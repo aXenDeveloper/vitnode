@@ -22,8 +22,7 @@ export class DeleteForumsPostsService {
 
     await this.databaseService.db
       .delete(forum_posts)
-      .where(eq(forum_posts.id, id))
-      .execute();
+      .where(eq(forum_posts.id, id));
 
     return "Success!";
   }
