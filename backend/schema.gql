@@ -206,6 +206,7 @@ type Mutation {
   core_sessions__sign_out: String!
   core_themes__change(id: Int!): String!
   forum_posts__create(content: [TextLanguageInput!]!, topic_id: Int!): ShowPostsForums!
+  forum_posts__delete(id: Int!): ShowPostsForums!
   forum_topics__actions__lock_toggle(id: Int!): Boolean!
   forum_topics__create(content: [TextLanguageInput!]!, forum_id: Int!, title: [TextLanguageInput!]!): ShowTopicsForums!
   forum_topics__edit(content: [TextLanguageInput!]!, id: Int!, title: [TextLanguageInput!]!): ShowTopicsForums!

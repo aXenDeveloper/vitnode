@@ -4,7 +4,7 @@ import { ShowTopicsForumsResolver } from "./show/show.resolver";
 import { ShowTopicsForumsService } from "./show/show.service";
 import { CreateForumTopicsResolver } from "./create/create.resolver";
 import { CreateForumTopicsService } from "./create/create.service";
-import { PostsForumModule } from "../posts/topics.module";
+import { PostsForumModule } from "../posts/posts.module";
 import { ForumsForumModule } from "../forums/forums.module";
 import { EditForumTopicsResolver } from "./edit/edit.resolver";
 import { EditForumTopicsService } from "./edit/edit.service";
