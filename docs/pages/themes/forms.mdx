@@ -1,13 +1,233 @@
-import { Callout } from 'nextra/components';
+import { Callout } from "nextra/components";
+import { Steps } from "nextra/components";
 
 # Forms
 
+## Usage
+
+<Steps>
+
+### Create a Hook
+
+We're recomend to create a hook to handle the form state and submission. It will make your code cleaner and easier to maintain.
+
+Create a new file in `frontend/admin/blog/views/categories/create-edit/hooks/use-create-edit-category-blog-admin.ts` and add the following code:
+
+```tsx
+export const useCreateEditCategoryBlogAdmin = () => {};
+```
+
+### Create a form schema
+
+Define the shape of your form using a Zod schema. You can read more about using [Zod in the Zod documentation](https://zod.dev/).
+
+```tsx {1, 3, 6-9}
+import * as z from "zod";
+
+import { zodInput } from "@/functions/zod";
+
+export const useCreateEditCategoryBlogAdmin = () => {
+  const formSchema = z.object({
+    name: zodInput.languageInput.min(1),
+    description: zodInput.languageInput
+  });
+};
+```
+
+We used the `zodInput` helper to create a custom validation function. You can read more about it in the [Custom validation zod section](#custom-validation-zod).
+
+### Define a form
+
+Define the form state with default values with return the `form` object.
+
+```tsx {2-3, 13-19, 21}
+import * as z from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import { zodInput } from "@/functions/zod";
+
+export const useCreateEditCategoryBlogAdmin = () => {
+  const formSchema = z.object({
+    name: zodInput.languageInput.min(1),
+    description: zodInput.languageInput
+  });
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: [],
+      description: []
+    }
+  });
+
+  return { form };
+};
+```
+
+### Define a submit handler
+
+Define the submit handler that will be called when the form is submitted and return the `onSubmit` function.
+
+```tsx {21-23, 25}
+import * as z from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import { zodInput } from "@/functions/zod";
+
+export const useCreateEditCategoryBlogAdmin = () => {
+  const formSchema = z.object({
+    name: zodInput.languageInput.min(1),
+    description: zodInput.languageInput
+  });
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: [],
+      description: []
+    }
+  });
+
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    // Do something
+  };
+
+  return { form, onSubmit };
+};
+```
+
+In `onSubmit` function you can call [Mutation with Server Action](/themes/fetch#mutation).
+
+### Build your form
+
+We can now use the `<Form />` components to build our form.
+
+```tsx {1, 3-12, 14, 21-22, 24-68}
+import { useTranslations } from "next-intl";
+
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage
+} from "@/components/ui/form";
+import { useCreateEditCategoryBlogAdmin } from "./hooks/use-create-edit-category-blog-admin";
+import { TextLanguageInput } from "@/components/text-language-input";
+import { Button } from "@/components/ui/button";
+import { Editor } from "@/components/editor/editor";
+
+interface Props {
+  data?: unknown;
+}
+
+export const CreateEditCategoryBlogAdmin = ({ data }: Props) => {
+  const t = useTranslations("blog.admin.categories");
+  const { form, onSubmit } = useCreateEditCategoryBlogAdmin();
+
+  return (
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="flex flex-col gap-4"
+      >
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("create.name.label")}</FormLabel>
+              <FormControl>
+                <TextLanguageInput {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t("create.description.label")}</FormLabel>
+              <FormControl>
+                <Editor id="create_categories_blog" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button
+          type="submit"
+          onClick={form.handleSubmit(onSubmit)}
+          loading={form.formState.isSubmitting}
+          disabled={!form.formState.isValid}
+        >
+          {t(data ? "edit.submit" : "create.submit")}
+        </Button>
+      </form>
+    </Form>
+  );
+};
+```
+
+#### Upload Files
+
 <Callout type="warning" emoji="⚠️">
   This feature is currently planned but not yet implemented.
 </Callout>
 
-## Upload Files
+</Steps>
 
-<Callout type="warning" emoji="⚠️">
-  This feature is currently planned but not yet implemented.
-</Callout>
+## Custom validation zod
+
+VitNode provides a custom validation function that allows you to use the `zod` schema to validate the form data.
+
+### Text Language Input
+
+This validation trims the input and create an array of objects with the language code and the value.
+
+```tsx
+import { zodInput } from "@/functions/zod";
+
+const formSchema = z.object({
+  name: zodInput.languageInput
+});
+```
+
+You can make the input required by adding the `.min(1)` method.
+
+```tsx
+import { zodInput } from "@/functions/zod";
+
+const formSchema = z.object({
+  name: zodInput.languageInput.min(1)
+});
+```
+
+### String
+
+This validation trims the input. We're recomend to use this validation insted of `z.string()`.
+
+```tsx
+import { zodInput } from "@/functions/zod";
+
+const formSchema = z.object({
+  name: zodInput.string
+});
+```
+
+You can make the input required by adding the `.min(1)` method.
+
+```tsx
+import { zodInput } from "@/functions/zod";
+
+const formSchema = z.object({
+  name: zodInput.string.min(1)
+});
+```

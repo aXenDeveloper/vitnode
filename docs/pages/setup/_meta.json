@@ -3,5 +3,6 @@
   "domain": "Domain",
   "server": "Configuration Server",
   "install": "Installation",
-  "secure": "Secure Server"
+  "secure": "Secure Server",
+  "update": "Update"
 }

@@ -6,7 +6,21 @@
         "categories": "Categories"
       },
       "categories": {
-        "title": "Categories"
+        "title": "Categories",
+        "create": {
+          "title": "Create Category",
+          "name": {
+            "label": "Title"
+          },
+          "description": {
+            "label": "Description"
+          },
+          "submit": "Create Category"
+        },
+        "edit": {
+          "title": "Edit Category",
+          "submit": "Update Category"
+        }
       }
     }
   }

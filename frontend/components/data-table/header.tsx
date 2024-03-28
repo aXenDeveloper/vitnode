@@ -42,7 +42,7 @@ export function HeaderSortingDataTable<T>({
   return (
     <Button
       variant="ghost"
-      className="-ml-4"
+      className="-ml-3"
       size="sm"
       onClick={() => {
         const params = new URLSearchParams(searchParams);
