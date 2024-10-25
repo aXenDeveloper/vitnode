@@ -1,14 +1,18 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
+import type { Request, Response } from 'express';
+
+import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
-import { type Request } from 'express';
 import {
   ShowAuthObj,
+  SignInAuthBody,
+  SignInAuthObj,
   SignUpAuthBody,
   VerifyConfirmEmailAuthBody,
 } from 'vitnode-shared/auth.dto';
 
 import { VerifyConfirmEmailAuthService } from './services/confirm_email/verify.service';
 import { ShowAuthService } from './services/show.service';
+import { SignInAuthService } from './services/sign_in/sign_in.service';
 import { SignUpAuthService } from './services/sign_up/sign_up.service';
 
 @ApiTags('Core')
@@ -17,6 +21,7 @@ export class AuthController {
   constructor(
     private readonly showService: ShowAuthService,
     private readonly signUpService: SignUpAuthService,
+    private readonly signInService: SignInAuthService,
     private readonly verifyConfirmEmailService: VerifyConfirmEmailAuthService,
   ) {}
 
@@ -29,7 +34,23 @@ export class AuthController {
     return await this.showService.show();
   }
 
+  @Post('sign_in')
+  @ApiResponse({
+    status: 201,
+    type: SignInAuthObj,
+  })
+  async signIn(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() body: SignInAuthBody,
+  ): Promise<SignInAuthObj> {
+    return await this.signInService.singIn({ req, res, body });
+  }
+
   @Post('sign_up')
+  @ApiResponse({
+    status: 201,
+  })
   async signUp(@Req() req: Request, @Body() body: SignUpAuthBody) {
     return await this.signUpService.signUp({ req, body });
   }

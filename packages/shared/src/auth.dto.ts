@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
+  IsString,
   IsStrongPassword,
   Matches,
   MaxLength,
@@ -50,4 +51,25 @@ export class VerifyConfirmEmailAuthBody {
 
   @ApiProperty()
   user_id: number;
+}
+
+export class SignInAuthBody {
+  @ApiPropertyOptional({ example: false })
+  admin?: boolean;
+
+  @ApiProperty({ example: 'test@test.com' })
+  @IsEmail()
+  email: string;
+
+  @ApiProperty({ example: 'Test123!' })
+  @IsString()
+  password: string;
+
+  @ApiPropertyOptional({ example: false })
+  remember?: boolean;
+}
+
+export class SignInAuthObj {
+  @ApiProperty()
+  login_token: string;
 }

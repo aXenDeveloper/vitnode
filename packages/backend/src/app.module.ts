@@ -1,5 +1,6 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { ScheduleModule } from '@nestjs/schedule';
 import { join } from 'path';
 
@@ -80,6 +81,7 @@ const config = () => {
     frontend_url: frontend_url.url,
     backend_url: backend_url.url,
     port: process.env.PORT ? parseInt(process.env.PORT, 10) : 8080,
+    dev_mode: process.env.NODE_ENV === 'development',
     cookies: {
       domain: replaceUrlToDomain(frontend_url.url),
       secure: frontend_url.protocol === 'https:',
@@ -130,6 +132,7 @@ export class VitNodeCoreModule {
         ScheduleModule.forRoot(),
         CoreModule,
         InternalDatabaseModule.register(database),
+        JwtModule.register({ global: true }),
         GlobalHelpersModule.register({ email }),
       ],
     };

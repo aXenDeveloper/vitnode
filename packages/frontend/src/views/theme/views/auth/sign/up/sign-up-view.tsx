@@ -31,7 +31,7 @@ export const SignUpView = async () => {
 
   return (
     <SignUpWrapper isEmailEnabled={is_email_enabled}>
-      <div className="container mx-auto max-w-md pt-10">
+      <div className="container mx-auto max-w-md py-10">
         <div className="mb-10 space-y-1 text-center">
           <CardTitle className="text-3xl">{t('title')}</CardTitle>
           <CardDescription>

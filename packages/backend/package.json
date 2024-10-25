@@ -81,6 +81,7 @@
   },
   "dependencies": {
     "@nestjs/config": "^3.3.0",
+    "@nestjs/jwt": "^10.2.0",
     "@nestjs/swagger": "^7.4.2",
     "@react-email/render": "^1.0.1",
     "cookie-parser": "^1.4.7",
