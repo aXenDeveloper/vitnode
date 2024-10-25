@@ -19,7 +19,7 @@ export const core_files = pgTable(
     user_id: t.integer().references(() => core_users.id, {
       onDelete: 'cascade',
     }),
-    created: t.timestamp().notNull().defaultNow(),
+    created_at: t.timestamp().notNull().defaultNow(),
     file_size: t.integer().notNull(),
     mimetype: t.varchar({ length: 255 }).notNull(),
     width: t.integer(),

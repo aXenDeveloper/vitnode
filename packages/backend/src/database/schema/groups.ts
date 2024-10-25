@@ -2,8 +2,8 @@ import { pgTable } from 'drizzle-orm/pg-core';
 
 export const core_groups = pgTable('core_groups', t => ({
   id: t.serial().primaryKey(),
-  created: t.timestamp().notNull().defaultNow(),
-  updated: t.timestamp().notNull().defaultNow(),
+  created_at: t.timestamp().notNull().defaultNow(),
+  updated_at: t.timestamp().notNull().defaultNow(),
   protected: t.boolean().notNull().default(false),
   default: t.boolean().notNull().default(false),
   root: t.boolean().notNull().default(false),

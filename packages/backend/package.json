@@ -61,26 +61,35 @@
   "devDependencies": {
     "@nestjs/common": "^10.0.0",
     "@nestjs/schedule": "^4.1.1",
+    "@react-email/components": "^0.0.25",
     "@swc/cli": "0.4.1-nightly.20240914",
     "@swc/core": "^1.7.39",
     "@types/cookie-parser": "^1.4.7",
+    "@types/express": "^5.0.0",
     "@types/node": "^22.7.9",
     "@types/pg": "^8.11.10",
+    "@types/react": "^18.3.12",
+    "@types/ua-parser-js": "^0.7.39",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "concurrently": "^9.0.1",
     "eslint-config-typescript-vitnode": "workspace:*",
+    "react": "19.0.0-rc-1631855f-20241023",
+    "react-dom": "19.0.0-rc-1631855f-20241023",
     "tsup": "^8.3.0",
     "typescript": "^5.6.3"
   },
   "dependencies": {
+    "@nestjs/config": "^3.3.0",
     "@nestjs/swagger": "^7.4.2",
+    "@react-email/render": "^1.0.1",
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.5",
     "drizzle-kit": "^0.26.2",
     "drizzle-orm": "^0.35.3",
     "helmet": "^8.0.0",
     "pg": "^8.13.0",
+    "ua-parser-js": "^1.0.39",
     "vitnode-shared": "workspace:*"
   }
 }

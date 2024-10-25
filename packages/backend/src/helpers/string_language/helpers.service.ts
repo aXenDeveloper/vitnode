@@ -1,6 +1,6 @@
 import { core_languages_words } from '@/database/schema/languages';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { and, eq, getTableName } from 'drizzle-orm';
 import { PgTableWithColumns, TableConfig } from 'drizzle-orm/pg-core';
 import { StringLanguage } from 'vitnode-shared/string-language.dto';
@@ -107,7 +107,7 @@ export class StringLanguageHelper extends ParseStringLanguageHelper {
     });
 
     if (!plugin && plugin_code !== 'core') {
-      throw new NotFoundException('Plugin for String Language not found');
+      throw new HttpException('PLUGIN_NOT_FOUND', HttpStatus.NOT_FOUND);
     }
     const tableName = getTableName(database);
 

@@ -1,5 +1,5 @@
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ShowAuthObj } from 'vitnode-shared/auth.dto';
 
 @Injectable()
@@ -11,7 +11,7 @@ export class ShowAuthService {
       where: (table, { eq }) => eq(table.default, true),
     });
     if (!plugin) {
-      throw new UnauthorizedException('No default plugin found');
+      throw new HttpException('Plugin not found', HttpStatus.NOT_FOUND);
     }
 
     return {

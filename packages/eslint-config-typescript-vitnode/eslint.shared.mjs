@@ -96,7 +96,12 @@ export default [
         },
         {
           name: 'next/navigation',
-          importNames: ['useRouter'],
+          importNames: [
+            'redirect',
+            'permanentRedirect',
+            'useRouter',
+            'usePathname',
+          ],
           message: 'Please import from `vitnode-frontend/navigation` instead.',
         },
       ],

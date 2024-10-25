@@ -14,8 +14,8 @@ export const core_moderators_permissions = pgTable(
     user_id: t.integer().references(() => core_users.id, {
       onDelete: 'cascade',
     }),
-    created: t.timestamp().notNull().defaultNow(),
-    updated: t.timestamp().notNull().defaultNow(),
+    created_at: t.timestamp().notNull().defaultNow(),
+    updated_at: t.timestamp().notNull().defaultNow(),
     protected: t.boolean().notNull().default(false),
   }),
   table => ({

@@ -1,7 +1,5 @@
-'use client';
-
 import { ErrorView } from 'vitnode-frontend/views/theme/views/error/error-view';
 
-export default function Error() {
-  return <ErrorView code="500" />;
+export default function NotFoundPage() {
+  return <ErrorView code="404" />;
 }

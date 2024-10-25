@@ -1,30 +1,38 @@
 import { CONFIG } from '@/helpers/config-with-env';
 
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters, @typescript-eslint/no-explicit-any
-export async function fetcher<TData extends Record<string, any>>({
+export async function fetcher<
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters, @typescript-eslint/no-explicit-any
+  TData extends Record<string, any>,
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters, @typescript-eslint/no-explicit-any
+  TVariable extends Record<string, any> = Record<string, any>,
+>({
   url,
+  body,
   ...options
 }: {
+  body?: TVariable;
   url: string;
-} & RequestInit): Promise<{
+} & Omit<RequestInit, 'body'>): Promise<{
   data: TData;
   res: Response;
 }> {
   const res = await fetch(`${CONFIG.backend_url}${url}`, {
+    ...options,
     method: options?.method ?? 'GET',
     headers: {
       'Content-Type': 'application/json',
       ...options?.headers,
     },
-    ...options,
     cache: 'no-store',
+    body: body ? JSON.stringify(body) : null,
   });
 
-  if (!res.ok) {
-    throw new Error(`${res.status} - ${res.statusText}`);
-  }
+  const data = await res.json();
 
-  const data: TData = await res.json();
+  if (!res.ok) {
+    const error: { message: string; statusCode: number } = data;
+    throw new Error(`${error.statusCode} - ${error.message}`);
+  }
 
   return { res, data };
 }

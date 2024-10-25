@@ -15,8 +15,8 @@ export const core_admin_permissions = pgTable(
     user_id: t.integer().references(() => core_users.id, {
       onDelete: 'cascade',
     }),
-    created: t.timestamp().notNull().defaultNow(),
-    updated: t.timestamp().notNull().defaultNow(),
+    created_at: t.timestamp().notNull().defaultNow(),
+    updated_at: t.timestamp().notNull().defaultNow(),
     protected: t.boolean().notNull().default(false),
     permissions: t.jsonb().default('[]'),
   }),
@@ -52,7 +52,7 @@ export const core_admin_sessions = pgTable(
       .references(() => core_users.id, {
         onDelete: 'cascade',
       }),
-    created: t.timestamp().notNull().defaultNow(),
+    created_at: t.timestamp().notNull().defaultNow(),
     last_seen: t.timestamp().notNull().defaultNow(),
     expires: t.timestamp().notNull(),
     device_id: t

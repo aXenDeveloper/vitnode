@@ -27,6 +27,8 @@
     "@swc/cli": "0.4.1-nightly.20240914",
     "@swc/core": "^1.7.39",
     "@types/node": "^20.3.1",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
     "concurrently": "^9.0.1",
     "eslint-config-typescript-vitnode": "workspace:*",
     "typescript": "^5.6.3"

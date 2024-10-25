@@ -2,7 +2,7 @@ import { existsSync } from 'fs';
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 
-import { DEFAULT_CONFIG_DATA, getConfigFile } from '../src//providers/config';
+import { DEFAULT_CONFIG_DATA, getConfigFile } from '../src/helpers/config';
 import { updateObject } from './helpers/update-object';
 
 export const generateConfig = async ({

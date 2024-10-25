@@ -62,7 +62,7 @@ export const core_files_avatars = pgTable('core_files_avatars', t => ({
   id: t.serial().primaryKey(),
   dir_folder: t.varchar({ length: 255 }).notNull(),
   file_name: t.varchar({ length: 255 }).notNull(),
-  created: t.timestamp().notNull().defaultNow(),
+  created_at: t.timestamp().notNull().defaultNow(),
   file_size: t.integer().notNull(),
   mimetype: t.varchar({ length: 255 }).notNull(),
   extension: t.varchar({ length: 32 }).notNull(),
@@ -90,7 +90,7 @@ export const core_users_pass_reset = pgTable('core_users_pass_reset', t => ({
     })
     .notNull(),
   key: t.varchar({ length: 100 }).notNull().unique(),
-  created: t.timestamp().notNull().defaultNow(),
+  created_at: t.timestamp().notNull().defaultNow(),
   expires: t.timestamp().notNull(),
 }));
 
@@ -115,7 +115,7 @@ export const core_users_confirm_emails = pgTable(
       })
       .notNull(),
     token: t.varchar({ length: 100 }).notNull().unique(),
-    created: t.timestamp().notNull().defaultNow(),
+    created_at: t.timestamp().notNull().defaultNow(),
     expires: t.timestamp().notNull(),
   }),
 );

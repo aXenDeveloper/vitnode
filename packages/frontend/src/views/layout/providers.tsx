@@ -30,21 +30,21 @@ export const RootProviders = ({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <MiddlewareContext.Provider value={{ ...middlewareData }}>
-        <NextTopLoader
-          color="hsl(var(--primary))"
-          height={4}
-          showSpinner={false}
-        />
-        <NextThemesProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-        >
-          {children}
-          <Toaster closeButton />
-        </NextThemesProvider>
-      </MiddlewareContext.Provider>
+      <NextTopLoader
+        color="hsl(var(--primary))"
+        height={4}
+        showSpinner={false}
+      />
+      <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
+        {middlewareData ? (
+          <MiddlewareContext.Provider value={{ ...middlewareData }}>
+            {children}
+          </MiddlewareContext.Provider>
+        ) : (
+          children
+        )}
+        <Toaster closeButton />
+      </NextThemesProvider>
     </QueryClientProvider>
   );
 };

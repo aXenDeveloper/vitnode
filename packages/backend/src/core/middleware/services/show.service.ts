@@ -1,13 +1,16 @@
 import { ABSOLUTE_PATHS } from '@/app.module';
-import { getConfigFile } from '@/providers/config';
+import { getConfigFile } from '@/helpers/config';
+import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { Injectable } from '@nestjs/common';
-import { readdir, readFile } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { ManifestWithLang } from 'vitnode-shared/manifest.dto';
 import { ShowMiddlewareObj } from 'vitnode-shared/middleware.dto';
 
 @Injectable()
 export class ShowMiddlewareService {
+  constructor(private readonly databaseService: InternalDatabaseService) {}
+
   protected async getManifest({
     langCodes,
   }: {
@@ -33,22 +36,39 @@ export class ShowMiddlewareService {
   async show(): Promise<ShowMiddlewareObj> {
     // TODO: Add cache
     const config = getConfigFile();
-    const plugins = await readdir(ABSOLUTE_PATHS.plugins);
+    const [plugins, langs] = await Promise.all([
+      this.databaseService.db.query.core_plugins.findMany({
+        columns: {
+          code: true,
+        },
+      }),
+      this.databaseService.db.query.core_languages.findMany({
+        columns: {
+          code: true,
+          default: true,
+          enabled: true,
+          name: true,
+        },
+      }),
+    ]);
 
     return {
-      languages: config.langs,
+      languages: langs,
       authorization: {
         force_login: config.settings.authorization.force_login,
         lock_register: config.settings.authorization.lock_register,
       },
-      plugins: [
-        'admin',
-        ...plugins.filter(plugin => !['plugins.module.ts'].includes(plugin)),
-      ],
+      plugins: ['admin', 'core', ...plugins.map(plugin => plugin.code)],
       is_email_enabled: false, // TODO: Add email service
       is_ai_enabled: false, // TODO: Add AI service
       site_name: config.settings.main.site_name,
       site_short_name: config.settings.main.site_short_name,
+      security: {
+        captcha: {
+          site_key: config.security.captcha.site_key,
+          type: config.security.captcha.type,
+        },
+      },
     };
   }
 }
