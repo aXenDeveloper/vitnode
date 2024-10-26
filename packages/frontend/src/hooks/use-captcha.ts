@@ -90,7 +90,6 @@ export const useCaptcha = () => {
       window[functionCF] = null;
       document.body.removeChild(script);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getTokenFromCaptcha = async (): Promise<string> => {

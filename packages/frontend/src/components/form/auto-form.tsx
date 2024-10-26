@@ -118,7 +118,6 @@ export function AutoForm<
 
   React.useEffect(() => {
     onValuesChange?.(values);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valuesString]);
 
   return (

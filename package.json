@@ -19,7 +19,7 @@
     "db": "turbo db"
   },
   "devDependencies": {
-    "@types/node": "^22.7.9",
+    "@types/node": "^22.8.1",
     "eslint-config-typescript-vitnode": "workspace:*",
     "turbo": "^2.2.3"
   },

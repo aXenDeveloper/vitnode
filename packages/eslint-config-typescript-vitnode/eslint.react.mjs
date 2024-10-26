@@ -2,9 +2,18 @@
 import eslintVitNodeFrontend from './eslint.frontend.mjs';
 import reactPlugin from 'eslint-plugin-react';
 import globals from 'globals';
+import reactCompiler from 'eslint-plugin-react-compiler';
 
 export default [
   ...eslintVitNodeFrontend,
+  {
+    plugins: {
+      'react-compiler': reactCompiler,
+    },
+    rules: {
+      'react-compiler/react-compiler': 'error',
+    },
+  },
   {
     ...reactPlugin.configs.flat.recommended,
     languageOptions: {
@@ -15,6 +24,7 @@ export default [
       },
     },
     rules: {
+      'react-hooks/exhaustive-deps': 'off',
       'react/no-unknown-property': 'off',
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',

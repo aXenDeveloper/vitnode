@@ -27,14 +27,14 @@
   ],
   "devDependencies": {
     "@swc/cli": "^0.4.0",
-    "@swc/core": "^1.7.39",
-    "@types/node": "^22.7.8",
-    "ai": "^3.4.18",
+    "@swc/core": "^1.7.40",
+    "@types/node": "^22.8.1",
+    "ai": "^3.4.20",
     "concurrently": "^9.0.1",
     "eslint-config-typescript-vitnode": "workspace:*",
     "typescript": "^5.6.3"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^0.0.68"
+    "@ai-sdk/openai": "^0.0.70"
   }
 }
