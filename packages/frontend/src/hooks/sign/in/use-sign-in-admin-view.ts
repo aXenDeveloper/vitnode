@@ -29,8 +29,6 @@ export const useSignInAdminView = () => {
       toast.error(t('title'), {
         description: t('internal_server_error'),
       });
-
-      return;
     }
   };
 

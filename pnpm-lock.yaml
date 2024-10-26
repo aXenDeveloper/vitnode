@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  react-is: 19.0.0-rc-cae764ce-20241025
+
 importers:
 
   .:
@@ -576,6 +579,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.1.3
         version: 1.1.3(@types/react-dom@18.3.1)(@types/react@18.3.12)(react-dom@19.0.0-rc-cae764ce-20241025(react@19.0.0-rc-cae764ce-20241025))(react@19.0.0-rc-cae764ce-20241025)
+      '@radix-ui/react-visually-hidden':
+        specifier: ^1.1.0
+        version: 1.1.0(@types/react-dom@18.3.1)(@types/react@18.3.12)(react-dom@19.0.0-rc-cae764ce-20241025(react@19.0.0-rc-cae764ce-20241025))(react@19.0.0-rc-cae764ce-20241025)
       '@tailwindcss/container-queries':
         specifier: ^0.1.1
         version: 0.1.1(tailwindcss@3.4.14(ts-node@10.9.2(@swc/core@1.7.40(@swc/helpers@0.5.13))(@types/node@22.8.1)(typescript@5.6.3)))
@@ -670,8 +676,8 @@ importers:
         specifier: ^8.10.1
         version: 8.10.1(date-fns@3.6.0)(react@19.0.0-rc-cae764ce-20241025)
       react-is:
-        specifier: 19.0.0-rc-69d4b800-20241021
-        version: 19.0.0-rc-69d4b800-20241021
+        specifier: 19.0.0-rc-cae764ce-20241025
+        version: 19.0.0-rc-cae764ce-20241025
       tailwind-merge:
         specifier: ^2.5.4
         version: 2.5.4
@@ -6377,14 +6383,8 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
 
-  react-is@16.13.1:
-    resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
-
-  react-is@18.3.1:
-    resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
-
-  react-is@19.0.0-rc-69d4b800-20241021:
-    resolution: {integrity: sha512-aa07RwFePjPGNw0QEdTGYD9MFJHXUOqtKwSGZbNFZIUcsQRCXNudFvv/Ywv+Hp0KM60J4rTdF6+zew3pZAMm1g==}
+  react-is@19.0.0-rc-cae764ce-20241025:
+    resolution: {integrity: sha512-pbbteJfkGIPl/thVxTp/599pCiodCUy2zn7bZlvxsDYYVYDGJzu+UUn9ELubkFJrVMMOc1L2azCcoCPe4UTf7w==}
 
   react-promise-suspense@0.3.4:
     resolution: {integrity: sha512-I42jl7L3Ze6kZaq+7zXWSunBa3b1on5yfvUW6Eo/3fFOj6dZ5Bqmcd264nJbTK/gn1HjjILAjSwnZbV4RpSaNQ==}
@@ -11739,7 +11739,7 @@ snapshots:
 
   hoist-non-react-statics@3.3.2:
     dependencies:
-      react-is: 16.13.1
+      react-is: 19.0.0-rc-cae764ce-20241025
 
   html-dom-parser@5.0.10:
     dependencies:
@@ -12739,7 +12739,7 @@ snapshots:
     dependencies:
       loose-envify: 1.4.0
       object-assign: 4.1.1
-      react-is: 16.13.1
+      react-is: 19.0.0-rc-cae764ce-20241025
 
   prosemirror-changeset@2.2.1:
     dependencies:
@@ -12907,11 +12907,7 @@ snapshots:
     dependencies:
       react: 19.0.0-rc-cae764ce-20241025
 
-  react-is@16.13.1: {}
-
-  react-is@18.3.1: {}
-
-  react-is@19.0.0-rc-69d4b800-20241021: {}
+  react-is@19.0.0-rc-cae764ce-20241025: {}
 
   react-promise-suspense@0.3.4:
     dependencies:
@@ -13022,7 +13018,7 @@ snapshots:
       lodash: 4.17.21
       react: 19.0.0-rc-cae764ce-20241025
       react-dom: 19.0.0-rc-cae764ce-20241025(react@19.0.0-rc-cae764ce-20241025)
-      react-is: 18.3.1
+      react-is: 19.0.0-rc-cae764ce-20241025
       react-smooth: 4.0.1(react-dom@19.0.0-rc-cae764ce-20241025(react@19.0.0-rc-cae764ce-20241025))(react@19.0.0-rc-cae764ce-20241025)
       recharts-scale: 0.4.5
       tiny-invariant: 1.3.3

@@ -1,6 +1,11 @@
 {
   "core": {
     "global": {
+      "sidebar": {
+        "title": "Sidebar",
+        "desc": "Manage your sidebar settings.",
+        "toggle": "Toggle Sidebar"
+      },
       "loading": "Loading...",
       "optional": "Optional",
       "yes": "Yes",

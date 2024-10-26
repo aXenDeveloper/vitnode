@@ -1,7 +1,9 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  IsBoolean,
   IsEmail,
+  IsOptional,
   IsString,
   IsStrongPassword,
   Matches,
@@ -58,6 +60,8 @@ export class VerifyConfirmEmailAuthBody {
 
 export class SignInAuthBody {
   @ApiPropertyOptional({ example: false })
+  @IsBoolean()
+  @IsOptional()
   admin?: boolean;
 
   @ApiProperty({ example: 'test@test.com' })
@@ -69,6 +73,8 @@ export class SignInAuthBody {
   password: string;
 
   @ApiPropertyOptional({ example: false })
+  @IsBoolean()
+  @IsOptional()
   remember?: boolean;
 }
 
