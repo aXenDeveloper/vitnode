@@ -1,7 +1,7 @@
 import { ABSOLUTE_PATHS } from '@/app.module';
 import { getConfigFile } from '@/helpers/config';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { ManifestWithLang } from 'vitnode-shared/manifest.dto';
@@ -40,6 +40,7 @@ export class ShowMiddlewareService {
       this.databaseService.db.query.core_plugins.findMany({
         columns: {
           code: true,
+          default: true,
         },
       }),
       this.databaseService.db.query.core_languages.findMany({
@@ -51,6 +52,11 @@ export class ShowMiddlewareService {
         },
       }),
     ]);
+
+    const plugin_code_default = plugins.find(plugin => plugin.default)?.code;
+    if (!plugin_code_default) {
+      throw new InternalServerErrorException('Plugin not found');
+    }
 
     return {
       languages: langs,
@@ -69,6 +75,7 @@ export class ShowMiddlewareService {
           type: config.security.captcha.type,
         },
       },
+      plugin_code_default,
     };
   }
 }

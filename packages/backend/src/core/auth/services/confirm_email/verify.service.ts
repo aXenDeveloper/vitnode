@@ -19,10 +19,7 @@ export class VerifyConfirmEmailAuthService {
     });
   }
 
-  async verify({
-    token,
-    user_id,
-  }: VerifyConfirmEmailAuthBody): Promise<string> {
+  async verify({ token, user_id }: VerifyConfirmEmailAuthBody): Promise<void> {
     const data =
       await this.databaseService.db.query.core_users_confirm_emails.findFirst({
         where: (table, { eq, and }) =>
@@ -47,7 +44,5 @@ export class VerifyConfirmEmailAuthService {
         email_verified: true,
       })
       .where(eq(core_users.id, user_id));
-
-    return 'Email confirmed';
   }
 }

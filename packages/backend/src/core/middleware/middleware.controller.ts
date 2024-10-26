@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { ShowMiddlewareObj } from 'vitnode-shared/middleware.dto';
 
 import { ShowMiddlewareService } from './services/show.service';
@@ -10,8 +10,7 @@ export class MiddlewareController {
   constructor(private readonly showService: ShowMiddlewareService) {}
 
   @Get()
-  @ApiResponse({
-    status: 200,
+  @ApiOkResponse({
     type: ShowMiddlewareObj,
   })
   async show(): Promise<ShowMiddlewareObj> {

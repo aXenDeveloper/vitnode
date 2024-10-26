@@ -15,10 +15,7 @@ export const useSignInView = () => {
     remember: z.boolean().default(false).optional(),
   });
 
-  const onSubmit = async (
-    values: z.infer<typeof formSchema>,
-    // form: UseFormReturn<z.infer<typeof formSchema>>,
-  ) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setError('');
 
     try {
@@ -41,20 +38,7 @@ export const useSignInView = () => {
       toast.error(t('title'), {
         description: t('internal_server_error'),
       });
-
-      return;
     }
-
-    // await new Promise<void>(resolve => {
-    //   form.reset({}, { keepValues: true });
-
-    //   resolve();
-    // });
-
-    // // Redirect to home
-    // setTimeout(() => {
-    //   window.location.href = '/';
-    // }, 0);
   };
 
   return {

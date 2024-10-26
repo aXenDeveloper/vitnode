@@ -1,21 +1,37 @@
-import { InternalDatabaseService } from '@/utils/database/internal_database.service';
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { type IOAuthGuards } from '@/guards/auth.guard';
+import { Inject, Injectable } from '@nestjs/common';
+import { Request, Response } from 'express';
 import { ShowAuthObj } from 'vitnode-shared/auth.dto';
+import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
 @Injectable()
 export class ShowAuthService {
-  constructor(private readonly databaseService: InternalDatabaseService) {}
+  constructor(
+    @Inject('IOAuthGuards') private readonly authService: IOAuthGuards,
+  ) {}
 
-  async show(): Promise<ShowAuthObj> {
-    const plugin = await this.databaseService.db.query.core_plugins.findFirst({
-      where: (table, { eq }) => eq(table.default, true),
-    });
-    if (!plugin) {
-      throw new HttpException('Plugin not found', HttpStatus.NOT_FOUND);
+  async show({
+    req,
+    res,
+  }: {
+    req: Request;
+    res: Response;
+  }): Promise<ShowAuthObj> {
+    let user: null | UserWithDangerousInfo = null;
+    try {
+      user = await this.authService.authorization({
+        req,
+        res,
+      });
+    } catch (err) {
+      const error = err as { status: number };
+      if (error.status !== 403) {
+        throw err;
+      }
     }
 
     return {
-      plugin_code_default: plugin.code,
+      user,
     };
   }
 }

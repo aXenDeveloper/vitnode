@@ -10,9 +10,9 @@ import { and, eq } from 'drizzle-orm';
 import { Request, Response } from 'express';
 import { SignInAuthBody, SignInAuthObj } from 'vitnode-shared/auth.dto';
 
-import { verifyPassword } from '../../helpers/password';
-import { SendConfirmEmailAuthService } from '../sign_up/send.confirm_email.service';
-import { DeviceSignInAuthService } from './device.service';
+import { DeviceAuthService } from '../../../helpers/auth/device.service';
+import { verifyPassword } from '../helpers/password';
+import { SendConfirmEmailAuthService } from './sign_up/send.confirm_email.service';
 
 @Injectable()
 export class SignInAuthService {
@@ -20,7 +20,7 @@ export class SignInAuthService {
     private readonly databaseService: InternalDatabaseService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly deviceService: DeviceSignInAuthService,
+    private readonly deviceService: DeviceAuthService,
     private readonly sendConfirmEmailCoreSessionsService: SendConfirmEmailAuthService,
     private readonly mailService: EmailService,
   ) {}
@@ -214,6 +214,9 @@ export class SignInAuthService {
         group_id: true,
         name: true,
         password: true,
+        language: true,
+        name_seo: true,
+        avatar_color: true,
       },
     });
     if (!user) {
@@ -258,8 +261,12 @@ export class SignInAuthService {
       body: { admin, email, user_id: user.id, name: user.name, ...rest },
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _, ...userWithoutPassword } = user;
+
     return {
       login_token: loginToken,
+      ...userWithoutPassword,
     };
   }
 }

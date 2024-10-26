@@ -2,6 +2,7 @@ import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
 import { CoreModule } from './core/core.module';
@@ -133,6 +134,10 @@ export class VitNodeCoreModule {
         CoreModule,
         InternalDatabaseModule.register(database),
         JwtModule.register({ global: true }),
+        ServeStaticModule.forRoot({
+          rootPath: ABSOLUTE_PATHS.uploads.public,
+          serveRoot: '/public/',
+        }),
         GlobalHelpersModule.register({ email }),
       ],
     };

@@ -94,10 +94,15 @@ export async function fetcher<
     setCookieFromApi({ res });
   }
 
-  const data = await res.json();
+  let data = {} as TData;
+  try {
+    data = await res.json();
+  } catch (_) {
+    /* empty */
+  }
 
   if (!res.ok) {
-    const error: { message: string; statusCode: number } = data;
+    const error = data as unknown as { message: string; statusCode: number };
     throw new Error(`${error.statusCode} - ${error.message}`);
   }
 

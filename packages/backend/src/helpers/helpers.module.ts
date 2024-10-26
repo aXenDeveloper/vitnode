@@ -1,3 +1,4 @@
+import { InternalAuthService } from '@/helpers/auth/internal_auth.service';
 import {
   DynamicModule,
   Global,
@@ -6,6 +7,7 @@ import {
   Module,
 } from '@nestjs/common';
 
+import { DeviceAuthService } from './auth/device.service';
 import { CaptchaHelper } from './captcha/captcha.service';
 import { EmailService } from './email/email.service';
 import { EmailHelpersService } from './email/email-helpers.service';
@@ -14,6 +16,7 @@ import {
   EmailSenderFunction,
 } from './email/email-helpers.type';
 import { StringLanguageHelper } from './string_language/helpers.service';
+import { UserHelper } from './user.service';
 
 @Global()
 @Module({})
@@ -46,12 +49,21 @@ export class GlobalHelpersModule {
           provide: 'EmailHelpersService',
           useClass: EmailHelpersService,
         },
+        {
+          provide: 'IOAuthGuards',
+          useClass: InternalAuthService,
+        },
+        DeviceAuthService,
+        UserHelper,
       ],
       exports: [
         EmailService,
         StringLanguageHelper,
         CaptchaHelper,
         'EmailHelpersService',
+        'IOAuthGuards',
+        DeviceAuthService,
+        UserHelper,
       ],
     };
   }

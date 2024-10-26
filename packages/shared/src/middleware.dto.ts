@@ -50,6 +50,9 @@ export class ShowMiddlewareObj {
   @ApiProperty({ example: [{ code: 'en', default: true, enabled: true }] })
   languages: LanguagesMiddleware[];
 
+  @ApiProperty()
+  plugin_code_default: string;
+
   @ApiProperty({ example: ['core', 'admin'] })
   plugins: string[];
 

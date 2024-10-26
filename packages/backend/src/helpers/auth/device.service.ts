@@ -16,7 +16,7 @@ interface DeviceType {
 }
 
 @Injectable()
-export class DeviceSignInAuthService {
+export class DeviceAuthService {
   constructor(
     private readonly databaseService: InternalDatabaseService,
     private readonly configService: ConfigService,

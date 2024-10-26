@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
@@ -9,14 +9,17 @@ import {
   MinLength,
 } from 'class-validator';
 
+import { User, UserWithDangerousInfo } from './user.dto';
 import { TransformString } from './utils/text-language';
 
 export const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 
 export class ShowAuthObj {
-  @ApiProperty()
-  plugin_code_default: string;
+  @ApiPropertyOptional()
+  user: null | UserWithDangerousInfo;
 }
+
+export class SignAuthObj extends OmitType(User, ['group'] as const) {}
 
 export class SignUpAuthBody {
   @Transform(TransformString)
@@ -69,7 +72,7 @@ export class SignInAuthBody {
   remember?: boolean;
 }
 
-export class SignInAuthObj {
+export class SignInAuthObj extends SignAuthObj {
   @ApiProperty()
   login_token: string;
 }

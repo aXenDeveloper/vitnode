@@ -3,7 +3,7 @@ import { getConfigFile } from '@/helpers/config';
 import { EmailService } from '@/helpers/email/email.service';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Request } from 'express';
-import { SignUpAuthBody } from 'vitnode-shared/auth.dto';
+import { SignAuthObj, SignUpAuthBody } from 'vitnode-shared/auth.dto';
 
 import { HelperSignUpAuthService } from './helper.service';
 import { SendConfirmEmailAuthService } from './send.confirm_email.service';
@@ -17,7 +17,13 @@ export class SignUpAuthService {
     private readonly confirmEmailService: SendConfirmEmailAuthService,
   ) {}
 
-  async signUp({ req, body }: { body: SignUpAuthBody; req: Request }) {
+  async signUp({
+    req,
+    body,
+  }: {
+    body: SignUpAuthBody;
+    req: Request;
+  }): Promise<SignAuthObj> {
     const config = getConfigFile();
     if (config.settings.authorization.lock_register) {
       throw new HttpException('Register is locked', HttpStatus.FORBIDDEN);
@@ -35,8 +41,6 @@ export class SignUpAuthService {
       });
     }
 
-    return {
-      email: user.email,
-    };
+    return user;
   }
 }
