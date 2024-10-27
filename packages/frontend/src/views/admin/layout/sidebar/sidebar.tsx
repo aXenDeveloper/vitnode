@@ -3,29 +3,19 @@ import { Icon } from '@/components/icon/icon';
 import { LogoVitNode } from '@/components/logo-vitnode';
 import { LanguageSwitcher } from '@/components/switchers/language-switcher';
 import { ThemeSwitcher } from '@/components/switchers/theme-switcher';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import { Sidebar } from '@/components/ui/sidebar';
 import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
 } from '@/components/ui/sidebar-server';
+import { cn } from '@/helpers/classnames';
+import { CONFIG } from '@/helpers/config-with-env';
 import { Link } from '@/navigation';
-import { ChevronRight } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 
+import { ItemNavSidebarAdmin } from './item-nav';
 import { SearchSidebarAdmin } from './search/search';
 import { UserBarSidebarAdmin } from './user-bar';
 
@@ -103,8 +93,22 @@ export const SidebarAdmin = async () => {
   });
 
   return (
-    <Sidebar variant="inset">
-      <SidebarHeader className="flex-row items-center justify-between">
+    <Sidebar variant="sidebar">
+      <SidebarHeader
+        className={cn('relative flex-row items-center justify-between', {
+          'pt-3': CONFIG.node_development,
+        })}
+      >
+        {CONFIG.node_development && (
+          <div
+            className="absolute left-0 top-0 z-50 h-1 w-full"
+            style={{
+              backgroundImage:
+                'repeating-linear-gradient(-55deg,#000, #000 20px, #ffb103 20px, #feb100 40px)',
+            }}
+          />
+        )}
+
         <Link href="/admin/core/dashboard">
           <LogoVitNode className="h-8" small />
         </Link>
@@ -127,74 +131,11 @@ export const SidebarAdmin = async () => {
                 {t(`admin_${plugin.code}.nav.title`)}
               </SidebarGroupLabel>
 
-              <SidebarMenu>
-                {plugin.nav.map(item => {
-                  const textAndIcon = textsAndIcons.find(
-                    el => el.id === item.code && el.plugin_code === plugin.code,
-                  );
-                  if (!textAndIcon) return null;
-
-                  const button = (
-                    <SidebarMenuButton asChild>
-                      <Link href={`/admin/${plugin.code}/${item.code}`}>
-                        {textAndIcon.icon}
-                        <span>{textAndIcon.text}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  );
-
-                  if (!item.children?.length) {
-                    return (
-                      <SidebarMenuItem key={`${plugin.code}_${item.code}`}>
-                        {button}
-                      </SidebarMenuItem>
-                    );
-                  }
-
-                  return (
-                    <Collapsible asChild key={`${plugin.code}_${item.code}`}>
-                      <SidebarMenuItem>
-                        {button}
-                        <>
-                          <CollapsibleTrigger asChild>
-                            <SidebarMenuAction className="data-[state=open]:rotate-90">
-                              <ChevronRight />
-                              <span className="sr-only">
-                                {t('core.global.sidebar.toggle')}
-                              </span>
-                            </SidebarMenuAction>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <SidebarMenuSub>
-                              {item.children.map(child => {
-                                const textAndIcon = textsAndIcons.find(
-                                  el =>
-                                    el.id === `${item.code}_${child.code}` &&
-                                    el.plugin_code === plugin.code,
-                                );
-                                if (!textAndIcon) return null;
-                                const href = `/admin/${plugin.code}/${item.code}/${child.code}`;
-
-                                return (
-                                  <SidebarMenuSubItem
-                                    key={`${plugin.code}_${item.code}_${child.code}`}
-                                  >
-                                    <SidebarMenuSubButton asChild>
-                                      <Link href={href}>
-                                        <span>{textAndIcon.text}</span>
-                                      </Link>
-                                    </SidebarMenuSubButton>
-                                  </SidebarMenuSubItem>
-                                );
-                              })}
-                            </SidebarMenuSub>
-                          </CollapsibleContent>
-                        </>
-                      </SidebarMenuItem>
-                    </Collapsible>
-                  );
-                })}
-              </SidebarMenu>
+              <ItemNavSidebarAdmin
+                key={plugin.code}
+                plugin={plugin}
+                textsAndIcons={textsAndIcons}
+              />
             </SidebarGroup>
           );
         })}

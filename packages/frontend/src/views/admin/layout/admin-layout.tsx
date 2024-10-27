@@ -3,7 +3,6 @@ import { TranslationsProvider } from '@/components/translations-provider';
 import { Separator } from '@/components/ui/separator';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { SidebarInset } from '@/components/ui/sidebar-server';
-import { CONFIG } from '@/helpers/config-with-env';
 import { redirect } from '@/navigation';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
@@ -42,15 +41,6 @@ export const AdminLayout = async ({
     return (
       <TranslationsProvider namespaces="admin.global">
         <WrapperAdminLayout data={data}>
-          {CONFIG.node_development && (
-            <div
-              className="absolute left-0 top-0 z-50 h-1 w-full"
-              style={{
-                backgroundImage:
-                  'repeating-linear-gradient(-55deg,#000, #000 20px, #ffb103 20px, #feb100 40px)',
-              }}
-            />
-          )}
           <SidebarProvider>
             <SidebarAdmin />
             <SidebarInset>
@@ -62,9 +52,7 @@ export const AdminLayout = async ({
                 </div>
               </header>
 
-              <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-                {children}
-              </div>
+              <div className="p-4">{children}</div>
             </SidebarInset>
           </SidebarProvider>
         </WrapperAdminLayout>

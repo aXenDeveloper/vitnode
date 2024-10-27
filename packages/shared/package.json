@@ -11,7 +11,7 @@
     "directory": "packages/shared"
   },
   "scripts": {
-    "build": "tsc && swc src -d dist --config-file .swcrc",
+    "build:packages": "tsc && swc src -d dist --config-file .swcrc",
     "dev": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\"",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"

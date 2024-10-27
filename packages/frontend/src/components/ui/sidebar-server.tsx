@@ -3,6 +3,7 @@ import { Slot } from '@radix-ui/react-slot';
 import { cva, VariantProps } from 'class-variance-authority';
 
 import { Input } from './input';
+import { ScrollArea } from './scroll-area';
 import { Separator } from './separator';
 import { TooltipContentSidebarMenuButton } from './sidebar';
 import { Skeleton } from './skeleton';
@@ -39,7 +40,7 @@ const SidebarMenuSubButton = ({
     <Comp
       className={cn(
         'text-foreground ring-ring hover:bg-accent hover:text-accent-foreground active:bg-accent active:text-accent-foreground [&>svg]:text-accent-foreground flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0',
-        'data-[active=true]:bg-accent data-[active=true]:text-accent-foreground',
+        'data-[active=true]:bg-primary/10 data-[active=true]:text-primary text-muted-foreground transition-colors',
         size === 'sm' && 'text-xs',
         size === 'md' && 'text-sm',
         'group-data-[collapsible=icon]:hidden',
@@ -157,7 +158,7 @@ const SidebarMenuAction = ({
 };
 
 const sidebarMenuButtonVariants = cva(
-  'peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-ring transition-[width,height,padding] hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 active:bg-accent active:text-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-accent data-[active=true]:font-medium data-[active=true]:text-accent-foreground data-[state=open]:hover:bg-accent data-[state=open]:hover:text-accent-foreground group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0',
+  'peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-sm outline-none ring-ring transition-[width,height,padding] hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 active:bg-accent active:text-accent-foreground disabled:pointer-events-none disabled:opacity-50 group-has-[[data-sidebar=menu-action]]/menu-item:pr-8 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:bg-primary/10 data-[active=true]:font-medium data-[active=true]:text-primary data-[state=open]:hover:bg-accent data-[state=open]:hover:text-accent-foreground group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-2 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 text-muted-foreground transition-colors',
   {
     variants: {
       variant: {
@@ -242,7 +243,7 @@ const SidebarHeader = ({
 }: React.ComponentProps<'div'>) => {
   return (
     <div
-      className={cn('flex flex-col gap-2 p-2', className)}
+      className={cn('flex flex-col gap-2 px-3 py-2', className)}
       data-sidebar="header"
       {...props}
     />
@@ -255,7 +256,7 @@ const SidebarFooter = ({
 }: React.ComponentProps<'div'>) => {
   return (
     <div
-      className={cn('flex flex-col gap-2 p-2', className)}
+      className={cn('flex flex-col gap-2 px-2 py-3', className)}
       data-sidebar="footer"
       {...props}
     />
@@ -278,13 +279,10 @@ const SidebarSeparator = ({
 const SidebarContent = ({
   className,
   ...props
-}: React.ComponentProps<'div'>) => {
+}: React.ComponentProps<typeof ScrollArea>) => {
   return (
-    <div
-      className={cn(
-        'flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden',
-        className,
-      )}
+    <ScrollArea
+      className={cn('flex-1', className)}
       data-sidebar="content"
       {...props}
     />
@@ -294,7 +292,10 @@ const SidebarContent = ({
 const SidebarGroup = ({ className, ...props }: React.ComponentProps<'div'>) => {
   return (
     <div
-      className={cn('relative flex w-full min-w-0 flex-col p-2', className)}
+      className={cn(
+        'relative flex w-full min-w-0 flex-col px-3 py-2',
+        className,
+      )}
       data-sidebar="group"
       {...props}
     />
