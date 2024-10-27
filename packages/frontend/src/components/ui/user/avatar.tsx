@@ -1,4 +1,5 @@
 import { Img } from '@/components/img';
+import { AvatarUser as AvatarUserType } from 'vitnode-shared/user.dto';
 
 import { cn } from '../../../helpers/classnames';
 import { CONFIG } from '../../../helpers/config-with-env';
@@ -11,12 +12,12 @@ const generateLetterPhoto = (letter: string, color: string) =>
 export const AvatarUser = ({
   className,
   sizeInRem,
-  user: { avatar_color, name },
+  user: { avatar_color, name, avatar },
 }: {
   className?: string;
   sizeInRem: number;
   user: {
-    // avatar?: Pick<AvatarUserType, 'dir_folder' | 'file_name'>;
+    avatar?: Pick<AvatarUserType, 'dir_folder' | 'file_name'>;
     avatar_color: string;
     name: string;
     name_seo: string;
@@ -28,13 +29,12 @@ export const AvatarUser = ({
       className={cn('flex-shrink-0 rounded-full', className)}
       height={sizeInRem * 16}
       imageClassName="object-cover"
-      // priority={!avatar}
-      src={generateLetterPhoto(name.slice(0, 1), avatar_color)}
-      // src={
-      //   avatar
-      //     ? `${CONFIG.backend_public_url}/${avatar.dir_folder}/${avatar.file_name}`
-      //     : generateLetterPhoto(name.slice(0, 1), avatar_color)
-      // }
+      priority={!avatar}
+      src={
+        avatar
+          ? `${CONFIG.backend_public_url}/${avatar.dir_folder}/${avatar.file_name}`
+          : generateLetterPhoto(name.slice(0, 1), avatar_color)
+      }
       width={sizeInRem * 16}
     />
   );

@@ -19,7 +19,7 @@ import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
 export const AuthUserBar = ({
   className,
-  user: { email, name, name_seo, avatar_color },
+  user: { email, name, name_seo, avatar_color, avatar },
 }: {
   className?: string;
   user: UserWithDangerousInfo;
@@ -42,6 +42,7 @@ export const AuthUserBar = ({
               avatar_color,
               name,
               name_seo,
+              avatar,
             }}
           />
         </Button>

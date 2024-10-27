@@ -1,28 +1,23 @@
+import { getSessionAdminData } from '@/api/get-session-admin-data';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { HeaderContent } from '@/components/ui/header-content';
 import { CONFIG } from '@/helpers/config-with-env';
-import { Link } from '@/navigation';
-import { AlertTriangle, HammerIcon } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 
+import { WarnReqRestartServer } from '../warn-req-restart-server';
 import { Test } from './test';
 
 export const DashboardCoreAdminView = async () => {
-  const [
-    // {
-    //   admin__sessions__authorization: { version },
-    // },
-    t,
-  ] = await Promise.all([
-    // getSessionAdminData(),
+  const [{ version_of_vitnode }, t] = await Promise.all([
+    getSessionAdminData(),
     getTranslations('admin.global'),
   ]);
 
   return (
     <>
       <HeaderContent
-        desc={t('version', { version: '111' })}
+        desc={t('version', { version: version_of_vitnode })}
         h1={
           <>
             <span>VitNode</span>
@@ -51,7 +46,7 @@ export const DashboardCoreAdminView = async () => {
         )} */}
       </HeaderContent>
 
-      {/* <WarnReqRestartServer /> */}
+      <WarnReqRestartServer />
 
       <Test />
     </>

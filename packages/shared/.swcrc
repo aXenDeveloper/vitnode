@@ -3,7 +3,7 @@
   "jsc": {
     "baseUrl": "./",
     "paths": {
-      "@/*": ["./plugins/*"]
+      "@/*": ["./src/*"]
     },
     "parser": {
       "syntax": "typescript",

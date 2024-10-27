@@ -34,14 +34,14 @@ export class InternalAuthService {
     req: Request;
     res: Response;
   }): Promise<UserWithDangerousInfo> {
+    if (!req.headers['user-agent']) {
+      throw new HttpException('User agent not found', HttpStatus.BAD_REQUEST);
+    }
     const login_token = req.cookies[
       this.configService.getOrThrow('cookies.login_token.name')
     ] as string;
     const know_device_id: number | undefined =
       +req.cookies[this.configService.getOrThrow('cookies.known_device.name')];
-    if (!req.headers['user-agent']) {
-      throw new HttpException('User agent not found', HttpStatus.BAD_REQUEST);
-    }
     if (!login_token || !know_device_id) {
       throw new ForbiddenException();
     }

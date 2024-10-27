@@ -10,7 +10,7 @@ export const useMiddlewareData = () => {
 
   if (!hook) {
     throw new Error(
-      'useMiddlewareData must be used within a RootProviders componen!',
+      'useMiddlewareData must be used within a RootProviders component!',
     );
   }
 

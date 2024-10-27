@@ -13,9 +13,20 @@ export class GroupUser {
   name: StringLanguage[];
 }
 
+export class AvatarUser {
+  @ApiProperty()
+  dir_folder: string;
+
+  @ApiProperty()
+  file_name: string;
+
+  @ApiProperty()
+  id: number;
+}
+
 export class User {
-  // @ApiProperty()
-  // avatar: AvatarUser | null;
+  @ApiPropertyOptional()
+  avatar?: AvatarUser;
 
   @ApiProperty()
   avatar_color: string;

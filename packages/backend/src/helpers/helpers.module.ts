@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 
 import { DeviceAuthService } from './auth/device.service';
+import { InternalAuthAdminService } from './auth/internal_auth_admin.service';
 import { CaptchaHelper } from './captcha/captcha.service';
 import { EmailService } from './email/email.service';
 import { EmailHelpersService } from './email/email-helpers.service';
@@ -46,6 +47,10 @@ export class GlobalHelpersModule {
         StringLanguageHelper,
         CaptchaHelper,
         {
+          provide: 'IOAdminAuthGuards',
+          useClass: InternalAuthAdminService,
+        },
+        {
           provide: 'EmailHelpersService',
           useClass: EmailHelpersService,
         },
@@ -62,6 +67,7 @@ export class GlobalHelpersModule {
         CaptchaHelper,
         'EmailHelpersService',
         'IOAuthGuards',
+        'IOAdminAuthGuards',
         DeviceAuthService,
         UserHelper,
       ],

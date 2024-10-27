@@ -1,24 +1,24 @@
 import { LogoVitNode } from '@/components/logo-vitnode';
 import { LanguageSwitcher } from '@/components/switchers/language-switcher';
 import { ThemeSwitcher } from '@/components/switchers/theme-switcher';
-import { Sidebar, SidebarHeader } from '@/components/ui/sidebar';
-import { CONFIG } from '@/helpers/config-with-env';
+import { Sidebar } from '@/components/ui/sidebar';
+import {
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from '@/components/ui/sidebar-server';
 import { Link } from '@/navigation';
 
 import { SearchSidebarAdmin } from './search/search';
+import { UserBarSidebarAdmin } from './user-bar';
 
 export const SidebarAdmin = () => {
   return (
     <Sidebar variant="inset">
-      {/* {CONFIG.node_development && (
-        <div
-          className="absolute left-0 top-0 z-50 h-1 w-full"
-          style={{
-            backgroundImage:
-              'repeating-linear-gradient(-55deg,#000, #000 20px, #ffb103 20px, #feb100 40px)',
-          }}
-        />
-      )} */}
       <SidebarHeader className="flex-row items-center justify-between">
         <Link href="/admin/core/dashboard">
           <LogoVitNode className="h-8" small />
@@ -28,11 +28,22 @@ export const SidebarAdmin = () => {
           <LanguageSwitcher />
           <ThemeSwitcher />
 
-          <div>test</div>
+          <UserBarSidebarAdmin />
         </div>
       </SidebarHeader>
       <SearchSidebarAdmin />
-      test
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>test</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/admin/core/dashboard">Dashboard</Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+      </SidebarContent>
     </Sidebar>
   );
 };
