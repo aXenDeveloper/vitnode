@@ -1,18 +1,37 @@
 import { core_files } from '@/database/schema/files';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { eq, sum } from 'drizzle-orm';
+import { PermissionsStaffObjWithoutPluginName } from 'vitnode-shared/admin/staff.dto';
 import { User, UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
 @Injectable()
 export class UserHelper {
   constructor(private readonly databaseService: InternalDatabaseService) {}
 
+  async getUserAdminPermission({
+    user,
+  }: {
+    user: User;
+  }): Promise<PermissionsStaffObjWithoutPluginName[]> {
+    const admin =
+      await this.databaseService.db.query.core_admin_permissions.findFirst({
+        where: (table, { or, eq }) =>
+          or(eq(table.user_id, user.id), eq(table.group_id, user.group.id)),
+      });
+
+    if (!admin) {
+      throw new ForbiddenException();
+    }
+
+    return admin.permissions as PermissionsStaffObjWithoutPluginName[];
+  }
   // Overload signatures
   async getUserById(params: {
     id: number;
     withDangerousData: true;
   }): Promise<null | UserWithDangerousInfo>;
+
   async getUserById(params: {
     id: number;
     withDangerousData?: false | undefined;

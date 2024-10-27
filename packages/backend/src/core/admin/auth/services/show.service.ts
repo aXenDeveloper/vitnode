@@ -1,5 +1,6 @@
 import { type IOAuthGuards } from '@/guards/auth.guard';
 import { getConfigFile } from '@/helpers/config';
+import { UserHelper } from '@/helpers/user.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { existsSync } from 'fs';
@@ -7,10 +8,14 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { ShowAuthAdminObj } from 'vitnode-shared/admin/auth.dto';
 
+import { NavAuthAdminService } from './nav/nav.service';
+
 @Injectable()
 export class ShowAuthAdminService {
   constructor(
     @Inject('IOAdminAuthGuards') private readonly authService: IOAuthGuards,
+    private readonly userHelper: UserHelper,
+    private readonly navAdminService: NavAuthAdminService,
   ) {}
 
   private async getPackageJSON() {
@@ -43,6 +48,8 @@ export class ShowAuthAdminService {
       user,
       version_of_vitnode: packageJSON.version,
       restart_server: config.restart_server,
+      permissions: await this.userHelper.getUserAdminPermission({ user }),
+      nav: await this.navAdminService.nav({ user }),
     };
   }
 }

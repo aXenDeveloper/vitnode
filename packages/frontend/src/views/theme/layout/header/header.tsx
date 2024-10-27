@@ -38,9 +38,7 @@ export const Header = async ({ className }: { className?: string }) => {
 
         <div className="hidden items-center justify-center gap-4 sm:flex">
           {user ? (
-            <React.Suspense fallback={null}>
-              <AuthUserBar user={user} />
-            </React.Suspense>
+            <AuthUserBar user={user} />
           ) : (
             <>
               <Link

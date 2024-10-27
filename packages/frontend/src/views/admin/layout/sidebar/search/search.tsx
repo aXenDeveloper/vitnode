@@ -41,7 +41,7 @@ export const SearchSidebarAdmin = () => {
   }, 500);
 
   return (
-    <>
+    <div className="p-2">
       <button
         className="bg-secondary/50 text-muted-foreground hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2 rounded-lg border p-1.5 text-sm transition-colors max-md:hidden"
         data-search-full=""
@@ -69,6 +69,6 @@ export const SearchSidebarAdmin = () => {
           </CommandGroup>
         </CommandList>
       </CommandDialog>
-    </>
+    </div>
   );
 };

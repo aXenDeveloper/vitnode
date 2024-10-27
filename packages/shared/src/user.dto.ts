@@ -9,7 +9,7 @@ export class GroupUser {
   @ApiProperty()
   id: number;
 
-  @ApiProperty()
+  @ApiProperty({ type: [StringLanguage] })
   name: StringLanguage[];
 }
 
