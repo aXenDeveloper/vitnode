@@ -33,7 +33,7 @@ jobs:
         run: pnpm install
 
       - name: Build shared projects
-        run: pnpm build --filter=vitnode-shared --filter=shared
+        run: pnpm build --filter=vitnode-shared
 
       - name: Build Scripts
         run: pnpm build:scripts
