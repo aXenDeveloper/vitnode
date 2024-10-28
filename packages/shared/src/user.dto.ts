@@ -67,4 +67,7 @@ export class UserWithDangerousInfo extends User {
 
   @ApiProperty()
   files_permissions: FilesPermissionsCoreSessions;
+
+  @ApiProperty()
+  is_admin: boolean;
 }

@@ -23,6 +23,13 @@ export class ShowAuthObj {
 
 export class SignAuthObj extends OmitType(User, ['group'] as const) {}
 
+export class SignOutAuthBody {
+  @ApiPropertyOptional({ example: false })
+  @IsBoolean()
+  @IsOptional()
+  is_admin?: boolean;
+}
+
 export class SignUpAuthBody {
   @Transform(TransformString)
   @IsEmail()

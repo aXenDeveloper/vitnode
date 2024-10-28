@@ -13,19 +13,20 @@ import {
 import { AvatarUser } from '@/components/ui/user/avatar';
 import { cn } from '@/helpers/classnames';
 import { useSignOutApi } from '@/hooks/sign/out/use-sign-out-api';
-import { LogOutIcon } from 'lucide-react';
+import { Link } from '@/navigation';
+import { KeyRoundIcon, LogOutIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
 export const AuthUserBar = ({
   className,
-  user: { email, name, name_seo, avatar_color, avatar },
+  user: { email, name, name_seo, avatar_color, avatar, is_admin },
 }: {
   className?: string;
   user: UserWithDangerousInfo;
 }) => {
   const t = useTranslations('core.global.user-bar');
-  const { onSubmit } = useSignOutApi();
+  const { onSubmit } = useSignOutApi({});
 
   return (
     <DropdownMenu>
@@ -57,6 +58,23 @@ export const AuthUserBar = ({
             </p>
           </div>
         </DropdownMenuLabel>
+
+        {is_admin && (
+          <>
+            <DropdownMenuSeparator />
+
+            <DropdownMenuGroup>
+              {is_admin && (
+                <DropdownMenuItem asChild>
+                  <Link href="/admin" target="_blank">
+                    <KeyRoundIcon />
+                    <span>{t('admin_cp')}</span>
+                  </Link>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuGroup>
+          </>
+        )}
 
         <DropdownMenuSeparator />
 

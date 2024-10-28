@@ -9,6 +9,7 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarHeader,
+  SidebarMenu,
 } from '@/components/ui/sidebar-server';
 import { cn } from '@/helpers/classnames';
 import { CONFIG } from '@/helpers/config-with-env';
@@ -131,11 +132,16 @@ export const SidebarAdmin = async () => {
                 {t(`admin_${plugin.code}.nav.title`)}
               </SidebarGroupLabel>
 
-              <ItemNavSidebarAdmin
-                key={plugin.code}
-                plugin={plugin}
-                textsAndIcons={textsAndIcons}
-              />
+              <SidebarMenu>
+                {plugin.nav.map(item => (
+                  <ItemNavSidebarAdmin
+                    item={item}
+                    key={`${plugin.code}_${item.code}`}
+                    plugin_code={plugin.code}
+                    textsAndIcons={textsAndIcons}
+                  />
+                ))}
+              </SidebarMenu>
             </SidebarGroup>
           );
         })}

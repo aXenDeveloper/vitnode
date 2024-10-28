@@ -1,14 +1,15 @@
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
+import { SignOutAuthBody } from 'vitnode-shared/auth.dto';
 
 import { mutationApi } from './mutation-api';
 
-export const useSignOutApi = () => {
+export const useSignOutApi = (body: SignOutAuthBody) => {
   const t = useTranslations('core.global.errors');
 
   const onSubmit = async () => {
     try {
-      await mutationApi();
+      await mutationApi(body);
     } catch (e) {
       const { message } = e as Error;
       if (message === 'NEXT_REDIRECT') return;

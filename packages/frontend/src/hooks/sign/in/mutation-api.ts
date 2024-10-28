@@ -15,21 +15,21 @@ export const mutationApi = async (body: SignInAuthBody) => {
   });
 
   const cookie = await cookies();
-  if (!body.admin) {
-    const userIdFromCookie = cookie.get('vitnode-user-id')?.value;
-    if (userIdFromCookie) {
-      revalidateTags.session(+userIdFromCookie);
+  if (body.admin) {
+    const adminIdFromCookie = await getAdminIdCookie();
+    if (adminIdFromCookie) {
+      revalidateTags.sessionAdmin(+adminIdFromCookie);
     }
 
-    await redirect('/');
+    await redirect('/admin/core/dashboard');
 
     return;
   }
 
-  const adminIdFromCookie = await getAdminIdCookie();
-  if (adminIdFromCookie) {
-    revalidateTags.sessionAdmin(+adminIdFromCookie);
+  const userIdFromCookie = cookie.get('vitnode-user-id')?.value;
+  if (userIdFromCookie) {
+    revalidateTags.session(+userIdFromCookie);
   }
 
-  await redirect('/admin/core/dashboard');
+  await redirect('/');
 };

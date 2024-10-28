@@ -11,15 +11,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { AvatarUser } from '@/components/ui/user/avatar';
+import { useSignOutApi } from '@/hooks/sign/out/use-sign-out-api';
 import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { Link } from '@/navigation';
-import { HomeIcon } from 'lucide-react';
+import { HomeIcon, LogOut, SquareArrowOutUpRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 export const UserBarSidebarAdmin = () => {
   const t = useTranslations('admin.global');
+  const tCore = useTranslations('core.global');
   const { user } = useSessionAdmin();
   const { name, email } = user;
+  const { onSubmit } = useSignOutApi({ is_admin: true });
 
   return (
     <DropdownMenu>
@@ -71,6 +74,40 @@ export const UserBarSidebarAdmin = () => {
               </Link>
             </DropdownMenuItem>
           )} */}
+        </DropdownMenuGroup>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuGroup>
+          <DropdownMenuItem asChild>
+            <Link
+              href="https://vitnode.com/"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              VitNode
+              <SquareArrowOutUpRight />
+            </Link>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem asChild>
+            <Link
+              href="https://github.com/VitNode/vitnode"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              VitNode GitHub
+              <SquareArrowOutUpRight />
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuGroup>
+          <DropdownMenuItem onClick={onSubmit}>
+            <LogOut /> <span>{tCore('user-bar.log_out')}</span>
+          </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>

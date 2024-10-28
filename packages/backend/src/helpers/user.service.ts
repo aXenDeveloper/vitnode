@@ -109,9 +109,12 @@ export class UserHelper {
       return userReturnValues;
     }
 
-    return {
+    const data: UserWithDangerousInfo = {
       ...userReturnValues,
       email: user.email,
+      is_admin: await this.isAdmin({
+        user: userReturnValues,
+      }),
       files_permissions: {
         space_used: countStorageUsed,
         allow_upload: user.group.files_allow_upload,
@@ -123,5 +126,16 @@ export class UserHelper {
           : user.group.files_total_max_storage,
       },
     };
+
+    return data;
+  }
+
+  async isAdmin({ user }: { user: User }): Promise<boolean> {
+    return !!(await this.databaseService.db.query.core_admin_permissions.findFirst(
+      {
+        where: (table, { eq, or }) =>
+          or(eq(table.group_id, user.group.id), eq(table.user_id, user.id)),
+      },
+    ));
   }
 }

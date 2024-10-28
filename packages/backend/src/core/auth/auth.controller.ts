@@ -22,6 +22,7 @@ import {
   SignAuthObj,
   SignInAuthBody,
   SignInAuthObj,
+  SignOutAuthBody,
   SignUpAuthBody,
   VerifyConfirmEmailAuthBody,
 } from 'vitnode-shared/auth.dto';
@@ -73,8 +74,9 @@ export class AuthController {
   async signOut(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
+    @Body() body: SignOutAuthBody,
   ): Promise<void> {
-    await this.signOutService.signOut({ req, res });
+    await this.signOutService.signOut({ req, res, body });
   }
 
   @Post('sign_up')
