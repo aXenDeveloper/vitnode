@@ -1,6 +1,6 @@
 'use client';
 
-import { useBeforeUnload } from '@/helpers/use-before-unload';
+import { useBeforeUnload } from '@/hooks/use-before-unload';
 import * as LabelPrimitive from '@radix-ui/react-label';
 import { Slot } from '@radix-ui/react-slot';
 import { useTranslations } from 'next-intl';

@@ -1,5 +1,5 @@
 import { Body, Controller, Put } from '@nestjs/common';
-import { ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { MainSettingsAdminBody } from 'vitnode-shared/admin/settings.dto';
 
 import { EditMainSettingsAdminService } from './services/edit.main.service';
@@ -11,6 +11,9 @@ export class SettingsAdminController {
   constructor(private readonly editMainService: EditMainSettingsAdminService) {}
 
   @Put('/main')
+  @ApiOkResponse({
+    type: MainSettingsAdminBody,
+  })
   async editMainSettings(
     @Body() body: MainSettingsAdminBody,
   ): Promise<MainSettingsAdminBody> {

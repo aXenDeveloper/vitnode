@@ -26,6 +26,12 @@ export class LanguagesMiddleware {
 
   @ApiProperty()
   name: string;
+
+  @ApiProperty()
+  time_24: boolean;
+
+  @ApiProperty()
+  timezone: string;
 }
 
 export class CaptchaSecurityMiddleware {

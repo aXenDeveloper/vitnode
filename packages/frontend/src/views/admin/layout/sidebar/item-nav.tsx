@@ -47,7 +47,9 @@ export const ItemNavSidebarAdmin = ({
         setOpen(true);
       }}
     >
-      <Link href={href}>
+      <Link
+        href={item.children?.length ? `${href}/${item.children[0].code}` : href}
+      >
         {textAndIcon.icon}
         <span>{textAndIcon.text}</span>
       </Link>

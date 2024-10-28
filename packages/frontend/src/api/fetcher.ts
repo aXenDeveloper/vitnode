@@ -47,17 +47,35 @@ export const setCookieFromApi = ({ res }: { res: Response }) => {
   });
 };
 
+function buildFilteredQuery(params: Record<string, unknown>): string {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (
+      value !== undefined &&
+      value !== '' &&
+      !(Array.isArray(value) && value.length === 0)
+    ) {
+      searchParams.append(key, String(value));
+    }
+  });
+
+  return searchParams.toString();
+}
+
 export async function fetcher<
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters, @typescript-eslint/no-explicit-any
   TData extends Record<string, any>,
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters, @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   TVariable extends Record<string, any> = Record<string, any>,
 >({
   url,
   body,
+  query: queryFromArgs,
   ...options
 }: {
   body?: TVariable;
+  query?: TVariable;
   url: string;
 } & Omit<RequestInit, 'body'>): Promise<{
   data: TData;
@@ -77,8 +95,10 @@ export async function fetcher<
     'x-vitnode-user-language': cookie.get('NEXT_LOCALE')?.value ?? 'en',
   };
 
+  const query = queryFromArgs ? buildFilteredQuery(queryFromArgs) : '';
+  const href = `${CONFIG.backend_url}${url}${query ? `?${query}` : ''}`;
   const method = options?.method ?? 'GET';
-  const res = await fetch(`${CONFIG.backend_url}${url}`, {
+  const res = await fetch(href, {
     ...options,
     method,
     headers: {

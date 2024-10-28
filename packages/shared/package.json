@@ -11,25 +11,22 @@
     "directory": "packages/shared"
   },
   "scripts": {
-    "build:packages": "tsc && swc src -d dist --config-file .swcrc",
-    "dev": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\"",
+    "build:packages": "tsc",
+    "dev": "tsc -w",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
   "exports": {
     "./*": {
-      "require": "./dist/src/*.js",
-      "import": "./dist/src/*.js",
-      "types": "./dist/types/*.d.ts"
+      "require": "./dist/*.js",
+      "import": "./dist/*.js",
+      "types": "./dist/*.d.ts"
     }
   },
   "devDependencies": {
-    "@swc/cli": "^0.4.0",
-    "@swc/core": "^1.7.40",
     "@types/node": "^22.8.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
-    "concurrently": "^9.0.1",
     "eslint-config-typescript-vitnode": "workspace:*",
     "typescript": "^5.6.3"
   },

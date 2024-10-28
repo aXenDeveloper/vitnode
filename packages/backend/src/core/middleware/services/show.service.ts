@@ -50,6 +50,8 @@ export class ShowMiddlewareService {
           enabled: true,
           name: true,
           allow_in_input: true,
+          timezone: true,
+          time_24: true,
         },
       }),
     ]);

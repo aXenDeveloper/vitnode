@@ -18,7 +18,6 @@
     "next-intl": "3.23.1",
     "react": "19.0.0-rc-cae764ce-20241025",
     "react-dom": "19.0.0-rc-cae764ce-20241025",
-    "shared": "workspace:*",
     "vitnode-frontend": "workspace:*"
   },
   "devDependencies": {

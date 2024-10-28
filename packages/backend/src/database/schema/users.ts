@@ -12,7 +12,7 @@ export const core_users = pgTable(
     name: t.varchar({ length: 255 }).notNull().unique(),
     email: t.varchar({ length: 255 }).notNull().unique(),
     password: t.varchar().notNull(),
-    joined: t.timestamp().notNull().defaultNow(),
+    joined_at: t.timestamp().notNull().defaultNow(),
     newsletter: t.boolean().notNull().default(false),
     avatar_color: t.varchar({ length: 6 }).notNull(),
     email_verified: t.boolean().notNull().default(false),

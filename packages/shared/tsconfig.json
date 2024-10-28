@@ -4,10 +4,11 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "commonjs",
+    "moduleResolution": "Node",
     "outDir": "./dist",
-    "declarationDir": "./dist/types",
-    "emitDeclarationOnly": true,
     "rootDir": "./src",
+    "esModuleInterop": true,
+    "declaration": true,
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"
   },
   "include": ["src/**/*"]
