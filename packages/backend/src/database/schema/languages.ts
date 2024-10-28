@@ -16,11 +16,6 @@ export const core_languages = pgTable(
     time_24: t.boolean().notNull().default(false),
     locale: t.varchar({ length: 50 }).notNull().default('en'),
     allow_in_input: t.boolean().default(true).notNull(),
-    site_copyright: t
-      .varchar({
-        length: 255,
-      })
-      .default(''),
   }),
   table => ({
     code_idx: index('core_languages_code_idx').on(table.code),

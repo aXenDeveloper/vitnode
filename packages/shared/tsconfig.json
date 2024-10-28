@@ -7,9 +7,6 @@
     "outDir": "./dist",
     "declarationDir": "./dist/types",
     "emitDeclarationOnly": true,
-    "paths": {
-      "@/*": ["./src/*"]
-    },
     "rootDir": "./src",
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"
   },

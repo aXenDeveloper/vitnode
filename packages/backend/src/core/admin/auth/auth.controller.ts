@@ -8,11 +8,11 @@ import { ShowAuthAdminService } from './services/show.service';
 
 @ApiTags('Admin')
 @Controller('admin/auth')
+@ApiSecurity('admin')
 export class AuthAdminController {
   constructor(private readonly showService: ShowAuthAdminService) {}
 
   @Get()
-  @ApiSecurity('admin')
   @ApiOkResponse({
     type: ShowAuthAdminObj,
   })

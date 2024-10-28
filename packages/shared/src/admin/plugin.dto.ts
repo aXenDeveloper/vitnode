@@ -1,4 +1,3 @@
-import { TransformString } from '@/utils/text-language';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
@@ -9,6 +8,7 @@ import {
   MinLength,
 } from 'class-validator';
 
+import { TransformString } from '../utils/text-language';
 import { ItemNavAuthAdminObj } from './auth.dto';
 
 export class CreatePluginsAdminBody {

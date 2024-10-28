@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+import { MainSettingsAdminBody } from './admin/settings.dto';
 import { CaptchaTypeEnum } from './utils/global';
 
 export class AuthorizationMiddleware {
@@ -11,6 +12,9 @@ export class AuthorizationMiddleware {
 }
 
 export class LanguagesMiddleware {
+  @ApiProperty()
+  allow_in_input: boolean;
+
   @ApiProperty()
   code: string;
 
@@ -37,7 +41,7 @@ export class SecurityMiddleware {
   captcha: CaptchaSecurityMiddleware;
 }
 
-export class ShowMiddlewareObj {
+export class ShowMiddlewareObj extends MainSettingsAdminBody {
   @ApiProperty()
   authorization: AuthorizationMiddleware;
 
@@ -58,10 +62,4 @@ export class ShowMiddlewareObj {
 
   @ApiProperty()
   security: SecurityMiddleware;
-
-  @ApiProperty()
-  site_name: string;
-
-  @ApiProperty()
-  site_short_name: string;
 }

@@ -1,5 +1,6 @@
-import { StringLanguage } from '@/string-language.dto';
 import { registerDecorator } from 'class-validator';
+
+import { StringLanguage } from '../string-language.dto';
 
 export const MaxLengthLanguageInput = ({ length }: { length: number }) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

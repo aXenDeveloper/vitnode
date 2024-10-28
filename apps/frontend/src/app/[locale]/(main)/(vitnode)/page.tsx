@@ -2,9 +2,9 @@
 // ! If you remove this then default page plugin will not work
 import React from 'react';
 import { getMiddlewareData } from 'vitnode-frontend/api/get-middleware-data';
-// import { generateMetadataDefaultPage } from 'vitnode-frontend/views/theme/views/default-page';
+import { generateMetadataDefaultPage } from 'vitnode-frontend/views/theme/views/default-page';
 
-// export const generateMetadata = generateMetadataDefaultPage;
+export const generateMetadata = generateMetadataDefaultPage;
 
 export default async function Page() {
   const { plugin_code_default } = await getMiddlewareData();

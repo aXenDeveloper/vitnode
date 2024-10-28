@@ -30,14 +30,14 @@ export const ItemNavSidebarAdmin = ({
   plugin_code: string;
   textsAndIcons: TextAndIconsAsideAdmin[];
 }) => {
-  const [open, setOpen] = React.useState(false);
-  const t = useTranslations();
   const pathname = usePathname();
+  const href = `/admin/${plugin_code}/${item.code}`;
+  const [open, setOpen] = React.useState(pathname.startsWith(href));
+  const t = useTranslations();
   const textAndIcon = textsAndIcons.find(
     el => el.id === item.code && el.plugin_code === plugin_code,
   );
   if (!textAndIcon) return null;
-  const href = `/admin/${plugin_code}/${item.code}`;
 
   const button = (
     <SidebarMenuButton

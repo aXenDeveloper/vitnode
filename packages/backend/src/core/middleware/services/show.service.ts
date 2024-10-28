@@ -24,9 +24,9 @@ export class ShowMiddlewareService {
           lang,
           'manifest.webmanifest',
         );
-        const manifest = JSON.parse(
+        const manifest: ManifestWithLang = JSON.parse(
           await readFile(path, 'utf8'),
-        ) as ManifestWithLang;
+        );
 
         return manifest;
       }),
@@ -49,6 +49,7 @@ export class ShowMiddlewareService {
           default: true,
           enabled: true,
           name: true,
+          allow_in_input: true,
         },
       }),
     ]);
@@ -57,6 +58,9 @@ export class ShowMiddlewareService {
     if (!plugin_code_default) {
       throw new InternalServerErrorException('Plugin not found');
     }
+    const manifest = await this.getManifest({
+      langCodes: langs.map(lang => lang.code),
+    });
 
     return {
       languages: langs,
@@ -76,6 +80,11 @@ export class ShowMiddlewareService {
         },
       },
       plugin_code_default,
+      site_description: manifest.map(item => ({
+        language_code: item.lang,
+        value: item.description,
+      })),
+      contact_email: config.settings.main.contact_email,
     };
   }
 }

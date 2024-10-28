@@ -1,6 +1,6 @@
-import { UserWithDangerousInfo } from '@/user.dto';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+import { UserWithDangerousInfo } from '../user.dto';
 import { PermissionsStaffObjWithoutPluginName } from './staff.dto';
 
 export class ItemNavAuthAdminObj {
