@@ -1,26 +1,23 @@
-import { AutoForm } from '@/components/form/auto-form';
-import { AutoFormCheckbox } from '@/components/form/fields/checkbox';
-import { AutoFormInput } from '@/components/form/fields/input';
 import { useDialog } from '@/components/ui/dialog';
 import { nameRegex } from '@/hooks/sign/up/use-sign-up-view';
+import { useCaptcha } from '@/hooks/use-captcha';
 import { useTranslations } from 'next-intl';
+import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
-import { UserMembersAdmin } from 'vitnode-shared/admin/members/users.dto';
 import * as z from 'zod';
 
 import { mutationApi } from './mutation-api';
 
-export const EditActionUserMembersAdmin = ({
-  name,
-  email,
-  newsletter,
-  id,
-}: Pick<UserMembersAdmin, 'email' | 'id' | 'name' | 'newsletter'>) => {
-  const t = useTranslations('admin.members.users.item.edit');
+export const useCreateUserAdmin = () => {
+  const t = useTranslations('admin.members.users.create');
   const tSignUp = useTranslations('core.sign_up');
   const tCore = useTranslations('core.global.errors');
+  const [values, setValues] = React.useState<
+    Partial<z.infer<typeof formSchema>>
+  >({});
   const { setOpen } = useDialog();
+  const { getTokenFromCaptcha, isReady } = useCaptcha();
 
   const formSchema = z.object({
     name: z
@@ -34,24 +31,38 @@ export const EditActionUserMembersAdmin = ({
       .refine(value => nameRegex.test(value), {
         message: tSignUp('name.invalid'),
       })
-      .default(name),
+      .default(''),
     email: z
       .string()
       .email({
         message: tSignUp('email_invalid'),
       })
-      .default(email),
-    newsletter: z.boolean().default(newsletter).optional(),
+      .default(''),
+    password: z
+      .string()
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+{};:,<.>]).{8,}$/,
+      )
+      .default(''),
   });
 
   const onSubmit = async (
     values: z.infer<typeof formSchema>,
     form: UseFormReturn<z.infer<typeof formSchema>>,
   ) => {
+    const token = await getTokenFromCaptcha();
+    if (!token) {
+      toast.error(tCore('title'), {
+        description: tCore('captcha_empty'),
+      });
+
+      return;
+    }
+
     try {
       await mutationApi({
-        id,
         ...values,
+        token,
       });
 
       setOpen?.(false);
@@ -61,9 +72,29 @@ export const EditActionUserMembersAdmin = ({
     } catch (e) {
       const error = e as Error;
       if (error.message.includes('EMAIL_ALREADY_EXISTS')) {
-        form.setError('email', {
-          message: tSignUp('email.already_exists'),
-        });
+        form.setError(
+          'email',
+          {
+            type: 'manual',
+            message: tSignUp('email.already_exists'),
+          },
+          {
+            shouldFocus: true,
+          },
+        );
+
+        return;
+      } else if (error.message.includes('NAME_ALREADY_EXISTS')) {
+        form.setError(
+          'name',
+          {
+            type: 'manual',
+            message: tSignUp('name.already_exists'),
+          },
+          {
+            shouldFocus: true,
+          },
+        );
 
         return;
       }
@@ -72,36 +103,7 @@ export const EditActionUserMembersAdmin = ({
         description: tCore('internal_server_error'),
       });
     }
-
-    // const mutation = await mutationApi({
-    //   id,
-    //   ...values,
-    //   newsletter: values.newsletter ?? false,
-    // });
   };
 
-  return (
-    <AutoForm
-      fields={[
-        {
-          id: 'name',
-          component: AutoFormInput,
-          description: tSignUp('name.desc'),
-        },
-        {
-          id: 'email',
-          component: props => <AutoFormInput {...props} type="email" />,
-          label: tSignUp('email.label'),
-        },
-        {
-          id: 'newsletter',
-          label: tSignUp('newsletter.label'),
-          description: tSignUp('newsletter.desc'),
-          component: AutoFormCheckbox,
-        },
-      ]}
-      formSchema={formSchema}
-      onSubmit={onSubmit}
-    />
-  );
+  return { formSchema, onSubmit, values, setValues, isReady };
 };

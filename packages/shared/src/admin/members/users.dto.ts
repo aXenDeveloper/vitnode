@@ -1,12 +1,24 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  IsBoolean,
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
+import { nameRegex } from '../../auth.dto';
 import { User } from '../../user.dto';
 import {
   PageInfoObj,
   PaginationQuery,
   SortByPaginationBody,
 } from '../../utils/pagination.dto';
+import { TransformString } from '../../utils/text-language';
 import { ColumnsSortDirectionEnum } from './users.enum';
 
 class SortedByUsersMembersAdminBody extends SortByPaginationBody {
@@ -50,4 +62,23 @@ export class UserMembersAdmin extends User {
 export class UsersMembersAdminObj extends PageInfoObj {
   @ApiProperty({ type: [UserMembersAdmin] })
   edges: UserMembersAdmin[];
+}
+
+export class EditUserMembersAdminBody {
+  @Transform(TransformString)
+  @IsEmail()
+  @ApiProperty({ example: 'test@test.com' })
+  email: string;
+
+  @Transform(TransformString)
+  @MinLength(3)
+  @MaxLength(32)
+  @Matches(nameRegex)
+  @ApiProperty({ example: 'aXen' })
+  name: string;
+
+  @ApiPropertyOptional({ example: false })
+  @IsBoolean()
+  @IsOptional()
+  newsletter?: boolean;
 }

@@ -1,17 +1,13 @@
 'use server';
 
-export const mutationApi = async () => {
-  // try {
-  //   await fetcher<
-  //     Admin__Core_Members__DeleteMutation,
-  //     Admin__Core_Members__DeleteMutationVariables
-  //   >({
-  //     query: Admin__Core_Members__Delete,
-  //     variables,
-  //   });
-  //   revalidatePath('/', 'layout');
-  // } catch (error) {
-  //   const e = error as Error;
-  //   return { error: e.message };
-  // }
+import { fetcher } from '@/api/fetcher';
+import { revalidatePath } from 'next/cache';
+
+export const mutationApi = async (id: number) => {
+  await fetcher({
+    url: `/admin/members/users/${id}`,
+    method: 'DELETE',
+  });
+
+  revalidatePath('/', 'layout');
 };

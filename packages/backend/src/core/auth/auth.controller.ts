@@ -47,6 +47,7 @@ export class AuthController {
   @Get()
   @ApiOkResponse({
     type: ShowAuthObj,
+    description: 'Show auth',
   })
   async show(
     @Req() req: Request,
@@ -58,6 +59,7 @@ export class AuthController {
   @Post('sign_in')
   @ApiCreatedResponse({
     type: SignInAuthObj,
+    description: 'Sign in user',
   })
   async signIn(
     @Req() req: Request,
@@ -69,7 +71,9 @@ export class AuthController {
 
   @Delete('sign_out')
   @ApiSecurity('')
-  @ApiOkResponse()
+  @ApiOkResponse({
+    description: 'Sign out user',
+  })
   @UseGuards(AuthGuard)
   async signOut(
     @Req() req: Request,
@@ -82,6 +86,7 @@ export class AuthController {
   @Post('sign_up')
   @ApiCreatedResponse({
     type: SignAuthObj,
+    description: 'Sign up user',
   })
   async signUp(
     @Req() req: Request,
@@ -91,7 +96,9 @@ export class AuthController {
   }
 
   @Get('verify_confirm_email')
-  @ApiOkResponse()
+  @ApiOkResponse({
+    description: 'Verify confirm email',
+  })
   async verifyConfirmEmail(
     @Body() body: VerifyConfirmEmailAuthBody,
   ): Promise<void> {

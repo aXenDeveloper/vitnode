@@ -44,6 +44,8 @@ export class SignUpAuthBody {
   name: string;
 
   @ApiPropertyOptional({ example: false })
+  @IsBoolean()
+  @IsOptional()
   newsletter?: boolean;
 
   @IsStrongPassword({

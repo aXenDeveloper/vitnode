@@ -12,6 +12,7 @@ import {
 } from 'vitnode-shared/admin/members/users.dto';
 import { ColumnsSortDirectionEnum } from 'vitnode-shared/admin/members/users.enum';
 
+import { CreateUserUsersMembersAdmin } from '../create/create';
 import { TableUsersMembersAdmin } from './table';
 
 interface SearchParams extends SearchParamsPagination {
@@ -63,7 +64,7 @@ export const UsersMembersAdminView = async ({
   return (
     <>
       <HeaderContent desc={t('desc')} h1={t('title')}>
-        {/* <CreateUserUsersMembersAdmin /> */}
+        <CreateUserUsersMembersAdmin />
       </HeaderContent>
 
       <TableUsersMembersAdmin {...data} />

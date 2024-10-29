@@ -5,7 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
+import { User, UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
 export interface IOAuthGuards {
   authorization: (context: {
@@ -19,7 +19,11 @@ export class AuthGuard implements CanActivate {
   constructor(@Inject('IOAuthGuards') private readonly service: IOAuthGuards) {}
 
   protected async getAuth(context: { req: Request; res: Response }) {
-    return await this.service.authorization(context);
+    const data = await this.service.authorization(context);
+
+    (context.req as { user: User } & Request).user = data;
+
+    return data;
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

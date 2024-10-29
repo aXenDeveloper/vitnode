@@ -21,7 +21,7 @@ export const DeleteActionUserMembersAdmin = ({
 
   const onSubmit = async () => {
     try {
-      await mutationApi();
+      await mutationApi(id);
 
       setOpen(false);
       push('/admin/members/users');

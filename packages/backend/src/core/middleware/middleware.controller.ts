@@ -12,6 +12,7 @@ export class MiddlewareController {
   @Get()
   @ApiOkResponse({
     type: ShowMiddlewareObj,
+    description: 'Show middleware',
   })
   async show(): Promise<ShowMiddlewareObj> {
     return this.showService.show();

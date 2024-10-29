@@ -10,7 +10,7 @@ export const ConfirmEmailActionUserMembersAdmin = ({ id }: { id: number }) => {
 
   const onSubmit = async () => {
     try {
-      await mutationApi();
+      await mutationApi(id);
       toast.success(t('success'));
     } catch (_) {
       toast.error(tError('title'), {
