@@ -39,7 +39,7 @@ pnpm create vitnode-app@latest
 
 | 🛠️ Software | Minimum | Recommended |
 | :---------- | :------ | :---------- |
-| Node.js     | 20      | 20          |
+| Node.js     | 20      | 22          |
 | PostgreSQL  | 14      | 16          |
 
 | 🖥️ Hardware | Minimum        | Development    |
