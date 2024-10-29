@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  IsArray,
   IsBoolean,
   IsEmail,
   IsEnum,
@@ -13,36 +14,35 @@ import {
 
 import { nameRegex } from '../../auth.dto';
 import { User } from '../../user.dto';
-import {
-  PageInfoObj,
-  PaginationQuery,
-  SortByPaginationBody,
-} from '../../utils/pagination.dto';
+import { PageInfoObj, PaginationQuery } from '../../utils/pagination.dto';
+import { SortDirectionEnum } from '../../utils/pagination.enum';
 import { TransformString } from '../../utils/text-language';
-import { ColumnsSortDirectionEnum } from './users.enum';
-
-class SortedByUsersMembersAdminBody extends SortByPaginationBody {
-  @ApiPropertyOptional({
-    enum: ColumnsSortDirectionEnum,
-    name: 'ColumnsSortDirectionEnum',
-  })
-  @IsEnum(ColumnsSortDirectionEnum)
-  @IsOptional()
-  column?: ColumnsSortDirectionEnum;
-}
+import { ColumnsSortUsersMembersAdminEnum } from './users.enum';
 
 export class UsersMembersAdminQuery extends PaginationQuery {
   @ApiPropertyOptional({ type: [Number] })
+  @Transform(({ value }) => value.split(','))
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   groups?: number[];
 
   @ApiPropertyOptional()
   @IsOptional()
   search?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    enum: ColumnsSortUsersMembersAdminEnum,
+    name: 'ColumnsSortUsersMembersAdminEnum',
+  })
+  @IsEnum(ColumnsSortUsersMembersAdminEnum)
   @IsOptional()
-  sortBy?: SortedByUsersMembersAdminBody;
+  sortBy?: ColumnsSortUsersMembersAdminEnum;
+
+  @ApiPropertyOptional({ enum: SortDirectionEnum, name: 'SortDirectionEnum' })
+  @IsEnum(SortDirectionEnum)
+  @IsOptional()
+  sortDirection?: SortDirectionEnum;
 }
 
 export class UserMembersAdmin extends User {

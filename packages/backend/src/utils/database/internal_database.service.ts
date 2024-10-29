@@ -103,6 +103,7 @@ export class InternalDatabaseService<
     last,
     primaryCursor = 'id',
     sortBy,
+    sortDirection,
     where: whereInput,
     query,
   }: {
@@ -120,18 +121,16 @@ export class InternalDatabaseService<
       orderBy: SQL;
       where?: SQL;
     }) => Promise<Y[]>;
-    sortBy?: {
-      column?: string;
-      direction?: SortDirectionEnum;
-    };
+    sortBy?: string;
+    sortDirection?: SortDirectionEnum;
     where?: SQL;
   }) {
     const currentSortBy: {
       column: keyof T['columns'];
       direction: SortDirectionEnum;
     } = {
-      column: sortBy?.column ?? defaultSortBy.column,
-      direction: sortBy?.direction ?? defaultSortBy.direction,
+      column: sortBy ?? defaultSortBy.column,
+      direction: sortDirection ?? defaultSortBy.direction,
     };
 
     const fn = last

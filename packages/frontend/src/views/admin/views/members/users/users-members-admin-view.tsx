@@ -10,13 +10,13 @@ import {
   UsersMembersAdminObj,
   UsersMembersAdminQuery,
 } from 'vitnode-shared/admin/members/users.dto';
-import { ColumnsSortDirectionEnum } from 'vitnode-shared/admin/members/users.enum';
+import { ColumnsSortUsersMembersAdminEnum } from 'vitnode-shared/admin/members/users.enum';
 
 import { CreateUserUsersMembersAdmin } from '../create/create';
 import { TableUsersMembersAdmin } from './table';
 
 interface SearchParams extends SearchParamsPagination {
-  groups?: string[];
+  group_id?: string | string[];
 }
 
 export interface UsersMembersAdminViewProps {
@@ -44,16 +44,20 @@ export const generateMetadataUsersMembersAdmin =
 export const UsersMembersAdminView = async ({
   searchParams,
 }: UsersMembersAdminViewProps) => {
-  const { groups } = await searchParams;
+  const { group_id } = await searchParams;
   const variables = await getPaginationTool({
     searchParams,
     defaultPageSize: 10,
-    columnsSortByEnum: ColumnsSortDirectionEnum,
+    columnsSortByEnum: ColumnsSortUsersMembersAdminEnum,
   });
 
   const query: UsersMembersAdminQuery = {
     ...variables,
-    groups: Array.isArray(groups) ? groups.map(group => Number(group)) : [],
+    groups: Array.isArray(group_id)
+      ? group_id.map(group => +group)
+      : group_id
+        ? [+group_id]
+        : [],
   };
 
   const [t, data] = await Promise.all([

@@ -75,6 +75,23 @@ const init = async () => {
   process.exit(0);
 };
 
+const db = async () => {
+  console.log(`${initConsole} [1/2] Generating database migrations...`);
+  await generateDatabaseMigrations();
+
+  console.log(
+    `${initConsole} [2/2] Create tables in database using migrations...`,
+  );
+  await runMigrations();
+
+  console.log(`${initConsole} ✅ Project setup complete.`);
+  process.exit(0);
+};
+
 if (process.argv[2] === 'init') {
   void init();
+}
+
+if (process.argv[2] === 'db') {
+  void db();
 }

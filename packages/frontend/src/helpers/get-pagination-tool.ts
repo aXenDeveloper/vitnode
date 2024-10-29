@@ -22,10 +22,15 @@ export async function getPaginationTool({
   cursor?: number;
   first: number;
   last: number;
-  sortBy?: { column?: never; direction?: SortDirectionEnum };
+  sortBy?: never;
+  sortDirection?: SortDirectionEnum;
 }> {
   const searchParams = await searchParamsPromise;
 
+  const sortBy = getGetSortByParamsAPI({
+    constEnum: columnsSortByEnum,
+    searchParams,
+  });
   const pagination = {
     first: Number(searchParams?.last ?? 0)
       ? null
@@ -33,10 +38,8 @@ export async function getPaginationTool({
     last: Number(searchParams?.last ?? 0),
     cursor: Number(searchParams?.cursor) || undefined,
     search: searchParams?.search ?? '',
-    sortBy: getGetSortByParamsAPI({
-      constEnum: columnsSortByEnum,
-      searchParams,
-    }),
+    sortBy: sortBy?.column,
+    sortDirection: sortBy?.direction,
   };
 
   return {

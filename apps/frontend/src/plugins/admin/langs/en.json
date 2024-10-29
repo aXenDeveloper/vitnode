@@ -562,6 +562,7 @@
       },
       "groups": {
         "title": "Groups",
+        "desc": "Manage groups on your website.",
         "name": "Name",
         "updated": "Updated",
         "search_placeholder": "Search by name...",

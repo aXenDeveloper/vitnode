@@ -23,6 +23,7 @@ export class GetUsersMembersAdminService {
     sortBy,
     search,
     groups,
+    sortDirection,
   }: UsersMembersAdminQuery): Promise<UsersMembersAdminObj> {
     let where: SQL | undefined;
 
@@ -48,6 +49,7 @@ export class GetUsersMembersAdminService {
         column: 'joined_at',
       },
       sortBy,
+      sortDirection,
       where,
       query: async args =>
         await this.databaseService.db.query.core_users.findMany({

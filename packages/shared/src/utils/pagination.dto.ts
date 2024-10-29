@@ -1,14 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsEnum, IsNumber, IsOptional } from 'class-validator';
-
-import { SortDirectionEnum } from './pagination.enum';
-
-export class SortByPaginationBody {
-  @ApiPropertyOptional({ enum: SortDirectionEnum, name: 'SortDirectionEnum' })
-  @IsEnum(SortDirectionEnum)
-  direction?: SortDirectionEnum;
-}
+import { IsNumber, IsOptional } from 'class-validator';
 
 export class PageInfo {
   @ApiProperty({ example: 0 })

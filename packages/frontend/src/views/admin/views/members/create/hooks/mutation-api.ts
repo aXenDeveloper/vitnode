@@ -18,5 +18,5 @@ export const mutationApi = async (
     },
   });
 
-  revalidatePath('/[locale]/admin/(auth)/members/users', 'page');
+  revalidatePath('/[locale]/admin/(auth)/(vitnode)/members/users', 'page');
 };

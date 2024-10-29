@@ -109,6 +109,14 @@ export function DataTable<T extends TMin>({
                       const content =
                         column.cell?.({ row, allData: data }) ?? cell;
 
+                      if (content === null || content === undefined) {
+                        return (
+                          <TableCell
+                            key={`${column.id.toString()}_${row.id}`}
+                          ></TableCell>
+                        );
+                      }
+
                       return (
                         <TableCell key={`${column.id.toString()}_${row.id}`}>
                           {column.id.toString() === 'actions' ? (
