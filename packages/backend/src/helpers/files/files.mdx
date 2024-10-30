@@ -1,0 +1,42 @@
+```ts
+   @Post()
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'List of cats',
+    type: FileUploadDto,
+  })
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'avatar' },
+      { name: 'background', maxCount: 1 },
+    ]),
+  )
+  uploadFile(
+    @UploadedFiles(
+      new FilesValidationPipe({
+        avatar: { maxSize: 279458000, acceptMimeType: [] },
+      }),
+    )
+    files: {
+      avatar?: Express.Multer.File[];
+      background?: Express.Multer.File[];
+    },
+  ) {
+    console.log('files', files);
+
+    return 'test';
+  }
+```
+
+```ts
+class FileUploadDto {
+  @ApiPropertyOptional({
+    type: 'array',
+    items: { type: 'string', format: 'binary' },
+  })
+  avatar: Express.Multer.File[];
+
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  background: Express.Multer.File;
+}
+```

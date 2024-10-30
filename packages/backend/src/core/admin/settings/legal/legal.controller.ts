@@ -1,7 +1,8 @@
 import { AdminAuthGuard } from '@/guards/admin-auth.guard';
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
-import { ApiOkResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
-import { CreateLegalBody, Legal } from 'vitnode-shared/legal.dto';
+import { ApiCreatedResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { CreateLegalSettingsAdminBody } from 'vitnode-shared/admin/settings/legal.dto';
+import { Legal } from 'vitnode-shared/legal.dto';
 
 import { CreateLegalSettingsAdminService } from './services/create.service';
 
@@ -15,11 +16,11 @@ export class LegalSettingsAdminController {
   ) {}
 
   @Post()
-  @ApiOkResponse({
+  @ApiCreatedResponse({
     type: Legal,
     description: 'Create legal',
   })
-  async create(@Body() body: CreateLegalBody): Promise<Legal> {
+  async create(@Body() body: CreateLegalSettingsAdminBody): Promise<Legal> {
     return await this.createService.create(body);
   }
 }

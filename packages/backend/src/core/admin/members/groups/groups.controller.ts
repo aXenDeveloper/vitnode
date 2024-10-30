@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
+  ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiSecurity,
@@ -41,7 +42,7 @@ export class GroupsMembersAdminController {
   ) {}
 
   @Post()
-  @ApiOkResponse({
+  @ApiCreatedResponse({
     description: 'Create group',
     type: GroupMembersAdmin,
   })

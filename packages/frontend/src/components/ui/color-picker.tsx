@@ -1,6 +1,6 @@
 'use client';
 
-import { ContentColor } from '@/helpers/color/content-color';
+import { ContentColor } from '@/components/helpers/color/content-color';
 import { getHSLFromString, isColorBrightness } from '@/helpers/colors';
 import { RemoveFormatting } from 'lucide-react';
 import { useTranslations } from 'next-intl';

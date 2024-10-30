@@ -1,7 +1,4 @@
-import { relations } from 'drizzle-orm';
 import { pgTable } from 'drizzle-orm/pg-core';
-
-import { core_languages_words } from './languages';
 
 export const core_groups = pgTable('core_groups', t => ({
   id: t.serial().primaryKey(),

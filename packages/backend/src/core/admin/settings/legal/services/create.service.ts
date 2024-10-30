@@ -3,7 +3,8 @@ import { removeSpecialCharacters } from '@/functions';
 import { StringLanguageHelper } from '@/helpers/string_language/helpers.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { ConflictException, Injectable } from '@nestjs/common';
-import { CreateLegalBody, Legal } from 'vitnode-shared/legal.dto';
+import { CreateLegalSettingsAdminBody } from 'vitnode-shared/admin/settings/legal.dto';
+import { Legal } from 'vitnode-shared/legal.dto';
 
 @Injectable()
 export class CreateLegalSettingsAdminService {
@@ -17,7 +18,7 @@ export class CreateLegalSettingsAdminService {
     content,
     href,
     code,
-  }: CreateLegalBody): Promise<Legal> {
+  }: CreateLegalSettingsAdminBody): Promise<Legal> {
     const termExist = await this.databaseService.db.query.core_legal.findFirst({
       where: (table, { eq }) => eq(table.code, code),
     });

@@ -24,6 +24,7 @@
     }
   },
   "devDependencies": {
+    "@types/multer": "^1.4.12",
     "@types/node": "^22.8.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",

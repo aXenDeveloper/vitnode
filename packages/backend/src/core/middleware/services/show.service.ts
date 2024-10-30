@@ -1,5 +1,6 @@
 import { ABSOLUTE_PATHS } from '@/app.module';
 import { getConfigFile } from '@/helpers/config';
+import { EmailService } from '@/helpers/email/email.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { readFile } from 'fs/promises';
@@ -9,7 +10,10 @@ import { ShowMiddlewareObj } from 'vitnode-shared/middleware.dto';
 
 @Injectable()
 export class ShowMiddlewareService {
-  constructor(private readonly databaseService: InternalDatabaseService) {}
+  constructor(
+    private readonly databaseService: InternalDatabaseService,
+    private readonly mailService: EmailService,
+  ) {}
 
   protected async getManifest({
     langCodes,
@@ -72,7 +76,7 @@ export class ShowMiddlewareService {
       },
       plugins: ['admin', 'core', ...plugins.map(plugin => plugin.code)],
       languages_code_default: langs.find(lang => lang.default)?.code ?? 'en',
-      is_email_enabled: false, // TODO: Add email service
+      is_email_enabled: this.mailService.checkIfEnable(),
       is_ai_enabled: false, // TODO: Add AI service
       site_name: config.settings.main.site_name,
       site_short_name: config.settings.main.site_short_name,

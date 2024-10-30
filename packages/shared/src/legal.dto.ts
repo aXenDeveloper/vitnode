@@ -4,27 +4,6 @@ import { ArrayMinSize, IsArray, IsOptional, IsString } from 'class-validator';
 import { StringLanguage } from './string-language.dto';
 import { PageInfoObj, PaginationQuery } from './utils/pagination.dto';
 
-export class CreateLegalBody {
-  @ApiProperty()
-  @IsString()
-  code: string;
-
-  @ApiProperty({ type: [StringLanguage] })
-  @IsArray()
-  @ArrayMinSize(1)
-  content: StringLanguage[];
-
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  href?: string;
-
-  @ApiProperty({ type: [StringLanguage] })
-  @IsArray()
-  @ArrayMinSize(1)
-  title: StringLanguage[];
-}
-
 export class LegalsQuery extends PaginationQuery {}
 
 export class Legal {
