@@ -71,6 +71,7 @@ export class ShowMiddlewareService {
         lock_register: config.settings.authorization.lock_register,
       },
       plugins: ['admin', 'core', ...plugins.map(plugin => plugin.code)],
+      languages_code_default: langs.find(lang => lang.default)?.code ?? 'en',
       is_email_enabled: false, // TODO: Add email service
       is_ai_enabled: false, // TODO: Add AI service
       site_name: config.settings.main.site_name,
@@ -80,6 +81,12 @@ export class ShowMiddlewareService {
           site_key: config.security.captcha.site_key,
           type: config.security.captcha.type,
         },
+      },
+      editor: {
+        files: {
+          allow_type: config.editor.files.allow_type,
+        },
+        sticky: config.editor.sticky,
       },
       plugin_code_default,
       site_description: manifest.map(item => ({

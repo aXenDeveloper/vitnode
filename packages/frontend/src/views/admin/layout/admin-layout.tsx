@@ -52,7 +52,7 @@ export const AdminLayout = async ({
                 </div>
               </header>
 
-              <div className="p-4">{children}</div>
+              <div className="container p-4">{children}</div>
             </SidebarInset>
           </SidebarProvider>
         </WrapperAdminLayout>

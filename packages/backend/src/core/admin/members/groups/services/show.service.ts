@@ -1,5 +1,6 @@
 import { core_groups } from '@/database/schema/groups';
 import { core_users } from '@/database/schema/users';
+import { StringLanguageHelper } from '@/helpers/string_language/helpers.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { Injectable } from '@nestjs/common';
 import { count, eq, inArray, SQL } from 'drizzle-orm';
@@ -11,7 +12,10 @@ import { SortDirectionEnum } from 'vitnode-shared/utils/pagination.enum';
 
 @Injectable()
 export class ShowGroupsMembersAdminService {
-  constructor(private readonly databaseService: InternalDatabaseService) {}
+  constructor(
+    private readonly databaseService: InternalDatabaseService,
+    private readonly stringLanguageHelper: StringLanguageHelper,
+  ) {}
 
   async show({
     first,
@@ -59,17 +63,15 @@ export class ShowGroupsMembersAdminService {
         column: 'updated_at',
       },
       query: async args =>
-        await this.databaseService.db.query.core_groups.findMany({
-          ...args,
-          with: {
-            name: {
-              columns: {
-                value: true,
-                language_code: true,
-              },
-            },
-          },
-        }),
+        await this.databaseService.db.query.core_groups.findMany(args),
+    });
+
+    const ids = pagination.edges.map(edge => edge.id);
+    const names = await this.stringLanguageHelper.get({
+      database: core_groups,
+      item_ids: ids,
+      plugin_code: 'core',
+      variables: ['name'],
     });
 
     const edges: GroupsMembersAdminObj['edges'] = await Promise.all(
@@ -87,6 +89,7 @@ export class ShowGroupsMembersAdminService {
             files_max_storage_for_submit: edge.files_max_storage_for_submit,
             files_total_max_storage: edge.files_total_max_storage,
           },
+          name: names.filter(name => name.item_id === edge.id),
         };
       }),
     );

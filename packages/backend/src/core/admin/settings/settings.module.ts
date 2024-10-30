@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
 
-import { EditMainSettingsAdminService } from './services/edit.main.service';
-import { SettingsAdminController } from './settings.controller';
+import { LegalSettingsAdminModule } from './legal/legal.module';
+import { MainSettingsAdminModule } from './main/main.module';
 
 @Module({
-  providers: [EditMainSettingsAdminService],
-  controllers: [SettingsAdminController],
+  imports: [MainSettingsAdminModule, LegalSettingsAdminModule],
 })
 export class SettingsAdminModule {}

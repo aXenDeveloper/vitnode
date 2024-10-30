@@ -6,13 +6,13 @@ import { MainSettingsAdminBody } from 'vitnode-shared/admin/settings.dto';
 import { EditMainSettingsAdminService } from './services/edit.main.service';
 
 @ApiTags('Admin')
-@Controller('admin/settings')
+@Controller('admin/settings/main')
 @ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
-export class SettingsAdminController {
+export class MainSettingsAdminController {
   constructor(private readonly editMainService: EditMainSettingsAdminService) {}
 
-  @Put('/main')
+  @Put('')
   @ApiOkResponse({
     type: MainSettingsAdminBody,
     description: 'Edit main settings',

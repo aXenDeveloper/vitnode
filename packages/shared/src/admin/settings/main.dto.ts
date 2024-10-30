@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsArray, IsEmail, IsOptional, IsString } from 'class-validator';
 
-import { StringLanguage } from '../string-language.dto';
+import { StringLanguage } from '../../string-language.dto';
 
 export class MainSettingsAdminBody {
   @ApiProperty()

@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-import { MainSettingsAdminBody } from './admin/settings.dto';
-import { CaptchaTypeEnum } from './utils/global';
+import { MainSettingsAdminBody } from './admin/settings/main.dto';
+import { AllowTypeFilesEnum, CaptchaTypeEnum } from './utils/global';
 
 export class AuthorizationMiddleware {
   @ApiProperty()
@@ -47,9 +47,25 @@ export class SecurityMiddleware {
   captcha: CaptchaSecurityMiddleware;
 }
 
+class FilesEditorMiddleware {
+  @ApiProperty({ enum: AllowTypeFilesEnum, title: 'AllowTypeFilesEnum' })
+  allow_type: AllowTypeFilesEnum;
+}
+
+class EditorMiddleware {
+  @ApiProperty()
+  files: FilesEditorMiddleware;
+
+  @ApiProperty()
+  sticky: boolean;
+}
+
 export class ShowMiddlewareObj extends MainSettingsAdminBody {
   @ApiProperty()
   authorization: AuthorizationMiddleware;
+
+  @ApiProperty()
+  editor: EditorMiddleware;
 
   @ApiProperty()
   is_ai_enabled: boolean;
@@ -59,6 +75,9 @@ export class ShowMiddlewareObj extends MainSettingsAdminBody {
 
   @ApiProperty({ example: [{ code: 'en', default: true, enabled: true }] })
   languages: LanguagesMiddleware[];
+
+  @ApiProperty()
+  languages_code_default: string;
 
   @ApiProperty()
   plugin_code_default: string;

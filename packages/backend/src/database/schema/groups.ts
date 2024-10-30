@@ -16,17 +16,3 @@ export const core_groups = pgTable('core_groups', t => ({
   files_total_max_storage: t.integer().notNull().default(500000),
   files_max_storage_for_submit: t.integer().notNull().default(10000),
 }));
-
-export const core_groups_relation = relations(core_groups, ({ many }) => ({
-  name: many(core_languages_words),
-}));
-
-export const core_languages_words_relation = relations(
-  core_languages_words,
-  ({ one }) => ({
-    group: one(core_groups, {
-      fields: [core_languages_words.item_id],
-      references: [core_groups.id],
-    }),
-  }),
-);
