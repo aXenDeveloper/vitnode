@@ -1,6 +1,6 @@
 import { ABSOLUTE_PATHS } from '@/app.module';
 import { getConfigFile } from '@/helpers/config';
-import { EmailService } from '@/helpers/email/email.service';
+import { EmailHelperService } from '@/helpers/email/email.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { readFile } from 'fs/promises';
@@ -12,7 +12,7 @@ import { ShowMiddlewareObj } from 'vitnode-shared/middleware.dto';
 export class ShowMiddlewareService {
   constructor(
     private readonly databaseService: InternalDatabaseService,
-    private readonly mailService: EmailService,
+    private readonly mailService: EmailHelperService,
   ) {}
 
   protected async getManifest({

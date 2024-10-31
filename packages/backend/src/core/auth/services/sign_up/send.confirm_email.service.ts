@@ -1,6 +1,6 @@
 import { core_users_confirm_emails } from '@/database/schema/users';
 import { getTranslationForEmail } from '@/helpers/email/email';
-import { EmailService } from '@/helpers/email/email.service';
+import { EmailHelperService } from '@/helpers/email/email.service';
 import { type EmailHelpersServiceType } from '@/helpers/email/email-helpers.type';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
@@ -13,7 +13,7 @@ import { ConfirmEmailTemplate } from '../confirm_email/confirm_email.email';
 export class SendConfirmEmailAuthService {
   constructor(
     private readonly databaseService: InternalDatabaseService,
-    private readonly mailService: EmailService,
+    private readonly mailService: EmailHelperService,
     @Inject('EmailHelpersService')
     private readonly emailHelpersService: EmailHelpersServiceType,
   ) {}

@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import { join } from 'path';
+import { FileObj } from 'vitnode-shared/utils/files.dto';
 import {
   AllowTypeFilesEnum,
   CaptchaTypeEnum,
@@ -42,7 +43,7 @@ export interface ConfigType {
     email: {
       color_primary: string;
       color_primary_foreground: string;
-      // logo?: UploadCoreFilesObj;
+      logo?: FileObj;
     };
     main: {
       contact_email: string;

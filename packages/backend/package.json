@@ -93,6 +93,7 @@
     "drizzle-orm": "^0.35.3",
     "helmet": "^8.0.0",
     "pg": "^8.13.1",
+    "sharp": "^0.33.5",
     "ua-parser-js": "^1.0.39",
     "vitnode-shared": "workspace:*"
   }

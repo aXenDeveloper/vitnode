@@ -1,6 +1,6 @@
 import { CaptchaHelper } from '@/helpers/captcha/captcha.service';
 import { getConfigFile } from '@/helpers/config';
-import { EmailService } from '@/helpers/email/email.service';
+import { EmailHelperService } from '@/helpers/email/email.service';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Request } from 'express';
 import { SignAuthObj, SignUpAuthBody } from 'vitnode-shared/auth.dto';
@@ -13,7 +13,7 @@ export class SignUpAuthService {
   constructor(
     private readonly captchaHelper: CaptchaHelper,
     private readonly signUpHelper: HelperSignUpAuthService,
-    private readonly mailService: EmailService,
+    private readonly mailService: EmailHelperService,
     private readonly confirmEmailService: SendConfirmEmailAuthService,
   ) {}
 

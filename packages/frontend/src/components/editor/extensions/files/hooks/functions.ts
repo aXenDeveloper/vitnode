@@ -1,5 +1,5 @@
-import { StringLanguage } from '@/graphql/types';
 import { JSONContent } from '@tiptap/react';
+import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 import { FileStateEditor } from '../files';
 

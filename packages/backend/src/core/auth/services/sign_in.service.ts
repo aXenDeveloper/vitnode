@@ -1,7 +1,7 @@
 import { core_admin_sessions } from '@/database/schema/admins';
 import { core_sessions } from '@/database/schema/sessions';
 import { getConfigFile } from '@/helpers/config';
-import { EmailService } from '@/helpers/email/email.service';
+import { EmailHelperService } from '@/helpers/email/email.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -22,7 +22,7 @@ export class SignInAuthService {
     private readonly configService: ConfigService,
     private readonly deviceService: DeviceAuthService,
     private readonly sendConfirmEmailCoreSessionsService: SendConfirmEmailAuthService,
-    private readonly mailService: EmailService,
+    private readonly mailService: EmailHelperService,
   ) {}
 
   private async createSession({

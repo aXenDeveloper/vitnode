@@ -12,7 +12,7 @@ import {
 import { EmailTemplateProps } from './template/email-template';
 
 @Injectable()
-export class EmailService {
+export class EmailHelperService {
   constructor(
     private readonly databaseService: InternalDatabaseService,
     @Inject('VITNODE_EMAIL_SENDER')

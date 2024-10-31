@@ -1,7 +1,7 @@
 import { core_users } from '@/database/schema/users';
 import { getUserIp, removeSpecialCharacters } from '@/functions';
 import { getConfigFile } from '@/helpers/config';
-import { EmailService } from '@/helpers/email/email.service';
+import { EmailHelperService } from '@/helpers/email/email.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { count } from 'drizzle-orm';
@@ -15,7 +15,7 @@ import { encryptPassword } from '../../helpers/password';
 export class HelperSignUpAuthService {
   constructor(
     private readonly databaseService: InternalDatabaseService,
-    private readonly mailService: EmailService,
+    private readonly mailService: EmailHelperService,
   ) {}
 
   private readonly getDefaultData = async (): Promise<{

@@ -22,6 +22,9 @@ export class FileObj {
   @ApiProperty()
   mimetype: string;
 
+  @ApiProperty()
+  secure: boolean;
+
   @ApiPropertyOptional()
   width?: null | number;
 }

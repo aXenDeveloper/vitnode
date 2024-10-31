@@ -1,7 +1,6 @@
-import { Core_Editor_Files__UploadMutation } from '@/graphql/mutations/editor/core_editor_files__upload.generated';
-import { StringLanguage } from '@/graphql/types';
 import { Plugin } from '@tiptap/pm/state';
 import { mergeAttributes, Node } from '@tiptap/react';
+import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 import { renderReactNode } from './client';
 

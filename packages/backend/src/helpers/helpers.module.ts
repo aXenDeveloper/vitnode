@@ -10,12 +10,13 @@ import {
 import { DeviceAuthService } from './auth/device.service';
 import { InternalAuthAdminService } from './auth/internal_auth_admin.service';
 import { CaptchaHelper } from './captcha/captcha.service';
-import { EmailService } from './email/email.service';
+import { EmailHelperService } from './email/email.service';
 import { EmailHelpersService } from './email/email-helpers.service';
 import {
   EmailSenderArgs,
   EmailSenderFunction,
 } from './email/email-helpers.type';
+import { FilesHelperService } from './files/files-helper.service';
 import { StringLanguageHelper } from './string_language/helpers.service';
 import { UserHelper } from './user.service';
 
@@ -43,7 +44,7 @@ export class GlobalHelpersModule {
           provide: 'VITNODE_EMAIL_SENDER_IS_ENABLED',
           useValue: !!options.email,
         },
-        EmailService,
+        EmailHelperService,
         StringLanguageHelper,
         CaptchaHelper,
         {
@@ -60,9 +61,10 @@ export class GlobalHelpersModule {
         },
         DeviceAuthService,
         UserHelper,
+        FilesHelperService,
       ],
       exports: [
-        EmailService,
+        EmailHelperService,
         StringLanguageHelper,
         CaptchaHelper,
         'EmailHelpersService',
@@ -70,6 +72,7 @@ export class GlobalHelpersModule {
         'IOAdminAuthGuards',
         DeviceAuthService,
         UserHelper,
+        FilesHelperService,
       ],
     };
   }
