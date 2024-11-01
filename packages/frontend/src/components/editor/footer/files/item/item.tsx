@@ -89,7 +89,6 @@ export const ItemListFilesFooterEditor = ({
           }
         />
       </div>
-
       <div className="inline-block w-full min-w-0 flex-1">
         <span className="block truncate leading-tight">
           {file?.name ?? data?.file_name ?? 'Error!'}
@@ -104,7 +103,6 @@ export const ItemListFilesFooterEditor = ({
           />
         </div>
       </div>
-
       {!isLoading && (
         <div className="flex shrink-0 flex-wrap items-center justify-center gap-1">
           {!error && data && (
@@ -150,18 +148,18 @@ export const ItemListFilesFooterEditor = ({
               }
               editor.commands.deleteFile(id);
 
-              // if (data) {
-              //   const mutation = await deleteMutationApi({
-              //     id,
-              //     securityKey: data.security_key,
-              //   });
-
-              //   if (mutation?.error) {
-              //     toast.error(tCore('errors.title'), {
-              //       description: tCore('errors.internal_server_error'),
-              //     });
-              //   }
-              // }
+              if (data) {
+                try {
+                  await deleteMutationApi({
+                    file_id: id,
+                    security_key: data.security_key ?? '',
+                  });
+                } catch (_) {
+                  toast.error(tCore('errors.title'), {
+                    description: tCore('errors.internal_server_error'),
+                  });
+                }
+              }
             }}
             size="icon"
             variant="destructiveGhost"

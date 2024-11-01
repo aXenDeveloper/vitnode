@@ -1,10 +1,11 @@
+import { fetcherClient } from '@/api/fetcher-client';
 import { formatBytes } from '@/helpers/format-bytes';
 import { useMiddlewareData } from '@/hooks/use-middleware-data';
 import { useSession } from '@/hooks/use-session';
 import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { ShowAuthObj } from 'vitnode-shared/auth.dto';
+import { ShowFile, UploadFilesBody } from 'vitnode-shared/files.dto';
 import { FilesPermissionsCoreSessions } from 'vitnode-shared/user.dto';
 import { AllowTypeFilesEnum } from 'vitnode-shared/utils/global';
 
@@ -14,7 +15,6 @@ import {
   FileStateEditor,
 } from '../files';
 import { deleteMutationApi } from './delete-mutation-api';
-import { uploadMutationApi } from './upload-mutation-api';
 
 export const useFilesExtensionEditor = ({
   allowUploadFiles,
@@ -55,15 +55,16 @@ export const useFilesExtensionEditor = ({
     id: number;
     securityKey: string | undefined;
   }) => {
-    // const mutation = await deleteMutationApi({
-    //   id,
-    //   securityKey,
-    // });
-    // if (mutation?.error) {
-    //   toast.error(tCore('title'), {
-    //     description: tCore('internal_server_error'),
-    //   });
-    // }
+    try {
+      await deleteMutationApi({
+        file_id: id,
+        security_key: securityKey,
+      });
+    } catch (_) {
+      toast.error(tCore('title'), {
+        description: tCore('internal_server_error'),
+      });
+    }
   };
 
   const validateMimeTypeFile = (file: FileStateEditor): FileStateEditor => {
@@ -203,23 +204,27 @@ export const useFilesExtensionEditor = ({
     formData.append('file', file.file);
     formData.append('plugin', allowUploadFiles.plugin);
     formData.append('folder', allowUploadFiles.folder);
-    const mutation = await uploadMutationApi(formData);
 
-    if (mutation.error || !mutation.data?.core_editor_files__upload) {
+    try {
+      const { data } = await fetcherClient<ShowFile, UploadFilesBody>({
+        url: '/core/files',
+        method: 'POST',
+        body: formData,
+      });
+
       return {
-        ...file,
+        data,
+        id: data.id,
+        isLoading: false,
+        error: '',
+      };
+    } catch (_) {
+      return {
+        id: file.id,
         error: tCore('internal_server_error'),
         isLoading: false,
       };
     }
-    const { core_editor_files__upload } = mutation.data;
-
-    return {
-      data: core_editor_files__upload,
-      id: core_editor_files__upload.id,
-      isLoading: false,
-      error: '',
-    };
   };
 
   return { handleDelete, checkUploadFile, uploadFile };

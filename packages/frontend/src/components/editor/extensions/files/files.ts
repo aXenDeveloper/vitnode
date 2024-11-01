@@ -1,5 +1,6 @@
 import { Plugin } from '@tiptap/pm/state';
 import { mergeAttributes, Node } from '@tiptap/react';
+import { ShowFile } from 'vitnode-shared/files.dto';
 import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 import { renderReactNode } from './client';
@@ -38,7 +39,7 @@ declare module '@tiptap/react' {
 }
 
 export interface FileStateEditor {
-  data?: Core_Editor_Files__UploadMutation['core_editor_files__upload'];
+  data?: Omit<ShowFile, 'count_uses' | 'created_at' | 'secure'>;
   error?: string;
   file?: File;
   id: number;

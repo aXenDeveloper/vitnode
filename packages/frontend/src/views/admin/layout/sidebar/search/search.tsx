@@ -43,7 +43,7 @@ export const SearchSidebarAdmin = () => {
   return (
     <div className="px-3 py-2">
       <button
-        className="bg-secondary/50 text-muted-foreground hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2 rounded-lg border p-1.5 text-sm transition-colors max-md:hidden"
+        className="bg-secondary/50 text-muted-foreground hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2 rounded-lg border p-1.5 text-sm transition-colors"
         data-search-full=""
         onClick={() => {
           setOpen(true);

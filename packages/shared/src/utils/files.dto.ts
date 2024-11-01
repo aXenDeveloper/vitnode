@@ -17,7 +17,7 @@ export class FileObj {
   file_size: number;
 
   @ApiPropertyOptional()
-  height?: number;
+  height: null | number;
 
   @ApiProperty()
   mimetype: string;
@@ -26,5 +26,5 @@ export class FileObj {
   secure: boolean;
 
   @ApiPropertyOptional()
-  width?: number;
+  width: null | number;
 }

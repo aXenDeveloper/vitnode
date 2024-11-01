@@ -11,20 +11,6 @@ import { getTranslations } from 'next-intl/server';
 
 import { ContentMainSettingsCoreAdmin } from './content';
 
-// import { ContentMainSettingsCoreAdmin } from './content';
-
-// const getData = async () => {
-//   const data = await fetcher<
-//     Core_Main_Settings__ShowQuery,
-//     Core_Main_Settings__ShowQueryVariables
-//   >({
-//     query: Core_Main_Settings__Show,
-//     cache: 'force-cache',
-//   });
-
-//   return data;
-// };
-
 const permission = {
   plugin_code: 'core',
   group: 'settings',

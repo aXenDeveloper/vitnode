@@ -101,9 +101,9 @@ export class FilesHelperService {
       dir_folder: dirFolder,
       extension,
       file_size: file.size,
+      secure,
       width: null,
       height: null,
-      secure,
     };
 
     if (acceptMimeTypeImage.includes(file.mimetype)) {
@@ -112,8 +112,8 @@ export class FilesHelperService {
 
       return {
         ...returnValues,
-        width: image.width,
-        height: image.height,
+        width: image.width ?? null,
+        height: image.height ?? null,
       };
     }
 
