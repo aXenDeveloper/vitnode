@@ -26,7 +26,11 @@
     "react-dom": "19.0.0-rc-cae764ce-20241025",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "vitnode-backend": "workspace:*"
+    "vitnode-backend": "workspace:*",
+    "vitnode-backend-ai-google": "workspace:*",
+    "vitnode-backend-ai-open-ai": "workspace:*",
+    "vitnode-backend-email-resend": "workspace:*",
+    "vitnode-backend-email-smtp": "workspace:*"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.5",

@@ -1,9 +1,11 @@
 import { AdminAuthGuard } from '@/guards/admin-auth.guard';
 import { FilesValidationPipe } from '@/helpers/files/files.pipe';
+import { CurrentUser } from '@/helpers/user.decorator';
 import {
   Body,
   Controller,
   Get,
+  Post,
   Put,
   UploadedFiles,
   UseGuards,
@@ -20,10 +22,13 @@ import {
 import {
   EditEmailSettingsAdminBody,
   ShowEmailSettingsAdminObj,
+  TestEmailSettingsAdminBody,
 } from 'vitnode-shared/admin/settings/email.dto';
+import { User } from 'vitnode-shared/user.dto';
 
 import { EditEmailSettingsAdminService } from './services/edit.service';
 import { ShowEmailSettingsAdminService } from './services/show.service';
+import { TestEmailSettingsAdminService } from './services/test.service';
 
 @ApiTags('Admin')
 @Controller('admin/settings/email')
@@ -33,6 +38,7 @@ export class EmailSettingsAdminController {
   constructor(
     private readonly showService: ShowEmailSettingsAdminService,
     private readonly editService: EditEmailSettingsAdminService,
+    private readonly testService: TestEmailSettingsAdminService,
   ) {}
 
   @Put()
@@ -67,5 +73,14 @@ export class EmailSettingsAdminController {
   })
   show(): ShowEmailSettingsAdminObj {
     return this.showService.show();
+  }
+
+  @Post('/test')
+  @ApiOkResponse({ description: 'Test email settings' })
+  async test(
+    @Body() body: TestEmailSettingsAdminBody,
+    @CurrentUser() user: User,
+  ): Promise<void> {
+    await this.testService.test({ body, user });
   }
 }

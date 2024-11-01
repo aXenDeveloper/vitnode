@@ -18,7 +18,7 @@ export const useTestingEmailAdmin = () => {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      await mutationApi();
+      await mutationApi(values);
       toast.success(t('success.title'), {
         description: t('success.desc'),
       });

@@ -1,7 +1,26 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString } from 'class-validator';
+import { IsEmail, IsOptional, IsString } from 'class-validator';
 
 import { FileObj } from '../../utils/files.dto';
+
+export class TestEmailSettingsAdminBody {
+  @ApiProperty()
+  @IsString()
+  message: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  preview_text?: string;
+
+  @ApiProperty()
+  @IsString()
+  subject: string;
+
+  @ApiProperty()
+  @IsEmail()
+  to: string;
+}
 
 export class EditEmailSettingsAdminBody {
   @ApiProperty({ example: 'hsl(220, 74%, 50%)' })
