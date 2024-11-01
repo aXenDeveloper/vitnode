@@ -202,6 +202,8 @@ export const useFilesExtensionEditor = ({
       };
     }
     formData.append('file', file.file);
+    // TODO: Change this to plugin_code when testing is done
+    // ! This is a temporary issue to test the upload of files
     formData.append('plugin', allowUploadFiles.plugin);
     formData.append('folder', allowUploadFiles.folder);
 

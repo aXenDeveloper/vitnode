@@ -1,5 +1,6 @@
 // import { UploadCoreFilesObj } from '@/core/files/helpers/upload/upload.dto';
 import React from 'react';
+import { FileObj } from 'vitnode-shared/utils/files.dto';
 
 import { EmailTemplateProps } from './template/email-template';
 
@@ -21,7 +22,7 @@ export interface GetHelpersForEmailType {
   };
   contact_email: string;
   frontend_url: string;
-  // logo?: UploadCoreFilesObj;
+  logo?: FileObj;
   site_name: string;
   site_short_name: string;
 }

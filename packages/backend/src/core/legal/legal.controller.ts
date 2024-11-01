@@ -1,13 +1,25 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { LegalsObj, LegalsQuery } from 'vitnode-shared/legal.dto';
+import { Legal, LegalsObj, LegalsQuery } from 'vitnode-shared/legal.dto';
 
+import { ItemLegalService } from './services/item.service';
 import { ShowLegalService } from './services/show.service';
 
 @ApiTags('Core')
 @Controller('core/legal')
 export class LegalController {
-  constructor(private readonly showService: ShowLegalService) {}
+  constructor(
+    private readonly showService: ShowLegalService,
+    private readonly itemService: ItemLegalService,
+  ) {}
+
+  @Get(':code')
+  @ApiOkResponse({
+    description: 'Item legal',
+  })
+  async item(@Param('code') code: string): Promise<Legal> {
+    return await this.itemService.item(code);
+  }
 
   @Get()
   @ApiOkResponse({

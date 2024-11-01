@@ -4,10 +4,12 @@ import { useTextLang } from '@/hooks/use-text-lang';
 import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
+import { CreateLegalSettingsAdminBody } from 'vitnode-shared/admin/settings/legal.dto';
 import { LegalsObj } from 'vitnode-shared/legal.dto';
 import * as z from 'zod';
 
 import { createMutationApi } from './create-mutation-api';
+import { editMutationApi } from './edit-mutation-api';
 
 export const useCreateEditLegalAdmin = ({
   data,
@@ -42,22 +44,23 @@ export const useCreateEditLegalAdmin = ({
     values: z.infer<typeof formSchema>,
     form: UseFormReturn<z.infer<typeof formSchema>>,
   ) => {
-    try {
-      await createMutationApi({
-        title: values.title,
-        content: values.external_href ? [] : (values.content ?? []),
-        href: values.external_href ? values.href : undefined,
-        code: values.code,
-      });
+    const body: CreateLegalSettingsAdminBody = {
+      title: values.title,
+      content: values.external_href ? [] : (values.content ?? []),
+      href: values.external_href ? values.href : undefined,
+      code: values.code,
+    };
 
-      // await editMutationApi({
-      //   id: data.id,
-      //   title: values.title,
-      //   content: values.external_href ? [] : (values.content ?? []),
-      //   href: values.external_href ? values.href : undefined,
-      //   code: values.code,
-      //   prevCode: data.code,
-      // });
+    try {
+      if (data) {
+        await editMutationApi({
+          ...body,
+          id: data.id,
+          prevCode: data.code,
+        });
+      } else {
+        await createMutationApi(body);
+      }
 
       setOpen?.(false);
       toast.success(t(`success.${data ? 'edit' : 'create'}`), {

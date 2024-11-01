@@ -27,7 +27,7 @@ export const ContentDeleteContentLegalSettingsAdmin = ({
 
   const onSubmit = async () => {
     try {
-      await mutationApi();
+      await mutationApi(code);
       setOpen(false);
       toast.success(t('success'), {
         description: convertedTitle,

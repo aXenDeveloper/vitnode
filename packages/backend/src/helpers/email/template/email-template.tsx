@@ -36,7 +36,7 @@ export const EmailTemplate = ({
     site_name,
     site_short_name,
     backend_url,
-    // logo,
+    logo,
     contact_email,
   },
   user,
@@ -110,7 +110,7 @@ export const EmailTemplate = ({
         >
           <Container className="max-w-[600px]">
             <Section className="my-8 text-xl">
-              {/* {logo ? (
+              {logo ? (
                 <Img
                   alt={site_name}
                   className="max-w-xs"
@@ -118,7 +118,7 @@ export const EmailTemplate = ({
                 />
               ) : (
                 site_name
-              )} */}
+              )}
             </Section>
 
             <Section

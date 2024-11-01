@@ -1,5 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayMinSize, IsArray, IsOptional, IsString } from 'class-validator';
 
 import { StringLanguage } from './string-language.dto';
 import { PageInfoObj, PaginationQuery } from './utils/pagination.dto';

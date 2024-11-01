@@ -14,11 +14,6 @@ const getData = async (query: LegalsQuery) => {
     next: {
       tags: [RevalidateTagEnum.Core_Terms_Show],
     },
-    // next: {
-    //   tags: [
-    //     `${RevalidateTagEnum.Core_Terms_Show}${query.code ? `--${query.code}` : ''}`,
-    //   ],
-    // },
   });
 
   return data;
