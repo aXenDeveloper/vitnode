@@ -14,7 +14,7 @@ export const zodComboBoxWithFetcher = z.array(
   }),
 );
 
-export const zodFile = z.array(
+export const zodFiles = z.array(
   z.union([
     z.instanceof(File),
     z.object({

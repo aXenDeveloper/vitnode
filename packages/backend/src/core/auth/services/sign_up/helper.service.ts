@@ -4,6 +4,7 @@ import { getConfigFile } from '@/helpers/config';
 import { EmailHelperService } from '@/helpers/email/email.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { count } from 'drizzle-orm';
 import { Request } from 'express';
 import { SignUpAuthBody } from 'vitnode-shared/auth.dto';
@@ -16,6 +17,7 @@ export class HelperSignUpAuthService {
   constructor(
     private readonly databaseService: InternalDatabaseService,
     private readonly mailService: EmailHelperService,
+    private readonly configService: ConfigService,
   ) {}
 
   private readonly getDefaultData = async (): Promise<{
@@ -62,9 +64,7 @@ export class HelperSignUpAuthService {
 
   private readonly getLanguage = async (req: Request): Promise<string> => {
     const languageToSet: string =
-      (Array.isArray(req.headers['x-vitnode-user-language'])
-        ? req.headers['x-vitnode-user-language'][0]
-        : req.headers['x-vitnode-user-language']) ?? 'en';
+      req.cookies[this.configService.get('cookies.lang') ?? 'NEXT_LOCALE'];
 
     // Check if language exists
     const lang = await this.databaseService.db.query.core_languages.findMany({

@@ -2,10 +2,11 @@
 
 import { fetcher } from '@/api/fetcher';
 import { revalidateTags } from '@/api/revalidate-tags';
-import { CreateLegalBody, Legal } from 'vitnode-shared/legal.dto';
+import { CreateLegalSettingsAdminBody } from 'vitnode-shared/admin/settings/legal.dto';
+import { Legal } from 'vitnode-shared/legal.dto';
 
-export const createMutationApi = async (body: CreateLegalBody) => {
-  await fetcher<Legal, CreateLegalBody>({
+export const createMutationApi = async (body: CreateLegalSettingsAdminBody) => {
+  await fetcher<Legal, CreateLegalSettingsAdminBody>({
     url: '/admin/settings/legal',
     method: 'POST',
     body,

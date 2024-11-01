@@ -1,7 +1,7 @@
 import { AdminAuthGuard } from '@/guards/admin-auth.guard';
 import { Body, Controller, Put, UseGuards } from '@nestjs/common';
 import { ApiOkResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
-import { MainSettingsAdminBody } from 'vitnode-shared/admin/settings.dto';
+import { MainSettingsAdminBody } from 'vitnode-shared/admin/settings/main.dto';
 
 import { EditMainSettingsAdminService } from './services/edit.main.service';
 

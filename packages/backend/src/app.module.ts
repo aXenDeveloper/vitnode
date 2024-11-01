@@ -87,6 +87,7 @@ const config = () => {
     cookies: {
       domain: replaceUrlToDomain(frontend_url.url),
       secure: frontend_url.protocol === 'https:',
+      lang: 'NEXT_LOCALE',
       login_token: {
         expiresIn: 3, // 3 days
         expiresInRemember: 90, // 90 days

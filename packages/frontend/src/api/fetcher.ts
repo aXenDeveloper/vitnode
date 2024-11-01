@@ -2,6 +2,8 @@ import 'server-only';
 import { CONFIG } from '@/helpers/config-with-env';
 import { cookies, headers as nextHeaders } from 'next/headers';
 
+import { buildFilteredQuery } from './helpers';
+
 const cookieFromStringToObject = (
   str: string[],
 ): {
@@ -46,22 +48,6 @@ export const setCookieFromApi = ({ res }: { res: Response }) => {
     });
   });
 };
-
-function buildFilteredQuery(params: Record<string, unknown>): string {
-  const searchParams = new URLSearchParams();
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (
-      value !== undefined &&
-      value !== '' &&
-      !(Array.isArray(value) && value.length === 0)
-    ) {
-      searchParams.append(key, String(value));
-    }
-  });
-
-  return searchParams.toString();
-}
 
 export async function fetcher<
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters, @typescript-eslint/no-explicit-any

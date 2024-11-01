@@ -37,9 +37,8 @@ export class InternalAuthService {
     if (!req.headers['user-agent']) {
       throw new HttpException('User agent not found', HttpStatus.BAD_REQUEST);
     }
-    const login_token = req.cookies[
-      this.configService.getOrThrow('cookies.login_token.name')
-    ] as string;
+    const login_token: string =
+      req.cookies[this.configService.getOrThrow('cookies.login_token.name')];
     const know_device_id: number | undefined =
       +req.cookies[this.configService.getOrThrow('cookies.known_device.name')];
     if (!login_token || !know_device_id) {
@@ -98,11 +97,8 @@ export class InternalAuthService {
     ) {
       throw new ForbiddenException();
     }
-
     let languageToSet: string =
-      (Array.isArray(req.headers['x-vitnode-user-language'])
-        ? req.headers['x-vitnode-user-language'][0]
-        : req.headers['x-vitnode-user-language']) ?? 'en';
+      req.cookies[this.configService.get('cookies.lang') ?? 'NEXT_LOCALE'];
 
     // Check if language exists
     const lang = await this.databaseService.db.query.core_languages.findMany({

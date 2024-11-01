@@ -24,14 +24,6 @@ export class EditEmailSettingsAdminService {
     const configSettings = getConfigFile();
     const emailSettings = configSettings.settings.email;
 
-    // Handle logo deletion
-    if ((delete_logo || logo) && emailSettings.logo) {
-      await this.filesService.delete({
-        dir_folder: emailSettings.logo.dir_folder,
-        file_name: emailSettings.logo.file_name,
-      });
-    }
-
     // Update email settings
     const updatedEmailSettings = {
       ...emailSettings,
@@ -39,6 +31,16 @@ export class EditEmailSettingsAdminService {
       color_primary_foreground,
       logo: emailSettings.logo,
     };
+
+    // Handle logo deletion
+    if ((delete_logo || logo) && emailSettings.logo) {
+      await this.filesService.delete({
+        dir_folder: emailSettings.logo.dir_folder,
+        file_name: emailSettings.logo.file_name,
+      });
+
+      updatedEmailSettings.logo = undefined;
+    }
 
     // Handle logo upload
     if (logo) {

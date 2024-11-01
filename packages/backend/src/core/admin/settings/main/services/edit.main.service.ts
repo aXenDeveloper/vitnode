@@ -4,7 +4,7 @@ import { InternalDatabaseService } from '@/utils/database/internal_database.serv
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
-import { MainSettingsAdminBody } from 'vitnode-shared/admin/settings.dto';
+import { MainSettingsAdminBody } from 'vitnode-shared/admin/settings/main.dto';
 import { ManifestWithLang } from 'vitnode-shared/manifest.dto';
 
 @Injectable()

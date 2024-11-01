@@ -1,12 +1,17 @@
+import { fetcherClient } from '@/api/fetcher-client';
 import { getHSLFromString, isColorBrightness } from '@/helpers/colors';
-import { zodFile } from '@/helpers/zod';
+import { zodFiles } from '@/helpers/zod';
 import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
+import {
+  EditEmailSettingsAdminBody,
+  ShowEmailSettingsAdminObj,
+} from 'vitnode-shared/admin/settings/email.dto';
 import * as z from 'zod';
 
 import { ContentEmailSettingsAdmin } from '../content';
-import { mutationApi } from './mutation-api';
+import { revalidateApi } from './revalidate-api';
 
 export const useEmailSettingsFormAdmin = (
   data: React.ComponentProps<typeof ContentEmailSettingsAdmin>,
@@ -14,7 +19,7 @@ export const useEmailSettingsFormAdmin = (
   const t = useTranslations('core.global');
   const formSchema = z.object({
     color_primary: z.string().default(data.color_primary),
-    logo: zodFile.optional(),
+    logo: zodFiles.default(data.logo ? [data.logo] : []).optional(),
   });
 
   const onSubmit = async (
@@ -33,14 +38,22 @@ export const useEmailSettingsFormAdmin = (
 
     if (values.logo?.length) {
       if (values.logo[0] instanceof File) {
-        formData.append('logo.file', values.logo[0]);
-      } else {
-        formData.append('logo.keep', 'true');
+        formData.append('logo', values.logo[0]);
       }
+    } else {
+      formData.append('delete_logo', 'true');
     }
 
     try {
-      await mutationApi();
+      await fetcherClient<
+        ShowEmailSettingsAdminObj,
+        EditEmailSettingsAdminBody
+      >({
+        url: '/admin/settings/email',
+        method: 'PUT',
+        body: formData,
+      });
+      await revalidateApi();
 
       toast.success(t('saved_success'));
       form.reset(values);
