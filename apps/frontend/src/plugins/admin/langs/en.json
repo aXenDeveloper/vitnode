@@ -630,7 +630,7 @@
             "success": "Permissions has been deleted"
           }
         },
-        "administrators": {
+        "admin": {
           "title": "Administrators",
           "desc": "Manage access to the administrator panel (AdminCP).",
           "administrator": "Administrator",

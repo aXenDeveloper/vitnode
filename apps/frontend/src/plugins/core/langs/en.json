@@ -363,15 +363,15 @@
       "users": "Users List",
       "groups": "Groups",
       "staff": "Staff",
-      "staff_moderators": "Moderators",
-      "staff_administrators": "Administrators"
+      "staff_mod": "Moderators",
+      "staff_admin": "Administrators"
     },
     "admin_permissions": {
       "users": "Users",
       "can_manage_users": "Can manage users?",
       "can_manage_groups": "Can manage groups?",
       "staff": "Staff",
-      "can_manage_staff_administrators": "Can manage administrators?"
+      "can_manage_staff_admin": "Can manage administrators?"
     }
   }
 }

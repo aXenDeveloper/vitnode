@@ -80,7 +80,7 @@ importers:
     devDependencies:
       '@nestjs/cli':
         specifier: ^10.4.5
-        version: 10.4.5(@swc/cli@0.4.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(chokidar@3.6.0))(@swc/core@1.7.40(@swc/helpers@0.5.13))(esbuild@0.19.12)
+        version: 10.4.5(@swc/cli@0.4.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(chokidar@3.6.0))(@swc/core@1.7.40(@swc/helpers@0.5.13))
       '@nestjs/schematics':
         specifier: ^10.2.2
         version: 10.2.2(chokidar@3.6.0)(typescript@5.6.3)
@@ -110,7 +110,7 @@ importers:
         version: 0.5.21
       ts-loader:
         specifier: ^9.5.1
-        version: 9.5.1(typescript@5.6.3)(webpack@5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(esbuild@0.19.12))
+        version: 9.5.1(typescript@5.6.3)(webpack@5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13)))
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@swc/core@1.7.40(@swc/helpers@0.5.13))(@types/node@22.8.1)(typescript@5.6.3)
@@ -780,6 +780,10 @@ importers:
         version: 5.6.3
 
 packages:
+
+  '@acuminous/bitsyntax@0.1.2':
+    resolution: {integrity: sha512-29lUK80d1muEQqiUsSo+3A0yP6CdspgC95EnKBMi22Xlwt79i/En4Vr67+cXhU+cZjbti3TgGGC5wy1stIywVQ==}
+    engines: {node: '>=0.8'}
 
   '@ai-sdk/google@0.0.54':
     resolution: {integrity: sha512-PKc9xFZQpxnca6ZXDOmrYyO3eDPwwskFea5RMI2Q860GgB+l7N+QhWOqKAfngqHiZy9jH1WhqhhzH8YZbPrXCw==}
@@ -3904,6 +3908,16 @@ packages:
   ajv@8.12.0:
     resolution: {integrity: sha512-sRu1kpcO9yLtYxBKvqfTeh9KzZEwO3STyX1HT+4CaDzC6HpTGYhIhPIzj9XuKU7KYDwnaeh5hcOwjy1QuJzBPA==}
 
+  amqp-connection-manager@4.1.14:
+    resolution: {integrity: sha512-1km47dIvEr0HhMUazqovSvNwIlSvDX2APdUpULaINtHpiki1O+cLRaTeXb/jav4OLtH+k6GBXx5gsKOT9kcGKQ==}
+    engines: {node: '>=10.0.0', npm: '>5.0.0'}
+    peerDependencies:
+      amqplib: '*'
+
+  amqplib@0.10.4:
+    resolution: {integrity: sha512-DMZ4eCEjAVdX1II2TfIUpJhfKAuoCeDIo/YyETbfAqehHTXxxs7WOOd+N1Xxr4cKhx12y23zk8/os98FxlZHrw==}
+    engines: {node: '>=10'}
+
   ansi-colors@4.1.3:
     resolution: {integrity: sha512-/6w/C21Pm1A7aZitlI5Ni/2J6FFQN8i1Cvz3kHABAAbw93v/NlvKdVOqz7CCWz/3iv/JplRSEEZ83XION15ovw==}
     engines: {node: '>=6'}
@@ -4071,6 +4085,9 @@ packages:
 
   buffer-from@1.1.2:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
+
+  buffer-more-ints@1.0.0:
+    resolution: {integrity: sha512-EMetuGFz5SLsT0QTnXzINh4Ksr+oo4i+UGTXEshiGCQWnsgSs7ZhJ8fzlwQ+OzEMs0MpDAMr1hxnblp5a4vcHg==}
 
   buffer@5.7.1:
     resolution: {integrity: sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==}
@@ -5467,6 +5484,9 @@ packages:
     resolution: {integrity: sha512-LvIm3/KWzS9oRFHugab7d+M/GcBXuXX5xZkzPmN+NxihdQlZUQ4dWuSV1xR/sq6upL1TJEDrfBgRepHFdBtSNQ==}
     engines: {node: '>= 0.4'}
 
+  isarray@0.0.1:
+    resolution: {integrity: sha512-D2S+3GLxWH+uhrNEcoh/fnmYeP8E8/zHl644d/jdA0g2uyXvy3sb0qxotE+ne0LtccHknQzWwZEzhak7oJ0COQ==}
+
   isarray@1.0.0:
     resolution: {integrity: sha512-VLghIWNM6ELQzo7zwmcg0NmTVyWKYjvIeM83yjp0wRDTmUnrM678fQbcKBo6n2CJEF0szoG//ytg+TKla89ALQ==}
 
@@ -6349,6 +6369,9 @@ packages:
   process-nextick-args@2.0.1:
     resolution: {integrity: sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag==}
 
+  promise-breaker@6.0.0:
+    resolution: {integrity: sha512-BthzO9yTPswGf7etOBiHCVuugs2N01/Q/94dIPls48z2zCmrnDptUUZzfIb+41xq0MnYZ/BzmOd6ikDR4ibNZA==}
+
   prompts@2.4.2:
     resolution: {integrity: sha512-NxNv/kLguCA7p3jE8oL2aEBsrJWgAakBpgmgK6lpPWV+WuOmY6r2/zbAVnP+T8bQlA0nzHXSJSJW0Hq7ylaD2Q==}
     engines: {node: '>= 6'}
@@ -6442,6 +6465,9 @@ packages:
   qs@6.13.0:
     resolution: {integrity: sha512-+38qI9SOr8tfZ4QmJNplMUxqjbe7LKvvZgWdExBOmd+egZTtjLB67Gu0HRX3u/XOq7UU2Nx6nsjvS16Z9uwfpg==}
     engines: {node: '>=0.6'}
+
+  querystringify@2.2.0:
+    resolution: {integrity: sha512-FIqgj2EUvTa7R50u0rGsyTftzjYmv/a3hO345bZNrqabNqjtgiDMgmo4mkUjd+nzU5oF3dClKqFIPUKybUyqoQ==}
 
   queue-microtask@1.2.3:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
@@ -6562,6 +6588,9 @@ packages:
   read-cache@1.0.0:
     resolution: {integrity: sha512-Owdv/Ft7IjOgm/i0xvNDZ1LrRANRfew4b2prF3OWMQLxLfu3bS8FVhCsrSCMK4lR56Y9ya+AThoTpDCTxCmpRA==}
 
+  readable-stream@1.1.14:
+    resolution: {integrity: sha512-+MeVjFf4L44XUkhM1eYbD8fyEsxcV81pqMSR5gblfcLCHfZvbrqy4/qYHE+/R5HoBUT11WV5O08Cr1n3YXkWVQ==}
+
   readable-stream@2.3.8:
     resolution: {integrity: sha512-8p0AUk4XODgIewSi0l8Epjs+EVnWiK7NoDIEGU0HhE7+ZyY8D1IMY7odu5lRrFXGg71L15KG8QrPmum45RTtdA==}
 
@@ -6616,6 +6645,9 @@ packages:
   require-from-string@2.0.2:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
+
+  requires-port@1.0.0:
+    resolution: {integrity: sha512-KigOCHcocU3XODJxsu8i/j8T9tzT4adHiecwORRQ0ZZFcp7ahwXuRU1m+yuO90C5ZUyGeGfocHDI14M3L3yDAQ==}
 
   resend@4.0.0:
     resolution: {integrity: sha512-rDX0rspl/XcmC2JV2V5obQvRX2arzxXUvNFUDMOv5ObBLR68+7kigCOysb7+dlkb0JE3erhQG0nHrbBt/ZCWIg==}
@@ -6895,6 +6927,9 @@ packages:
   string.prototype.trimstart@1.0.8:
     resolution: {integrity: sha512-UXSH262CSZY1tfu3G3Secr6uGLCFVPMhIqHjlgCUtCCcgihYc/xKs9djMTMUOb2j1mVSeU8EU6NWc/iQKU6Gfg==}
     engines: {node: '>= 0.4'}
+
+  string_decoder@0.10.31:
+    resolution: {integrity: sha512-ev2QzSzWPYmy9GuqfIVildA4OdcGLeFZQrq5ys6RtiuF+RQQiZWr8TZNyAcuVXyQRYfEO+MsoB/1BuQVhOJuoQ==}
 
   string_decoder@1.1.1:
     resolution: {integrity: sha512-n/ShnvDi6FHbbVfviro+WojiFzv+s8MPMHBczVePfUpDJLwoLT0ht1l4YwBCbi8pJAveEEdnkHyPyTP/mzRfwg==}
@@ -7299,6 +7334,9 @@ packages:
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
+  url-parse@1.5.10:
+    resolution: {integrity: sha512-WypcfiRhfeUP9vvF0j6rw0J3hrWrw6iZv3+22h6iRMJ/8z1Tj6XfLP4DsUix5MhMPnXpiHDoKyoZ/bdCkwBCiQ==}
+
   use-callback-ref@1.3.2:
     resolution: {integrity: sha512-elOQwe6Q8gqZgDA8mrh44qRTQqpIHDcZ3hXTLjBe1i4ph8XpNJnO+aQf3NaG+lriLopI4HMx9VjQLfPQ6vhnoA==}
     engines: {node: '>=10'}
@@ -7541,6 +7579,15 @@ packages:
     resolution: {integrity: sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==}
 
 snapshots:
+
+  '@acuminous/bitsyntax@0.1.2':
+    dependencies:
+      buffer-more-ints: 1.0.0
+      debug: 4.3.7
+      safe-buffer: 5.1.2
+    transitivePeerDependencies:
+      - supports-color
+    optional: true
 
   '@ai-sdk/google@0.0.54(zod@3.23.8)':
     dependencies:
@@ -8578,7 +8625,7 @@ snapshots:
       '@napi-rs/nice-win32-x64-msvc': 1.0.1
     optional: true
 
-  '@nestjs/cli@10.4.5(@swc/cli@0.4.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(chokidar@3.6.0))(@swc/core@1.7.40(@swc/helpers@0.5.13))(esbuild@0.19.12)':
+  '@nestjs/cli@10.4.5(@swc/cli@0.4.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(chokidar@3.6.0))(@swc/core@1.7.40(@swc/helpers@0.5.13))':
     dependencies:
       '@angular-devkit/core': 17.3.8(chokidar@3.6.0)
       '@angular-devkit/schematics': 17.3.8(chokidar@3.6.0)
@@ -8588,7 +8635,7 @@ snapshots:
       chokidar: 3.6.0
       cli-table3: 0.6.5
       commander: 4.1.1
-      fork-ts-checker-webpack-plugin: 9.0.2(typescript@5.3.3)(webpack@5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(esbuild@0.19.12))
+      fork-ts-checker-webpack-plugin: 9.0.2(typescript@5.3.3)(webpack@5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13)))
       glob: 10.4.2
       inquirer: 8.2.6
       node-emoji: 1.11.0
@@ -8597,7 +8644,7 @@ snapshots:
       tsconfig-paths: 4.2.0
       tsconfig-paths-webpack-plugin: 4.1.0
       typescript: 5.3.3
-      webpack: 5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(esbuild@0.19.12)
+      webpack: 5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))
       webpack-node-externals: 3.0.0
     optionalDependencies:
       '@swc/cli': 0.4.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(chokidar@3.6.0)
@@ -8638,7 +8685,7 @@ snapshots:
       tslib: 2.7.0
       uid: 2.0.2
     optionalDependencies:
-      '@nestjs/microservices': 10.4.6(@grpc/grpc-js@1.12.2)(@nestjs/common@10.4.6(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.6)(@nestjs/websockets@10.4.6)(reflect-metadata@0.2.2)(rxjs@7.8.1)
+      '@nestjs/microservices': 10.4.6(@grpc/grpc-js@1.12.2)(@nestjs/common@10.4.6(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.6)(@nestjs/websockets@10.4.6)(amqp-connection-manager@4.1.14(amqplib@0.10.4))(amqplib@0.10.4)(reflect-metadata@0.2.2)(rxjs@7.8.1)
       '@nestjs/platform-express': 10.4.6(@nestjs/common@10.4.6(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.6)
       '@nestjs/websockets': 10.4.6(@nestjs/common@10.4.6(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.6)(@nestjs/platform-socket.io@10.4.6)(reflect-metadata@0.2.2)(rxjs@7.8.1)
     transitivePeerDependencies:
@@ -8658,7 +8705,7 @@ snapshots:
       class-transformer: 0.5.1
       class-validator: 0.14.1
 
-  '@nestjs/microservices@10.4.6(@grpc/grpc-js@1.12.2)(@nestjs/common@10.4.6(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.6)(@nestjs/websockets@10.4.6)(reflect-metadata@0.2.2)(rxjs@7.8.1)':
+  '@nestjs/microservices@10.4.6(@grpc/grpc-js@1.12.2)(@nestjs/common@10.4.6(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.6)(@nestjs/websockets@10.4.6)(amqp-connection-manager@4.1.14(amqplib@0.10.4))(amqplib@0.10.4)(reflect-metadata@0.2.2)(rxjs@7.8.1)':
     dependencies:
       '@nestjs/common': 10.4.6(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1)
       '@nestjs/core': 10.4.6(@nestjs/common@10.4.6(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/microservices@10.4.6)(@nestjs/platform-express@10.4.6)(@nestjs/websockets@10.4.6)(reflect-metadata@0.2.2)(rxjs@7.8.1)
@@ -8669,6 +8716,8 @@ snapshots:
     optionalDependencies:
       '@grpc/grpc-js': 1.12.2
       '@nestjs/websockets': 10.4.6(@nestjs/common@10.4.6(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.6)(@nestjs/platform-socket.io@10.4.6)(reflect-metadata@0.2.2)(rxjs@7.8.1)
+      amqp-connection-manager: 4.1.14(amqplib@0.10.4)
+      amqplib: 0.10.4
     optional: true
 
   '@nestjs/platform-express@10.4.6(@nestjs/common@10.4.6(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.6)':
@@ -8754,7 +8803,7 @@ snapshots:
       '@nestjs/core': 10.4.6(@nestjs/common@10.4.6(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/microservices@10.4.6)(@nestjs/platform-express@10.4.6)(@nestjs/websockets@10.4.6)(reflect-metadata@0.2.2)(rxjs@7.8.1)
       tslib: 2.7.0
     optionalDependencies:
-      '@nestjs/microservices': 10.4.6(@grpc/grpc-js@1.12.2)(@nestjs/common@10.4.6(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.6)(@nestjs/websockets@10.4.6)(reflect-metadata@0.2.2)(rxjs@7.8.1)
+      '@nestjs/microservices': 10.4.6(@grpc/grpc-js@1.12.2)(@nestjs/common@10.4.6(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.6)(@nestjs/websockets@10.4.6)(amqp-connection-manager@4.1.14(amqplib@0.10.4))(amqplib@0.10.4)(reflect-metadata@0.2.2)(rxjs@7.8.1)
       '@nestjs/platform-express': 10.4.6(@nestjs/common@10.4.6(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.6)
 
   '@nestjs/websockets@10.4.6(@nestjs/common@10.4.6(class-transformer@0.5.1)(class-validator@0.14.1)(reflect-metadata@0.2.2)(rxjs@7.8.1))(@nestjs/core@10.4.6)(@nestjs/platform-socket.io@10.4.6)(reflect-metadata@0.2.2)(rxjs@7.8.1)':
@@ -10509,6 +10558,22 @@ snapshots:
       require-from-string: 2.0.2
       uri-js: 4.4.1
 
+  amqp-connection-manager@4.1.14(amqplib@0.10.4):
+    dependencies:
+      amqplib: 0.10.4
+      promise-breaker: 6.0.0
+    optional: true
+
+  amqplib@0.10.4:
+    dependencies:
+      '@acuminous/bitsyntax': 0.1.2
+      buffer-more-ints: 1.0.0
+      readable-stream: 1.1.14
+      url-parse: 1.5.10
+    transitivePeerDependencies:
+      - supports-color
+    optional: true
+
   ansi-colors@4.1.3: {}
 
   ansi-escapes@4.3.2:
@@ -10705,6 +10770,9 @@ snapshots:
   buffer-equal-constant-time@1.0.1: {}
 
   buffer-from@1.1.2: {}
+
+  buffer-more-ints@1.0.0:
+    optional: true
 
   buffer@5.7.1:
     dependencies:
@@ -11808,7 +11876,7 @@ snapshots:
       cross-spawn: 7.0.3
       signal-exit: 4.1.0
 
-  fork-ts-checker-webpack-plugin@9.0.2(typescript@5.3.3)(webpack@5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(esbuild@0.19.12)):
+  fork-ts-checker-webpack-plugin@9.0.2(typescript@5.3.3)(webpack@5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))):
     dependencies:
       '@babel/code-frame': 7.26.0
       chalk: 4.1.2
@@ -11823,7 +11891,7 @@ snapshots:
       semver: 7.6.3
       tapable: 2.2.1
       typescript: 5.3.3
-      webpack: 5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(esbuild@0.19.12)
+      webpack: 5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))
 
   forwarded@0.2.0: {}
 
@@ -12249,6 +12317,9 @@ snapshots:
     dependencies:
       call-bind: 1.0.7
       get-intrinsic: 1.2.4
+
+  isarray@0.0.1:
+    optional: true
 
   isarray@1.0.0: {}
 
@@ -12992,6 +13063,9 @@ snapshots:
 
   process-nextick-args@2.0.1: {}
 
+  promise-breaker@6.0.0:
+    optional: true
+
   prompts@2.4.2:
     dependencies:
       kleur: 3.0.3
@@ -13144,6 +13218,9 @@ snapshots:
     dependencies:
       side-channel: 1.0.6
 
+  querystringify@2.2.0:
+    optional: true
+
   queue-microtask@1.2.3: {}
 
   quick-lru@5.1.1: {}
@@ -13259,6 +13336,14 @@ snapshots:
     dependencies:
       pify: 2.3.0
 
+  readable-stream@1.1.14:
+    dependencies:
+      core-util-is: 1.0.3
+      inherits: 2.0.4
+      isarray: 0.0.1
+      string_decoder: 0.10.31
+    optional: true
+
   readable-stream@2.3.8:
     dependencies:
       core-util-is: 1.0.3
@@ -13328,6 +13413,9 @@ snapshots:
   require-directory@2.1.1: {}
 
   require-from-string@2.0.2: {}
+
+  requires-port@1.0.0:
+    optional: true
 
   resend@4.0.0(react-dom@19.0.0-rc-cae764ce-20241025(react@19.0.0-rc-cae764ce-20241025))(react@19.0.0-rc-cae764ce-20241025):
     dependencies:
@@ -13698,6 +13786,9 @@ snapshots:
       define-properties: 1.2.1
       es-object-atoms: 1.0.0
 
+  string_decoder@0.10.31:
+    optional: true
+
   string_decoder@1.1.1:
     dependencies:
       safe-buffer: 5.1.2
@@ -13837,17 +13928,16 @@ snapshots:
 
   tapable@2.2.1: {}
 
-  terser-webpack-plugin@5.3.10(@swc/core@1.7.40(@swc/helpers@0.5.13))(esbuild@0.19.12)(webpack@5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(esbuild@0.19.12)):
+  terser-webpack-plugin@5.3.10(@swc/core@1.7.40(@swc/helpers@0.5.13))(webpack@5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.25
       jest-worker: 27.5.1
       schema-utils: 3.3.0
       serialize-javascript: 6.0.2
       terser: 5.36.0
-      webpack: 5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(esbuild@0.19.12)
+      webpack: 5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))
     optionalDependencies:
       '@swc/core': 1.7.40(@swc/helpers@0.5.13)
-      esbuild: 0.19.12
 
   terser@5.36.0:
     dependencies:
@@ -13919,7 +14009,7 @@ snapshots:
 
   ts-interface-checker@0.1.13: {}
 
-  ts-loader@9.5.1(typescript@5.6.3)(webpack@5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(esbuild@0.19.12)):
+  ts-loader@9.5.1(typescript@5.6.3)(webpack@5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))):
     dependencies:
       chalk: 4.1.2
       enhanced-resolve: 5.17.1
@@ -13927,7 +14017,7 @@ snapshots:
       semver: 7.6.3
       source-map: 0.7.4
       typescript: 5.6.3
-      webpack: 5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(esbuild@0.19.12)
+      webpack: 5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))
 
   ts-node@10.9.2(@swc/core@1.7.40(@swc/helpers@0.5.13))(@types/node@22.8.1)(typescript@5.6.3):
     dependencies:
@@ -14139,6 +14229,12 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
+  url-parse@1.5.10:
+    dependencies:
+      querystringify: 2.2.0
+      requires-port: 1.0.0
+    optional: true
+
   use-callback-ref@1.3.2(@types/react@18.3.12)(react@19.0.0-rc-cae764ce-20241025):
     dependencies:
       react: 19.0.0-rc-cae764ce-20241025
@@ -14245,7 +14341,7 @@ snapshots:
 
   webpack-sources@3.2.3: {}
 
-  webpack@5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(esbuild@0.19.12):
+  webpack@5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13)):
     dependencies:
       '@types/estree': 1.0.6
       '@webassemblyjs/ast': 1.12.1
@@ -14267,7 +14363,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 3.3.0
       tapable: 2.2.1
-      terser-webpack-plugin: 5.3.10(@swc/core@1.7.40(@swc/helpers@0.5.13))(esbuild@0.19.12)(webpack@5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13))(esbuild@0.19.12))
+      terser-webpack-plugin: 5.3.10(@swc/core@1.7.40(@swc/helpers@0.5.13))(webpack@5.94.0(@swc/core@1.7.40(@swc/helpers@0.5.13)))
       watchpack: 2.4.2
       webpack-sources: 3.2.3
     transitivePeerDependencies:

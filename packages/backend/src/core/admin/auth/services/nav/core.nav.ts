@@ -120,7 +120,7 @@ export const coreNav: ShowAuthAdminObj['nav'] = [
         keywords: [],
         children: [
           {
-            code: 'administrators',
+            code: 'admin',
             keywords: ['admin', 'administrator'],
           },
         ],
