@@ -25,7 +25,6 @@ export class ShowLanguagesAdminService {
       database: core_languages,
       first,
       last,
-      primaryCursor: 'id',
       defaultSortBy: {
         direction: SortDirectionEnum.desc,
         column: 'created_at',

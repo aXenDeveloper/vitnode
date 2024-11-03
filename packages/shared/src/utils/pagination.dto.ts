@@ -7,19 +7,19 @@ export class PageInfo {
   count: number;
 
   @ApiPropertyOptional({ example: null })
-  endCursor: number | undefined;
+  end_cursor: number | undefined;
 
   @ApiProperty({ example: 0 })
-  hasNextPage: boolean;
+  has_next_page: boolean;
 
   @ApiProperty({ example: 0 })
-  hasPreviousPage: boolean;
+  has_previous_page: boolean;
 
   @ApiPropertyOptional({ example: null })
-  startCursor: number | undefined;
+  start_cursor: number | undefined;
 
   @ApiProperty({ example: 0 })
-  totalCount: number;
+  total_count: number;
 }
 
 export class PageInfoObj {

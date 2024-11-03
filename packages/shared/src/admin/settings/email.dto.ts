@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEmail, IsOptional, IsString } from 'class-validator';
 
 import { FileObj } from '../../utils/files.dto';
+import { PageInfoObj, PaginationQuery } from '../../utils/pagination.dto';
 
 export class TestEmailSettingsAdminBody {
   @ApiProperty()
@@ -47,4 +48,31 @@ export class ShowEmailSettingsAdminObj {
 
   @ApiPropertyOptional()
   logo?: FileObj;
+}
+
+export class LogsEmailSettingsAdminQuery extends PaginationQuery {}
+
+class LogEmailSettingsAdmin {
+  @ApiProperty()
+  created_at: Date;
+
+  @ApiProperty()
+  error: string;
+
+  @ApiProperty()
+  html: string;
+
+  @ApiProperty()
+  id: number;
+
+  @ApiProperty()
+  subject: string;
+
+  @ApiProperty()
+  to: string;
+}
+
+export class LogsEmailSettingsAdminObj extends PageInfoObj {
+  @ApiProperty({ type: [LogEmailSettingsAdmin] })
+  edges: LogEmailSettingsAdmin[];
 }

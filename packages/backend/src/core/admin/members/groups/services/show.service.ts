@@ -57,7 +57,6 @@ export class ShowGroupsMembersAdminService {
       where,
       sortBy,
       sortDirection,
-      primaryCursor: 'id',
       defaultSortBy: {
         direction: SortDirectionEnum.desc,
         column: 'updated_at',

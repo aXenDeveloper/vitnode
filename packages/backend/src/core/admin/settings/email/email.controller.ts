@@ -7,6 +7,7 @@ import {
   Get,
   Post,
   Put,
+  Query,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
@@ -21,12 +22,15 @@ import {
 } from '@nestjs/swagger';
 import {
   EditEmailSettingsAdminBody,
+  LogsEmailSettingsAdminObj,
+  LogsEmailSettingsAdminQuery,
   ShowEmailSettingsAdminObj,
   TestEmailSettingsAdminBody,
 } from 'vitnode-shared/admin/settings/email.dto';
 import { User } from 'vitnode-shared/user.dto';
 
 import { EditEmailSettingsAdminService } from './services/edit.service';
+import { LogsEmailSettingsAdminService } from './services/lags.service';
 import { ShowEmailSettingsAdminService } from './services/show.service';
 import { TestEmailSettingsAdminService } from './services/test.service';
 
@@ -39,6 +43,7 @@ export class EmailSettingsAdminController {
     private readonly showService: ShowEmailSettingsAdminService,
     private readonly editService: EditEmailSettingsAdminService,
     private readonly testService: TestEmailSettingsAdminService,
+    private readonly logsService: LogsEmailSettingsAdminService,
   ) {}
 
   @Put()
@@ -64,6 +69,17 @@ export class EmailSettingsAdminController {
     @Body() body: Omit<EditEmailSettingsAdminBody, 'logo'>,
   ): Promise<ShowEmailSettingsAdminObj> {
     return await this.editService.edit({ ...body, logo: files.logo?.at(0) });
+  }
+
+  @Get('/logs')
+  @ApiOkResponse({
+    type: LogsEmailSettingsAdminObj,
+    description: 'Logs email settings',
+  })
+  async logs(
+    @Query() body: LogsEmailSettingsAdminQuery,
+  ): Promise<LogsEmailSettingsAdminObj> {
+    return await this.logsService.logs(body);
   }
 
   @Get()

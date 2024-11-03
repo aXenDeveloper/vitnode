@@ -68,7 +68,6 @@ export class ShowAdminStaffMembersAdminService {
       database: core_admin_permissions,
       first,
       last,
-      primaryCursor: 'id',
       defaultSortBy: {
         direction: SortDirectionEnum.desc,
         column: 'updated_at',

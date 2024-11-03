@@ -18,7 +18,6 @@ export class ShowLegalService {
       database: core_legal,
       first,
       last,
-      primaryCursor: 'id',
       defaultSortBy: {
         direction: SortDirectionEnum.desc,
         column: 'updated_at',

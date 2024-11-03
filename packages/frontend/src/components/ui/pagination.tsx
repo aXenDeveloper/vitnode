@@ -56,7 +56,7 @@ export const Pagination = ({
   return (
     <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-end">
       <span className="text-muted-foreground text-sm">
-        {t('total_count', { count: page_info.totalCount })}
+        {t('total_count', { count: page_info.total_count })}
       </span>
 
       <div className="flex flex-wrap items-center justify-center gap-4">
@@ -100,12 +100,12 @@ export const Pagination = ({
           <Button
             ariaLabel={t('previous')}
             className="bg-card size-9"
-            disabled={!page_info.hasPreviousPage}
+            disabled={!page_info.has_previous_page}
             onClick={() => {
-              if (!page_info.startCursor) return;
+              if (!page_info.start_cursor) return;
 
               const params = new URLSearchParams(searchParams.toString());
-              params.set('cursor', `${page_info.startCursor}`);
+              params.set('cursor', `${page_info.start_cursor}`);
               params.set('last', `${pageSizeValue}`);
               params.delete('first');
               push(`${pathname}?${params.toString()}`, {
@@ -120,12 +120,12 @@ export const Pagination = ({
           <Button
             ariaLabel={t('next')}
             className="bg-card size-9"
-            disabled={!page_info.hasNextPage}
+            disabled={!page_info.has_next_page}
             onClick={() => {
-              if (!page_info.endCursor) return;
+              if (!page_info.end_cursor) return;
 
               const params = new URLSearchParams(searchParams.toString());
-              params.set('cursor', `${page_info.endCursor}`);
+              params.set('cursor', `${page_info.end_cursor}`);
               params.set('first', `${pageSizeValue}`);
               params.delete('last');
               push(`${pathname}?${params.toString()}`, {

@@ -29,7 +29,7 @@ export class InternalDatabaseService<
 
   protected outputPagination<T>({
     edges,
-    totalCount,
+    total_count,
     cursor,
     last,
     first,
@@ -40,7 +40,7 @@ export class InternalDatabaseService<
     first: number | undefined;
     last: number | undefined;
     primaryCursor: string;
-    totalCount: number;
+    total_count: number;
   }): {
     edges: T[];
   } & PageInfoObj {
@@ -66,12 +66,12 @@ export class InternalDatabaseService<
       return {
         edges,
         page_info: {
-          totalCount,
+          total_count,
           count: edges.length,
-          hasNextPage: false,
-          hasPreviousPage: false,
-          startCursor: edgesCursor.start,
-          endCursor: edgesCursor.end,
+          has_next_page: false,
+          has_previous_page: false,
+          start_cursor: edgesCursor.start,
+          end_cursor: edgesCursor.end,
         },
       };
     }
@@ -79,15 +79,15 @@ export class InternalDatabaseService<
     return {
       edges: currentEdges,
       page_info: {
-        hasNextPage:
+        has_next_page:
           cursor && first
             ? !!edges.at(first)
             : edges.length > currentEdges.length,
-        startCursor: edgesCursor.start,
-        endCursor: edgesCursor.end,
-        totalCount,
+        start_cursor: edgesCursor.start,
+        end_cursor: edgesCursor.end,
+        total_count,
         count: currentEdges.length,
-        hasPreviousPage:
+        has_previous_page:
           last && cursor
             ? edges.length > currentEdges.length + 1
             : edgesCursor.start !== undefined && !!cursor,
@@ -176,7 +176,7 @@ export class InternalDatabaseService<
       // }
     }
 
-    const [edges, [totalCount]] = await Promise.all([
+    const [edges, [total_count]] = await Promise.all([
       query({
         where: whereInput ? and(whereInput, where) : where,
         orderBy,
@@ -191,7 +191,7 @@ export class InternalDatabaseService<
       last,
       first,
       primaryCursor: primaryCursor.toString(),
-      totalCount: totalCount.count,
+      total_count: total_count.count,
     });
   }
 }
