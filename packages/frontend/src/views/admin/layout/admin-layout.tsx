@@ -10,15 +10,6 @@ import { getTranslations } from 'next-intl/server';
 import { SidebarAdmin } from './sidebar/sidebar';
 import { WrapperAdminLayout } from './wrapper';
 
-export interface TextAndIconsAsideAdmin {
-  icon: null | React.ReactNode;
-  id: string;
-  parent_text?: string;
-  plugin: string;
-  plugin_code: string;
-  text: string;
-}
-
 export const generateMetadataAdminLayout = async (): Promise<Metadata> => {
   const t = await getTranslations('admin.global');
 

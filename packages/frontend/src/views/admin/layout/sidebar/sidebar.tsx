@@ -121,7 +121,7 @@ export const SidebarAdmin = async () => {
           <UserBarSidebarAdmin />
         </div>
       </SidebarHeader>
-      <SearchSidebarAdmin />
+      <SearchSidebarAdmin textsAndIcons={textsAndIcons} />
       <SidebarContent>
         {nav.map(plugin => {
           return (

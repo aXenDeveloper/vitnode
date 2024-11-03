@@ -1,21 +1,27 @@
 'use client';
 
-import {
-  Command,
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
+import { CommandDialog, CommandInput } from '@/components/ui/command';
 import { Loader } from '@/components/ui/loader';
+import { DialogTitle } from '@radix-ui/react-dialog';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { SearchIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 
-export const SearchSidebarAdmin = () => {
+import { TextAndIconsAsideAdmin } from '../sidebar';
+
+const Content = React.lazy(async () =>
+  import('./content').then(module => ({
+    default: module.ContentSearchAsideAuthAdmin,
+  })),
+);
+
+export const SearchSidebarAdmin = ({
+  textsAndIcons,
+}: {
+  textsAndIcons: TextAndIconsAsideAdmin[];
+}) => {
   const t = useTranslations('admin.global.search');
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
@@ -43,7 +49,7 @@ export const SearchSidebarAdmin = () => {
   return (
     <div className="px-3 py-2">
       <button
-        className="bg-secondary/50 text-muted-foreground hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2 rounded-lg border p-1.5 text-sm transition-colors"
+        className="bg-secondary/50 text-muted-foreground hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2 rounded-lg border p-1.5 text-sm transition-colors max-md:hidden"
         data-search-full=""
         onClick={() => {
           setOpen(true);
@@ -58,16 +64,21 @@ export const SearchSidebarAdmin = () => {
         </div>
       </button>
 
-      <CommandDialog onOpenChange={setOpen} open={open}>
-        <CommandInput placeholder="Type a command or search..." />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup heading="Suggestions">
-            <CommandItem>Calendar</CommandItem>
-            <CommandItem>Search Emoji</CommandItem>
-            <CommandItem>Calculator</CommandItem>
-          </CommandGroup>
-        </CommandList>
+      <CommandDialog onOpenChange={setOpen} open={open} shouldFilter={false}>
+        <VisuallyHidden>
+          <DialogTitle>{t('placeholder')}</DialogTitle>
+        </VisuallyHidden>
+        <CommandInput
+          onValueChange={handleSearchInput}
+          placeholder={t('placeholder')}
+        />
+        <React.Suspense fallback={<Loader className="p-4" />}>
+          <Content
+            search={search}
+            setOpen={setOpen}
+            textsAndIcons={textsAndIcons}
+          />
+        </React.Suspense>
       </CommandDialog>
     </div>
   );

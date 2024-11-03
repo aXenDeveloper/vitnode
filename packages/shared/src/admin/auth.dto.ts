@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString } from 'class-validator';
 
 import { UserWithDangerousInfo } from '../user.dto';
 import { PermissionsStaffObjWithoutPluginName } from './staff.dto';
@@ -42,4 +43,24 @@ export class ShowAuthAdminObj {
 
   @ApiProperty()
   version_of_vitnode: string;
+}
+
+export class SearchNavAuthAdminQuery {
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  search?: string;
+}
+
+export class NavSearchNavAuthAdmin extends ItemNavAuthAdminObj {
+  @ApiProperty()
+  code_plugin: string;
+
+  @ApiPropertyOptional()
+  parent_nav_code?: string;
+}
+
+export class SearchNavAuthAdminObj {
+  @ApiProperty({ type: [NavSearchNavAuthAdmin] })
+  nav: NavSearchNavAuthAdmin[];
 }
