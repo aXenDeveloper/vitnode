@@ -1,5 +1,5 @@
 import { getSessionAdminData } from '@/api/get-session-admin-data';
-import { Icon } from '@/components/icon/icon';
+import { DynamicIcon } from '@/components/icon/dynamic-icon';
 import { LogoVitNode } from '@/components/logo-vitnode';
 import { LanguageSwitcher } from '@/components/switchers/language-switcher';
 import { ThemeSwitcher } from '@/components/switchers/theme-switcher';
@@ -69,8 +69,8 @@ export const SidebarAdmin = async () => {
       : item.code;
 
     const getIcon = () => {
-      if (item.parent_icon) return <Icon name={item.parent_icon} />;
-      if (item.icon) return <Icon name={item.icon} />;
+      if (item.parent_icon) return <DynamicIcon name={item.parent_icon} />;
+      if (item.icon) return <DynamicIcon name={item.icon} />;
 
       return null;
     };

@@ -1,9 +1,9 @@
+import { DynamicIcon } from '@/components/icon/dynamic-icon';
 import { Button } from '@/components/ui/button';
 import dynamicIconImports from 'lucide-react/dynamicIconImports';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
-import { IconClient } from '../../../icon-client';
 import { IconPickerProps } from '../content';
 
 interface Props extends IconPickerProps {
@@ -47,7 +47,7 @@ export const IconsContentIconInput = ({
           size="icon"
           variant={value === name ? 'default' : 'ghost'}
         >
-          <IconClient name={name} />
+          <DynamicIcon name={name} />
         </Button>
       ))}
     </>

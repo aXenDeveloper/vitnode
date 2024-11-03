@@ -8,13 +8,8 @@ import { cn } from '../../../helpers/classnames';
 import { Button } from '../../ui/button';
 import { Loader } from '../../ui/loader';
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover';
+import { DynamicIcon } from '../dynamic-icon';
 import { IconPickerProps } from './content/content';
-
-const IconClient = React.lazy(async () =>
-  import('../icon-client').then(module => ({
-    default: module.IconClient,
-  })),
-);
 
 const Content = React.lazy(async () =>
   import('./content/content').then(module => ({
@@ -65,7 +60,7 @@ export const IconPicker = ({
         </div>
 
         <React.Suspense fallback={<Loader className="p-4" />}>
-          {value && <IconClient className="size-10 text-4xl" name={value} />}
+          {value && <DynamicIcon className="size-10 text-4xl" name={value} />}
         </React.Suspense>
       </div>
 
