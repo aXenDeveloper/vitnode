@@ -454,7 +454,7 @@
           "time_24": "24h Format",
           "locale": "Locale",
           "name": "Name",
-          "created": "Created",
+          "updated": "Updated",
           "enabled": "Enabled"
         },
         "actions": {
@@ -467,7 +467,8 @@
             "code": {
               "label": "Code",
               "placeholder": "en",
-              "desc": "This code uses as a language identifier in your URL, like: /en/page"
+              "desc": "This code uses as a language identifier in your URL, like: /en/page",
+              "already_exists": "Language with this code already exists."
             },
             "timezone": {
               "label": "Timezone"

@@ -30,6 +30,9 @@ export const ABSOLUTE_PATHS = {
   plugin: ({ code }: { code: string }) => ({
     root: join(internalPaths.plugins, code),
     config: join(internalPaths.plugins, code, 'config.json'),
+    frontend: {
+      languages: join(internalPaths.frontend, 'plugins', code, 'langs'),
+    },
   }),
 };
 
