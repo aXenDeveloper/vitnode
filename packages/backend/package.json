@@ -83,6 +83,7 @@
   },
   "dependencies": {
     "@nestjs/config": "^3.3.0",
+    "@nestjs/core": "^10.4.6",
     "@nestjs/jwt": "^10.2.0",
     "@nestjs/serve-static": "^4.0.2",
     "@nestjs/swagger": "^7.4.2",

@@ -14,13 +14,18 @@ import { AvatarUser } from '@/components/ui/user/avatar';
 import { useSignOutApi } from '@/hooks/sign/out/use-sign-out-api';
 import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { Link } from '@/navigation';
-import { HomeIcon, LogOut, SquareArrowOutUpRight } from 'lucide-react';
+import {
+  HammerIcon,
+  HomeIcon,
+  LogOut,
+  SquareArrowOutUpRight,
+} from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 export const UserBarSidebarAdmin = () => {
   const t = useTranslations('admin.global');
   const tCore = useTranslations('core.global');
-  const { user } = useSessionAdmin();
+  const { user, isInAdminPermission } = useSessionAdmin();
   const { name, email } = user;
   const { onSubmit } = useSignOutApi({ is_admin: true });
 
@@ -62,7 +67,7 @@ export const UserBarSidebarAdmin = () => {
               <span>{tCore('user-bar.my_profile')}</span>
             </Link>
           </DropdownMenuItem> */}
-          {/* {isInAdminPermission({
+          {isInAdminPermission({
             plugin_code: 'core',
             group: 'dashboard',
             permission: 'can_manage_diagnostic_tools',
@@ -73,7 +78,7 @@ export const UserBarSidebarAdmin = () => {
                 <span>{t('diagnostic_tools')}</span>
               </Link>
             </DropdownMenuItem>
-          )} */}
+          )}
         </DropdownMenuGroup>
 
         <DropdownMenuSeparator />

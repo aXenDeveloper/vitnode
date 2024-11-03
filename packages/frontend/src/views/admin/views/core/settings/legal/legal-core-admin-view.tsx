@@ -1,4 +1,5 @@
 import { fetcher } from '@/api/fetcher';
+import { checkAdminPermissionPage } from '@/api/get-session-admin-data';
 import { TranslationsProvider } from '@/components/translations-provider';
 import { Button } from '@/components/ui/button';
 import { HeaderContent } from '@/components/ui/header-content';
@@ -31,8 +32,6 @@ const permission = {
 };
 
 export const generateMetadataLegalSettingsAdmin = async () => {
-  // const perm = await checkAdminPermissionPageMetadata(permission);
-  // if (perm) return perm;
   const t = await getTranslations('admin.core.settings.legal');
 
   return {
@@ -45,8 +44,8 @@ export const LegalSettingsAdminView = async ({
 }: {
   searchParams: Promise<SearchParamsPagination>;
 }) => {
-  // const perm = await checkAdminPermissionPage(permission);
-  // if (perm) return perm;
+  const perm = await checkAdminPermissionPage(permission);
+  if (perm) return perm;
   const variables = await getPaginationTool({
     searchParams,
     defaultPageSize: 10,

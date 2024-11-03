@@ -1,8 +1,13 @@
-import { getSessionAdminData } from '@/api/get-session-admin-data';
+import {
+  getSessionAdminData,
+  isInAdminPermission,
+} from '@/api/get-session-admin-data';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { HeaderContent } from '@/components/ui/header-content';
 import { CONFIG } from '@/helpers/config-with-env';
-import { AlertTriangle } from 'lucide-react';
+import { Link } from '@/navigation';
+import { AlertTriangle, HammerIcon } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 
 import { WarnReqRestartServer } from '../warn-req-restart-server';
@@ -32,7 +37,7 @@ export const DashboardCoreAdminView = async () => {
           </>
         }
       >
-        {/* {(await isInAdminPermission({
+        {(await isInAdminPermission({
           plugin_code: 'core',
           group: 'dashboard',
           permission: 'can_manage_diagnostic_tools',
@@ -43,7 +48,7 @@ export const DashboardCoreAdminView = async () => {
               {t('diagnostic_tools')}
             </Link>
           </Button>
-        )} */}
+        )}
       </HeaderContent>
 
       <WarnReqRestartServer />
