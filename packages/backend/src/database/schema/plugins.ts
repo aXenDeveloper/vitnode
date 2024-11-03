@@ -18,8 +18,8 @@ export const core_plugins = pgTable(
     default: t.boolean().notNull().default(false),
     allow_default: t.boolean().notNull().default(true),
   }),
-  table => ({
-    code_idx: index('core_plugins_code_idx').on(table.code),
-    name_idx: index('core_plugins_name_idx').on(table.name),
-  }),
+  t => [
+    index('core_plugins_code_idx').on(t.code),
+    index('core_plugins_name_idx').on(t.name),
+  ],
 );

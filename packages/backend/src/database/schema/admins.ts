@@ -20,12 +20,10 @@ export const core_admin_permissions = pgTable(
     protected: t.boolean().notNull().default(false),
     permissions: t.jsonb().default('[]'),
   }),
-  table => ({
-    group_id_idx: index('core_admin_permissions_group_id_idx').on(
-      table.group_id,
-    ),
-    user_id_idx: index('core_admin_permissions_user_id_idx').on(table.user_id),
-  }),
+  t => [
+    index('core_admin_permissions_group_id_idx').on(t.group_id),
+    index('core_admin_permissions_user_id_idx').on(t.user_id),
+  ],
 );
 
 export const core_admin_permissions_relations = relations(
@@ -62,12 +60,10 @@ export const core_admin_sessions = pgTable(
       })
       .notNull(),
   }),
-  table => ({
-    login_token_idx: index('core_admin_sessions_login_token_idx').on(
-      table.login_token,
-    ),
-    user_id_idx: index('core_admin_sessions_user_id_idx').on(table.user_id),
-  }),
+  t => [
+    index('core_admin_sessions_login_token_idx').on(t.login_token),
+    index('core_admin_sessions_user_id_idx').on(t.user_id),
+  ],
 );
 
 export const core_admin_sessions_relations = relations(

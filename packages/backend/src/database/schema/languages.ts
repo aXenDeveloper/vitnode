@@ -17,10 +17,10 @@ export const core_languages = pgTable(
     locale: t.varchar({ length: 50 }).notNull().default('en'),
     allow_in_input: t.boolean().default(true).notNull(),
   }),
-  table => ({
-    code_idx: index('core_languages_code_idx').on(table.code),
-    name_idx: index('core_languages_name_idx').on(table.name),
-  }),
+  t => [
+    index('core_languages_code_idx').on(t.code),
+    index('core_languages_name_idx').on(t.name),
+  ],
 );
 
 export const core_languages_words = pgTable(
@@ -39,11 +39,7 @@ export const core_languages_words = pgTable(
     table_name: t.varchar({ length: 255 }).notNull(),
     variable: t.varchar({ length: 255 }).notNull(),
   }),
-  table => ({
-    language_code_idx: index('core_languages_words_lang_code_idx').on(
-      table.language_code,
-    ),
-  }),
+  t => [index('core_languages_words_lang_code_idx').on(t.language_code)],
 );
 
 export const core_languages_words_relations = relations(

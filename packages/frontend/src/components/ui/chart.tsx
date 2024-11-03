@@ -7,15 +7,16 @@ import * as RechartsPrimitive from 'recharts';
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: '', dark: '.dark' } as const;
 
-export type ChartConfig = {
-  [k in string]: {
+export type ChartConfig = Record<
+  string,
+  {
     icon?: React.ComponentType;
     label?: React.ReactNode;
   } & (
     | { color?: never; theme: Record<keyof typeof THEMES, string> }
     | { color?: string; theme?: never }
-  );
-};
+  )
+>;
 
 interface ChartContextProps {
   config: ChartConfig;

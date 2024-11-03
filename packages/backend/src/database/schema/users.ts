@@ -32,11 +32,11 @@ export const core_users = pgTable(
         onDelete: 'set default',
       }),
   }),
-  table => ({
-    name_seo_idx: index('core_users_name_seo_idx').on(table.name_seo),
-    name_idx: index('core_users_name_idx').on(table.name),
-    email_idx: index('core_users_email_idx').on(table.email),
-  }),
+  t => [
+    index('core_users_name_seo_idx').on(t.name_seo),
+    index('core_users_name_idx').on(t.name),
+    index('core_users_email_idx').on(t.email),
+  ],
 );
 
 export const core_users_relations = relations(core_users, ({ one }) => ({

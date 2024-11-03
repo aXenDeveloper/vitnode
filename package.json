@@ -20,11 +20,11 @@
   },
   "pnpm": {
     "overrides": {
-      "react-is": "19.0.0-rc-cae764ce-20241025"
+      "react-is": "19.0.0-rc-7c8e5e7a-20241101"
     }
   },
   "devDependencies": {
-    "@types/node": "^22.8.1",
+    "@types/node": "^22.8.7",
     "eslint-config-typescript-vitnode": "workspace:*",
     "turbo": "^2.2.3"
   },
