@@ -47,6 +47,7 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.6.3",
-    "vitnode-shared": "workspace:*"
+    "vitnode-shared": "workspace:*",
+    "shared": "workspace:*"
   }
 }

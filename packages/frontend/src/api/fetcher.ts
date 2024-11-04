@@ -92,7 +92,6 @@ export async function fetcher<
       ...internalHeaders,
       ...options?.headers,
     },
-    cache: 'no-store',
     body: body ? JSON.stringify(body) : null,
   });
 

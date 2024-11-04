@@ -16,11 +16,16 @@ import {
 const internalPaths = {
   backend: join(process.cwd(), 'src'),
   frontend: join(process.cwd(), '..', 'frontend', 'src'),
+  frontend_root: join(process.cwd(), '..', 'frontend'),
+  shared: join(process.cwd(), '..', 'shared', 'plugins'),
   uploads: join(process.cwd(), 'uploads'),
   plugins: join(process.cwd(), 'src', 'plugins'),
 };
 
 export const ABSOLUTE_PATHS = {
+  backend: internalPaths.backend,
+  frontend: internalPaths.frontend,
+  frontend_root: internalPaths.frontend_root,
   plugins: internalPaths.plugins,
   uploads: {
     public: join(internalPaths.uploads, 'public'),
@@ -29,9 +34,47 @@ export const ABSOLUTE_PATHS = {
   },
   plugin: ({ code }: { code: string }) => ({
     root: join(internalPaths.plugins, code),
+    admin: join(internalPaths.plugins, code, 'admin'),
     config: join(internalPaths.plugins, code, 'config.json'),
+    database: join(internalPaths.plugins, code, 'admin', 'database'),
+    shared: join(internalPaths.shared, code),
     frontend: {
+      plugin: join(internalPaths.frontend, 'plugins', code),
+      templates: join(internalPaths.frontend, 'plugins', code, 'templates'),
       languages: join(internalPaths.frontend, 'plugins', code, 'langs'),
+      admin_pages_auth: join(
+        internalPaths.frontend,
+        'app',
+        '[locale]',
+        'admin',
+        '(auth)',
+        code,
+      ),
+      admin_pages: join(
+        internalPaths.frontend,
+        'app',
+        '[locale]',
+        'admin',
+        code,
+      ),
+      pages: join(internalPaths.frontend, 'src', 'app', '[locale]', code),
+      pages_main: join(
+        internalPaths.frontend,
+        'src',
+        'app',
+        '[locale]',
+        '(main)',
+        code,
+      ),
+      pages_main_layout: join(
+        internalPaths.frontend,
+        'src',
+        'app',
+        '[locale]',
+        '(main)',
+        '(layout)',
+        code,
+      ),
     },
   }),
 };
