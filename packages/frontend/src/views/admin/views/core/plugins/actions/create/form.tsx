@@ -2,8 +2,8 @@
 
 import { AutoForm, DependencyType } from '@/components/form/auto-form';
 import { AutoFormInput } from '@/components/form/fields/input';
-import { ShowAdminPlugins } from '@/graphql/types';
 import { useTranslations } from 'next-intl';
+import { ShowPluginAdmin } from 'vitnode-shared/admin/plugins.dto';
 
 import { useCreateEditPluginAdmin } from './hooks/use-create-edit-plugin-admin';
 
@@ -12,7 +12,7 @@ export const FormCreateEditPluginAdmin = ({
   className,
 }: {
   className?: string;
-  data?: ShowAdminPlugins;
+  data?: ShowPluginAdmin;
 }) => {
   const t = useTranslations('admin.core.plugins');
   const { onSubmit, formSchema } = useCreateEditPluginAdmin({ data });

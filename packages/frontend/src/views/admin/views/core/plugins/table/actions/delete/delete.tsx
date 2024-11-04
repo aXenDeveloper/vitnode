@@ -9,11 +9,7 @@ import { Loader } from '@/components/ui/loader';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
-const ContentDeletePluginActionsAdmin = React.lazy(async () =>
-  import('./content').then(module => ({
-    default: module.ContentDeletePluginActionsAdmin,
-  })),
-);
+import { ContentDeletePluginActionsAdmin } from './content';
 
 export const DeletePluginActionsAdmin = ({
   open,

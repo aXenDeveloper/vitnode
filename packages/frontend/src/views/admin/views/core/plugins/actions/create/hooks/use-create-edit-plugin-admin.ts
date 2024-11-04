@@ -1,3 +1,4 @@
+import { useDialog } from '@/components/ui/dialog';
 import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
@@ -17,6 +18,7 @@ export const useCreateEditPluginAdmin = ({
   const t = useTranslations('admin.core.plugins');
   const tCore = useTranslations('core.global.errors');
   const { user } = useSessionAdmin();
+  const { setOpen } = useDialog();
 
   const formSchema = z.object({
     name: z
@@ -69,9 +71,14 @@ export const useCreateEditPluginAdmin = ({
       // });
 
       await mutationCreateApi(values);
-      toast.success(t('edit.success'), {
-        description: values.name,
+      setOpen?.(false);
+      await new Promise<void>(resolve => {
+        setTimeout(() => {
+          form.reset(values);
+          resolve();
+        }, 0);
       });
+      window.location.reload();
     } catch (err) {
       const error = err as Error;
       if (error.message.includes('PLUGIN_ALREADY_EXISTS')) {

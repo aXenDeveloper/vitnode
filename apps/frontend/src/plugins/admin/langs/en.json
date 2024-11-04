@@ -252,6 +252,7 @@
       },
       "plugins": {
         "title": "Plugins",
+        "desc": "Extend the functionality of your app with plugins.",
         "upload_new_version": "Upload New Version",
         "set_default": "Set as default",
         "get_help": "Get help",
@@ -376,7 +377,7 @@
         "delete": {
           "submit": "Yes, delete plugin",
           "desc": "This action will delete <name></name> plugin created by <author></author> and all data associated with it.",
-          "info": "You may see the errors while the system is changing files. After the process is complete, you need to restart the server to apply the changes."
+          "info": "After the process is complete, you need to restart the server to apply the changes."
         },
         "download": {
           "title": "Download Plugin",

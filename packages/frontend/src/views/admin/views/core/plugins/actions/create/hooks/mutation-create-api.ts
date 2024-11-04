@@ -7,12 +7,18 @@ import {
   ShowPluginAdmin,
 } from 'vitnode-shared/admin/plugins.dto';
 
+import { checkConnectionApi } from '../../../check-connection-api';
+
 export const mutationCreateApi = async (body: CreatePluginsAdminBody) => {
   await fetcher<ShowPluginAdmin, CreatePluginsAdminBody>({
     url: '/admin/plugins',
     method: 'POST',
     body,
   });
+
+  // await new Promise(resolve => setTimeout(resolve, 3000));
+
+  await checkConnectionApi();
 
   revalidatePath('/', 'layout');
 };
