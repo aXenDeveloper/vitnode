@@ -41,7 +41,6 @@ export const LogsEmailSettingsAdminView = async ({
 }) => {
   const variables = await getPaginationTool({
     searchParams,
-    defaultPageSize: 10,
   });
 
   const [t, data] = await Promise.all([

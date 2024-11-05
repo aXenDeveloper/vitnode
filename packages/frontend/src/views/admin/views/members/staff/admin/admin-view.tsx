@@ -12,6 +12,7 @@ import {
   AdminStaffMembersAdminObj,
   AdminStaffMembersAdminQuery,
 } from 'vitnode-shared/admin/members/staff/admin.dto';
+import { ShowStaffMembersAdminSortEnum } from 'vitnode-shared/admin/members/staff/admin.enum';
 
 import { ActionsAdministratorsStaffAdmin } from './actions/actions';
 import { TableAdministratorsStaffAdmin } from './table/table';
@@ -43,7 +44,7 @@ export const AdminStaffAdminView = async ({
 }) => {
   const variables = await getPaginationTool({
     searchParams,
-    defaultPageSize: 10,
+    sortEnum: ShowStaffMembersAdminSortEnum,
   });
 
   const [t, middleware, data] = await Promise.all([

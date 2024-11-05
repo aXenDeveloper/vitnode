@@ -11,7 +11,7 @@ import {
   GroupsMembersAdminObj,
   GroupsMembersAdminQuery,
 } from 'vitnode-shared/admin/members/groups.dto';
-import { ColumnsSortGroupsMembersAdmin } from 'vitnode-shared/admin/members/groups.enum';
+import { GroupsMembersAdminSortEnum } from 'vitnode-shared/admin/members/groups.enum';
 
 import { ActionsGroupsMembersAdmin } from './actions/actions-groups-members-admin';
 import { TableGroupsMembersAdmin } from './table/table';
@@ -46,8 +46,7 @@ export const GroupsMembersAdminView = async ({
 }: GroupsMembersAdminViewProps) => {
   const variables = await getPaginationTool({
     searchParams,
-    columnsSortByEnum: ColumnsSortGroupsMembersAdmin,
-    defaultPageSize: 10,
+    sortEnum: GroupsMembersAdminSortEnum,
   });
 
   const [data, t] = await Promise.all([

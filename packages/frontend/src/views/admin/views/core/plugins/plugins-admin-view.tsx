@@ -10,6 +10,7 @@ import {
   ShowPluginsAdminObj,
   ShowPluginsAdminQuery,
 } from 'vitnode-shared/admin/plugins.dto';
+import { ShowPluginsAdminSortEnum } from 'vitnode-shared/admin/plugins.enum';
 
 import { WarnReqRestartServer } from '../warn-req-restart-server';
 import { ActionsPluginsAdmin } from './actions/actions';
@@ -39,7 +40,7 @@ export const PluginsAdminView = async ({
 }) => {
   const variables = await getPaginationTool({
     searchParams,
-    defaultPageSize: 10,
+    sortEnum: ShowPluginsAdminSortEnum,
   });
   const [t, data] = await Promise.all([
     getTranslations('admin.core.plugins'),

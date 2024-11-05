@@ -17,6 +17,8 @@ export class ShowPluginsAdminService {
     last,
     cursor,
     search = '',
+    sortBy,
+    sortDirection,
   }: ShowPluginsAdminQuery): Promise<ShowPluginsAdminObj> {
     const where = ilike(core_plugins.name, `%${search}%`);
 
@@ -25,6 +27,8 @@ export class ShowPluginsAdminService {
       database: core_plugins,
       first,
       last,
+      sortBy,
+      sortDirection,
       defaultSortBy: {
         direction: SortDirectionEnum.desc,
         column: 'updated_at',

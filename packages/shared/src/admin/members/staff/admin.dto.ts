@@ -4,16 +4,18 @@ import {
   getSchemaPath,
   OmitType,
 } from '@nestjs/swagger';
-import { IsArray, IsNumber, IsOptional } from 'class-validator';
+import { IsArray, IsEnum, IsNumber, IsOptional } from 'class-validator';
 
 import { StringLanguage } from '../../../string-language.dto';
 import { GroupUser, User } from '../../../user.dto';
 import { PageInfoObj, PaginationQuery } from '../../../utils/pagination.dto';
+import { SortDirectionEnum } from '../../../utils/pagination.enum';
 import {
   PermissionsStaffArgs,
   PermissionsStaffObj,
   PermissionsStaffObjWithoutPluginName,
 } from '../../staff.dto';
+import { ShowStaffMembersAdminSortEnum } from './admin.enum';
 
 export class CreateAdminStaffMembersAdminBody {
   @ApiPropertyOptional()
@@ -36,7 +38,19 @@ export class EditAdminStaffMembersAdminBody extends OmitType(
   ['group_id', 'user_id'] as const,
 ) {}
 
-export class AdminStaffMembersAdminQuery extends PaginationQuery {}
+export class AdminStaffMembersAdminQuery extends PaginationQuery {
+  @ApiPropertyOptional({
+    enum: ShowStaffMembersAdminSortEnum,
+  })
+  @IsEnum(ShowStaffMembersAdminSortEnum)
+  @IsOptional()
+  sortBy?: ShowStaffMembersAdminSortEnum;
+
+  @ApiPropertyOptional({ enum: SortDirectionEnum })
+  @IsEnum(SortDirectionEnum)
+  @IsOptional()
+  sortDirection?: SortDirectionEnum;
+}
 
 export class StaffGroupUser extends OmitType(GroupUser, ['name'] as const) {
   @ApiProperty({ type: [StringLanguage] })

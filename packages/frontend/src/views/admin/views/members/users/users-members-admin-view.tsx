@@ -10,7 +10,7 @@ import {
   UsersMembersAdminObj,
   UsersMembersAdminQuery,
 } from 'vitnode-shared/admin/members/users.dto';
-import { ColumnsSortUsersMembersAdminEnum } from 'vitnode-shared/admin/members/users.enum';
+import { UsersMembersAdminSortEnum } from 'vitnode-shared/admin/members/users.enum';
 
 import { CreateUserUsersMembersAdmin } from '../create/create';
 import { TableUsersMembersAdmin } from './table';
@@ -47,8 +47,7 @@ export const UsersMembersAdminView = async ({
   const { group_id } = await searchParams;
   const variables = await getPaginationTool({
     searchParams,
-    defaultPageSize: 10,
-    columnsSortByEnum: ColumnsSortUsersMembersAdminEnum,
+    sortEnum: UsersMembersAdminSortEnum,
   });
 
   const query: UsersMembersAdminQuery = {

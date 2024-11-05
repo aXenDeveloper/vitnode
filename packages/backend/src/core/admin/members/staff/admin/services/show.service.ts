@@ -62,12 +62,16 @@ export class ShowAdminStaffMembersAdminService {
     first,
     last,
     cursor,
+    sortBy,
+    sortDirection,
   }: AdminStaffMembersAdminQuery): Promise<AdminStaffMembersAdminObj> {
     const pagination = await this.databaseService.paginationCursor({
       cursor,
       database: core_admin_permissions,
       first,
       last,
+      sortBy,
+      sortDirection,
       defaultSortBy: {
         direction: SortDirectionEnum.desc,
         column: 'updated_at',

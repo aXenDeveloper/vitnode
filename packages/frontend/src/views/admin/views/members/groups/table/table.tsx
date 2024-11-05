@@ -72,7 +72,7 @@ export const TableGroupsMembersAdmin = ({
         sortBy: 'updated_at',
         sortDirection: 'desc',
       }}
-      page_info={page_info}
+      pageInfo={page_info}
       searchPlaceholder={t('search_placeholder')}
     />
   );

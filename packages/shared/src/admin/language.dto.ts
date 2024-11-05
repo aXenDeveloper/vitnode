@@ -1,15 +1,29 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 
 import { PageInfoObj, PaginationQuery } from '../utils/pagination.dto';
+import { SortDirectionEnum } from '../utils/pagination.enum';
 import { TransformString } from '../utils/text-language';
+import { ShowLanguagesAdminSortEnum } from './language.enum';
 
 export class ShowLanguagesAdminQuery extends PaginationQuery {
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
   search?: string;
+
+  @ApiPropertyOptional({
+    enum: ShowLanguagesAdminSortEnum,
+  })
+  @IsEnum(ShowLanguagesAdminSortEnum)
+  @IsOptional()
+  sortBy?: ShowLanguagesAdminSortEnum;
+
+  @ApiPropertyOptional({ enum: SortDirectionEnum })
+  @IsEnum(SortDirectionEnum)
+  @IsOptional()
+  sortDirection?: SortDirectionEnum;
 }
 
 export class LanguagesAdminObj {

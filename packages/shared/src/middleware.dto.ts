@@ -38,7 +38,7 @@ export class CaptchaSecurityMiddleware {
   @ApiProperty()
   site_key: string;
 
-  @ApiProperty({ enum: CaptchaTypeEnum, name: 'CaptchaTypeEnum' })
+  @ApiProperty({ enum: CaptchaTypeEnum })
   type: CaptchaTypeEnum;
 }
 
@@ -48,7 +48,7 @@ export class SecurityMiddleware {
 }
 
 class FilesEditorMiddleware {
-  @ApiProperty({ enum: AllowTypeFilesEnum, title: 'AllowTypeFilesEnum' })
+  @ApiProperty({ enum: AllowTypeFilesEnum })
   allow_type: AllowTypeFilesEnum;
 }
 

@@ -10,14 +10,14 @@ export interface SearchParamsPagination {
 }
 
 export async function getPaginationTool({
-  defaultPageSize,
+  defaultPageSize = 10,
   searchParams: searchParamsPromise,
-  columnsSortByEnum,
+  sortEnum,
 }: {
-  columnsSortByEnum?: Record<string, unknown>;
-  defaultPageSize: 10 | 20 | 30 | 40 | 50;
+  defaultPageSize?: 10 | 20 | 30 | 40 | 50;
   search?: boolean;
   searchParams: Promise<SearchParamsPagination>;
+  sortEnum?: Record<string, unknown>;
 }): Promise<{
   cursor?: number;
   first: number;
@@ -28,7 +28,7 @@ export async function getPaginationTool({
   const searchParams = await searchParamsPromise;
 
   const sortBy = getGetSortByParamsAPI({
-    constEnum: columnsSortByEnum,
+    constEnum: sortEnum,
     searchParams,
   });
   const pagination = {

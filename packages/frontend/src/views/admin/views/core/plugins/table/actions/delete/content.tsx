@@ -12,11 +12,10 @@ import { SubmitContentDeletePluginActionsAdmin } from './submit';
 
 export const ContentDeletePluginActionsAdmin = ({
   id,
-  name,
 }: Pick<ShowPluginAdmin, 'author' | 'id' | 'name'>) => {
   const t = useTranslations('admin.core.plugins.delete');
   const tCore = useTranslations('core.global');
-  const { onSubmit } = useDeletePluginAdmin({ id, name });
+  const { onSubmit } = useDeletePluginAdmin({ id });
 
   return (
     <form action={onSubmit}>

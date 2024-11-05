@@ -11,6 +11,7 @@ import {
   ShowLanguagesAdminObj,
   ShowLanguagesAdminQuery,
 } from 'vitnode-shared/admin/language.dto';
+import { ShowLanguagesAdminSortEnum } from 'vitnode-shared/admin/language.enum';
 
 import { CreateActionLangAdmin } from './actions/create';
 import { ContentLangsCoreAdminView } from './table/content';
@@ -43,7 +44,7 @@ export const LangsCoreAdminView = async ({
 }) => {
   const variables = await getPaginationTool({
     searchParams,
-    defaultPageSize: 10,
+    sortEnum: ShowLanguagesAdminSortEnum,
   });
 
   const [t, data] = await Promise.all([

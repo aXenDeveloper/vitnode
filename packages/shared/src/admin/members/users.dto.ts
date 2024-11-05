@@ -17,7 +17,7 @@ import { User } from '../../user.dto';
 import { PageInfoObj, PaginationQuery } from '../../utils/pagination.dto';
 import { SortDirectionEnum } from '../../utils/pagination.enum';
 import { TransformString } from '../../utils/text-language';
-import { ColumnsSortUsersMembersAdminEnum } from './users.enum';
+import { UsersMembersAdminSortEnum } from './users.enum';
 
 export class UsersMembersAdminQuery extends PaginationQuery {
   @ApiPropertyOptional({ type: [Number] })
@@ -32,14 +32,13 @@ export class UsersMembersAdminQuery extends PaginationQuery {
   search?: string;
 
   @ApiPropertyOptional({
-    enum: ColumnsSortUsersMembersAdminEnum,
-    name: 'ColumnsSortUsersMembersAdminEnum',
+    enum: UsersMembersAdminSortEnum,
   })
-  @IsEnum(ColumnsSortUsersMembersAdminEnum)
+  @IsEnum(UsersMembersAdminSortEnum)
   @IsOptional()
-  sortBy?: ColumnsSortUsersMembersAdminEnum;
+  sortBy?: UsersMembersAdminSortEnum;
 
-  @ApiPropertyOptional({ enum: SortDirectionEnum, name: 'SortDirectionEnum' })
+  @ApiPropertyOptional({ enum: SortDirectionEnum })
   @IsEnum(SortDirectionEnum)
   @IsOptional()
   sortDirection?: SortDirectionEnum;

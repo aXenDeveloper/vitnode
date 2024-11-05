@@ -48,7 +48,6 @@ export const LegalSettingsAdminView = async ({
   if (perm) return perm;
   const variables = await getPaginationTool({
     searchParams,
-    defaultPageSize: 10,
   });
   const [t, data] = await Promise.all([
     getTranslations('admin.core.settings.legal'),

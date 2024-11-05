@@ -95,7 +95,7 @@ export const TableUsersMembersAdmin = ({
         sortBy: 'joined_at',
         sortDirection: 'desc',
       }}
-      page_info={page_info}
+      pageInfo={page_info}
       // filters={<GroupsFiltersUsersMembersAdmin />}
       searchPlaceholder={t('search_placeholder')}
     />

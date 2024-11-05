@@ -17,6 +17,8 @@ export class ShowLanguagesAdminService {
     last,
     cursor,
     search = '',
+    sortBy,
+    sortDirection,
   }: ShowLanguagesAdminQuery): Promise<ShowLanguagesAdminObj> {
     const where = ilike(core_languages.name, `%${search}%`);
 
@@ -25,6 +27,8 @@ export class ShowLanguagesAdminService {
       database: core_languages,
       first,
       last,
+      sortBy,
+      sortDirection,
       defaultSortBy: {
         direction: SortDirectionEnum.desc,
         column: 'created_at',

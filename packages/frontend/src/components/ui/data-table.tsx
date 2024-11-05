@@ -9,10 +9,6 @@ import { HeaderDataTable } from '../data-table/header';
 import { SkeletonDataTable } from '../data-table/skeleton';
 import { ToolbarDataTable } from '../data-table/toolbar/toolbar';
 import { Pagination } from './pagination';
-// import { HeaderDataTable } from '../data-table/header';
-// import { SkeletonDataTable } from '../data-table/skeleton';
-// import { ToolbarDataTable } from '../data-table/toolbar/toolbar';
-// import { Pagination } from './pagination';
 import {
   Table,
   TableBody,
@@ -39,7 +35,7 @@ export interface DataTableProps<T extends TMin> {
     sortBy: keyof T;
     sortDirection: 'asc' | 'desc';
   };
-  page_info?: PageInfo;
+  pageInfo?: PageInfo;
   searchPlaceholder?: string;
 }
 
@@ -48,7 +44,7 @@ export function DataTable<T extends TMin>({
   columns,
   defaultSorting,
   searchPlaceholder,
-  page_info,
+  pageInfo,
   defaultPageSize = 10,
 }: DataTableProps<T>) {
   const t = useTranslations('core.global');
@@ -146,8 +142,8 @@ export function DataTable<T extends TMin>({
         )}
       </div>
 
-      {page_info && (
-        <Pagination defaultPageSize={defaultPageSize} page_info={page_info} />
+      {pageInfo && (
+        <Pagination defaultPageSize={defaultPageSize} pageInfo={pageInfo} />
       )}
     </div>
   );

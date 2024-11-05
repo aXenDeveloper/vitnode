@@ -68,7 +68,7 @@ export const TableLegalSettingsAdmin = ({ edges, page_info }: LegalsObj) => {
         sortBy: 'updated_at',
         sortDirection: 'desc',
       }}
-      page_info={page_info}
+      pageInfo={page_info}
     />
   );
 };

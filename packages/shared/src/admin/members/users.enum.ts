@@ -1,3 +1,3 @@
-export enum ColumnsSortUsersMembersAdminEnum {
+export enum UsersMembersAdminSortEnum {
   joined_at = 'joined_at',
 }

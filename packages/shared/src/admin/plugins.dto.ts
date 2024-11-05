@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  IsEnum,
   IsOptional,
   IsString,
   Matches,
@@ -9,13 +10,27 @@ import {
 } from 'class-validator';
 
 import { PageInfoObj, PaginationQuery } from '../utils/pagination.dto';
+import { SortDirectionEnum } from '../utils/pagination.enum';
 import { TransformString } from '../utils/text-language';
+import { ShowPluginsAdminSortEnum } from './plugins.enum';
 
 export class ShowPluginsAdminQuery extends PaginationQuery {
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
   search?: string;
+
+  @ApiPropertyOptional({
+    enum: ShowPluginsAdminSortEnum,
+  })
+  @IsEnum(ShowPluginsAdminSortEnum)
+  @IsOptional()
+  sortBy?: ShowPluginsAdminSortEnum;
+
+  @ApiPropertyOptional({ enum: SortDirectionEnum })
+  @IsEnum(SortDirectionEnum)
+  @IsOptional()
+  sortDirection?: SortDirectionEnum;
 }
 
 export class ShowPluginAdmin {

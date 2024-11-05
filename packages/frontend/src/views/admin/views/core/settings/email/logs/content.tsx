@@ -57,7 +57,7 @@ export const ContentLogsEmailSettingsAdmin = ({
         sortBy: 'created_at',
         sortDirection: 'desc',
       }}
-      page_info={page_info}
+      pageInfo={page_info}
     />
   );
 };
