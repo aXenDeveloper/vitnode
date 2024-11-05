@@ -78,7 +78,7 @@
   }
 }
 
-@layer utilities {
+@layer components {
   .underline-strike-through {
     text-decoration: underline line-through;
   }

@@ -9,12 +9,14 @@ import { getTranslations } from 'next-intl/server';
 import React from 'react';
 
 import { AuthUserBar } from './auth-user-bar/auth-user-bar';
+import { NavHeader } from './nav/nav';
 
 export const Header = async ({ className }: { className?: string }) => {
   const [
     t,
     {
       authorization: { lock_register },
+      nav,
     },
     { user },
   ] = await Promise.all([
@@ -30,8 +32,11 @@ export const Header = async ({ className }: { className?: string }) => {
         className,
       )}
     >
-      <div className="container flex h-16 items-center gap-5 px-5">
-        <div className="ml-auto hidden gap-2 sm:flex">
+      <div className="container flex h-16 items-center gap-4 px-5">
+        <div>test</div>
+        {nav.length && <NavHeader />}
+
+        <div className="ml-auto flex gap-2">
           <LanguageSwitcher />
           <ThemeSwitcher />
         </div>
