@@ -3,7 +3,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React from 'react';
-import { PageInfo } from 'vitnode-shared/utils/pagination.dto';
+import { PaginationInfo } from 'vitnode-shared/utils/pagination.dto';
 
 import { Button } from './button';
 import {
@@ -27,7 +27,7 @@ export const Pagination = ({
   defaultPageSize = 10,
 }: {
   defaultPageSize?: 10 | 20 | 30 | 40 | 50;
-  pageInfo: PageInfo;
+  pageInfo: PaginationInfo;
 }) => {
   const t = useTranslations('core.global');
   const { push } = useRouter();

@@ -12,7 +12,7 @@ import {
 
 import { StringLanguage } from '../../string-language.dto';
 import { GroupUser } from '../../user.dto';
-import { PageInfoObj, PaginationQuery } from '../../utils/pagination.dto';
+import { PaginationObj, PaginationQuery } from '../../utils/pagination.dto';
 import { SortDirectionEnum } from '../../utils/pagination.enum';
 import { TransformStringLanguageInput } from '../../utils/text-language';
 import { GroupsMembersAdminSortEnum } from './groups.enum';
@@ -103,7 +103,7 @@ export class GroupMembersAdmin extends GroupUser {
   users_count: number;
 }
 
-export class GroupsMembersAdminObj extends PageInfoObj {
+export class GroupsMembersAdminObj extends PaginationObj {
   @ApiProperty({ type: [GroupMembersAdmin] })
   edges: GroupMembersAdmin[];
 }

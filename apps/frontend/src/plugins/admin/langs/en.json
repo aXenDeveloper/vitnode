@@ -11,6 +11,7 @@
       "search": {
         "placeholder": "Search...",
         "no_results": "No results found.",
+        "desc": "Search Engine for AdminCP",
         "pages": "Pages"
       }
     },
@@ -400,6 +401,7 @@
           "href": "URL: {href}",
           "create": {
             "title": "Create Navigation",
+            "desc": "Create a new navigation for your website.",
             "success": "Navigation has been created.",
             "name": {
               "label": "Name"

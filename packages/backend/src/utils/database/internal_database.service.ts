@@ -3,7 +3,7 @@ import type { DatabaseModuleArgs } from '@/utils/database/database.module';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, count, desc, gt, gte, lt, lte, SQL } from 'drizzle-orm';
 import { PgTableWithColumns, TableConfig } from 'drizzle-orm/pg-core';
-import { PageInfoObj } from 'vitnode-shared/utils/pagination.dto';
+import { PaginationObj } from 'vitnode-shared/utils/pagination.dto';
 import { SortDirectionEnum } from 'vitnode-shared/utils/pagination.enum';
 
 import coreSchemaDatabase from '../../database';
@@ -43,7 +43,7 @@ export class InternalDatabaseService<
     total_count: number;
   }): {
     edges: T[];
-  } & PageInfoObj {
+  } & PaginationObj {
     let currentEdges: T[] = edges;
 
     if (last) {

@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsNumber, IsOptional } from 'class-validator';
 
-export class PageInfo {
+export class PaginationInfo {
   @ApiProperty({ example: 0 })
   count: number;
 
@@ -22,9 +22,9 @@ export class PageInfo {
   total_count: number;
 }
 
-export class PageInfoObj {
+export class PaginationObj {
   @ApiProperty()
-  page_info: PageInfo;
+  page_info: PaginationInfo;
 }
 
 export class PaginationQuery {

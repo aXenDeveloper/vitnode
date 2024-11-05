@@ -89,7 +89,7 @@ export class StringLanguageHelper extends ParseStringLanguageHelper {
     plugin_code,
     item_id,
     database,
-    data,
+    data = [],
     variable,
   }: {
     data: StringLanguage[];

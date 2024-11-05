@@ -1,9 +1,8 @@
 'use client';
 
-// import { PageInfo } from '@/graphql/types';
 import { useTranslations } from 'next-intl';
 import React from 'react';
-import { PageInfo } from 'vitnode-shared/utils/pagination.dto';
+import { PaginationInfo } from 'vitnode-shared/utils/pagination.dto';
 
 import { HeaderDataTable } from '../data-table/header';
 import { SkeletonDataTable } from '../data-table/skeleton';
@@ -35,7 +34,7 @@ export interface DataTableProps<T extends TMin> {
     sortBy: keyof T;
     sortDirection: 'asc' | 'desc';
   };
-  pageInfo?: PageInfo;
+  pageInfo?: PaginationInfo;
   searchPlaceholder?: string;
 }
 

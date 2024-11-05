@@ -9,7 +9,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-import { PageInfoObj, PaginationQuery } from '../utils/pagination.dto';
+import { PaginationObj, PaginationQuery } from '../utils/pagination.dto';
 import { SortDirectionEnum } from '../utils/pagination.enum';
 import { TransformString } from '../utils/text-language';
 import { ShowPluginsAdminSortEnum } from './plugins.enum';
@@ -77,7 +77,7 @@ export class ShowPluginAdmin {
   version_code: number;
 }
 
-export class ShowPluginsAdminObj extends PageInfoObj {
+export class ShowPluginsAdminObj extends PaginationObj {
   @ApiProperty({ type: [ShowPluginAdmin] })
   edges: ShowPluginAdmin[];
 }

@@ -2,7 +2,7 @@
 
 import { CommandDialog, CommandInput } from '@/components/ui/command';
 import { Loader } from '@/components/ui/loader';
-import { DialogTitle } from '@radix-ui/react-dialog';
+import { DialogDescription, DialogTitle } from '@radix-ui/react-dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { SearchIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -67,6 +67,7 @@ export const SearchSidebarAdmin = ({
       <CommandDialog onOpenChange={setOpen} open={open} shouldFilter={false}>
         <VisuallyHidden>
           <DialogTitle>{t('placeholder')}</DialogTitle>
+          <DialogDescription>{t('desc')}</DialogDescription>
         </VisuallyHidden>
         <CommandInput
           onValueChange={handleSearchInput}

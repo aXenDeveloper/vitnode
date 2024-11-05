@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 import { MainSettingsAdminBody } from './admin/settings/main.dto';
+import { ShowNavStyles } from './nav.dto';
 import { AllowTypeFilesEnum, CaptchaTypeEnum } from './utils/global';
 
 export class AuthorizationMiddleware {
@@ -78,6 +79,9 @@ export class ShowMiddlewareObj extends MainSettingsAdminBody {
 
   @ApiProperty()
   languages_code_default: string;
+
+  @ApiProperty({ type: [ShowNavStyles] })
+  nav: ShowNavStyles[];
 
   @ApiProperty()
   plugin_code_default: string;

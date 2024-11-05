@@ -14,7 +14,7 @@ import {
 
 import { nameRegex } from '../../auth.dto';
 import { User } from '../../user.dto';
-import { PageInfoObj, PaginationQuery } from '../../utils/pagination.dto';
+import { PaginationObj, PaginationQuery } from '../../utils/pagination.dto';
 import { SortDirectionEnum } from '../../utils/pagination.enum';
 import { TransformString } from '../../utils/text-language';
 import { UsersMembersAdminSortEnum } from './users.enum';
@@ -58,7 +58,7 @@ export class UserMembersAdmin extends User {
   newsletter: boolean;
 }
 
-export class UsersMembersAdminObj extends PageInfoObj {
+export class UsersMembersAdminObj extends PaginationObj {
   @ApiProperty({ type: [UserMembersAdmin] })
   edges: UserMembersAdmin[];
 }

@@ -8,7 +8,7 @@ import { IsArray, IsEnum, IsNumber, IsOptional } from 'class-validator';
 
 import { StringLanguage } from '../../../string-language.dto';
 import { GroupUser, User } from '../../../user.dto';
-import { PageInfoObj, PaginationQuery } from '../../../utils/pagination.dto';
+import { PaginationObj, PaginationQuery } from '../../../utils/pagination.dto';
 import { SortDirectionEnum } from '../../../utils/pagination.enum';
 import {
   PermissionsStaffArgs,
@@ -82,7 +82,7 @@ export class AdminStaffMembersAdmin {
   user_or_group: StaffGroupUser | User;
 }
 
-export class AdminStaffMembersAdminObj extends PageInfoObj {
+export class AdminStaffMembersAdminObj extends PaginationObj {
   @ApiProperty({ type: [AdminStaffMembersAdmin] })
   edges: AdminStaffMembersAdmin[];
 

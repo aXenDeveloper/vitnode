@@ -8,11 +8,14 @@ import { join } from 'path';
 import { ManifestWithLang } from 'vitnode-shared/manifest.dto';
 import { ShowMiddlewareObj } from 'vitnode-shared/middleware.dto';
 
+import { NavMiddlewareService } from './nav.service';
+
 @Injectable()
 export class ShowMiddlewareService {
   constructor(
     private readonly databaseService: InternalDatabaseService,
     private readonly mailService: EmailHelperService,
+    private readonly navService: NavMiddlewareService,
   ) {}
 
   protected async getManifest({
@@ -98,6 +101,7 @@ export class ShowMiddlewareService {
         value: item.description,
       })),
       contact_email: config.settings.main.contact_email,
+      nav: await this.navService.show(),
     };
   }
 }

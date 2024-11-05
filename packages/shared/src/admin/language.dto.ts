@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 
-import { PageInfoObj, PaginationQuery } from '../utils/pagination.dto';
+import { PaginationObj, PaginationQuery } from '../utils/pagination.dto';
 import { SortDirectionEnum } from '../utils/pagination.enum';
 import { TransformString } from '../utils/text-language';
 import { ShowLanguagesAdminSortEnum } from './language.enum';
@@ -64,7 +64,7 @@ export class LanguagesAdminObj {
   updated_at: Date;
 }
 
-export class ShowLanguagesAdminObj extends PageInfoObj {
+export class ShowLanguagesAdminObj extends PaginationObj {
   @ApiProperty({ type: [LanguagesAdminObj] })
   edges: LanguagesAdminObj[];
 }
