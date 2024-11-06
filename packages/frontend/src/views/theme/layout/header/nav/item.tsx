@@ -40,29 +40,33 @@ export const ItemNavHeader = ({
         </PopoverTrigger>
 
         <PopoverContent className="max-w-96 p-2">
-          {children.map(child => (
-            <PopoverClose asChild key={child.id}>
-              <Button
-                asChild
-                className="flex h-auto w-full flex-col items-start gap-1 px-4 py-2 text-left"
-                size="sm"
-                variant="ghost"
-              >
-                <Link
-                  href={child.href}
-                  rel={child.external ? 'noopener noreferrer' : undefined}
-                  target={child.external ? '_blank' : undefined}
+          {children.map(child => {
+            const activeChild = pathname.startsWith(child.href);
+
+            return (
+              <PopoverClose asChild key={child.id}>
+                <Button
+                  asChild
+                  className="flex h-auto w-full flex-col items-start gap-1 px-4 py-2 text-left"
+                  size="sm"
+                  variant={activeChild ? 'secondary' : 'ghost'}
                 >
-                  <span>{convertText(child.name)}</span>
-                  {child.description.length > 0 && (
-                    <p className="text-muted-foreground line-clamp-2 truncate whitespace-normal text-sm leading-snug">
-                      {convertText(child.description)}
-                    </p>
-                  )}
-                </Link>
-              </Button>
-            </PopoverClose>
-          ))}
+                  <Link
+                    href={child.href}
+                    rel={child.external ? 'noopener noreferrer' : undefined}
+                    target={child.external ? '_blank' : undefined}
+                  >
+                    <span>{convertText(child.name)}</span>
+                    {child.description.length > 0 && (
+                      <p className="text-muted-foreground line-clamp-2 truncate whitespace-normal text-sm leading-snug">
+                        {convertText(child.description)}
+                      </p>
+                    )}
+                  </Link>
+                </Button>
+              </PopoverClose>
+            );
+          })}
         </PopoverContent>
       </Popover>
     );

@@ -88,9 +88,11 @@
         "admin_cp": "Admin Panel"
       },
       "mobile_nav": {
+        "home": "Home",
         "back": "Back",
         "search": "Search",
-        "menu": "Menu"
+        "menu": "Menu",
+        "desc": "Mobile Menu with navigation and user settings."
       },
       "icon_picker": {
         "title": "Choose an icon",

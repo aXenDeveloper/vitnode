@@ -44,9 +44,9 @@ export const UserBarSidebarAdmin = () => {
 
       <DropdownMenuContent align="start" className="w-64 p-2">
         <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-base font-medium leading-none">{name}</p>
-            <p className="text-muted-foreground text-xs leading-none">
+          <div className="flex flex-col gap-1">
+            <span className="font-semibold leading-none">{name}</span>
+            <p className="text-muted-foreground text-sm leading-none">
               {email}
             </p>
           </div>

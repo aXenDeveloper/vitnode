@@ -28,7 +28,7 @@ export const Header = async ({ className }: { className?: string }) => {
   return (
     <header
       className={cn(
-        'bg-background/75 sticky top-0 z-20 w-full border-b backdrop-blur transition-colors',
+        'bg-background/75 top-0 z-20 w-full border-b backdrop-blur sm:sticky',
         className,
       )}
     >
