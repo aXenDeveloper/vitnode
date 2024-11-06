@@ -29,7 +29,7 @@ export const ItemNavHeader = ({
       <Popover>
         <PopoverTrigger asChild>
           <Button
-            className={cn('px-6', {
+            className={cn('hover:text-foreground px-6', {
               'text-muted-foreground': !active,
             })}
             size="sm"
@@ -47,7 +47,7 @@ export const ItemNavHeader = ({
               <PopoverClose asChild key={child.id}>
                 <Button
                   asChild
-                  className="flex h-auto w-full flex-col items-start gap-1 px-4 py-2 text-left"
+                  className="hover:text-foreground flex h-auto w-full flex-col items-start gap-1 px-4 py-2 text-left"
                   size="sm"
                   variant={activeChild ? 'secondary' : 'ghost'}
                 >
@@ -75,7 +75,7 @@ export const ItemNavHeader = ({
   return (
     <Button
       asChild
-      className={cn('px-6', {
+      className={cn('hover:text-foreground px-6', {
         'text-muted-foreground': !active,
       })}
       size="sm"

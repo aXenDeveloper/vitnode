@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { AdvancedAdminModule } from './advanced/advanced.module';
 import { AuthAdminModule } from './auth/auth.module';
 import { LanguagesAdminModule } from './languages/languages.module';
 import { MembersAdminModule } from './members/members.module';
@@ -15,6 +16,7 @@ import { StylesAdminModule } from './styles/styles.module';
     LanguagesAdminModule,
     PluginsAdminModule,
     StylesAdminModule,
+    AdvancedAdminModule,
   ],
 })
 export class AdminModule {}
