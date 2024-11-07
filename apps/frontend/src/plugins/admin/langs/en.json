@@ -278,6 +278,7 @@
             "link_url_with_link": "Link URL: <link></link>",
             "create": {
               "title": "Create Navigation",
+              "desc": "Create a new navigation for your plugin.",
               "code": {
                 "label": "Code",
                 "desc": "Should be unique. Min 3-50 characters.",

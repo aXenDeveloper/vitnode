@@ -10,6 +10,7 @@ import { getTranslations } from 'next-intl/server';
 import React from 'react';
 
 import { getPluginDataAdmin } from './query-api';
+import { TabsDevPluginAdmin } from './tabs';
 
 interface Props {
   children: React.ReactNode;
@@ -93,7 +94,7 @@ export const DevPluginAdminLayout = async ({ params, children }: Props) => {
         {/* <ActionsDevPluginAdmin {...plugin} /> */}
       </HeaderContent>
 
-      {/* <TabsDevPluginAdmin code={code} /> */}
+      <TabsDevPluginAdmin code={code} />
 
       <Card className="p-6">{children}</Card>
     </>
