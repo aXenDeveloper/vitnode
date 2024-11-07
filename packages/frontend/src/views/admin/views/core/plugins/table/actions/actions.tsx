@@ -14,6 +14,7 @@ import React from 'react';
 import { ShowPluginAdmin } from 'vitnode-shared/admin/plugins.dto';
 
 import { DeletePluginActionsAdmin } from './delete/delete';
+import { SetDefaultPluginActionsAdmin } from './set-default/set-default';
 
 export const ActionsItemPluginsAdmin = (props: ShowPluginAdmin) => {
   const t = useTranslations('admin.core.plugins');
@@ -25,11 +26,11 @@ export const ActionsItemPluginsAdmin = (props: ShowPluginAdmin) => {
 
   return (
     <>
-      {/* {!props.default &&
+      {!props.default &&
         props.enabled &&
         (props.allow_default || CONFIG.node_development) && (
           <SetDefaultPluginActionsAdmin {...props} />
-        )} */}
+        )}
 
       <TooltipWrapper content={t('get_help')}>
         <Button ariaLabel={t('get_help')} asChild size="icon" variant="ghost">

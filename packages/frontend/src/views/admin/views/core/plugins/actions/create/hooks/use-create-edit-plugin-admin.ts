@@ -7,6 +7,7 @@ import { ShowPluginAdmin } from 'vitnode-shared/admin/plugins.dto';
 import * as z from 'zod';
 
 import { mutationCreateApi } from './mutation-create-api';
+import { mutationEditApi } from './mutation-edit-api';
 
 export const codePluginRegex = /^[a-z0-9-]*$/;
 
@@ -60,25 +61,27 @@ export const useCreateEditPluginAdmin = ({
     form: UseFormReturn<z.infer<typeof formSchema>>,
   ) => {
     try {
-      // const mutation = await mutationEditApi({
-      //   name: values.name,
-      //   code: values.code,
-      //   description: values.description,
-      //   supportUrl: values.support_url,
-      //   author: values.author,
-      //   authorUrl: values.author_url,
-      //   default: data.default,
-      // });
-
-      await mutationCreateApi(values);
-      setOpen?.(false);
       await new Promise<void>(resolve => {
         setTimeout(() => {
           form.reset(values);
           resolve();
         }, 0);
       });
-      window.location.reload();
+
+      if (data) {
+        await mutationEditApi({
+          ...values,
+          default: data.default,
+        });
+
+        toast.error(t('edit.success'), {
+          description: values.name,
+        });
+      } else {
+        await mutationCreateApi(values);
+        setOpen?.(false);
+        window.location.reload();
+      }
     } catch (err) {
       const error = err as Error;
       if (error.message.includes('PLUGIN_ALREADY_EXISTS')) {

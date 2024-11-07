@@ -6,6 +6,7 @@ import {
   Get,
   Param,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ import {
   ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
+import { EditPluginsAdminBody } from 'vitnode-shared/admin/plugin.dto';
 import {
   CreatePluginsAdminBody,
   ShowPluginAdmin,
@@ -24,6 +26,8 @@ import {
 
 import { CreatePluginsAdminService } from './services/create.service';
 import { DeletePluginsAdminService } from './services/delete.service';
+import { EditPluginsAdminService } from './services/edit.service';
+import { ItemPluginsAdminService } from './services/item.service';
 import { ShowPluginsAdminService } from './services/show.service';
 
 @ApiTags('Admin')
@@ -35,23 +39,45 @@ export class PluginsAdminController {
     private readonly showService: ShowPluginsAdminService,
     private readonly createService: CreatePluginsAdminService,
     private readonly deleteService: DeletePluginsAdminService,
+    private readonly itemService: ItemPluginsAdminService,
+    private readonly editService: EditPluginsAdminService,
   ) {}
 
   @Post()
   @ApiCreatedResponse({ description: 'Plugin created', type: ShowPluginAdmin })
-  async create(@Body() body: CreatePluginsAdminBody): Promise<ShowPluginAdmin> {
+  async createPlugin(
+    @Body() body: CreatePluginsAdminBody,
+  ): Promise<ShowPluginAdmin> {
     return await this.createService.create(body);
   }
 
   @Delete(':id')
   @ApiOkResponse({ description: 'Plugin deleted' })
-  async delete(@Param('id') id: string): Promise<void> {
+  async deletePlugin(@Param('id') id: string): Promise<void> {
     await this.deleteService.delete(+id);
+  }
+
+  @Put(':code')
+  @ApiOkResponse({
+    type: ShowPluginAdmin,
+    description: 'Plugin updated',
+  })
+  async editPlugin(
+    @Param('code') code: string,
+    @Body() body: EditPluginsAdminBody,
+  ): Promise<ShowPluginAdmin> {
+    return await this.editService.edit({ code, body });
+  }
+
+  @Get(':code')
+  @ApiOkResponse({ type: ShowPluginAdmin, description: 'Plugin details' })
+  async itemPlugin(@Param('code') code: string): Promise<ShowPluginAdmin> {
+    return await this.itemService.item(code);
   }
 
   @Get()
   @ApiOkResponse({ type: ShowPluginsAdminObj, description: 'List of plugins' })
-  async show(
+  async showPlugin(
     @Query() query: ShowPluginsAdminQuery,
   ): Promise<ShowPluginsAdminObj> {
     return await this.showService.show(query);

@@ -10,9 +10,11 @@ import { useCreateEditPluginAdmin } from './hooks/use-create-edit-plugin-admin';
 export const FormCreateEditPluginAdmin = ({
   data,
   className,
+  theme,
 }: {
   className?: string;
   data?: ShowPluginAdmin;
+  theme?: 'horizontal' | 'vertical';
 }) => {
   const t = useTranslations('admin.core.plugins');
   const { onSubmit, formSchema } = useCreateEditPluginAdmin({ data });
@@ -68,6 +70,7 @@ export const FormCreateEditPluginAdmin = ({
       ]}
       formSchema={formSchema}
       onSubmit={onSubmit}
+      theme={theme}
     />
   );
 };

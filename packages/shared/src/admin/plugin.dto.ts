@@ -1,6 +1,7 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  IsBoolean,
   IsNotEmpty,
   IsOptional,
   Matches,
@@ -62,4 +63,18 @@ export interface ConfigPlugin extends CreatePluginsAdminBody {
   }[];
   version: string;
   version_code: number;
+}
+
+export class EditPluginsAdminBody extends OmitType(CreatePluginsAdminBody, [
+  'code',
+] as const) {
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  default?: boolean;
+
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  enabled?: boolean;
 }

@@ -16,8 +16,6 @@ export const mutationCreateApi = async (body: CreatePluginsAdminBody) => {
     body,
   });
 
-  // await new Promise(resolve => setTimeout(resolve, 3000));
-
   await checkConnectionApi();
 
   revalidatePath('/', 'layout');
