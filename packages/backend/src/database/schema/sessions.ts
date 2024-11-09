@@ -15,7 +15,7 @@ export const core_sessions = pgTable(
         onDelete: 'cascade',
       }),
     created_at: t.timestamp().notNull().defaultNow(),
-    expires: t.timestamp().notNull(),
+    expires_at: t.timestamp().notNull(),
     device_id: t
       .integer()
       .references(() => core_sessions_known_devices.id, {

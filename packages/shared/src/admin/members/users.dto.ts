@@ -12,7 +12,7 @@ import {
   MinLength,
 } from 'class-validator';
 
-import { nameRegex } from '../../auth.dto';
+import { nameRegex } from '../../auth/auth.dto';
 import { User } from '../../user.dto';
 import { PaginationObj, PaginationQuery } from '../../utils/pagination.dto';
 import { SortDirectionEnum } from '../../utils/pagination.enum';

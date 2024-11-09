@@ -14,7 +14,7 @@ import { AvatarUser } from '@/components/ui/user/avatar';
 import { cn } from '@/helpers/classnames';
 import { useSignOutApi } from '@/hooks/sign/out/use-sign-out-api';
 import { Link } from '@/navigation';
-import { KeyRoundIcon, LogOutIcon } from 'lucide-react';
+import { KeyRoundIcon, LogOutIcon, SettingsIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
@@ -58,6 +58,23 @@ export const AuthUserBar = ({
             </p>
           </div>
         </DropdownMenuLabel>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuGroup>
+          {/* <DropdownMenuItem asChild>
+            <Link href={`/profile/${name_seo}`}>
+              <User />
+              <span>{t('my_profile')}</span>
+            </Link>
+          </DropdownMenuItem> */}
+          <DropdownMenuItem asChild>
+            <Link href="/settings">
+              <SettingsIcon />
+              <span>{t('settings')}</span>
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
 
         {is_admin && (
           <>

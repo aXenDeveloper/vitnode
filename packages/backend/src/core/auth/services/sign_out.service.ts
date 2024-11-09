@@ -35,7 +35,7 @@ export class SignOutAuthService {
       await this.databaseService.db
         .update(core_admin_sessions)
         .set({
-          expires: new Date(),
+          expires_at: new Date(),
         })
         .where(eq(core_admin_sessions.login_token, login_token));
     } else {

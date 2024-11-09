@@ -52,7 +52,7 @@ export const core_admin_sessions = pgTable(
       }),
     created_at: t.timestamp().notNull().defaultNow(),
     last_seen: t.timestamp().notNull().defaultNow(),
-    expires: t.timestamp().notNull(),
+    expires_at: t.timestamp().notNull(),
     device_id: t
       .integer()
       .references(() => core_sessions_known_devices.id, {

@@ -19,8 +19,9 @@ export const AutoFormLabel = ({
   return (
     <FormLabel
       className={cn(className, {
-        '@xs:mt-3 @xs:w-32 @xs:shrink-0 @xs:text-right @sm:w-40 @xl:w-72 @3xl:w-96 @4xl:w-[26rem] flex w-full flex-col items-end gap-1':
+        '@xs:w-32 @xs:shrink-0 @xs:text-right @sm:w-40 @xl:w-72 @3xl:w-96 @4xl:w-[26rem] @sm:items-end flex w-full flex-col gap-1':
           theme === 'horizontal',
+        '@xs:mt-3': !description,
       })}
       optional={!isRequired && !hideOptionalLabel}
     >

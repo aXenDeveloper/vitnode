@@ -13,7 +13,7 @@ export const AutoFormWrapper = ({
   return (
     <FormItem
       className={cn(className, {
-        '@xs:flex-row @xs:gap-6 flex w-full flex-col items-start space-y-2':
+        '@xs:flex-row @xs:gap-6 flex w-full flex-col items-start gap-2':
           theme === 'horizontal',
       })}
     >

@@ -11,8 +11,8 @@ import {
   MinLength,
 } from 'class-validator';
 
-import { User, UserWithDangerousInfo } from './user.dto';
-import { TransformString } from './utils/text-language';
+import { User, UserWithDangerousInfo } from '../user.dto';
+import { TransformString } from '../utils/text-language';
 
 export const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 

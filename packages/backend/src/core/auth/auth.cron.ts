@@ -28,7 +28,7 @@ export class AuthCron {
       .delete(core_sessions)
       .where(
         and(
-          lte(core_sessions.expires, new Date()),
+          lte(core_sessions.expires_at, new Date()),
           lte(core_sessions.created_at, expiresIn),
         ),
       );
@@ -38,7 +38,7 @@ export class AuthCron {
       .delete(core_admin_sessions)
       .where(
         and(
-          lte(core_admin_sessions.expires, new Date()),
+          lte(core_admin_sessions.expires_at, new Date()),
           lte(core_admin_sessions.created_at, expiresIn),
         ),
       );

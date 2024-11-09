@@ -62,8 +62,8 @@ export class SignInAuthService {
     );
 
     if (admin) {
-      const expires = new Date();
-      expires.setDate(expires.getDate() + 1);
+      const expires_at = new Date();
+      expires_at.setDate(expires_at.getDate() + 1);
 
       const activeSession =
         await this.databaseService.db.query.core_admin_sessions.findFirst({
@@ -76,7 +76,7 @@ export class SignInAuthService {
           .update(core_admin_sessions)
           .set({
             login_token,
-            expires,
+            expires_at,
           })
           .where(
             and(
@@ -88,7 +88,7 @@ export class SignInAuthService {
         await this.databaseService.db.insert(core_admin_sessions).values({
           login_token,
           user_id,
-          expires,
+          expires_at,
           device_id: device.id,
         });
       }
@@ -102,7 +102,7 @@ export class SignInAuthService {
           secure: !!this.configService.getOrThrow('cookies.secure'),
           domain: this.configService.getOrThrow('cookies.domain'),
           path: '/',
-          expires,
+          expires: expires_at,
           sameSite: this.configService.getOrThrow('cookies.secure')
             ? 'none'
             : 'lax',
@@ -117,7 +117,7 @@ export class SignInAuthService {
           secure: !!this.configService.getOrThrow('cookies.secure'),
           domain: this.configService.getOrThrow('cookies.domain'),
           path: '/',
-          expires,
+          expires: expires_at,
           sameSite: this.configService.getOrThrow('cookies.secure')
             ? 'none'
             : 'lax',
@@ -127,8 +127,8 @@ export class SignInAuthService {
       return login_token;
     }
 
-    const expires = new Date();
-    expires.setDate(expires.getDate() + expiresValue);
+    const expires_at = new Date();
+    expires_at.setDate(expires_at.getDate() + expiresValue);
 
     // Check if user has an active session in the same device
     const activeSession =
@@ -142,7 +142,7 @@ export class SignInAuthService {
         .update(core_sessions)
         .set({
           login_token,
-          expires,
+          expires_at,
         })
         .where(
           and(
@@ -154,7 +154,7 @@ export class SignInAuthService {
       await this.databaseService.db.insert(core_sessions).values({
         login_token,
         user_id,
-        expires,
+        expires_at,
         device_id: device.id,
       });
     }
@@ -168,7 +168,7 @@ export class SignInAuthService {
         secure: !!this.configService.getOrThrow('cookies.secure'),
         domain: this.configService.getOrThrow('cookies.domain'),
         path: '/',
-        expires: remember ? expires : undefined,
+        expires: remember ? expires_at : undefined,
         sameSite: this.configService.getOrThrow('cookies.secure')
           ? 'none'
           : 'lax',
@@ -182,7 +182,7 @@ export class SignInAuthService {
         secure: !!this.configService.getOrThrow('cookies.secure'),
         domain: this.configService.getOrThrow('cookies.domain'),
         path: '/',
-        expires: remember ? expires : undefined,
+        expires: remember ? expires_at : undefined,
         sameSite: this.configService.getOrThrow('cookies.secure')
           ? 'none'
           : 'lax',

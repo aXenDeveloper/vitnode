@@ -10,6 +10,7 @@ import { SignOutAuthService } from './services/sign_out.service';
 import { HelperSignUpAuthService } from './services/sign_up/helper.service';
 import { SendConfirmEmailAuthService } from './services/sign_up/send.confirm_email.service';
 import { SignUpAuthService } from './services/sign_up/sign_up.service';
+import { SettingsAuthModule } from './settings/settings.module';
 
 @Module({
   providers: [
@@ -24,5 +25,6 @@ import { SignUpAuthService } from './services/sign_up/sign_up.service';
     SignOutAuthService,
   ],
   controllers: [AuthController],
+  imports: [SettingsAuthModule],
 })
 export class AuthModule {}

@@ -16,11 +16,11 @@ export const Tabs = ({
   return (
     <div
       className={cn(
-        'no-scrollbar shadow-border overflow-x-auto shadow-[inset_0_-2px_0]',
+        'no-scrollbar shadow-border flex overflow-x-auto shadow-[inset_0_-2px_0]',
         className,
       )}
     >
-      <div className="flex">{children}</div>
+      {children}
     </div>
   );
 };

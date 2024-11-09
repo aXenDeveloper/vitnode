@@ -52,7 +52,7 @@ export class InternalAuthAdminService {
           and(
             eq(table.login_token, login_token),
             eq(table.device_id, device.id),
-            gt(table.expires, new Date()),
+            gt(table.expires_at, new Date()),
           ),
         with: {
           user: {

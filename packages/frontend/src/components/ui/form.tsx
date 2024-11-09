@@ -112,7 +112,7 @@ const FormItem = ({
 
   return (
     <FormItemContext.Provider value={{ id }}>
-      <div className={cn('space-y-2', className)} {...props} />
+      <div className={cn('flex flex-col gap-2', className)} {...props} />
     </FormItemContext.Provider>
   );
 };
@@ -133,7 +133,7 @@ const FormLabel = ({
 
   return (
     <Label
-      className={cn(error && 'text-destructive', 'space-x-2', className)}
+      className={cn(error && 'text-destructive', className)}
       htmlFor={formItemId}
       {...props}
     >

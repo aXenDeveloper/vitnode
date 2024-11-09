@@ -25,7 +25,6 @@
     "react": "19.0.0-rc-7c8e5e7a-20241101",
     "react-dom": "19.0.0-rc-7c8e5e7a-20241101",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1",
     "vitnode-backend": "workspace:*",
     "vitnode-backend-ai-google": "workspace:*",
     "vitnode-backend-ai-open-ai": "workspace:*",
@@ -35,19 +34,18 @@
   "devDependencies": {
     "@nestjs/cli": "^10.4.5",
     "@nestjs/schematics": "^10.2.3",
-    "@nestjs/testing": "^10.4.6",
     "@swc/cli": "^0.5.0",
     "@types/express": "^5.0.0",
     "@types/node": "^22.8.7",
     "@types/react": "^18.3.12",
     "cross-env": "^7.0.3",
     "eslint-config-typescript-vitnode": "workspace:*",
+    "shared": "workspace:*",
     "source-map-support": "^0.5.21",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.6.3",
-    "vitnode-shared": "workspace:*",
-    "shared": "workspace:*"
+    "vitnode-shared": "workspace:*"
   }
 }
