@@ -5,7 +5,6 @@ import { usePathname, useRouter } from '@/navigation';
 import { Languages } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
-// import { useGlobalData } from '../../hooks/use-global-data';
 import { Button } from '../ui/button';
 import {
   DropdownMenu,

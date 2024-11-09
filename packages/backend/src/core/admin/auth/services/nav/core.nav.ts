@@ -46,17 +46,6 @@ export const coreNav: ShowAuthAdminObj['nav'] = [
             code: 'legal',
             keywords: ['legal', 'terms', 'privacy', 'policy', 'tos', 'pp'],
           },
-          {
-            code: 'ai',
-            keywords: [
-              'artificial',
-              'intelligence',
-              'gpt',
-              'openai',
-              'google',
-              'gemini',
-            ],
-          },
         ],
       },
       {

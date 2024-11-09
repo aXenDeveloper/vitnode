@@ -18,7 +18,6 @@ export const coreAdminPermissions: PermissionsStaffObj[] = [
           'can_manage_settings_email',
           'can_manage_settings_authorization',
           'can_manage_settings_legal',
-          'can_manage_settings_ai',
         ],
       },
       {
