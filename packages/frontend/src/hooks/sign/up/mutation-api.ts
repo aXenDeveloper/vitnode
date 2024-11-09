@@ -1,7 +1,7 @@
 'use server';
 
 import { fetcher } from '@/api/fetcher';
-import { SignUpAuthBody } from 'vitnode-shared/auth.dto';
+import { SignUpAuthBody } from 'vitnode-shared/auth/auth.dto';
 
 export const mutationApi = async (
   body: {

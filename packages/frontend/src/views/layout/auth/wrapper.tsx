@@ -1,7 +1,7 @@
 'use client';
 
 import { SessionContext } from '@/hooks/use-session';
-import { ShowAuthObj } from 'vitnode-shared/auth.dto';
+import { ShowAuthObj } from 'vitnode-shared/auth/auth.dto';
 
 export const WrapperAuthLayout = ({
   children,

@@ -7,7 +7,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { count } from 'drizzle-orm';
 import { Request } from 'express';
-import { SignUpAuthBody } from 'vitnode-shared/auth.dto';
+import { SignUpAuthBody } from 'vitnode-shared/auth/auth.dto';
 
 import { generateAvatarColor } from '../../helpers/avatar-color';
 import { encryptPassword } from '../../helpers/password';

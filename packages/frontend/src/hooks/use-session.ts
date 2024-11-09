@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShowAuthObj } from 'vitnode-shared/auth.dto';
+import { ShowAuthObj } from 'vitnode-shared/auth/auth.dto';
 
 export const SessionContext = React.createContext<ShowAuthObj>(
   {} as ShowAuthObj,

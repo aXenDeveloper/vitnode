@@ -25,7 +25,7 @@ import {
   SignOutAuthBody,
   SignUpAuthBody,
   VerifyConfirmEmailAuthBody,
-} from 'vitnode-shared/auth.dto';
+} from 'vitnode-shared/auth/auth.dto';
 
 import { VerifyConfirmEmailAuthService } from './services/confirm_email/verify.service';
 import { ShowAuthService } from './services/show.service';

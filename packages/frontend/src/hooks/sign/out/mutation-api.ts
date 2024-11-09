@@ -4,7 +4,7 @@ import { fetcher } from '@/api/fetcher';
 import { getAdminIdCookie, getUserIdCookie } from '@/api/get-user-id-cookie';
 import { revalidateTags } from '@/api/revalidate-tags';
 import { redirect } from '@/navigation';
-import { SignOutAuthBody } from 'vitnode-shared/auth.dto';
+import { SignOutAuthBody } from 'vitnode-shared/auth/auth.dto';
 
 export const mutationApi = async (body: SignOutAuthBody) => {
   await fetcher<object, SignOutAuthBody>({

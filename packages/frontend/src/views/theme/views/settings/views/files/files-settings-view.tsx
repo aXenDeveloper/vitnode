@@ -1,25 +1,36 @@
+import { fetcher } from '@/api/fetcher';
 import { getSessionData } from '@/api/get-session-data';
 import { CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Loader } from '@/components/ui/loader';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/helpers/classnames';
 import { formatBytes } from '@/helpers/format-bytes';
-import { SearchParamsPagination } from '@/helpers/get-pagination-tool';
+import {
+  getPaginationTool,
+  SearchParamsPagination,
+} from '@/helpers/get-pagination-tool';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import React from 'react';
+import {
+  ShowFilesSettingsAuthObj,
+  ShowFilesSettingsAuthQuery,
+} from 'vitnode-shared/auth/settings/files.dto';
+import { ShowFilesSettingsAuthSortEnum } from 'vitnode-shared/auth/settings/files.enum';
 
-// const getData = async (variables: Core_Members__Files__ShowQueryVariables) => {
-//   const data = await fetcher<
-//     Core_Members__Files__ShowQuery,
-//     Core_Members__Files__ShowQueryVariables
-//   >({
-//     query: Core_Members__Files__Show,
-//     variables,
-//   });
+import { ContentFilesSettings } from './content';
 
-//   return data;
-// };
+const getData = async (query: ShowFilesSettingsAuthQuery) => {
+  const { data } = await fetcher<
+    ShowFilesSettingsAuthObj,
+    ShowFilesSettingsAuthQuery
+  >({
+    url: '/core/auth/settings/files',
+    query,
+  });
+
+  return data;
+};
 
 export const generateMetadataFilesSettings = async (): Promise<Metadata> => {
   const t = await getTranslations('core.settings.files');
@@ -35,15 +46,15 @@ export const FilesSettingsView = async ({
 }: {
   searchParams: Promise<SearchParamsPagination>;
 }) => {
-  // const variables = await getPaginationTool({
-  //   searchParams,
-  //   defaultPageSize: 10,
-  //   sortByEnum: ShowCoreFilesSortingColumnEnum,
-  // });
-  const [t, { user }] = await Promise.all([
+  const variables = await getPaginationTool({
+    searchParams,
+    defaultPageSize: 10,
+    sortEnum: ShowFilesSettingsAuthSortEnum,
+  });
+  const [t, { user }, data] = await Promise.all([
     getTranslations('core.settings.files'),
     getSessionData(),
-    // getData(variables),
+    getData(variables),
   ]);
   if (!user) return null;
   const { files_permissions } = user;
@@ -79,7 +90,7 @@ export const FilesSettingsView = async ({
         )}
 
         <React.Suspense fallback={<Loader />}>
-          {/* <ContentFilesSettings {...data} /> */}
+          <ContentFilesSettings {...data} />
         </React.Suspense>
       </CardContent>
     </>

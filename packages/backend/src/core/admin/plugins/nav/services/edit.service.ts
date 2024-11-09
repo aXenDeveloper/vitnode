@@ -11,8 +11,6 @@ import { ParentNavAuthAdminObj } from 'vitnode-shared/admin/auth.dto';
 import { ConfigPlugin } from 'vitnode-shared/admin/plugin.dto';
 import { CreateNavPluginsAdminBody } from 'vitnode-shared/admin/plugins/nav.dto';
 
-import { CreateNavPluginsAdminService } from './create.service';
-
 @Injectable()
 export class EditNavPluginsAdminService {
   async edit({

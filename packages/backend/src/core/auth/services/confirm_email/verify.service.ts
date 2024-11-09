@@ -3,7 +3,7 @@ import { InternalDatabaseService } from '@/utils/database/internal_database.serv
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import crypto from 'crypto';
 import { eq } from 'drizzle-orm';
-import { VerifyConfirmEmailAuthBody } from 'vitnode-shared/auth.dto';
+import { VerifyConfirmEmailAuthBody } from 'vitnode-shared/auth/auth.dto';
 
 @Injectable()
 export class VerifyConfirmEmailAuthService {

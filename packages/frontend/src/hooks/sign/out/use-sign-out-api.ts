@@ -1,6 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { SignOutAuthBody } from 'vitnode-shared/auth.dto';
+import { SignOutAuthBody } from 'vitnode-shared/auth/auth.dto';
 
 import { mutationApi } from './mutation-api';
 

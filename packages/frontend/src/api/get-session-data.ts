@@ -1,4 +1,4 @@
-import { ShowAuthObj } from 'vitnode-shared/auth.dto';
+import { ShowAuthObj } from 'vitnode-shared/auth/auth.dto';
 
 import { fetcher } from './fetcher';
 import { getUserIdCookie } from './get-user-id-cookie';

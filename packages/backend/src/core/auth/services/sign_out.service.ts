@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { eq } from 'drizzle-orm';
 import { Request, Response } from 'express';
-import { SignOutAuthBody } from 'vitnode-shared/auth.dto';
+import { SignOutAuthBody } from 'vitnode-shared/auth/auth.dto';
 
 @Injectable()
 export class SignOutAuthService {

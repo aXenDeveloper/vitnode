@@ -1,7 +1,7 @@
 import { type IOAuthGuards } from '@/guards/auth.guard';
 import { Inject, Injectable } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { ShowAuthObj } from 'vitnode-shared/auth.dto';
+import { ShowAuthObj } from 'vitnode-shared/auth/auth.dto';
 import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
 @Injectable()

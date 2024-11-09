@@ -3,7 +3,7 @@ import { getConfigFile } from '@/helpers/config';
 import { EmailHelperService } from '@/helpers/email/email.service';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Request } from 'express';
-import { SignAuthObj, SignUpAuthBody } from 'vitnode-shared/auth.dto';
+import { SignAuthObj, SignUpAuthBody } from 'vitnode-shared/auth/auth.dto';
 
 import { HelperSignUpAuthService } from './helper.service';
 import { SendConfirmEmailAuthService } from './send.confirm_email.service';

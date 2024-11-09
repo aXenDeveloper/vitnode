@@ -2,7 +2,7 @@
 
 import { fetcher } from '@/api/fetcher';
 import { revalidatePath } from 'next/cache';
-import { SignUpAuthBody } from 'vitnode-shared/auth.dto';
+import { SignUpAuthBody } from 'vitnode-shared/auth/auth.dto';
 
 export const mutationApi = async (
   body: {

@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { and, eq } from 'drizzle-orm';
 import { Request, Response } from 'express';
-import { SignInAuthBody, SignInAuthObj } from 'vitnode-shared/auth.dto';
+import { SignInAuthBody, SignInAuthObj } from 'vitnode-shared/auth/auth.dto';
 
 import { DeviceAuthService } from '../../../helpers/auth/device.service';
 import { verifyPassword } from '../helpers/password';
