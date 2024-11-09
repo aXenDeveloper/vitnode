@@ -1,0 +1,86 @@
+import { AdminAuthGuard } from '@/guards/admin-auth.guard';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiSecurity,
+  ApiTags,
+} from '@nestjs/swagger';
+import {
+  CreatePermissionsAdminPluginsAdminBody,
+  DeletePermissionsAdminPluginsAdminBody,
+} from 'vitnode-shared/admin/plugins/permissions-admin.dto';
+import { PermissionsStaff } from 'vitnode-shared/admin/staff.dto';
+
+import { CreatePermissionsAdminPluginsAdminService } from './services/create.service';
+import { DeletePermissionsAdminPluginsAdminService } from './services/delete.service';
+import { EditPermissionsAdminPluginsAdminService } from './services/edit.service';
+import { ShowPermissionsAdminPluginsAdminService } from './services/show.service';
+
+@ApiTags('Admin')
+@Controller('admin/plugins/permissions-admin')
+@ApiSecurity('admin')
+@UseGuards(AdminAuthGuard)
+export class PermissionsAdminPluginsAdminController {
+  constructor(
+    private readonly showService: ShowPermissionsAdminPluginsAdminService,
+    private readonly createService: CreatePermissionsAdminPluginsAdminService,
+    private readonly editService: EditPermissionsAdminPluginsAdminService,
+    private readonly deleteService: DeletePermissionsAdminPluginsAdminService,
+  ) {}
+
+  @Post(':plugin_code')
+  @ApiCreatedResponse({
+    description: 'Permission created',
+    type: PermissionsStaff,
+  })
+  async createPermission(
+    @Param('plugin_code') plugin_code: string,
+    @Body() body: CreatePermissionsAdminPluginsAdminBody,
+  ): Promise<PermissionsStaff> {
+    return await this.createService.create({ body, plugin_code });
+  }
+
+  @Delete(':plugin_code/:id')
+  @ApiOkResponse({ description: 'Permission deleted' })
+  async deletePermission(
+    @Param('plugin_code') plugin_code: string,
+    @Param('id') id: string,
+    @Body() body: DeletePermissionsAdminPluginsAdminBody,
+  ): Promise<void> {
+    await this.deleteService.delete({ plugin_code, id, body });
+  }
+
+  @Put(':plugin_code/:old_id')
+  @ApiOkResponse({
+    description: 'Permission edited',
+    type: PermissionsStaff,
+  })
+  async editPermission(
+    @Param('plugin_code') plugin_code: string,
+    @Param('old_id') old_id: string,
+    @Body() body: CreatePermissionsAdminPluginsAdminBody,
+  ): Promise<PermissionsStaff> {
+    return await this.editService.edit({ body, plugin_code, old_id });
+  }
+
+  @Get(':plugin_code')
+  @ApiOkResponse({
+    description: 'Permissions of plugin',
+    type: [PermissionsStaff],
+  })
+  async showPermissions(
+    @Param('plugin_code') plugin_code: string,
+  ): Promise<PermissionsStaff[]> {
+    return await this.showService.show(plugin_code);
+  }
+}

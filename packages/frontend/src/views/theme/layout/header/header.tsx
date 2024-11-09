@@ -34,7 +34,7 @@ export const Header = async ({ className }: { className?: string }) => {
     >
       <div className="container flex h-16 items-center gap-4 px-5">
         <div>test</div>
-        {nav.length && <NavHeader />}
+        {nav.length > 0 && <NavHeader />}
 
         <div className="ml-auto flex gap-2">
           <LanguageSwitcher />
