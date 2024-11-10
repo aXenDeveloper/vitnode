@@ -1,8 +1,0 @@
-mutation Core_sessions__sign_in(
-  $email: String!
-  $password: String!
-  $remember: Boolean
-  $admin: Boolean
-) {
-  core_sessions__sign_in(email: $email, password: $password, remember: $remember, admin: $admin)
-}

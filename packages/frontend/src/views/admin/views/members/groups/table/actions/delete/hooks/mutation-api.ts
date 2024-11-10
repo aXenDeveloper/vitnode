@@ -1,29 +1,13 @@
 'use server';
 
-import { fetcher } from '@/graphql/fetcher';
-import {
-  Admin__Core_Groups__Delete,
-  Admin__Core_Groups__DeleteMutation,
-  Admin__Core_Groups__DeleteMutationVariables,
-} from '@/graphql/mutations/admin/members/groups/admin__core_groups__delete.generated';
+import { fetcher } from '@/api/fetcher';
 import { revalidatePath } from 'next/cache';
 
-export const mutationApi = async (
-  variables: Admin__Core_Groups__DeleteMutationVariables,
-) => {
-  try {
-    await fetcher<
-      Admin__Core_Groups__DeleteMutation,
-      Admin__Core_Groups__DeleteMutationVariables
-    >({
-      query: Admin__Core_Groups__Delete,
-      variables,
-    });
+export const mutationApi = async (id: number) => {
+  await fetcher({
+    url: `/admin/members/groups/${id}`,
+    method: 'DELETE',
+  });
 
-    revalidatePath('/', 'layout');
-  } catch (error) {
-    const e = error as Error;
-
-    return { error: e.message };
-  }
+  revalidatePath('/', 'layout');
 };

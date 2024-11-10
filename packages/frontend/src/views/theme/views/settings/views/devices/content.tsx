@@ -1,9 +1,9 @@
 import { DateFormat } from '@/components/date-format';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Core_Sessions__Devices__ShowQuery } from '@/graphql/queries/settings/core_sessions__devices__show.generated';
 import { Monitor, Smartphone } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { ShowDevicesSettingsAuthObj } from 'vitnode-shared/auth/settings/devices.dto';
 
 const getDeviceIcon = (device: string) => {
   if (
@@ -18,19 +18,18 @@ const getDeviceIcon = (device: string) => {
   return <Monitor />;
 };
 
-interface Props extends Core_Sessions__Devices__ShowQuery {
-  loginToken: string;
-}
-
 export const ContentDevicesSettings = ({
-  core_sessions__devices__show: devices,
+  data,
   loginToken,
-}: Props) => {
+}: {
+  data: ShowDevicesSettingsAuthObj[];
+  loginToken: string;
+}) => {
   const t = useTranslations('core.settings.devices');
 
   return (
     <div className="space-y-6">
-      {devices.map(device => (
+      {data.map(device => (
         <div className="space-y-4 rounded-md border p-6" key={device.id}>
           <div className="flex flex-wrap items-center gap-4">
             <div className="bg-primary/10 [&>svg]:text-primary flex shrink-0 items-center justify-center rounded-sm p-2 [&>svg]:size-8">
@@ -71,7 +70,7 @@ export const ContentDevicesSettings = ({
             <li>
               <div>{t('session_expires')}</div>
               <div>
-                <DateFormat date={device.expires} showFullDate />
+                <DateFormat date={device.expires_at} showFullDate />
               </div>
             </li>
           </ul>

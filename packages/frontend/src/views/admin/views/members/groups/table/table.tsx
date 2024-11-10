@@ -4,16 +4,17 @@ import { DateFormat } from '@/components/date-format';
 import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/components/ui/data-table';
 import { GroupFormat } from '@/components/ui/user/group-format';
-import { Admin__Core_Groups__ShowQuery } from '@/graphql/queries/admin/members/groups/admin__core_groups__show.generated';
 import { Link } from '@/navigation';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { GroupsMembersAdminObj } from 'vitnode-shared/admin/members/groups.dto';
 
 import { ActionsTableGroupsMembersAdmin } from './actions/actions';
 
 export const TableGroupsMembersAdmin = ({
-  admin__core_groups__show: { edges, pageInfo },
-}: Admin__Core_Groups__ShowQuery) => {
+  edges,
+  page_info,
+}: GroupsMembersAdminObj) => {
   const t = useTranslations('admin.members.groups');
 
   return (
@@ -37,20 +38,26 @@ export const TableGroupsMembersAdmin = ({
           title: t('table.users_count'),
           cell: ({ row }) => {
             if (row.guest) return null;
+            if (row.users_count === 0) return row.users_count;
 
             return (
-              <Link href={`/admin/members/users?groups=${row.id}`}>
+              <Link
+                href={{
+                  pathname: `/admin/members/users`,
+                  query: { group_id: row.id },
+                }}
+              >
                 {row.users_count}
               </Link>
             );
           },
         },
         {
-          id: 'updated',
+          id: 'updated_at',
           title: t('updated'),
           sortable: true,
           cell: ({ row }) => {
-            return <DateFormat date={row.updated} />;
+            return <DateFormat date={row.updated_at} />;
           },
         },
         {
@@ -62,10 +69,10 @@ export const TableGroupsMembersAdmin = ({
       ]}
       data={edges}
       defaultSorting={{
-        sortBy: 'updated',
+        sortBy: 'updated_at',
         sortDirection: 'desc',
       }}
-      pageInfo={pageInfo}
+      pageInfo={page_info}
       searchPlaceholder={t('search_placeholder')}
     />
   );

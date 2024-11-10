@@ -1,26 +1,25 @@
+import { fetcher } from '@/api/fetcher';
 import { HeaderContent } from '@/components/ui/header-content';
-import { fetcher } from '@/graphql/fetcher';
 import {
   getPaginationTool,
   SearchParamsPagination,
-} from '@/graphql/get-pagination-tool';
-import {
-  Admin__Core_Email__Logs,
-  Admin__Core_Email__LogsQuery,
-  Admin__Core_Email__LogsQueryVariables,
-} from '@/graphql/queries/admin/settings/email/admin__core_email__logs.generated';
+} from '@/helpers/get-pagination-tool';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import {
+  LogsEmailSettingsAdminObj,
+  LogsEmailSettingsAdminQuery,
+} from 'vitnode-shared/admin/settings/email.dto';
 
 import { ContentLogsEmailSettingsAdmin } from './content';
 
-const getData = async (variables: Admin__Core_Email__LogsQueryVariables) => {
-  const data = await fetcher<
-    Admin__Core_Email__LogsQuery,
-    Admin__Core_Email__LogsQueryVariables
+const getData = async (query: LogsEmailSettingsAdminQuery) => {
+  const { data } = await fetcher<
+    LogsEmailSettingsAdminObj,
+    LogsEmailSettingsAdminQuery
   >({
-    query: Admin__Core_Email__Logs,
-    variables,
+    url: '/admin/settings/email/logs',
+    query,
   });
 
   return data;
@@ -42,7 +41,6 @@ export const LogsEmailSettingsAdminView = async ({
 }) => {
   const variables = await getPaginationTool({
     searchParams,
-    defaultPageSize: 10,
   });
 
   const [t, data] = await Promise.all([

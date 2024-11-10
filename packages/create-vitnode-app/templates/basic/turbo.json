@@ -15,7 +15,8 @@
       "cache": false
     },
     "config:init": {
-      "dependsOn": ["^config:init"]
+      "dependsOn": ["^config:init"],
+      "cache": false
     },
     "lint": {
       "dependsOn": ["^lint"]

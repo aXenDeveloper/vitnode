@@ -43,9 +43,9 @@ export const InternalErrorView = () => {
           </Button>
 
           <Button
-            onClick={() => {
+            onClick={async () => {
               if (CONFIG.node_development) {
-                mutationClearCache();
+                await mutationClearCache();
               }
 
               window.location.reload();

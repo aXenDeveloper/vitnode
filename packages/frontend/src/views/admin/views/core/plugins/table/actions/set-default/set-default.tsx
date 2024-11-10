@@ -3,13 +3,13 @@ import {
   TooltipContent,
   TooltipProvider,
 } from '@/components/ui/tooltip';
-import { ShowAdminPlugins } from '@/graphql/types';
 import { useTranslations } from 'next-intl';
+import { ShowPluginAdmin } from 'vitnode-shared/admin/plugins.dto';
 
 import { ButtonSetDefaultPluginActionsAdmin } from './button';
 import { useSetDefaultPluginAdmin } from './hooks/use-set-default-admin';
 
-export const SetDefaultPluginActionsAdmin = (props: ShowAdminPlugins) => {
+export const SetDefaultPluginActionsAdmin = (props: ShowPluginAdmin) => {
   const t = useTranslations('admin.core.plugins');
   const { onSubmit } = useSetDefaultPluginAdmin(props);
 

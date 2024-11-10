@@ -1,8 +1,0 @@
-mutation Admin__core_styles__editor__edit(
-  $files: FilesEditAdminEditorStyles!
-  $sticky: Boolean!
-) {
-  admin__core_styles__editor__edit(files: $files, sticky: $sticky) {
-    sticky
-  }
-}

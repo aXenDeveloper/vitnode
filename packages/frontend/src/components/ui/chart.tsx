@@ -7,15 +7,16 @@ import * as RechartsPrimitive from 'recharts';
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: '', dark: '.dark' } as const;
 
-export type ChartConfig = {
-  [k in string]: {
+export type ChartConfig = Record<
+  string,
+  {
     icon?: React.ComponentType;
     label?: React.ReactNode;
   } & (
     | { color?: never; theme: Record<keyof typeof THEMES, string> }
     | { color?: string; theme?: never }
-  );
-};
+  )
+>;
 
 interface ChartContextProps {
   config: ChartConfig;
@@ -118,7 +119,6 @@ const ChartTooltipContent = ({
   color,
   nameKey,
   labelKey,
-  ...props
 }: {
   hideIndicator?: boolean;
   hideLabel?: boolean;
@@ -177,7 +177,6 @@ const ChartTooltipContent = ({
         'border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl',
         className,
       )}
-      {...props}
     >
       {!nestLabel ? tooltipLabel : null}
       <div className="grid gap-1.5">

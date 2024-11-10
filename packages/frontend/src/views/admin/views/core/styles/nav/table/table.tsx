@@ -1,19 +1,17 @@
 'use client';
 
 import { DragAndDropSortableList } from '@/components/drag&drop/sortable-list/list';
-import { Admin__Core_Nav__ShowQuery } from '@/graphql/queries/admin/styles/nav/admin__core_nav__show.generated';
 import { useTextLang } from '@/hooks/use-text-lang';
 import { ExternalLink } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { toast } from 'sonner';
+import { ShowNavStyles } from 'vitnode-shared/nav.dto';
 
 import { ActionsTableNavAdmin } from './actions/actions';
 import { mutationChangePositionApi } from './hooks/mutation-change-position-api';
 
-export const TableNavAdmin = ({
-  core_nav__show: { edges },
-}: Admin__Core_Nav__ShowQuery) => {
+export const TableNavAdmin = ({ edges }: { edges: ShowNavStyles[] }) => {
   const t = useTranslations('admin.core.styles.nav');
   const tCore = useTranslations('core.global.errors');
   const { convertText } = useTextLang();
@@ -54,8 +52,8 @@ export const TableNavAdmin = ({
         try {
           await mutationChangePositionApi({
             id: Number(moveTo.id),
-            indexToMove: moveTo.indexToMove,
-            parentId: Number(moveTo.parentId),
+            index_to_move: moveTo.indexToMove,
+            parent_id: Number(moveTo.parentId),
           });
         } catch (_) {
           toast.error(tCore('title'), {

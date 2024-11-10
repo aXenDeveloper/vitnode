@@ -1,10 +1,12 @@
-import { DatabaseModuleArgs } from '@/utils/database/database.module';
+import type { DatabaseModuleArgs } from '@/utils/database/database.module';
+
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, count, desc, gt, gte, lt, lte, SQL } from 'drizzle-orm';
 import { PgTableWithColumns, TableConfig } from 'drizzle-orm/pg-core';
+import { PaginationObj } from 'vitnode-shared/utils/pagination.dto';
+import { SortDirectionEnum } from 'vitnode-shared/utils/pagination.enum';
 
 import coreSchemaDatabase from '../../database';
-import { PageInfo, SortDirectionEnum } from '../pagination';
 import { createClientDatabase, DetermineClient } from './client';
 
 @Injectable()
@@ -15,21 +17,19 @@ export class InternalDatabaseService<
     @Inject('DATABASE_MODULE_OPTIONS')
     private readonly options: DatabaseModuleArgs,
   ) {
-    void (async () => {
-      const client = await createClientDatabase({
-        schemaDatabase: this.options.schemaDatabase,
-        config: this.options.config,
-      });
+    const client = createClientDatabase({
+      schemaDatabase: this.options.schemaDatabase,
+      config: this.options.config,
+    });
 
-      this.db = client.db as DetermineClient<T>;
-    })();
+    this.db = client.db as DetermineClient<T>;
   }
 
   public db: DetermineClient<T>;
 
   protected outputPagination<T>({
     edges,
-    totalCount,
+    total_count,
     cursor,
     last,
     first,
@@ -40,11 +40,10 @@ export class InternalDatabaseService<
     first: number | undefined;
     last: number | undefined;
     primaryCursor: string;
-    totalCount: number;
+    total_count: number;
   }): {
     edges: T[];
-    pageInfo: PageInfo;
-  } {
+  } & PaginationObj {
     let currentEdges: T[] = edges;
 
     if (last) {
@@ -66,29 +65,29 @@ export class InternalDatabaseService<
     if (!first && !last) {
       return {
         edges,
-        pageInfo: {
-          totalCount,
+        page_info: {
+          total_count,
           count: edges.length,
-          hasNextPage: false,
-          hasPreviousPage: false,
-          startCursor: edgesCursor.start ?? null,
-          endCursor: edgesCursor.end ?? null,
+          has_next_page: false,
+          has_previous_page: false,
+          start_cursor: edgesCursor.start,
+          end_cursor: edgesCursor.end,
         },
       };
     }
 
     return {
       edges: currentEdges,
-      pageInfo: {
-        hasNextPage:
+      page_info: {
+        has_next_page:
           cursor && first
             ? !!edges.at(first)
             : edges.length > currentEdges.length,
-        startCursor: edgesCursor.start ?? null,
-        endCursor: edgesCursor.end ?? null,
-        totalCount,
+        start_cursor: edgesCursor.start,
+        end_cursor: edgesCursor.end,
+        total_count,
         count: currentEdges.length,
-        hasPreviousPage:
+        has_previous_page:
           last && cursor
             ? edges.length > currentEdges.length + 1
             : edgesCursor.start !== undefined && !!cursor,
@@ -102,8 +101,9 @@ export class InternalDatabaseService<
     defaultSortBy,
     first,
     last,
-    primaryCursor,
+    primaryCursor = 'id',
     sortBy,
+    sortDirection,
     where: whereInput,
     query,
   }: {
@@ -115,22 +115,23 @@ export class InternalDatabaseService<
     };
     first: number | undefined;
     last: number | undefined;
-    primaryCursor: keyof T['columns'];
+    primaryCursor?: keyof T['columns'];
     query: (args: {
       limit?: number;
       orderBy: SQL;
       where?: SQL;
     }) => Promise<Y[]>;
-    sortBy?: {
-      column: string;
-      direction: SortDirectionEnum;
-    };
+    sortBy?: string;
+    sortDirection?: SortDirectionEnum;
     where?: SQL;
   }) {
     const currentSortBy: {
       column: keyof T['columns'];
       direction: SortDirectionEnum;
-    } = sortBy ? sortBy : defaultSortBy;
+    } = {
+      column: sortBy ?? defaultSortBy.column,
+      direction: sortDirection ?? defaultSortBy.direction,
+    };
 
     const fn = last
       ? currentSortBy.direction === SortDirectionEnum.asc
@@ -175,7 +176,7 @@ export class InternalDatabaseService<
       // }
     }
 
-    const [edges, [totalCount]] = await Promise.all([
+    const [edges, [total_count]] = await Promise.all([
       query({
         where: whereInput ? and(whereInput, where) : where,
         orderBy,
@@ -190,7 +191,7 @@ export class InternalDatabaseService<
       last,
       first,
       primaryCursor: primaryCursor.toString(),
-      totalCount: totalCount.count,
+      total_count: total_count.count,
     });
   }
 }

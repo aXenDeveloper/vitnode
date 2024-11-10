@@ -8,7 +8,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Admin__Core_Files__ShowQuery } from '@/graphql/queries/admin/advanced/files/admin__core_files__show.generated';
 import { CONFIG } from '@/helpers/config-with-env';
 import { formatBytes } from '@/helpers/format-bytes';
 import { Link } from '@/navigation';
@@ -16,12 +15,14 @@ import { Clock, File } from 'lucide-react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { ShowFilesAdvancedAdminObj } from 'vitnode-shared/admin/advanced/files.dto';
 
 import { ActionsFilesAdvancedCoreAdmin } from './actions/actions';
 
 export const ContentFilesAdvancedCoreAdminView = ({
-  admin__core_files__show: { edges, pageInfo },
-}: Admin__Core_Files__ShowQuery) => {
+  edges,
+  page_info,
+}: ShowFilesAdvancedAdminObj) => {
   const t = useTranslations('core.settings.files');
 
   return (
@@ -78,11 +79,11 @@ export const ContentFilesAdvancedCoreAdminView = ({
           },
         },
         {
-          id: 'created',
+          id: 'created_at',
           sortable: true,
           title: t('created'),
           cell: ({ row }) => {
-            return <DateFormat date={row.created} />;
+            return <DateFormat date={row.created_at} />;
           },
         },
         {
@@ -138,10 +139,10 @@ export const ContentFilesAdvancedCoreAdminView = ({
       ]}
       data={edges}
       defaultSorting={{
-        sortBy: 'created',
+        sortBy: 'created_at',
         sortDirection: 'desc',
       }}
-      pageInfo={pageInfo}
+      pageInfo={page_info}
       searchPlaceholder={t('search')}
     />
   );

@@ -11,6 +11,7 @@
       "search": {
         "placeholder": "Search...",
         "no_results": "No results found.",
+        "desc": "Search Engine for AdminCP",
         "pages": "Pages"
       }
     },
@@ -72,9 +73,6 @@
           },
           "description": {
             "label": "Description Site"
-          },
-          "copyright": {
-            "label": "Copyright Site"
           },
           "contact_email": {
             "label": "Contact Email",
@@ -255,6 +253,7 @@
       },
       "plugins": {
         "title": "Plugins",
+        "desc": "Extend the functionality of your app with plugins.",
         "upload_new_version": "Upload New Version",
         "set_default": "Set as default",
         "get_help": "Get help",
@@ -279,6 +278,7 @@
             "link_url_with_link": "Link URL: <link></link>",
             "create": {
               "title": "Create Navigation",
+              "desc": "Create a new navigation for your plugin.",
               "code": {
                 "label": "Code",
                 "desc": "Should be unique. Min 3-50 characters.",
@@ -379,7 +379,7 @@
         "delete": {
           "submit": "Yes, delete plugin",
           "desc": "This action will delete <name></name> plugin created by <author></author> and all data associated with it.",
-          "info": "You may see the errors while the system is changing files. After the process is complete, you need to restart the server to apply the changes."
+          "info": "After the process is complete, you need to restart the server to apply the changes."
         },
         "download": {
           "title": "Download Plugin",
@@ -402,6 +402,7 @@
           "href": "URL: {href}",
           "create": {
             "title": "Create Navigation",
+            "desc": "Create a new navigation for your website.",
             "success": "Navigation has been created.",
             "name": {
               "label": "Name"
@@ -457,7 +458,7 @@
           "time_24": "24h Format",
           "locale": "Locale",
           "name": "Name",
-          "created": "Created",
+          "updated": "Updated",
           "enabled": "Enabled"
         },
         "actions": {
@@ -470,7 +471,8 @@
             "code": {
               "label": "Code",
               "placeholder": "en",
-              "desc": "This code uses as a language identifier in your URL, like: /en/page"
+              "desc": "This code uses as a language identifier in your URL, like: /en/page",
+              "already_exists": "Language with this code already exists."
             },
             "timezone": {
               "label": "Timezone"
@@ -514,6 +516,30 @@
             "uses_warning": "This file is used in other part of the system.",
             "success": "File has been deleted.",
             "submit": "Yes, delete file"
+          }
+        }
+      },
+      "security": {
+        "spam": {
+          "title": "Spam Protection",
+          "captcha": {
+            "title": "Captcha",
+            "type": {
+              "title": "Type",
+              "none": {
+                "title": "None"
+              },
+              "recaptcha_desc": "Read more on <link>Google reCAPTCHA</link>.",
+              "recaptcha_v2_invisible": "reCAPTCHA v2 Invisible",
+              "recaptcha_v2_checkbox": "reCAPTCHA v2 Checkbox",
+              "recaptcha_v3": "reCAPTCHA v3",
+              "cloudflare_turnstile": {
+                "title": "Cloudflare Turnstile",
+                "desc": "Read more on <link>Cloudflare Turnstile</link>."
+              }
+            },
+            "site_key": "Site Key",
+            "secret_key": "Secret Key"
           }
         }
       }
@@ -565,6 +591,7 @@
       },
       "groups": {
         "title": "Groups",
+        "desc": "Manage groups on your website.",
         "name": "Name",
         "updated": "Updated",
         "search_placeholder": "Search by name...",
@@ -632,7 +659,7 @@
             "success": "Permissions has been deleted"
           }
         },
-        "administrators": {
+        "admin": {
           "title": "Administrators",
           "desc": "Manage access to the administrator panel (AdminCP).",
           "administrator": "Administrator",

@@ -7,7 +7,6 @@ import {
 } from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
 import { Loader } from '@/components/ui/loader';
-import { StringLanguage } from '@/graphql/types';
 import { cn } from '@/helpers/classnames';
 import { useTextLang } from '@/hooks/use-text-lang';
 import { useQuery } from '@tanstack/react-query';
@@ -15,6 +14,7 @@ import { Check, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { useDebouncedCallback } from 'use-debounce';
+import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 export const ComboboxContentWithFetcher = ({
   queryKey,

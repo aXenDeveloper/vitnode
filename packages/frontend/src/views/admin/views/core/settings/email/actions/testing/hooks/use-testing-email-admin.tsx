@@ -17,24 +17,17 @@ export const useTestingEmailAdmin = () => {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    const mutation = await mutationApi({
-      ...values,
-      previewText: values.preview_text,
-    });
-
-    if (mutation?.error) {
+    try {
+      await mutationApi(values);
+      toast.success(t('success.title'), {
+        description: t('success.desc'),
+      });
+      setOpen?.(false);
+    } catch (_) {
       toast.error(tCore('title'), {
         description: tCore('internal_server_error'),
       });
-
-      return;
     }
-
-    toast.success(t('success.title'), {
-      description: t('success.desc'),
-    });
-
-    setOpen?.(false);
   };
 
   return { onSubmit, formSchema };

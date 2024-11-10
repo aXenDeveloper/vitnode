@@ -1,29 +1,15 @@
 'use server';
 
-import { fetcher } from '@/graphql/fetcher';
-import {
-  Admin__Core_Main_Settings__Edit,
-  Admin__Core_Main_Settings__EditMutation,
-  Admin__Core_Main_Settings__EditMutationVariables,
-} from '@/graphql/mutations/admin/settings/admin__core_main_settings__edit.generated';
+import { fetcher } from '@/api/fetcher';
 import { revalidatePath } from 'next/cache';
+import { MainSettingsAdminBody } from 'vitnode-shared/admin/settings/main.dto';
 
-export const mutationApi = async (
-  variables: Admin__Core_Main_Settings__EditMutationVariables,
-) => {
-  try {
-    await fetcher<
-      Admin__Core_Main_Settings__EditMutation,
-      Admin__Core_Main_Settings__EditMutationVariables
-    >({
-      query: Admin__Core_Main_Settings__Edit,
-      variables,
-    });
+export const mutationApi = async (body: MainSettingsAdminBody) => {
+  await fetcher<MainSettingsAdminBody, MainSettingsAdminBody>({
+    url: '/admin/settings/main',
+    method: 'PUT',
+    body,
+  });
 
-    revalidatePath('/', 'layout');
-  } catch (error) {
-    const e = error as Error;
-
-    return { error: e.message };
-  }
+  revalidatePath('/', 'layout');
 };

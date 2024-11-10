@@ -1,14 +1,14 @@
 'use client';
 
-import { StringLanguage } from '@/graphql/types';
+import { useMiddlewareData } from '@/hooks/use-middleware-data';
 import { useSession } from '@/hooks/use-session';
 import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { Content, EditorContent, useEditor } from '@tiptap/react';
 import { useLocale } from 'next-intl';
 import React from 'react';
+import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 import { cn } from '../../helpers/classnames';
-import { useGlobalData } from '../../hooks/use-global-data';
 import { Skeleton } from '../ui/skeleton';
 import { EmojiExtensionEditor } from './extensions/emoji/emoji';
 import { useExtensionsEditor } from './extensions/extensions';
@@ -43,15 +43,15 @@ export const Editor = ({
   value: StringLanguage[];
 }) => {
   const locale = useLocale();
-  const { defaultLanguage } = useGlobalData();
+  const { languages_code_default } = useMiddlewareData();
   const [selectedLanguage, setSelectedLanguage] = React.useState(
-    locale || defaultLanguage,
+    locale || languages_code_default,
   );
   const session = useSession();
   const adminSession = useSessionAdmin();
   const allowUploadFilesSession =
-    session.session?.files_permissions.allow_upload ??
-    adminSession.session?.files_permissions.allow_upload ??
+    session.user?.files_permissions.allow_upload ??
+    adminSession.user?.files_permissions.allow_upload ??
     false;
   const { handleDelete, checkUploadFile, uploadFile } = useFilesExtensionEditor(
     {
@@ -132,7 +132,6 @@ export const Editor = ({
 
     const content: Content = JSON.parse(findValue);
     editor.commands.setContent(content);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLanguage]);
 
   if (!editor) return null;

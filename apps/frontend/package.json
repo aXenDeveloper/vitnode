@@ -1,43 +1,35 @@
 {
   "name": "frontend",
-  "version": "0.0.10-canary.2",
-  "author": "Maciej Piotr (aXenDev) Balcerzak",
-  "license": "GPL-3.0 license",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
     "config:init": "vitnode-frontend init",
     "config:dev": "vitnode-frontend dev",
     "dev": "vitnode-frontend dev && next dev --turbo",
     "build": "next build",
-    "analyze": "cross-env ANALYZE=true pnpm build",
     "start": "next start",
     "start:prod": "node server.js",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "codegen": "graphql-codegen --config codegen.ts"
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "geist": "^1.3.1",
-    "lucide-react": "^0.451.0",
-    "next": "15.0.0-rc.1",
-    "next-intl": "3.21.0-canary.0",
-    "react": "19.0.0-rc-6cf85185-20241014",
-    "react-dom": "19.0.0-rc-6cf85185-20241014",
-    "react-hook-form": "^7.53.0",
-    "recharts": "^2.13.0",
-    "sonner": "^1.5.0",
-    "vitnode-frontend": "workspace:*",
-    "zod": "^3.23.8"
+    "next": "^15.0.2",
+    "next-intl": "^3.24.0",
+    "react": "19.0.0-rc-7c8e5e7a-20241101",
+    "react-dom": "19.0.0-rc-7c8e5e7a-20241101",
+    "vitnode-frontend": "workspace:*"
   },
   "devDependencies": {
-    "@graphql-codegen/cli": "^5.0.3",
-    "@types/node": "^22.7.5",
-    "@types/react": "^18.3.11",
+    "@types/node": "^22.8.7",
+    "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.20",
     "eslint-config-typescript-vitnode": "workspace:*",
-    "graphql-tag": "^2.12.6",
     "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.13",
-    "typescript": "^5.6.3"
+    "tailwindcss": "^3.4.14",
+    "typescript": "^5.6.3",
+    "vitnode-shared": "workspace:*",
+    "shared": "workspace:*"
   }
 }

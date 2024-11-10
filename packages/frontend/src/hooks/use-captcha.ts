@@ -1,20 +1,18 @@
-import { CaptchaTypeEnum } from '@/graphql/types';
 import { useLocale } from 'next-intl';
 import { useTheme } from 'next-themes';
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import React from 'react';
+import { CaptchaTypeEnum } from 'vitnode-shared/utils/global';
 
-import { useGlobalData } from './use-global-data';
+import { useMiddlewareData } from './use-middleware-data';
 
 export const useCaptcha = () => {
   const locale = useLocale();
   const { resolvedTheme } = useTheme();
   const [isReady, setIsReady] = React.useState(false);
   const {
-    config: {
-      security: { captcha: config },
-    },
-  } = useGlobalData();
+    security: { captcha: config },
+  } = useMiddlewareData();
   const [token, setToken] = React.useState<string>(
     config.type === CaptchaTypeEnum.none ? 'none' : '',
   );
@@ -78,9 +76,9 @@ export const useCaptcha = () => {
     } else if (config.type === CaptchaTypeEnum.recaptcha_v3) {
       script.src = `${googleCaptchaDomain}&render=${config.site_key}`;
     } else {
-      window[functionCF] = handleLoaded;
+      // window[functionCF] = handleLoaded;
 
-      script.src = `https://challenges.cloudflare.com/turnstile/v0/api.js?onload=${functionCF}`;
+      script.src = `https://challenges.cloudflare.com/turnstile/v0/api.js`;
     }
     if (!script.src) return;
 
@@ -92,7 +90,6 @@ export const useCaptcha = () => {
       window[functionCF] = null;
       document.body.removeChild(script);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getTokenFromCaptcha = async (): Promise<string> => {

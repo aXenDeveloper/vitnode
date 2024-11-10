@@ -1,12 +1,12 @@
 'use client';
 
+import { ContentColor } from '@/components/helpers/color/content-color';
 import { getHSLFromString, isColorBrightness } from '@/helpers/colors';
 import { RemoveFormatting } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
 import { cn } from '../../helpers/classnames';
-import { ContentColor } from '../utils/color/content-color';
 import { Button } from './button';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 import {

@@ -13,6 +13,7 @@ const useRouter = () => {
   const router = useRouterI18n();
   const { push } = router;
 
+  // eslint-disable-next-line react-compiler/react-compiler
   router.push = (href, options) => {
     NProgress.start();
     push(href, options);

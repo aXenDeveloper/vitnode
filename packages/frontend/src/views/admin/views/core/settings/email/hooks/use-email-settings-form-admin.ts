@@ -1,20 +1,25 @@
-import { Admin__Core_Email_Settings__ShowQuery } from '@/graphql/queries/admin/settings/admin__core_email_settings__show.generated';
+import { fetcherClient } from '@/api/fetcher-client';
 import { getHSLFromString, isColorBrightness } from '@/helpers/colors';
-import { zodFile } from '@/helpers/zod';
+import { zodFiles } from '@/helpers/zod';
 import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
+import {
+  EditEmailSettingsAdminBody,
+  ShowEmailSettingsAdminObj,
+} from 'vitnode-shared/admin/settings/email.dto';
 import * as z from 'zod';
 
-import { mutationApi } from './mutation-api';
+import { ContentEmailSettingsAdmin } from '../content';
+import { revalidateApi } from './revalidate-api';
 
-export const useEmailSettingsFormAdmin = ({
-  admin__core_email_settings__show: data,
-}: Admin__Core_Email_Settings__ShowQuery) => {
+export const useEmailSettingsFormAdmin = (
+  data: React.ComponentProps<typeof ContentEmailSettingsAdmin>,
+) => {
   const t = useTranslations('core.global');
   const formSchema = z.object({
     color_primary: z.string().default(data.color_primary),
-    logo: zodFile.default(data.logo ? [data.logo] : []).optional(),
+    logo: zodFiles.default(data.logo ? [data.logo] : []).optional(),
   });
 
   const onSubmit = async (
@@ -33,23 +38,30 @@ export const useEmailSettingsFormAdmin = ({
 
     if (values.logo?.length) {
       if (values.logo[0] instanceof File) {
-        formData.append('logo.file', values.logo[0]);
-      } else {
-        formData.append('logo.keep', 'true');
+        formData.append('logo', values.logo[0]);
       }
+    } else {
+      formData.append('delete_logo', 'true');
     }
 
-    const mutation = await mutationApi(formData);
-    if (mutation?.error) {
+    try {
+      await fetcherClient<
+        ShowEmailSettingsAdminObj,
+        EditEmailSettingsAdminBody
+      >({
+        url: '/admin/settings/email',
+        method: 'PUT',
+        body: formData,
+      });
+      await revalidateApi();
+
+      toast.success(t('saved_success'));
+      form.reset(values);
+    } catch (_) {
       toast.error(t('errors.title'), {
         description: t('errors.internal_server_error'),
       });
-
-      return;
     }
-
-    toast.success(t('saved_success'));
-    form.reset(values);
   };
 
   return { onSubmit, formSchema };

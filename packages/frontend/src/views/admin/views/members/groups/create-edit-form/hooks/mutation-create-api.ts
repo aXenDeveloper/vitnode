@@ -1,28 +1,18 @@
 'use server';
 
-import { fetcher } from '@/graphql/fetcher';
-import {
-  Admin__Core_Groups__Create,
-  Admin__Core_Groups__CreateMutation,
-  Admin__Core_Groups__CreateMutationVariables,
-} from '@/graphql/mutations/admin/members/groups/admin__core_groups__create.generated';
+import { fetcher } from '@/api/fetcher';
 import { revalidatePath } from 'next/cache';
+import {
+  CreateGroupsMembersAdminBody,
+  GroupMembersAdmin,
+} from 'vitnode-shared/admin/members/groups.dto';
 
-export const mutationCreateApi = async (
-  variables: Admin__Core_Groups__CreateMutationVariables,
-) => {
-  try {
-    await fetcher<
-      Admin__Core_Groups__CreateMutation,
-      Admin__Core_Groups__CreateMutationVariables
-    >({
-      query: Admin__Core_Groups__Create,
-      variables,
-    });
-    revalidatePath('/[locale]/admin/(vitnode)/members/groups', 'page');
-  } catch (error) {
-    const e = error as Error;
+export const mutationCreateApi = async (body: CreateGroupsMembersAdminBody) => {
+  await fetcher<GroupMembersAdmin, CreateGroupsMembersAdminBody>({
+    url: '/admin/members/groups',
+    method: 'POST',
+    body,
+  });
 
-    return { error: e.message };
-  }
+  revalidatePath('/[locale]/admin/(auth)/(vitnode)/members/groups', 'page');
 };

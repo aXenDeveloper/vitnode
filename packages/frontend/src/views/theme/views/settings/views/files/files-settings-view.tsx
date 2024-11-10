@@ -1,41 +1,36 @@
+import { fetcher } from '@/api/fetcher';
+import { getSessionData } from '@/api/get-session-data';
 import { CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Loader } from '@/components/ui/loader';
 import { Progress } from '@/components/ui/progress';
-import { fetcher } from '@/graphql/fetcher';
+import { cn } from '@/helpers/classnames';
+import { formatBytes } from '@/helpers/format-bytes';
 import {
   getPaginationTool,
   SearchParamsPagination,
-} from '@/graphql/get-pagination-tool';
-import { getSessionData } from '@/graphql/get-session-data';
-import {
-  Core_Members__Files__Show,
-  Core_Members__Files__ShowQuery,
-  Core_Members__Files__ShowQueryVariables,
-} from '@/graphql/queries/settings/core_members__files__show.generated';
-import { ShowCoreFilesSortingColumnEnum } from '@/graphql/types';
-import { cn } from '@/helpers/classnames';
-import { formatBytes } from '@/helpers/format-bytes';
+} from '@/helpers/get-pagination-tool';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import React from 'react';
+import {
+  ShowFilesSettingsAuthObj,
+  ShowFilesSettingsAuthQuery,
+} from 'vitnode-shared/auth/settings/files.dto';
+import { ShowFilesSettingsAuthSortEnum } from 'vitnode-shared/auth/settings/files.enum';
 
-const getData = async (variables: Core_Members__Files__ShowQueryVariables) => {
-  const data = await fetcher<
-    Core_Members__Files__ShowQuery,
-    Core_Members__Files__ShowQueryVariables
+import { ContentFilesSettings } from './content';
+
+const getData = async (query: ShowFilesSettingsAuthQuery) => {
+  const { data } = await fetcher<
+    ShowFilesSettingsAuthObj,
+    ShowFilesSettingsAuthQuery
   >({
-    query: Core_Members__Files__Show,
-    variables,
+    url: '/core/auth/settings/files',
+    query,
   });
 
   return data;
 };
-
-const ContentFilesSettings = React.lazy(async () =>
-  import('./content').then(module => ({
-    default: module.ContentFilesSettings,
-  })),
-);
 
 export const generateMetadataFilesSettings = async (): Promise<Metadata> => {
   const t = await getTranslations('core.settings.files');
@@ -54,19 +49,15 @@ export const FilesSettingsView = async ({
   const variables = await getPaginationTool({
     searchParams,
     defaultPageSize: 10,
-    sortByEnum: ShowCoreFilesSortingColumnEnum,
+    sortEnum: ShowFilesSettingsAuthSortEnum,
   });
-  const [t, data, { core_sessions__authorization }] = await Promise.all([
+  const [t, { user }, data] = await Promise.all([
     getTranslations('core.settings.files'),
-    getData(variables),
     getSessionData(),
+    getData(variables),
   ]);
-  if (!core_sessions__authorization.user) {
-    return null;
-  }
-  const {
-    user: { files_permissions },
-  } = core_sessions__authorization;
+  if (!user) return null;
+  const { files_permissions } = user;
   const percentStorage =
     (files_permissions.space_used / files_permissions.total_max_storage) * 100;
 
@@ -97,6 +88,7 @@ export const FilesSettingsView = async ({
             </div>
           </div>
         )}
+
         <React.Suspense fallback={<Loader />}>
           <ContentFilesSettings {...data} />
         </React.Suspense>

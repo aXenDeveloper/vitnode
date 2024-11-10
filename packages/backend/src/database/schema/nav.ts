@@ -10,7 +10,5 @@ export const core_nav = pgTable(
     // ! Warning: this is a recursive relation. It's not supported by drizzle-orm yet.
     parent_id: t.integer().notNull().default(0),
   }),
-  table => ({
-    parent_id_idx: index('core_nav_parent_id_idx').on(table.parent_id),
-  }),
+  t => [index('core_nav_parent_id_idx').on(t.parent_id)],
 );

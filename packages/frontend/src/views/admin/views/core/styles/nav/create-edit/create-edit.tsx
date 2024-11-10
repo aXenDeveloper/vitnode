@@ -4,13 +4,15 @@ import { AutoFormSwitch } from '@/components/form/fields/switch';
 import { AutoFormStringLanguageInput } from '@/components/form/fields/text-language-input';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from 'next-intl';
+import { ShowNavStyles } from 'vitnode-shared/nav.dto';
 
-import {
-  CreateEditNavAdminArgs,
-  useCreateEditNavAdmin,
-} from './hooks/use-create-edit-nav-admin';
+import { useCreateEditNavAdmin } from './hooks/use-create-edit-nav-admin';
 
-export const ContentCreateEditNavAdmin = ({ data }: CreateEditNavAdminArgs) => {
+export const ContentCreateEditNavAdmin = ({
+  data,
+}: {
+  data?: Omit<ShowNavStyles, 'children'>;
+}) => {
   const t = useTranslations('admin.core.styles.nav');
   const tCore = useTranslations('core.global');
   const { onSubmit, formSchema } = useCreateEditNavAdmin({ data });

@@ -12,6 +12,8 @@
     "declaration": true,
     "removeComments": true,
     "emitDeclarationOnly": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "plugins": [
       {
         "name": "next"

@@ -1,8 +1,8 @@
+import { Injectable } from '@nestjs/common';
 import {
   ConfigPlugin,
-  NavPluginInfoJSONTypeWithChildren,
-} from '@/providers/plugins.type';
-import { Injectable } from '@nestjs/common';
+  NavPluginInfoJSONType,
+} from 'vitnode-shared/admin/plugin.dto';
 
 @Injectable()
 export class HelpersAdminNavPluginsService {
@@ -12,7 +12,7 @@ export class HelpersAdminNavPluginsService {
   }: {
     code: string;
     items: ConfigPlugin['nav'];
-  }): NavPluginInfoJSONTypeWithChildren | null {
+  }): NavPluginInfoJSONType | null {
     for (const item of items) {
       if (item.code === code) {
         return item;

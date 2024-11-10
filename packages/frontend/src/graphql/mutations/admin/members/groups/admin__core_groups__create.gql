@@ -1,9 +1,0 @@
-mutation Admin__core_groups__create(
-  $name: [StringLanguageInput!]!
-  $content: ContentCreateAdminGroups!
-  $color: String
-) {
-  admin__core_groups__create(name: $name, content: $content, color: $color) {
-    id
-  }
-}

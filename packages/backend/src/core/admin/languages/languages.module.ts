@@ -1,20 +1,18 @@
 import { Module } from '@nestjs/common';
 
-import { CreateAdminCoreLanguagesResolver } from './create/create.resolver';
-import { CreateAdminCoreLanguageService } from './create/create.service';
-import { DeleteAdminCoreLanguagesResolver } from './delete/delete.resolver';
-import { DeleteAdminCoreLanguageService } from './delete/delete.service';
-import { EditAdminCoreLanguagesResolver } from './edit/edit.resolver';
-import { EditAdminCoreLanguagesService } from './edit/edit.service';
+import { LanguagesAdminController } from './languages.controller';
+import { CreateLanguagesAdminService } from './services/create.service';
+import { DeleteLanguagesAdminService } from './services/delete.service';
+import { EditLanguagesAdminService } from './services/edit.service';
+import { ShowLanguagesAdminService } from './services/show.service';
 
 @Module({
   providers: [
-    CreateAdminCoreLanguageService,
-    CreateAdminCoreLanguagesResolver,
-    EditAdminCoreLanguagesResolver,
-    EditAdminCoreLanguagesService,
-    DeleteAdminCoreLanguagesResolver,
-    DeleteAdminCoreLanguageService,
+    ShowLanguagesAdminService,
+    CreateLanguagesAdminService,
+    EditLanguagesAdminService,
+    DeleteLanguagesAdminService,
   ],
+  controllers: [LanguagesAdminController],
 })
-export class AdminLanguagesModule {}
+export class LanguagesAdminModule {}

@@ -1,9 +1,0 @@
-mutation Admin__core_members__create(
-  $email: String!
-  $name: String!
-  $password: String!
-) {
-  admin__core_members__create(email: $email, name: $name, password: $password) {
-    email
-  }
-}

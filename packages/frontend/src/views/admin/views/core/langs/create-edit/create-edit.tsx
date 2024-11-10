@@ -3,13 +3,13 @@ import { AutoFormCombobox } from '@/components/form/fields/combobox';
 import { AutoFormInput } from '@/components/form/fields/input';
 import { AutoFormSwitch } from '@/components/form/fields/switch';
 import { Button } from '@/components/ui/button';
-import { ShowCoreLanguages } from '@/graphql/types';
 import { useTranslations } from 'next-intl';
+import { LanguagesAdminObj } from 'vitnode-shared/admin/language.dto';
 
 import { useCreateEditLangAdmin } from './hooks/use-create-edit-lang-admin';
 import { locales } from './locales';
 
-export const CreateEditLangAdmin = ({ data }: { data?: ShowCoreLanguages }) => {
+export const CreateEditLangAdmin = ({ data }: { data?: LanguagesAdminObj }) => {
   const t = useTranslations('admin.core.langs.actions');
   const { onSubmit, formSchema } = useCreateEditLangAdmin({ data });
 

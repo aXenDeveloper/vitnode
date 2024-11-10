@@ -1,28 +1,21 @@
 'use server';
 
-import { fetcher } from '@/graphql/fetcher';
-import {
-  Admin__Core_Groups__Edit,
-  Admin__Core_Groups__EditMutation,
-  Admin__Core_Groups__EditMutationVariables,
-} from '@/graphql/mutations/admin/members/groups/admin__core_groups__edit.generated';
+import { fetcher } from '@/api/fetcher';
 import { revalidatePath } from 'next/cache';
+import {
+  CreateGroupsMembersAdminBody,
+  GroupMembersAdmin,
+} from 'vitnode-shared/admin/members/groups.dto';
 
-export const mutationEditApi = async (
-  variables: Admin__Core_Groups__EditMutationVariables,
-) => {
-  try {
-    await fetcher<
-      Admin__Core_Groups__EditMutation,
-      Admin__Core_Groups__EditMutationVariables
-    >({
-      query: Admin__Core_Groups__Edit,
-      variables,
-    });
-    revalidatePath('/', 'layout');
-  } catch (error) {
-    const e = error as Error;
+export const mutationEditApi = async ({
+  id,
+  ...body
+}: { id: number } & CreateGroupsMembersAdminBody) => {
+  await fetcher<GroupMembersAdmin, CreateGroupsMembersAdminBody>({
+    url: `/admin/members/groups/${id}`,
+    method: 'PUT',
+    body,
+  });
 
-    return { error: e.message };
-  }
+  revalidatePath('/', 'layout');
 };

@@ -3,14 +3,12 @@
 import { AutoForm } from '@/components/form/auto-form';
 import { AutoFormInput } from '@/components/form/fields/input';
 import { AutoFormStringLanguageInput } from '@/components/form/fields/text-language-input';
-import { Core_Main_Settings__ShowQuery } from '@/graphql/queries/admin/settings/core_main_settings__show.generated';
 import { useTranslations } from 'next-intl';
+import { ShowMiddlewareObj } from 'vitnode-shared/middleware.dto';
 
 import { useSettingsCoreAdmin } from './hooks/use-settings-core-admin';
 
-export const ContentMainSettingsCoreAdmin = (
-  props: Core_Main_Settings__ShowQuery,
-) => {
+export const ContentMainSettingsCoreAdmin = (props: ShowMiddlewareObj) => {
   const t = useTranslations('admin.core.settings.main');
   const { onSubmit, formSchema } = useSettingsCoreAdmin(props);
 
@@ -18,17 +16,22 @@ export const ContentMainSettingsCoreAdmin = (
     <AutoForm
       fields={[
         {
-          id: 'name',
+          id: 'site_name',
           component: AutoFormInput,
           label: t('name.label'),
         },
         {
-          id: 'short_name',
+          id: 'site_short_name',
           component: AutoFormInput,
           label: t('short_name.label'),
         },
         {
-          id: 'contactEmail',
+          id: 'site_description',
+          component: AutoFormStringLanguageInput,
+          label: t('description.label'),
+        },
+        {
+          id: 'contact_email',
           component: props => (
             <AutoFormInput
               {...props}
@@ -38,16 +41,6 @@ export const ContentMainSettingsCoreAdmin = (
           ),
           label: t('contact_email.label'),
           description: t('contact_email.desc'),
-        },
-        {
-          id: 'description',
-          component: AutoFormStringLanguageInput,
-          label: t('description.label'),
-        },
-        {
-          id: 'copyright',
-          component: AutoFormStringLanguageInput,
-          label: t('copyright.label'),
         },
       ]}
       formSchema={formSchema}

@@ -1,8 +1,8 @@
-import { AvatarUser as AvatarUserType } from '@/graphql/types';
+import { Img } from '@/components/img';
+import { AvatarUser as AvatarUserType } from 'vitnode-shared/user.dto';
 
 import { cn } from '../../../helpers/classnames';
 import { CONFIG } from '../../../helpers/config-with-env';
-import { Img } from '../../img';
 
 const generateLetterPhoto = (letter: string, color: string) =>
   `data:image/svg+xml,${encodeURIComponent(
@@ -12,7 +12,7 @@ const generateLetterPhoto = (letter: string, color: string) =>
 export const AvatarUser = ({
   className,
   sizeInRem,
-  user: { avatar, avatar_color, name },
+  user: { avatar_color, name, avatar },
 }: {
   className?: string;
   sizeInRem: number;

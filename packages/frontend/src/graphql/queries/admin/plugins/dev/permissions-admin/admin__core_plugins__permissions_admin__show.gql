@@ -1,6 +1,0 @@
-query Admin__core_plugins__permissions_admin__show($pluginCode: String!) {
-  admin__core_plugins__permissions_admin__show(plugin_code: $pluginCode) {
-    permissions
-    id
-  }
-}

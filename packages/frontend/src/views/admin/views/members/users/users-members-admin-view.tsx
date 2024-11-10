@@ -1,40 +1,36 @@
+import { fetcher } from '@/api/fetcher';
 import { HeaderContent } from '@/components/ui/header-content';
-import { fetcher } from '@/graphql/fetcher';
 import {
   getPaginationTool,
   SearchParamsPagination,
-} from '@/graphql/get-pagination-tool';
-import {
-  Admin__Core_Members__Show,
-  Admin__Core_Members__ShowQuery,
-  Admin__Core_Members__ShowQueryVariables,
-} from '@/graphql/queries/admin/members/users/admin__core_members__show.generated';
-import { ShowAdminMembersSortingColumnEnum } from '@/graphql/types';
+} from '@/helpers/get-pagination-tool';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import {
+  UsersMembersAdminObj,
+  UsersMembersAdminQuery,
+} from 'vitnode-shared/admin/members/users.dto';
+import { UsersMembersAdminSortEnum } from 'vitnode-shared/admin/members/users.enum';
 
-import { CreateUserUsersMembersAdmin } from './create/create';
-import { TableUsersMembersAdmin } from './table/table';
-
-const getData = async (variables: Admin__Core_Members__ShowQueryVariables) => {
-  const data = await fetcher<
-    Admin__Core_Members__ShowQuery,
-    Admin__Core_Members__ShowQueryVariables
-  >({
-    query: Admin__Core_Members__Show,
-    variables,
-  });
-
-  return data;
-};
+import { CreateUserUsersMembersAdmin } from '../create/create';
+import { TableUsersMembersAdmin } from './table';
 
 interface SearchParams extends SearchParamsPagination {
-  groups?: string[];
+  group_id?: string | string[];
 }
 
 export interface UsersMembersAdminViewProps {
   searchParams: Promise<SearchParams>;
 }
+
+const getData = async (query: UsersMembersAdminQuery) => {
+  const { data } = await fetcher<UsersMembersAdminObj, UsersMembersAdminQuery>({
+    url: '/admin/members/users',
+    query,
+  });
+
+  return data;
+};
 
 export const generateMetadataUsersMembersAdmin =
   async (): Promise<Metadata> => {
@@ -48,24 +44,25 @@ export const generateMetadataUsersMembersAdmin =
 export const UsersMembersAdminView = async ({
   searchParams,
 }: UsersMembersAdminViewProps) => {
-  const { groups } = await searchParams;
-  const variables: Admin__Core_Members__ShowQueryVariables = {
-    ...(await getPaginationTool({
-      searchParams,
-      sortByEnum: ShowAdminMembersSortingColumnEnum,
-      defaultPageSize: 10,
-    })),
-    groups: Array.isArray(groups)
-      ? groups.map(group => Number(group))
-      : Number(groups),
+  const { group_id } = await searchParams;
+  const variables = await getPaginationTool({
+    searchParams,
+    sortEnum: UsersMembersAdminSortEnum,
+  });
+
+  const query: UsersMembersAdminQuery = {
+    ...variables,
+    groups: Array.isArray(group_id)
+      ? group_id.map(group => +group)
+      : group_id
+        ? [+group_id]
+        : [],
   };
 
-  const [data, t] = await Promise.all([
-    getData(variables),
+  const [t, data] = await Promise.all([
     getTranslations('admin.members.users'),
+    getData(query),
   ]);
-
-  // console.log('data', data);
 
   return (
     <>

@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
 
-import { AdminAuthorizationSettingsModule } from './authorization/authorization.module';
-import { AdminMainSettingsModule } from './main/main.module';
-import { AdminTermsSettingsModule } from './terms/terms.module';
+import { EmailSettingsAdminModule } from './email/email.module';
+import { LegalSettingsAdminModule } from './legal/legal.module';
+import { MainSettingsAdminModule } from './main/main.module';
 
 @Module({
   imports: [
-    AdminMainSettingsModule,
-    AdminAuthorizationSettingsModule,
-    AdminTermsSettingsModule,
+    MainSettingsAdminModule,
+    LegalSettingsAdminModule,
+    EmailSettingsAdminModule,
   ],
 })
-export class AdminSettingsModule {}
+export class SettingsAdminModule {}

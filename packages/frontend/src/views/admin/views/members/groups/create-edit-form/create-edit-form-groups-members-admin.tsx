@@ -5,21 +5,13 @@ import { AutoFormSwitch } from '@/components/form/fields/switch';
 import { AutoFormStringLanguageInput } from '@/components/form/fields/text-language-input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsTrigger } from '@/components/ui/tabs';
-import { useTextLang } from '@/hooks/use-text-lang';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { GroupsMembersAdminObj } from 'vitnode-shared/admin/members/groups.dto';
 
-import {
-  CreateEditFormGroupsMembersAdminArgs,
-  useCreateEditFormGroupsMembersAdmin,
-} from './hooks/use-create-edit-form-groups-members-admin';
+import { useCreateEditFormGroupsMembersAdmin } from './hooks/use-create-edit-form-groups-members-admin';
 
 enum TabsEnum {
   CONTENT = 'content',
@@ -28,44 +20,41 @@ enum TabsEnum {
 
 export const CreateEditFormGroupsMembersAdmin = ({
   data,
-}: CreateEditFormGroupsMembersAdminArgs) => {
+}: {
+  data?: Pick<
+    GroupsMembersAdminObj['edges'][0],
+    'color' | 'content' | 'id' | 'name'
+  >;
+}) => {
   const t = useTranslations('admin.members.groups');
   const tCore = useTranslations('core.global');
   const [activeTab, setActiveTab] = React.useState<TabsEnum>(TabsEnum.MAIN);
   const { onSubmit, formSchema } = useCreateEditFormGroupsMembersAdmin({
     data,
   });
-  const { convertText } = useTextLang();
 
   return (
     <>
-      <DialogHeader>
-        <DialogTitle>{data ? t('edit.title') : t('create.title')}</DialogTitle>
-        {data && (
-          <DialogDescription>{convertText(data.name)}</DialogDescription>
-        )}
-
-        <Tabs>
-          <TabsTrigger
-            active={activeTab === TabsEnum.MAIN}
-            id="main"
-            onClick={() => {
-              setActiveTab(TabsEnum.MAIN);
-            }}
-          >
-            {t('create_edit.main')}
-          </TabsTrigger>
-          <TabsTrigger
-            active={activeTab === TabsEnum.CONTENT}
-            id="content"
-            onClick={() => {
-              setActiveTab(TabsEnum.CONTENT);
-            }}
-          >
-            {t('create_edit.content')}
-          </TabsTrigger>
-        </Tabs>
-      </DialogHeader>
+      <Tabs>
+        <TabsTrigger
+          active={activeTab === TabsEnum.MAIN}
+          id="main"
+          onClick={() => {
+            setActiveTab(TabsEnum.MAIN);
+          }}
+        >
+          {t('create_edit.main')}
+        </TabsTrigger>
+        <TabsTrigger
+          active={activeTab === TabsEnum.CONTENT}
+          id="content"
+          onClick={() => {
+            setActiveTab(TabsEnum.CONTENT);
+          }}
+        >
+          {t('create_edit.content')}
+        </TabsTrigger>
+      </Tabs>
 
       <AutoForm
         dependencies={[

@@ -6,22 +6,20 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Admin__Core_Files__ShowQuery } from '@/graphql/queries/admin/advanced/files/admin__core_files__show.generated';
 import { useTranslations } from 'next-intl';
+import { ShowFilesAdvancedAdmin } from 'vitnode-shared/admin/advanced/files.dto';
 
 import { useDeleteFileAdvancedAdmin } from './hooks/use-delete-file-advanced-admin';
 import { SubmitDeleteActionFilesAdvancedCoreAdmin } from './submit';
-
-export type ContentDeleteActionFilesAdvancedCoreAdminProps = Pick<
-  Admin__Core_Files__ShowQuery['admin__core_files__show']['edges'][0],
-  'count_uses' | 'file_name_original' | 'id'
->;
 
 export const ContentDeleteActionFilesAdvancedCoreAdmin = ({
   count_uses,
   file_name_original,
   id,
-}: ContentDeleteActionFilesAdvancedCoreAdminProps) => {
+}: Pick<
+  ShowFilesAdvancedAdmin,
+  'count_uses' | 'file_name_original' | 'id'
+>) => {
   const t = useTranslations('admin.core.advanced.files.delete');
   const tCore = useTranslations('core.global');
   const { onSubmit } = useDeleteFileAdvancedAdmin({

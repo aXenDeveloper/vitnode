@@ -1,6 +1,6 @@
 {
   "name": "vitnode-backend-ai-google",
-  "version": "0.0.10-canary.2",
+  "version": "0.0.10-canary.4",
   "description": "Google AI provider for VitNode projects.",
   "author": "VitNode Team",
   "license": "MIT",
@@ -11,8 +11,8 @@
     "directory": "packages/backend-ai-google"
   },
   "scripts": {
-    "build": "tsc && swc src -d dist --config-file .swcrc",
-    "dev": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\"",
+    "build:packages": "tsc && swc src -d dist --config-file .swcrc",
+    "dev:packages": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\"",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
@@ -26,15 +26,15 @@
     "gemini"
   ],
   "devDependencies": {
-    "@swc/cli": "^0.4.0",
-    "@swc/core": "^1.7.35",
-    "@types/node": "^22.7.5",
-    "ai": "^3.4.10",
+    "@swc/cli": "^0.5.0",
+    "@swc/core": "^1.7.42",
+    "@types/node": "^22.8.7",
+    "ai": "^3.4.32",
     "concurrently": "^9.0.1",
     "eslint-config-typescript-vitnode": "workspace:*",
     "typescript": "^5.6.3"
   },
   "dependencies": {
-    "@ai-sdk/google": "^0.0.51"
+    "@ai-sdk/google": "^0.0.55"
   }
 }

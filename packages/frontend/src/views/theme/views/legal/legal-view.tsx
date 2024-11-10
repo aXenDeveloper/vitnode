@@ -1,29 +1,18 @@
+import { fetcher } from '@/api/fetcher';
+import { RevalidateTagEnum } from '@/api/revalidate-tags';
 import { Card } from '@/components/ui/card';
-import { fetcher } from '@/graphql/fetcher';
-import {
-  Core_Terms__Show,
-  Core_Terms__ShowQuery,
-  Core_Terms__ShowQueryVariables,
-} from '@/graphql/queries/terms/core_terms__show.generated';
-import { RevalidateTagEnum } from '@/graphql/revalidate-tags';
 import { getTranslations } from 'next-intl/server';
+import { LegalsObj, LegalsQuery } from 'vitnode-shared/legal.dto';
 
 import { ItemLegal } from './item';
 
-export const getLegalData = async (
-  variables: Core_Terms__ShowQueryVariables,
-) => {
-  const data = await fetcher<
-    Core_Terms__ShowQuery,
-    Core_Terms__ShowQueryVariables
-  >({
-    query: Core_Terms__Show,
-    variables,
+const getData = async (query: LegalsQuery) => {
+  const { data } = await fetcher<LegalsObj, LegalsQuery>({
+    url: '/core/legal',
+    query,
     cache: 'force-cache',
     next: {
-      tags: [
-        `${RevalidateTagEnum.Core_Terms_Show}${variables.code ? `--${variables.code}` : ''}`,
-      ],
+      tags: [RevalidateTagEnum.Core_Terms_Show],
     },
   });
 
@@ -39,17 +28,17 @@ export const generateMetadataLegal = async () => {
 };
 
 export const LegalView = async () => {
-  const [
-    t,
-    {
-      core_terms__show: { edges },
-    },
-  ] = await Promise.all([getTranslations('core.legal'), getLegalData({})]);
+  const [t, { edges }] = await Promise.all([
+    getTranslations('core.legal'),
+    getData({}),
+  ]);
 
   return (
     <div className="container my-14 flex max-w-5xl flex-col justify-between gap-10 md:flex-row">
       <div className="max-w-xs">
-        <h1 className="text-3xl font-semibold">{t('title_page')}</h1>
+        <h1 className="text-3xl font-semibold leading-normal">
+          {t('title_page')}
+        </h1>
       </div>
 
       <div className="flex-1 space-y-10">

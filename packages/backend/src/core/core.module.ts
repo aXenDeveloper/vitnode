@@ -1,39 +1,20 @@
 import { Module } from '@nestjs/common';
 
 import { AdminModule } from './admin/admin.module';
-import { CoreEditorModule } from './editor/editor.module';
-import { CoreFilesModule, GlobalCoreFilesModule } from './files/files.module';
-import { GlobalCoreHelpersModule } from './helpers/helpers.module';
-import { CoreLanguagesModule } from './languages/languages.module';
-import { CoreMembersModule } from './members/members.module';
-import { CoreMiddlewareModule } from './middleware/middleware.module';
-import { CoreNavModule } from './nav/nav.module';
-import { CorePluginsModule } from './plugins/plugins.module';
-import {
-  CoreSessionsModule,
-  GlobalCoreSessionsModule,
-} from './sessions/sessions.module';
-import { CoreSettingsModule } from './settings/settings.module';
-import { TermsCoreModule } from './terms/terms.module';
-import { CoreThemeEditorModule } from './theme_editor/theme_editor.module';
+import { AuthModule } from './auth/auth.module';
+import { FilesModule } from './files/files.module';
+import { LegalModule } from './legal/legal.module';
+import { MiddlewareModule } from './middleware/middleware.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
+    MiddlewareModule,
+    AuthModule,
+    UsersModule,
     AdminModule,
-    CoreNavModule,
-    GlobalCoreSessionsModule,
-    CoreSessionsModule,
-    GlobalCoreHelpersModule,
-    CorePluginsModule,
-    CoreLanguagesModule,
-    GlobalCoreFilesModule,
-    CoreFilesModule,
-    CoreEditorModule,
-    CoreMembersModule,
-    CoreMiddlewareModule,
-    CoreSettingsModule,
-    CoreThemeEditorModule,
-    TermsCoreModule,
+    LegalModule,
+    FilesModule,
   ],
 })
 export class CoreModule {}

@@ -1,0 +1,100 @@
+import { AdminAuthGuard } from '@/guards/admin-auth.guard';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiOkResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { ParentNavAuthAdminObj } from 'vitnode-shared/admin/auth.dto';
+import {
+  ChangePositionNavPluginsAdminBody,
+  CreateNavPluginsAdminBody,
+  DeleteNavPluginsAdminBody,
+} from 'vitnode-shared/admin/plugins/nav.dto';
+
+import { ChangePositionNavPluginsAdminService } from './services/change_position.service';
+import { CreateNavPluginsAdminService } from './services/create.service';
+import { DeleteNavPluginsAdminService } from './services/delete.service';
+import { EditNavPluginsAdminService } from './services/edit.service';
+import { ShowNavPluginsAdminService } from './services/show.service';
+
+@ApiTags('Admin')
+@Controller('admin/plugins/nav')
+@ApiSecurity('admin')
+@UseGuards(AdminAuthGuard)
+export class NavPluginsAdminController {
+  constructor(
+    private readonly showService: ShowNavPluginsAdminService,
+    private readonly createService: CreateNavPluginsAdminService,
+    private readonly editService: EditNavPluginsAdminService,
+    private readonly deleteService: DeleteNavPluginsAdminService,
+    private readonly changePositionService: ChangePositionNavPluginsAdminService,
+  ) {}
+
+  @Put('change_position/:plugin_code/:code')
+  @ApiOkResponse({ description: 'Nav plugin position changed' })
+  async changePositionNav(
+    @Param('plugin_code') plugin_code: string,
+    @Param('code') code: string,
+    @Body() body: ChangePositionNavPluginsAdminBody,
+  ): Promise<void> {
+    await this.changePositionService.changePosition({
+      plugin_code,
+      code,
+      body,
+    });
+  }
+
+  @Post(':plugin_code')
+  @ApiOkResponse({
+    description: 'Nav plugin created',
+    type: ParentNavAuthAdminObj,
+  })
+  async createNav(
+    @Param('plugin_code') plugin_code: string,
+    @Body() body: CreateNavPluginsAdminBody,
+  ): Promise<ParentNavAuthAdminObj> {
+    return await this.createService.create({ plugin_code, body });
+  }
+
+  @ApiOkResponse({ description: 'Nav plugin position changed' })
+  @Delete(':plugin_code/:code')
+  @ApiOkResponse({ description: 'Nav plugin deleted' })
+  async deleteNav(
+    @Param('plugin_code') plugin_code: string,
+    @Param('code') code: string,
+    @Body() body: DeleteNavPluginsAdminBody,
+  ): Promise<void> {
+    await this.deleteService.delete({ plugin_code, code, body });
+  }
+
+  @Put(':plugin_code/:code')
+  @ApiOkResponse({
+    description: 'Nav plugin edited',
+    type: ParentNavAuthAdminObj,
+  })
+  async editNav(
+    @Param('plugin_code') plugin_code: string,
+    @Param('code') code: string,
+    @Body() body: CreateNavPluginsAdminBody,
+  ): Promise<ParentNavAuthAdminObj> {
+    return await this.editService.edit({
+      body,
+      plugin_code,
+      previous_code: code,
+    });
+  }
+
+  @Get(':plugin_code')
+  @ApiOkResponse({ description: 'Nav plugins', type: [ParentNavAuthAdminObj] })
+  async showNav(
+    @Param('plugin_code') plugin_code: string,
+  ): Promise<ParentNavAuthAdminObj[]> {
+    return await this.showService.show(plugin_code);
+  }
+}

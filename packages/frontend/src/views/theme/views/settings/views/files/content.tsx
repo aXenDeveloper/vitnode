@@ -9,7 +9,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Core_Members__Files__ShowQuery } from '@/graphql/queries/settings/core_members__files__show.generated';
 import { CONFIG } from '@/helpers/config-with-env';
 import { formatBytes } from '@/helpers/format-bytes';
 import { Link } from '@/navigation';
@@ -17,10 +16,12 @@ import { Clock, Download, File } from 'lucide-react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { ShowFilesSettingsAuthObj } from 'vitnode-shared/auth/settings/files.dto';
 
 export const ContentFilesSettings = ({
-  core_files__show: { edges, pageInfo },
-}: Core_Members__Files__ShowQuery) => {
+  edges,
+  page_info,
+}: ShowFilesSettingsAuthObj) => {
   const t = useTranslations('core.settings.files');
   const tCore = useTranslations('core.global');
 
@@ -78,11 +79,11 @@ export const ContentFilesSettings = ({
           },
         },
         {
-          id: 'created',
+          id: 'created_at',
           title: t('created'),
           sortable: true,
           cell: ({ row }) => {
-            return <DateFormat date={row.created} />;
+            return <DateFormat date={row.created_at} />;
           },
         },
         {
@@ -149,10 +150,10 @@ export const ContentFilesSettings = ({
       ]}
       data={edges}
       defaultSorting={{
-        sortBy: 'created',
+        sortBy: 'created_at',
         sortDirection: 'desc',
       }}
-      pageInfo={pageInfo}
+      pageInfo={page_info}
       searchPlaceholder={t('search')}
     />
   );

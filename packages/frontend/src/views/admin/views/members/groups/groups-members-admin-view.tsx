@@ -1,30 +1,28 @@
+import { fetcher } from '@/api/fetcher';
 import { TranslationsProvider } from '@/components/translations-provider';
 import { HeaderContent } from '@/components/ui/header-content';
-import { fetcher } from '@/graphql/fetcher';
 import {
   getPaginationTool,
   SearchParamsPagination,
-} from '@/graphql/get-pagination-tool';
-import {
-  Admin__Core_Groups__Show,
-  Admin__Core_Groups__ShowQuery,
-  Admin__Core_Groups__ShowQueryVariables,
-} from '@/graphql/queries/admin/members/groups/admin__core_groups__show.generated';
-import { ShowAdminGroupsSortingColumnEnum } from '@/graphql/types';
+} from '@/helpers/get-pagination-tool';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import {
+  GroupsMembersAdminObj,
+  GroupsMembersAdminQuery,
+} from 'vitnode-shared/admin/members/groups.dto';
+import { GroupsMembersAdminSortEnum } from 'vitnode-shared/admin/members/groups.enum';
 
 import { ActionsGroupsMembersAdmin } from './actions/actions-groups-members-admin';
 import { TableGroupsMembersAdmin } from './table/table';
 
-const getData = async (variables: Admin__Core_Groups__ShowQueryVariables) => {
-  const data = await fetcher<
-    Admin__Core_Groups__ShowQuery,
-    Admin__Core_Groups__ShowQueryVariables
+const getData = async (query: GroupsMembersAdminQuery) => {
+  const { data } = await fetcher<
+    GroupsMembersAdminObj,
+    GroupsMembersAdminQuery
   >({
-    query: Admin__Core_Groups__Show,
-    variables,
-    cache: 'force-cache',
+    url: '/admin/members/groups',
+    query,
   });
 
   return data;
@@ -48,8 +46,7 @@ export const GroupsMembersAdminView = async ({
 }: GroupsMembersAdminViewProps) => {
   const variables = await getPaginationTool({
     searchParams,
-    sortByEnum: ShowAdminGroupsSortingColumnEnum,
-    defaultPageSize: 10,
+    sortEnum: GroupsMembersAdminSortEnum,
   });
 
   const [data, t] = await Promise.all([
@@ -59,7 +56,7 @@ export const GroupsMembersAdminView = async ({
 
   return (
     <TranslationsProvider namespaces="admin.members.groups">
-      <HeaderContent h1={t('title')}>
+      <HeaderContent desc={t('desc')} h1={t('title')}>
         <ActionsGroupsMembersAdmin />
       </HeaderContent>
 

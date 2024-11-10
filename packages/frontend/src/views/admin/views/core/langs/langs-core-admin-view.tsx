@@ -1,54 +1,35 @@
+import { fetcher } from '@/api/fetcher';
 import { TranslationsProvider } from '@/components/translations-provider';
 import { HeaderContent } from '@/components/ui/header-content';
-import { fetcher } from '@/graphql/fetcher';
 import {
   getPaginationTool,
   SearchParamsPagination,
-} from '@/graphql/get-pagination-tool';
-import {
-  checkAdminPermissionPage,
-  checkAdminPermissionPageMetadata,
-} from '@/graphql/get-session-admin-data';
-import {
-  Admin__Core_Languages__Show,
-  Admin__Core_Languages__ShowQuery,
-  Admin__Core_Languages__ShowQueryVariables,
-} from '@/graphql/queries/admin/languages/admin__core_languages__show.generated';
-import { ShowCoreLanguagesSortingColumnEnum } from '@/graphql/types';
+} from '@/helpers/get-pagination-tool';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import {
+  ShowLanguagesAdminObj,
+  ShowLanguagesAdminQuery,
+} from 'vitnode-shared/admin/language.dto';
+import { ShowLanguagesAdminSortEnum } from 'vitnode-shared/admin/language.enum';
 
-import { ActionsLangsAdmin } from './actions/actions';
-import { ContentLangsCoreAdminView } from './content';
+import { CreateActionLangAdmin } from './actions/create';
+import { ContentLangsCoreAdminView } from './table/content';
 
-const getData = async (
-  variables: Admin__Core_Languages__ShowQueryVariables,
-) => {
-  const data = await fetcher<
-    Admin__Core_Languages__ShowQuery,
-    Admin__Core_Languages__ShowQueryVariables
+const getData = async (query: ShowLanguagesAdminQuery) => {
+  const { data } = await fetcher<
+    ShowLanguagesAdminObj,
+    ShowLanguagesAdminQuery
   >({
-    query: Admin__Core_Languages__Show,
-    variables,
+    url: '/admin/languages',
+    query,
     cache: 'force-cache',
   });
 
   return data;
 };
 
-interface Props {
-  searchParams: Promise<SearchParamsPagination>;
-}
-
-const permission = {
-  plugin_code: 'core',
-  group: 'can_manage_langs',
-  permission: '',
-};
-
 export const generateMetadataLangsCoreAdmin = async (): Promise<Metadata> => {
-  const perm = await checkAdminPermissionPageMetadata(permission);
-  if (perm) return perm;
   const t = await getTranslations('admin.core.langs');
 
   return {
@@ -56,13 +37,14 @@ export const generateMetadataLangsCoreAdmin = async (): Promise<Metadata> => {
   };
 };
 
-export const LangsCoreAdminView = async ({ searchParams }: Props) => {
-  const perm = await checkAdminPermissionPage(permission);
-  if (perm) return perm;
+export const LangsCoreAdminView = async ({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParamsPagination>;
+}) => {
   const variables = await getPaginationTool({
     searchParams,
-    defaultPageSize: 10,
-    sortByEnum: ShowCoreLanguagesSortingColumnEnum,
+    sortEnum: ShowLanguagesAdminSortEnum,
   });
 
   const [t, data] = await Promise.all([
@@ -73,7 +55,7 @@ export const LangsCoreAdminView = async ({ searchParams }: Props) => {
   return (
     <TranslationsProvider namespaces={['admin.core.langs']}>
       <HeaderContent h1={t('title')}>
-        <ActionsLangsAdmin />
+        <CreateActionLangAdmin />
       </HeaderContent>
 
       <ContentLangsCoreAdminView {...data} />

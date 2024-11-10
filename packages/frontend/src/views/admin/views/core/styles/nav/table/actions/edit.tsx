@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -15,10 +16,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ShowCoreNav } from '@/graphql/types';
+import { useTextLang } from '@/hooks/use-text-lang';
 import { Pencil } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { ShowNavStyles } from 'vitnode-shared/nav.dto';
 
 const Content = React.lazy(async () =>
   import('../../create-edit/create-edit').then(module => ({
@@ -27,9 +29,10 @@ const Content = React.lazy(async () =>
 );
 
 export const EditActionTableNavAdmin = (
-  props: Omit<ShowCoreNav, 'children'>,
+  props: Omit<ShowNavStyles, 'children'>,
 ) => {
   const t = useTranslations('admin.core.styles.nav.edit');
+  const { convertText } = useTextLang();
 
   return (
     <Dialog>
@@ -50,6 +53,7 @@ export const EditActionTableNavAdmin = (
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription>{convertText(props.name)}</DialogDescription>
         </DialogHeader>
 
         <React.Suspense fallback={<Loader />}>

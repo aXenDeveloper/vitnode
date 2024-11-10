@@ -1,25 +1,20 @@
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { HeaderContent } from '@/components/ui/header-content';
 import {
   getSessionAdminData,
   isInAdminPermission,
-} from '@/graphql/get-session-admin-data';
+} from '@/api/get-session-admin-data';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { HeaderContent } from '@/components/ui/header-content';
 import { CONFIG } from '@/helpers/config-with-env';
 import { Link } from '@/navigation';
 import { AlertTriangle, HammerIcon } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 
-import { WarnReqRestartServer } from '../plugins/warn-req-restart-server';
+import { WarnReqRestartServer } from '../warn-req-restart-server';
 import { Test } from './test';
 
 export const DashboardCoreAdminView = async () => {
-  const [
-    {
-      admin__sessions__authorization: { version },
-    },
-    t,
-  ] = await Promise.all([
+  const [{ version_of_vitnode }, t] = await Promise.all([
     getSessionAdminData(),
     getTranslations('admin.global'),
   ]);
@@ -27,7 +22,7 @@ export const DashboardCoreAdminView = async () => {
   return (
     <>
       <HeaderContent
-        desc={t('version', { version })}
+        desc={t('version', { version: version_of_vitnode })}
         h1={
           <>
             <span>VitNode</span>

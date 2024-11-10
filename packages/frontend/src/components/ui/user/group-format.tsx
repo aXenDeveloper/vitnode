@@ -1,14 +1,13 @@
-import { GroupUser } from '@/graphql/types';
 import { cn } from '@/helpers/classnames';
-
-import { useTextLang } from '../../../hooks/use-text-lang';
+import { useTextLang } from '@/hooks/use-text-lang';
+import { GroupUser } from 'vitnode-shared/user.dto';
 
 export const GroupFormat = ({
   className,
   group: { name, color },
 }: {
   className?: string;
-  group: Omit<GroupUser, '__typename'>;
+  group: GroupUser;
 }) => {
   const { convertText } = useTextLang();
 

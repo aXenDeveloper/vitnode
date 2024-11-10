@@ -1,3 +1,4 @@
+import { useMiddlewareData } from '@/hooks/use-middleware-data';
 import {
   Bold,
   Italic,
@@ -11,7 +12,6 @@ import {
 } from 'lucide-react';
 
 import { cn } from '../../../helpers/classnames';
-import { useGlobalData } from '../../../hooks/use-global-data';
 import { useEditorState } from '../hooks/use-editor-state';
 import { ButtonToolbarEditor } from './button';
 import { ColorToolbarEditor } from './custom/color/color';
@@ -22,7 +22,7 @@ import { TextAlignToolbarEditor } from './custom/text-align';
 import { ToggleToolbarEditor } from './toggle';
 
 export const ToolBarEditor = () => {
-  const { config } = useGlobalData();
+  const middleware = useMiddlewareData();
   const { editor } = useEditorState();
 
   return (
@@ -30,7 +30,8 @@ export const ToolBarEditor = () => {
       className={cn(
         'bg-background flex flex-wrap items-center gap-1 rounded-t-sm border-b p-1',
         {
-          'sticky top-0 z-10 max-h-[26vh] overflow-auto': config.editor.sticky,
+          'sticky top-0 z-10 max-h-[26vh] overflow-auto':
+            middleware.editor.sticky,
         },
       )}
     >

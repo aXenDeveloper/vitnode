@@ -15,11 +15,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { StringLanguage } from '@/graphql/types';
 import { cn } from '@/helpers/classnames';
 import { Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { StringLanguage } from 'vitnode-shared/string-language.dto';
 import * as z from 'zod';
 
 import { getBaseSchema } from '../utils';

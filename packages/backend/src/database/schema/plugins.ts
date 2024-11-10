@@ -10,16 +10,16 @@ export const core_plugins = pgTable(
     version: t.varchar({ length: 255 }).notNull().default('0.0.1'),
     version_code: t.integer().notNull().default(1),
     enabled: t.boolean().notNull().default(true),
-    created: t.timestamp().notNull().defaultNow(),
-    updated: t.timestamp().notNull().defaultNow(),
+    created_at: t.timestamp().notNull().defaultNow(),
+    updated_at: t.timestamp().notNull().defaultNow(),
     support_url: t.varchar({ length: 255 }).notNull(),
     author: t.varchar({ length: 100 }).notNull(),
     author_url: t.varchar({ length: 255 }),
     default: t.boolean().notNull().default(false),
     allow_default: t.boolean().notNull().default(true),
   }),
-  table => ({
-    code_idx: index('core_plugins_code_idx').on(table.code),
-    name_idx: index('core_plugins_name_idx').on(table.name),
-  }),
+  t => [
+    index('core_plugins_code_idx').on(t.code),
+    index('core_plugins_name_idx').on(t.name),
+  ],
 );

@@ -1,23 +1,23 @@
+import { fetcher } from '@/api/fetcher';
 import { Card } from '@/components/ui/card';
 import { HeaderContent } from '@/components/ui/header-content';
-import { fetcher } from '@/graphql/fetcher';
-import {
-  Admin__Core_Email_Settings__Show,
-  Admin__Core_Email_Settings__ShowQuery,
-  Admin__Core_Email_Settings__ShowQueryVariables,
-} from '@/graphql/queries/admin/settings/admin__core_email_settings__show.generated';
+// import { fetcher } from '@/graphql/fetcher';
+// import {
+//   Admin__Core_Email_Settings__Show,
+//   Admin__Core_Email_Settings__ShowQuery,
+//   Admin__Core_Email_Settings__ShowQueryVariables,
+// } from '@/graphql/queries/admin/settings/admin__core_email_settings__show.generated';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { ShowEmailSettingsAdminObj } from 'vitnode-shared/admin/settings/email.dto';
 
 import { ActionsEmailSettingsAdmin } from './actions/actions';
 import { ContentEmailSettingsAdmin } from './content';
 
 const getData = async () => {
-  const data = await fetcher<
-    Admin__Core_Email_Settings__ShowQuery,
-    Admin__Core_Email_Settings__ShowQueryVariables
-  >({
-    query: Admin__Core_Email_Settings__Show,
+  const { data } = await fetcher<ShowEmailSettingsAdminObj>({
+    url: '/admin/settings/email',
+    cache: 'force-cache',
   });
 
   return data;
@@ -41,9 +41,7 @@ export const EmailSettingsAdminView = async () => {
   return (
     <>
       <HeaderContent desc={t('desc')} h1={t('title')}>
-        <ActionsEmailSettingsAdmin
-          disabled={!data.admin__core_email_settings__show.is_enabled}
-        />
+        <ActionsEmailSettingsAdmin disabled={!data.is_enabled} />
       </HeaderContent>
 
       <Card className="p-6">

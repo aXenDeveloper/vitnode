@@ -1,31 +1,19 @@
 'use server';
 
-import { fetcher } from '@/graphql/fetcher';
-import {
-  Admin__Core_Plugins__Delete,
-  Admin__Core_Plugins__DeleteMutation,
-  Admin__Core_Plugins__DeleteMutationVariables,
-} from '@/graphql/mutations/admin/plugins/admin__core_plugins__delete.generated';
+import { fetcher } from '@/api/fetcher';
 import { revalidatePath } from 'next/cache';
 
-export const mutationApi = async (
-  variables: Admin__Core_Plugins__DeleteMutationVariables,
-) => {
-  try {
-    await fetcher<
-      Admin__Core_Plugins__DeleteMutation,
-      Admin__Core_Plugins__DeleteMutationVariables
-    >({
-      query: Admin__Core_Plugins__Delete,
-      variables,
-    });
-  } catch (error) {
-    const e = error as Error;
+import { checkConnectionApi } from '../../../../check-connection-api';
 
-    if (e.message !== 'fetch failed') {
-      return { error: e.message };
-    }
-  }
+export const mutationApi = async (id: number) => {
+  await fetcher<object>({
+    url: `/admin/plugins/${id}`,
+    method: 'DELETE',
+  });
+
+  // await new Promise(resolve => setTimeout(resolve, 3000));
+
+  await checkConnectionApi();
 
   revalidatePath('/', 'layout');
 };

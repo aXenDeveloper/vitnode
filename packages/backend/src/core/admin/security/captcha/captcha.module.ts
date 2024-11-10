@@ -1,16 +1,11 @@
 import { Module } from '@nestjs/common';
 
-import { EditAdminCaptchaSecurityResolver } from './edit/edit.resolver';
-import { EditAdminCaptchaSecurityService } from './edit/edit.service';
-import { ShowAdminCaptchaSecurityResolver } from './show/show.resolver';
-import { ShowAdminCaptchaSecurityService } from './show/show.service';
+import { CaptchaSecurityAdminController } from './captcha.controller';
+import { EditCaptchaSecurityAdminService } from './service/edit.service';
+import { ShowCaptchaSecurityAdminService } from './service/show.service';
 
 @Module({
-  providers: [
-    ShowAdminCaptchaSecurityResolver,
-    ShowAdminCaptchaSecurityService,
-    EditAdminCaptchaSecurityResolver,
-    EditAdminCaptchaSecurityService,
-  ],
+  providers: [ShowCaptchaSecurityAdminService, EditCaptchaSecurityAdminService],
+  controllers: [CaptchaSecurityAdminController],
 })
-export class AdminCaptchaSecurityModule {}
+export class CaptchaSecurityAdminModule {}

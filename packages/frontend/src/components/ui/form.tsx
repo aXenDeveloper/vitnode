@@ -1,6 +1,6 @@
 'use client';
 
-import { useBeforeUnload } from '@/helpers/use-before-unload';
+import { useBeforeUnload } from '@/hooks/use-before-unload';
 import * as LabelPrimitive from '@radix-ui/react-label';
 import { Slot } from '@radix-ui/react-slot';
 import { useTranslations } from 'next-intl';
@@ -44,7 +44,6 @@ function Form<
     if (props.disableBeforeUnload) return;
 
     setIsDirty?.(formIsDirty);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formIsDirty, props.disableBeforeUnload]);
 
   return <FormProvider {...props} />;
@@ -134,7 +133,11 @@ const FormLabel = ({
 
   return (
     <Label
-      className={cn(error && 'text-destructive', 'space-x-2', className)}
+      className={cn(
+        error && 'text-destructive',
+        className,
+        'flex flex-wrap gap-2',
+      )}
       htmlFor={formItemId}
       {...props}
     >

@@ -1,4 +1,6 @@
-import { useGlobalData } from '../../../hooks/use-global-data';
+import { useMiddlewareData } from '@/hooks/use-middleware-data';
+import { AllowTypeFilesEnum } from 'vitnode-shared/utils/global';
+
 import { FileStateEditor } from '../extensions/files/files';
 import { useEditorState } from '../hooks/use-editor-state';
 import { FilesButtonFooterEditor } from './files/button';
@@ -19,7 +21,7 @@ export const FooterEditor = ({
 }: Props) => {
   const { allowUploadFiles, editor } = useEditorState();
   const files: FileStateEditor[] = editor.storage.files.files;
-  const { config } = useGlobalData();
+  const middleware = useMiddlewareData();
 
   if (!disableLanguages && !allowUploadFiles) {
     return null;
@@ -35,9 +37,10 @@ export const FooterEditor = ({
           />
         )}
 
-        {allowUploadFiles && config.editor.files.allow_type !== 'none' && (
-          <FilesButtonFooterEditor />
-        )}
+        {allowUploadFiles &&
+          middleware.editor.files.allow_type !== AllowTypeFilesEnum.none && (
+            <FilesButtonFooterEditor />
+          )}
       </div>
 
       {files.length > 0 && <ListFilesFooterEditor />}

@@ -1,36 +1,30 @@
+import { fetcher } from '@/api/fetcher';
 import { TranslationsProvider } from '@/components/translations-provider';
 import { HeaderContent } from '@/components/ui/header-content';
-import { fetcher } from '@/graphql/fetcher';
 import {
   getPaginationTool,
   SearchParamsPagination,
-} from '@/graphql/get-pagination-tool';
-import {
-  Admin__Core_Files__Show,
-  Admin__Core_Files__ShowQuery,
-  Admin__Core_Files__ShowQueryVariables,
-} from '@/graphql/queries/admin/advanced/files/admin__core_files__show.generated';
-import { ShowCoreFilesSortingColumnEnum } from '@/graphql/types';
+} from '@/helpers/get-pagination-tool';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import {
+  ShowFilesAdvancedAdminObj,
+  ShowFilesAdvancedAdminQuery,
+} from 'vitnode-shared/admin/advanced/files.dto';
 
 import { ContentFilesAdvancedCoreAdminView } from './content';
 
-const getData = async (variables: Admin__Core_Files__ShowQueryVariables) => {
-  const data = await fetcher<
-    Admin__Core_Files__ShowQuery,
-    Admin__Core_Files__ShowQueryVariables
+const getData = async (query: ShowFilesAdvancedAdminQuery) => {
+  const { data } = await fetcher<
+    ShowFilesAdvancedAdminObj,
+    ShowFilesAdvancedAdminQuery
   >({
-    query: Admin__Core_Files__Show,
-    variables,
+    url: '/admin/advanced/files',
+    query,
   });
 
   return data;
 };
-
-export interface FilesAdvancedCoreAdminViewProps {
-  searchParams: Promise<SearchParamsPagination>;
-}
 
 export const generateMetadataFilesAdvancedCoreAdmin =
   async (): Promise<Metadata> => {
@@ -43,11 +37,12 @@ export const generateMetadataFilesAdvancedCoreAdmin =
 
 export const FilesAdvancedCoreAdminView = async ({
   searchParams,
-}: FilesAdvancedCoreAdminViewProps) => {
+}: {
+  searchParams: Promise<SearchParamsPagination>;
+}) => {
   const variables = await getPaginationTool({
     searchParams,
     defaultPageSize: 10,
-    sortByEnum: ShowCoreFilesSortingColumnEnum,
   });
 
   const [t, data] = await Promise.all([

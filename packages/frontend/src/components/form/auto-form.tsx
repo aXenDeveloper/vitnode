@@ -118,7 +118,6 @@ export function AutoForm<
 
   React.useEffect(() => {
     onValuesChange?.(values);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valuesString]);
 
   return (
@@ -145,7 +144,12 @@ export function AutoForm<
         })}
 
         {children}
-        <div className="flex w-full flex-wrap items-center justify-end gap-2">
+        <div
+          className={cn('flex w-full flex-wrap items-center gap-2', {
+            'justify-end': !setOpen,
+            '[&>*]:flex-1': setOpen,
+          })}
+        >
           {setOpen ? (
             <Button
               disabled={form.formState.isSubmitting}

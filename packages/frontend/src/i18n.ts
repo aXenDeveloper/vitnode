@@ -1,9 +1,4 @@
-import { fetcher } from 'vitnode-frontend/graphql/fetcher';
-import {
-  Core_Middleware__Show,
-  Core_Middleware__ShowQuery,
-  Core_Middleware__ShowQueryVariables,
-} from 'vitnode-frontend/graphql/queries/core_middleware__show.generated';
+import { getMiddlewareData } from './api/get-middleware-data';
 
 export const i18nConfigVitNode = async ({
   pathsToMessagesFromPlugins,
@@ -27,19 +22,12 @@ export const i18nConfigVitNode = async ({
 
   let plugins: string[] = [];
   try {
-    const {
-      core_middleware__show: { plugins: pluginsFromServer, languages },
-    } = await fetcher<
-      Core_Middleware__ShowQuery,
-      Core_Middleware__ShowQueryVariables
-    >({
-      query: Core_Middleware__Show,
-    });
-    plugins = pluginsFromServer;
+    const data = await getMiddlewareData();
+    plugins = data.plugins;
 
-    const defaultLanguage = languages.find(lang => lang.default);
+    const defaultLanguage = data.languages.find(lang => lang.default);
     defaultLocale = defaultLanguage?.code ?? 'en';
-    if (!languages.find(lang => lang.code === locale)) {
+    if (!data.languages.find(lang => lang.code === locale)) {
       locale = defaultLanguage?.code;
     }
   } catch (_) {

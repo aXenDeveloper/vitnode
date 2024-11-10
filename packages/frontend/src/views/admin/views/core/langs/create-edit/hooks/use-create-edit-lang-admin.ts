@@ -1,19 +1,18 @@
 import { useDialog } from '@/components/ui/dialog';
-import { ShowCoreLanguages } from '@/graphql/types';
 import { useTranslations } from 'next-intl';
+import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import * as z from 'zod';
 
+import { CreateEditLangAdmin } from '../create-edit';
 import { locales } from '../locales';
 import { timeZones } from '../timezones';
 import { createMutationApi } from './create-mutation-api';
 import { editMutationApi } from './edit-mutation-api';
 
-interface Args {
-  data?: ShowCoreLanguages;
-}
-
-export const useCreateEditLangAdmin = ({ data }: Args) => {
+export const useCreateEditLangAdmin = ({
+  data,
+}: React.ComponentProps<typeof CreateEditLangAdmin>) => {
   const t = useTranslations('admin.core.langs.actions');
   const tCore = useTranslations('core.global.errors');
   const { setOpen } = useDialog();
@@ -47,44 +46,45 @@ export const useCreateEditLangAdmin = ({ data }: Args) => {
       .optional(),
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    let isError = false;
-
-    if (data) {
-      const mutation = await editMutationApi({
-        ...data,
-        ...values,
-        time24: values.time_24 ?? false,
-        allowInInput: values.allow_in_input ?? true,
-      });
-
-      if (mutation?.error) {
-        isError = true;
+  const onSubmit = async (
+    values: z.infer<typeof formSchema>,
+    form: UseFormReturn<z.infer<typeof formSchema>>,
+  ) => {
+    try {
+      if (data) {
+        await editMutationApi({
+          ...data,
+          ...values,
+          time_24: values.time_24 ?? false,
+          allow_in_input: values.allow_in_input ?? true,
+        });
+      } else {
+        await createMutationApi({
+          ...values,
+          time_24: values.time_24 ?? false,
+          allow_in_input: values.allow_in_input ?? true,
+        });
       }
-    } else {
-      const mutation = await createMutationApi({
-        ...values,
-        time24: values.time_24 ?? false,
-        allowInInput: values.allow_in_input ?? true,
+
+      toast(t(data ? 'edit.success' : 'create.success'), {
+        description: values.name,
       });
+      setOpen?.(false);
+    } catch (err) {
+      const error = err as Error;
 
-      if (mutation?.error) {
-        isError = true;
+      if (error.message.includes('ALREADY_EXISTS')) {
+        form.setError('code', {
+          message: t('create.code.already_exists'),
+        });
+
+        return;
       }
-    }
 
-    if (isError) {
       toast.error(tCore('title'), {
         description: tCore('internal_server_error'),
       });
-
-      return;
     }
-
-    toast(t(data ? 'edit.success' : 'create.success'), {
-      description: values.name,
-    });
-    setOpen?.(false);
   };
 
   return {

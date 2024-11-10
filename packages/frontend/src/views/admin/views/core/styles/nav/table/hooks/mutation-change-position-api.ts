@@ -1,31 +1,17 @@
 'use server';
 
-import { fetcher } from '@/graphql/fetcher';
-import {
-  Admin__Core_Nav_Styles__Change_Position,
-  Admin__Core_Nav_Styles__Change_PositionMutation,
-  Admin__Core_Nav_Styles__Change_PositionMutationVariables,
-} from '@/graphql/mutations/admin/styles/nav/core_nav_styles__change_position.generated';
+import { fetcher } from '@/api/fetcher';
 import { revalidatePath } from 'next/cache';
+import { ChangePositionNavStylesAdminBody } from 'vitnode-shared/admin/styles/nav.dto';
 
 export const mutationChangePositionApi = async (
-  variables: Admin__Core_Nav_Styles__Change_PositionMutationVariables,
+  body: ChangePositionNavStylesAdminBody,
 ) => {
-  try {
-    const data = await fetcher<
-      Admin__Core_Nav_Styles__Change_PositionMutation,
-      Admin__Core_Nav_Styles__Change_PositionMutationVariables
-    >({
-      query: Admin__Core_Nav_Styles__Change_Position,
-      variables,
-    });
+  await fetcher<object, ChangePositionNavStylesAdminBody>({
+    url: `/admin/styles/nav/change_position`,
+    method: 'PUT',
+    body,
+  });
 
-    revalidatePath('/', 'layout');
-
-    return data;
-  } catch (error) {
-    const e = error as Error;
-
-    return { error: e.message };
-  }
+  revalidatePath('/', 'layout');
 };

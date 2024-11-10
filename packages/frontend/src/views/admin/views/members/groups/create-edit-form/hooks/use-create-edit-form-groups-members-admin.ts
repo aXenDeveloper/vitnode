@@ -1,23 +1,19 @@
 import { useDialog } from '@/components/ui/dialog';
-import { Admin__Core_Groups__CreateMutationVariables } from '@/graphql/mutations/admin/members/groups/admin__core_groups__create.generated';
-import { ShowAdminGroups } from '@/graphql/types';
 import { zodLanguageInput } from '@/helpers/zod';
 import { useTextLang } from '@/hooks/use-text-lang';
 import { usePathname, useRouter } from '@/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
+import { CreateGroupsMembersAdminBody } from 'vitnode-shared/admin/members/groups.dto';
 import * as z from 'zod';
 
+import { CreateEditFormGroupsMembersAdmin } from '../create-edit-form-groups-members-admin';
 import { mutationCreateApi } from './mutation-create-api';
 import { mutationEditApi } from './mutation-edit-api';
 
-export interface CreateEditFormGroupsMembersAdminArgs {
-  data?: Pick<ShowAdminGroups, 'color' | 'content' | 'id' | 'name'>;
-}
-
 export const useCreateEditFormGroupsMembersAdmin = ({
   data,
-}: CreateEditFormGroupsMembersAdminArgs) => {
+}: React.ComponentProps<typeof CreateEditFormGroupsMembersAdmin>) => {
   const t = useTranslations('admin.members.groups');
   const tCore = useTranslations('core.global.errors');
   const { setOpen } = useDialog();
@@ -50,9 +46,7 @@ export const useCreateEditFormGroupsMembersAdmin = ({
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    let isError = false;
-
-    const variables: Admin__Core_Groups__CreateMutationVariables = {
+    const variables: CreateGroupsMembersAdminBody = {
       name: values.main.name,
       color: values.main.color,
       content: {
@@ -63,36 +57,26 @@ export const useCreateEditFormGroupsMembersAdmin = ({
       },
     };
 
-    if (data) {
-      const mutation = await mutationEditApi({
-        id: data.id,
-        ...variables,
-      });
-      if (mutation?.error) {
-        isError = true;
+    try {
+      if (data) {
+        await mutationEditApi({
+          id: data.id,
+          ...variables,
+        });
+      } else {
+        await mutationCreateApi(variables);
       }
-    } else {
-      const mutation = await mutationCreateApi(variables);
-      if (mutation?.error) {
-        isError = true;
-      }
-    }
 
-    if (isError) {
+      toast.success(data ? t('edit.success') : t('create.success'), {
+        description: convertText(values.main.name),
+      });
+      setOpen?.(false);
+      push(pathname);
+    } catch (_) {
       toast.error(tCore('title'), {
         description: tCore('internal_server_error'),
       });
-
-      return;
     }
-
-    push(pathname);
-
-    toast.success(data ? t('edit.success') : t('create.success'), {
-      description: convertText(values.main.name),
-    });
-
-    setOpen?.(false);
   };
 
   return { formSchema, onSubmit };

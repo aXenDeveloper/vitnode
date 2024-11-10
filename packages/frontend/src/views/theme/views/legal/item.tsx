@@ -1,15 +1,15 @@
 import { DateFormat } from '@/components/date-format';
 import { Button } from '@/components/ui/button';
-import { Admin_Core_Terms__ShowQuery } from '@/graphql/queries/admin/settings/terms/Admin_core_terms__show.generated';
 import { useTextLang } from '@/hooks/use-text-lang';
 import { Link } from '@/navigation';
 import { useTranslations } from 'next-intl';
+import { LegalsObj } from 'vitnode-shared/legal.dto';
 
 export const ItemLegal = ({
   code,
   title,
-  updated,
-}: Admin_Core_Terms__ShowQuery['core_terms__show']['edges'][0]) => {
+  updated_at,
+}: LegalsObj['edges'][0]) => {
   const { convertText } = useTextLang();
   const t = useTranslations('core.legal');
 
@@ -24,7 +24,7 @@ export const ItemLegal = ({
           <span className="text-xl font-semibold">{convertText(title)}</span>
           <p className="text-muted-foreground text-sm">
             {t.rich('last_updated', {
-              date: () => <DateFormat date={updated} />,
+              date: () => <DateFormat date={updated_at} />,
             })}
           </p>
         </div>

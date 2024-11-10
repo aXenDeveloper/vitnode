@@ -1,5 +1,0 @@
-mutation Core_members__avatar__upload($file: Upload!) {
-  core_members__avatar__upload(file: $file) {
-    id
-  }
-}

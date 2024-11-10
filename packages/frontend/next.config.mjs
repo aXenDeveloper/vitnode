@@ -28,8 +28,7 @@ const nextConfig = config => {
       NEXT_PUBLIC_BACKEND_URL: ENVS.backend_url,
       NEXT_PUBLIC_FRONTEND_URL: ENVS.frontend_url,
     },
-    output: 'standalone',
-    transpilePackages: ['lucide-react', 'vitnode-frontend'],
+    transpilePackages: ['lucide-react', 'vitnode-frontend', 'vitnode-shared'],
     images: {
       remotePatterns: [
         {

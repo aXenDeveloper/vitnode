@@ -1,9 +1,9 @@
-import { StringLanguage } from '@/graphql/types';
+import { useMiddlewareData } from '@/hooks/use-middleware-data';
 import { useLocale } from 'next-intl';
 import React from 'react';
+import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 import { cn } from '../../helpers/classnames';
-import { useGlobalData } from '../../hooks/use-global-data';
 import { FormControl } from './form';
 import { Input } from './input';
 import {
@@ -31,7 +31,9 @@ export const StringLanguageInput = ({
   ...props
 }: Props) => {
   const locale = useLocale();
-  const { defaultLanguage, languages: languagesFromGlobal } = useGlobalData();
+  const { languages: languagesFromGlobal } = useMiddlewareData();
+  const defaultLanguage =
+    languagesFromGlobal.find(item => item.default)?.code ?? 'en';
   const languages = languagesFromGlobal.filter(item => item.allow_in_input);
   const [selectedLanguage, setSelectedLanguage] = React.useState(
     locale || defaultLanguage,

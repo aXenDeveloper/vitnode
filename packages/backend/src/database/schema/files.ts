@@ -19,16 +19,14 @@ export const core_files = pgTable(
     user_id: t.integer().references(() => core_users.id, {
       onDelete: 'cascade',
     }),
-    created: t.timestamp().notNull().defaultNow(),
+    created_at: t.timestamp().notNull().defaultNow(),
     file_size: t.integer().notNull(),
     mimetype: t.varchar({ length: 255 }).notNull(),
     width: t.integer(),
     height: t.integer(),
     security_key: t.varchar({ length: 255 }),
   }),
-  table => ({
-    user_id_idx: index('core_files_user_id_idx').on(table.user_id),
-  }),
+  t => [index('core_files_user_id_idx').on(t.user_id)],
 );
 
 export const core_files_relations = relations(core_files, ({ many, one }) => ({
@@ -50,9 +48,7 @@ export const core_files_using = pgTable(
     plugin: t.varchar({ length: 255 }).notNull(),
     folder: t.varchar({ length: 255 }).notNull(),
   }),
-  table => ({
-    file_id_idx: index('core_files_using_file_id_idx').on(table.file_id),
-  }),
+  t => [index('core_files_using_file_id_idx').on(t.file_id)],
 );
 
 export const core_files_using_relations = relations(

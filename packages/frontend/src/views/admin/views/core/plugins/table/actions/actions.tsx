@@ -6,18 +6,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { TooltipWrapper } from '@/components/ui/tooltip';
-import { ShowAdminPlugins } from '@/graphql/types';
 import { CONFIG } from '@/helpers/config-with-env';
 import { Link, usePathname } from '@/navigation';
 import { BadgeHelp, ChevronDown, CodeXml, Trash2, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { ShowPluginAdmin } from 'vitnode-shared/admin/plugins.dto';
 
 import { DeletePluginActionsAdmin } from './delete/delete';
 import { SetDefaultPluginActionsAdmin } from './set-default/set-default';
-import { UploadPluginActionsAdmin } from './upload';
 
-export const ActionsItemPluginsAdmin = (props: ShowAdminPlugins) => {
+export const ActionsItemPluginsAdmin = (props: ShowPluginAdmin) => {
   const t = useTranslations('admin.core.plugins');
   const tCore = useTranslations('core.global');
   const pathname = usePathname();
@@ -86,11 +85,11 @@ export const ActionsItemPluginsAdmin = (props: ShowAdminPlugins) => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <UploadPluginActionsAdmin
+          {/* <UploadPluginActionsAdmin
             open={isOpenUploadDialog}
             setOpen={setIsOpenUploadDialog}
             {...props}
-          />
+          /> */}
 
           {!props.default && (
             <DeletePluginActionsAdmin

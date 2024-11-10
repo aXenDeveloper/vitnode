@@ -1,3 +1,0 @@
-mutation Core_editor_files__delete($id: Int!, $securityKey: String) {
-  core_editor_files__delete(id: $id, security_key: $securityKey)
-}

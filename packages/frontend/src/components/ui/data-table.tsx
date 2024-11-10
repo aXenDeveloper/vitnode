@@ -1,8 +1,8 @@
 'use client';
 
-import { PageInfo } from '@/graphql/types';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { PaginationInfo } from 'vitnode-shared/utils/pagination.dto';
 
 import { HeaderDataTable } from '../data-table/header';
 import { SkeletonDataTable } from '../data-table/skeleton';
@@ -34,7 +34,7 @@ export interface DataTableProps<T extends TMin> {
     sortBy: keyof T;
     sortDirection: 'asc' | 'desc';
   };
-  pageInfo?: PageInfo;
+  pageInfo?: PaginationInfo;
   searchPlaceholder?: string;
 }
 
@@ -103,6 +103,14 @@ export function DataTable<T extends TMin>({
                       ] as React.ReactNode;
                       const content =
                         column.cell?.({ row, allData: data }) ?? cell;
+
+                      if (content === null || content === undefined) {
+                        return (
+                          <TableCell
+                            key={`${column.id.toString()}_${row.id}`}
+                          ></TableCell>
+                        );
+                      }
 
                       return (
                         <TableCell key={`${column.id.toString()}_${row.id}`}>

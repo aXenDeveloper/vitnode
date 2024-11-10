@@ -1,11 +1,10 @@
-#!/usr/bin/env node
-/* eslint-disable no-console */
-
 import { createClientDatabase, DATABASE_ENVS } from '@/utils/database/client';
-import * as fs from 'fs';
+/* eslint-disable no-console */
+import { existsSync } from 'fs';
 import { join } from 'path';
 
 import coreSchemaDatabase from '../src/database';
+import { checkUpdateSchemaDatabase } from './check-update-schema-database';
 import { copyFiles } from './copy-files';
 import { generateDatabaseMigrations, runMigrations } from './database';
 import { generateConfig } from './generate-config';
@@ -16,7 +15,7 @@ const initConsole = '\x1b[34m[VitNode]\x1b[0m \x1b[33m[Backend]\x1b[0m';
 
 const getPluginsPath = () => {
   const pluginsPath = join(process.cwd(), 'src', 'plugins');
-  if (!fs.existsSync(pluginsPath)) {
+  if (!existsSync(pluginsPath)) {
     console.log(
       `⛔️ Plugins not found in 'src/plugins' directory. "${pluginsPath}"`,
     );
@@ -38,36 +37,39 @@ const init = async () => {
   console.log(
     `${initConsole} [1/${skipDatabase ? 2 : 6}] Setup the project. Generating the config file...`,
   );
-  generateConfig({ pluginsPath });
+  await generateConfig({ pluginsPath });
 
   console.log(
     `${initConsole} [2/${skipDatabase ? 2 : 6}] Copying files into backend...`,
   );
-  copyFiles({ pluginsPath });
+  await copyFiles({ pluginsPath });
 
   if (skipDatabase) {
     console.log(`${initConsole} ✅ Project setup complete.`);
     process.exit(0);
   }
 
-  console.log(`${initConsole} [3/6] Generating database migrations...`);
+  console.log(`${initConsole} [3/7] Generating database migrations...`);
   await generateDatabaseMigrations();
 
-  console.log(`${initConsole} [4/6] Generating the manifest files...`);
-  generateManifest();
+  console.log(`${initConsole} [4/7] Generating the manifest files...`);
+  await generateManifest();
 
-  const database = await createClientDatabase({
+  const database = createClientDatabase({
     config: DATABASE_ENVS,
     schemaDatabase: coreSchemaDatabase,
   });
 
   console.log(
-    `${initConsole} [5/6] Create tables in database using migrations...`,
+    `${initConsole} [5/7] Create tables in database using migrations...`,
   );
   await runMigrations();
 
-  console.log(`${initConsole} [6/6] Updating plugins...`);
+  console.log(`${initConsole} [6/7] Updating plugins...`);
   await updatePlugins({ pluginsPath, db: database.db });
+
+  console.log(`${initConsole} [7/7] Checking and updating schema database...`);
+  await checkUpdateSchemaDatabase({ db: database.db });
 
   console.log(`${initConsole} ✅ Project setup complete.`);
   process.exit(0);

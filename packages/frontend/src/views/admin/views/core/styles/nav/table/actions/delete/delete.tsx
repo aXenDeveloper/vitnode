@@ -10,7 +10,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ShowCoreNav } from '@/graphql/types';
 import { Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
@@ -18,7 +17,7 @@ import React from 'react';
 import { ContentDeleteActionTableNavAdmin } from './content';
 
 export const DeleteActionTableNavAdmin = (
-  props: Pick<ShowCoreNav, 'children' | 'id' | 'name'>,
+  props: React.ComponentProps<typeof ContentDeleteActionTableNavAdmin>,
 ) => {
   const t = useTranslations('core.global');
 

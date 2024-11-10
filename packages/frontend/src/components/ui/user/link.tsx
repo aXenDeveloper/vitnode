@@ -1,5 +1,5 @@
-import { User } from '@/graphql/types';
 import React from 'react';
+import { User } from 'vitnode-shared/user.dto';
 
 import { Link } from '../../../navigation';
 

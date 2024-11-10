@@ -1,4 +1,4 @@
-import { getSessionData } from '@/graphql/get-session-data';
+import { getMiddlewareData } from '@/api/get-middleware-data';
 import { Metadata } from 'next';
 
 const getDescription = async ({
@@ -6,17 +6,17 @@ const getDescription = async ({
 }: {
   locale: string;
 }): Promise<string> => {
-  const {
-    core_settings__show: { site_description },
-  } = await getSessionData();
+  const { site_description } = await getMiddlewareData();
 
-  const textFromLang = site_description.find(t => t.language_code === locale);
+  const textFromLang = (site_description ?? []).find(
+    t => t.language_code === locale,
+  );
 
   if (textFromLang) {
     return textFromLang.value;
   }
 
-  return site_description[0]?.value ?? '';
+  return site_description?.[0]?.value ?? '';
 };
 
 export const generateMetadataDefaultPage = async ({

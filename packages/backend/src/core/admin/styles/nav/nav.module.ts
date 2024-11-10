@@ -1,24 +1,20 @@
+import { MiddlewareModule } from '@/core/middleware/middleware.module';
 import { Module } from '@nestjs/common';
 
-import { ChangePositionAdminNavStylesResolver } from './change_position/change_position.resolver';
-import { ChangePositionAdminNavStylesService } from './change_position/change_position.service';
-import { CreateAdminNavStylesResolver } from './create/create.resolver';
-import { CreateAdminNavStylesService } from './create/create.service';
-import { DeleteAdminNavStylesResolver } from './delete/delete.resolver';
-import { DeleteAdminNavStylesService } from './delete/delete.service';
-import { EditAdminNavStylesResolver } from './edit/edit.resolver';
-import { EditAdminNavStylesService } from './edit/edit.service';
+import { NavStylesAdminController } from './nav.controller';
+import { ChangePositionNavStylesAdminService } from './services/change_position.service';
+import { CreateNavStylesAdminService } from './services/create.service';
+import { DeleteNavStylesAdminService } from './services/delete.service';
+import { EditNavStylesAdminService } from './services/edit.service';
 
 @Module({
   providers: [
-    CreateAdminNavStylesResolver,
-    CreateAdminNavStylesService,
-    DeleteAdminNavStylesResolver,
-    DeleteAdminNavStylesService,
-    ChangePositionAdminNavStylesService,
-    ChangePositionAdminNavStylesResolver,
-    EditAdminNavStylesResolver,
-    EditAdminNavStylesService,
+    CreateNavStylesAdminService,
+    DeleteNavStylesAdminService,
+    EditNavStylesAdminService,
+    ChangePositionNavStylesAdminService,
   ],
+  controllers: [NavStylesAdminController],
+  imports: [MiddlewareModule],
 })
-export class AdminNavStylesModule {}
+export class NavStylesAdminModule {}

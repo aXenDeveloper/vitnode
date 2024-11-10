@@ -1,24 +1,19 @@
-import { getGlobalData } from '@/graphql/get-global-data';
-import { getSessionData } from '@/graphql/get-session-data';
+import { getSessionData } from '@/api/get-session-data';
+import { InternalErrorView } from '@/views/global';
 import React from 'react';
 
-import { redirect } from '../../../navigation';
-import { AuthProviders } from './providers';
+import { WrapperAuthLayout } from './wrapper';
 
 export const AuthLayout = async ({
   children,
 }: {
   children: React.ReactNode;
 }) => {
-  const [data, { core_languages__show }] = await Promise.all([
-    getSessionData(),
-    getGlobalData(),
-  ]);
+  try {
+    const data = await getSessionData();
 
-  // TODO: Improve this check, make this based on the users count
-  if (core_languages__show.edges.length === 0) {
-    await redirect('/admin/install');
+    return <WrapperAuthLayout data={data}>{children}</WrapperAuthLayout>;
+  } catch (_) {
+    return <InternalErrorView />;
   }
-
-  return <AuthProviders data={data}>{children}</AuthProviders>;
 };

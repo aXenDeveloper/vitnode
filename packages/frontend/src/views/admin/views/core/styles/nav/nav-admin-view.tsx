@@ -1,43 +1,25 @@
+import { fetcher } from '@/api/fetcher';
+import { checkAdminPermissionPage } from '@/api/get-session-admin-data';
 import { TranslationsProvider } from '@/components/translations-provider';
 import { HeaderContent } from '@/components/ui/header-content';
-import { fetcher } from '@/graphql/fetcher';
-import {
-  checkAdminPermissionPage,
-  checkAdminPermissionPageMetadata,
-} from '@/graphql/get-session-admin-data';
-import {
-  Admin__Core_Nav__Show,
-  Admin__Core_Nav__ShowQuery,
-  Admin__Core_Nav__ShowQueryVariables,
-} from '@/graphql/queries/admin/styles/nav/admin__core_nav__show.generated';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import React from 'react';
+import { ShowNavStyles } from 'vitnode-shared/nav.dto';
 
-import { ActionsNavAdmin } from './actions/actions';
+import { CreateActionNavAdmin } from './actions/create';
 import { TableNavAdmin } from './table/table';
 
 const getData = async () => {
-  const data = await fetcher<
-    Admin__Core_Nav__ShowQuery,
-    Admin__Core_Nav__ShowQueryVariables
-  >({
-    query: Admin__Core_Nav__Show,
+  const { data } = await fetcher<ShowNavStyles[]>({
+    url: '/admin/styles/nav',
     cache: 'force-cache',
   });
 
   return data;
 };
 
-const permission = {
-  plugin_code: 'core',
-  group: 'styles',
-  permission: 'can_manage_styles_nav',
-};
-
-export const generateMetadataNavAdmin = async (): Promise<Metadata> => {
-  const perm = await checkAdminPermissionPageMetadata(permission);
-  if (perm) return perm;
+export const generateMetadataNavStyleAdmin = async (): Promise<Metadata> => {
   const t = await getTranslations('admin.core.styles.nav');
 
   return {
@@ -45,10 +27,14 @@ export const generateMetadataNavAdmin = async (): Promise<Metadata> => {
   };
 };
 
-export const NavAdminView = async () => {
-  const perm = await checkAdminPermissionPage(permission);
+export const NavStyleAdminView = async () => {
+  const perm = await checkAdminPermissionPage({
+    plugin_code: 'core',
+    group: 'styles',
+    permission: 'can_manage_styles_nav',
+  });
   if (perm) return perm;
-  const [data, t] = await Promise.all([
+  const [edges, t] = await Promise.all([
     getData(),
     getTranslations('admin.core.styles.nav'),
   ]);
@@ -56,10 +42,10 @@ export const NavAdminView = async () => {
   return (
     <TranslationsProvider namespaces="admin.core.styles.nav">
       <HeaderContent h1={t('title')}>
-        <ActionsNavAdmin />
+        <CreateActionNavAdmin />
       </HeaderContent>
 
-      <TableNavAdmin {...data} />
+      <TableNavAdmin edges={edges} />
     </TranslationsProvider>
   );
 };

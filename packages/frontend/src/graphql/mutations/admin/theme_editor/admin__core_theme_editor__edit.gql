@@ -1,6 +1,0 @@
-mutation Admin__core_theme_editor__edit(
-  $colors: ColorsEditAdminThemeEditor
-  $logos: LogosEditAdminThemeEditor!
-) {
-  admin__core_theme_editor__edit(colors: $colors, logos: $logos)
-}

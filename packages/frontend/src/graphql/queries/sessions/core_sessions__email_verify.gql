@@ -1,3 +1,0 @@
-query Core_sessions__email_verify($token: String!, $userId: Float!) {
-  core_sessions__email_verify(token: $token, user_id: $userId)
-}

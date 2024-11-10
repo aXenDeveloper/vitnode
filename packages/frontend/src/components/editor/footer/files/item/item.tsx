@@ -1,12 +1,12 @@
 import { deleteMutationApi } from '@/components/editor/extensions/files/hooks/delete-mutation-api';
 import { Button } from '@/components/ui/button';
-import { StringLanguage } from '@/graphql/types';
 import { cn } from '@/helpers/classnames';
 import { CONFIG } from '@/helpers/config-with-env';
 import { JSONContent } from '@tiptap/react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
+import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 import { FileStateEditor } from '../../../extensions/files/files';
 import { useEditorState } from '../../../hooks/use-editor-state';
@@ -89,7 +89,6 @@ export const ItemListFilesFooterEditor = ({
           }
         />
       </div>
-
       <div className="inline-block w-full min-w-0 flex-1">
         <span className="block truncate leading-tight">
           {file?.name ?? data?.file_name ?? 'Error!'}
@@ -104,7 +103,6 @@ export const ItemListFilesFooterEditor = ({
           />
         </div>
       </div>
-
       {!isLoading && (
         <div className="flex shrink-0 flex-wrap items-center justify-center gap-1">
           {!error && data && (
@@ -151,12 +149,12 @@ export const ItemListFilesFooterEditor = ({
               editor.commands.deleteFile(id);
 
               if (data) {
-                const mutation = await deleteMutationApi({
-                  id,
-                  securityKey: data.security_key,
-                });
-
-                if (mutation?.error) {
+                try {
+                  await deleteMutationApi({
+                    file_id: id,
+                    security_key: data.security_key ?? '',
+                  });
+                } catch (_) {
                   toast.error(tCore('errors.title'), {
                     description: tCore('errors.internal_server_error'),
                   });

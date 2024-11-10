@@ -1,14 +1,18 @@
-import { AuthorizationCurrentUserObj, ShowCoreNav } from '@/graphql/types';
 import React from 'react';
+import { ShowAuthObj } from 'vitnode-shared/auth/auth.dto';
 
-interface Args {
-  nav: ShowCoreNav[];
-  session: null | Omit<AuthorizationCurrentUserObj, 'posts'> | undefined;
-}
+export const SessionContext = React.createContext<ShowAuthObj>(
+  {} as ShowAuthObj,
+);
 
-export const SessionContext = React.createContext<Args>({
-  session: null,
-  nav: [],
-});
+export const useSession = () => {
+  const hook = React.useContext(SessionContext);
 
-export const useSession = () => React.useContext(SessionContext);
+  if (!hook) {
+    throw new Error(
+      'useSession must be used within a RootProviders component!',
+    );
+  }
+
+  return hook;
+};

@@ -1,3 +1,0 @@
-mutation Admin__core_languages__delete($code: String!) {
-  admin__core_languages__delete(code: $code)
-}

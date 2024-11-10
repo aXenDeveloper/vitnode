@@ -1,10 +1,10 @@
 'use client';
 
+import { useMiddlewareData } from '@/hooks/use-middleware-data';
+import { usePathname, useRouter } from '@/navigation';
 import { Languages } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 
-import { useGlobalData } from '../../hooks/use-global-data';
-import { usePathname, useRouter } from '../../navigation';
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
@@ -16,7 +16,7 @@ import {
 
 export const LanguageSwitcher = () => {
   const t = useTranslations('core.global');
-  const { languages } = useGlobalData();
+  const { languages } = useMiddlewareData();
   const locale = useLocale();
   const { replace } = useRouter();
   const pathname = usePathname();

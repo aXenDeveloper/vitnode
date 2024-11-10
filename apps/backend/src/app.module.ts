@@ -1,13 +1,12 @@
 import { Module } from '@nestjs/common';
 import { join } from 'path';
-import { VitNodeCoreModule } from 'vitnode-backend';
+import { VitNodeCoreModule } from 'vitnode-backend/app.module';
 // import { emailResend } from 'vitnode-backend-email-resend';
 // import { emailSMTP } from 'vitnode-backend-email-smtp';
 // import { aiGoogle } from 'vitnode-backend-ai-google';
 // import { aiOpenAi } from 'vitnode-backend-ai-open-ai';
 
 import { DATABASE_ENVS, schemaDatabase } from './database/config';
-import { DatabaseModule } from './database/database.module';
 import { PluginsModule } from './plugins/plugins.module';
 
 @Module({
@@ -39,7 +38,6 @@ import { PluginsModule } from './plugins/plugins.module';
       //   model: 'gpt-4-turbo',
       // }),
     }),
-    DatabaseModule,
     PluginsModule,
   ],
 })

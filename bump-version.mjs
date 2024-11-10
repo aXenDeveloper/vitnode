@@ -22,6 +22,7 @@ const packages = [
   'backend',
   'create-vitnode-app',
   'frontend',
+  'shared',
   'eslint-config-typescript-vitnode',
   'backend-email-resend',
   'backend-email-smtp',

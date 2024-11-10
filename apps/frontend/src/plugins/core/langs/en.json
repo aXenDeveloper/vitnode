@@ -1,6 +1,11 @@
 {
   "core": {
     "global": {
+      "sidebar": {
+        "title": "Sidebar",
+        "desc": "Manage your sidebar settings.",
+        "toggle": "Toggle Sidebar"
+      },
       "loading": "Loading...",
       "optional": "Optional",
       "yes": "Yes",
@@ -83,9 +88,11 @@
         "admin_cp": "Admin Panel"
       },
       "mobile_nav": {
+        "home": "Home",
         "back": "Back",
         "search": "Search",
-        "menu": "Menu"
+        "menu": "Menu",
+        "desc": "Mobile Menu with navigation and user settings."
       },
       "icon_picker": {
         "title": "Choose an icon",
@@ -177,6 +184,7 @@
       "title": "Settings",
       "desc": "Manage your account settings.",
       "open_sheet": "Open Menu",
+      "open_sheet_desc": "You can change your account settings here.",
       "change_avatar": {
         "title": "Change Avatar",
         "desc": "Choose one option to change your avatar.",
@@ -316,12 +324,12 @@
       "dashboard": "Dashboard",
       "settings": "Settings",
       "settings_main": "Main",
-      "settings_security": "Security",
       "settings_metadata": "Metadata",
       "settings_email": "Email",
       "settings_authorization": "Authorization",
       "settings_legal": "Legal & Policies",
-      "settings_ai": "AI",
+      "security": "Security",
+      "security_spam": "Spam Protection",
       "plugins": "Plugins",
       "styles": "Styles",
       "styles_theme-editor": "Theme Editor",
@@ -336,13 +344,13 @@
       "can_manage_diagnostic_tools": "Can manage diagnostic tools?",
       "settings": "Settings",
       "can_manage_settings_main": "Can manage main settings?",
-      "can_manage_settings_security": "Can manage security settings?",
       "can_manage_settings_metadata": "Can manage metadata settings?",
       "can_manage_settings_email": "Can manage email settings?",
       "can_manage_settings_authorization": "Can manage authorization settings?",
       "can_manage_settings_legal": "Can manage legal settings?",
-      "can_manage_settings_ai": "Can manage AI settings?",
       "can_manage_plugins": "Can manage plugins?",
+      "security": "Security",
+      "can_manage_security_spam": "Can manage spam protection?",
       "styles": "Styles",
       "can_manage_styles_theme-editor": "Can manage theme editor?",
       "can_manage_styles_nav": "Can manage navigation?",
@@ -358,15 +366,15 @@
       "users": "Users List",
       "groups": "Groups",
       "staff": "Staff",
-      "staff_moderators": "Moderators",
-      "staff_administrators": "Administrators"
+      "staff_mod": "Moderators",
+      "staff_admin": "Administrators"
     },
     "admin_permissions": {
       "users": "Users",
       "can_manage_users": "Can manage users?",
       "can_manage_groups": "Can manage groups?",
       "staff": "Staff",
-      "can_manage_staff_administrators": "Can manage administrators?"
+      "can_manage_staff_admin": "Can manage administrators?"
     }
   }
 }

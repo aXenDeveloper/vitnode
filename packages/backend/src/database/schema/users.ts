@@ -12,7 +12,7 @@ export const core_users = pgTable(
     name: t.varchar({ length: 255 }).notNull().unique(),
     email: t.varchar({ length: 255 }).notNull().unique(),
     password: t.varchar().notNull(),
-    joined: t.timestamp().notNull().defaultNow(),
+    joined_at: t.timestamp().notNull().defaultNow(),
     newsletter: t.boolean().notNull().default(false),
     avatar_color: t.varchar({ length: 6 }).notNull(),
     email_verified: t.boolean().notNull().default(false),
@@ -32,11 +32,11 @@ export const core_users = pgTable(
         onDelete: 'set default',
       }),
   }),
-  table => ({
-    name_seo_idx: index('core_users_name_seo_idx').on(table.name_seo),
-    name_idx: index('core_users_name_idx').on(table.name),
-    email_idx: index('core_users_email_idx').on(table.email),
-  }),
+  t => [
+    index('core_users_name_seo_idx').on(t.name_seo),
+    index('core_users_name_idx').on(t.name),
+    index('core_users_email_idx').on(t.email),
+  ],
 );
 
 export const core_users_relations = relations(core_users, ({ one }) => ({
@@ -62,7 +62,7 @@ export const core_files_avatars = pgTable('core_files_avatars', t => ({
   id: t.serial().primaryKey(),
   dir_folder: t.varchar({ length: 255 }).notNull(),
   file_name: t.varchar({ length: 255 }).notNull(),
-  created: t.timestamp().notNull().defaultNow(),
+  created_at: t.timestamp().notNull().defaultNow(),
   file_size: t.integer().notNull(),
   mimetype: t.varchar({ length: 255 }).notNull(),
   extension: t.varchar({ length: 32 }).notNull(),
@@ -90,7 +90,7 @@ export const core_users_pass_reset = pgTable('core_users_pass_reset', t => ({
     })
     .notNull(),
   key: t.varchar({ length: 100 }).notNull().unique(),
-  created: t.timestamp().notNull().defaultNow(),
+  created_at: t.timestamp().notNull().defaultNow(),
   expires: t.timestamp().notNull(),
 }));
 
@@ -115,7 +115,7 @@ export const core_users_confirm_emails = pgTable(
       })
       .notNull(),
     token: t.varchar({ length: 100 }).notNull().unique(),
-    created: t.timestamp().notNull().defaultNow(),
+    created_at: t.timestamp().notNull().defaultNow(),
     expires: t.timestamp().notNull(),
   }),
 );

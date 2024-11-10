@@ -21,6 +21,5 @@
     "uagent",
     "vitnode"
   ],
-  "eslint.workingDirectories": ["frontend", "backend"],
   "tailwindCSS.experimental.classRegex": ["class:\\s*?[\"'`]([^\"'`]*).*?,"]
 }

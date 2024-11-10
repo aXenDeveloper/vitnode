@@ -14,13 +14,10 @@ import { Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
-import {
-  ContentDeleteActionFilesAdvancedCoreAdmin,
-  ContentDeleteActionFilesAdvancedCoreAdminProps,
-} from './content';
+import { ContentDeleteActionFilesAdvancedCoreAdmin } from './content';
 
 export const DeleteActionFilesAdvancedCoreAdmin = (
-  props: ContentDeleteActionFilesAdvancedCoreAdminProps,
+  props: React.ComponentProps<typeof ContentDeleteActionFilesAdvancedCoreAdmin>,
 ) => {
   const t = useTranslations('core.global');
 

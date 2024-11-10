@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
 
-import { AdminEditorStylesModule } from './editor/editor.module';
-import { AdminNavStylesModule } from './nav/nav.module';
+import { NavStylesAdminModule } from './nav/nav.module';
+import { EditorStylesAdminService } from './services/editor.service';
+import { StylesAdminController } from './styles.controller';
 
 @Module({
-  imports: [AdminNavStylesModule, AdminEditorStylesModule],
+  providers: [EditorStylesAdminService],
+  controllers: [StylesAdminController],
+  imports: [NavStylesAdminModule],
 })
-export class AdminStylesModule {}
+export class StylesAdminModule {}

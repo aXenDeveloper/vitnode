@@ -1,25 +1,21 @@
-import {
-  ABSOLUTE_PATHS_BACKEND,
-  configPath,
-  ConfigType,
-  getConfigFile,
-} from '@/index';
+import { ABSOLUTE_PATHS } from '@/app.module';
+import { configPath, ConfigType, getConfigFile } from '@/helpers/config';
 import { Injectable } from '@nestjs/common';
-import { existsSync, promises as fs } from 'fs';
+import { existsSync } from 'fs';
+import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 
-import { changeCodePluginToCapitalLetters } from './change-code-plugin-to-capital-letters';
-
-const { readFile, writeFile } = fs;
-
 @Injectable()
-export class ChangeFilesAdminPluginsService {
-  private async updateConfigFile(code: string, action: 'add' | 'delete') {
-    const filePath = join(
-      ABSOLUTE_PATHS_BACKEND.backend,
-      'database',
-      'config.ts',
+export class ChangeFilesPluginsAdminHelpersService {
+  readonly changeCodePluginToCapitalLetters = (str: string) => {
+    return (
+      str.charAt(0).toUpperCase() +
+      str.slice(1).replace(/-([a-z])/g, g => g[1].toUpperCase())
     );
+  };
+
+  private async updateConfigFile(code: string, action: 'add' | 'delete') {
+    const filePath = join(ABSOLUTE_PATHS.backend, 'database', 'config.ts');
 
     await this.updateFileContent({
       code,
@@ -28,10 +24,11 @@ export class ChangeFilesAdminPluginsService {
       importRegex: /import (\w+) from ['"](.*)['"];/g,
       entryRegex: /export const schemaDatabase = {([\s\S]*?)};/,
       getImportNameAndPath: code => ({
-        importName: `table${changeCodePluginToCapitalLetters(code)}`,
+        importName: `table${this.changeCodePluginToCapitalLetters(code)}`,
         importPath: `@/plugins/${code}/admin/database/index`,
       }),
-      getEntryName: code => `...table${changeCodePluginToCapitalLetters(code)}`,
+      getEntryName: code =>
+        `...table${this.changeCodePluginToCapitalLetters(code)}`,
       reconstructFileContent: (imports, entries, originalContent) => {
         let newContent = '';
         imports.forEach((path, name) => {
@@ -137,7 +134,7 @@ export class ChangeFilesAdminPluginsService {
   }
 
   private async updateGlobalDTSFile(code: string, action: 'add' | 'delete') {
-    const filePath = join(ABSOLUTE_PATHS_BACKEND.frontend.init, 'global.d.ts');
+    const filePath = join(ABSOLUTE_PATHS.frontend_root, 'global.d.ts');
 
     await this.updateFileContent({
       code,
@@ -173,7 +170,7 @@ export class ChangeFilesAdminPluginsService {
   }
 
   private async updatePluginModuleFile(code: string, action: 'add' | 'delete') {
-    const filePath = join(ABSOLUTE_PATHS_BACKEND.plugins, 'plugins.module.ts');
+    const filePath = join(ABSOLUTE_PATHS.plugins, 'plugins.module.ts');
 
     await this.updateFileContent({
       code,
@@ -182,10 +179,11 @@ export class ChangeFilesAdminPluginsService {
       importRegex: /import { (\w+) } from ['"](.*)['"];/g,
       entryRegex: /imports:\s*\[([^\]]*)\]/,
       getImportNameAndPath: code => ({
-        importName: `${changeCodePluginToCapitalLetters(code)}Module`,
+        importName: `${this.changeCodePluginToCapitalLetters(code)}Module`,
         importPath: `./${code}/${code}.module`,
       }),
-      getEntryName: code => `${changeCodePluginToCapitalLetters(code)}Module`,
+      getEntryName: code =>
+        `${this.changeCodePluginToCapitalLetters(code)}Module`,
       reconstructFileContent: (imports, entries) => {
         let newContent = `import { Module } from '@nestjs/common';\n\n`;
         for (const [name, path] of imports) {

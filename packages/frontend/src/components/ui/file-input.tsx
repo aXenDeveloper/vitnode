@@ -1,14 +1,14 @@
-import { UploadCoreFilesObj } from '@/graphql/types';
+import { PreviewFilesInput } from '@/components/helpers/files/preview-files-input';
+import { useMergeRefs } from '@/hooks/use-merge-refs';
 import { Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { toast } from 'sonner';
+import { FileObj } from 'vitnode-shared/utils/files.dto';
 
 import { cn } from '../../helpers/classnames';
-import { useMergeRefs } from '../../helpers/use-merge-refs';
-import { PreviewFilesInput } from '../utils/files/preview-files-input';
 
-export type FilesInputValue = File | UploadCoreFilesObj;
+export type FilesInputValue = File | FileObj;
 
 export const FileInput = ({
   acceptExtensions,

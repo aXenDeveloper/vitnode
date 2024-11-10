@@ -1,14 +1,12 @@
 import { Module } from '@nestjs/common';
 
-import { CoreMiddlewareCron } from './middleware.cron';
-import { ShowCoreMiddlewareResolver } from './show/show.resolver';
-import { ShowCoreMiddlewareService } from './show/show.service';
+import { MiddlewareController } from './middleware.controller';
+import { NavMiddlewareService } from './services/nav.service';
+import { ShowMiddlewareService } from './services/show.service';
 
 @Module({
-  providers: [
-    CoreMiddlewareCron,
-    ShowCoreMiddlewareService,
-    ShowCoreMiddlewareResolver,
-  ],
+  providers: [ShowMiddlewareService, NavMiddlewareService],
+  controllers: [MiddlewareController],
+  exports: [NavMiddlewareService],
 })
-export class CoreMiddlewareModule {}
+export class MiddlewareModule {}

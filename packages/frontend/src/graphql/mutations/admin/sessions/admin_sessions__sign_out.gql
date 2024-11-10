@@ -1,3 +1,0 @@
-mutation Admin_sessions__sign_out {
-  admin_sessions__sign_out
-}

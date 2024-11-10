@@ -14,18 +14,14 @@ export const core_moderators_permissions = pgTable(
     user_id: t.integer().references(() => core_users.id, {
       onDelete: 'cascade',
     }),
-    created: t.timestamp().notNull().defaultNow(),
-    updated: t.timestamp().notNull().defaultNow(),
+    created_at: t.timestamp().notNull().defaultNow(),
+    updated_at: t.timestamp().notNull().defaultNow(),
     protected: t.boolean().notNull().default(false),
   }),
-  table => ({
-    group_id_idx: index('core_moderators_permissions_group_id_idx').on(
-      table.group_id,
-    ),
-    user_id_idx: index('core_moderators_permissions_user_id_idx').on(
-      table.user_id,
-    ),
-  }),
+  t => [
+    index('core_moderators_permissions_group_id_idx').on(t.group_id),
+    index('core_moderators_permissions_user_id_idx').on(t.user_id),
+  ],
 );
 
 export const core_moderators_permissions_relations = relations(

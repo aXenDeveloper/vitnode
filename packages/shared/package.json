@@ -1,0 +1,38 @@
+{
+  "name": "vitnode-shared",
+  "version": "0.0.10-canary.4",
+  "description": "Shared code between backend and frontend in VitNode projects.",
+  "author": "VitNode Team",
+  "license": "MIT",
+  "homepage": "https://vitnode.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VitNode/vitnode.git",
+    "directory": "packages/shared"
+  },
+  "scripts": {
+    "build:packages": "tsc",
+    "dev": "tsc -w",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "exports": {
+    "./*": {
+      "require": "./dist/*.js",
+      "import": "./dist/*.js",
+      "types": "./dist/*.d.ts"
+    }
+  },
+  "devDependencies": {
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.8.7",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "eslint-config-typescript-vitnode": "workspace:*",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.4.6",
+    "@nestjs/swagger": "^8.0.1"
+  }
+}

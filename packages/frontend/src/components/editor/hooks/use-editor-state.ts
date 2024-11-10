@@ -1,6 +1,6 @@
-import { StringLanguage } from '@/graphql/types';
 import { Editor } from '@tiptap/react';
 import React from 'react';
+import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 interface Args {
   allowUploadFiles?: {

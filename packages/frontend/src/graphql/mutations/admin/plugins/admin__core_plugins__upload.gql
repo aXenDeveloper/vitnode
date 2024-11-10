@@ -1,3 +1,0 @@
-mutation Admin__core_plugins__upload($file: Upload!, $code: String) {
-  admin__core_plugins__upload(file: $file, code: $code)
-}

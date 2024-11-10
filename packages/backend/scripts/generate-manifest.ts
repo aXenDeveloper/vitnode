@@ -1,5 +1,6 @@
+import { existsSync } from 'fs';
+import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
 /* eslint-disable no-console */
-import * as fs from 'fs';
 import { join } from 'path';
 
 import { objectToArray, updateObject } from './helpers/update-object';
@@ -80,7 +81,7 @@ const generateDefaultManifest = ({
   ],
 });
 
-export const generateManifest = () => {
+export const generateManifest = async () => {
   const langsPath = join(
     process.cwd(),
     '..',
@@ -91,7 +92,7 @@ export const generateManifest = () => {
     'langs',
   );
 
-  if (!fs.existsSync(langsPath)) {
+  if (!existsSync(langsPath)) {
     console.log(
       `⛔️ Languages not found in 'frontend/plugins/core/langs' directory. "${langsPath}"`,
     );
@@ -107,69 +108,71 @@ export const generateManifest = () => {
     'config.json',
   );
 
-  if (!fs.existsSync(configPath)) {
+  if (!existsSync(configPath)) {
     console.log(
       `⛔️ Config file not found in 'backend/utils/config.json' directory. "${configPath}"`,
     );
     process.exit(1);
   }
 
-  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-  const languages = fs
-    .readdirSync(langsPath)
-    .map(fileName => fileName.replace('.json', ''));
+  const config = JSON.parse(await readFile(configPath, 'utf8'));
+  const languages = (await readdir(langsPath)).map(fileName =>
+    fileName.replace('.json', ''),
+  );
 
   const envUrl = process.env.NEXT_PUBLIC_FRONTEND_URL;
   const frontendUrl = envUrl ? envUrl : 'http://localhost:3000';
 
-  languages.forEach(langCode => {
-    const defaultManifest = generateDefaultManifest({
-      langCode,
-      frontendUrl,
-      siteName: config.settings.main.site_name,
-      siteShortName: config.settings.main.site_short_name,
-    });
+  await Promise.all(
+    languages.map(async langCode => {
+      const defaultManifest = generateDefaultManifest({
+        langCode,
+        frontendUrl,
+        siteName: config.settings.main.site_name,
+        siteShortName: config.settings.main.site_short_name,
+      });
 
-    const pathToUpload = join(
-      process.cwd(),
-      'uploads',
-      'public',
-      'assets',
-      langCode,
-    );
-    const pathToUploadFile = join(pathToUpload, 'manifest.webmanifest');
+      const pathToUpload = join(
+        process.cwd(),
+        'uploads',
+        'public',
+        'assets',
+        langCode,
+      );
+      const pathToUploadFile = join(pathToUpload, 'manifest.webmanifest');
 
-    if (!fs.existsSync(pathToUpload)) {
-      fs.mkdirSync(pathToUpload, { recursive: true });
+      if (!existsSync(pathToUpload)) {
+        await mkdir(pathToUpload, { recursive: true });
 
-      fs.writeFileSync(
-        pathToUploadFile,
-        JSON.stringify(defaultManifest, null, 2),
+        await writeFile(
+          pathToUploadFile,
+          JSON.stringify(defaultManifest, null, 2),
+        );
+
+        return;
+      }
+
+      // Update manifest
+      const manifest: ManifestType = JSON.parse(
+        await readFile(pathToUploadFile, 'utf8'),
+      );
+      if (!manifest.start_url) return;
+      const startUrl = `${frontendUrl}/${langCode}`;
+      const updatedManifest: ManifestType = objectToArray(
+        updateObject(
+          {
+            ...manifest,
+            start_url: `${startUrl}${manifest.start_url.replace(startUrl, '')}`,
+            id: `${startUrl}${manifest.start_url.replace(startUrl, '')}`,
+          },
+          defaultManifest,
+        ),
       );
 
-      return;
-    }
-
-    // Update manifest
-    const manifest: ManifestType = JSON.parse(
-      fs.readFileSync(pathToUploadFile, 'utf8'),
-    );
-    if (!manifest.start_url) return;
-    const startUrl = `${frontendUrl}/${langCode}`;
-    const updatedManifest: ManifestType = objectToArray(
-      updateObject(
-        {
-          ...manifest,
-          start_url: `${startUrl}${manifest.start_url.replace(startUrl, '')}`,
-          id: `${startUrl}${manifest.start_url.replace(startUrl, '')}`,
-        },
-        defaultManifest,
-      ),
-    );
-
-    fs.writeFileSync(
-      pathToUploadFile,
-      JSON.stringify(updatedManifest, null, 2),
-    );
-  });
+      await writeFile(
+        pathToUploadFile,
+        JSON.stringify(updatedManifest, null, 2),
+      );
+    }),
+  );
 };

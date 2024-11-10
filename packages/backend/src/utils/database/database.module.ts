@@ -1,13 +1,7 @@
 import { DynamicModule, Global, Module } from '@nestjs/common';
-import { registerEnumType } from '@nestjs/graphql';
 import { PoolConfig } from 'pg';
 
-import { SortDirectionEnum } from '../pagination';
 import { InternalDatabaseService } from './internal_database.service';
-
-registerEnumType(SortDirectionEnum, {
-  name: 'SortDirectionEnum',
-});
 
 export interface DatabaseModuleArgs {
   config: PoolConfig;

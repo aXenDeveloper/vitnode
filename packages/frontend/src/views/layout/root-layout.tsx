@@ -1,8 +1,8 @@
+import { getMiddlewareData } from '@/api/get-middleware-data';
 import { TranslationsProvider } from '@/components/translations-provider';
 import { Metadata } from 'next';
 import React from 'react';
 
-import { getGlobalData } from '../../graphql/get-global-data';
 import { CONFIG } from '../../helpers/config-with-env';
 import { InternalErrorView } from '../global';
 import { RootProviders } from './providers';
@@ -26,9 +26,7 @@ export const generateMetadataRootLayout = async ({
   };
 
   try {
-    const {
-      core_settings__show: { site_name, site_short_name },
-    } = await getGlobalData();
+    const { site_name, site_short_name } = await getMiddlewareData();
 
     return {
       ...metadata,
@@ -52,12 +50,14 @@ export const generateMetadataRootLayout = async ({
 export const RootLayout = async ({ children, params, className }: Props) => {
   const { locale } = await params;
   try {
-    const middlewareData = await getGlobalData();
+    const middlewareData = await getMiddlewareData();
 
     return (
       <WrapperRootLayout className={className} locale={locale}>
         <RootProviders middlewareData={middlewareData}>
-          {children}
+          <TranslationsProvider namespaces={[]}>
+            {children}
+          </TranslationsProvider>
         </RootProviders>
       </WrapperRootLayout>
     );

@@ -7,10 +7,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { ShowCoreNav } from '@/graphql/types';
 import { useTextLang } from '@/hooks/use-text-lang';
 import { Trash } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { ShowNavStyles } from 'vitnode-shared/nav.dto';
 
 import { useDeleteNavAdmin } from './hooks/use-delete-nav-admin';
 import { SubmitDeleteActionTableNavAdmin } from './submit';
@@ -19,7 +19,7 @@ export const ContentDeleteActionTableNavAdmin = ({
   children,
   id,
   name,
-}: Pick<ShowCoreNav, 'children' | 'id' | 'name'>) => {
+}: Pick<ShowNavStyles, 'children' | 'id' | 'name'>) => {
   const t = useTranslations('admin.core.styles.nav.delete');
   const tCore = useTranslations('core.global');
   const { onSubmit } = useDeleteNavAdmin({ id, name });

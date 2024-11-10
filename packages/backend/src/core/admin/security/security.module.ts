@@ -1,16 +1,8 @@
-import { Global, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 
-import { AdminCaptchaSecurityModule } from './captcha/captcha.module';
-import { CaptchaCoreCaptchaSecurityService } from './captcha/captcha.service';
+import { CaptchaSecurityAdminModule } from './captcha/captcha.module';
 
 @Module({
-  imports: [AdminCaptchaSecurityModule],
+  imports: [CaptchaSecurityAdminModule],
 })
-export class AdminSecurityModule {}
-
-@Global()
-@Module({
-  providers: [CaptchaCoreCaptchaSecurityService],
-  exports: [CaptchaCoreCaptchaSecurityService],
-})
-export class GlobalAdminSecurityModule {}
+export class SecurityAdminModule {}

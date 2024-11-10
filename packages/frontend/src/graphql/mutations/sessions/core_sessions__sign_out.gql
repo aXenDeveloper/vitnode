@@ -1,3 +1,0 @@
-mutation Core_sessions__sign_out {
-  core_sessions__sign_out
-}

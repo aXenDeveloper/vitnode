@@ -5,17 +5,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Admin__Core_Files__ShowQuery } from '@/graphql/queries/admin/advanced/files/admin__core_files__show.generated';
 import { CONFIG } from '@/helpers/config-with-env';
 import { Link } from '@/navigation';
 import { Download } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { ShowFilesAdvancedAdmin } from 'vitnode-shared/admin/advanced/files.dto';
 
 import { DeleteActionFilesAdvancedCoreAdmin } from './delete/delete';
 
-export const ActionsFilesAdvancedCoreAdmin = (
-  data: Admin__Core_Files__ShowQuery['admin__core_files__show']['edges'][0],
-) => {
+export const ActionsFilesAdvancedCoreAdmin = (data: ShowFilesAdvancedAdmin) => {
   const t = useTranslations('core.global');
 
   return (

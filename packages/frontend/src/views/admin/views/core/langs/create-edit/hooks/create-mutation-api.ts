@@ -1,28 +1,17 @@
 'use server';
 
-import { fetcher } from '@/graphql/fetcher';
-import {
-  Admin__Core_Languages__Create,
-  Admin__Core_Languages__CreateMutation,
-  Admin__Core_Languages__CreateMutationVariables,
-} from '@/graphql/mutations/admin/languages/admin__core_languages__create.generated';
+import { fetcher } from '@/api/fetcher';
 import { revalidatePath } from 'next/cache';
+import {
+  CreateLanguagesAdminBody,
+  LanguagesAdminObj,
+} from 'vitnode-shared/admin/language.dto';
 
-export const createMutationApi = async (
-  variables: Admin__Core_Languages__CreateMutationVariables,
-) => {
-  try {
-    await fetcher<
-      Admin__Core_Languages__CreateMutation,
-      Admin__Core_Languages__CreateMutationVariables
-    >({
-      query: Admin__Core_Languages__Create,
-      variables,
-    });
-    revalidatePath('/', 'layout');
-  } catch (error) {
-    const e = error as Error;
-
-    return { error: e.message };
-  }
+export const createMutationApi = async (body: CreateLanguagesAdminBody) => {
+  await fetcher<LanguagesAdminObj, CreateLanguagesAdminBody>({
+    url: '/admin/languages',
+    method: 'POST',
+    body,
+  });
+  revalidatePath('/', 'layout');
 };

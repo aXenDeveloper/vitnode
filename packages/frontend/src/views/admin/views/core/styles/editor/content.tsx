@@ -3,14 +3,12 @@
 import { AutoForm } from '@/components/form/auto-form';
 import { AutoFormRadioGroup } from '@/components/form/fields/radio-group';
 import { AutoFormSwitch } from '@/components/form/fields/switch';
-import { Core_GlobalQuery } from '@/graphql/queries/core_global.generated';
 import { useTranslations } from 'next-intl';
+import { ShowMiddlewareObj } from 'vitnode-shared/middleware.dto';
 
 import { useEditorAdmin } from './hooks/use-editor-admin';
 
-export const ContentEditorAdmin = (
-  data: Core_GlobalQuery['core_middleware__show']['editor'],
-) => {
+export const ContentEditorAdmin = (data: ShowMiddlewareObj['editor']) => {
   const t = useTranslations('admin.core.styles.editor');
   const { onSubmit, formSchema } = useEditorAdmin(data);
 

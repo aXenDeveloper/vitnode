@@ -7,7 +7,7 @@ export default function DefaultPage() {
   const t = useTranslations('welcome.home');
 
   return (
-    <main className="container my-10 flex max-w-5xl flex-wrap items-center justify-between gap-8 px-8 sm:px-16">
+    <main className="container my-10 flex max-w-5xl flex-wrap items-center justify-between gap-8 px-8">
       <div className="max-w-md space-y-4">
         <h1 className="text-balance text-3xl font-bold tracking-tight md:text-4xl">
           {t('title')}

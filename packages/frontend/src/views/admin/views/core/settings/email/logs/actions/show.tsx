@@ -11,9 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { TooltipWrapper } from '@/components/ui/tooltip';
-import { Admin__Core_Email__LogsQuery } from '@/graphql/queries/admin/settings/email/admin__core_email__logs.generated';
 import { Eye } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { LogsEmailSettingsAdminObj } from 'vitnode-shared/admin/settings/email.dto';
 
 export const ShowActionLogsEmailSettingsAdmin = ({
   subject,
@@ -21,7 +21,7 @@ export const ShowActionLogsEmailSettingsAdmin = ({
   to,
   html,
   error,
-}: Admin__Core_Email__LogsQuery['admin__core_email__logs']['edges'][0]) => {
+}: LogsEmailSettingsAdminObj['edges'][0]) => {
   const t = useTranslations('admin.core.settings.email.logs.show');
 
   return (

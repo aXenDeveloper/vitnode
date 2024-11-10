@@ -1,18 +1,21 @@
-import { PermissionSessionAdmin } from '@/graphql/get-session-admin-data';
-import { Admin__Sessions__AuthorizationQuery } from '@/graphql/queries/admin/admin__sessions__authorization.generated';
+import { PermissionSessionAdmin } from '@/api/get-session-admin-data';
 import React from 'react';
+import { ShowAuthAdminObj } from 'vitnode-shared/admin/auth.dto';
 
-interface Args {
+interface Args extends ShowAuthAdminObj {
   isInAdminPermission: (args: PermissionSessionAdmin) => boolean;
-  session?: Admin__Sessions__AuthorizationQuery['admin__sessions__authorization']['user'];
-  version: string;
 }
 
-export const SessionAdminContext = React.createContext<Args>({
-  session:
-    {} as Admin__Sessions__AuthorizationQuery['admin__sessions__authorization']['user'],
-  version: '',
-  isInAdminPermission: () => false,
-});
+export const SessionAdminContext = React.createContext<Args>({} as Args);
 
-export const useSessionAdmin = () => React.useContext(SessionAdminContext);
+export const useSessionAdmin = () => {
+  const hook = React.useContext(SessionAdminContext);
+
+  if (!hook) {
+    throw new Error(
+      'useSessionAdmin must be used within a AdminLayout component!',
+    );
+  }
+
+  return hook;
+};

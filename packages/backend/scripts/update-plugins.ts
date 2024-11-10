@@ -1,11 +1,12 @@
 import { eq, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import * as fs from 'fs';
+import { existsSync } from 'fs';
+import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
 
 import coreSchemaDatabase from '../src/database';
 import { core_plugins } from '../src/database/schema/plugins';
-import { ConfigPlugin } from '../src/providers/plugins.type';
+// import { ConfigPlugin } from '../src/providers/plugins.type';
 
 export const updatePlugins = async ({
   pluginsPath,
@@ -18,9 +19,9 @@ export const updatePlugins = async ({
   const defaultPlugin = await db.query.core_plugins.findFirst({
     where: (table, { eq }) => eq(table.default, true),
   });
-  const plugins = fs
-    .readdirSync(pluginsPath)
-    .filter(plugin => !['core', 'plugins.module.ts'].includes(plugin));
+  const plugins = (await readdir(pluginsPath)).filter(
+    plugin => !['core', 'plugins.module.ts'].includes(plugin),
+  );
 
   await db.transaction(async tx => {
     const pluginsFromDatabase = await tx.query.core_plugins.findMany({
@@ -34,12 +35,13 @@ export const updatePlugins = async ({
       plugins.map(async (code, index) => {
         const pluginPath = join(pluginsPath, code);
         const configPath = join(pluginPath, 'config.json');
-        if (!fs.existsSync(configPath)) {
+        if (!existsSync(configPath)) {
           return;
         }
 
-        const config: ConfigPlugin = JSON.parse(
-          fs.readFileSync(join(pluginPath, 'config.json'), 'utf8'),
+        // const config: ConfigPlugin = JSON.parse(
+        const config = JSON.parse(
+          await readFile(join(pluginPath, 'config.json'), 'utf8'),
         );
 
         if (config.allow_default) {

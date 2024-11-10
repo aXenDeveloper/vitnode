@@ -8,10 +8,10 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Loader } from '@/components/ui/loader';
-import { ShowCoreLanguages } from '@/graphql/types';
 import { Pencil } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { LanguagesAdminObj } from 'vitnode-shared/admin/language.dto';
 
 const Content = React.lazy(async () =>
   import('../../create-edit/create-edit').then(module => ({
@@ -19,7 +19,7 @@ const Content = React.lazy(async () =>
   })),
 );
 
-export const EditActionsTableLangsCoreAdmin = (data: ShowCoreLanguages) => {
+export const EditActionsTableLangsCoreAdmin = (data: LanguagesAdminObj) => {
   const t = useTranslations('admin.core.langs.actions');
   const tCore = useTranslations('core.global');
 

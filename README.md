@@ -13,15 +13,7 @@
 
 # VitNode
 
-VitNode is a **Modular Application Platform** build on top of [NextJS (React)](https://nextjs.org/), [NestJS (Express)](https://nestjs.com/) and [PostgreSQL](https://www.postgresql.org/) offering a customizable, scalable environment for building apps. Its easy-to-use plugin system, modern tools, and flexible integrations let you develop complex apps or launch quickly with simplicity, security, and efficiency.
-
-## Why VitNode?
-
-- **Purpose & Flexibility**: If you’re looking to build a full-stack web application (all-in-one) that needs modularity and includes complex backend logic, integrations, and the ability to manage both content and features like a CMS,
-- **Freandly for No-dev users** - who can use drag-and-drop interfaces and customizable themes,
-- **Freandly for Developers** - who can dive into code for API integrations, CRON jobs, etc.
-- **Development Tools and Features** - VitNode provides an entire ecosystem for building and managing applications. It integrates features like email management, CRON jobs, group and user management, security settings, and more.
-- **Security and Compliance** - Comes with built-in security features such as CSRF protection, CORS, rate limiting, CAPTCHA integrations, and more.
+VitNode is a robust **full-stack framework** designed to streamline the development of complex web applications by integrating powerful, modern technologies and offering a feature-rich Admin Control Panel (AdminCP). Built on top of popular frameworks, VitNode combines the front-end capabilities of [Next.js](https://nextjs.org/) (a React-based framework) with the backend power of [Nest.js](https://nestjs.com/) (built on Express) and [PostgreSQL](https://www.postgresql.org/) for efficient data management.
 
 ## 🚀 Installation
 
@@ -39,7 +31,7 @@ pnpm create vitnode-app@latest
 
 | 🛠️ Software | Minimum | Recommended |
 | :---------- | :------ | :---------- |
-| Node.js     | 20      | 20          |
+| Node.js     | 20      | 22          |
 | PostgreSQL  | 14      | 16          |
 
 | 🖥️ Hardware | Minimum        | Development    |

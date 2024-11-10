@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 
-import { EditAdminMainSettingsResolver } from './edit/edit.resolver';
-import { EditAdminMainSettingsService } from './edit/edit.service';
+import { MainSettingsAdminController } from './main.controller';
+import { EditMainSettingsAdminService } from './services/edit.main.service';
 
 @Module({
-  providers: [EditAdminMainSettingsService, EditAdminMainSettingsResolver],
+  providers: [EditMainSettingsAdminService],
+  controllers: [MainSettingsAdminController],
 })
-export class AdminMainSettingsModule {}
+export class MainSettingsAdminModule {}

@@ -1,9 +1,9 @@
 import { useAlertDialog } from '@/components/ui/alert-dialog';
-import { ShowAdminGroups } from '@/graphql/types';
 import { useTextLang } from '@/hooks/use-text-lang';
 import { usePathname, useRouter } from '@/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
+import { GroupsMembersAdminObj } from 'vitnode-shared/admin/members/groups.dto';
 import * as z from 'zod';
 
 import { mutationApi } from './mutation-api';
@@ -11,7 +11,7 @@ import { mutationApi } from './mutation-api';
 export const useDeleteGroupAdmin = ({
   id,
   name,
-}: Pick<ShowAdminGroups, 'id' | 'name'>) => {
+}: Pick<GroupsMembersAdminObj['edges'][0], 'id' | 'name'>) => {
   const t = useTranslations('admin.members.groups.delete');
   const tCore = useTranslations('core.global.errors');
   const { convertText } = useTextLang();
@@ -26,19 +26,19 @@ export const useDeleteGroupAdmin = ({
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (values.name !== formatName) return;
-    const mutation = await mutationApi({ id });
+    try {
+      await mutationApi(id);
 
-    if (mutation?.error) {
+      push(pathname);
+      toast.success(t('success'), {
+        description: values.name,
+      });
+      setOpen(false);
+    } catch (_) {
       toast.error(tCore('title'), {
         description: tCore('internal_server_error'),
       });
-
-      return;
     }
-
-    push(pathname);
-    toast.success(t('success'));
-    setOpen(false);
   };
 
   return { onSubmit, formSchema };

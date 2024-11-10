@@ -1,29 +1,13 @@
 'use server';
 
-import { fetcher } from '@/graphql/fetcher';
-import {
-  Admin__Core_Styles__Nav__Delete,
-  Admin__Core_Styles__Nav__DeleteMutation,
-  Admin__Core_Styles__Nav__DeleteMutationVariables,
-} from '@/graphql/mutations/admin/styles/nav/core_styles__nav__delete.generated';
+import { fetcher } from '@/api/fetcher';
 import { revalidatePath } from 'next/cache';
 
-export const mutationApi = async (
-  variables: Admin__Core_Styles__Nav__DeleteMutationVariables,
-) => {
-  try {
-    await fetcher<
-      Admin__Core_Styles__Nav__DeleteMutation,
-      Admin__Core_Styles__Nav__DeleteMutationVariables
-    >({
-      query: Admin__Core_Styles__Nav__Delete,
-      variables,
-    });
+export const mutationApi = async (id: number) => {
+  await fetcher<object>({
+    url: `/admin/styles/nav/${id}`,
+    method: 'DELETE',
+  });
 
-    revalidatePath('/', 'layout');
-  } catch (error) {
-    const e = error as Error;
-
-    return { error: e.message };
-  }
+  revalidatePath('/', 'layout');
 };

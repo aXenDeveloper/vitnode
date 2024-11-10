@@ -1,24 +1,15 @@
+import { fetcher } from '@/api/fetcher';
 import { Button } from '@/components/ui/button';
-import { fetcher } from '@/graphql/fetcher';
-import {
-  Core_Sessions__Email_Verify,
-  Core_Sessions__Email_VerifyQuery,
-  Core_Sessions__Email_VerifyQueryVariables,
-} from '@/graphql/queries/sessions/core_sessions__email_verify.generated';
 import { Link, redirect } from '@/navigation';
 import { CircleCheckIcon, LogIn } from 'lucide-react';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { VerifyConfirmEmailAuthBody } from 'vitnode-shared/auth/auth.dto';
 
-const getData = async (
-  variables: Core_Sessions__Email_VerifyQueryVariables,
-) => {
-  await fetcher<
-    Core_Sessions__Email_VerifyQuery,
-    Core_Sessions__Email_VerifyQueryVariables
-  >({
-    query: Core_Sessions__Email_Verify,
-    variables,
+const getData = async (body: VerifyConfirmEmailAuthBody) => {
+  await fetcher<object, VerifyConfirmEmailAuthBody>({
+    url: '/core/auth/verify_confirm_email',
+    body,
   });
 };
 
@@ -48,7 +39,7 @@ export const ConfirmEmailSignUpView = async ({
   try {
     await getData({
       token,
-      userId: +userId,
+      user_id: +userId,
     });
   } catch (_e) {
     await redirect('/login');

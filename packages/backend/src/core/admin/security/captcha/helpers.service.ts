@@ -1,13 +1,15 @@
-import { ABSOLUTE_PATHS_BACKEND } from '@/index';
+import { ABSOLUTE_PATHS } from '@/app.module';
+import { Injectable } from '@nestjs/common';
 import { join } from 'path';
 
 export interface CaptchaSecurityConfig {
   secret_key: string;
 }
 
-export class HelpersAdminCaptchaSecurityService {
+@Injectable()
+export class HelpersCaptchaSecurityAdminService {
   protected readonly path: string = join(
-    ABSOLUTE_PATHS_BACKEND.plugin({ code: 'core' }).root,
+    ABSOLUTE_PATHS.plugin({ code: 'core' }).root,
     'utils',
     'captcha.config.json',
   );

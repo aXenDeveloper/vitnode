@@ -15,17 +15,15 @@ export const core_admin_permissions = pgTable(
     user_id: t.integer().references(() => core_users.id, {
       onDelete: 'cascade',
     }),
-    created: t.timestamp().notNull().defaultNow(),
-    updated: t.timestamp().notNull().defaultNow(),
+    created_at: t.timestamp().notNull().defaultNow(),
+    updated_at: t.timestamp().notNull().defaultNow(),
     protected: t.boolean().notNull().default(false),
     permissions: t.jsonb().default('[]'),
   }),
-  table => ({
-    group_id_idx: index('core_admin_permissions_group_id_idx').on(
-      table.group_id,
-    ),
-    user_id_idx: index('core_admin_permissions_user_id_idx').on(table.user_id),
-  }),
+  t => [
+    index('core_admin_permissions_group_id_idx').on(t.group_id),
+    index('core_admin_permissions_user_id_idx').on(t.user_id),
+  ],
 );
 
 export const core_admin_permissions_relations = relations(
@@ -52,9 +50,9 @@ export const core_admin_sessions = pgTable(
       .references(() => core_users.id, {
         onDelete: 'cascade',
       }),
-    created: t.timestamp().notNull().defaultNow(),
+    created_at: t.timestamp().notNull().defaultNow(),
     last_seen: t.timestamp().notNull().defaultNow(),
-    expires: t.timestamp().notNull(),
+    expires_at: t.timestamp().notNull(),
     device_id: t
       .integer()
       .references(() => core_sessions_known_devices.id, {
@@ -62,12 +60,10 @@ export const core_admin_sessions = pgTable(
       })
       .notNull(),
   }),
-  table => ({
-    login_token_idx: index('core_admin_sessions_login_token_idx').on(
-      table.login_token,
-    ),
-    user_id_idx: index('core_admin_sessions_user_id_idx').on(table.user_id),
-  }),
+  t => [
+    index('core_admin_sessions_login_token_idx').on(t.login_token),
+    index('core_admin_sessions_user_id_idx').on(t.user_id),
+  ],
 );
 
 export const core_admin_sessions_relations = relations(

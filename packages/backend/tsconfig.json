@@ -3,7 +3,8 @@
   "extends": "eslint-config-typescript-vitnode/tsconfig.nest.json",
   "compilerOptions": {
     "target": "ESNext",
-    "module": "commonjs",
+    "module": "es2015",
+    "moduleResolution": "bundler",
     "outDir": "./dist",
     "emitDeclarationOnly": true,
     "paths": {

@@ -1,3 +1,0 @@
-mutation Admin__core_staff_administrators__delete($id: Int!) {
-  admin__core_staff_administrators__delete(id: $id)
-}

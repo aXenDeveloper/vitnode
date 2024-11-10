@@ -1,8 +1,0 @@
-query Admin__core_manifest_metadata__show {
-  admin__core_manifest_metadata__show {
-    display
-    start_url
-    theme_color
-    background_color
-  }
-}

@@ -14,8 +14,8 @@ export const core_sessions = pgTable(
       .references(() => core_users.id, {
         onDelete: 'cascade',
       }),
-    created: t.timestamp().notNull().defaultNow(),
-    expires: t.timestamp().notNull(),
+    created_at: t.timestamp().notNull().defaultNow(),
+    expires_at: t.timestamp().notNull(),
     device_id: t
       .integer()
       .references(() => core_sessions_known_devices.id, {
@@ -23,9 +23,7 @@ export const core_sessions = pgTable(
       })
       .notNull(),
   }),
-  table => ({
-    user_id_idx: index('core_sessions_user_id_idx').on(table.user_id),
-  }),
+  t => [index('core_sessions_user_id_idx').on(t.user_id)],
 );
 
 export const core_sessions_relations = relations(core_sessions, ({ one }) => ({
@@ -50,11 +48,7 @@ export const core_sessions_known_devices = pgTable(
     uagent_os: t.varchar({ length: 100 }).notNull(),
     last_seen: t.timestamp().notNull().defaultNow(),
   }),
-  table => ({
-    ip_address_idx: index('core_sessions_known_devices_ip_address_idx').on(
-      table.ip_address,
-    ),
-  }),
+  t => [index('core_sessions_known_devices_ip_address_idx').on(t.ip_address)],
 );
 
 export const core_sessions_known_devices_relations = relations(

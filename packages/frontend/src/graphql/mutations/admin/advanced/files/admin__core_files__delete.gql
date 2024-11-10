@@ -1,3 +1,0 @@
-mutation Admin__core_files__delete($id: Int!) {
-  admin__core_files__delete(id: $id)
-}

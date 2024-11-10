@@ -1,7 +1,0 @@
-query Admin__core_security__captcha__show {
-  admin__core_security__captcha__show {
-    secret_key
-    site_key
-    type
-  }
-}

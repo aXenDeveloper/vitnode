@@ -2,10 +2,10 @@ import { AutoFormComponentProps } from '@/components/form/auto-form';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsTrigger } from '@/components/ui/tabs';
-import { Admin__Core_Staff_Administrators__ShowQuery } from '@/graphql/queries/admin/members/staff/admin__core_staff_administrators__show.generated';
 import { cn } from '@/helpers/classnames';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { PermissionsStaffObj } from 'vitnode-shared/admin/staff.dto';
 
 interface PermissionState {
   groups: {
@@ -19,7 +19,7 @@ export function PermissionsField({
   permissions: permissionsFromProps,
   field,
 }: {
-  permissions: Admin__Core_Staff_Administrators__ShowQuery['admin__core_staff_administrators__show']['permissions'];
+  permissions: PermissionsStaffObj[];
 } & AutoFormComponentProps) {
   const permissions = permissionsFromProps.filter(
     plugin => plugin.groups.length > 0,

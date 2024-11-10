@@ -1,9 +1,9 @@
-import { PageInfo } from '@/graphql/types';
 import { usePathname, useRouter } from '@/navigation';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React from 'react';
+import { PaginationInfo } from 'vitnode-shared/utils/pagination.dto';
 
 import { Button } from './button';
 import {
@@ -24,10 +24,10 @@ const PAGE_SIZES = [10, 20, 30, 40, 50];
 
 export const Pagination = ({
   pageInfo,
-  defaultPageSize,
+  defaultPageSize = 10,
 }: {
-  defaultPageSize: 10 | 20 | 30 | 40 | 50;
-  pageInfo: PageInfo;
+  defaultPageSize?: 10 | 20 | 30 | 40 | 50;
+  pageInfo: PaginationInfo;
 }) => {
   const t = useTranslations('core.global');
   const { push } = useRouter();
@@ -56,7 +56,7 @@ export const Pagination = ({
   return (
     <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-end">
       <span className="text-muted-foreground text-sm">
-        {t('total_count', { count: pageInfo.totalCount })}
+        {t('total_count', { count: pageInfo.total_count })}
       </span>
 
       <div className="flex flex-wrap items-center justify-center gap-4">
@@ -100,12 +100,12 @@ export const Pagination = ({
           <Button
             ariaLabel={t('previous')}
             className="bg-card size-9"
-            disabled={!pageInfo.hasPreviousPage}
+            disabled={!pageInfo.has_previous_page}
             onClick={() => {
-              if (!pageInfo.startCursor) return;
+              if (!pageInfo.start_cursor) return;
 
               const params = new URLSearchParams(searchParams.toString());
-              params.set('cursor', `${pageInfo.startCursor}`);
+              params.set('cursor', `${pageInfo.start_cursor}`);
               params.set('last', `${pageSizeValue}`);
               params.delete('first');
               push(`${pathname}?${params.toString()}`, {
@@ -120,12 +120,12 @@ export const Pagination = ({
           <Button
             ariaLabel={t('next')}
             className="bg-card size-9"
-            disabled={!pageInfo.hasNextPage}
+            disabled={!pageInfo.has_next_page}
             onClick={() => {
-              if (!pageInfo.endCursor) return;
+              if (!pageInfo.end_cursor) return;
 
               const params = new URLSearchParams(searchParams.toString());
-              params.set('cursor', `${pageInfo.endCursor}`);
+              params.set('cursor', `${pageInfo.end_cursor}`);
               params.set('first', `${pageSizeValue}`);
               params.delete('last');
               push(`${pathname}?${params.toString()}`, {

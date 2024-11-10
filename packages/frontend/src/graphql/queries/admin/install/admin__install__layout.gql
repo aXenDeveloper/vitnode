@@ -1,5 +1,0 @@
-query Admin__install__layout {
-  admin__install__layout {
-    status
-  }
-}

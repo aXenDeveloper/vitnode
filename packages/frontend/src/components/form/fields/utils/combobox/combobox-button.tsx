@@ -1,12 +1,12 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { StringLanguage } from '@/graphql/types';
 import { cn } from '@/helpers/classnames';
 import { useTextLang } from '@/hooks/use-text-lang';
 import { ChevronsUpDownIcon, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { ControllerRenderProps, FieldValues } from 'react-hook-form';
+import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 interface ComboBoxButtonProps<T extends FieldValues>
   extends Omit<React.ComponentProps<typeof Button>, 'ariaLabel' | 'children'> {

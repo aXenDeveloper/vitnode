@@ -1,3 +1,0 @@
-mutation Admin__core_terms_settings__delete($code: String!) {
-  admin__core_terms_settings__delete(code: $code)
-}

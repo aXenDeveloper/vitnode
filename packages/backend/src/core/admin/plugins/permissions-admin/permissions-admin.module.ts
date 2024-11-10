@@ -1,20 +1,18 @@
 import { Module } from '@nestjs/common';
 
-import { CreateEditAdminPermissionsAdminPluginsResolver } from './create-edit/create-edit.resolver';
-import { CreateEditAdminPermissionsAdminPluginsService } from './create-edit/create-edit.service';
-import { DeleteAdminPermissionsAdminPluginsResolver } from './delete/delete.resolver';
-import { DeleteAdminPermissionsAdminPluginsService } from './delete/delete.service';
-import { ShowAdminPermissionsAdminPluginsResolver } from './show/show.resolver';
-import { ShowAdminPermissionsAdminPluginsService } from './show/show.service';
+import { PermissionsAdminPluginsAdminController } from './permissions-admin.controller';
+import { CreatePermissionsAdminPluginsAdminService } from './services/create.service';
+import { DeletePermissionsAdminPluginsAdminService } from './services/delete.service';
+import { EditPermissionsAdminPluginsAdminService } from './services/edit.service';
+import { ShowPermissionsAdminPluginsAdminService } from './services/show.service';
 
 @Module({
   providers: [
-    ShowAdminPermissionsAdminPluginsResolver,
-    ShowAdminPermissionsAdminPluginsService,
-    CreateEditAdminPermissionsAdminPluginsService,
-    CreateEditAdminPermissionsAdminPluginsResolver,
-    DeleteAdminPermissionsAdminPluginsResolver,
-    DeleteAdminPermissionsAdminPluginsService,
+    ShowPermissionsAdminPluginsAdminService,
+    CreatePermissionsAdminPluginsAdminService,
+    EditPermissionsAdminPluginsAdminService,
+    DeletePermissionsAdminPluginsAdminService,
   ],
+  controllers: [PermissionsAdminPluginsAdminController],
 })
-export class AdminPermissionsAdminPluginsModule {}
+export class PermissionsAdminPluginsAdminModule {}

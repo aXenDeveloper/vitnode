@@ -1,18 +1,23 @@
-import * as fs from 'fs';
+import { existsSync } from 'fs';
+import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 
-import { DEFAULT_CONFIG_DATA, getConfigFile } from '../src/providers/config';
+import { DEFAULT_CONFIG_DATA, getConfigFile } from '../src/helpers/config';
 import { updateObject } from './helpers/update-object';
 
-export const generateConfig = ({ pluginsPath }: { pluginsPath: string }) => {
+export const generateConfig = async ({
+  pluginsPath,
+}: {
+  pluginsPath: string;
+}) => {
   const folderPath = join(pluginsPath, 'core', 'utils');
-  if (!fs.existsSync(folderPath)) {
-    fs.mkdirSync(folderPath, { recursive: true });
+  if (!existsSync(folderPath)) {
+    await mkdir(folderPath, { recursive: true });
   }
 
   const configPath = join(folderPath, 'config.json');
-  if (!fs.existsSync(configPath)) {
-    fs.writeFileSync(
+  if (!existsSync(configPath)) {
+    await writeFile(
       configPath,
       JSON.stringify(DEFAULT_CONFIG_DATA, null, 2),
       'utf8',
@@ -24,7 +29,7 @@ export const generateConfig = ({ pluginsPath }: { pluginsPath: string }) => {
   const config = getConfigFile();
   const updatedConfig = updateObject(config, DEFAULT_CONFIG_DATA);
 
-  fs.writeFileSync(
+  await writeFile(
     configPath,
     JSON.stringify(
       { ...updatedConfig, restart_server: DEFAULT_CONFIG_DATA.restart_server },

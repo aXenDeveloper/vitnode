@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
-import { mutationApi } from './hooks/mutation-api';
+import { mutationClearCache } from './hooks/mutation-api';
 
 export const ContentClearCacheActionDiagnostic = () => {
   const t = useTranslations('admin.core.diagnostic.clear_cache');
@@ -26,8 +26,8 @@ export const ContentClearCacheActionDiagnostic = () => {
         <AlertDialogCancel>{tCore('cancel')}</AlertDialogCancel>
         <AlertDialogAction asChild>
           <Button
-            onClick={() => {
-              mutationApi();
+            onClick={async () => {
+              await mutationClearCache();
               toast.success(t('success'));
             }}
             variant="destructive"

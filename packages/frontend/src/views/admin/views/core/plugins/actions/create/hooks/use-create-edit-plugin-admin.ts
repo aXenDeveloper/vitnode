@@ -1,24 +1,25 @@
-import { ShowAdminPlugins } from '@/graphql/types';
+import { useDialog } from '@/components/ui/dialog';
 import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
+import { ShowPluginAdmin } from 'vitnode-shared/admin/plugins.dto';
 import * as z from 'zod';
 
-import { checkConnectionMutationApi } from '../../../hooks/check-connection-mutation-api';
 import { mutationCreateApi } from './mutation-create-api';
 import { mutationEditApi } from './mutation-edit-api';
 
 export const codePluginRegex = /^[a-z0-9-]*$/;
 
-interface Args {
-  data?: ShowAdminPlugins;
-}
-
-export const useCreateEditPluginAdmin = ({ data }: Args) => {
+export const useCreateEditPluginAdmin = ({
+  data,
+}: {
+  data?: ShowPluginAdmin;
+}) => {
   const t = useTranslations('admin.core.plugins');
   const tCore = useTranslations('core.global.errors');
-  const { session } = useSessionAdmin();
+  const { user } = useSessionAdmin();
+  const { setOpen } = useDialog();
 
   const formSchema = z.object({
     name: z
@@ -46,7 +47,7 @@ export const useCreateEditPluginAdmin = ({ data }: Args) => {
       .string()
       .min(3)
       .max(100)
-      .default(data ? data.author : (session?.name ?? '')),
+      .default(data ? data.author : (user?.name ?? '')),
     author_url: z
       .string()
       .url()
@@ -59,39 +60,31 @@ export const useCreateEditPluginAdmin = ({ data }: Args) => {
     values: z.infer<typeof formSchema>,
     form: UseFormReturn<z.infer<typeof formSchema>>,
   ) => {
-    let error = '';
-
-    if (data) {
-      const mutation = await mutationEditApi({
-        name: values.name,
-        code: values.code,
-        description: values.description,
-        supportUrl: values.support_url,
-        author: values.author,
-        authorUrl: values.author_url,
-        default: data.default,
+    try {
+      await new Promise<void>(resolve => {
+        setTimeout(() => {
+          form.reset(values);
+          resolve();
+        }, 0);
       });
 
-      if (mutation?.error) {
-        error = mutation.error;
-      }
-    } else {
-      const mutation = await mutationCreateApi({
-        name: values.name,
-        code: values.code,
-        description: values.description,
-        supportUrl: values.support_url,
-        author: values.author,
-        authorUrl: values.author_url,
-      });
+      if (data) {
+        await mutationEditApi({
+          ...values,
+          default: data.default,
+        });
 
-      if (mutation?.error) {
-        error = mutation.error;
+        toast.error(t('edit.success'), {
+          description: values.name,
+        });
+      } else {
+        await mutationCreateApi(values);
+        setOpen?.(false);
+        window.location.reload();
       }
-    }
-
-    if (error) {
-      if (error === 'PLUGIN_ALREADY_EXISTS') {
+    } catch (err) {
+      const error = err as Error;
+      if (error.message.includes('PLUGIN_ALREADY_EXISTS')) {
         form.setError('code', {
           message: t('create.code.exists'),
         });
@@ -100,38 +93,9 @@ export const useCreateEditPluginAdmin = ({ data }: Args) => {
       }
 
       toast.error(tCore('title'), {
-        description: tCore('internal_server_error'),
+        description: error.message,
       });
-
-      return;
     }
-
-    if (!data) {
-      // Wait 3 seconds before reloading the page
-      await new Promise<void>(resolve =>
-        setTimeout(async () => {
-          form.reset({}, { keepValues: true });
-          const data = await checkConnectionMutationApi();
-
-          if (data?.error) {
-            toast.error(tCore('title'), {
-              description: tCore('internal_server_error'),
-            });
-
-            resolve();
-          }
-
-          window.location.reload();
-          resolve();
-        }, 3000),
-      );
-
-      return;
-    }
-
-    toast.success(t('edit.success'), {
-      description: values.name,
-    });
   };
 
   return {

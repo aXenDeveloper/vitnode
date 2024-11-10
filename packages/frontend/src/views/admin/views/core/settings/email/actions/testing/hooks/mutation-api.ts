@@ -1,26 +1,12 @@
 'use server';
 
-import { fetcher } from '@/graphql/fetcher';
-import {
-  Admin__Core_Email_Settings__Test,
-  Admin__Core_Email_Settings__TestMutation,
-  Admin__Core_Email_Settings__TestMutationVariables,
-} from '@/graphql/mutations/admin/settings/email/admin__core_email_settings__test.generated';
+import { fetcher } from '@/api/fetcher';
+import { TestEmailSettingsAdminBody } from 'vitnode-shared/admin/settings/email.dto';
 
-export const mutationApi = async (
-  variables: Admin__Core_Email_Settings__TestMutationVariables,
-) => {
-  try {
-    await fetcher<
-      Admin__Core_Email_Settings__TestMutation,
-      Admin__Core_Email_Settings__TestMutationVariables
-    >({
-      query: Admin__Core_Email_Settings__Test,
-      variables,
-    });
-  } catch (error) {
-    const e = error as Error;
-
-    return { error: e.message };
-  }
+export const mutationApi = async (body: TestEmailSettingsAdminBody) => {
+  await fetcher<object, TestEmailSettingsAdminBody>({
+    url: '/admin/settings/email/test',
+    method: 'POST',
+    body,
+  });
 };

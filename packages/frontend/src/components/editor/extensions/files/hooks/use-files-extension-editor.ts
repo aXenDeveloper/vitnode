@@ -1,10 +1,13 @@
-import { FilesPermissionsCoreSessions } from '@/graphql/types';
+import { fetcherClient } from '@/api/fetcher-client';
 import { formatBytes } from '@/helpers/format-bytes';
-import { useGlobalData } from '@/hooks/use-global-data';
+import { useMiddlewareData } from '@/hooks/use-middleware-data';
 import { useSession } from '@/hooks/use-session';
 import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
+import { ShowFile, UploadFilesBody } from 'vitnode-shared/files.dto';
+import { FilesPermissionsCoreSessions } from 'vitnode-shared/user.dto';
+import { AllowTypeFilesEnum } from 'vitnode-shared/utils/global';
 
 import {
   acceptMimeTypeImage,
@@ -12,7 +15,6 @@ import {
   FileStateEditor,
 } from '../files';
 import { deleteMutationApi } from './delete-mutation-api';
-import { uploadMutationApi } from './upload-mutation-api';
 
 export const useFilesExtensionEditor = ({
   allowUploadFiles,
@@ -26,23 +28,23 @@ export const useFilesExtensionEditor = ({
   const tCore = useTranslations('core.global.errors');
   const session = useSession();
   const adminSession = useSessionAdmin();
-  const { config } = useGlobalData();
+  const middleware = useMiddlewareData();
   const permissionFiles: FilesPermissionsCoreSessions = {
     allow_upload:
-      session.session?.files_permissions.allow_upload ??
-      adminSession.session?.files_permissions.allow_upload ??
+      session.user?.files_permissions.allow_upload ??
+      adminSession.user?.files_permissions.allow_upload ??
       false,
     max_storage_for_submit:
-      session.session?.files_permissions.max_storage_for_submit ??
-      adminSession.session?.files_permissions.max_storage_for_submit ??
+      session.user?.files_permissions.max_storage_for_submit ??
+      adminSession.user?.files_permissions.max_storage_for_submit ??
       0,
     space_used:
-      session.session?.files_permissions.space_used ??
-      adminSession.session?.files_permissions.space_used ??
+      session.user?.files_permissions.space_used ??
+      adminSession.user?.files_permissions.space_used ??
       0,
     total_max_storage:
-      session.session?.files_permissions.total_max_storage ??
-      adminSession.session?.files_permissions.total_max_storage ??
+      session.user?.files_permissions.total_max_storage ??
+      adminSession.user?.files_permissions.total_max_storage ??
       0,
   };
 
@@ -53,12 +55,12 @@ export const useFilesExtensionEditor = ({
     id: number;
     securityKey: string | undefined;
   }) => {
-    const mutation = await deleteMutationApi({
-      id,
-      securityKey,
-    });
-
-    if (mutation?.error) {
+    try {
+      await deleteMutationApi({
+        file_id: id,
+        security_key: securityKey,
+      });
+    } catch (_) {
       toast.error(tCore('title'), {
         description: tCore('internal_server_error'),
       });
@@ -73,13 +75,13 @@ export const useFilesExtensionEditor = ({
         isLoading: false,
       };
 
-    const { allow_type } = config.editor.files;
-    if (allow_type === 'all') return file;
+    const { allow_type } = middleware.editor.files;
+    if (allow_type === AllowTypeFilesEnum.all) return file;
 
     const isValidType = (types: string[]) =>
       types.includes(file.file?.type ?? '');
 
-    if (allow_type === 'images_videos') {
+    if (allow_type === AllowTypeFilesEnum.images_videos) {
       if (!isValidType([...acceptMimeTypeImage, ...acceptMimeTypeVideo])) {
         return {
           ...file,
@@ -89,7 +91,7 @@ export const useFilesExtensionEditor = ({
           isLoading: false,
         };
       }
-    } else if (allow_type === 'images') {
+    } else if (allow_type === AllowTypeFilesEnum.images) {
       if (!isValidType(acceptMimeTypeImage)) {
         return {
           ...file,
@@ -171,7 +173,7 @@ export const useFilesExtensionEditor = ({
   }) => {
     if (
       !allowUploadFiles ||
-      config.editor.files.allow_type === 'none' ||
+      middleware.editor.files.allow_type === AllowTypeFilesEnum.none ||
       !permissionFiles.allow_upload
     ) {
       return;
@@ -200,25 +202,31 @@ export const useFilesExtensionEditor = ({
       };
     }
     formData.append('file', file.file);
+    // TODO: Change this to plugin_code when testing is done
+    // ! This is a temporary issue to test the upload of files
     formData.append('plugin', allowUploadFiles.plugin);
     formData.append('folder', allowUploadFiles.folder);
-    const mutation = await uploadMutationApi(formData);
 
-    if (mutation.error || !mutation.data?.core_editor_files__upload) {
+    try {
+      const { data } = await fetcherClient<ShowFile, UploadFilesBody>({
+        url: '/core/files',
+        method: 'POST',
+        body: formData,
+      });
+
       return {
-        ...file,
+        data,
+        id: data.id,
+        isLoading: false,
+        error: '',
+      };
+    } catch (_) {
+      return {
+        id: file.id,
         error: tCore('internal_server_error'),
         isLoading: false,
       };
     }
-    const { core_editor_files__upload } = mutation.data;
-
-    return {
-      data: core_editor_files__upload,
-      id: core_editor_files__upload.id,
-      isLoading: false,
-      error: '',
-    };
   };
 
   return { handleDelete, checkUploadFile, uploadFile };

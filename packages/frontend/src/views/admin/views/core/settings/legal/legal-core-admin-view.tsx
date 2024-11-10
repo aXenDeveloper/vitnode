@@ -1,36 +1,24 @@
+import { fetcher } from '@/api/fetcher';
+import { checkAdminPermissionPage } from '@/api/get-session-admin-data';
 import { TranslationsProvider } from '@/components/translations-provider';
 import { Button } from '@/components/ui/button';
 import { HeaderContent } from '@/components/ui/header-content';
-import { fetcher } from '@/graphql/fetcher';
 import {
   getPaginationTool,
   SearchParamsPagination,
-} from '@/graphql/get-pagination-tool';
-import {
-  checkAdminPermissionPage,
-  checkAdminPermissionPageMetadata,
-} from '@/graphql/get-session-admin-data';
-import {
-  Admin_Core_Terms__Show,
-  Admin_Core_Terms__ShowQuery,
-  Admin_Core_Terms__ShowQueryVariables,
-} from '@/graphql/queries/admin/settings/terms/Admin_core_terms__show.generated';
+} from '@/helpers/get-pagination-tool';
 import { Link } from '@/navigation';
 import { SquareArrowOutUpRight } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
+import { LegalsObj, LegalsQuery } from 'vitnode-shared/legal.dto';
 
-import { ContentLegalSettingsAdmin } from './content/content';
 import { CreateLegalSettingsAdmin } from './create';
+import { TableLegalSettingsAdmin } from './table/table';
 
-export const getData = async (
-  variables: Admin_Core_Terms__ShowQueryVariables,
-) => {
-  const data = await fetcher<
-    Admin_Core_Terms__ShowQuery,
-    Admin_Core_Terms__ShowQueryVariables
-  >({
-    query: Admin_Core_Terms__Show,
-    variables,
+const getData = async (query: LegalsQuery) => {
+  const { data } = await fetcher<LegalsObj, LegalsQuery>({
+    url: '/core/legal',
+    query,
     cache: 'force-cache',
   });
 
@@ -44,8 +32,6 @@ const permission = {
 };
 
 export const generateMetadataLegalSettingsAdmin = async () => {
-  const perm = await checkAdminPermissionPageMetadata(permission);
-  if (perm) return perm;
   const t = await getTranslations('admin.core.settings.legal');
 
   return {
@@ -62,7 +48,6 @@ export const LegalSettingsAdminView = async ({
   if (perm) return perm;
   const variables = await getPaginationTool({
     searchParams,
-    defaultPageSize: 10,
   });
   const [t, data] = await Promise.all([
     getTranslations('admin.core.settings.legal'),
@@ -80,7 +65,7 @@ export const LegalSettingsAdminView = async ({
         <CreateLegalSettingsAdmin />
       </HeaderContent>
 
-      <ContentLegalSettingsAdmin {...data} />
+      <TableLegalSettingsAdmin {...data} />
     </TranslationsProvider>
   );
 };

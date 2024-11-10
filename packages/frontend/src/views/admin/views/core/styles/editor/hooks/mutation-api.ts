@@ -1,28 +1,15 @@
 'use server';
 
-import { fetcher } from '@/graphql/fetcher';
-import {
-  Admin__Core_Styles__Editor__Edit,
-  Admin__Core_Styles__Editor__EditMutation,
-  Admin__Core_Styles__Editor__EditMutationVariables,
-} from '@/graphql/mutations/admin/styles/editor/admin__core_styles__editor__edit.generated';
+import { fetcher } from '@/api/fetcher';
 import { revalidatePath } from 'next/cache';
+import { EditorStylesAdminBody } from 'vitnode-shared/admin/styles/editor.dto';
 
-export const mutationApi = async (
-  variables: Admin__Core_Styles__Editor__EditMutationVariables,
-) => {
-  try {
-    await fetcher<
-      Admin__Core_Styles__Editor__EditMutation,
-      Admin__Core_Styles__Editor__EditMutationVariables
-    >({
-      query: Admin__Core_Styles__Editor__Edit,
-      variables,
-    });
-    revalidatePath('/', 'layout');
-  } catch (error) {
-    const e = error as Error;
+export const mutationApi = async (body: EditorStylesAdminBody) => {
+  await fetcher<EditorStylesAdminBody, EditorStylesAdminBody>({
+    url: '/admin/styles/editor',
+    method: 'PUT',
+    body,
+  });
 
-    return { error: e.message };
-  }
+  revalidatePath('/', 'layout');
 };

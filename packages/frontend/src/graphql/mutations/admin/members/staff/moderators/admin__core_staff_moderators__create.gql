@@ -1,5 +1,0 @@
-mutation Admin__core_staff_moderators__create($groupId: Int, $userId: Int) {
-  admin__core_staff_moderators__create(group_id: $groupId, user_id: $userId) {
-    id
-  }
-}

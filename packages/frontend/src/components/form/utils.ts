@@ -190,14 +190,14 @@ export default function resolveDependencies<
           isDisabled = true;
         }
         break;
-      case DependencyType.REQUIRES:
-        if (conditionMet) {
-          isRequired = true;
-        }
-        break;
       case DependencyType.HIDES:
         if (conditionMet) {
           isHidden = true;
+        }
+        break;
+      case DependencyType.REQUIRES:
+        if (conditionMet) {
+          isRequired = true;
         }
         break;
       case DependencyType.SETS_OPTIONS:

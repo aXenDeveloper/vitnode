@@ -1,20 +1,20 @@
 'use client';
 
-import { Core_GlobalQuery } from '@/graphql/queries/core_global.generated';
+import { MiddlewareContext } from '@/hooks/use-middleware-data';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider as NextThemesProvider } from 'next-themes';
 import NextTopLoader from 'nextjs-toploader';
 import React from 'react';
+import { ShowMiddlewareObj } from 'vitnode-shared/middleware.dto';
 
 import { Toaster } from '../../components/ui/sonner';
-import { GlobalsContext } from '../../hooks/use-global-data';
 
 export const RootProviders = ({
   children,
   middlewareData,
 }: {
   children: React.ReactNode;
-  middlewareData?: Core_GlobalQuery;
+  middlewareData?: ShowMiddlewareObj;
 }) => {
   const [queryClient] = React.useState(
     () =>
@@ -30,41 +30,21 @@ export const RootProviders = ({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <GlobalsContext.Provider
-        value={{
-          languages:
-            middlewareData?.core_languages__show.edges.filter(
-              lang => lang.enabled,
-            ) ?? [],
-          defaultLanguage:
-            middlewareData?.core_languages__show.edges.find(
-              lang => lang.default,
-            )?.code ?? 'en',
-          settings: middlewareData?.core_settings__show ?? {
-            site_copyright: [],
-            site_description: [],
-            site_name: '',
-            site_short_name: '',
-          },
-          config:
-            middlewareData?.core_middleware__show ??
-            ({} as Core_GlobalQuery['core_middleware__show']),
-        }}
-      >
-        <NextTopLoader
-          color="hsl(var(--primary))"
-          height={4}
-          showSpinner={false}
-        />
-        <NextThemesProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-        >
-          {children}
-          <Toaster closeButton />
-        </NextThemesProvider>
-      </GlobalsContext.Provider>
+      <NextTopLoader
+        color="hsl(var(--primary))"
+        height={4}
+        showSpinner={false}
+      />
+      <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
+        {middlewareData ? (
+          <MiddlewareContext.Provider value={{ ...middlewareData }}>
+            {children}
+          </MiddlewareContext.Provider>
+        ) : (
+          children
+        )}
+        <Toaster closeButton />
+      </NextThemesProvider>
     </QueryClientProvider>
   );
 };
