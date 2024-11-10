@@ -24,11 +24,10 @@ export interface PermissionsAdminWithI18n {
 }
 
 export const PermissionsAdminDevPluginAdminView = async ({
-  params,
+  code,
 }: {
-  params: Promise<{ code: string }>;
+  code: string;
 }) => {
-  const { code } = await params;
   const [t, data, tPlugin] = await Promise.all([
     getTranslations('admin.core.plugins.dev.permissions-admin'),
     getData(code),

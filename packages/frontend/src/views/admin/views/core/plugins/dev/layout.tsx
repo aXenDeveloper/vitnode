@@ -14,28 +14,21 @@ import { TabsDevPluginAdmin } from './tabs';
 
 interface Props {
   children: React.ReactNode;
-  params: Promise<{
-    code: string;
-  }>;
+  code: string;
 }
 
 export async function generateMetadataDevPluginAdminLayout({
-  params,
-}: Props): Promise<Metadata> {
-  const { code } = await params;
+  code,
+}: Omit<Props, 'children'>): Promise<Metadata> {
   const data = await getPluginDataAdmin(code);
   const defaultTitle = data.name;
 
   return {
-    title: {
-      template: `%s - ${defaultTitle}`,
-      absolute: defaultTitle,
-    },
+    title: defaultTitle,
   };
 }
 
-export const DevPluginAdminLayout = async ({ params, children }: Props) => {
-  const { code } = await params;
+export const DevPluginAdminLayout = async ({ code, children }: Props) => {
   if (!CONFIG.node_development) await redirect('/admin');
   const [
     {

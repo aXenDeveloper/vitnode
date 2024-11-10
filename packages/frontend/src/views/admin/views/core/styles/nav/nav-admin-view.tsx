@@ -19,7 +19,7 @@ const getData = async () => {
   return data;
 };
 
-export const generateMetadataNavAdmin = async (): Promise<Metadata> => {
+export const generateMetadataNavStyleAdmin = async (): Promise<Metadata> => {
   const t = await getTranslations('admin.core.styles.nav');
 
   return {
@@ -27,7 +27,7 @@ export const generateMetadataNavAdmin = async (): Promise<Metadata> => {
   };
 };
 
-export const NavAdminView = async () => {
+export const NavStyleAdminView = async () => {
   const perm = await checkAdminPermissionPage({
     plugin_code: 'core',
     group: 'styles',

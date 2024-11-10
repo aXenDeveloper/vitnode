@@ -16,12 +16,7 @@ const getData = async (code: string) => {
   return data;
 };
 
-export const NavDevPluginAdminView = async ({
-  params,
-}: {
-  params: Promise<{ code: string }>;
-}) => {
-  const { code } = await params;
+export const NavDevPluginAdminView = async ({ code }: { code: string }) => {
   const [data, t, tGlobal] = await Promise.all([
     getData(code),
     getTranslations('admin.core.plugins.dev.nav'),

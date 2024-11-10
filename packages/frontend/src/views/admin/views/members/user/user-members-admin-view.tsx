@@ -30,11 +30,10 @@ const getData = async (id: number) => {
 };
 
 interface Props {
-  params: Promise<{ id: string }>;
+  id: string;
 }
 
-export const generateMetadataUserMembersAdmin = async ({ params }: Props) => {
-  const { id } = await params;
+export const generateMetadataUserMembersAdmin = async ({ id }: Props) => {
   const { name } = await getData(+id);
 
   return {
@@ -42,8 +41,7 @@ export const generateMetadataUserMembersAdmin = async ({ params }: Props) => {
   };
 };
 
-export const UserMembersAdminView = async ({ params }: Props) => {
-  const { id } = await params;
+export const UserMembersAdminView = async ({ id }: Props) => {
   const [t, data] = await Promise.all([
     getTranslations('admin.members.users.item'),
     getData(+id),

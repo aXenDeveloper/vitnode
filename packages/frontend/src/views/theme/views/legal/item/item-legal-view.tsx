@@ -32,13 +32,12 @@ const getData = async (code: string) => {
 };
 
 interface Props {
-  params: Promise<{ code: string }>;
+  code: string;
 }
 
 export const generateMetadataItemLegal = async ({
-  params,
+  code,
 }: Props): Promise<Metadata> => {
-  const { code } = await params;
   const [{ convertText }, { title }] = await Promise.all([
     getTextLang(),
     getData(code),
@@ -49,8 +48,7 @@ export const generateMetadataItemLegal = async ({
   };
 };
 
-export const ItemLegalView = async ({ params }: Props) => {
-  const { code } = await params;
+export const ItemLegalView = async ({ code }: Props) => {
   const [t, { convertText }, { updated_at, title, content }] =
     await Promise.all([
       getTranslations('core.legal'),

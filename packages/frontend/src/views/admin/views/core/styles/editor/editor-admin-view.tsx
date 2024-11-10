@@ -7,15 +7,16 @@ import { getTranslations } from 'next-intl/server';
 
 import { ContentEditorAdmin } from './content';
 
-export const generateMetadataEditorAdmin = async (): Promise<Metadata> => {
-  const t = await getTranslations('admin.core.styles.editor');
+export const generateMetadataEditorStylesAdmin =
+  async (): Promise<Metadata> => {
+    const t = await getTranslations('admin.core.styles.editor');
 
-  return {
-    title: t('title'),
+    return {
+      title: t('title'),
+    };
   };
-};
 
-export const EditorAdminView = async () => {
+export const EditorStylesAdminView = async () => {
   const [t, data] = await Promise.all([
     getTranslations('admin.core.styles.editor'),
     getMiddlewareData(),

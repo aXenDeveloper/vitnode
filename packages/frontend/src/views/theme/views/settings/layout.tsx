@@ -2,24 +2,11 @@ import { getSessionData } from '@/api/get-session-data';
 import { TranslationsProvider } from '@/components/translations-provider';
 import { Card } from '@/components/ui/card';
 import { HeaderContent } from '@/components/ui/header-content';
-import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import React from 'react';
 
 import { NavSettings } from './nav/nav-settings';
-
-export const generateMetadataLayoutSettings = async (): Promise<Metadata> => {
-  const t = await getTranslations('core.settings');
-
-  return {
-    title: {
-      default: t('title'),
-      template: `%s - ${t('title')}`,
-    },
-    robots: 'noindex, nofollow',
-  };
-};
 
 export const LayoutSettingsView = async ({
   children,
