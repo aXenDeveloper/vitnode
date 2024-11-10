@@ -12,7 +12,7 @@ export const editMutationApi = async ({
   ...body
 }: { id: number } & EditLanguagesAdminBody) => {
   await fetcher<LanguagesAdminObj, EditLanguagesAdminBody>({
-    url: `/admin/core/languages/${id}`,
+    url: `/admin/languages/${id}`,
     method: 'PUT',
     body,
   });

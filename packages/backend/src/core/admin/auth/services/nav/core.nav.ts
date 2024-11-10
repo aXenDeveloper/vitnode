@@ -19,10 +19,6 @@ export const coreNav: ShowAuthAdminObj['nav'] = [
             keywords: ['name', 'title', 'description', 'desc'],
           },
           {
-            code: 'security',
-            keywords: ['captcha'],
-          },
-          {
             code: 'metadata',
             keywords: ['manifest', 'pwa', 'seo'],
           },
@@ -49,9 +45,15 @@ export const coreNav: ShowAuthAdminObj['nav'] = [
         ],
       },
       {
-        code: 'plugins',
-        icon: 'plug',
-        keywords: ['plug', 'plugin'],
+        code: 'security',
+        icon: 'shield',
+        keywords: [],
+        children: [
+          {
+            code: 'spam',
+            keywords: ['spam', 'report', 'reporting', 'recaptcha'],
+          },
+        ],
       },
       {
         code: 'styles',
@@ -71,6 +73,11 @@ export const coreNav: ShowAuthAdminObj['nav'] = [
             keywords: ['editor', 'tiptap'],
           },
         ],
+      },
+      {
+        code: 'plugins',
+        icon: 'plug',
+        keywords: ['plug', 'plugin'],
       },
       {
         code: 'langs',

@@ -63,7 +63,8 @@ export class SignInAuthService {
 
     if (admin) {
       const expires_at = new Date();
-      expires_at.setDate(expires_at.getDate() + 1);
+      // Admin session expires in 3 hours
+      expires_at.setHours(expires_at.getHours() + 3);
 
       const activeSession =
         await this.databaseService.db.query.core_admin_sessions.findFirst({

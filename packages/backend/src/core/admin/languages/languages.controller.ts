@@ -30,7 +30,7 @@ import { EditLanguagesAdminService } from './services/edit.service';
 import { ShowLanguagesAdminService } from './services/show.service';
 
 @ApiTags('Admin')
-@Controller('admin/core/languages')
+@Controller('admin/languages')
 @ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class LanguagesAdminController {

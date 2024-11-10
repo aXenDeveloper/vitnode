@@ -518,6 +518,30 @@
             "submit": "Yes, delete file"
           }
         }
+      },
+      "security": {
+        "spam": {
+          "title": "Spam Protection",
+          "captcha": {
+            "title": "Captcha",
+            "type": {
+              "title": "Type",
+              "none": {
+                "title": "None"
+              },
+              "recaptcha_desc": "Read more on <link>Google reCAPTCHA</link>.",
+              "recaptcha_v2_invisible": "reCAPTCHA v2 Invisible",
+              "recaptcha_v2_checkbox": "reCAPTCHA v2 Checkbox",
+              "recaptcha_v3": "reCAPTCHA v3",
+              "cloudflare_turnstile": {
+                "title": "Cloudflare Turnstile",
+                "desc": "Read more on <link>Cloudflare Turnstile</link>."
+              }
+            },
+            "site_key": "Site Key",
+            "secret_key": "Secret Key"
+          }
+        }
       }
     },
     "members": {

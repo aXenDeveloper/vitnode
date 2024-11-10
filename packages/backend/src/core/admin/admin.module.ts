@@ -5,6 +5,7 @@ import { AuthAdminModule } from './auth/auth.module';
 import { LanguagesAdminModule } from './languages/languages.module';
 import { MembersAdminModule } from './members/members.module';
 import { PluginsAdminModule } from './plugins/plugins.module';
+import { SecurityAdminModule } from './security/security.module';
 import { SettingsAdminModule } from './settings/settings.module';
 import { StylesAdminModule } from './styles/styles.module';
 
@@ -17,6 +18,7 @@ import { StylesAdminModule } from './styles/styles.module';
     PluginsAdminModule,
     StylesAdminModule,
     AdvancedAdminModule,
+    SecurityAdminModule,
   ],
 })
 export class AdminModule {}

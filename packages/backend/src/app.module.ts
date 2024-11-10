@@ -142,7 +142,6 @@ const config = () => {
         admin: {
           name: 'vitnode-login-token-admin',
           admin_id: 'vitnode-admin-id',
-          expiresIn: 1, // 1 day
         },
       },
       known_device: {

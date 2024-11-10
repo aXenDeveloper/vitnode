@@ -21,7 +21,7 @@ const getData = async (query: ShowLanguagesAdminQuery) => {
     ShowLanguagesAdminObj,
     ShowLanguagesAdminQuery
   >({
-    url: '/admin/core/languages',
+    url: '/admin/languages',
     query,
     cache: 'force-cache',
   });

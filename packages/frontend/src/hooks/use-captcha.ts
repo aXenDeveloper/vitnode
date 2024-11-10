@@ -76,9 +76,9 @@ export const useCaptcha = () => {
     } else if (config.type === CaptchaTypeEnum.recaptcha_v3) {
       script.src = `${googleCaptchaDomain}&render=${config.site_key}`;
     } else {
-      window[functionCF] = handleLoaded;
+      // window[functionCF] = handleLoaded;
 
-      script.src = `https://challenges.cloudflare.com/turnstile/v0/api.js?onload=${functionCF}`;
+      script.src = `https://challenges.cloudflare.com/turnstile/v0/api.js`;
     }
     if (!script.src) return;
 

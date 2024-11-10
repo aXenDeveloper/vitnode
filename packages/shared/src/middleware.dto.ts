@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsEnum, IsString } from 'class-validator';
 
 import { MainSettingsAdminBody } from './admin/settings/main.dto';
 import { ShowNavStyles } from './nav.dto';
@@ -37,9 +38,11 @@ export class LanguagesMiddleware {
 
 export class CaptchaSecurityMiddleware {
   @ApiProperty()
+  @IsString()
   site_key: string;
 
   @ApiProperty({ enum: CaptchaTypeEnum })
+  @IsEnum(CaptchaTypeEnum)
   type: CaptchaTypeEnum;
 }
 

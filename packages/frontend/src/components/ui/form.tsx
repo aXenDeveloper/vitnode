@@ -133,7 +133,11 @@ const FormLabel = ({
 
   return (
     <Label
-      className={cn(error && 'text-destructive', className)}
+      className={cn(
+        error && 'text-destructive',
+        className,
+        'flex flex-wrap gap-2',
+      )}
       htmlFor={formItemId}
       {...props}
     >

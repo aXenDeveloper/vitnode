@@ -13,12 +13,15 @@ export const coreAdminPermissions: PermissionsStaffObj[] = [
         id: 'settings',
         permissions: [
           'can_manage_settings_main',
-          'can_manage_settings_security',
           'can_manage_settings_metadata',
           'can_manage_settings_email',
           'can_manage_settings_authorization',
           'can_manage_settings_legal',
         ],
+      },
+      {
+        id: 'security',
+        permissions: ['can_manage_security_spam'],
       },
       {
         id: 'can_manage_plugins',

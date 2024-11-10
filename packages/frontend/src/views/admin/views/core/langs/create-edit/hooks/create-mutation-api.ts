@@ -9,7 +9,7 @@ import {
 
 export const createMutationApi = async (body: CreateLanguagesAdminBody) => {
   await fetcher<LanguagesAdminObj, CreateLanguagesAdminBody>({
-    url: '/admin/core/languages',
+    url: '/admin/languages',
     method: 'POST',
     body,
   });
