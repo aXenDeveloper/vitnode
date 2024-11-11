@@ -13,7 +13,7 @@
 
 # VitNode App
 
-This is a basic template for a VitNode app.
+This is a basic template for a [VitNode](https://vitnode.com/) app.
 
 ## Getting Started
 
@@ -24,6 +24,8 @@ pnpm i
 # or
 npm i
 ```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 ## Development
 

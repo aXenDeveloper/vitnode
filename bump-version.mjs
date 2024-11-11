@@ -129,16 +129,7 @@ function logError(error) {
     'folders_to_copy',
   );
   const frontendAppPath = path.join(WORKSPACE, 'apps', 'frontend');
-  const pathsToFoldersForce = [
-    join('src', 'app', '[locale]', 'admin', '(vitnode)'),
-    join('src', 'app', '[locale]', 'admin', '(auth)', '(vitnode)'),
-    join('src', 'app', '[locale]', '(main)', '(layout)', '(vitnode)'),
-  ];
   const pathsToFiles = [
-    {
-      folder: join('src', 'app'),
-      file: 'not-found.tsx',
-    },
     {
       folder: join('src', 'plugins', 'core', 'langs'),
       file: 'en.json',
@@ -153,17 +144,6 @@ function logError(error) {
   if (!fs.existsSync(frontendPackagePath)) {
     fs.mkdirSync(frontendPackagePath, { recursive: true });
   }
-
-  // Copy folders
-  pathsToFoldersForce.forEach(folder => {
-    const appPath = join(frontendAppPath, folder);
-    const packagePath = join(frontendPackagePath, folder);
-    if (!fs.existsSync(packagePath)) {
-      fs.mkdirSync(packagePath, { recursive: true });
-    }
-
-    fs.cpSync(appPath, packagePath, { recursive: true });
-  });
 
   // Copy files
   pathsToFiles.forEach(file => {

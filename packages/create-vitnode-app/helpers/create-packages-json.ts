@@ -4,6 +4,7 @@ import { join } from 'path';
 interface PackageJSON {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
+  exports?: Record<string, Record<string, string>>;
   name: string;
   overrides?: Record<string, string>;
   packageManager?: string;
@@ -36,11 +37,9 @@ export const createPackagesJSON = ({
     version: '1.0.0',
     private: true,
     scripts: {
-      'config:init': 'turbo config:init',
-      dev: 'turbo config:init && turbo dev',
+      dev: 'turbo dev',
       build: 'turbo build',
       start: 'turbo start',
-      codegen: 'turbo codegen',
       db: 'turbo db',
       ...(eslint ? { lint: 'turbo lint', 'lint:fix': 'turbo lint:fix' } : {}),
       ...(docker
@@ -51,14 +50,14 @@ export const createPackagesJSON = ({
     },
     overrides: packageManager.startsWith('npm')
       ? {
-          react: '19.0.0-rc-69d4b800-20241021',
-          'react-dom': '19.0.0-rc-69d4b800-20241021',
+          react: '19.0.0-rc-5c56b873-20241107',
+          'react-dom': '19.0.0-rc-5c56b873-20241107',
         }
       : {},
     pnpm: packageManager.startsWith('pnpm')
       ? {
           overrides: {
-            'react-is': '19.0.0-rc-69d4b800-20241021',
+            'react-is': '19.0.0-rc-5c56b873-20241107',
           },
         }
       : {},
@@ -66,8 +65,6 @@ export const createPackagesJSON = ({
       ...(eslint
         ? {
             'eslint-config-typescript-vitnode': `^${pkg.version}`,
-            prettier: '^3.3.3',
-            'prettier-plugin-tailwindcss': '^0.6.8',
           }
         : {}),
       turbo: '^2.2.3',
@@ -87,39 +84,37 @@ export const createPackagesJSON = ({
     private: true,
     scripts: {
       'config:init': 'vitnode-frontend init',
-      dev: 'next dev --turbo',
+      dev: 'vitnode-frontend dev && next dev --turbo',
       build: 'next build',
       start: 'next start',
+      'start:prod': 'node server.js',
       lint: 'eslint .',
       'lint:fix': 'eslint . --fix',
-      codegen: 'graphql-codegen',
     },
     dependencies: {
-      '@hookform/resolvers': '^3.9.0',
+      '@hookform/resolvers': '^3.9.1',
       geist: '^1.3.1',
-      'lucide-react': '^0.453.0',
-      next: '^15.0.0',
-      'next-intl': '^3.23.1',
-      react: '19.0.0-rc-69d4b800-20241021',
-      'react-dom': '19.0.0-rc-69d4b800-20241021',
-      'react-hook-form': '^7.53.1',
-      recharts: '^2.13.0',
-      sonner: '^1.5.0',
+      next: '^15.0.3',
+      'next-intl': '^3.25.0',
+      react: '19.0.0-rc-5c56b873-20241107',
+      'react-dom': '19.0.0-rc-5c56b873-20241107',
+      'react-hook-form': '^7.53.2',
+      recharts: '^2.13.3',
+      sonner: '^1.7.0',
       'vitnode-frontend': `^${pkg.version}`,
       zod: '^3.23.8',
     },
     devDependencies: {
-      '@graphql-codegen/cli': '^5.0.3',
-      '@types/node': '^22.7.8',
-      '@types/react': '^18.3.10',
+      '@types/node': '^22.9.0',
+      '@types/react': '^18.3.12',
       '@types/react-dom': '^18.3.1',
       autoprefixer: '^10.4.20',
-      ...(eslint ? { eslint: '^9.11.1' } : {}),
       'eslint-config-typescript-vitnode': `^${pkg.version}`,
-      'graphql-tag': '^2.12.6',
-      postcss: '^8.4.47',
+      postcss: '^8.4.48',
+      shared: 'workspace:*',
       tailwindcss: '^3.4.14',
       typescript: '^5.6.3',
+      'vitnode-shared': `^${pkg.version}`,
     },
   };
 
@@ -135,7 +130,7 @@ export const createPackagesJSON = ({
     scripts: {
       'drizzle-kit': 'drizzle-kit',
       'config:init': 'vitnode-backend init',
-      dev: 'cross-env NODE_ENV=development nest start -w',
+      dev: 'pnpm config:init && cross-env NODE_ENV=development nest start -w',
       build: 'nest build',
       start: 'node dist/main',
       lint: 'eslint .',
@@ -143,43 +138,75 @@ export const createPackagesJSON = ({
       db: 'vitnode-backend db',
     },
     dependencies: {
-      '@nestjs/common': '^10.4.5',
-      '@nestjs/core': '^10.4.5',
-      '@nestjs/graphql': '^12.2.0',
+      '@nestjs/common': '^10.4.7',
+      '@nestjs/core': '^10.4.7',
+      '@nestjs/platform-express': '^10.4.7',
       '@nestjs/schedule': '^4.1.1',
       '@nestjs/throttler': '^6.2.1',
-      '@react-email/components': '^0.0.25',
+      '@react-email/components': '^0.0.28',
       'class-transformer': '^0.5.1',
       'class-validator': '^0.14.1',
-      react: '19.0.0-rc-69d4b800-20241021',
-      'react-dom': '19.0.0-rc-69d4b800-20241021',
+      'drizzle-kit': '^0.28.0',
+      'drizzle-orm': '^0.36.1',
+      react: '19.0.0-rc-5c56b873-20241107',
+      'react-dom': '19.0.0-rc-5c56b873-20241107',
       'reflect-metadata': '^0.2.2',
       'vitnode-backend': `^${pkg.version}`,
     },
     devDependencies: {
-      '@nestjs/cli': '^10.4.5',
-      '@nestjs/platform-express': '^10.4.5',
-      '@nestjs/schematics': '^10.2.2',
-      '@types/express': '^4.17.21',
-      '@types/node': '^22.7.8',
-      '@types/pg': '^8.11.10',
-      '@types/react': '^18.3.10',
+      '@nestjs/cli': '^10.4.7',
+      '@nestjs/schematics': '^10.2.3',
+      '@swc/cli': '^0.5.0',
+      '@types/express': '^5.0.0',
+      '@types/node': '^22.9.0',
+      '@types/react': '^18.3.12',
       'cross-env': '^7.0.3',
-      'drizzle-kit': '^0.26.2',
-      'drizzle-orm': '^0.35.3',
-      ...(eslint ? { eslint: '^9.11.1' } : {}),
       'eslint-config-typescript-vitnode': `^${pkg.version}`,
-      pg: '^8.13.0',
-      'source-map-support': '^0.5.21',
-      'ts-loader': '^9.5.1',
-      'ts-node': '^10.9.2',
-      'tsconfig-paths': '^4.2.0',
+      shared: 'workspace:*',
       typescript: '^5.6.3',
+      'vitnode-shared': `^${pkg.version}`,
     },
   };
 
   writeFileSync(
     join(root, 'apps', 'backend', 'package.json'),
     JSON.stringify(backendPackagesJSON, null, 2),
+  );
+
+  const sharedPackagesJSON: PackageJSON = {
+    name: 'shared',
+    version: '1.0.0',
+    private: true,
+    scripts: {
+      build: 'tsc',
+      dev: 'tsc -w',
+      lint: 'eslint .',
+      'lint:fix': 'eslint . --fix',
+    },
+    exports: {
+      './*': {
+        require: './dist/*.js',
+        import: './dist/*.js',
+        types: './dist/*.d.ts',
+      },
+    },
+    dependencies: {
+      '@nestjs/common': '^10.4.7',
+      '@nestjs/swagger': '^8.0.5',
+    },
+    devDependencies: {
+      '@types/multer': '^1.4.12',
+      '@types/node': '^22.9.0',
+      'class-transformer': '^0.5.1',
+      'class-validator': '^0.14.1',
+      'eslint-config-typescript-vitnode': `^${pkg.version}`,
+      typescript: '^5.6.3',
+      'vitnode-shared': `^${pkg.version}`,
+    },
+  };
+
+  writeFileSync(
+    join(root, 'apps', 'shared', 'package.json'),
+    JSON.stringify(sharedPackagesJSON, null, 2),
   );
 };

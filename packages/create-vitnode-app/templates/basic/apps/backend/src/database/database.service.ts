@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InternalDatabaseService } from 'vitnode-backend';
+import { InternalDatabaseService } from 'vitnode-backend/utils/database/internal_database.service';
 
 import { schemaDatabase } from './config';
 

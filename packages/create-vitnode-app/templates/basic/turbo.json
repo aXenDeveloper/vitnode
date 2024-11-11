@@ -10,14 +10,6 @@
       "dependsOn": ["^start"],
       "persistent": true
     },
-    "codegen": {
-      "dependsOn": ["^codegen"],
-      "cache": false
-    },
-    "config:init": {
-      "dependsOn": ["^config:init"],
-      "cache": false
-    },
     "lint": {
       "dependsOn": ["^lint"]
     },
