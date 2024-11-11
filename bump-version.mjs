@@ -1,4 +1,3 @@
-// @ts-check
 import { execSync, spawn } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { EOL } from 'os';
