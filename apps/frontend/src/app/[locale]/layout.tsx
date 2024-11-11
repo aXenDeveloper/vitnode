@@ -1,4 +1,4 @@
-import { GeistSans } from 'geist/font/sans';
+import { Geist } from 'next/font/google';
 import {
   generateMetadataRootLayout,
   RootLayout,
@@ -6,8 +6,10 @@ import {
 
 export const generateMetadata = generateMetadataRootLayout;
 
+const geistSans = Geist();
+
 export default function Layout(
   props: Omit<React.ComponentProps<typeof RootLayout>, 'className'>,
 ) {
-  return <RootLayout className={GeistSans.className} {...props} />;
+  return <RootLayout className={geistSans.className} {...props} />;
 }

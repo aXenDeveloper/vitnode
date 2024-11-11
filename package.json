@@ -24,7 +24,7 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^22.8.7",
+    "@types/node": "^22.9.0",
     "eslint-config-typescript-vitnode": "workspace:*",
     "turbo": "^2.2.3"
   },

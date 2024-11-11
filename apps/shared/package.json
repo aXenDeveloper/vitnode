@@ -16,15 +16,15 @@
   },
   "devDependencies": {
     "@types/multer": "^1.4.12",
-    "@types/node": "^22.8.7",
+    "@types/node": "^22.9.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "eslint-config-typescript-vitnode": "workspace:*",
-    "vitnode-shared": "workspace:*",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitnode-shared": "workspace:*"
   },
   "dependencies": {
-    "@nestjs/common": "^10.4.6",
-    "@nestjs/swagger": "^8.0.1"
+    "@nestjs/common": "^10.4.7",
+    "@nestjs/swagger": "^8.0.5"
   }
 }
