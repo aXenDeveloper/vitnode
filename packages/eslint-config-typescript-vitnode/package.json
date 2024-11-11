@@ -1,6 +1,6 @@
 {
   "name": "eslint-config-typescript-vitnode",
-  "version": "0.0.10-canary.4",
+  "version": "0.0.10-canary.5",
   "description": "ESLint, TypeScript (TSConfig), Prettier config for VitNode",
   "author": "VitNode Team",
   "license": "MIT",
