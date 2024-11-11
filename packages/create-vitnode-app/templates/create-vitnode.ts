@@ -67,7 +67,6 @@ export const createVitNode = async ({
   // Rename files
   spinner.text = 'Renaming files...';
   renameSync(join(root, '.gitignore_template'), join(root, '.gitignore'));
-  renameSync(join(root, '.npmrc_template'), join(root, '.npmrc'));
 
   // Change tailwind.config.ts based on package manager
   spinner.text = 'Changing tailwind.config.ts...';

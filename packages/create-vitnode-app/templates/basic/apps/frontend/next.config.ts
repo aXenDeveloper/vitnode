@@ -1,4 +1,4 @@
-import { NextConfig } from 'next';
+import type { NextConfig } from 'next';
 import VitNodeConfig from 'vitnode-frontend/next.config';
 
 const nextConfig: NextConfig = {};

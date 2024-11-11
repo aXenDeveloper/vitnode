@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { join } from 'path';
-import { VitNodeCoreModule } from 'vitnode-backend';
+import { VitNodeCoreModule } from 'vitnode-backend/app.module';
 
 import { DATABASE_ENVS, schemaDatabase } from './database/config';
 import { DatabaseModule } from './database/database.module';
