@@ -1,8 +1,9 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsString } from 'class-validator';
 
 import { MainSettingsAdminBody } from './admin/settings/main.dto';
 import { ShowNavStyles } from './nav.dto';
+import { FileObj } from './utils/files.dto';
 import { AllowTypeFilesEnum, CaptchaTypeEnum } from './utils/global';
 
 export class AuthorizationMiddleware {
@@ -64,6 +65,29 @@ class EditorMiddleware {
   sticky: boolean;
 }
 
+class LogosMiddleware {
+  @ApiPropertyOptional()
+  dark?: FileObj;
+
+  @ApiPropertyOptional()
+  light?: FileObj;
+
+  @ApiPropertyOptional()
+  mobile_dark?: FileObj;
+
+  @ApiPropertyOptional()
+  mobile_light?: FileObj;
+
+  @ApiProperty()
+  mobile_width: number;
+
+  @ApiProperty()
+  text: string;
+
+  @ApiProperty()
+  width: number;
+}
+
 export class ShowMiddlewareObj extends MainSettingsAdminBody {
   @ApiProperty()
   authorization: AuthorizationMiddleware;
@@ -82,6 +106,9 @@ export class ShowMiddlewareObj extends MainSettingsAdminBody {
 
   @ApiProperty()
   languages_code_default: string;
+
+  @ApiProperty()
+  logos: LogosMiddleware;
 
   @ApiProperty({ type: [ShowNavStyles] })
   nav: ShowNavStyles[];

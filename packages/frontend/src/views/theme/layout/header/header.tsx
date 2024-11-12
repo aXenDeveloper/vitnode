@@ -9,6 +9,7 @@ import { getTranslations } from 'next-intl/server';
 import React from 'react';
 
 import { AuthUserBar } from './auth-user-bar/auth-user-bar';
+import { LogoHeader } from './logo';
 import { NavHeader } from './nav/nav';
 
 export const Header = async ({ className }: { className?: string }) => {
@@ -33,7 +34,7 @@ export const Header = async ({ className }: { className?: string }) => {
       )}
     >
       <div className="container flex h-16 items-center gap-4 px-5">
-        <div>test</div>
+        <LogoHeader />
         {nav.length > 0 && <NavHeader />}
 
         <div className="ml-auto flex gap-2">
