@@ -1,12 +1,6 @@
 import { fetcher } from '@/api/fetcher';
 import { Card } from '@/components/ui/card';
 import { HeaderContent } from '@/components/ui/header-content';
-// import { fetcher } from '@/graphql/fetcher';
-// import {
-//   Admin__Core_Email_Settings__Show,
-//   Admin__Core_Email_Settings__ShowQuery,
-//   Admin__Core_Email_Settings__ShowQueryVariables,
-// } from '@/graphql/queries/admin/settings/admin__core_email_settings__show.generated';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { ShowEmailSettingsAdminObj } from 'vitnode-shared/admin/settings/email.dto';

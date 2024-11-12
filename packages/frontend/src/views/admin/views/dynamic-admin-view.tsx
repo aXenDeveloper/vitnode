@@ -56,6 +56,7 @@ import {
   generateMetadataNavStyleAdmin,
   NavStyleAdminView,
 } from './core/styles/nav/nav-admin-view';
+import { ThemeEditorStyleAdminView } from './core/styles/theme-editor/theme-editor-admin-view';
 import {
   generateMetadataGroupsMembersAdmin,
   GroupsMembersAdminView,
@@ -230,6 +231,10 @@ export const DynamicAdminView = async (props: {
     }
 
     if (slug[1] === 'styles' && !slug[3]) {
+      if (slug[2] === 'theme-editor') {
+        return <ThemeEditorStyleAdminView />;
+      }
+
       if (slug[2] === 'editor') {
         return <EditorStylesAdminView />;
       }

@@ -397,6 +397,11 @@
         }
       },
       "styles": {
+        "theme-editor": {
+          "desktop": "Desktop",
+          "tablet": "Tablet",
+          "mobile": "Mobile"
+        },
         "nav": {
           "title": "Navigation",
           "href": "URL: {href}",

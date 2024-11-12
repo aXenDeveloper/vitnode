@@ -61,16 +61,16 @@ export const coreNav: ShowAuthAdminObj['nav'] = [
         keywords: [],
         children: [
           {
-            code: 'theme-editor',
-            keywords: ['theme', 'editor', 'color', 'logo'],
-          },
-          {
             code: 'nav',
             keywords: ['nav', 'navigation'],
           },
           {
             code: 'editor',
             keywords: ['editor', 'tiptap'],
+          },
+          {
+            code: 'theme-editor',
+            keywords: ['theme', 'editor', 'color', 'logo'],
           },
         ],
       },
