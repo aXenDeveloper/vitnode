@@ -11,27 +11,31 @@ export const PreviewFilesInput = ({
   multiple?: boolean;
   onChange: (e: FilesInputValue[]) => void;
   showInfo?: boolean;
-  value: FilesInputValue[];
+  value?: FilesInputValue[];
 }) => {
-  if (value.length === 0) return null;
+  if (value?.length === 0) return null;
 
   return (
     <ul className="flex flex-col gap-4">
-      {[...(Array.isArray(value) ? value : [value])].map((file, index) => (
-        <ItemPreviewFilesInput
-          file={file}
-          index={index}
-          key={
-            file instanceof File
-              ? `${file.name}_${file.lastModified}_${file.size}`
-              : `${file.dir_folder}_${file.file_name}`
-          }
-          multiple={multiple}
-          onChange={onChange}
-          showInfo={showInfo}
-          value={value}
-        />
-      ))}
+      {[...(Array.isArray(value) ? value : [value])].map((file, index) => {
+        if (!file) return null;
+
+        return (
+          <ItemPreviewFilesInput
+            file={file}
+            index={index}
+            key={
+              file instanceof File
+                ? `${file.name}_${file.lastModified}_${file.size}`
+                : `${file.dir_folder}_${file.file_name}`
+            }
+            multiple={multiple}
+            onChange={onChange}
+            showInfo={showInfo}
+            value={value}
+          />
+        );
+      })}
     </ul>
   );
 };

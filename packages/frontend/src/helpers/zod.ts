@@ -24,8 +24,9 @@ export const zodFiles = z.array(
       dir_folder: z.string(),
       extension: z.string(),
       file_size: z.number(),
-      width: z.number().nullable().optional(),
-      height: z.number().nullable().optional(),
+      width: z.number().nullable(),
+      height: z.number().nullable(),
+      secure: z.boolean(),
     }),
   ]),
 );

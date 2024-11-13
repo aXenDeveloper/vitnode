@@ -6,6 +6,7 @@ import { cn } from '@/helpers/classnames';
 import { CONFIG } from '@/helpers/config-with-env';
 import React from 'react';
 
+import { useThemeEditor } from './hooks/use-theme-editor';
 import { SidebarThemeEditorStyleAdmin } from './sidebar';
 
 export enum ThemeEditorViewEnum {
@@ -18,11 +19,12 @@ export const ContentThemeEditorStyleAdmin = () => {
   const [activeMode, setActiveMode] = React.useState<ThemeEditorViewEnum>(
     ThemeEditorViewEnum.Desktop,
   );
+  const { iframeRef } = useThemeEditor();
 
   return (
     <>
       <div className="fixed right-0 top-0 z-20 flex h-12 items-center gap-2 px-4">
-        <SidebarTrigger />
+        <SidebarTrigger className="rotate-180" />
       </div>
       <SidebarInset className="flex min-h-full items-center justify-center">
         <iframe
@@ -33,6 +35,7 @@ export const ContentThemeEditorStyleAdmin = () => {
             'h-5/6 w-[375px] rounded-md border':
               activeMode === ThemeEditorViewEnum.Mobile,
           })}
+          ref={iframeRef}
           src={CONFIG.frontend_url}
           title={CONFIG.frontend_url}
         />

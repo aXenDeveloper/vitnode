@@ -21,7 +21,7 @@ export const ItemPreviewFilesInput = ({
   multiple?: boolean;
   onChange: (e: FilesInputValue[]) => void;
   showInfo?: boolean;
-  value: FilesInputValue[];
+  value?: FilesInputValue[];
 }) => {
   const t = useTranslations('core.global');
 

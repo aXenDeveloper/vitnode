@@ -28,7 +28,7 @@ export const FileInput = ({
   onChange: (e: FilesInputValue[]) => void;
   ref?: React.RefCallback<HTMLInputElement>;
   showInfo?: boolean;
-  value: FilesInputValue[];
+  value?: FilesInputValue[];
 } & Omit<
   React.InputHTMLAttributes<HTMLInputElement>,
   'multiple' | 'onChange' | 'type' | 'value'
@@ -81,7 +81,7 @@ export const FileInput = ({
 
   return (
     <div className="@container flex-1">
-      {!value.length || multiple ? (
+      {!(value ?? []).length || multiple ? (
         <div
           className={cn(
             'm-h-32 border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring flex w-full flex-col rounded-md border px-3 py-2 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50',
@@ -123,11 +123,11 @@ export const FileInput = ({
           role="button"
           tabIndex={disabled ? -1 : 0}
         >
-          <div className="text-muted-foreground @xs:p-4 @xs:flex-col @xs:text-center flex items-center gap-4 text-left">
+          <div className="text-muted-foreground @xs:p-4 @xs:gap-4 flex flex-col items-center gap-1 p-2 text-center">
             <Upload className="@xs:size-7 size-5 flex-shrink-0" />
 
             <div className="space-y-1">
-              <p className="text-foreground text-sm font-medium">
+              <p className="@xs:block text-foreground hidden text-sm font-medium">
                 {t(isDrag ? 'drop_here' : 'title')}
               </p>
 

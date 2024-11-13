@@ -9,6 +9,7 @@ export const LogoHeader = async ({ className }: { className?: string }) => {
 
   return (
     <Link
+      className="max-w-[75vw] truncate"
       href="/"
       id="vitnode_logo"
       style={

@@ -1,12 +1,17 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import { Form } from '@/components/ui/form';
 import { Sidebar } from '@/components/ui/sidebar';
+import { SidebarContent, SidebarHeader } from '@/components/ui/sidebar-server';
 import { TooltipWrapper } from '@/components/ui/tooltip';
 import { MonitorIcon, SmartphoneIcon, TabletIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { ThemeEditorViewEnum } from './content';
+import { useThemeEditor } from './hooks/use-theme-editor';
+import { LogosSidebarThemeEditorStyleAdmin } from './tabs/logos';
+import { MobileLogosSidebarThemeEditorStyleAdmin } from './tabs/mobile-logos';
 
 export const SidebarThemeEditorStyleAdmin = ({
   setActiveMode,
@@ -16,6 +21,7 @@ export const SidebarThemeEditorStyleAdmin = ({
   setActiveMode: React.Dispatch<React.SetStateAction<ThemeEditorViewEnum>>;
 }) => {
   const t = useTranslations('admin.core.styles.theme-editor');
+  const { form } = useThemeEditor();
 
   const ButtonWithTooltip = ({
     active,
@@ -45,7 +51,7 @@ export const SidebarThemeEditorStyleAdmin = ({
 
   return (
     <Sidebar className="h-auto" side="right">
-      <div className="flex gap-1 p-2">
+      <SidebarHeader className="flex-row">
         <ButtonWithTooltip
           active={activeMode === ThemeEditorViewEnum.Desktop}
           ariaLabel={t(ThemeEditorViewEnum.Desktop)}
@@ -75,7 +81,29 @@ export const SidebarThemeEditorStyleAdmin = ({
         >
           <SmartphoneIcon />
         </ButtonWithTooltip>
-      </div>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <Form {...form}>
+          <form className="relative flex h-full flex-col">
+            <div className="space-y-4 pt-4">
+              <LogosSidebarThemeEditorStyleAdmin />
+              <MobileLogosSidebarThemeEditorStyleAdmin />
+            </div>
+
+            <div className="bg-card sticky bottom-0 mt-auto p-4 pb-6">
+              <Button
+                className="w-full"
+                disabled={!form.formState.isValid}
+                loading={form.formState.isSubmitting}
+                type="submit"
+              >
+                {t('save')}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </SidebarContent>
     </Sidebar>
   );
 };
