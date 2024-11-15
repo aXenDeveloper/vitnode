@@ -1,12 +1,21 @@
 'use client';
 
+import { fetcherClient } from '@/api/fetcher-client';
 import { FilesInputValue } from '@/components/ui/file-input';
 import { cn } from '@/helpers/classnames';
+import { useMiddlewareData } from '@/hooks/use-middleware-data';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslations } from 'next-intl';
 import React from 'react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+import {
+  EditThemeEditorStylesAdminBody,
+  EditThemeEditorStylesAdminObj,
+} from 'vitnode-shared/admin/styles/theme-editor.dto';
 import * as z from 'zod';
 
+import { revalidateApi } from './hooks/revalidate-api';
 import {
   ThemeEditorContext,
   ThemeEditorIds,
@@ -18,34 +27,32 @@ export const WrapperThemeEditorAdmin = ({
 }: {
   children: React.ReactNode;
 }) => {
+  const t = useTranslations('core.global');
+  const { logos } = useMiddlewareData();
   const { formSchema } = useThemeEditor();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       logos: {
-        text: '',
-        width: 20,
-        mobile_width: 5,
+        text: logos.text,
+        width: logos.width,
+        mobile_width: logos.mobile_width,
+        light: logos.logo_light,
+        mobile_light: logos.mobile_logo_light,
+        dark: logos.logo_dark,
+        mobile_dark: logos.mobile_logo_dark,
       },
     },
   });
   const iframeRef = React.useRef<HTMLIFrameElement>(null);
 
-  // const stateLogos = {
-  //   light: form.watch('logos.light'),
-  //   dark: form.watch('logos.dark'),
-  //   mobile_light: form.watch('logos.mobile_light'),
-  //   mobile_dark: form.watch('logos.mobile_dark'),
-  // };
-
   const updateLogo = ({
-    file: files,
+    file,
     id,
   }: {
-    file: FilesInputValue[];
+    file: FilesInputValue | null;
     id: ThemeEditorIds;
   }) => {
-    const file = files[0];
     const iFrame = iframeRef?.current?.contentWindow?.document;
     const logoElement = iFrame?.querySelector<HTMLElement>('#vitnode_logo');
     if (!logoElement) return;
@@ -60,27 +67,27 @@ export const WrapperThemeEditorAdmin = ({
     const commonClassName = 'w-[--logo-mobile-width] sm:w-[--logo-width]';
     const classNames = {
       vitnode_logo_light: cn(commonClassName, {
-        'dark:hidden': stateLogos.dark?.length,
-        'hidden sm:block': stateLogos.mobile_light?.length
+        'dark:hidden': stateLogos.dark,
+        'hidden sm:block': stateLogos.mobile_light
           ? stateLogos.mobile_light
           : stateLogos.mobile_dark,
       }),
       vitnode_logo_dark: cn(commonClassName, {
         'hidden dark:block': stateLogos.light,
         'hidden sm:block': !stateLogos.light,
-        'dark:hidden dark:sm:block': stateLogos.mobile_dark?.length
+        'dark:hidden dark:sm:block': stateLogos.mobile_dark
           ? stateLogos.mobile_dark
           : stateLogos.mobile_light,
       }),
       vitnode_logo_mobile_light: cn(commonClassName, {
-        'block sm:hidden': stateLogos.light?.length
+        'block sm:hidden': stateLogos.light
           ? stateLogos.light
           : stateLogos.dark,
 
         'dark:hidden': stateLogos.mobile_dark,
       }),
       vitnode_logo_mobile_dark: cn(commonClassName, {
-        'block sm:hidden dark:block dark:sm:hidden': stateLogos.light?.length
+        'block sm:hidden dark:block dark:sm:hidden': stateLogos.light
           ? stateLogos.light
           : stateLogos.dark,
         'hidden dark:block': form.watch('logos.mobile_light'),
@@ -157,8 +164,62 @@ export const WrapperThemeEditorAdmin = ({
     logoElement.appendChild(span);
   };
 
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    const formData = new FormData();
+    const { logos } = values;
+
+    // Add basic logo settings
+    formData.append('mobile_width', logos.mobile_width.toString());
+    formData.append('text', logos.text);
+    formData.append('width', logos.width.toString());
+
+    // Handle logo files
+    const logoTypes = {
+      dark: 'logo_dark',
+      light: 'logo_light',
+      mobile_dark: 'mobile_logo_dark',
+      mobile_light: 'mobile_logo_light',
+    } as const;
+
+    const logosToDelete: string[] = [];
+
+    Object.entries(logoTypes).forEach(([key, formKey]) => {
+      const logo = logos[key as keyof typeof logoTypes];
+      if (logo) {
+        if (logo instanceof File) {
+          formData.append(formKey, logo);
+        }
+      } else {
+        logosToDelete.push(formKey);
+      }
+    });
+
+    formData.append('delete_logos', logosToDelete.toString());
+
+    try {
+      await fetcherClient<
+        EditThemeEditorStylesAdminObj,
+        EditThemeEditorStylesAdminBody
+      >({
+        url: '/admin/styles/theme-editor',
+        method: 'PUT',
+        body: formData,
+      });
+
+      await revalidateApi();
+      toast.success(t('saved_success'));
+      form.reset(values);
+    } catch (_) {
+      toast.error(t('errors.title'), {
+        description: t('errors.internal_server_error'),
+      });
+    }
+  };
+
   return (
-    <ThemeEditorContext.Provider value={{ form, iframeRef, updateLogo }}>
+    <ThemeEditorContext.Provider
+      value={{ form, iframeRef, updateLogo, onSubmit }}
+    >
       {children}
     </ThemeEditorContext.Provider>
   );

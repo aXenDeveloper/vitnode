@@ -19,10 +19,10 @@ export interface ConfigType {
     enabled: boolean;
   }[];
   logos: {
-    dark?: FileObj;
-    light?: FileObj;
-    mobile_dark?: FileObj;
-    mobile_light?: FileObj;
+    logo_dark?: FileObj;
+    logo_light?: FileObj;
+    mobile_logo_dark?: FileObj;
+    mobile_logo_light?: FileObj;
     mobile_width: number;
     text: string;
     width: number;

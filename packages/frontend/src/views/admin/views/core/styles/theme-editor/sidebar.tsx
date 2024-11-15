@@ -21,7 +21,7 @@ export const SidebarThemeEditorStyleAdmin = ({
   setActiveMode: React.Dispatch<React.SetStateAction<ThemeEditorViewEnum>>;
 }) => {
   const t = useTranslations('admin.core.styles.theme-editor');
-  const { form } = useThemeEditor();
+  const { form, onSubmit } = useThemeEditor();
 
   const ButtonWithTooltip = ({
     active,
@@ -85,8 +85,11 @@ export const SidebarThemeEditorStyleAdmin = ({
 
       <SidebarContent>
         <Form {...form}>
-          <form className="relative flex h-full flex-col">
-            <div className="space-y-4 pt-4">
+          <form
+            className="relative flex h-full flex-col"
+            onSubmit={form.handleSubmit(onSubmit)}
+          >
+            <div className="space-y-4 pt-6">
               <LogosSidebarThemeEditorStyleAdmin />
               <MobileLogosSidebarThemeEditorStyleAdmin />
             </div>

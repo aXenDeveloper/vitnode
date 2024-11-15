@@ -108,7 +108,7 @@ export const MobileLogosSidebarThemeEditorStyleAdmin = () => {
                           );
 
                         logoElement?.style.setProperty(
-                          '--logo-width',
+                          '--logo-mobile-width',
                           `${e[0]}rem`,
                         );
                       }}

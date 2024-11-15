@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 import { MainSettingsAdminBody } from './admin/settings/main.dto';
 import { ShowNavStyles } from './nav.dto';
@@ -65,26 +71,37 @@ class EditorMiddleware {
   sticky: boolean;
 }
 
-class LogosMiddleware {
+export class LogosMiddleware {
   @ApiPropertyOptional()
-  dark?: FileObj;
+  @IsObject()
+  @IsOptional()
+  logo_dark?: FileObj;
 
   @ApiPropertyOptional()
-  light?: FileObj;
+  @IsObject()
+  @IsOptional()
+  logo_light?: FileObj;
 
   @ApiPropertyOptional()
-  mobile_dark?: FileObj;
+  @IsObject()
+  @IsOptional()
+  mobile_logo_dark?: FileObj;
 
   @ApiPropertyOptional()
-  mobile_light?: FileObj;
+  @IsObject()
+  @IsOptional()
+  mobile_logo_light?: FileObj;
 
   @ApiProperty()
+  @IsNumber()
   mobile_width: number;
 
   @ApiProperty()
+  @IsString()
   text: string;
 
   @ApiProperty()
+  @IsNumber()
   width: number;
 }
 

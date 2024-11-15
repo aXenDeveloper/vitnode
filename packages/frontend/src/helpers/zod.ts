@@ -14,22 +14,20 @@ export const zodComboBoxWithFetcher = z.array(
   }),
 );
 
-export const zodFiles = z.array(
-  z.union([
-    z.instanceof(File),
-    z.object({
-      mimetype: z.string(),
-      file_name: z.string(),
-      file_name_original: z.string(),
-      dir_folder: z.string(),
-      extension: z.string(),
-      file_size: z.number(),
-      width: z.number().nullable(),
-      height: z.number().nullable(),
-      secure: z.boolean(),
-    }),
-  ]),
-);
+export const zodFile = z.union([
+  z.instanceof(File),
+  z.object({
+    mimetype: z.string(),
+    file_name: z.string(),
+    file_name_original: z.string(),
+    dir_folder: z.string(),
+    extension: z.string(),
+    file_size: z.number(),
+    width: z.number().nullable(),
+    height: z.number().nullable(),
+    secure: z.boolean(),
+  }),
+]);
 
 export const zodTag = z.array(
   z.object({

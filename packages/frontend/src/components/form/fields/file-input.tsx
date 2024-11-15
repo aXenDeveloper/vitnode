@@ -1,5 +1,5 @@
 import { AutoFormComponentProps } from '@/components/form/auto-form';
-import { FileInput } from '@/components/ui/file-input';
+import { FileInput, FilesInputValue } from '@/components/ui/file-input';
 import { FormControl, FormMessage } from '@/components/ui/form';
 import { cn } from '@/helpers/classnames';
 
@@ -47,11 +47,12 @@ export function AutoFormFileInput({
             {...zodInputProps}
             className={cn('w-full', props.className)}
             disabled={isDisabled || props.disabled}
+            multiple={props.multiple}
             onBlur={field.onBlur || props.onBlur}
-            onChange={e => {
+            onChange={(e: FilesInputValue | FilesInputValue[] | null) => {
               field.onChange(e);
             }}
-            value={field.value ?? []}
+            value={field.value}
           />
         </FormControl>
       </AutoFormInputWrapper>

@@ -1,4 +1,4 @@
-import { FilesInputValue } from '@/components/ui/file-input';
+import { FileInput, FilesInputValue } from '@/components/ui/file-input';
 import { cn } from '@/helpers/classnames';
 import { CONFIG } from '@/helpers/config-with-env';
 import { Trash2 } from 'lucide-react';
@@ -18,17 +18,16 @@ export const ItemPreviewFilesInput = ({
 }: {
   file: FilesInputValue;
   index: number;
-  multiple?: boolean;
-  onChange: (e: FilesInputValue[]) => void;
   showInfo?: boolean;
-  value?: FilesInputValue[];
-}) => {
+} & Pick<
+  React.ComponentProps<typeof FileInput>,
+  'multiple' | 'onChange' | 'value'
+>) => {
   const t = useTranslations('core.global');
-
   const size = React.useMemo(() => {
     const sizeInBytes = file instanceof File ? file.size : file.file_size;
     const sizeInKb = sizeInBytes / 1024;
-    if (sizeInBytes < 2048) return `${Math.ceil(sizeInKb)} KB`;
+    if (sizeInKb < 1024) return `${Math.ceil(sizeInKb)} KB`;
 
     const sizeInMb = sizeInKb / 1024;
     if (sizeInMb < 1024) return `${sizeInMb.toFixed(2)} MB`;
@@ -42,12 +41,16 @@ export const ItemPreviewFilesInput = ({
     if (!value) return;
 
     if (multiple) {
-      onChange(value.filter((_, i) => i !== index));
+      onChange(
+        (Array.isArray(value) ? value : [value]).filter(
+          (_, i) => i !== index,
+        ) as FilesInputValue[] & (FilesInputValue | null),
+      );
 
       return;
     }
 
-    onChange([]);
+    onChange(null as unknown as FilesInputValue[] & (FilesInputValue | null));
   };
 
   return (
