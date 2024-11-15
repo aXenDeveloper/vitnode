@@ -34,14 +34,14 @@ export const AdminLayout = async ({
           <SidebarProvider>
             <SidebarAdmin />
             <SidebarInset>
-              <header className="flex h-16 shrink-0 items-center gap-2">
+              <header className="flex h-12 shrink-0 items-center gap-2">
                 <div className="flex items-center gap-2 px-4">
                   <SidebarTrigger className="-ml-1" />
                   {/* <Separator className="mr-2 h-4" orientation="vertical" /> */}
                 </div>
               </header>
 
-              <div className="container p-4">{children}</div>
+              <div className="container flex-1 p-4">{children}</div>
             </SidebarInset>
           </SidebarProvider>
         </WrapperAdminLayout>

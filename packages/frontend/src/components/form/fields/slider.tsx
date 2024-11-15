@@ -1,14 +1,14 @@
 import { AutoFormComponentProps } from '@/components/form/auto-form';
-import { FileInput, FilesInputValue } from '@/components/ui/file-input';
 import { FormControl, FormMessage } from '@/components/ui/form';
-import { cn } from '@/helpers/classnames';
+import { Slider } from '@/components/ui/slider';
+import React from 'react';
 
 import { AutoFormInputWrapper } from './common/input-wrapper';
 import { AutoFormLabel } from './common/label';
 import { AutoFormTooltip } from './common/tooltip';
 import { AutoFormWrapper } from './common/wrapper';
 
-export function AutoFormFileInput({
+export function AutoFormSlider({
   field,
   label,
   theme,
@@ -16,7 +16,8 @@ export function AutoFormFileInput({
   isRequired,
   isDisabled,
   hideOptionalLabel,
-  zodInputProps,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  zodInputProps: _zodInputProps,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   overrideOptions: _,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -24,8 +25,10 @@ export function AutoFormFileInput({
   wrapper,
   classNameWrapper,
   ...props
-}: AutoFormComponentProps &
-  Omit<React.ComponentProps<typeof FileInput>, 'name' | 'onChange' | 'value'>) {
+}: {
+  onChange?: (value: number[]) => void;
+} & AutoFormComponentProps &
+  Omit<React.ComponentProps<typeof Slider>, 'name' | 'value'>) {
   return (
     <AutoFormWrapper className={classNameWrapper} theme={theme}>
       {label && (
@@ -40,19 +43,17 @@ export function AutoFormFileInput({
 
       <AutoFormInputWrapper field={field} Wrapper={wrapper}>
         <FormControl>
-          <FileInput
-            required={isRequired}
-            {...field}
-            {...props}
-            {...zodInputProps}
-            className={cn('w-full', props.className)}
-            disabled={isDisabled || props.disabled}
-            multiple={props.multiple}
-            onBlur={field.onBlur || props.onBlur}
-            onChange={(e: FilesInputValue | FilesInputValue[] | null) => {
-              field.onChange(e);
+          <Slider
+            max={30}
+            min={1}
+            onValueChange={value => {
+              field.onChange(value[0]);
+              props.onChange?.(value);
             }}
-            value={field.value}
+            value={[field.value ?? 0]}
+            {...props}
+            disabled={isDisabled || props.disabled}
+            onBlur={field.onBlur || props.onBlur}
           />
         </FormControl>
       </AutoFormInputWrapper>

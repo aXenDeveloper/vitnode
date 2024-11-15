@@ -19,10 +19,10 @@ export interface ConfigType {
     enabled: boolean;
   }[];
   logos: {
-    // dark?: UploadCoreFilesObj;
-    // light?: UploadCoreFilesObj;
-    // mobile_dark?: UploadCoreFilesObj;
-    // mobile_light?: UploadCoreFilesObj;
+    logo_dark?: FileObj;
+    logo_light?: FileObj;
+    mobile_logo_dark?: FileObj;
+    mobile_logo_light?: FileObj;
     mobile_width: number;
     text: string;
     width: number;

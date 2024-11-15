@@ -49,11 +49,6 @@ export default [
     },
   },
   {
-    ignores: [
-      'tailwind.config.ts',
-      'postcss.config.mjs',
-      'graphql',
-      'src/graphql/types.ts',
-    ],
+    ignores: ['tailwind.config.ts', 'postcss.config.mjs'],
   },
 ];

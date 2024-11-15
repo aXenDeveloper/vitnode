@@ -397,6 +397,20 @@
         }
       },
       "styles": {
+        "theme-editor": {
+          "save": "Save",
+          "desktop": "Desktop",
+          "tablet": "Tablet",
+          "mobile": "Mobile",
+          "logos": {
+            "title": "Logos",
+            "text": "Logo Text",
+            "logo_light": "Logo Light",
+            "logo_dark": "Logo Dark",
+            "width": "Width",
+            "title_mobile": "Logos (Mobile)"
+          }
+        },
         "nav": {
           "title": "Navigation",
           "href": "URL: {href}",

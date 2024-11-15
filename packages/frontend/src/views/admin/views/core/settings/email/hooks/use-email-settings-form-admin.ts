@@ -1,6 +1,6 @@
 import { fetcherClient } from '@/api/fetcher-client';
 import { getHSLFromString, isColorBrightness } from '@/helpers/colors';
-import { zodFiles } from '@/helpers/zod';
+import { zodFile } from '@/helpers/zod';
 import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -19,7 +19,10 @@ export const useEmailSettingsFormAdmin = (
   const t = useTranslations('core.global');
   const formSchema = z.object({
     color_primary: z.string().default(data.color_primary),
-    logo: zodFiles.default(data.logo ? [data.logo] : []).optional(),
+    logo: zodFile
+      .nullable()
+      .default(data.logo ?? null)
+      .optional(),
   });
 
   const onSubmit = async (
@@ -36,9 +39,9 @@ export const useEmailSettingsFormAdmin = (
       `hsl(${isColorBrightness(primaryHSL) ? `${primaryHSL.h}, 40%, 2%` : `${primaryHSL.h}, 40%, 98%`})`,
     );
 
-    if (values.logo?.length) {
-      if (values.logo[0] instanceof File) {
-        formData.append('logo', values.logo[0]);
+    if (values.logo) {
+      if (values.logo instanceof File) {
+        formData.append('logo', values.logo);
       }
     } else {
       formData.append('delete_logo', 'true');

@@ -72,6 +72,7 @@ export class ShowMiddlewareService {
     });
 
     return {
+      logos: config.logos,
       languages: langs,
       authorization: {
         force_login: config.settings.authorization.force_login,

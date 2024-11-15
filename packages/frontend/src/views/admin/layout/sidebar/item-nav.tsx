@@ -32,7 +32,6 @@ export const ItemNavSidebarAdmin = ({
 }) => {
   const pathname = usePathname();
   const href = `/admin/${plugin_code}/${item.code}`;
-  const [open, setOpen] = React.useState(pathname.startsWith(href));
   const t = useTranslations();
   const textAndIcon = textsAndIcons.find(
     el => el.id === item.code && el.plugin_code === plugin_code,
@@ -40,13 +39,7 @@ export const ItemNavSidebarAdmin = ({
   if (!textAndIcon) return null;
 
   const button = (
-    <SidebarMenuButton
-      asChild
-      isActive={pathname.startsWith(href)}
-      onClick={() => {
-        setOpen(true);
-      }}
-    >
+    <SidebarMenuButton asChild isActive={pathname.startsWith(href)}>
       <Link
         href={item.children?.length ? `${href}/${item.children[0].code}` : href}
       >
@@ -61,12 +54,7 @@ export const ItemNavSidebarAdmin = ({
   }
 
   return (
-    <Collapsible
-      asChild
-      defaultOpen={pathname.startsWith(href)}
-      onOpenChange={setOpen}
-      open={open}
-    >
+    <Collapsible asChild defaultOpen={pathname.startsWith(href)}>
       <SidebarMenuItem>
         {button}
         <>

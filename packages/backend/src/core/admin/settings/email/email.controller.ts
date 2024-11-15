@@ -48,6 +48,10 @@ export class EmailSettingsAdminController {
 
   @Put()
   @ApiConsumes('multipart/form-data')
+  @ApiOkResponse({
+    description: 'Email settings updated',
+    type: ShowEmailSettingsAdminObj,
+  })
   @ApiBody({
     description: 'Edit email settings',
     type: EditEmailSettingsAdminBody,
