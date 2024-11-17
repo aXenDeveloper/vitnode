@@ -79,9 +79,9 @@ export const ReadOnlyEditor = ({
         );
       }
 
-      if (name === 'pre' && children.length > 0) {
-        return changeCodeBlock(domNode);
-      }
+      // if (name === 'pre' && children.length > 0) {
+      //   return changeCodeBlock(domNode);
+      // }
 
       if (name === 'button' && domNode.attribs['data-type'] === 'file') {
         return (

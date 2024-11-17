@@ -50,14 +50,14 @@ export const createPackagesJSON = ({
     },
     overrides: packageManager.startsWith('npm')
       ? {
-          react: '19.0.0-rc-5c56b873-20241107',
-          'react-dom': '19.0.0-rc-5c56b873-20241107',
+          react: '19.0.0-rc.1',
+          'react-dom': '19.0.0-rc.1',
         }
       : {},
     pnpm: packageManager.startsWith('pnpm')
       ? {
           overrides: {
-            'react-is': '19.0.0-rc-5c56b873-20241107',
+            'react-is': '19.0.0-rc.1',
           },
         }
       : {},
@@ -67,7 +67,7 @@ export const createPackagesJSON = ({
             'eslint-config-typescript-vitnode': `^${pkg.version}`,
           }
         : {}),
-      turbo: '^2.2.3',
+      turbo: '^2.3.0',
     },
     packageManager,
     workspaces: ['apps/*'],
@@ -94,11 +94,11 @@ export const createPackagesJSON = ({
     dependencies: {
       '@hookform/resolvers': '^3.9.1',
       geist: '^1.3.1',
-      'lucide-react': '^0.456.0',
+      'lucide-react': '^0.460.0',
       next: '^15.0.3',
-      'next-intl': '^3.25.0',
-      react: '19.0.0-rc-5c56b873-20241107',
-      'react-dom': '19.0.0-rc-5c56b873-20241107',
+      'next-intl': '^3.25.1',
+      react: '19.0.0-rc.1',
+      'react-dom': '19.0.0-rc.1',
       'react-hook-form': '^7.53.2',
       recharts: '^2.13.3',
       sonner: '^1.7.0',
@@ -111,9 +111,9 @@ export const createPackagesJSON = ({
       '@types/react-dom': '^18.3.1',
       autoprefixer: '^10.4.20',
       'eslint-config-typescript-vitnode': `^${pkg.version}`,
-      postcss: '^8.4.48',
+      postcss: '^8.4.49',
       shared: 'workspace:*',
-      tailwindcss: '^3.4.14',
+      tailwindcss: '^3.4.15',
       typescript: '^5.6.3',
       'vitnode-shared': `^${pkg.version}`,
     },
@@ -139,18 +139,18 @@ export const createPackagesJSON = ({
       db: 'vitnode-backend db',
     },
     dependencies: {
-      '@nestjs/common': '^10.4.7',
-      '@nestjs/core': '^10.4.7',
-      '@nestjs/platform-express': '^10.4.7',
+      '@nestjs/common': '^10.4.8',
+      '@nestjs/core': '^10.4.8',
+      '@nestjs/platform-express': '^10.4.8',
       '@nestjs/schedule': '^4.1.1',
       '@nestjs/throttler': '^6.2.1',
       '@react-email/components': '^0.0.28',
       'class-transformer': '^0.5.1',
       'class-validator': '^0.14.1',
-      'drizzle-kit': '^0.28.0',
-      'drizzle-orm': '^0.36.1',
-      react: '19.0.0-rc-5c56b873-20241107',
-      'react-dom': '19.0.0-rc-5c56b873-20241107',
+      'drizzle-kit': '^0.28.1',
+      'drizzle-orm': '^0.36.3',
+      react: '19.0.0-rc.1',
+      'react-dom': '19.0.0-rc.1',
       'reflect-metadata': '^0.2.2',
       'vitnode-backend': `^${pkg.version}`,
     },
@@ -192,8 +192,8 @@ export const createPackagesJSON = ({
       },
     },
     dependencies: {
-      '@nestjs/common': '^10.4.7',
-      '@nestjs/swagger': '^8.0.5',
+      '@nestjs/common': '^10.4.8',
+      '@nestjs/swagger': '^8.0.7',
     },
     devDependencies: {
       '@types/multer': '^1.4.12',

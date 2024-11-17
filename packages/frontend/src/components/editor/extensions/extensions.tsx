@@ -51,7 +51,7 @@ export const useExtensionsEditor = ({ fileSystem }: FilesHandlerProps) => {
     TextAlign.configure({
       types: ['heading', 'paragraph'],
     }),
-    CodeBlockLowlightExtensionEditor,
+    // CodeBlockLowlightExtensionEditor,
     Link.extend({ inclusive: false }).configure({
       openOnClick: true,
     }),
