@@ -118,7 +118,7 @@ export function AutoFormCombobox({
       return;
     }
 
-    field.onChange(findKey ? [] : [{ key, value }]);
+    field.onChange(findKey && !isRequired ? [] : [{ key, value }]);
     setOpen(false);
   };
 

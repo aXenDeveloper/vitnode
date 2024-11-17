@@ -589,6 +589,7 @@
           },
           "edit": {
             "title": "Edit User",
+            "group": "Group",
             "success": "User has been updated."
           },
           "delete": {
