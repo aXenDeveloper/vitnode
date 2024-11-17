@@ -9,7 +9,7 @@ interface Args {
   editor: Editor;
   files: FilesHandlerStorage[];
   onChange: (value: string | StringLanguage[]) => void;
-  onRemoveFile: (id: number) => void;
+  onRemoveFile: (args: { id: number; securityKey?: string }) => void;
   onUploadFile: (file: File) => void;
   selectedLanguage: string;
   value: string | StringLanguage[];

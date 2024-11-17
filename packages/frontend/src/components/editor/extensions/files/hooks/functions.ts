@@ -1,5 +1,6 @@
 import { JSONContent } from '@tiptap/react';
 import { StringLanguage } from 'vitnode-shared/string-language.dto';
+
 import { FilesHandlerStorage } from '../files';
 
 export const getFilesFromContent = (
@@ -14,7 +15,7 @@ export const getFilesFromContent = (
       values.forEach(value => {
         // Get all file ids
         if (
-          value.type === 'files' &&
+          value.type === 'fileNode' &&
           value.attrs?.id &&
           !files.find(file => file.id === value.attrs?.id)
         ) {

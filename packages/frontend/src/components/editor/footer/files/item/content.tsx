@@ -3,8 +3,10 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/helpers/classnames';
 import { CONFIG } from '@/helpers/config-with-env';
 import { formatBytes } from '@/helpers/format-bytes';
+import { JSONContent } from '@tiptap/react';
 import { PlusIcon, Trash2Icon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 import { IconItemListFilesFooterEditor } from './icon';
 import { ItemListFilesFooterEditor } from './item';
@@ -20,6 +22,42 @@ export const ContentItemListFilesFooterEditor = ({
   const tCore = useTranslations('core.global');
   const { editor, onChange, selectedLanguage, value, onRemoveFile } =
     useEditorState();
+
+  const handleDelete = ({
+    content,
+    file_id,
+  }: {
+    content: string;
+    file_id: number;
+  }): string => {
+    const parseValue: { content: JSONContent[]; type: string } =
+      JSON.parse(content);
+
+    const mapContent = (values: JSONContent[]): JSONContent[] => {
+      if (!values) return [];
+
+      return values.reduce((acc: JSONContent[], value: JSONContent) => {
+        if (value.type === 'fileNode' && Number(value.attrs?.id) === file_id) {
+          return acc;
+        }
+
+        if (value.content) {
+          value.content = mapContent(value.content);
+        }
+
+        acc.push(value);
+
+        return acc;
+      }, []);
+    };
+
+    const valueReturn = {
+      ...parseValue,
+      content: mapContent(parseValue.content),
+    };
+
+    return JSON.stringify(valueReturn);
+  };
 
   return (
     <>
@@ -89,35 +127,34 @@ export const ContentItemListFilesFooterEditor = ({
             ariaLabel={tCore('delete')}
             onClick={() => {
               // Remove files from the editor
-              // if (Array.isArray(value) && value.length > 0) {
-              //   const content: StringLanguage[] = value.map(item => ({
-              //     language_code: item.language_code,
-              //     value: handleDelete({
-              //       content: item.value,
-              //       file_id: id,
-              //     }),
-              //   }));
+              if (Array.isArray(value) && value.length > 0) {
+                const content: StringLanguage[] = value.map(item => ({
+                  language_code: item.language_code,
+                  value: handleDelete({
+                    content: item.value,
+                    file_id: id,
+                  }),
+                }));
 
-              //   onChange(content);
+                onChange(content);
 
-              //   const parseContent: string = JSON.parse(
-              //     content.find(item => item.language_code === selectedLanguage)
-              //       ?.value ?? '',
-              //   );
+                const parseContent: string = JSON.parse(
+                  content.find(item => item.language_code === selectedLanguage)
+                    ?.value ?? '',
+                );
 
-              //   editor.commands.clearContent();
-              //   editor.commands.setContent(parseContent);
-              // } else if (typeof value === 'string') {
-              //   const content = handleDelete({
-              //     content: value,
-              //     file_id: id,
-              //   });
+                editor.commands.clearContent();
+                editor.commands.setContent(parseContent);
+              } else if (typeof value === 'string') {
+                const content = handleDelete({
+                  content: value,
+                  file_id: id,
+                });
 
-              //   onChange(content);
-              // }
-              // editor.commands.deleteFile(id);
+                onChange(content);
+              }
 
-              onRemoveFile(id);
+              onRemoveFile({ id, securityKey: data?.security_key ?? '' });
             }}
             size="icon"
             variant="destructiveGhost"

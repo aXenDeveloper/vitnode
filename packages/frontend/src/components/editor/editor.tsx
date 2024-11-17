@@ -8,6 +8,7 @@ import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { Content, EditorContent, useEditor } from '@tiptap/react';
 import { useLocale, useTranslations } from 'next-intl';
 import React from 'react';
+import { toast } from 'sonner';
 import { ShowFile, UploadFilesBody } from 'vitnode-shared/files.dto';
 import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
@@ -16,6 +17,7 @@ import { Skeleton } from '../ui/skeleton';
 import { EmojiExtensionEditor } from './extensions/emoji/emoji';
 import { useExtensionsEditor } from './extensions/extensions';
 import { FilesHandlerStorage } from './extensions/files/files';
+import { deleteMutationApi } from './extensions/files/hooks/delete-mutation-api';
 import { getFilesFromContent } from './extensions/files/hooks/functions';
 import { useFilesExtensionEditor } from './extensions/files/hooks/use-files-extension-editor';
 import { FooterEditor } from './footer/footer';
@@ -37,7 +39,7 @@ export const Editor = ({
 }: {
   allowUploadFiles?: {
     folder: string;
-    plugin: string;
+    plugin_code: string;
   };
   autofocus?: boolean;
   className?: string;
@@ -46,10 +48,12 @@ export const Editor = ({
   onChange: (value: StringLanguage[]) => void;
   value: StringLanguage[];
 }) => {
-  const [files, setFiles] = React.useState<FilesHandlerStorage[]>([]);
+  const [files, setFiles] = React.useState<FilesHandlerStorage[]>(
+    getFilesFromContent(value),
+  );
   const locale = useLocale();
   const t = useTranslations('core.global.editor.files.errors');
-  const tGlobal = useTranslations('core.global.errors');
+  const tCore = useTranslations('core.global.errors');
   const { languages_code_default } = useMiddlewareData();
   const [selectedLanguage, setSelectedLanguage] = React.useState(
     locale || languages_code_default,
@@ -61,6 +65,34 @@ export const Editor = ({
     adminSession.user?.files_permissions.allow_upload ??
     false;
   const { validateMimeTypeFile, validateSizeFile } = useFilesExtensionEditor();
+
+  const handleUploadError = (error: Error, tempId: number) => {
+    const updateFileError = (message: string) => {
+      setFiles(prev =>
+        prev.map(f =>
+          f.id === tempId ? { ...f, isLoading: false, error: message } : f,
+        ),
+      );
+    };
+
+    if (error.message.includes('MAX_STORAGE_EXTENDED')) {
+      const maxStorage = Number(error.message.split('.')[1]);
+      updateFileError(
+        t('max_storage_extended', { size: formatBytes(maxStorage) }),
+      );
+
+      return;
+    }
+
+    if (error.message.includes('INVALID_FILE_TYPE')) {
+      const fileType = error.message.split('.')[1];
+      updateFileError(t('invalid_file_type', { type: fileType }));
+
+      return;
+    }
+
+    updateFileError(tCore('internal_server_error'));
+  };
 
   const onUploadFile = async (file: File) => {
     if (!allowUploadFiles) return;
@@ -89,9 +121,7 @@ export const Editor = ({
 
       const formData = new FormData();
       formData.append('file', file);
-      // TODO: Change this to plugin_code when testing is done
-      // ! This is a temporary issue to test the upload of files
-      formData.append('plugin', allowUploadFiles.plugin);
+      formData.append('plugin_code', allowUploadFiles.plugin_code);
       formData.append('folder', allowUploadFiles.folder);
 
       const { data } = await fetcherClient<ShowFile, UploadFilesBody>({
@@ -99,95 +129,42 @@ export const Editor = ({
         method: 'POST',
         body: formData,
       });
-    } catch (err) {
-      const error = err as Error;
-      if (error.message.includes('MAX_STORAGE_EXTENDED')) {
-        const maxStorage = Number(error.message.split('.')[1]);
-        setFiles(prev =>
-          prev.map(f => {
-            if (f.id === tempId) {
-              return {
-                ...f,
-                isLoading: false,
-                error: t('max_storage_extended', {
-                  size: formatBytes(maxStorage),
-                }),
-              };
-            }
 
-            return f;
-          }),
-        );
-
-        return;
-      }
-
-      if (error.message.includes('INVALID_FILE_TYPE')) {
-        const fileType = error.message.split('.')[1];
-
-        setFiles(prev =>
-          prev.map(f => {
-            if (f.id === tempId) {
-              return {
-                ...f,
-                isLoading: false,
-                error: t('invalid_file_type', {
-                  type: fileType,
-                }),
-              };
-            }
-
-            return f;
-          }),
-        );
-
-        return;
-      }
-
-      // Disable loading, show error
       setFiles(prev =>
-        prev.map(f => {
-          if (f.id === tempId) {
-            return {
-              ...f,
-              isLoading: false,
-              error: tGlobal('internal_server_error'),
-            };
-          }
-
-          return f;
-        }),
+        prev.map(f =>
+          f.id === tempId ? { ...f, isLoading: false, data, id: data.id } : f,
+        ),
       );
+
+      return data;
+    } catch (err) {
+      handleUploadError(err as Error, tempId);
     }
   };
 
-  const onRemoveFile = (id: number) => {
-    setFiles(prev => prev.filter(f => f.id !== id));
-
-    // const handleDelete = async ({
-    //   id,
-    //   securityKey,
-    // }: {
-    //   id: number;
-    //   securityKey: string | undefined;
-    // }) => {
-    //   try {
-    //     await deleteMutationApi({
-    //       file_id: id,
-    //       security_key: securityKey,
-    //     });
-    //   } catch (_) {
-    //     toast.error(tCore('title'), {
-    //       description: tCore('internal_server_error'),
-    //     });
-    //   }
-    // };
+  const onRemoveFile = async ({
+    id,
+    securityKey,
+  }: {
+    id: number;
+    securityKey?: string;
+  }) => {
+    try {
+      await deleteMutationApi({
+        file_id: id,
+        security_key: securityKey,
+      });
+      setFiles(prev => prev.filter(f => f.id !== id));
+    } catch (_) {
+      toast.error(tCore('title'), {
+        description: tCore('internal_server_error'),
+      });
+    }
   };
 
   const extensions = useExtensionsEditor({
     filesOptions: {
       onUploadFile,
-      onRemoveFile,
     },
   });
 
