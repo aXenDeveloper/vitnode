@@ -176,7 +176,7 @@
     "react-colorful": "^5.6.1",
     "react-cropper": "^2.3.3",
     "react-day-picker": "^8.10.1",
-    "react-is": "19.0.0-rc-5c56b873-20241107",
+    "react-is": "19.0.0-rc.1",
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
     "tippy.js": "^6.3.7",

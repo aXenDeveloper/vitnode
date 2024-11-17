@@ -1,18 +1,20 @@
 'use client';
 
 import { formatBytes } from '@/helpers/format-bytes';
-import { NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react';
+import {
+  NodeViewProps,
+  NodeViewWrapper,
+  ReactNodeViewRenderer,
+} from '@tiptap/react';
 import { File } from 'lucide-react';
 import Image from 'next/image';
 
 import { CONFIG } from '../../../../helpers/config-with-env';
 import { acceptMimeTypeImage, FilesHandlerAttributes } from './files';
 
-const FileFromNextWithNode = ({
-  node: { attrs: data },
-}: {
-  node: { attrs: FilesHandlerAttributes };
-}) => {
+const FileComponent = ({ node: { attrs } }: NodeViewProps) => {
+  const data = attrs as FilesHandlerAttributes;
+
   if (
     acceptMimeTypeImage.includes(data.mimetype) &&
     data.width &&
@@ -59,8 +61,5 @@ const FileFromNextWithNode = ({
   );
 };
 
-export const renderReactNode = () =>
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
-  // TODO: Fix this
-  ReactNodeViewRenderer(FileFromNextWithNode);
+export const renderFileNodeForReact = () =>
+  ReactNodeViewRenderer(FileComponent);

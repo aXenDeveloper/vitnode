@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsBoolean,
@@ -8,6 +8,7 @@ import {
   IsOptional,
   IsString,
   Min,
+  ValidateNested,
 } from 'class-validator';
 
 import { StringLanguage } from '../../string-language.dto';
@@ -39,6 +40,8 @@ export class CreateGroupsMembersAdminBody {
   color?: string;
 
   @ApiProperty()
+  @ValidateNested()
+  @Type(() => ContentCreateGroupsMembersAdmin)
   content: ContentCreateGroupsMembersAdmin;
 
   @ArrayMinSize(1)

@@ -1,17 +1,21 @@
 'use client';
 
+import { fetcherClient } from '@/api/fetcher-client';
+import { formatBytes } from '@/helpers/format-bytes';
 import { useMiddlewareData } from '@/hooks/use-middleware-data';
 import { useSession } from '@/hooks/use-session';
 import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { Content, EditorContent, useEditor } from '@tiptap/react';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import React from 'react';
+import { ShowFile, UploadFilesBody } from 'vitnode-shared/files.dto';
 import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 import { cn } from '../../helpers/classnames';
 import { Skeleton } from '../ui/skeleton';
 import { EmojiExtensionEditor } from './extensions/emoji/emoji';
 import { useExtensionsEditor } from './extensions/extensions';
+import { FilesHandlerStorage } from './extensions/files/files';
 import { getFilesFromContent } from './extensions/files/hooks/functions';
 import { useFilesExtensionEditor } from './extensions/files/hooks/use-files-extension-editor';
 import { FooterEditor } from './footer/footer';
@@ -42,7 +46,10 @@ export const Editor = ({
   onChange: (value: StringLanguage[]) => void;
   value: StringLanguage[];
 }) => {
+  const [files, setFiles] = React.useState<FilesHandlerStorage[]>([]);
   const locale = useLocale();
+  const t = useTranslations('core.global.editor.files.errors');
+  const tGlobal = useTranslations('core.global.errors');
   const { languages_code_default } = useMiddlewareData();
   const [selectedLanguage, setSelectedLanguage] = React.useState(
     locale || languages_code_default,
@@ -53,20 +60,134 @@ export const Editor = ({
     session.user?.files_permissions.allow_upload ??
     adminSession.user?.files_permissions.allow_upload ??
     false;
-  const { handleDelete, checkUploadFile, uploadFile } = useFilesExtensionEditor(
-    {
-      allowUploadFiles,
-    },
-  );
+  const { validateMimeTypeFile, validateSizeFile } = useFilesExtensionEditor();
+
+  const onUploadFile = async (file: File) => {
+    if (!allowUploadFiles) return;
+    const tempId = Math.floor(Math.random() * 1000) + file.size;
+    let allFiles: FilesHandlerStorage[] = [];
+
+    setFiles(prev => {
+      const current: FilesHandlerStorage[] = [
+        ...prev,
+        {
+          id: tempId,
+          isLoading: true,
+          file,
+        },
+      ];
+
+      allFiles = current;
+
+      return current;
+    });
+
+    try {
+      // Validate file
+      validateMimeTypeFile(file);
+      validateSizeFile({ file, files: allFiles });
+
+      const formData = new FormData();
+      formData.append('file', file);
+      // TODO: Change this to plugin_code when testing is done
+      // ! This is a temporary issue to test the upload of files
+      formData.append('plugin', allowUploadFiles.plugin);
+      formData.append('folder', allowUploadFiles.folder);
+
+      const { data } = await fetcherClient<ShowFile, UploadFilesBody>({
+        url: '/core/files',
+        method: 'POST',
+        body: formData,
+      });
+    } catch (err) {
+      const error = err as Error;
+      if (error.message.includes('MAX_STORAGE_EXTENDED')) {
+        const maxStorage = Number(error.message.split('.')[1]);
+        setFiles(prev =>
+          prev.map(f => {
+            if (f.id === tempId) {
+              return {
+                ...f,
+                isLoading: false,
+                error: t('max_storage_extended', {
+                  size: formatBytes(maxStorage),
+                }),
+              };
+            }
+
+            return f;
+          }),
+        );
+
+        return;
+      }
+
+      if (error.message.includes('INVALID_FILE_TYPE')) {
+        const fileType = error.message.split('.')[1];
+
+        setFiles(prev =>
+          prev.map(f => {
+            if (f.id === tempId) {
+              return {
+                ...f,
+                isLoading: false,
+                error: t('invalid_file_type', {
+                  type: fileType,
+                }),
+              };
+            }
+
+            return f;
+          }),
+        );
+
+        return;
+      }
+
+      // Disable loading, show error
+      setFiles(prev =>
+        prev.map(f => {
+          if (f.id === tempId) {
+            return {
+              ...f,
+              isLoading: false,
+              error: tGlobal('internal_server_error'),
+            };
+          }
+
+          return f;
+        }),
+      );
+    }
+  };
+
+  const onRemoveFile = (id: number) => {
+    setFiles(prev => prev.filter(f => f.id !== id));
+
+    // const handleDelete = async ({
+    //   id,
+    //   securityKey,
+    // }: {
+    //   id: number;
+    //   securityKey: string | undefined;
+    // }) => {
+    //   try {
+    //     await deleteMutationApi({
+    //       file_id: id,
+    //       security_key: securityKey,
+    //     });
+    //   } catch (_) {
+    //     toast.error(tCore('title'), {
+    //       description: tCore('internal_server_error'),
+    //     });
+    //   }
+    // };
+  };
+
   const extensions = useExtensionsEditor({
-    fileSystem: {
-      editorValue: value,
-      files: Array.isArray(value) ? getFilesFromContent(value) : [],
-      selectedLanguage,
-      handleDelete,
-      checkUploadFile,
-      uploadFile,
-      allowUpload: allowUploadFilesSession,
+    filesOptions: {
+      onUploadFile,
+      onRemoveFile,
     },
   });
 
@@ -140,12 +261,13 @@ export const Editor = ({
     <EditorStateContext.Provider
       value={{
         editor,
-        allowUploadFiles: allowUploadFilesSession
-          ? allowUploadFiles
-          : undefined,
         value,
         onChange: onChange as (value: string | StringLanguage[]) => void,
         selectedLanguage,
+        files,
+        allowUploadFiles: allowUploadFilesSession,
+        onUploadFile,
+        onRemoveFile,
       }}
     >
       <div

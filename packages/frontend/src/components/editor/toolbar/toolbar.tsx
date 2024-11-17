@@ -10,6 +10,7 @@ import {
   Strikethrough,
   Underline,
 } from 'lucide-react';
+import { AllowTypeFilesEnum } from 'vitnode-shared/utils/global';
 
 import { cn } from '../../../helpers/classnames';
 import { useEditorState } from '../hooks/use-editor-state';
@@ -19,11 +20,12 @@ import { EmojiToolbarEditor } from './custom/emoji/emoji';
 import { HeadingToolbarEditor } from './custom/heading';
 import { LinkToolbarEditor } from './custom/link/link';
 import { TextAlignToolbarEditor } from './custom/text-align';
+import { UploadFilesToolbarEditor } from './custom/upload-files';
 import { ToggleToolbarEditor } from './toggle';
 
 export const ToolBarEditor = () => {
   const middleware = useMiddlewareData();
-  const { editor } = useEditorState();
+  const { editor, allowUploadFiles } = useEditorState();
 
   return (
     <div
@@ -92,6 +94,10 @@ export const ToolBarEditor = () => {
       <TextAlignToolbarEditor />
       <LinkToolbarEditor />
       <EmojiToolbarEditor />
+      {allowUploadFiles &&
+        middleware.editor.files.allow_type !== AllowTypeFilesEnum.none && (
+          <UploadFilesToolbarEditor />
+        )}
 
       <ButtonToolbarEditor
         name="horizontal_rule"

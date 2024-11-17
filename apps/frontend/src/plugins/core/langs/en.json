@@ -114,6 +114,7 @@
         "horizontal_rule": "Horizontal Rule",
         "more": "More",
         "align": "Align",
+        "upload_files": "Upload Files",
         "link": {
           "title": "Link",
           "text": "Text",
@@ -163,7 +164,6 @@
           }
         },
         "files": {
-          "attach": "Attach Files",
           "state": {
             "loading": "Uploading...",
             "error": "Oops! Something went wrong. {error}"
@@ -173,7 +173,7 @@
           "images_videos": "Images & Videos",
           "images": "Images",
           "errors": {
-            "max_storage_extended": "Max storage exceeded. You can't upload more files. Max storage is {size}.",
+            "max_storage_extended": "Max storage exceeded. Max storage is {size}.",
             "invalid_file_type": "Invalid file type! Allowed types: {types}."
           }
         },
