@@ -23,7 +23,7 @@ export class EditUsersMembersAdminService {
 
   async edit({
     id,
-    body: { email, name, newsletter },
+    body: { email, name, newsletter, group_id },
   }: {
     body: EditUserMembersAdminBody;
     id: number;
@@ -37,6 +37,17 @@ export class EditUsersMembersAdminService {
 
     if (!user) {
       throw new NotFoundException();
+    }
+
+    const group = await this.databaseService.db.query.core_groups.findFirst({
+      where: (table, { eq }) => eq(table.id, group_id),
+      columns: {
+        id: true,
+      },
+    });
+
+    if (!group) {
+      throw new NotFoundException('GROUP_NOT_FOUND');
     }
 
     const emailExists =
@@ -55,6 +66,7 @@ export class EditUsersMembersAdminService {
         name,
         newsletter,
         avatar_color: generateAvatarColor(name),
+        group_id,
       })
       .where(eq(core_users.id, id))
       .returning();

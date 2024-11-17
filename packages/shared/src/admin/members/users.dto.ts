@@ -5,10 +5,12 @@ import {
   IsBoolean,
   IsEmail,
   IsEnum,
+  IsNumber,
   IsOptional,
   IsString,
   Matches,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -68,6 +70,11 @@ export class EditUserMembersAdminBody {
   @IsEmail()
   @ApiProperty({ example: 'test@test.com' })
   email: string;
+
+  @ApiProperty({ example: 2 })
+  @IsNumber()
+  @Min(1)
+  group_id: number;
 
   @Transform(TransformString)
   @MinLength(3)
