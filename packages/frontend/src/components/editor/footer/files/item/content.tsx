@@ -115,7 +115,7 @@ export const ContentItemListFilesFooterEditor = ({
           {data && (
             <Button
               onClick={() => {
-                // editor.commands.insertFileIntoContent(id);
+                editor.commands.insertFileIntoContent(data);
                 editor.commands.focus();
               }}
               variant="ghost"

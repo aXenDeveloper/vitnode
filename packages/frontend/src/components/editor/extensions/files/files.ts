@@ -28,13 +28,15 @@ export interface FilesHandlerAttributes {
   width?: number;
 }
 
-// declare module '@tiptap/react' {
-//   interface Commands<ReturnType> {
-//     filesUpload: {
-//       deleteFile: (id: number) => ReturnType;
-//     };
-//   }
-// }
+declare module '@tiptap/react' {
+  interface Commands<ReturnType> {
+    filesUpload: {
+      insertFileIntoContent: (
+        file: Omit<ShowFile, 'count_uses' | 'created_at' | 'secure'>,
+      ) => ReturnType;
+    };
+  }
+}
 
 const FileNode = Node.create({
   name: 'fileNode',
@@ -75,6 +77,19 @@ const FileNode = Node.create({
       security_key: {
         default: '',
       },
+    };
+  },
+
+  addCommands() {
+    return {
+      insertFileIntoContent:
+        file =>
+        ({ commands }) => {
+          return commands.insertContent({
+            type: this.name,
+            attrs: file,
+          });
+        },
     };
   },
 

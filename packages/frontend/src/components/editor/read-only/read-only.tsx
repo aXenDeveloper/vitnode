@@ -67,22 +67,21 @@ export const ReadOnlyEditor = ({
       if (
         name === 'button' &&
         domNode.attribs['data-type'] === 'fileNode' &&
-        domNode.attribs.width
+        domNode.attribs.width &&
+        domNode.attribs.height
       ) {
         const src = `${CONFIG.backend_public_url}/${domNode.attribs.dir_folder}/${domNode.attribs.file_name}`;
 
         return (
-          <Image
-            alt=""
-            height={300}
-            sizes="100vw"
-            src={src}
-            style={{
-              width: '100%',
-              height: 'auto',
-            }}
-            width={500}
-          />
+          <span className="inline-block">
+            <Image
+              alt=""
+              // className="inline-block"
+              height={+domNode.attribs.width}
+              src={src}
+              width={+domNode.attribs.height}
+            />
+          </span>
         );
       }
 

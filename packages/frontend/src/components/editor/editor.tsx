@@ -258,7 +258,7 @@ export const Editor = ({
       >
         <ToolBarEditor />
         <EditorContent
-          className="[&_.ProseMirror-selectednode]:ring-ring break-words [&_.ProseMirror-selectednode]:w-fit [&_.ProseMirror-selectednode]:outline-none [&_.ProseMirror-selectednode]:ring-4 [&_.ProseMirror-selectednode]:ring-offset-2 [&_.node-files]:inline-flex"
+          className="break-words [&_.ProseMirror-selectednode]:w-fit [&_.node-files]:inline-flex"
           editor={editor}
         />
 
