@@ -1,3 +1,4 @@
+import { CONFIG } from '@/helpers/config-with-env';
 import { generateHTML } from '@tiptap/html';
 import { JSONContent } from '@tiptap/react';
 import parse, { Element, HTMLReactParserOptions } from 'html-react-parser';
@@ -63,27 +64,32 @@ export const ReadOnlyEditor = ({
 
       const { children, name } = domNode;
 
-      if (name === 'img') {
+      if (
+        name === 'button' &&
+        domNode.attribs['data-type'] === 'fileNode' &&
+        domNode.attribs.width &&
+        domNode.attribs.height
+      ) {
+        const src = `${CONFIG.backend_public_url}/${domNode.attribs.dir_folder}/${domNode.attribs.file_name}`;
+
         return (
-          <Image
-            alt=""
-            height={300}
-            sizes="100vw"
-            src={domNode.attribs.src}
-            style={{
-              width: '100%',
-              height: 'auto',
-            }}
-            width={500}
-          />
+          <span className="inline-block">
+            <Image
+              alt=""
+              // className="inline-block"
+              height={+domNode.attribs.width}
+              src={src}
+              width={+domNode.attribs.height}
+            />
+          </span>
         );
       }
 
-      if (name === 'pre' && children.length > 0) {
-        return changeCodeBlock(domNode);
-      }
+      // if (name === 'pre' && children.length > 0) {
+      //   return changeCodeBlock(domNode);
+      // }
 
-      if (name === 'button' && domNode.attribs['data-type'] === 'file') {
+      if (name === 'button' && domNode.attribs['data-type'] === 'fileNode') {
         return (
           <FileDownloadButton
             allowDownloadAttachments={allowDownloadAttachments}

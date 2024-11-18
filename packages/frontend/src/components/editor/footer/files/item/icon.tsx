@@ -1,15 +1,15 @@
 import { Loader } from '@/components/ui/loader';
-import { CircleX, File } from 'lucide-react';
+import { File, FileWarningIcon } from 'lucide-react';
 import Image from 'next/image';
 
 export const IconItemListFilesFooterEditor = ({
   alt,
-  isError,
   isLoading,
   src,
+  isError,
 }: {
   alt: string;
-  isError: boolean | undefined;
+  isError: boolean;
   isLoading: boolean;
   src: null | string;
 }) => {
@@ -18,7 +18,7 @@ export const IconItemListFilesFooterEditor = ({
   }
 
   if (isError) {
-    return <CircleX className="text-destructive size-8" />;
+    return <FileWarningIcon className="text-destructive size-8" />;
   }
 
   if (src) {

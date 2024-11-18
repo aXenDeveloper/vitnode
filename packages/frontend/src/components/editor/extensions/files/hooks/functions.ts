@@ -1,12 +1,12 @@
 import { JSONContent } from '@tiptap/react';
 import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
-import { FileStateEditor } from '../files';
+import { FilesHandlerStorage } from '../files';
 
 export const getFilesFromContent = (
   content: StringLanguage[],
-): FileStateEditor[] => {
-  const files: FileStateEditor[] = [];
+): FilesHandlerStorage[] => {
+  const files: FilesHandlerStorage[] = [];
 
   content.forEach(item => {
     const parseValue: JSONContent[] = JSON.parse(item.value).content;
@@ -15,7 +15,7 @@ export const getFilesFromContent = (
       values.forEach(value => {
         // Get all file ids
         if (
-          value.type === 'files' &&
+          value.type === 'fileNode' &&
           value.attrs?.id &&
           !files.find(file => file.id === value.attrs?.id)
         ) {

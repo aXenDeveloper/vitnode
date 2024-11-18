@@ -1,35 +1,87 @@
 'use client';
 
 import { formatBytes } from '@/helpers/format-bytes';
-import { NodeViewWrapper, ReactNodeViewRenderer } from '@tiptap/react';
+import {
+  NodeViewProps,
+  NodeViewWrapper,
+  ReactNodeViewRenderer,
+} from '@tiptap/react';
 import { File } from 'lucide-react';
 import Image from 'next/image';
+import React from 'react';
+import Moveable from 'react-moveable';
 
 import { CONFIG } from '../../../../helpers/config-with-env';
 import { acceptMimeTypeImage, FilesHandlerAttributes } from './files';
 
-const FileFromNextWithNode = ({
-  node: { attrs: data },
-}: {
-  node: { attrs: FilesHandlerAttributes };
-}) => {
+const FileComponent = ({
+  node: { attrs },
+  selected,
+  updateAttributes,
+}: NodeViewProps) => {
+  const targetRef = React.useRef<HTMLDivElement>(null);
+  const data = attrs as FilesHandlerAttributes;
+
   if (
     acceptMimeTypeImage.includes(data.mimetype) &&
     data.width &&
     data.height
   ) {
     return (
-      <NodeViewWrapper className="inline-block">
-        <div data-drag-handle="" draggable>
+      <NodeViewWrapper
+        className="relative inline-block"
+        data-drag-handle=""
+        draggable
+      >
+        <div
+          className="relative"
+          ref={targetRef}
+          style={{
+            width: data.width,
+            height: data.height,
+          }}
+        >
           <Image
             alt={data.file_alt ?? data.file_name_original}
             className="h-auto w-full"
-            height={data.height}
-            sizes="100vw"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             src={`${CONFIG.backend_public_url}/${data.dir_folder}/${data.file_name}`}
-            width={data.width}
           />
         </div>
+        {selected && (
+          <Moveable
+            container={null}
+            edge={false}
+            keepRatio={true}
+            onResize={({
+              target,
+              width,
+              height,
+
+              delta,
+            }) => {
+              if (delta[0]) target.style.width = `${width}px`;
+              if (delta[1]) target.style.height = `${height}px`;
+            }}
+            onResizeEnd={e => {
+              updateAttributes({
+                width: Math.round(+e.lastEvent.width),
+                height: Math.round(+e.lastEvent.height),
+              });
+            }}
+            onScale={({ target, transform }) => {
+              target.style.transform = transform;
+            }}
+            origin={false}
+            resizable={true}
+            scalable={true}
+            target={targetRef}
+            throttleDrag={0}
+            throttleResize={0}
+            throttleScale={0}
+          />
+        )}
       </NodeViewWrapper>
     );
   }
@@ -59,8 +111,5 @@ const FileFromNextWithNode = ({
   );
 };
 
-export const renderReactNode = () =>
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
-  // TODO: Fix this
-  ReactNodeViewRenderer(FileFromNextWithNode);
+export const renderFileNodeForReact = () =>
+  ReactNodeViewRenderer(FileComponent);

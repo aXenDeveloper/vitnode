@@ -6,11 +6,15 @@ import { Underline } from '@tiptap/extension-underline';
 import { StarterKit } from '@tiptap/starter-kit';
 
 import { CodeBlockLowlightExtensionEditor } from './code/code';
-import { FilesHandler, FilesHandlerProps } from './files/files';
+import { FilesHandler, FilesHandlerOptions } from './files/files';
 import { HeadingExtensionEditor } from './heading';
 import { MentionExtensionEditor } from './mentions/emoji';
 
-export const useExtensionsEditor = ({ fileSystem }: FilesHandlerProps) => {
+export const useExtensionsEditor = ({
+  filesOptions,
+}: {
+  filesOptions?: FilesHandlerOptions;
+}) => {
   return [
     StarterKit.configure({
       heading: false,
@@ -51,16 +55,14 @@ export const useExtensionsEditor = ({ fileSystem }: FilesHandlerProps) => {
     TextAlign.configure({
       types: ['heading', 'paragraph'],
     }),
-    CodeBlockLowlightExtensionEditor,
+    // CodeBlockLowlightExtensionEditor,
     Link.extend({ inclusive: false }).configure({
       openOnClick: true,
     }),
     Color,
     TextStyle,
     MentionExtensionEditor,
-    FilesHandler({
-      fileSystem,
-    }),
+    FilesHandler({ ...filesOptions }),
     HeadingExtensionEditor(),
   ];
 };

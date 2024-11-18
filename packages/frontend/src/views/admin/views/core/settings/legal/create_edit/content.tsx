@@ -93,7 +93,7 @@ export const ContentCreateEditLegalPage = ({
               {...props}
               allowUploadFiles={{
                 folder: 'legal',
-                plugin: 'core',
+                plugin_code: 'core',
               }}
             />
           ),

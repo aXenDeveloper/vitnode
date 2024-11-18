@@ -14,5 +14,5 @@ export const mutationCreateApi = async (body: CreateGroupsMembersAdminBody) => {
     body,
   });
 
-  revalidatePath('/[locale]/admin/(auth)/(vitnode)/members/groups', 'page');
+  revalidatePath('/', 'layout');
 };

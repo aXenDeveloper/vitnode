@@ -2,13 +2,15 @@ import { Editor } from '@tiptap/react';
 import React from 'react';
 import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
+import { FilesHandlerStorage } from '../extensions/files/files';
+
 interface Args {
-  allowUploadFiles?: {
-    folder: string;
-    plugin: string;
-  };
+  allowUploadFiles: boolean;
   editor: Editor;
+  files: FilesHandlerStorage[];
   onChange: (value: string | StringLanguage[]) => void;
+  onRemoveFile: (args: { id: number; securityKey?: string }) => void;
+  onUploadFile: (file: File) => void;
   selectedLanguage: string;
   value: string | StringLanguage[];
 }
@@ -18,6 +20,10 @@ export const EditorStateContext = React.createContext<Args>({
   value: [],
   onChange: () => {},
   selectedLanguage: '',
+  files: [],
+  allowUploadFiles: false,
+  onUploadFile: () => {},
+  onRemoveFile: () => {},
 });
 
 export const useEditorState = () => React.useContext(EditorStateContext);

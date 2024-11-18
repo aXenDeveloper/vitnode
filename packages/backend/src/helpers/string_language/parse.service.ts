@@ -24,7 +24,7 @@ export class ParseStringLanguageHelper {
 
         // Get all file ids
         if (
-          value.type === 'files' &&
+          value.type === 'fileNode' &&
           !files.find(file => file.id === value.attrs?.id) &&
           value.attrs.dir_folder
         ) {
