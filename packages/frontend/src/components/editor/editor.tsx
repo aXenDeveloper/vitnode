@@ -14,7 +14,6 @@ import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 import { cn } from '../../helpers/classnames';
 import { Skeleton } from '../ui/skeleton';
-import { EmojiExtensionEditor } from './extensions/emoji/emoji';
 import { useExtensionsEditor } from './extensions/extensions';
 import { FilesHandlerStorage } from './extensions/files/files';
 import { deleteMutationApi } from './extensions/files/hooks/delete-mutation-api';
@@ -171,7 +170,7 @@ export const Editor = ({
   const editor = useEditor({
     autofocus: !!autofocus,
     immediatelyRender: false,
-    extensions: [...extensions, EmojiExtensionEditor],
+    extensions,
     editorProps: {
       attributes: {
         class: cn(

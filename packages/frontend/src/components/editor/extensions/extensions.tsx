@@ -6,9 +6,9 @@ import { Underline } from '@tiptap/extension-underline';
 import { StarterKit } from '@tiptap/starter-kit';
 
 import { CodeBlockLowlightExtensionEditor } from './code/code';
+import { EmojiReplacer } from './emoji/emoji-replacer';
 import { FilesHandler, FilesHandlerOptions } from './files/files';
 import { HeadingExtensionEditor } from './heading';
-import { MentionExtensionEditor } from './mentions/emoji';
 
 export const useExtensionsEditor = ({
   filesOptions,
@@ -61,7 +61,7 @@ export const useExtensionsEditor = ({
     }),
     Color,
     TextStyle,
-    MentionExtensionEditor,
+    EmojiReplacer,
     FilesHandler({ ...filesOptions }),
     HeadingExtensionEditor(),
   ];
