@@ -151,9 +151,14 @@ const config = () => {
     },
   };
 
-  if (!data.login_token_secret) {
-    throw new Error('`LOGIN_TOKEN_SECRET` is not defined in .env file');
-  }
+  console.log('LOGIN_TOKEN_SECRET', process.env.LOGIN_TOKEN_SECRET);
+  console.log('DB_PASSWORD', process.env.DB_PASSWORD);
+  console.log('process.env', process.env);
+  console.log('Config:', data);
+
+  // if (!data.login_token_secret) {
+  //   throw new Error('`LOGIN_TOKEN_SECRET` is not defined in .env file');
+  // }
 
   return data;
 };
@@ -175,7 +180,7 @@ export class VitNodeCoreModule {
         ConfigModule.forRoot({
           isGlobal: true,
           load: [config],
-          envFilePath: pathToEnvFile,
+          // envFilePath: '.env',
         }),
         ScheduleModule.forRoot(),
         CoreModule,

@@ -1,66 +1,52 @@
 version: '3.8'
 
 services:
-  # database:
-  #   container_name: vitnode_database
-  #   image: postgres:16.3-alpine
-  #   restart: unless-stopped
-  #   environment:
-  #     POSTGRES_USER: ${DB_USER}
-  #     POSTGRES_PASSWORD: ${DB_PASSWORD}
-  #     POSTGRES_DB: ${DB_DATABASE:-vitnode}
-  #   ports:
-  #     - '${DB_PORT:-5432}:${DB_PORT:-5432}'
-  #   volumes:
-  #     - ./docker/prod/database:/var/lib/postgresql/data
-  #   networks:
-  #     - vitnode
-  # backend:
-  #   container_name: vitnode_backend
-  #   build:
-  #     context: .
-  #     dockerfile: ./apps/backend/Dockerfile
-  #   restart: unless-stopped
-  #   environment:
-  #     - DB_HOST=${DB_HOST:-database}
-  #     - DB_PORT=${DB_PORT:-5432}
-  #     - DB_USER=${DB_USER}
-  #     - DB_PASSWORD=${DB_PASSWORD}
-  #     - DB_DATABASE=${DB_DATABASE:-vitnode}
-  #     - LOGIN_TOKEN_SECRET=${LOGIN_TOKEN_SECRET}
-  #     - NEXT_PUBLIC_FRONTEND_URL=${NEXT_PUBLIC_FRONTEND_URL:-http://localhost:3000}
-  #   command: sh -c "cd backend && pnpm config:init && pnpm start:prod"
-  #   ports:
-  #     - '8080:8080'
-  #   depends_on:
-  #     - database
-  #   volumes:
-  #     - ./frontend/config:/app/frontend/config # config
-  #     - ./frontend/app:/app/frontend/app # app
-  #     - ./frontend/plugins:/app/frontend/plugins # plugins
-  #     - ./backend/uploads:/app/backend/uploads # uploads
-  #     - ./backend/schema.gql:/app/backend/schema.gql # schema
-  #     - ./backend/src/plugins:/app/backend/src/plugins # plugins
-  #   networks:
-  #     - vitnode
+  database:
+    container_name: vitnode_database
+    image: postgres:16.3-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE:-vitnode}
+    ports:
+      - '${DB_PORT:-5432}:${DB_PORT:-5432}'
+    volumes:
+      - ./docker/prod/database:/var/lib/postgresql/data
+    networks:
+      - vitnode
+  backend:
+    container_name: vitnode_backend
+    build:
+      context: .
+      dockerfile: ./apps/backend/DockerFile
+    restart: unless-stopped
+    depends_on:
+      - database
+    environment:
+      DB_HOST: ${DB_HOST:-database}
+    env_file:
+      - .env
+    command: sh -c "cd apps/backend && pnpm config:init && node dist/main.js"
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./apps/backend/uploads:/app/apps/backend/uploads # uploads
+      - ./apps/backend/src/plugins/core:/app/apps/backend/src/plugins/core # core
+    networks:
+      - vitnode
   frontend:
     container_name: vitnode_frontend
     build:
       context: .
-      dockerfile: ./apps/frontend/Dockerfile
+      dockerfile: ./apps/frontend/DockerFile
       args:
-        - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-http://localhost:8080}
+        - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-http://backend:8080}
+        - NEXT_PUBLIC_BACKEND_CLIENT_URL=${NEXT_PUBLIC_BACKEND_CLIENT_URL:-http://localhost:8080}
         - NEXT_PUBLIC_FRONTEND_URL=${NEXT_PUBLIC_FRONTEND_URL:-http://localhost:3000}
     restart: unless-stopped
-    # command: sh -c "cd frontend && pnpm start:prod"
     ports:
       - '3000:3000'
-    # depends_on:
-    #   - backend
-    # volumes:
-    #   - ./frontend/config:/app/frontend/config # config
-    #   - ./frontend/app:/app/frontend/app # app
-    #   - ./frontend/plugins:/app/frontend/plugins # admin
     networks:
       - vitnode
 
