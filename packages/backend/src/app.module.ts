@@ -151,14 +151,9 @@ const config = () => {
     },
   };
 
-  console.log('LOGIN_TOKEN_SECRET', process.env.LOGIN_TOKEN_SECRET);
-  console.log('DB_PASSWORD', process.env.DB_PASSWORD);
-  console.log('process.env', process.env);
-  console.log('Config:', data);
-
-  // if (!data.login_token_secret) {
-  //   throw new Error('`LOGIN_TOKEN_SECRET` is not defined in .env file');
-  // }
+  if (!data.login_token_secret) {
+    throw new Error('`LOGIN_TOKEN_SECRET` is not defined in .env file');
+  }
 
   return data;
 };
@@ -166,13 +161,11 @@ const config = () => {
 @Module({})
 export class VitNodeCoreModule {
   static register({
-    pathToEnvFile,
     database,
     email,
   }: {
     database: DatabaseModuleArgs;
     email?: EmailSenderFunction;
-    pathToEnvFile: string;
   }): DynamicModule {
     return {
       module: VitNodeCoreModule,
@@ -180,7 +173,6 @@ export class VitNodeCoreModule {
         ConfigModule.forRoot({
           isGlobal: true,
           load: [config],
-          // envFilePath: '.env',
         }),
         ScheduleModule.forRoot(),
         CoreModule,

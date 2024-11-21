@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { join } from 'path';
 import { VitNodeCoreModule } from 'vitnode-backend/app.module';
 // import { emailResend } from 'vitnode-backend-email-resend';
 // import { emailSMTP } from 'vitnode-backend-email-smtp';
@@ -13,7 +12,6 @@ import { PluginsModule } from './plugins/plugins.module';
 @Module({
   imports: [
     VitNodeCoreModule.register({
-      pathToEnvFile: join(process.cwd(), '..', '..', '.env'),
       database: {
         config: DATABASE_ENVS,
         schemaDatabase,

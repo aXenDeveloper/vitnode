@@ -41,7 +41,6 @@ Provide `aiGoogle` to `VitNodeCoreModule` and chose the model you want to use:
 
 ```ts title="apps/backend/src/app.module.ts"
 import { Module } from '@nestjs/common';
-import { join } from 'path';
 import { VitNodeCoreModule } from 'vitnode-backend';
 import { aiGoogle } from 'vitnode-backend-ai-google';
 
@@ -52,7 +51,6 @@ import { PluginsModule } from './plugins/plugins.module';
 @Module({
   imports: [
     VitNodeCoreModule.register({
-      pathToEnvFile: join(process.cwd(), '..', '..', '.env'),
       database: {
         config: DATABASE_ENVS,
         schemaDatabase,
