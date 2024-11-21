@@ -62,12 +62,12 @@
     "@nestjs/platform-express": "^10.4.8",
     "@nestjs/schedule": "^4.1.1",
     "@react-email/components": "^0.0.28",
-    "@swc/cli": "^0.5.0",
+    "@swc/cli": "^0.5.1",
     "@swc/core": "^1.9.2",
     "@types/cookie-parser": "^1.4.7",
     "@types/express": "^5.0.0",
     "@types/multer": "^1.4.12",
-    "@types/node": "^22.9.0",
+    "@types/node": "^22.9.1",
     "@types/pg": "^8.11.10",
     "@types/react": "^18.3.12",
     "@types/ua-parser-js": "^0.7.39",
@@ -94,7 +94,7 @@
     "helmet": "^8.0.0",
     "pg": "^8.13.1",
     "sharp": "^0.33.5",
-    "ua-parser-js": "2.0.0-rc.1",
+    "ua-parser-js": "^2.0.0",
     "vitnode-shared": "workspace:*"
   }
 }

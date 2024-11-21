@@ -1,8 +1,10 @@
-import { existsSync } from 'fs';
-import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 /* eslint-disable no-console */
+import { existsSync } from 'fs';
+import { mkdir, readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 
+import coreSchemaDatabase from '../src/database';
 import { objectToArray, updateObject } from './helpers/update-object';
 
 interface ManifestType {
@@ -81,24 +83,11 @@ const generateDefaultManifest = ({
   ],
 });
 
-export const generateManifest = async () => {
-  const langsPath = join(
-    process.cwd(),
-    '..',
-    'frontend',
-    'src',
-    'plugins',
-    'core',
-    'langs',
-  );
-
-  if (!existsSync(langsPath)) {
-    console.log(
-      `⛔️ Languages not found in 'frontend/plugins/core/langs' directory. "${langsPath}"`,
-    );
-    process.exit(1);
-  }
-
+export const generateManifest = async ({
+  db,
+}: {
+  db: NodePgDatabase<typeof coreSchemaDatabase>;
+}) => {
   const configPath = join(
     process.cwd(),
     'src',
@@ -116,17 +105,19 @@ export const generateManifest = async () => {
   }
 
   const config = JSON.parse(await readFile(configPath, 'utf8'));
-  const languages = (await readdir(langsPath)).map(fileName =>
-    fileName.replace('.json', ''),
-  );
+  const languages = await db.query.core_languages.findMany({
+    columns: {
+      code: true,
+    },
+  });
 
   const envUrl = process.env.NEXT_PUBLIC_FRONTEND_URL;
   const frontendUrl = envUrl ? envUrl : 'http://localhost:3000';
 
   await Promise.all(
-    languages.map(async langCode => {
+    languages.map(async ({ code }) => {
       const defaultManifest = generateDefaultManifest({
-        langCode,
+        langCode: code,
         frontendUrl,
         siteName: config.settings.main.site_name,
         siteShortName: config.settings.main.site_short_name,
@@ -137,7 +128,7 @@ export const generateManifest = async () => {
         'uploads',
         'public',
         'assets',
-        langCode,
+        code,
       );
       const pathToUploadFile = join(pathToUpload, 'manifest.webmanifest');
 
@@ -157,7 +148,7 @@ export const generateManifest = async () => {
         await readFile(pathToUploadFile, 'utf8'),
       );
       if (!manifest.start_url) return;
-      const startUrl = `${frontendUrl}/${langCode}`;
+      const startUrl = `${frontendUrl}/${code}`;
       const updatedManifest: ManifestType = objectToArray(
         updateObject(
           {

@@ -52,24 +52,24 @@ const init = async () => {
   console.log(`${initConsole} [3/7] Generating database migrations...`);
   await generateDatabaseMigrations();
 
-  console.log(`${initConsole} [4/7] Generating the manifest files...`);
-  await generateManifest();
-
   const database = createClientDatabase({
     config: DATABASE_ENVS,
     schemaDatabase: coreSchemaDatabase,
   });
 
   console.log(
-    `${initConsole} [5/7] Create tables in database using migrations...`,
+    `${initConsole} [4/7] Create tables in database using migrations...`,
   );
   await runMigrations();
 
-  console.log(`${initConsole} [6/7] Updating plugins...`);
+  console.log(`${initConsole} [5/7] Updating plugins...`);
   await updatePlugins({ pluginsPath, db: database.db });
 
-  console.log(`${initConsole} [7/7] Checking and updating schema database...`);
+  console.log(`${initConsole} [6/7] Checking and updating schema database...`);
   await checkUpdateSchemaDatabase({ db: database.db });
+
+  console.log(`${initConsole} [7/7] Generating the manifest files...`);
+  await generateManifest({ db: database.db });
 
   console.log(`${initConsole} ✅ Project setup complete.`);
   process.exit(0);

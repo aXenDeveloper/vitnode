@@ -106,7 +106,7 @@ export const createPackagesJSON = ({
       zod: '^3.23.8',
     },
     devDependencies: {
-      '@types/node': '^22.9.0',
+      '@types/node': '^22.9.1',
       '@types/react': '^18.3.12',
       '@types/react-dom': '^18.3.1',
       autoprefixer: '^10.4.20',
@@ -155,11 +155,11 @@ export const createPackagesJSON = ({
       'vitnode-backend': `^${pkg.version}`,
     },
     devDependencies: {
-      '@nestjs/cli': '^10.4.7',
+      '@nestjs/cli': '^10.4.8',
       '@nestjs/schematics': '^10.2.3',
-      '@swc/cli': '^0.5.0',
+      '@swc/cli': '^0.5.1',
       '@types/express': '^5.0.0',
-      '@types/node': '^22.9.0',
+      '@types/node': '^22.9.1',
       '@types/react': '^18.3.12',
       'cross-env': '^7.0.3',
       'eslint-config-typescript-vitnode': `^${pkg.version}`,
@@ -197,7 +197,7 @@ export const createPackagesJSON = ({
     },
     devDependencies: {
       '@types/multer': '^1.4.12',
-      '@types/node': '^22.9.0',
+      '@types/node': '^22.9.1',
       'class-transformer': '^0.5.1',
       'class-validator': '^0.14.1',
       'eslint-config-typescript-vitnode': `^${pkg.version}`,

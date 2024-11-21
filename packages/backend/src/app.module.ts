@@ -161,13 +161,11 @@ const config = () => {
 @Module({})
 export class VitNodeCoreModule {
   static register({
-    pathToEnvFile,
     database,
     email,
   }: {
     database: DatabaseModuleArgs;
     email?: EmailSenderFunction;
-    pathToEnvFile: string;
   }): DynamicModule {
     return {
       module: VitNodeCoreModule,
@@ -175,7 +173,6 @@ export class VitNodeCoreModule {
         ConfigModule.forRoot({
           isGlobal: true,
           load: [config],
-          envFilePath: pathToEnvFile,
         }),
         ScheduleModule.forRoot(),
         CoreModule,

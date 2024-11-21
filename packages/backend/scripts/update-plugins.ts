@@ -6,7 +6,6 @@ import { join } from 'path';
 
 import coreSchemaDatabase from '../src/database';
 import { core_plugins } from '../src/database/schema/plugins';
-// import { ConfigPlugin } from '../src/providers/plugins.type';
 
 export const updatePlugins = async ({
   pluginsPath,
