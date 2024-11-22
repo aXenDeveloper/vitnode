@@ -37,6 +37,7 @@ export const createPackagesJSON = ({
     version: '1.0.0',
     private: true,
     scripts: {
+      'config:init': 'turbo config:init',
       dev: 'turbo dev',
       build: 'turbo build',
       start: 'turbo start',
@@ -45,6 +46,7 @@ export const createPackagesJSON = ({
       ...(docker
         ? {
             'docker:dev': `docker compose -f ./docker-compose-dev.yml -p vitnode-dev-${appName} up -d`,
+            'docker:prod': `docker compose -f ./docker-compose.yml -p vitnode-prod-${appName} up -d`,
           }
         : {}),
     },
