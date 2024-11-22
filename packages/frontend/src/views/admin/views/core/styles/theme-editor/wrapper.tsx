@@ -210,6 +210,9 @@ export const WrapperThemeEditorAdmin = ({
       toast.success(t('saved_success'));
       form.reset(values);
     } catch (_) {
+      // TODO: To delete
+      // eslint-disable-next-line no-console
+      console.log(_);
       toast.error(t('errors.title'), {
         description: t('errors.internal_server_error'),
       });

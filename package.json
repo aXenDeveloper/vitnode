@@ -13,7 +13,7 @@
     "lint": "turbo lint",
     "lint:fix": "turbo lint:fix",
     "docker:dev": "docker compose -f ./docker-compose-dev.yml -p vitnode-dev up -d",
-    "docker:prod": "docker compose -f ./docker-compose.yml -p vitnode-prod up -d",
+    "docker:prod": "docker compose -f ./docker-compose.yml -p vitnode-prod-vitnode-page up -d",
     "docker:clear": "sudo docker system prune -a",
     "release": "node ./bump-version.mjs",
     "db": "turbo db"
@@ -30,7 +30,7 @@
   "devDependencies": {
     "@types/node": "^22.9.1",
     "eslint-config-typescript-vitnode": "workspace:*",
-    "turbo": "^2.3.0"
+    "turbo": "^2.3.1"
   },
   "packageManager": "pnpm@9.12.2",
   "engines": {

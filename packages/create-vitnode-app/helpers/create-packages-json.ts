@@ -37,6 +37,7 @@ export const createPackagesJSON = ({
     version: '1.0.0',
     private: true,
     scripts: {
+      'config:init': 'turbo config:init',
       dev: 'turbo dev',
       build: 'turbo build',
       start: 'turbo start',
@@ -45,6 +46,7 @@ export const createPackagesJSON = ({
       ...(docker
         ? {
             'docker:dev': `docker compose -f ./docker-compose-dev.yml -p vitnode-dev-${appName} up -d`,
+            'docker:prod': `docker compose -f ./docker-compose.yml -p vitnode-prod-${appName} up -d`,
           }
         : {}),
     },
@@ -67,7 +69,7 @@ export const createPackagesJSON = ({
             'eslint-config-typescript-vitnode': `^${pkg.version}`,
           }
         : {}),
-      turbo: '^2.3.0',
+      turbo: '^2.3.1',
     },
     packageManager,
     workspaces: ['apps/*'],
@@ -148,7 +150,7 @@ export const createPackagesJSON = ({
       'class-transformer': '^0.5.1',
       'class-validator': '^0.14.1',
       'drizzle-kit': '^0.28.1',
-      'drizzle-orm': '^0.36.3',
+      'drizzle-orm': '^0.36.4',
       react: '19.0.0-rc.1',
       'react-dom': '19.0.0-rc.1',
       'reflect-metadata': '^0.2.2',

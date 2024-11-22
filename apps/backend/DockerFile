@@ -5,7 +5,7 @@ RUN npm i -g pnpm
 
 FROM base AS builder
 WORKDIR /app
-RUN npm i -g turbo@~2.0.6
+RUN npm i -g turbo@^2
 COPY . .
 RUN turbo telemetry disable
 RUN turbo prune backend --docker
@@ -15,6 +15,7 @@ WORKDIR /app
 COPY --from=builder /app/out/json/ .
 RUN pnpm i
 COPY --from=builder /app/out/full/ .
+RUN pnpm config:init -- --skip-database
 RUN pnpm turbo build --filter=backend...
 
 FROM base AS runner

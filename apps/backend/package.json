@@ -22,7 +22,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "drizzle-kit": "^0.28.1",
-    "drizzle-orm": "^0.36.3",
+    "drizzle-orm": "^0.36.4",
     "react": "19.0.0-rc.1",
     "react-dom": "19.0.0-rc.1",
     "reflect-metadata": "^0.2.2",
