@@ -2,6 +2,7 @@
 
 import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 import { AvatarUser } from '@/components/ui/user/avatar';
+import { useMiddlewareData } from '@/hooks/use-middleware-data';
 import { useSession } from '@/hooks/use-session';
 import { usePathname, useRouter } from '@/navigation';
 import { DialogDescription, DialogTitle } from '@radix-ui/react-dialog';
@@ -19,6 +20,7 @@ export const NavBarMobile = () => {
   const { user } = useSession();
   const pathname = usePathname();
   const { back } = useRouter();
+  const { nav } = useMiddlewareData();
 
   return (
     <>
@@ -45,9 +47,7 @@ export const NavBarMobile = () => {
           </VisuallyHidden>
 
           <UserHeaderNavBarMobile />
-
-          <NavNavBarMobile />
-
+          {nav.length > 0 && <NavNavBarMobile />}
           {user && <UserFooterNavBarMobile />}
         </DrawerContent>
       </Drawer>

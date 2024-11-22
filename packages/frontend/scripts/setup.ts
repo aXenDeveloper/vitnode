@@ -4,8 +4,6 @@
 import * as fs from 'fs';
 import { join } from 'path';
 
-import { checkFilesAndFilterIfExist } from './helpers/check-files-and-filter-if-exist';
-
 const init = ({ dev }: { dev: boolean }) => {
   const initConsole = '\x1b[34m[VitNode]\x1b[0m \x1b[33m[Frontend]\x1b[0m';
 
@@ -35,10 +33,6 @@ const init = ({ dev }: { dev: boolean }) => {
     path: string;
   }[] = [
     {
-      path: join('src', 'app'),
-      file: 'not-found.tsx',
-    },
-    {
       path: join('src', 'plugins', 'core', 'langs'),
       file: 'en.json',
     },
@@ -48,39 +42,11 @@ const init = ({ dev }: { dev: boolean }) => {
     },
   ];
 
-  // Stage 2 - Force files
   forcePathFiles.forEach(file => {
     const packageFromCopyPath = join(packagePath, file.path, file.file);
     const rootToCopyPath = join(process.cwd(), file.path, file.file);
 
     fs.copyFileSync(packageFromCopyPath, rootToCopyPath);
-  });
-
-  // Stage 3 - Force copy folders
-  const forceCopyFolders = [
-    join('src', 'app', '[locale]', 'admin', '(vitnode)'),
-    join('src', 'app', '[locale]', 'admin', '(auth)', '(vitnode)'),
-  ];
-
-  // Stage 4 - Force folders
-  forceCopyFolders.forEach(folder => {
-    const packageFromCopyPath = join(packagePath, folder);
-    const rootToCopyPath = join(process.cwd(), folder);
-
-    fs.cpSync(packageFromCopyPath, rootToCopyPath, { recursive: true });
-  });
-
-  // Stage 5 - Copy folders if not exist
-  const foldersOptional = checkFilesAndFilterIfExist(
-    packagePath,
-    process.cwd(),
-  );
-
-  foldersOptional.forEach(folder => {
-    const packageFromCopyPath = join(packagePath, folder);
-    const rootToCopyPath = join(process.cwd(), folder);
-
-    fs.cpSync(packageFromCopyPath, rootToCopyPath, { recursive: true });
   });
 
   console.log(`${initConsole} ✅ Frontend files copied successfully.`);
