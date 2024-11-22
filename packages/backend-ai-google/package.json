@@ -1,6 +1,6 @@
 {
   "name": "vitnode-backend-ai-google",
-  "version": "0.0.10-canary.8",
+  "version": "0.0.10-canary.9",
   "description": "Google AI provider for VitNode projects.",
   "author": "VitNode Team",
   "license": "MIT",
