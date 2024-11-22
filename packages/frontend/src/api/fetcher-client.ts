@@ -21,7 +21,7 @@ export async function fetcherClient<
   res: Response;
 }> {
   const query = queryFromArgs ? buildFilteredQuery(queryFromArgs) : '';
-  const href = `${CONFIG.backend_url}${url}${query ? `?${query}` : ''}`;
+  const href = `${CONFIG.backend_client_url}${url}${query ? `?${query}` : ''}`;
   const method = options?.method ?? 'GET';
   const res = await fetch(href, {
     ...options,

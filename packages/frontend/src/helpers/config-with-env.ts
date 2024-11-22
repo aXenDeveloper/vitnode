@@ -14,8 +14,9 @@ const urls = {
 
 export const CONFIG = {
   backend_url: urls.backend.origin,
+  backend_client_url: urls.backend_client.origin,
   frontend_url: urls.frontend.origin,
-  backend_public_url: `${urls.backend_client.origin}/public`,
+  backend_public_url: `${urls.backend.origin}/public`,
   local_storage: {
     editor_skin_tone: 'emoji:skin-tone',
   },

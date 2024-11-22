@@ -26,6 +26,9 @@
     "lint:fix": {
       "dependsOn": ["^lint:fix"]
     },
+    "config:init": {
+      "dependsOn": ["^config:init"]
+    },
     "dev:packages": {
       "cache": false,
       "persistent": true

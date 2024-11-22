@@ -85,8 +85,8 @@ export const createPackagesJSON = ({
     version: '1.0.0',
     private: true,
     scripts: {
-      'config:init': 'vitnode-frontend init',
-      dev: 'vitnode-frontend dev && next dev --turbo',
+      postinstall: 'vitnode-frontend init',
+      dev: 'next dev --turbo',
       build: 'next build',
       start: 'next start',
       'start:prod': 'node server.js',
@@ -133,7 +133,7 @@ export const createPackagesJSON = ({
     scripts: {
       'drizzle-kit': 'drizzle-kit',
       'config:init': 'vitnode-backend init',
-      dev: 'pnpm config:init && cross-env NODE_ENV=development nest start -w',
+      dev: 'vitnode-backend init && cross-env NODE_ENV=development nest start -w',
       build: 'nest build',
       start: 'node dist/main',
       lint: 'eslint .',

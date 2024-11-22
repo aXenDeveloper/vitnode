@@ -36,8 +36,6 @@ fi
 # ================================
 # Install Nginx
 sudo apt install nginx -y
-# Allow Nginx through the firewall
-sudo ufw allow 'Nginx HTTP'
 
 # Delete the default Nginx configuration file if it exists
 if [ -f /etc/nginx/sites-available/default ]; then
