@@ -62,59 +62,58 @@ export const useSignUpView = () => {
       return;
     }
 
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { terms, ...rest } = values;
-      await mutationApi({
-        ...rest,
-        token,
-      });
-
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { terms, ...rest } = values;
+    const mutation = await mutationApi({
+      ...rest,
+      token,
+    });
+    if (!mutation?.message) {
       setEmailSuccess(values.email);
-    } catch (err) {
-      const { message } = err as Error;
 
-      if (message.includes('CAPTCHA_FAILED')) {
-        toast.error(tCore('errors.title'), {
-          description: tCore('errors.captcha_failed'),
-        });
-
-        return;
-      }
-
-      if (message.includes('EMAIL_ALREADY_EXISTS')) {
-        form.setError(
-          'email',
-          {
-            type: 'manual',
-            message: t('email.already_exists'),
-          },
-          {
-            shouldFocus: true,
-          },
-        );
-
-        return;
-      }
-      if (message.includes('NAME_ALREADY_EXISTS')) {
-        form.setError(
-          'name',
-          {
-            type: 'manual',
-            message: t('name.already_exists'),
-          },
-          {
-            shouldFocus: true,
-          },
-        );
-
-        return;
-      }
-
-      toast.error(tCore('errors.title'), {
-        description: tCore('errors.internal_server_error'),
-      });
+      return;
     }
+
+    if (mutation.message === 'CAPTCHA_FAILED') {
+      toast.error(tCore('errors.title'), {
+        description: tCore('errors.captcha_failed'),
+      });
+
+      return;
+    }
+
+    if (mutation.message === 'EMAIL_ALREADY_EXISTS') {
+      form.setError(
+        'email',
+        {
+          type: 'manual',
+          message: t('email.already_exists'),
+        },
+        {
+          shouldFocus: true,
+        },
+      );
+
+      return;
+    }
+    if (mutation.message === 'NAME_ALREADY_EXISTS') {
+      form.setError(
+        'name',
+        {
+          type: 'manual',
+          message: t('name.already_exists'),
+        },
+        {
+          shouldFocus: true,
+        },
+      );
+
+      return;
+    }
+
+    toast.error(tCore('errors.title'), {
+      description: tCore('errors.internal_server_error'),
+    });
   };
 
   return {

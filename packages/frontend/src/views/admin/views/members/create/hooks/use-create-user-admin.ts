@@ -59,50 +59,52 @@ export const useCreateUserAdmin = () => {
       return;
     }
 
-    try {
-      await mutationApi({
-        ...values,
-        token,
-      });
-
+    const mutation = await mutationApi({
+      ...values,
+      token,
+    });
+    if (!mutation?.message) {
       setOpen?.(false);
       toast.success(t('success'), {
         description: values.name,
       });
-    } catch (e) {
-      const error = e as Error;
-      if (error.message.includes('EMAIL_ALREADY_EXISTS')) {
-        form.setError(
-          'email',
-          {
-            type: 'manual',
-            message: tSignUp('email.already_exists'),
-          },
-          {
-            shouldFocus: true,
-          },
-        );
 
-        return;
-      } else if (error.message.includes('NAME_ALREADY_EXISTS')) {
-        form.setError(
-          'name',
-          {
-            type: 'manual',
-            message: tSignUp('name.already_exists'),
-          },
-          {
-            shouldFocus: true,
-          },
-        );
-
-        return;
-      }
-
-      toast.error(tCore('title'), {
-        description: tCore('internal_server_error'),
-      });
+      return;
     }
+
+    if (mutation.message === 'EMAIL_ALREADY_EXISTS') {
+      form.setError(
+        'email',
+        {
+          type: 'manual',
+          message: tSignUp('email.already_exists'),
+        },
+        {
+          shouldFocus: true,
+        },
+      );
+
+      return;
+    }
+
+    if (mutation.message === 'NAME_ALREADY_EXISTS') {
+      form.setError(
+        'name',
+        {
+          type: 'manual',
+          message: tSignUp('name.already_exists'),
+        },
+        {
+          shouldFocus: true,
+        },
+      );
+
+      return;
+    }
+
+    toast.error(tCore('title'), {
+      description: tCore('internal_server_error'),
+    });
   };
 
   return { formSchema, onSubmit, values, setValues, isReady };
