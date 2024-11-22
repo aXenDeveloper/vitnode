@@ -17,28 +17,23 @@ export const useSignInView = () => {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setError('');
+    const mutation = await mutationApi(values);
+    if (!mutation?.message) return;
+    if (mutation.message === 'EMAIL_NOT_VERIFIED') {
+      setError('EMAIL_NOT_VERIFIED');
 
-    try {
-      await mutationApi(values);
-    } catch (e) {
-      const { message } = e as Error;
-      if (message === 'NEXT_REDIRECT') return;
-      if (message.includes('EMAIL_NOT_VERIFIED')) {
-        setError('EMAIL_NOT_VERIFIED');
-
-        return;
-      }
-
-      if (message.includes('ACCESS_DENIED')) {
-        setError('ACCESS_DENIED');
-
-        return;
-      }
-
-      toast.error(t('title'), {
-        description: t('internal_server_error'),
-      });
+      return;
     }
+
+    if (mutation.message === 'ACCESS_DENIED') {
+      setError('ACCESS_DENIED');
+
+      return;
+    }
+
+    toast.error(t('title'), {
+      description: t('internal_server_error'),
+    });
   };
 
   return {

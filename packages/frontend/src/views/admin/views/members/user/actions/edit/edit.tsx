@@ -62,31 +62,32 @@ export const EditActionUserMembersAdmin = ({
     values: z.infer<typeof formSchema>,
     form: UseFormReturn<z.infer<typeof formSchema>>,
   ) => {
-    try {
-      await mutationApi({
-        id,
-        ...values,
-        group_id: +values.group[0].key,
-      });
+    const mutation = await mutationApi({
+      id,
+      ...values,
+      group_id: +values.group[0].key,
+    });
 
+    if (!mutation?.message) {
       setOpen?.(false);
       toast.success(t('success'), {
         description: values.name,
       });
-    } catch (e) {
-      const error = e as Error;
-      if (error.message.includes('EMAIL_ALREADY_EXISTS')) {
-        form.setError('email', {
-          message: tSignUp('email.already_exists'),
-        });
 
-        return;
-      }
-
-      toast.error(tCore('title'), {
-        description: tCore('internal_server_error'),
-      });
+      return;
     }
+
+    if (mutation.message === 'EMAIL_ALREADY_EXISTS') {
+      form.setError('email', {
+        message: tSignUp('email.already_exists'),
+      });
+
+      return;
+    }
+
+    toast.error(tCore('title'), {
+      description: tCore('internal_server_error'),
+    });
   };
 
   return (

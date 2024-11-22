@@ -11,12 +11,22 @@ export const mutationApi = async ({
   id,
   ...body
 }: { id: number } & EditUserMembersAdminBody) => {
-  await fetcher<UserMembersAdmin, EditUserMembersAdminBody>({
-    url: `/admin/members/users/${id}`,
-    method: 'PUT',
-    body,
-  });
+  try {
+    await fetcher<UserMembersAdmin, EditUserMembersAdminBody>({
+      url: `/admin/members/users/${id}`,
+      method: 'PUT',
+      body,
+    });
 
-  revalidateTags.session(id);
-  revalidateTags.sessionAdmin(id);
+    revalidateTags.session(id);
+    revalidateTags.sessionAdmin(id);
+  } catch (err) {
+    const { message } = err as Error;
+
+    if (message.includes('EMAIL_ALREADY_EXISTS')) {
+      return { message: 'EMAIL_ALREADY_EXISTS' };
+    }
+
+    return { message: 'INTERNAL_SERVER_ERROR' };
+  }
 };

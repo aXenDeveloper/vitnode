@@ -201,7 +201,7 @@ else
   echo ".env file already exists. Skipping creation."
 fi
 
-sudo docker-compose -f ./docker-compose.yml -p vitnode up -d
+sudo docker-compose -f ./docker-compose.yml -p vitnode up --build -d
 
 sudo chown -R 1001:1001 ./apps/backend/src/plugins/core
 sudo chown -R 1001:1001 ./apps/backend/uploads

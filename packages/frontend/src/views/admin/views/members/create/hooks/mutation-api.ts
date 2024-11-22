@@ -9,14 +9,28 @@ export const mutationApi = async (
     token: string;
   } & SignUpAuthBody,
 ) => {
-  await fetcher<{ email: string }, SignUpAuthBody>({
-    url: '/core/auth/sign_up',
-    method: 'POST',
-    body,
-    headers: {
-      'x-vitnode-captcha-token': body.token,
-    },
-  });
+  try {
+    await fetcher<{ email: string }, SignUpAuthBody>({
+      url: '/core/auth/sign_up',
+      method: 'POST',
+      body,
+      headers: {
+        'x-vitnode-captcha-token': body.token,
+      },
+    });
 
-  revalidatePath('/[locale]/admin/(auth)/(vitnode)/members/users', 'page');
+    revalidatePath('/[locale]/admin/(auth)/(vitnode)/members/users', 'page');
+  } catch (err) {
+    const { message } = err as Error;
+
+    if (message.includes('EMAIL_ALREADY_EXISTS')) {
+      return { message: 'EMAIL_ALREADY_EXISTS' };
+    }
+
+    if (message.includes('NAME_ALREADY_EXISTS')) {
+      return { message: 'NAME_ALREADY_EXISTS' };
+    }
+
+    return { message: 'INTERNAL_SERVER_ERROR' };
+  }
 };
