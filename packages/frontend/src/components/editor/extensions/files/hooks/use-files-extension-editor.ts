@@ -1,14 +1,14 @@
+import {
+  acceptMimeTypeImage,
+  acceptMimeTypeVideo,
+} from '@/helpers/files-support';
 import { useMiddlewareData } from '@/hooks/use-middleware-data';
 import { useSession } from '@/hooks/use-session';
 import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { FilesPermissionsCoreSessions } from 'vitnode-shared/user.dto';
 import { AllowTypeFilesEnum } from 'vitnode-shared/utils/global';
 
-import {
-  acceptMimeTypeImage,
-  acceptMimeTypeVideo,
-  FilesHandlerStorage,
-} from '../files';
+import { FilesHandlerStorage } from '../files';
 
 export const useFilesExtensionEditor = () => {
   const session = useSession();

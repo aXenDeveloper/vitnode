@@ -1,5 +1,6 @@
 'use client';
 
+import { acceptMimeTypeImage } from '@/helpers/files-support';
 import { formatBytes } from '@/helpers/format-bytes';
 import {
   NodeViewProps,
@@ -12,7 +13,7 @@ import React from 'react';
 import Moveable from 'react-moveable';
 
 import { CONFIG } from '../../../../helpers/config-with-env';
-import { acceptMimeTypeImage, FilesHandlerAttributes } from './files';
+import { FilesHandlerAttributes } from './files';
 
 const FileComponent = ({
   node: { attrs },

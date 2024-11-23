@@ -6,6 +6,11 @@ import Image from 'next/image';
 
 export const LogoHeader = async ({ className }: { className?: string }) => {
   const { logos } = await getMiddlewareData();
+  // console.log(
+  //   'logos',
+  //   logos,
+  //   `${CONFIG.backend_public_url}/${logos.logo_light.dir_folder}/${logos.logo_light.file_name}`,
+  // );
 
   return (
     <Link

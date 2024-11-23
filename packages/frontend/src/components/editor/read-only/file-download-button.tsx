@@ -1,5 +1,6 @@
 'use client';
 
+import { acceptMimeTypeImage } from '@/helpers/files-support';
 import { formatBytes } from '@/helpers/format-bytes';
 import { File } from 'lucide-react';
 import Image from 'next/image';
@@ -7,7 +8,6 @@ import { useTranslations } from 'next-intl';
 
 import { CONFIG } from '../../../helpers/config-with-env';
 import { Button } from '../../ui/button';
-import { acceptMimeTypeImage } from '../extensions/files/files';
 
 export const FileDownloadButton = ({
   allowDownloadAttachments,
