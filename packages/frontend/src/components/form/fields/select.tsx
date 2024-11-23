@@ -1,5 +1,5 @@
 import { AutoFormComponentProps } from '@/components/form/auto-form';
-import { FormControl, FormMessage } from '@/components/ui/form';
+import { FormControl } from '@/components/ui/form';
 import {
   Select,
   SelectContent,
@@ -11,10 +11,8 @@ import { useTranslations } from 'next-intl';
 import * as z from 'zod';
 
 import { getBaseSchema } from '../utils';
-import { AutoFormInputWrapper } from './common/input-wrapper';
 import { AutoFormLabel } from './common/label';
 import { AutoFormTooltip } from './common/tooltip';
-import { AutoFormWrapper } from './common/wrapper';
 
 export function AutoFormSelect({
   field,
@@ -28,10 +26,8 @@ export function AutoFormSelect({
   zodInputProps: _,
   overrideOptions,
   shape,
-  wrapper,
   labels,
   placeholder,
-  classNameWrapper,
   ...props
 }: {
   labels?: Record<string, React.JSX.Element | string>;
@@ -64,7 +60,7 @@ export function AutoFormSelect({
   };
 
   return (
-    <AutoFormWrapper className={classNameWrapper} theme={theme}>
+    <>
       {label && (
         <AutoFormLabel
           description={description}
@@ -75,43 +71,40 @@ export function AutoFormSelect({
         />
       )}
 
-      <AutoFormInputWrapper field={field} Wrapper={wrapper}>
-        <FormControl>
-          <Select
-            defaultValue={field.value}
-            disabled={isDisabled || props.disabled}
-            onValueChange={e => {
-              field.onChange(e);
-              props?.onValueChange?.(e);
-            }}
-          >
-            <SelectTrigger {...props}>
-              <SelectValue
-                onBlur={field.onBlur}
-                placeholder={placeholder ?? buttonPlaceholder()}
-              >
-                {buttonPlaceholder()}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {values.map(([value, labelFromProps]) => {
-                const label = labels?.[value] ?? labelFromProps;
+      <FormControl>
+        <Select
+          defaultValue={field.value}
+          disabled={isDisabled || props.disabled}
+          onValueChange={e => {
+            field.onChange(e);
+            props?.onValueChange?.(e);
+          }}
+        >
+          <SelectTrigger {...props}>
+            <SelectValue
+              onBlur={field.onBlur}
+              placeholder={placeholder ?? buttonPlaceholder()}
+            >
+              {buttonPlaceholder()}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {values.map(([value, labelFromProps]) => {
+              const label = labels?.[value] ?? labelFromProps;
 
-                return (
-                  <SelectItem key={value} value={labelFromProps}>
-                    {label}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-        </FormControl>
-      </AutoFormInputWrapper>
+              return (
+                <SelectItem key={value} value={labelFromProps}>
+                  {label}
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+      </FormControl>
 
       {description && theme === 'vertical' && (
         <AutoFormTooltip description={description} />
       )}
-      <FormMessage />
-    </AutoFormWrapper>
+    </>
   );
 }

@@ -35,7 +35,7 @@ export const mutationApi = async (body: SignInAuthBody) => {
   } catch (err) {
     const { message } = err as Error;
     if (message === 'NEXT_REDIRECT') {
-      await redirect('/');
+      await redirect(body.admin ? '/admin/core/dashboard' : '/');
     }
     if (message.includes('EMAIL_NOT_VERIFIED')) {
       return { message: 'EMAIL_NOT_VERIFIED' };

@@ -8,7 +8,7 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command';
-import { FormControl, FormMessage } from '@/components/ui/form';
+import { FormControl } from '@/components/ui/form';
 import { Loader } from '@/components/ui/loader';
 import {
   Popover,
@@ -23,10 +23,8 @@ import { StringLanguage } from 'vitnode-shared/string-language.dto';
 import * as z from 'zod';
 
 import { getBaseSchema } from '../utils';
-import { AutoFormInputWrapper } from './common/input-wrapper';
 import { AutoFormLabel } from './common/label';
 import { AutoFormTooltip } from './common/tooltip';
-import { AutoFormWrapper } from './common/wrapper';
 import { ComboBoxButton } from './utils/combobox/combobox-button';
 
 const ComboboxContentWithFetcher = React.lazy(async () =>
@@ -43,7 +41,6 @@ export function AutoFormCombobox({
   isRequired,
   isDisabled,
   hideOptionalLabel,
-  wrapper,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   zodInputProps: _zodInputProps,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -54,7 +51,6 @@ export function AutoFormCombobox({
   labels,
   placeholder,
   placeholderSearchInput,
-  classNameWrapper,
   ...props
 }: {
   labels?: Record<string, React.JSX.Element | string>;
@@ -123,7 +119,7 @@ export function AutoFormCombobox({
   };
 
   return (
-    <AutoFormWrapper className={classNameWrapper} theme={theme}>
+    <>
       {label && (
         <AutoFormLabel
           description={description}
@@ -135,23 +131,21 @@ export function AutoFormCombobox({
       )}
 
       <Popover modal onOpenChange={setOpen} open={open}>
-        <AutoFormInputWrapper field={field} Wrapper={wrapper}>
-          <PopoverTrigger asChild>
-            <FormControl>
-              <ComboBoxButton
-                disabled={isDisabled || props?.disabled}
-                field={field}
-                label={label}
-                labels={labels}
-                multiple={multiple}
-                placeholder={placeholder}
-                values={values}
-                withFetcher={!!withFetcher}
-                {...props}
-              />
-            </FormControl>
-          </PopoverTrigger>
-        </AutoFormInputWrapper>
+        <PopoverTrigger asChild>
+          <FormControl>
+            <ComboBoxButton
+              disabled={isDisabled || props?.disabled}
+              field={field}
+              label={label}
+              labels={labels}
+              multiple={multiple}
+              placeholder={placeholder}
+              values={values}
+              withFetcher={!!withFetcher}
+              {...props}
+            />
+          </FormControl>
+        </PopoverTrigger>
 
         <PopoverContent align="start" className="p-0">
           {withFetcher ? (
@@ -239,7 +233,6 @@ export function AutoFormCombobox({
       {description && theme === 'vertical' && (
         <AutoFormTooltip description={description} />
       )}
-      <FormMessage />
-    </AutoFormWrapper>
+    </>
   );
 }

@@ -26,7 +26,6 @@ export enum DependencyType {
 }
 
 export interface AutoFormComponentProps {
-  classNameWrapper?: string;
   description: React.ReactNode | string | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   field: ControllerRenderProps<Record<string, any>>;
@@ -37,10 +36,6 @@ export interface AutoFormComponentProps {
   overrideOptions: undefined | z.EnumValues;
   shape: z.ZodAny;
   theme: 'horizontal' | 'vertical';
-  wrapper?: (props: {
-    children: React.ReactNode; // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    field: ControllerRenderProps<Record<string, any>>;
-  }) => React.ReactNode;
   zodInputProps: React.InputHTMLAttributes<
     HTMLInputElement | HTMLTextAreaElement
   >;
@@ -71,11 +66,6 @@ export function AutoForm<
     hideOptionalLabel?: boolean;
     id: FieldPath<z.infer<T>>;
     label?: string;
-    wrapper?: (props: {
-      children: React.ReactNode;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      field: ControllerRenderProps<Record<string, any>>;
-    }) => React.ReactNode;
   }[];
   formSchema: T;
   onSubmit?: (

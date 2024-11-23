@@ -1,12 +1,7 @@
-import { FormField } from '@/components/ui/form';
+import { FormField, FormMessage } from '@/components/ui/form';
+import { cn } from '@/helpers/classnames';
 import React from 'react';
-import {
-  Control,
-  ControllerRenderProps,
-  FieldPath,
-  FieldValues,
-  UseFormWatch,
-} from 'react-hook-form';
+import { Control, FieldPath, FieldValues, UseFormWatch } from 'react-hook-form';
 import * as z from 'zod';
 
 import { AutoFormComponentProps } from '../../auto-form';
@@ -15,6 +10,7 @@ import resolveDependencies, {
   getShapeFromSchema,
   zodToHtmlInputProps,
 } from '../../utils';
+import { AutoFormWrapper } from '../common/wrapper';
 
 export function ItemAutoForm<
   T extends
@@ -31,7 +27,6 @@ export function ItemAutoForm<
   dependencies,
   hideOptionalLabel,
   formSchema,
-  wrapper,
   classNameWrapper,
 }: {
   classNameWrapper?: string;
@@ -46,11 +41,6 @@ export function ItemAutoForm<
   label?: string;
   theme: 'horizontal' | 'vertical';
   watch: UseFormWatch<FieldValues>;
-  wrapper?: (props: {
-    children: React.ReactNode;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    field: ControllerRenderProps<Record<string, any>>;
-  }) => React.ReactNode;
 }) {
   const { isHidden, isDisabled, isRequired, overrideOptions } =
     resolveDependencies(dependencies, id, watch);
@@ -74,7 +64,22 @@ export function ItemAutoForm<
       name={id}
       render={({ field }) => {
         return (
-          <>
+          <AutoFormWrapper
+            className={cn(
+              classNameWrapper,
+              {
+                'flex items-start space-x-3 space-y-0':
+                  component.name === 'AutoFormCheckbox',
+                'rounded-md border p-4':
+                  label && description && component.name === 'AutoFormCheckbox',
+              },
+              {
+                'gap-4 rounded-lg border p-4':
+                  component.name === 'AutoFormSwitch' && theme === 'vertical',
+              },
+            )}
+            theme={theme}
+          >
             {component({
               field,
               label,
@@ -86,10 +91,9 @@ export function ItemAutoForm<
               overrideOptions,
               zodInputProps,
               shape,
-              wrapper,
-              classNameWrapper,
             })}
-          </>
+            <FormMessage />
+          </AutoFormWrapper>
         );
       }}
     />

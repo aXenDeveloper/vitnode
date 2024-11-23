@@ -1,18 +1,11 @@
 import { AutoFormComponentProps } from '@/components/form/auto-form';
-import {
-  FormControl,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+import { FormControl, FormItem, FormLabel } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import * as z from 'zod';
 
 import { getBaseSchema } from '../utils';
-import { AutoFormInputWrapper } from './common/input-wrapper';
 import { AutoFormLabel } from './common/label';
 import { AutoFormTooltip } from './common/tooltip';
-import { AutoFormWrapper } from './common/wrapper';
 
 export function AutoFormRadioGroup({
   field,
@@ -27,8 +20,6 @@ export function AutoFormRadioGroup({
   overrideOptions,
   labels,
   shape,
-  wrapper,
-  classNameWrapper,
   ...props
 }: {
   labels?: Record<
@@ -61,7 +52,7 @@ export function AutoFormRadioGroup({
   }
 
   return (
-    <AutoFormWrapper className={classNameWrapper} theme={theme}>
+    <>
       {label && (
         <AutoFormLabel
           description={description}
@@ -72,47 +63,44 @@ export function AutoFormRadioGroup({
         />
       )}
 
-      <AutoFormInputWrapper field={field} Wrapper={wrapper}>
-        <FormControl>
-          <RadioGroup
-            defaultValue={field.value}
-            disabled={isDisabled || props?.disabled}
-            onValueChange={field.onChange}
-            {...props}
-          >
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {values.map((value: any) => {
-              const label = labels?.[value[0]]?.title ?? value[1];
-              const description = labels?.[value[0]]?.description;
+      <FormControl>
+        <RadioGroup
+          defaultValue={field.value}
+          disabled={isDisabled || props?.disabled}
+          onValueChange={field.onChange}
+          {...props}
+        >
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+          {values.map((value: any) => {
+            const label = labels?.[value[0]]?.title ?? value[1];
+            const description = labels?.[value[0]]?.description;
 
-              return (
-                <FormItem
-                  className="flex items-center gap-3 space-y-0"
-                  key={value}
-                >
-                  <FormControl>
-                    <RadioGroupItem value={value[0]} />
-                  </FormControl>
-                  <FormLabel className="flex items-center space-y-0 font-normal">
-                    <span>{label}</span>
+            return (
+              <FormItem
+                className="flex items-center gap-3 space-y-0"
+                key={value}
+              >
+                <FormControl>
+                  <RadioGroupItem value={value[0]} />
+                </FormControl>
+                <FormLabel className="flex items-center space-y-0 font-normal">
+                  <span>{label}</span>
 
-                    {description && (
-                      <span className="text-muted-foreground mt-1 flex flex-wrap items-center gap-1 text-sm font-normal">
-                        {description}
-                      </span>
-                    )}
-                  </FormLabel>
-                </FormItem>
-              );
-            })}
-          </RadioGroup>
-        </FormControl>
-      </AutoFormInputWrapper>
+                  {description && (
+                    <span className="text-muted-foreground mt-1 flex flex-wrap items-center gap-1 text-sm font-normal">
+                      {description}
+                    </span>
+                  )}
+                </FormLabel>
+              </FormItem>
+            );
+          })}
+        </RadioGroup>
+      </FormControl>
 
       {description && theme === 'vertical' && (
         <AutoFormTooltip description={description} />
       )}
-      <FormMessage />
-    </AutoFormWrapper>
+    </>
   );
 }
