@@ -1,11 +1,9 @@
 import { AutoFormComponentProps } from '@/components/form/auto-form';
-import { FormControl, FormMessage } from '@/components/ui/form';
+import { FormControl } from '@/components/ui/form';
 import { TagInput } from '@/components/ui/tag-input';
 
-import { AutoFormInputWrapper } from './common/input-wrapper';
 import { AutoFormLabel } from './common/label';
 import { AutoFormTooltip } from './common/tooltip';
-import { AutoFormWrapper } from './common/wrapper';
 
 export function AutoFormTagInput({
   field,
@@ -21,13 +19,11 @@ export function AutoFormTagInput({
   overrideOptions: _,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   shape: _shape,
-  wrapper,
-  classNameWrapper,
   ...props
 }: AutoFormComponentProps &
   Omit<React.ComponentProps<typeof TagInput>, 'name' | 'onChange' | 'value'>) {
   return (
-    <AutoFormWrapper className={classNameWrapper} theme={theme}>
+    <>
       {label && (
         <AutoFormLabel
           description={description}
@@ -38,23 +34,20 @@ export function AutoFormTagInput({
         />
       )}
 
-      <AutoFormInputWrapper field={field} Wrapper={wrapper}>
-        <FormControl>
-          <TagInput
-            {...props}
-            disabled={isDisabled || props.disabled}
-            onBlur={field.onBlur || props.onBlur}
-            onChange={e => {
-              field.onChange(e);
-            }}
-          />
-        </FormControl>
-      </AutoFormInputWrapper>
+      <FormControl>
+        <TagInput
+          {...props}
+          disabled={isDisabled || props.disabled}
+          onBlur={field.onBlur || props.onBlur}
+          onChange={e => {
+            field.onChange(e);
+          }}
+        />
+      </FormControl>
 
       {description && theme === 'vertical' && (
         <AutoFormTooltip description={description} />
       )}
-      <FormMessage />
-    </AutoFormWrapper>
+    </>
   );
 }

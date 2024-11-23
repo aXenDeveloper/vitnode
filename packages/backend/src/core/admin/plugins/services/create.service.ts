@@ -72,7 +72,7 @@ export class ${nameWithCapitalLetters}Module {}
           {
             name: 'default-page.tsx',
             content: `export default function DefaultPage() {
-  return <div className="container my-4">Default Page for ${code}</div>;
+  return <div className="container my-6">Default Page for ${code}</div>;
 }
 `,
           },

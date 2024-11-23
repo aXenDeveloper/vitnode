@@ -1,11 +1,9 @@
 import { AutoFormComponentProps } from '@/components/form/auto-form';
 import { ColorPicker } from '@/components/ui/color-picker';
-import { FormControl, FormMessage } from '@/components/ui/form';
+import { FormControl } from '@/components/ui/form';
 
-import { AutoFormInputWrapper } from './common/input-wrapper';
 import { AutoFormLabel } from './common/label';
 import { AutoFormTooltip } from './common/tooltip';
-import { AutoFormWrapper } from './common/wrapper';
 
 export function AutoFormColorPicker({
   field,
@@ -20,8 +18,6 @@ export function AutoFormColorPicker({
   overrideOptions: _,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   shape: _shape,
-  wrapper,
-  classNameWrapper,
   ...props
 }: AutoFormComponentProps &
   Omit<
@@ -29,7 +25,7 @@ export function AutoFormColorPicker({
     'name' | 'onChange' | 'required' | 'value'
   >) {
   return (
-    <AutoFormWrapper className={classNameWrapper} theme={theme}>
+    <>
       {label && (
         <AutoFormLabel
           description={description}
@@ -40,27 +36,24 @@ export function AutoFormColorPicker({
         />
       )}
 
-      <AutoFormInputWrapper field={field} Wrapper={wrapper}>
-        <FormControl>
-          <ColorPicker
-            required={isRequired}
-            {...field}
-            {...zodInputProps}
-            {...props}
-            disabled={isDisabled || props.disabled}
-            onChange={e => {
-              field.onChange(e);
-              // props.onChange?.(e);
-            }}
-            value={field.value || ''}
-          />
-        </FormControl>
-      </AutoFormInputWrapper>
+      <FormControl>
+        <ColorPicker
+          required={isRequired}
+          {...field}
+          {...zodInputProps}
+          {...props}
+          disabled={isDisabled || props.disabled}
+          onChange={e => {
+            field.onChange(e);
+            // props.onChange?.(e);
+          }}
+          value={field.value || ''}
+        />
+      </FormControl>
 
       {description && theme === 'vertical' && (
         <AutoFormTooltip description={description} />
       )}
-      <FormMessage />
-    </AutoFormWrapper>
+    </>
   );
 }

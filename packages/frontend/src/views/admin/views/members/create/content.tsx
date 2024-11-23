@@ -18,14 +18,13 @@ export const ContentCreateUserUsersMembersAdmin = () => {
           id: 'name',
           label: t('name.label'),
           description: t('name.desc'),
-          component: AutoFormInput,
-          wrapper: ({ field, children }) => {
-            const value: string = field.value ?? '';
+          component: props => {
+            const value: string = props.field.value ?? '';
 
             return (
-              <>
-                {children}
-                {value.length > 0 && (
+              <div className="space-y-1">
+                <AutoFormInput {...props} />
+                {props.field.value.length > 0 && (
                   <span className="text-muted-foreground mt-2 block max-w-md truncate text-sm">
                     {t.rich('name.your_id', {
                       id: () => (
@@ -36,7 +35,7 @@ export const ContentCreateUserUsersMembersAdmin = () => {
                     })}
                   </span>
                 )}
-              </>
+              </div>
             );
           },
         },
@@ -49,9 +48,8 @@ export const ContentCreateUserUsersMembersAdmin = () => {
           id: 'password',
           label: t('password.label'),
           description: t('password.desc'),
-          component: props => <AutoFormInput {...props} type="password" />,
-          wrapper: ({ field, children }) => {
-            const value: string = field.value ?? '';
+          component: props => {
+            const value: string = props.field.value ?? '';
             const regexArray = [
               /^.{8,}$/, // Min 8 characters
               /[a-z]/, // Min 1 lowercase
@@ -65,8 +63,8 @@ export const ContentCreateUserUsersMembersAdmin = () => {
             }, 0);
 
             return (
-              <>
-                {children}
+              <div className="space-y-1">
+                <AutoFormInput {...props} type="password" />
                 {value.length > 0 && (
                   <div>
                     <div className="mb-2 flex justify-between text-xs font-semibold">
@@ -78,7 +76,7 @@ export const ContentCreateUserUsersMembersAdmin = () => {
                     />
                   </div>
                 )}
-              </>
+              </div>
             );
           },
         },

@@ -20,17 +20,12 @@ export const FormSignUp = () => {
       fields={[
         {
           id: 'name',
-          component: props => (
-            <AutoFormInput {...props} className="bg-card shadow-sm" />
-          ),
-          label: t('name.label'),
-          description: t('name.desc'),
-          wrapper: ({ field, children }) => {
-            const value: string = field.value ?? '';
+          component: props => {
+            const value: string = props.field.value ?? '';
 
             return (
-              <>
-                {children}
+              <div className="space-y-1">
+                <AutoFormInput {...props} className="bg-card shadow-sm" />
                 {value.length > 0 && (
                   <span className="text-muted-foreground block max-w-md truncate text-sm">
                     {t.rich('name.your_id', {
@@ -42,9 +37,11 @@ export const FormSignUp = () => {
                     })}
                   </span>
                 )}
-              </>
+              </div>
             );
           },
+          label: t('name.label'),
+          description: t('name.desc'),
         },
         {
           id: 'email',
@@ -61,15 +58,8 @@ export const FormSignUp = () => {
           id: 'password',
           label: t('password.label'),
           description: t('password.desc'),
-          component: props => (
-            <AutoFormInput
-              {...props}
-              className="bg-card shadow-sm"
-              type="password"
-            />
-          ),
-          wrapper: ({ field, children }) => {
-            const value: string = field.value ?? '';
+          component: props => {
+            const value: string = props.field.value ?? '';
             const regexArray = [
               /^.{8,}$/, // Min 8 characters
               /[a-z]/, // Min 1 lowercase
@@ -83,8 +73,12 @@ export const FormSignUp = () => {
             }, 0);
 
             return (
-              <>
-                {children}
+              <div className="space-y-1">
+                <AutoFormInput
+                  {...props}
+                  className="bg-card shadow-sm"
+                  type="password"
+                />
                 {value.length > 0 && (
                   <div>
                     <div className="mb-2 flex justify-between text-xs font-semibold">
@@ -96,7 +90,7 @@ export const FormSignUp = () => {
                     />
                   </div>
                 )}
-              </>
+              </div>
             );
           },
         },

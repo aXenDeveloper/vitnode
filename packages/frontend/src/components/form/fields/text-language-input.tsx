@@ -1,11 +1,9 @@
 import { AutoFormComponentProps } from '@/components/form/auto-form';
-import { FormControl, FormMessage } from '@/components/ui/form';
+import { FormControl } from '@/components/ui/form';
 import { StringLanguageInput } from '@/components/ui/text-language-input';
 
-import { AutoFormInputWrapper } from './common/input-wrapper';
 import { AutoFormLabel } from './common/label';
 import { AutoFormTooltip } from './common/tooltip';
-import { AutoFormWrapper } from './common/wrapper';
 
 export function AutoFormStringLanguageInput({
   field,
@@ -20,8 +18,6 @@ export function AutoFormStringLanguageInput({
   overrideOptions: _,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   shape: _shape,
-  wrapper,
-  classNameWrapper,
   ...props
 }: AutoFormComponentProps &
   Omit<
@@ -29,7 +25,7 @@ export function AutoFormStringLanguageInput({
     'name' | 'onChange' | 'value'
   >) {
   return (
-    <AutoFormWrapper className={classNameWrapper} theme={theme}>
+    <>
       {label && (
         <AutoFormLabel
           description={description}
@@ -40,25 +36,22 @@ export function AutoFormStringLanguageInput({
         />
       )}
 
-      <AutoFormInputWrapper field={field} Wrapper={wrapper}>
-        <FormControl>
-          <StringLanguageInput
-            {...props}
-            {...zodInputProps}
-            disabled={isDisabled || props.disabled}
-            onBlur={field.onBlur || props.onBlur}
-            onChange={e => {
-              field.onChange(e);
-            }}
-            value={field.value ?? []}
-          />
-        </FormControl>
-      </AutoFormInputWrapper>
+      <FormControl>
+        <StringLanguageInput
+          {...props}
+          {...zodInputProps}
+          disabled={isDisabled || props.disabled}
+          onBlur={field.onBlur || props.onBlur}
+          onChange={e => {
+            field.onChange(e);
+          }}
+          value={field.value ?? []}
+        />
+      </FormControl>
 
       {description && theme === 'vertical' && (
         <AutoFormTooltip description={description} />
       )}
-      <FormMessage />
-    </AutoFormWrapper>
+    </>
   );
 }

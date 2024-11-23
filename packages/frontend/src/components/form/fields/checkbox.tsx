@@ -1,12 +1,9 @@
 import { AutoFormComponentProps } from '@/components/form/auto-form';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FormControl, FormMessage } from '@/components/ui/form';
-import { cn } from '@/helpers/classnames';
+import { FormControl } from '@/components/ui/form';
 
-import { AutoFormInputWrapper } from './common/input-wrapper';
 import { AutoFormLabel } from './common/label';
 import { AutoFormTooltip } from './common/tooltip';
-import { AutoFormWrapper } from './common/wrapper';
 
 export function AutoFormCheckbox({
   field,
@@ -22,35 +19,22 @@ export function AutoFormCheckbox({
   overrideOptions: _,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   shape: _shape,
-  wrapper,
-  classNameWrapper,
   ...props
 }: AutoFormComponentProps &
   Omit<React.ComponentProps<typeof Checkbox>, 'name' | 'value'>) {
   return (
-    <AutoFormWrapper
-      className={cn(
-        'flex items-start space-x-3 space-y-0',
-        {
-          'rounded-md border p-4': label && description,
-        },
-        classNameWrapper,
-      )}
-      theme={theme}
-    >
-      <AutoFormInputWrapper field={field} Wrapper={wrapper}>
-        <FormControl>
-          <Checkbox
-            checked={field.value || false}
-            disabled={isDisabled || props.disabled}
-            onCheckedChange={e => {
-              field.onChange(e);
-              props.onCheckedChange?.(e);
-            }}
-            {...props}
-          />
-        </FormControl>
-      </AutoFormInputWrapper>
+    <>
+      <FormControl>
+        <Checkbox
+          checked={field.value || false}
+          disabled={isDisabled || props.disabled}
+          onCheckedChange={e => {
+            field.onChange(e);
+            props.onCheckedChange?.(e);
+          }}
+          {...props}
+        />
+      </FormControl>
 
       {(label ?? description) && (
         <div className="space-y-1 leading-none">
@@ -68,7 +52,6 @@ export function AutoFormCheckbox({
           )}
         </div>
       )}
-      <FormMessage />
-    </AutoFormWrapper>
+    </>
   );
 }

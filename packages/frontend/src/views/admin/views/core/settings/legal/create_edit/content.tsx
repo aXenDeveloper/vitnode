@@ -56,14 +56,13 @@ export const ContentCreateEditLegalPage = ({
           id: 'code',
           label: t('form.code.title'),
           description: t('form.code.desc'),
-          component: props => <AutoFormInput {...props} />,
-          wrapper: ({ field, children }) => {
-            const value: string = field.value ?? '';
+          component: props => {
+            const value: string = props.field.value ?? '';
             const parsedValue = removeSpecialCharacters(value);
 
             return (
               <>
-                {children}
+                <AutoFormInput {...props} />
                 <div className="text-muted-foreground mt-1 text-sm">
                   {t.rich('form.code.preview_url', {
                     url: () => (
