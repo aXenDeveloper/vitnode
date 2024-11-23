@@ -55,22 +55,42 @@ export class ThemeEditorStylesAdminController {
       new FilesValidationPipe({
         logo_dark: {
           maxSize: 1024 * 1024, // 1 MB
-          acceptMimeType: ['image/png', 'image/jpeg'],
+          acceptMimeType: [
+            'image/png',
+            'image/jpeg',
+            'image/svg+xml',
+            'image/webp',
+          ],
           isOptional: true,
         },
         mobile_logo_dark: {
           maxSize: 1024 * 1024, // 1 MB
-          acceptMimeType: ['image/png', 'image/jpeg'],
+          acceptMimeType: [
+            'image/png',
+            'image/jpeg',
+            'image/svg+xml',
+            'image/webp',
+          ],
           isOptional: true,
         },
         logo_light: {
           maxSize: 1024 * 1024, // 1 MB
-          acceptMimeType: ['image/png', 'image/jpeg'],
+          acceptMimeType: [
+            'image/png',
+            'image/jpeg',
+            'image/svg+xml',
+            'image/webp',
+          ],
           isOptional: true,
         },
         mobile_logo_light: {
           maxSize: 1024 * 1024, // 1 MB
-          acceptMimeType: ['image/png', 'image/jpeg'],
+          acceptMimeType: [
+            'image/png',
+            'image/jpeg',
+            'image/svg+xml',
+            'image/webp',
+          ],
           isOptional: true,
         },
       }),

@@ -19,12 +19,19 @@ export const nestjsMainApp = async (app: INestApplication, options?: Args) => {
   const pkg: {
     version: string;
   } = JSON.parse(await readFile(join(process.cwd(), 'package.json'), 'utf-8'));
+  app.enableCors({
+    ...options?.cors,
+    credentials: true,
+    origin: [
+      process.env.NEXT_PUBLIC_FRONTEND_URL ?? 'http://localhost:3000',
+      ...(options?.cors?.origin ?? []),
+    ],
+  });
 
   app.use(cookieParser());
   app.use(
     helmet({
-      contentSecurityPolicy:
-        process.env.NODE_ENV === 'development' ? false : undefined,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
     }),
   );
 
@@ -47,17 +54,6 @@ export const nestjsMainApp = async (app: INestApplication, options?: Args) => {
       enableDebugMessages: process.env.NODE_ENV === 'development',
     }),
   );
-
-  app.enableCors({
-    ...options?.cors,
-    credentials: true,
-    origin: [
-      process.env.NEXT_PUBLIC_FRONTEND_URL
-        ? process.env.NEXT_PUBLIC_FRONTEND_URL
-        : 'http://localhost:3000',
-      ...(options?.cors?.origin ?? []),
-    ],
-  });
 
   const port = Number(process.env.PORT) || 8080;
   const hostname = process.env.HOSTNAME ?? 'localhost';
