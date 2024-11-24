@@ -232,6 +232,7 @@
     "sign_in": {
       "title": "Login",
       "desc": "You don't have an account? <link></link>.",
+      "or": "or",
       "sign_up": "Sign Up",
       "email": "Email",
       "password": "Password",

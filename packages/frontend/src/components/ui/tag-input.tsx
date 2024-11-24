@@ -1,6 +1,5 @@
 'use client';
 
-import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import React from 'react';
 
@@ -47,48 +46,43 @@ export const TagInput = ({
     <div className="space-y-3">
       {values.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <AnimatePresence>
-            {values.map(item => {
-              const onRemove = () => {
-                if (multiple) {
-                  onChange(values.filter(value => value.id !== item.id));
+          {values.map(item => {
+            const onRemove = () => {
+              if (multiple) {
+                onChange(values.filter(value => value.id !== item.id));
 
-                  return;
-                }
+                return;
+              }
 
-                onChange();
-              };
+              onChange();
+            };
 
-              return (
-                <motion.div
-                  animate={{ opacity: 1, scale: 1 }}
-                  className={badgeVariants({
-                    variant: 'outline',
-                    className: 'shrink-0 cursor-pointer [&>svg]:size-4',
-                  })}
-                  exit={{ opacity: 0, scale: 0.5 }}
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  key={item.id}
-                  layout
-                  onClick={e => {
+            return (
+              <div
+                className={badgeVariants({
+                  variant: 'outline',
+                  className: 'shrink-0 cursor-pointer [&>svg]:size-4',
+                })}
+                key={item.id}
+                onClick={e => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  onRemove();
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
                     e.stopPropagation();
                     e.preventDefault();
                     onRemove();
-                  }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      onRemove();
-                    }
-                  }}
-                  tabIndex={0}
-                >
-                  {item.value} <X />
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+              >
+                {item.value} <X />
+              </div>
+            );
+          })}
         </div>
       )}
 

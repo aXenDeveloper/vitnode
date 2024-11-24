@@ -220,7 +220,7 @@ export class SignInAuthService {
         avatar_color: true,
       },
     });
-    if (!user) {
+    if (!user?.password) {
       throw new HttpException('ACCESS_DENIED', HttpStatus.UNAUTHORIZED);
     }
 

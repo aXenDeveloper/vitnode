@@ -19,6 +19,7 @@ import {
 import { FilesHelperService } from './files/files-helper.service';
 import { StringLanguageHelper } from './string_language/helpers.service';
 import { UserHelper } from './user.service';
+import { SSOAuthHelper } from './auth/sso.service';
 
 @Global()
 @Module({})
@@ -62,6 +63,7 @@ export class GlobalHelpersModule {
         DeviceAuthService,
         UserHelper,
         FilesHelperService,
+        SSOAuthHelper,
       ],
       exports: [
         EmailHelperService,
@@ -73,6 +75,7 @@ export class GlobalHelpersModule {
         DeviceAuthService,
         UserHelper,
         FilesHelperService,
+        SSOAuthHelper,
       ],
     };
   }

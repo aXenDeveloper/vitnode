@@ -9,6 +9,7 @@ import { ManifestWithLang } from 'vitnode-shared/manifest.dto';
 import { ShowMiddlewareObj } from 'vitnode-shared/middleware.dto';
 
 import { NavMiddlewareService } from './nav.service';
+import { SSOAuthHelper } from '@/helpers/auth/sso.service';
 
 @Injectable()
 export class ShowMiddlewareService {
@@ -16,6 +17,7 @@ export class ShowMiddlewareService {
     private readonly databaseService: InternalDatabaseService,
     private readonly mailService: EmailHelperService,
     private readonly navService: NavMiddlewareService,
+    private readonly ssoHelper: SSOAuthHelper,
   ) {}
 
   protected async getManifest({
@@ -77,6 +79,13 @@ export class ShowMiddlewareService {
       authorization: {
         force_login: config.settings.authorization.force_login,
         lock_register: config.settings.authorization.lock_register,
+      },
+      auth_methods: {
+        password: true,
+        sso: this.ssoHelper.getSSOs().map(sso => ({
+          name: sso.name,
+          code: sso.code,
+        })),
       },
       plugins: ['admin', 'core', ...plugins.map(plugin => plugin.code)],
       languages_code_default: langs.find(lang => lang.default)?.code ?? 'en',

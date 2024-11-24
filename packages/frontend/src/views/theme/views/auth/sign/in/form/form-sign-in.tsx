@@ -1,7 +1,7 @@
 'use client';
 
 import { AutoForm } from '@/components/form/auto-form';
-import { AutoFormCheckbox } from '@/components/form/fields/checkbox';
+import { AutoFormCheckbox as AutoFormCheckboxFromProps } from '@/components/form/fields/checkbox';
 import { AutoFormInput } from '@/components/form/fields/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -71,9 +71,11 @@ export const FormSignIn = () => {
             id: 'remember',
             label: t('remember.label'),
             description: t('remember.desc'),
-            component: props => (
-              <AutoFormCheckbox {...props} className="bg-card" />
-            ),
+            component: function AutoFormCheckbox(props) {
+              return (
+                <AutoFormCheckboxFromProps {...props} className="bg-card" />
+              );
+            },
           },
         ]}
         formSchema={formSchema}

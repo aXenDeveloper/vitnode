@@ -5,6 +5,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 
+import { SSOSign } from '../sso';
 import { FormSignUp } from './form/form-sign-up';
 import { SignUpWrapper } from './wrapper';
 
@@ -22,6 +23,7 @@ export const SignUpView = async () => {
     {
       is_email_enabled,
       authorization: { lock_register },
+      auth_methods,
     },
   ] = await Promise.all([getTranslations('core.sign_up'), getMiddlewareData()]);
 
@@ -41,6 +43,7 @@ export const SignUpView = async () => {
           </CardDescription>
         </div>
 
+        {auth_methods.sso.length > 0 && <SSOSign />}
         <FormSignUp />
       </div>
     </SignUpWrapper>

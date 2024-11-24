@@ -12,7 +12,7 @@ export const UserFooterNavBarMobile = () => {
   const { onSubmit } = useSignOutApi({});
 
   return (
-    <div className="my-4 flex flex-col px-2">
+    <div className="mb-4 flex flex-col px-2">
       {user?.is_admin && (
         <>
           <Separator className="my-1" />

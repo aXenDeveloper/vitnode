@@ -1,9 +1,10 @@
+import { getMiddlewareData } from '@/api/get-middleware-data';
 import { CardDescription, CardTitle } from '@/components/ui/card';
 import { Link } from '@/navigation';
 import { Metadata } from 'next';
-import { useTranslations } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 
+import { SSOSign } from '../sso';
 import { FormSignIn } from './form/form-sign-in';
 
 export const generateMetadataSignIn = async (): Promise<Metadata> => {
@@ -14,8 +15,11 @@ export const generateMetadataSignIn = async (): Promise<Metadata> => {
   };
 };
 
-export const SignInView = () => {
-  const t = useTranslations('core.sign_in');
+export const SignInView = async () => {
+  const [t, { auth_methods }] = await Promise.all([
+    getTranslations('core.sign_in'),
+    getMiddlewareData(),
+  ]);
 
   return (
     <div className="container mx-auto max-w-md py-10">
@@ -28,6 +32,7 @@ export const SignInView = () => {
         </CardDescription>
       </div>
 
+      {auth_methods.sso.length > 0 && <SSOSign />}
       <FormSignIn />
     </div>
   );
