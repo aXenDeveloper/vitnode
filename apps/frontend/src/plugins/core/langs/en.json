@@ -241,6 +241,10 @@
         "desc": "Not recommended on shared computers."
       },
       "submit": "Log In",
+      "sso_first_login": {
+        "title": "Almost there!",
+        "desc": "Please complete your registration by entering your name."
+      },
       "error": {
         "title": "Invalid credentials",
         "desc": "The email address or password was incorrect. Please try again (make sure your caps lock is off)."

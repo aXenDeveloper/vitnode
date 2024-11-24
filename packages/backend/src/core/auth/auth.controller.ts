@@ -29,7 +29,7 @@ import {
 
 import { VerifyConfirmEmailAuthService } from './services/confirm_email/verify.service';
 import { ShowAuthService } from './services/show.service';
-import { SignInAuthService } from './services/sign_in.service';
+import { SignInAuthService } from './services/sign_in/sign_in.service';
 import { SignOutAuthService } from './services/sign_out.service';
 import { SignUpAuthService } from './services/sign_up/sign_up.service';
 

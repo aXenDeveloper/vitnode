@@ -57,11 +57,11 @@ export class CaptchaSecurityMiddleware {
 export class SSOAuthMethodMiddleware {
   @ApiProperty()
   @IsString()
-  name: string;
+  code: string;
 
   @ApiProperty()
   @IsString()
-  code: string;
+  name: string;
 }
 
 export class AuthMethodMiddleware {
@@ -127,6 +127,9 @@ export class LogosMiddleware {
 
 export class ShowMiddlewareObj extends MainSettingsAdminBody {
   @ApiProperty()
+  auth_methods: AuthMethodMiddleware;
+
+  @ApiProperty()
   authorization: AuthorizationMiddleware;
 
   @ApiProperty()
@@ -146,9 +149,6 @@ export class ShowMiddlewareObj extends MainSettingsAdminBody {
 
   @ApiProperty()
   logos: LogosMiddleware;
-
-  @ApiProperty()
-  auth_methods: AuthMethodMiddleware;
 
   @ApiProperty({ type: [ShowNavStyles] })
   nav: ShowNavStyles[];

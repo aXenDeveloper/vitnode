@@ -1,4 +1,5 @@
 import { ABSOLUTE_PATHS } from '@/app.module';
+import { SSOAuthHelper } from '@/helpers/auth/sso.service';
 import { getConfigFile } from '@/helpers/config';
 import { EmailHelperService } from '@/helpers/email/email.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
@@ -9,7 +10,6 @@ import { ManifestWithLang } from 'vitnode-shared/manifest.dto';
 import { ShowMiddlewareObj } from 'vitnode-shared/middleware.dto';
 
 import { NavMiddlewareService } from './nav.service';
-import { SSOAuthHelper } from '@/helpers/auth/sso.service';
 
 @Injectable()
 export class ShowMiddlewareService {
@@ -82,10 +82,13 @@ export class ShowMiddlewareService {
       },
       auth_methods: {
         password: true,
-        sso: this.ssoHelper.getSSOs().map(sso => ({
-          name: sso.name,
-          code: sso.code,
-        })),
+        sso: this.ssoHelper
+          .getSSOs()
+          .filter(item => item.enabled)
+          .map(sso => ({
+            name: sso.name,
+            code: sso.code,
+          })),
       },
       plugins: ['admin', 'core', ...plugins.map(plugin => plugin.code)],
       languages_code_default: langs.find(lang => lang.default)?.code ?? 'en',

@@ -70,11 +70,21 @@ export const core_users_sso_tokens = pgTable(
       })
       .notNull(),
     provider: t.varchar({ length: 100 }).notNull(),
-    id_provider: t.varchar({ length: 255 }).notNull(),
+    provider_id: t.varchar({ length: 255 }).notNull(),
     created_at: t.timestamp().notNull().defaultNow(),
     updated_at: t.timestamp().notNull().defaultNow(),
   }),
   t => [index('core_users_sso_tokens_user_id_idx').on(t.user_id)],
+);
+
+export const core_users_sso_tokens_relations = relations(
+  core_users_sso_tokens,
+  ({ one }) => ({
+    user: one(core_users, {
+      fields: [core_users_sso_tokens.user_id],
+      references: [core_users.id],
+    }),
+  }),
 );
 
 export const core_files_avatars = pgTable('core_files_avatars', t => ({

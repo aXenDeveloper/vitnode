@@ -1,5 +1,5 @@
 import { getMiddlewareData } from '@/api/get-middleware-data';
-import { CardDescription, CardTitle } from '@/components/ui/card';
+import { CardDescription } from '@/components/ui/card';
 import { Link } from '@/navigation';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
@@ -23,8 +23,10 @@ export const SignInView = async () => {
 
   return (
     <div className="container mx-auto max-w-md py-10">
-      <div className="mb-10 space-y-1 text-center">
-        <CardTitle className="text-3xl">{t('title')}</CardTitle>
+      <div className="mb-10 space-y-2 text-center">
+        <h1 className="text-3xl font-semibold leading-none tracking-tight">
+          {t('title')}
+        </h1>
         <CardDescription>
           {t.rich('desc', {
             link: () => <Link href="/register">{t('sign_up')}</Link>,

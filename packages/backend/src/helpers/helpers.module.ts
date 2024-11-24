@@ -9,6 +9,7 @@ import {
 
 import { DeviceAuthService } from './auth/device.service';
 import { InternalAuthAdminService } from './auth/internal_auth_admin.service';
+import { SSOAuthHelper } from './auth/sso.service';
 import { CaptchaHelper } from './captcha/captcha.service';
 import { EmailHelperService } from './email/email.service';
 import { EmailHelpersService } from './email/email-helpers.service';
@@ -19,7 +20,6 @@ import {
 import { FilesHelperService } from './files/files-helper.service';
 import { StringLanguageHelper } from './string_language/helpers.service';
 import { UserHelper } from './user.service';
-import { SSOAuthHelper } from './auth/sso.service';
 
 @Global()
 @Module({})
