@@ -18,7 +18,7 @@ import {
 } from './table';
 
 interface TMin {
-  id: number;
+  id: number | string;
 }
 
 export interface DataTableProps<T extends TMin> {

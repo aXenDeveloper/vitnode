@@ -166,7 +166,9 @@
             }
           },
           "methods": {
-            "title": "Login Methods"
+            "title": "Login Methods",
+            "name": "Name",
+            "enabled": "Enabled"
           }
         },
         "legal": {

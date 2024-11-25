@@ -3,6 +3,7 @@ import { getMiddlewareData } from '@/api/get-middleware-data';
 import { ShowAuthSettingsAdminObj } from 'vitnode-shared/admin/settings/auth.dto';
 
 import { ContentAuthorizationSettingsAdminView } from './content';
+import { Card } from '@/components/ui/card';
 
 const getData = async () => {
   const { data } = await fetcher<ShowAuthSettingsAdminObj>({
@@ -20,9 +21,11 @@ export const AuthorizationSettingsAdminView = async () => {
   ]);
 
   return (
-    <ContentAuthorizationSettingsAdminView
-      isEmailEnabled={is_email_enabled}
-      {...data}
-    />
+    <Card className="p-6">
+      <ContentAuthorizationSettingsAdminView
+        isEmailEnabled={is_email_enabled}
+        {...data}
+      />
+    </Card>
   );
 };
