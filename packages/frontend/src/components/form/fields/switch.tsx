@@ -1,5 +1,6 @@
 import { FormControl } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/helpers/classnames';
 
 import { AutoFormComponentProps } from '../auto-form';
 import { AutoFormLabel } from './common/label';
@@ -25,7 +26,11 @@ export function AutoFormSwitch({
   const value: boolean = field.value || false;
 
   return (
-    <>
+    <div
+      className={cn({
+        'gap-4 rounded-lg border p-4': theme === 'vertical',
+      })}
+    >
       <div>
         {label && (
           <AutoFormLabel
@@ -52,6 +57,6 @@ export function AutoFormSwitch({
           disabled={isDisabled || props?.disabled}
         />
       </FormControl>
-    </>
+    </div>
   );
 }

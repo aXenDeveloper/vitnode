@@ -1,6 +1,6 @@
 import { useDialog } from '@/components/ui/dialog';
-import { nameRegex } from '@/hooks/sign/up/use-sign-up-view';
 import { useCaptcha } from '@/hooks/use-captcha';
+import { nameRegex } from '@/views/theme/views/auth/sign/up/hooks/use-sign-up-view';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';

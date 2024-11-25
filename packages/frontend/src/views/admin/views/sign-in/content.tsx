@@ -4,7 +4,7 @@ import { AutoForm } from '@/components/form/auto-form';
 import { AutoFormInput } from '@/components/form/fields/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { useSignInAdminView } from '@/hooks/sign/in/use-sign-in-admin-view';
+import { useSignInAdminView } from '@/views/theme/views/auth/sign/in/hooks/use-sign-in-admin-view';
 import { AlertCircle, LogIn } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 

@@ -1,6 +1,6 @@
 import { Separator } from '@/components/ui/separator';
-import { useSignOutApi } from '@/hooks/sign/out/use-sign-out-api';
 import { useSession } from '@/hooks/use-session';
+import { useSignOutApi } from '@/views/theme/layout/header/auth-user-bar/hooks/use-sign-out-api';
 import { KeyRoundIcon, LogOutIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 

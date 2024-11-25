@@ -1,10 +1,11 @@
 import type { Request, Response } from 'express';
 
-import { core_users_sso_tokens } from '@/database/schema/users';
+import { core_users, core_users_sso_tokens } from '@/database/schema/users';
 import { SSOAuthHelper } from '@/helpers/auth/sso.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { eq } from 'drizzle-orm';
 import { SSOCallbackAuthObj } from 'vitnode-shared/auth/sso.dto';
 
 import { HelperSignInAuthService } from '../../services/sign_in/helper.service';
@@ -98,10 +99,20 @@ export class CallbackSSOAuthService {
         language: true,
         name_seo: true,
         avatar_color: true,
+        email_verified: true,
       },
     });
     // If user exists, create SSO token and sign in
     if (user) {
+      if (!user.email_verified) {
+        await this.databaseService.db
+          .update(core_users)
+          .set({
+            email_verified: true,
+          })
+          .where(eq(core_users.id, user.id));
+      }
+
       await this.databaseService.db.insert(core_users_sso_tokens).values({
         provider,
         provider_id: data.id,

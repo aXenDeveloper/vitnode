@@ -6,7 +6,7 @@ import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 
 import { SSOSign } from '../sso';
-import { FormSignUp } from './form/form-sign-up';
+import { FormSignUp } from './form';
 import { SignUpWrapper } from './wrapper';
 
 export const generateMetadataSignUp = async (): Promise<Metadata> => {

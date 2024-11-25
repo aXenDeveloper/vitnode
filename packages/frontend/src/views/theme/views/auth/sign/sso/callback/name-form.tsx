@@ -3,7 +3,6 @@ import { AutoFormInput } from '@/components/form/fields/input';
 import { Button } from '@/components/ui/button';
 import { CardDescription } from '@/components/ui/card';
 import { removeSpecialCharacters } from '@/helpers/special-characters';
-import { nameRegex } from '@/hooks/sign/up/use-sign-up-view';
 import { LogIn } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
@@ -11,6 +10,7 @@ import { toast } from 'sonner';
 import { SSOCallbackAuthObj } from 'vitnode-shared/auth/sso.dto';
 import * as z from 'zod';
 
+import { nameRegex } from '../../up/hooks/use-sign-up-view';
 import { mutationApi } from './hooks/mutation-api';
 
 export const NameFormCallbackSSO = ({

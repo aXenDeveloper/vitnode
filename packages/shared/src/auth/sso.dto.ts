@@ -1,12 +1,6 @@
 import { ApiProperty, PickType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import {
-  IsEmail,
-  IsString,
-  Matches,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 import { TransformString } from '../utils/text-language';
 import { nameRegex, SignInAuthObj } from './auth.dto';

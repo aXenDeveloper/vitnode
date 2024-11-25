@@ -5,7 +5,7 @@ import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 
 import { SSOSign } from '../sso';
-import { FormSignIn } from './form/form-sign-in';
+import { FormSignIn } from './form';
 
 export const generateMetadataSignIn = async (): Promise<Metadata> => {
   const t = await getTranslations('core.sign_in');

@@ -6,10 +6,11 @@ import { AutoFormInput } from '@/components/form/fields/input';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { removeSpecialCharacters } from '@/helpers/special-characters';
-import { useSignUpView } from '@/hooks/sign/up/use-sign-up-view';
 import { Link } from '@/navigation';
 import { LogIn } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+
+import { useSignUpView } from './hooks/use-sign-up-view';
 
 export const FormSignUp = () => {
   const t = useTranslations('core.sign_up');

@@ -42,7 +42,10 @@
       "default": "./dist/src/hooks/*.js"
     },
     "./views/*": {
-      "types": "./dist/src/views/*.tsx",
+      "types": [
+        "./dist/src/views/*.tsx",
+        "./dist/src/views/*.ts"
+      ],
       "default": "./dist/src/views/*.js"
     },
     "./admin/*": {
