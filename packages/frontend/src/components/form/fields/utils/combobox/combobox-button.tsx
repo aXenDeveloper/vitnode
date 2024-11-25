@@ -11,7 +11,7 @@ import { StringLanguage } from 'vitnode-shared/string-language.dto';
 interface ComboBoxButtonProps<T extends FieldValues>
   extends Omit<React.ComponentProps<typeof Button>, 'ariaLabel' | 'children'> {
   field: ControllerRenderProps<T>;
-  label?: string;
+  label?: React.ReactNode | string;
   labels?: Record<string, React.JSX.Element | string>;
   multiple?: boolean;
   placeholder?: string;
@@ -84,7 +84,7 @@ export function ComboBoxButton<T extends FieldValues>({
 
   return (
     <Button
-      ariaLabel={label ?? ''}
+      ariaLabel={typeof label === 'string' ? label : ''}
       className={cn('w-full justify-start font-normal', className)}
       role="combobox"
       variant="outline"

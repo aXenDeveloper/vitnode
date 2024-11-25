@@ -91,7 +91,6 @@ export class RegisterCallbackSSOAuthService {
         email: createUser.email,
         user_id: createUser.id,
         name: createUser.name,
-        remember: true,
       },
     });
 

@@ -1,7 +1,6 @@
 import { core_admin_sessions } from '@/database/schema/admins';
 import { core_sessions } from '@/database/schema/sessions';
 import { DeviceAuthService } from '@/helpers/auth/device.service';
-import { getConfigFile } from '@/helpers/config';
 import { EmailHelperService } from '@/helpers/email/email.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { ForbiddenException, Injectable } from '@nestjs/common';
@@ -27,7 +26,7 @@ export class HelperSignInAuthService {
   async createSession({
     req,
     res,
-    body: { email, remember, admin, user_id, name },
+    body: { email, admin, user_id, name },
   }: {
     body: { name: string; user_id: number } & Omit<SignInAuthBody, 'password'>;
     req: Request;
@@ -57,7 +56,7 @@ export class HelperSignInAuthService {
     );
 
     const expiresValue: number = this.configService.getOrThrow(
-      `cookies.login_token.${remember ? 'expiresInRemember' : 'expiresIn'}`,
+      'cookies.login_token.expiresIn',
     );
 
     if (admin) {
@@ -168,7 +167,7 @@ export class HelperSignInAuthService {
         secure: !!this.configService.getOrThrow('cookies.secure'),
         domain: this.configService.getOrThrow('cookies.domain'),
         path: '/',
-        expires: remember ? expires_at : undefined,
+        expires: expires_at,
         sameSite: this.configService.getOrThrow('cookies.secure')
           ? 'none'
           : 'lax',
@@ -182,7 +181,7 @@ export class HelperSignInAuthService {
         secure: !!this.configService.getOrThrow('cookies.secure'),
         domain: this.configService.getOrThrow('cookies.domain'),
         path: '/',
-        expires: remember ? expires_at : undefined,
+        expires: expires_at,
         sameSite: this.configService.getOrThrow('cookies.secure')
           ? 'none'
           : 'lax',

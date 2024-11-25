@@ -12,7 +12,6 @@ export const useSignInView = () => {
   const formSchema = z.object({
     email: z.string().email().default(''),
     password: z.string().min(1).default(''),
-    remember: z.boolean().default(false).optional(),
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
