@@ -77,7 +77,6 @@ export class CallbackSSOAuthService {
           email: sso.user.email,
           user_id: sso.user.id,
           name: sso.user.name,
-          remember: true,
         },
       });
 
@@ -126,7 +125,6 @@ export class CallbackSSOAuthService {
           email: user.email,
           user_id: user.id,
           name: user.name,
-          remember: true,
         },
       });
 
