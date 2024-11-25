@@ -3,8 +3,13 @@ import type { Request, Response } from 'express';
 import { core_users } from '@/database/schema/users';
 import { getUserIp, removeSpecialCharacters } from '@/functions';
 import { SSOAuthHelper } from '@/helpers/auth/sso.service';
+import { getConfigFile } from '@/helpers/config';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import {
   RegisterSSOCallbackAuthBody,
   SSOCallbackAuthObj,
@@ -34,6 +39,10 @@ export class RegisterCallbackSSOAuthService {
     req: Request;
     res: Response;
   }): Promise<SSOCallbackAuthObj> {
+    const config = getConfigFile();
+    if (config.settings.authorization.lock_register) {
+      throw new ForbiddenException('Register is locked');
+    }
     const sso = this.ssoAuthHelper.getSSO(provider);
     const data = await sso.registerCallback({ access_token });
     if (provider_id !== data.id) {

@@ -8,6 +8,7 @@
       "diagnostic_tools": "Diagnostic Tools",
       "home_page": "Home Page",
       "mobile_not_supported": "Mobile devices are not supported.",
+      "require_email_service": "The email service is disabled.",
       "search": {
         "placeholder": "Search...",
         "no_results": "No results found.",
@@ -147,17 +148,25 @@
           }
         },
         "authorization": {
-          "force_login": {
-            "title": "Force Login",
-            "desc": "Force users to log in before they can access your website."
+          "title": "Authorization",
+          "desc": "Manage authorization settings for your website.",
+          "settings": {
+            "title": "Settings",
+            "force_login": {
+              "title": "Force Login",
+              "desc": "Force users to log in before they can access your website."
+            },
+            "lock_register": {
+              "title": "Lock Register",
+              "desc": "Don't allow users to register on your website."
+            },
+            "require_confirm_email": {
+              "title": "Require Confirm Email",
+              "desc": "Require users to confirm their email address before they can access your site."
+            }
           },
-          "lock_register": {
-            "title": "Lock Register",
-            "desc": "Don't allow users to register on your website."
-          },
-          "require_confirm_email": {
-            "title": "Require Confirm Email",
-            "desc": "Require users to confirm their email address before they can access your site."
+          "methods": {
+            "title": "Login Methods"
           }
         },
         "legal": {

@@ -30,7 +30,9 @@ export const mutationApi = async ({
     await redirect('/');
   } catch (err) {
     const { message } = err as Error;
-
+    if (message === 'NEXT_REDIRECT') {
+      await redirect('/');
+    }
     if (message.includes('NAME_ALREADY_EXISTS')) {
       return { message: 'NAME_ALREADY_EXISTS' };
     }

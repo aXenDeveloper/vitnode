@@ -16,10 +16,13 @@ export const generateMetadataSignIn = async (): Promise<Metadata> => {
 };
 
 export const SignInView = async () => {
-  const [t, { auth_methods }] = await Promise.all([
-    getTranslations('core.sign_in'),
-    getMiddlewareData(),
-  ]);
+  const [
+    t,
+    {
+      auth_methods,
+      authorization: { lock_register },
+    },
+  ] = await Promise.all([getTranslations('core.sign_in'), getMiddlewareData()]);
 
   return (
     <div className="container mx-auto max-w-md py-10">
@@ -27,11 +30,13 @@ export const SignInView = async () => {
         <h1 className="text-3xl font-semibold leading-none tracking-tight">
           {t('title')}
         </h1>
-        <CardDescription>
-          {t.rich('desc', {
-            link: () => <Link href="/register">{t('sign_up')}</Link>,
-          })}
-        </CardDescription>
+        {!lock_register && (
+          <CardDescription>
+            {t.rich('desc', {
+              link: () => <Link href="/register">{t('sign_up')}</Link>,
+            })}
+          </CardDescription>
+        )}
       </div>
 
       {auth_methods.sso.length > 0 && <SSOSign />}

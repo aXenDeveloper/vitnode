@@ -13,7 +13,7 @@ export const AutoFormLabel = ({
   description: React.ReactNode | undefined;
   hideOptionalLabel: boolean | undefined;
   isRequired: boolean;
-  label: string;
+  label: React.ReactNode | string;
   theme: 'horizontal' | 'vertical';
 }) => {
   return (
@@ -30,7 +30,7 @@ export const AutoFormLabel = ({
           <span>{label}</span>
           <span
             className={cn(
-              'text-muted-foreground mt-1 block max-w-sm text-sm font-normal',
+              'text-muted-foreground @sm:items-end mt-1 flex max-w-sm flex-col gap-2 text-sm font-normal',
             )}
           >
             {description}

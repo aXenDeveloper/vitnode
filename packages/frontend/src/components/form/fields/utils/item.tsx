@@ -37,7 +37,7 @@ export function ItemAutoForm<
   formSchema: T;
   hideOptionalLabel?: boolean;
   id: FieldPath<z.infer<T>>;
-  label?: string;
+  label?: React.ReactNode | string;
   theme: 'horizontal' | 'vertical';
   watch: UseFormWatch<FieldValues>;
 }) {

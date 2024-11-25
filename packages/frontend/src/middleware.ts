@@ -5,7 +5,7 @@ import { getMiddlewareData } from './api/get-middleware-data';
 
 const getI18n = async () => {
   try {
-    const { languages: lang } = await getMiddlewareData();
+    const { languages: lang, authorization } = await getMiddlewareData();
     const languages = lang.filter(lang => lang.enabled);
     const defaultLanguage = lang.find(lang => lang.default)?.code ?? 'en';
     const i18n = {
@@ -13,11 +13,15 @@ const getI18n = async () => {
       defaultLocale: defaultLanguage,
     };
 
-    return i18n;
+    return {
+      ...i18n,
+      force_login: authorization.force_login,
+    };
   } catch (_) {
     const i18n = {
       locales: ['en'],
       defaultLocale: 'en',
+      force_login: false,
     };
 
     return i18n;
@@ -55,19 +59,16 @@ export function createMiddleware() {
       admin: request.cookies.get('vitnode-login-token-admin'),
     };
 
-    // if (i18n.core_middleware__show) {
-    //   const { authorization } = i18n.core_middleware__show;
-    //   // Redirect if force login is true
-    //   if (
-    //     authorization.force_login &&
-    //     !cookieSession.default &&
-    //     !pathname.startsWith('/admin') &&
-    //     pathname !== '/login' &&
-    //     pathname !== '/register'
-    //   ) {
-    //     return NextResponse.redirect(new URL('/login', request.url));
-    //   }
-    // }
+    // Redirect if force login is true
+    if (
+      i18n.force_login &&
+      !cookieSession.default &&
+      !pathname.startsWith('/admin') &&
+      !pathname.startsWith('/login') &&
+      !pathname.startsWith('/register')
+    ) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
 
     // Redirect to /admin if the user is not logged in to AdminCP
     if (

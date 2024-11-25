@@ -25,11 +25,18 @@ export function AutoFormCheckbox({
   Omit<React.ComponentProps<typeof Checkbox>, 'name' | 'value'>) {
   return (
     <div
-      className={cn('flex items-start space-x-3 space-y-0', {
-        'rounded-md border p-4': label && description,
+      className={cn({
+        'flex items-start space-x-3 space-y-0 rounded-md border p-4':
+          label && description && theme === 'vertical',
+        '@xs:flex-row @xs:gap-6 flex w-full flex-col items-start gap-2':
+          theme === 'horizontal',
       })}
     >
-      <FormControl>
+      <FormControl
+        className={cn({
+          'order-1 mt-2': theme === 'horizontal',
+        })}
+      >
         <Checkbox
           checked={field.value || false}
           disabled={isDisabled || props.disabled}
@@ -42,7 +49,11 @@ export function AutoFormCheckbox({
       </FormControl>
 
       {(label ?? description) && (
-        <div className="space-y-1 leading-none">
+        <div
+          className={cn('space-y-1 leading-none', {
+            'order-0': theme === 'horizontal',
+          })}
+        >
           {label && (
             <AutoFormLabel
               description={description}

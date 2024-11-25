@@ -32,7 +32,7 @@ export interface AutoFormComponentProps {
   hideOptionalLabel: boolean | undefined;
   isDisabled: boolean;
   isRequired: boolean;
-  label: string | undefined;
+  label: React.ReactNode | string;
   overrideOptions: undefined | z.EnumValues;
   shape: z.ZodAny;
   theme: 'horizontal' | 'vertical';
@@ -65,7 +65,7 @@ export function AutoForm<
     description?: React.ReactNode | string;
     hideOptionalLabel?: boolean;
     id: FieldPath<z.infer<T>>;
-    label?: string;
+    label?: React.ReactNode | string;
   }[];
   formSchema: T;
   onSubmit?: (
