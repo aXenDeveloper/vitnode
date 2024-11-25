@@ -1,6 +1,6 @@
 import { Separator } from '@/components/ui/separator';
-import { useSignOutApi } from '@/hooks/sign/out/use-sign-out-api';
 import { useSession } from '@/hooks/use-session';
+import { useSignOutApi } from '@/views/theme/layout/header/auth-user-bar/hooks/use-sign-out-api';
 import { KeyRoundIcon, LogOutIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -12,7 +12,7 @@ export const UserFooterNavBarMobile = () => {
   const { onSubmit } = useSignOutApi({});
 
   return (
-    <div className="my-4 flex flex-col px-2">
+    <div className="mb-4 flex flex-col px-2">
       {user?.is_admin && (
         <>
           <Separator className="my-1" />

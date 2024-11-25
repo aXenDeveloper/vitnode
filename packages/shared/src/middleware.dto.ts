@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsEnum,
   IsNumber,
   IsObject,
@@ -51,6 +52,25 @@ export class CaptchaSecurityMiddleware {
   @ApiProperty({ enum: CaptchaTypeEnum })
   @IsEnum(CaptchaTypeEnum)
   type: CaptchaTypeEnum;
+}
+
+export class SSOAuthMethodMiddleware {
+  @ApiProperty()
+  @IsString()
+  code: string;
+
+  @ApiProperty()
+  @IsString()
+  name: string;
+}
+
+export class AuthMethodMiddleware {
+  @ApiProperty()
+  @IsBoolean()
+  password: boolean;
+
+  @ApiProperty({ type: [SSOAuthMethodMiddleware] })
+  sso: SSOAuthMethodMiddleware[];
 }
 
 export class SecurityMiddleware {
@@ -106,6 +126,9 @@ export class LogosMiddleware {
 }
 
 export class ShowMiddlewareObj extends MainSettingsAdminBody {
+  @ApiProperty()
+  auth_methods: AuthMethodMiddleware;
+
   @ApiProperty()
   authorization: AuthorizationMiddleware;
 

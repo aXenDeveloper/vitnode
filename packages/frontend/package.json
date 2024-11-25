@@ -42,7 +42,10 @@
       "default": "./dist/src/hooks/*.js"
     },
     "./views/*": {
-      "types": "./dist/src/views/*.tsx",
+      "types": [
+        "./dist/src/views/*.tsx",
+        "./dist/src/views/*.ts"
+      ],
       "default": "./dist/src/views/*.js"
     },
     "./admin/*": {
@@ -165,7 +168,6 @@
     "cropperjs": "^1.6.2",
     "embla-carousel-react": "^8.5.1",
     "emoji-mart": "^5.6.0",
-    "framer-motion": "^11.11.17",
     "html-react-parser": "^5.1.18",
     "lodash": "^4.17.21",
     "lowlight": "^3.1.0",

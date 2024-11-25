@@ -20,7 +20,7 @@ export class HelperSignUpAuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  private readonly getDefaultData = async (): Promise<{
+  readonly getDefaultData = async (): Promise<{
     email_verified: boolean;
     group_id: number;
   }> => {
@@ -62,7 +62,7 @@ export class HelperSignUpAuthService {
     };
   };
 
-  private readonly getLanguage = async (req: Request): Promise<string> => {
+  readonly getLanguage = async (req: Request): Promise<string> => {
     const languageToSet: string =
       req.cookies[this.configService.get('cookies.lang') ?? 'NEXT_LOCALE'];
 
@@ -102,7 +102,7 @@ export class HelperSignUpAuthService {
     const convertToNameSEO = removeSpecialCharacters(name);
     const checkNameSEO =
       await this.databaseService.db.query.core_users.findFirst({
-        where: (table, { ilike }) => ilike(table.name_seo, convertToNameSEO),
+        where: (table, { eq }) => eq(table.name_seo, convertToNameSEO),
       });
 
     if (checkNameSEO) {

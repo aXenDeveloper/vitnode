@@ -6,10 +6,11 @@ import { AutoFormInput } from '@/components/form/fields/input';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { removeSpecialCharacters } from '@/helpers/special-characters';
-import { useSignUpView } from '@/hooks/sign/up/use-sign-up-view';
 import { Link } from '@/navigation';
 import { LogIn } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+
+import { useSignUpView } from './hooks/use-sign-up-view';
 
 export const FormSignUp = () => {
   const t = useTranslations('core.sign_up');
@@ -24,7 +25,7 @@ export const FormSignUp = () => {
             const value: string = props.field.value ?? '';
 
             return (
-              <div className="space-y-1">
+              <>
                 <AutoFormInput {...props} className="bg-card shadow-sm" />
                 {value.length > 0 && (
                   <span className="text-muted-foreground block max-w-md truncate text-sm">
@@ -37,7 +38,7 @@ export const FormSignUp = () => {
                     })}
                   </span>
                 )}
-              </div>
+              </>
             );
           },
           label: t('name.label'),
@@ -73,7 +74,7 @@ export const FormSignUp = () => {
             }, 0);
 
             return (
-              <div className="space-y-1">
+              <>
                 <AutoFormInput
                   {...props}
                   className="bg-card shadow-sm"
@@ -90,7 +91,7 @@ export const FormSignUp = () => {
                     />
                   </div>
                 )}
-              </div>
+              </>
             );
           },
         },

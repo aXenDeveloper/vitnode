@@ -6,7 +6,7 @@ import { AutoFormInput } from '@/components/form/fields/input';
 import { useDialog } from '@/components/ui/dialog';
 import { GroupFormat } from '@/components/ui/user/group-format';
 import { zodComboBoxWithFetcher } from '@/helpers/zod';
-import { nameRegex } from '@/hooks/sign/up/use-sign-up-view';
+import { nameRegex } from '@/views/theme/views/auth/sign/up/hooks/use-sign-up-view';
 import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';

@@ -22,7 +22,7 @@ export const ContentCreateUserUsersMembersAdmin = () => {
             const value: string = props.field.value ?? '';
 
             return (
-              <div className="space-y-1">
+              <>
                 <AutoFormInput {...props} />
                 {props.field.value.length > 0 && (
                   <span className="text-muted-foreground mt-2 block max-w-md truncate text-sm">
@@ -35,7 +35,7 @@ export const ContentCreateUserUsersMembersAdmin = () => {
                     })}
                   </span>
                 )}
-              </div>
+              </>
             );
           },
         },
@@ -63,7 +63,7 @@ export const ContentCreateUserUsersMembersAdmin = () => {
             }, 0);
 
             return (
-              <div className="space-y-1">
+              <>
                 <AutoFormInput {...props} type="password" />
                 {value.length > 0 && (
                   <div>
@@ -76,7 +76,7 @@ export const ContentCreateUserUsersMembersAdmin = () => {
                     />
                   </div>
                 )}
-              </div>
+              </>
             );
           },
         },

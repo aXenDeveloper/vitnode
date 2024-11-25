@@ -11,9 +11,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { AvatarUser } from '@/components/ui/user/avatar';
-import { useSignOutApi } from '@/hooks/sign/out/use-sign-out-api';
 import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { Link } from '@/navigation';
+import { useSignOutApi } from '@/views/theme/layout/header/auth-user-bar/hooks/use-sign-out-api';
 import {
   HammerIcon,
   HomeIcon,

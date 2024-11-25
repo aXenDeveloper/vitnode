@@ -80,11 +80,6 @@ export class SignInAuthBody {
   @ApiProperty({ example: 'Test123!' })
   @IsString()
   password: string;
-
-  @ApiPropertyOptional({ example: false })
-  @IsBoolean()
-  @IsOptional()
-  remember?: boolean;
 }
 
 export class SignInAuthObj extends SignAuthObj {

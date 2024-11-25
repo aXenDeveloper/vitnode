@@ -32,6 +32,9 @@ import {
   generateMetadataCaptchaSpamSecurityAdmin,
 } from './core/security/spam/captcha/captcha-spam-security-admin-view';
 import { SpamSecurityAdminLayout } from './core/security/spam/layout';
+import { AuthorizationSettingsAdminView } from './core/settings/authorization/authorization-settings-admin-view';
+import { LayoutAuthorizationSettingsAdmin } from './core/settings/authorization/layout/layout';
+import { MethodsAuthSettingsAdminView } from './core/settings/authorization/methods/methods-auth-settings-admin-view';
 import {
   EmailSettingsAdminView,
   generateMetadataEmailSettingsAdmin,
@@ -201,6 +204,24 @@ export const DynamicAdminView = async (props: {
     }
 
     if (slug[1] === 'settings') {
+      if (slug[2] === 'authorization' && !slug[4]) {
+        return (
+          <LayoutAuthorizationSettingsAdmin>
+            {(() => {
+              if (!slug[3]) {
+                return <AuthorizationSettingsAdminView />;
+              }
+
+              if (slug[3] === 'methods') {
+                return <MethodsAuthSettingsAdminView />;
+              }
+
+              notFound();
+            })()}
+          </LayoutAuthorizationSettingsAdmin>
+        );
+      }
+
       if (slug[2] === 'email' && !slug[4]) {
         return (
           <TranslationsProvider namespaces="admin.core.settings.email">

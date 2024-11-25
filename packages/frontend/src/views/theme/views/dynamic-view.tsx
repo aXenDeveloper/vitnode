@@ -7,6 +7,8 @@ import {
   generateMetadataSignIn,
   SignInView,
 } from './auth/sign/in/sign-in-view';
+import { CallbackSSOAuthView } from './auth/sign/sso/callback/callback-sso-auth-view';
+import { UrlSSOAuthView } from './auth/sign/sso/url-sso-auth-view';
 import { ConfirmEmailSignUpView } from './auth/sign/up/confirm-email/confirm-email-sign-up-view';
 import {
   generateMetadataSignUp,
@@ -35,7 +37,7 @@ export const generateMetadataDynamic = async (props: {
 }): Promise<Metadata> => {
   const { slug } = await props.params;
 
-  if (slug[0] === 'login') {
+  if (slug[0] === 'login' && !slug[2]) {
     return generateMetadataSignIn();
   }
 
@@ -87,7 +89,27 @@ export const DynamicView = async (props: {
   searchParams: Promise<Record<string, string>>;
 }) => {
   const { slug } = await props.params;
-  if (slug[0] === 'login') {
+  if (slug[0] === 'login' && !slug[4]) {
+    if (slug[1] === 'sso' && slug[2]) {
+      if (slug[3] === 'callback') {
+        const code = (await props.searchParams).code;
+
+        return (
+          <TranslationsProvider
+            namespaces={['core.sign_in.sso_first_login', 'core.sign_up']}
+          >
+            <CallbackSSOAuthView code={code} provider={slug[2]} />
+          </TranslationsProvider>
+        );
+      }
+
+      if (slug[3]) notFound();
+
+      return <UrlSSOAuthView provider={slug[2]} />;
+    }
+
+    if (slug[2]) notFound();
+
     return (
       <TranslationsProvider namespaces="core.sign_in">
         <SignInView />

@@ -8,7 +8,7 @@ export const NavNavBarMobile = () => {
 
   return (
     <Accordion asChild type="multiple">
-      <nav className="my-4 flex flex-col px-2">
+      <nav className="mb-4 flex flex-col px-2">
         {nav.map(item => (
           <ItemNavNavBarMobile key={item.id} {...item} />
         ))}

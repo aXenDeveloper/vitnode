@@ -232,14 +232,15 @@
     "sign_in": {
       "title": "Login",
       "desc": "You don't have an account? <link></link>.",
+      "or": "or",
       "sign_up": "Sign Up",
       "email": "Email",
       "password": "Password",
-      "remember": {
-        "label": "Remember me",
-        "desc": "Not recommended on shared computers."
-      },
       "submit": "Log In",
+      "sso_first_login": {
+        "title": "Almost there!",
+        "desc": "Please complete your registration by entering your name."
+      },
       "error": {
         "title": "Invalid credentials",
         "desc": "The email address or password was incorrect. Please try again (make sure your caps lock is off)."

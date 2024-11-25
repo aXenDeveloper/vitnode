@@ -11,7 +11,7 @@ export const core_users = pgTable(
     name_seo: t.varchar({ length: 255 }).notNull().unique(),
     name: t.varchar({ length: 255 }).notNull().unique(),
     email: t.varchar({ length: 255 }).notNull().unique(),
-    password: t.varchar().notNull(),
+    password: t.varchar(),
     joined_at: t.timestamp().notNull().defaultNow(),
     newsletter: t.boolean().notNull().default(false),
     avatar_color: t.varchar({ length: 6 }).notNull(),
@@ -39,7 +39,7 @@ export const core_users = pgTable(
   ],
 );
 
-export const core_users_relations = relations(core_users, ({ one }) => ({
+export const core_users_relations = relations(core_users, ({ one, many }) => ({
   group: one(core_groups, {
     fields: [core_users.group_id],
     references: [core_groups.id],
@@ -56,7 +56,36 @@ export const core_users_relations = relations(core_users, ({ one }) => ({
     fields: [core_users.id],
     references: [core_users_confirm_emails.user_id],
   }),
+  sso: many(core_users_sso_tokens),
 }));
+
+export const core_users_sso_tokens = pgTable(
+  'core_users_sso_tokens',
+  t => ({
+    id: t.serial().primaryKey(),
+    user_id: t
+      .integer()
+      .references(() => core_users.id, {
+        onDelete: 'cascade',
+      })
+      .notNull(),
+    provider: t.varchar({ length: 100 }).notNull(),
+    provider_id: t.varchar({ length: 255 }).notNull(),
+    created_at: t.timestamp().notNull().defaultNow(),
+    updated_at: t.timestamp().notNull().defaultNow(),
+  }),
+  t => [index('core_users_sso_tokens_user_id_idx').on(t.user_id)],
+);
+
+export const core_users_sso_tokens_relations = relations(
+  core_users_sso_tokens,
+  ({ one }) => ({
+    user: one(core_users, {
+      fields: [core_users_sso_tokens.user_id],
+      references: [core_users.id],
+    }),
+  }),
+);
 
 export const core_files_avatars = pgTable('core_files_avatars', t => ({
   id: t.serial().primaryKey(),

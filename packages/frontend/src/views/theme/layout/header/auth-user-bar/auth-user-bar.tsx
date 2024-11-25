@@ -12,8 +12,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { AvatarUser } from '@/components/ui/user/avatar';
 import { cn } from '@/helpers/classnames';
-import { useSignOutApi } from '@/hooks/sign/out/use-sign-out-api';
 import { Link } from '@/navigation';
+import { useSignOutApi } from '@/views/theme/layout/header/auth-user-bar/hooks/use-sign-out-api';
 import { KeyRoundIcon, LogOutIcon, SettingsIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';

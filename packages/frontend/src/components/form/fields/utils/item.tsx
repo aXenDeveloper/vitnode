@@ -1,5 +1,4 @@
 import { FormField, FormMessage } from '@/components/ui/form';
-import { cn } from '@/helpers/classnames';
 import React from 'react';
 import { Control, FieldPath, FieldValues, UseFormWatch } from 'react-hook-form';
 import * as z from 'zod';
@@ -38,7 +37,7 @@ export function ItemAutoForm<
   formSchema: T;
   hideOptionalLabel?: boolean;
   id: FieldPath<z.infer<T>>;
-  label?: string;
+  label?: React.ReactNode | string;
   theme: 'horizontal' | 'vertical';
   watch: UseFormWatch<FieldValues>;
 }) {
@@ -64,22 +63,7 @@ export function ItemAutoForm<
       name={id}
       render={({ field }) => {
         return (
-          <AutoFormWrapper
-            className={cn(
-              classNameWrapper,
-              {
-                'flex items-start space-x-3 space-y-0':
-                  component.name === 'AutoFormCheckbox',
-                'rounded-md border p-4':
-                  label && description && component.name === 'AutoFormCheckbox',
-              },
-              {
-                'gap-4 rounded-lg border p-4':
-                  component.name === 'AutoFormSwitch' && theme === 'vertical',
-              },
-            )}
-            theme={theme}
-          >
+          <AutoFormWrapper className={classNameWrapper} theme={theme}>
             {component({
               field,
               label,

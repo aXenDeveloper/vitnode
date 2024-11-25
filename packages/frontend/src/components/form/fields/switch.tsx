@@ -26,7 +26,7 @@ export function AutoFormSwitch({
 
   return (
     <>
-      <div>
+      <div className="space-y-1">
         {label && (
           <AutoFormLabel
             description={description}
