@@ -36,9 +36,7 @@ export const useSignUpView = () => {
       .default(''),
     password: z
       .string()
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+{};:,<.>]).{8,}$/,
-      )
+      .regex(/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+{};:,<.>]).{8,}$/)
       .default(''),
     terms: z
       .boolean()

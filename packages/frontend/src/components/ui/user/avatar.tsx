@@ -26,7 +26,7 @@ export const AvatarUser = ({
   return (
     <Image
       alt={name}
-      className={cn('object-cover', className)}
+      className={cn('rounded-full object-cover', className)}
       height={sizeInRem * 16}
       priority={!avatar}
       src={

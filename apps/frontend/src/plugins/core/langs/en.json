@@ -254,8 +254,6 @@
       "title": "Register",
       "desc": "You already have an account? <link></link>.",
       "sign_in": "Sign In",
-      "week_password": "Week",
-      "strong_password": "Strong",
       "email_invalid": "This email address is invalid.",
       "name": {
         "label": "Nickname",
@@ -270,7 +268,11 @@
       },
       "password": {
         "label": "Password",
-        "desc": "Min 8 characters, lowercase uppercase letter, number and special character."
+        "desc": "Password must have:",
+        "min_length": "At least 8 characters",
+        "uppercase": "At least one uppercase letter",
+        "number": "At least one number",
+        "special_char": "At least one special character"
       },
       "terms": {
         "label": "Accept terms and conditions",

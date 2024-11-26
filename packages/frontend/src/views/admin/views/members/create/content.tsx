@@ -1,8 +1,8 @@
 import { AutoForm } from '@/components/form/auto-form';
 import { AutoFormInput } from '@/components/form/fields/input';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { removeSpecialCharacters } from '@/helpers/special-characters';
+import { CircleCheck, CircleX } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useCreateUserAdmin } from './hooks/use-create-user-admin';
@@ -47,35 +47,55 @@ export const ContentCreateUserUsersMembersAdmin = () => {
         {
           id: 'password',
           label: t('password.label'),
-          description: t('password.desc'),
           component: props => {
             const value: string = props.field.value ?? '';
             const regexArray = [
-              /^.{8,}$/, // Min 8 characters
-              /[a-z]/, // Min 1 lowercase
-              /[A-Z]/, // Min 1 uppercase
-              /\d/, // Min 1 digit
-              /\W|_/, // Min 1 special character
+              {
+                regex: /^.{8,}$/.test(value),
+                id: 'min_length' as const,
+              },
+              {
+                regex: /[A-Z]/.test(value),
+                id: 'uppercase' as const,
+              },
+              {
+                regex: /\d/.test(value),
+                id: 'number' as const,
+              },
+              {
+                regex: /\W|_/.test(value),
+                id: 'special_char' as const,
+              },
             ];
-
-            const passRegexPassword = regexArray.reduce((acc, regex) => {
-              return acc + Number(regex.test(value));
-            }, 0);
 
             return (
               <>
-                <AutoFormInput {...props} type="password" />
-                {value.length > 0 && (
-                  <div>
-                    <div className="mb-2 flex justify-between text-xs font-semibold">
-                      <span>{t('week_password')}</span>
-                      <span>{t('strong_password')}</span>
-                    </div>
-                    <Progress
-                      value={(100 / regexArray.length) * passRegexPassword}
-                    />
-                  </div>
-                )}
+                <AutoFormInput
+                  {...props}
+                  className="bg-card shadow-sm"
+                  type="password"
+                />
+                <div className="text-sm">
+                  <span className="text-muted-foreground">
+                    {t('password.desc')}
+                  </span>
+                  <ul className="mt-1 space-y-1">
+                    {regexArray.map(({ regex, id }, index) => (
+                      <li
+                        className="text-muted-foreground flex flex-wrap gap-2"
+                        key={index}
+                      >
+                        {regex ? (
+                          <CircleCheck className="text-primary size-5" />
+                        ) : (
+                          <CircleX className="text-destructive size-5" />
+                        )}
+
+                        <span>{t(`password.${id}`)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </>
             );
           },
