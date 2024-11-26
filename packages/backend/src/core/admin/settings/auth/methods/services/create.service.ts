@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { existsSync } from 'fs';
-import { readFile, writeFile } from 'fs/promises';
+import { writeFile } from 'fs/promises';
 import {
   CreateMethodAuthSettingsAdminBody,
   ShowMethodAuthSettingsAdmin,

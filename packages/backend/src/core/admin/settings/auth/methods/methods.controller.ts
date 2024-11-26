@@ -6,6 +6,7 @@ import {
   Get,
   Param,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -16,12 +17,14 @@ import {
 } from '@nestjs/swagger';
 import {
   CreateMethodAuthSettingsAdminBody,
+  EditMethodAuthSettingsAdminBody,
   ShowMethodAuthSettingsAdmin,
   ShowMethodAuthSettingsAdminObj,
 } from 'vitnode-shared/admin/settings/auth.dto';
 
 import { CreateMethodsAuthSettingsAdminService } from './services/create.service';
 import { DeleteMethodsAuthSettingsAdminService } from './services/delete.service';
+import { EditMethodsAuthSettingsAdminService } from './services/edit.service';
 import { ShowMethodsAuthSettingsAdminService } from './services/show.service';
 
 @ApiTags('Admin')
@@ -33,6 +36,7 @@ export class MethodsAuthSettingsAdminController {
     private readonly showService: ShowMethodsAuthSettingsAdminService,
     private readonly createService: CreateMethodsAuthSettingsAdminService,
     private readonly deleteService: DeleteMethodsAuthSettingsAdminService,
+    private readonly editService: EditMethodsAuthSettingsAdminService,
   ) {}
 
   @Post()
@@ -52,6 +56,18 @@ export class MethodsAuthSettingsAdminController {
   })
   async deleteMethod(@Param('code') code: string): Promise<void> {
     return this.deleteService.delete(code);
+  }
+
+  @Put(':code')
+  @ApiOkResponse({
+    description: 'Edit auth method',
+    type: ShowMethodAuthSettingsAdmin,
+  })
+  async editMethod(
+    @Param('code') code: string,
+    @Body() body: EditMethodAuthSettingsAdminBody,
+  ): Promise<ShowMethodAuthSettingsAdmin> {
+    return this.editService.edit({ code, body });
   }
 
   @Get()

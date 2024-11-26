@@ -1,4 +1,4 @@
-import { AutoForm } from '@/components/form/auto-form';
+import { AutoForm, DependencyType } from '@/components/form/auto-form';
 import { AutoFormInput } from '@/components/form/fields/input';
 import { AutoFormSelect } from '@/components/form/fields/select';
 import { useTranslations } from 'next-intl';
@@ -6,18 +6,44 @@ import { ShowMethodAuthSettingsAdminObj } from 'vitnode-shared/admin/settings/au
 
 import { useCreateMethodAuthAdminApi } from './hooks/use-create-method-auth-admin-api';
 
-export const ContentCreateMethodsAuthSettingsAdmin = ({
-  enabledMethods,
-  edges,
-}: ShowMethodAuthSettingsAdminObj) => {
-  const { formSchema, onSubmit } = useCreateMethodAuthAdminApi({
-    edges,
-    enabledMethods,
-  });
+export const ContentCreateEditMethodsAuthSettingsAdmin = ({
+  dataFromSSR: { enabledMethods, edges },
+  data,
+}: {
+  data?: ShowMethodAuthSettingsAdminObj['edges'][0];
+  dataFromSSR: ShowMethodAuthSettingsAdminObj;
+}) => {
   const t = useTranslations('admin.core.settings.authorization.methods.create');
+  const { formSchema, onSubmit } = useCreateMethodAuthAdminApi({
+    dataFromSSR: {
+      enabledMethods,
+      edges,
+    },
+    data,
+  });
 
   return (
     <AutoForm
+      dependencies={[
+        {
+          sourceField: 'provider',
+          type: DependencyType.HIDES,
+          targetField: 'provider',
+          when: () => !!data,
+        },
+        {
+          sourceField: 'provider',
+          type: DependencyType.HIDES,
+          targetField: 'client_id',
+          when: (provider: string) => !provider,
+        },
+        {
+          sourceField: 'provider',
+          type: DependencyType.HIDES,
+          targetField: 'client_secret',
+          when: (provider: string) => !provider,
+        },
+      ]}
       fields={[
         {
           id: 'provider',

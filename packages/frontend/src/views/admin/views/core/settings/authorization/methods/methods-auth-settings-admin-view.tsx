@@ -3,8 +3,8 @@ import { HeaderContent } from '@/components/ui/header-content';
 import { getTranslations } from 'next-intl/server';
 import { ShowMethodAuthSettingsAdminObj } from 'vitnode-shared/admin/settings/auth.dto';
 
-import { CreateMethodsAuthSettingsAdmin } from '../create/create';
 import { ContentMethodsAuthSettingsAdmin } from './content';
+import { CreateMethodsAuthSettingsAdmin } from './create-edit/create';
 
 const getData = async () => {
   const { data } = await fetcher<ShowMethodAuthSettingsAdminObj>({
@@ -20,13 +20,18 @@ export const MethodsAuthSettingsAdminView = async () => {
     getTranslations('admin.core.settings.authorization.methods'),
     getData(),
   ]);
+  // Exclude edges from enabledMethods
+  const enabledMethods = data.enabledMethods.filter(
+    method => data.edges.findIndex(edge => edge.code === method.code) === -1,
+  );
 
   return (
     <>
       <HeaderContent h1={t('title')}>
-        {data.enabledMethods.length > 0 && (
-          <CreateMethodsAuthSettingsAdmin {...data} />
-        )}
+        <CreateMethodsAuthSettingsAdmin
+          dataFromSSR={data}
+          disabled={!enabledMethods.length}
+        />
       </HeaderContent>
       <ContentMethodsAuthSettingsAdmin {...data} />
     </>

@@ -7,7 +7,9 @@ import {
   ShowMethodAuthSettingsAdmin,
 } from 'vitnode-shared/admin/settings/auth.dto';
 
-export const mutationApi = async (body: CreateMethodAuthSettingsAdminBody) => {
+export const createMutationApi = async (
+  body: CreateMethodAuthSettingsAdminBody,
+) => {
   await fetcher<ShowMethodAuthSettingsAdmin, CreateMethodAuthSettingsAdminBody>(
     {
       url: '/admin/settings/auth/methods',

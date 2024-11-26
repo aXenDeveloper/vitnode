@@ -15,19 +15,19 @@ import React from 'react';
 
 const Content = React.lazy(async () =>
   import('./content').then(module => ({
-    default: module.ContentCreateMethodsAuthSettingsAdmin,
+    default: module.ContentCreateEditMethodsAuthSettingsAdmin,
   })),
 );
 
 export const CreateMethodsAuthSettingsAdmin = (
-  props: React.ComponentProps<typeof Content>,
+  props: { disabled: boolean } & React.ComponentProps<typeof Content>,
 ) => {
   const t = useTranslations('admin.core.settings.authorization.methods.create');
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button>
+        <Button disabled={props.disabled}>
           <PlusIcon /> {t('title')}
         </Button>
       </DialogTrigger>

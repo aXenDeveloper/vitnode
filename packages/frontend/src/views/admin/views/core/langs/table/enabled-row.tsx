@@ -20,7 +20,9 @@ export const EnabledRowTableLangsCoreAdmin = ({
       checked={checked}
       disabled={data.default || data.code === locale}
       onClick={async () => {
-        changeChecked(!checked);
+        React.startTransition(() => {
+          changeChecked(!checked);
+        });
 
         try {
           await editMutationApi({
@@ -33,7 +35,9 @@ export const EnabledRowTableLangsCoreAdmin = ({
           toast.error(t('title'), {
             description: t('internal_server_error'),
           });
-          changeChecked(!checked);
+          React.startTransition(() => {
+            changeChecked(!checked);
+          });
         }
       }}
     />

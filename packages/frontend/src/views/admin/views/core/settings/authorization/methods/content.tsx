@@ -9,6 +9,7 @@ import { EnabledContentMethodsAuthSettingsAdmin } from './enabled';
 
 export const ContentMethodsAuthSettingsAdmin = ({
   edges,
+  enabledMethods,
 }: ShowMethodAuthSettingsAdminObj) => {
   const t = useTranslations('admin.core.settings.authorization.methods');
 
@@ -29,7 +30,12 @@ export const ContentMethodsAuthSettingsAdmin = ({
         {
           id: 'actions',
           cell: ({ row }) => {
-            return <ActionsContentMethodsAuthSettingsAdmin {...row} />;
+            return (
+              <ActionsContentMethodsAuthSettingsAdmin
+                data={row}
+                dataFromSSR={{ edges, enabledMethods }}
+              />
+            );
           },
         },
       ]}

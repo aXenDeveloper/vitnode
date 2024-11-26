@@ -173,7 +173,12 @@
               "title": "Create Method",
               "provider": "Provider",
               "client_id": "Client ID",
-              "client_secret": "Client Secret"
+              "client_secret": "Client Secret",
+              "success": "Login method has been created."
+            },
+            "edit": {
+              "title": "Edit Method",
+              "success": "Login method has been updated."
             },
             "delete": {
               "desc": "This action will delete the login method <name></name>.",
