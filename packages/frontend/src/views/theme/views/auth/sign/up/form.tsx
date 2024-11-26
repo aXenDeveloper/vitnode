@@ -1,10 +1,11 @@
 'use client';
 
-import { AutoForm } from '@/components/form/auto-form';
+import { AutoForm, DependencyType } from '@/components/form/auto-form';
 import { AutoFormCheckbox } from '@/components/form/fields/checkbox';
 import { AutoFormInput } from '@/components/form/fields/input';
 import { Button } from '@/components/ui/button';
 import { removeSpecialCharacters } from '@/helpers/special-characters';
+import { useMiddlewareData } from '@/hooks/use-middleware-data';
 import { Link } from '@/navigation';
 import { CircleCheck, CircleX, LogIn } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -14,9 +15,18 @@ import { useSignUpView } from './hooks/use-sign-up-view';
 export const FormSignUp = () => {
   const t = useTranslations('core.sign_up');
   const { formSchema, onSubmit } = useSignUpView();
+  const { is_email_enabled } = useMiddlewareData();
 
   return (
     <AutoForm
+      dependencies={[
+        {
+          sourceField: 'newsletter',
+          type: DependencyType.HIDES,
+          targetField: 'newsletter',
+          when: () => !is_email_enabled,
+        },
+      ]}
       fields={[
         {
           id: 'name',
