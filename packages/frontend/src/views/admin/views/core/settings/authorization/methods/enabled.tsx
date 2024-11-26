@@ -1,24 +1,21 @@
 import { Switch } from '@/components/ui/switch';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import React from 'react';
 import { toast } from 'sonner';
-import { LanguagesAdminObj } from 'vitnode-shared/admin/language.dto';
+import { ShowMethodAuthSettingsAdminObj } from 'vitnode-shared/admin/settings/auth.dto';
 
-import { editMutationApi } from '../create-edit/hooks/edit-mutation-api';
+import { editMutationApi } from './create-edit/hooks/edit-mutation-api';
 
-export const EnabledRowTableLangsCoreAdmin = ({
-  data,
-}: {
-  data: LanguagesAdminObj;
-}) => {
-  const locale = useLocale();
-  const t = useTranslations('core.global.errors');
+export const EnabledContentMethodsAuthSettingsAdmin = (
+  data: ShowMethodAuthSettingsAdminObj['edges'][0],
+) => {
   const [checked, changeChecked] = React.useOptimistic(data.enabled);
+  const t = useTranslations('core.global.errors');
 
   return (
     <Switch
       checked={checked}
-      disabled={data.default || data.code === locale}
+      disabled={data.code === 'standard'}
       onClick={async () => {
         React.startTransition(() => {
           changeChecked(!checked);
@@ -28,8 +25,6 @@ export const EnabledRowTableLangsCoreAdmin = ({
           await editMutationApi({
             ...data,
             enabled: !data.enabled,
-            time_24: data.time_24,
-            allow_in_input: data.allow_in_input,
           });
         } catch (_) {
           toast.error(t('title'), {

@@ -166,7 +166,28 @@
             }
           },
           "methods": {
-            "title": "Login Methods"
+            "title": "Login Methods",
+            "name": "Name",
+            "enabled": "Enabled",
+            "create": {
+              "title": "Create Method",
+              "desc": "New login method for your website.",
+              "provider": "Provider",
+              "client_id": "Client ID",
+              "client_secret": "Client Secret",
+              "success": "Login method has been created.",
+              "your_callback_url": "Your callback URL"
+            },
+            "edit": {
+              "title": "Edit Method",
+              "success": "Login method has been updated."
+            },
+            "delete": {
+              "desc": "This action will delete the login method <name></name>.",
+              "warn": "If you delete this login method, users who use this method to log in will not be able to log in.",
+              "success": "Login method has been deleted.",
+              "submit": "Yes, delete login method"
+            }
           }
         },
         "legal": {

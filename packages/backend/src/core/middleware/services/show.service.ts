@@ -72,6 +72,7 @@ export class ShowMiddlewareService {
     const manifest = await this.getManifest({
       langCodes: langs.map(lang => lang.code),
     });
+    const SSOs = await this.ssoHelper.getActiveSSOs();
 
     return {
       logos: config.logos,
@@ -82,13 +83,10 @@ export class ShowMiddlewareService {
       },
       auth_methods: {
         password: true,
-        sso: this.ssoHelper
-          .getSSOs()
-          .filter(item => item.enabled)
-          .map(sso => ({
-            name: sso.name,
-            code: sso.code,
-          })),
+        sso: SSOs.filter(item => item.enabled).map(sso => ({
+          name: sso.name,
+          code: sso.code,
+        })),
       },
       plugins: ['admin', 'core', ...plugins.map(plugin => plugin.code)],
       languages_code_default: langs.find(lang => lang.default)?.code ?? 'en',

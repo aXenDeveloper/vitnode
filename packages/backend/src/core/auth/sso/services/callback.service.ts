@@ -33,15 +33,14 @@ export class CallbackSSOAuthService {
     const frontendUrl: string = this.configService.getOrThrow('frontend_url');
     const redirectUri = (code: string) =>
       `${frontendUrl}/login/sso/${code}/callback`;
-    const ssoProvider = this.ssoHelper.getSSO(provider);
+    const ssoProvider = await this.ssoHelper.getActiveSSO(provider);
     if (!ssoProvider.enabled) {
       throw new ForbiddenException('SSO provider not enabled');
     }
 
     const { access_token } = await ssoProvider.callback({
-      client_id:
-        '1067408430287-igio7a4koou4i26n8vvmqo4eqtcp9gka.apps.googleusercontent.com',
-      client_secret: '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',
+      client_id: ssoProvider.client_id,
+      client_secret: ssoProvider.client_secret,
       redirect_uri: redirectUri(provider),
       code,
     });

@@ -43,7 +43,7 @@ export class RegisterCallbackSSOAuthService {
     if (config.settings.authorization.lock_register) {
       throw new ForbiddenException('Register is locked');
     }
-    const sso = this.ssoAuthHelper.getSSO(provider);
+    const sso = await this.ssoAuthHelper.getActiveSSO(provider);
     const data = await sso.registerCallback({ access_token });
     if (provider_id !== data.id) {
       throw new ConflictException('Provider id does not match');

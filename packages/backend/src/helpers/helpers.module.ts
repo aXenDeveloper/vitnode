@@ -9,7 +9,7 @@ import {
 
 import { DeviceAuthService } from './auth/device.service';
 import { InternalAuthAdminService } from './auth/internal_auth_admin.service';
-import { SSOAuthHelper } from './auth/sso.service';
+import { SSOAuthHelper, SSOAuthItem } from './auth/sso.service';
 import { CaptchaHelper } from './captcha/captcha.service';
 import { EmailHelperService } from './email/email.service';
 import { EmailHelpersService } from './email/email-helpers.service';
@@ -24,7 +24,10 @@ import { UserHelper } from './user.service';
 @Global()
 @Module({})
 export class GlobalHelpersModule {
-  static register(options: { email?: EmailSenderFunction }): DynamicModule {
+  static register(options: {
+    email?: EmailSenderFunction;
+    ssoLoginMethod?: SSOAuthItem[];
+  }): DynamicModule {
     return {
       module: GlobalHelpersModule,
       providers: [
@@ -40,6 +43,10 @@ export class GlobalHelpersModule {
 
             await options.email(params);
           },
+        },
+        {
+          provide: 'VITNODE_SSO_LOGIN_METHODS',
+          useValue: options.ssoLoginMethod ?? [],
         },
         {
           provide: 'VITNODE_EMAIL_SENDER_IS_ENABLED',

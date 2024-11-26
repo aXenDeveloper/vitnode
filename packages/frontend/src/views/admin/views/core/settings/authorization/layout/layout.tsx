@@ -1,5 +1,4 @@
 import { TranslationsProvider } from '@/components/translations-provider';
-import { Card } from '@/components/ui/card';
 import { HeaderContent } from '@/components/ui/header-content';
 import { getTranslations } from 'next-intl/server';
 
@@ -21,7 +20,7 @@ export const LayoutAuthorizationSettingsAdmin = async ({
       <HeaderContent desc={t('desc')} h1={t('title')} />
       <TabsLayoutAuthorizationSettingsAdmin />
 
-      <Card className="p-6">{children}</Card>
+      {children}
     </TranslationsProvider>
   );
 };
