@@ -1,6 +1,7 @@
 'use client';
 
 import { DateFormat } from '@/components/date-format';
+import { ImgFromApi } from '@/components/img';
 import { buttonVariants } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import {
@@ -13,7 +14,6 @@ import { CONFIG } from '@/helpers/config-with-env';
 import { formatBytes } from '@/helpers/format-bytes';
 import { Link } from '@/navigation';
 import { Clock, Download, File } from 'lucide-react';
-import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { ShowFilesSettingsAuthObj } from 'vitnode-shared/auth/settings/files.dto';
@@ -31,21 +31,21 @@ export const ContentFilesSettings = ({
         {
           id: 'id',
           cell: ({ row }) => {
-            const src =
-              row.width && row.height
-                ? `${CONFIG.backend_public_url}/${row.dir_folder}/${row.file_name}`
-                : null;
             const alt = row.file_alt ?? row.file_name;
 
             return (
               <div className="relative flex h-14 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg">
-                {row.width && row.height && src ? (
-                  <Image
+                {row.width && row.height ? (
+                  <ImgFromApi
                     alt={alt}
                     className="object-cover"
+                    dir_folder={row.dir_folder}
+                    file_name={row.file_name}
                     fill
+                    height={row.height}
+                    mimetype={row.mimetype}
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    src={src}
+                    width={row.width}
                   />
                 ) : (
                   <File className="text-muted-foreground size-8" />

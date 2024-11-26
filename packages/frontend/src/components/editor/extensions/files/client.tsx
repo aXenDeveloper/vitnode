@@ -1,5 +1,6 @@
 'use client';
 
+import { ImgFromApi } from '@/components/img';
 import { acceptMimeTypeImage } from '@/helpers/files-support';
 import { formatBytes } from '@/helpers/format-bytes';
 import {
@@ -8,11 +9,9 @@ import {
   ReactNodeViewRenderer,
 } from '@tiptap/react';
 import { File } from 'lucide-react';
-import Image from 'next/image';
 import React from 'react';
 import Moveable from 'react-moveable';
 
-import { CONFIG } from '../../../../helpers/config-with-env';
 import { FilesHandlerAttributes } from './files';
 
 const FileComponent = ({
@@ -42,12 +41,14 @@ const FileComponent = ({
             height: data.height,
           }}
         >
-          <Image
+          <ImgFromApi
             alt={data.file_alt ?? data.file_name_original}
             className="h-auto w-full"
+            dir_folder={data.dir_folder}
+            file_name={data.file_name}
             fill
+            mimetype={data.mimetype}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            src={`${CONFIG.backend_public_url}/${data.dir_folder}/${data.file_name}`}
           />
         </div>
         {selected && (

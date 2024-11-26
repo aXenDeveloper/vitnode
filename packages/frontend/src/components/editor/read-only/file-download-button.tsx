@@ -1,9 +1,9 @@
 'use client';
 
+import { ImgFromApi } from '@/components/img';
 import { acceptMimeTypeImage } from '@/helpers/files-support';
 import { formatBytes } from '@/helpers/format-bytes';
 import { File } from 'lucide-react';
-import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 
 import { CONFIG } from '../../../helpers/config-with-env';
@@ -39,12 +39,14 @@ export const FileDownloadButton = ({
   if (acceptMimeTypeImage.includes(mimetype) && width && height) {
     return (
       <span className="inline-block">
-        <Image
+        <ImgFromApi
           alt={file_alt ?? file_name_original}
           className="h-auto w-full"
+          dir_folder={dir_folder}
+          file_name={file_name}
           height={height}
+          mimetype={mimetype}
           sizes="100vw"
-          src={`${CONFIG.backend_public_url}/${dir_folder}/${file_name}`}
           width={width}
         />
       </span>

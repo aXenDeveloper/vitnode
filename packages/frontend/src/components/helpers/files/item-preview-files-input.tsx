@@ -1,6 +1,6 @@
+import { ImgFromApi } from '@/components/img';
 import { FileInput, FilesInputValue } from '@/components/ui/file-input';
 import { cn } from '@/helpers/classnames';
-import { CONFIG } from '@/helpers/config-with-env';
 import { Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
@@ -71,17 +71,27 @@ export const ItemPreviewFilesInput = ({
             'size-10': !showInfo,
           })}
         >
-          <Image
-            alt={file instanceof File ? file.name : file.file_name_original}
-            className="object-contain"
-            fill
-            sizes="100px"
-            src={
-              file instanceof File
-                ? URL.createObjectURL(file)
-                : `${CONFIG.backend_public_url}/${file.dir_folder}/${file.file_name}`
-            }
-          />
+          {file instanceof File ? (
+            <Image
+              alt={file.name}
+              className="object-contain"
+              fill
+              sizes="100px"
+              src={URL.createObjectURL(file)}
+            />
+          ) : (
+            <ImgFromApi
+              alt={file.file_name_original}
+              className="object-contain"
+              dir_folder={file.dir_folder}
+              file_name={file.file_name}
+              fill
+              height={file.height ?? 100}
+              mimetype={file.mimetype}
+              sizes="100px"
+              width={file.width ?? 100}
+            />
+          )}
         </div>
       )}
       <div className="mr-6 truncate">

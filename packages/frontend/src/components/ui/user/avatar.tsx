@@ -1,4 +1,4 @@
-import { Img } from '@/components/img';
+import Image from 'next/image';
 import { AvatarUser as AvatarUserType } from 'vitnode-shared/user.dto';
 
 import { cn } from '../../../helpers/classnames';
@@ -24,11 +24,10 @@ export const AvatarUser = ({
   };
 }) => {
   return (
-    <Img
+    <Image
       alt={name}
-      className={cn('flex-shrink-0 rounded-full', className)}
+      className={cn('object-cover', className)}
       height={sizeInRem * 16}
-      imageClassName="object-cover"
       priority={!avatar}
       src={
         avatar
