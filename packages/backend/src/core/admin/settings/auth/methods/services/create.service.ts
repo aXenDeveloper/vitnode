@@ -48,22 +48,18 @@ export class CreateMethodsAuthSettingsAdminService {
       };
     }
 
-    const ssoConfigFile: SSOAuthConfig = JSON.parse(
-      await readFile(this.ssoAuthHelper.path, 'utf8'),
-    );
-
-    const checkIfSSOExists = ssoConfigFile.sso.find(item => item.code === code);
+    const ssoConfig = await this.ssoAuthHelper.getSSOConfig();
+    const checkIfSSOExists = ssoConfig.sso.find(item => item.code === code);
     if (checkIfSSOExists) {
       throw new ConflictException(
         `SSO method with ${code} code already exists`,
       );
     }
 
-    ssoConfigFile.sso.push(dataSSO);
-
+    ssoConfig.sso.push(dataSSO);
     await writeFile(
       this.ssoAuthHelper.path,
-      JSON.stringify(ssoConfigFile, null, 2),
+      JSON.stringify(ssoConfig, null, 2),
     );
 
     return {

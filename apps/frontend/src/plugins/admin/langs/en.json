@@ -174,6 +174,12 @@
               "provider": "Provider",
               "client_id": "Client ID",
               "client_secret": "Client Secret"
+            },
+            "delete": {
+              "desc": "This action will delete the login method <name></name>.",
+              "warn": "If you delete this login method, users who use this method to log in will not be able to log in.",
+              "success": "Login method has been deleted.",
+              "submit": "Yes, delete login method"
             }
           }
         },

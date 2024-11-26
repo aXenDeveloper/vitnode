@@ -4,6 +4,7 @@ import { DataTable } from '@/components/ui/data-table';
 import { useTranslations } from 'next-intl';
 import { ShowMethodAuthSettingsAdminObj } from 'vitnode-shared/admin/settings/auth.dto';
 
+import { ActionsContentMethodsAuthSettingsAdmin } from './actions/actions';
 import { EnabledContentMethodsAuthSettingsAdmin } from './enabled';
 
 export const ContentMethodsAuthSettingsAdmin = ({
@@ -27,8 +28,8 @@ export const ContentMethodsAuthSettingsAdmin = ({
         },
         {
           id: 'actions',
-          cell: () => {
-            return <div>actions</div>;
+          cell: ({ row }) => {
+            return <ActionsContentMethodsAuthSettingsAdmin {...row} />;
           },
         },
       ]}

@@ -78,12 +78,10 @@ export class SSOAuthHelper {
       return [];
     }
 
-    const ssoConfigFile: SSOAuthConfig = JSON.parse(
-      await readFile(this.path, 'utf8'),
-    );
+    const ssoConfig = await this.getSSOConfig();
     const SSOs = this.getSSOs();
     const activeSSOs: ShowMethodAuthSettingsAdmin[] = [];
-    ssoConfigFile.sso.forEach(sso => {
+    ssoConfig.sso.forEach(sso => {
       const ssoItem = SSOs.find(item => item.code === sso.code);
       if (!ssoItem) return;
 
@@ -98,6 +96,14 @@ export class SSOAuthHelper {
 
   getSSO(code: string) {
     return this.getSSOs().find(sso => sso.code === code);
+  }
+
+  async getSSOConfig(): Promise<SSOAuthConfig> {
+    if (!existsSync(this.path)) {
+      return { sso: [] };
+    }
+
+    return JSON.parse(await readFile(this.path, 'utf8'));
   }
 
   getSSOs(): SSOAuthItem[] {
