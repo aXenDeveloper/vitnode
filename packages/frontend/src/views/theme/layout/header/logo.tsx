@@ -1,16 +1,10 @@
 import { getMiddlewareData } from '@/api/get-middleware-data';
+import { ImgFromApi } from '@/components/img';
 import { cn } from '@/helpers/classnames';
-import { CONFIG } from '@/helpers/config-with-env';
 import { Link } from '@/navigation';
-import Image from 'next/image';
 
 export const LogoHeader = async ({ className }: { className?: string }) => {
   const { logos } = await getMiddlewareData();
-  // console.log(
-  //   'logos',
-  //   logos,
-  //   `${CONFIG.backend_public_url}/${logos.logo_light.dir_folder}/${logos.logo_light.file_name}`,
-  // );
 
   return (
     <Link
@@ -40,7 +34,7 @@ export const LogoHeader = async ({ className }: { className?: string }) => {
       ) : null}
 
       {logos.logo_light?.height && logos.logo_light.width && (
-        <Image
+        <ImgFromApi
           alt={logos.text}
           className={cn(
             'w-[--logo-mobile-width] sm:w-[--logo-width]',
@@ -51,15 +45,17 @@ export const LogoHeader = async ({ className }: { className?: string }) => {
                 logos.mobile_logo_light ?? logos.mobile_logo_dark,
             },
           )}
+          dir_folder={logos.logo_light.dir_folder}
+          file_name={logos.logo_light.file_name}
           height={logos.logo_light.height}
           id="vitnode_logo_light"
+          mimetype={logos.logo_light.mimetype}
           sizes="100vw"
-          src={`${CONFIG.backend_public_url}/${logos.logo_light.dir_folder}/${logos.logo_light.file_name}`}
           width={logos.logo_light.width}
         />
       )}
       {logos.logo_dark?.height && logos.logo_dark.width && (
-        <Image
+        <ImgFromApi
           alt={logos.text}
           className={cn(
             'w-[--logo-mobile-width] sm:w-[--logo-width]',
@@ -71,16 +67,18 @@ export const LogoHeader = async ({ className }: { className?: string }) => {
                 logos.mobile_logo_dark ?? logos.mobile_logo_light,
             },
           )}
+          dir_folder={logos.logo_dark.dir_folder}
+          file_name={logos.logo_dark.file_name}
           height={logos.logo_dark.height}
           id="vitnode_logo_dark"
+          mimetype={logos.logo_dark.mimetype}
           sizes="100vw"
-          src={`${CONFIG.backend_public_url}/${logos.logo_dark.dir_folder}/${logos.logo_dark.file_name}`}
           width={logos.logo_dark.width}
         />
       )}
 
       {logos.mobile_logo_light?.height && logos.mobile_logo_light.width && (
-        <Image
+        <ImgFromApi
           alt={logos.text}
           className={cn(
             'w-[--logo-mobile-width] sm:w-[--logo-width]',
@@ -90,15 +88,17 @@ export const LogoHeader = async ({ className }: { className?: string }) => {
               'dark:hidden': logos.mobile_logo_dark,
             },
           )}
+          dir_folder={logos.mobile_logo_light.dir_folder}
+          file_name={logos.mobile_logo_light.file_name}
           height={logos.mobile_logo_light.height}
           id="vitnode_logo_mobile_light"
+          mimetype={logos.mobile_logo_light.mimetype}
           sizes="100vw"
-          src={`${CONFIG.backend_public_url}/${logos.mobile_logo_light.dir_folder}/${logos.mobile_logo_light.file_name}`}
           width={logos.mobile_logo_light.width}
         />
       )}
       {logos.mobile_logo_dark?.height && logos.mobile_logo_dark.width && (
-        <Image
+        <ImgFromApi
           alt={logos.text}
           className={cn(
             'w-[--logo-mobile-width] sm:w-[--logo-width]',
@@ -109,10 +109,12 @@ export const LogoHeader = async ({ className }: { className?: string }) => {
               'hidden dark:block': logos.mobile_logo_light,
             },
           )}
+          dir_folder={logos.mobile_logo_dark.dir_folder}
+          file_name={logos.mobile_logo_dark.file_name}
           height={logos.mobile_logo_dark.height}
           id="vitnode_logo_mobile_dark"
+          mimetype={logos.mobile_logo_dark.mimetype}
           sizes="100vw"
-          src={`${CONFIG.backend_public_url}/${logos.mobile_logo_dark.dir_folder}/${logos.mobile_logo_dark.file_name}`}
           width={logos.mobile_logo_dark.width}
         />
       )}

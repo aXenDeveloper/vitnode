@@ -58,7 +58,7 @@ export const MobileLogosSidebarThemeEditorStyleAdmin = () => {
                       maxFileSizeInMb={2}
                       onChange={file => {
                         field.onChange(file);
-                        updateLogo({ file, id: ThemeEditorIds.light });
+                        updateLogo({ file, id: ThemeEditorIds.mobile_light });
                       }}
                     />
                   </FormControl>
@@ -81,7 +81,7 @@ export const MobileLogosSidebarThemeEditorStyleAdmin = () => {
                       maxFileSizeInMb={2}
                       onChange={file => {
                         field.onChange(file);
-                        updateLogo({ file, id: ThemeEditorIds.dark });
+                        updateLogo({ file, id: ThemeEditorIds.mobile_dark });
                       }}
                     />
                   </FormControl>
