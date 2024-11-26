@@ -120,7 +120,7 @@ export class HelperSignUpAuthService {
         email,
         name,
         name_seo: convertToNameSEO,
-        newsletter,
+        newsletter: this.mailService.checkIfEnable() ? newsletter : false,
         password: hashPassword,
         avatar_color: generateAvatarColor(name),
         group_id,

@@ -59,8 +59,7 @@
         }
       },
       "email": {
-        "hello": "Hello",
-        "footer": "You're receiving this email because your account activity triggered this email. Please do not reply to this email. If you have any questions, please contact us at:"
+        "hello": "Hello"
       },
       "settings": {
         "main": {

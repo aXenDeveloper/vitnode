@@ -2,7 +2,6 @@ import {
   Body,
   Container,
   Head,
-  Hr,
   Html,
   Img,
   Link,
@@ -37,7 +36,6 @@ export const EmailTemplate = ({
     site_short_name,
     backend_url,
     logo,
-    contact_email,
   },
   user,
 }: EmailTemplateProps) => {
@@ -105,9 +103,7 @@ export const EmailTemplate = ({
           },
         }}
       >
-        <Body
-          className={`bg-${color.background} mx-auto px-2 font-sans text-${color.foreground}`}
-        >
+        <Body className={`mx-auto px-2 font-sans text-${color.foreground}`}>
           <Container className="max-w-[600px]">
             <Section className="my-8 text-xl">
               {logo ? (
@@ -138,19 +134,6 @@ export const EmailTemplate = ({
               ) : (
                 children
               )}
-
-              <Hr
-                className={`mx-0 my-6 w-full border border-solid border-${color.border}`}
-              />
-              <Text className={`text-xs text-${color.muted.foreground}`}>
-                {t('footer')}{' '}
-                <Link
-                  className={`text-${color.primary.DEFAULT}`}
-                  href={`mailto:${contact_email}`}
-                >
-                  {contact_email}
-                </Link>
-              </Text>
             </Section>
 
             <Section className="my-8 text-center text-sm">
