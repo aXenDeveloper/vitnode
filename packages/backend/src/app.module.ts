@@ -6,6 +6,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
 import { CoreModule } from './core/core.module';
+import { SSOAuthItem } from './helpers/auth/sso.service';
 import { EmailSenderFunction } from './helpers/email/email-helpers.type';
 import { GlobalHelpersModule } from './helpers/helpers.module';
 import {
@@ -162,9 +163,11 @@ export class VitNodeCoreModule {
   static register({
     database,
     email,
+    ssoLoginMethod,
   }: {
     database: DatabaseModuleArgs;
     email?: EmailSenderFunction;
+    ssoLoginMethod?: SSOAuthItem[];
   }): DynamicModule {
     return {
       module: VitNodeCoreModule,
@@ -181,7 +184,7 @@ export class VitNodeCoreModule {
           rootPath: ABSOLUTE_PATHS.uploads.public,
           serveRoot: '/public/',
         }),
-        GlobalHelpersModule.register({ email }),
+        GlobalHelpersModule.register({ email, ssoLoginMethod }),
       ],
     };
   }

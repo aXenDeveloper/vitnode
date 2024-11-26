@@ -49,7 +49,7 @@ export class SSOAuthController {
     type: SSOUrlAuthObj,
     description: 'Get SSO URL',
   })
-  getUrl(@Param('provider') provider: string): SSOUrlAuthObj {
+  async getUrl(@Param('provider') provider: string): Promise<SSOUrlAuthObj> {
     return this.getUrlSSO.getUrlSSO(provider);
   }
 

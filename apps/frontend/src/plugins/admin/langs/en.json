@@ -168,7 +168,13 @@
           "methods": {
             "title": "Login Methods",
             "name": "Name",
-            "enabled": "Enabled"
+            "enabled": "Enabled",
+            "create": {
+              "title": "Create Method",
+              "provider": "Provider",
+              "client_id": "Client ID",
+              "client_secret": "Client Secret"
+            }
           }
         },
         "legal": {

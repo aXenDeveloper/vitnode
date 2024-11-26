@@ -7,7 +7,10 @@ export class ShowMethodsAuthSettingsAdminService {
   constructor(private readonly ssoAuthHelper: SSOAuthHelper) {}
 
   async show(): Promise<ShowMethodAuthSettingsAdminObj> {
-    const test = this.ssoAuthHelper.getSSOs();
+    const [activeSSOs, enabledSSOs] = await Promise.all([
+      this.ssoAuthHelper.getActiveSSOs(),
+      this.ssoAuthHelper.getSSOs(),
+    ]);
 
     return {
       edges: [
@@ -15,7 +18,16 @@ export class ShowMethodsAuthSettingsAdminService {
           name: 'Standard',
           code: 'standard',
           enabled: true,
+          client_id: '',
+          client_secret: '',
         },
+        ...activeSSOs,
+      ],
+      enabledMethods: [
+        ...enabledSSOs.map(method => ({
+          code: method.code,
+          name: method.name,
+        })),
       ],
     };
   }

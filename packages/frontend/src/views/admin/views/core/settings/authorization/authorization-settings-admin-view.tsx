@@ -1,9 +1,9 @@
 import { fetcher } from '@/api/fetcher';
 import { getMiddlewareData } from '@/api/get-middleware-data';
+import { Card } from '@/components/ui/card';
 import { ShowAuthSettingsAdminObj } from 'vitnode-shared/admin/settings/auth.dto';
 
 import { ContentAuthorizationSettingsAdminView } from './content';
-import { Card } from '@/components/ui/card';
 
 const getData = async () => {
   const { data } = await fetcher<ShowAuthSettingsAdminObj>({

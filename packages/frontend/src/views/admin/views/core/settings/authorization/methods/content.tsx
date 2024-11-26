@@ -1,9 +1,10 @@
 'use client';
 
 import { DataTable } from '@/components/ui/data-table';
-import { ShowMethodAuthSettingsAdminObj } from 'vitnode-shared/admin/settings/auth.dto';
-import { EnabledContentMethodsAuthSettingsAdmin } from './enabled';
 import { useTranslations } from 'next-intl';
+import { ShowMethodAuthSettingsAdminObj } from 'vitnode-shared/admin/settings/auth.dto';
+
+import { EnabledContentMethodsAuthSettingsAdmin } from './enabled';
 
 export const ContentMethodsAuthSettingsAdmin = ({
   edges,

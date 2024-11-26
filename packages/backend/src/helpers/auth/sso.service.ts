@@ -1,9 +1,19 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ABSOLUTE_PATHS } from '@/app.module';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { existsSync } from 'fs';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
+import { ShowMethodAuthSettingsAdmin } from 'vitnode-shared/admin/settings/auth.dto';
 import { SSOUrlAuthObj } from 'vitnode-shared/auth/sso.dto';
+
+export interface SSOAuthConfig {
+  sso: {
+    client_id: string;
+    client_secret: string;
+    code: string;
+    enabled: boolean;
+  }[];
+}
 
 export interface SSOAuthCallbackObj {
   email: string;
@@ -22,7 +32,6 @@ export interface SSOAuthItem {
     access_token: string;
   }>;
   code: string;
-  enabled: boolean;
   getUrl: (args: {
     client_id: string;
     redirect_uri: string;
@@ -35,84 +44,63 @@ export interface SSOAuthItem {
 
 @Injectable()
 export class SSOAuthHelper {
-  getSSO(code: string): SSOAuthItem {
-    const item = this.getSSOs().find(sso => sso.code === code);
-    if (!item) {
+  constructor(
+    @Inject('VITNODE_SSO_LOGIN_METHODS')
+    private readonly loginMethods: SSOAuthItem[],
+  ) {}
+
+  path = join(
+    ABSOLUTE_PATHS.plugin({ code: 'core' }).root,
+    'utils',
+    'sso.config.json',
+  );
+
+  async getActiveSSO(
+    code: string,
+  ): Promise<SSOAuthConfig['sso'][0] & SSOAuthItem> {
+    const item = this.getSSO(code);
+    if (!item || !existsSync(this.path)) {
       throw new NotFoundException(`SSO provider with ${code} code not found`);
     }
 
-    return item;
+    const ssoConfig = (await this.getActiveSSOs()).find(
+      sso => sso.code === code,
+    );
+    if (!ssoConfig) {
+      throw new NotFoundException(`SSO provider with ${code} code not found`);
+    }
+
+    return { ...item, ...ssoConfig };
+  }
+
+  async getActiveSSOs(): Promise<ShowMethodAuthSettingsAdmin[]> {
+    if (!existsSync(this.path)) {
+      return [];
+    }
+
+    const ssoConfigFile: SSOAuthConfig = JSON.parse(
+      await readFile(this.path, 'utf8'),
+    );
+    const SSOs = this.getSSOs();
+    const activeSSOs: ShowMethodAuthSettingsAdmin[] = [];
+    ssoConfigFile.sso.forEach(sso => {
+      const ssoItem = SSOs.find(item => item.code === sso.code);
+      if (!ssoItem) return;
+
+      activeSSOs.push({
+        ...sso,
+        name: ssoItem.name,
+      });
+    });
+
+    return activeSSOs;
+  }
+
+  getSSO(code: string) {
+    return this.getSSOs().find(sso => sso.code === code);
   }
 
   getSSOs(): SSOAuthItem[] {
-    return [
-      {
-        name: 'Google',
-        code: 'google',
-        enabled: true,
-        getUrl: ({ redirect_uri, client_id }) => {
-          const params = new URLSearchParams({
-            client_id,
-            redirect_uri,
-            response_type: 'code',
-            scope: 'openid profile email',
-          });
-
-          return {
-            url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
-          };
-        },
-        callback: async ({ client_id, client_secret, redirect_uri, code }) => {
-          const body = {
-            client_id,
-            client_secret,
-            code,
-            grant_type: 'authorization_code',
-            redirect_uri,
-          };
-
-          const res = await fetch('https://oauth2.googleapis.com/token', {
-            method: 'POST',
-            body: JSON.stringify(body),
-          });
-
-          const tokenData: {
-            access_token?: string;
-          } = await res.json();
-          if (!tokenData.access_token) {
-            throw new ForbiddenException('Invalid token');
-          }
-
-          return {
-            access_token: tokenData.access_token,
-          };
-        },
-        registerCallback: async ({ access_token }) => {
-          const res = await fetch(
-            'https://www.googleapis.com/oauth2/v2/userinfo',
-            {
-              headers: {
-                Authorization: `Bearer ${access_token}`,
-              },
-            },
-          );
-
-          const userInfo: {
-            email: string;
-            id: string;
-            name: string;
-            verified_email: boolean;
-          } = await res.json();
-          // console.log(userInfo);
-
-          return {
-            id: userInfo.id,
-            name: userInfo.name,
-            email: userInfo.email,
-            verified_email: userInfo.verified_email,
-          };
-        },
-      },
-    ];
+    return this.loginMethods;
   }
 }

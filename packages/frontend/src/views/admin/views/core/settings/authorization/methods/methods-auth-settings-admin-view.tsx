@@ -1,6 +1,10 @@
-import { ShowMethodAuthSettingsAdminObj } from 'vitnode-shared/admin/settings/auth.dto';
-import { ContentMethodsAuthSettingsAdmin } from './content';
 import { fetcher } from '@/api/fetcher';
+import { HeaderContent } from '@/components/ui/header-content';
+import { getTranslations } from 'next-intl/server';
+import { ShowMethodAuthSettingsAdminObj } from 'vitnode-shared/admin/settings/auth.dto';
+
+import { CreateMethodsAuthSettingsAdmin } from '../create/create';
+import { ContentMethodsAuthSettingsAdmin } from './content';
 
 const getData = async () => {
   const { data } = await fetcher<ShowMethodAuthSettingsAdminObj>({
@@ -12,7 +16,19 @@ const getData = async () => {
 };
 
 export const MethodsAuthSettingsAdminView = async () => {
-  const data = await getData();
+  const [t, data] = await Promise.all([
+    getTranslations('admin.core.settings.authorization.methods'),
+    getData(),
+  ]);
 
-  return <ContentMethodsAuthSettingsAdmin {...data} />;
+  return (
+    <>
+      <HeaderContent h1={t('title')}>
+        {data.enabledMethods.length > 0 && (
+          <CreateMethodsAuthSettingsAdmin {...data} />
+        )}
+      </HeaderContent>
+      <ContentMethodsAuthSettingsAdmin {...data} />
+    </>
+  );
 };

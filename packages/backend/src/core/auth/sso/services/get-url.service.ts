@@ -10,15 +10,15 @@ export class GetUrlSSOAuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  getUrlSSO(provider: string): SSOUrlAuthObj {
+  async getUrlSSO(provider: string): Promise<SSOUrlAuthObj> {
     const frontendUrl: string = this.configService.getOrThrow('frontend_url');
     const redirectUri = (code: string) =>
       `${frontendUrl}/login/sso/${code}/callback`;
+    const sso = await this.ssoHelper.getActiveSSO(provider);
 
-    return this.ssoHelper.getSSO(provider).getUrl({
+    return sso.getUrl({
       redirect_uri: redirectUri(provider),
-      client_id:
-        '1067408430287-igio7a4koou4i26n8vvmqo4eqtcp9gka.apps.googleusercontent.com',
+      client_id: sso.client_id,
     });
   }
 }

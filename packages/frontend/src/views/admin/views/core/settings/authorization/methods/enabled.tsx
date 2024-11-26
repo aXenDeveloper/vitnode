@@ -1,6 +1,6 @@
-import { ShowMethodAuthSettingsAdminObj } from 'vitnode-shared/admin/settings/auth.dto';
-import React from 'react';
 import { Switch } from '@/components/ui/switch';
+import React from 'react';
+import { ShowMethodAuthSettingsAdminObj } from 'vitnode-shared/admin/settings/auth.dto';
 
 export const EnabledContentMethodsAuthSettingsAdmin = ({
   enabled,

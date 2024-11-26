@@ -15,14 +15,34 @@ export class ShowAuthSettingsAdminObj {
   require_confirm_email: boolean;
 }
 
-export class ShowMethodAuthSettingsAdmin {
+export class CreateMethodAuthSettingsAdminBody {
+  @ApiProperty()
+  @IsString()
+  client_id: string;
+
+  @ApiProperty()
+  @IsString()
+  client_secret: string;
+
   @ApiProperty()
   @IsString()
   code: string;
+}
 
+export class ShowMethodAuthSettingsAdmin extends CreateMethodAuthSettingsAdminBody {
   @ApiProperty()
   @IsBoolean()
   enabled: boolean;
+
+  @ApiProperty()
+  @IsString()
+  name: string;
+}
+
+export class EnabledMethodsAuthSettingsAdmin {
+  @ApiProperty()
+  @IsString()
+  code: string;
 
   @ApiProperty()
   @IsString()
@@ -33,4 +53,8 @@ export class ShowMethodAuthSettingsAdminObj {
   @ApiProperty({ type: [ShowMethodAuthSettingsAdmin] })
   @IsArray()
   edges: ShowMethodAuthSettingsAdmin[];
+
+  @ApiProperty({ type: [EnabledMethodsAuthSettingsAdmin] })
+  @IsArray()
+  enabledMethods: EnabledMethodsAuthSettingsAdmin[];
 }
