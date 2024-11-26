@@ -94,6 +94,24 @@ export const generateMetadataDynamic = async (props: {
     }
 
     if (slug[1] === 'settings') {
+      if (slug[2] === 'authorization' && !slug[4]) {
+        const t = await getTranslations('admin.core.settings.authorization');
+        const primary: Metadata = {
+          title: t('title'),
+        };
+
+        if (!slug[3]) {
+          return primary;
+        }
+
+        if (slug[3] === 'methods') {
+          return {
+            ...primary,
+            title: `${t('methods.title')} - ${primary.title}`,
+          };
+        }
+      }
+
       if (slug[2] === 'email' && !slug[4]) {
         if (!slug[3]) {
           return generateMetadataEmailSettingsAdmin();

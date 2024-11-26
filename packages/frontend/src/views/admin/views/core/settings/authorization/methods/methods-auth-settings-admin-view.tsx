@@ -20,7 +20,6 @@ export const MethodsAuthSettingsAdminView = async () => {
     getTranslations('admin.core.settings.authorization.methods'),
     getData(),
   ]);
-  // Exclude edges from enabledMethods
   const enabledMethods = data.enabledMethods.filter(
     method => data.edges.findIndex(edge => edge.code === method.code) === -1,
   );

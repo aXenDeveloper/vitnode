@@ -171,10 +171,12 @@
             "enabled": "Enabled",
             "create": {
               "title": "Create Method",
+              "desc": "New login method for your website.",
               "provider": "Provider",
               "client_id": "Client ID",
               "client_secret": "Client Secret",
-              "success": "Login method has been created."
+              "success": "Login method has been created.",
+              "your_callback_url": "Your callback URL"
             },
             "edit": {
               "title": "Edit Method",

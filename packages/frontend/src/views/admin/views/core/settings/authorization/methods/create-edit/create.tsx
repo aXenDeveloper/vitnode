@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -35,6 +36,7 @@ export const CreateMethodsAuthSettingsAdmin = (
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription>{t('desc')}</DialogDescription>
         </DialogHeader>
 
         <React.Suspense fallback={<Loader />}>

@@ -1,5 +1,6 @@
 import { useDialog } from '@/components/ui/dialog';
 import { useTranslations } from 'next-intl';
+import React from 'react';
 import { toast } from 'sonner';
 import * as z from 'zod';
 
@@ -14,6 +15,9 @@ export const useCreateMethodAuthAdminApi = ({
   const { setOpen } = useDialog();
   const t = useTranslations('admin.core.settings.authorization.methods');
   const tCore = useTranslations('core.global.errors');
+  const [values, setValues] = React.useState<
+    Partial<z.infer<typeof formSchema>>
+  >({});
   const formSchema = z.object({
     provider: z
       .enum(enabledMethods.map(method => method.code) as [string, ...string[]])
@@ -48,5 +52,5 @@ export const useCreateMethodAuthAdminApi = ({
     }
   };
 
-  return { formSchema, onSubmit };
+  return { formSchema, onSubmit, values, setValues };
 };
