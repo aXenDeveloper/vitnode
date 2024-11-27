@@ -1,6 +1,6 @@
 {
   "name": "vitnode-backend-ai-open-ai",
-  "version": "0.0.10-canary.14",
+  "version": "0.0.10-canary.15",
   "description": "OpenAI provider for VitNode projects.",
   "author": "VitNode Team",
   "license": "MIT",
