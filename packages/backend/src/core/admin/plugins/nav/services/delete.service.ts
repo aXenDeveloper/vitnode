@@ -1,7 +1,8 @@
 import { ABSOLUTE_PATHS } from '@/app.module';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { existsSync } from 'fs';
-import { readFile, writeFile } from 'fs/promises';
+import { readdir, readFile, writeFile } from 'fs/promises';
+import { join } from 'path';
 import { ConfigPlugin } from 'vitnode-shared/admin/plugin.dto';
 import { DeleteNavPluginsAdminBody } from 'vitnode-shared/admin/plugins/nav.dto';
 
@@ -43,6 +44,27 @@ export class DeleteNavPluginsAdminService {
 
       config.nav = config.nav.filter(nav => nav.code !== code);
     }
+
+    // Delete lang from json
+    const langPathFolder = ABSOLUTE_PATHS.plugin({
+      code: plugin_code,
+    }).frontend.languages;
+    const langs = await readdir(langPathFolder);
+    await Promise.all(
+      langs.map(async lang => {
+        const langFilePath = join(langPathFolder, lang);
+        if (!langFilePath.endsWith('.json')) return;
+
+        const langFile = JSON.parse(await readFile(langFilePath, 'utf8'));
+        const langCode = parent_code ? `${parent_code}_${code}` : code;
+
+        if (langFile[`admin_${plugin_code}`]?.nav?.[langCode]) {
+          delete langFile[`admin_${plugin_code}`].nav[langCode];
+
+          await writeFile(langFilePath, JSON.stringify(langFile, null, 2));
+        }
+      }),
+    );
 
     await writeFile(pathConfig, JSON.stringify(config, null, 2));
   }

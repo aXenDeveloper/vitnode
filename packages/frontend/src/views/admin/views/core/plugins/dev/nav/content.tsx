@@ -2,12 +2,12 @@
 
 import { DragAndDropSortableList } from '@/components/drag&drop/sortable-list/list';
 import { TextAndIconsAsideAdmin } from '@/views/admin/layout/sidebar/sidebar';
-import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { toast } from 'sonner';
 import { ParentNavAuthAdminObj } from 'vitnode-shared/admin/auth.dto';
 
+import { useDevPluginAdmin } from '../hooks/use-dev-plugin';
 import { mutationChangePositionApi } from './hooks/mutation-change-position-api';
 import { ItemContentNavDevPluginAdmin } from './item/item';
 
@@ -19,7 +19,7 @@ export const ContentNavDevPluginAdmin = ({
   textsAndIcons: TextAndIconsAsideAdmin[];
 }) => {
   const t = useTranslations('core.global.errors');
-  const { code } = useParams();
+  const { pluginCode } = useDevPluginAdmin();
 
   return (
     <DragAndDropSortableList
@@ -45,12 +45,10 @@ export const ContentNavDevPluginAdmin = ({
       }))}
       maxDepth={1}
       onDragEnd={async moveTo => {
-        if (!code) return;
-
         try {
           await mutationChangePositionApi({
             code: moveTo.id.toString(),
-            plugin_code: Array.isArray(code) ? code[0] : code,
+            plugin_code: pluginCode,
             index_to_move: moveTo.indexToMove,
             parent_code: moveTo.parentId?.toString(),
           });

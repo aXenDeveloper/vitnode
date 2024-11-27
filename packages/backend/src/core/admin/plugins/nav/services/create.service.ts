@@ -6,7 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { existsSync } from 'fs';
-import { readFile, writeFile } from 'fs/promises';
+import { readdir, readFile, writeFile } from 'fs/promises';
+import { join } from 'path';
 import { ParentNavAuthAdminObj } from 'vitnode-shared/admin/auth.dto';
 import { ConfigPlugin } from 'vitnode-shared/admin/plugin.dto';
 import { CreateNavPluginsAdminBody } from 'vitnode-shared/admin/plugins/nav.dto';
@@ -61,6 +62,30 @@ export class CreateNavPluginsAdminService extends HelpersAdminNavPluginsService 
         keywords,
       });
     }
+
+    const langPathFolder = ABSOLUTE_PATHS.plugin({
+      code: plugin_code,
+    }).frontend.languages;
+    // Get all files
+    const langs = await readdir(langPathFolder);
+    await Promise.all(
+      langs.map(async lang => {
+        const langFilePath = join(langPathFolder, lang);
+        if (!langFilePath.endsWith('.json')) return;
+
+        const langFile = JSON.parse(await readFile(langFilePath, 'utf8'));
+        const langCode = parent_code ? `${parent_code}_${code}` : code;
+        langFile[`admin_${plugin_code}`] = {
+          ...langFile[`admin_${plugin_code}`],
+          nav: {
+            ...langFile[`admin_${plugin_code}`].nav,
+            [langCode]: `admin_${plugin_code}.nav.${langCode}`,
+          },
+        };
+
+        await writeFile(langFilePath, JSON.stringify(langFile, null, 2));
+      }),
+    );
 
     await writeFile(pathConfig, JSON.stringify(config, null, 2));
 

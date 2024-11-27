@@ -16,9 +16,13 @@ const getData = async (code: string) => {
   return data;
 };
 
-export const NavDevPluginAdminView = async ({ code }: { code: string }) => {
+export const NavDevPluginAdminView = async ({
+  pluginCode,
+}: {
+  pluginCode: string;
+}) => {
   const [data, t, tGlobal] = await Promise.all([
-    getData(code),
+    getData(pluginCode),
     getTranslations('admin.core.plugins.dev.nav'),
     getTranslations(),
   ]);
@@ -36,10 +40,10 @@ export const NavDevPluginAdminView = async ({ code }: { code: string }) => {
       parent_nav_code: nav.children ? nav.code : undefined,
       ...child,
       parent_icon: nav.icon,
-      plugin: code,
+      plugin: pluginCode,
     }));
 
-    return [{ ...nav, plugin: code }, ...mappedChildren];
+    return [{ ...nav, plugin: pluginCode }, ...mappedChildren];
   });
 
   const textsAndIcons: TextAndIconsAsideAdmin[] = nav.map(item => {

@@ -2,11 +2,11 @@ import { FormCreateEditPluginAdmin } from '../actions/create/form';
 import { getPluginDataAdmin } from './query-api';
 
 export const OverviewDevPluginAdminView = async ({
-  code,
+  pluginCode,
 }: {
-  code: string;
+  pluginCode: string;
 }) => {
-  const data = await getPluginDataAdmin(code);
+  const data = await getPluginDataAdmin(pluginCode);
 
   return <FormCreateEditPluginAdmin data={data} theme="horizontal" />;
 };

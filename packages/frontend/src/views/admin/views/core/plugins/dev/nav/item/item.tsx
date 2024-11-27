@@ -1,8 +1,8 @@
 import { TextAndIconsAsideAdmin } from '@/views/admin/layout/sidebar/sidebar';
-import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ParentNavAuthAdminObj } from 'vitnode-shared/admin/auth.dto';
 
+import { useDevPluginAdmin } from '../../hooks/use-dev-plugin';
 import { ActionsTableNavDevPluginAdmin } from './actions/actions';
 
 export const ItemContentNavDevPluginAdmin = ({
@@ -16,7 +16,7 @@ export const ItemContentNavDevPluginAdmin = ({
   parentId?: string;
   textsAndIcons: TextAndIconsAsideAdmin[];
 }) => {
-  const { code: pluginCode } = useParams();
+  const { pluginCode } = useDevPluginAdmin();
   const tAdmin = useTranslations('admin.core.plugins.dev.nav');
   const langKey = parentId ? `${parentId}_${data.code}` : data.code;
   const textAndIcon = textsAndIcons.find(item => item.id === langKey);
