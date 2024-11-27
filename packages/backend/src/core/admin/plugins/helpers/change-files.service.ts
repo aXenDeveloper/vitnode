@@ -52,7 +52,16 @@ export class ChangeFilesPluginsAdminHelpersService {
     });
   }
 
-  private async updateFileContent(params: {
+  private async updateFileContent({
+    code,
+    action,
+    filePath,
+    importRegex,
+    entryRegex,
+    getImportNameAndPath,
+    getEntryName,
+    reconstructFileContent,
+  }: {
     action: 'add' | 'delete';
     code: string;
     entryRegex: RegExp;
@@ -69,17 +78,6 @@ export class ChangeFilesPluginsAdminHelpersService {
       originalContent: string,
     ) => string;
   }) {
-    const {
-      code,
-      action,
-      filePath,
-      importRegex,
-      entryRegex,
-      getImportNameAndPath,
-      getEntryName,
-      reconstructFileContent,
-    } = params;
-
     if (!existsSync(filePath)) {
       throw new Error(`File not found: ${filePath}`);
     }
@@ -146,11 +144,11 @@ export class ChangeFilesPluginsAdminHelpersService {
         importName: code,
         importPath: `@/plugins/${code}/langs/en.json`,
       }),
-      getEntryName: code => `typeof ${code}`,
+      getEntryName: code => `typeof ${code.replace(/-/g, '_')}`,
       reconstructFileContent: (imports, entries, originalContent) => {
         let newContent = '';
         imports.forEach((path, name) => {
-          newContent += `import type ${name} from '${path}';\n`;
+          newContent += `import type ${name.replace(/-/g, '_')} from '${path}';\n`;
         });
 
         newContent += `\n`;
