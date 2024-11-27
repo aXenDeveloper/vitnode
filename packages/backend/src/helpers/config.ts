@@ -85,7 +85,7 @@ export const DEFAULT_CONFIG_DATA: ConfigType = {
     authorization: {
       force_login: false,
       lock_register: false,
-      require_confirm_email: true,
+      require_confirm_email: false,
     },
   },
   langs: [

@@ -9,8 +9,9 @@ import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import React from 'react';
 
-import { getPluginDataAdmin } from './query-api';
-import { TabsDevPluginAdmin } from './tabs';
+import { getPluginDataAdmin } from '../query-api';
+import { TabsDevPluginAdmin } from '../tabs';
+import { WrapperDevPluginAdminLayout } from './wrapper';
 
 interface Props {
   children: React.ReactNode;
@@ -48,7 +49,7 @@ export const DevPluginAdminLayout = async ({ code, children }: Props) => {
   ]);
 
   return (
-    <>
+    <WrapperDevPluginAdminLayout pluginCode={code}>
       <HeaderContent
         desc={
           <div>
@@ -90,6 +91,6 @@ export const DevPluginAdminLayout = async ({ code, children }: Props) => {
       <TabsDevPluginAdmin code={code} />
 
       <Card className="p-6">{children}</Card>
-    </>
+    </WrapperDevPluginAdminLayout>
   );
 };

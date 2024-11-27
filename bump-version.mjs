@@ -174,6 +174,26 @@ function logError(error) {
     recursive: true,
   });
 
+  // Copy public in frontend to create-vitnode-app
+  const createVitnodeAppPublicPath = path.join(
+    WORKSPACE,
+    'packages',
+    'create-vitnode-app',
+    'templates',
+    'basic',
+    'apps',
+    'frontend',
+    'public',
+  );
+  const frontendPublicPath = path.join(WORKSPACE, 'apps', 'frontend', 'public');
+  if (!fs.existsSync(createVitnodeAppPublicPath)) {
+    fs.mkdirSync(createVitnodeAppPublicPath, { recursive: true });
+  }
+
+  fs.cpSync(frontendPublicPath, createVitnodeAppPublicPath, {
+    recursive: true,
+  });
+
   if (process.argv[2] === '--without-bump-version') {
     exitSuccess('Folders & Files copied!');
     return;

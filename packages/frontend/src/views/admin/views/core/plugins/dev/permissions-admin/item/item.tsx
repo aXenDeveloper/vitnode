@@ -1,7 +1,7 @@
 import { AppWindow } from 'lucide-react';
-import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 
+import { useDevPluginAdmin } from '../../hooks/use-dev-plugin';
 import { PermissionsAdminWithI18n } from '../permissions-admin';
 import { ActionsItemPermissionsAdminDevPluginAdmin } from './actions/actions';
 
@@ -16,7 +16,7 @@ export const ItemPermissionsAdminDevPluginAdmin = ({
   parentId: string | undefined;
 } & PermissionsAdminWithI18n) => {
   const t = useTranslations('admin.core.plugins.dev.permissions-admin');
-  const { code } = useParams();
+  const { pluginCode } = useDevPluginAdmin();
 
   return (
     <div className="flex flex-1 items-center gap-4">
@@ -28,7 +28,7 @@ export const ItemPermissionsAdminDevPluginAdmin = ({
         <p className="text-muted-foreground text-sm">
           {t.rich('lang_key', {
             key: () => (
-              <span className="text-foreground">{`admin_${code}.admin_permissions.${id}`}</span>
+              <span className="text-foreground">{`admin_${pluginCode}.admin_permissions.${id}`}</span>
             ),
           })}
         </p>
@@ -37,7 +37,7 @@ export const ItemPermissionsAdminDevPluginAdmin = ({
             {t.rich('page_permission', {
               page: () => (
                 <span className="text-foreground">
-                  {`/admin/${code}/${id.replace('can_manage_', '').split('_').join('/')}`}
+                  {`/admin/${pluginCode}/${id.replace('can_manage_', '').split('_').join('/')}`}
                 </span>
               ),
             })}

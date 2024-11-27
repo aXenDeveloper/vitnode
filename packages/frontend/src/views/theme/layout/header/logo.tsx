@@ -4,10 +4,11 @@ import { cn } from '@/helpers/classnames';
 import { Link } from '@/navigation';
 
 export const LogoHeader = async ({ className }: { className?: string }) => {
-  const { logos } = await getMiddlewareData();
+  const { logos, site_short_name } = await getMiddlewareData();
 
   return (
     <Link
+      aria-label={site_short_name}
       className="max-w-[75vw] truncate"
       href="/"
       id="vitnode_logo"

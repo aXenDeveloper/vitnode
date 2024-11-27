@@ -24,16 +24,16 @@ export interface PermissionsAdminWithI18n {
 }
 
 export const PermissionsAdminDevPluginAdminView = async ({
-  code,
+  pluginCode,
 }: {
-  code: string;
+  pluginCode: string;
 }) => {
   const [t, data, tPlugin] = await Promise.all([
     getTranslations('admin.core.plugins.dev.permissions-admin'),
-    getData(code),
+    getData(pluginCode),
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
-    getTranslations(`admin_${code}`),
+    getTranslations(`admin_${pluginCode}`),
   ]);
 
   const dataWithI18n: PermissionsAdminWithI18n[] = data.map(permission => {

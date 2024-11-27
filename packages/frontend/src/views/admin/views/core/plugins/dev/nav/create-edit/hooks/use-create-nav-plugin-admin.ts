@@ -1,11 +1,11 @@
 import { useDialog } from '@/components/ui/dialog';
 import { zodTag } from '@/helpers/zod';
-import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import * as z from 'zod';
 
+import { useDevPluginAdmin } from '../../../hooks/use-dev-plugin';
 import { CreateEditNavDevPluginAdmin } from '../create-edit';
 import { createMutationApi } from './create-mutation-api';
 import { editMutationApi } from './edit-mutation-api';
@@ -21,7 +21,7 @@ export const useCreateNavPluginAdmin = ({
   const t = useTranslations('admin.core.plugins.dev.nav');
   const tCore = useTranslations('core.global.errors');
   const { setOpen } = useDialog();
-  const { code } = useParams();
+  const { pluginCode } = useDevPluginAdmin();
 
   const formSchema = z.object({
     code: z
@@ -50,14 +50,14 @@ export const useCreateNavPluginAdmin = ({
     values: z.infer<typeof formSchema>,
     form: UseFormReturn<z.infer<typeof formSchema>>,
   ) => {
-    if (!code) return;
+    if (!pluginCode) return;
 
     try {
       if (data) {
         await editMutationApi({
           ...values,
           previous_code: data.code,
-          plugin_code: Array.isArray(code) ? code[0] : code,
+          plugin_code: pluginCode,
           parent_code:
             values.parent_code === 'null' ? undefined : values.parent_code,
           keywords: (values.keywords ?? []).map(keyword => keyword.value),
@@ -65,7 +65,7 @@ export const useCreateNavPluginAdmin = ({
       } else {
         await createMutationApi({
           ...values,
-          plugin_code: Array.isArray(code) ? code[0] : code,
+          plugin_code: pluginCode,
           parent_code:
             values.parent_code === 'null' ? undefined : values.parent_code,
           keywords: (values.keywords ?? []).map(keyword => keyword.value),
