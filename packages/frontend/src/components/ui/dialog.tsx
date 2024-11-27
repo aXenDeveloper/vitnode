@@ -34,7 +34,11 @@ const Dialog = ({
     <DialogContext.Provider
       value={{
         open: openProp ?? open,
-        setOpen: onOpenChange ?? setOpen,
+        setOpen: val => {
+          setIsDirty(false);
+          onOpenChange?.(val);
+          setOpen(val);
+        },
         isDirty,
         setIsDirty,
       }}

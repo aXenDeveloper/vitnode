@@ -61,13 +61,6 @@ export const useCreateEditPluginAdmin = ({
     form: UseFormReturn<z.infer<typeof formSchema>>,
   ) => {
     try {
-      await new Promise<void>(resolve => {
-        setTimeout(() => {
-          form.reset(values);
-          resolve();
-        }, 0);
-      });
-
       if (data) {
         await mutationEditApi({
           ...values,
@@ -80,7 +73,12 @@ export const useCreateEditPluginAdmin = ({
       } else {
         await mutationCreateApi(values);
         setOpen?.(false);
-        window.location.reload();
+        await new Promise<void>(resolve => {
+          setTimeout(() => {
+            window.location.reload();
+            resolve();
+          }, 350);
+        });
       }
     } catch (err) {
       const error = err as Error;

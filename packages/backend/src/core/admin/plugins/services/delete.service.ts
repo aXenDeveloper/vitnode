@@ -79,6 +79,7 @@ export class DeletePluginsAdminService {
       this.databaseService.db
         .delete(core_files_using)
         .where(eq(core_files_using.plugin, plugin.code)),
+      this.changeFilesHelper.setServerToRestartConfig(),
     ]);
   }
 }

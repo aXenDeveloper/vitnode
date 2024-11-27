@@ -19,7 +19,7 @@ export const ContentDeletePluginActionsAdmin = ({
 
   return (
     <form action={onSubmit}>
-      <Alert className="mt-4" variant="primary">
+      <Alert variant="primary">
         <AlertDescription>{t('info')}</AlertDescription>
       </Alert>
 
