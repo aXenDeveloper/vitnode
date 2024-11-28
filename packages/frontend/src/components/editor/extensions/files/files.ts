@@ -98,16 +98,16 @@ const FileNode = Node.create({
   },
 });
 
+export interface FilesHandlerOptions {
+  onUploadFile?: (file: File) => Promise<ShowFile | undefined>;
+}
+
 export interface FilesHandlerStorage {
   data?: Omit<ShowFile, 'count_uses' | 'created_at' | 'secure'>;
   error?: string;
   file?: File;
   id: number;
   isLoading: boolean;
-}
-
-export interface FilesHandlerOptions {
-  onUploadFile?: (file: File) => Promise<ShowFile | undefined>;
 }
 
 export const FilesHandler = ({ onUploadFile }: FilesHandlerOptions) => {

@@ -2,8 +2,8 @@ import { CONFIG } from '@/helpers/config-with-env';
 import { generateHTML } from '@tiptap/html';
 import { JSONContent } from '@tiptap/react';
 import parse, { Element, HTMLReactParserOptions } from 'html-react-parser';
-import Image from 'next/image';
 import { useLocale } from 'next-intl';
+import Image from 'next/image';
 import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 import { cn } from '../../../helpers/classnames';

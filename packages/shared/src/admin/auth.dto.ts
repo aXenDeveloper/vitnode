@@ -28,6 +28,26 @@ export class NavAuthAdminObj {
   nav: ParentNavAuthAdminObj[];
 }
 
+export class NavSearchNavAuthAdmin extends ItemNavAuthAdminObj {
+  @ApiProperty()
+  code_plugin: string;
+
+  @ApiPropertyOptional()
+  parent_nav_code?: string;
+}
+
+export class SearchNavAuthAdminObj {
+  @ApiProperty({ type: [NavSearchNavAuthAdmin] })
+  nav: NavSearchNavAuthAdmin[];
+}
+
+export class SearchNavAuthAdminQuery {
+  @ApiProperty()
+  @IsOptional()
+  @IsString()
+  search?: string;
+}
+
 export class ShowAuthAdminObj {
   @ApiProperty({ type: [NavAuthAdminObj] })
   nav: NavAuthAdminObj[];
@@ -43,24 +63,4 @@ export class ShowAuthAdminObj {
 
   @ApiProperty()
   version_of_vitnode: string;
-}
-
-export class SearchNavAuthAdminQuery {
-  @ApiProperty()
-  @IsString()
-  @IsOptional()
-  search?: string;
-}
-
-export class NavSearchNavAuthAdmin extends ItemNavAuthAdminObj {
-  @ApiProperty()
-  code_plugin: string;
-
-  @ApiPropertyOptional()
-  parent_nav_code?: string;
-}
-
-export class SearchNavAuthAdminObj {
-  @ApiProperty({ type: [NavSearchNavAuthAdmin] })
-  nav: NavSearchNavAuthAdmin[];
 }

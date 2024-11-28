@@ -5,8 +5,8 @@ import { AvatarUser } from '@/components/ui/user/avatar';
 import { GroupFormat } from '@/components/ui/user/group-format';
 import { Link } from '@/navigation';
 import { SquareArrowOutUpRight } from 'lucide-react';
-import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { notFound } from 'next/navigation';
 import { UserMembersAdmin } from 'vitnode-shared/admin/members/users.dto';
 
 import { ActionsUserMembersAdmin } from './actions/actions';

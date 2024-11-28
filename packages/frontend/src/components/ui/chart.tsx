@@ -40,12 +40,12 @@ const ChartContainer = ({
   children,
   config,
   ...props
-}: {
+}: React.ComponentProps<'div'> & {
   children: React.ComponentProps<
     typeof RechartsPrimitive.ResponsiveContainer
   >['children'];
   config: ChartConfig;
-} & React.ComponentProps<'div'>) => {
+}) => {
   const uniqueId = React.useId();
   const chartId = `chart-${id ?? uniqueId.replace(/:/g, '')}`;
 
@@ -119,14 +119,14 @@ const ChartTooltipContent = ({
   color,
   nameKey,
   labelKey,
-}: {
-  hideIndicator?: boolean;
-  hideLabel?: boolean;
-  indicator?: 'dashed' | 'dot' | 'line';
-  labelKey?: string;
-  nameKey?: string;
-} & React.ComponentProps<'div'> &
-  React.ComponentProps<typeof RechartsPrimitive.Tooltip>) => {
+}: React.ComponentProps<'div'> &
+  React.ComponentProps<typeof RechartsPrimitive.Tooltip> & {
+    hideIndicator?: boolean;
+    hideLabel?: boolean;
+    indicator?: 'dashed' | 'dot' | 'line';
+    labelKey?: string;
+    nameKey?: string;
+  }) => {
   const { config } = useChart();
 
   const tooltipLabel = React.useMemo(() => {
@@ -259,11 +259,11 @@ const ChartLegendContent = ({
   verticalAlign = 'bottom',
   nameKey,
   ...props
-}: {
-  hideIcon?: boolean;
-  nameKey?: string;
-} & Pick<RechartsPrimitive.LegendProps, 'payload' | 'verticalAlign'> &
-  React.ComponentProps<'div'>) => {
+}: Pick<RechartsPrimitive.LegendProps, 'payload' | 'verticalAlign'> &
+  React.ComponentProps<'div'> & {
+    hideIcon?: boolean;
+    nameKey?: string;
+  }) => {
   const { config } = useChart();
 
   if (!payload?.length) {

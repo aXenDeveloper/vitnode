@@ -9,10 +9,10 @@ export const editMutationApi = async ({
   plugin_code,
   old_id,
   ...body
-}: {
+}: CreatePermissionsAdminPluginsAdminBody & {
   old_id: string;
   plugin_code: string;
-} & CreatePermissionsAdminPluginsAdminBody) => {
+}) => {
   await fetcher<PermissionsStaff, CreatePermissionsAdminPluginsAdminBody>({
     url: `/admin/plugins/permissions-admin/${plugin_code}/${old_id}`,
     method: 'PUT',

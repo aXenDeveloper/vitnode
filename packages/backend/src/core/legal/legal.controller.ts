@@ -13,18 +13,18 @@ export class LegalController {
     private readonly itemService: ItemLegalService,
   ) {}
 
-  @Get(':code')
   @ApiOkResponse({
     description: 'Item legal',
   })
+  @Get(':code')
   async item(@Param('code') code: string): Promise<Legal> {
     return await this.itemService.item(code);
   }
 
-  @Get()
   @ApiOkResponse({
     description: 'Show legal',
   })
+  @Get()
   async show(@Query() query: LegalsQuery): Promise<LegalsObj> {
     return await this.showService.show(query);
   }

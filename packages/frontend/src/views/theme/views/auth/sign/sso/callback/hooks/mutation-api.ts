@@ -12,9 +12,9 @@ import {
 export const mutationApi = async ({
   provider,
   ...body
-}: {
+}: RegisterSSOCallbackAuthBody & {
   provider: string;
-} & RegisterSSOCallbackAuthBody) => {
+}) => {
   try {
     await fetcher<SSOCallbackAuthObj, RegisterSSOCallbackAuthBody>({
       method: 'POST',

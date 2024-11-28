@@ -30,11 +30,11 @@ export class SSOAuthController {
     private readonly registerCallbackSSO: RegisterCallbackSSOAuthService,
   ) {}
 
-  @Post(':provider/callback')
   @ApiOkResponse({
     type: SSOCallbackAuthObj,
     description: 'Callback SSO',
   })
+  @Post(':provider/callback')
   async callback(
     @Param('provider') provider: string,
     @Query('code') code: string,
@@ -44,20 +44,20 @@ export class SSOAuthController {
     return this.callbackSSO.callbackSSO({ provider, code, req, res });
   }
 
-  @Get(':provider')
   @ApiOkResponse({
     type: SSOUrlAuthObj,
     description: 'Get SSO URL',
   })
+  @Get(':provider')
   async getUrl(@Param('provider') provider: string): Promise<SSOUrlAuthObj> {
     return this.getUrlSSO.getUrlSSO(provider);
   }
 
-  @Post(':provider/register')
   @ApiOkResponse({
     type: SSOCallbackAuthObj,
     description: 'Register user if not exists',
   })
+  @Post(':provider/register')
   async register(
     @Body() body: RegisterSSOCallbackAuthBody,
     @Req() req: Request,

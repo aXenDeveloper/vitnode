@@ -8,10 +8,10 @@ export const mutationApi = async ({
   id,
   plugin_code,
   ...body
-}: {
+}: DeletePermissionsAdminPluginsAdminBody & {
   id: string;
   plugin_code: string;
-} & DeletePermissionsAdminPluginsAdminBody) => {
+}) => {
   await fetcher<object, DeletePermissionsAdminPluginsAdminBody>({
     url: `/admin/plugins/permissions-admin/${plugin_code}/${id}`,
     method: 'DELETE',

@@ -21,10 +21,10 @@ export function AutoFormSlider({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   shape: _shape,
   ...props
-}: {
-  onChange?: (value: number[]) => void;
-} & AutoFormComponentProps &
-  Omit<React.ComponentProps<typeof Slider>, 'name' | 'value'>) {
+}: AutoFormComponentProps &
+  Omit<React.ComponentProps<typeof Slider>, 'name' | 'value'> & {
+    onChange?: (value: number[]) => void;
+  }) {
   return (
     <>
       {label && (

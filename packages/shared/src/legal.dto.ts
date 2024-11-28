@@ -3,8 +3,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { StringLanguage } from './string-language.dto';
 import { PaginationObj, PaginationQuery } from './utils/pagination.dto';
 
-export class LegalsQuery extends PaginationQuery {}
-
 export class Legal {
   @ApiProperty()
   code: string;
@@ -32,3 +30,5 @@ export class LegalsObj extends PaginationObj {
   @ApiProperty({ type: [Legal] })
   edges: Legal[];
 }
+
+export class LegalsQuery extends PaginationQuery {}

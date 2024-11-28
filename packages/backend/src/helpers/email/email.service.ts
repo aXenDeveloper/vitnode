@@ -82,11 +82,11 @@ export class EmailHelperService {
     message,
     previewText,
     user,
-  }: {
+  }: Pick<EmailTemplateProps, 'previewText' | 'user'> & {
     message: React.JSX.Element | string;
     subject: string;
     to: string;
-  } & Pick<EmailTemplateProps, 'previewText' | 'user'>): Promise<string> {
+  }): Promise<string> {
     await this.processEmail({
       to,
       subject,

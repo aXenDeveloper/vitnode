@@ -29,11 +29,11 @@ export function AutoFormSelect({
   labels,
   placeholder,
   ...props
-}: {
-  labels?: Record<string, React.JSX.Element | string>;
-  placeholder?: string;
-} & AutoFormComponentProps &
-  Omit<React.ComponentProps<typeof Select>, 'name' | 'value'>) {
+}: AutoFormComponentProps &
+  Omit<React.ComponentProps<typeof Select>, 'name' | 'value'> & {
+    labels?: Record<string, React.JSX.Element | string>;
+    placeholder?: string;
+  }) {
   const t = useTranslations('core.global');
   const baseValues = (
     getBaseSchema(shape, true) as unknown as z.ZodEnum<[string, ...string[]]>

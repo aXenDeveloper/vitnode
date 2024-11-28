@@ -21,9 +21,9 @@ import { CreateLegalSettingsAdminService } from './services/create.service';
 import { DeleteLegalSettingsAdminService } from './services/delete.service';
 import { EditLegalSettingsAdminService } from './services/edit.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin')
 @Controller('admin/settings/legal')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class LegalSettingsAdminController {
   constructor(
@@ -32,11 +32,11 @@ export class LegalSettingsAdminController {
     private readonly deleteService: DeleteLegalSettingsAdminService,
   ) {}
 
-  @Post()
   @ApiCreatedResponse({
     type: Legal,
     description: 'Create legal',
   })
+  @Post()
   async create(@Body() body: CreateLegalSettingsAdminBody): Promise<Legal> {
     return await this.createService.create(body);
   }
@@ -46,11 +46,11 @@ export class LegalSettingsAdminController {
     await this.deleteService.delete(code);
   }
 
-  @Put(':id')
   @ApiOkResponse({
     type: Legal,
     description: 'Edit legal',
   })
+  @Put(':id')
   async editLegal(
     @Param('id') id: string,
     @Body() body: CreateLegalSettingsAdminBody,

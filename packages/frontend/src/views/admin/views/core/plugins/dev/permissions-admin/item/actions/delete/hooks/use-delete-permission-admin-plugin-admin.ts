@@ -1,5 +1,4 @@
 import { useAlertDialog } from '@/components/ui/alert-dialog';
-import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
@@ -10,9 +9,9 @@ import { mutationApi } from './mutation-api';
 export const useDeletePermissionAdminPluginAdmin = ({
   id,
   parentId,
-}: {
+}: Pick<PermissionsAdminWithI18n, 'id'> & {
   parentId: string | undefined;
-} & Pick<PermissionsAdminWithI18n, 'id'>) => {
+}) => {
   const t = useTranslations('admin.core.plugins.dev.permissions-admin.delete');
   const tCore = useTranslations('core.global.errors');
   const { setOpen } = useAlertDialog();

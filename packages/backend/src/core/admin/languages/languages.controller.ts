@@ -29,9 +29,9 @@ import { DeleteLanguagesAdminService } from './services/delete.service';
 import { EditLanguagesAdminService } from './services/edit.service';
 import { ShowLanguagesAdminService } from './services/show.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin')
 @Controller('admin/languages')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class LanguagesAdminController {
   constructor(
@@ -41,30 +41,30 @@ export class LanguagesAdminController {
     private readonly deleteService: DeleteLanguagesAdminService,
   ) {}
 
-  @Post()
   @ApiCreatedResponse({
     type: LanguagesAdminObj,
     description: 'Create language',
   })
+  @Post()
   async createLang(
     @Body() body: CreateLanguagesAdminBody,
   ): Promise<LanguagesAdminObj> {
     return await this.createService.create(body);
   }
 
-  @Delete(':id')
   @ApiOkResponse({
     description: 'Delete language',
   })
+  @Delete(':id')
   async deleteLang(@Param('id') id: string) {
     await this.deleteService.delete(+id);
   }
 
-  @Put(':id')
   @ApiOkResponse({
     type: LanguagesAdminObj,
     description: 'Edit language',
   })
+  @Put(':id')
   async editLang(
     @Body() body: EditLanguagesAdminBody,
     @Param('id') id: string,
@@ -72,11 +72,11 @@ export class LanguagesAdminController {
     return await this.editService.edit({ body, id: +id });
   }
 
-  @Get()
   @ApiOkResponse({
     type: ShowLanguagesAdminObj,
     description: 'Show languages',
   })
+  @Get()
   async showLang(
     @Query() query: ShowLanguagesAdminQuery,
   ): Promise<ShowLanguagesAdminObj> {

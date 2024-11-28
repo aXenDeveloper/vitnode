@@ -7,12 +7,12 @@ export const PreviewFilesInput = ({
   value,
   showInfo,
   multiple,
-}: {
-  showInfo?: boolean;
-} & Pick<
+}: Pick<
   React.ComponentProps<typeof FileInput>,
   'multiple' | 'onChange' | 'value'
->) => {
+> & {
+  showInfo?: boolean;
+}) => {
   if ((multiple && Array.isArray(value) && !value.length) || !value) {
     return null;
   }

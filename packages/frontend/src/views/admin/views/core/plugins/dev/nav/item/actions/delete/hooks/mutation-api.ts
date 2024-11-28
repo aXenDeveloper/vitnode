@@ -8,10 +8,10 @@ export const mutationApi = async ({
   plugin_code,
   code,
   ...body
-}: {
+}: DeleteNavPluginsAdminBody & {
   code: string;
   plugin_code: string;
-} & DeleteNavPluginsAdminBody) => {
+}) => {
   await fetcher<object, DeleteNavPluginsAdminBody>({
     url: `/admin/plugins/nav/${plugin_code}/${code}`,
     method: 'DELETE',

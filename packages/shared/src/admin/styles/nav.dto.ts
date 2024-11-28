@@ -23,22 +23,22 @@ export class ChangePositionNavStylesAdminBody {
 }
 
 export class CreateNavStylesAdminBody {
-  @Transform(TransformStringLanguageInput)
-  @IsArray()
   @ApiProperty({ type: [StringLanguage] })
+  @IsArray()
+  @Transform(TransformStringLanguageInput)
   description: StringLanguage[];
 
   @ApiProperty()
   external: boolean;
 
-  @Transform(TransformString)
-  @MaxLength(255)
   @ApiProperty()
+  @MaxLength(255)
+  @Transform(TransformString)
   href: string;
 
+  @ApiProperty({ type: [StringLanguage] })
   @ArrayMinSize(1)
   @IsArray()
   @Transform(TransformStringLanguageInput)
-  @ApiProperty({ type: [StringLanguage] })
   name: StringLanguage[];
 }

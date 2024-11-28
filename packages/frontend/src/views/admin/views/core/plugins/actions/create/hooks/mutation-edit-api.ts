@@ -8,7 +8,7 @@ import { ShowPluginAdmin } from 'vitnode-shared/admin/plugins.dto';
 export const mutationEditApi = async ({
   code,
   ...body
-}: { code: string } & EditPluginsAdminBody) => {
+}: EditPluginsAdminBody & { code: string }) => {
   await fetcher<ShowPluginAdmin, EditPluginsAdminBody>({
     url: `/admin/plugins/${code}`,
     method: 'PUT',

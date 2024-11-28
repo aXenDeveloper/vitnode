@@ -9,22 +9,9 @@ export class DeleteFilesQuery {
   file_id: number;
 
   @ApiPropertyOptional()
-  @IsString()
   @IsOptional()
+  @IsString()
   security_key?: string;
-}
-
-export class UploadFilesBody {
-  @ApiProperty({ type: 'string', format: 'binary' })
-  file: Express.Multer.File;
-
-  @ApiProperty()
-  @IsString()
-  folder: string;
-
-  @ApiProperty()
-  @IsString()
-  plugin_code: string;
 }
 
 export class ShowFile extends FileObj {
@@ -42,4 +29,17 @@ export class ShowFile extends FileObj {
 
   @ApiPropertyOptional()
   security_key: null | string;
+}
+
+export class UploadFilesBody {
+  @ApiProperty({ type: 'string', format: 'binary' })
+  file: Express.Multer.File;
+
+  @ApiProperty()
+  @IsString()
+  folder: string;
+
+  @ApiProperty()
+  @IsString()
+  plugin_code: string;
 }

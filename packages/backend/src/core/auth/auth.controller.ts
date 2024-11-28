@@ -44,11 +44,11 @@ export class AuthController {
     private readonly signOutService: SignOutAuthService,
   ) {}
 
-  @Get()
   @ApiOkResponse({
     type: ShowAuthObj,
     description: 'Show auth',
   })
+  @Get()
   async show(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
@@ -56,11 +56,11 @@ export class AuthController {
     return await this.showService.show({ req, res });
   }
 
-  @Post('sign_in')
   @ApiCreatedResponse({
     type: SignInAuthObj,
     description: 'Sign in user',
   })
+  @Post('sign_in')
   async signIn(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
@@ -69,11 +69,11 @@ export class AuthController {
     return await this.signInService.singIn({ req, res, body });
   }
 
-  @Delete('sign_out')
-  @ApiSecurity('')
   @ApiOkResponse({
     description: 'Sign out user',
   })
+  @ApiSecurity('')
+  @Delete('sign_out')
   @UseGuards(AuthGuard)
   async signOut(
     @Req() req: Request,
@@ -83,11 +83,11 @@ export class AuthController {
     await this.signOutService.signOut({ req, res, body });
   }
 
-  @Post('sign_up')
   @ApiCreatedResponse({
     type: SignAuthObj,
     description: 'Sign up user',
   })
+  @Post('sign_up')
   async signUp(
     @Req() req: Request,
     @Body() body: SignUpAuthBody,
@@ -95,10 +95,10 @@ export class AuthController {
     return await this.signUpService.signUp({ req, body });
   }
 
-  @Get('verify_confirm_email')
   @ApiOkResponse({
     description: 'Verify confirm email',
   })
+  @Get('verify_confirm_email')
   async verifyConfirmEmail(
     @Body() body: VerifyConfirmEmailAuthBody,
   ): Promise<void> {

@@ -29,9 +29,9 @@ import { DeleteGroupsMembersAdminService } from './services/delete.service';
 import { EditGroupsMembersAdminService } from './services/edit.service';
 import { ShowGroupsMembersAdminService } from './services/show.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin - Members')
 @Controller('admin/members/groups')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class GroupsMembersAdminController {
   constructor(
@@ -41,31 +41,31 @@ export class GroupsMembersAdminController {
     private readonly deleteService: DeleteGroupsMembersAdminService,
   ) {}
 
-  @Post()
   @ApiCreatedResponse({
     description: 'Create group',
     type: GroupMembersAdmin,
   })
+  @Post()
   async createGroup(
     @Body() body: CreateGroupsMembersAdminBody,
   ): Promise<GroupMembersAdmin> {
     return await this.createService.create(body);
   }
 
-  @Delete(':id')
   @ApiOkResponse({
     description: 'Delete group',
   })
+  @Delete(':id')
   async deleteGroup(@Param('id') id: string): Promise<void> {
     await this.deleteService.delete(+id);
   }
 
-  @Put(':id')
+  @ApiNotFoundResponse()
   @ApiOkResponse({
     description: 'Edit group',
     type: GroupMembersAdmin,
   })
-  @ApiNotFoundResponse()
+  @Put(':id')
   async editGroup(
     @Param('id') id: string,
     @Body() body: CreateGroupsMembersAdminBody,
@@ -73,11 +73,11 @@ export class GroupsMembersAdminController {
     return await this.editService.edit({ id: +id, body });
   }
 
-  @Get()
   @ApiOkResponse({
     type: GroupsMembersAdminObj,
     description: 'Show groups',
   })
+  @Get()
   async showGroups(
     @Query() query: GroupsMembersAdminQuery,
   ): Promise<GroupsMembersAdminObj> {

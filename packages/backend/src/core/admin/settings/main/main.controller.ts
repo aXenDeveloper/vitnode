@@ -5,18 +5,18 @@ import { MainSettingsAdminBody } from 'vitnode-shared/admin/settings/main.dto';
 
 import { EditMainSettingsAdminService } from './services/edit.main.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin')
 @Controller('admin/settings/main')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class MainSettingsAdminController {
   constructor(private readonly editMainService: EditMainSettingsAdminService) {}
 
-  @Put('')
   @ApiOkResponse({
     type: MainSettingsAdminBody,
     description: 'Edit main settings',
   })
+  @Put('')
   async editMainSettings(
     @Body() body: MainSettingsAdminBody,
   ): Promise<MainSettingsAdminBody> {

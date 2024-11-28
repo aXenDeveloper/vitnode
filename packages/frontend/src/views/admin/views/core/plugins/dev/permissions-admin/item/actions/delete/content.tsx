@@ -17,9 +17,9 @@ export const ContentDeleteActionItemPermissionsAdminDevPluginAdmin = ({
   id,
   parentId,
   permissions,
-}: {
+}: PermissionsAdminWithI18n & {
   parentId: string | undefined;
-} & PermissionsAdminWithI18n) => {
+}) => {
   const t = useTranslations('admin.core.plugins.dev.permissions-admin.delete');
   const tCore = useTranslations('core.global');
   const { onSubmit } = useDeletePermissionAdminPluginAdmin({ id, parentId });

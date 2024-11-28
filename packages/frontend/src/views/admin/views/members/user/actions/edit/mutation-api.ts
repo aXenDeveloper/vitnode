@@ -10,7 +10,7 @@ import {
 export const mutationApi = async ({
   id,
   ...body
-}: { id: number } & EditUserMembersAdminBody) => {
+}: EditUserMembersAdminBody & { id: number }) => {
   try {
     await fetcher<UserMembersAdmin, EditUserMembersAdminBody>({
       url: `/admin/members/users/${id}`,

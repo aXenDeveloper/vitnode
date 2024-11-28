@@ -2,13 +2,6 @@ import React from 'react';
 
 import { cn } from '../../helpers/classnames';
 
-interface HeaderContentProps {
-  children?: React.ReactNode;
-  className?: string;
-  desc?: React.ReactNode;
-  ref?: React.RefCallback<HTMLDivElement>;
-}
-
 interface HeaderContentH1Props extends HeaderContentProps {
   h1: React.ReactNode | string;
   h2?: never;
@@ -17,6 +10,13 @@ interface HeaderContentH1Props extends HeaderContentProps {
 interface HeaderContentH2Props extends HeaderContentProps {
   h1?: never;
   h2: React.ReactNode | string;
+}
+
+interface HeaderContentProps {
+  children?: React.ReactNode;
+  className?: string;
+  desc?: React.ReactNode;
+  ref?: React.RefCallback<HTMLDivElement>;
 }
 
 export const HeaderContent = ({

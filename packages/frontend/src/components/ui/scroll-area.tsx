@@ -9,9 +9,9 @@ const ScrollArea = ({
   children,
   disableShadow,
   ...props
-}: {
+}: React.ComponentProps<typeof ScrollAreaPrimitive.Root> & {
   disableShadow?: boolean;
-} & React.ComponentProps<typeof ScrollAreaPrimitive.Root>) => (
+}) => (
   <ScrollAreaPrimitive.Root
     className={cn('relative overflow-hidden', className)}
     {...props}

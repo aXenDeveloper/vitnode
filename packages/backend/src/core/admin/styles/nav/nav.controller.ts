@@ -27,9 +27,9 @@ import { CreateNavStylesAdminService } from './services/create.service';
 import { DeleteNavStylesAdminService } from './services/delete.service';
 import { EditNavStylesAdminService } from './services/edit.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin')
 @Controller('admin/styles/nav')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class NavStylesAdminController {
   constructor(
@@ -40,40 +40,40 @@ export class NavStylesAdminController {
     private readonly changePositionService: ChangePositionNavStylesAdminService,
   ) {}
 
-  @Put('change_position')
   @ApiOkResponse({
     description: 'Change position of nav style',
   })
+  @Put('change_position')
   async changePosition(
     @Body() body: ChangePositionNavStylesAdminBody,
   ): Promise<void> {
     await this.changePositionService.changePosition(body);
   }
 
-  @Post()
   @ApiCreatedResponse({
     type: ShowNavStyles,
     description: 'Create a new nav style',
   })
+  @Post()
   async createNav(
     @Body() body: CreateNavStylesAdminBody,
   ): Promise<ShowNavStyles> {
     return await this.createService.create(body);
   }
 
-  @Delete(':id')
   @ApiOkResponse({
     description: 'Delete a nav style',
   })
+  @Delete(':id')
   async deleteNav(@Param('id') id: string): Promise<void> {
     await this.deleteService.delete(+id);
   }
 
-  @Put(':id')
   @ApiOkResponse({
     type: ShowNavStyles,
     description: 'Edit a nav style',
   })
+  @Put(':id')
   async editNav(
     @Param('id') id: string,
     @Body() body: CreateNavStylesAdminBody,
@@ -81,11 +81,11 @@ export class NavStylesAdminController {
     return await this.editService.edit({ body, id: +id });
   }
 
-  @Get()
   @ApiOkResponse({
     type: [ShowNavStyles],
     description: 'Show all nav styles',
   })
+  @Get()
   async showNav(): Promise<ShowNavStyles[]> {
     return await this.showService.show();
   }

@@ -28,9 +28,9 @@ import { DeleteAdminStaffMembersAdminService } from './services/delete.service';
 import { EditAdminStaffMembersAdminService } from './services/edit.service';
 import { ShowAdminStaffMembersAdminService } from './services/show.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin - Members')
 @Controller('admin/members/staff/admin')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class AdminStaffMembersAdminController {
   constructor(
@@ -40,30 +40,30 @@ export class AdminStaffMembersAdminController {
     private readonly editService: EditAdminStaffMembersAdminService,
   ) {}
 
-  @Post()
   @ApiCreatedResponse({
     description: 'Create a new staff member',
     type: AdminStaffMembersAdmin,
   })
+  @Post()
   async createAdmin(
     @Body() body: CreateAdminStaffMembersAdminBody,
   ): Promise<AdminStaffMembersAdmin> {
     return this.createService.create(body);
   }
 
-  @Delete(':id')
   @ApiOkResponse({
     description: 'Delete a staff member',
   })
+  @Delete(':id')
   async deleteAdmin(@Param('id') id: string): Promise<void> {
     await this.deleteService.delete(+id);
   }
 
-  @Put(':id')
   @ApiOkResponse({
     description: 'Edit a staff member',
     type: AdminStaffMembersAdmin,
   })
+  @Put(':id')
   async editAdmin(
     @Body() body: CreateAdminStaffMembersAdminBody,
     @Param('id') id: string,
@@ -71,11 +71,11 @@ export class AdminStaffMembersAdminController {
     return this.editService.edit({ body, id: +id });
   }
 
-  @Get()
   @ApiOkResponse({
     description: 'List of staff members',
     type: AdminStaffMembersAdminObj,
   })
+  @Get()
   async showAdmins(
     @Query() query: AdminStaffMembersAdminQuery,
   ): Promise<AdminStaffMembersAdminObj> {

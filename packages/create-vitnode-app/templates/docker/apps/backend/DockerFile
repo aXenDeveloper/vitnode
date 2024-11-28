@@ -15,6 +15,7 @@ WORKDIR /app
 COPY --from=builder /app/out/json/ .
 RUN pnpm i
 COPY --from=builder /app/out/full/ .
+RUN pnpm config:init -- --skip-database
 RUN pnpm turbo build --filter=backend...
 
 FROM base AS runner

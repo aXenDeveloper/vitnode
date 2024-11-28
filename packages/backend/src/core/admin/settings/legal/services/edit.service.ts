@@ -24,7 +24,7 @@ export class EditLegalSettingsAdminService {
     href,
     code,
     id,
-  }: { id: number } & CreateLegalSettingsAdminBody): Promise<Legal> {
+  }: CreateLegalSettingsAdminBody & { id: number }): Promise<Legal> {
     const term = await this.databaseService.db.query.core_legal.findFirst({
       where: (table, { eq }) => eq(table.id, id),
     });

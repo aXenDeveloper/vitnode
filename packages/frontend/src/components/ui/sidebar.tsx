@@ -52,11 +52,11 @@ const SidebarProvider = ({
   style,
   children,
   ...props
-}: {
+}: React.ComponentProps<'div'> & {
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   open?: boolean;
-} & React.ComponentProps<'div'>) => {
+}) => {
   const isMobile = useIsMobile();
   const [openMobile, setOpenMobile] = React.useState(false);
 
@@ -159,11 +159,11 @@ const Sidebar = ({
   className,
   children,
   ...props
-}: {
+}: React.ComponentProps<'div'> & {
   collapsible?: 'icon' | 'none' | 'offcanvas';
   side?: 'left' | 'right';
   variant?: 'floating' | 'inset' | 'sidebar';
-} & React.ComponentProps<'div'>) => {
+}) => {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
   const t = useTranslations('core.global');
 

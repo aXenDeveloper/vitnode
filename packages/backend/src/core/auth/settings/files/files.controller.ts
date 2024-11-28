@@ -10,18 +10,18 @@ import { User } from 'vitnode-shared/user.dto';
 
 import { ShowFilesSettingsAuthServices } from './services/show.service';
 
+@ApiSecurity('')
 @ApiTags('Core')
 @Controller('core/auth/settings/files')
-@ApiSecurity('')
 @UseGuards(AuthGuard)
 export class FilesSettingsAuthController {
   constructor(private readonly showService: ShowFilesSettingsAuthServices) {}
 
-  @Get()
   @ApiOkResponse({
     description: 'Show files settings',
     type: ShowFilesSettingsAuthObj,
   })
+  @Get()
   async show(
     @Query() query: ShowFilesSettingsAuthQuery,
     @CurrentUser() user: User,

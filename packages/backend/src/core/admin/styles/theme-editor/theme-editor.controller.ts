@@ -23,25 +23,25 @@ import {
 
 import { EditThemeEditorStylesAdminService } from './service/edit.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin')
 @Controller('admin/styles/theme-editor')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class ThemeEditorStylesAdminController {
   constructor(
     private readonly editService: EditThemeEditorStylesAdminService,
   ) {}
 
-  @Put()
+  @ApiBody({
+    description: 'Edit theme editor settings',
+    type: EditThemeEditorStylesAdminBody,
+  })
   @ApiConsumes('multipart/form-data')
   @ApiOkResponse({
     description: 'Theme editor settings updated',
     type: EditThemeEditorStylesAdminObj,
   })
-  @ApiBody({
-    description: 'Edit theme editor settings',
-    type: EditThemeEditorStylesAdminBody,
-  })
+  @Put()
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'logo_dark', maxCount: 1 },

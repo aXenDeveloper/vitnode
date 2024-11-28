@@ -18,9 +18,9 @@ interface PermissionState {
 export function PermissionsField({
   permissions: permissionsFromProps,
   field,
-}: {
+}: AutoFormComponentProps & {
   permissions: PermissionsStaffObj[];
-} & AutoFormComponentProps) {
+}) {
   const permissions = permissionsFromProps.filter(
     plugin => plugin.groups.length > 0,
   );

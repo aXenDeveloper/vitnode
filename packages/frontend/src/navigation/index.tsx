@@ -1,6 +1,6 @@
-import { RedirectType } from 'next/navigation';
 import { createNavigation } from 'next-intl/navigation';
 import { getLocale } from 'next-intl/server';
+import { RedirectType } from 'next/navigation';
 import { QueryParams } from 'node_modules/next-intl/dist/types/src/navigation/shared/utils';
 import React from 'react';
 
@@ -10,11 +10,11 @@ const { redirect: redirectFromImport, Link: LinkFromImport } =
 
 const redirect = async (
   href:
+    | string
     | {
         pathname: string;
         query?: QueryParams;
-      }
-    | string,
+      },
   type?: RedirectType,
 ) => {
   const locale = await getLocale();

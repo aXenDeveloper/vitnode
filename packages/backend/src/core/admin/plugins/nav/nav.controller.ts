@@ -23,9 +23,9 @@ import { DeleteNavPluginsAdminService } from './services/delete.service';
 import { EditNavPluginsAdminService } from './services/edit.service';
 import { ShowNavPluginsAdminService } from './services/show.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin')
 @Controller('admin/plugins/nav')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class NavPluginsAdminController {
   constructor(
@@ -36,8 +36,8 @@ export class NavPluginsAdminController {
     private readonly changePositionService: ChangePositionNavPluginsAdminService,
   ) {}
 
-  @Put('change_position/:plugin_code/:code')
   @ApiOkResponse({ description: 'Nav plugin position changed' })
+  @Put('change_position/:plugin_code/:code')
   async changePositionNav(
     @Param('plugin_code') plugin_code: string,
     @Param('code') code: string,
@@ -50,11 +50,11 @@ export class NavPluginsAdminController {
     });
   }
 
-  @Post(':plugin_code')
   @ApiOkResponse({
     description: 'Nav plugin created',
     type: ParentNavAuthAdminObj,
   })
+  @Post(':plugin_code')
   async createNav(
     @Param('plugin_code') plugin_code: string,
     @Body() body: CreateNavPluginsAdminBody,
@@ -63,8 +63,8 @@ export class NavPluginsAdminController {
   }
 
   @ApiOkResponse({ description: 'Nav plugin position changed' })
-  @Delete(':plugin_code/:code')
   @ApiOkResponse({ description: 'Nav plugin deleted' })
+  @Delete(':plugin_code/:code')
   async deleteNav(
     @Param('plugin_code') plugin_code: string,
     @Param('code') code: string,
@@ -73,11 +73,11 @@ export class NavPluginsAdminController {
     await this.deleteService.delete({ plugin_code, code, body });
   }
 
-  @Put(':plugin_code/:code')
   @ApiOkResponse({
     description: 'Nav plugin edited',
     type: ParentNavAuthAdminObj,
   })
+  @Put(':plugin_code/:code')
   async editNav(
     @Param('plugin_code') plugin_code: string,
     @Param('code') code: string,
@@ -90,8 +90,8 @@ export class NavPluginsAdminController {
     });
   }
 
-  @Get(':plugin_code')
   @ApiOkResponse({ description: 'Nav plugins', type: [ParentNavAuthAdminObj] })
+  @Get(':plugin_code')
   async showNav(
     @Param('plugin_code') plugin_code: string,
   ): Promise<ParentNavAuthAdminObj[]> {

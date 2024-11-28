@@ -26,9 +26,9 @@ import { DeletePermissionsAdminPluginsAdminService } from './services/delete.ser
 import { EditPermissionsAdminPluginsAdminService } from './services/edit.service';
 import { ShowPermissionsAdminPluginsAdminService } from './services/show.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin')
 @Controller('admin/plugins/permissions-admin')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class PermissionsAdminPluginsAdminController {
   constructor(
@@ -38,11 +38,11 @@ export class PermissionsAdminPluginsAdminController {
     private readonly deleteService: DeletePermissionsAdminPluginsAdminService,
   ) {}
 
-  @Post(':plugin_code')
   @ApiCreatedResponse({
     description: 'Permission created',
     type: PermissionsStaff,
   })
+  @Post(':plugin_code')
   async createPermission(
     @Param('plugin_code') plugin_code: string,
     @Body() body: CreatePermissionsAdminPluginsAdminBody,
@@ -50,8 +50,8 @@ export class PermissionsAdminPluginsAdminController {
     return await this.createService.create({ body, plugin_code });
   }
 
-  @Delete(':plugin_code/:id')
   @ApiOkResponse({ description: 'Permission deleted' })
+  @Delete(':plugin_code/:id')
   async deletePermission(
     @Param('plugin_code') plugin_code: string,
     @Param('id') id: string,
@@ -60,11 +60,11 @@ export class PermissionsAdminPluginsAdminController {
     await this.deleteService.delete({ plugin_code, id, body });
   }
 
-  @Put(':plugin_code/:old_id')
   @ApiOkResponse({
     description: 'Permission edited',
     type: PermissionsStaff,
   })
+  @Put(':plugin_code/:old_id')
   async editPermission(
     @Param('plugin_code') plugin_code: string,
     @Param('old_id') old_id: string,
@@ -73,11 +73,11 @@ export class PermissionsAdminPluginsAdminController {
     return await this.editService.edit({ body, plugin_code, old_id });
   }
 
-  @Get(':plugin_code')
   @ApiOkResponse({
     description: 'Permissions of plugin',
     type: [PermissionsStaff],
   })
+  @Get(':plugin_code')
   async showPermissions(
     @Param('plugin_code') plugin_code: string,
   ): Promise<PermissionsStaff[]> {

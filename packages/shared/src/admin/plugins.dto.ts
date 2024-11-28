@@ -14,23 +14,46 @@ import { SortDirectionEnum } from '../utils/pagination.enum';
 import { TransformString } from '../utils/text-language';
 import { ShowPluginsAdminSortEnum } from './plugins.enum';
 
-export class ShowPluginsAdminQuery extends PaginationQuery {
-  @ApiPropertyOptional()
+export class CreatePluginsAdminBody {
+  @ApiProperty()
   @IsString()
-  @IsOptional()
-  search?: string;
+  @MaxLength(100)
+  @MinLength(3)
+  @Transform(TransformString)
+  author: string;
 
-  @ApiPropertyOptional({
-    enum: ShowPluginsAdminSortEnum,
-  })
-  @IsEnum(ShowPluginsAdminSortEnum)
+  @ApiPropertyOptional()
   @IsOptional()
-  sortBy?: ShowPluginsAdminSortEnum;
+  @IsString()
+  @Transform(TransformString)
+  author_url?: string;
 
-  @ApiPropertyOptional({ enum: SortDirectionEnum })
-  @IsEnum(SortDirectionEnum)
+  @ApiProperty()
+  @IsString()
+  @Matches(/^[a-z0-9-]*$/)
+  @MaxLength(50)
+  @MinLength(3)
+  @Transform(TransformString)
+  code: string;
+
+  @ApiPropertyOptional()
   @IsOptional()
-  sortDirection?: SortDirectionEnum;
+  @IsString()
+  @MaxLength(255)
+  @Transform(TransformString)
+  description?: string;
+
+  @ApiProperty()
+  @IsString()
+  @MaxLength(100)
+  @MinLength(3)
+  @Transform(TransformString)
+  name: string;
+
+  @ApiProperty()
+  @IsString()
+  @Transform(TransformString)
+  support_url: string;
 }
 
 export class ShowPluginAdmin {
@@ -82,44 +105,21 @@ export class ShowPluginsAdminObj extends PaginationObj {
   edges: ShowPluginAdmin[];
 }
 
-export class CreatePluginsAdminBody {
-  @Transform(TransformString)
-  @MinLength(3)
-  @MaxLength(100)
-  @ApiProperty()
-  @IsString()
-  author: string;
-
-  @Transform(TransformString)
-  @IsOptional()
+export class ShowPluginsAdminQuery extends PaginationQuery {
   @ApiPropertyOptional()
-  @IsString()
-  author_url?: string;
-
-  @Transform(TransformString)
-  @MinLength(3)
-  @MaxLength(50)
-  @Matches(/^[a-z0-9-]*$/)
-  @ApiProperty()
-  @IsString()
-  code: string;
-
-  @Transform(TransformString)
-  @MaxLength(255)
   @IsOptional()
-  @ApiPropertyOptional()
   @IsString()
-  description?: string;
+  search?: string;
 
-  @Transform(TransformString)
-  @ApiProperty()
-  @MinLength(3)
-  @MaxLength(100)
-  @IsString()
-  name: string;
+  @ApiPropertyOptional({
+    enum: ShowPluginsAdminSortEnum,
+  })
+  @IsEnum(ShowPluginsAdminSortEnum)
+  @IsOptional()
+  sortBy?: ShowPluginsAdminSortEnum;
 
-  @Transform(TransformString)
-  @ApiProperty()
-  @IsString()
-  support_url: string;
+  @ApiPropertyOptional({ enum: SortDirectionEnum })
+  @IsEnum(SortDirectionEnum)
+  @IsOptional()
+  sortDirection?: SortDirectionEnum;
 }

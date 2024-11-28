@@ -2,17 +2,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 import { StringLanguage } from './string-language.dto';
 
-export class GroupUser {
-  @ApiPropertyOptional()
-  color: null | string;
-
-  @ApiProperty()
-  id: number;
-
-  @ApiProperty({ type: [StringLanguage] })
-  name: StringLanguage[];
-}
-
 export class AvatarUser {
   @ApiProperty()
   dir_folder: string;
@@ -22,6 +11,31 @@ export class AvatarUser {
 
   @ApiProperty()
   id: number;
+}
+
+export class FilesPermissionsCoreSessions {
+  @ApiProperty()
+  allow_upload: boolean;
+
+  @ApiProperty()
+  max_storage_for_submit: number;
+
+  @ApiProperty()
+  space_used: number;
+
+  @ApiProperty()
+  total_max_storage: number;
+}
+
+export class GroupUser {
+  @ApiPropertyOptional()
+  color: null | string;
+
+  @ApiProperty()
+  id: number;
+
+  @ApiProperty({ type: [StringLanguage] })
+  name: StringLanguage[];
 }
 
 export class User {
@@ -45,20 +59,6 @@ export class User {
 
   @ApiProperty()
   name_seo: string;
-}
-
-export class FilesPermissionsCoreSessions {
-  @ApiProperty()
-  allow_upload: boolean;
-
-  @ApiProperty()
-  max_storage_for_submit: number;
-
-  @ApiProperty()
-  space_used: number;
-
-  @ApiProperty()
-  total_max_storage: number;
 }
 
 export class UserWithDangerousInfo extends User {

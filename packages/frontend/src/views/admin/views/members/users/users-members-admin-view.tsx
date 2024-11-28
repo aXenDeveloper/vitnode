@@ -15,12 +15,12 @@ import { UsersMembersAdminSortEnum } from 'vitnode-shared/admin/members/users.en
 import { CreateUserUsersMembersAdmin } from '../create/create';
 import { TableUsersMembersAdmin } from './table';
 
-interface SearchParams extends SearchParamsPagination {
-  group_id?: string | string[];
-}
-
 export interface UsersMembersAdminViewProps {
   searchParams: Promise<SearchParams>;
+}
+
+interface SearchParams extends SearchParamsPagination {
+  group_id?: string | string[];
 }
 
 const getData = async (query: UsersMembersAdminQuery) => {

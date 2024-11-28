@@ -41,9 +41,9 @@ export class InternalDatabaseService<
     last: number | undefined;
     primaryCursor: string;
     total_count: number;
-  }): {
+  }): PaginationObj & {
     edges: T[];
-  } & PaginationObj {
+  } {
     let currentEdges: T[] = edges;
 
     if (last) {

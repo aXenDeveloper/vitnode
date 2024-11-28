@@ -9,11 +9,11 @@ import { ShowMiddlewareService } from './services/show.service';
 export class MiddlewareController {
   constructor(private readonly showService: ShowMiddlewareService) {}
 
-  @Get()
   @ApiOkResponse({
     type: ShowMiddlewareObj,
     description: 'Show middleware',
   })
+  @Get()
   async show(): Promise<ShowMiddlewareObj> {
     return this.showService.show();
   }

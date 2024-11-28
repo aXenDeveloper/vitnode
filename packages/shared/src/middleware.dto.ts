@@ -13,12 +13,54 @@ import { ShowNavStyles } from './nav.dto';
 import { FileObj } from './utils/files.dto';
 import { AllowTypeFilesEnum, CaptchaTypeEnum } from './utils/global';
 
+class EditorMiddleware {
+  @ApiProperty()
+  files: FilesEditorMiddleware;
+
+  @ApiProperty()
+  sticky: boolean;
+}
+
+export class SSOAuthMethodMiddleware {
+  @ApiProperty()
+  @IsString()
+  code: string;
+
+  @ApiProperty()
+  @IsString()
+  name: string;
+}
+
+class FilesEditorMiddleware {
+  @ApiProperty({ enum: AllowTypeFilesEnum })
+  allow_type: AllowTypeFilesEnum;
+}
+
+export class AuthMethodMiddleware {
+  @ApiProperty()
+  @IsBoolean()
+  password: boolean;
+
+  @ApiProperty({ type: [SSOAuthMethodMiddleware] })
+  sso: SSOAuthMethodMiddleware[];
+}
+
 export class AuthorizationMiddleware {
   @ApiProperty()
   force_login: boolean;
 
   @ApiProperty()
   lock_register: boolean;
+}
+
+export class CaptchaSecurityMiddleware {
+  @ApiProperty()
+  @IsString()
+  site_key: string;
+
+  @ApiProperty({ enum: CaptchaTypeEnum })
+  @IsEnum(CaptchaTypeEnum)
+  type: CaptchaTypeEnum;
 }
 
 export class LanguagesMiddleware {
@@ -42,53 +84,6 @@ export class LanguagesMiddleware {
 
   @ApiProperty()
   timezone: string;
-}
-
-export class CaptchaSecurityMiddleware {
-  @ApiProperty()
-  @IsString()
-  site_key: string;
-
-  @ApiProperty({ enum: CaptchaTypeEnum })
-  @IsEnum(CaptchaTypeEnum)
-  type: CaptchaTypeEnum;
-}
-
-export class SSOAuthMethodMiddleware {
-  @ApiProperty()
-  @IsString()
-  code: string;
-
-  @ApiProperty()
-  @IsString()
-  name: string;
-}
-
-export class AuthMethodMiddleware {
-  @ApiProperty()
-  @IsBoolean()
-  password: boolean;
-
-  @ApiProperty({ type: [SSOAuthMethodMiddleware] })
-  sso: SSOAuthMethodMiddleware[];
-}
-
-export class SecurityMiddleware {
-  @ApiProperty()
-  captcha: CaptchaSecurityMiddleware;
-}
-
-class FilesEditorMiddleware {
-  @ApiProperty({ enum: AllowTypeFilesEnum })
-  allow_type: AllowTypeFilesEnum;
-}
-
-class EditorMiddleware {
-  @ApiProperty()
-  files: FilesEditorMiddleware;
-
-  @ApiProperty()
-  sticky: boolean;
 }
 
 export class LogosMiddleware {
@@ -123,6 +118,11 @@ export class LogosMiddleware {
   @ApiProperty()
   @IsNumber()
   width: number;
+}
+
+export class SecurityMiddleware {
+  @ApiProperty()
+  captcha: CaptchaSecurityMiddleware;
 }
 
 export class ShowMiddlewareObj extends MainSettingsAdminBody {

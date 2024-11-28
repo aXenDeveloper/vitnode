@@ -19,6 +19,13 @@ import { cn } from '../../helpers/classnames';
 import { useDialog } from './dialog';
 import { Label } from './label';
 
+interface FormFieldContextValue<
+  TFieldValues extends FieldValues = FieldValues,
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+> {
+  name: TName;
+}
+
 interface FormProps<
   TFieldValues extends FieldValues,
   TContext = unknown,
@@ -47,13 +54,6 @@ function Form<
   }, [formIsDirty, props.disableBeforeUnload]);
 
   return <FormProvider {...props} />;
-}
-
-interface FormFieldContextValue<
-  TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
-> {
-  name: TName;
 }
 
 const FormFieldContext = React.createContext<FormFieldContextValue>(

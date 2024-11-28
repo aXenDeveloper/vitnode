@@ -10,9 +10,9 @@ import {
 export const editMutationApi = async ({
   code,
   ...body
-}: {
+}: EditMethodAuthSettingsAdminBody & {
   code: string;
-} & EditMethodAuthSettingsAdminBody) => {
+}) => {
   await fetcher<ShowMethodAuthSettingsAdmin, EditMethodAuthSettingsAdminBody>({
     url: `/admin/settings/auth/methods/${code}`,
     method: 'PUT',

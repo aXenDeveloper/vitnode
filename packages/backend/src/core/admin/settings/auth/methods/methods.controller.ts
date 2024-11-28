@@ -27,9 +27,9 @@ import { DeleteMethodsAuthSettingsAdminService } from './services/delete.service
 import { EditMethodsAuthSettingsAdminService } from './services/edit.service';
 import { ShowMethodsAuthSettingsAdminService } from './services/show.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin')
 @Controller('admin/settings/auth/methods')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class MethodsAuthSettingsAdminController {
   constructor(
@@ -39,30 +39,30 @@ export class MethodsAuthSettingsAdminController {
     private readonly editService: EditMethodsAuthSettingsAdminService,
   ) {}
 
-  @Post()
   @ApiCreatedResponse({
     type: ShowMethodAuthSettingsAdmin,
     description: 'Create new auth method',
   })
+  @Post()
   async createMethod(
     @Body() body: CreateMethodAuthSettingsAdminBody,
   ): Promise<ShowMethodAuthSettingsAdmin> {
     return this.createService.create(body);
   }
 
-  @Delete(':code')
   @ApiOkResponse({
     description: 'Delete auth method',
   })
+  @Delete(':code')
   async deleteMethod(@Param('code') code: string): Promise<void> {
     return this.deleteService.delete(code);
   }
 
-  @Put(':code')
   @ApiOkResponse({
     description: 'Edit auth method',
     type: ShowMethodAuthSettingsAdmin,
   })
+  @Put(':code')
   async editMethod(
     @Param('code') code: string,
     @Body() body: EditMethodAuthSettingsAdminBody,
@@ -70,11 +70,11 @@ export class MethodsAuthSettingsAdminController {
     return this.editService.edit({ code, body });
   }
 
-  @Get()
   @ApiOkResponse({
     type: ShowMethodAuthSettingsAdminObj,
     description: 'Show all auth enabled methods',
   })
+  @Get()
   async showMethod(): Promise<ShowMethodAuthSettingsAdminObj> {
     return this.showService.show();
   }

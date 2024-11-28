@@ -12,48 +12,6 @@ import {
 import { TransformString } from '../utils/text-language';
 import { ItemNavAuthAdminObj } from './auth.dto';
 
-export class CreatePluginsAdminBody {
-  @Transform(TransformString)
-  @MinLength(3)
-  @MaxLength(100)
-  @ApiProperty()
-  author: string;
-
-  @Transform(TransformString)
-  @IsOptional()
-  @ApiPropertyOptional()
-  author_url?: string;
-
-  @Transform(TransformString)
-  @MinLength(3)
-  @MaxLength(50)
-  @Matches(/^[a-z0-9-]*$/)
-  @ApiProperty()
-  code: string;
-
-  @Transform(TransformString)
-  @MaxLength(255)
-  @IsOptional()
-  @ApiPropertyOptional()
-  description?: string;
-
-  @Transform(TransformString)
-  @ApiProperty()
-  @MinLength(3)
-  @MaxLength(100)
-  name: string;
-
-  @Transform(TransformString)
-  @IsNotEmpty()
-  @ApiProperty()
-  support_url: string;
-}
-
-export interface NavPluginInfoJSONType extends ItemNavAuthAdminObj {
-  children?: ItemNavAuthAdminObj[];
-  parent_code?: string;
-}
-
 export interface ConfigPlugin extends CreatePluginsAdminBody {
   allow_default: boolean;
   nav: NavPluginInfoJSONType[];
@@ -63,6 +21,48 @@ export interface ConfigPlugin extends CreatePluginsAdminBody {
   }[];
   version: string;
   version_code: number;
+}
+
+export interface NavPluginInfoJSONType extends ItemNavAuthAdminObj {
+  children?: ItemNavAuthAdminObj[];
+  parent_code?: string;
+}
+
+export class CreatePluginsAdminBody {
+  @ApiProperty()
+  @MaxLength(100)
+  @MinLength(3)
+  @Transform(TransformString)
+  author: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Transform(TransformString)
+  author_url?: string;
+
+  @ApiProperty()
+  @Matches(/^[a-z0-9-]*$/)
+  @MaxLength(50)
+  @MinLength(3)
+  @Transform(TransformString)
+  code: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @MaxLength(255)
+  @Transform(TransformString)
+  description?: string;
+
+  @ApiProperty()
+  @MaxLength(100)
+  @MinLength(3)
+  @Transform(TransformString)
+  name: string;
+
+  @ApiProperty()
+  @IsNotEmpty()
+  @Transform(TransformString)
+  support_url: string;
 }
 
 export class EditPluginsAdminBody extends OmitType(CreatePluginsAdminBody, [

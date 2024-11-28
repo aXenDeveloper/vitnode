@@ -23,7 +23,7 @@ export const createMutationApi = async (
 export const editMutationApi = async ({
   id,
   ...body
-}: { id: number } & EditAdminStaffMembersAdminBody) => {
+}: EditAdminStaffMembersAdminBody & { id: number }) => {
   await fetcher<AdminStaffMembersAdmin, EditAdminStaffMembersAdminBody>({
     url: `/admin/members/staff/admin/${id}`,
     method: 'PUT',

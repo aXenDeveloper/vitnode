@@ -1,7 +1,7 @@
 import { usePathname, useRouter } from '@/navigation';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
 import React from 'react';
 import { PaginationInfo } from 'vitnode-shared/utils/pagination.dto';
 

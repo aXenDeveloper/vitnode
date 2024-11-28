@@ -7,18 +7,18 @@ import { User } from 'vitnode-shared/user.dto';
 
 import { ShowDevicesSettingsAuthService } from './services/show.service';
 
+@ApiSecurity('')
 @ApiTags('Core')
 @Controller('core/auth/settings/devices')
-@ApiSecurity('')
 @UseGuards(AuthGuard)
 export class DevicesSettingsAuthController {
   constructor(private readonly showService: ShowDevicesSettingsAuthService) {}
 
-  @Get()
   @ApiOkResponse({
     description: 'Devices settings',
     type: [ShowDevicesSettingsAuthObj],
   })
+  @Get()
   async show(@CurrentUser() user: User): Promise<ShowDevicesSettingsAuthObj[]> {
     return await this.showService.show(user);
   }

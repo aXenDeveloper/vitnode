@@ -1,7 +1,7 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
 import { createNavigation } from 'next-intl/navigation';
+import { useSearchParams } from 'next/navigation';
 import NProgress from 'nprogress';
 import React from 'react';
 

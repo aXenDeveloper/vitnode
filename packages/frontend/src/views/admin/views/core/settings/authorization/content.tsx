@@ -11,9 +11,9 @@ import { useAuthorizationFormAdmin } from './hooks/use-authorization-settings-fo
 export const ContentAuthorizationSettingsAdminView = ({
   isEmailEnabled,
   ...props
-}: {
+}: ShowAuthSettingsAdminObj & {
   isEmailEnabled: boolean;
-} & ShowAuthSettingsAdminObj) => {
+}) => {
   const t = useTranslations('admin.core.settings.authorization.settings');
   const tAdminGlobal = useTranslations('admin.global');
   const { onSubmit, formSchema } = useAuthorizationFormAdmin(props);

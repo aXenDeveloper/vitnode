@@ -8,9 +8,9 @@ import { PermissionsStaff } from 'vitnode-shared/admin/staff.dto';
 export const createMutationApi = async ({
   plugin_code,
   ...body
-}: {
+}: CreatePermissionsAdminPluginsAdminBody & {
   plugin_code: string;
-} & CreatePermissionsAdminPluginsAdminBody) => {
+}) => {
   await fetcher<PermissionsStaff, CreatePermissionsAdminPluginsAdminBody>({
     url: `/admin/plugins/permissions-admin/${plugin_code}`,
     method: 'POST',

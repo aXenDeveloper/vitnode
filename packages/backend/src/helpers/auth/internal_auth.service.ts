@@ -86,10 +86,10 @@ export class InternalAuthService {
       throw new ForbiddenException();
     }
 
-    const decodeAccessToken: {
+    const decodeAccessToken: null | {
       email: string;
       exp: number;
-    } | null = this.jwtService.decode(login_token);
+    } = this.jwtService.decode(login_token);
     if (
       !decodeAccessToken ||
       decodeAccessToken.exp < currentUnixDate() ||

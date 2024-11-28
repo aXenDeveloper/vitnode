@@ -3,8 +3,8 @@ import { Loader } from '@/components/ui/loader';
 import { cn } from '@/helpers/classnames';
 import { usePathname, useRouter } from '@/navigation';
 import { CheckIcon } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
 
 import { useFilterToolbarDataTable } from '../hooks/use-filter-toolbar-data-table';
 import { ContentFilterToolbarDataTableProps } from './content';

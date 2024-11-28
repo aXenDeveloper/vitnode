@@ -2,8 +2,8 @@ import { ImgFromApi } from '@/components/img';
 import { FileInput, FilesInputValue } from '@/components/ui/file-input';
 import { cn } from '@/helpers/classnames';
 import { Trash2 } from 'lucide-react';
-import Image from 'next/image';
 import { useTranslations } from 'next-intl';
+import Image from 'next/image';
 import React from 'react';
 
 import { acceptMimeTypeImage } from '../../../helpers/files-support';
@@ -15,14 +15,14 @@ export const ItemPreviewFilesInput = ({
   value,
   showInfo,
   multiple,
-}: {
+}: Pick<
+  React.ComponentProps<typeof FileInput>,
+  'multiple' | 'onChange' | 'value'
+> & {
   file: FilesInputValue;
   index: number;
   showInfo?: boolean;
-} & Pick<
-  React.ComponentProps<typeof FileInput>,
-  'multiple' | 'onChange' | 'value'
->) => {
+}) => {
   const t = useTranslations('core.global');
   const size = React.useMemo(() => {
     const sizeInBytes = file instanceof File ? file.size : file.file_size;

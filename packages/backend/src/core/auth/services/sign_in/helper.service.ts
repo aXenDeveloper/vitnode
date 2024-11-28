@@ -28,7 +28,7 @@ export class HelperSignInAuthService {
     res,
     body: { email, admin, user_id, name },
   }: {
-    body: { name: string; user_id: number } & Omit<SignInAuthBody, 'password'>;
+    body: Omit<SignInAuthBody, 'password'> & { name: string; user_id: number };
     req: Request;
     res: Response;
   }) {

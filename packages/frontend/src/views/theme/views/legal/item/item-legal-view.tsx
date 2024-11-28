@@ -4,8 +4,8 @@ import { DateFormat } from '@/components/date-format';
 import { ReadOnlyEditor } from '@/components/editor/read-only/read-only';
 import { getTextLang } from '@/hooks/use-text-lang';
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { notFound } from 'next/navigation';
 import { Legal } from 'vitnode-shared/legal.dto';
 
 const getData = async (code: string) => {

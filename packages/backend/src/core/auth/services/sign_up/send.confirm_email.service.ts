@@ -1,7 +1,7 @@
 import { core_users_confirm_emails } from '@/database/schema/users';
 import { getTranslationForEmail } from '@/helpers/email/email';
-import { EmailHelperService } from '@/helpers/email/email.service';
 import { type EmailHelpersServiceType } from '@/helpers/email/email-helpers.type';
+import { EmailHelperService } from '@/helpers/email/email.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import crypto from 'crypto';

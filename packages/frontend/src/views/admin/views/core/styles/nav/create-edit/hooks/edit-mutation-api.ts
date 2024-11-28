@@ -8,7 +8,7 @@ import { ShowNavStyles } from 'vitnode-shared/nav.dto';
 export const editMutationApi = async ({
   id,
   ...body
-}: { id: number } & CreateNavStylesAdminBody) => {
+}: CreateNavStylesAdminBody & { id: number }) => {
   await fetcher<ShowNavStyles, CreateNavStylesAdminBody>({
     url: `/admin/styles/nav/${id}`,
     method: 'PUT',

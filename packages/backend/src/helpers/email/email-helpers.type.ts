@@ -4,6 +4,20 @@ import { FileObj } from 'vitnode-shared/utils/files.dto';
 
 import { EmailTemplateProps } from './template/email-template';
 
+export interface EmailHelpersServiceType {
+  getHelpersForEmail: () => GetHelpersForEmailType;
+  template: (props: Omit<EmailTemplateProps, 'helpers'>) => React.JSX.Element;
+}
+
+export interface EmailSenderArgs {
+  html: string;
+  site_short_name: string;
+  subject: string;
+  to: string;
+}
+
+export type EmailSenderFunction = (params: EmailSenderArgs) => Promise<void>;
+
 export interface GetHelpersForEmailType {
   backend_url: string;
   color: {
@@ -26,17 +40,3 @@ export interface GetHelpersForEmailType {
   site_name: string;
   site_short_name: string;
 }
-
-export interface EmailHelpersServiceType {
-  getHelpersForEmail: () => GetHelpersForEmailType;
-  template: (props: Omit<EmailTemplateProps, 'helpers'>) => React.JSX.Element;
-}
-
-export interface EmailSenderArgs {
-  html: string;
-  site_short_name: string;
-  subject: string;
-  to: string;
-}
-
-export type EmailSenderFunction = (params: EmailSenderArgs) => Promise<void>;

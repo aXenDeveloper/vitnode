@@ -2,89 +2,6 @@ import { arrayMove } from '@dnd-kit/sortable';
 
 import { FlattenedItem, TreeItem } from './types';
 
-function getDragDepth(offset: number, indentationWidth: number) {
-  return Math.round(offset / indentationWidth);
-}
-
-export function getProjection<T extends TreeItem<T>>(
-  items: FlattenedItem<T>[],
-  activeId: number | string,
-  overId: number | string,
-  dragOffset: number,
-  indentationWidth: number,
-  maxDepthProp?: number,
-) {
-  const overItemIndex = items.findIndex(({ id }) => id === overId);
-  const activeItemIndex = items.findIndex(({ id }) => id === activeId);
-  const activeItem = items[activeItemIndex];
-  const newItems = arrayMove(items, activeItemIndex, overItemIndex);
-  const previousItem: FlattenedItem<T> | undefined =
-    newItems[overItemIndex - 1];
-  const nextItem = newItems[overItemIndex + 1];
-  const dragDepth = getDragDepth(dragOffset, indentationWidth);
-  const projectedDepth = +activeItem.depth + dragDepth;
-  const maxDepth =
-    maxDepthProp ??
-    getMaxDepth({
-      previousItem,
-    });
-  const minDepth = getMinDepth({ nextItem });
-  let depth = projectedDepth;
-
-  if (projectedDepth >= maxDepth) {
-    depth = maxDepth;
-  } else if (projectedDepth < minDepth) {
-    depth = minDepth;
-  }
-
-  return { depth, maxDepth, minDepth, parentId: getParentId() };
-
-  function getParentId() {
-    if (depth === 0 || !previousItem) {
-      return null;
-    }
-
-    if (depth === previousItem.depth) {
-      return previousItem.parentId;
-    }
-
-    if (depth > previousItem.depth) {
-      return previousItem.id;
-    }
-
-    const newParent = newItems
-      .slice(0, overItemIndex)
-      .reverse()
-      .find(item => item.depth === depth)?.parentId;
-
-    return newParent ?? null;
-  }
-}
-
-function getMaxDepth<T extends TreeItem<T>>({
-  previousItem,
-}: {
-  previousItem: FlattenedItem<T> | undefined;
-}) {
-  if (previousItem) {
-    return previousItem.depth + 1;
-  }
-
-  return 0;
-}
-
-function getMinDepth<T extends TreeItem<T>>({
-  nextItem,
-}: {
-  nextItem: FlattenedItem<T> | undefined;
-}) {
-  if (nextItem) {
-    return nextItem.depth;
-  }
-
-  return 0;
-}
-
 export function buildTree<T extends TreeItem<T>>(
   flattenedItems: FlattenedItem<T>[],
 ): T[] {
@@ -146,6 +63,89 @@ export function findItemDeep<T extends TreeItem<T>>(
   return undefined;
 }
 
+export function getChildCount<T extends TreeItem<T>>(
+  items: TreeItem<T>[],
+  id: number | string,
+) {
+  const item = findItemDeep(items, id);
+
+  return item ? countChildren(item.children) : 0;
+}
+
+export function getProjection<T extends TreeItem<T>>(
+  items: FlattenedItem<T>[],
+  activeId: number | string,
+  overId: number | string,
+  dragOffset: number,
+  indentationWidth: number,
+  maxDepthProp?: number,
+) {
+  const overItemIndex = items.findIndex(({ id }) => id === overId);
+  const activeItemIndex = items.findIndex(({ id }) => id === activeId);
+  const activeItem = items[activeItemIndex];
+  const newItems = arrayMove(items, activeItemIndex, overItemIndex);
+  const previousItem: FlattenedItem<T> | undefined =
+    newItems[overItemIndex - 1];
+  const nextItem = newItems[overItemIndex + 1];
+  const dragDepth = getDragDepth(dragOffset, indentationWidth);
+  const projectedDepth = +activeItem.depth + dragDepth;
+  const maxDepth =
+    maxDepthProp ??
+    getMaxDepth({
+      previousItem,
+    });
+  const minDepth = getMinDepth({ nextItem });
+  let depth = projectedDepth;
+
+  if (projectedDepth >= maxDepth) {
+    depth = maxDepth;
+  } else if (projectedDepth < minDepth) {
+    depth = minDepth;
+  }
+
+  return { depth, maxDepth, minDepth, parentId: getParentId() };
+
+  function getParentId() {
+    if (depth === 0 || !previousItem) {
+      return null;
+    }
+
+    if (depth === previousItem.depth) {
+      return previousItem.parentId;
+    }
+
+    if (depth > previousItem.depth) {
+      return previousItem.id;
+    }
+
+    const newParent = newItems
+      .slice(0, overItemIndex)
+      .reverse()
+      .find(item => item.depth === depth)?.parentId;
+
+    return newParent ?? null;
+  }
+}
+
+export function removeChildrenOf<T extends TreeItem<T>>(
+  items: FlattenedItem<T>[],
+  ids: (number | string)[],
+) {
+  const excludeParentIds = [...ids];
+
+  return items.filter(item => {
+    if (item.parentId && excludeParentIds.includes(item.parentId)) {
+      if (item.children.length) {
+        excludeParentIds.push(item.id);
+      }
+
+      return false;
+    }
+
+    return true;
+  });
+}
+
 export function removeItem<T extends TreeItem<T>>(
   items: TreeItem<T>[],
   id: number | string,
@@ -203,30 +203,30 @@ function countChildren<T extends TreeItem<T>>(
   }, count);
 }
 
-export function getChildCount<T extends TreeItem<T>>(
-  items: TreeItem<T>[],
-  id: number | string,
-) {
-  const item = findItemDeep(items, id);
-
-  return item ? countChildren(item.children) : 0;
+function getDragDepth(offset: number, indentationWidth: number) {
+  return Math.round(offset / indentationWidth);
 }
 
-export function removeChildrenOf<T extends TreeItem<T>>(
-  items: FlattenedItem<T>[],
-  ids: (number | string)[],
-) {
-  const excludeParentIds = [...ids];
+function getMaxDepth<T extends TreeItem<T>>({
+  previousItem,
+}: {
+  previousItem: FlattenedItem<T> | undefined;
+}) {
+  if (previousItem) {
+    return previousItem.depth + 1;
+  }
 
-  return items.filter(item => {
-    if (item.parentId && excludeParentIds.includes(item.parentId)) {
-      if (item.children.length) {
-        excludeParentIds.push(item.id);
-      }
+  return 0;
+}
 
-      return false;
-    }
+function getMinDepth<T extends TreeItem<T>>({
+  nextItem,
+}: {
+  nextItem: FlattenedItem<T> | undefined;
+}) {
+  if (nextItem) {
+    return nextItem.depth;
+  }
 
-    return true;
-  });
+  return 0;
 }

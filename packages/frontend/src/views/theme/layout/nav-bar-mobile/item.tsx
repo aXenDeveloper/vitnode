@@ -10,13 +10,13 @@ export const ItemNavBarMobile = ({
   title,
   onClick,
   ...props
-}: {
+}: React.HTMLAttributes<HTMLAnchorElement | HTMLButtonElement> & {
   children: React.ReactNode;
   className?: string;
   href?: string;
   onClick?: () => void;
   title: string;
-} & React.HTMLAttributes<HTMLAnchorElement | HTMLButtonElement>) => {
+}) => {
   const classNameInternal = cn(
     '[&>span]:text-muted-foreground text-foreground flex flex-1 flex-col items-center justify-center gap-1.5 truncate px-2 text-center text-xs leading-none no-underline [&>svg]:size-6',
   );

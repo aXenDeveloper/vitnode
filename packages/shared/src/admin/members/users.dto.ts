@@ -21,29 +21,28 @@ import { SortDirectionEnum } from '../../utils/pagination.enum';
 import { TransformString } from '../../utils/text-language';
 import { UsersMembersAdminSortEnum } from './users.enum';
 
-export class UsersMembersAdminQuery extends PaginationQuery {
-  @ApiPropertyOptional({ type: [Number] })
-  @Transform(({ value }) => value.split(','))
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  groups?: number[];
+export class EditUserMembersAdminBody {
+  @ApiProperty({ example: 'test@test.com' })
+  @IsEmail()
+  @Transform(TransformString)
+  email: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  search?: string;
+  @ApiProperty({ example: 2 })
+  @IsNumber()
+  @Min(1)
+  group_id: number;
 
-  @ApiPropertyOptional({
-    enum: UsersMembersAdminSortEnum,
-  })
-  @IsEnum(UsersMembersAdminSortEnum)
-  @IsOptional()
-  sortBy?: UsersMembersAdminSortEnum;
+  @ApiProperty({ example: 'aXen' })
+  @Matches(nameRegex)
+  @MaxLength(32)
+  @MinLength(3)
+  @Transform(TransformString)
+  name: string;
 
-  @ApiPropertyOptional({ enum: SortDirectionEnum })
-  @IsEnum(SortDirectionEnum)
+  @ApiPropertyOptional({ example: false })
+  @IsBoolean()
   @IsOptional()
-  sortDirection?: SortDirectionEnum;
+  newsletter?: boolean;
 }
 
 export class UserMembersAdmin extends User {
@@ -65,26 +64,27 @@ export class UsersMembersAdminObj extends PaginationObj {
   edges: UserMembersAdmin[];
 }
 
-export class EditUserMembersAdminBody {
-  @Transform(TransformString)
-  @IsEmail()
-  @ApiProperty({ example: 'test@test.com' })
-  email: string;
-
-  @ApiProperty({ example: 2 })
-  @IsNumber()
-  @Min(1)
-  group_id: number;
-
-  @Transform(TransformString)
-  @MinLength(3)
-  @MaxLength(32)
-  @Matches(nameRegex)
-  @ApiProperty({ example: 'aXen' })
-  name: string;
-
-  @ApiPropertyOptional({ example: false })
-  @IsBoolean()
+export class UsersMembersAdminQuery extends PaginationQuery {
+  @ApiPropertyOptional({ type: [Number] })
+  @IsArray()
   @IsOptional()
-  newsletter?: boolean;
+  @IsString({ each: true })
+  @Transform(({ value }) => value.split(','))
+  groups?: number[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  search?: string;
+
+  @ApiPropertyOptional({
+    enum: UsersMembersAdminSortEnum,
+  })
+  @IsEnum(UsersMembersAdminSortEnum)
+  @IsOptional()
+  sortBy?: UsersMembersAdminSortEnum;
+
+  @ApiPropertyOptional({ enum: SortDirectionEnum })
+  @IsEnum(SortDirectionEnum)
+  @IsOptional()
+  sortDirection?: SortDirectionEnum;
 }

@@ -2,42 +2,6 @@ import { execSync } from 'child_process';
 import { rmSync } from 'fs';
 import { join } from 'path';
 
-function isInGitRepository(): boolean {
-  try {
-    execSync('git rev-parse --is-inside-work-tree', { stdio: 'ignore' });
-
-    return true;
-  } catch (_) {
-    /* empty */
-  }
-
-  return false;
-}
-
-function isInMercurialRepository(): boolean {
-  try {
-    execSync('hg --cwd . root', { stdio: 'ignore' });
-
-    return true;
-  } catch (_) {
-    /* empty */
-  }
-
-  return false;
-}
-
-function isDefaultBranchSet(): boolean {
-  try {
-    execSync('git config init.defaultBranch', { stdio: 'ignore' });
-
-    return true;
-  } catch (_) {
-    /* empty */
-  }
-
-  return false;
-}
-
 export function tryGitInit(root: string): boolean {
   let didInit = false;
   try {
@@ -70,4 +34,40 @@ export function tryGitInit(root: string): boolean {
 
     return false;
   }
+}
+
+function isDefaultBranchSet(): boolean {
+  try {
+    execSync('git config init.defaultBranch', { stdio: 'ignore' });
+
+    return true;
+  } catch (_) {
+    /* empty */
+  }
+
+  return false;
+}
+
+function isInGitRepository(): boolean {
+  try {
+    execSync('git rev-parse --is-inside-work-tree', { stdio: 'ignore' });
+
+    return true;
+  } catch (_) {
+    /* empty */
+  }
+
+  return false;
+}
+
+function isInMercurialRepository(): boolean {
+  try {
+    execSync('hg --cwd . root', { stdio: 'ignore' });
+
+    return true;
+  } catch (_) {
+    /* empty */
+  }
+
+  return false;
 }

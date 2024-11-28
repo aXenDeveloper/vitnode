@@ -11,6 +11,16 @@ export enum ThemeEditorIds {
   mobile_light = 'vitnode_logo_mobile_light',
 }
 
+interface Args {
+  form: UseFormReturn<FormValues>;
+  iframeRef: React.RefObject<HTMLIFrameElement>;
+  onSubmit: (args: FormValues) => void;
+  updateLogo: (args: {
+    file: FilesInputValue | null;
+    id: ThemeEditorIds;
+  }) => void;
+}
+
 interface FormValues {
   logos: {
     dark?: FilesInputValue | null;
@@ -21,16 +31,6 @@ interface FormValues {
     text: string;
     width: number;
   };
-}
-
-interface Args {
-  form: UseFormReturn<FormValues>;
-  iframeRef: React.RefObject<HTMLIFrameElement>;
-  onSubmit: (args: FormValues) => void;
-  updateLogo: (args: {
-    file: FilesInputValue | null;
-    id: ThemeEditorIds;
-  }) => void;
 }
 
 export const ThemeEditorContext = React.createContext<Args>({} as Args);
