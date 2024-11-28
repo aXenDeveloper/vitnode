@@ -15,6 +15,11 @@ export class ItemNavAuthAdminObj {
   keywords: string[];
 }
 
+export class ParentNavAuthAdminObj extends ItemNavAuthAdminObj {
+  @ApiProperty({ type: [ItemNavAuthAdminObj] })
+  children?: ItemNavAuthAdminObj[];
+}
+
 export class NavAuthAdminObj {
   @ApiProperty()
   code: string;
@@ -29,11 +34,6 @@ export class NavSearchNavAuthAdmin extends ItemNavAuthAdminObj {
 
   @ApiPropertyOptional()
   parent_nav_code?: string;
-}
-
-export class ParentNavAuthAdminObj extends ItemNavAuthAdminObj {
-  @ApiProperty({ type: [ItemNavAuthAdminObj] })
-  children?: ItemNavAuthAdminObj[];
 }
 
 export class SearchNavAuthAdminObj {

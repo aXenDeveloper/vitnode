@@ -21,6 +21,16 @@ class EditorMiddleware {
   sticky: boolean;
 }
 
+export class SSOAuthMethodMiddleware {
+  @ApiProperty()
+  @IsString()
+  code: string;
+
+  @ApiProperty()
+  @IsString()
+  name: string;
+}
+
 class FilesEditorMiddleware {
   @ApiProperty({ enum: AllowTypeFilesEnum })
   allow_type: AllowTypeFilesEnum;
@@ -151,14 +161,4 @@ export class ShowMiddlewareObj extends MainSettingsAdminBody {
 
   @ApiProperty()
   security: SecurityMiddleware;
-}
-
-export class SSOAuthMethodMiddleware {
-  @ApiProperty()
-  @IsString()
-  code: string;
-
-  @ApiProperty()
-  @IsString()
-  name: string;
 }

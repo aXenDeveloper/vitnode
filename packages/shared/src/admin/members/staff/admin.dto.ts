@@ -17,6 +17,11 @@ import {
 } from '../../staff.dto';
 import { ShowStaffMembersAdminSortEnum } from './admin.enum';
 
+export class StaffGroupUser extends OmitType(GroupUser, ['name'] as const) {
+  @ApiProperty({ type: [StringLanguage] })
+  group_name: StringLanguage[];
+}
+
 export class AdminStaffMembersAdmin {
   @ApiProperty()
   created_at: Date;
@@ -84,8 +89,3 @@ export class EditAdminStaffMembersAdminBody extends OmitType(
   CreateAdminStaffMembersAdminBody,
   ['group_id', 'user_id'] as const,
 ) {}
-
-export class StaffGroupUser extends OmitType(GroupUser, ['name'] as const) {
-  @ApiProperty({ type: [StringLanguage] })
-  group_name: StringLanguage[];
-}
