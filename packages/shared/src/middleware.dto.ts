@@ -13,6 +13,11 @@ import { ShowNavStyles } from './nav.dto';
 import { FileObj } from './utils/files.dto';
 import { AllowTypeFilesEnum, CaptchaTypeEnum } from './utils/global';
 
+class FilesEditorMiddleware {
+  @ApiProperty({ enum: AllowTypeFilesEnum })
+  allow_type: AllowTypeFilesEnum;
+}
+
 class EditorMiddleware {
   @ApiProperty()
   files: FilesEditorMiddleware;
@@ -29,11 +34,6 @@ export class SSOAuthMethodMiddleware {
   @ApiProperty()
   @IsString()
   name: string;
-}
-
-class FilesEditorMiddleware {
-  @ApiProperty({ enum: AllowTypeFilesEnum })
-  allow_type: AllowTypeFilesEnum;
 }
 
 export class AuthMethodMiddleware {
