@@ -10,6 +10,22 @@ import { cn } from '../../../../helpers/classnames';
 import { Button } from '../../../ui/button';
 import { classPopover } from '../../../ui/popover';
 
+export interface ComponentListProps {
+  command: (_props: { id: string }) => void;
+  items: string[];
+  ref?: React.RefCallback<ComponentListRef>;
+}
+
+export interface ComponentListRef {
+  onKeyDown: (props: SuggestionKeyDownProps) => boolean;
+}
+
+export interface SuggestionKeyDownProps {
+  event: KeyboardEvent;
+  range: Range;
+  view: EditorView;
+}
+
 export interface SuggestionProps<I> {
   clientRect?: GetReferenceClientRect;
   command: (props: I) => void;
@@ -20,22 +36,6 @@ export interface SuggestionProps<I> {
   query: string;
   range: Range;
   text: string;
-}
-
-export interface SuggestionKeyDownProps {
-  event: KeyboardEvent;
-  range: Range;
-  view: EditorView;
-}
-
-export interface ComponentListRef {
-  onKeyDown: (props: SuggestionKeyDownProps) => boolean;
-}
-
-export interface ComponentListProps {
-  command: (_props: { id: string }) => void;
-  items: string[];
-  ref?: React.RefCallback<ComponentListRef>;
 }
 
 const ComponentList = ({ command, items, ref }: ComponentListProps) => {
@@ -116,6 +116,20 @@ const ComponentList = ({ command, items, ref }: ComponentListProps) => {
 let component: null | ReactRenderer<ComponentListRef> = null;
 let popup: Instance[] | null = null;
 
+export function onKeyDown(props: SuggestionKeyDownProps) {
+  if (!component || !popup) {
+    return;
+  }
+
+  if (props.event.key === 'Escape') {
+    popup[0].hide();
+
+    return true;
+  }
+
+  return component.ref?.onKeyDown(props);
+}
+
 export function onStart<T>(props: SuggestionProps<T>) {
   component = new ReactRenderer(ComponentList, {
     props,
@@ -152,20 +166,6 @@ export function onUpdate<T>(props: SuggestionProps<T>) {
   popup[0].setProps({
     getReferenceClientRect: props.clientRect,
   });
-}
-
-export function onKeyDown(props: SuggestionKeyDownProps) {
-  if (!component || !popup) {
-    return;
-  }
-
-  if (props.event.key === 'Escape') {
-    popup[0].hide();
-
-    return true;
-  }
-
-  return component.ref?.onKeyDown(props);
 }
 
 export const onExit = () => {

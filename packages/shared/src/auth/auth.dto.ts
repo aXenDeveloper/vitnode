@@ -23,49 +23,6 @@ export class ShowAuthObj {
 
 export class SignAuthObj extends OmitType(User, ['group'] as const) {}
 
-export class SignOutAuthBody {
-  @ApiPropertyOptional({ example: false })
-  @IsBoolean()
-  @IsOptional()
-  is_admin?: boolean;
-}
-
-export class SignUpAuthBody {
-  @Transform(TransformString)
-  @IsEmail()
-  @ApiProperty({ example: 'test@test.com' })
-  email: string;
-
-  @Transform(TransformString)
-  @MinLength(3)
-  @MaxLength(32)
-  @Matches(nameRegex)
-  @ApiProperty({ example: 'aXen' })
-  name: string;
-
-  @ApiPropertyOptional({ example: false })
-  @IsBoolean()
-  @IsOptional()
-  newsletter?: boolean;
-
-  @IsStrongPassword({
-    minLength: 8,
-    minUppercase: 1,
-    minNumbers: 1,
-    minSymbols: 1,
-  })
-  @ApiProperty({ example: 'Test123!' })
-  password: string;
-}
-
-export class VerifyConfirmEmailAuthBody {
-  @ApiProperty()
-  token: string;
-
-  @ApiProperty()
-  user_id: number;
-}
-
 export class SignInAuthBody {
   @ApiPropertyOptional({ example: false })
   @IsBoolean()
@@ -84,4 +41,47 @@ export class SignInAuthBody {
 export class SignInAuthObj extends SignAuthObj {
   @ApiProperty()
   login_token: string;
+}
+
+export class SignOutAuthBody {
+  @ApiPropertyOptional({ example: false })
+  @IsBoolean()
+  @IsOptional()
+  is_admin?: boolean;
+}
+
+export class SignUpAuthBody {
+  @ApiProperty({ example: 'test@test.com' })
+  @IsEmail()
+  @Transform(TransformString)
+  email: string;
+
+  @ApiProperty({ example: 'aXen' })
+  @Matches(nameRegex)
+  @MaxLength(32)
+  @MinLength(3)
+  @Transform(TransformString)
+  name: string;
+
+  @ApiPropertyOptional({ example: false })
+  @IsBoolean()
+  @IsOptional()
+  newsletter?: boolean;
+
+  @ApiProperty({ example: 'Test123!' })
+  @IsStrongPassword({
+    minLength: 8,
+    minUppercase: 1,
+    minNumbers: 1,
+    minSymbols: 1,
+  })
+  password: string;
+}
+
+export class VerifyConfirmEmailAuthBody {
+  @ApiProperty()
+  token: string;
+
+  @ApiProperty()
+  user_id: number;
 }

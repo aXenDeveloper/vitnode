@@ -15,9 +15,9 @@ import { SubmitDeleteActionTableNavDevPluginAdmin } from './submit';
 export const ContentDeleteActionTableNavDevPluginAdmin = ({
   code,
   parentId,
-}: {
+}: Pick<ParentNavAuthAdminObj, 'code'> & {
   parentId: string | undefined;
-} & Pick<ParentNavAuthAdminObj, 'code'>) => {
+}) => {
   const t = useTranslations('admin.core.plugins.dev.nav.delete');
   const tCore = useTranslations('core.global');
   const { onSubmit } = useDeleteNavPluginAdmin({ code, parentId });

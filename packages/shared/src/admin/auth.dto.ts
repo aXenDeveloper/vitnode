@@ -15,17 +15,37 @@ export class ItemNavAuthAdminObj {
   keywords: string[];
 }
 
-export class ParentNavAuthAdminObj extends ItemNavAuthAdminObj {
-  @ApiProperty({ type: [ItemNavAuthAdminObj] })
-  children?: ItemNavAuthAdminObj[];
-}
-
 export class NavAuthAdminObj {
   @ApiProperty()
   code: string;
 
   @ApiProperty({ type: [ParentNavAuthAdminObj] })
   nav: ParentNavAuthAdminObj[];
+}
+
+export class NavSearchNavAuthAdmin extends ItemNavAuthAdminObj {
+  @ApiProperty()
+  code_plugin: string;
+
+  @ApiPropertyOptional()
+  parent_nav_code?: string;
+}
+
+export class ParentNavAuthAdminObj extends ItemNavAuthAdminObj {
+  @ApiProperty({ type: [ItemNavAuthAdminObj] })
+  children?: ItemNavAuthAdminObj[];
+}
+
+export class SearchNavAuthAdminObj {
+  @ApiProperty({ type: [NavSearchNavAuthAdmin] })
+  nav: NavSearchNavAuthAdmin[];
+}
+
+export class SearchNavAuthAdminQuery {
+  @ApiProperty()
+  @IsOptional()
+  @IsString()
+  search?: string;
 }
 
 export class ShowAuthAdminObj {
@@ -43,24 +63,4 @@ export class ShowAuthAdminObj {
 
   @ApiProperty()
   version_of_vitnode: string;
-}
-
-export class SearchNavAuthAdminQuery {
-  @ApiProperty()
-  @IsString()
-  @IsOptional()
-  search?: string;
-}
-
-export class NavSearchNavAuthAdmin extends ItemNavAuthAdminObj {
-  @ApiProperty()
-  code_plugin: string;
-
-  @ApiPropertyOptional()
-  parent_nav_code?: string;
-}
-
-export class SearchNavAuthAdminObj {
-  @ApiProperty({ type: [NavSearchNavAuthAdmin] })
-  nav: NavSearchNavAuthAdmin[];
 }

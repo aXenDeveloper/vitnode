@@ -1,7 +1,7 @@
 import { TranslationsProvider } from '@/components/translations-provider';
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { notFound } from 'next/navigation';
 
 import {
   FilesAdvancedCoreAdminView,

@@ -9,9 +9,9 @@ export const ActionsTableNavDevPluginAdmin = ({
   parentId,
   textsAndIcons,
   dataFromSSR,
-}: {
+}: React.ComponentProps<typeof ItemContentNavDevPluginAdmin> & {
   dataFromSSR: ParentNavAuthAdminObj[];
-} & React.ComponentProps<typeof ItemContentNavDevPluginAdmin>) => {
+}) => {
   return (
     <div className="flex gap-1">
       <EditActionTableNavDevPluginAdmin

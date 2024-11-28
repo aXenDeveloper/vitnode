@@ -7,8 +7,8 @@ export class CreatePermissionsAdminPluginsAdminBody {
   id: string;
 
   @ApiPropertyOptional()
-  @IsString()
   @IsOptional()
+  @IsString()
   parent_id?: string;
 }
 

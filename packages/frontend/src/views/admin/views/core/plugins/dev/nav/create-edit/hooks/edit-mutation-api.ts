@@ -9,10 +9,10 @@ export const editMutationApi = async ({
   plugin_code,
   previous_code,
   ...body
-}: {
+}: CreateNavPluginsAdminBody & {
   plugin_code: string;
   previous_code: string;
-} & CreateNavPluginsAdminBody) => {
+}) => {
   await fetcher<ParentNavAuthAdminObj, CreateNavPluginsAdminBody>({
     url: `/admin/plugins/nav/${plugin_code}/${previous_code}`,
     method: 'PUT',

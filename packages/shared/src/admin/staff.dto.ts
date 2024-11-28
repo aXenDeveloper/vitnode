@@ -8,20 +8,20 @@ class PermissionsStaffInput {
   permissions: string[];
 }
 
-export class PermissionsStaffArgs {
-  @ApiProperty({ type: [PermissionsStaffInput] })
-  groups: PermissionsStaffInput[];
-
-  @ApiProperty()
-  plugin_code: string;
-}
-
 export class PermissionsStaff {
   @ApiProperty()
   id: string;
 
   @ApiProperty({ type: [String] })
   permissions: string[];
+}
+
+export class PermissionsStaffArgs {
+  @ApiProperty({ type: [PermissionsStaffInput] })
+  groups: PermissionsStaffInput[];
+
+  @ApiProperty()
+  plugin_code: string;
 }
 
 export class PermissionsStaffObj {

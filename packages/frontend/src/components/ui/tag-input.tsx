@@ -6,9 +6,9 @@ import React from 'react';
 import { badgeVariants } from './badge';
 import { Input } from './input';
 
-interface TagInputItemProps {
-  id: number | string;
-  value: string;
+interface MultiProps extends Props {
+  multiple?: true;
+  value?: TagInputItemProps[] | undefined;
 }
 
 interface Props
@@ -18,14 +18,14 @@ interface Props
   onChange: (value?: TagInputItemProps | TagInputItemProps[]) => void;
 }
 
-interface MultiProps extends Props {
-  multiple?: true;
-  value?: TagInputItemProps[] | undefined;
-}
-
 interface SingleProps extends Props {
   multiple?: never;
   value?: TagInputItemProps | undefined;
+}
+
+interface TagInputItemProps {
+  id: number | string;
+  value: string;
 }
 
 export const TagInput = ({

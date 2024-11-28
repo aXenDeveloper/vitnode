@@ -30,9 +30,9 @@ import { EditPluginsAdminService } from './services/edit.service';
 import { ItemPluginsAdminService } from './services/item.service';
 import { ShowPluginsAdminService } from './services/show.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin')
 @Controller('admin/plugins')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class PluginsAdminController {
   constructor(
@@ -43,25 +43,25 @@ export class PluginsAdminController {
     private readonly editService: EditPluginsAdminService,
   ) {}
 
-  @Post()
   @ApiCreatedResponse({ description: 'Plugin created', type: ShowPluginAdmin })
+  @Post()
   async createPlugin(
     @Body() body: CreatePluginsAdminBody,
   ): Promise<ShowPluginAdmin> {
     return await this.createService.create(body);
   }
 
-  @Delete(':id')
   @ApiOkResponse({ description: 'Plugin deleted' })
+  @Delete(':id')
   async deletePlugin(@Param('id') id: string): Promise<void> {
     await this.deleteService.delete(+id);
   }
 
-  @Put(':code')
   @ApiOkResponse({
     type: ShowPluginAdmin,
     description: 'Plugin updated',
   })
+  @Put(':code')
   async editPlugin(
     @Param('code') code: string,
     @Body() body: EditPluginsAdminBody,
@@ -69,14 +69,14 @@ export class PluginsAdminController {
     return await this.editService.edit({ code, body });
   }
 
-  @Get(':code')
   @ApiOkResponse({ type: ShowPluginAdmin, description: 'Plugin details' })
+  @Get(':code')
   async itemPlugin(@Param('code') code: string): Promise<ShowPluginAdmin> {
     return await this.itemService.item(code);
   }
 
-  @Get()
   @ApiOkResponse({ type: ShowPluginsAdminObj, description: 'List of plugins' })
+  @Get()
   async showPlugin(
     @Query() query: ShowPluginsAdminQuery,
   ): Promise<ShowPluginsAdminObj> {

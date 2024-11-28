@@ -1,5 +1,11 @@
 import { FlattenedItem, TreeItem } from './types';
 
+export function flattenTree<T extends TreeItem<T>>(
+  items: T[],
+): FlattenedItem<T>[] {
+  return flatten(items);
+}
+
 function flatten<T extends TreeItem<T>>(
   items: T[],
   parentId: null | number | string = null,
@@ -20,10 +26,4 @@ function flatten<T extends TreeItem<T>>(
       ...flatten(item.children as T[], item.id, depth + 1),
     ];
   }, []);
-}
-
-export function flattenTree<T extends TreeItem<T>>(
-  items: T[],
-): FlattenedItem<T>[] {
-  return flatten(items);
 }

@@ -21,16 +21,16 @@ export function AutoFormRadioGroup({
   labels,
   shape,
   ...props
-}: {
-  labels?: Record<
-    string,
-    {
-      description?: React.ReactNode;
-      title: string;
-    }
-  >;
-} & AutoFormComponentProps &
-  Omit<React.ComponentProps<typeof RadioGroup>, 'role' | 'variant'>) {
+}: AutoFormComponentProps &
+  Omit<React.ComponentProps<typeof RadioGroup>, 'role' | 'variant'> & {
+    labels?: Record<
+      string,
+      {
+        description?: React.ReactNode;
+        title: string;
+      }
+    >;
+  }) {
   const baseValues = (
     getBaseSchema(shape, true) as unknown as z.ZodEnum<[string, ...string[]]>
   )._def.values;

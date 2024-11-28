@@ -21,15 +21,15 @@ const IconsContentIconInput = React.lazy(async () =>
   })),
 );
 
+enum Tab {
+  Emoji = 'emoji',
+  Icon = 'icon',
+}
+
 export interface IconPickerProps {
   onChange: (icon: string | undefined) => void;
   setOpen: (open: boolean) => void;
   value: string | undefined;
-}
-
-enum Tab {
-  Emoji = 'emoji',
-  Icon = 'icon',
 }
 
 export const ContentIconInput = (props: IconPickerProps) => {

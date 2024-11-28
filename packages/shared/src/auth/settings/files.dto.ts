@@ -6,25 +6,6 @@ import { PaginationObj, PaginationQuery } from '../../utils/pagination.dto';
 import { SortDirectionEnum } from '../../utils/pagination.enum';
 import { ShowFilesSettingsAuthSortEnum } from './files.enum';
 
-export class ShowFilesSettingsAuthQuery extends PaginationQuery {
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  search?: string;
-
-  @ApiPropertyOptional({
-    enum: ShowFilesSettingsAuthSortEnum,
-  })
-  @IsEnum(ShowFilesSettingsAuthSortEnum)
-  @IsOptional()
-  sortBy?: ShowFilesSettingsAuthSortEnum;
-
-  @ApiPropertyOptional({ enum: SortDirectionEnum })
-  @IsEnum(SortDirectionEnum)
-  @IsOptional()
-  sortDirection?: SortDirectionEnum;
-}
-
 export class ShowFilesSettingsAuth extends FileObj {
   @ApiProperty()
   count_uses: number;
@@ -45,4 +26,23 @@ export class ShowFilesSettingsAuth extends FileObj {
 export class ShowFilesSettingsAuthObj extends PaginationObj {
   @ApiProperty({ type: [ShowFilesSettingsAuth] })
   edges: ShowFilesSettingsAuth[];
+}
+
+export class ShowFilesSettingsAuthQuery extends PaginationQuery {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({
+    enum: ShowFilesSettingsAuthSortEnum,
+  })
+  @IsEnum(ShowFilesSettingsAuthSortEnum)
+  @IsOptional()
+  sortBy?: ShowFilesSettingsAuthSortEnum;
+
+  @ApiPropertyOptional({ enum: SortDirectionEnum })
+  @IsEnum(SortDirectionEnum)
+  @IsOptional()
+  sortDirection?: SortDirectionEnum;
 }

@@ -38,6 +38,7 @@ export const ComboboxContentWithFetcher = ({
   queryKey: string;
   search?: boolean;
   value:
+    | undefined
     | {
         key: string;
         value: string | StringLanguage[];
@@ -45,8 +46,7 @@ export const ComboboxContentWithFetcher = ({
     | {
         key: string;
         value: string | StringLanguage[];
-      }[]
-    | undefined;
+      }[];
 }) => {
   const t = useTranslations('core.global');
   const [search, setSearch] = React.useState('');

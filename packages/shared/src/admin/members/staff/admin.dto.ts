@@ -17,46 +17,6 @@ import {
 } from '../../staff.dto';
 import { ShowStaffMembersAdminSortEnum } from './admin.enum';
 
-export class CreateAdminStaffMembersAdminBody {
-  @ApiPropertyOptional()
-  @IsNumber()
-  @IsOptional()
-  group_id: null | number;
-
-  @ApiProperty({ type: [PermissionsStaffArgs] })
-  @IsArray()
-  permissions: PermissionsStaffArgs[];
-
-  @ApiPropertyOptional()
-  @IsNumber()
-  @IsOptional()
-  user_id: null | number;
-}
-
-export class EditAdminStaffMembersAdminBody extends OmitType(
-  CreateAdminStaffMembersAdminBody,
-  ['group_id', 'user_id'] as const,
-) {}
-
-export class AdminStaffMembersAdminQuery extends PaginationQuery {
-  @ApiPropertyOptional({
-    enum: ShowStaffMembersAdminSortEnum,
-  })
-  @IsEnum(ShowStaffMembersAdminSortEnum)
-  @IsOptional()
-  sortBy?: ShowStaffMembersAdminSortEnum;
-
-  @ApiPropertyOptional({ enum: SortDirectionEnum })
-  @IsEnum(SortDirectionEnum)
-  @IsOptional()
-  sortDirection?: SortDirectionEnum;
-}
-
-export class StaffGroupUser extends OmitType(GroupUser, ['name'] as const) {
-  @ApiProperty({ type: [StringLanguage] })
-  group_name: StringLanguage[];
-}
-
 export class AdminStaffMembersAdmin {
   @ApiProperty()
   created_at: Date;
@@ -88,4 +48,44 @@ export class AdminStaffMembersAdminObj extends PaginationObj {
 
   @ApiProperty({ type: [PermissionsStaffObj] })
   permissions: PermissionsStaffObj[];
+}
+
+export class AdminStaffMembersAdminQuery extends PaginationQuery {
+  @ApiPropertyOptional({
+    enum: ShowStaffMembersAdminSortEnum,
+  })
+  @IsEnum(ShowStaffMembersAdminSortEnum)
+  @IsOptional()
+  sortBy?: ShowStaffMembersAdminSortEnum;
+
+  @ApiPropertyOptional({ enum: SortDirectionEnum })
+  @IsEnum(SortDirectionEnum)
+  @IsOptional()
+  sortDirection?: SortDirectionEnum;
+}
+
+export class CreateAdminStaffMembersAdminBody {
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  group_id: null | number;
+
+  @ApiProperty({ type: [PermissionsStaffArgs] })
+  @IsArray()
+  permissions: PermissionsStaffArgs[];
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @IsOptional()
+  user_id: null | number;
+}
+
+export class EditAdminStaffMembersAdminBody extends OmitType(
+  CreateAdminStaffMembersAdminBody,
+  ['group_id', 'user_id'] as const,
+) {}
+
+export class StaffGroupUser extends OmitType(GroupUser, ['name'] as const) {
+  @ApiProperty({ type: [StringLanguage] })
+  group_name: StringLanguage[];
 }

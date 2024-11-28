@@ -24,49 +24,14 @@ class ContentCreateGroupsMembersAdmin {
   files_allow_upload: boolean;
 
   @ApiProperty()
-  @Min(0)
   @IsNumber()
+  @Min(0)
   files_max_storage_for_submit: number;
 
   @ApiProperty()
-  @Min(0)
   @IsNumber()
+  @Min(0)
   files_total_max_storage: number;
-}
-
-export class CreateGroupsMembersAdminBody {
-  @ApiPropertyOptional()
-  @IsString()
-  color?: string;
-
-  @ApiProperty()
-  @ValidateNested()
-  @Type(() => ContentCreateGroupsMembersAdmin)
-  content: ContentCreateGroupsMembersAdmin;
-
-  @ArrayMinSize(1)
-  @Transform(TransformStringLanguageInput)
-  @ApiProperty({ type: [StringLanguage] })
-  name: StringLanguage[];
-}
-
-export class GroupsMembersAdminQuery extends PaginationQuery {
-  @ApiPropertyOptional()
-  @IsString()
-  @IsOptional()
-  search?: string;
-
-  @ApiPropertyOptional({
-    enum: GroupsMembersAdminSortEnum,
-  })
-  @IsEnum(GroupsMembersAdminSortEnum)
-  @IsOptional()
-  sortBy?: GroupsMembersAdminSortEnum;
-
-  @ApiPropertyOptional({ enum: SortDirectionEnum })
-  @IsEnum(SortDirectionEnum)
-  @IsOptional()
-  sortDirection?: SortDirectionEnum;
 }
 
 export class ContentGroupMembersAdmin {
@@ -78,6 +43,22 @@ export class ContentGroupMembersAdmin {
 
   @ApiProperty()
   files_total_max_storage: number;
+}
+
+export class CreateGroupsMembersAdminBody {
+  @ApiPropertyOptional()
+  @IsString()
+  color?: string;
+
+  @ApiProperty()
+  @Type(() => ContentCreateGroupsMembersAdmin)
+  @ValidateNested()
+  content: ContentCreateGroupsMembersAdmin;
+
+  @ApiProperty({ type: [StringLanguage] })
+  @ArrayMinSize(1)
+  @Transform(TransformStringLanguageInput)
+  name: StringLanguage[];
 }
 
 export class GroupMembersAdmin extends GroupUser {
@@ -109,4 +90,23 @@ export class GroupMembersAdmin extends GroupUser {
 export class GroupsMembersAdminObj extends PaginationObj {
   @ApiProperty({ type: [GroupMembersAdmin] })
   edges: GroupMembersAdmin[];
+}
+
+export class GroupsMembersAdminQuery extends PaginationQuery {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({
+    enum: GroupsMembersAdminSortEnum,
+  })
+  @IsEnum(GroupsMembersAdminSortEnum)
+  @IsOptional()
+  sortBy?: GroupsMembersAdminSortEnum;
+
+  @ApiPropertyOptional({ enum: SortDirectionEnum })
+  @IsEnum(SortDirectionEnum)
+  @IsOptional()
+  sortDirection?: SortDirectionEnum;
 }

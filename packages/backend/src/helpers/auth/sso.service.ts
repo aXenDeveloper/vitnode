@@ -6,6 +6,13 @@ import { join } from 'path';
 import { ShowMethodAuthSettingsAdmin } from 'vitnode-shared/admin/settings/auth.dto';
 import { SSOUrlAuthObj } from 'vitnode-shared/auth/sso.dto';
 
+export interface SSOAuthCallbackObj {
+  email: string;
+  id: string;
+  name: string;
+  verified_email: boolean;
+}
+
 export interface SSOAuthConfig {
   sso: {
     client_id: string;
@@ -13,13 +20,6 @@ export interface SSOAuthConfig {
     code: string;
     enabled: boolean;
   }[];
-}
-
-export interface SSOAuthCallbackObj {
-  email: string;
-  id: string;
-  name: string;
-  verified_email: boolean;
 }
 
 export interface SSOAuthItem {

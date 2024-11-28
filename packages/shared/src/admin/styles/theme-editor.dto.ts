@@ -14,8 +14,8 @@ import { LogosMiddleware } from '../../middleware.dto';
 export class EditThemeEditorStylesAdminBody {
   @ApiPropertyOptional({ isArray: true, type: 'string' })
   @IsArray()
-  @IsString({ each: true })
   @IsOptional()
+  @IsString({ each: true })
   delete_logos: string;
 
   @ApiPropertyOptional({ type: 'string', format: 'binary' })
@@ -32,8 +32,8 @@ export class EditThemeEditorStylesAdminBody {
 
   @ApiProperty({ example: 5 })
   @IsNumber()
-  @Min(1)
   @Max(30)
+  @Min(1)
   mobile_width: number;
 
   @ApiProperty()
@@ -42,8 +42,8 @@ export class EditThemeEditorStylesAdminBody {
 
   @ApiProperty({ example: 15 })
   @IsNumber()
-  @Min(1)
   @Max(30)
+  @Min(1)
   width: number;
 }
 

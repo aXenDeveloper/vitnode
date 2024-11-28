@@ -10,13 +10,10 @@ export const PageItemContentSearchAsideAuthAdmin = ({
   parent_nav_code,
   setOpen,
   textAndIcon,
-}: {
+}: Pick<NavSearchNavAuthAdmin, 'code' | 'code_plugin' | 'parent_nav_code'> & {
   setOpen: (open: boolean) => void;
   textAndIcon: TextAndIconsAsideAdmin;
-} & Pick<
-  NavSearchNavAuthAdmin,
-  'code' | 'code_plugin' | 'parent_nav_code'
->) => {
+}) => {
   const { push } = useRouter();
   const href = parent_nav_code
     ? `/admin/${code_plugin}/${parent_nav_code}/${code}`

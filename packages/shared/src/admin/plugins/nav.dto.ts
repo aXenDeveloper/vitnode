@@ -12,17 +12,29 @@ import {
 
 import { TransformString } from '../../utils/text-language';
 
+export class ChangePositionNavPluginsAdminBody {
+  @ApiProperty()
+  @IsNumber()
+  @Min(0)
+  index_to_move: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  parent_code?: string;
+}
+
 export class CreateNavPluginsAdminBody {
   @ApiProperty()
-  @MinLength(3)
-  @MaxLength(100)
-  @Transform(TransformString)
   @IsString()
+  @MaxLength(100)
+  @MinLength(3)
+  @Transform(TransformString)
   code: string;
 
   @ApiPropertyOptional()
-  @IsString()
   @IsOptional()
+  @IsString()
   icon?: string;
 
   @ApiProperty({ isArray: true })
@@ -31,26 +43,14 @@ export class CreateNavPluginsAdminBody {
   keywords: string[];
 
   @ApiPropertyOptional()
-  @IsString()
   @IsOptional()
+  @IsString()
   parent_code?: string;
 }
 
 export class DeleteNavPluginsAdminBody {
   @ApiPropertyOptional()
-  @IsString()
   @IsOptional()
-  parent_code?: string;
-}
-
-export class ChangePositionNavPluginsAdminBody {
-  @ApiProperty()
-  @IsNumber()
-  @Min(0)
-  index_to_move: number;
-
-  @ApiPropertyOptional()
   @IsString()
-  @IsOptional()
   parent_code?: string;
 }

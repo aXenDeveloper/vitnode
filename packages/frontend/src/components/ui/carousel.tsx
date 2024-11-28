@@ -8,7 +8,14 @@ import { cn } from '../../helpers/classnames';
 import { Button } from './button';
 
 export type CarouselApi = UseEmblaCarouselType[1];
-type UseCarouselParameters = Parameters<typeof useEmblaCarousel>;
+type CarouselContextProps = CarouselProps & {
+  api: ReturnType<typeof useEmblaCarousel>[1];
+  canScrollNext: boolean;
+  canScrollPrev: boolean;
+  carouselRef: ReturnType<typeof useEmblaCarousel>[0];
+  scrollNext: () => void;
+  scrollPrev: () => void;
+};
 type CarouselOptions = UseCarouselParameters[0];
 type CarouselPlugin = UseCarouselParameters[1];
 
@@ -19,26 +26,9 @@ interface CarouselProps {
   setApi?: (api: CarouselApi) => void;
 }
 
-type CarouselContextProps = {
-  api: ReturnType<typeof useEmblaCarousel>[1];
-  canScrollNext: boolean;
-  canScrollPrev: boolean;
-  carouselRef: ReturnType<typeof useEmblaCarousel>[0];
-  scrollNext: () => void;
-  scrollPrev: () => void;
-} & CarouselProps;
+type UseCarouselParameters = Parameters<typeof useEmblaCarousel>;
 
 const CarouselContext = React.createContext<CarouselContextProps | null>(null);
-
-function useCarousel() {
-  const context = React.useContext(CarouselContext);
-
-  if (!context) {
-    throw new Error('useCarousel must be used within a <Carousel />');
-  }
-
-  return context;
-}
 
 function Carousel({
   orientation = 'horizontal',
@@ -177,6 +167,35 @@ function CarouselItem({
   );
 }
 
+function CarouselNext({
+  className,
+  variant = 'outline',
+  size = 'icon',
+  ...props
+}: React.ComponentProps<typeof Button>) {
+  const { orientation, scrollNext, canScrollNext } = useCarousel();
+
+  return (
+    <Button
+      className={cn(
+        'absolute h-8 w-8 rounded-full',
+        orientation === 'horizontal'
+          ? '-right-12 top-1/2 -translate-y-1/2'
+          : '-bottom-12 left-1/2 -translate-x-1/2 rotate-90',
+        className,
+      )}
+      disabled={!canScrollNext}
+      onClick={scrollNext}
+      size={size as 'default' | 'lg' | 'sm' | undefined}
+      variant={variant}
+      {...props}
+    >
+      <ArrowRight className="size-4" />
+      <span className="sr-only">Next slide</span>
+    </Button>
+  );
+}
+
 function CarouselPrevious({
   className,
   variant = 'outline',
@@ -206,33 +225,14 @@ function CarouselPrevious({
   );
 }
 
-function CarouselNext({
-  className,
-  variant = 'outline',
-  size = 'icon',
-  ...props
-}: React.ComponentProps<typeof Button>) {
-  const { orientation, scrollNext, canScrollNext } = useCarousel();
+function useCarousel() {
+  const context = React.useContext(CarouselContext);
 
-  return (
-    <Button
-      className={cn(
-        'absolute h-8 w-8 rounded-full',
-        orientation === 'horizontal'
-          ? '-right-12 top-1/2 -translate-y-1/2'
-          : '-bottom-12 left-1/2 -translate-x-1/2 rotate-90',
-        className,
-      )}
-      disabled={!canScrollNext}
-      onClick={scrollNext}
-      size={size as 'default' | 'lg' | 'sm' | undefined}
-      variant={variant}
-      {...props}
-    >
-      <ArrowRight className="size-4" />
-      <span className="sr-only">Next slide</span>
-    </Button>
-  );
+  if (!context) {
+    throw new Error('useCarousel must be used within a <Carousel />');
+  }
+
+  return context;
 }
 
 export {

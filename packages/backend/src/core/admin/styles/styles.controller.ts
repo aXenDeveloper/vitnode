@@ -5,18 +5,18 @@ import { EditorStylesAdminBody } from 'vitnode-shared/admin/styles/editor.dto';
 
 import { EditorStylesAdminService } from './services/editor.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin')
 @Controller('admin/styles')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class StylesAdminController {
   constructor(private readonly editorStyles: EditorStylesAdminService) {}
 
-  @Put('editor')
   @ApiOkResponse({
     description: 'Editor settings updated',
     type: EditorStylesAdminBody,
   })
+  @Put('editor')
   async editor(
     @Body() body: EditorStylesAdminBody,
   ): Promise<EditorStylesAdminBody> {

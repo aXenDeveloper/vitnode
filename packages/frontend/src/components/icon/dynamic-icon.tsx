@@ -13,9 +13,9 @@ export const DynamicIcon = ({
   name,
   className,
   ...props
-}: {
+}: LucideProps & {
   name: string;
-} & LucideProps) => {
+}) => {
   if (/\p{Extended_Pictographic}/gu.test(name)) {
     return (
       <span className={cn('text-center leading-none', className)}>{name}</span>

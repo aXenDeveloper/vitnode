@@ -37,21 +37,21 @@ export class FilesController {
     private readonly deleteFileService: DeleteFilesService,
   ) {}
 
-  @Delete()
   @ApiOkResponse()
+  @Delete()
   async delete(@Query() query: DeleteFilesQuery, @CurrentUser() user: User) {
     return await this.deleteFileService.delete({ query, user });
   }
 
-  @Post()
-  @ApiConsumes('multipart/form-data')
   @ApiBody({
     description: 'Upload files',
     type: UploadFilesBody,
   })
+  @ApiConsumes('multipart/form-data')
   @ApiCreatedResponse({
     type: ShowFile,
   })
+  @Post()
   @UseInterceptors(FileFieldsInterceptor([{ name: 'file', maxCount: 1 }]))
   async edit(
     @UploadedFiles()

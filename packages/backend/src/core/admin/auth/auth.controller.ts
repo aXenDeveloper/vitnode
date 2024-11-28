@@ -14,9 +14,9 @@ import { User } from 'vitnode-shared/user.dto';
 import { SearchAuthAdminService } from './services/nav/search.service';
 import { ShowAuthAdminService } from './services/show.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin')
 @Controller('admin/auth')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class AuthAdminController {
   constructor(
@@ -24,11 +24,11 @@ export class AuthAdminController {
     private readonly searchService: SearchAuthAdminService,
   ) {}
 
-  @Get('search')
   @ApiOkResponse({
     description: 'Search for a navigation item',
     type: SearchNavAuthAdminObj,
   })
+  @Get('search')
   async search(
     @Query() query: SearchNavAuthAdminQuery,
     @CurrentUser() user: User,
@@ -36,11 +36,11 @@ export class AuthAdminController {
     return await this.searchService.search({ query, user });
   }
 
-  @Get()
   @ApiOkResponse({
     type: ShowAuthAdminObj,
     description: 'Show the admin user with personal information',
   })
+  @Get()
   async show(
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,

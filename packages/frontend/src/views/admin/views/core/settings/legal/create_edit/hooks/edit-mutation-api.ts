@@ -10,7 +10,7 @@ export const editMutationApi = async ({
   id,
   prevCode,
   ...body
-}: { id: number; prevCode: string } & CreateLegalSettingsAdminBody) => {
+}: CreateLegalSettingsAdminBody & { id: number; prevCode: string }) => {
   await fetcher<Legal, CreateLegalSettingsAdminBody>({
     url: `/admin/settings/legal/${id}`,
     method: 'PUT',

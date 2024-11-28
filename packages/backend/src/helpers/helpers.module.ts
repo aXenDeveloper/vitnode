@@ -11,12 +11,12 @@ import { DeviceAuthService } from './auth/device.service';
 import { InternalAuthAdminService } from './auth/internal_auth_admin.service';
 import { SSOAuthHelper, SSOAuthItem } from './auth/sso.service';
 import { CaptchaHelper } from './captcha/captcha.service';
-import { EmailHelperService } from './email/email.service';
 import { EmailHelpersService } from './email/email-helpers.service';
 import {
   EmailSenderArgs,
   EmailSenderFunction,
 } from './email/email-helpers.type';
+import { EmailHelperService } from './email/email.service';
 import { FilesHelperService } from './files/files-helper.service';
 import { StringLanguageHelper } from './string_language/helpers.service';
 import { UserHelper } from './user.service';

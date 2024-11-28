@@ -9,17 +9,17 @@ export class CreateLegalSettingsAdminBody {
   code: string;
 
   @ApiProperty({ type: [StringLanguage] })
-  @IsArray()
   @ArrayMinSize(1)
+  @IsArray()
   content: StringLanguage[];
 
   @ApiPropertyOptional()
-  @IsString()
   @IsOptional()
+  @IsString()
   href?: string;
 
   @ApiProperty({ type: [StringLanguage] })
-  @IsArray()
   @ArrayMinSize(1)
+  @IsArray()
   title: StringLanguage[];
 }

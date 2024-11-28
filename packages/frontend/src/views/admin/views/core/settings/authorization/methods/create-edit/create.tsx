@@ -21,7 +21,7 @@ const Content = React.lazy(async () =>
 );
 
 export const CreateMethodsAuthSettingsAdmin = (
-  props: { disabled: boolean } & React.ComponentProps<typeof Content>,
+  props: React.ComponentProps<typeof Content> & { disabled: boolean },
 ) => {
   const t = useTranslations('admin.core.settings.authorization.methods.create');
 

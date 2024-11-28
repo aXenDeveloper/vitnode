@@ -32,9 +32,9 @@ const DrawerContent = ({
   children,
   direction = 'bottom',
   ...props
-}: {
+}: React.ComponentProps<typeof DrawerPrimitive.Content> & {
   direction?: React.ComponentProps<typeof DrawerPrimitive.Root>['direction'];
-} & React.ComponentProps<typeof DrawerPrimitive.Content>) => (
+}) => (
   <DrawerPortal>
     <DrawerOverlay />
     <DrawerPrimitive.Content

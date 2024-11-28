@@ -29,11 +29,11 @@ const SidebarMenuSubButton = ({
   isActive,
   className,
   ...props
-}: {
+}: React.ComponentProps<'a'> & {
   asChild?: boolean;
   isActive?: boolean;
   size?: 'md' | 'sm';
-} & React.ComponentProps<'a'>) => {
+}) => {
   const Comp = asChild ? Slot : 'a';
 
   return (
@@ -77,9 +77,9 @@ const SidebarMenuSkeleton = ({
   className,
   showIcon = false,
   ...props
-}: {
+}: React.ComponentProps<'div'> & {
   showIcon?: boolean;
-} & React.ComponentProps<'div'>) => {
+}) => {
   const width = `${Math.floor(Math.random() * 40) + 50}%`;
 
   return (
@@ -131,10 +131,10 @@ const SidebarMenuAction = ({
   asChild = false,
   showOnHover = false,
   ...props
-}: {
+}: React.ComponentProps<'button'> & {
   asChild?: boolean;
   showOnHover?: boolean;
-} & React.ComponentProps<'button'>) => {
+}) => {
   const Comp = asChild ? Slot : 'button';
 
   return (
@@ -187,12 +187,12 @@ const SidebarMenuButton = ({
   tooltip,
   className,
   ...props
-}: {
-  asChild?: boolean;
-  isActive?: boolean;
-  tooltip?: React.ComponentProps<typeof TooltipContent> | string;
-} & React.ComponentProps<'button'> &
-  VariantProps<typeof sidebarMenuButtonVariants>) => {
+}: React.ComponentProps<'button'> &
+  VariantProps<typeof sidebarMenuButtonVariants> & {
+    asChild?: boolean;
+    isActive?: boolean;
+    tooltip?: React.ComponentProps<typeof TooltipContent> | string;
+  }) => {
   const Comp = asChild ? Slot : 'button';
 
   const button = (
@@ -306,7 +306,7 @@ const SidebarGroupLabel = ({
   className,
   asChild = false,
   ...props
-}: { asChild?: boolean } & React.ComponentProps<'div'>) => {
+}: React.ComponentProps<'div'> & { asChild?: boolean }) => {
   const Comp = asChild ? Slot : 'div';
 
   return (
@@ -326,7 +326,7 @@ const SidebarGroupAction = ({
   className,
   asChild = false,
   ...props
-}: { asChild?: boolean } & React.ComponentProps<'button'>) => {
+}: React.ComponentProps<'button'> & { asChild?: boolean }) => {
   const Comp = asChild ? Slot : 'button';
 
   return (

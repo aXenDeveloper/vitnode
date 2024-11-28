@@ -18,7 +18,7 @@ export class AdminAuthGuard implements CanActivate {
   protected async getAuth(context: { req: Request; res: Response }) {
     const data = await this.service.authorization(context);
 
-    (context.req as { user: User } & Request).user = data;
+    (context.req as Request & { user: User }).user = data;
 
     return data;
   }

@@ -21,9 +21,9 @@ const Content = React.lazy(async () =>
 );
 
 export const EditActionMethodsAuthSettingsAdmin = (
-  props: {
+  props: Omit<React.ComponentProps<typeof Content>, 'data'> & {
     data: ShowMethodAuthSettingsAdminObj['edges'][0];
-  } & Omit<React.ComponentProps<typeof Content>, 'data'>,
+  },
 ) => {
   const t = useTranslations('admin.core.settings.authorization.methods.edit');
 

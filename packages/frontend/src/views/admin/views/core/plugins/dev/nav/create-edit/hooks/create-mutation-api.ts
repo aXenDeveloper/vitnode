@@ -8,7 +8,7 @@ import { CreateNavPluginsAdminBody } from 'vitnode-shared/admin/plugins/nav.dto'
 export const createMutationApi = async ({
   plugin_code,
   ...body
-}: { plugin_code: string } & CreateNavPluginsAdminBody) => {
+}: CreateNavPluginsAdminBody & { plugin_code: string }) => {
   await fetcher<ParentNavAuthAdminObj, CreateNavPluginsAdminBody>({
     url: `/admin/plugins/nav/${plugin_code}`,
     method: 'POST',

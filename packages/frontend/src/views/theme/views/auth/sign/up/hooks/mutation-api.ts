@@ -4,9 +4,9 @@ import { fetcher } from '@/api/fetcher';
 import { SignUpAuthBody } from 'vitnode-shared/auth/auth.dto';
 
 export const mutationApi = async (
-  body: {
+  body: SignUpAuthBody & {
     token: string;
-  } & SignUpAuthBody,
+  },
 ) => {
   try {
     await fetcher<{ email: string }, SignUpAuthBody>({

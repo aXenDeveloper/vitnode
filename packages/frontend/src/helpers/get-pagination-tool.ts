@@ -55,11 +55,11 @@ function getGetSortByParamsAPI({
   constEnum?: Record<string, unknown>;
   searchParams: Pick<SearchParamsPagination, 'sortBy' | 'sortDirection'>;
 }):
+  | undefined
   | {
       column?: never;
       direction?: SortDirectionEnum;
-    }
-  | undefined {
+    } {
   const sort = {
     by: searchParams?.sortBy?.toLowerCase(),
     direction: searchParams?.sortDirection?.toLowerCase(),

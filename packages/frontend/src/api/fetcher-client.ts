@@ -12,11 +12,11 @@ export async function fetcherClient<
   body,
   query: queryFromArgs,
   ...options
-}: {
+}: Omit<RequestInit, 'body'> & {
   body?: FormData | TVariable;
   query?: TVariable;
   url: string;
-} & Omit<RequestInit, 'body'>): Promise<{
+}): Promise<{
   data: TData;
   res: Response;
 }> {

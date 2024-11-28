@@ -24,11 +24,11 @@ export const IconPicker = ({
   disabled,
   required,
   ...props
-}: {
+}: Omit<IconPickerProps, 'setOpen'> & {
   className?: string;
   disabled?: boolean;
   required?: boolean;
-} & Omit<IconPickerProps, 'setOpen'>) => {
+}) => {
   const t = useTranslations('core.global.icon_picker');
   const [open, setOpen] = React.useState(false);
 

@@ -5,9 +5,16 @@ import { IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { TransformString } from '../utils/text-language';
 import { nameRegex, SignInAuthObj } from './auth.dto';
 
-export class SSOUrlAuthObj {
-  @ApiProperty()
-  url: string;
+export class RegisterSSOCallbackAuthBody extends PickType(SSOCallbackAuthObj, [
+  'provider_id',
+  'access_token',
+] as const) {
+  @ApiProperty({ example: 'aXen' })
+  @Matches(nameRegex)
+  @MaxLength(32)
+  @MinLength(3)
+  @Transform(TransformString)
+  name: string;
 }
 
 export class SSOCallbackAuthObj extends SignInAuthObj {
@@ -24,14 +31,7 @@ export class SSOCallbackAuthObj extends SignInAuthObj {
   provider_id: string;
 }
 
-export class RegisterSSOCallbackAuthBody extends PickType(SSOCallbackAuthObj, [
-  'provider_id',
-  'access_token',
-] as const) {
-  @Transform(TransformString)
-  @MinLength(3)
-  @MaxLength(32)
-  @Matches(nameRegex)
-  @ApiProperty({ example: 'aXen' })
-  name: string;
+export class SSOUrlAuthObj {
+  @ApiProperty()
+  url: string;
 }

@@ -52,17 +52,17 @@ export function AutoFormCombobox({
   placeholder,
   placeholderSearchInput,
   ...props
-}: {
-  labels?: Record<string, React.JSX.Element | string>;
-  multiple?: boolean;
-  placeholder?: string;
-  placeholderSearchInput?: string;
-  withFetcher?: Omit<
-    React.ComponentProps<typeof ComboboxContentWithFetcher>,
-    'multiple' | 'onSelect' | 'placeholder' | 'value'
-  >;
-} & AutoFormComponentProps &
-  Omit<React.ComponentProps<typeof Button>, 'role' | 'variant'>) {
+}: AutoFormComponentProps &
+  Omit<React.ComponentProps<typeof Button>, 'role' | 'variant'> & {
+    labels?: Record<string, React.JSX.Element | string>;
+    multiple?: boolean;
+    placeholder?: string;
+    placeholderSearchInput?: string;
+    withFetcher?: Omit<
+      React.ComponentProps<typeof ComboboxContentWithFetcher>,
+      'multiple' | 'onSelect' | 'placeholder' | 'value'
+    >;
+  }) {
   const t = useTranslations('core.global');
   const [open, setOpen] = React.useState(false);
   const value: string | string[] | undefined = field.value;
@@ -87,6 +87,7 @@ export function AutoFormCombobox({
     value: string | StringLanguage[];
   }) => {
     const currentValue:
+      | undefined
       | {
           key: string;
           value: string | StringLanguage[];
@@ -94,8 +95,7 @@ export function AutoFormCombobox({
       | {
           key: string;
           value: string | StringLanguage[];
-        }[]
-      | undefined = field.value;
+        }[] = field.value;
     const currentArrayValues = Array.isArray(currentValue)
       ? currentValue
       : currentValue

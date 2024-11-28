@@ -10,7 +10,7 @@ import {
 export const mutationEditApi = async ({
   id,
   ...body
-}: { id: number } & CreateGroupsMembersAdminBody) => {
+}: CreateGroupsMembersAdminBody & { id: number }) => {
   await fetcher<GroupMembersAdmin, CreateGroupsMembersAdminBody>({
     url: `/admin/members/groups/${id}`,
     method: 'PUT',

@@ -6,9 +6,9 @@ import { ShowCaptchaSecurityAdminObj } from 'vitnode-shared/admin/security/captc
 import { EditCaptchaSecurityAdminService } from './service/edit.service';
 import { ShowCaptchaSecurityAdminService } from './service/show.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin')
 @Controller('admin/security/captcha')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class CaptchaSecurityAdminController {
   constructor(
@@ -16,22 +16,22 @@ export class CaptchaSecurityAdminController {
     private readonly editService: EditCaptchaSecurityAdminService,
   ) {}
 
-  @Put()
   @ApiOkResponse({
     description: 'Edit captcha settings',
     type: ShowCaptchaSecurityAdminObj,
   })
+  @Put()
   async edit(
     @Body() body: ShowCaptchaSecurityAdminObj,
   ): Promise<ShowCaptchaSecurityAdminObj> {
     return await this.editService.edit(body);
   }
 
-  @Get()
   @ApiOkResponse({
     description: 'Show captcha settings',
     type: ShowCaptchaSecurityAdminObj,
   })
+  @Get()
   async show(): Promise<ShowCaptchaSecurityAdminObj> {
     return await this.showService.show();
   }

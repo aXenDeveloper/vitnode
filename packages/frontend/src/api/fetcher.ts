@@ -59,11 +59,11 @@ export async function fetcher<
   body,
   query: queryFromArgs,
   ...options
-}: {
+}: Omit<RequestInit, 'body'> & {
   body?: TVariable;
   query?: TVariable;
   url: string;
-} & Omit<RequestInit, 'body'>): Promise<{
+}): Promise<{
   data: TData;
   res: Response;
 }> {

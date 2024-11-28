@@ -10,7 +10,7 @@ import {
 export const editMutationApi = async ({
   id,
   ...body
-}: { id: number } & EditLanguagesAdminBody) => {
+}: EditLanguagesAdminBody & { id: number }) => {
   await fetcher<LanguagesAdminObj, EditLanguagesAdminBody>({
     url: `/admin/languages/${id}`,
     method: 'PUT',

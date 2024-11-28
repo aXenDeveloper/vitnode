@@ -11,10 +11,10 @@ export const ItemPermissionsAdminDevPluginAdmin = ({
   parentId,
   dataWithI18n,
   permissions,
-}: {
+}: PermissionsAdminWithI18n & {
   dataWithI18n: PermissionsAdminWithI18n[];
   parentId: string | undefined;
-} & PermissionsAdminWithI18n) => {
+}) => {
   const t = useTranslations('admin.core.plugins.dev.permissions-admin');
   const { pluginCode } = useDevPluginAdmin();
 

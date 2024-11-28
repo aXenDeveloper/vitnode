@@ -18,7 +18,7 @@ export function SortableTreeItem<T extends TreeItem<T>>({
   children,
   isDragEnd = true,
   ...props
-}: {
+}: Omit<React.HTMLAttributes<HTMLLIElement>, 'id' | 'style'> & {
   childCount?: number;
   children: React.ReactNode;
   clone?: boolean;
@@ -28,7 +28,7 @@ export function SortableTreeItem<T extends TreeItem<T>>({
   indentationWidth: number;
   isDragEnd?: boolean;
   onCollapse?: () => void;
-} & Omit<React.HTMLAttributes<HTMLLIElement>, 'id' | 'style'>) {
+}) {
   const {
     attributes,
     isSorting,

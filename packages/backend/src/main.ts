@@ -7,12 +7,12 @@ import { readFile } from 'fs/promises';
 import helmet from 'helmet';
 import { join } from 'path';
 
-interface CorsOptionsMain extends Omit<CorsOptions, 'credentials'> {
-  origin?: (RegExp | string)[];
-}
-
 interface Args {
   cors?: CorsOptionsMain;
+}
+
+interface CorsOptionsMain extends Omit<CorsOptions, 'credentials'> {
+  origin?: (RegExp | string)[];
 }
 
 export const nestjsMainApp = async (app: INestApplication, options?: Args) => {

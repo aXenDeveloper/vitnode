@@ -2,14 +2,14 @@ import { core_files_using } from '@/database/schema/files';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { and, inArray } from 'drizzle-orm';
 
+interface InfoType {
+  files: { folder: string; id: number }[];
+}
+
 interface StringLanguageJSONContentType {
   attrs?: { dir_folder?: string; id: number };
   content?: StringLanguageJSONContentType[];
   type: string;
-}
-
-interface InfoType {
-  files: { folder: string; id: number }[];
 }
 
 export class ParseStringLanguageHelper {

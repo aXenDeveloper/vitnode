@@ -1,20 +1,6 @@
 import { ApiProperty, PickType } from '@nestjs/swagger';
 import { IsArray, IsBoolean, IsString } from 'class-validator';
 
-export class ShowAuthSettingsAdminObj {
-  @ApiProperty()
-  @IsBoolean()
-  force_login: boolean;
-
-  @ApiProperty()
-  @IsBoolean()
-  lock_register: boolean;
-
-  @ApiProperty()
-  @IsBoolean()
-  require_confirm_email: boolean;
-}
-
 export class CreateMethodAuthSettingsAdminBody {
   @ApiProperty()
   @IsString()
@@ -46,20 +32,34 @@ export class EditMethodAuthSettingsAdminBody extends PickType(
   enabled: boolean;
 }
 
-export class ShowMethodAuthSettingsAdmin extends CreateMethodAuthSettingsAdminBody {
+export class EnabledMethodsAuthSettingsAdmin {
   @ApiProperty()
-  @IsBoolean()
-  enabled: boolean;
+  @IsString()
+  code: string;
 
   @ApiProperty()
   @IsString()
   name: string;
 }
 
-export class EnabledMethodsAuthSettingsAdmin {
+export class ShowAuthSettingsAdminObj {
   @ApiProperty()
-  @IsString()
-  code: string;
+  @IsBoolean()
+  force_login: boolean;
+
+  @ApiProperty()
+  @IsBoolean()
+  lock_register: boolean;
+
+  @ApiProperty()
+  @IsBoolean()
+  require_confirm_email: boolean;
+}
+
+export class ShowMethodAuthSettingsAdmin extends CreateMethodAuthSettingsAdminBody {
+  @ApiProperty()
+  @IsBoolean()
+  enabled: boolean;
 
   @ApiProperty()
   @IsString()

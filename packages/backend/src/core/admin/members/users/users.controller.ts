@@ -30,9 +30,9 @@ import { EditUsersMembersAdminService } from './services/edit.service';
 import { GetUsersMembersAdminService } from './services/get.service';
 import { ItemUsersMembersAdminService } from './services/item.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin - Members')
 @Controller('admin/members/users')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class UsersMembersAdminController {
   constructor(
@@ -43,20 +43,20 @@ export class UsersMembersAdminController {
     private readonly confirmEmailService: ConfirmEmailUsersMembersAdminService,
   ) {}
 
-  @Get('/confirm-email/:id')
+  @ApiNotFoundResponse()
   @ApiOkResponse({
     description: 'Confirm email',
   })
-  @ApiNotFoundResponse()
+  @Get('/confirm-email/:id')
   async confirmEmail(@Param('id') id: string): Promise<void> {
     await this.confirmEmailService.confirmEmail(+id);
   }
 
-  @Delete(':id')
+  @ApiNotFoundResponse()
   @ApiOkResponse({
     description: 'Delete user',
   })
-  @ApiNotFoundResponse()
+  @Delete(':id')
   async deleteUser(
     @Param('id') id: string,
     @CurrentUser() user: User,
@@ -64,12 +64,12 @@ export class UsersMembersAdminController {
     await this.deleteUsersService.delete({ id: +id, user });
   }
 
-  @Put(':id')
+  @ApiNotFoundResponse()
   @ApiOkResponse({
     type: UserMembersAdmin,
     description: 'Edit user',
   })
-  @ApiNotFoundResponse()
+  @Put(':id')
   async editUser(
     @Param('id') id: string,
     @Body() body: EditUserMembersAdminBody,
@@ -77,21 +77,21 @@ export class UsersMembersAdminController {
     return await this.editUsersService.edit({ id: +id, body });
   }
 
-  @Get(':id')
+  @ApiNotFoundResponse()
   @ApiOkResponse({
     type: UserMembersAdmin,
     description: 'Get user by id',
   })
-  @ApiNotFoundResponse()
+  @Get(':id')
   async getUser(@Param('id') id: string): Promise<UserMembersAdmin> {
     return await this.itemUsersService.item(+id);
   }
 
-  @Get()
   @ApiOkResponse({
     type: UsersMembersAdminObj,
     description: 'List of users',
   })
+  @Get()
   async getUsers(
     @Query() query: UsersMembersAdminQuery,
   ): Promise<UsersMembersAdminObj> {

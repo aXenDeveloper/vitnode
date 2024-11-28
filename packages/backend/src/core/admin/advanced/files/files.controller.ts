@@ -16,9 +16,9 @@ import {
 import { DeleteFilesAdvancedAdminService } from './services/delete.service';
 import { ShowFilesAdvancedAdminService } from './services/show.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin')
 @Controller('admin/advanced/files')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class FilesAdvancedAdminController {
   constructor(
@@ -26,19 +26,19 @@ export class FilesAdvancedAdminController {
     private readonly deleteService: DeleteFilesAdvancedAdminService,
   ) {}
 
-  @Delete(':id')
   @ApiOkResponse({
     description: 'Delete file',
   })
+  @Delete(':id')
   async deleteFile(@Param('id') id: string): Promise<void> {
     await this.deleteService.delete(+id);
   }
 
-  @Get()
   @ApiOkResponse({
     type: ShowFilesAdvancedAdminObj,
     description: 'Show files from all users',
   })
+  @Get()
   async showFiles(
     @Query() query: ShowFilesAdvancedAdminQuery,
   ): Promise<ShowFilesAdvancedAdminObj> {

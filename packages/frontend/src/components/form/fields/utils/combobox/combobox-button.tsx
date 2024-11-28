@@ -36,6 +36,7 @@ export function ComboBoxButton<T extends FieldValues>({
   const getButtonPlaceholder = () => {
     if (withFetcher) {
       const currentValue:
+        | undefined
         | {
             key: string;
             value: string | StringLanguage[];
@@ -43,8 +44,7 @@ export function ComboBoxButton<T extends FieldValues>({
         | {
             key: string;
             value: string | StringLanguage[];
-          }[]
-        | undefined = field.value;
+          }[] = field.value;
       const currentArrayValues = Array.isArray(currentValue)
         ? currentValue
         : currentValue

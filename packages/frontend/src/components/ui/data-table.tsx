@@ -17,10 +17,6 @@ import {
   TableRow,
 } from './table';
 
-interface TMin {
-  id: number | string;
-}
-
 export interface DataTableProps<T extends TMin> {
   columns: {
     cell?: (data: { allData: T[]; row: T }) => React.ReactNode;
@@ -36,6 +32,10 @@ export interface DataTableProps<T extends TMin> {
   };
   pageInfo?: PaginationInfo;
   searchPlaceholder?: string;
+}
+
+interface TMin {
+  id: number | string;
 }
 
 export function DataTable<T extends TMin>({

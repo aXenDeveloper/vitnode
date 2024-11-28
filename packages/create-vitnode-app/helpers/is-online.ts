@@ -2,20 +2,6 @@ import { execSync } from 'child_process';
 import { lookup } from 'dns/promises';
 import { URL } from 'url';
 
-function getProxy(): string | undefined {
-  if (process.env.https_proxy) {
-    return process.env.https_proxy;
-  }
-
-  try {
-    const httpsProxy = execSync('npm config get https-proxy').toString().trim();
-
-    return httpsProxy !== 'null' ? httpsProxy : undefined;
-  } catch (_) {
-    return;
-  }
-}
-
 export async function getOnline(): Promise<boolean> {
   try {
     await lookup('registry.yarnpkg.com');
@@ -44,5 +30,19 @@ export async function getOnline(): Promise<boolean> {
       // The DNS lookup for the proxy server also failed, so we are offline
       return false;
     }
+  }
+}
+
+function getProxy(): string | undefined {
+  if (process.env.https_proxy) {
+    return process.env.https_proxy;
+  }
+
+  try {
+    const httpsProxy = execSync('npm config get https-proxy').toString().trim();
+
+    return httpsProxy !== 'null' ? httpsProxy : undefined;
+  } catch (_) {
+    return;
   }
 }

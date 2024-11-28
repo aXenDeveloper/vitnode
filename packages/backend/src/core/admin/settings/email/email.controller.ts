@@ -34,9 +34,9 @@ import { LogsEmailSettingsAdminService } from './services/lags.service';
 import { ShowEmailSettingsAdminService } from './services/show.service';
 import { TestEmailSettingsAdminService } from './services/test.service';
 
+@ApiSecurity('admin')
 @ApiTags('Admin')
 @Controller('admin/settings/email')
-@ApiSecurity('admin')
 @UseGuards(AdminAuthGuard)
 export class EmailSettingsAdminController {
   constructor(
@@ -46,16 +46,16 @@ export class EmailSettingsAdminController {
     private readonly logsService: LogsEmailSettingsAdminService,
   ) {}
 
-  @Put()
+  @ApiBody({
+    description: 'Edit email settings',
+    type: EditEmailSettingsAdminBody,
+  })
   @ApiConsumes('multipart/form-data')
   @ApiOkResponse({
     description: 'Email settings updated',
     type: ShowEmailSettingsAdminObj,
   })
-  @ApiBody({
-    description: 'Edit email settings',
-    type: EditEmailSettingsAdminBody,
-  })
+  @Put()
   @UseInterceptors(FileFieldsInterceptor([{ name: 'logo', maxCount: 1 }]))
   async edit(
     @UploadedFiles(
@@ -75,28 +75,28 @@ export class EmailSettingsAdminController {
     return await this.editService.edit({ ...body, logo: files.logo?.at(0) });
   }
 
-  @Get('/logs')
   @ApiOkResponse({
     type: LogsEmailSettingsAdminObj,
     description: 'Logs email settings',
   })
+  @Get('/logs')
   async logs(
     @Query() body: LogsEmailSettingsAdminQuery,
   ): Promise<LogsEmailSettingsAdminObj> {
     return await this.logsService.logs(body);
   }
 
-  @Get()
   @ApiOkResponse({
     type: ShowEmailSettingsAdminObj,
     description: 'Show email settings',
   })
+  @Get()
   show(): ShowEmailSettingsAdminObj {
     return this.showService.show();
   }
 
-  @Post('/test')
   @ApiOkResponse({ description: 'Test email settings' })
+  @Post('/test')
   async test(
     @Body() body: TestEmailSettingsAdminBody,
     @CurrentUser() user: User,

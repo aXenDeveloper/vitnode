@@ -2,8 +2,8 @@ import { getMiddlewareData } from '@/api/get-middleware-data';
 import { CardDescription } from '@/components/ui/card';
 import { Link } from '@/navigation';
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
+import { notFound } from 'next/navigation';
 
 import { SSOSign } from '../sso';
 import { FormSignUp } from './form';

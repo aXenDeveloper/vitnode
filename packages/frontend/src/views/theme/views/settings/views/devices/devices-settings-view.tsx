@@ -2,8 +2,8 @@ import { fetcher } from '@/api/fetcher';
 import { CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { redirect } from '@/navigation';
 import { Metadata } from 'next';
-import { cookies } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
+import { cookies } from 'next/headers';
 import { ShowDevicesSettingsAuthObj } from 'vitnode-shared/auth/settings/devices.dto';
 
 import { ContentDevicesSettings } from './content';

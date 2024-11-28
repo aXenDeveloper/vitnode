@@ -12,8 +12,8 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/helpers/classnames';
 import { usePathname, useRouter } from '@/navigation';
 import { Search } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
 import React from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 
