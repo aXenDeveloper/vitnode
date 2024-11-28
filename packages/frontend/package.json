@@ -1,6 +1,6 @@
 {
   "name": "vitnode-frontend",
-  "version": "0.0.10-canary.16",
+  "version": "0.0.10-canary.17",
   "description": "Frontend wrapper for VitNode projects",
   "author": "VitNode Team",
   "license": "MIT",

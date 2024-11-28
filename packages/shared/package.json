@@ -1,6 +1,6 @@
 {
   "name": "vitnode-shared",
-  "version": "0.0.10-canary.16",
+  "version": "0.0.10-canary.17",
   "description": "Shared code between backend and frontend in VitNode projects.",
   "author": "VitNode Team",
   "license": "MIT",
