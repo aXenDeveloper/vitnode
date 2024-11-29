@@ -1,21 +1,6 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiCreatedResponse,
-  ApiOkResponse,
-  ApiSecurity,
-  ApiTags,
-} from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Body, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import {
   CreateLanguagesAdminBody,
   EditLanguagesAdminBody,
@@ -29,10 +14,11 @@ import { DeleteLanguagesAdminService } from './services/delete.service';
 import { EditLanguagesAdminService } from './services/edit.service';
 import { ShowLanguagesAdminService } from './services/show.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin')
-@Controller('admin/languages')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'languages',
+  isAdmin: true,
+})
 export class LanguagesAdminController {
   constructor(
     private readonly showService: ShowLanguagesAdminService,

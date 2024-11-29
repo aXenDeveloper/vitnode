@@ -23,6 +23,7 @@ export default [
   },
   {
     rules: {
+      'perfectionist/sort-decorators': 'warn',
       'perfectionist/sort-modules': 'off',
       'perfectionist/sort-switch-case': 'warn',
       '@typescript-eslint/no-unnecessary-condition': 'off',

@@ -1,6 +1,7 @@
 'use server';
 
 import { fetcher } from '@/api/fetcher';
+import { revalidatePath } from 'next/cache';
 import {
   ShowMetadataAdminBody,
   ShowMetadataAdminObj,
@@ -12,4 +13,6 @@ export const mutationApi = async (body: ShowMetadataAdminBody) => {
     method: 'PUT',
     body,
   });
+
+  revalidatePath('/', 'layout');
 };

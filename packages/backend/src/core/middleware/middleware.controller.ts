@@ -1,11 +1,15 @@
-import { Controller, Get } from '@nestjs/common';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Get } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import { ShowMiddlewareObj } from 'vitnode-shared/middleware.dto';
 
 import { ShowMiddlewareService } from './services/show.service';
 
-@ApiTags('Core')
-@Controller('core/middleware')
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'core',
+  route: 'middleware',
+})
 export class MiddlewareController {
   constructor(private readonly showService: ShowMiddlewareService) {}
 

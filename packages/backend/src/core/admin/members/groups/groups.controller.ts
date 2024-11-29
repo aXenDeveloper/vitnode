@@ -1,21 +1,9 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Body, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
-  ApiSecurity,
-  ApiTags,
 } from '@nestjs/swagger';
 import {
   CreateGroupsMembersAdminBody,
@@ -29,10 +17,12 @@ import { DeleteGroupsMembersAdminService } from './services/delete.service';
 import { EditGroupsMembersAdminService } from './services/edit.service';
 import { ShowGroupsMembersAdminService } from './services/show.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin - Members')
-@Controller('admin/members/groups')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Members',
+  plugin_code: 'members',
+  isAdmin: true,
+  route: 'groups',
+})
 export class GroupsMembersAdminController {
   constructor(
     private readonly showService: ShowGroupsMembersAdminService,

@@ -1,7 +1,7 @@
-import { AuthGuard } from '@/guards/auth.guard';
+import { Controllers } from '@/helpers/controller.decorator';
 import { CurrentUser } from '@/helpers/user.decorator';
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiOkResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { Get, Query } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import {
   ShowFilesSettingsAuthObj,
   ShowFilesSettingsAuthQuery,
@@ -10,10 +10,12 @@ import { User } from 'vitnode-shared/user.dto';
 
 import { ShowFilesSettingsAuthServices } from './services/show.service';
 
-@ApiSecurity('')
-@ApiTags('Core')
-@Controller('core/auth/settings/files')
-@UseGuards(AuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'core',
+  route: 'auth/settings/files',
+  isProtect: true,
+})
 export class FilesSettingsAuthController {
   constructor(private readonly showService: ShowFilesSettingsAuthServices) {}
 

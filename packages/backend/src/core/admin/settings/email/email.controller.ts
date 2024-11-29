@@ -1,25 +1,17 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
+import { Controllers } from '@/helpers/controller.decorator';
 import { FilesValidationPipe } from '@/helpers/files/files.pipe';
 import { CurrentUser } from '@/helpers/user.decorator';
 import {
   Body,
-  Controller,
   Get,
   Post,
   Put,
   Query,
   UploadedFiles,
-  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import {
-  ApiBody,
-  ApiConsumes,
-  ApiOkResponse,
-  ApiSecurity,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiOkResponse } from '@nestjs/swagger';
 import {
   EditEmailSettingsAdminBody,
   LogsEmailSettingsAdminObj,
@@ -34,10 +26,12 @@ import { LogsEmailSettingsAdminService } from './services/lags.service';
 import { ShowEmailSettingsAdminService } from './services/show.service';
 import { TestEmailSettingsAdminService } from './services/test.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin')
-@Controller('admin/settings/email')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'settings',
+  isAdmin: true,
+  route: 'email',
+})
 export class EmailSettingsAdminController {
   constructor(
     private readonly showService: ShowEmailSettingsAdminService,

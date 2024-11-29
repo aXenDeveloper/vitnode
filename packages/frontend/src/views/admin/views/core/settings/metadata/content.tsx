@@ -12,7 +12,7 @@ import { ShowMetadataAdminObj } from 'vitnode-shared/admin/settings/metadata.dto
 import { useMetadataSettingsAdminApi } from './hooks/use-metadata-settings-admin-api';
 
 export const ContentMetadataSettingsAdmin = (data: ShowMetadataAdminObj) => {
-  const { formSchema } = useMetadataSettingsAdminApi(data);
+  const { formSchema, onSubmit } = useMetadataSettingsAdminApi(data);
   const t = useTranslations('admin.core.settings.metadata');
 
   return (
@@ -94,6 +94,7 @@ export const ContentMetadataSettingsAdmin = (data: ShowMetadataAdminObj) => {
         },
       ]}
       formSchema={formSchema}
+      onSubmit={onSubmit}
       theme="horizontal"
     />
   );

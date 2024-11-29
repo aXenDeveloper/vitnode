@@ -1,9 +1,9 @@
 import type { Request, Response } from 'express';
 
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
+import { Controllers } from '@/helpers/controller.decorator';
 import { CurrentUser } from '@/helpers/user.decorator';
-import { Controller, Get, Query, Req, Res, UseGuards } from '@nestjs/common';
-import { ApiOkResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { Get, Query, Req, Res } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import {
   SearchNavAuthAdminObj,
   SearchNavAuthAdminQuery,
@@ -14,10 +14,11 @@ import { User } from 'vitnode-shared/user.dto';
 import { SearchAuthAdminService } from './services/nav/search.service';
 import { ShowAuthAdminService } from './services/show.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin')
-@Controller('admin/auth')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'auth',
+  isAdmin: true,
+})
 export class AuthAdminController {
   constructor(
     private readonly showService: ShowAuthAdminService,

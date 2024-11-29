@@ -1,21 +1,8 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
+import { Controllers } from '@/helpers/controller.decorator';
 import { FilesValidationPipe } from '@/helpers/files/files.pipe';
-import {
-  Body,
-  Controller,
-  Put,
-  UploadedFiles,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Body, Put, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import {
-  ApiBody,
-  ApiConsumes,
-  ApiOkResponse,
-  ApiSecurity,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiOkResponse } from '@nestjs/swagger';
 import {
   EditThemeEditorStylesAdminBody,
   EditThemeEditorStylesAdminObj,
@@ -23,10 +10,12 @@ import {
 
 import { EditThemeEditorStylesAdminService } from './service/edit.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin')
-@Controller('admin/styles/theme-editor')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'styles',
+  isAdmin: true,
+  route: 'theme-editor',
+})
 export class ThemeEditorStylesAdminController {
   constructor(
     private readonly editService: EditThemeEditorStylesAdminService,

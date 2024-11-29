@@ -1,19 +1,6 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
-import {
-  Body,
-  Controller,
-  Delete,
-  Param,
-  Post,
-  Put,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiCreatedResponse,
-  ApiOkResponse,
-  ApiSecurity,
-  ApiTags,
-} from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Body, Delete, Param, Post, Put } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { CreateLegalSettingsAdminBody } from 'vitnode-shared/admin/settings/legal.dto';
 import { Legal } from 'vitnode-shared/legal.dto';
 
@@ -21,10 +8,12 @@ import { CreateLegalSettingsAdminService } from './services/create.service';
 import { DeleteLegalSettingsAdminService } from './services/delete.service';
 import { EditLegalSettingsAdminService } from './services/edit.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin')
-@Controller('admin/settings/legal')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'settings',
+  isAdmin: true,
+  route: 'legal',
+})
 export class LegalSettingsAdminController {
   constructor(
     private readonly createService: CreateLegalSettingsAdminService,

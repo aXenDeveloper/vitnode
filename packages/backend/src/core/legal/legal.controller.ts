@@ -1,12 +1,16 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Get, Param, Query } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import { Legal, LegalsObj, LegalsQuery } from 'vitnode-shared/legal.dto';
 
 import { ItemLegalService } from './services/item.service';
 import { ShowLegalService } from './services/show.service';
 
-@ApiTags('Core')
-@Controller('core/legal')
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'core',
+  route: 'legal',
+})
 export class LegalController {
   constructor(
     private readonly showService: ShowLegalService,

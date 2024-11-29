@@ -1,20 +1,6 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiCreatedResponse,
-  ApiOkResponse,
-  ApiSecurity,
-  ApiTags,
-} from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Body, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import {
   CreatePermissionsAdminPluginsAdminBody,
   DeletePermissionsAdminPluginsAdminBody,
@@ -26,10 +12,12 @@ import { DeletePermissionsAdminPluginsAdminService } from './services/delete.ser
 import { EditPermissionsAdminPluginsAdminService } from './services/edit.service';
 import { ShowPermissionsAdminPluginsAdminService } from './services/show.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin')
-@Controller('admin/plugins/permissions-admin')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'plugins',
+  isAdmin: true,
+  route: 'permissions-admin',
+})
 export class PermissionsAdminPluginsAdminController {
   constructor(
     private readonly showService: ShowPermissionsAdminPluginsAdminService,

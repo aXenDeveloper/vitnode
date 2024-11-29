@@ -1,21 +1,6 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiCreatedResponse,
-  ApiOkResponse,
-  ApiSecurity,
-  ApiTags,
-} from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Body, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import {
   AdminStaffMembersAdmin,
   AdminStaffMembersAdminObj,
@@ -28,10 +13,12 @@ import { DeleteAdminStaffMembersAdminService } from './services/delete.service';
 import { EditAdminStaffMembersAdminService } from './services/edit.service';
 import { ShowAdminStaffMembersAdminService } from './services/show.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin - Members')
-@Controller('admin/members/staff/admin')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Members',
+  plugin_code: 'members',
+  isAdmin: true,
+  route: 'staff/admin',
+})
 export class AdminStaffMembersAdminController {
   constructor(
     private readonly showService: ShowAdminStaffMembersAdminService,

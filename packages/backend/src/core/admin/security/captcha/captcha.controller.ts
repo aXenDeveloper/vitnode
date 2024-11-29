@@ -1,15 +1,17 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
-import { Body, Controller, Get, Put, UseGuards } from '@nestjs/common';
-import { ApiOkResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Body, Get, Put } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import { ShowCaptchaSecurityAdminObj } from 'vitnode-shared/admin/security/captcha.dto';
 
 import { EditCaptchaSecurityAdminService } from './service/edit.service';
 import { ShowCaptchaSecurityAdminService } from './service/show.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin')
-@Controller('admin/security/captcha')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'security',
+  isAdmin: true,
+  route: 'captcha',
+})
 export class CaptchaSecurityAdminController {
   constructor(
     private readonly showService: ShowCaptchaSecurityAdminService,

@@ -1,15 +1,6 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-  UseGuards,
-} from '@nestjs/common';
-import { ApiOkResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Body, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import { ParentNavAuthAdminObj } from 'vitnode-shared/admin/auth.dto';
 import {
   ChangePositionNavPluginsAdminBody,
@@ -23,10 +14,12 @@ import { DeleteNavPluginsAdminService } from './services/delete.service';
 import { EditNavPluginsAdminService } from './services/edit.service';
 import { ShowNavPluginsAdminService } from './services/show.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin')
-@Controller('admin/plugins/nav')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'plugins',
+  isAdmin: true,
+  route: 'nav',
+})
 export class NavPluginsAdminController {
   constructor(
     private readonly showService: ShowNavPluginsAdminService,

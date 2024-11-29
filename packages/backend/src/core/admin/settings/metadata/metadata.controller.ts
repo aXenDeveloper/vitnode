@@ -1,6 +1,6 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
-import { Body, Controller, Get, Put, UseGuards } from '@nestjs/common';
-import { ApiOkResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Body, Get, Put } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import {
   ShowMetadataAdminBody,
   ShowMetadataAdminObj,
@@ -9,10 +9,12 @@ import {
 import { EditMetadataAdminService } from './services/edit.service';
 import { ShowMetadataAdminService } from './services/show.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin')
-@Controller('admin/settings/metadata')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'settings',
+  isAdmin: true,
+  route: 'metadata',
+})
 export class MetadataAdminController {
   constructor(
     private readonly showService: ShowMetadataAdminService,

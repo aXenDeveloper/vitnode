@@ -1,21 +1,7 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
+import { Controllers } from '@/helpers/controller.decorator';
 import { CurrentUser } from '@/helpers/user.decorator';
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Put,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiNotFoundResponse,
-  ApiOkResponse,
-  ApiSecurity,
-  ApiTags,
-} from '@nestjs/swagger';
+import { Body, Delete, Get, Param, Put, Query } from '@nestjs/common';
+import { ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
 import {
   EditUserMembersAdminBody,
   UserMembersAdmin,
@@ -30,10 +16,12 @@ import { EditUsersMembersAdminService } from './services/edit.service';
 import { GetUsersMembersAdminService } from './services/get.service';
 import { ItemUsersMembersAdminService } from './services/item.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin - Members')
-@Controller('admin/members/users')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Members',
+  plugin_code: 'members',
+  isAdmin: true,
+  route: 'users',
+})
 export class UsersMembersAdminController {
   constructor(
     private readonly getUsersService: GetUsersMembersAdminService,
