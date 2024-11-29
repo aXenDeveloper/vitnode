@@ -4,7 +4,7 @@ import { useSignOutApi } from '@/views/theme/layout/header/auth-user-bar/hooks/u
 import { KeyRoundIcon, LogOutIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { ItemUserFooterNavBarMobile } from './item';
+import { ItemUserNavBarMobile } from './item';
 
 export const UserFooterNavBarMobile = () => {
   const t = useTranslations('core.global.user-bar');
@@ -17,7 +17,7 @@ export const UserFooterNavBarMobile = () => {
         <>
           <Separator className="my-1" />
 
-          <ItemUserFooterNavBarMobile
+          <ItemUserNavBarMobile
             href="/admin"
             icon={<KeyRoundIcon />}
             name={t('admin_cp')}
@@ -28,7 +28,7 @@ export const UserFooterNavBarMobile = () => {
 
       <Separator className="my-1" />
 
-      <ItemUserFooterNavBarMobile
+      <ItemUserNavBarMobile
         icon={<LogOutIcon />}
         name={t('log_out')}
         onClick={onSubmit}

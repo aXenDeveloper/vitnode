@@ -10,7 +10,7 @@ import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { ArrowLeftIcon, MenuIcon, SearchIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { UserFooterNavBarMobile } from './content/footer/user-footer';
+import { UserFooterNavBarMobile } from './content/user-footer';
 import { UserHeaderNavBarMobile } from './content/user-header';
 import { ItemNavBarMobile } from './item';
 import { NavNavBarMobile } from './nav/nav';

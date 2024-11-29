@@ -10,7 +10,7 @@ interface Props
   target?: string;
 }
 
-export const ItemUserFooterNavBarMobile = ({
+export const ItemUserNavBarMobile = ({
   name,
   icon,
   href,

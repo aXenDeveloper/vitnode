@@ -5,6 +5,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { useSidebar } from '@/components/ui/sidebar';
 import {
   SidebarMenuAction,
   SidebarMenuButton,
@@ -33,13 +34,20 @@ export const ItemNavSidebarAdmin = ({
   const pathname = usePathname();
   const href = `/admin/${plugin_code}/${item.code}`;
   const t = useTranslations();
+  const { setOpenMobile } = useSidebar();
   const textAndIcon = textsAndIcons.find(
     el => el.id === item.code && el.plugin_code === plugin_code,
   );
   if (!textAndIcon) return null;
 
   const button = (
-    <SidebarMenuButton asChild isActive={pathname.startsWith(href)}>
+    <SidebarMenuButton
+      asChild
+      isActive={pathname.startsWith(href)}
+      onClick={() => {
+        setOpenMobile(false);
+      }}
+    >
       <Link
         href={item.children?.length ? `${href}/${item.children[0].code}` : href}
       >
@@ -83,6 +91,9 @@ export const ItemNavSidebarAdmin = ({
                     <SidebarMenuSubButton
                       asChild
                       isActive={pathname.startsWith(href)}
+                      onClick={() => {
+                        setOpenMobile(false);
+                      }}
                     >
                       <Link href={href}>
                         <span>{textAndIcon.text}</span>

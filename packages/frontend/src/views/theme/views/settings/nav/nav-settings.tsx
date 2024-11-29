@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/button';
 import {
   Drawer,
   DrawerClose,
@@ -48,10 +47,8 @@ export const NavSettings = async () => {
 
       <div className="block lg:hidden">
         <Drawer>
-          <DrawerTrigger asChild>
-            <Button className="w-full" variant="ghost">
-              {t('open_sheet')}
-            </Button>
+          <DrawerTrigger className="h-9 w-full">
+            {t('open_sheet')}
           </DrawerTrigger>
 
           <DrawerContent>
