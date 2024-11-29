@@ -51,6 +51,7 @@ import {
   generateMetadataMainSettingsCoreAdmin,
   MainSettingsCoreAdminView,
 } from './core/settings/main/main-settings-core-admin-view';
+import { MetadataSettingsAdminView } from './core/settings/metadata/metadata-settings-admin-view';
 import {
   EditorStylesAdminView,
   generateMetadataEditorStylesAdmin,
@@ -222,6 +223,10 @@ export const DynamicAdminView = async (props: {
     }
 
     if (slug[1] === 'settings') {
+      if (slug[2] === 'metadata' && !slug[3]) {
+        return <MetadataSettingsAdminView />;
+      }
+
       if (slug[2] === 'authorization' && !slug[4]) {
         return (
           <LayoutAuthorizationSettingsAdmin>
