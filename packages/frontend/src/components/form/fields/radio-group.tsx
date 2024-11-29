@@ -72,8 +72,8 @@ export function AutoFormRadioGroup({
         >
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {values.map((value: any) => {
-            const label = labels?.[value[0]]?.title ?? value[1];
-            const description = labels?.[value[0]]?.description;
+            const label = labels?.[value[1]]?.title ?? value[1];
+            const description = labels?.[value[1]]?.description;
 
             return (
               <FormItem
@@ -81,7 +81,7 @@ export function AutoFormRadioGroup({
                 key={value}
               >
                 <FormControl>
-                  <RadioGroupItem value={value[0]} />
+                  <RadioGroupItem value={value[1]} />
                 </FormControl>
                 <FormLabel className="flex items-center space-y-0 font-normal">
                   <span>{label}</span>

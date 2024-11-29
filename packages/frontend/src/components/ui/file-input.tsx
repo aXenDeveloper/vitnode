@@ -1,3 +1,5 @@
+'use client';
+
 import { PreviewFilesInput } from '@/components/helpers/files/preview-files-input';
 import { useMergeRefs } from '@/hooks/use-merge-refs';
 import { Upload } from 'lucide-react';

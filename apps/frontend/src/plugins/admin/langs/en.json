@@ -242,12 +242,16 @@
             "prompt_placeholder": "Ask a question...",
             "submit": "Ask"
           }
-        }
-      },
-      "metadata": {
-        "manifest": {
-          "title": "Manifest",
-          "desc": "The web app manifest provides information about an application (such as name, author, icon, and description) in a JSON text file. The manifest is used to install the web application (PWA) to the home screen of a device.",
+        },
+        "metadata": {
+          "title": "Metadata",
+          "desc": "Share your website with the world by adding metadata to your website.",
+          "theme_color": "Theme Color",
+          "background_color": "Background Color",
+          "start_url": {
+            "label": "Start URL",
+            "desc": "When user launches the app, this is the page that will be loaded."
+          },
           "display": {
             "label": "Display",
             "desc": "The display property controls how the app is displayed.",
@@ -259,7 +263,7 @@
               "title": "Standalone",
               "desc": "Without any browser UI."
             },
-            "minimal-ui": {
+            "minimal": {
               "title": "Minimal UI",
               "desc": "Minimal browser UI."
             },
@@ -267,16 +271,6 @@
               "title": "Browser",
               "desc": "With browser UI."
             }
-          },
-          "start_url": {
-            "label": "Start URL",
-            "desc": "When user launches the app, this is the page that will be loaded."
-          },
-          "theme_color": {
-            "label": "Theme Color"
-          },
-          "background_color": {
-            "label": "Background Color"
           }
         }
       },

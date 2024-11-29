@@ -19,7 +19,7 @@ export const generateMetadataRootLayout = async ({
 }: Omit<Props, 'className'>): Promise<Metadata> => {
   const { locale } = await params;
   const metadata: Metadata = {
-    manifest: `${CONFIG.backend_public_url}/assets/${locale}/manifest.webmanifest`,
+    manifest: `${CONFIG.backend_client_public_url}/assets/${locale}/manifest.webmanifest`,
     icons: {
       icon: '/icons/favicon.ico',
     },

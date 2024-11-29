@@ -1,13 +1,11 @@
-import { AuthGuard } from '@/guards/auth.guard';
+import { Controllers } from '@/helpers/controller.decorator';
 import { CurrentUser } from '@/helpers/user.decorator';
 import {
   Body,
-  Controller,
   Delete,
   Post,
   Query,
   UploadedFiles,
-  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
@@ -16,7 +14,6 @@ import {
   ApiConsumes,
   ApiCreatedResponse,
   ApiOkResponse,
-  ApiTags,
 } from '@nestjs/swagger';
 import {
   DeleteFilesQuery,
@@ -28,9 +25,12 @@ import { User } from 'vitnode-shared/user.dto';
 import { DeleteFilesService } from './services/delete.service';
 import { UploadFilesService } from './services/upload.service';
 
-@ApiTags('Core')
-@Controller('core/files')
-@UseGuards(AuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'core',
+  route: 'files',
+  isProtect: true,
+})
 export class FilesController {
   constructor(
     private readonly uploadFileService: UploadFilesService,

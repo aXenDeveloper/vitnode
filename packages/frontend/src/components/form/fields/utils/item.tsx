@@ -26,9 +26,9 @@ export function ItemAutoForm<
   dependencies,
   hideOptionalLabel,
   formSchema,
-  classNameWrapper,
+  className: classNameWrapper,
 }: {
-  classNameWrapper?: string;
+  className?: string;
   component: (props: AutoFormComponentProps) => React.ReactNode;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   control: Control<Record<string, any>> | undefined;

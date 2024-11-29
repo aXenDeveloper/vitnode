@@ -1,16 +1,8 @@
 import type { Request, Response } from 'express';
 
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query,
-  Req,
-  Res,
-} from '@nestjs/common';
-import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Body, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import {
   RegisterSSOCallbackAuthBody,
   SSOCallbackAuthObj,
@@ -21,8 +13,11 @@ import { CallbackSSOAuthService } from './services/callback.service';
 import { GetUrlSSOAuthService } from './services/get-url.service';
 import { RegisterCallbackSSOAuthService } from './services/register-callback.service';
 
-@ApiTags('Core')
-@Controller('core/auth/sso')
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'core',
+  route: 'auth/sso',
+})
 export class SSOAuthController {
   constructor(
     private readonly getUrlSSO: GetUrlSSOAuthService,

@@ -9,20 +9,23 @@ import { ChevronDown } from 'lucide-react';
 import { ShowNavStyles } from 'vitnode-shared/nav.dto';
 
 export const ItemNavNavBarMobile = ({
+  childrenItem,
   name,
   href,
   external,
-  children,
-  id,
-}: ShowNavStyles) => {
+}: {
+  childrenItem?: ShowNavStyles['children'];
+  external?: boolean;
+  href: string;
+  name: string;
+}) => {
   const { convertText } = useTextLang();
   const pathname = usePathname();
   const active = pathname.startsWith(href);
-  const text = convertText(name);
 
-  if (children.length > 0) {
+  if (childrenItem && childrenItem.length > 0) {
     return (
-      <AccordionItem value={`nav-mobile-${id}`}>
+      <AccordionItem value={`nav-mobile-${href}`}>
         <AccordionTrigger asChild>
           <Button
             className={cn(
@@ -33,13 +36,13 @@ export const ItemNavNavBarMobile = ({
             )}
             variant={active ? 'secondary' : 'ghost'}
           >
-            <span className="truncate">{text}</span>
+            <span className="truncate">{name}</span>
             <ChevronDown className="ml-auto transition-transform duration-200" />
           </Button>
         </AccordionTrigger>
 
         <AccordionContent className="py-2">
-          {children.map(child => {
+          {childrenItem.map(child => {
             const activeChild = pathname.startsWith(child.href);
 
             return (
@@ -84,7 +87,7 @@ export const ItemNavNavBarMobile = ({
           rel={external ? 'noopener noreferrer' : undefined}
           target={external ? '_blank' : undefined}
         >
-          <span className="truncate">{text}</span>
+          <span className="truncate">{name}</span>
         </Link>
       </Button>
     </DrawerClose>

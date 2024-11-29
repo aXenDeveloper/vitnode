@@ -1,5 +1,6 @@
 'use client';
 
+import { cn } from '@/helpers/classnames';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { PaginationInfo } from 'vitnode-shared/utils/pagination.dto';
@@ -45,12 +46,14 @@ export function DataTable<T extends TMin>({
   searchPlaceholder,
   pageInfo,
   defaultPageSize = 10,
-}: DataTableProps<T>) {
+  className,
+  ...props
+}: DataTableProps<T> & React.HTMLAttributes<HTMLDivElement>) {
   const t = useTranslations('core.global');
   const [isPending, startTransition] = React.useTransition();
 
   return (
-    <div className="space-y-6">
+    <div className={cn('space-y-6', className)} {...props}>
       {searchPlaceholder && (
         <ToolbarDataTable
           searchPlaceholder={searchPlaceholder}

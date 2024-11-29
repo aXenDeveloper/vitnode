@@ -12,10 +12,13 @@ export const AutoFormWrapper = ({
 }) => {
   return (
     <FormItem
-      className={cn(className, {
-        '@xs:flex-row @xs:gap-6 flex w-full flex-col items-start gap-2':
-          theme === 'horizontal',
-      })}
+      className={cn(
+        {
+          '@xs:flex-row @xs:gap-6 flex w-full flex-col items-start gap-2 space-y-0':
+            theme === 'horizontal',
+        },
+        className,
+      )}
     >
       {children}
     </FormItem>

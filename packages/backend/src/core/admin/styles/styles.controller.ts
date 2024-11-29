@@ -1,14 +1,15 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
-import { Body, Controller, Put, UseGuards } from '@nestjs/common';
-import { ApiOkResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Body, Put } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import { EditorStylesAdminBody } from 'vitnode-shared/admin/styles/editor.dto';
 
 import { EditorStylesAdminService } from './services/editor.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin')
-@Controller('admin/styles')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'styles',
+  isAdmin: true,
+})
 export class StylesAdminController {
   constructor(private readonly editorStyles: EditorStylesAdminService) {}
 

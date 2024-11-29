@@ -23,7 +23,7 @@ interface SingleProps extends Props {
   value?: TagInputItemProps | undefined;
 }
 
-interface TagInputItemProps {
+export interface TagInputItemProps {
   id: number | string;
   value: string;
 }

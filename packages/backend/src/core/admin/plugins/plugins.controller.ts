@@ -1,21 +1,6 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiCreatedResponse,
-  ApiOkResponse,
-  ApiSecurity,
-  ApiTags,
-} from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Body, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { EditPluginsAdminBody } from 'vitnode-shared/admin/plugin.dto';
 import {
   CreatePluginsAdminBody,
@@ -30,10 +15,7 @@ import { EditPluginsAdminService } from './services/edit.service';
 import { ItemPluginsAdminService } from './services/item.service';
 import { ShowPluginsAdminService } from './services/show.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin')
-@Controller('admin/plugins')
-@UseGuards(AdminAuthGuard)
+@Controllers({ plugin_name: 'Core', plugin_code: 'plugins', isAdmin: true })
 export class PluginsAdminController {
   constructor(
     private readonly showService: ShowPluginsAdminService,

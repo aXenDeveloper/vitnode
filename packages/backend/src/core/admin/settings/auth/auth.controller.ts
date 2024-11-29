@@ -1,15 +1,17 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
-import { ApiOkResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Body, Get, Post } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import { ShowAuthSettingsAdminObj } from 'vitnode-shared/admin/settings/auth.dto';
 
 import { EditAuthSettingsAdminService } from './services/edit.service';
 import { ShowAuthSettingsAdminService } from './services/show.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin')
-@Controller('admin/settings/auth')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'settings',
+  isAdmin: true,
+  route: 'auth',
+})
 export class AuthSettingsAdminController {
   constructor(
     private readonly showService: ShowAuthSettingsAdminService,

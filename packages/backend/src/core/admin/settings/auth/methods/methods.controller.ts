@@ -1,20 +1,6 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiCreatedResponse,
-  ApiOkResponse,
-  ApiSecurity,
-  ApiTags,
-} from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Body, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import {
   CreateMethodAuthSettingsAdminBody,
   EditMethodAuthSettingsAdminBody,
@@ -27,10 +13,12 @@ import { DeleteMethodsAuthSettingsAdminService } from './services/delete.service
 import { EditMethodsAuthSettingsAdminService } from './services/edit.service';
 import { ShowMethodsAuthSettingsAdminService } from './services/show.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin')
-@Controller('admin/settings/auth/methods')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'settings',
+  isAdmin: true,
+  route: 'auth/methods',
+})
 export class MethodsAuthSettingsAdminController {
   constructor(
     private readonly showService: ShowMethodsAuthSettingsAdminService,
