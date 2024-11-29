@@ -1,21 +1,7 @@
 import { NavMiddlewareService } from '@/core/middleware/services/nav.service';
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiCreatedResponse,
-  ApiOkResponse,
-  ApiSecurity,
-  ApiTags,
-} from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Body, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import {
   ChangePositionNavStylesAdminBody,
   CreateNavStylesAdminBody,
@@ -27,10 +13,12 @@ import { CreateNavStylesAdminService } from './services/create.service';
 import { DeleteNavStylesAdminService } from './services/delete.service';
 import { EditNavStylesAdminService } from './services/edit.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin')
-@Controller('admin/styles/nav')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'styles',
+  isAdmin: true,
+  route: 'nav',
+})
 export class NavStylesAdminController {
   constructor(
     private readonly showService: NavMiddlewareService,

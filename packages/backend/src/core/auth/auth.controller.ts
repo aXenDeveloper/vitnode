@@ -1,21 +1,12 @@
 import type { Request, Response } from 'express';
 
 import { AuthGuard } from '@/guards/auth.guard';
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Post,
-  Req,
-  Res,
-  UseGuards,
-} from '@nestjs/common';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Body, Delete, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiOkResponse,
   ApiSecurity,
-  ApiTags,
 } from '@nestjs/swagger';
 import {
   ShowAuthObj,
@@ -33,8 +24,11 @@ import { SignInAuthService } from './services/sign_in/sign_in.service';
 import { SignOutAuthService } from './services/sign_out.service';
 import { SignUpAuthService } from './services/sign_up/sign_up.service';
 
-@ApiTags('Core')
-@Controller('core/auth')
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'core',
+  route: 'auth',
+})
 export class AuthController {
   constructor(
     private readonly showService: ShowAuthService,

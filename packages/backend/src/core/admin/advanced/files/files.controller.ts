@@ -1,13 +1,6 @@
-import { AdminAuthGuard } from '@/guards/admin-auth.guard';
-import {
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import { ApiOkResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { Controllers } from '@/helpers/controller.decorator';
+import { Delete, Get, Param, Query } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import {
   ShowFilesAdvancedAdminObj,
   ShowFilesAdvancedAdminQuery,
@@ -16,10 +9,12 @@ import {
 import { DeleteFilesAdvancedAdminService } from './services/delete.service';
 import { ShowFilesAdvancedAdminService } from './services/show.service';
 
-@ApiSecurity('admin')
-@ApiTags('Admin')
-@Controller('admin/advanced/files')
-@UseGuards(AdminAuthGuard)
+@Controllers({
+  plugin_name: 'Core',
+  plugin_code: 'advanced',
+  isAdmin: true,
+  route: 'files',
+})
 export class FilesAdvancedAdminController {
   constructor(
     private readonly showService: ShowFilesAdvancedAdminService,
