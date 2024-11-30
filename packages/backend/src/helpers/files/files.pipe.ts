@@ -13,20 +13,64 @@ export class FilesValidationPipe implements PipeTransform {
       {
         acceptMimeType: string[];
         isOptional?: boolean;
+        maxCount: number;
         maxSize: number;
       }
     >,
   ) {}
 
-  transform(
+  private validateFieldExists(file: Express.Multer.File): void {
+    if (!this.options[file.fieldname]) {
+      throw new InternalServerErrorException(
+        `Invalid file field ${file.fieldname} in FilesValidationPipe`,
+      );
+    }
+  }
+
+  private validateFileCount(
+    files: Express.Multer.File[],
+    file: Express.Multer.File,
+  ): void {
+    const { maxCount } = this.options[file.fieldname];
+    const fieldCount = files.filter(f => f.fieldname === file.fieldname).length;
+
+    if (maxCount && fieldCount > maxCount) {
+      throw new BadRequestException(
+        `Exceeded maximum file count of ${maxCount} for ${file.fieldname} field`,
+      );
+    }
+  }
+
+  private validateFileSize(file: Express.Multer.File): void {
+    const { maxSize } = this.options[file.fieldname];
+
+    if (file.size > maxSize) {
+      throw new BadRequestException(
+        `File ${file.originalname} (${file.size} bytes) exceeds size limit of ${maxSize} bytes for ${file.fieldname} field`,
+      );
+    }
+  }
+
+  private validateFileType(file: Express.Multer.File): void {
+    const { acceptMimeType } = this.options[file.fieldname];
+
+    if (acceptMimeType.length && !acceptMimeType.includes(file.mimetype)) {
+      throw new BadRequestException(
+        `Invalid file type for ${file.originalname} (${file.mimetype})`,
+      );
+    }
+  }
+
+  private validateInput(
     filesFromArgs:
       | Express.Multer.File
       | Express.Multer.File[]
       | Record<string, Express.Multer.File | Express.Multer.File[]>,
-  ): Record<string, Express.Multer.File[]> {
+  ): Express.Multer.File[] {
     const checkIfIsRecord = !!(
       Array.isArray(filesFromArgs) ? filesFromArgs : [filesFromArgs]
     ).at(0)?.fieldname;
+
     if (checkIfIsRecord) {
       throw new BadRequestException('Invalid file format');
     }
@@ -38,41 +82,41 @@ export class FilesValidationPipe implements PipeTransform {
       .map(key => filesFromArgs[key])
       .flatMap(files => files);
 
+    return files;
+  }
+
+  transform(
+    filesFromArgs:
+      | Express.Multer.File
+      | Express.Multer.File[]
+      | Record<string, Express.Multer.File | Express.Multer.File[]>,
+  ): Record<string, Express.Multer.File | Express.Multer.File[]> {
+    const files = this.validateInput(filesFromArgs);
+
     // Validate files
     files.forEach(file => {
-      if (!this.options[file.fieldname]) {
-        throw new InternalServerErrorException(
-          `Invalid file field ${file.fieldname} in FilesValidationPipe`,
-        );
-      }
-
-      // Validate file size
-      if (file.size > this.options[file.fieldname].maxSize) {
-        throw new BadRequestException(
-          `File ${file.originalname} (${file.size} bytes) exceeds size limit of ${this.options[file.fieldname].maxSize} bytes for ${file.fieldname} field`,
-        );
-      }
-
-      // Validate file type
-      if (
-        this.options[file.fieldname].acceptMimeType.length &&
-        !this.options[file.fieldname].acceptMimeType.includes(file.mimetype)
-      ) {
-        throw new BadRequestException(
-          `Invalid file type for ${file.originalname} (${file.mimetype})`,
-        );
-      }
+      this.validateFieldExists(file);
+      this.validateFileCount(files, file);
+      this.validateFileType(file);
+      this.validateFileSize(file);
     });
 
-    const groupByFieldName: Record<string, Express.Multer.File[]> =
-      files.reduce((acc, file) => {
-        if (!acc[file.fieldname]) {
-          acc[file.fieldname] = [];
-        }
-        acc[file.fieldname].push(file);
+    const groupByFieldName: Record<
+      string,
+      Express.Multer.File | Express.Multer.File[]
+    > = files.reduce((acc, file) => {
+      if (!acc[file.fieldname]) {
+        acc[file.fieldname] =
+          this.options[file.fieldname].maxCount === 1 ? undefined : [];
+      }
+      if (this.options[file.fieldname].maxCount === 1) {
+        acc[file.fieldname] = file;
+      } else {
+        (acc[file.fieldname] as Express.Multer.File[]).push(file);
+      }
 
-        return acc;
-      }, {});
+      return acc;
+    }, {});
 
     // Validate if required fields are present
     Object.keys(this.options).forEach(fieldName => {

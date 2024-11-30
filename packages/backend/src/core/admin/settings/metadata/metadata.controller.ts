@@ -1,5 +1,7 @@
 import { Controllers } from '@/helpers/controller.decorator';
-import { Body, Get, Put } from '@nestjs/common';
+import { FilesValidationPipe } from '@/helpers/files/files.pipe';
+import { UploadFilesMethod } from '@/helpers/upload-files.decorator';
+import { Body, Get, Put, UploadedFiles } from '@nestjs/common';
 import { ApiOkResponse } from '@nestjs/swagger';
 import {
   ShowMetadataAdminBody,
@@ -26,10 +28,28 @@ export class MetadataAdminController {
     type: ShowMetadataAdminObj,
   })
   @Put()
+  @UploadFilesMethod({ fields: ['icon', 'favicon'] })
   async edit(
+    @UploadedFiles(
+      new FilesValidationPipe({
+        icon: {
+          maxSize: 1024 * 1024, // 1 MB
+          acceptMimeType: ['image/png', 'image/jpeg', 'image/webp'],
+          isOptional: true,
+          maxCount: 1,
+        },
+        favicon: {
+          maxSize: 1024 * 1024, // 1 MB
+          acceptMimeType: ['image/x-icon', 'image/vnd.microsoft.icon'],
+          isOptional: true,
+          maxCount: 1,
+        },
+      }),
+    )
+    files: Pick<ShowMetadataAdminBody, 'favicon' | 'icon'>,
     @Body() body: ShowMetadataAdminBody,
   ): Promise<ShowMetadataAdminObj> {
-    return this.editService.edit(body);
+    return this.editService.edit({ body, files });
   }
 
   @ApiOkResponse({

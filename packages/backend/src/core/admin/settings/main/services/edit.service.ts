@@ -7,6 +7,8 @@ import { join } from 'path';
 import { MainSettingsAdminBody } from 'vitnode-shared/admin/settings/main.dto';
 import { ManifestWithLang } from 'vitnode-shared/manifest.dto';
 
+import { getManifest, ManifestType } from '../../metadata/helpers';
+
 @Injectable()
 export class EditMainSettingsAdminService {
   constructor(private readonly databaseService: InternalDatabaseService) {}
@@ -14,9 +16,13 @@ export class EditMainSettingsAdminService {
   protected async updateDescription({
     languages,
     site_description,
+    site_name,
+    site_short_name,
   }: {
     languages: { code: string }[];
     site_description: MainSettingsAdminBody['site_description'];
+    site_name: MainSettingsAdminBody['site_name'];
+    site_short_name: MainSettingsAdminBody['site_short_name'];
   }) {
     const update = await Promise.all(
       (site_description ?? []).map(async el => {
@@ -32,22 +38,25 @@ export class EditMainSettingsAdminService {
           throw new InternalServerErrorException();
         }
 
-        const path = join(
-          ABSOLUTE_PATHS.uploads.public,
-          'assets',
-          item.language_code,
-          'manifest.webmanifest',
-        );
-        const manifest: ManifestWithLang = JSON.parse(
-          await readFile(path, 'utf8'),
-        );
-        const newData: ManifestWithLang = {
+        const manifest = await getManifest({ lang_code: item.language_code });
+        const newData: ManifestType = {
           ...manifest,
           lang: el.language_code,
           description: item.value,
+          name: site_name,
+          short_name: site_short_name,
         };
 
-        await writeFile(path, JSON.stringify(newData, null, 2), 'utf8');
+        await writeFile(
+          join(
+            ABSOLUTE_PATHS.uploads.public,
+            'assets',
+            item.language_code,
+            'manifest.webmanifest',
+          ),
+          JSON.stringify(newData, null, 2),
+          'utf8',
+        );
 
         return el.language_code;
       }),
@@ -112,6 +121,8 @@ export class EditMainSettingsAdminService {
     await this.updateDescription({
       languages,
       site_description,
+      site_name,
+      site_short_name,
     });
 
     return {

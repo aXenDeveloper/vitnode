@@ -1,6 +1,14 @@
-import { ApiProperty, OmitType } from '@nestjs/swagger';
-import { IsEnum, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
+import {
+  IsBoolean,
+  IsEnum,
+  IsObject,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
+import { FileObj } from '../../utils/files.dto';
 import { ManifestDisplay } from './metadata.enum';
 
 export class ShowMetadataAdminObj {
@@ -11,6 +19,16 @@ export class ShowMetadataAdminObj {
   @ApiProperty({ example: 'standalone', enum: ManifestDisplay })
   @IsEnum(ManifestDisplay)
   display: ManifestDisplay;
+
+  @ApiPropertyOptional()
+  @IsObject()
+  @IsOptional()
+  favicon?: FileObj;
+
+  @ApiPropertyOptional()
+  @IsObject()
+  @IsOptional()
+  icon?: FileObj;
 
   @ApiProperty({ example: '/' })
   @IsString()
@@ -32,4 +50,24 @@ export class ShowMetadataAdminObj {
 export class ShowMetadataAdminBody extends OmitType(ShowMetadataAdminObj, [
   'id',
   'lang',
-]) {}
+  'icon',
+  'favicon',
+]) {
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  favicon?: Express.Multer.File;
+
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  icon?: Express.Multer.File;
+
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => value === 'true')
+  remove_favicon?: boolean;
+
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => value === 'true')
+  remove_icon?: boolean;
+}

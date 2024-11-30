@@ -15,7 +15,7 @@ import {
 } from 'vitnode-shared/admin/styles/theme-editor.dto';
 import * as z from 'zod';
 
-import { revalidateApi } from './hooks/revalidate-api';
+import { revalidateAllApi } from '../../diagnostic/actions/clear_cache/hooks/revalidate-all-api';
 import {
   ThemeEditorContext,
   ThemeEditorIds,
@@ -206,13 +206,10 @@ export const WrapperThemeEditorAdmin = ({
         body: formData,
       });
 
-      await revalidateApi();
+      await revalidateAllApi();
       toast.success(t('saved_success'));
       form.reset(values);
     } catch (_) {
-      // TODO: To delete
-      // eslint-disable-next-line no-console
-      console.log(_);
       toast.error(t('errors.title'), {
         description: t('errors.internal_server_error'),
       });

@@ -49,10 +49,14 @@ export class FilesHelperService {
     file,
     plugin_code,
     folder,
+    force_name,
     secure = false,
+    custom_dir,
   }: {
+    custom_dir?: string;
     file: Express.Multer.File;
     folder: string;
+    force_name?: string;
     plugin_code: string;
     secure?: boolean;
   }): Promise<FileObj> {
@@ -73,11 +77,13 @@ export class FilesHelperService {
     const privateOrPublicFolder = secure
       ? ABSOLUTE_PATHS.uploads.secure
       : ABSOLUTE_PATHS.uploads.public;
-    const dirFolder = join(
-      `monthly_${date.getMonth() + 1}_${date.getFullYear()}`,
-      plugin_code,
-      folder,
-    );
+    const dirFolder = custom_dir
+      ? custom_dir
+      : join(
+          `monthly_${date.getMonth() + 1}_${date.getFullYear()}`,
+          plugin_code,
+          folder,
+        );
 
     if (!existsSync(dirFolder)) {
       await mkdir(join(privateOrPublicFolder, dirFolder), {
@@ -89,9 +95,11 @@ export class FilesHelperService {
     if (!extension) {
       throw new BadRequestException('File extension not found');
     }
-    const fileName = `${Date.now()}_${generateRandomString(5)}_${removeSpecialCharacters(
-      file.originalname.replace(`.${extension}`, ''),
-    ).replace(/\./g, '')}.${extension}`;
+    const fileName = force_name
+      ? force_name
+      : `${Date.now()}_${generateRandomString(5)}_${removeSpecialCharacters(
+          file.originalname.replace(`.${extension}`, ''),
+        ).replace(/\./g, '')}.${extension}`;
     const pathToSaveFile = join(privateOrPublicFolder, dirFolder, fileName);
     await writeFile(pathToSaveFile, file.buffer);
 

@@ -86,10 +86,8 @@ export const ItemPreviewFilesInput = ({
               dir_folder={file.dir_folder}
               file_name={file.file_name}
               fill
-              height={file.height ?? 100}
               mimetype={file.mimetype}
               sizes="100px"
-              width={file.width ?? 100}
             />
           )}
         </div>

@@ -94,7 +94,7 @@ const parseFrontendUrlFromEnv = () => {
 };
 
 const parseBackendUrlFromEnv = () => {
-  const envUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  const envUrl = process.env.NEXT_PUBLIC_BACKEND_CLIENT_URL;
   const frontendUrl = envUrl ? envUrl : 'http://localhost:8080';
   const urlObj = new URL(frontendUrl);
 

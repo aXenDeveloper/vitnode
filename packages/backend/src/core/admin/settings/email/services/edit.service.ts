@@ -15,11 +15,13 @@ export class EditEmailSettingsAdminService {
     private readonly filesService: FilesHelperService,
   ) {}
 
-  async edit(
-    settings: EditEmailSettingsAdminBody,
-  ): Promise<ShowEmailSettingsAdminObj> {
-    const { logo, color_primary, color_primary_foreground, delete_logo } =
-      settings;
+  async edit({
+    body: { color_primary, color_primary_foreground, delete_logo },
+    files: { logo },
+  }: {
+    body: Omit<EditEmailSettingsAdminBody, 'logo'>;
+    files: Pick<EditEmailSettingsAdminBody, 'logo'>;
+  }): Promise<ShowEmailSettingsAdminObj> {
     const isEmailEnabled = this.mailService.checkIfEnable();
     const configSettings = getConfigFile();
     const emailSettings = configSettings.settings.email;

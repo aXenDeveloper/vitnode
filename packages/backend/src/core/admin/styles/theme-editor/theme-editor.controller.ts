@@ -1,8 +1,8 @@
 import { Controllers } from '@/helpers/controller.decorator';
 import { FilesValidationPipe } from '@/helpers/files/files.pipe';
-import { Body, Put, UploadedFiles, UseInterceptors } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes, ApiOkResponse } from '@nestjs/swagger';
+import { UploadFilesMethod } from '@/helpers/upload-files.decorator';
+import { Body, Put, UploadedFiles } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import {
   EditThemeEditorStylesAdminBody,
   EditThemeEditorStylesAdminObj,
@@ -21,24 +21,19 @@ export class ThemeEditorStylesAdminController {
     private readonly editService: EditThemeEditorStylesAdminService,
   ) {}
 
-  @ApiBody({
-    description: 'Edit theme editor settings',
-    type: EditThemeEditorStylesAdminBody,
-  })
-  @ApiConsumes('multipart/form-data')
   @ApiOkResponse({
     description: 'Theme editor settings updated',
     type: EditThemeEditorStylesAdminObj,
   })
   @Put()
-  @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: 'logo_dark', maxCount: 1 },
-      { name: 'mobile_logo_dark', maxCount: 1 },
-      { name: 'logo_light', maxCount: 1 },
-      { name: 'mobile_logo_light', maxCount: 1 },
-    ]),
-  )
+  @UploadFilesMethod({
+    fields: [
+      'logo_dark',
+      'mobile_logo_dark',
+      'logo_light',
+      'mobile_logo_light',
+    ],
+  })
   async updateThemeEditor(
     @UploadedFiles(
       new FilesValidationPipe({
@@ -51,6 +46,7 @@ export class ThemeEditorStylesAdminController {
             'image/webp',
           ],
           isOptional: true,
+          maxCount: 1,
         },
         mobile_logo_dark: {
           maxSize: 1024 * 1024, // 1 MB
@@ -61,6 +57,7 @@ export class ThemeEditorStylesAdminController {
             'image/webp',
           ],
           isOptional: true,
+          maxCount: 1,
         },
         logo_light: {
           maxSize: 1024 * 1024, // 1 MB
@@ -71,6 +68,7 @@ export class ThemeEditorStylesAdminController {
             'image/webp',
           ],
           isOptional: true,
+          maxCount: 1,
         },
         mobile_logo_light: {
           maxSize: 1024 * 1024, // 1 MB
@@ -81,27 +79,20 @@ export class ThemeEditorStylesAdminController {
             'image/webp',
           ],
           isOptional: true,
+          maxCount: 1,
         },
       }),
     )
-    files: {
-      logo_dark?: Express.Multer.File[];
-      logo_light?: Express.Multer.File[];
-      mobile_logo_dark?: Express.Multer.File[];
-      mobile_logo_light?: Express.Multer.File[];
-    },
-    @Body()
-    body: Omit<
+    files: Pick<
       EditThemeEditorStylesAdminBody,
       'logo_dark' | 'logo_light' | 'mobile_logo_dark' | 'mobile_logo_light'
     >,
+    @Body()
+    body: EditThemeEditorStylesAdminBody,
   ): Promise<EditThemeEditorStylesAdminObj> {
     return await this.editService.update({
-      ...body,
-      logo_dark: files.logo_dark?.at(0),
-      mobile_logo_dark: files.mobile_logo_dark?.at(0),
-      logo_light: files.logo_light?.at(0),
-      mobile_logo_light: files.mobile_logo_light?.at(0),
+      body,
+      files,
     });
   }
 }
