@@ -74,13 +74,7 @@ const generateDefaultManifest = ({
   background_color: '#09090b',
   start_url: `${frontendUrl}/${langCode}/`,
   orientation: 'any',
-  icons: [
-    {
-      src: '/icons/favicon.ico',
-      sizes: 'any',
-      type: 'image/x-icon',
-    },
-  ],
+  icons: [],
 });
 
 export const generateManifest = async ({

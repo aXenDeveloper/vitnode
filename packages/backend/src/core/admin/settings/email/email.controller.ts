@@ -1,17 +1,9 @@
 import { Controllers } from '@/helpers/controller.decorator';
 import { FilesValidationPipe } from '@/helpers/files/files.pipe';
+import { UploadFilesMethod } from '@/helpers/upload-files.decorator';
 import { CurrentUser } from '@/helpers/user.decorator';
-import {
-  Body,
-  Get,
-  Post,
-  Put,
-  Query,
-  UploadedFiles,
-  UseInterceptors,
-} from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { ApiBody, ApiConsumes, ApiOkResponse } from '@nestjs/swagger';
+import { Body, Get, Post, Put, Query, UploadedFiles } from '@nestjs/common';
+import { ApiOkResponse } from '@nestjs/swagger';
 import {
   EditEmailSettingsAdminBody,
   LogsEmailSettingsAdminObj,
@@ -40,17 +32,12 @@ export class EmailSettingsAdminController {
     private readonly logsService: LogsEmailSettingsAdminService,
   ) {}
 
-  @ApiBody({
-    description: 'Edit email settings',
-    type: EditEmailSettingsAdminBody,
-  })
-  @ApiConsumes('multipart/form-data')
   @ApiOkResponse({
     description: 'Email settings updated',
     type: ShowEmailSettingsAdminObj,
   })
   @Put()
-  @UseInterceptors(FileFieldsInterceptor([{ name: 'logo', maxCount: 1 }]))
+  @UploadFilesMethod({ fields: ['logo'] })
   async edit(
     @UploadedFiles(
       new FilesValidationPipe({
@@ -62,12 +49,10 @@ export class EmailSettingsAdminController {
         },
       }),
     )
-    files: {
-      logo?: Express.Multer.File[];
-    },
-    @Body() body: Omit<EditEmailSettingsAdminBody, 'logo'>,
+    files: Pick<EditEmailSettingsAdminBody, 'logo'>,
+    @Body() body: EditEmailSettingsAdminBody,
   ): Promise<ShowEmailSettingsAdminObj> {
-    return await this.editService.edit({ ...body, logo: files.logo?.at(0) });
+    return await this.editService.edit({ body, files });
   }
 
   @ApiOkResponse({

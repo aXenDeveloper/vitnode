@@ -23,6 +23,11 @@ export class ShowMetadataAdminObj {
   @ApiPropertyOptional()
   @IsObject()
   @IsOptional()
+  favicon?: FileObj;
+
+  @ApiPropertyOptional()
+  @IsObject()
+  @IsOptional()
   icon?: FileObj;
 
   @ApiProperty({ example: '/' })
@@ -46,9 +51,19 @@ export class ShowMetadataAdminBody extends OmitType(ShowMetadataAdminObj, [
   'id',
   'lang',
   'icon',
+  'favicon',
 ]) {
   @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  favicon?: Express.Multer.File;
+
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
   icon?: Express.Multer.File;
+
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => value === 'true')
+  remove_favicon?: boolean;
 
   @ApiPropertyOptional()
   @IsBoolean()

@@ -3,6 +3,7 @@ import { FilesHelperService } from '@/helpers/files/files-helper.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { existsSync } from 'fs';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import sharp from 'sharp';
@@ -65,11 +66,11 @@ export class EditMetadataAdminService {
   }
 
   async edit({
-    body: { remove_icon, ...body },
+    body: { remove_icon, remove_favicon, ...body },
     files,
   }: {
-    body: Omit<ShowMetadataAdminBody, 'icon'>;
-    files: Pick<ShowMetadataAdminBody, 'icon'>;
+    body: Omit<ShowMetadataAdminBody, 'favicon' | 'icon'>;
+    files: Pick<ShowMetadataAdminBody, 'favicon' | 'icon'>;
   }): Promise<ShowMetadataAdminObj> {
     const frontendUrl: string = this.configService.getOrThrow('frontend_url');
     const backendUrl: string = this.configService.getOrThrow('backend_url');
@@ -79,6 +80,29 @@ export class EditMetadataAdminService {
       },
       orderBy: (table, { desc }) => desc(table.default),
     });
+
+    // Handle favicon
+    const faviconPath = join(
+      ABSOLUTE_PATHS.uploads.public,
+      'assets',
+      'favicon.ico',
+    );
+    if ((remove_favicon || files.icon) && existsSync(faviconPath)) {
+      await this.filesHelper.delete({
+        dir_folder: 'assets',
+        file_name: 'favicon.ico',
+      });
+    }
+
+    if (files.favicon) {
+      await this.filesHelper.upload({
+        file: files.favicon,
+        force_name: 'favicon.ico',
+        folder: 'icons',
+        plugin_code: 'core',
+        custom_dir: 'assets',
+      });
+    }
 
     if (remove_icon || files.icon) {
       const manifest = await getManifest({

@@ -28,7 +28,7 @@ export class MetadataAdminController {
     type: ShowMetadataAdminObj,
   })
   @Put()
-  @UploadFilesMethod({ fields: ['icon'] })
+  @UploadFilesMethod({ fields: ['icon', 'favicon'] })
   async edit(
     @UploadedFiles(
       new FilesValidationPipe({
@@ -38,9 +38,15 @@ export class MetadataAdminController {
           isOptional: true,
           maxCount: 1,
         },
+        favicon: {
+          maxSize: 1024 * 1024, // 1 MB
+          acceptMimeType: ['image/x-icon', 'image/vnd.microsoft.icon'],
+          isOptional: true,
+          maxCount: 1,
+        },
       }),
     )
-    files: Pick<ShowMetadataAdminBody, 'icon'>,
+    files: Pick<ShowMetadataAdminBody, 'favicon' | 'icon'>,
     @Body() body: ShowMetadataAdminBody,
   ): Promise<ShowMetadataAdminObj> {
     return this.editService.edit({ body, files });
