@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { MainSettingsAdminController } from './main.controller';
-import { EditMainSettingsAdminService } from './services/edit.main.service';
+import { EditMainSettingsAdminService } from './services/edit.service';
 
 @Module({
   providers: [EditMainSettingsAdminService],

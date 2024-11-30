@@ -1,6 +1,13 @@
-import { ApiProperty, OmitType } from '@nestjs/swagger';
-import { IsEnum, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+import {
+  IsBoolean,
+  IsEnum,
+  IsObject,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
+import { FileObj } from '../../utils/files.dto';
 import { ManifestDisplay } from './metadata.enum';
 
 export class ShowMetadataAdminObj {
@@ -11,6 +18,11 @@ export class ShowMetadataAdminObj {
   @ApiProperty({ example: 'standalone', enum: ManifestDisplay })
   @IsEnum(ManifestDisplay)
   display: ManifestDisplay;
+
+  @ApiPropertyOptional()
+  @IsObject()
+  @IsOptional()
+  icon?: FileObj;
 
   @ApiProperty({ example: '/' })
   @IsString()
@@ -32,4 +44,13 @@ export class ShowMetadataAdminObj {
 export class ShowMetadataAdminBody extends OmitType(ShowMetadataAdminObj, [
   'id',
   'lang',
-]) {}
+  'icon',
+]) {
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  icon?: Express.Multer.File;
+
+  @ApiPropertyOptional()
+  @IsBoolean()
+  @IsOptional()
+  remove_icon?: boolean;
+}

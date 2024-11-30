@@ -3,7 +3,7 @@ import { Body, Put } from '@nestjs/common';
 import { ApiOkResponse } from '@nestjs/swagger';
 import { MainSettingsAdminBody } from 'vitnode-shared/admin/settings/main.dto';
 
-import { EditMainSettingsAdminService } from './services/edit.main.service';
+import { EditMainSettingsAdminService } from './services/edit.service';
 
 @Controllers({
   plugin_name: 'Core',

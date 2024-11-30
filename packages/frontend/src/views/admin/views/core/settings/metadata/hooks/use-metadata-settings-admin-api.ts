@@ -1,5 +1,6 @@
 import { convertColor, getHSLFromString } from '@/helpers/colors';
 import { CONFIG } from '@/helpers/config-with-env';
+import { zodFile } from '@/helpers/zod';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { ManifestDisplay } from 'vitnode-shared/admin/settings/metadata.enum';
@@ -13,6 +14,7 @@ export const useMetadataSettingsAdminApi = ({
   theme_color,
   background_color,
   display,
+  icon,
 }: React.ComponentProps<typeof ContentMetadataSettingsAdmin>) => {
   const t = useTranslations('core.global');
   const themeColor = convertColor.hexToHSL(theme_color);
@@ -38,6 +40,10 @@ export const useMetadataSettingsAdminApi = ({
           ? `hsl(${backgroundColor.h}, ${backgroundColor.s}%, ${backgroundColor.l}%)`
           : '',
       ),
+    icon: zodFile
+      .nullable()
+      .default(icon ?? null)
+      .optional(),
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {

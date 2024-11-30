@@ -3,6 +3,7 @@
 import { AutoForm } from '@/components/form/auto-form';
 import { AutoFormColorPicker } from '@/components/form/fields/color-picker';
 import { AutoFormLabel } from '@/components/form/fields/common/label';
+import { AutoFormFileInput } from '@/components/form/fields/file-input';
 import { AutoFormRadioGroup } from '@/components/form/fields/radio-group';
 import { Input } from '@/components/ui/input';
 import { CONFIG } from '@/helpers/config-with-env';
@@ -91,6 +92,19 @@ export const ContentMetadataSettingsAdmin = (data: ShowMetadataAdminObj) => {
           id: 'background_color',
           label: t('background_color'),
           component: AutoFormColorPicker,
+        },
+        {
+          id: 'icon',
+          label: t('icon.label'),
+          component: props => (
+            <AutoFormFileInput
+              {...props}
+              accept="image/png, image/jpeg, image/webp"
+              acceptExtensions={['png', 'jpg', 'webp', 'jpeg']}
+              maxFileSizeInMb={1}
+              showInfo
+            />
+          ),
         },
       ]}
       formSchema={formSchema}

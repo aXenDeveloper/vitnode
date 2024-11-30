@@ -12,15 +12,18 @@ export class EditThemeEditorStylesAdminService {
   constructor(private readonly filesHelper: FilesHelperService) {}
 
   async update({
-    logo_dark,
-    mobile_logo_dark,
-    logo_light,
-    mobile_logo_light,
-    delete_logos: deleteLogosBody,
-    mobile_width,
-    width,
-    text,
-  }: EditThemeEditorStylesAdminBody): Promise<EditThemeEditorStylesAdminObj> {
+    body: { text, width, mobile_width, delete_logos: deleteLogosBody },
+    files: { logo_dark, mobile_logo_dark, logo_light, mobile_logo_light },
+  }: {
+    body: Omit<
+      EditThemeEditorStylesAdminBody,
+      'logo_dark' | 'logo_light' | 'mobile_logo_dark' | 'mobile_logo_light'
+    >;
+    files: Pick<
+      EditThemeEditorStylesAdminBody,
+      'logo_dark' | 'logo_light' | 'mobile_logo_dark' | 'mobile_logo_light'
+    >;
+  }): Promise<EditThemeEditorStylesAdminObj> {
     const config = getConfigFile();
     const delete_logos = deleteLogosBody.split(',');
 

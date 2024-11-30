@@ -252,6 +252,9 @@
             "label": "Start URL",
             "desc": "When user launches the app, this is the page that will be loaded."
           },
+          "icon": {
+            "label": "Icon"
+          },
           "display": {
             "label": "Display",
             "desc": "The display property controls how the app is displayed.",
