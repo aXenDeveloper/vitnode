@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-export const revalidateApi = async () => {
+export const revalidateAllApi = async () => {
   await new Promise<void>((resolve, reject) => {
     try {
       revalidatePath('/', 'layout');

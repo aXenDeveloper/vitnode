@@ -1,13 +1,18 @@
+import { fetcherClient } from '@/api/fetcher-client';
 import { convertColor, getHSLFromString } from '@/helpers/colors';
 import { CONFIG } from '@/helpers/config-with-env';
 import { zodFile } from '@/helpers/zod';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
+import {
+  ShowMetadataAdminBody,
+  ShowMetadataAdminObj,
+} from 'vitnode-shared/admin/settings/metadata.dto';
 import { ManifestDisplay } from 'vitnode-shared/admin/settings/metadata.enum';
 import * as z from 'zod';
 
+import { revalidateAllApi } from '../../../diagnostic/actions/clear_cache/hooks/revalidate-all-api';
 import { ContentMetadataSettingsAdmin } from '../content';
-import { mutationApi } from './mutation-api';
 
 export const useMetadataSettingsAdminApi = ({
   start_url,
@@ -51,14 +56,30 @@ export const useMetadataSettingsAdminApi = ({
     const backgroundColor = getHSLFromString(values.background_color);
 
     try {
-      await mutationApi({
-        ...values,
-        theme_color: themeColor ? `#${convertColor.hslToHex(themeColor)}` : '',
-        background_color: backgroundColor
-          ? `#${convertColor.hslToHex(backgroundColor)}`
-          : '',
-      });
+      const formData = new FormData();
+      formData.append('display', values.display);
+      formData.append('start_url', values.start_url);
+      if (themeColor) {
+        formData.append('theme_color', `#${convertColor.hslToHex(themeColor)}`);
+      }
+      if (backgroundColor) {
+        formData.append(
+          'background_color',
+          `#${convertColor.hslToHex(backgroundColor)}`,
+        );
+      }
+      if (values.icon && values.icon instanceof File) {
+        formData.append('icon', values.icon);
+      } else if (values.icon === null) {
+        formData.append('remove_icon', 'true');
+      }
 
+      await fetcherClient<ShowMetadataAdminObj, ShowMetadataAdminBody>({
+        url: '/admin/settings/metadata',
+        method: 'PUT',
+        body: formData,
+      });
+      await revalidateAllApi();
       toast.success(t('saved_success'));
     } catch (_) {
       toast.error(t('errors.title'), {

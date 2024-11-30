@@ -104,6 +104,7 @@ export class EditMetadataAdminService {
         const manifest = await getManifest({
           lang_code: code,
         });
+
         const dataToUpdate: Omit<ManifestType, 'name' | 'short_name'> = {
           ...manifest,
           background_color: body.background_color,
@@ -112,15 +113,20 @@ export class EditMetadataAdminService {
           display: body.display,
           id: `${frontendUrl}/${code}${body.start_url}`,
           lang: code,
-          icons: images
+        };
+
+        if (remove_icon) {
+          dataToUpdate.icons = [];
+        } else {
+          dataToUpdate.icons = images
             ? images.map(image => ({
                 sizes: `${image.resolution}x${image.resolution}`,
                 src: `${backendUrl}/public/${image.dir_folder}/${image.file_name}`,
                 type: 'image/png',
                 ...image,
               }))
-            : manifest.icons,
-        };
+            : manifest.icons;
+        }
 
         await writeFile(
           join(

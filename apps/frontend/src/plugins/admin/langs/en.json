@@ -253,7 +253,8 @@
             "desc": "When user launches the app, this is the page that will be loaded."
           },
           "icon": {
-            "label": "Icon"
+            "label": "Icon",
+            "desc": "The icon is used to represent your website on the home screen of the user's device. Recommended size: 512x512px."
           },
           "display": {
             "label": "Display",

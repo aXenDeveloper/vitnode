@@ -35,6 +35,7 @@ export class MetadataAdminController {
         icon: {
           maxSize: 1024 * 1024, // 1 MB
           acceptMimeType: ['image/png', 'image/jpeg', 'image/webp'],
+          isOptional: true,
           maxCount: 1,
         },
       }),

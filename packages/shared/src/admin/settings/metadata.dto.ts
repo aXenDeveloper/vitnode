@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
@@ -52,5 +53,6 @@ export class ShowMetadataAdminBody extends OmitType(ShowMetadataAdminObj, [
   @ApiPropertyOptional()
   @IsBoolean()
   @IsOptional()
+  @Transform(({ value }) => value === 'true')
   remove_icon?: boolean;
 }

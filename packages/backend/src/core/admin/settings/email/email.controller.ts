@@ -58,6 +58,7 @@ export class EmailSettingsAdminController {
           maxSize: 1024 * 1024, // 1 MB
           acceptMimeType: ['image/jpeg', 'image/png', 'image/gif'],
           isOptional: true,
+          maxCount: 1,
         },
       }),
     )

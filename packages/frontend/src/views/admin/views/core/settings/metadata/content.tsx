@@ -96,6 +96,7 @@ export const ContentMetadataSettingsAdmin = (data: ShowMetadataAdminObj) => {
         {
           id: 'icon',
           label: t('icon.label'),
+          description: t('icon.desc'),
           component: props => (
             <AutoFormFileInput
               {...props}
