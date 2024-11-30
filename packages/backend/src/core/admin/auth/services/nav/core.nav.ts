@@ -20,7 +20,16 @@ export const coreNav: ShowAuthAdminObj['nav'] = [
           },
           {
             code: 'metadata',
-            keywords: ['manifest', 'pwa', 'seo'],
+            keywords: [
+              'manifest',
+              'pwa',
+              'seo',
+              'icon',
+              'favicon',
+              'theme',
+              'color',
+              'start',
+            ],
           },
           {
             code: 'email',

@@ -87,7 +87,7 @@ export class EditMetadataAdminService {
       'assets',
       'favicon.ico',
     );
-    if ((remove_favicon || files.icon) && existsSync(faviconPath)) {
+    if ((remove_favicon || files.favicon) && existsSync(faviconPath)) {
       await this.filesHelper.delete({
         dir_folder: 'assets',
         file_name: 'favicon.ico',
@@ -112,10 +112,12 @@ export class EditMetadataAdminService {
       if (manifest.icons) {
         await Promise.all(
           manifest.icons.map(async icon => {
-            await this.filesHelper.delete({
-              dir_folder: icon.dir_folder,
-              file_name: icon.file_name,
-            });
+            if (icon.dir_folder && icon.file_name) {
+              await this.filesHelper.delete({
+                dir_folder: icon.dir_folder,
+                file_name: icon.file_name,
+              });
+            }
           }),
         );
       }
