@@ -15,6 +15,9 @@ export class ItemShowNavStyles {
   @ApiProperty()
   id: number;
 
+  @ApiProperty()
+  last_updated: Date;
+
   @ApiProperty({ type: [StringLanguage] })
   name: StringLanguage[];
 

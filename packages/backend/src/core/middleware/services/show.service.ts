@@ -113,6 +113,7 @@ export class ShowMiddlewareService {
       })),
       contact_email: config.settings.main.contact_email,
       nav: await this.navService.show(),
+      last_updated: config.last_updated,
     };
   }
 }

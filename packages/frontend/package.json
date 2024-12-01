@@ -25,6 +25,10 @@
       "types": "./dist/src/sitemap.ts",
       "default": "./dist/src/sitemap.js"
     },
+    "./robots": {
+      "types": "./dist/src/robots.ts",
+      "default": "./dist/src/robots.js"
+    },
     "./i18n": {
       "types": "./dist/src/i18n.ts",
       "default": "./dist/src/i18n.js"

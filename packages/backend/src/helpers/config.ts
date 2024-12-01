@@ -18,6 +18,7 @@ export interface ConfigType {
     default: boolean;
     enabled: boolean;
   }[];
+  last_updated: string;
   logos: {
     logo_dark?: FileObj;
     logo_light?: FileObj;
@@ -54,6 +55,7 @@ export interface ConfigType {
 }
 
 export const DEFAULT_CONFIG_DATA: ConfigType = {
+  last_updated: new Date().toISOString(),
   restart_server: false,
   logos: {
     text: 'VitNode',
@@ -110,4 +112,8 @@ export const getConfigFile = () => {
   const file = fs.readFileSync(configPath, 'utf-8');
 
   return JSON.parse(file) as ConfigType;
+};
+
+export const updateConfigFile = (config: ConfigType) => {
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
 };
