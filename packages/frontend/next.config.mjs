@@ -19,18 +19,34 @@ const nextConfig = config => {
     frontend: new URL(ENVS.frontend_url ?? 'http://localhost:3000'),
   };
 
+  const transpilePackages = config.transpilePackages || [];
+  const imageRemotePatterns = config.images?.remotePatterns || [];
+
   return {
     ...config,
     devIndicators: {
+      ...config.devIndicators,
       appIsrStatus: false,
     },
     env: {
+      ...config.env,
       NEXT_PUBLIC_BACKEND_URL: ENVS.backend_url,
       NEXT_PUBLIC_FRONTEND_URL: ENVS.frontend_url,
     },
-    transpilePackages: ['lucide-react', 'vitnode-frontend', 'vitnode-shared'],
+    experimental: {
+      ...(config.experimental || {}),
+      reactCompiler: true,
+    },
+    transpilePackages: [
+      ...transpilePackages,
+      'lucide-react',
+      'vitnode-frontend',
+      'vitnode-shared',
+    ],
     images: {
+      ...(config.images || {}),
       remotePatterns: [
+        ...imageRemotePatterns,
         {
           protocol: urls.backend.protocol === 'https:' ? 'https' : 'http',
           hostname: urls.backend.hostname,
