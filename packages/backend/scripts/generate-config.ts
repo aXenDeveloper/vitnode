@@ -2,7 +2,11 @@ import { existsSync } from 'fs';
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 
-import { DEFAULT_CONFIG_DATA, getConfigFile } from '../src/helpers/config';
+import {
+  ConfigType,
+  DEFAULT_CONFIG_DATA,
+  getConfigFile,
+} from '../src/helpers/config';
 import { updateObject } from './helpers/update-object';
 
 export const generateConfig = async ({
@@ -27,7 +31,10 @@ export const generateConfig = async ({
   }
 
   const config = getConfigFile();
-  const updatedConfig = updateObject(config, DEFAULT_CONFIG_DATA);
+  const updatedConfig: ConfigType = {
+    ...updateObject(config, DEFAULT_CONFIG_DATA),
+    last_updated: new Date().toISOString(),
+  };
 
   await writeFile(
     configPath,

@@ -33,6 +33,7 @@ export class EditNavStylesAdminService {
       .set({
         href,
         external,
+        last_updated: new Date(),
       })
       .where(eq(core_nav.id, id))
       .returning();

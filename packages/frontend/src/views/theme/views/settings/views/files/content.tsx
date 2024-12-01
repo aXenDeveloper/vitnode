@@ -1,7 +1,7 @@
 'use client';
 
 import { DateFormat } from '@/components/date-format';
-import { ImgFromApi } from '@/components/img';
+import { ImgFromApi } from '@/components/img-from-api';
 import { buttonVariants } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import {
@@ -42,10 +42,8 @@ export const ContentFilesSettings = ({
                     dir_folder={row.dir_folder}
                     file_name={row.file_name}
                     fill
-                    height={row.height}
                     mimetype={row.mimetype}
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    width={row.width}
                   />
                 ) : (
                   <File className="text-muted-foreground size-8" />

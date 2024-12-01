@@ -1,4 +1,4 @@
-import { ImgFromApi } from '@/components/img';
+import { ImgFromApi } from '@/components/img-from-api';
 import { FileInput, FilesInputValue } from '@/components/ui/file-input';
 import { cn } from '@/helpers/classnames';
 import { Trash2 } from 'lucide-react';

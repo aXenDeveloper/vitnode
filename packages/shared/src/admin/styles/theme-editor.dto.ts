@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsArray,
   IsNumber,
@@ -16,7 +17,8 @@ export class EditThemeEditorStylesAdminBody {
   @IsArray()
   @IsOptional()
   @IsString({ each: true })
-  delete_logos: string;
+  @Transform(({ value }) => value.split(','))
+  delete_logos: string[];
 
   @ApiPropertyOptional({ type: 'string', format: 'binary' })
   logo_dark?: Express.Multer.File;
@@ -34,6 +36,7 @@ export class EditThemeEditorStylesAdminBody {
   @IsNumber()
   @Max(30)
   @Min(1)
+  @Transform(({ value }) => +value)
   mobile_width: number;
 
   @ApiProperty()
@@ -44,6 +47,7 @@ export class EditThemeEditorStylesAdminBody {
   @IsNumber()
   @Max(30)
   @Min(1)
+  @Transform(({ value }) => +value)
   width: number;
 }
 

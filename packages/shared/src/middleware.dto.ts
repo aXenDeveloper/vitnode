@@ -148,6 +148,9 @@ export class ShowMiddlewareObj extends MainSettingsAdminBody {
   languages_code_default: string;
 
   @ApiProperty()
+  last_updated: string;
+
+  @ApiProperty()
   logos: LogosMiddleware;
 
   @ApiProperty({ type: [ShowNavStyles] })

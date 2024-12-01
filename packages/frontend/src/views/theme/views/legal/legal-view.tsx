@@ -6,7 +6,7 @@ import { LegalsObj, LegalsQuery } from 'vitnode-shared/legal.dto';
 
 import { ItemLegal } from './item';
 
-const getData = async (query: LegalsQuery) => {
+export const getLegalData = async (query: LegalsQuery) => {
   const { data } = await fetcher<LegalsObj, LegalsQuery>({
     url: '/core/legal',
     query,
@@ -30,7 +30,7 @@ export const generateMetadataLegal = async () => {
 export const LegalView = async () => {
   const [t, { edges }] = await Promise.all([
     getTranslations('core.legal'),
-    getData({}),
+    getLegalData({}),
   ]);
 
   return (

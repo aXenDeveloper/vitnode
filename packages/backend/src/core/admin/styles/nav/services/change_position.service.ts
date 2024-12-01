@@ -57,6 +57,7 @@ export class ChangePositionNavStylesAdminService {
           .set({
             position: item.position,
             parent_id,
+            last_updated: new Date(),
           })
           .where(eq(core_nav.id, item.id));
       }),
