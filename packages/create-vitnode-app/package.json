@@ -1,6 +1,6 @@
 {
   "name": "create-vitnode-app",
-  "version": "0.0.10-canary.21",
+  "version": "0.0.10-canary.22",
   "description": "Create a new VitNode app in seconds.",
   "author": "VitNode Team",
   "license": "MIT",

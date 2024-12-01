@@ -1,6 +1,6 @@
 {
   "name": "vitnode-backend-email-smtp",
-  "version": "0.0.10-canary.21",
+  "version": "0.0.10-canary.22",
   "description": "SMTP email provider for VitNode projects.",
   "author": "VitNode Team",
   "license": "MIT",
