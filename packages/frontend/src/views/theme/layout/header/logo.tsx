@@ -1,5 +1,5 @@
 import { getMiddlewareData } from '@/api/get-middleware-data';
-import { ImgFromApi } from '@/components/img';
+import { ImgFromApi } from '@/components/img-from-api';
 import { cn } from '@/helpers/classnames';
 import { Link } from '@/navigation';
 

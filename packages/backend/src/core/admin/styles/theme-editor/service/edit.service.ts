@@ -12,7 +12,7 @@ export class EditThemeEditorStylesAdminService {
   constructor(private readonly filesHelper: FilesHelperService) {}
 
   async update({
-    body: { text, width, mobile_width, delete_logos: deleteLogosBody },
+    body: { text, width, mobile_width, delete_logos },
     files: { logo_dark, mobile_logo_dark, logo_light, mobile_logo_light },
   }: {
     body: Omit<
@@ -25,7 +25,6 @@ export class EditThemeEditorStylesAdminService {
     >;
   }): Promise<EditThemeEditorStylesAdminObj> {
     const config = getConfigFile();
-    const delete_logos = deleteLogosBody.split(',');
 
     await Promise.all(
       [

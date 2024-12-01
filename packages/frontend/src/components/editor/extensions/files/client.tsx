@@ -1,6 +1,6 @@
 'use client';
 
-import { ImgFromApi } from '@/components/img';
+import { ImgFromApi } from '@/components/img-from-api';
 import { acceptMimeTypeImage } from '@/helpers/files-support';
 import { formatBytes } from '@/helpers/format-bytes';
 import {

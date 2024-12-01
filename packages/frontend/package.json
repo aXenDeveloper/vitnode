@@ -21,6 +21,10 @@
       "types": "./dist/src/middleware.ts",
       "default": "./dist/src/middleware.js"
     },
+    "./sitemap": {
+      "types": "./dist/src/sitemap.ts",
+      "default": "./dist/src/sitemap.js"
+    },
     "./i18n": {
       "types": "./dist/src/i18n.ts",
       "default": "./dist/src/i18n.js"
