@@ -11,8 +11,8 @@
     "directory": "packages/backend-ai-open-ai"
   },
   "scripts": {
-    "build:packages": "tsc && swc src -d dist --config-file .swcrc",
-    "dev:packages": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\"",
+    "build:packages": "tsc",
+    "dev:packages": "tsc -w",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
@@ -26,11 +26,8 @@
     "chatgpt"
   ],
   "devDependencies": {
-    "@swc/cli": "^0.5.1",
-    "@swc/core": "^1.9.3",
     "@types/node": "^22.10.1",
-    "ai": "^4.0.8",
-    "concurrently": "^9.1.0",
+    "ai": "^4.0.10",
     "eslint-config-typescript-vitnode": "workspace:*",
     "typescript": "^5.7.2"
   },

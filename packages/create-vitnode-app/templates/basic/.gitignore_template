@@ -50,5 +50,9 @@ yarn-error.log*
 !/apps/backend/uploads/private/index.html
 !/apps/backend/uploads/temp/index.html
 
+## Configuration
+/apps/backend/src/plugins/core/utils/*
+
 ## Frontend
 /apps/frontend/next-env.d.ts
+/apps/frontend/.source/
