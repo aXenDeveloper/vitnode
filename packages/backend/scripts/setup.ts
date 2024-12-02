@@ -1,5 +1,7 @@
-import { createClientDatabase, DATABASE_ENVS } from '@/utils/database/client';
+#!/usr/bin/env node
 /* eslint-disable no-console */
+
+import { createClientDatabase, DATABASE_ENVS } from '@/utils/database/client';
 import { existsSync } from 'fs';
 import { join } from 'path';
 

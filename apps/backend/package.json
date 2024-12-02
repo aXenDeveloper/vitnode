@@ -13,9 +13,9 @@
     "db": "vitnode-backend db"
   },
   "dependencies": {
-    "@nestjs/common": "^10.4.11",
-    "@nestjs/core": "^10.4.11",
-    "@nestjs/platform-express": "^10.4.11",
+    "@nestjs/common": "^10.4.12",
+    "@nestjs/core": "^10.4.12",
+    "@nestjs/platform-express": "^10.4.12",
     "@nestjs/schedule": "^4.1.1",
     "@nestjs/throttler": "^6.2.1",
     "@react-email/components": "^0.0.28",
@@ -35,7 +35,7 @@
   "devDependencies": {
     "@nestjs/cli": "^10.4.8",
     "@nestjs/schematics": "^10.2.3",
-    "@swc/cli": "^0.5.1",
+    "@swc/cli": "^0.5.2",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.1",
     "@types/react": "^18.3.12",

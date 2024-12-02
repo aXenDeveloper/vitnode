@@ -5,11 +5,7 @@
     "target": "ESNext",
     "module": "commonjs",
     "outDir": "./dist",
-    "rootDir": "./",
-    "emitDeclarationOnly": true,
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "rootDir": "./"
   },
   "include": ["src/**/*", "scripts/**/*"]
 }

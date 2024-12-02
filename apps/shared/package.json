@@ -15,7 +15,7 @@
     }
   },
   "dependencies": {
-    "@nestjs/common": "^10.4.11",
+    "@nestjs/common": "^10.4.12",
     "@nestjs/swagger": "^8.0.7"
   },
   "devDependencies": {
