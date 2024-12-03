@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
+import { emailResend } from 'vitnode-backend-email-resend';
 import { VitNodeCoreModule } from 'vitnode-backend/app.module';
-// import { emailResend } from 'vitnode-backend-email-resend';
 // import { emailSMTP } from 'vitnode-backend-email-smtp';
 // import { aiGoogle } from 'vitnode-backend-ai-google';
 // import { aiOpenAi } from 'vitnode-backend-ai-open-ai';
@@ -74,10 +74,10 @@ import { PluginsModule } from './plugins/plugins.module';
           },
         },
       ],
-      // email: emailResend({
-      //   api_key: process.env.EMAIL_RESEND_API_KEY,
-      //   from: process.env.EMAIL_RESEND_FROM,
-      // }),
+      email: emailResend({
+        api_key: process.env.EMAIL_RESEND_API_KEY,
+        from: process.env.EMAIL_RESEND_FROM,
+      }),
       // email: emailSMTP({
       //   host: process.env.EMAIL_SMTP_HOST,
       //   port: process.env.EMAIL_SMTP_PORT,

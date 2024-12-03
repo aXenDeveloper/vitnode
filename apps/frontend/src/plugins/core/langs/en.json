@@ -248,6 +248,18 @@
       "not_verified": {
         "title": "Email is not verified",
         "desc": "Please check your inbox and click the link to activate your account."
+      },
+      "forgot_password": {
+        "title": "Forgot Password?",
+        "desc": "Don't worry! We'll help you reset your password.",
+        "email": "Email",
+        "go_back_login": "Go back to login",
+        "pin": {
+          "label": "Pin",
+          "desc": "Enter the pin code you received in your email."
+        },
+        "send_code": "Send code",
+        "change_password": "Change Password"
       }
     },
     "sign_up": {

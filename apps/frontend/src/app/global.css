@@ -11,6 +11,10 @@
     @apply bg-background text-foreground;
   }
 
+  a {
+    @apply text-primary;
+  }
+
   :root {
     --background: 220 40% 98%;
     --foreground: 213deg 5% 8%;
