@@ -8,7 +8,7 @@ export const SuccessForgotPassword = ({ email }: { email: string }) => {
     <>
       <CircleCheckIcon className="mx-auto size-16 text-green-500" />
       <div className="mt-4 space-y-2 text-center">
-        <span className="text-xl font-semibold">{t('title')}</span>
+        <span className="text-3xl font-semibold">{t('title')}</span>
         <p className="text-muted-foreground">
           {t.rich('desc', {
             email: () => (

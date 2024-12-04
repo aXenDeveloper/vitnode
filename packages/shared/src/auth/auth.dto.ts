@@ -3,6 +3,7 @@ import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEmail,
+  IsNumber,
   IsOptional,
   IsString,
   IsStrongPassword,
@@ -91,4 +92,23 @@ export class SendForgotPasswordAuthBody {
   @IsEmail()
   @Transform(TransformString)
   email: string;
+}
+
+export class ChangeForgotPasswordAuthBody {
+  @ApiProperty({ example: 'Test123!' })
+  @IsStrongPassword({
+    minLength: 8,
+    minUppercase: 1,
+    minNumbers: 1,
+    minSymbols: 1,
+  })
+  password: string;
+
+  @ApiProperty()
+  @IsString()
+  token: string;
+
+  @ApiProperty()
+  @IsNumber()
+  user_id: number;
 }

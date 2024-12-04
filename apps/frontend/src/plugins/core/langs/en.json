@@ -263,7 +263,13 @@
         "change_password": {
           "title": "Change Password",
           "desc": "Almost done!",
-          "new_password": "New Password"
+          "new_password": "New Password",
+          "error": "We can't reset your password. Please check the link or try again.",
+          "success": {
+            "title": "Password Changed!",
+            "desc": "Your password has been changed successfully!",
+            "sign_in": "Go to Sign In"
+          }
         },
         "content_email": {
           "subject": "Reset your password",

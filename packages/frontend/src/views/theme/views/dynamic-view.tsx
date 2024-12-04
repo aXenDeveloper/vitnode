@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
-import { ForgotPasswordView } from './auth/sign/forgot_password/forgot_passowrd-view';
+import { ForgotPasswordView } from './auth/sign/forgot_password/forgot_password-view';
 import {
   generateMetadataSignIn,
   SignInView,
