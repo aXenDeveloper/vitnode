@@ -20,20 +20,6 @@ export type EmailSenderFunction = (params: EmailSenderArgs) => Promise<void>;
 
 export interface GetHelpersForEmailType {
   backend_url: string;
-  color: {
-    background: string;
-    border: string;
-    card: string;
-    foreground: string;
-    muted: {
-      DEFAULT: string;
-      foreground: string;
-    };
-    primary: {
-      DEFAULT: string;
-      foreground: string;
-    };
-  };
   contact_email: string;
   frontend_url: string;
   logo?: FileObj;

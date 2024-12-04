@@ -120,7 +120,9 @@ export const DynamicView = async (props: {
     }
 
     if (slug[1] === 'forgot-password' && !slug[2]) {
-      return <ForgotPasswordView />;
+      const { userId, token } = await props.searchParams;
+
+      return <ForgotPasswordView token={token} userId={userId} />;
     }
 
     if (slug[1]) notFound();

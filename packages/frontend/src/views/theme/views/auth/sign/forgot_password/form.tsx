@@ -8,14 +8,14 @@ import { ChevronLeftIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { useForgotPasswordView } from './hooks/use-forgot-password-view';
-import { ResetPassword } from './reset/reset-password';
+import { SuccessForgotPassword } from './success';
 
 export const FormForgotPassword = () => {
   const t = useTranslations('core.sign_in.forgot_password');
   const { formSchema, email, onSubmit } = useForgotPasswordView();
 
   if (email) {
-    return <ResetPassword />;
+    return <SuccessForgotPassword email={email} />;
   }
 
   return (
@@ -39,10 +39,12 @@ export const FormForgotPassword = () => {
             </Link>
           </Button>
           <Button className="flex-1" {...props}>
-            {t('send_code')}
+            {t('send')}
           </Button>
         </>
       )}
-    />
+    >
+      <div id="vitnode_captcha" />
+    </AutoForm>
   );
 };

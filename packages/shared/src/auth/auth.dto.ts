@@ -85,3 +85,10 @@ export class VerifyConfirmEmailAuthBody {
   @ApiProperty()
   user_id: number;
 }
+
+export class SendForgotPasswordAuthBody {
+  @ApiProperty({ example: 'test@test.com' })
+  @IsEmail()
+  @Transform(TransformString)
+  email: string;
+}
