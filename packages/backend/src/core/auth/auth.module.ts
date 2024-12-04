@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { AuthController } from './auth.controller';
 import { AuthCron } from './auth.cron';
+import { ForgotPasswordAuthModule } from './forgot_password/forgot_password.module';
 import { ClearTokenConfirmEmailAuthCron } from './services/confirm_email/clear_tokens_email.cron';
 import { VerifyConfirmEmailAuthService } from './services/confirm_email/verify.service';
 import { ShowAuthService } from './services/show.service';
@@ -39,6 +40,11 @@ export class HelpersAuthModule {}
     SignOutAuthService,
   ],
   controllers: [AuthController],
-  imports: [SettingsAuthModule, SSOAuthModule, HelpersAuthModule],
+  imports: [
+    SettingsAuthModule,
+    SSOAuthModule,
+    HelpersAuthModule,
+    ForgotPasswordAuthModule,
+  ],
 })
 export class AuthModule {}

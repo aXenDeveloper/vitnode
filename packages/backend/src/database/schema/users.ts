@@ -23,7 +23,7 @@ export const core_users = pgTable(
     first_name: t.varchar({ length: 255 }),
     last_name: t.varchar({ length: 255 }),
     birthday: t.timestamp(),
-    ip_address: t.varchar({ length: 255 }).notNull(),
+    ip_address: t.varchar({ length: 40 }).notNull(),
     language: t
       .varchar({ length: 5 })
       .notNull()
@@ -57,6 +57,10 @@ export const core_users_relations = relations(core_users, ({ one, many }) => ({
     references: [core_users_confirm_emails.user_id],
   }),
   sso: many(core_users_sso_tokens),
+  forgot_password: one(core_users_forgot_password, {
+    fields: [core_users.id],
+    references: [core_users_forgot_password.user_id],
+  }),
 }));
 
 export const core_users_sso_tokens = pgTable(
@@ -110,29 +114,6 @@ export const core_files_avatars_relations = relations(
   }),
 );
 
-export const core_users_pass_reset = pgTable('core_users_pass_reset', t => ({
-  id: t.serial().primaryKey(),
-  user_id: t
-    .integer()
-    .references(() => core_users.id, {
-      onDelete: 'cascade',
-    })
-    .notNull(),
-  key: t.varchar({ length: 100 }).notNull().unique(),
-  created_at: t.timestamp().notNull().defaultNow(),
-  expires: t.timestamp().notNull(),
-}));
-
-export const core_users_pass_reset_relations = relations(
-  core_users_pass_reset,
-  ({ one }) => ({
-    user: one(core_users, {
-      fields: [core_users_pass_reset.user_id],
-      references: [core_users.id],
-    }),
-  }),
-);
-
 export const core_users_confirm_emails = pgTable(
   'core_users_confirm_emails',
   t => ({
@@ -154,6 +135,34 @@ export const core_users_confirm_emails_relations = relations(
   ({ one }) => ({
     user: one(core_users, {
       fields: [core_users_confirm_emails.user_id],
+      references: [core_users.id],
+    }),
+  }),
+);
+
+export const core_users_forgot_password = pgTable(
+  'core_users_forgot_password',
+  t => ({
+    id: t.serial().primaryKey(),
+    user_id: t
+      .integer()
+      .references(() => core_users.id, {
+        onDelete: 'cascade',
+      })
+      .notNull()
+      .unique(),
+    token: t.varchar({ length: 100 }).notNull().unique(),
+    ip_address: t.varchar({ length: 40 }).notNull(),
+    created_at: t.timestamp().notNull().defaultNow(),
+    expires_at: t.timestamp().notNull(),
+  }),
+);
+
+export const core_users_forgot_password_relations = relations(
+  core_users_forgot_password,
+  ({ one }) => ({
+    user: one(core_users, {
+      fields: [core_users_forgot_password.user_id],
       references: [core_users.id],
     }),
   }),

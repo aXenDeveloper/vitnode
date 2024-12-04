@@ -248,6 +248,36 @@
       "not_verified": {
         "title": "Email is not verified",
         "desc": "Please check your inbox and click the link to activate your account."
+      },
+      "forgot_password": {
+        "title": "Forgot Password?",
+        "desc": "Don't worry! We'll help you reset your password.",
+        "email": "Email",
+        "go_back_login": "Go back to login",
+        "send": "Send Email",
+        "success": {
+          "title": "Email Sent!",
+          "desc": "We've sent a password reset email to <email></email>.",
+          "warning": "Please check your inbox and follow the instructions."
+        },
+        "change_password": {
+          "title": "Change Password",
+          "desc": "Almost done!",
+          "new_password": "New Password",
+          "error": "We can't reset your password. Please check the link or try again.",
+          "success": {
+            "title": "Password Changed!",
+            "desc": "Your password has been changed successfully!",
+            "sign_in": "Go to Sign In"
+          }
+        },
+        "content_email": {
+          "subject": "Reset your password",
+          "preview": "You're receiving this email because you requested a password reset for your account.",
+          "p": "Someone recently requested a password change for your account. If this was you, you can set a new password here:",
+          "button": "Reset Password",
+          "security": "This link will expire in 15 minutes. If you don't want to change your password or didn't request this, just ignore and delete this message."
+        }
       }
     },
     "sign_up": {

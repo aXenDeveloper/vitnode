@@ -21,6 +21,7 @@ export const SignInView = async () => {
     {
       auth_methods,
       authorization: { lock_register },
+      is_email_enabled,
     },
   ] = await Promise.all([getTranslations('core.sign_in'), getMiddlewareData()]);
 
@@ -38,9 +39,15 @@ export const SignInView = async () => {
           </CardDescription>
         )}
       </div>
-
       {auth_methods.sso.length > 0 && <SSOSign />}
       <FormSignIn />
+      {is_email_enabled && (
+        <div className="mt-4 flex items-center justify-end text-sm">
+          <Link className="text-right" href="/login/forgot-password">
+            {t('forgot_password.title')}
+          </Link>
+        </div>
+      )}
     </div>
   );
 };

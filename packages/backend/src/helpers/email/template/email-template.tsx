@@ -1,3 +1,5 @@
+import { convertColor, getHSLFromString } from '@/functions';
+import { getConfigFile } from '@/helpers/config';
 import {
   Body,
   Container,
@@ -29,16 +31,14 @@ export interface EmailTemplateProps {
 export const EmailTemplate = ({
   previewText,
   children = 'This is the email template.',
-  helpers: {
-    color,
-    frontend_url,
-    site_name,
-    site_short_name,
-    backend_url,
-    logo,
-  },
+  helpers: { frontend_url, site_name, site_short_name, backend_url, logo },
   user,
 }: EmailTemplateProps) => {
+  const config = getConfigFile();
+  const primaryHSL = getHSLFromString(config.settings.email.color_primary);
+  const primaryForegroundHSL = getHSLFromString(
+    config.settings.email.color_primary_foreground,
+  );
   const t = getTranslationForEmail('admin.core.email', user.language);
 
   return (
@@ -48,6 +48,25 @@ export const EmailTemplate = ({
       <Tailwind
         config={{
           theme: {
+            extend: {
+              colors: {
+                primary: {
+                  DEFAULT: `#${primaryHSL ? convertColor.hslToHex(primaryHSL) : '215fdc'}`,
+                  foreground: `#${
+                    primaryForegroundHSL
+                      ? convertColor.hslToHex(primaryForegroundHSL)
+                      : '131415'
+                  }`,
+                },
+                foreground: '#131415',
+                card: '#fff',
+                border: '#e0e4eb',
+                muted: {
+                  DEFAULT: '#f1f3f9',
+                  foreground: '#676d79',
+                },
+              },
+            },
             fontSize: {
               xs: ['12px', { lineHeight: '16px' }],
               sm: ['14px', { lineHeight: '20px' }],
@@ -103,7 +122,7 @@ export const EmailTemplate = ({
           },
         }}
       >
-        <Body className={`mx-auto px-2 font-sans text-${color.foreground}`}>
+        <Body className="text-foreground mx-auto px-2 font-sans">
           <Container className="max-w-[600px]">
             <Section className="my-8 text-xl">
               {logo ? (
@@ -117,15 +136,10 @@ export const EmailTemplate = ({
               )}
             </Section>
 
-            <Section
-              className={`rounded border border-solid border-${color.border} p-5 bg-${color.card}`}
-            >
+            <Section className="border-border bg-card rounded border border-solid p-5">
               <Text className="mt-0">
                 {t('hello')}{' '}
-                <span className={`font-bold text-${color.primary.DEFAULT}`}>
-                  {user.name}
-                </span>
-                ,
+                <span className="text-primary font-bold">{user.name}</span>,
               </Text>
               {typeof children === 'string' ? (
                 <Text className="text-[14px] leading-[24px] text-black">
@@ -137,10 +151,7 @@ export const EmailTemplate = ({
             </Section>
 
             <Section className="my-8 text-center text-sm">
-              <Link
-                className={`text-${color.muted.foreground}`}
-                href={frontend_url}
-              >
+              <Link className="text-muted-foreground" href={frontend_url}>
                 {site_short_name} © {new Date().getFullYear()}
               </Link>
             </Section>

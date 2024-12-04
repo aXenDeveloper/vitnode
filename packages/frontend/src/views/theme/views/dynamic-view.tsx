@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
+import { ForgotPasswordView } from './auth/sign/forgot_password/forgot_password-view';
 import {
   generateMetadataSignIn,
   SignInView,
@@ -38,7 +39,17 @@ export const generateMetadataDynamic = async (props: {
   const { slug } = await props.params;
 
   if (slug[0] === 'login' && !slug[2]) {
-    return generateMetadataSignIn();
+    if (slug[1] === 'forgot-password') {
+      const t = await getTranslations('core.sign_in.forgot_password');
+
+      return {
+        title: t('title'),
+      };
+    }
+
+    if (!slug[1]) {
+      return generateMetadataSignIn();
+    }
   }
 
   if (slug[0] === 'register') {
@@ -108,7 +119,13 @@ export const DynamicView = async (props: {
       return <UrlSSOAuthView provider={slug[2]} />;
     }
 
-    if (slug[2]) notFound();
+    if (slug[1] === 'forgot-password' && !slug[2]) {
+      const { userId, token } = await props.searchParams;
+
+      return <ForgotPasswordView token={token} userId={userId} />;
+    }
+
+    if (slug[1]) notFound();
 
     return (
       <TranslationsProvider namespaces="core.sign_in">
