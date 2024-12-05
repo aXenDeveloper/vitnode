@@ -35,6 +35,18 @@
       "require": "./dist/src/utils/*.js",
       "types": "./dist/src/utils/*.d.ts"
     },
+    "./helpers/*": {
+      "require": "./dist/src/helpers/*.js",
+      "types": "./dist/src/helpers/*.d.ts"
+    },
+    "./guards/*": {
+      "require": "./dist/src/guards/*.js",
+      "types": "./dist/src/guards/*.d.ts"
+    },
+    "./functions/*": {
+      "require": "./dist/src/functions/*.js",
+      "types": "./dist/src/functions/*.d.ts"
+    },
     "./app.module": {
       "require": "./dist/src/app.module.js",
       "types": "./dist/src/app.module.d.ts"
