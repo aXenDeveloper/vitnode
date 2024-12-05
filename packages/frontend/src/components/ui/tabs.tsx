@@ -1,97 +1,83 @@
-'use client';
-
 import React from 'react';
 
 import { cn } from '../../helpers/classnames';
-import { Link, usePathname } from '../../navigation';
-import { buttonVariants } from './button';
+import { Link } from '../../navigation';
+import { Button } from './button';
 
 export const Tabs = ({
   children,
   className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => {
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => {
   return (
-    <div
+    <aside
       className={cn(
         'no-scrollbar shadow-border flex overflow-x-auto shadow-[inset_0_-2px_0]',
         className,
       )}
+      {...props}
     >
       {children}
-    </div>
+    </aside>
   );
 };
 
-const Wrapper = ({ children }: { children: React.ReactNode }) => {
-  return <div className="relative pb-2">{children}</div>;
-};
-
-export interface TabsTriggerProps {
+export const TabsItem = ({
+  active,
+  children,
+  className: classNameFromProps,
+  href,
+  ariaLabel,
+  ...props
+}: Omit<React.ComponentProps<typeof Button>, 'asChild'> & {
   active?: boolean;
   children: React.ReactNode;
   className?: string;
   href?: string;
-  id: string;
-  onClick?: () => void;
-}
-
-export const TabsTrigger = ({
-  active: activeFromProps,
-  children,
-  className: classNameFromProps,
-  href,
-  onClick,
-}: TabsTriggerProps) => {
-  const pathname = usePathname();
-  const active = activeFromProps ?? (href && pathname.includes(href));
+}) => {
   const dataState = active ? 'active' : 'inactive';
 
-  const className = buttonVariants({
-    variant: 'ghost',
-    className: cn(
-      classNameFromProps,
-      'text-muted-foreground hover:text-foreground flex-shrink-0',
-      {
-        'text-foreground': active,
-      },
-    ),
-    size: 'sm',
-  });
+  const className = cn(
+    'text-muted-foreground hover:text-foreground relative mb-2 flex-shrink-0',
+    {
+      'text-foreground': active,
+    },
+    classNameFromProps,
+  );
 
   const underline = active && (
-    <div className="bg-primary absolute bottom-0 left-0 z-10 h-1 w-full rounded-md" />
+    <div className="bg-primary absolute -bottom-[8px] left-0 z-10 h-1 w-full rounded-md" />
   );
 
   if (href) {
     return (
-      <Wrapper>
-        <Link
-          className={className}
-          data-state={dataState}
-          href={href}
-          onClick={onClick}
-        >
+      <Button
+        ariaLabel={ariaLabel ?? ''}
+        className={className}
+        size="sm"
+        variant="ghost"
+        {...props}
+        asChild
+      >
+        <Link className={className} data-state={dataState} href={href}>
           {children}
           {underline}
         </Link>
-      </Wrapper>
+      </Button>
     );
   }
 
   return (
-    <Wrapper>
-      <button
-        className={className}
-        data-state={dataState}
-        onClick={onClick}
-        type="button"
-      >
-        {children}
-        {underline}
-      </button>
-    </Wrapper>
+    <Button
+      ariaLabel={ariaLabel ?? ''}
+      className={className}
+      data-state={dataState}
+      size="sm"
+      variant="ghost"
+      {...props}
+    >
+      {children}
+      {underline}
+    </Button>
   );
 };

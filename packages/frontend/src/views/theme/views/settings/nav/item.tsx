@@ -1,7 +1,8 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { Link, usePathname } from '@/navigation';
+import { TabsItem } from '@/components/ui/tabs';
+import { cn } from '@/helpers/classnames';
+import { usePathname } from '@/navigation';
 
 import { NavItemsType } from './nav-settings';
 
@@ -10,16 +11,17 @@ export const ItemNavSettings = ({ icon, text, href }: NavItemsType) => {
   const active = pathname === href;
 
   return (
-    <Button
-      asChild
-      className="relative justify-start gap-2 [&>svg]:size-5"
-      size="sm"
-      variant={active ? 'default' : 'ghost'}
+    <TabsItem
+      active={active}
+      className={cn('lg:mb-1 lg:justify-start lg:[&>div]:hidden', {
+        'lg:bg-primary lg:text-primary-foreground lg:hover:text-primary-foreground lg:hover:bg-primary/90':
+          active,
+        'lg:text-foreground': !active,
+      })}
+      href={href}
     >
-      <Link href={href}>
-        {icon}
-        <span>{text}</span>
-      </Link>
-    </Button>
+      {icon}
+      {text}
+    </TabsItem>
   );
 };

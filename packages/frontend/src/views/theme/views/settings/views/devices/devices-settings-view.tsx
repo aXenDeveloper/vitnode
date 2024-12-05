@@ -1,5 +1,5 @@
 import { fetcher } from '@/api/fetcher';
-import { CardContent, CardDescription, CardHeader } from '@/components/ui/card';
+import { HeaderContent } from '@/components/ui/header-content';
 import { redirect } from '@/navigation';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
@@ -40,17 +40,10 @@ export const DevicesSettingsView = async () => {
   }
 
   return (
-    <>
-      <CardHeader>
-        <h1 className="text-2xl font-semibold leading-none tracking-tight">
-          {t('title')}
-        </h1>
-        <CardDescription>{t('desc')}</CardDescription>
-      </CardHeader>
+    <div>
+      <HeaderContent desc={t('desc')} h1={t('title')} />
 
-      <CardContent>
-        <ContentDevicesSettings data={data} loginToken={loginToken} />
-      </CardContent>
-    </>
+      <ContentDevicesSettings data={data} loginToken={loginToken} />
+    </div>
   );
 };

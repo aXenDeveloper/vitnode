@@ -1,6 +1,6 @@
 import { fetcher } from '@/api/fetcher';
 import { getSessionData } from '@/api/get-session-data';
-import { CardContent, CardDescription, CardHeader } from '@/components/ui/card';
+import { HeaderContent } from '@/components/ui/header-content';
 import { Loader } from '@/components/ui/loader';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/helpers/classnames';
@@ -62,37 +62,30 @@ export const FilesSettingsView = async ({
     (files_permissions.space_used / files_permissions.total_max_storage) * 100;
 
   return (
-    <>
-      <CardHeader>
-        <h1 className="text-2xl font-semibold leading-none tracking-tight">
-          {t('title')}
-        </h1>
-        <CardDescription>{t('desc')}</CardDescription>
-      </CardHeader>
+    <div>
+      <HeaderContent desc={t('desc')} h1={t('title')} />
 
-      <CardContent>
-        {files_permissions.total_max_storage > 0 && (
-          <div className="mb-6 space-y-2">
-            <Progress
-              className={cn({
-                '[&>div]:bg-destructive': percentStorage > 85,
-              })}
-              value={percentStorage}
-            />
-            <div className="text-muted-foreground text-center text-sm">
-              {t.rich('storage_usage', {
-                used: formatBytes(files_permissions.space_used),
-                total: formatBytes(files_permissions.total_max_storage),
-                percent: Math.round(percentStorage),
-              })}
-            </div>
+      {files_permissions.total_max_storage > 0 && (
+        <div className="mb-6 space-y-2">
+          <Progress
+            className={cn({
+              '[&>div]:bg-destructive': percentStorage > 85,
+            })}
+            value={percentStorage}
+          />
+          <div className="text-muted-foreground text-center text-sm">
+            {t.rich('storage_usage', {
+              used: formatBytes(files_permissions.space_used),
+              total: formatBytes(files_permissions.total_max_storage),
+              percent: Math.round(percentStorage),
+            })}
           </div>
-        )}
+        </div>
+      )}
 
-        <React.Suspense fallback={<Loader />}>
-          <ContentFilesSettings {...data} />
-        </React.Suspense>
-      </CardContent>
-    </>
+      <React.Suspense fallback={<Loader />}>
+        <ContentFilesSettings {...data} />
+      </React.Suspense>
+    </div>
   );
 };

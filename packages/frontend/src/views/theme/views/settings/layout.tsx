@@ -1,8 +1,5 @@
 import { getSessionData } from '@/api/get-session-data';
 import { TranslationsProvider } from '@/components/translations-provider';
-import { Card } from '@/components/ui/card';
-import { HeaderContent } from '@/components/ui/header-content';
-import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import React from 'react';
 
@@ -13,11 +10,7 @@ export const LayoutSettingsView = async ({
 }: {
   children: React.ReactNode;
 }) => {
-  const [t, session] = await Promise.all([
-    getTranslations('core'),
-    getSessionData(),
-  ]);
-
+  const session = await getSessionData();
   if (!session.user) {
     notFound();
   }
@@ -25,15 +18,9 @@ export const LayoutSettingsView = async ({
   return (
     <TranslationsProvider namespaces="core.settings">
       <div className="container my-6">
-        <HeaderContent
-          className="mb-5"
-          desc={t('settings.desc')}
-          h2={t('settings.title')}
-        />
-
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-8">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-8 [&>div]:grow">
           <NavSettings />
-          <Card className="grow">{children}</Card>
+          {children}
         </div>
       </div>
     </TranslationsProvider>

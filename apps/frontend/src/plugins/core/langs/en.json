@@ -182,7 +182,6 @@
     },
     "settings": {
       "title": "Settings",
-      "desc": "Manage your account settings.",
       "open_sheet": "Open Menu",
       "open_sheet_desc": "You can change your account settings here.",
       "change_avatar": {
