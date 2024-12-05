@@ -52,8 +52,8 @@ export const createPackagesJSON = ({
     },
     overrides: packageManager.startsWith('npm')
       ? {
-          react: '19.0.0-rc.1',
-          'react-dom': '19.0.0-rc.1',
+          react: '^19.0.0',
+          'react-dom': '^19.0.0',
         }
       : {},
     pnpm: packageManager.startsWith('pnpm')
@@ -99,8 +99,8 @@ export const createPackagesJSON = ({
       'lucide-react': '^0.468.0',
       next: '^15.0.3',
       'next-intl': '^3.25.3',
-      react: '19.0.0-rc.1',
-      'react-dom': '19.0.0-rc.1',
+      react: '^19.0.0',
+      'react-dom': '^19.0.0',
       'react-hook-form': '^7.53.2',
       recharts: '^2.14.1',
       sonner: '^1.7.0',
@@ -109,8 +109,8 @@ export const createPackagesJSON = ({
     },
     devDependencies: {
       '@types/node': '^22.10.1',
-      '@types/react': '^18.3.13',
-      '@types/react-dom': '^18.3.1',
+      '@types/react': '^19.0.0',
+      '@types/react-dom': '^19.0.0',
       autoprefixer: '^10.4.20',
       'eslint-config-typescript-vitnode': `^${pkg.version}`,
       postcss: '^8.4.49',
@@ -150,8 +150,8 @@ export const createPackagesJSON = ({
       'class-validator': '^0.14.1',
       'drizzle-kit': '^0.29.1',
       'drizzle-orm': '^0.37.0',
-      react: '19.0.0-rc.1',
-      'react-dom': '19.0.0-rc.1',
+      react: '^19.0.0',
+      'react-dom': '^19.0.0',
       'reflect-metadata': '^0.2.2',
       'vitnode-backend': `^${pkg.version}`,
     },

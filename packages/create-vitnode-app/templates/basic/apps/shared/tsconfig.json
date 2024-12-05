@@ -3,8 +3,8 @@
   "extends": "eslint-config-typescript-vitnode/tsconfig.nest.json",
   "compilerOptions": {
     "target": "ESNext",
-    "module": "commonjs",
-    "moduleResolution": "Node",
+    "module": "Node16",
+    "moduleResolution": "Node16",
     "outDir": "./dist",
     "rootDir": "./plugins",
     "esModuleInterop": true,

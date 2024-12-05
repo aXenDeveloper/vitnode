@@ -13,7 +13,7 @@ export enum ThemeEditorIds {
 
 interface Args {
   form: UseFormReturn<FormValues>;
-  iframeRef: React.RefObject<HTMLIFrameElement>;
+  iframeRef: React.RefObject<HTMLIFrameElement | null>;
   onSubmit: (args: FormValues) => void;
   updateLogo: (args: {
     file: FilesInputValue | null;
