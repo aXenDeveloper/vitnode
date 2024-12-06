@@ -2,7 +2,7 @@ import { useAlertDialog } from '@/components/ui/alert-dialog';
 import { usePathname, useRouter } from '@/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { ContentDeleteActionsTableLangsCoreAdmin } from '../content';
 import { mutationApi } from './mutation-api';

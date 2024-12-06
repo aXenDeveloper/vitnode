@@ -35,7 +35,7 @@ const nextConfig = config => {
     },
     experimental: {
       ...(config.experimental || {}),
-      reactCompiler: true,
+      // reactCompiler: true,
     },
     transpilePackages: [
       ...transpilePackages,

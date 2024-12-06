@@ -14,7 +14,6 @@ export const CopperChangeAvatar = ({
       aspectRatio={1}
       autoCropArea={1}
       background={false}
-      checkOrientation={false}
       minCropBoxHeight={100}
       minCropBoxWidth={100}
       ref={cropperRef}

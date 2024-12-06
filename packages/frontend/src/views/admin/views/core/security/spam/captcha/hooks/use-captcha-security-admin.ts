@@ -2,7 +2,7 @@ import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import { CaptchaTypeEnum } from 'vitnode-shared/utils/global';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { ContentCaptchaSpamSecurityAdmin } from '../content';
 import { mutationApi } from './mutation-api';

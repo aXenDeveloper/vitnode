@@ -3,7 +3,7 @@ import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import { ShowMiddlewareObj } from 'vitnode-shared/middleware.dto';
 import { AllowTypeFilesEnum } from 'vitnode-shared/utils/global';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { mutationApi } from './mutation-api';
 

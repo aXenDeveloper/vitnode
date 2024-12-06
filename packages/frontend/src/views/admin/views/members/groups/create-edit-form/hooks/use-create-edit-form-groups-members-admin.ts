@@ -5,7 +5,7 @@ import { usePathname, useRouter } from '@/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { CreateGroupsMembersAdminBody } from 'vitnode-shared/admin/members/groups.dto';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { CreateEditFormGroupsMembersAdmin } from '../create-edit-form-groups-members-admin';
 import { mutationCreateApi } from './mutation-create-api';

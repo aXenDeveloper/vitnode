@@ -2,7 +2,7 @@ import { useDialog } from '@/components/ui/dialog';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { toast } from 'sonner';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { ContentCreateEditMethodsAuthSettingsAdmin } from '../content';
 import { createMutationApi } from './create-mutation-api';

@@ -103,6 +103,7 @@ export class UserHelper {
       language: user.language,
       name: user.name,
       name_seo: user.name_seo,
+      avatar: user.avatar,
     };
 
     if (!withDangerousData) {

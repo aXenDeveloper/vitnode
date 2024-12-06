@@ -8,7 +8,7 @@ import {
   EditEmailSettingsAdminBody,
   ShowEmailSettingsAdminObj,
 } from 'vitnode-shared/admin/settings/email.dto';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { ContentEmailSettingsAdmin } from '../content';
 import { revalidateApi } from './revalidate-api';

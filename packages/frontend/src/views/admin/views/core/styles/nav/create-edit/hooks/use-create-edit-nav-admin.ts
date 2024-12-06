@@ -3,7 +3,7 @@ import { zodLanguageInput } from '@/helpers/zod';
 import { useTextLang } from '@/hooks/use-text-lang';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { ContentCreateEditNavAdmin } from '../create-edit';
 import { createMutationApi } from './create-mutation-api';

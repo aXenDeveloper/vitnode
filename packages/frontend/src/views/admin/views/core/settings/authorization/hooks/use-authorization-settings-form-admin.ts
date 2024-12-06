@@ -1,7 +1,7 @@
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { ShowAuthSettingsAdminObj } from 'vitnode-shared/admin/settings/auth.dto';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { mutationApi } from './mutation-api';
 

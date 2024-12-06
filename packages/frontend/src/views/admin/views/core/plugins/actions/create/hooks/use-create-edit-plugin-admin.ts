@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import { ShowPluginAdmin } from 'vitnode-shared/admin/plugins.dto';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { mutationCreateApi } from './mutation-create-api';
 import { mutationEditApi } from './mutation-edit-api';

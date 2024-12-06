@@ -99,9 +99,12 @@ export const core_files_avatars = pgTable('core_files_avatars', t => ({
   file_size: t.integer().notNull(),
   mimetype: t.varchar({ length: 255 }).notNull(),
   extension: t.varchar({ length: 32 }).notNull(),
-  user_id: t.integer().references(() => core_users.id, {
-    onDelete: 'cascade',
-  }),
+  user_id: t
+    .integer()
+    .references(() => core_users.id, {
+      onDelete: 'cascade',
+    })
+    .unique(),
 }));
 
 export const core_files_avatars_relations = relations(

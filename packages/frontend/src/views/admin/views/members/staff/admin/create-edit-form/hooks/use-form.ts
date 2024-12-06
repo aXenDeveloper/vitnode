@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import { AdminStaffMembersAdminObj } from 'vitnode-shared/admin/members/staff/admin.dto';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { createMutationApi, editMutationApi } from './mutation-api';
 

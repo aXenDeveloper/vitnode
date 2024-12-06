@@ -207,6 +207,7 @@
           "title": "Change Avatar",
           "desc": "Show your personality with a new avatar.",
           "submit": "Change Avatar",
+          "success": "Your avatar has been changed.",
           "types": {
             "upload": "Upload a new avatar",
             "delete": "Delete avatar"

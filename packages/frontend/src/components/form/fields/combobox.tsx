@@ -20,7 +20,7 @@ import { Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { StringLanguage } from 'vitnode-shared/string-language.dto';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { getBaseSchema } from '../utils';
 import { AutoFormLabel } from './common/label';

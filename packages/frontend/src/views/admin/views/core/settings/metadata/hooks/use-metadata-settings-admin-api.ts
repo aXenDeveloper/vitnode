@@ -9,7 +9,7 @@ import {
   ShowMetadataAdminObj,
 } from 'vitnode-shared/admin/settings/metadata.dto';
 import { ManifestDisplay } from 'vitnode-shared/admin/settings/metadata.enum';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { revalidateAllApi } from '../../../diagnostic/actions/clear_cache/hooks/revalidate-all-api';
 import { ContentMetadataSettingsAdmin } from '../content';

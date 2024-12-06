@@ -9,7 +9,8 @@ import { CopperChangeAvatar } from './cropper/cropper';
 import { useChangeAvatar } from './hooks/use-change-avatar';
 
 export const ContentChangeAvatar = () => {
-  const { formSchema, cropperRef } = useChangeAvatar();
+  const { formSchema, cropperRef, onSubmit, setValues, values } =
+    useChangeAvatar();
   const { user } = useSession();
   const t = useTranslations('core.settings.overview.change_avatar');
 
@@ -29,6 +30,12 @@ export const ContentChangeAvatar = () => {
           type: DependencyType.HIDES,
           targetField: 'type',
           when: () => !user.avatar,
+        },
+        {
+          sourceField: 'file',
+          type: DependencyType.HIDES,
+          targetField: 'file',
+          when: (file: string) => !!file,
         },
       ]}
       fields={[
@@ -50,25 +57,25 @@ export const ContentChangeAvatar = () => {
         },
         {
           id: 'file',
-          component: props =>
-            !props.field.value ? (
-              <AutoFormFileInput
-                {...props}
-                accept="image/png, image/jpeg, image/webp"
-                acceptExtensions={['png', 'jpg', 'webp']}
-                maxFileSizeInMb={2}
-                showInfo
-              />
-            ) : (
-              <CopperChangeAvatar
-                cropperRef={cropperRef}
-                file={props.field.value}
-              />
-            ),
+          component: props => (
+            <AutoFormFileInput
+              {...props}
+              accept="image/png, image/jpeg, image/webp"
+              acceptExtensions={['png', 'jpg', 'webp']}
+              maxFileSizeInMb={2}
+              showInfo
+            />
+          ),
         },
       ]}
       formSchema={formSchema}
+      onSubmit={onSubmit}
+      onValuesChange={setValues}
       submitButton={props => <Button {...props}>{t('submit')}</Button>}
-    />
+    >
+      {values.file && values.file instanceof File && (
+        <CopperChangeAvatar cropperRef={cropperRef} file={values.file} />
+      )}
+    </AutoForm>
   );
 };

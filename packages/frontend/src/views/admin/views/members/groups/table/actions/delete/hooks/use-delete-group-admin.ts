@@ -4,7 +4,7 @@ import { usePathname, useRouter } from '@/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { GroupsMembersAdminObj } from 'vitnode-shared/admin/members/groups.dto';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { mutationApi } from './mutation-api';
 

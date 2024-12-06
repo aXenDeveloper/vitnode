@@ -13,7 +13,7 @@ import {
   EditThemeEditorStylesAdminBody,
   EditThemeEditorStylesAdminObj,
 } from 'vitnode-shared/admin/styles/theme-editor.dto';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { revalidateAllApi } from '../../diagnostic/actions/clear_cache/hooks/revalidate-all-api';
 import {

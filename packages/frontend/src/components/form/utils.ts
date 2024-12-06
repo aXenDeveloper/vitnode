@@ -1,5 +1,5 @@
 import { DefaultValues, FieldValues, UseFormWatch } from 'react-hook-form';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { DependencyType } from './auto-form';
 

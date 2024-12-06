@@ -6,7 +6,7 @@ import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import { CreateLegalSettingsAdminBody } from 'vitnode-shared/admin/settings/legal.dto';
 import { LegalsObj } from 'vitnode-shared/legal.dto';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { createMutationApi } from './create-mutation-api';
 import { editMutationApi } from './edit-mutation-api';
