@@ -202,7 +202,16 @@
         "submit": "Change Avatar"
       },
       "overview": {
-        "title": "Overview"
+        "title": "Overview",
+        "change_avatar": {
+          "title": "Change Avatar",
+          "desc": "Show your personality with a new avatar.",
+          "submit": "Change Avatar",
+          "types": {
+            "upload": "Upload a new avatar",
+            "delete": "Delete avatar"
+          }
+        }
       },
       "files": {
         "title": "My Files",
