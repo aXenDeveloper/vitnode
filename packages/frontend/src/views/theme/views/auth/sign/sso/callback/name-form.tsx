@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import { SSOCallbackAuthObj } from 'vitnode-shared/auth/sso.dto';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { nameRegex } from '../../up/hooks/use-sign-up-view';
 import { mutationApi } from './hooks/mutation-api';

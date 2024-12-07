@@ -53,9 +53,6 @@ export class UserMembersAdmin extends User {
   email_verified: boolean;
 
   @ApiProperty()
-  joined_at: Date;
-
-  @ApiProperty()
   newsletter: boolean;
 }
 

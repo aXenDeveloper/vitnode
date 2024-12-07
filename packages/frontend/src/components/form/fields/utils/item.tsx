@@ -1,7 +1,7 @@
 import { FormField, FormMessage } from '@/components/ui/form';
 import React from 'react';
 import { Control, FieldPath, FieldValues, UseFormWatch } from 'react-hook-form';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { AutoFormComponentProps } from '../../auto-form';
 import resolveDependencies, {

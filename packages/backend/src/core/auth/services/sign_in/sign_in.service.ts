@@ -48,6 +48,7 @@ export class SignInAuthService {
         language: true,
         name_seo: true,
         avatar_color: true,
+        joined_at: true,
       },
     });
     if (!user?.password) {

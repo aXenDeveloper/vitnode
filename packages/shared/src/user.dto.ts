@@ -52,6 +52,9 @@ export class User {
   id: number;
 
   @ApiProperty()
+  joined_at: Date;
+
+  @ApiProperty()
   language: string;
 
   @ApiProperty()

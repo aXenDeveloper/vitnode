@@ -11,7 +11,7 @@ import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import { UserMembersAdmin } from 'vitnode-shared/admin/members/users.dto';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { mutationApi } from './mutation-api';
 

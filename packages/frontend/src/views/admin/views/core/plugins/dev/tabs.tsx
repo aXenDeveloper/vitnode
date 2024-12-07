@@ -1,6 +1,6 @@
 'use client';
 
-import { Tabs, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsItem } from '@/components/ui/tabs';
 import { usePathname } from '@/navigation';
 import { useTranslations } from 'next-intl';
 
@@ -10,22 +10,18 @@ export const TabsDevPluginAdmin = ({ code }: { code: string }) => {
 
   return (
     <Tabs className="mb-5">
-      <TabsTrigger
+      <TabsItem
         active={pathname === `/admin/core/plugins/${code}/dev`}
         href={`/admin/core/plugins/${code}/dev`}
-        id="overview"
       >
         {t('overview.title')}
-      </TabsTrigger>
-      <TabsTrigger href={`/admin/core/plugins/${code}/dev/nav`} id="nav">
+      </TabsItem>
+      <TabsItem href={`/admin/core/plugins/${code}/dev/nav`}>
         {t('nav.title')}
-      </TabsTrigger>
-      <TabsTrigger
-        href={`/admin/core/plugins/${code}/dev/permissions-admin`}
-        id="permissions-admin"
-      >
+      </TabsItem>
+      <TabsItem href={`/admin/core/plugins/${code}/dev/permissions-admin`}>
         {t('permissions-admin.title')}
-      </TabsTrigger>
+      </TabsItem>
     </Tabs>
   );
 };

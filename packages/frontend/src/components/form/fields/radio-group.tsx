@@ -1,7 +1,7 @@
 import { AutoFormComponentProps } from '@/components/form/auto-form';
 import { FormControl, FormItem, FormLabel } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { getBaseSchema } from '../utils';
 import { AutoFormLabel } from './common/label';

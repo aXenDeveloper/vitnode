@@ -1,5 +1,6 @@
 import { DateFormat } from '@/components/date-format';
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Monitor, Smartphone } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -30,7 +31,7 @@ export const ContentDevicesSettings = ({
   return (
     <div className="space-y-6">
       {data.map(device => (
-        <div className="space-y-4 rounded-md border p-6" key={device.id}>
+        <Card className="space-y-4 p-6" key={device.id}>
           <div className="flex flex-wrap items-center gap-4">
             <div className="bg-primary/10 [&>svg]:text-primary flex shrink-0 items-center justify-center rounded-sm p-2 [&>svg]:size-8">
               {getDeviceIcon(device.uagent_os)}
@@ -74,7 +75,7 @@ export const ContentDevicesSettings = ({
               </div>
             </li>
           </ul>
-        </div>
+        </Card>
       ))}
     </div>
   );

@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTranslations } from 'next-intl';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { getBaseSchema } from '../utils';
 import { AutoFormLabel } from './common/label';

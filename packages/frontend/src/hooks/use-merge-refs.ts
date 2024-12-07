@@ -17,7 +17,7 @@ export function useMergeRefs<Instance>(
         if (typeof ref === 'function') {
           ref(value);
         } else if (ref != null) {
-          (ref as React.MutableRefObject<Instance | null>).current = value;
+          ref.current = value;
         }
       });
     };

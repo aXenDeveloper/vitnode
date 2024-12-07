@@ -2,7 +2,7 @@ import { FilesInputValue } from '@/components/ui/file-input';
 import { zodFile } from '@/helpers/zod';
 import React from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import * as z from 'zod';
+import { z } from 'zod';
 
 export enum ThemeEditorIds {
   dark = 'vitnode_logo_dark',
@@ -13,7 +13,7 @@ export enum ThemeEditorIds {
 
 interface Args {
   form: UseFormReturn<FormValues>;
-  iframeRef: React.RefObject<HTMLIFrameElement>;
+  iframeRef: React.RefObject<HTMLIFrameElement | null>;
   onSubmit: (args: FormValues) => void;
   updateLogo: (args: {
     file: FilesInputValue | null;

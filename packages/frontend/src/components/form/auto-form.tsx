@@ -10,7 +10,7 @@ import {
   useForm,
   UseFormReturn,
 } from 'react-hook-form';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { Button } from '../ui/button';
 import { useDialog } from '../ui/dialog';

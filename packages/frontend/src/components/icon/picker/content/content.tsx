@@ -4,10 +4,8 @@ import React from 'react';
 
 import { Input } from '../../../ui/input';
 import { Loader } from '../../../ui/loader';
-import { Tabs, TabsTrigger } from '../../../ui/tabs';
+import { Tabs, TabsItem } from '../../../ui/tabs';
 import { SkinSelectEmojisContentIconInput } from './emojis/skin-select';
-
-// import { SkinSelectEmojiButtonEditor } from "@/components/editor/toolbar/buttons/emoji/skin-select";
 
 const EmojisContentIconInput = React.lazy(async () =>
   import('./emojis/emojis').then(module => ({
@@ -47,24 +45,22 @@ export const ContentIconInput = (props: IconPickerProps) => {
     <>
       <div className="bg-popover sticky top-0 z-10 flex flex-col gap-3 p-4">
         <Tabs>
-          <TabsTrigger
+          <TabsItem
             active={activeTab === Tab.Icon}
-            id={Tab.Icon}
             onClick={() => {
               setActiveTab(Tab.Icon);
             }}
           >
             {t('icons.title')}
-          </TabsTrigger>
-          <TabsTrigger
+          </TabsItem>
+          <TabsItem
             active={activeTab === Tab.Emoji}
-            id={Tab.Emoji}
             onClick={() => {
               setActiveTab(Tab.Emoji);
             }}
           >
             {t('emojis.title')}
-          </TabsTrigger>
+          </TabsItem>
         </Tabs>
 
         <div className="flex gap-2">

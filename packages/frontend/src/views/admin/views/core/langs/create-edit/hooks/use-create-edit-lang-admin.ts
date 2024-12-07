@@ -2,7 +2,7 @@ import { useDialog } from '@/components/ui/dialog';
 import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { CreateEditLangAdmin } from '../create-edit';
 import { locales } from '../locales';

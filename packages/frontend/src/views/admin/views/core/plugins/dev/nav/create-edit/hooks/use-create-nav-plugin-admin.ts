@@ -3,7 +3,7 @@ import { zodTag } from '@/helpers/zod';
 import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { useDevPluginAdmin } from '../../../hooks/use-dev-plugin';
 import { CreateEditNavDevPluginAdmin } from '../create-edit';

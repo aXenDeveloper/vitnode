@@ -2,7 +2,7 @@ import { zodLanguageInput } from '@/helpers/zod';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { ShowMiddlewareObj } from 'vitnode-shared/middleware.dto';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { mutationApi } from './mutation-api';
 

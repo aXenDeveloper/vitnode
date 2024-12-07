@@ -6,7 +6,7 @@ import { AutoFormStringLanguageInput } from '@/components/form/fields/text-langu
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsItem } from '@/components/ui/tabs';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { GroupsMembersAdminObj } from 'vitnode-shared/admin/members/groups.dto';
@@ -36,24 +36,22 @@ export const CreateEditFormGroupsMembersAdmin = ({
   return (
     <>
       <Tabs>
-        <TabsTrigger
+        <TabsItem
           active={activeTab === TabsEnum.MAIN}
-          id="main"
           onClick={() => {
             setActiveTab(TabsEnum.MAIN);
           }}
         >
           {t('create_edit.main')}
-        </TabsTrigger>
-        <TabsTrigger
+        </TabsItem>
+        <TabsItem
           active={activeTab === TabsEnum.CONTENT}
-          id="content"
           onClick={() => {
             setActiveTab(TabsEnum.CONTENT);
           }}
         >
           {t('create_edit.content')}
-        </TabsTrigger>
+        </TabsItem>
       </Tabs>
 
       <AutoForm

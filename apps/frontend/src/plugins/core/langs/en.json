@@ -182,28 +182,25 @@
     },
     "settings": {
       "title": "Settings",
-      "desc": "Manage your account settings.",
       "open_sheet": "Open Menu",
       "open_sheet_desc": "You can change your account settings here.",
-      "change_avatar": {
-        "title": "Change Avatar",
-        "desc": "Choose one option to change your avatar.",
-        "options": {
-          "upload": {
-            "title": "Upload a new avatar",
-            "success": "Your avatar has been changed.",
-            "error": "An error occurred while uploading your avatar."
-          },
-          "delete": {
-            "title": "Delete avatar",
-            "success": "Your avatar has been deleted.",
-            "error": "An error occurred while deleting your avatar."
+      "overview": {
+        "title": "Overview",
+        "change_avatar": {
+          "title": "Change Avatar",
+          "desc": "Show your personality with a new avatar.",
+          "submit": "Change Avatar",
+          "success": "Your avatar has been changed.",
+          "types": {
+            "upload": "Upload a new avatar",
+            "delete": "Delete avatar"
           }
         },
-        "submit": "Change Avatar"
-      },
-      "overview": {
-        "title": "Overview"
+        "basic_info": {
+          "title": "Basic Information",
+          "email": "Email",
+          "joined_at": "Joined at"
+        }
       },
       "files": {
         "title": "My Files",
