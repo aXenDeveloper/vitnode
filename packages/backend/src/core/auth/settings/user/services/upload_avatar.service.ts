@@ -44,6 +44,10 @@ export class UploadAvatarUserSettingsAuthService {
       if (delete_avatar) return;
     }
 
+    if (!avatar) {
+      throw new BadRequestException('No avatar provided');
+    }
+
     const file = await this.filesHelper.upload({
       file: avatar,
       folder: 'avatars',

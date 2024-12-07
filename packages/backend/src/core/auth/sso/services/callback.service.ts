@@ -63,6 +63,7 @@ export class CallbackSSOAuthService {
               language: true,
               name_seo: true,
               avatar_color: true,
+              joined_at: true,
             },
           },
         },
@@ -98,6 +99,7 @@ export class CallbackSSOAuthService {
         name_seo: true,
         avatar_color: true,
         email_verified: true,
+        joined_at: true,
       },
     });
     // If user exists, create SSO token and sign in
@@ -146,6 +148,7 @@ export class CallbackSSOAuthService {
       avatar_color: '',
       provider,
       provider_id: data.id,
+      joined_at: new Date(),
     };
   }
 }
