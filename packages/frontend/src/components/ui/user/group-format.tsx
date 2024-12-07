@@ -5,8 +5,8 @@ import { GroupUser } from 'vitnode-shared/user.dto';
 export const GroupFormat = ({
   className,
   group: { name, color },
-}: {
-  className?: string;
+  ...props
+}: React.HTMLAttributes<HTMLSpanElement> & {
   group: GroupUser;
 }) => {
   const { convertText } = useTextLang();
@@ -15,6 +15,7 @@ export const GroupFormat = ({
     <span
       className={cn('text-[--group-color]', className)}
       style={{ '--group-color': color } as React.CSSProperties}
+      {...props}
     >
       {convertText(name)}
     </span>

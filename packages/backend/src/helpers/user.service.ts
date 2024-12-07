@@ -53,6 +53,7 @@ export class UserHelper {
         language: true,
         name: true,
         name_seo: true,
+        joined_at: true,
       },
       with: {
         avatar: true,
@@ -104,6 +105,7 @@ export class UserHelper {
       name: user.name,
       name_seo: user.name_seo,
       avatar: user.avatar,
+      joined_at: user.joined_at,
     };
 
     if (!withDangerousData) {

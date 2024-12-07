@@ -29,14 +29,14 @@ export const ChangeAvatarWrapper = ({
   const t = useTranslations('core.settings.overview.change_avatar');
 
   return (
-    <div className="relative inline-block">
+    <div className="relative inline-block flex-shrink-0">
       {children}
       <Dialog>
         <TooltipWrapper content={t('title')}>
           <DialogTrigger asChild>
             <Button
               ariaLabel={t('title')}
-              className="absolute -bottom-2 -right-2 size-8 [&>svg]:size-4"
+              className="absolute -right-1 bottom-0 size-8 [&>svg]:size-4"
               size="icon"
               variant="outline"
             >

@@ -20,8 +20,6 @@ export const core_users = pgTable(
       .integer()
       .references(() => core_groups.id)
       .notNull(),
-    first_name: t.varchar({ length: 255 }),
-    last_name: t.varchar({ length: 255 }),
     birthday: t.timestamp(),
     ip_address: t.varchar({ length: 40 }).notNull(),
     language: t
