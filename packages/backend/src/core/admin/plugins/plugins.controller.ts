@@ -1,9 +1,21 @@
+import type { Response } from 'express';
+
 import { Controllers } from '@/helpers/controller.decorator';
-import { Body, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  Res,
+} from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { EditPluginsAdminBody } from 'vitnode-shared/admin/plugin.dto';
 import {
   CreatePluginsAdminBody,
+  ExportPluginsAdminBody,
   ShowPluginAdmin,
   ShowPluginsAdminObj,
   ShowPluginsAdminQuery,
@@ -12,6 +24,7 @@ import {
 import { CreatePluginsAdminService } from './services/create.service';
 import { DeletePluginsAdminService } from './services/delete.service';
 import { EditPluginsAdminService } from './services/edit.service';
+import { ExportPluginsAdminService } from './services/export.service';
 import { ItemPluginsAdminService } from './services/item.service';
 import { ShowPluginsAdminService } from './services/show.service';
 
@@ -23,6 +36,7 @@ export class PluginsAdminController {
     private readonly deleteService: DeletePluginsAdminService,
     private readonly itemService: ItemPluginsAdminService,
     private readonly editService: EditPluginsAdminService,
+    private readonly exportService: ExportPluginsAdminService,
   ) {}
 
   @ApiCreatedResponse({ description: 'Plugin created', type: ShowPluginAdmin })
@@ -49,6 +63,16 @@ export class PluginsAdminController {
     @Body() body: EditPluginsAdminBody,
   ): Promise<ShowPluginAdmin> {
     return await this.editService.edit({ code, body });
+  }
+
+  @ApiOkResponse({ description: 'Plugin exported' })
+  @Post('export/:code')
+  async exportPlugin(
+    @Param('code') code: string,
+    @Body() body: ExportPluginsAdminBody,
+    @Res() res: Response,
+  ): Promise<void> {
+    await this.exportService.export({ code, body, res });
   }
 
   @ApiOkResponse({ type: ShowPluginAdmin, description: 'Plugin details' })

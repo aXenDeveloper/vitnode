@@ -145,6 +145,7 @@ export const createPackagesJSON = ({
       '@nestjs/core': '^10.4.13',
       '@nestjs/platform-express': '^10.4.13',
       '@nestjs/schedule': '^4.1.1',
+      '@nestjs/swagger': '^8.1.0',
       '@react-email/components': '^0.0.29',
       'class-transformer': '^0.5.1',
       'class-validator': '^0.14.1',
