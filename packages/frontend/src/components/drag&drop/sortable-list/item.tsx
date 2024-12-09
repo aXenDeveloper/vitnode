@@ -59,7 +59,7 @@ export function SortableTreeItem<T extends TreeItem<T>>({
     >
       <div
         className={cn(
-          'bg-card relative flex items-center gap-2 border px-[10px] py-[var(--vertical-padding)]',
+          'bg-card relative flex items-center gap-2 border px-4 py-[var(--vertical-padding)]',
           {
             'rounded-sm pr-[24px] shadow': clone,
           },

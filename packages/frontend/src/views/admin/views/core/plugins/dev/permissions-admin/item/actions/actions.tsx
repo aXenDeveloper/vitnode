@@ -9,12 +9,12 @@ export const ActionsItemPermissionsAdminDevPluginAdmin = (
   >,
 ) => {
   return (
-    <div className="ml-auto space-x-1">
+    <>
       <EditActionItemPermissionsAdminDevPluginAdmin {...props} />
       <DeleteActionItemPermissionsAdminDevPluginAdmin
         {...props.data}
         parentId={props.parentId}
       />
-    </div>
+    </>
   );
 };

@@ -10,12 +10,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Loader } from '@/components/ui/loader';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { TooltipWrapper } from '@/components/ui/tooltip';
 import { useTextLang } from '@/hooks/use-text-lang';
 import { Pencil } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -36,19 +31,13 @@ export const EditActionTableNavAdmin = (
 
   return (
     <Dialog>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <Button ariaLabel={t('title')} size="icon" variant="ghost">
-                <Pencil />
-              </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
-
-          <TooltipContent>{t('title')}</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <TooltipWrapper content={t('title')}>
+        <DialogTrigger asChild>
+          <Button ariaLabel={t('title')} size="icon" variant="ghost">
+            <Pencil />
+          </Button>
+        </DialogTrigger>
+      </TooltipWrapper>
 
       <DialogContent className="max-w-2xl">
         <DialogHeader>

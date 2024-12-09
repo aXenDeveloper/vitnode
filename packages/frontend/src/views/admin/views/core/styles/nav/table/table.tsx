@@ -1,6 +1,9 @@
 'use client';
 
-import { DragAndDropSortableList } from '@/components/drag&drop/sortable-list/list';
+import {
+  DragAndDropSortableItem,
+  DragAndDropSortableList,
+} from '@/components/drag&drop/sortable-list/list';
 import { useTextLang } from '@/hooks/use-text-lang';
 import { ExternalLink } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -20,7 +23,10 @@ export const TableNavAdmin = ({ edges }: { edges: ShowNavStyles[] }) => {
     <DragAndDropSortableList
       componentItem={data => {
         return (
-          <div className="flex flex-1 items-center justify-between gap-2">
+          <DragAndDropSortableItem
+            actions={<ActionsTableNavAdmin {...data} />}
+            className="flex flex-1 items-center justify-between gap-2"
+          >
             <div className="flex flex-1 flex-col">
               <div className="flex items-center gap-2">
                 <span className="flex items-center gap-1 font-semibold">
@@ -39,8 +45,7 @@ export const TableNavAdmin = ({ edges }: { edges: ShowNavStyles[] }) => {
                 </span>
               )}
             </div>
-            <ActionsTableNavAdmin {...data} />
-          </div>
+          </DragAndDropSortableItem>
         );
       }}
       data={edges.map(item => ({

@@ -13,12 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from './tooltip';
+import { TooltipWrapper } from './tooltip';
 
 const PAGE_SIZES = [10, 20, 30, 40, 50];
 
@@ -60,46 +55,40 @@ export const Pagination = ({
       </span>
 
       <div className="flex flex-wrap items-center justify-center gap-4">
-        <TooltipProvider>
-          <Tooltip>
-            <Select
-              onValueChange={value => {
-                const params = new URLSearchParams(searchParams.toString());
-                if (params.has('last')) {
-                  params.set('last', value);
-                  params.delete('first');
-                } else {
-                  params.set('first', value);
-                  params.delete('last');
-                }
-                push(`${pathname}?${params.toString()}`, {
-                  scroll: false,
-                });
-              }}
-              value={`${pageSizeValue}`}
-            >
-              <TooltipTrigger asChild>
-                <SelectTrigger className="bg-card h-8 w-[70px]">
-                  <SelectValue placeholder={pageSizeValue} />
-                </SelectTrigger>
-              </TooltipTrigger>
-              <SelectContent side="top">
-                {PAGE_SIZES.map(pageSize => (
-                  <SelectItem key={pageSize} value={`${pageSize}`}>
-                    {pageSize}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <TooltipContent>{t('rows_per_page')}</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Select
+          onValueChange={value => {
+            const params = new URLSearchParams(searchParams.toString());
+            if (params.has('last')) {
+              params.set('last', value);
+              params.delete('first');
+            } else {
+              params.set('first', value);
+              params.delete('last');
+            }
+            push(`${pathname}?${params.toString()}`, {
+              scroll: false,
+            });
+          }}
+          value={`${pageSizeValue}`}
+        >
+          <TooltipWrapper content={t('rows_per_page')}>
+            <SelectTrigger className="bg-card h-8 w-[70px]">
+              <SelectValue placeholder={pageSizeValue} />
+            </SelectTrigger>
+          </TooltipWrapper>
+          <SelectContent side="top">
+            {PAGE_SIZES.map(pageSize => (
+              <SelectItem key={pageSize} value={`${pageSize}`}>
+                {pageSize}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <div className="flex items-center space-x-2">
           <Button
             ariaLabel={t('previous')}
-            className="bg-card size-9"
+            className="bg-card"
             disabled={!pageInfo.has_previous_page}
             onClick={() => {
               if (!pageInfo.start_cursor) return;
@@ -119,7 +108,7 @@ export const Pagination = ({
           </Button>
           <Button
             ariaLabel={t('next')}
-            className="bg-card size-9"
+            className="bg-card"
             disabled={!pageInfo.has_next_page}
             onClick={() => {
               if (!pageInfo.end_cursor) return;

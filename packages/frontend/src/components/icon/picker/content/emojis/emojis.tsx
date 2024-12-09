@@ -72,7 +72,7 @@ export const EmojisContentIconInput = ({
               return (
                 <Button
                   ariaLabel={emoji.name}
-                  className="size-9 text-2xl"
+                  className="text-2xl"
                   key={`search_${id}`}
                   onClick={() => {
                     if (value === icon) {
@@ -124,7 +124,7 @@ export const EmojisContentIconInput = ({
               return (
                 <Button
                   ariaLabel={emoji.name}
-                  className="size-9 text-2xl"
+                  className="text-2xl"
                   key={`${id}_${category.id}`}
                   onClick={() => {
                     if (value === icon) {
