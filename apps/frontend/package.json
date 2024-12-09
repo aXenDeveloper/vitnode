@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "0.0.10-canary.25",
+  "version": "0.0.10-canary.26",
   "private": true,
   "scripts": {
     "config:init": "vitnode-frontend init",
