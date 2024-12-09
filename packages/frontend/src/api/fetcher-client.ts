@@ -40,6 +40,10 @@ export async function fetcherClient<
       : null,
   });
 
+  if (res.headers.get('Content-Disposition')) {
+    return { res, data: {} as TData };
+  }
+
   let data = {} as TData;
   try {
     data = await res.json();

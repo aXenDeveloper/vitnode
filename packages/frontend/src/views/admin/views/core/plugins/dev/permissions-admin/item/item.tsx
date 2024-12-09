@@ -16,7 +16,7 @@ export const ItemPermissionsAdminDevPluginAdmin = ({
   parentId: string | undefined;
 }) => {
   const t = useTranslations('admin.core.plugins.dev.permissions-admin');
-  const { pluginCode } = useDevPluginAdmin();
+  const { code } = useDevPluginAdmin();
 
   return (
     <div className="flex flex-1 items-center gap-4">
@@ -28,7 +28,7 @@ export const ItemPermissionsAdminDevPluginAdmin = ({
         <p className="text-muted-foreground text-sm">
           {t.rich('lang_key', {
             key: () => (
-              <span className="text-foreground">{`admin_${pluginCode}.admin_permissions.${id}`}</span>
+              <span className="text-foreground">{`admin_${code}.admin_permissions.${id}`}</span>
             ),
           })}
         </p>
@@ -37,7 +37,7 @@ export const ItemPermissionsAdminDevPluginAdmin = ({
             {t.rich('page_permission', {
               page: () => (
                 <span className="text-foreground">
-                  {`/admin/${pluginCode}/${id.replace('can_manage_', '').split('_').join('/')}`}
+                  {`/admin/${code}/${id.replace('can_manage_', '').split('_').join('/')}`}
                 </span>
               ),
             })}

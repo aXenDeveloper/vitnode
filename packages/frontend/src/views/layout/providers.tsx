@@ -37,9 +37,9 @@ export const RootProviders = ({
       />
       <NextThemesProvider attribute="class" defaultTheme="system" enableSystem>
         {middlewareData ? (
-          <MiddlewareContext.Provider value={{ ...middlewareData }}>
+          <MiddlewareContext value={{ ...middlewareData }}>
             {children}
-          </MiddlewareContext.Provider>
+          </MiddlewareContext>
         ) : (
           children
         )}

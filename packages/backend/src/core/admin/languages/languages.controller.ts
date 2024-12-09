@@ -1,5 +1,15 @@
+import { OnlyForDevelopment } from '@/guards/dev.guard';
 import { Controllers } from '@/helpers/controller.decorator';
-import { Body, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import {
   CreateLanguagesAdminBody,
@@ -32,6 +42,7 @@ export class LanguagesAdminController {
     description: 'Create language',
   })
   @Post()
+  @UseGuards(OnlyForDevelopment)
   async createLang(
     @Body() body: CreateLanguagesAdminBody,
   ): Promise<LanguagesAdminObj> {
@@ -42,6 +53,7 @@ export class LanguagesAdminController {
     description: 'Delete language',
   })
   @Delete(':id')
+  @UseGuards(OnlyForDevelopment)
   async deleteLang(@Param('id') id: string) {
     await this.deleteService.delete(+id);
   }

@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEnum,
+  IsNumber,
   IsOptional,
   IsString,
   Matches,
@@ -122,4 +123,16 @@ export class ShowPluginsAdminQuery extends PaginationQuery {
   @IsEnum(SortDirectionEnum)
   @IsOptional()
   sortDirection?: SortDirectionEnum;
+}
+
+export class ExportPluginsAdminBody {
+  @ApiPropertyOptional({ example: '0.0.1' })
+  @IsOptional()
+  @IsString()
+  version?: string;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsNumber()
+  @IsOptional()
+  version_code?: number;
 }

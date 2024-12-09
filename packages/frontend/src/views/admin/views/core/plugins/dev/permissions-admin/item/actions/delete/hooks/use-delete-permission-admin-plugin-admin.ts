@@ -15,12 +15,12 @@ export const useDeletePermissionAdminPluginAdmin = ({
   const t = useTranslations('admin.core.plugins.dev.permissions-admin.delete');
   const tCore = useTranslations('core.global.errors');
   const { setOpen } = useAlertDialog();
-  const { pluginCode } = useDevPluginAdmin();
+  const { code } = useDevPluginAdmin();
 
   const onSubmit = async () => {
     try {
       await mutationApi({
-        plugin_code: Array.isArray(pluginCode) ? pluginCode[0] : pluginCode,
+        plugin_code: code,
         id,
         parent_id: parentId,
       });

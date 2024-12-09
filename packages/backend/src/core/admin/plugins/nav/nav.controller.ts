@@ -19,6 +19,7 @@ import { ShowNavPluginsAdminService } from './services/show.service';
   plugin_code: 'plugins',
   isAdmin: true,
   route: 'nav',
+  isDev: true,
 })
 export class NavPluginsAdminController {
   constructor(

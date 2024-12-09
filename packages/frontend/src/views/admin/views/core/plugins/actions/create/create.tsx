@@ -28,7 +28,7 @@ export const CreateActionPluginAdmin = () => {
     return (
       <Button asChild>
         <Link
-          href="https://vitnode.com/docs/dev/plugins"
+          href="https://vitnode.com/docs/dev/plugin-create"
           rel="noreferrer noopener"
           target="_blank"
         >

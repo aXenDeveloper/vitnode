@@ -118,6 +118,7 @@
     "pg": "^8.13.1",
     "rxjs": "^7.8.1",
     "sharp": "^0.33.5",
+    "tar": "^7.4.3",
     "ua-parser-js": "^2.0.0",
     "vitnode-shared": "workspace:*"
   }

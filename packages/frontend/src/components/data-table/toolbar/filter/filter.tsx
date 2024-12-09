@@ -52,11 +52,11 @@ export function FilterToolbarDataTable({
       </PopoverTrigger>
 
       <PopoverContent align="start" className="w-56 p-0">
-        <FilterToolbarDataTableContext.Provider value={{ title, id }}>
+        <FilterToolbarDataTableContext value={{ title, id }}>
           <React.Suspense fallback={<Loader className="p-4" />}>
             {children}
           </React.Suspense>
-        </FilterToolbarDataTableContext.Provider>
+        </FilterToolbarDataTableContext>
       </PopoverContent>
     </Popover>
   );

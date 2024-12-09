@@ -17,6 +17,7 @@ import { ShowPermissionsAdminPluginsAdminService } from './services/show.service
   plugin_code: 'plugins',
   isAdmin: true,
   route: 'permissions-admin',
+  isDev: true,
 })
 export class PermissionsAdminPluginsAdminController {
   constructor(

@@ -21,7 +21,7 @@ export const useCreateNavPluginAdmin = ({
   const t = useTranslations('admin.core.plugins.dev.nav');
   const tCore = useTranslations('core.global.errors');
   const { setOpen } = useDialog();
-  const { pluginCode } = useDevPluginAdmin();
+  const { code } = useDevPluginAdmin();
 
   const formSchema = z.object({
     code: z
@@ -50,14 +50,12 @@ export const useCreateNavPluginAdmin = ({
     values: z.infer<typeof formSchema>,
     form: UseFormReturn<z.infer<typeof formSchema>>,
   ) => {
-    if (!pluginCode) return;
-
     try {
       if (data) {
         await editMutationApi({
           ...values,
           previous_code: data.code,
-          plugin_code: pluginCode,
+          plugin_code: code,
           parent_code:
             values.parent_code === 'null' ? undefined : values.parent_code,
           keywords: (values.keywords ?? []).map(keyword => keyword.value),
@@ -65,7 +63,7 @@ export const useCreateNavPluginAdmin = ({
       } else {
         await createMutationApi({
           ...values,
-          plugin_code: pluginCode,
+          plugin_code: code,
           parent_code:
             values.parent_code === 'null' ? undefined : values.parent_code,
           keywords: (values.keywords ?? []).map(keyword => keyword.value),

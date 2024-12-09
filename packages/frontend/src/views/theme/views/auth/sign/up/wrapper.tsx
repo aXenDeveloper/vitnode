@@ -20,9 +20,7 @@ export const SignUpWrapper = ({
 
   if (!emailSuccess) {
     return (
-      <SignUpContext.Provider value={{ setEmailSuccess }}>
-        {children}
-      </SignUpContext.Provider>
+      <SignUpContext value={{ setEmailSuccess }}>{children}</SignUpContext>
     );
   }
 
