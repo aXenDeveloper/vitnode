@@ -22,6 +22,7 @@ export const nestjsMainApp = async (app: INestApplication, options?: Args) => {
   app.enableCors({
     ...options?.cors,
     credentials: true,
+    exposedHeaders: ['Content-Disposition'],
     origin: [
       process.env.NEXT_PUBLIC_FRONTEND_URL ?? 'http://localhost:3000',
       ...(options?.cors?.origin ?? []),

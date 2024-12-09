@@ -31,7 +31,7 @@ const Dialog = ({
   const [isDirty, setIsDirty] = React.useState(false);
 
   return (
-    <DialogContext.Provider
+    <DialogContext
       value={{
         open: openProp ?? open,
         setOpen: val => {
@@ -50,7 +50,7 @@ const Dialog = ({
       >
         {children}
       </DialogPrimitive.Root>
-    </DialogContext.Provider>
+    </DialogContext>
   );
 };
 

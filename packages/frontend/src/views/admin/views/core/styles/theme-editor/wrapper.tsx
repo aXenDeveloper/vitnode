@@ -217,10 +217,8 @@ export const WrapperThemeEditorAdmin = ({
   };
 
   return (
-    <ThemeEditorContext.Provider
-      value={{ form, iframeRef, updateLogo, onSubmit }}
-    >
+    <ThemeEditorContext value={{ form, iframeRef, updateLogo, onSubmit }}>
       {children}
-    </ThemeEditorContext.Provider>
+    </ThemeEditorContext>
   );
 };

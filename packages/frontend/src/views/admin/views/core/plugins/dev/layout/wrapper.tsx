@@ -1,16 +1,19 @@
 'use client';
 
-import { DevPluginAdminContext } from '../hooks/use-dev-plugin';
+import {
+  DevPluginAdminContext,
+  DevPluginAdminContextArgs,
+} from '../hooks/use-dev-plugin';
 
 export const WrapperDevPluginAdminLayout = ({
   children,
-  pluginCode,
+  data,
 }: {
   children: React.ReactNode;
-  pluginCode: string;
+  data: DevPluginAdminContextArgs;
 }) => {
   return (
-    <DevPluginAdminContext.Provider value={{ pluginCode }}>
+    <DevPluginAdminContext.Provider value={data}>
       {children}
     </DevPluginAdminContext.Provider>
   );

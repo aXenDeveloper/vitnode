@@ -1,9 +1,11 @@
 import { AdminAuthGuard } from '@/guards/admin-auth.guard';
 import { AuthGuard } from '@/guards/auth.guard';
+import { OnlyForDevelopment } from '@/guards/dev.guard';
 import { applyDecorators, Controller, UseGuards } from '@nestjs/common';
 import { ApiSecurity, ApiTags } from '@nestjs/swagger';
 
 interface Args {
+  isDev?: boolean;
   plugin_code: string;
   plugin_name: string;
   route?: string;
@@ -30,8 +32,13 @@ export function Controllers({
   isAdmin,
   isProtect,
   route,
+  isDev,
 }: ArgsWithAdmin | ArgsWithout | ArgsWithProtect) {
   const decorators = [Controller(`${plugin_code}${route ? `/${route}` : ''}`)];
+
+  if (isDev) {
+    decorators.push(UseGuards(OnlyForDevelopment));
+  }
 
   if (isAdmin) {
     decorators.push(

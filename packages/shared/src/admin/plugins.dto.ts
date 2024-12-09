@@ -126,7 +126,7 @@ export class ShowPluginsAdminQuery extends PaginationQuery {
 }
 
 export class ExportPluginsAdminBody {
-  @ApiPropertyOptional({ example: '1.0.0' })
+  @ApiPropertyOptional({ example: '0.0.1' })
   @IsOptional()
   @IsString()
   version?: string;

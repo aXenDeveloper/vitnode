@@ -19,7 +19,7 @@ export const ContentNavDevPluginAdmin = ({
   textsAndIcons: TextAndIconsAsideAdmin[];
 }) => {
   const t = useTranslations('core.global.errors');
-  const { pluginCode } = useDevPluginAdmin();
+  const { code } = useDevPluginAdmin();
 
   return (
     <DragAndDropSortableList
@@ -48,7 +48,7 @@ export const ContentNavDevPluginAdmin = ({
         try {
           await mutationChangePositionApi({
             code: moveTo.id.toString(),
-            plugin_code: pluginCode,
+            plugin_code: code,
             index_to_move: moveTo.indexToMove,
             parent_code: moveTo.parentId?.toString(),
           });

@@ -18,7 +18,7 @@ export const useCreateEditPermissionAdminPluginAdmin = ({
   dataWithI18n: PermissionsAdminWithI18n[];
   parentId: string | undefined;
 }) => {
-  const { pluginCode } = useDevPluginAdmin();
+  const { code } = useDevPluginAdmin();
   const t = useTranslations(
     'admin.core.plugins.dev.permissions-admin.create_edit',
   );
@@ -44,14 +44,14 @@ export const useCreateEditPermissionAdminPluginAdmin = ({
         await editMutationApi({
           ...values,
           parent_id: values.parent_id === 'null' ? undefined : values.parent_id,
-          plugin_code: pluginCode,
+          plugin_code: code,
           old_id: data.id,
         });
       } else {
         await createMutationApi({
           ...values,
           parent_id: values.parent_id === 'null' ? undefined : values.parent_id,
-          plugin_code: pluginCode,
+          plugin_code: code,
         });
       }
 

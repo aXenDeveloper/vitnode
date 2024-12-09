@@ -28,7 +28,7 @@ const Sheet = ({
   const [open, setOpen] = React.useState(false);
 
   return (
-    <SheetContext.Provider
+    <SheetContext
       value={{
         open: openProp ?? open,
         setOpen: onOpenChange ?? setOpen,
@@ -41,7 +41,7 @@ const Sheet = ({
       >
         {children}
       </SheetPrimitive.Root>
-    </SheetContext.Provider>
+    </SheetContext>
   );
 };
 

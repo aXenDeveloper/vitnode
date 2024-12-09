@@ -13,7 +13,7 @@ export const useDeleteNavPluginAdmin = ({
   const t = useTranslations('admin.core.plugins.dev.nav.delete');
   const tCore = useTranslations('core.global.errors');
   const { setOpen } = useAlertDialog();
-  const { pluginCode } = useDevPluginAdmin();
+  const { code: pluginCode } = useDevPluginAdmin();
 
   const onSubmit = async () => {
     try {

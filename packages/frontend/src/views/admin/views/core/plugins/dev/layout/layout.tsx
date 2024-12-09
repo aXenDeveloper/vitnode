@@ -11,6 +11,7 @@ import React from 'react';
 
 import { getPluginDataAdmin } from '../query-api';
 import { TabsDevPluginAdmin } from '../tabs';
+import { ExportActionDevPluginAdmin } from './export/export';
 import { WrapperDevPluginAdminLayout } from './wrapper';
 
 interface Props {
@@ -49,7 +50,14 @@ export const DevPluginAdminLayout = async ({ code, children }: Props) => {
   ]);
 
   return (
-    <WrapperDevPluginAdminLayout pluginCode={code}>
+    <WrapperDevPluginAdminLayout
+      data={{
+        code,
+        version,
+        version_code,
+        name,
+      }}
+    >
       <HeaderContent
         desc={
           <div>
@@ -85,7 +93,7 @@ export const DevPluginAdminLayout = async ({ code, children }: Props) => {
           </div>
         }
       >
-        {/* <ActionsDevPluginAdmin {...plugin} /> */}
+        {CONFIG.node_development && <ExportActionDevPluginAdmin />}
       </HeaderContent>
 
       <TabsDevPluginAdmin code={code} />

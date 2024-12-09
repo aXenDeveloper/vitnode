@@ -27,7 +27,7 @@ const AlertDialog = ({
   const [open, setOpen] = React.useState(false);
 
   return (
-    <AlertDialogContext.Provider
+    <AlertDialogContext
       value={{ open: openProp ?? open, setOpen: onOpenChange ?? setOpen }}
     >
       <AlertDialogPrimitive.Root
@@ -37,7 +37,7 @@ const AlertDialog = ({
       >
         {children}
       </AlertDialogPrimitive.Root>
-    </AlertDialogContext.Provider>
+    </AlertDialogContext>
   );
 };
 

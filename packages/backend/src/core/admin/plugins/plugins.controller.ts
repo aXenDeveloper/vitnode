@@ -1,5 +1,6 @@
 import type { Response } from 'express';
 
+import { OnlyForDevelopment } from '@/guards/dev.guard';
 import { Controllers } from '@/helpers/controller.decorator';
 import {
   Body,
@@ -10,6 +11,7 @@ import {
   Put,
   Query,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { EditPluginsAdminBody } from 'vitnode-shared/admin/plugin.dto';
@@ -41,6 +43,7 @@ export class PluginsAdminController {
 
   @ApiCreatedResponse({ description: 'Plugin created', type: ShowPluginAdmin })
   @Post()
+  @UseGuards(OnlyForDevelopment)
   async createPlugin(
     @Body() body: CreatePluginsAdminBody,
   ): Promise<ShowPluginAdmin> {
@@ -49,6 +52,7 @@ export class PluginsAdminController {
 
   @ApiOkResponse({ description: 'Plugin deleted' })
   @Delete(':id')
+  @UseGuards(OnlyForDevelopment)
   async deletePlugin(@Param('id') id: string): Promise<void> {
     await this.deleteService.delete(+id);
   }
@@ -66,7 +70,8 @@ export class PluginsAdminController {
   }
 
   @ApiOkResponse({ description: 'Plugin exported' })
-  @Post('export/:code')
+  @Post(':code/export')
+  @UseGuards(OnlyForDevelopment)
   async exportPlugin(
     @Param('code') code: string,
     @Body() body: ExportPluginsAdminBody,

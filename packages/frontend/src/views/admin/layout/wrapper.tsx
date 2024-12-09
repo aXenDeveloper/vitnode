@@ -30,8 +30,8 @@ export const WrapperAdminLayout = ({
   };
 
   return (
-    <SessionAdminContext.Provider value={{ ...data, isInAdminPermission }}>
+    <SessionAdminContext value={{ ...data, isInAdminPermission }}>
       {children}
-    </SessionAdminContext.Provider>
+    </SessionAdminContext>
   );
 };

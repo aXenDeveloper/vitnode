@@ -234,7 +234,7 @@ export const Editor = ({
   if (!editor) return null;
 
   return (
-    <EditorStateContext.Provider
+    <EditorStateContext
       value={{
         editor,
         value,
@@ -267,6 +267,6 @@ export const Editor = ({
           setSelectedLanguage={setSelectedLanguage}
         />
       </div>
-    </EditorStateContext.Provider>
+    </EditorStateContext>
   );
 };

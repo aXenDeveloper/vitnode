@@ -14,12 +14,20 @@ export const TabsDevPluginAdmin = ({ code }: { code: string }) => {
         active={pathname === `/admin/core/plugins/${code}/dev`}
         href={`/admin/core/plugins/${code}/dev`}
       >
-        {t('overview.title')}
+        {t('overview')}
       </TabsItem>
-      <TabsItem href={`/admin/core/plugins/${code}/dev/nav`}>
+      <TabsItem
+        active={pathname === `/admin/core/plugins/${code}/dev/nav`}
+        href={`/admin/core/plugins/${code}/dev/nav`}
+      >
         {t('nav.title')}
       </TabsItem>
-      <TabsItem href={`/admin/core/plugins/${code}/dev/permissions-admin`}>
+      <TabsItem
+        active={
+          pathname === `/admin/core/plugins/${code}/dev/permissions-admin`
+        }
+        href={`/admin/core/plugins/${code}/dev/permissions-admin`}
+      >
         {t('permissions-admin.title')}
       </TabsItem>
     </Tabs>

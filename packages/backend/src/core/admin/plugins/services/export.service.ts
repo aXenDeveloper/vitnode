@@ -55,6 +55,17 @@ export class ExportPluginsAdminService {
       });
     }
 
+    // Check if version_code is greater than the current version_code
+    if (
+      version_code &&
+      configJSON.version_code &&
+      version_code <= configJSON.version_code
+    ) {
+      return res.status(400).json({
+        message: 'Version code must be greater than the current version code',
+      });
+    }
+
     configJSON.allow_default = allow_default;
     configJSON.version = version ?? configJSON.version;
     configJSON.version_code = version_code ?? configJSON.version_code;
@@ -70,23 +81,21 @@ export class ExportPluginsAdminService {
           updated_at: new Date(),
         })
         .where(eq(core_plugins.code, code));
-
-      return;
+    } else {
+      await this.databaseService.db
+        .update(core_plugins)
+        .set({
+          version,
+          version_code,
+          allow_default,
+          updated_at: new Date(),
+        })
+        .where(eq(core_plugins.code, code));
     }
-
-    await this.databaseService.db
-      .update(core_plugins)
-      .set({
-        version,
-        version_code,
-        allow_default,
-        updated_at: new Date(),
-      })
-      .where(eq(core_plugins.code, code));
 
     // Prepare the export
     const tempFolderName = removeSpecialCharacters(
-      `${code}-${version}-${generateRandomString(5)}-${currentUnixDate()}`,
+      `${code}-${version ?? plugin.version}-${generateRandomString(5)}-${currentUnixDate()}`,
     );
     const tempPath = join(this.tempPath, tempFolderName);
     await mkdir(tempPath, { recursive: true });
@@ -135,10 +144,11 @@ export class ExportPluginsAdminService {
 
     // Copy shared files
     const sharedSource = ABSOLUTE_PATHS.plugin({ code }).shared;
-    if (!existsSync(sharedSource)) return;
-    const sharedPath = join(tempPath, 'shared');
-    await mkdir(sharedPath, { recursive: true });
-    await cp(sharedSource, sharedPath, { recursive: true });
+    if (existsSync(sharedSource)) {
+      const sharedPath = join(tempPath, 'shared');
+      await mkdir(sharedPath, { recursive: true });
+      await cp(sharedSource, sharedPath, { recursive: true });
+    }
 
     // Create tar
     const file = join(ABSOLUTE_PATHS.uploads.temp, `${tempFolderName}.tgz`);

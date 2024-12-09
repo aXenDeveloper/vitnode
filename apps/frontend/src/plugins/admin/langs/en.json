@@ -299,9 +299,7 @@
           "desc": "We're detected changes in <bold>the plugin system</bold>. To apply these changes, you need to <bold>restart the server</bold>."
         },
         "dev": {
-          "overview": {
-            "title": "Overview"
-          },
+          "overview": "Overview",
           "nav": {
             "title": "Navigation in AdminCP",
             "lang_key": "Lang Key: <key></key>",
@@ -363,6 +361,18 @@
                 "desc": "If you delete this permission, all children will be deleted too."
               }
             }
+          },
+          "export": {
+            "title": "Export Plugin",
+            "desc": "Choose version to export.",
+            "type": {
+              "rebuild": "Rebuild current version - {version}",
+              "new_version": "Create new version"
+            },
+            "version": "Version",
+            "version_code": "Version Code",
+            "success": "Plugin has been exported.",
+            "submit": "Export"
           }
         },
         "create": {
@@ -411,20 +421,6 @@
           "submit": "Yes, delete plugin",
           "desc": "This action will delete <name></name> plugin created by <author></author> and all data associated with it.",
           "info": "After the process is complete, you need to restart the server to apply the changes."
-        },
-        "download": {
-          "title": "Download Plugin",
-          "type": {
-            "rebuild": "Rebuild current version - {version}",
-            "new_version": "Create new version"
-          },
-          "version": {
-            "label": "Version"
-          },
-          "version_code": {
-            "label": "Version Code"
-          },
-          "submit": "Download"
         }
       },
       "styles": {

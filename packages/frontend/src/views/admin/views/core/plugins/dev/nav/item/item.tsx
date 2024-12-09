@@ -16,7 +16,7 @@ export const ItemContentNavDevPluginAdmin = ({
   parentId?: string;
   textsAndIcons: TextAndIconsAsideAdmin[];
 }) => {
-  const { pluginCode } = useDevPluginAdmin();
+  const { code } = useDevPluginAdmin();
   const tAdmin = useTranslations('admin.core.plugins.dev.nav');
   const langKey = parentId ? `${parentId}_${data.code}` : data.code;
   const textAndIcon = textsAndIcons.find(item => item.id === langKey);
@@ -32,14 +32,14 @@ export const ItemContentNavDevPluginAdmin = ({
         <p className="text-muted-foreground text-sm">
           {tAdmin.rich('lang_key', {
             key: () => (
-              <span className="text-foreground">{`admin_${pluginCode}.nav.${langKey}`}</span>
+              <span className="text-foreground">{`admin_${code}.nav.${langKey}`}</span>
             ),
           })}
         </p>
         <p className="text-muted-foreground text-sm">
           {tAdmin.rich('link_url_with_link', {
             link: () => (
-              <span className="text-foreground">{`/admin/${pluginCode}/${parentId ? `${parentId}/` : ''}${data.code}`}</span>
+              <span className="text-foreground">{`/admin/${code}/${parentId ? `${parentId}/` : ''}${data.code}`}</span>
             ),
           })}
         </p>

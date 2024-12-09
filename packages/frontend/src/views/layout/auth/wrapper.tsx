@@ -10,7 +10,5 @@ export const WrapperAuthLayout = ({
   children: React.ReactNode;
   data: ShowAuthObj;
 }) => {
-  return (
-    <SessionContext.Provider value={data}>{children}</SessionContext.Provider>
-  );
+  return <SessionContext value={data}>{children}</SessionContext>;
 };
