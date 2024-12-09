@@ -92,6 +92,11 @@ export class CreateLanguagesAdminService {
       code,
       enabled: true,
       default: false,
+      name,
+      timezone,
+      time_24,
+      locale,
+      allow_in_input: true,
     });
     await writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
 

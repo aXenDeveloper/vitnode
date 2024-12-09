@@ -14,9 +14,14 @@ export interface ConfigType {
     sticky: boolean;
   };
   langs: {
+    allow_in_input: boolean;
     code: string;
     default: boolean;
     enabled: boolean;
+    locale: string;
+    name: string;
+    time_24: boolean;
+    timezone: string;
   }[];
   last_updated: string;
   logos: {
@@ -95,6 +100,11 @@ export const DEFAULT_CONFIG_DATA: ConfigType = {
       code: 'en',
       enabled: true,
       default: true,
+      name: 'English (USA)',
+      timezone: 'America/New_York',
+      time_24: false,
+      locale: 'en',
+      allow_in_input: true,
     },
   ],
 };
