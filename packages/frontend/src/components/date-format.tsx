@@ -3,12 +3,7 @@
 import { useDateFormat } from '@/hooks/use-date-format';
 import React from 'react';
 
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from './ui/tooltip';
+import { TooltipWrapper } from './ui/tooltip';
 
 export const DateFormat = ({
   className,
@@ -27,22 +22,11 @@ export const DateFormat = ({
 
   if (now.getFullYear() == new Date().getFullYear() && !showFullDate) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <time
-              className={className}
-              dateTime={fullDate.toString()}
-              ref={ref}
-            >
-              {getDate()}
-            </time>
-          </TooltipTrigger>
-          <TooltipContent>
-            <span>{fullDate}</span>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <TooltipWrapper content={fullDate}>
+        <time className={className} dateTime={fullDate.toString()} ref={ref}>
+          {getDate()}
+        </time>
+      </TooltipWrapper>
     );
   }
 

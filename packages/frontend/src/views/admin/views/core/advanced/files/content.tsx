@@ -3,12 +3,7 @@
 import { DateFormat } from '@/components/date-format';
 import { ImgFromApi } from '@/components/img-from-api';
 import { DataTable } from '@/components/ui/data-table';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { TooltipWrapper } from '@/components/ui/tooltip';
 import { formatBytes } from '@/helpers/format-bytes';
 import { Link } from '@/navigation';
 import { Clock, File } from 'lucide-react';
@@ -111,14 +106,9 @@ export const ContentFilesAdvancedCoreAdminView = ({
             if (row.count_uses === 0) {
               return (
                 <div className="flex items-center gap-2">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Clock className="text-destructive size-4" />
-                      </TooltipTrigger>
-                      <TooltipContent>{t('temp_file')}</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <TooltipWrapper content={t('temp_file')}>
+                    <Clock className="text-destructive size-4" />
+                  </TooltipWrapper>
                   {row.count_uses}
                 </div>
               );

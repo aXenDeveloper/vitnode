@@ -4,12 +4,7 @@ import { DateFormat } from '@/components/date-format';
 import { ImgFromApi } from '@/components/img-from-api';
 import { buttonVariants } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { TooltipWrapper } from '@/components/ui/tooltip';
 import { CONFIG } from '@/helpers/config-with-env';
 import { formatBytes } from '@/helpers/format-bytes';
 import { Link } from '@/navigation';
@@ -99,14 +94,9 @@ export const ContentFilesSettings = ({
             if (row.count_uses === 0) {
               return (
                 <div className="flex items-center gap-2">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Clock className="text-destructive size-4" />
-                      </TooltipTrigger>
-                      <TooltipContent>{t('temp_file')}</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <TooltipWrapper content={t('temp_file')}>
+                    <Clock className="text-destructive size-4" />
+                  </TooltipWrapper>
                   {row.count_uses}
                 </div>
               );
@@ -119,29 +109,23 @@ export const ContentFilesSettings = ({
           id: 'actions',
           cell: ({ row }) => {
             return (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link
-                      aria-label={tCore('download')}
-                      className={buttonVariants({
-                        size: 'icon',
-                        variant: 'ghost',
-                      })}
-                      href={
-                        row.width && row.height
-                          ? `${CONFIG.backend_public_url}/${row.dir_folder}/${row.file_name}`
-                          : `${CONFIG.backend_url}/secure_files/${row.id}?security_key=${row.security_key}`
-                      }
-                      target="_blank"
-                    >
-                      <Download />
-                    </Link>
-                  </TooltipTrigger>
-
-                  <TooltipContent>{tCore('download')}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <TooltipWrapper content={tCore('download')}>
+                <Link
+                  aria-label={tCore('download')}
+                  className={buttonVariants({
+                    size: 'icon',
+                    variant: 'ghost',
+                  })}
+                  href={
+                    row.width && row.height
+                      ? `${CONFIG.backend_public_url}/${row.dir_folder}/${row.file_name}`
+                      : `${CONFIG.backend_url}/secure_files/${row.id}?security_key=${row.security_key}`
+                  }
+                  target="_blank"
+                >
+                  <Download />
+                </Link>
+              </TooltipWrapper>
             );
           },
         },

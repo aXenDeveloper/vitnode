@@ -5,9 +5,9 @@ import { EditActionTableNavAdmin } from './edit';
 
 export const ActionsTableNavAdmin = (props: ShowNavStyles) => {
   return (
-    <div className="flex gap-1">
+    <>
       <EditActionTableNavAdmin {...props} />
       <DeleteActionTableNavAdmin {...props} />
-    </div>
+    </>
   );
 };

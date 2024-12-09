@@ -1,6 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsNumber, MaxLength } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsBoolean,
+  IsNumber,
+  MaxLength,
+} from 'class-validator';
 
 import { StringLanguage } from '../../string-language.dto';
 import {
@@ -29,6 +35,7 @@ export class CreateNavStylesAdminBody {
   description: StringLanguage[];
 
   @ApiProperty()
+  @IsBoolean()
   external: boolean;
 
   @ApiProperty()

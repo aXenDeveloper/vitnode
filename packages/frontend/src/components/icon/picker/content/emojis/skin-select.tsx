@@ -32,7 +32,7 @@ export const SkinSelectEmojisContentIconInput = ({
       <DropdownMenuTrigger asChild>
         <Button
           ariaLabel={t('skin.title')}
-          className="size-9 shrink-0"
+          className="shrink-0"
           size="icon"
           variant="ghost"
         >

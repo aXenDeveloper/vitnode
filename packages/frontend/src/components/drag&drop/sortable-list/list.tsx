@@ -1,5 +1,6 @@
 'use client';
 
+import { cn } from '@/helpers/classnames';
 import {
   closestCenter,
   defaultDropAnimation,
@@ -186,89 +187,115 @@ export function DragAndDropSortableList<
   }
 
   return (
-    <DndContext
-      collisionDetection={closestCenter}
-      id={id}
-      measuring={{
-        droppable: {
-          strategy: MeasuringStrategy.Always,
-        },
-      }}
-      onDragCancel={handleDragCancel}
-      onDragEnd={handleDragEnd}
-      onDragMove={handleDragMove}
-      onDragOver={handleDragOver}
-      onDragStart={handleDragStart}
-    >
-      <SortableContext items={sortedIds} strategy={verticalListSortingStrategy}>
-        {flattenedItems.map(item => (
-          <SortableTreeItem
-            collapsed={Boolean(item.collapsed && item.children.length)}
-            depth={
-              item.id === activeId && projected ? projected.depth : item.depth
-            }
-            id={item.id}
-            indentationWidth={indentationWidth}
-            isDragEnd={!!onDragEnd}
-            key={item.id}
-            onCollapse={
-              item.children.length
-                ? () => {
-                    handleCollapse(item.id);
-                  }
-                : undefined
-            }
-          >
-            {componentItem(item as unknown as T, item.parentId)}
-          </SortableTreeItem>
-        ))}
-        {isReadyDocument &&
-          createPortal(
-            <DragOverlay
-              dropAnimation={{
-                keyframes({ transform }) {
-                  return [
-                    {
-                      opacity: 1,
-                      transform: CSS.Transform.toString(transform.initial),
-                    },
-                    {
-                      opacity: 0,
-                      transform: CSS.Transform.toString({
-                        ...transform.final,
-                        x: transform.final.x + 5,
-                        y: transform.final.y + 5,
-                      }),
-                    },
-                  ];
-                },
-                easing: 'ease-out',
-                sideEffects({ active }) {
-                  active.node.animate([{ opacity: 0 }, { opacity: 1 }], {
-                    duration: defaultDropAnimation.duration,
-                    easing: defaultDropAnimation.easing,
-                  });
-                },
-              }}
+    <ul className="@container">
+      <DndContext
+        collisionDetection={closestCenter}
+        id={id}
+        measuring={{
+          droppable: {
+            strategy: MeasuringStrategy.Always,
+          },
+        }}
+        onDragCancel={handleDragCancel}
+        onDragEnd={handleDragEnd}
+        onDragMove={handleDragMove}
+        onDragOver={handleDragOver}
+        onDragStart={handleDragStart}
+      >
+        <SortableContext
+          items={sortedIds}
+          strategy={verticalListSortingStrategy}
+        >
+          {flattenedItems.map(item => (
+            <SortableTreeItem
+              collapsed={Boolean(item.collapsed && item.children.length)}
+              depth={
+                item.id === activeId && projected ? projected.depth : item.depth
+              }
+              id={item.id}
+              indentationWidth={indentationWidth}
+              isDragEnd={!!onDragEnd}
+              key={item.id}
+              onCollapse={
+                item.children.length
+                  ? () => {
+                      handleCollapse(item.id);
+                    }
+                  : undefined
+              }
             >
-              {activeId && activeItem ? (
-                <SortableTreeItem
-                  childCount={getChildCount(items, activeId) + 1}
-                  clone
-                  depth={activeItem.depth}
-                  id={activeId}
-                  indentationWidth={indentationWidth}
-                >
-                  {componentItem(
-                    activeItem as unknown as T,
-                    activeItem.parentId,
-                  )}
-                </SortableTreeItem>
-              ) : null}
-            </DragOverlay>,
-            document.body,
-          )}
-      </SortableContext>
-    </DndContext>
+              {componentItem(item as unknown as T, item.parentId)}
+            </SortableTreeItem>
+          ))}
+          {isReadyDocument &&
+            createPortal(
+              <DragOverlay
+                dropAnimation={{
+                  keyframes({ transform }) {
+                    return [
+                      {
+                        opacity: 1,
+                        transform: CSS.Transform.toString(transform.initial),
+                      },
+                      {
+                        opacity: 0,
+                        transform: CSS.Transform.toString({
+                          ...transform.final,
+                          x: transform.final.x + 5,
+                          y: transform.final.y + 5,
+                        }),
+                      },
+                    ];
+                  },
+                  easing: 'ease-out',
+                  sideEffects({ active }) {
+                    active.node.animate([{ opacity: 0 }, { opacity: 1 }], {
+                      duration: defaultDropAnimation.duration,
+                      easing: defaultDropAnimation.easing,
+                    });
+                  },
+                }}
+              >
+                {activeId && activeItem ? (
+                  <SortableTreeItem
+                    childCount={getChildCount(items, activeId) + 1}
+                    clone
+                    depth={activeItem.depth}
+                    id={activeId}
+                    indentationWidth={indentationWidth}
+                  >
+                    {componentItem(
+                      activeItem as unknown as T,
+                      activeItem.parentId,
+                    )}
+                  </SortableTreeItem>
+                ) : null}
+              </DragOverlay>,
+              document.body,
+            )}
+        </SortableContext>
+      </DndContext>
+    </ul>
   );
 }
+
+export const DragAndDropSortableItem = ({
+  children,
+  className,
+  actions,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & {
+  actions?: React.ReactNode;
+}) => {
+  return (
+    <div className="@sm:flex-row flex flex-1 flex-col gap-2" {...props}>
+      <div className={cn(className)}>{children}</div>
+
+      {actions && (
+        <div className="[&>button]:bg-background [&>a]:bg-background @sm:[&>a]:bg-inherit @sm:[&>button]:bg-inherit flex items-center gap-1 [&>a]:flex-1 [&>button]:flex-1">
+          {actions}
+        </div>
+      )}
+    </div>
+  );
+};

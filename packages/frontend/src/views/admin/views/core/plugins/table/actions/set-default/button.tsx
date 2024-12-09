@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipWrapper } from '@/components/ui/tooltip';
 import { Star } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useFormStatus } from 'react-dom';
@@ -9,7 +9,7 @@ export const ButtonSetDefaultPluginActionsAdmin = () => {
   const { pending } = useFormStatus();
 
   return (
-    <TooltipTrigger asChild>
+    <TooltipWrapper content={t('set_default')}>
       <Button
         ariaLabel={t('set_default')}
         loading={pending}
@@ -19,6 +19,6 @@ export const ButtonSetDefaultPluginActionsAdmin = () => {
       >
         <Star />
       </Button>
-    </TooltipTrigger>
+    </TooltipWrapper>
   );
 };

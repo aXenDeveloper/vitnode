@@ -38,7 +38,7 @@ export const SidebarThemeEditorStyleAdmin = ({
       <TooltipWrapper content={ariaLabel}>
         <Button
           ariaLabel={ariaLabel}
-          className="relative size-9 shrink-0"
+          className="relative shrink-0"
           onClick={onClick}
           size="icon"
           variant={active ? 'default' : 'ghost'}

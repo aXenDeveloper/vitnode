@@ -13,13 +13,13 @@ export const ActionsTableNavDevPluginAdmin = ({
   dataFromSSR: ParentNavAuthAdminObj[];
 }) => {
   return (
-    <div className="flex gap-1">
+    <>
       <EditActionTableNavDevPluginAdmin
         data={data}
         dataFromSSR={dataFromSSR}
         textsAndIcons={textsAndIcons}
       />
       <DeleteActionTableNavDevPluginAdmin {...data} parentId={parentId} />
-    </div>
+    </>
   );
 };

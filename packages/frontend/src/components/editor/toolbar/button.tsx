@@ -28,7 +28,7 @@ export const ButtonToolbarEditor = ({
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       ariaLabel={t(name)}
-      className={cn('hover:bg-muted size-9 shadow-none', className, {
+      className={cn('hover:bg-muted shadow-none', className, {
         'bg-accent': active,
       })}
       disabled={disabled}

@@ -9,12 +9,7 @@ import React from 'react';
 import { cn } from '../../helpers/classnames';
 import { Button } from './button';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from './tooltip';
+import { TooltipWrapper } from './tooltip';
 
 export const ColorPicker = ({
   required,
@@ -69,26 +64,20 @@ export const ColorPicker = ({
         </PopoverTrigger>
 
         {!required && value && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  ariaLabel={t('remove')}
-                  className="shrink-0"
-                  onClick={() => {
-                    onChange('');
-                    clearOnClick?.();
-                  }}
-                  size="icon"
-                  variant="ghost"
-                >
-                  <RemoveFormatting />
-                </Button>
-              </TooltipTrigger>
-
-              <TooltipContent>{t('remove')}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <TooltipWrapper content={t('remove')}>
+            <Button
+              ariaLabel={t('remove')}
+              className="shrink-0"
+              onClick={() => {
+                onChange('');
+                clearOnClick?.();
+              }}
+              size="icon"
+              variant="ghost"
+            >
+              <RemoveFormatting />
+            </Button>
+          </TooltipWrapper>
         )}
 
         {!disabled && (
