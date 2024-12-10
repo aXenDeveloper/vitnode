@@ -19,10 +19,6 @@ export class CreateLanguagesAdminBody {
 
   @ApiProperty()
   @IsString()
-  locale: string;
-
-  @ApiProperty()
-  @IsString()
   @Transform(TransformString)
   name: string;
 
@@ -66,9 +62,6 @@ export class LanguagesAdminObj {
 
   @ApiProperty()
   id: number;
-
-  @ApiProperty()
-  locale: string;
 
   @ApiProperty()
   name: string;

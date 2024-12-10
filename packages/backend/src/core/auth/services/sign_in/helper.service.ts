@@ -1,7 +1,6 @@
 import { core_admin_sessions } from '@/database/schema/admins';
 import { core_sessions } from '@/database/schema/sessions';
 import { DeviceAuthService } from '@/helpers/auth/device.service';
-import { EmailHelperService } from '@/helpers/email/email.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -10,8 +9,6 @@ import { and, eq } from 'drizzle-orm';
 import { Request, Response } from 'express';
 import { SignInAuthBody } from 'vitnode-shared/auth/auth.dto';
 
-import { SendConfirmEmailAuthService } from '../sign_up/send.confirm_email.service';
-
 @Injectable()
 export class HelperSignInAuthService {
   constructor(
@@ -19,8 +16,6 @@ export class HelperSignInAuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly deviceService: DeviceAuthService,
-    private readonly sendConfirmEmailCoreSessionsService: SendConfirmEmailAuthService,
-    private readonly mailService: EmailHelperService,
   ) {}
 
   async createSession({

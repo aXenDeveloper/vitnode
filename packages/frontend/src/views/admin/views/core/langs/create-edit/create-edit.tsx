@@ -51,21 +51,6 @@ export const CreateEditLangAdmin = ({ data }: { data?: LanguagesAdminObj }) => {
           ),
         },
         {
-          id: 'locale',
-          label: t('create.locale.label'),
-          component: props => (
-            <AutoFormCombobox
-              {...props}
-              labels={Object.fromEntries(
-                locales.map(item => [
-                  item.locale,
-                  `${item.name} - ${item.locale}`,
-                ]),
-              )}
-            />
-          ),
-        },
-        {
           id: 'code',
           component: AutoFormInput,
           label: t('create.code.label'),

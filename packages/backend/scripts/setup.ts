@@ -11,7 +11,6 @@ import { copyFiles } from './copy-files';
 import { generateDatabaseMigrations, runMigrations } from './database';
 import { generateConfig } from './generate-config';
 import { generateManifest } from './generate-manifest';
-import { updateLanguages } from './update-languages';
 import { updatePlugins } from './update-plugins';
 
 const initConsole = '\x1b[34m[VitNode]\x1b[0m \x1b[33m[Backend]\x1b[0m';
@@ -38,12 +37,12 @@ const init = async () => {
 
   const pluginsPath = getPluginsPath();
   console.log(
-    `${initConsole} [1/${skipDatabase ? 2 : 8}] Setup the project. Generating the config file...`,
+    `${initConsole} [1/${skipDatabase ? 2 : 7}] Setup the project. Generating the config file...`,
   );
   await generateConfig({ pluginsPath });
 
   console.log(
-    `${initConsole} [2/${skipDatabase ? 2 : 8}] Copying files into backend...`,
+    `${initConsole} [2/${skipDatabase ? 2 : 7}] Copying files into backend...`,
   );
   await copyFiles({ pluginsPath });
 
@@ -52,7 +51,7 @@ const init = async () => {
     process.exit(0);
   }
 
-  console.log(`${initConsole} [3/8] Generating database migrations...`);
+  console.log(`${initConsole} [3/7] Generating database migrations...`);
   await generateDatabaseMigrations();
 
   const database = createClientDatabase({
@@ -61,20 +60,17 @@ const init = async () => {
   });
 
   console.log(
-    `${initConsole} [4/8] Create tables in database using migrations...`,
+    `${initConsole} [4/7] Create tables in database using migrations...`,
   );
   await runMigrations();
 
-  console.log(`${initConsole} [5/8] Updating plugins...`);
+  console.log(`${initConsole} [5/7] Updating plugins...`);
   await updatePlugins({ pluginsPath, db: database.db });
 
-  console.log(`${initConsole} [6/8] Checking and updating schema database...`);
+  console.log(`${initConsole} [6/7] Checking and updating schema database...`);
   await checkUpdateSchemaDatabase({ db: database.db });
 
-  console.log(`${initConsole} [7/8] Update languages...`);
-  await updateLanguages({ db: database.db });
-
-  console.log(`${initConsole} [8/8] Generating the manifest files...`);
+  console.log(`${initConsole} [7/7] Generating the manifest files...`);
   await generateManifest({ db: database.db });
 
   console.log(`${initConsole} ✅ Project setup complete.`);

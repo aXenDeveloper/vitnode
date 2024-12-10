@@ -1,9 +1,7 @@
 import { core_languages } from '@/database/schema/languages';
-import { configPath, ConfigType, getConfigFile } from '@/helpers/config';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
-import { writeFile } from 'fs/promises';
 import {
   EditLanguagesAdminBody,
   LanguagesAdminObj,
@@ -31,23 +29,6 @@ export class EditLanguagesAdminService {
     if (!language) {
       throw new NotFoundException();
     }
-
-    // Update config file
-    const config: ConfigType = getConfigFile();
-    if (body.default) {
-      config.langs.forEach(lang => {
-        lang.default = false;
-      });
-    }
-
-    config.langs = config.langs.map(lang => {
-      if (lang.code === language.code) {
-        return { ...lang, ...body };
-      }
-
-      return lang;
-    });
-    await writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
 
     // Edit default language
     if (body.default) {
