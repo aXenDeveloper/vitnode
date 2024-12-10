@@ -16,8 +16,8 @@
   }
 
   :root {
-    --background: 217 39% 96%;
-    --foreground: 213deg 5% 8%;
+    --background: 217 20% 96%;
+    --foreground: 213 5% 8%;
     --card: 220 40% 100%;
     --card-foreground: 213deg 26% 7%;
     --popover: var(--card);
@@ -32,7 +32,7 @@
     --accent-foreground: 222 47% 11%;
     --destructive: 0 57% 43%;
     --destructive-foreground: 210 40% 98%;
-    --border: 220 20% 90%;
+    --border: 220 40% 90%;
     --input: var(--border);
     --ring: var(--primary);
     --radius: 0.5rem;

@@ -29,7 +29,6 @@ export const checkUpdateSchemaDatabase = async ({
         default: true,
         protected: true,
         timezone: 'America/New_York',
-        locale: 'en',
       },
     ]);
   }

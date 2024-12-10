@@ -5,7 +5,6 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 
 import { CreateEditLangAdmin } from '../create-edit';
-import { locales } from '../locales';
 import { timeZones } from '../timezones';
 import { createMutationApi } from './create-mutation-api';
 import { editMutationApi } from './edit-mutation-api';
@@ -25,9 +24,6 @@ export const useCreateEditLangAdmin = ({
     timezone: z
       .enum(timeZones as [string, ...string[]])
       .default(data?.timezone ?? 'America/New_York'),
-    locale: z
-      .enum(locales.map(item => item.locale) as [string, ...string[]])
-      .default(data?.locale ?? 'en'),
     code: z
       .string()
       .min(1)
@@ -59,28 +55,34 @@ export const useCreateEditLangAdmin = ({
           allow_in_input: values.allow_in_input ?? true,
         });
       } else {
-        await createMutationApi({
+        const mutation = await createMutationApi({
           ...values,
           time_24: values.time_24 ?? false,
           allow_in_input: values.allow_in_input ?? true,
         });
+
+        if (mutation?.message) {
+          if (mutation.message === 'CANNOT_FIND_LANGUAGE_FILE_IN_PLUGIN') {
+            form.setError('code', {
+              message: t('create.code.cannot_find_language_file_in_plugin'),
+            });
+          }
+
+          if (mutation.message === 'ALREADY_EXISTS') {
+            form.setError('code', {
+              message: t('create.code.already_exists'),
+            });
+          }
+
+          return;
+        }
       }
 
       toast(t(data ? 'edit.success' : 'create.success'), {
         description: values.name,
       });
       setOpen?.(false);
-    } catch (err) {
-      const error = err as Error;
-
-      if (error.message.includes('ALREADY_EXISTS')) {
-        form.setError('code', {
-          message: t('create.code.already_exists'),
-        });
-
-        return;
-      }
-
+    } catch (_) {
       toast.error(tCore('title'), {
         description: tCore('internal_server_error'),
       });

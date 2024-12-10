@@ -37,10 +37,6 @@ export const ContentLangsCoreAdminView = ({
           title: t('table.key'),
         },
         {
-          id: 'locale',
-          title: t('table.locale'),
-        },
-        {
           id: 'time_24',
           title: t('table.time_24'),
           cell: ({ row }) => {

@@ -14,7 +14,6 @@ export const core_languages = pgTable(
     created_at: t.timestamp().notNull().defaultNow(),
     updated_at: t.timestamp().notNull().defaultNow(),
     time_24: t.boolean().notNull().default(false),
-    locale: t.varchar({ length: 50 }).notNull().default('en'),
     allow_in_input: t.boolean().default(true).notNull(),
   }),
   t => [

@@ -1,14 +1,15 @@
 import { ABSOLUTE_PATHS } from '@/app.module';
 import { core_languages } from '@/database/schema/languages';
-import { configPath, ConfigType, getConfigFile } from '@/helpers/config';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { existsSync } from 'fs';
-import { cp, writeFile } from 'fs/promises';
+import { cp } from 'fs/promises';
 import { join } from 'path';
 import {
   CreateLanguagesAdminBody,
@@ -17,7 +18,10 @@ import {
 
 @Injectable()
 export class CreateLanguagesAdminService {
-  constructor(private readonly databaseService: InternalDatabaseService) {}
+  constructor(
+    private readonly databaseService: InternalDatabaseService,
+    private readonly configService: ConfigService,
+  ) {}
 
   private async cloneLangInPlugins(pluginCode: string) {
     const plugins = await this.databaseService.db.query.core_plugins.findMany({
@@ -33,19 +37,30 @@ export class CreateLanguagesAdminService {
           .frontend.languages;
 
         const path = join(pathToPluginLang, `${pluginCode}.json`);
-        if (existsSync(path)) return;
+        if (existsSync(path)) {
+          return;
+        }
 
-        await cp(join(pathToPluginLang, 'en.json'), path, { recursive: true });
+        // Throw error if language file not found in production
+        if (!this.configService.get('dev_mode')) {
+          throw new NotFoundException(
+            `CANNOT_FIND_LANGUAGE_FILE_IN_PLUGIN:${plugin.code}`,
+          );
+        }
+
+        await cp(join(pathToPluginLang, 'en.json'), path, {
+          recursive: true,
+        });
       }),
     );
   }
 
   async create({
     code,
-    locale,
     name,
     time_24,
     timezone,
+    allow_in_input,
   }: CreateLanguagesAdminBody): Promise<LanguagesAdminObj> {
     const defaultLanguage =
       await this.databaseService.db.query.core_languages.findFirst({
@@ -86,20 +101,6 @@ export class CreateLanguagesAdminService {
       ),
     );
 
-    // Update config file
-    const config: ConfigType = getConfigFile();
-    config.langs.push({
-      code,
-      enabled: true,
-      default: false,
-      name,
-      timezone,
-      time_24,
-      locale,
-      allow_in_input: true,
-    });
-    await writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
-
     const [newLanguage] = await this.databaseService.db
       .insert(core_languages)
       .values({
@@ -110,7 +111,7 @@ export class CreateLanguagesAdminService {
         protected: false,
         enabled: true,
         time_24,
-        locale,
+        allow_in_input,
       })
       .returning();
 
