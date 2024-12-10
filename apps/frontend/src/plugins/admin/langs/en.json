@@ -512,7 +512,6 @@
               "label": "Code",
               "placeholder": "en",
               "desc": "This code uses as a language identifier in your URL, like: /en/page",
-              "cannot_find_language_file_in_plugin": "Cannot find the language file in the plugin. You have to add the language file to the plugin first in dev mode.",
               "already_exists": "Language with this code already exists."
             },
             "timezone": {

@@ -5,7 +5,6 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
-  NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { existsSync } from 'fs';
@@ -24,6 +23,7 @@ export class CreateLanguagesAdminService {
   ) {}
 
   private async cloneLangInPlugins(pluginCode: string) {
+    if (!this.configService.get('dev_mode')) return;
     const plugins = await this.databaseService.db.query.core_plugins.findMany({
       orderBy: (table, { desc }) => desc(table.updated_at),
       columns: {
@@ -39,13 +39,6 @@ export class CreateLanguagesAdminService {
         const path = join(pathToPluginLang, `${pluginCode}.json`);
         if (existsSync(path)) {
           return;
-        }
-
-        // Throw error if language file not found in production
-        if (!this.configService.get('dev_mode')) {
-          throw new NotFoundException(
-            `CANNOT_FIND_LANGUAGE_FILE_IN_PLUGIN:${plugin.code}`,
-          );
         }
 
         await cp(join(pathToPluginLang, 'en.json'), path, {

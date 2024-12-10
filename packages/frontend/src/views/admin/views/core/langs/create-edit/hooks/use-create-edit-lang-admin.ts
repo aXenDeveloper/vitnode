@@ -62,12 +62,6 @@ export const useCreateEditLangAdmin = ({
         });
 
         if (mutation?.message) {
-          if (mutation.message === 'CANNOT_FIND_LANGUAGE_FILE_IN_PLUGIN') {
-            form.setError('code', {
-              message: t('create.code.cannot_find_language_file_in_plugin'),
-            });
-          }
-
           if (mutation.message === 'ALREADY_EXISTS') {
             form.setError('code', {
               message: t('create.code.already_exists'),
