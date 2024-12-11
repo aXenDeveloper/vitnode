@@ -8,12 +8,15 @@
     "types": ["node"],
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
+    "rootDir": "./",
     "outDir": "./dist",
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "allowJs": false,
     "moduleDetection": "force",
+    "declaration": true,
+    "declarationMap": true,
     "paths": {
       "@/*": ["./src/*"]
     }

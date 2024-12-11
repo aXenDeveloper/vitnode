@@ -2,12 +2,13 @@ import { serve } from '@hono/node-server';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { plugins } from '@/plugins/plugins.js';
 import { honoConfig } from 'vitnode-api/index';
+import { serveStatic } from '@hono/node-server/serve-static';
 
 const app = new OpenAPIHono();
-
-app.route('/', plugins);
-
 honoConfig({ app });
+
+app.use('/public/*', serveStatic({ root: './uploads' }));
+app.route('/', plugins);
 
 const port = 8081;
 const hostname = 'localhost';

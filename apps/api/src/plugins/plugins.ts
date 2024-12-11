@@ -1,4 +1,4 @@
-import { core } from 'vitnode-api/core/index';
+import { core } from 'vitnode-api/core/routes';
 import { OpenAPIHono } from '@hono/zod-openapi';
 
 export const plugins = new OpenAPIHono();

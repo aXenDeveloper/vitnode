@@ -3,6 +3,7 @@
   "version": "0.0.10-canary.29",
   "type": "module",
   "scripts": {
+    "build": "tsc && swc src -d dist --config-file .swcrc",
     "dev": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\""
   },
   "exports": {
@@ -12,8 +13,7 @@
     }
   },
   "dependencies": {
-    "@hono/zod-openapi": "^0.18.3",
-    "zod": "^3.23.8"
+    "@hono/zod-openapi": "^0.18.3"
   },
   "devDependencies": {
     "@swc/cli": "^0.5.2",
