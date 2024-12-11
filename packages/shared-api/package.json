@@ -1,0 +1,25 @@
+{
+  "name": "vitnode-shared-api",
+  "version": "0.0.10-canary.29",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\""
+  },
+  "exports": {
+    "./*": {
+      "import": "./dist/src/*.js",
+      "types": "./dist/src/*.d.ts"
+    }
+  },
+  "dependencies": {
+    "@hono/zod-openapi": "^0.18.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@swc/cli": "^0.5.2",
+    "@swc/core": "^1.10.0",
+    "@types/node": "^22.10.2",
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.2"
+  }
+}

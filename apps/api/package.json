@@ -1,0 +1,23 @@
+{
+  "name": "api",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@hono/zod-openapi": "^0.18.3",
+    "drizzle-kit": "^0.29.1",
+    "drizzle-orm": "^0.37.0",
+    "hono": "^4.6.13",
+    "vitnode-api": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

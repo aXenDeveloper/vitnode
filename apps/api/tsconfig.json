@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowJs": false,
+    "moduleDetection": "force",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "exclude": ["node_modules"],
+  "include": ["src"]
+}

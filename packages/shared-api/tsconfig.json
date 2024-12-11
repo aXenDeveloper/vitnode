@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "rootDir": "./",
+    "outDir": "./dist",
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "declarationMap": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "exclude": ["node_modules"],
+  "include": ["src"]
+}
