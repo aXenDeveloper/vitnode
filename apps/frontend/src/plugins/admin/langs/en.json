@@ -16,6 +16,12 @@
         "pages": "Pages"
       }
     },
+    "dashboard": {
+      "new_users": {
+        "title": "New Users",
+        "users": "Users"
+      }
+    },
     "theme_editor": {
       "title": "Theme Editor",
       "desktop": "Desktop",
