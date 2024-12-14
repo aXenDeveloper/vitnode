@@ -58,7 +58,6 @@ export class ShowFilesSettingsAuthServices {
         return {
           ...edge,
           count_uses: countFileUsing.count,
-          secure: edge.security_key !== null,
         };
       }),
     );

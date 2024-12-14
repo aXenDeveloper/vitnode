@@ -26,12 +26,12 @@
     "gemini"
   ],
   "devDependencies": {
-    "@types/node": "^22.10.1",
-    "ai": "^4.0.10",
+    "@types/node": "^22.10.2",
+    "ai": "^4.0.17",
     "eslint-config-typescript-vitnode": "workspace:*",
     "typescript": "^5.7.2"
   },
   "dependencies": {
-    "@ai-sdk/google": "^1.0.4"
+    "@ai-sdk/google": "^1.0.10"
   }
 }

@@ -25,7 +25,6 @@ export const zodFile = z.union([
     file_size: z.number(),
     width: z.number().nullable(),
     height: z.number().nullable(),
-    secure: z.boolean(),
   }),
 ]);
 

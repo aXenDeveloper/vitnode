@@ -34,7 +34,7 @@ export class AuthSettingsAdminController {
     description: 'Show auth settings',
   })
   @Get()
-  show(): ShowAuthSettingsAdminObj {
+  async show(): Promise<ShowAuthSettingsAdminObj> {
     return this.showService.show();
   }
 }

@@ -1,5 +1,4 @@
 import { convertColor, getHSLFromString } from '@/functions';
-import { getConfigFile } from '@/helpers/config';
 import {
   Body,
   Container,
@@ -31,14 +30,19 @@ export interface EmailTemplateProps {
 export const EmailTemplate = ({
   previewText,
   children = 'This is the email template.',
-  helpers: { frontend_url, site_name, site_short_name, backend_url, logo },
+  helpers: {
+    frontend_url,
+    site_name,
+    site_short_name,
+    backend_url,
+    logo,
+    color_primary,
+    color_primary_foreground,
+  },
   user,
 }: EmailTemplateProps) => {
-  const config = getConfigFile();
-  const primaryHSL = getHSLFromString(config.settings.email.color_primary);
-  const primaryForegroundHSL = getHSLFromString(
-    config.settings.email.color_primary_foreground,
-  );
+  const primaryHSL = getHSLFromString(color_primary);
+  const primaryForegroundHSL = getHSLFromString(color_primary_foreground);
   const t = getTranslationForEmail('admin.core.email', user.language);
 
   return (

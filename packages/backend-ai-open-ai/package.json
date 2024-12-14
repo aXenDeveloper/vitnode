@@ -26,12 +26,12 @@
     "chatgpt"
   ],
   "devDependencies": {
-    "@types/node": "^22.10.1",
-    "ai": "^4.0.10",
+    "@types/node": "^22.10.2",
+    "ai": "^4.0.17",
     "eslint-config-typescript-vitnode": "workspace:*",
     "typescript": "^5.7.2"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^1.0.5"
+    "@ai-sdk/openai": "^1.0.8"
   }
 }

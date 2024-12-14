@@ -20,11 +20,7 @@ export const ActionsFilesAdvancedCoreAdmin = (data: ShowFilesAdvancedAdmin) => {
             size: 'icon',
             variant: 'ghost',
           })}
-          href={
-            data.width && data.height
-              ? `${CONFIG.backend_public_url}/${data.dir_folder}/${data.file_name}`
-              : `${CONFIG.backend_url}/secure_files/${data.id}?security_key=${data.security_key}`
-          }
+          href={`${CONFIG.backend_public_url}/${data.dir_folder}/${data.file_name}`}
           target="_blank"
         >
           <Download />

@@ -30,7 +30,6 @@ export const ABSOLUTE_PATHS = {
   plugins: internalPaths.plugins,
   uploads: {
     public: join(internalPaths.uploads, 'public'),
-    secure: join(internalPaths.uploads, 'secure'),
     temp: join(internalPaths.uploads, 'temp'),
   },
   plugin: ({ code }: { code: string }) => ({

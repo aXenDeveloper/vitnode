@@ -8,7 +8,7 @@
     "baseUrl": "./",
     "outDir": "./dist",
     "paths": {
-      "@/*": ["./src/*", "./node_modules/vitnode-backend/dist/*"]
+      "@/*": ["./src/*"]
     }
   },
   "exclude": ["uploads"]

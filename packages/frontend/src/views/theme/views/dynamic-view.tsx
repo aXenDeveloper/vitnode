@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-base-to-string */
 import { TranslationsProvider } from '@/components/translations-provider';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';

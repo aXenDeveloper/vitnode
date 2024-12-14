@@ -5,9 +5,10 @@ export const buildFilteredQuery = (params: Record<string, unknown>): string => {
     if (
       value !== undefined &&
       value !== '' &&
-      !(Array.isArray(value) && value.length === 0)
+      !(Array.isArray(value) && value.length === 0) &&
+      value
     ) {
-      searchParams.append(key, String(value));
+      searchParams.append(key, JSON.stringify(value));
     }
   });
 

@@ -19,17 +19,12 @@
     "release": "node ./bump-version.mjs",
     "db": "turbo db"
   },
-  "pnpm": {
-    "overrides": {
-      "react-is": "19.0.0-rc.1"
-    }
-  },
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "devDependencies": {
-    "@types/node": "^22.10.1",
+    "@types/node": "^22.10.2",
     "eslint-config-typescript-vitnode": "workspace:*",
     "turbo": "^2.3.3"
   },

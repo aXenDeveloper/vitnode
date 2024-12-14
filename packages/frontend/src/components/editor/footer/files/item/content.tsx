@@ -154,7 +154,7 @@ export const ContentItemListFilesFooterEditor = ({
                 onChange(content);
               }
 
-              onRemoveFile({ id, securityKey: data?.security_key ?? '' });
+              onRemoveFile({ id });
             }}
             size="icon"
             variant="destructiveGhost"

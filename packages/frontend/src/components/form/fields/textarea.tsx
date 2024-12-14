@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { AutoFormLabel } from './common/label';
 import { AutoFormTooltip } from './common/tooltip';
 
-export function AutoTextArea({
+export function AutoFormTextArea({
   field,
   label,
   theme,

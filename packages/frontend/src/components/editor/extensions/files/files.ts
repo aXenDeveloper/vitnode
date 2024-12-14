@@ -14,7 +14,6 @@ export interface FilesHandlerAttributes {
   height?: number;
   id: number;
   mimetype: string;
-  security_key?: string;
   width?: number;
 }
 
@@ -64,9 +63,6 @@ const FileNode = Node.create({
       height: {
         default: 0,
       },
-      security_key: {
-        default: '',
-      },
     };
   },
 
@@ -103,7 +99,7 @@ export interface FilesHandlerOptions {
 }
 
 export interface FilesHandlerStorage {
-  data?: Omit<ShowFile, 'count_uses' | 'created_at' | 'secure'>;
+  data?: Omit<ShowFile, 'count_uses' | 'created_at'>;
   error?: string;
   file?: File;
   id: number;
@@ -160,7 +156,6 @@ export const FilesHandler = ({ onUploadFile }: FilesHandlerOptions) => {
                     id: fileData.id,
                     width: fileData.width,
                     height: fileData.height,
-                    security_key: fileData.security_key,
                   });
 
                   // Use the current selection position for paste
@@ -205,7 +200,6 @@ export const FilesHandler = ({ onUploadFile }: FilesHandlerOptions) => {
                     id: fileData.id,
                     width: fileData.width,
                     height: fileData.height,
-                    security_key: fileData.security_key,
                   });
 
                   // Insert the file node at the drop position

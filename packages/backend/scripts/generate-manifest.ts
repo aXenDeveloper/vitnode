@@ -82,6 +82,12 @@ export const generateManifest = async ({
 }: {
   db: NodePgDatabase<typeof coreSchemaDatabase>;
 }) => {
+  const config = await db.query.core_config.findFirst();
+  if (!config) {
+    console.log('⛔️ Config in database not found');
+    process.exit(1);
+  }
+
   const configPath = join(
     process.cwd(),
     'src',
@@ -98,7 +104,6 @@ export const generateManifest = async ({
     process.exit(1);
   }
 
-  const config = JSON.parse(await readFile(configPath, 'utf8'));
   const languages = await db.query.core_languages.findMany({
     columns: {
       code: true,
@@ -113,8 +118,8 @@ export const generateManifest = async ({
       const defaultManifest = generateDefaultManifest({
         langCode: code,
         frontendUrl,
-        siteName: config.settings.main.site_name,
-        siteShortName: config.settings.main.site_short_name,
+        siteName: config.site_name,
+        siteShortName: config.site_short_name,
       });
 
       const pathToUpload = join(

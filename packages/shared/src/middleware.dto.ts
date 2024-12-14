@@ -11,17 +11,9 @@ import {
 import { MainSettingsAdminBody } from './admin/settings/main.dto';
 import { ShowNavStyles } from './nav.dto';
 import { FileObj } from './utils/files.dto';
-import { AllowTypeFilesEnum, CaptchaTypeEnum } from './utils/global';
-
-class FilesEditorMiddleware {
-  @ApiProperty({ enum: AllowTypeFilesEnum })
-  allow_type: AllowTypeFilesEnum;
-}
+import { CaptchaTypeEnum } from './utils/global';
 
 class EditorMiddleware {
-  @ApiProperty()
-  files: FilesEditorMiddleware;
-
   @ApiProperty()
   sticky: boolean;
 }
@@ -90,22 +82,22 @@ export class LogosMiddleware {
   @ApiPropertyOptional()
   @IsObject()
   @IsOptional()
-  logo_dark?: FileObj;
+  logo_dark: FileObj | null;
 
   @ApiPropertyOptional()
   @IsObject()
   @IsOptional()
-  logo_light?: FileObj;
+  logo_light: FileObj | null;
 
   @ApiPropertyOptional()
   @IsObject()
   @IsOptional()
-  mobile_logo_dark?: FileObj;
+  mobile_logo_dark: FileObj | null;
 
   @ApiPropertyOptional()
   @IsObject()
   @IsOptional()
-  mobile_logo_light?: FileObj;
+  mobile_logo_light: FileObj | null;
 
   @ApiProperty()
   @IsNumber()
@@ -148,7 +140,7 @@ export class ShowMiddlewareObj extends MainSettingsAdminBody {
   languages_code_default: string;
 
   @ApiProperty()
-  last_updated: string;
+  last_updated: Date;
 
   @ApiProperty()
   logos: LogosMiddleware;

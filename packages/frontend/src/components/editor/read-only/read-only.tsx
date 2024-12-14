@@ -9,14 +9,11 @@ import { StringLanguage } from 'vitnode-shared/string-language.dto';
 import { cn } from '../../../helpers/classnames';
 import { useExtensionsEditor } from '../extensions/extensions';
 import { changeCodeBlock } from './code-block';
-import { FileDownloadButton } from './file-download-button';
 
 export const ReadOnlyEditor = ({
-  allowDownloadAttachments,
   className,
   value,
 }: {
-  allowDownloadAttachments?: boolean;
   className?: string;
   value: StringLanguage[];
 }) => {
@@ -88,24 +85,6 @@ export const ReadOnlyEditor = ({
       // if (name === 'pre' && children.length > 0) {
       //   return changeCodeBlock(domNode);
       // }
-
-      if (name === 'button' && domNode.attribs['data-type'] === 'fileNode') {
-        return (
-          <FileDownloadButton
-            allowDownloadAttachments={allowDownloadAttachments}
-            dir_folder={domNode.attribs.dir_folder}
-            file_alt={domNode.attribs.file_alt}
-            file_name={domNode.attribs.file_name}
-            file_name_original={domNode.attribs.file_name_original}
-            file_size={parseInt(domNode.attribs.file_size, 10)}
-            height={+domNode.attribs.height}
-            id={+domNode.attribs.id}
-            mimetype={domNode.attribs.mimetype}
-            security_key={domNode.attribs.security_key}
-            width={+domNode.attribs.width}
-          />
-        );
-      }
     },
   };
 

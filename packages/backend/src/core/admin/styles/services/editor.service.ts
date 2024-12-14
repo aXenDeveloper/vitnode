@@ -1,20 +1,22 @@
-import { configPath, getConfigFile } from '@/helpers/config';
+import { core_config } from '@/database/schema/config';
+import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { Injectable } from '@nestjs/common';
-import { writeFile } from 'fs/promises';
 import { EditorStylesAdminBody } from 'vitnode-shared/admin/styles/editor.dto';
 
 @Injectable()
 export class EditorStylesAdminService {
+  constructor(private readonly databaseService: InternalDatabaseService) {}
+
   async editor(data: EditorStylesAdminBody): Promise<EditorStylesAdminBody> {
-    const config = getConfigFile();
+    const [config] = await this.databaseService.db
+      .update(core_config)
+      .set({
+        editor_sticky: data.sticky,
+      })
+      .returning();
 
-    config.editor = {
-      ...config.editor,
-      ...data,
+    return {
+      sticky: config.editor_sticky,
     };
-
-    await writeFile(configPath, JSON.stringify(config, null, 2));
-
-    return config.editor;
   }
 }

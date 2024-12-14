@@ -16,6 +16,17 @@
         "pages": "Pages"
       }
     },
+    "dashboard": {
+      "new_users": {
+        "title": "New Users",
+        "users": "Users"
+      },
+      "note": {
+        "title": "Note for Administrators",
+        "last_updated": "Last Updated: <date></date>",
+        "submit": "Save Note"
+      }
+    },
     "theme_editor": {
       "title": "Theme Editor",
       "desktop": "Desktop",
@@ -479,15 +490,6 @@
           "sticky": {
             "label": "Sticky Toolbar",
             "desc": "The toolbar will be fixed at the top of the screen."
-          },
-          "files": {
-            "allow_type": {
-              "title": "Allow File Type",
-              "all": "All",
-              "images_videos": "Images & Videos",
-              "images": "Images",
-              "none": "None"
-            }
           }
         }
       },

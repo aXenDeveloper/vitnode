@@ -32,7 +32,6 @@ export const getFilesFromContent = (
               height: value.attrs.height,
               width: value.attrs.width,
               dir_folder: value.attrs.dir_folder,
-              security_key: value.attrs.security_key,
               file_alt: value.attrs.file_alt,
               file_name_original: value.attrs.file_name_original,
             },

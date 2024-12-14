@@ -1,5 +1,5 @@
 import { ABSOLUTE_PATHS } from '@/app.module';
-import { configPath, ConfigType, getConfigFile } from '@/helpers/config';
+import { ConfigHelperService } from '@/helpers/config.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { readFile, writeFile } from 'fs/promises';
@@ -11,7 +11,10 @@ import { getManifest, ManifestType } from '../../metadata/helpers';
 
 @Injectable()
 export class EditMainSettingsAdminService {
-  constructor(private readonly databaseService: InternalDatabaseService) {}
+  constructor(
+    private readonly databaseService: InternalDatabaseService,
+    private readonly configHelper: ConfigHelperService,
+  ) {}
 
   protected async updateDescription({
     languages,
@@ -97,20 +100,12 @@ export class EditMainSettingsAdminService {
     site_short_name,
     contact_email,
   }: MainSettingsAdminBody): Promise<MainSettingsAdminBody> {
-    const config = getConfigFile();
-    const newData: ConfigType = {
-      ...config,
-      settings: {
-        ...config.settings,
-        main: {
-          ...config.settings.main,
-          site_name,
-          site_short_name,
-          contact_email,
-        },
-      },
-    };
-    await writeFile(configPath, JSON.stringify(newData, null, 2), 'utf8');
+    await this.configHelper.updateConfig({
+      site_name,
+      site_short_name,
+      contact_email,
+    });
+
     const languages =
       await this.databaseService.db.query.core_languages.findMany({
         columns: {

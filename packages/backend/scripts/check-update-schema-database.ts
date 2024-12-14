@@ -1,4 +1,5 @@
 import { core_admin_permissions } from '@/database/schema/admins';
+import { core_config } from '@/database/schema/config';
 import { core_groups } from '@/database/schema/groups';
 import {
   core_languages,
@@ -15,6 +16,15 @@ export const checkUpdateSchemaDatabase = async ({
 }: {
   db: NodePgDatabase<typeof coreSchemaDatabase>;
 }) => {
+  const config = await db.query.core_config.findFirst();
+  if (!config) {
+    await db.insert(core_config).values([{}]);
+  } else {
+    await db.update(core_config).set({
+      restart_server: false,
+    });
+  }
+
   const [languageCount] = await db
     .select({
       count: count(),

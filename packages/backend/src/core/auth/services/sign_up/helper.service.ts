@@ -1,6 +1,6 @@
 import { core_users } from '@/database/schema/users';
 import { getUserIp, removeSpecialCharacters } from '@/functions';
-import { getConfigFile } from '@/helpers/config';
+import { ConfigHelperService } from '@/helpers/config.service';
 import { EmailHelperService } from '@/helpers/email/email.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
@@ -18,6 +18,7 @@ export class HelperSignUpAuthService {
     private readonly databaseService: InternalDatabaseService,
     private readonly mailService: EmailHelperService,
     private readonly configService: ConfigService,
+    private readonly configHelper: ConfigHelperService,
   ) {}
 
   readonly getDefaultData = async (): Promise<{
@@ -110,7 +111,7 @@ export class HelperSignUpAuthService {
     }
 
     const hashPassword = await encryptPassword(password);
-    const config = getConfigFile();
+    const config = await this.configHelper.getConfig();
 
     const { group_id, email_verified } = await this.getDefaultData();
 
@@ -125,8 +126,7 @@ export class HelperSignUpAuthService {
         avatar_color: generateAvatarColor(name),
         group_id,
         email_verified:
-          config.settings.authorization.require_confirm_email &&
-          this.mailService.checkIfEnable()
+          config.auth_require_confirm_email && this.mailService.checkIfEnable()
             ? email_verified
             : true,
         ip_address: getUserIp(req),

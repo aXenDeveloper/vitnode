@@ -2,6 +2,7 @@ import { ABSOLUTE_PATHS } from '@/app.module';
 import { core_files_using } from '@/database/schema/files';
 import { core_languages_words } from '@/database/schema/languages';
 import { core_plugins } from '@/database/schema/plugins';
+import { ConfigHelperService } from '@/helpers/config.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import {
   BadRequestException,
@@ -19,6 +20,7 @@ export class DeletePluginsAdminService {
   constructor(
     private readonly databaseService: InternalDatabaseService,
     private readonly changeFilesHelper: ChangeFilesPluginsAdminHelpersService,
+    private readonly configHelper: ConfigHelperService,
   ) {}
 
   protected async deleteFolderWhenExists(path: string) {
@@ -79,7 +81,9 @@ export class DeletePluginsAdminService {
       this.databaseService.db
         .delete(core_files_using)
         .where(eq(core_files_using.plugin, plugin.code)),
-      this.changeFilesHelper.setServerToRestartConfig(),
+      this.configHelper.updateConfig({
+        restart_server: true,
+      }),
     ]);
   }
 }

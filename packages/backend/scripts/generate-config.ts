@@ -31,18 +31,7 @@ export const generateConfig = async ({
   }
 
   const config = getConfigFile();
-  const updatedConfig: ConfigType = {
-    ...updateObject(config, DEFAULT_CONFIG_DATA),
-    last_updated: new Date().toISOString(),
-  };
+  const updatedConfig: ConfigType = updateObject(config, DEFAULT_CONFIG_DATA);
 
-  await writeFile(
-    configPath,
-    JSON.stringify(
-      { ...updatedConfig, restart_server: DEFAULT_CONFIG_DATA.restart_server },
-      null,
-      2,
-    ),
-    'utf8',
-  );
+  await writeFile(configPath, JSON.stringify(updatedConfig, null, 2), 'utf8');
 };
