@@ -33,6 +33,8 @@ services:
     volumes:
       - ./apps/backend/uploads:/app/apps/backend/uploads # uploads
       - ./apps/backend/src/plugins/core:/app/apps/backend/src/plugins/core # core
+      - ./apps/frontend/src/plugins/admin/langs:/app/apps/frontend/src/plugins/admin/langs # admin - langs
+      - ./apps/frontend/src/plugins/core/langs:/app/apps/frontend/src/plugins/core/langs # core - langs
     networks:
       - vitnode
   frontend:

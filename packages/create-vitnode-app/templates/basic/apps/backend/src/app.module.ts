@@ -1,3 +1,4 @@
+import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { VitNodeCoreModule } from 'vitnode-backend/app.module';
 
@@ -15,6 +16,9 @@ import { PluginsModule } from './plugins/plugins.module';
     }),
     DatabaseModule,
     PluginsModule,
+    CacheModule.register({
+      isGlobal: true,
+    }),
   ],
 })
 export class AppModule {}
