@@ -14,7 +14,7 @@ export class DeleteFilesService {
   ) {}
 
   async delete({
-    query: { file_id, security_key },
+    query: { file_id },
     user,
   }: {
     query: DeleteFilesQuery;
@@ -24,11 +24,7 @@ export class DeleteFilesService {
       where: (table, { eq }) => eq(table.id, file_id),
     });
 
-    if (
-      !findFile ||
-      findFile.user_id !== user.id ||
-      (findFile.security_key && findFile.security_key !== security_key)
-    ) {
+    if (!findFile || findFile.user_id !== user.id) {
       throw new ForbiddenException();
     }
 
@@ -46,7 +42,6 @@ export class DeleteFilesService {
     await this.filesService.delete({
       dir_folder: findFile.dir_folder,
       file_name: findFile.file_name,
-      secure: !!findFile.security_key,
     });
 
     await Promise.all([

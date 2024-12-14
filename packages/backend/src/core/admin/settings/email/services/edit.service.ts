@@ -1,8 +1,10 @@
-import { configPath, ConfigType, getConfigFile } from '@/helpers/config';
+import { core_files } from '@/database/schema/files';
+import { ConfigHelperService } from '@/helpers/config.service';
 import { EmailHelperService } from '@/helpers/email/email.service';
 import { FilesHelperService } from '@/helpers/files/files-helper.service';
+import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { Injectable } from '@nestjs/common';
-import { writeFile } from 'fs/promises';
+import { eq } from 'drizzle-orm';
 import {
   EditEmailSettingsAdminBody,
   ShowEmailSettingsAdminObj,
@@ -13,6 +15,8 @@ export class EditEmailSettingsAdminService {
   constructor(
     private readonly mailService: EmailHelperService,
     private readonly filesService: FilesHelperService,
+    private readonly configHelpers: ConfigHelperService,
+    private readonly databaseService: InternalDatabaseService,
   ) {}
 
   async edit({
@@ -23,45 +27,51 @@ export class EditEmailSettingsAdminService {
     files: Pick<EditEmailSettingsAdminBody, 'logo'>;
   }): Promise<ShowEmailSettingsAdminObj> {
     const isEmailEnabled = this.mailService.checkIfEnable();
-    const configSettings = getConfigFile();
-    const emailSettings = configSettings.settings.email;
+    const config = await this.configHelpers.getConfig();
 
     // Update email settings
     const updatedEmailSettings = {
-      ...emailSettings,
       color_primary,
       color_primary_foreground,
-      logo: emailSettings.logo,
+      logo: config.email_logo,
     };
 
     // Handle logo deletion
-    if ((delete_logo || logo) && emailSettings.logo) {
+    if (
+      (delete_logo || logo) &&
+      config.email_logo &&
+      config.email_logo_file_id
+    ) {
       await this.filesService.delete({
-        dir_folder: emailSettings.logo.dir_folder,
-        file_name: emailSettings.logo.file_name,
+        dir_folder: config.email_logo.dir_folder,
+        file_name: config.email_logo.file_name,
       });
 
-      updatedEmailSettings.logo = undefined;
+      await Promise.all([
+        this.databaseService.db
+          .delete(core_files)
+          .where(eq(core_files.id, config.email_logo_file_id)),
+        this.configHelpers.cleanCache(),
+      ]);
     }
 
     // Handle logo upload
     if (logo) {
-      updatedEmailSettings.logo = await this.filesService.upload({
+      const file = await this.filesService.upload({
         file: logo,
         folder: 'settings',
         plugin_code: 'core',
       });
+
+      const [fileFromDb] = await this.databaseService.db
+        .insert(core_files)
+        .values(file)
+        .returning();
+
+      await this.configHelpers.updateConfig({
+        email_logo_file_id: fileFromDb.id,
+      });
     }
-
-    const newConfig: ConfigType = {
-      ...configSettings,
-      settings: {
-        ...configSettings.settings,
-        email: updatedEmailSettings,
-      },
-    };
-
-    await writeFile(configPath, JSON.stringify(newConfig, null, 2), 'utf8');
 
     return {
       color_primary,

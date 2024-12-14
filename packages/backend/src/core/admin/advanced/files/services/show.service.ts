@@ -53,7 +53,6 @@ export class ShowFilesAdvancedAdminService {
 
         return {
           ...edge,
-          secure: !!edge.security_key,
           user: edge.user_id
             ? await this.userHelper.getUserById({
                 id: edge.user_id,

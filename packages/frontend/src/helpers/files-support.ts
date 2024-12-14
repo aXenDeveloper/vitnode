@@ -6,5 +6,3 @@ export const acceptMimeTypeImage = [
   'image/avif',
   'image/svg+xml',
 ];
-
-export const acceptMimeTypeVideo = ['video/mp4', 'video/webm', 'video/ogg'];

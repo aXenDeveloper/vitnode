@@ -1,5 +1,5 @@
 import { CaptchaHelper } from '@/helpers/captcha/captcha.service';
-import { getConfigFile } from '@/helpers/config';
+import { ConfigHelperService } from '@/helpers/config.service';
 import { EmailHelperService } from '@/helpers/email/email.service';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { Request } from 'express';
@@ -15,6 +15,7 @@ export class SignUpAuthService {
     private readonly signUpHelper: HelperSignUpAuthService,
     private readonly mailService: EmailHelperService,
     private readonly confirmEmailService: SendConfirmEmailAuthService,
+    private readonly configHelper: ConfigHelperService,
   ) {}
 
   async signUp({
@@ -24,15 +25,15 @@ export class SignUpAuthService {
     body: SignUpAuthBody;
     req: Request;
   }): Promise<SignAuthObj> {
-    const config = getConfigFile();
-    if (config.settings.authorization.lock_register) {
+    const config = await this.configHelper.getConfig();
+    if (config.auth_lock_register) {
       throw new HttpException('Register is locked', HttpStatus.FORBIDDEN);
     }
     await this.captchaHelper.validateCaptcha({ req });
     const user = await this.signUpHelper.signUp({ req, body });
 
     if (
-      config.settings.authorization.require_confirm_email &&
+      config.auth_require_confirm_email &&
       !user.email_verified &&
       this.mailService.checkIfEnable()
     ) {

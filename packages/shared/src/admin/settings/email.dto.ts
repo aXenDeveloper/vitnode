@@ -55,7 +55,7 @@ export class ShowEmailSettingsAdminObj {
   is_enabled: boolean;
 
   @ApiPropertyOptional()
-  logo?: FileObj;
+  logo: FileObj | null;
 }
 
 export class TestEmailSettingsAdminBody {

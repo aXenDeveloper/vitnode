@@ -1,9 +1,10 @@
-import { Module } from '@nestjs/common';
-import { emailResend } from 'vitnode-backend-email-resend';
-import { VitNodeCoreModule } from 'vitnode-backend/app.module';
 // import { emailSMTP } from 'vitnode-backend-email-smtp';
 // import { aiGoogle } from 'vitnode-backend-ai-google';
 // import { aiOpenAi } from 'vitnode-backend-ai-open-ai';
+import { CacheModule } from '@nestjs/cache-manager';
+import { Module } from '@nestjs/common';
+import { emailResend } from 'vitnode-backend-email-resend';
+import { VitNodeCoreModule } from 'vitnode-backend/app.module';
 
 import { DATABASE_ENVS, schemaDatabase } from './database/config';
 import { DatabaseModule } from './database/database.module';
@@ -97,6 +98,9 @@ import { PluginsModule } from './plugins/plugins.module';
     }),
     DatabaseModule,
     PluginsModule,
+    CacheModule.register({
+      isGlobal: true,
+    }),
   ],
 })
 export class AppModule {}

@@ -1,6 +1,5 @@
 import { ABSOLUTE_PATHS } from '@/app.module';
 import { core_plugins } from '@/database/schema/plugins';
-import { getConfigFile, updateConfigFile } from '@/helpers/config';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import {
   BadRequestException,
@@ -74,9 +73,6 @@ export class EditPluginsAdminService {
     config.support_url = rest.support_url;
 
     await writeFile(path, JSON.stringify(config, null, 2));
-
-    const configMain = getConfigFile();
-    updateConfigFile({ ...configMain, last_updated: new Date().toISOString() });
 
     return updatePlugin;
   }

@@ -50,12 +50,6 @@ export const createPackagesJSON = ({
           }
         : {}),
     },
-    overrides: packageManager.startsWith('npm')
-      ? {
-          react: '^19.0.0',
-          'react-dom': '^19.0.0',
-        }
-      : {},
     devDependencies: {
       ...(eslint
         ? {
@@ -134,6 +128,7 @@ export const createPackagesJSON = ({
       db: 'vitnode-backend db',
     },
     dependencies: {
+      '@nestjs/cache-manager': '3.0.0-next.0',
       '@nestjs/common': '^10.4.15',
       '@nestjs/core': '^10.4.15',
       '@nestjs/platform-express': '^10.4.15',

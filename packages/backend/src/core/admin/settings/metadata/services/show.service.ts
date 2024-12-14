@@ -34,7 +34,6 @@ export class ShowMetadataAdminService {
             height: icon.height,
             width: icon.width,
             mimetype: icon.mimetype,
-            secure: icon.secure,
           }
         : undefined,
       favicon: existsSync(faviconPath)
@@ -47,7 +46,6 @@ export class ShowMetadataAdminService {
             height: null,
             width: null,
             mimetype: 'image/x-icon',
-            secure: false,
           }
         : undefined,
     };

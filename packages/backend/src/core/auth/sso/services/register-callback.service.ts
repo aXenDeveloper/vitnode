@@ -3,7 +3,7 @@ import type { Request, Response } from 'express';
 import { core_users } from '@/database/schema/users';
 import { getUserIp, removeSpecialCharacters } from '@/functions';
 import { SSOAuthHelper } from '@/helpers/auth/sso.service';
-import { getConfigFile } from '@/helpers/config';
+import { ConfigHelperService } from '@/helpers/config.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import {
   ConflictException,
@@ -26,6 +26,7 @@ export class RegisterCallbackSSOAuthService {
     private readonly ssoAuthHelper: SSOAuthHelper,
     private readonly signUpHelper: HelperSignUpAuthService,
     private readonly signInHelper: HelperSignInAuthService,
+    private readonly configHelper: ConfigHelperService,
   ) {}
 
   async registerCallbackSSO({
@@ -39,8 +40,8 @@ export class RegisterCallbackSSOAuthService {
     req: Request;
     res: Response;
   }): Promise<SSOCallbackAuthObj> {
-    const config = getConfigFile();
-    if (config.settings.authorization.lock_register) {
+    const config = await this.configHelper.getConfig();
+    if (config.auth_lock_register) {
       throw new ForbiddenException('Register is locked');
     }
     const sso = await this.ssoAuthHelper.getActiveSSO(provider);

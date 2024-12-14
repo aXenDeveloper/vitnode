@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class FileObj {
   @ApiProperty()
@@ -30,10 +30,6 @@ export class FileObj {
   @ApiProperty()
   @IsString()
   mimetype: string;
-
-  @ApiProperty()
-  @IsBoolean()
-  secure: boolean;
 
   @ApiPropertyOptional()
   @IsNumber()

@@ -71,7 +71,7 @@ export class EmailSettingsAdminController {
     description: 'Show email settings',
   })
   @Get()
-  show(): ShowEmailSettingsAdminObj {
+  async show(): Promise<ShowEmailSettingsAdminObj> {
     return this.showService.show();
   }
 

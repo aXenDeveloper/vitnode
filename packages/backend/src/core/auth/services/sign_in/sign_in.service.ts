@@ -1,4 +1,4 @@
-import { getConfigFile } from '@/helpers/config';
+import { ConfigHelperService } from '@/helpers/config.service';
 import { EmailHelperService } from '@/helpers/email/email.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import {
@@ -21,6 +21,7 @@ export class SignInAuthService {
     private readonly signInHelper: HelperSignInAuthService,
     private readonly sendConfirmEmailCoreSessionsService: SendConfirmEmailAuthService,
     private readonly mailService: EmailHelperService,
+    private readonly configHelper: ConfigHelperService,
   ) {}
 
   async singIn({
@@ -32,7 +33,7 @@ export class SignInAuthService {
     req: Request;
     res: Response;
   }): Promise<SignInAuthObj> {
-    const { settings } = getConfigFile();
+    const config = await this.configHelper.getConfig();
     const email = emailRaw.toLowerCase();
     const user = await this.databaseService.db.query.core_users.findFirst({
       where: (table, { eq }) => eq(table.email, email),
@@ -62,7 +63,7 @@ export class SignInAuthService {
 
     if (
       !user.email_verified &&
-      settings.authorization.require_confirm_email &&
+      config.auth_require_confirm_email &&
       this.mailService.checkIfEnable()
     ) {
       await this.sendConfirmEmailCoreSessionsService.sendConfirmEmail({

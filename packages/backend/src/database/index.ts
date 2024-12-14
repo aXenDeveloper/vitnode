@@ -1,4 +1,5 @@
 import * as admins from './schema/admins';
+import * as config from './schema/config';
 import * as files from './schema/files';
 import * as groups from './schema/groups';
 import * as languages from './schema/languages';
@@ -22,4 +23,5 @@ export default {
   ...plugins,
   ...nav,
   ...logs,
+  ...config,
 };

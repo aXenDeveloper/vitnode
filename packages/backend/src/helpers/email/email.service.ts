@@ -4,7 +4,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { render } from '@react-email/render';
 import React from 'react';
 
-import { getConfigFile } from '../config';
+import { ConfigHelperService } from '../config.service';
 import {
   type EmailHelpersServiceType,
   type EmailSenderFunction,
@@ -21,6 +21,7 @@ export class EmailHelperService {
     private readonly isEmailEnabled: boolean,
     @Inject('EmailHelpersService')
     private readonly emailHelpersService: EmailHelpersServiceType,
+    private readonly configHelper: ConfigHelperService,
   ) {}
 
   private async handleErrors({
@@ -48,18 +49,18 @@ export class EmailHelperService {
     template,
   }: {
     subject: string;
-    template: React.ReactElement;
+    template: Promise<React.ReactElement> | React.ReactElement;
     to: string;
   }): Promise<void> {
-    const html = await Promise.resolve(render(template));
-    const { settings } = getConfigFile();
+    const html = await Promise.resolve(render(await template));
+    const config = await this.configHelper.getConfig();
 
     try {
       await this.emailSender({
         to,
         subject,
         html,
-        site_short_name: settings.main.site_short_name,
+        site_short_name: config.site_short_name,
       });
     } catch (e) {
       const error = e as Error;
