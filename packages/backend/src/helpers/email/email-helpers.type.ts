@@ -5,7 +5,7 @@ import { FileObj } from 'vitnode-shared/utils/files.dto';
 import { EmailTemplateProps } from './template/email-template';
 
 export interface EmailHelpersServiceType {
-  getHelpersForEmail: () => GetHelpersForEmailType;
+  getHelpersForEmail: () => Promise<GetHelpersForEmailType>;
   template: (
     props: Omit<EmailTemplateProps, 'helpers'>,
   ) => Promise<React.JSX.Element>;

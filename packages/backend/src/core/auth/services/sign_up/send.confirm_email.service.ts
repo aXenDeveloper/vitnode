@@ -87,7 +87,7 @@ export class SendConfirmEmailAuthService {
       subject: t('subject'),
       message: ConfirmEmailTemplate({
         user,
-        helpers: this.emailHelpersService.getHelpersForEmail(),
+        helpers: await this.emailHelpersService.getHelpersForEmail(),
         token: hashToken,
       }),
       previewText: t('preview'),

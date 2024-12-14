@@ -82,7 +82,7 @@ export class SendForgotPasswordAuthService {
       message: SendForgotPasswordTemplateEmail({
         user,
         token,
-        helpers: this.emailHelpersService.getHelpersForEmail(),
+        helpers: await this.emailHelpersService.getHelpersForEmail(),
       }),
       previewText: t('preview'),
       user,
