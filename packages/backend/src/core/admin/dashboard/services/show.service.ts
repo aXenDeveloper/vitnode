@@ -1,3 +1,4 @@
+import { ConfigHelperService } from '@/helpers/config.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { Injectable } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
@@ -5,7 +6,10 @@ import { ShowDashboardAdminObj } from 'vitnode-shared/admin/dashboard.dto';
 
 @Injectable()
 export class ShowDashboardAdminService {
-  constructor(private readonly databaseService: InternalDatabaseService) {}
+  constructor(
+    private readonly databaseService: InternalDatabaseService,
+    private readonly configHelper: ConfigHelperService,
+  ) {}
 
   async getNewUsersStats(): Promise<ShowDashboardAdminObj['new_users']> {
     const data = await this.databaseService.db.execute<{
@@ -43,8 +47,14 @@ export class ShowDashboardAdminService {
   }
 
   async show(): Promise<ShowDashboardAdminObj> {
+    const config = await this.configHelper.getConfig();
+
     return {
       new_users: await this.getNewUsersStats(),
+      note: {
+        text: config.admin_note,
+        updated_at: config.admin_note_updated_at,
+      },
     };
   }
 }

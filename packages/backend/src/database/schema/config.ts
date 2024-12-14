@@ -58,6 +58,8 @@ export const core_config = pgTable('core_config', t => ({
   logo_width: t.integer().notNull().default(10),
   logo_mobile_width: t.integer().notNull().default(3),
   logo_text: t.varchar().notNull().default('VitNode'),
+  admin_note: t.text().notNull().default('Enter your note here. :)'),
+  admin_note_updated_at: t.timestamp().notNull().defaultNow(),
 }));
 
 export const core_config__types = core_config.$inferSelect;

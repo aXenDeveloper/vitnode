@@ -3,6 +3,7 @@ import {
   getSessionAdminData,
   isInAdminPermission,
 } from '@/api/get-session-admin-data';
+import { DateFormat } from '@/components/date-format';
 import { TranslationsProvider } from '@/components/translations-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import { ShowDashboardAdminObj } from 'vitnode-shared/admin/dashboard.dto';
 
 import { WarnReqRestartServer } from '../warn-req-restart-server';
 import { NewUsersChart } from './new-users-chart';
+import { NoteForm } from './note-admin/note-form';
 
 const getData = async () => {
   const { data } = await fetcher<ShowDashboardAdminObj>({
@@ -78,10 +80,23 @@ export const DashboardCoreAdminView = async () => {
         <Card>
           <CardHeader>
             <CardTitle>{t('new_users.title')}</CardTitle>
-            <CardDescription>January - June 2024</CardDescription>
           </CardHeader>
           <CardContent>
             <NewUsersChart data={data.new_users} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('note.title')}</CardTitle>
+            <CardDescription>
+              {t.rich('note.last_updated', {
+                date: () => <DateFormat date={data.note.updated_at} />,
+              })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <NoteForm data={data.note} />
           </CardContent>
         </Card>
       </div>

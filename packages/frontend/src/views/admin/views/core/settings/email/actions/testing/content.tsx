@@ -1,6 +1,6 @@
 import { AutoForm } from '@/components/form/auto-form';
 import { AutoFormInput } from '@/components/form/fields/input';
-import { AutoTextArea } from '@/components/form/fields/textarea';
+import { AutoFormTextArea } from '@/components/form/fields/textarea';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from 'next-intl';
 
@@ -26,7 +26,7 @@ export const ContentTestingActionEmailSettingsAdmin = () => {
         {
           id: 'message',
           label: t('message'),
-          component: AutoTextArea,
+          component: AutoFormTextArea,
         },
       ]}
       formSchema={formSchema}

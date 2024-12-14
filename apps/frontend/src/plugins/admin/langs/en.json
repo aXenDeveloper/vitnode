@@ -20,6 +20,11 @@
       "new_users": {
         "title": "New Users",
         "users": "Users"
+      },
+      "note": {
+        "title": "Note for Administrators",
+        "last_updated": "Last Updated: <date></date>",
+        "submit": "Save Note"
       }
     },
     "theme_editor": {

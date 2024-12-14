@@ -1,8 +1,13 @@
 import { Controllers } from '@/helpers/controller.decorator';
-import { Get } from '@nestjs/common';
+import { Body, Get, Put } from '@nestjs/common';
 import { ApiOkResponse } from '@nestjs/swagger';
-import { ShowDashboardAdminObj } from 'vitnode-shared/admin/dashboard.dto';
+import {
+  EditNoteDashboardBody,
+  NoteDashboard,
+  ShowDashboardAdminObj,
+} from 'vitnode-shared/admin/dashboard.dto';
 
+import { EditNoteDashboardAdminService } from './services/edit-note.service';
 import { ShowDashboardAdminService } from './services/show.service';
 
 @Controllers({
@@ -11,7 +16,19 @@ import { ShowDashboardAdminService } from './services/show.service';
   isAdmin: true,
 })
 export class DashboardAdminController {
-  constructor(private readonly showService: ShowDashboardAdminService) {}
+  constructor(
+    private readonly showService: ShowDashboardAdminService,
+    private readonly editNoteService: EditNoteDashboardAdminService,
+  ) {}
+
+  @ApiOkResponse({
+    type: NoteDashboard,
+    description: 'Edit note',
+  })
+  @Put('edit-note')
+  async editNote(@Body() body: EditNoteDashboardBody) {
+    return await this.editNoteService.editNote(body);
+  }
 
   @ApiOkResponse({
     type: ShowDashboardAdminObj,
