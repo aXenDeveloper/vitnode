@@ -1,10 +1,3 @@
-export enum AllowTypeFilesEnum {
-  all = 'all',
-  images = 'images',
-  images_videos = 'images_videos',
-  none = 'none',
-}
-
 export enum CaptchaTypeEnum {
   cloudflare_turnstile = 'cloudflare_turnstile',
   none = 'none',

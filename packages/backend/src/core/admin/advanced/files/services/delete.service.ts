@@ -14,16 +14,18 @@ export class DeleteFilesAdvancedAdminService {
   async delete(id: number): Promise<void> {
     const findFile = await this.databaseService.db.query.core_files.findFirst({
       where: (table, { eq }) => eq(table.id, id),
+      columns: {
+        id: true,
+        dir_folder: true,
+        file_name: true,
+      },
     });
 
     if (!findFile) {
       throw new NotFoundException();
     }
 
-    await this.filesService.delete({
-      ...findFile,
-      secure: !!findFile.security_key,
-    });
+    await this.filesService.delete(findFile);
 
     await this.databaseService.db
       .delete(core_files)

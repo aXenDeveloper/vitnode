@@ -18,25 +18,18 @@ export const acceptMimeTypeImage = [
   'image/svg+xml',
 ];
 
-export const acceptMimeTypeVideo = ['video/mp4', 'video/webm', 'video/ogg'];
-
 @Injectable()
 export class FilesHelperService {
   constructor(private readonly databaseService: InternalDatabaseService) {}
 
   async delete({
-    secure,
     dir_folder,
     file_name,
   }: {
     dir_folder: string;
     file_name: string;
-    secure?: boolean;
   }) {
-    const privateOrPublicFolder = secure
-      ? ABSOLUTE_PATHS.uploads.secure
-      : ABSOLUTE_PATHS.uploads.public;
-    const path = join(privateOrPublicFolder, dir_folder, file_name);
+    const path = join(ABSOLUTE_PATHS.uploads.public, dir_folder, file_name);
 
     if (!existsSync(path)) {
       throw new BadRequestException('File not found');
@@ -50,7 +43,6 @@ export class FilesHelperService {
     plugin_code,
     folder,
     force_name,
-    secure = false,
     custom_dir,
   }: {
     custom_dir?: string;
@@ -58,7 +50,6 @@ export class FilesHelperService {
     folder: string;
     force_name?: string;
     plugin_code: string;
-    secure?: boolean;
   }): Promise<FileObj> {
     const pluginExists =
       await this.databaseService.db.query.core_plugins.findFirst({
@@ -74,9 +65,6 @@ export class FilesHelperService {
 
     // Create folders
     const date = new Date();
-    const privateOrPublicFolder = secure
-      ? ABSOLUTE_PATHS.uploads.secure
-      : ABSOLUTE_PATHS.uploads.public;
     const dirFolder = custom_dir
       ? custom_dir
       : join(
@@ -86,7 +74,7 @@ export class FilesHelperService {
         );
 
     if (!existsSync(dirFolder)) {
-      await mkdir(join(privateOrPublicFolder, dirFolder), {
+      await mkdir(join(ABSOLUTE_PATHS.uploads.public, dirFolder), {
         recursive: true,
       });
     }
@@ -100,7 +88,11 @@ export class FilesHelperService {
       : `${Date.now()}_${generateRandomString(5)}_${removeSpecialCharacters(
           file.originalname.replace(`.${extension}`, ''),
         ).replace(/\./g, '')}.${extension}`;
-    const pathToSaveFile = join(privateOrPublicFolder, dirFolder, fileName);
+    const pathToSaveFile = join(
+      ABSOLUTE_PATHS.uploads.public,
+      dirFolder,
+      fileName,
+    );
     await writeFile(pathToSaveFile, file.buffer);
 
     const returnValues: FileObj = {
@@ -110,7 +102,6 @@ export class FilesHelperService {
       dir_folder: dirFolder,
       extension,
       file_size: file.size,
-      secure,
       width: null,
       height: null,
     };

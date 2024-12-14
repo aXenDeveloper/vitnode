@@ -18,9 +18,6 @@ export class ShowFilesSettingsAuth extends FileObj {
 
   @ApiProperty()
   id: number;
-
-  @ApiPropertyOptional()
-  security_key: null | string;
 }
 
 export class ShowFilesSettingsAuthObj extends PaginationObj {

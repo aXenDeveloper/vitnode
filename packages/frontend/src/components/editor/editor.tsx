@@ -141,17 +141,10 @@ export const Editor = ({
     }
   };
 
-  const onRemoveFile = async ({
-    id,
-    securityKey,
-  }: {
-    id: number;
-    securityKey?: string;
-  }) => {
+  const onRemoveFile = async ({ id }: { id: number }) => {
     try {
       await deleteMutationApi({
         file_id: id,
-        security_key: securityKey,
       });
       setFiles(prev => prev.filter(f => f.id !== id));
     } catch (_) {

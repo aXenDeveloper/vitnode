@@ -1,5 +1,4 @@
 import { ABSOLUTE_PATHS } from '@/app.module';
-import { configPath, ConfigType, getConfigFile } from '@/helpers/config';
 import { Injectable } from '@nestjs/common';
 import { existsSync } from 'fs';
 import { readFile, writeFile } from 'fs/promises';
@@ -212,16 +211,5 @@ export class ChangeFilesPluginsAdminHelpersService {
       this.updatePluginModuleFile(code, action),
       this.updateConfigFile(code, action),
     ]);
-  }
-
-  async setServerToRestartConfig() {
-    const config = getConfigFile();
-
-    const updatedConfig: ConfigType = {
-      ...config,
-      restart_server: true,
-    };
-
-    await writeFile(configPath, JSON.stringify(updatedConfig, null, 2), 'utf8');
   }
 }

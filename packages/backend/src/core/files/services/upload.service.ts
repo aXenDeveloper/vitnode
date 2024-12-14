@@ -1,10 +1,5 @@
 import { core_files } from '@/database/schema/files';
-import { generateRandomString } from '@/functions/generate-random-string';
-import {
-  acceptMimeTypeImage,
-  acceptMimeTypeVideo,
-  FilesHelperService,
-} from '@/helpers/files/files-helper.service';
+import { FilesHelperService } from '@/helpers/files/files-helper.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { eq, sum } from 'drizzle-orm';
@@ -17,11 +12,6 @@ export class UploadFilesService {
     private readonly databaseService: InternalDatabaseService,
     private readonly filesService: FilesHelperService,
   ) {}
-
-  protected acceptMimeTypeToFrontend = [
-    ...acceptMimeTypeImage,
-    ...acceptMimeTypeVideo,
-  ];
 
   async upload({
     body: { file, folder, plugin_code },
@@ -86,20 +76,15 @@ export class UploadFilesService {
       plugin_code,
     });
 
-    const securityKey = this.acceptMimeTypeToFrontend.includes(file.mimetype)
-      ? null
-      : generateRandomString(32);
-
     // Save to database
     const [data] = await this.databaseService.db
       .insert(core_files)
       .values({
         user_id: user.id,
         ...uploadedFile,
-        security_key: securityKey,
       })
       .returning();
 
-    return { ...data, count_uses: 0, secure: securityKey !== null };
+    return { ...data, count_uses: 0 };
   }
 }

@@ -24,7 +24,6 @@ export const core_files = pgTable(
     mimetype: t.varchar({ length: 255 }).notNull(),
     width: t.integer(),
     height: t.integer(),
-    security_key: t.varchar({ length: 255 }),
   }),
   t => [index('core_files_user_id_idx').on(t.user_id)],
 );

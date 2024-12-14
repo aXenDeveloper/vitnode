@@ -1,5 +1,5 @@
 import { type IOAuthGuards } from '@/guards/auth.guard';
-import { getConfigFile } from '@/helpers/config';
+import { ConfigHelperService } from '@/helpers/config.service';
 import { UserHelper } from '@/helpers/user.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { Request, Response } from 'express';
@@ -16,6 +16,7 @@ export class ShowAuthAdminService {
     @Inject('IOAdminAuthGuards') private readonly authService: IOAuthGuards,
     private readonly userHelper: UserHelper,
     private readonly navAdminService: NavAuthAdminService,
+    private readonly configHelper: ConfigHelperService,
   ) {}
 
   private async getPackageJSON() {
@@ -42,12 +43,12 @@ export class ShowAuthAdminService {
       res,
     });
     const packageJSON = await this.getPackageJSON();
-    const config = getConfigFile();
+    const config = await this.configHelper.getConfig();
 
     return {
       user,
       version_of_vitnode: packageJSON.version,
-      restart_server: config.restart_server,
+      restart_server: config.restart_server ?? false,
       permissions: await this.userHelper.getUserAdminPermission({ user }),
       nav: await this.navAdminService.nav({ user }),
     };

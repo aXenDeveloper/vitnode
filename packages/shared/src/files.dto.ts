@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { IsString } from 'class-validator';
 
 import { FileObj } from './utils/files.dto';
 
@@ -7,11 +7,6 @@ export class DeleteFilesQuery {
   @ApiProperty()
   @IsString()
   file_id: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  security_key?: string;
 }
 
 export class ShowFile extends FileObj {
@@ -26,9 +21,6 @@ export class ShowFile extends FileObj {
 
   @ApiProperty()
   id: number;
-
-  @ApiPropertyOptional()
-  security_key: null | string;
 }
 
 export class UploadFilesBody {

@@ -71,7 +71,7 @@ export const rootSitemap = async (): Promise<MetadataRoute.Sitemap> => {
   return [
     {
       url: `${CONFIG.frontend_url}/${languages_code_default}`,
-      lastModified: new Date(last_updated),
+      lastModified: last_updated,
       changeFrequency: 'yearly',
       priority: 1,
       alternates: {
@@ -86,9 +86,9 @@ export const rootSitemap = async (): Promise<MetadataRoute.Sitemap> => {
     ...navUrls,
     {
       url: `${CONFIG.frontend_url}/${languages_code_default}/legal`,
-      lastModified: new Date(
-        legal.edges.length ? legal.edges[0].updated_at : last_updated,
-      ),
+      lastModified: legal.edges.length
+        ? legal.edges[0].updated_at
+        : last_updated,
       changeFrequency: 'yearly',
       priority: 0.2,
       alternates: {

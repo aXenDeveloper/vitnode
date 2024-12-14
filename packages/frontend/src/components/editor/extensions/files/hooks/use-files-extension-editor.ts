@@ -1,19 +1,13 @@
-import {
-  acceptMimeTypeImage,
-  acceptMimeTypeVideo,
-} from '@/helpers/files-support';
-import { useMiddlewareData } from '@/hooks/use-middleware-data';
+import { acceptMimeTypeImage } from '@/helpers/files-support';
 import { useSession } from '@/hooks/use-session';
 import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { FilesPermissionsCoreSessions } from 'vitnode-shared/user.dto';
-import { AllowTypeFilesEnum } from 'vitnode-shared/utils/global';
 
 import { FilesHandlerStorage } from '../files';
 
 export const useFilesExtensionEditor = () => {
   const session = useSession();
   const adminSession = useSessionAdmin();
-  const middleware = useMiddlewareData();
   const permissionFiles: FilesPermissionsCoreSessions = {
     allow_upload:
       session.user?.files_permissions.allow_upload ??
@@ -34,22 +28,11 @@ export const useFilesExtensionEditor = () => {
   };
 
   const validateMimeTypeFile = (file: File) => {
-    const { allow_type } = middleware.editor.files;
-    if (allow_type === AllowTypeFilesEnum.all) return file;
-
     const isValidType = (types: string[]) =>
       types.some(type => file.type.includes(type));
 
-    if (allow_type === AllowTypeFilesEnum.images_videos) {
-      if (!isValidType([...acceptMimeTypeImage, ...acceptMimeTypeVideo])) {
-        throw new Error(
-          `INVALID_FILE_TYPE.${[...acceptMimeTypeImage, ...acceptMimeTypeVideo].join(',')}`,
-        );
-      }
-    } else if (allow_type === AllowTypeFilesEnum.images) {
-      if (!isValidType(acceptMimeTypeImage)) {
-        throw new Error(`INVALID_FILE_TYPE.${acceptMimeTypeImage.join(',')}`);
-      }
+    if (!isValidType(acceptMimeTypeImage)) {
+      throw new Error(`INVALID_FILE_TYPE.${acceptMimeTypeImage.join(',')}`);
     }
 
     return file;

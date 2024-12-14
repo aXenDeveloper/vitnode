@@ -485,15 +485,6 @@
           "sticky": {
             "label": "Sticky Toolbar",
             "desc": "The toolbar will be fixed at the top of the screen."
-          },
-          "files": {
-            "allow_type": {
-              "title": "Allow File Type",
-              "all": "All",
-              "images_videos": "Images & Videos",
-              "images": "Images",
-              "none": "None"
-            }
           }
         }
       },
