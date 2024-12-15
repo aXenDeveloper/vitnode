@@ -1,6 +1,6 @@
 {
   "name": "vitnode-backend",
-  "version": "0.0.10-canary.30",
+  "version": "0.0.10-canary.31",
   "description": "Backend wrapper for VitNode projects",
   "author": "VitNode Team",
   "license": "MIT",
