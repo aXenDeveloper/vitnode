@@ -9,6 +9,7 @@ const config = {
     './src/components/**/*.tsx',
     './src/app/**/*.tsx',
     './src/plugins/**/templates/**/*.tsx',
+    './src/plugins/**/components/**/*.tsx',
   ],
 } satisfies Config;
 

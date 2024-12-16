@@ -6,7 +6,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
 import { CoreModule } from './core/core.module';
-import { SSOAuthItem } from './helpers/auth/sso.service';
+import { SSOAuthItem } from './helpers/auth/sso/sso.service';
 import { EmailSenderFunction } from './helpers/email/email-helpers.type';
 import { GlobalHelpersModule } from './helpers/helpers.module';
 import {

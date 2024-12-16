@@ -1,4 +1,4 @@
-import { SSOAuthHelper } from '@/helpers/auth/sso.service';
+import { SSOAuthHelper } from '@/helpers/auth/sso/sso.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { writeFile } from 'fs/promises';
 import {
