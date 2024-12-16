@@ -8,6 +8,8 @@ import { InternalErrorView } from '../global';
 import { RootProviders } from './providers';
 import { WrapperRootLayout } from './wrapper';
 
+export const dynamic = 'force-dynamic';
+
 interface Props {
   children: React.ReactNode;
   className?: string;
