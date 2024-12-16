@@ -6,6 +6,9 @@ import { join } from 'path';
 import { ShowMethodAuthSettingsAdmin } from 'vitnode-shared/admin/settings/auth.dto';
 import { SSOUrlAuthObj } from 'vitnode-shared/auth/sso.dto';
 
+import { facebookSSO } from './facebook';
+import { googleSSO } from './google';
+
 export interface SSOAuthCallbackObj {
   email: string;
   id: string;
@@ -107,6 +110,6 @@ export class SSOAuthHelper {
   }
 
   getSSOs(): SSOAuthItem[] {
-    return this.loginMethods;
+    return [googleSSO, facebookSSO, ...this.loginMethods];
   }
 }

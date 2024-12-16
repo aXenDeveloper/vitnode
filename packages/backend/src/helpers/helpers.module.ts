@@ -9,7 +9,7 @@ import {
 
 import { DeviceAuthService } from './auth/device.service';
 import { InternalAuthAdminService } from './auth/internal_auth_admin.service';
-import { SSOAuthHelper, SSOAuthItem } from './auth/sso.service';
+import { SSOAuthHelper, SSOAuthItem } from './auth/sso/sso.service';
 import { CaptchaHelper } from './captcha/captcha.service';
 import { ConfigHelperService } from './config.service';
 import { EmailHelpersService } from './email/email-helpers.service';

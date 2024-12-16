@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 
 import { core_users } from '@/database/schema/users';
 import { getUserIp, removeSpecialCharacters } from '@/functions';
-import { SSOAuthHelper } from '@/helpers/auth/sso.service';
+import { SSOAuthHelper } from '@/helpers/auth/sso/sso.service';
 import { ConfigHelperService } from '@/helpers/config.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import {

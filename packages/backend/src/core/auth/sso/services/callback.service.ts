@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 
 import { core_users, core_users_sso_tokens } from '@/database/schema/users';
-import { SSOAuthHelper } from '@/helpers/auth/sso.service';
+import { SSOAuthHelper } from '@/helpers/auth/sso/sso.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
