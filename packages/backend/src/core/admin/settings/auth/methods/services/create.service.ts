@@ -1,4 +1,4 @@
-import { SSOAuthConfig, SSOAuthHelper } from '@/helpers/auth/sso.service';
+import { SSOAuthConfig, SSOAuthHelper } from '@/helpers/auth/sso/sso.service';
 import {
   ConflictException,
   Injectable,

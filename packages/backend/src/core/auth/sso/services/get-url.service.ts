@@ -1,4 +1,4 @@
-import { SSOAuthHelper } from '@/helpers/auth/sso.service';
+import { SSOAuthHelper } from '@/helpers/auth/sso/sso.service';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SSOUrlAuthObj } from 'vitnode-shared/auth/sso.dto';

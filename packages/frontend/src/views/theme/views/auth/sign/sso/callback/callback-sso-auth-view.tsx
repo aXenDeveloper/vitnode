@@ -43,7 +43,7 @@ export const CallbackSSOAuthView = ({
 
   if (isLoading || data?.login_token) {
     return (
-      <div className="container my-6">
+      <div className="container my-6 sm:my-10">
         <Loader />
       </div>
     );

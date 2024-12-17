@@ -17,7 +17,7 @@ export const LayoutSettingsView = async ({
 
   return (
     <TranslationsProvider namespaces="core.settings">
-      <div className="container my-6">
+      <div className="container my-6 lg:my-10">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-8 [&>div]:grow">
           <NavSettings />
           {children}

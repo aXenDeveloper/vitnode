@@ -8,7 +8,8 @@ const config = {
     './node_modules/vitnode-frontend/src/views/**/*.tsx',
     './src/components/**/*.tsx',
     './src/app/**/*.tsx',
-    './src/plugins/**/*.tsx',
+    './src/plugins/**/templates/**/*.tsx',
+    './src/plugins/**/components/**/*.tsx',
   ],
 } satisfies Config;
 

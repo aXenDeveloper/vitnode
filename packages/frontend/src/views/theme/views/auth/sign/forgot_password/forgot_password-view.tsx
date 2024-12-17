@@ -23,7 +23,7 @@ export const ForgotPasswordView = async ({
           'core.sign_up',
         ]}
       >
-        <div className="container my-6 max-w-md py-10">
+        <div className="container my-6 max-w-md py-10 sm:my-10">
           <ResetPassword token={token} userId={userId} />
         </div>
       </TranslationsProvider>
@@ -32,7 +32,7 @@ export const ForgotPasswordView = async ({
 
   return (
     <TranslationsProvider namespaces="core.sign_in.forgot_password">
-      <div className="container my-6 max-w-md py-10">
+      <div className="container my-6 max-w-md py-10 sm:my-10">
         <FormForgotPassword />
       </div>
     </TranslationsProvider>

@@ -1,5 +1,5 @@
 import { ABSOLUTE_PATHS } from '@/app.module';
-import { SSOAuthHelper } from '@/helpers/auth/sso.service';
+import { SSOAuthHelper } from '@/helpers/auth/sso/sso.service';
 import { getConfigFile } from '@/helpers/config';
 import { ConfigHelperService } from '@/helpers/config.service';
 import { EmailHelperService } from '@/helpers/email/email.service';
