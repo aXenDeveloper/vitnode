@@ -64,10 +64,9 @@ export const ABSOLUTE_PATHS = {
         'admin',
         code,
       ),
-      pages: join(internalPaths.frontend, 'src', 'app', '[locale]', code),
+      pages: join(internalPaths.frontend, 'app', '[locale]', code),
       pages_main: join(
         internalPaths.frontend,
-        'src',
         'app',
         '[locale]',
         '(main)',
@@ -75,14 +74,13 @@ export const ABSOLUTE_PATHS = {
       ),
       pages_main_layout: join(
         internalPaths.frontend,
-        'src',
         'app',
         '[locale]',
         '(main)',
         '(layout)',
         code,
       ),
-      pages_root: join(internalPaths.frontend, 'src', 'app', code),
+      pages_root: join(internalPaths.frontend, 'app', code),
     },
   }),
 };

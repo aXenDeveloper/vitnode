@@ -12,7 +12,7 @@ export default [
   perfectionist.configs['recommended-natural'],
   { files: ['**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}'] },
   {
-    ignores: ['tsup.config.ts', 'codegen.ts'],
+    ignores: ['tsup.config.ts', 'uploads/temp'],
   },
   {
     languageOptions: {

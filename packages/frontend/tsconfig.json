@@ -23,6 +23,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "src/**/*", "global.d.ts", "scripts/**/*"],
-  "exclude": ["codegen.ts"]
+  "include": ["next-env.d.ts", "src/**/*", "global.d.ts", "scripts/**/*"]
 }
