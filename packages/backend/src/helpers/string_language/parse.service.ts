@@ -129,7 +129,7 @@ export class ParseStringLanguageHelper {
     );
   }
 
-  async parseContent({
+  protected async parseContent({
     oldContent,
     content,
     plugin_code,
