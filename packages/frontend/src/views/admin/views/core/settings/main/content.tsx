@@ -2,6 +2,7 @@
 
 import { AutoForm } from '@/components/form/auto-form';
 import { AutoFormInput } from '@/components/form/fields/input';
+import { AutoFormSelect } from '@/components/form/fields/select';
 import { AutoFormStringLanguageInput } from '@/components/form/fields/text-language-input';
 import { useTranslations } from 'next-intl';
 import { ShowMiddlewareObj } from 'vitnode-shared/middleware.dto';
@@ -41,6 +42,11 @@ export const ContentMainSettingsCoreAdmin = (props: ShowMiddlewareObj) => {
           ),
           label: t('contact_email.label'),
           description: t('contact_email.desc'),
+        },
+        {
+          id: 'app_type',
+          label: t('app_type.label'),
+          component: AutoFormSelect,
         },
       ]}
       formSchema={formSchema}

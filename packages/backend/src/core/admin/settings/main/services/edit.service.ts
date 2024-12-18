@@ -1,4 +1,5 @@
 import { ABSOLUTE_PATHS } from '@/app.module';
+import { core_config } from '@/database/schema/config';
 import { ConfigHelperService } from '@/helpers/config.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
@@ -99,6 +100,7 @@ export class EditMainSettingsAdminService {
     site_name,
     site_short_name,
     contact_email,
+    app_type,
   }: MainSettingsAdminBody): Promise<MainSettingsAdminBody> {
     await this.configHelper.updateConfig({
       site_name,
@@ -120,11 +122,16 @@ export class EditMainSettingsAdminService {
       site_short_name,
     });
 
+    await this.databaseService.db.update(core_config).set({
+      app_type,
+    });
+
     return {
       site_description,
       site_name,
       site_short_name,
       contact_email,
+      app_type,
     };
   }
 }

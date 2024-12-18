@@ -50,10 +50,16 @@ export function AutoFormSelect({
 
   const buttonPlaceholder = () => {
     const current = values.find(item => item[0] === field.value);
-    const item = current?.[1];
+    let item = current?.[1];
 
     if (current) {
       return labels?.[current[0]] ?? item;
+    }
+    const currentV2 = values.find(item => item[1] === field.value);
+    if (currentV2) {
+      item = currentV2[1];
+
+      return labels?.[currentV2[0]] ?? item;
     }
 
     return item ?? t('select_option');

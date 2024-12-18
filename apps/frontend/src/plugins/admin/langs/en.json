@@ -88,6 +88,9 @@
           "contact_email": {
             "label": "Contact Email",
             "desc": "This email address will be applied to the contact form and other contact points on your website."
+          },
+          "app_type": {
+            "label": "App Type"
           }
         },
         "email": {
