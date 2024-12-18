@@ -11,8 +11,8 @@ export const useSettingsCoreAdmin = (data: ShowMiddlewareObj) => {
   const t = useTranslations('core.global');
 
   const formSchema = z.object({
-    site_name: z.string().min(1).default(data.site_name),
-    site_short_name: z.string().min(1).default(data.site_short_name),
+    site_name: z.string().min(3).default(data.site_name),
+    site_short_name: z.string().min(3).default(data.site_short_name),
     site_description: zodLanguageInput
       .default(data.site_description ?? [])
       .optional(),

@@ -26,7 +26,7 @@ export function AutoFormCheckbox({
   return (
     <div
       className={cn({
-        'flex items-start space-x-3 space-y-0 rounded-md border p-4':
+        'flex items-start space-x-3 rounded-md border p-4':
           label && description && theme === 'vertical',
         '@xs:flex-row @xs:gap-6 flex w-full flex-col items-start gap-2':
           theme === 'horizontal',
