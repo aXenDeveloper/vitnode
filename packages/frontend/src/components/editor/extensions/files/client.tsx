@@ -53,16 +53,11 @@ const FileComponent = ({
         </div>
         {selected && (
           <Moveable
+            className="max-h-full max-w-full"
             container={null}
             edge={false}
             keepRatio={true}
-            onResize={({
-              target,
-              width,
-              height,
-
-              delta,
-            }) => {
+            onResize={({ target, width, height, delta }) => {
               if (delta[0]) target.style.width = `${width}px`;
               if (delta[1]) target.style.height = `${height}px`;
             }}

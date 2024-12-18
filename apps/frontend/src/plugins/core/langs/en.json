@@ -342,9 +342,8 @@
     },
     "legal": {
       "title": "Legal & Policies",
-      "title_page": "Explore our Legal documents and Policies",
+      "title_page": "Legal documents and Policies",
       "last_updated": "Last updated: <date></date>",
-      "read_document": "Read Document",
       "empty": "No documents found."
     }
   },

@@ -36,7 +36,7 @@ export const ContentDevicesSettings = ({
             <div className="bg-primary/10 [&>svg]:text-primary flex shrink-0 items-center justify-center rounded-sm p-2 [&>svg]:size-8">
               {getDeviceIcon(device.uagent_os)}
             </div>
-            <div className="flex flex-col gap-1">
+            <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-lg font-medium leading-none">
                   {device.uagent_os}

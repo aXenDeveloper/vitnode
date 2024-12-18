@@ -8,7 +8,7 @@ import { InternalDatabaseService } from '@/utils/database/internal_database.serv
 import { Injectable } from '@nestjs/common';
 import { eq } from 'drizzle-orm';
 import { createReadStream, existsSync } from 'fs';
-import { cp, mkdir, readdir, readFile, rm, writeFile } from 'fs/promises';
+import { cp, mkdir, readFile, rm, writeFile } from 'fs/promises';
 import { join } from 'path';
 import * as tar from 'tar';
 import { ConfigPlugin } from 'vitnode-shared/admin/plugin.dto';

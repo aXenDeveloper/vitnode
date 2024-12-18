@@ -74,9 +74,9 @@ export const ReadOnlyEditor = ({
             <Image
               alt=""
               // className="inline-block"
-              height={+domNode.attribs.width}
+              height={+domNode.attribs.height}
               src={src}
-              width={+domNode.attribs.height}
+              width={+domNode.attribs.width}
             />
           </span>
         );
