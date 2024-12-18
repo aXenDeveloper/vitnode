@@ -8,12 +8,13 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { existsSync } from 'fs';
-import { cp } from 'fs/promises';
+import { cp, readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import {
   CreateLanguagesAdminBody,
   LanguagesAdminObj,
 } from 'vitnode-shared/admin/language.dto';
+import { ManifestWithLang } from 'vitnode-shared/manifest.dto';
 
 @Injectable()
 export class CreateLanguagesAdminService {
@@ -77,6 +78,12 @@ export class CreateLanguagesAdminService {
     }
 
     await this.cloneLangInPlugins(code);
+    const manifestPath = join(
+      ABSOLUTE_PATHS.uploads.public,
+      'assets',
+      code,
+      'manifest.webmanifest',
+    );
 
     // Clone JSON for manifest
     await cp(
@@ -86,13 +93,15 @@ export class CreateLanguagesAdminService {
         'en',
         'manifest.webmanifest',
       ),
-      join(
-        ABSOLUTE_PATHS.uploads.public,
-        'assets',
-        code,
-        'manifest.webmanifest',
-      ),
+      manifestPath,
     );
+
+    // Change language code in manifest
+    const manifest = JSON.parse(
+      await readFile(manifestPath, 'utf8'),
+    ) as ManifestWithLang;
+    manifest.lang = code;
+    await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 
     const [newLanguage] = await this.databaseService.db
       .insert(core_languages)

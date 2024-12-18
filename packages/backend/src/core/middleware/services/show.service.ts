@@ -7,6 +7,7 @@ import { InternalDatabaseService } from '@/utils/database/internal_database.serv
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { AppTypeMainSettingsAdmin } from 'vitnode-shared/admin/settings/main.enum';
 import { ManifestWithLang } from 'vitnode-shared/manifest.dto';
 import { ShowMiddlewareObj } from 'vitnode-shared/middleware.dto';
 
@@ -22,7 +23,7 @@ export class ShowMiddlewareService {
     private readonly configService: ConfigHelperService,
   ) {}
 
-  protected async getManifest({
+  protected async getManifests({
     langCodes,
   }: {
     langCodes: string[];
@@ -71,13 +72,14 @@ export class ShowMiddlewareService {
     if (!plugin_code_default) {
       throw new InternalServerErrorException('Plugin not found');
     }
-    const manifest = await this.getManifest({
+    const manifest = await this.getManifests({
       langCodes: langs.map(lang => lang.code),
     });
     const SSOs = await this.ssoHelper.getActiveSSOs();
     const configFromDb = await this.configService.getConfig();
 
     return {
+      app_type: configFromDb.app_type as AppTypeMainSettingsAdmin,
       logos: {
         logo_dark: configFromDb.logo_dark,
         logo_light: configFromDb.logo_light,

@@ -77,17 +77,23 @@
           "title": "Main Settings",
           "desc": "These settings are used to configure the main features of your website.",
           "name": {
-            "label": "Name Site"
+            "label": "Name Site",
+            "seo": "Recommended between 50-60 characters."
           },
           "short_name": {
-            "label": "Short Name Site"
+            "label": "Short Name Site",
+            "seo": "Recommended max 20 characters."
           },
           "description": {
-            "label": "Description Site"
+            "label": "Description Site",
+            "seo": "Recommended between 120-160 characters."
           },
           "contact_email": {
             "label": "Contact Email",
             "desc": "This email address will be applied to the contact form and other contact points on your website."
+          },
+          "app_type": {
+            "label": "App Type"
           }
         },
         "email": {

@@ -41,7 +41,7 @@ export const useCreateEditFormGroupsMembersAdmin = ({
       files_max_storage_for_submit: z.coerce
         .number()
         .min(-1)
-        .default(data?.content.files_max_storage_for_submit ?? 10000),
+        .default(data?.content.files_max_storage_for_submit ?? 5000),
     }),
   });
 

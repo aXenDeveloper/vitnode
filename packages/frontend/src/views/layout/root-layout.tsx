@@ -28,7 +28,8 @@ export const generateMetadataRootLayout = async ({
   };
 
   try {
-    const { site_name, site_short_name } = await getMiddlewareData();
+    const { site_name, site_short_name, languages } = await getMiddlewareData();
+    const language = languages.find(lang => lang.code === locale);
 
     return {
       ...metadata,
@@ -38,6 +39,8 @@ export const generateMetadataRootLayout = async ({
       },
       openGraph: {
         title: site_name,
+        type: 'website',
+        locale: language ? language.code : 'en_US',
       },
     };
   } catch (_) {

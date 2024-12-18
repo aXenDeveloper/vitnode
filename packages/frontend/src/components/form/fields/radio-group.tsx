@@ -76,14 +76,11 @@ export function AutoFormRadioGroup({
             const description = labels?.[value[1]]?.description;
 
             return (
-              <FormItem
-                className="flex items-center gap-3 space-y-0"
-                key={value}
-              >
+              <FormItem className="flex items-center gap-3" key={value}>
                 <FormControl>
                   <RadioGroupItem value={value[1]} />
                 </FormControl>
-                <FormLabel className="flex items-center space-y-0 font-normal">
+                <FormLabel className="flex items-center font-normal">
                   <span>{label}</span>
 
                   {description && (

@@ -1,9 +1,24 @@
 import { relations, sql } from 'drizzle-orm';
-import { pgTable } from 'drizzle-orm/pg-core';
+import { pgEnum, pgTable } from 'drizzle-orm/pg-core';
 
 import { core_files } from './files';
 
+export const appTypeEnum = pgEnum('app_type', [
+  'website',
+  'article',
+  'book',
+  'music.album',
+  'music.playlist',
+  'music.radio_station',
+  'music.song',
+  'profile',
+  'video.episode',
+  'video.movie',
+  'video.tv_show',
+]);
+
 export const core_config = pgTable('core_config', t => ({
+  app_type: appTypeEnum().notNull().default('website'),
   restart_server: t.boolean().notNull().default(false),
   editor_sticky: t.boolean().notNull().default(true),
   site_name: t.varchar({ length: 150 }).notNull().default('VitNode'),

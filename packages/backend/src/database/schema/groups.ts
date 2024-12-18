@@ -11,5 +11,5 @@ export const core_groups = pgTable('core_groups', t => ({
   color: t.varchar({ length: 19 }),
   files_allow_upload: t.boolean().notNull().default(true),
   files_total_max_storage: t.integer().notNull().default(500000),
-  files_max_storage_for_submit: t.integer().notNull().default(10000),
+  files_max_storage_for_submit: t.integer().notNull().default(5000),
 }));

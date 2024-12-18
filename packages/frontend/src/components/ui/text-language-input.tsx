@@ -21,6 +21,7 @@ interface Props
   > {
   className?: string;
   onChange: (value: StringLanguage[]) => void;
+  onLanguageChange?: (language: string) => void;
   value: StringLanguage[];
 }
 
@@ -28,15 +29,15 @@ export const StringLanguageInput = ({
   className,
   onChange,
   value,
+  onLanguageChange,
   ...props
 }: Props) => {
   const locale = useLocale();
-  const { languages: languagesFromGlobal } = useMiddlewareData();
-  const defaultLanguage =
-    languagesFromGlobal.find(item => item.default)?.code ?? 'en';
+  const { languages: languagesFromGlobal, languages_code_default } =
+    useMiddlewareData();
   const languages = languagesFromGlobal.filter(item => item.allow_in_input);
   const [selectedLanguage, setSelectedLanguage] = React.useState(
-    locale || defaultLanguage,
+    locale || languages_code_default,
   );
   const valueAsArray = Array.isArray(value) ? value : [];
   const currentValue =
@@ -76,7 +77,13 @@ export const StringLanguageInput = ({
       />
 
       {languages.length > 1 && (
-        <Select onValueChange={setSelectedLanguage} value={selectedLanguage}>
+        <Select
+          onValueChange={val => {
+            setSelectedLanguage(val);
+            onLanguageChange?.(val);
+          }}
+          value={selectedLanguage}
+        >
           <FormControl>
             <SelectTrigger className="w-40">
               <SelectValue />
