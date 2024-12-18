@@ -15,7 +15,6 @@
       "types": "./next.config.d.ts",
       "default": "./next.config.mjs"
     },
-    "./codegen": "./src/codegen.ts",
     "./tailwind.config": "./tailwind.config.ts",
     "./middleware": {
       "types": "./dist/src/middleware.ts",

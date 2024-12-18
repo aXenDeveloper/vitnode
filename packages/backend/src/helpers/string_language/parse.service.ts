@@ -15,6 +15,29 @@ interface StringLanguageJSONContentType {
 export class ParseStringLanguageHelper {
   constructor(protected databaseService: InternalDatabaseService) {}
 
+  protected async parseContent({
+    oldContent,
+    content,
+    plugin_code,
+  }: {
+    content: string[];
+    oldContent: string[];
+    plugin_code: string;
+  }) {
+    const oldData = this.removeDuplicates(
+      oldContent.map(content => this.getInfoFromContent(content)),
+    );
+    const newData = this.removeDuplicates(
+      content.map(content => this.getInfoFromContent(content)),
+    );
+
+    await this.parseFiles({
+      oldFilesId: oldData.files,
+      newFilesId: newData.files,
+      plugin_code,
+    });
+  }
+
   private getInfoFromContent(content: string): InfoType {
     const files: InfoType['files'] = [];
 
@@ -127,28 +150,5 @@ export class ParseStringLanguageHelper {
       },
       { files: [] },
     );
-  }
-
-  protected async parseContent({
-    oldContent,
-    content,
-    plugin_code,
-  }: {
-    content: string[];
-    oldContent: string[];
-    plugin_code: string;
-  }) {
-    const oldData = this.removeDuplicates(
-      oldContent.map(content => this.getInfoFromContent(content)),
-    );
-    const newData = this.removeDuplicates(
-      content.map(content => this.getInfoFromContent(content)),
-    );
-
-    await this.parseFiles({
-      oldFilesId: oldData.files,
-      newFilesId: newData.files,
-      plugin_code,
-    });
   }
 }

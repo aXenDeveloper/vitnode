@@ -70,11 +70,7 @@ export const ContentCreateUserUsersMembersAdmin = () => {
 
             return (
               <>
-                <AutoFormInput
-                  {...props}
-                  className="bg-card shadow-sm"
-                  type="password"
-                />
+                <AutoFormInput {...props} type="password" />
                 <div className="text-sm">
                   <span className="text-muted-foreground">
                     {t('password.desc')}

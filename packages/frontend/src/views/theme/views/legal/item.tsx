@@ -28,10 +28,6 @@ export const ItemLegal = ({
             })}
           </p>
         </div>
-
-        <Button className="rounded-full" variant="outline">
-          {t('read_document')}
-        </Button>
       </Link>
     </Button>
   );

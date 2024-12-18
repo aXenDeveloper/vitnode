@@ -12,7 +12,7 @@ import {
 } from 'vitnode-shared/admin/members/users.dto';
 import { UsersMembersAdminSortEnum } from 'vitnode-shared/admin/members/users.enum';
 
-import { CreateUserUsersMembersAdmin } from '../create/create';
+import { CreateUserUsersMembersAdmin } from './create/create';
 import { TableUsersMembersAdmin } from './table';
 
 export interface UsersMembersAdminViewProps {

@@ -44,8 +44,8 @@ export const DeleteActionsTableLangsCoreAdmin = (
             {tCore('are_you_absolutely_sure')}
           </AlertDialogTitle>
           <AlertDialogDescription className="flex flex-col gap-4">
-            <p>{t('text')}</p>
-            <p>
+            <span>{t('text')}</span>
+            <span>
               {t.rich('form_confirm_text', {
                 text: () => (
                   <span className="text-foreground font-semibold">
@@ -53,7 +53,7 @@ export const DeleteActionsTableLangsCoreAdmin = (
                   </span>
                 ),
               })}
-            </p>
+            </span>
           </AlertDialogDescription>
 
           <React.Suspense fallback={<Loader />}>

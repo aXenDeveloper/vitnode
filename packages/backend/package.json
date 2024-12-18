@@ -59,15 +59,13 @@
     "nest",
     "drizzle",
     "typescript",
-    "appollo",
     "serve-static",
     "react-email",
     "swc",
     "sharp",
     "pg",
     "postgresql",
-    "express",
-    "codegen"
+    "express"
   ],
   "peerDependencies": {
     "@nestjs/common": "^10.4.15",
