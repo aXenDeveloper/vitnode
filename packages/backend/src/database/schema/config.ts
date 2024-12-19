@@ -3,7 +3,7 @@ import { pgEnum, pgTable } from 'drizzle-orm/pg-core';
 
 import { core_files } from './files';
 
-export const appTypeEnum = pgEnum('app_type', [
+export const appCoreTypeEnum = pgEnum('vitnode_core_app_type', [
   'website',
   'article',
   'book',
@@ -18,7 +18,7 @@ export const appTypeEnum = pgEnum('app_type', [
 ]);
 
 export const core_config = pgTable('core_config', t => ({
-  app_type: appTypeEnum().notNull().default('website'),
+  app_type: appCoreTypeEnum().notNull().default('website'),
   restart_server: t.boolean().notNull().default(false),
   editor_sticky: t.boolean().notNull().default(true),
   site_name: t.varchar({ length: 150 }).notNull().default('VitNode'),
