@@ -79,11 +79,13 @@ export class SignUpAuthBody {
   password: string;
 }
 
-export class VerifyConfirmEmailAuthBody {
+export class VerifyConfirmEmailAuthQuery {
   @ApiProperty()
+  @IsString()
   token: string;
 
   @ApiProperty()
+  @IsNumber()
   user_id: number;
 }
 

@@ -24,6 +24,9 @@ export const FormSignIn = () => {
               <MailQuestion className="size-4" />
               <AlertTitle>{t('not_verified.title')}</AlertTitle>
               <AlertDescription>{t('not_verified.desc')}</AlertDescription>
+              <AlertDescription className="mt-4">
+                {t('not_verified.resend')}
+              </AlertDescription>
             </Alert>
           ) : error === 'ACCESS_DENIED' ? (
             <Alert variant="error">
