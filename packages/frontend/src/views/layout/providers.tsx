@@ -43,7 +43,7 @@ export const RootProviders = ({
         ) : (
           children
         )}
-        <Toaster closeButton />
+        <Toaster closeButton position="bottom-center" />
       </NextThemesProvider>
     </QueryClientProvider>
   );

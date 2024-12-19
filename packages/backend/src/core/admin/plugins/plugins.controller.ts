@@ -11,6 +11,7 @@ import {
   Put,
   Query,
   Res,
+  UploadedFiles,
   UseGuards,
 } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
@@ -21,6 +22,7 @@ import {
   ShowPluginAdmin,
   ShowPluginsAdminObj,
   ShowPluginsAdminQuery,
+  UploadPluginsAdminBody,
 } from 'vitnode-shared/admin/plugins.dto';
 
 import { CreatePluginsAdminService } from './services/create.service';
@@ -29,6 +31,9 @@ import { EditPluginsAdminService } from './services/edit.service';
 import { ExportPluginsAdminService } from './services/export.service';
 import { ItemPluginsAdminService } from './services/item.service';
 import { ShowPluginsAdminService } from './services/show.service';
+import { UploadPluginsAdminService } from './services/upload.service';
+import { UploadFilesMethod } from '@/helpers/upload-files.decorator';
+import { FilesValidationPipe } from '@/helpers/files/files.pipe';
 
 @Controllers({ plugin_name: 'Core', plugin_code: 'plugins', isAdmin: true })
 export class PluginsAdminController {
@@ -39,7 +44,27 @@ export class PluginsAdminController {
     private readonly itemService: ItemPluginsAdminService,
     private readonly editService: EditPluginsAdminService,
     private readonly exportService: ExportPluginsAdminService,
+    private readonly uploadService: UploadPluginsAdminService,
   ) {}
+
+  @ApiCreatedResponse({ description: 'Plugin uploaded' })
+  @Post('upload')
+  @UseGuards(OnlyForDevelopment)
+  @UploadFilesMethod({ fields: ['file'] })
+  async uploadPlugin(
+    @UploadedFiles(
+      new FilesValidationPipe({
+        file: {
+          maxSize: 1024 * 1024 * 10, // 10 MB
+          acceptMimeType: ['application/gzip', 'application/x-compressed'],
+          maxCount: 1,
+        },
+      }),
+    )
+    files: Pick<UploadPluginsAdminBody, 'file'>,
+  ): Promise<void> {
+    await this.uploadService.upload({ files });
+  }
 
   @ApiCreatedResponse({ description: 'Plugin created', type: ShowPluginAdmin })
   @Post()

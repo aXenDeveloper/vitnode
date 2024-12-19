@@ -43,7 +43,7 @@ export const CreateActionPluginAdmin = () => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button>
+        <Button variant="ghost">
           <Plus />
           {t('create.title')}
         </Button>

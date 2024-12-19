@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  InternalServerErrorException,
-  PipeTransform,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, PipeTransform } from '@nestjs/common';
 
 @Injectable()
 export class FilesValidationPipe implements PipeTransform {
@@ -21,7 +16,7 @@ export class FilesValidationPipe implements PipeTransform {
 
   private validateFieldExists(file: Express.Multer.File): void {
     if (!this.options[file.fieldname]) {
-      throw new InternalServerErrorException(
+      throw new BadRequestException(
         `Invalid file field ${file.fieldname} in FilesValidationPipe`,
       );
     }
