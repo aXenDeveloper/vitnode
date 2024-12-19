@@ -8,7 +8,10 @@ export const buildFilteredQuery = (params: Record<string, unknown>): string => {
       !(Array.isArray(value) && value.length === 0) &&
       value
     ) {
-      searchParams.append(key, JSON.stringify(value));
+      searchParams.append(
+        key,
+        typeof value === 'string' ? value : JSON.stringify(value),
+      );
     }
   });
 
