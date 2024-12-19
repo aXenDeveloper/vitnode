@@ -244,7 +244,8 @@
       },
       "not_verified": {
         "title": "Email is not verified",
-        "desc": "Please check your inbox and click the link to activate your account."
+        "desc": "Please check your inbox and click the link to activate your account.",
+        "resend": "To resend the verification email you have to sign in again. We'll send you a new email if the previous has 10 minutes or more."
       },
       "forgot_password": {
         "title": "Forgot Password?",

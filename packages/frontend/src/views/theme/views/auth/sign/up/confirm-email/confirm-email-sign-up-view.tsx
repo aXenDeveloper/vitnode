@@ -1,16 +1,21 @@
 import { fetcher } from '@/api/fetcher';
 import { Button } from '@/components/ui/button';
-import { Link, redirect } from '@/navigation';
+import { Link } from '@/navigation';
 import { CircleCheckIcon, LogIn } from 'lucide-react';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
-import { VerifyConfirmEmailAuthBody } from 'vitnode-shared/auth/auth.dto';
+import { notFound } from 'next/navigation';
+import { VerifyConfirmEmailAuthQuery } from 'vitnode-shared/auth/auth.dto';
 
-const getData = async (body: VerifyConfirmEmailAuthBody) => {
-  await fetcher<object, VerifyConfirmEmailAuthBody>({
-    url: '/core/auth/verify_confirm_email',
-    body,
-  });
+const getData = async (query: VerifyConfirmEmailAuthQuery) => {
+  try {
+    await fetcher<object, VerifyConfirmEmailAuthQuery>({
+      url: '/core/auth/verify_confirm_email',
+      query,
+    });
+  } catch (_) {
+    notFound();
+  }
 };
 
 export const metadataConfirmEmailSignUp: Metadata = {
@@ -31,19 +36,13 @@ export const ConfirmEmailSignUpView = async ({
   ]);
 
   if (!userId || !token) {
-    await redirect('/login');
-
-    return;
+    notFound();
   }
 
-  try {
-    await getData({
-      token,
-      user_id: +userId,
-    });
-  } catch (_e) {
-    await redirect('/login');
-  }
+  await getData({
+    token,
+    user_id: +userId,
+  });
 
   return (
     <div className="bg-background container flex max-w-xl flex-col items-center justify-center px-4 py-12 text-center sm:px-6 lg:px-8">

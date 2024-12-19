@@ -3,7 +3,7 @@ import { InternalDatabaseService } from '@/utils/database/internal_database.serv
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import crypto from 'crypto';
 import { eq } from 'drizzle-orm';
-import { VerifyConfirmEmailAuthBody } from 'vitnode-shared/auth/auth.dto';
+import { VerifyConfirmEmailAuthQuery } from 'vitnode-shared/auth/auth.dto';
 
 @Injectable()
 export class VerifyConfirmEmailAuthService {
@@ -19,7 +19,7 @@ export class VerifyConfirmEmailAuthService {
     });
   }
 
-  async verify({ token, user_id }: VerifyConfirmEmailAuthBody): Promise<void> {
+  async verify({ token, user_id }: VerifyConfirmEmailAuthQuery): Promise<void> {
     const data =
       await this.databaseService.db.query.core_users_confirm_emails.findFirst({
         where: (table, { eq, and }) =>

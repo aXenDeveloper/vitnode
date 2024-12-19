@@ -2,7 +2,16 @@ import type { Request, Response } from 'express';
 
 import { AuthGuard } from '@/guards/auth.guard';
 import { Controllers } from '@/helpers/controller.decorator';
-import { Body, Delete, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Delete,
+  Get,
+  Post,
+  Query,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiOkResponse,
@@ -15,7 +24,7 @@ import {
   SignInAuthObj,
   SignOutAuthBody,
   SignUpAuthBody,
-  VerifyConfirmEmailAuthBody,
+  VerifyConfirmEmailAuthQuery,
 } from 'vitnode-shared/auth/auth.dto';
 
 import { VerifyConfirmEmailAuthService } from './services/confirm_email/verify.service';
@@ -94,8 +103,8 @@ export class AuthController {
   })
   @Get('verify_confirm_email')
   async verifyConfirmEmail(
-    @Body() body: VerifyConfirmEmailAuthBody,
+    @Query() query: VerifyConfirmEmailAuthQuery,
   ): Promise<void> {
-    await this.verifyConfirmEmailService.verify(body);
+    await this.verifyConfirmEmailService.verify(query);
   }
 }
