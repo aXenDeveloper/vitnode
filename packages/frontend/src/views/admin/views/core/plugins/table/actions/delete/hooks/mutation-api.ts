@@ -11,8 +11,6 @@ export const mutationApi = async (id: number) => {
     method: 'DELETE',
   });
 
-  // await new Promise(resolve => setTimeout(resolve, 3000));
-
   await checkConnectionApi();
 
   revalidatePath('/', 'layout');

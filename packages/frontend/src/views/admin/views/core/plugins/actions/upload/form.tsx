@@ -9,6 +9,7 @@ import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
+import { revalidateAllApi } from '../../../diagnostic/actions/clear_cache/hooks/revalidate-all-api';
 import { revalidateApi } from './revalidate-api';
 
 export const FormUploadPluginAdmin = () => {
@@ -28,12 +29,15 @@ export const FormUploadPluginAdmin = () => {
     formData.append('file', values.file);
 
     try {
-      await fetcherClient({
-        url: '/admin/plugins/upload',
-        method: 'POST',
-        body: formData,
-      });
-      await revalidateApi();
+      await Promise.all([
+        fetcherClient({
+          url: '/admin/plugins/upload',
+          method: 'POST',
+          body: formData,
+        }),
+        revalidateApi(),
+      ]);
+      await revalidateAllApi();
 
       setOpen?.(false);
       toast.success(t('success.upload'));
