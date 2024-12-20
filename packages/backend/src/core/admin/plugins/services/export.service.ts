@@ -116,6 +116,7 @@ export class ExportPluginsAdminService {
     await cp(backendSource, backendPath, { recursive: true });
 
     // Copy frontend files
+    const pathFiles = ABSOLUTE_PATHS.plugin({ code });
     const frontendPaths = [
       'admin_pages_auth',
       'admin_pages',
@@ -127,7 +128,7 @@ export class ExportPluginsAdminService {
     ] as const;
     await Promise.all(
       frontendPaths.map(async path => {
-        const source = ABSOLUTE_PATHS.plugin({ code }).frontend[path];
+        const source = pathFiles.frontend[path];
         if (!existsSync(source)) {
           if (path === 'plugin') {
             return res

@@ -18,6 +18,8 @@ export class ValidateFilesPluginsAdminHelpersService {
       pluginPath.frontend.plugin,
       // Shared
       pluginPath.shared,
+      // Backend
+      pluginPath.root,
     ];
 
     // Check if the folders exist

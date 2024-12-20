@@ -136,3 +136,13 @@ export class ExportPluginsAdminBody {
   @IsOptional()
   version_code?: number;
 }
+
+export class UploadPluginsAdminBody {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  code?: string;
+
+  @ApiProperty({ type: 'string', format: 'binary' })
+  file: Express.Multer.File;
+}

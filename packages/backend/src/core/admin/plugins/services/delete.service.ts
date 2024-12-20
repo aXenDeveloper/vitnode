@@ -12,6 +12,7 @@ import {
 import { eq } from 'drizzle-orm';
 import { existsSync } from 'fs';
 import { rm } from 'fs/promises';
+import { join } from 'path';
 
 import { ChangeFilesPluginsAdminHelpersService } from '../helpers/change-files.service';
 
@@ -70,6 +71,11 @@ export class DeletePluginsAdminService {
 
     // Shared
     await this.deleteFolderWhenExists(pluginPaths.shared);
+
+    // Uploads
+    await this.deleteFolderWhenExists(
+      join(ABSOLUTE_PATHS.uploads.public, plugin.code),
+    );
 
     await Promise.all([
       this.databaseService.db

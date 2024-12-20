@@ -16,7 +16,12 @@ import { ShowPluginAdmin } from 'vitnode-shared/admin/plugins.dto';
 import { DeletePluginActionsAdmin } from './delete/delete';
 import { SetDefaultPluginActionsAdmin } from './set-default/set-default';
 
-export const ActionsItemPluginsAdmin = (props: ShowPluginAdmin) => {
+export const ActionsItemPluginsAdmin = ({
+  isRestartServerRequired,
+  ...props
+}: ShowPluginAdmin & {
+  isRestartServerRequired: boolean;
+}) => {
   const t = useTranslations('admin.core.plugins');
   const tCore = useTranslations('core.global');
   const pathname = usePathname();
@@ -28,6 +33,7 @@ export const ActionsItemPluginsAdmin = (props: ShowPluginAdmin) => {
     <>
       {!props.default &&
         props.enabled &&
+        !isRestartServerRequired &&
         (props.allow_default || CONFIG.node_development) && (
           <SetDefaultPluginActionsAdmin {...props} />
         )}

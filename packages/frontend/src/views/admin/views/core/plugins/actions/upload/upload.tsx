@@ -1,40 +1,47 @@
 'use client';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Loader } from '@/components/ui/loader';
-import { Plus } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
 const Content = React.lazy(async () =>
   import('./form').then(module => ({
-    default: module.FormCreateEditPluginAdmin,
+    default: module.FormUploadPluginAdmin,
   })),
 );
 
-export const CreateActionPluginAdmin = () => {
-  const t = useTranslations('admin.core.plugins');
+export const UploadActionPluginAdmin = () => {
+  const t = useTranslations('admin.core.plugins.upload');
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost">
-          <Plus />
-          {t('create.title')}
+        <Button>
+          <Upload />
+          {t('title')}
         </Button>
       </DialogTrigger>
 
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>{t('create.title')}</DialogTitle>
+          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription>{t('desc')}</DialogDescription>
         </DialogHeader>
+
+        <Alert variant="primary">
+          <AlertDescription>{t('info')}</AlertDescription>
+        </Alert>
 
         <React.Suspense fallback={<Loader />}>
           <Content />

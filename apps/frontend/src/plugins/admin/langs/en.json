@@ -426,18 +426,24 @@
         },
         "upload": {
           "title": "Upload Plugin",
+          "desc": "Upload a new plugin to your website.",
           "title_new_version": "Upload New Version Plugin",
-          "info": "After uploading the plugin, you need to restart the server to apply the changes.",
+          "info": "After the process will be complete, you need to restart the server to apply the changes.",
           "errors": {
             "PLUGIN_ALREADY_EXISTS": "Plugin with this code already exists. If you want to update the plugin, use the upload new version form from the plugin dropdown menu.",
-            "PLUGIN_VERSION_IS_LOWER": "The version of the uploaded plugin is lower than the current version."
+            "PLUGIN_VERSION_IS_LOWER": "The version of the uploaded plugin is lower than the current version.",
+            "CONFLICT_PLUGIN_CODE": "Files with the same name already exist your project. Please remove them and try again."
+          },
+          "success": {
+            "upload": "Plugin has been uploaded.",
+            "new_version": "New version of the plugin has been uploaded."
           },
           "submit": "Upload"
         },
         "delete": {
           "submit": "Yes, delete plugin",
           "desc": "This action will delete <name></name> plugin created by <author></author> and all data associated with it.",
-          "info": "After the process is complete, you need to restart the server to apply the changes."
+          "info": "After the process will be complete, you need to restart the server to apply the changes."
         }
       },
       "styles": {

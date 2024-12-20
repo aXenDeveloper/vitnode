@@ -13,7 +13,10 @@ import { ActionsItemPluginsAdmin } from './actions/actions';
 export const ContentPluginsCoreAdmin = ({
   edges,
   page_info,
-}: ShowPluginsAdminObj) => {
+  isRestartServerRequired,
+}: ShowPluginsAdminObj & {
+  isRestartServerRequired: boolean;
+}) => {
   const t = useTranslations('admin.core.plugins');
   const tCore = useTranslations('core.global');
 
@@ -86,7 +89,12 @@ export const ContentPluginsCoreAdmin = ({
         {
           id: 'actions',
           cell: ({ row }) => {
-            return <ActionsItemPluginsAdmin {...row} />;
+            return (
+              <ActionsItemPluginsAdmin
+                isRestartServerRequired={isRestartServerRequired}
+                {...row}
+              />
+            );
           },
         },
       ]}

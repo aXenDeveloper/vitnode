@@ -38,7 +38,6 @@ export const updatePlugins = async ({
           return;
         }
 
-        // const config: ConfigPlugin = JSON.parse(
         const config = JSON.parse(
           await readFile(join(pluginPath, 'config.json'), 'utf8'),
         );

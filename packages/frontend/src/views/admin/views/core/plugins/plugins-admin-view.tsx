@@ -1,5 +1,7 @@
 import { fetcher } from '@/api/fetcher';
+import { getSessionAdminData } from '@/api/get-session-admin-data';
 import { HeaderContent } from '@/components/ui/header-content';
+import { CONFIG } from '@/helpers/config-with-env';
 import {
   getPaginationTool,
   SearchParamsPagination,
@@ -42,19 +44,23 @@ export const PluginsAdminView = async ({
     searchParams,
     sortEnum: ShowPluginsAdminSortEnum,
   });
-  const [t, data] = await Promise.all([
+  const [t, data, { restart_server }] = await Promise.all([
     getTranslations('admin.core.plugins'),
     getData(variables),
+    getSessionAdminData(),
   ]);
 
   return (
     <>
       <HeaderContent desc={t('desc')} h1={t('title')}>
-        <ActionsPluginsAdmin />
+        {CONFIG.node_development && <ActionsPluginsAdmin />}
       </HeaderContent>
 
       <WarnReqRestartServer />
-      <ContentPluginsCoreAdmin {...data} />
+      <ContentPluginsCoreAdmin
+        isRestartServerRequired={restart_server}
+        {...data}
+      />
     </>
   );
 };
