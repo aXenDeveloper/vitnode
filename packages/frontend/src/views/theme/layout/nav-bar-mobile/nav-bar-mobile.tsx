@@ -7,7 +7,7 @@ import { useSession } from '@/hooks/use-session';
 import { usePathname, useRouter } from '@/navigation';
 import { DialogDescription, DialogTitle } from '@radix-ui/react-dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { ArrowLeftIcon, MenuIcon, SearchIcon } from 'lucide-react';
+import { ArrowLeftIcon, MenuIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { UserFooterNavBarMobile } from './content/user-footer';
@@ -29,9 +29,9 @@ export const NavBarMobile = () => {
           <ArrowLeftIcon />
         </ItemNavBarMobile>
       )}
-      <ItemNavBarMobile href="/search" title={t('mobile_nav.search')}>
+      {/* <ItemNavBarMobile href="/search" title={t('mobile_nav.search')}>
         <SearchIcon />
-      </ItemNavBarMobile>
+      </ItemNavBarMobile> */}
 
       <Drawer>
         <DrawerTrigger asChild>

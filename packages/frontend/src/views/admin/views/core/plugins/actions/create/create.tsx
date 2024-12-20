@@ -9,9 +9,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Loader } from '@/components/ui/loader';
-import { CONFIG } from '@/helpers/config-with-env';
-import { Link } from '@/navigation';
-import { Plus, SquareArrowUpRight } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
@@ -23,22 +21,6 @@ const Content = React.lazy(async () =>
 
 export const CreateActionPluginAdmin = () => {
   const t = useTranslations('admin.core.plugins');
-
-  if (!CONFIG.node_development) {
-    return (
-      <Button asChild>
-        <Link
-          href="https://vitnode.com/docs/dev/plugin-create"
-          rel="noreferrer noopener"
-          target="_blank"
-        >
-          <Plus />
-          {t('create.title')}
-          <SquareArrowUpRight />
-        </Link>
-      </Button>
-    );
-  }
 
   return (
     <Dialog>

@@ -2,6 +2,8 @@ import type { Response } from 'express';
 
 import { OnlyForDevelopment } from '@/guards/dev.guard';
 import { Controllers } from '@/helpers/controller.decorator';
+import { FilesValidationPipe } from '@/helpers/files/files.pipe';
+import { UploadFilesMethod } from '@/helpers/upload-files.decorator';
 import {
   Body,
   Delete,
@@ -32,8 +34,6 @@ import { ExportPluginsAdminService } from './services/export.service';
 import { ItemPluginsAdminService } from './services/item.service';
 import { ShowPluginsAdminService } from './services/show.service';
 import { UploadPluginsAdminService } from './services/upload.service';
-import { UploadFilesMethod } from '@/helpers/upload-files.decorator';
-import { FilesValidationPipe } from '@/helpers/files/files.pipe';
 
 @Controllers({ plugin_name: 'Core', plugin_code: 'plugins', isAdmin: true })
 export class PluginsAdminController {
@@ -46,25 +46,6 @@ export class PluginsAdminController {
     private readonly exportService: ExportPluginsAdminService,
     private readonly uploadService: UploadPluginsAdminService,
   ) {}
-
-  @ApiCreatedResponse({ description: 'Plugin uploaded' })
-  @Post('upload')
-  @UseGuards(OnlyForDevelopment)
-  @UploadFilesMethod({ fields: ['file'] })
-  async uploadPlugin(
-    @UploadedFiles(
-      new FilesValidationPipe({
-        file: {
-          maxSize: 1024 * 1024 * 10, // 10 MB
-          acceptMimeType: ['application/gzip', 'application/x-compressed'],
-          maxCount: 1,
-        },
-      }),
-    )
-    files: Pick<UploadPluginsAdminBody, 'file'>,
-  ): Promise<void> {
-    await this.uploadService.upload({ files });
-  }
 
   @ApiCreatedResponse({ description: 'Plugin created', type: ShowPluginAdmin })
   @Post()
@@ -117,5 +98,25 @@ export class PluginsAdminController {
     @Query() query: ShowPluginsAdminQuery,
   ): Promise<ShowPluginsAdminObj> {
     return await this.showService.show(query);
+  }
+
+  @ApiCreatedResponse({ description: 'Plugin uploaded' })
+  @Post('upload')
+  @UploadFilesMethod({ fields: ['file'] })
+  @UseGuards(OnlyForDevelopment)
+  async uploadPlugin(
+    @UploadedFiles(
+      new FilesValidationPipe({
+        file: {
+          maxSize: 1024 * 1024 * 10, // 10 MB
+          acceptMimeType: ['application/gzip', 'application/x-compressed'],
+          maxCount: 1,
+        },
+      }),
+    )
+    files: Pick<UploadPluginsAdminBody, 'file'>,
+    @Body() body: UploadPluginsAdminBody,
+  ): Promise<void> {
+    await this.uploadService.upload({ files, body });
   }
 }
