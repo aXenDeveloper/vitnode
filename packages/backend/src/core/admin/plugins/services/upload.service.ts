@@ -6,6 +6,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotImplementedException,
 } from '@nestjs/common';
 import { existsSync } from 'fs';
 import { cp, mkdir, readFile, rm } from 'fs/promises';
@@ -157,6 +158,10 @@ export class UploadPluginsAdminService {
       file,
       tempPath,
     });
+
+    if (code) {
+      throw new NotImplementedException();
+    }
 
     // Validation
     if (code) {

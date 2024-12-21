@@ -7,12 +7,17 @@ import { zodFile } from '@/helpers/zod';
 import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
+import { ShowPluginAdmin } from 'vitnode-shared/admin/plugins.dto';
 import { z } from 'zod';
 
 import { revalidateAllApi } from '../../../diagnostic/actions/clear_cache/hooks/revalidate-all-api';
 import { revalidateApi } from './revalidate-api';
 
-export const FormUploadPluginAdmin = () => {
+export const FormUploadPluginAdmin = ({
+  data,
+}: {
+  data?: Pick<ShowPluginAdmin, 'code' | 'name'>;
+}) => {
   const t = useTranslations('admin.core.plugins.upload');
   const { setOpen } = useDialog();
   const tError = useTranslations('core.global.errors');
@@ -27,6 +32,9 @@ export const FormUploadPluginAdmin = () => {
     const formData = new FormData();
     if (!values.file || !(values.file instanceof File)) return;
     formData.append('file', values.file);
+    if (data) {
+      formData.append('code', data.code);
+    }
 
     try {
       await Promise.all([
@@ -40,7 +48,7 @@ export const FormUploadPluginAdmin = () => {
       await revalidateAllApi();
 
       setOpen?.(false);
-      toast.success(t('success.upload'));
+      toast.success(t(`success.${data ? 'new_version' : 'upload'}`));
     } catch (err) {
       const error = err as Error;
 
