@@ -2,10 +2,7 @@ import { Button } from '@/components/ui/button';
 import { DrawerClose } from '@/components/ui/drawer';
 import { useSession } from '@/hooks/use-session';
 import { Link } from '@/navigation';
-import { SettingsIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-
-import { ItemUserNavBarMobile } from './item';
 
 export const UserHeaderNavBarMobile = () => {
   const t = useTranslations('core.global');
@@ -29,21 +26,9 @@ export const UserHeaderNavBarMobile = () => {
   }
 
   return (
-    <>
-      <div className="flex flex-col gap-1 p-6 pb-4">
-        <span className="font-semibold leading-none">{user.name}</span>
-        <p className="text-muted-foreground text-sm leading-none">
-          {user.email}
-        </p>
-      </div>
-
-      <div className="flex flex-col px-2">
-        <ItemUserNavBarMobile
-          href="/settings"
-          icon={<SettingsIcon />}
-          name={t('user-bar.settings')}
-        />
-      </div>
-    </>
+    <div className="flex flex-col gap-1 p-6 pb-4">
+      <span className="font-semibold leading-none">{user.name}</span>
+      <p className="text-muted-foreground text-sm leading-none">{user.email}</p>
+    </div>
   );
 };

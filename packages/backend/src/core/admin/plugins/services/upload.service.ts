@@ -7,6 +7,7 @@ import {
   ConflictException,
   Injectable,
 } from '@nestjs/common';
+import { eq } from 'drizzle-orm';
 import { existsSync } from 'fs';
 import { cp, mkdir, readFile, rm } from 'fs/promises';
 import { join } from 'path';
@@ -222,7 +223,15 @@ export class UploadPluginsAdminService {
         tempPath,
         type: 'backend',
       }),
-      this.databaseService.db.insert(core_plugins).values(configPlugin),
+      code
+        ? this.databaseService.db
+            .update(core_plugins)
+            .set({
+              ...configPlugin,
+              updated_at: new Date(),
+            })
+            .where(eq(core_plugins.code, code))
+        : this.databaseService.db.insert(core_plugins).values(configPlugin),
     ]);
   }
 }

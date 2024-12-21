@@ -1,11 +1,7 @@
 import { fetcher } from '@/api/fetcher';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AvatarUser } from '@/components/ui/user/avatar';
 import { GroupFormat } from '@/components/ui/user/group-format';
-import { Link } from '@/navigation';
-import { SquareArrowOutUpRight } from 'lucide-react';
-import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { UserMembersAdmin } from 'vitnode-shared/admin/members/users.dto';
 
@@ -42,11 +38,8 @@ export const generateMetadataUserMembersAdmin = async ({ id }: Props) => {
 };
 
 export const UserMembersAdminView = async ({ id }: Props) => {
-  const [t, data] = await Promise.all([
-    getTranslations('admin.members.users.item'),
-    getData(+id),
-  ]);
-  const { name, group, name_seo } = data;
+  const data = await getData(+id);
+  const { name, group } = data;
 
   return (
     <div className="space-y-8">
@@ -66,11 +59,11 @@ export const UserMembersAdminView = async ({ id }: Props) => {
             <GroupFormat group={group} />
           </div>
 
-          <Button asChild variant="outline">
+          {/* <Button asChild variant="outline">
             <Link href={`/profile/${name_seo}`} target="_blank">
               {t('public_profile')} <SquareArrowOutUpRight />
             </Link>
-          </Button>
+          </Button> */}
 
           <ActionsUserMembersAdmin {...data} />
         </div>

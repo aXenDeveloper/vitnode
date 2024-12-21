@@ -12,7 +12,6 @@ export const useDeletePluginAdmin = ({ id }: { id: number }) => {
     try {
       await mutationApi(id);
       setOpen(false);
-      window.location.reload();
     } catch (_) {
       toast.error(tCore('title'), {
         description: tCore('internal_server_error'),

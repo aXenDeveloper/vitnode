@@ -40,10 +40,15 @@ export const nestjsMainApp = async (app: INestApplication, options?: Args) => {
     const config = new DocumentBuilder()
       .setTitle('VitNode App')
       .setVersion(pkg.version)
+      .setContact('VitNode', 'https://vitnode.com/', '')
       .build();
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api', app, document, {
       jsonDocumentUrl: '/api/swagger.json',
+      swaggerOptions: {
+        docExpansion: 'none',
+        defaultModelsExpandDepth: -1,
+      },
     });
   }
 

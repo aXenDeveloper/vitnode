@@ -152,28 +152,6 @@ export class InternalDatabaseService<
           ? gt
           : lt;
       where = comparisonFn(database[primaryCursor], cursorId);
-
-      // ! Deleted fragment code. If you having trouble, please uncomment below code.
-      // const cursorData = await this.db
-      //   .select()
-      //   .from(database)
-      //   .where(eq(database[primaryCursor], cursorId))
-      //   .limit(1);
-
-      // if (cursorData.length === 1) {
-      //   const comparisonFn = last
-      //     ? currentSortBy.direction === SortDirectionEnum.asc
-      //       ? lte
-      //       : gte
-      //     : currentSortBy.direction === SortDirectionEnum.asc
-      //       ? gt
-      //       : lt;
-      //   where = comparisonFn(
-      //     database[primaryCursor],
-      //     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      //     cursorData[0][primaryCursor as string],
-      //   );
-      // }
     }
 
     const [edges, [total_count]] = await Promise.all([
@@ -182,7 +160,7 @@ export class InternalDatabaseService<
         orderBy,
         limit: first || last ? ((last ? last + 1 : first) ?? 0) + 1 : undefined,
       }),
-      this.db.select({ count: count() }).from(database).where(where),
+      this.db.select({ count: count() }).from(database),
     ]);
 
     return this.outputPagination({

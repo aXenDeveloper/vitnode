@@ -66,7 +66,7 @@ export class UsersMembersAdminQuery extends PaginationQuery {
   @IsArray()
   @IsOptional()
   @IsString({ each: true })
-  @Transform(({ value }) => value.split(','))
+  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
   groups?: number[];
 
   @ApiPropertyOptional()

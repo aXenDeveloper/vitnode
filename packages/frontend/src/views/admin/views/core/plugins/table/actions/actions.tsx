@@ -15,6 +15,7 @@ import { ShowPluginAdmin } from 'vitnode-shared/admin/plugins.dto';
 
 import { DeletePluginActionsAdmin } from './delete/delete';
 import { SetDefaultPluginActionsAdmin } from './set-default/set-default';
+import { UploadPluginActionsAdmin } from './upload';
 
 export const ActionsItemPluginsAdmin = ({
   isRestartServerRequired,
@@ -91,11 +92,11 @@ export const ActionsItemPluginsAdmin = ({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* <UploadPluginActionsAdmin
+          <UploadPluginActionsAdmin
+            data={props}
             open={isOpenUploadDialog}
             setOpen={setIsOpenUploadDialog}
-            {...props}
-          /> */}
+          />
 
           {!props.default && (
             <DeletePluginActionsAdmin
