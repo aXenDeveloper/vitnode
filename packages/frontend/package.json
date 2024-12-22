@@ -101,9 +101,9 @@
     "react-hook-form": "^7.54.1",
     "recharts": "^2.14.1",
     "sonner": "^1.7.0",
+    "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2",
-    "zod": "^3.24.1",
-    "tailwindcss": "^3.4.17"
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@hookform/devtools": "^4.3.3",
@@ -119,10 +119,10 @@
     "eslint-config-typescript-vitnode": "workspace:*",
     "lucide-react": "^0.469.0",
     "next": "^15.1.2",
-    "next-intl": "^3.26.2",
+    "next-intl": "^3.26.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-hook-form": "^7.54.1",
+    "react-hook-form": "^7.54.2",
     "recharts": "^2.15.0",
     "sonner": "^1.7.1",
     "tailwindcss": "^3.4.17",

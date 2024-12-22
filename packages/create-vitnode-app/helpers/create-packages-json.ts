@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'fs';
+import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 
 interface PackageJSON {
@@ -15,7 +15,7 @@ interface PackageJSON {
   workspaces?: string[];
 }
 
-export const createPackagesJSON = ({
+export const createPackagesJSON = async ({
   appName,
   root,
   packageManager,
@@ -29,7 +29,7 @@ export const createPackagesJSON = ({
   root: string;
 }) => {
   const pkg: PackageJSON = JSON.parse(
-    readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'),
+    await readFile(join(__dirname, '..', 'package.json'), 'utf-8'),
   );
 
   const basePackageJSON: PackageJSON = {
@@ -45,8 +45,8 @@ export const createPackagesJSON = ({
       ...(eslint ? { lint: 'turbo lint', 'lint:fix': 'turbo lint:fix' } : {}),
       ...(docker
         ? {
-            'docker:dev': `docker compose -f ./docker-compose-dev.yml -p vitnode-dev-${appName} up -d`,
-            'docker:prod': `docker compose -f ./docker-compose.yml -p vitnode-prod-${appName} up -d`,
+            'docker:dev': `docker compose -f ./docker-compose-dev.yml -p ${appName}-dev up -d`,
+            'docker:prod': `docker compose -f ./docker-compose.yml -p ${appName} up -d`,
           }
         : {}),
     },
@@ -62,7 +62,7 @@ export const createPackagesJSON = ({
     workspaces: ['apps/*'],
   };
 
-  writeFileSync(
+  await writeFile(
     join(root, 'package.json'),
     JSON.stringify(basePackageJSON, null, 2),
   );
@@ -108,7 +108,7 @@ export const createPackagesJSON = ({
     },
   };
 
-  writeFileSync(
+  await writeFile(
     join(root, 'apps', 'frontend', 'package.json'),
     JSON.stringify(frontendPackagesJSON, null, 2),
   );
@@ -159,7 +159,7 @@ export const createPackagesJSON = ({
     },
   };
 
-  writeFileSync(
+  await writeFile(
     join(root, 'apps', 'backend', 'package.json'),
     JSON.stringify(backendPackagesJSON, null, 2),
   );
@@ -196,7 +196,7 @@ export const createPackagesJSON = ({
     },
   };
 
-  writeFileSync(
+  await writeFile(
     join(root, 'apps', 'shared', 'package.json'),
     JSON.stringify(sharedPackagesJSON, null, 2),
   );

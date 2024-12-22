@@ -1,8 +1,10 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { join } from 'path';
 
 import { CoreModule } from './core/core.module';
@@ -176,6 +178,12 @@ export class VitNodeCoreModule {
   }): DynamicModule {
     return {
       module: VitNodeCoreModule,
+      providers: [
+        {
+          provide: APP_GUARD,
+          useClass: ThrottlerGuard,
+        },
+      ],
       imports: [
         ConfigModule.forRoot({
           isGlobal: true,
@@ -183,11 +191,21 @@ export class VitNodeCoreModule {
         }),
         ScheduleModule.forRoot(),
         CoreModule,
+        ThrottlerModule.forRoot([
+          {
+            ttl: 1000,
+            limit: 60,
+          },
+        ]),
         InternalDatabaseModule.register(database),
         JwtModule.register({ global: true }),
         ServeStaticModule.forRoot({
           rootPath: ABSOLUTE_PATHS.uploads.public,
           serveRoot: '/public/',
+          serveStaticOptions: {
+            cacheControl: true,
+            maxAge: 31536000,
+          },
         }),
         GlobalHelpersModule.register({ email, ssoLoginMethod }),
       ],
