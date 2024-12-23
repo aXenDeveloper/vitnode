@@ -1,12 +1,4 @@
 /* eslint-disable no-console */
-import {
-  copyFileSync,
-  cpSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  writeFileSync,
-} from 'fs';
 import { join } from 'path';
 import { randomBytes } from 'crypto';
 
@@ -18,12 +10,7 @@ import { isFolderEmpty } from '../helpers/is-folder-empty';
 import { CreateCliReturn } from '../cli';
 import { createPackagesJSON } from '../helpers/create-packages-json';
 import { installDependencies } from '../helpers/install-dependencies';
-import { tryGitInit } from '../helpers/git';
-
-interface Args extends CreateCliReturn {
-  appName: string;
-  root: string;
-}
+import { copyFile, cp, mkdir, readFile, rename, writeFile } from 'fs/promises';
 
 export const createVitNode = async ({
   root,
@@ -32,7 +19,10 @@ export const createVitNode = async ({
   eslint,
   docker,
   install,
-}: Args) => {
+}: {
+  appName: string;
+  root: string;
+} & CreateCliReturn) => {
   const useNpm = packageManager.startsWith('npm');
   const pm = packageManager.split('@')[0];
   const templatePath = join(__dirname, '..', 'templates');
@@ -43,7 +33,7 @@ export const createVitNode = async ({
   /**
    * Create the folder
    */
-  mkdirSync(root, { recursive: true });
+  await mkdir(root, { recursive: true });
   if (!isFolderEmpty(root, appName)) {
     process.exit(1);
   }
@@ -52,7 +42,7 @@ export const createVitNode = async ({
 
   // Copy the basic template
   spinner.text = 'Copying files...';
-  cpSync(join(templatePath, 'basic'), root, { recursive: true });
+  await cp(join(templatePath, 'basic'), root, { recursive: true });
 
   // Create package.json
   spinner.text = 'Creating package.json...';
@@ -66,7 +56,7 @@ export const createVitNode = async ({
 
   // Rename files
   spinner.text = 'Renaming files...';
-  renameSync(join(root, '.gitignore_template'), join(root, '.gitignore'));
+  await rename(join(root, '.gitignore_template'), join(root, '.gitignore'));
 
   // Change tailwind.config.ts based on package manager
   spinner.text = 'Changing tailwind.config.ts...';
@@ -77,8 +67,7 @@ export const createVitNode = async ({
       'frontend',
       'tailwind.config.ts',
     );
-    const tailwindConfig = readFileSync(tailwindConfigPath, 'utf-8');
-    const newTailwindConfig = tailwindConfig
+    const newTailwindConfig = (await readFile(tailwindConfigPath, 'utf-8'))
       .replace(
         './node_modules/vitnode-frontend/src/components/**/*.tsx',
         '../../node_modules/vitnode-frontend/src/components/**/*.tsx',
@@ -88,47 +77,52 @@ export const createVitNode = async ({
         '../../node_modules/vitnode-frontend/src/views/**/*.tsx',
       );
 
-    writeFileSync(tailwindConfigPath, newTailwindConfig);
+    await writeFile(tailwindConfigPath, newTailwindConfig);
+  }
+  if (docker) {
+    spinner.text = 'Setup docker-compose-dev.yml...';
+    const dockerComposeDevPath = join(root, 'docker-compose-dev.yml');
+    const newDockerComposeDev = (await readFile(dockerComposeDevPath, 'utf-8'))
+      .replace('vitnode_postgres_dev', `${appName}_postgres_dev`)
+      .replace('vitnode_pgadmin_dev', `${appName}_pgadmin_dev`);
+
+    await writeFile(dockerComposeDevPath, newDockerComposeDev);
   }
 
   // Copy pnpm template
   if (packageManager.startsWith('pnpm')) {
     spinner.text = 'Copying pnpm template...';
-    cpSync(join(templatePath, 'pnpm'), root, { recursive: true });
+    await cp(join(templatePath, 'pnpm'), root, { recursive: true });
   }
 
   // Copy eslint template
   if (eslint) {
     spinner.text = 'Copying eslint template...';
-    cpSync(join(templatePath, 'eslint'), root, { recursive: true });
+    await cp(join(templatePath, 'eslint'), root, { recursive: true });
   }
 
   // Copy docker template
   if (docker) {
     spinner.text = 'Copying docker template...';
-    cpSync(join(templatePath, 'docker'), root, { recursive: true });
+    await cp(join(templatePath, 'docker'), root, { recursive: true });
   }
 
   // Change the .env file
   spinner.text = 'Changing .env file...';
-  copyFileSync(join(root, '.env.template'), join(root, '.env'));
+  await copyFile(join(root, '.env.template'), join(root, '.env'));
   const envPath = join(root, '.env');
-  const env = readFileSync(envPath, 'utf-8');
-  const newEnv = env.replace(
+  const newEnv = (await readFile(envPath, 'utf-8')).replace(
     'LOGIN_TOKEN_SECRET=vitnode_secret',
     `LOGIN_TOKEN_SECRET=${randomBytes(32).toString('hex')}`,
   );
 
-  writeFileSync(envPath, newEnv);
+  await writeFile(envPath, newEnv);
 
   // Install dependencies
   if (install) {
     spinner.text = 'Installing dependencies...';
     await installDependencies({ packageManager });
   }
-
-  spinner.text = 'Initializing a git repository...';
-  tryGitInit(root);
 
   console.log(
     '\n' +
