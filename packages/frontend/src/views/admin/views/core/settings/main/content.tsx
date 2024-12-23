@@ -23,7 +23,7 @@ export const ContentMainSettingsCoreAdmin = (props: ShowMiddlewareObj) => {
           component: props => (
             <>
               <AutoFormInput {...props} />
-              <div className="flex w-32 items-center justify-center">
+              <div className="flex w-32 items-center justify-start">
                 <TooltipWrapper content={t('name.seo')}>
                   <Badge
                     className="mt-1"
@@ -50,7 +50,7 @@ export const ContentMainSettingsCoreAdmin = (props: ShowMiddlewareObj) => {
           component: props => (
             <>
               <AutoFormInput {...props} />
-              <div className="flex w-32 items-center justify-center">
+              <div className="flex w-32 items-center justify-start">
                 <TooltipWrapper content={t('short_name.seo')}>
                   <Badge
                     className="mt-1"

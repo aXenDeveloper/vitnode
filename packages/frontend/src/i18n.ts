@@ -13,8 +13,8 @@ export const i18nConfigVitNode = async ({
   }) => Promise<{ default: object }>;
   requestLocale: Promise<string | undefined>;
 }) => {
-  let locale = await requestLocale;
   let defaultLocale = 'en';
+  let locale = (await requestLocale) ?? 'en';
 
   if (!locale) {
     locale = 'en';
@@ -28,7 +28,7 @@ export const i18nConfigVitNode = async ({
     const defaultLanguage = data.languages.find(lang => lang.default);
     defaultLocale = defaultLanguage?.code ?? 'en';
     if (!data.languages.find(lang => lang.code === locale)) {
-      locale = defaultLanguage?.code;
+      locale = defaultLanguage?.code ?? defaultLocale;
     }
   } catch (_) {
     // If the request fails, we will use the default plugins

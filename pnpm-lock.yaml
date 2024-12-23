@@ -130,8 +130,8 @@ importers:
         specifier: ^15.1.2
         version: 15.1.2(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@19.0.0-beta-df7b47d-20241124)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       next-intl:
-        specifier: ^3.26.2
-        version: 3.26.2(next@15.1.2(@opentelemetry/api@1.9.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
+        specifier: 4.0.0-beta-ddd5ae5
+        version: 4.0.0-beta-ddd5ae5(next@15.1.2(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@19.0.0-beta-df7b47d-20241124)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)(typescript@5.7.2)
       react:
         specifier: ^19.0.0
         version: 19.0.0
@@ -743,8 +743,8 @@ importers:
         specifier: ^15.1.2
         version: 15.1.2(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@19.0.0-beta-df7b47d-20241124)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       next-intl:
-        specifier: ^3.26.3
-        version: 3.26.3(next@15.1.2(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@19.0.0-beta-df7b47d-20241124)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)
+        specifier: 4.0.0-beta-ddd5ae5
+        version: 4.0.0-beta-ddd5ae5(next@15.1.2(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@19.0.0-beta-df7b47d-20241124)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)(typescript@5.7.2)
       react:
         specifier: ^19.0.0
         version: 19.0.0
@@ -2567,6 +2567,9 @@ packages:
 
   '@scena/matrix@1.1.1':
     resolution: {integrity: sha512-JVKBhN0tm2Srl+Yt+Ywqu0oLgLcdemDQlD1OxmN9jaCTwaFPZ7tY8n6dhVgMEaR9qcR7r+kAlMXnSfNyYdE+Vg==}
+
+  '@schummar/icu-type-parser@1.21.5':
+    resolution: {integrity: sha512-bXHSaW5jRTmke9Vd0h5P7BtWZG9Znqb8gSDxZnxaGSJnGwPLDPfS+3g0BKzeWqzgZPsIVZkM7m2tbo18cm5HBw==}
 
   '@sec-ant/readable-stream@0.4.1':
     resolution: {integrity: sha512-831qok9r2t8AlxLko40y2ebgSDhenenCatLVeW/uBtnHPyhHOvG0C7TvfgecV+wHzIm5KUICgzmVpWS+IMEAeg==}
@@ -5174,17 +5177,15 @@ packages:
   neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
 
-  next-intl@3.26.2:
-    resolution: {integrity: sha512-fPsL5/9Y/aYNHoOf904b+PhYkm1RfZKrNMAxUvURMqFuQTA0TQAIGnY0s03yPH7oRv9qCFcutaxr6DsHq0aCzQ==}
+  next-intl@4.0.0-beta-ddd5ae5:
+    resolution: {integrity: sha512-AS+aZVXXqlSgM3MYbX9dmBHj+X8sFrYGPbpq09R9dqsiRGE5LeLxZKS4TDGkg4oZzEU52JlUSZNnCTonqFB+lg==}
     peerDependencies:
-      next: ^10.0.0 || ^11.0.0 || ^12.0.0 || ^13.0.0 || ^14.0.0 || ^15.0.0
+      next: ^12.0.0 || ^13.0.0 || ^14.0.0 || ^15.0.0
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=19.0.0-rc <19.0.0 || ^19.0.0
-
-  next-intl@3.26.3:
-    resolution: {integrity: sha512-6Y97ODrDsEE1J8cXKMHwg1laLdtkN66QMIqG8BzH4zennJRUNTtM8UMtBDyhfmF6uiZ+xsbWLXmHUgmUymUsfQ==}
-    peerDependencies:
-      next: ^10.0.0 || ^11.0.0 || ^12.0.0 || ^13.0.0 || ^14.0.0 || ^15.0.0
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=19.0.0-rc <19.0.0 || ^19.0.0
+      typescript: ^5.0.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   next-themes@0.4.4:
     resolution: {integrity: sha512-LDQ2qIOJF0VnuVrrMSMLrWGjRMkq+0mpgl6e0juCLqdJ+oo8Q84JRWT6Wh11VDQKkMMe+dVzDKLWs5n87T+PkQ==}
@@ -6590,15 +6591,10 @@ packages:
     peerDependencies:
       react: '>=16.13'
 
-  use-intl@3.26.2:
-    resolution: {integrity: sha512-H0BpBXLNFTkw6RvntLXSXr2+la4T/xilKSG5l8ND9Br9+i1hqHensWouNS288QZdiDTrfYUVswDtUIR6L39JHQ==}
+  use-intl@4.0.0-beta-ddd5ae5:
+    resolution: {integrity: sha512-dpudMwXrHizH0iYL3oaCEv/jVe3Gq6RDnloza3AjS0Jp63/l/fNoTkPHGkToxk8F04dy0zxZfUEXB2V8dlphFA==}
     peerDependencies:
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=19.0.0-rc <19.0.0 || ^19.0.0
-
-  use-intl@3.26.3:
-    resolution: {integrity: sha512-yY0a2YseO17cKwHA9M6fcpiEJ2Uo81DEU0NOUxNTp6lJVNOuI6nULANPVVht6IFdrYFtlsMmMoc97+Eq9/Tnng==}
-    peerDependencies:
-      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=19.0.0-rc <19.0.0 || ^19.0.0
+      react: ^17.0.0 || ^18.0.0 || >=19.0.0-rc <19.0.0 || ^19.0.0
 
   use-sidecar@1.1.3:
     resolution: {integrity: sha512-Fedw0aZvkhynoPYlA5WXrMCAMm+nSWdZt6lzJQ7Ok8S6Q+VsHmHpRWndVRJ8Be0ZbkfPc5LRYH+5XrzXcEeLRQ==}
@@ -8523,6 +8519,8 @@ snapshots:
   '@scena/matrix@1.1.1':
     dependencies:
       '@daybrush/utils': 1.13.0
+
+  '@schummar/icu-type-parser@1.21.5': {}
 
   '@sec-ant/readable-stream@0.4.1': {}
 
@@ -11280,21 +11278,15 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  next-intl@3.26.2(next@15.1.2(@opentelemetry/api@1.9.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0):
+  next-intl@4.0.0-beta-ddd5ae5(next@15.1.2(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@19.0.0-beta-df7b47d-20241124)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0)(typescript@5.7.2):
     dependencies:
       '@formatjs/intl-localematcher': 0.5.9
       negotiator: 1.0.0
       next: 15.1.2(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@19.0.0-beta-df7b47d-20241124)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react: 19.0.0
-      use-intl: 3.26.2(react@19.0.0)
-
-  next-intl@3.26.3(next@15.1.2(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@19.0.0-beta-df7b47d-20241124)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@19.0.0):
-    dependencies:
-      '@formatjs/intl-localematcher': 0.5.9
-      negotiator: 1.0.0
-      next: 15.1.2(@opentelemetry/api@1.9.0)(babel-plugin-react-compiler@19.0.0-beta-df7b47d-20241124)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      react: 19.0.0
-      use-intl: 3.26.3(react@19.0.0)
+      use-intl: 4.0.0-beta-ddd5ae5(react@19.0.0)
+    optionalDependencies:
+      typescript: 5.7.2
 
   next-themes@0.4.4(react-dom@19.0.0(react@19.0.0))(react@19.0.0):
     dependencies:
@@ -12801,15 +12793,10 @@ snapshots:
       dequal: 2.0.3
       react: 19.0.0
 
-  use-intl@3.26.2(react@19.0.0):
+  use-intl@4.0.0-beta-ddd5ae5(react@19.0.0):
     dependencies:
       '@formatjs/fast-memoize': 2.2.5
-      intl-messageformat: 10.7.10
-      react: 19.0.0
-
-  use-intl@3.26.3(react@19.0.0):
-    dependencies:
-      '@formatjs/fast-memoize': 2.2.5
+      '@schummar/icu-type-parser': 1.21.5
       intl-messageformat: 10.7.10
       react: 19.0.0
 

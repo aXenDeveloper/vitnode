@@ -4,6 +4,8 @@ import type welcome from '@/plugins/welcome/langs/en.json';
 
 type Messages = typeof core & typeof admin & typeof welcome;
 
-declare global {
-  interface IntlMessages extends Messages {}
+declare module 'next-intl' {
+  interface AppConfig {
+    Messages: Messages;
+  }
 }
