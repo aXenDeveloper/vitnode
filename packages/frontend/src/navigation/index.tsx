@@ -1,7 +1,6 @@
-import { createNavigation } from 'next-intl/navigation';
+import { createNavigation, QueryParams } from 'next-intl/navigation';
 import { getLocale } from 'next-intl/server';
 import { RedirectType } from 'next/navigation';
-import { QueryParams } from 'node_modules/next-intl/dist/types/src/navigation/shared/utils';
 import React from 'react';
 
 import { usePathname, useRouter } from './router';
