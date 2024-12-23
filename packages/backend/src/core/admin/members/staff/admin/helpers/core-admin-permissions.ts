@@ -20,10 +20,6 @@ export const coreAdminPermissions: PermissionsStaffObj[] = [
         ],
       },
       {
-        id: 'security',
-        permissions: ['can_manage_security_spam'],
-      },
-      {
         id: 'can_manage_plugins',
         permissions: [],
       },

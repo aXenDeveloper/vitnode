@@ -9,6 +9,7 @@ import { join } from 'path';
 
 import { CoreModule } from './core/core.module';
 import { SSOAuthItem } from './helpers/auth/sso/sso.service';
+import { CaptchaConfig } from './helpers/captcha/captcha.service';
 import { EmailSenderFunction } from './helpers/email/email-helpers.type';
 import { GlobalHelpersModule } from './helpers/helpers.module';
 import {
@@ -171,7 +172,9 @@ export class VitNodeCoreModule {
     database,
     email,
     ssoLoginMethod,
+    captcha,
   }: {
+    captcha?: CaptchaConfig;
     database: DatabaseModuleArgs;
     email?: EmailSenderFunction;
     ssoLoginMethod?: SSOAuthItem[];
@@ -207,7 +210,7 @@ export class VitNodeCoreModule {
             maxAge: 31536000,
           },
         }),
-        GlobalHelpersModule.register({ email, ssoLoginMethod }),
+        GlobalHelpersModule.register({ email, ssoLoginMethod, captcha }),
       ],
     };
   }

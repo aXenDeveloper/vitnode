@@ -10,7 +10,7 @@ import {
 import { DeviceAuthService } from './auth/device.service';
 import { InternalAuthAdminService } from './auth/internal_auth_admin.service';
 import { SSOAuthHelper, SSOAuthItem } from './auth/sso/sso.service';
-import { CaptchaHelper } from './captcha/captcha.service';
+import { CaptchaConfig, CaptchaHelper } from './captcha/captcha.service';
 import { ConfigHelperService } from './config.service';
 import { EmailHelpersService } from './email/email-helpers.service';
 import {
@@ -26,6 +26,7 @@ import { UserHelper } from './user.service';
 @Module({})
 export class GlobalHelpersModule {
   static register(options: {
+    captcha?: CaptchaConfig;
     email?: EmailSenderFunction;
     ssoLoginMethod?: SSOAuthItem[];
   }): DynamicModule {
@@ -44,6 +45,10 @@ export class GlobalHelpersModule {
 
             await options.email(params);
           },
+        },
+        {
+          provide: 'VITNODE_CAPTCHA_CONFIG',
+          useValue: options.captcha,
         },
         {
           provide: 'VITNODE_SSO_LOGIN_METHODS',
@@ -81,6 +86,7 @@ export class GlobalHelpersModule {
         'EmailHelpersService',
         'IOAuthGuards',
         'IOAdminAuthGuards',
+        'VITNODE_CAPTCHA_CONFIG',
         DeviceAuthService,
         UserHelper,
         FilesHelperService,

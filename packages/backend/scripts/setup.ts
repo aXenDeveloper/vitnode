@@ -9,7 +9,6 @@ import coreSchemaDatabase from '../src/database';
 import { checkUpdateSchemaDatabase } from './check-update-schema-database';
 import { copyFiles } from './copy-files';
 import { generateDatabaseMigrations, runMigrations } from './database';
-import { generateConfig } from './generate-config';
 import { generateManifest } from './generate-manifest';
 import { updatePlugins } from './update-plugins';
 
@@ -37,12 +36,7 @@ const init = async () => {
 
   const pluginsPath = getPluginsPath();
   console.log(
-    `${initConsole} [1/${skipDatabase ? 2 : 7}] Setup the project. Generating the config file...`,
-  );
-  await generateConfig({ pluginsPath });
-
-  console.log(
-    `${initConsole} [2/${skipDatabase ? 2 : 7}] Copying files into backend...`,
+    `${initConsole} [1/${skipDatabase ? 1 : 6}] Copying files into backend...`,
   );
   await copyFiles({ pluginsPath });
 
@@ -51,7 +45,7 @@ const init = async () => {
     process.exit(0);
   }
 
-  console.log(`${initConsole} [3/7] Generating database migrations...`);
+  console.log(`${initConsole} [2/6] Generating database migrations...`);
   await generateDatabaseMigrations();
 
   const database = createClientDatabase({
@@ -60,17 +54,17 @@ const init = async () => {
   });
 
   console.log(
-    `${initConsole} [4/7] Create tables in database using migrations...`,
+    `${initConsole} [3/6] Create tables in database using migrations...`,
   );
   await runMigrations();
 
-  console.log(`${initConsole} [5/7] Updating plugins...`);
+  console.log(`${initConsole} [4/6] Updating plugins...`);
   await updatePlugins({ pluginsPath, db: database.db });
 
-  console.log(`${initConsole} [6/7] Checking and updating schema database...`);
+  console.log(`${initConsole} [5/6] Checking and updating schema database...`);
   await checkUpdateSchemaDatabase({ db: database.db });
 
-  console.log(`${initConsole} [7/7] Generating the manifest files...`);
+  console.log(`${initConsole} [6/6] Generating the manifest files...`);
   await generateManifest({ db: database.db });
 
   console.log(`${initConsole} ✅ Project setup complete.`);

@@ -54,17 +54,6 @@ export const coreNav: ShowAuthAdminObj['nav'] = [
         ],
       },
       {
-        code: 'security',
-        icon: 'shield',
-        keywords: [],
-        children: [
-          {
-            code: 'spam',
-            keywords: ['spam', 'report', 'reporting', 'recaptcha'],
-          },
-        ],
-      },
-      {
         code: 'styles',
         icon: 'paintbrush',
         keywords: [],

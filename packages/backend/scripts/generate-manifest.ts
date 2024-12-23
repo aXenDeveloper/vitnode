@@ -88,22 +88,6 @@ export const generateManifest = async ({
     process.exit(1);
   }
 
-  const configPath = join(
-    process.cwd(),
-    'src',
-    'plugins',
-    'core',
-    'utils',
-    'config.json',
-  );
-
-  if (!existsSync(configPath)) {
-    console.log(
-      `⛔️ Config file not found in 'backend/utils/config.json' directory. "${configPath}"`,
-    );
-    process.exit(1);
-  }
-
   const languages = await db.query.core_languages.findMany({
     columns: {
       code: true,

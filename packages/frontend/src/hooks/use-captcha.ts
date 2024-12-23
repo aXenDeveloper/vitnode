@@ -1,8 +1,7 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { useLocale } from 'next-intl';
 import { useTheme } from 'next-themes';
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import React from 'react';
-import { CaptchaTypeEnum } from 'vitnode-shared/utils/global';
 
 import { useMiddlewareData } from './use-middleware-data';
 
@@ -13,15 +12,13 @@ export const useCaptcha = () => {
   const {
     security: { captcha: config },
   } = useMiddlewareData();
-  const [token, setToken] = React.useState<string>(
-    config.type === CaptchaTypeEnum.none ? 'none' : '',
-  );
+  const [token, setToken] = React.useState<string>(!config.type ? 'none' : '');
 
   const handleLoaded = () => {
     const elementId = 'vitnode_captcha';
     if (
-      config.type === CaptchaTypeEnum.recaptcha_v2_checkbox ||
-      config.type === CaptchaTypeEnum.recaptcha_v2_invisible
+      config.type === 'recaptcha_v2_checkbox' ||
+      config.type === 'recaptcha_v2_invisible'
     ) {
       // @ts-expect-error
       window.grecaptcha.ready(() => {
@@ -30,16 +27,13 @@ export const useCaptcha = () => {
           sitekey: config.site_key,
           theme: resolvedTheme,
           locale,
-          size:
-            config.type === CaptchaTypeEnum.recaptcha_v2_invisible
-              ? 'invisible'
-              : null,
+          size: config.type === 'recaptcha_v2_invisible' ? 'invisible' : null,
           callback: (token: string) => {
             setToken(token);
           },
         });
       });
-    } else if (config.type === CaptchaTypeEnum.cloudflare_turnstile) {
+    } else if (config.type === 'cloudflare_turnstile') {
       // @ts-expect-error
       window.turnstile.render(`#${elementId}`, {
         sitekey: config.site_key,
@@ -55,7 +49,7 @@ export const useCaptcha = () => {
   };
 
   React.useEffect(() => {
-    if (config.type === CaptchaTypeEnum.none) {
+    if (!config.type) {
       setIsReady(true);
 
       return;
@@ -69,11 +63,11 @@ export const useCaptcha = () => {
     const script = document.createElement('script');
 
     if (
-      config.type === CaptchaTypeEnum.recaptcha_v2_checkbox ||
-      config.type === CaptchaTypeEnum.recaptcha_v2_invisible
+      config.type === 'recaptcha_v2_checkbox' ||
+      config.type === 'recaptcha_v2_invisible'
     ) {
       script.src = `${googleCaptchaDomain}&render=explicit`;
-    } else if (config.type === CaptchaTypeEnum.recaptcha_v3) {
+    } else if (config.type === 'recaptcha_v3') {
       script.src = `${googleCaptchaDomain}&render=${config.site_key}`;
     } else {
       // window[functionCF] = handleLoaded;
@@ -93,7 +87,7 @@ export const useCaptcha = () => {
   }, []);
 
   const getTokenFromCaptcha = async (): Promise<string> => {
-    if (config.type === CaptchaTypeEnum.recaptcha_v3) {
+    if (config.type === 'recaptcha_v3') {
       // Captcha
       return new Promise<string>(resolve => {
         // @ts-expect-error
