@@ -1,4 +1,4 @@
-import { CaptchaHelper } from '@/helpers/captcha/captcha.service';
+import { CaptchaHelper } from '@/helpers/captcha.service';
 import { ConfigHelperService } from '@/helpers/config.service';
 import { EmailHelperService } from '@/helpers/email/email.service';
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';

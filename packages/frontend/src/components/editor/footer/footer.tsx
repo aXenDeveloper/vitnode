@@ -16,7 +16,7 @@ export const FooterEditor = ({
 }: Props) => {
   const { files } = useEditorState();
 
-  if (!disableLanguages && !files.length) {
+  if (disableLanguages && !files.length) {
     return null;
   }
 

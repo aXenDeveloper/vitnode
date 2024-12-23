@@ -1,14 +1,17 @@
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 // import { emailSMTP } from 'vitnode-backend-email-smtp';
-// import { aiGoogle } from 'vitnode-backend-ai-google';
-// import { aiOpenAi } from 'vitnode-backend-ai-open-ai';
+// import { emailResend } from 'vitnode-backend-email-resend';
 import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
-// import { emailResend } from 'vitnode-backend-email-resend';
 import { VitNodeCoreModule } from 'vitnode-backend/app.module';
 
 import { DATABASE_ENVS, schemaDatabase } from './database/config';
 import { DatabaseModule } from './database/database.module';
 import { PluginsModule } from './plugins/plugins.module';
+
+const google = createGoogleGenerativeAI({
+  apiKey: process.env.AI_MODEL_API_KEY,
+});
 
 @Module({
   imports: [
@@ -17,6 +20,7 @@ import { PluginsModule } from './plugins/plugins.module';
         config: DATABASE_ENVS,
         schemaDatabase,
       },
+      ai: google('gemini-1.5-pro'),
       // captcha: {
       //   type: 'cloudflare_turnstile',
       //   secret_key: '',
@@ -33,14 +37,6 @@ import { PluginsModule } from './plugins/plugins.module';
       //   user: process.env.EMAIL_SMTP_USER,
       //   password: process.env.EMAIL_SMTP_PASSWORD,
       //   from: process.env.EMAIL_SMTP_FROM,
-      // }),
-      // ai: aiGoogle({
-      //   api_key: process.env.AI_GOOGLE_API_KEY,
-      //   model: 'gemini-1.0-pro',
-      // }),
-      // ai: aiOpenAi({
-      //   api_key: process.env.AI_OPENAI_API_KEY,
-      //   model: 'gpt-4-turbo',
       // }),
     }),
     DatabaseModule,

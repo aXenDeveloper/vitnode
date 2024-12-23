@@ -185,7 +185,7 @@
           }
         },
         "legal": {
-          "title": "Legal & Policies",
+          "title": "Legal",
           "desc": "These settings are used to generate the legal pages on your website.",
           "legal_public": "Public Legal",
           "created": "Created",

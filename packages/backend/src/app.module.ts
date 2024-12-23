@@ -5,11 +5,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { LanguageModel } from 'ai';
 import { join } from 'path';
 
 import { CoreModule } from './core/core.module';
 import { SSOAuthItem } from './helpers/auth/sso/sso.service';
-import { CaptchaConfig } from './helpers/captcha/captcha.service';
+import { CaptchaConfig } from './helpers/captcha.service';
 import { EmailSenderFunction } from './helpers/email/email-helpers.type';
 import { GlobalHelpersModule } from './helpers/helpers.module';
 import {
@@ -173,7 +174,9 @@ export class VitNodeCoreModule {
     email,
     ssoLoginMethod,
     captcha,
+    ai,
   }: {
+    ai?: LanguageModel;
     captcha?: CaptchaConfig;
     database: DatabaseModuleArgs;
     email?: EmailSenderFunction;
@@ -210,7 +213,7 @@ export class VitNodeCoreModule {
             maxAge: 31536000,
           },
         }),
-        GlobalHelpersModule.register({ email, ssoLoginMethod, captcha }),
+        GlobalHelpersModule.register({ email, ssoLoginMethod, captcha, ai }),
       ],
     };
   }
