@@ -1,6 +1,8 @@
+import { core_users_sso } from '@/database/schema/users';
 import { SSOAuthHelper } from '@/helpers/auth/sso/sso.service';
+import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { writeFile } from 'fs/promises';
+import { eq } from 'drizzle-orm';
 import {
   EditMethodAuthSettingsAdminBody,
   ShowMethodAuthSettingsAdmin,
@@ -8,7 +10,10 @@ import {
 
 @Injectable()
 export class EditMethodsAuthSettingsAdminService {
-  constructor(private readonly ssoAuthHelper: SSOAuthHelper) {}
+  constructor(
+    private readonly ssoAuthHelper: SSOAuthHelper,
+    private readonly databaseService: InternalDatabaseService,
+  ) {}
 
   async edit({
     code,
@@ -21,26 +26,26 @@ export class EditMethodsAuthSettingsAdminService {
     if (!sso) {
       throw new NotFoundException(`SSO method with ${code} code not found`);
     }
-    const ssoConfigFile = await this.ssoAuthHelper.getSSOConfig();
-    const ssoConfig = ssoConfigFile.sso;
-    const ssoIndex = ssoConfig.findIndex(item => item.code === code);
-    if (ssoIndex === -1) {
+    const ssoConfig =
+      await this.databaseService.db.query.core_users_sso.findFirst({
+        where: (table, { eq }) => eq(table.code, code),
+      });
+    if (!ssoConfig) {
       throw new NotFoundException(`SSO method with ${code} code not found`);
     }
-    ssoConfig[ssoIndex] = {
-      ...ssoConfig[ssoIndex],
-      client_id,
-      client_secret,
-      enabled,
-    };
 
-    await writeFile(
-      this.ssoAuthHelper.path,
-      JSON.stringify(ssoConfigFile, null, 2),
-    );
+    const [data] = await this.databaseService.db
+      .update(core_users_sso)
+      .set({
+        client_id,
+        client_secret,
+        enabled,
+      })
+      .where(eq(core_users_sso.code, code))
+      .returning();
 
     return {
-      ...ssoConfig[ssoIndex],
+      ...data,
       name: sso.name,
     };
   }

@@ -1,10 +1,13 @@
 import { SSOAuthHelper } from '@/helpers/auth/sso/sso.service';
+import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { rm, writeFile } from 'fs/promises';
 
 @Injectable()
 export class DeleteMethodsAuthSettingsAdminService {
-  constructor(private readonly ssoAuthHelper: SSOAuthHelper) {}
+  constructor(
+    private readonly ssoAuthHelper: SSOAuthHelper,
+    private readonly databaseService: InternalDatabaseService,
+  ) {}
 
   async delete(code: string): Promise<void> {
     const sso = await this.ssoAuthHelper.getActiveSSO(code);
@@ -12,17 +15,12 @@ export class DeleteMethodsAuthSettingsAdminService {
       throw new NotFoundException(`SSO method with ${code} code not found`);
     }
 
-    const ssoConfigFile = await this.ssoAuthHelper.getSSOConfig();
-    ssoConfigFile.sso = ssoConfigFile.sso.filter(item => item.code !== code);
-    if (ssoConfigFile.sso.length === 0) {
-      await rm(this.ssoAuthHelper.path);
-
-      return;
+    const ssoConfig =
+      await this.databaseService.db.query.core_users_sso.findFirst({
+        where: (table, { eq }) => eq(table.code, code),
+      });
+    if (!ssoConfig) {
+      throw new NotFoundException(`SSO method with ${code} code not found`);
     }
-
-    await writeFile(
-      this.ssoAuthHelper.path,
-      JSON.stringify(ssoConfigFile, null, 2),
-    );
   }
 }

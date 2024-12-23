@@ -1,8 +1,5 @@
-import { ABSOLUTE_PATHS } from '@/app.module';
+import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { existsSync } from 'fs';
-import { readFile } from 'fs/promises';
-import { join } from 'path';
 import { ShowMethodAuthSettingsAdmin } from 'vitnode-shared/admin/settings/auth.dto';
 import { SSOUrlAuthObj } from 'vitnode-shared/auth/sso.dto';
 
@@ -50,19 +47,14 @@ export class SSOAuthHelper {
   constructor(
     @Inject('VITNODE_SSO_LOGIN_METHODS')
     private readonly loginMethods: SSOAuthItem[],
+    private readonly databaseService: InternalDatabaseService,
   ) {}
-
-  path = join(
-    ABSOLUTE_PATHS.plugin({ code: 'core' }).root,
-    'utils',
-    'sso.config.json',
-  );
 
   async getActiveSSO(
     code: string,
   ): Promise<SSOAuthConfig['sso'][0] & SSOAuthItem> {
     const item = this.getSSO(code);
-    if (!item || !existsSync(this.path)) {
+    if (!item) {
       throw new NotFoundException(`SSO provider with ${code} code not found`);
     }
 
@@ -77,14 +69,11 @@ export class SSOAuthHelper {
   }
 
   async getActiveSSOs(): Promise<ShowMethodAuthSettingsAdmin[]> {
-    if (!existsSync(this.path)) {
-      return [];
-    }
-
-    const ssoConfig = await this.getSSOConfig();
+    const ssoConfig =
+      await this.databaseService.db.query.core_users_sso.findMany();
     const SSOs = this.getSSOs();
     const activeSSOs: ShowMethodAuthSettingsAdmin[] = [];
-    ssoConfig.sso.forEach(sso => {
+    ssoConfig.forEach(sso => {
       const ssoItem = SSOs.find(item => item.code === sso.code);
       if (!ssoItem) return;
 
@@ -99,14 +88,6 @@ export class SSOAuthHelper {
 
   getSSO(code: string) {
     return this.getSSOs().find(sso => sso.code === code);
-  }
-
-  async getSSOConfig(): Promise<SSOAuthConfig> {
-    if (!existsSync(this.path)) {
-      return { sso: [] };
-    }
-
-    return JSON.parse(await readFile(this.path, 'utf8'));
   }
 
   getSSOs(): SSOAuthItem[] {

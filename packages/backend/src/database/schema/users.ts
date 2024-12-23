@@ -61,6 +61,13 @@ export const core_users_relations = relations(core_users, ({ one, many }) => ({
   }),
 }));
 
+export const core_users_sso = pgTable('core_users_sso', t => ({
+  code: t.varchar({ length: 100 }).notNull().unique(),
+  client_id: t.varchar({ length: 255 }).notNull(),
+  client_secret: t.varchar({ length: 255 }).notNull(),
+  enabled: t.boolean().notNull().default(false),
+}));
+
 export const core_users_sso_tokens = pgTable(
   'core_users_sso_tokens',
   t => ({
@@ -71,7 +78,12 @@ export const core_users_sso_tokens = pgTable(
         onDelete: 'cascade',
       })
       .notNull(),
-    provider: t.varchar({ length: 100 }).notNull(),
+    provider: t
+      .varchar({ length: 100 })
+      .references(() => core_users_sso.code, {
+        onDelete: 'no action',
+      })
+      .notNull(),
     provider_id: t.varchar({ length: 255 }).notNull(),
     created_at: t.timestamp().notNull().defaultNow(),
     updated_at: t.timestamp().notNull().defaultNow(),
