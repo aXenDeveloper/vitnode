@@ -66,5 +66,4 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 !/uploads/temp/index.html
 
 # Configuration
-/src/plugins/*/admin/database/migrations
 /src/plugins/core/

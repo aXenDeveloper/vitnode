@@ -28,11 +28,6 @@ import {
   generateMetadataPluginsAdmin,
   PluginsAdminView,
 } from './core/plugins/plugins-admin-view';
-import {
-  CaptchaSpamSecurityAdminView,
-  generateMetadataCaptchaSpamSecurityAdmin,
-} from './core/security/spam/captcha/captcha-spam-security-admin-view';
-import { SpamSecurityAdminLayout } from './core/security/spam/layout';
 import { AuthorizationSettingsAdminView } from './core/settings/authorization/authorization-settings-admin-view';
 import { LayoutAuthorizationSettingsAdmin } from './core/settings/authorization/layout/layout';
 import { MethodsAuthSettingsAdminView } from './core/settings/authorization/methods/methods-auth-settings-admin-view';
@@ -146,23 +141,6 @@ export const generateMetadataDynamic = async (props: {
     if (slug[1] === 'advanced' && !slug[3]) {
       if (slug[2] === 'files') {
         return generateMetadataFilesAdvancedCoreAdmin();
-      }
-    }
-
-    if (slug[1] === 'security' && !slug[4]) {
-      const t = await getTranslations('admin.core.security.spam');
-      const primary: Metadata = {
-        title: t('title'),
-      };
-
-      if (slug[2] === 'spam') {
-        const current = await generateMetadataCaptchaSpamSecurityAdmin();
-
-        return {
-          ...primary,
-          ...current,
-          title: `${current.title} - ${primary.title}`,
-        };
       }
     }
 
@@ -295,24 +273,6 @@ export const DynamicAdminView = async (props: {
       if (slug[2] === 'files') {
         return <FilesAdvancedCoreAdminView {...props} />;
       }
-    }
-
-    if (slug[1] === 'security' && !slug[4]) {
-      if (slug[2] === 'spam') {
-        return (
-          <SpamSecurityAdminLayout>
-            {(() => {
-              if (slug[3] === 'captcha' || !slug[3]) {
-                return <CaptchaSpamSecurityAdminView />;
-              }
-
-              notFound();
-            })()}
-          </SpamSecurityAdminLayout>
-        );
-      }
-
-      notFound();
     }
 
     if (slug[1] === 'plugins' && !slug[5]) {

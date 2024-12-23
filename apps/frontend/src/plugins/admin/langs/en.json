@@ -141,28 +141,6 @@
             "send_testing_email": "Send Testing Email"
           }
         },
-        "security": {
-          "captcha": {
-            "title": "Captcha",
-            "desc": "Captcha is a security feature that requires users to complete a challenge to prove they are human. This helps prevent spam and abuse.",
-            "type": {
-              "title": "Type",
-              "none": {
-                "title": "None"
-              },
-              "recaptcha_desc": "Read more on <link>Google reCAPTCHA</link>.",
-              "recaptcha_v2_invisible": "reCAPTCHA v2 Invisible",
-              "recaptcha_v2_checkbox": "reCAPTCHA v2 Checkbox",
-              "recaptcha_v3": "reCAPTCHA v3",
-              "cloudflare_turnstile": {
-                "title": "Cloudflare Turnstile",
-                "desc": "Read more on <link>Cloudflare Turnstile</link>."
-              }
-            },
-            "site_key": "Site Key",
-            "secret_key": "Secret Key"
-          }
-        },
         "authorization": {
           "title": "Authorization",
           "desc": "Manage authorization settings for your website.",
@@ -567,30 +545,6 @@
             "uses_warning": "This file is used in other part of the system.",
             "success": "File has been deleted.",
             "submit": "Yes, delete file"
-          }
-        }
-      },
-      "security": {
-        "spam": {
-          "title": "Spam Protection",
-          "captcha": {
-            "title": "Captcha",
-            "type": {
-              "title": "Type",
-              "none": {
-                "title": "None"
-              },
-              "recaptcha_desc": "Read more on <link>Google reCAPTCHA</link>.",
-              "recaptcha_v2_invisible": "reCAPTCHA v2 Invisible",
-              "recaptcha_v2_checkbox": "reCAPTCHA v2 Checkbox",
-              "recaptcha_v3": "reCAPTCHA v3",
-              "cloudflare_turnstile": {
-                "title": "Cloudflare Turnstile",
-                "desc": "Read more on <link>Cloudflare Turnstile</link>."
-              }
-            },
-            "site_key": "Site Key",
-            "secret_key": "Secret Key"
           }
         }
       }

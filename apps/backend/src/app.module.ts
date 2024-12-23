@@ -17,6 +17,11 @@ import { PluginsModule } from './plugins/plugins.module';
         config: DATABASE_ENVS,
         schemaDatabase,
       },
+      // captcha: {
+      //   type: 'cloudflare_turnstile',
+      //   secret_key: '',
+      //   site_key: '',
+      // },
       // email: emailResend({
       //   api_key: process.env.EMAIL_RESEND_API_KEY,
       //   from: process.env.EMAIL_RESEND_FROM,

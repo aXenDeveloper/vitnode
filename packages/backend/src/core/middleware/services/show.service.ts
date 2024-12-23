@@ -1,10 +1,15 @@
+import type { CaptchaConfig } from '@/helpers/captcha/captcha.service';
+
 import { ABSOLUTE_PATHS } from '@/app.module';
 import { SSOAuthHelper } from '@/helpers/auth/sso/sso.service';
-import { getConfigFile } from '@/helpers/config';
 import { ConfigHelperService } from '@/helpers/config.service';
 import { EmailHelperService } from '@/helpers/email/email.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { AppTypeMainSettingsAdmin } from 'vitnode-shared/admin/settings/main.enum';
@@ -21,6 +26,8 @@ export class ShowMiddlewareService {
     private readonly navService: NavMiddlewareService,
     private readonly ssoHelper: SSOAuthHelper,
     private readonly configService: ConfigHelperService,
+    @Inject('VITNODE_CAPTCHA_CONFIG')
+    private readonly captchaConfig?: CaptchaConfig,
   ) {}
 
   protected async getManifests({
@@ -47,7 +54,6 @@ export class ShowMiddlewareService {
 
   async show(): Promise<ShowMiddlewareObj> {
     // TODO: Add cache
-    const config = getConfigFile();
     const [plugins, langs] = await Promise.all([
       this.databaseService.db.query.core_plugins.findMany({
         columns: {
@@ -109,8 +115,8 @@ export class ShowMiddlewareService {
       site_short_name: configFromDb.site_short_name,
       security: {
         captcha: {
-          site_key: config.security.captcha.site_key,
-          type: config.security.captcha.type,
+          site_key: this.captchaConfig?.site_key ?? '',
+          type: this.captchaConfig?.type ?? '',
         },
       },
       editor: {

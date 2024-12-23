@@ -1,19 +1,23 @@
-import { ABSOLUTE_PATHS } from '@/app.module';
 import { getUserIp } from '@/functions';
-import { getConfigFile } from '@/helpers/config';
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { Request } from 'express';
-import * as fs from 'fs';
-import { join } from 'path';
-import { CaptchaTypeEnum } from 'vitnode-shared/utils/global';
+
+export interface CaptchaConfig {
+  secret_key: string;
+  site_key: string;
+  type:
+    | 'cloudflare_turnstile'
+    | 'recaptcha_v2_checkbox'
+    | 'recaptcha_v2_invisible'
+    | 'recaptcha_v3';
+}
 
 @Injectable()
 export class CaptchaHelper {
-  protected readonly path: string = join(
-    ABSOLUTE_PATHS.plugin({ code: 'core' }).root,
-    'utils',
-    'captcha.config.json',
-  );
+  constructor(
+    @Inject('VITNODE_CAPTCHA_CONFIG')
+    private readonly captchaConfig?: CaptchaConfig,
+  ) {}
 
   private async getResFromReCaptcha({
     captchaKey,
@@ -22,35 +26,20 @@ export class CaptchaHelper {
     captchaKey: string | string[];
     userIp: string;
   }): Promise<{ 'error-codes'?: string[]; score: number; success: boolean }> {
-    const {
-      security: { captcha: config },
-    } = getConfigFile();
-    // If captcha is disabled, return success
-    if (config.type === CaptchaTypeEnum.none) {
+    if (!this.captchaConfig) {
       return {
         success: true,
         score: 1,
       };
     }
 
-    // Get secret key from file
-    if (!fs.existsSync(this.path)) {
-      return {
-        success: false,
-        score: 0,
-      };
-    }
-    const captchaSecurityConfig: { secret_key: string } = JSON.parse(
-      fs.readFileSync(this.path, 'utf8'),
-    );
-
-    if (config.type === CaptchaTypeEnum.cloudflare_turnstile) {
+    if (this.captchaConfig.type === 'cloudflare_turnstile') {
       const res = await fetch(
         'https://challenges.cloudflare.com/turnstile/v0/siteverify',
         {
           method: 'POST',
           body: JSON.stringify({
-            secret: captchaSecurityConfig.secret_key,
+            secret: this.captchaConfig.secret_key,
             response: captchaKey,
             remoteip: userIp,
           }),
@@ -65,13 +54,13 @@ export class CaptchaHelper {
       return data;
     } else if (
       [
-        CaptchaTypeEnum.recaptcha_v2_checkbox,
-        CaptchaTypeEnum.recaptcha_v2_invisible,
-        CaptchaTypeEnum.recaptcha_v3,
-      ].includes(config.type)
+        'recaptcha_v2_checkbox',
+        'recaptcha_v2_invisible',
+        'recaptcha_v3',
+      ].includes(this.captchaConfig.type)
     ) {
       const res = await fetch(
-        `https://www.google.com/recaptcha/api/siteverify?secret=${captchaSecurityConfig.secret_key}&response=${captchaKey}&remoteip=${userIp}`,
+        `https://www.google.com/recaptcha/api/siteverify?secret=${this.captchaConfig.secret_key}&response=${captchaKey}&remoteip=${userIp}`,
         {
           method: 'POST',
         },
@@ -90,11 +79,7 @@ export class CaptchaHelper {
 
   async validateCaptcha({ req }: { req: Request }) {
     const captchaKey = req.headers['x-vitnode-captcha-token'];
-
-    const {
-      security: { captcha: config },
-    } = getConfigFile();
-    if (!captchaKey && config.type !== CaptchaTypeEnum.none) {
+    if (!captchaKey && this.captchaConfig) {
       throw new HttpException(
         'Captcha token not provided',
         HttpStatus.BAD_REQUEST,
