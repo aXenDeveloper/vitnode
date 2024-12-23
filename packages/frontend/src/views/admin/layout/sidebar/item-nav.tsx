@@ -40,31 +40,39 @@ export const ItemNavSidebarAdmin = ({
   );
   if (!textAndIcon) return null;
 
-  const button = (
-    <SidebarMenuButton
-      asChild
-      isActive={pathname.startsWith(href)}
-      onClick={() => {
-        setOpenMobile(false);
-      }}
-    >
-      <Link
-        href={item.children?.length ? `${href}/${item.children[0].code}` : href}
-      >
-        {textAndIcon.icon}
-        <span>{textAndIcon.text}</span>
-      </Link>
-    </SidebarMenuButton>
-  );
-
   if (!item.children?.length) {
-    return <SidebarMenuItem>{button}</SidebarMenuItem>;
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          asChild
+          isActive={pathname.startsWith(href)}
+          onClick={() => {
+            setOpenMobile(false);
+          }}
+        >
+          <Link
+            href={
+              item.children?.length ? `${href}/${item.children[0].code}` : href
+            }
+          >
+            {textAndIcon.icon}
+            <span>{textAndIcon.text}</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
   }
 
   return (
     <Collapsible asChild defaultOpen={pathname.startsWith(href)}>
       <SidebarMenuItem>
-        {button}
+        <CollapsibleTrigger asChild>
+          <SidebarMenuButton isActive={pathname.startsWith(href)}>
+            {textAndIcon.icon}
+            <span>{textAndIcon.text}</span>
+          </SidebarMenuButton>
+        </CollapsibleTrigger>
+
         <>
           <CollapsibleTrigger asChild>
             <SidebarMenuAction className="data-[state=open]:rotate-90">

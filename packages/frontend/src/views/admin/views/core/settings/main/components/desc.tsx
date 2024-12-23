@@ -31,7 +31,7 @@ export const DescFieldContentMainSettingsCoreAdmin = ({
         onLanguageChange={setSelectedLanguage}
       />
 
-      <div className="flex w-32 items-center justify-center">
+      <div className="flex w-32 items-center justify-start">
         <TooltipWrapper content={t('description.seo')}>
           <Badge
             className="mt-1"
