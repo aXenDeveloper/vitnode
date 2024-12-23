@@ -1,11 +1,11 @@
+import { core_users_sso } from '@/database/schema/users';
 import { SSOAuthConfig, SSOAuthHelper } from '@/helpers/auth/sso/sso.service';
+import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import {
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { existsSync } from 'fs';
-import { writeFile } from 'fs/promises';
 import {
   CreateMethodAuthSettingsAdminBody,
   ShowMethodAuthSettingsAdmin,
@@ -13,7 +13,10 @@ import {
 
 @Injectable()
 export class CreateMethodsAuthSettingsAdminService {
-  constructor(private readonly ssoAuthHelper: SSOAuthHelper) {}
+  constructor(
+    private readonly ssoAuthHelper: SSOAuthHelper,
+    private readonly databaseService: InternalDatabaseService,
+  ) {}
 
   async create({
     code,
@@ -32,35 +35,21 @@ export class CreateMethodsAuthSettingsAdminService {
       enabled: true,
     };
 
-    if (!existsSync(this.ssoAuthHelper.path)) {
-      const dataToSave: SSOAuthConfig = {
-        sso: [dataSSO],
-      };
-
-      await writeFile(
-        this.ssoAuthHelper.path,
-        JSON.stringify(dataToSave, null, 2),
-      );
-
-      return {
-        ...dataSSO,
-        name: sso.name,
-      };
-    }
-
-    const ssoConfig = await this.ssoAuthHelper.getSSOConfig();
-    const checkIfSSOExists = ssoConfig.sso.find(item => item.code === code);
+    const ssoConfig =
+      await this.databaseService.db.query.core_users_sso.findMany();
+    const checkIfSSOExists = ssoConfig.find(item => item.code === code);
     if (checkIfSSOExists) {
       throw new ConflictException(
         `SSO method with ${code} code already exists`,
       );
     }
 
-    ssoConfig.sso.push(dataSSO);
-    await writeFile(
-      this.ssoAuthHelper.path,
-      JSON.stringify(ssoConfig, null, 2),
-    );
+    await this.databaseService.db.insert(core_users_sso).values({
+      code,
+      client_id,
+      client_secret,
+      enabled: true,
+    });
 
     return {
       ...dataSSO,
