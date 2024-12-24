@@ -3,7 +3,7 @@ import type { Request } from 'express';
 
 import { core_users_forgot_password } from '@/database/schema/users';
 import { getUserIp } from '@/functions';
-import { CaptchaHelper } from '@/helpers/captcha/captcha.service';
+import { CaptchaHelper } from '@/helpers/captcha.service';
 import { getTranslationForEmail } from '@/helpers/email/email';
 import { EmailHelperService } from '@/helpers/email/email.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';

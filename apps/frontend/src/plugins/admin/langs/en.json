@@ -185,7 +185,7 @@
           }
         },
         "legal": {
-          "title": "Legal & Policies",
+          "title": "Legal",
           "desc": "These settings are used to generate the legal pages on your website.",
           "legal_public": "Public Legal",
           "created": "Created",
@@ -485,6 +485,7 @@
       },
       "langs": {
         "title": "Languages",
+        "desc": "Manage languages on your website.",
         "search_placeholder": "Search by name...",
         "table": {
           "key": "Key",
@@ -494,6 +495,21 @@
           "enabled": "Enabled"
         },
         "actions": {
+          "translate-ai": {
+            "title": "Translate with AI",
+            "desc": "Choose which plugins you want to translate for <lang></lang> language.",
+            "all_plugins": {
+              "label": "All Plugins",
+              "desc": "This process may take a little longer."
+            },
+            "admin": "Admin",
+            "plugins": {
+              "label": "Plugins",
+              "desc": "Select specific plugins to translate."
+            },
+            "submit": "Translate",
+            "success": "The language has been translated."
+          },
           "create": {
             "title": "Create Language",
             "name": {

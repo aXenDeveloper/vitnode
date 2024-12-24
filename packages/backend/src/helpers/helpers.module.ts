@@ -6,11 +6,13 @@ import {
   HttpStatus,
   Module,
 } from '@nestjs/common';
+import { LanguageModel } from 'ai';
 
+import { AiHelperService } from './ai.service';
 import { DeviceAuthService } from './auth/device.service';
 import { InternalAuthAdminService } from './auth/internal_auth_admin.service';
 import { SSOAuthHelper, SSOAuthItem } from './auth/sso/sso.service';
-import { CaptchaConfig, CaptchaHelper } from './captcha/captcha.service';
+import { CaptchaConfig, CaptchaHelper } from './captcha.service';
 import { ConfigHelperService } from './config.service';
 import { EmailHelpersService } from './email/email-helpers.service';
 import {
@@ -26,6 +28,7 @@ import { UserHelper } from './user.service';
 @Module({})
 export class GlobalHelpersModule {
   static register(options: {
+    ai?: LanguageModel;
     captcha?: CaptchaConfig;
     email?: EmailSenderFunction;
     ssoLoginMethod?: SSOAuthItem[];
@@ -45,6 +48,10 @@ export class GlobalHelpersModule {
 
             await options.email(params);
           },
+        },
+        {
+          provide: 'VITNODE_MODEL_AI',
+          useValue: options.ai,
         },
         {
           provide: 'VITNODE_CAPTCHA_CONFIG',
@@ -78,6 +85,7 @@ export class GlobalHelpersModule {
         FilesHelperService,
         SSOAuthHelper,
         ConfigHelperService,
+        AiHelperService,
       ],
       exports: [
         EmailHelperService,
@@ -92,6 +100,7 @@ export class GlobalHelpersModule {
         FilesHelperService,
         SSOAuthHelper,
         ConfigHelperService,
+        AiHelperService,
       ],
     };
   }

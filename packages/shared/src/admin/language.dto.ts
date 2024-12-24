@@ -1,6 +1,12 @@
 import { ApiProperty, ApiPropertyOptional, OmitType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 import { PaginationObj, PaginationQuery } from '../utils/pagination.dto';
 import { SortDirectionEnum } from '../utils/pagination.enum';
@@ -101,4 +107,11 @@ export class ShowLanguagesAdminQuery extends PaginationQuery {
   @IsEnum(SortDirectionEnum)
   @IsOptional()
   sortDirection?: SortDirectionEnum;
+}
+
+export class TranslateAiLanguagesAdminBody {
+  @ApiProperty()
+  @IsArray()
+  @IsString({ each: true })
+  plugins_code: string[];
 }

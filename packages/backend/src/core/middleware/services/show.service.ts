@@ -1,4 +1,4 @@
-import type { CaptchaConfig } from '@/helpers/captcha/captcha.service';
+import type { CaptchaConfig } from '@/helpers/captcha.service';
 
 import { ABSOLUTE_PATHS } from '@/app.module';
 import { SSOAuthHelper } from '@/helpers/auth/sso/sso.service';

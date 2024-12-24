@@ -13,6 +13,7 @@
     "db": "vitnode-backend db"
   },
   "dependencies": {
+    "@ai-sdk/google": "^1.0.10",
     "@nestjs/cache-manager": "3.0.0-next.0",
     "@nestjs/common": "^10.4.15",
     "@nestjs/core": "^10.4.15",
@@ -28,8 +29,6 @@
     "react-dom": "^19.0.0",
     "reflect-metadata": "^0.2.2",
     "vitnode-backend": "workspace:*",
-    "vitnode-backend-ai-google": "workspace:*",
-    "vitnode-backend-ai-open-ai": "workspace:*",
     "vitnode-backend-email-resend": "workspace:*",
     "vitnode-backend-email-smtp": "workspace:*"
   },

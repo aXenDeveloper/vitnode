@@ -5,6 +5,7 @@ import { CreateLanguagesAdminService } from './services/create.service';
 import { DeleteLanguagesAdminService } from './services/delete.service';
 import { EditLanguagesAdminService } from './services/edit.service';
 import { ShowLanguagesAdminService } from './services/show.service';
+import { TranslateAiLanguagesAdminService } from './services/translate-ai.service';
 
 @Module({
   providers: [
@@ -12,6 +13,7 @@ import { ShowLanguagesAdminService } from './services/show.service';
     CreateLanguagesAdminService,
     EditLanguagesAdminService,
     DeleteLanguagesAdminService,
+    TranslateAiLanguagesAdminService,
   ],
   controllers: [LanguagesAdminController],
 })

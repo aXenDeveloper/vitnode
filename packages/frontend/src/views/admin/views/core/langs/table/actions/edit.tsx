@@ -8,6 +8,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Loader } from '@/components/ui/loader';
+import { TooltipWrapper } from '@/components/ui/tooltip';
 import { Pencil } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
@@ -21,15 +22,16 @@ const Content = React.lazy(async () =>
 
 export const EditActionsTableLangsCoreAdmin = (data: LanguagesAdminObj) => {
   const t = useTranslations('admin.core.langs.actions');
-  const tCore = useTranslations('core.global');
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        <Button ariaLabel={tCore('edit')} size="icon" variant="ghost">
-          <Pencil />
-        </Button>
-      </DialogTrigger>
+      <TooltipWrapper content={t('edit.title')}>
+        <DialogTrigger asChild>
+          <Button ariaLabel={t('edit.title')} size="icon" variant="ghost">
+            <Pencil />
+          </Button>
+        </DialogTrigger>
+      </TooltipWrapper>
 
       <DialogContent>
         <DialogHeader>

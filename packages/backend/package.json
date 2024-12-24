@@ -115,6 +115,7 @@
     "@nestjs/swagger": "^8.1.0",
     "@nestjs/throttler": "^6.3.0",
     "@react-email/render": "^1.0.3",
+    "ai": "^4.0.17",
     "cache-manager": "^6.3.1",
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.7",
@@ -124,6 +125,7 @@
     "sharp": "^0.33.5",
     "tar": "^7.4.3",
     "ua-parser-js": "^2.0.0",
-    "vitnode-shared": "workspace:*"
+    "vitnode-shared": "workspace:*",
+    "zod": "^3.24.1"
   }
 }

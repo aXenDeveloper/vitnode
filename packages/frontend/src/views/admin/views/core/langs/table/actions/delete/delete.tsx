@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
+import { TooltipWrapper } from '@/components/ui/tooltip';
 import { Trash2 } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import React from 'react';
@@ -27,16 +28,18 @@ export const DeleteActionsTableLangsCoreAdmin = (
 
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button
-          ariaLabel={tCore('delete')}
-          disabled={locale === props.code}
-          size="icon"
-          variant="destructiveGhost"
-        >
-          <Trash2 />
-        </Button>
-      </AlertDialogTrigger>
+      <TooltipWrapper content={tCore('delete')}>
+        <AlertDialogTrigger asChild>
+          <Button
+            ariaLabel={tCore('delete')}
+            disabled={locale === props.code}
+            size="icon"
+            variant="destructiveGhost"
+          >
+            <Trash2 />
+          </Button>
+        </AlertDialogTrigger>
+      </TooltipWrapper>
 
       <AlertDialogContent>
         <AlertDialogHeader>
