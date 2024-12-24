@@ -8,7 +8,7 @@ import { TranslateAiActionTableLangsCoreAdmin } from './translate-ai/translate-a
 export const ActionsTableLangsCoreAdmin = (data: LanguagesAdminObj) => {
   return (
     <>
-      <TranslateAiActionTableLangsCoreAdmin {...data} />
+      {data.code !== 'en' && <TranslateAiActionTableLangsCoreAdmin {...data} />}
       <EditActionsTableLangsCoreAdmin {...data} />
       {!data.protected && !data.default && (
         <DeleteActionsTableLangsCoreAdmin {...data} />
