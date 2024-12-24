@@ -17,6 +17,7 @@ import {
   LanguagesAdminObj,
   ShowLanguagesAdminObj,
   ShowLanguagesAdminQuery,
+  TranslateAiLanguagesAdminBody,
 } from 'vitnode-shared/admin/language.dto';
 
 import { CreateLanguagesAdminService } from './services/create.service';
@@ -86,7 +87,10 @@ export class LanguagesAdminController {
   })
   @Post('translate-ai/:code')
   @UseGuards(OnlyForDevelopment)
-  async translateAi(@Param('code') code: string) {
-    await this.translateAiService.translateAi(code);
+  async translateAi(
+    @Param('code') code: string,
+    @Body() body: TranslateAiLanguagesAdminBody,
+  ) {
+    await this.translateAiService.translateAi({ code, body });
   }
 }

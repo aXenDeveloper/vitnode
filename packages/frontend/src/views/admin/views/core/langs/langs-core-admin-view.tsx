@@ -1,4 +1,5 @@
 import { fetcher } from '@/api/fetcher';
+import { getMiddlewareData } from '@/api/get-middleware-data';
 import { TranslationsProvider } from '@/components/translations-provider';
 import { HeaderContent } from '@/components/ui/header-content';
 import {
@@ -47,14 +48,22 @@ export const LangsCoreAdminView = async ({
     sortEnum: ShowLanguagesAdminSortEnum,
   });
 
-  const [t, data] = await Promise.all([
+  const [t, data, middleware] = await Promise.all([
     getTranslations('admin.core.langs'),
     getData(variables),
+    getMiddlewareData(),
   ]);
 
   return (
-    <TranslationsProvider namespaces={['admin.core.langs']}>
-      <HeaderContent h1={t('title')}>
+    <TranslationsProvider
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      namespaces={[
+        'admin.core.langs',
+        ...middleware.plugins.map(plugin => `admin_${plugin}.nav.title`),
+      ]}
+    >
+      <HeaderContent desc={t('desc')} h1={t('title')}>
         <CreateActionLangAdmin />
       </HeaderContent>
 
