@@ -1,3 +1,5 @@
+import { useMiddlewareData } from '@/hooks/use-middleware-data';
+
 import { useEditorState } from '../hooks/use-editor-state';
 import { ListFilesFooterEditor } from './files/list';
 import {
@@ -10,13 +12,17 @@ interface Props extends LanguageSelectFooterEditorProps {
 }
 
 export const FooterEditor = ({
-  disableLanguages,
+  disableLanguages = false,
   selectedLanguage,
   setSelectedLanguage,
 }: Props) => {
   const { files } = useEditorState();
+  const { languages } = useMiddlewareData();
+  const enableLanguages = languages.filter(
+    lang => lang.enabled && lang.allow_in_input,
+  );
 
-  if (disableLanguages && !files.length) {
+  if (!files.length && (enableLanguages.length <= 1 || disableLanguages)) {
     return null;
   }
 
