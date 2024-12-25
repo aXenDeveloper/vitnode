@@ -18,7 +18,7 @@ interface Props {
 
 export const generateMetadataRootLayout = async ({
   params,
-}: Omit<Props, 'className'>): Promise<Metadata> => {
+}: Pick<Props, 'params'>): Promise<Metadata> => {
   const { locale } = await params;
   const metadata: Metadata = {
     manifest: `${CONFIG.backend_client_public_url}/assets/${locale}/manifest.webmanifest`,
@@ -32,6 +32,7 @@ export const generateMetadataRootLayout = async ({
     const language = languages.find(lang => lang.code === locale);
 
     return {
+      metadataBase: new URL(CONFIG.frontend_url),
       ...metadata,
       title: {
         default: site_name,

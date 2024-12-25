@@ -85,7 +85,7 @@ export const StringLanguageInput = ({
           value={selectedLanguage}
         >
           <FormControl>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="h-9 w-40">
               <SelectValue />
             </SelectTrigger>
           </FormControl>

@@ -6,15 +6,17 @@ import { CONFIG } from 'vitnode-frontend/helpers/config-with-env';
 import { getLegalData } from './views/theme/views/legal/legal-view';
 
 export const rootSitemap = async (): Promise<MetadataRoute.Sitemap> => {
-  const [{ languages, nav, languages_code_default, last_updated }, legal] =
-    await Promise.all([getMiddlewareData(), getLegalData({})]);
+  const [{ languages, nav, last_updated }, legal] = await Promise.all([
+    getMiddlewareData(),
+    getLegalData({}),
+  ]);
 
   const navUrls: MetadataRoute.Sitemap = nav
     .filter(item => !item.external)
     .flatMap(item => {
       const urls: MetadataRoute.Sitemap = [
         {
-          url: `${CONFIG.frontend_url}/${languages_code_default}${item.href.startsWith('/') ? item.href : `/${item.href}`}`,
+          url: `${CONFIG.frontend_url}/${item.href.startsWith('/') ? item.href : `/${item.href}`}`,
           lastModified: item.last_updated,
           changeFrequency: 'monthly',
           priority: 0.8,
@@ -32,7 +34,7 @@ export const rootSitemap = async (): Promise<MetadataRoute.Sitemap> => {
       if (item.children) {
         item.children.forEach(child => {
           urls.push({
-            url: `${CONFIG.frontend_url}/${languages_code_default}${child.href.startsWith('/') ? child.href : `/${child.href}`}`,
+            url: `${CONFIG.frontend_url}/${child.href.startsWith('/') ? child.href : `/${child.href}`}`,
             lastModified: child.last_updated,
             changeFrequency: 'weekly',
             priority: 0.6,
@@ -54,7 +56,7 @@ export const rootSitemap = async (): Promise<MetadataRoute.Sitemap> => {
   const legalUrls: MetadataRoute.Sitemap = legal.edges
     .filter(item => !item.href)
     .map(edge => ({
-      url: `${CONFIG.frontend_url}/${languages_code_default}/legal/${edge.code}`,
+      url: `${CONFIG.frontend_url}/legal/${edge.code}`,
       lastModified: edge.updated_at,
       changeFrequency: 'monthly',
       priority: 0.1,
@@ -70,7 +72,7 @@ export const rootSitemap = async (): Promise<MetadataRoute.Sitemap> => {
 
   return [
     {
-      url: `${CONFIG.frontend_url}/${languages_code_default}`,
+      url: CONFIG.frontend_url,
       lastModified: last_updated,
       changeFrequency: 'yearly',
       priority: 1,
@@ -85,7 +87,7 @@ export const rootSitemap = async (): Promise<MetadataRoute.Sitemap> => {
     },
     ...navUrls,
     {
-      url: `${CONFIG.frontend_url}/${languages_code_default}/legal`,
+      url: `${CONFIG.frontend_url}/legal`,
       lastModified: legal.edges.length
         ? legal.edges[0].updated_at
         : last_updated,
