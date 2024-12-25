@@ -20,7 +20,7 @@ const google = createGoogleGenerativeAI({
         config: DATABASE_ENVS,
         schemaDatabase,
       },
-      ai: google('gemini-1.5-pro'),
+      ai: google('gemini-2.0-flash-exp'),
       // captcha: {
       //   type: 'cloudflare_turnstile',
       //   secret_key: '',

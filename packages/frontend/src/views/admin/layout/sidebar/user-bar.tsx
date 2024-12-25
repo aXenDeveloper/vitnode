@@ -14,12 +14,7 @@ import { AvatarUser } from '@/components/ui/user/avatar';
 import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { Link } from '@/navigation';
 import { useSignOutApi } from '@/views/theme/layout/header/auth-user-bar/hooks/use-sign-out-api';
-import {
-  HammerIcon,
-  HomeIcon,
-  LogOut,
-  SquareArrowOutUpRight,
-} from 'lucide-react';
+import { HammerIcon, HomeIcon, LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 export const UserBarSidebarAdmin = () => {
@@ -61,12 +56,6 @@ export const UserBarSidebarAdmin = () => {
               <span>{t('home_page')}</span>
             </Link>
           </DropdownMenuItem>
-          {/* <DropdownMenuItem asChild>
-            <Link href={`/profile/${name_seo}`} target="_blank">
-              <UserIcon />
-              <span>{tCore('user-bar.my_profile')}</span>
-            </Link>
-          </DropdownMenuItem> */}
           {isInAdminPermission({
             plugin_code: 'core',
             group: 'dashboard',
@@ -79,32 +68,6 @@ export const UserBarSidebarAdmin = () => {
               </Link>
             </DropdownMenuItem>
           )}
-        </DropdownMenuGroup>
-
-        <DropdownMenuSeparator />
-
-        <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
-            <Link
-              href="https://vitnode.com/"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              VitNode
-              <SquareArrowOutUpRight />
-            </Link>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem asChild>
-            <Link
-              href="https://github.com/VitNode/vitnode"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              VitNode GitHub
-              <SquareArrowOutUpRight />
-            </Link>
-          </DropdownMenuItem>
         </DropdownMenuGroup>
 
         <DropdownMenuSeparator />
