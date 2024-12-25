@@ -62,12 +62,28 @@
       "diagnostic": {
         "title": "Diagnostic Tools",
         "desc": "Use these tools to diagnose and fix common issues with your website.",
+        "get_support": "Get Support",
         "clear_cache": {
           "title": "Clear Cache",
           "desc": "This action clean up the cache of your website. This can help fix issues with your website but may slow down your website temporarily.",
           "confirm": "Yes, clear cache",
           "success": "Cache has been cleared."
-        }
+        },
+        "captcha": {
+          "title": "Captcha",
+          "desc": "Protect your website from spam."
+        },
+        "email": {
+          "title": "Email",
+          "desc": "Access to send emails."
+        },
+        "ai": {
+          "title": "Artificial Intelligence (AI)",
+          "desc": "Use AI to improve your website."
+        },
+        "enable": "Enable",
+        "disable": "Disable",
+        "how_to_enable": "How to enable?"
       },
       "email": {
         "hello": "Hello"

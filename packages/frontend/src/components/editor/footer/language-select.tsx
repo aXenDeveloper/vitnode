@@ -21,9 +21,9 @@ export const LanguageSelectFooterEditor = ({
 }: LanguageSelectFooterEditorProps) => {
   const { languages: languagesFromGlobal } = useMiddlewareData();
   const { editor } = useEditorState();
-  const languages = languagesFromGlobal.filter(item => item.allow_in_input);
-
-  if (languages.length <= 1) return null;
+  const languages = languagesFromGlobal.filter(
+    item => item.allow_in_input && item.enabled,
+  );
 
   return (
     <Select onValueChange={setSelectedLanguage} value={selectedLanguage}>

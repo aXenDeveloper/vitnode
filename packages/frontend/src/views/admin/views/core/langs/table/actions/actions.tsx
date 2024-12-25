@@ -1,3 +1,4 @@
+import { useMiddlewareData } from '@/hooks/use-middleware-data';
 import React from 'react';
 import { LanguagesAdminObj } from 'vitnode-shared/admin/language.dto';
 
@@ -6,9 +7,13 @@ import { EditActionsTableLangsCoreAdmin } from './edit';
 import { TranslateAiActionTableLangsCoreAdmin } from './translate-ai/translate-ai';
 
 export const ActionsTableLangsCoreAdmin = (data: LanguagesAdminObj) => {
+  const { is_ai_enabled } = useMiddlewareData();
+
   return (
     <>
-      {data.code !== 'en' && <TranslateAiActionTableLangsCoreAdmin {...data} />}
+      {data.code !== 'en' && is_ai_enabled && (
+        <TranslateAiActionTableLangsCoreAdmin {...data} />
+      )}
       <EditActionsTableLangsCoreAdmin {...data} />
       {!data.protected && !data.default && (
         <DeleteActionsTableLangsCoreAdmin {...data} />

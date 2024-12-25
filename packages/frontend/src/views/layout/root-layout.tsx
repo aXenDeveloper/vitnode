@@ -38,7 +38,6 @@ export const generateMetadataRootLayout = async ({
         template: `%s - ${site_short_name}`,
       },
       openGraph: {
-        title: site_name,
         type: 'website',
         locale: language ? language.code : 'en_US',
       },

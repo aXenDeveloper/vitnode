@@ -77,14 +77,13 @@ export class TranslateAiLanguagesAdminService {
           prompt: `You are a professional translator in JSON format.
 
           Task: Translate the content below from en to ${code}.
-          Only translate the untranslated parts. If the content is already translated, leave it as is.
 
           Translation Requirements:
+          - If the content is already translated and it is correct, do not change it,
           - Do not translate the code,
           - Maintain exact file structure, indentation, and formatting,
           - Preserve all object/property keys, syntax characters, and punctuation marks exactly,
           - Keep consistent capitalization, spacing, and line breaks,
-          - Provide natural, culturally-adapted translations that sound native,
           - Match source file's JSON/object structure precisely,
           - Wrap return JSON in \`\`\`json code block.
 
@@ -97,7 +96,7 @@ export class TranslateAiLanguagesAdminService {
 
         const cleanedText = text
           .replace(/^```json\n?/, '')
-          .replace(/\n?```$/, '');
+          .replace(/\n?```\s*$/, '');
         await writeFile(
           join(pluginLangPath, `${code}.json`),
           JSON.stringify(JSON.parse(cleanedText), null, 2),

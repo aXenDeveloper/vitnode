@@ -1,6 +1,7 @@
 import type { CaptchaConfig } from '@/helpers/captcha.service';
 
 import { ABSOLUTE_PATHS } from '@/app.module';
+import { AiHelperService } from '@/helpers/ai.service';
 import { SSOAuthHelper } from '@/helpers/auth/sso/sso.service';
 import { ConfigHelperService } from '@/helpers/config.service';
 import { EmailHelperService } from '@/helpers/email/email.service';
@@ -28,6 +29,7 @@ export class ShowMiddlewareService {
     private readonly configService: ConfigHelperService,
     @Inject('VITNODE_CAPTCHA_CONFIG')
     private readonly captchaConfig?: CaptchaConfig,
+    private readonly aiHelper?: AiHelperService,
   ) {}
 
   protected async getManifests({
@@ -110,7 +112,7 @@ export class ShowMiddlewareService {
       plugins: ['admin', 'core', ...plugins.map(plugin => plugin.code)],
       languages_code_default: langs.find(lang => lang.default)?.code ?? 'en',
       is_email_enabled: this.mailService.checkIfEnable(),
-      is_ai_enabled: false, // TODO: Add AI service
+      is_ai_enabled: !!this.aiHelper,
       site_name: configFromDb.site_name,
       site_short_name: configFromDb.site_short_name,
       security: {
