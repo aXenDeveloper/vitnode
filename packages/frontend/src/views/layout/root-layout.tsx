@@ -32,7 +32,6 @@ export const generateMetadataRootLayout = async ({
     const language = languages.find(lang => lang.code === locale);
 
     return {
-      metadataBase: new URL(CONFIG.frontend_url),
       ...metadata,
       title: {
         default: site_name,
