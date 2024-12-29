@@ -59,6 +59,7 @@ npm run docker:dev
 <img src="https://raw.githubusercontent.com/VitNode/vitnode/canary/assets/screenshots/5.png" alt="Theme Editor in Admin Control Panel" />
 <img src="https://raw.githubusercontent.com/VitNode/vitnode/canary/assets/screenshots/6.png" alt="Metadata settings in Admin Control Panel" />
 <img src="https://raw.githubusercontent.com/VitNode/vitnode/canary/assets/screenshots/7.png" alt="Search engine in Admin Control Panel" />
+<img src="https://raw.githubusercontent.com/VitNode/vitnode/canary/assets/screenshots/8.png" alt="Create Article via Blog Plugin in Admin Control Panel" />
 
 ## ⚠️ Requirements
 

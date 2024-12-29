@@ -101,7 +101,7 @@ export const ContentMetadataSettingsAdmin = (data: ShowMetadataAdminObj) => {
             <AutoFormFileInput
               {...props}
               accept="image/png, image/jpeg, image/webp"
-              acceptExtensions={['png', 'jpg', 'webp', 'jpeg']}
+              acceptExtensions={['png', 'jpg', 'jpeg', 'webp', 'jpeg']}
               maxFileSizeInMb={1}
               showInfo
             />

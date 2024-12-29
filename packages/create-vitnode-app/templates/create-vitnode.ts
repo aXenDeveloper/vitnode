@@ -79,15 +79,6 @@ export const createVitNode = async ({
 
     await writeFile(tailwindConfigPath, newTailwindConfig);
   }
-  if (docker) {
-    spinner.text = 'Setup docker-compose-dev.yml...';
-    const dockerComposeDevPath = join(root, 'docker-compose-dev.yml');
-    const newDockerComposeDev = (await readFile(dockerComposeDevPath, 'utf-8'))
-      .replace('vitnode_postgres_dev', `${appName}_postgres_dev`)
-      .replace('vitnode_pgadmin_dev', `${appName}_pgadmin_dev`);
-
-    await writeFile(dockerComposeDevPath, newDockerComposeDev);
-  }
 
   // Copy pnpm template
   if (packageManager.startsWith('pnpm')) {
@@ -105,6 +96,14 @@ export const createVitNode = async ({
   if (docker) {
     spinner.text = 'Copying docker template...';
     await cp(join(templatePath, 'docker'), root, { recursive: true });
+
+    spinner.text = 'Setup docker-compose-dev.yml...';
+    const dockerComposeDevPath = join(root, 'docker-compose-dev.yml');
+    const newDockerComposeDev = (await readFile(dockerComposeDevPath, 'utf-8'))
+      .replace('vitnode_postgres_dev', `${appName}_postgres_dev`)
+      .replace('vitnode_pgadmin_dev', `${appName}_pgadmin_dev`);
+
+    await writeFile(dockerComposeDevPath, newDockerComposeDev);
   }
 
   // Change the .env file
