@@ -12,7 +12,13 @@ import { AuthUserBar } from './auth-user-bar/auth-user-bar';
 import { LogoHeader } from './logo';
 import { NavHeader } from './nav/nav';
 
-export const Header = async ({ className }: { className?: string }) => {
+export const Header = async ({
+  className,
+  children,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+}) => {
   const [
     t,
     {
@@ -41,6 +47,8 @@ export const Header = async ({ className }: { className?: string }) => {
           <LanguageSwitcher />
           <ThemeSwitcher />
         </div>
+
+        {children}
 
         <div className="hidden items-center justify-center gap-4 sm:flex">
           {user ? (
