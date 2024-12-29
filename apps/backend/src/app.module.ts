@@ -2,7 +2,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 // import { emailSMTP } from 'vitnode-backend-email-smtp';
-import { emailResend } from 'vitnode-backend-email-resend';
+// import { emailResend } from 'vitnode-backend-email-resend';
 import { VitNodeCoreModule } from 'vitnode-backend/app.module';
 
 import { DATABASE_ENVS, schemaDatabase } from './database/config';
@@ -23,13 +23,13 @@ const google = createGoogleGenerativeAI({
       ai: google('gemini-2.0-flash-exp'),
       captcha: {
         type: 'cloudflare_turnstile',
-        secret_key: '0x4AAAAAAA32f41qx12_EeCCnJ4mQ6kV6w4',
-        site_key: '0x4AAAAAAA32f1b5Xe26DZHP',
+        secret_key: '',
+        site_key: '',
       },
-      email: emailResend({
-        api_key: process.env.EMAIL_RESEND_API_KEY,
-        from: process.env.EMAIL_RESEND_FROM,
-      }),
+      // email: emailResend({
+      //   api_key: process.env.EMAIL_RESEND_API_KEY,
+      //   from: process.env.EMAIL_RESEND_FROM,
+      // }),
       // email: emailSMTP({
       //   host: process.env.EMAIL_SMTP_HOST,
       //   port: process.env.EMAIL_SMTP_PORT,

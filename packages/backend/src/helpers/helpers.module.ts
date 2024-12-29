@@ -1,4 +1,5 @@
 import { InternalAuthService } from '@/helpers/auth/internal_auth.service';
+import { AllExceptionsFilter } from '@/utils/all-exceptions.filter';
 import {
   DynamicModule,
   Global,
@@ -6,6 +7,7 @@ import {
   HttpStatus,
   Module,
 } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
 import { LanguageModel } from 'ai';
 
 import { AiHelperService } from './ai.service';
@@ -86,6 +88,10 @@ export class GlobalHelpersModule {
         SSOAuthHelper,
         ConfigHelperService,
         AiHelperService,
+        {
+          provide: APP_FILTER,
+          useClass: AllExceptionsFilter,
+        },
       ],
       exports: [
         EmailHelperService,
