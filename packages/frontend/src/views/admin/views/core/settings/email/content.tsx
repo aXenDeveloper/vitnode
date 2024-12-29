@@ -27,7 +27,7 @@ export const ContentEmailSettingsAdmin = (data: ShowEmailSettingsAdminObj) => {
             <AutoFormFileInput
               {...props}
               accept="image/png, image/gif, image/jpeg"
-              acceptExtensions={['png', 'jpg', 'gif']}
+              acceptExtensions={['png', 'jpg', 'jpeg', 'gif']}
               maxFileSizeInMb={2}
               showInfo
             />

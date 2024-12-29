@@ -61,7 +61,7 @@ export const ContentChangeAvatar = () => {
             <AutoFormFileInput
               {...props}
               accept="image/png, image/jpeg, image/webp"
-              acceptExtensions={['png', 'jpg', 'webp']}
+              acceptExtensions={['png', 'jpg', 'jpeg', 'webp']}
               maxFileSizeInMb={2}
               showInfo
             />

@@ -84,7 +84,7 @@ export const createPackagesJSON = async ({
       '@hookform/resolvers': '^3.9.1',
       geist: '^1.3.1',
       'lucide-react': '^0.469.0',
-      next: '^15.1.2',
+      next: '^15.1.3',
       'next-intl': '4.0.0-beta-ddd5ae5',
       react: '^19.0.0',
       'react-dom': '^19.0.0',

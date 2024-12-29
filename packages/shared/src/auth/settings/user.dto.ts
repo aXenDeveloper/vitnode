@@ -9,6 +9,6 @@ export class UploadAvatarUserSettingsAuthBody {
   @ApiPropertyOptional()
   @IsBoolean()
   @IsOptional()
-  @Transform(({ value }) => value === 'true')
+  @Transform(({ value }) => !!value)
   delete_avatar: boolean;
 }
