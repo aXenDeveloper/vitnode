@@ -44,7 +44,7 @@ export const HeadingToolbarEditor = () => {
   const t = useTranslations('core.global.editor.heading');
   const { editor } = useEditorState();
 
-  const value = React.useMemo(() => {
+  const value = () => {
     const findActiveHeading = [...Array(6).keys()].find(i =>
       editor.isActive('heading', { level: i + 1 }),
     );
@@ -58,7 +58,7 @@ export const HeadingToolbarEditor = () => {
     }
 
     return 0;
-  }, [editor]);
+  };
 
   return (
     <Select
@@ -79,10 +79,10 @@ export const HeadingToolbarEditor = () => {
         const level = (value - 1) as 1 | 2 | 3 | 4 | 5 | 6;
         editor.chain().setHeading({ level }).run();
       }}
-      value={value.toString()}
+      value={value().toString()}
     >
       <SelectTrigger className="hover:bg-muted h-9 w-14 justify-center gap-1 border-0 p-0 shadow-none [&>svg:not(:last-child)]:size-5">
-        {getHeadingIcon(value)}
+        {getHeadingIcon(value())}
       </SelectTrigger>
 
       <SelectContent onCloseAutoFocus={() => editor.commands.focus()}>

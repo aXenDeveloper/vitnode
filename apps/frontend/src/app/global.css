@@ -15,7 +15,7 @@
     @apply text-primary;
   }
 
-  :root {
+  :root:not(.dark) {
     --background: 217 20% 96%;
     --foreground: 213 5% 8%;
     --card: 220 40% 100%;
@@ -51,8 +51,8 @@
     --foreground: 0 0% 98%;
     --card: 225 15% 9%;
     --card-foreground: 0 0% 98%;
-    /* --popover: var(--card); */
-    /* --popover-foreground: var(--card-foreground); */
+    --popover: var(--card);
+    --popover-foreground: var(--card-foreground);
     --primary: 220 83% 60%;
     --primary-foreground: 220 40% 98%;
     --secondary: 216 10% 18%;
@@ -64,8 +64,9 @@
     --destructive: 359 78% 55%;
     --destructive-foreground: 210 40% 98%;
     --border: 228 10% 16%;
-    /* --input: var(--border); */
-    /* --ring: var(--primary); */
+    --input: var(--border);
+    --ring: var(--primary);
+    --radius: 0.5rem;
     --cover: 216 64% 39%;
     --cover-foreground: 210 40% 98%;
 

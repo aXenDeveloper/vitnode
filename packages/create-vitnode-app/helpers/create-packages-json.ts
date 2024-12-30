@@ -90,6 +90,7 @@ export const createPackagesJSON = async ({
       'react-dom': '^19.0.0',
       'react-hook-form': '^7.54.2',
       recharts: '^2.15.0',
+      shiki: '^1.24.4',
       sonner: '^1.7.1',
       'vitnode-frontend': `^${pkg.version}`,
       zod: '^3.24.1',
