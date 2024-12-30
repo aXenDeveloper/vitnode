@@ -1,5 +1,6 @@
 import { getMiddlewareData } from '@/api/get-middleware-data';
 import { checkAdminPermissionPage } from '@/api/get-session-admin-data';
+import { SkeletonDataTable } from '@/components/data-table/skeleton';
 import { TranslationsProvider } from '@/components/translations-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,9 +16,11 @@ import {
 } from 'lucide-react';
 import { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import React from 'react';
 
 import { WarnReqRestartServer } from '../warn-req-restart-server';
 import { ActionsDiagnosticTools } from './actions/actions';
+import { LogsDiagnosticToolsView } from './logs/logs-diagnostic-tools-view';
 
 const permission = {
   plugin_code: 'core',
@@ -33,7 +36,11 @@ export const generateMetadataDiagnosticAdmin = async (): Promise<Metadata> => {
   };
 };
 
-export const DiagnosticToolsView = async () => {
+export const DiagnosticToolsView = async ({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string>>;
+}) => {
   const perm = await checkAdminPermissionPage(permission);
   if (perm) return perm;
   const t = await getTranslations('admin.core.diagnostic');
@@ -68,7 +75,7 @@ export const DiagnosticToolsView = async () => {
 
       <WarnReqRestartServer />
 
-      <div className="grid auto-rows-min gap-4 md:grid-cols-3">
+      <div className="mb-10 grid auto-rows-min gap-4 md:grid-cols-3">
         {quickLook.map(item => (
           <Card className="p-6" key={item.id}>
             <div className="flex items-start gap-4">
@@ -110,6 +117,12 @@ export const DiagnosticToolsView = async () => {
           </Card>
         ))}
       </div>
+
+      <HeaderContent desc={t('error_logs.desc')} h2={t('error_logs.title')} />
+
+      <React.Suspense fallback={<SkeletonDataTable />}>
+        <LogsDiagnosticToolsView searchParams={searchParams} />
+      </React.Suspense>
     </TranslationsProvider>
   );
 };

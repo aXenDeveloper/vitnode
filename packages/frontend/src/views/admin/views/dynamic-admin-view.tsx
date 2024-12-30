@@ -194,7 +194,7 @@ export const DynamicAdminView = async (props: {
     }
 
     if (slug[1] === 'diagnostic' && !slug[2]) {
-      return <DiagnosticToolsView />;
+      return <DiagnosticToolsView {...props} />;
     }
 
     if (slug[1] === 'langs' && !slug[2]) {
