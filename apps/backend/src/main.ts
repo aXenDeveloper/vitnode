@@ -1,11 +1,12 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, NestApplicationOptions } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { nestjsMainApp } from 'vitnode-backend/main';
+import { nestFactoryOptions, nestjsMainApp } from 'vitnode-backend/main';
 
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app: INestApplication = await NestFactory.create(AppModule);
+  const options: NestApplicationOptions = nestFactoryOptions;
+  const app: INestApplication = await NestFactory.create(AppModule, options);
 
   void nestjsMainApp(app, {});
 }

@@ -83,7 +83,17 @@
         },
         "enable": "Enable",
         "disable": "Disable",
-        "how_to_enable": "How to enable?"
+        "how_to_enable": "How to enable?",
+        "error_logs": {
+          "title": "Error Logs",
+          "desc": "If you have any issues with your website, you can check the error logs here.",
+          "name": "Name",
+          "message": "Message",
+          "created": "Created",
+          "more_info": "More Info",
+          "url": "URL",
+          "headers": "Headers"
+        }
       },
       "email": {
         "hello": "Hello"

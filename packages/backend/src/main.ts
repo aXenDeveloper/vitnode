@@ -1,5 +1,9 @@
 /* eslint-disable no-console */
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import {
+  INestApplication,
+  NestApplicationOptions,
+  ValidationPipe,
+} from '@nestjs/common';
 import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
@@ -76,4 +80,9 @@ export const nestjsMainApp = async (app: INestApplication, options?: Args) => {
       `Swagger is running on: http://${hostname}:${port}/api`,
     );
   });
+};
+
+export const nestFactoryOptions: NestApplicationOptions = {
+  rawBody: true,
+  bodyParser: true,
 };
