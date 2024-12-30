@@ -6,9 +6,9 @@ export const core_logs = pgTable('core_logs', t => ({
   message: t.text().notNull(),
   status: t.smallint().notNull(),
   created_at: t.timestamp().notNull().defaultNow(),
-  headers: t.jsonb(),
-  method: t.varchar({ length: 10 }),
-  url: t.varchar({ length: 255 }),
+  headers: t.jsonb().notNull(),
+  method: t.varchar({ length: 10 }).notNull(),
+  url: t.varchar({ length: 255 }).notNull(),
 }));
 
 export const core_logs_email = pgTable('core_logs_email', t => ({
