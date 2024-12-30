@@ -21,31 +21,25 @@ import {
 import { cn } from 'vitnode-frontend/helpers/classnames';
 
 import { classNameCodeBlock } from './code';
+import { languagesSupportShiki } from './shiki-parser';
 
 export const CodeBlockComponent = ({
-  extension,
   node: {
     attrs: { language: defaultLanguage },
   },
   updateAttributes,
 }: {
-  extension: {
-    options: {
-      lowlight: {
-        listLanguages: () => string[];
-      };
-    };
-  };
   node: { attrs: { language: string } };
   updateAttributes: (attrs: { language: string }) => void;
 }) => {
   const [open, setOpen] = React.useState(false);
-  const [value, setValue] = React.useState(defaultLanguage);
+  const [value, setValue] = React.useState(defaultLanguage ?? 'plaintext');
   const t = useTranslations('core.global.editor.heading.code_block');
   const tCore = useTranslations('core.global');
+  const langs: string[] = ['plaintext', ...languagesSupportShiki];
 
   return (
-    <NodeViewWrapper className="bg-muted relative rounded-md">
+    <NodeViewWrapper className="bg-border/20 relative rounded-md border">
       <pre>
         <NodeViewContent
           as="code"
@@ -62,7 +56,7 @@ export const CodeBlockComponent = ({
               className="w-40 justify-between"
               role="combobox"
               size="sm"
-              variant="outline"
+              variant="ghost"
             >
               {value || t('auto')}
               <SortAscIcon className="ml-2 size-4 shrink-0 opacity-50" />
@@ -76,12 +70,13 @@ export const CodeBlockComponent = ({
               <CommandList>
                 <CommandEmpty>{tCore('no_results')}</CommandEmpty>
                 <CommandGroup>
-                  {extension.options.lowlight.listLanguages().map(lang => (
+                  {langs.map(lang => (
                     <CommandItem
                       key={lang}
                       onSelect={currentValue => {
                         const val = currentValue === value ? '' : currentValue;
                         updateAttributes({ language: val });
+
                         setValue(val);
                         setOpen(false);
                       }}
@@ -90,7 +85,7 @@ export const CodeBlockComponent = ({
                       {lang}
                       <CheckIcon
                         className={cn(
-                          'ml-auto h-4 w-4',
+                          'ml-auto size-4',
                           value === lang ? 'opacity-100' : 'opacity-0',
                         )}
                       />

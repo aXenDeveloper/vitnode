@@ -49,19 +49,19 @@ export const DiagnosticToolsView = async ({
   const quickLook = [
     {
       id: 'captcha' as const,
-      icon: <ShieldIcon className="size-5" />,
+      icon: <ShieldIcon className="size-5 flex-shrink-0" />,
       href: 'https://vitnode.com/docs/guides/captcha',
       enable: middleware.security.captcha.type,
     },
     {
       id: 'email' as const,
-      icon: <MailIcon className="size-5" />,
+      icon: <MailIcon className="size-5 flex-shrink-0" />,
       href: 'https://vitnode.com/docs/dev/email',
       enable: middleware.is_email_enabled,
     },
     {
       id: 'ai' as const,
-      icon: <SparklesIcon className="size-5" />,
+      icon: <SparklesIcon className="size-5 flex-shrink-0" />,
       href: 'https://vitnode.com/docs/dev/ai',
       enable: middleware.is_ai_enabled,
     },

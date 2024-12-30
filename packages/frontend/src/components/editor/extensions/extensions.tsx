@@ -5,7 +5,7 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import { Underline } from '@tiptap/extension-underline';
 import { StarterKit } from '@tiptap/starter-kit';
 
-import { CodeBlockLowlightExtensionEditor } from './code/code';
+import { CodeBlock } from './code/code';
 import { EmojiReplacer } from './emoji/emoji-replacer';
 import { FilesHandler, FilesHandlerOptions } from './files/files';
 import { HeadingExtensionEditor } from './heading';
@@ -55,7 +55,7 @@ export const useExtensionsEditor = ({
     TextAlign.configure({
       types: ['heading', 'paragraph'],
     }),
-    // CodeBlockLowlightExtensionEditor,
+    CodeBlock,
     Link.extend({ inclusive: false }).configure({
       openOnClick: true,
     }),

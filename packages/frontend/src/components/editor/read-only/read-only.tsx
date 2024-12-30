@@ -8,7 +8,7 @@ import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 import { cn } from '../../../helpers/classnames';
 import { useExtensionsEditor } from '../extensions/extensions';
-import { changeCodeBlock } from './code-block';
+import { CodeBlockReadOnly } from './code-block';
 
 export const ReadOnlyEditor = ({
   className,
@@ -82,9 +82,9 @@ export const ReadOnlyEditor = ({
         );
       }
 
-      // if (name === 'pre' && children.length > 0) {
-      //   return changeCodeBlock(domNode);
-      // }
+      if (name === 'pre' && children.length > 0) {
+        return <CodeBlockReadOnly element={domNode} />;
+      }
     },
   };
 

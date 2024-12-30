@@ -1,6 +1,62 @@
 import { Config } from 'tailwindcss';
 import tailwindcssAnimate from 'tailwindcss-animate';
+import plugin from 'tailwindcss/plugin';
 import tailwindContainerQuery from '@tailwindcss/container-queries';
+
+const vitNodePlugin = plugin.withOptions(() => {
+  return ({ addBase }) => {
+    addBase({
+      '.light .shiki code span': {
+        color: 'var(--shiki-light)',
+      },
+      '.dark .shiki code span': {
+        color: 'var(--shiki-dark)',
+      },
+      '.codeblock code': {
+        display: 'grid',
+        'font-size': '13px',
+      },
+
+      '.shiki code .diff.remove': {
+        backgroundColor: 'var(--diff-remove-color)',
+        opacity: '0.7',
+      },
+      '.shiki code .diff::before': {
+        position: 'absolute',
+        left: '6px',
+      },
+      '.shiki code .diff.remove::before': {
+        content: "'-'",
+        color: 'var(--diff-remove-symbol-color)',
+      },
+      '.shiki code .diff.add': {
+        backgroundColor: 'var(--diff-add-color)',
+      },
+      '.shiki code .diff.add::before': {
+        content: "'+'",
+        color: 'var(--diff-add-symbol-color)',
+      },
+      '.shiki code .diff': {
+        margin: '0 -16px',
+        padding: '0 16px',
+        position: 'relative',
+      },
+      '.shiki .highlighted': {
+        margin: '0 -16px',
+        padding: '0 16px',
+        backgroundColor: `theme('colors.primary.DEFAULT / 10%')`,
+      },
+      '.shiki .highlighted-word': {
+        padding: '1px 2px',
+        margin: '-1px -3px',
+        border: '1px solid',
+        borderColor: `theme('colors.primary.DEFAULT / 50%')`,
+        backgroundColor: `theme('colors.primary.DEFAULT / 10%')`,
+        borderRadius: '2px',
+      },
+    });
+  };
+});
 
 const config = {
   darkMode: ['class'],
@@ -85,7 +141,7 @@ const config = {
       },
     },
   },
-  plugins: [tailwindcssAnimate, tailwindContainerQuery],
+  plugins: [tailwindcssAnimate, tailwindContainerQuery, vitNodePlugin],
 } satisfies Config;
 
 export default config;
