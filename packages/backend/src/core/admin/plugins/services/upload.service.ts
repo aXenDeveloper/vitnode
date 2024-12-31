@@ -119,7 +119,7 @@ export class UploadPluginsAdminService {
     });
 
     const config: ConfigPlugin = JSON.parse(
-      await readFile(join(tempPath, 'backend', 'config.json'), 'utf-8'),
+      await readFile(join(tempPath, 'backend', 'metadata.json'), 'utf-8'),
     );
 
     // Check if variables exists

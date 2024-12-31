@@ -34,7 +34,7 @@ export class ShowAdminStaffMembersAdminService {
       plugin => {
         const pathConfig = ABSOLUTE_PATHS.plugin({
           code: plugin.code,
-        }).config;
+        }).metadata;
         if (!existsSync(pathConfig)) {
           return {
             plugin_code: plugin.code,

@@ -3,7 +3,6 @@ import { Module } from '@nestjs/common';
 import { ChangeFilesPluginsAdminHelpersService } from './helpers/change-files.service';
 import { ValidateFilesPluginsAdminHelpersService } from './helpers/validate-files.service';
 import { NavPluginsAdminModule } from './nav/nav.module';
-import { PermissionsAdminPluginsAdminModule } from './permissions-admin/permissions-admin.module';
 import { PluginsAdminController } from './plugins.controller';
 import { CreatePluginsAdminService } from './services/create.service';
 import { DeletePluginsAdminService } from './services/delete.service';
@@ -26,6 +25,6 @@ import { UploadPluginsAdminService } from './services/upload.service';
     UploadPluginsAdminService,
   ],
   controllers: [PluginsAdminController],
-  imports: [NavPluginsAdminModule, PermissionsAdminPluginsAdminModule],
+  imports: [NavPluginsAdminModule],
 })
 export class PluginsAdminModule {}

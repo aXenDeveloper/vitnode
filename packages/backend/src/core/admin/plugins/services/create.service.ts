@@ -61,7 +61,7 @@ export class ${nameWithCapitalLetters}Module {}
 `,
           },
           {
-            name: 'config.json',
+            name: 'metadata.json',
             content: JSON.stringify(jsonFile, null, 2),
           },
         ],

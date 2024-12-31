@@ -24,7 +24,7 @@ export class EditNavPluginsAdminService {
   }): Promise<ParentNavAuthAdminObj> {
     const pathConfig = ABSOLUTE_PATHS.plugin({
       code: plugin_code,
-    }).config;
+    }).metadata;
     if (!existsSync(pathConfig)) {
       throw new NotFoundException();
     }

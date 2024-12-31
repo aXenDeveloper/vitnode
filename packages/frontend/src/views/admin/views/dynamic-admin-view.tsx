@@ -27,7 +27,6 @@ import {
 } from './core/plugins/dev/layout/layout';
 import { NavDevPluginAdminView } from './core/plugins/dev/nav/nav';
 import { OverviewDevPluginAdminView } from './core/plugins/dev/overview';
-import { PermissionsAdminDevPluginAdminView } from './core/plugins/dev/permissions-admin/permissions-admin';
 import {
   generateMetadataPluginsAdmin,
   PluginsAdminView,
@@ -308,14 +307,6 @@ export const DynamicAdminView = async (props: {
 
                     if (slug[4] === 'nav') {
                       return <NavDevPluginAdminView pluginCode={slug[2]} />;
-                    }
-
-                    if (slug[4] === 'permissions-admin') {
-                      return (
-                        <PermissionsAdminDevPluginAdminView
-                          pluginCode={slug[2]}
-                        />
-                      );
                     }
 
                     notFound();

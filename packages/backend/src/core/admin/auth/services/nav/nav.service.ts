@@ -35,7 +35,7 @@ export class NavAuthAdminService {
 
     const navFromPlugins = await Promise.all(
       adminNavPlugins.map(async ({ code }) => {
-        const pathConfig = ABSOLUTE_PATHS.plugin({ code }).config;
+        const pathConfig = ABSOLUTE_PATHS.plugin({ code }).metadata;
         if (!existsSync(pathConfig)) {
           return {
             code,

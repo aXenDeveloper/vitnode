@@ -18,7 +18,7 @@ export class DeleteNavPluginsAdminService {
   }): Promise<void> {
     const pathConfig = ABSOLUTE_PATHS.plugin({
       code: plugin_code,
-    }).config;
+    }).metadata;
     if (!existsSync(pathConfig)) {
       throw new NotFoundException();
     }

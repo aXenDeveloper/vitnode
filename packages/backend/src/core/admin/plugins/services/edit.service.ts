@@ -60,8 +60,8 @@ export class EditPluginsAdminService {
       .where(eq(core_plugins.code, code))
       .returning();
 
-    // Update config.json
-    const path = ABSOLUTE_PATHS.plugin({ code }).config;
+    // Update metadata.json
+    const path = ABSOLUTE_PATHS.plugin({ code }).metadata;
     const config: Omit<ConfigPlugin, 'version_code' | 'versions'> = JSON.parse(
       await readFile(path, 'utf8'),
     );

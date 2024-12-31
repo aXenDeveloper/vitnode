@@ -22,14 +22,6 @@ export const TabsDevPluginAdmin = ({ code }: { code: string }) => {
       >
         {t('nav.title')}
       </TabsItem>
-      <TabsItem
-        active={
-          pathname === `/admin/core/plugins/${code}/dev/permissions-admin`
-        }
-        href={`/admin/core/plugins/${code}/dev/permissions-admin`}
-      >
-        {t('permissions-admin.title')}
-      </TabsItem>
     </Tabs>
   );
 };
