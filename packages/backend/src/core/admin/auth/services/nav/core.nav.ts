@@ -91,6 +91,10 @@ export const coreNav: ShowAuthAdminObj['nav'] = [
             code: 'files',
             keywords: ['file'],
           },
+          {
+            code: 'cron',
+            keywords: ['crons', 'cronjob', 'cronjobs', 'schedule', 'task'],
+          },
         ],
       },
     ],
