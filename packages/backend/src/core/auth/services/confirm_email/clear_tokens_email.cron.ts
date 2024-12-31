@@ -9,7 +9,7 @@ export class ClearTokenConfirmEmailAuthCron {
   constructor(private readonly databaseService: InternalDatabaseService) {}
 
   @Cron(CronExpression.EVERY_MINUTE, {
-    name: 'ClearTokenConfirmEmailCoreSessionsCron',
+    name: 'core_clear_expired_confirm_emails',
   })
   async clearTokenEmail() {
     await this.databaseService.db

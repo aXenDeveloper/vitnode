@@ -365,7 +365,8 @@
       "styles_editor": "Editor",
       "langs": "Languages",
       "advanced": "Advanced",
-      "advanced_files": "Files"
+      "advanced_files": "Files",
+      "advanced_cron": "Cron Jobs"
     },
     "admin_permissions": {
       "dashboard": "Dashboard",
@@ -383,7 +384,8 @@
       "can_manage_styles_editor": "Can manage editor?",
       "can_manage_langs": "Can manage languages?",
       "advanced": "Advanced",
-      "can_manage_advanced_files": "Can manage files?"
+      "can_manage_advanced_files": "Can manage files?",
+      "can_manage_advanced_cron": "Can manage cron jobs?"
     }
   },
   "admin_members": {

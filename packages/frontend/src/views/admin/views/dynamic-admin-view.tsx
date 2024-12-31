@@ -5,6 +5,10 @@ import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
 import {
+  CronAdvancedCoreAdminView,
+  generateMetadataCronAdvancedCoreAdmin,
+} from './core/advanced/cron/cron-advanced-core-admin-view';
+import {
   FilesAdvancedCoreAdminView,
   generateMetadataFilesAdvancedCoreAdmin,
 } from './core/advanced/files/files-advanced-core-admin-view';
@@ -142,6 +146,9 @@ export const generateMetadataDynamic = async (props: {
       if (slug[2] === 'files') {
         return generateMetadataFilesAdvancedCoreAdmin();
       }
+      if (slug[2] === 'cron') {
+        return generateMetadataCronAdvancedCoreAdmin();
+      }
     }
 
     if (slug[1] === 'plugins' && !slug[5]) {
@@ -273,6 +280,12 @@ export const DynamicAdminView = async (props: {
       if (slug[2] === 'files') {
         return <FilesAdvancedCoreAdminView {...props} />;
       }
+
+      if (slug[2] === 'cron') {
+        return <CronAdvancedCoreAdminView />;
+      }
+
+      notFound();
     }
 
     if (slug[1] === 'plugins' && !slug[5]) {

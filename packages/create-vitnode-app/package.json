@@ -44,7 +44,7 @@
     "@types/node": "^22.10.2",
     "@types/prompts": "^2.4.9",
     "@types/validate-npm-package-name": "^4.0.2",
-    "commander": "^12.1.0",
+    "commander": "^13.0.0",
     "cross-spawn": "^7.0.6",
     "eslint-config-typescript-vitnode": "workspace:*",
     "ora": "^8.1.1",

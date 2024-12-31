@@ -1,4 +1,6 @@
+import { core_files } from '@/database/schema/files';
 import { core_users } from '@/database/schema/users';
+import { FilesHelperService } from '@/helpers/files/files-helper.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import {
   ForbiddenException,
@@ -10,7 +12,10 @@ import { User } from 'vitnode-shared/user.dto';
 
 @Injectable()
 export class DeleteUsersMembersAdminService {
-  constructor(private readonly databaseService: InternalDatabaseService) {}
+  constructor(
+    private readonly databaseService: InternalDatabaseService,
+    private readonly filesService: FilesHelperService,
+  ) {}
 
   async delete({
     id,
@@ -44,6 +49,24 @@ export class DeleteUsersMembersAdminService {
     if (admin) {
       throw new ForbiddenException('DELETE_ADMIN');
     }
+
+    // Delete all files of the user
+    const files = await this.databaseService.db.query.core_files.findMany({
+      where: (table, { eq }) => eq(table.user_id, user.id),
+    });
+    await Promise.all(
+      files.map(async file => {
+        await Promise.all([
+          this.filesService.delete({
+            dir_folder: file.dir_folder,
+            file_name: file.file_name,
+          }),
+          this.databaseService.db
+            .delete(core_files)
+            .where(eq(core_files.id, file.id)),
+        ]);
+      }),
+    );
 
     await this.databaseService.db
       .delete(core_users)

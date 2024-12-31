@@ -26,14 +26,14 @@ interface ArgsWithProtect extends Args {
   isProtect: true;
 }
 
-export function Controllers({
+export const Controllers = ({
   plugin_name,
   plugin_code,
   isAdmin,
   isProtect,
   route,
   isDev,
-}: ArgsWithAdmin | ArgsWithout | ArgsWithProtect) {
+}: ArgsWithAdmin | ArgsWithout | ArgsWithProtect) => {
   const decorators = [Controller(`${plugin_code}${route ? `/${route}` : ''}`)];
 
   if (isDev) {
@@ -56,4 +56,4 @@ export function Controllers({
   }
 
   return applyDecorators(...decorators);
-}
+};

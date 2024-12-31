@@ -588,6 +588,22 @@
             "success": "File has been deleted.",
             "submit": "Yes, delete file"
           }
+        },
+        "cron": {
+          "title": "Cron Jobs",
+          "desc": "Tasks that run automatically at a specific time.",
+          "name": "Name",
+          "schedule": "Schedule",
+          "next_date": "Next Date",
+          "running": {
+            "title": "Status",
+            "enabled": "Enabled",
+            "disabled": "Disabled"
+          },
+          "last_execution": {
+            "title": "Last Execution",
+            "never": "Never"
+          }
         }
       }
     },

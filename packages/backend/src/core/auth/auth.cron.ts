@@ -15,7 +15,7 @@ export class AuthCron {
   ) {}
 
   @Cron(CronExpression.EVERY_MINUTE, {
-    name: 'ClearExpiredSessions',
+    name: 'core_clear_expired_sessions',
   })
   async clearExpiredSessions() {
     const expiresIn = new Date();
