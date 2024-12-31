@@ -1,8 +1,6 @@
 import { relations, sql } from 'drizzle-orm';
 import { pgEnum, pgTable } from 'drizzle-orm/pg-core';
 
-import { core_files } from './files';
-
 export const appCoreTypeEnum = pgEnum('vitnode_core_app_type', [
   'website',
   'article',
@@ -16,6 +14,24 @@ export const appCoreTypeEnum = pgEnum('vitnode_core_app_type', [
   'video.movie',
   'video.tv_show',
 ]);
+
+export const core_config_files = pgTable('core_config_files', t => ({
+  id: t.serial().primaryKey(),
+  extension: t.varchar({ length: 32 }).notNull(),
+  file_alt: t.varchar({ length: 255 }),
+  file_name: t.varchar({ length: 255 }).notNull(),
+  file_name_original: t
+    .varchar({
+      length: 255,
+    })
+    .notNull(),
+  dir_folder: t.varchar({ length: 255 }).notNull(),
+  created_at: t.timestamp().notNull().defaultNow(),
+  file_size: t.integer().notNull(),
+  mimetype: t.varchar({ length: 255 }).notNull(),
+  width: t.integer(),
+  height: t.integer(),
+}));
 
 export const core_config = pgTable('core_config', t => ({
   app_type: appCoreTypeEnum().notNull().default('website'),
@@ -42,31 +58,31 @@ export const core_config = pgTable('core_config', t => ({
     .default('hsl(210, 40%, 98%)'),
   email_logo_file_id: t
     .integer()
-    .references(() => core_files.id, {
+    .references(() => core_config_files.id, {
       onDelete: 'set null',
     })
     .default(sql`NULL`),
   logo_dark: t
     .integer()
-    .references(() => core_files.id, {
+    .references(() => core_config_files.id, {
       onDelete: 'set null',
     })
     .default(sql`NULL`),
   logo_light: t
     .integer()
-    .references(() => core_files.id, {
+    .references(() => core_config_files.id, {
       onDelete: 'set null',
     })
     .default(sql`NULL`),
   mobile_logo_dark: t
     .integer()
-    .references(() => core_files.id, {
+    .references(() => core_config_files.id, {
       onDelete: 'set null',
     })
     .default(sql`NULL`),
   mobile_logo_light: t
     .integer()
-    .references(() => core_files.id, {
+    .references(() => core_config_files.id, {
       onDelete: 'set null',
     })
     .default(sql`NULL`),
@@ -81,24 +97,24 @@ export const core_config__types = core_config.$inferSelect;
 export const core_config__insert_types = core_config.$inferInsert;
 
 export const core_config_relations = relations(core_config, ({ one }) => ({
-  email_logo: one(core_files, {
+  email_logo: one(core_config_files, {
     fields: [core_config.email_logo_file_id],
-    references: [core_files.id],
+    references: [core_config_files.id],
   }),
-  logo_dark: one(core_files, {
+  logo_dark: one(core_config_files, {
     fields: [core_config.logo_dark],
-    references: [core_files.id],
+    references: [core_config_files.id],
   }),
-  logo_light: one(core_files, {
+  logo_light: one(core_config_files, {
     fields: [core_config.logo_light],
-    references: [core_files.id],
+    references: [core_config_files.id],
   }),
-  mobile_logo_dark: one(core_files, {
+  mobile_logo_dark: one(core_config_files, {
     fields: [core_config.mobile_logo_dark],
-    references: [core_files.id],
+    references: [core_config_files.id],
   }),
-  mobile_logo_light: one(core_files, {
+  mobile_logo_light: one(core_config_files, {
     fields: [core_config.mobile_logo_light],
-    references: [core_files.id],
+    references: [core_config_files.id],
   }),
 }));
