@@ -20,7 +20,11 @@ export class ShowNavPluginsAdminService {
     return (config.nav ?? []).map(nav => {
       return {
         ...nav,
-        keywords: nav.keywords,
+        keywords: nav.keywords ?? [],
+        children: (nav.children ?? []).map(child => ({
+          ...child,
+          keywords: child.keywords ?? [],
+        })),
       };
     });
   }

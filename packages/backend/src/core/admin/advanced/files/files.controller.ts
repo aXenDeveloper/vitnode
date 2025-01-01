@@ -1,3 +1,4 @@
+import { AdminPermission } from '@/helpers/auth/admin-permission.decorator';
 import { Controllers } from '@/helpers/controller.decorator';
 import { Delete, Get, Param, Query } from '@nestjs/common';
 import { ApiOkResponse } from '@nestjs/swagger';
@@ -21,6 +22,11 @@ export class FilesAdvancedAdminController {
     private readonly deleteService: DeleteFilesAdvancedAdminService,
   ) {}
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'advanced',
+    permission: 'can_manage_advanced_files',
+  })
   @ApiOkResponse({
     description: 'Delete file',
   })
@@ -29,6 +35,11 @@ export class FilesAdvancedAdminController {
     await this.deleteService.delete(+id);
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'advanced',
+    permission: 'can_manage_advanced_files',
+  })
   @ApiOkResponse({
     type: ShowFilesAdvancedAdminObj,
     description: 'Show files from all users',

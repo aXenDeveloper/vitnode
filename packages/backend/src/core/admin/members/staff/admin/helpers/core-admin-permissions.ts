@@ -37,7 +37,7 @@ export const coreAdminPermissions: PermissionsStaffObj[] = [
       },
       {
         id: 'advanced',
-        permissions: ['can_manage_advanced_files'],
+        permissions: ['can_manage_advanced_files', 'can_manage_advanced_cron'],
       },
     ],
   },

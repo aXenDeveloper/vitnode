@@ -25,7 +25,6 @@ export const coreNav: ShowAuthAdminObj['nav'] = [
               'pwa',
               'seo',
               'icon',
-              'favicon',
               'theme',
               'color',
               'start',

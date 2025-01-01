@@ -1,6 +1,7 @@
 import type { Response } from 'express';
 
 import { OnlyForDevelopment } from '@/guards/dev.guard';
+import { AdminPermission } from '@/helpers/auth/admin-permission.decorator';
 import { Controllers } from '@/helpers/controller.decorator';
 import { FilesValidationPipe } from '@/helpers/files/files.pipe';
 import { UploadFilesMethod } from '@/helpers/upload-files.decorator';
@@ -47,6 +48,10 @@ export class PluginsAdminController {
     private readonly uploadService: UploadPluginsAdminService,
   ) {}
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'can_manage_plugins',
+  })
   @ApiCreatedResponse({ description: 'Plugin created', type: ShowPluginAdmin })
   @Post()
   @UseGuards(OnlyForDevelopment)
@@ -56,6 +61,10 @@ export class PluginsAdminController {
     return await this.createService.create(body);
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'can_manage_plugins',
+  })
   @ApiOkResponse({ description: 'Plugin deleted' })
   @Delete(':id')
   @UseGuards(OnlyForDevelopment)
@@ -63,6 +72,10 @@ export class PluginsAdminController {
     await this.deleteService.delete(+id);
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'can_manage_plugins',
+  })
   @ApiOkResponse({
     type: ShowPluginAdmin,
     description: 'Plugin updated',
@@ -75,6 +88,10 @@ export class PluginsAdminController {
     return await this.editService.edit({ code, body });
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'can_manage_plugins',
+  })
   @ApiOkResponse({ description: 'Plugin exported' })
   @Post(':code/export')
   @UseGuards(OnlyForDevelopment)
@@ -86,12 +103,20 @@ export class PluginsAdminController {
     await this.exportService.export({ code, body, res });
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'can_manage_plugins',
+  })
   @ApiOkResponse({ type: ShowPluginAdmin, description: 'Plugin details' })
   @Get(':code')
   async itemPlugin(@Param('code') code: string): Promise<ShowPluginAdmin> {
     return await this.itemService.item(code);
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'can_manage_plugins',
+  })
   @ApiOkResponse({ type: ShowPluginsAdminObj, description: 'List of plugins' })
   @Get()
   async showPlugin(
@@ -100,6 +125,10 @@ export class PluginsAdminController {
     return await this.showService.show(query);
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'can_manage_plugins',
+  })
   @ApiCreatedResponse({ description: 'Plugin uploaded' })
   @Post('upload')
   @UploadFilesMethod({ fields: ['file'] })

@@ -26,7 +26,7 @@ export class DeleteNavPluginsAdminService {
 
     // Update config
     if (parent_code) {
-      const parent = config.nav.find(nav => nav.code === parent_code);
+      const parent = (config.nav ?? []).find(nav => nav.code === parent_code);
 
       if (!parent) {
         throw new NotFoundException('PARENT_NOT_FOUND');
@@ -36,12 +36,12 @@ export class DeleteNavPluginsAdminService {
         child => child.code !== code,
       );
     } else {
-      const codeExists = config.nav.find(nav => nav.code === code);
+      const codeExists = (config.nav ?? []).find(nav => nav.code === code);
       if (!codeExists) {
         throw new NotFoundException();
       }
 
-      config.nav = config.nav.filter(nav => nav.code !== code);
+      config.nav = (config.nav ?? []).filter(nav => nav.code !== code);
     }
 
     await writeFile(pathConfig, JSON.stringify(config, null, 2));

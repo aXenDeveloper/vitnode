@@ -1,3 +1,4 @@
+import { AdminPermission } from '@/helpers/auth/admin-permission.decorator';
 import { Controllers } from '@/helpers/controller.decorator';
 import { FilesValidationPipe } from '@/helpers/files/files.pipe';
 import { UploadFilesMethod } from '@/helpers/upload-files.decorator';
@@ -23,12 +24,17 @@ export class MetadataAdminController {
     private readonly editService: EditMetadataAdminService,
   ) {}
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'settings',
+    permission: 'can_manage_settings_metadata',
+  })
   @ApiOkResponse({
     description: 'Edit metadata settings',
     type: ShowMetadataAdminObj,
   })
   @Put()
-  @UploadFilesMethod({ fields: ['icon', 'favicon'] })
+  @UploadFilesMethod({ fields: ['icon'] })
   async edit(
     @UploadedFiles(
       new FilesValidationPipe({
@@ -38,20 +44,19 @@ export class MetadataAdminController {
           isOptional: true,
           maxCount: 1,
         },
-        favicon: {
-          maxSize: 1024 * 1024, // 1 MB
-          acceptMimeType: ['image/x-icon', 'image/vnd.microsoft.icon'],
-          isOptional: true,
-          maxCount: 1,
-        },
       }),
     )
-    files: Pick<ShowMetadataAdminBody, 'favicon' | 'icon'>,
+    files: Pick<ShowMetadataAdminBody, 'icon'>,
     @Body() body: ShowMetadataAdminBody,
   ): Promise<ShowMetadataAdminObj> {
     return this.editService.edit({ body, files });
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'settings',
+    permission: 'can_manage_settings_metadata',
+  })
   @ApiOkResponse({
     description: 'Return metadata settings',
     type: ShowMetadataAdminObj,

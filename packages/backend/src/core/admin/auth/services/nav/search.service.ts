@@ -43,7 +43,7 @@ export class SearchAuthAdminService {
           return [nav, ...mappedChildren];
         });
       })
-      .filter(nav => nav.keywords.length);
+      .filter(nav => (nav.keywords ?? []).length);
 
     if (search.length === 0) {
       return {
@@ -54,7 +54,7 @@ export class SearchAuthAdminService {
     return {
       nav: nav.filter(
         nav =>
-          nav.keywords.some(item =>
+          (nav.keywords ?? []).some(item =>
             search.some(search => item.toLowerCase().includes(search)),
           ) || search.some(search => nav.code.toLowerCase().includes(search)),
       ),

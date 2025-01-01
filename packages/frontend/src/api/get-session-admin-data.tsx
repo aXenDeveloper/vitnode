@@ -27,7 +27,7 @@ export const getSessionAdminData = async () => {
 
 export interface PermissionSessionAdmin {
   group: string;
-  permission: string;
+  permission?: string;
   plugin_code: string;
 }
 

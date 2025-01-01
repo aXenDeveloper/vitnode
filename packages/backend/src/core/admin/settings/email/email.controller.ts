@@ -1,3 +1,4 @@
+import { AdminPermission } from '@/helpers/auth/admin-permission.decorator';
 import { Controllers } from '@/helpers/controller.decorator';
 import { FilesValidationPipe } from '@/helpers/files/files.pipe';
 import { UploadFilesMethod } from '@/helpers/upload-files.decorator';
@@ -32,6 +33,11 @@ export class EmailSettingsAdminController {
     private readonly logsService: LogsEmailSettingsAdminService,
   ) {}
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'settings',
+    permission: 'can_manage_settings_email',
+  })
   @ApiOkResponse({
     description: 'Email settings updated',
     type: ShowEmailSettingsAdminObj,
@@ -55,6 +61,11 @@ export class EmailSettingsAdminController {
     return await this.editService.edit({ body, files });
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'settings',
+    permission: 'can_manage_settings_email',
+  })
   @ApiOkResponse({
     type: LogsEmailSettingsAdminObj,
     description: 'Logs email settings',
@@ -66,6 +77,11 @@ export class EmailSettingsAdminController {
     return await this.logsService.logs(body);
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'settings',
+    permission: 'can_manage_settings_email',
+  })
   @ApiOkResponse({
     type: ShowEmailSettingsAdminObj,
     description: 'Show email settings',
@@ -75,6 +91,11 @@ export class EmailSettingsAdminController {
     return this.showService.show();
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'settings',
+    permission: 'can_manage_settings_email',
+  })
   @ApiOkResponse({ description: 'Test email settings' })
   @Post('/test')
   async test(

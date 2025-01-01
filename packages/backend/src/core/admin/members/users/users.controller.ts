@@ -1,3 +1,4 @@
+import { AdminPermission } from '@/helpers/auth/admin-permission.decorator';
 import { Controllers } from '@/helpers/controller.decorator';
 import { CurrentUser } from '@/helpers/user.decorator';
 import { Body, Delete, Get, Param, Put, Query } from '@nestjs/common';
@@ -31,6 +32,11 @@ export class UsersMembersAdminController {
     private readonly confirmEmailService: ConfirmEmailUsersMembersAdminService,
   ) {}
 
+  @AdminPermission({
+    plugin_code: 'members',
+    group: 'users',
+    permission: 'can_manage_users',
+  })
   @ApiNotFoundResponse()
   @ApiOkResponse({
     description: 'Confirm email',
@@ -40,6 +46,11 @@ export class UsersMembersAdminController {
     await this.confirmEmailService.confirmEmail(+id);
   }
 
+  @AdminPermission({
+    plugin_code: 'members',
+    group: 'users',
+    permission: 'can_manage_users',
+  })
   @ApiNotFoundResponse()
   @ApiOkResponse({
     description: 'Delete user',
@@ -52,6 +63,11 @@ export class UsersMembersAdminController {
     await this.deleteUsersService.delete({ id: +id, user });
   }
 
+  @AdminPermission({
+    plugin_code: 'members',
+    group: 'users',
+    permission: 'can_manage_users',
+  })
   @ApiNotFoundResponse()
   @ApiOkResponse({
     type: UserMembersAdmin,
@@ -65,6 +81,11 @@ export class UsersMembersAdminController {
     return await this.editUsersService.edit({ id: +id, body });
   }
 
+  @AdminPermission({
+    plugin_code: 'members',
+    group: 'users',
+    permission: 'can_manage_users',
+  })
   @ApiNotFoundResponse()
   @ApiOkResponse({
     type: UserMembersAdmin,
@@ -75,6 +96,11 @@ export class UsersMembersAdminController {
     return await this.itemUsersService.item(+id);
   }
 
+  @AdminPermission({
+    plugin_code: 'members',
+    group: 'users',
+    permission: 'can_manage_users',
+  })
   @ApiOkResponse({
     type: UsersMembersAdminObj,
     description: 'List of users',

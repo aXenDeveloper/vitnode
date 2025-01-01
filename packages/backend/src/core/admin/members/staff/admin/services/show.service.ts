@@ -11,10 +11,7 @@ import {
   AdminStaffMembersAdminQuery,
 } from 'vitnode-shared/admin/members/staff/admin.dto';
 import { ConfigPlugin } from 'vitnode-shared/admin/plugin.dto';
-import {
-  PermissionsStaffObj,
-  PermissionsStaffObjWithoutPluginName,
-} from 'vitnode-shared/admin/staff.dto';
+import { PermissionsStaffObj } from 'vitnode-shared/admin/staff.dto';
 import { SortDirectionEnum } from 'vitnode-shared/utils/pagination.enum';
 
 import { coreAdminPermissions } from '../helpers/core-admin-permissions';
@@ -50,7 +47,10 @@ export class ShowAdminStaffMembersAdminService {
         return {
           plugin_code: plugin.code,
           plugin: plugin.name,
-          groups: config.permissions_admin ?? [],
+          groups: (config.permissions_admin ?? []).map(item => ({
+            ...item,
+            permissions: item.permissions ?? [],
+          })),
         };
       },
     );
@@ -106,8 +106,7 @@ export class ShowAdminStaffMembersAdminService {
             user_or_group: {
               ...user,
             },
-            permissions: (edge.permissions ??
-              []) as PermissionsStaffObjWithoutPluginName[],
+            permissions: edge.data?.permissions ?? [],
           };
         }
 
@@ -128,8 +127,7 @@ export class ShowAdminStaffMembersAdminService {
             ...edge.group,
             group_name,
           },
-          permissions: (edge.permissions ??
-            []) as PermissionsStaffObjWithoutPluginName[],
+          permissions: edge.data?.permissions ?? [],
         };
       }),
     );

@@ -16,7 +16,7 @@ export class ChangePositionNavPluginsAdminService extends HelpersAdminNavPlugins
     code: string;
     items: ConfigPlugin['nav'];
   }): ConfigPlugin['nav'] {
-    return items.filter(item => {
+    return (items ?? []).filter(item => {
       if (item.code === code) {
         return false;
       }
@@ -74,7 +74,7 @@ export class ChangePositionNavPluginsAdminService extends HelpersAdminNavPlugins
       // Move children to root if itemToMove has children
       if (itemToMove.children && itemToMove.children.length > 0) {
         config.nav = [
-          ...config.nav,
+          ...(config.nav ?? []),
           ...itemToMove.children.map(child => ({
             ...child,
             children: [],
@@ -87,6 +87,7 @@ export class ChangePositionNavPluginsAdminService extends HelpersAdminNavPlugins
       parentItem.children.splice(index_to_move, 0, itemToMove);
     } else {
       // If parent_code is not provided, add the item to the root of the nav array
+      config.nav = config.nav ?? [];
       config.nav.splice(index_to_move, 0, itemToMove);
     }
 

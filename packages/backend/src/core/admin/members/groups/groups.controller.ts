@@ -1,3 +1,4 @@
+import { AdminPermission } from '@/helpers/auth/admin-permission.decorator';
 import { Controllers } from '@/helpers/controller.decorator';
 import { Body, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import {
@@ -31,6 +32,10 @@ export class GroupsMembersAdminController {
     private readonly deleteService: DeleteGroupsMembersAdminService,
   ) {}
 
+  @AdminPermission({
+    plugin_code: 'members',
+    group: 'can_manage_groups',
+  })
   @ApiCreatedResponse({
     description: 'Create group',
     type: GroupMembersAdmin,
@@ -42,6 +47,10 @@ export class GroupsMembersAdminController {
     return await this.createService.create(body);
   }
 
+  @AdminPermission({
+    plugin_code: 'members',
+    group: 'can_manage_groups',
+  })
   @ApiOkResponse({
     description: 'Delete group',
   })
@@ -50,6 +59,10 @@ export class GroupsMembersAdminController {
     await this.deleteService.delete(+id);
   }
 
+  @AdminPermission({
+    plugin_code: 'members',
+    group: 'can_manage_groups',
+  })
   @ApiNotFoundResponse()
   @ApiOkResponse({
     description: 'Edit group',
@@ -63,6 +76,10 @@ export class GroupsMembersAdminController {
     return await this.editService.edit({ id: +id, body });
   }
 
+  @AdminPermission({
+    plugin_code: 'members',
+    group: 'can_manage_groups',
+  })
   @ApiOkResponse({
     type: GroupsMembersAdminObj,
     description: 'Show groups',

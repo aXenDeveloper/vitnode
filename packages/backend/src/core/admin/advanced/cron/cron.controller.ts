@@ -1,3 +1,4 @@
+import { AdminPermission } from '@/helpers/auth/admin-permission.decorator';
 import { Controllers } from '@/helpers/controller.decorator';
 import { Get } from '@nestjs/common';
 import { ApiOkResponse } from '@nestjs/swagger';
@@ -14,6 +15,11 @@ import { ShowCronAdvancedAdminService } from './services/show.service';
 export class CoreAdvancedAdminController {
   constructor(private readonly showService: ShowCronAdvancedAdminService) {}
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'advanced',
+    permission: 'can_manage_advanced_cron',
+  })
   @ApiOkResponse({
     type: ShowCronAdvancedAdminObj,
     description: 'Show cron jobs',

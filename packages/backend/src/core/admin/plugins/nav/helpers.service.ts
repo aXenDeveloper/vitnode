@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import {
-  ConfigPlugin,
-  NavPluginInfoJSONType,
-} from 'vitnode-shared/admin/plugin.dto';
+import { ItemNavAuthAdminObj } from 'vitnode-shared/admin/auth.dto';
+import { ConfigPlugin } from 'vitnode-shared/admin/plugin.dto';
 
 @Injectable()
 export class HelpersAdminNavPluginsService {
@@ -12,10 +10,22 @@ export class HelpersAdminNavPluginsService {
   }: {
     code: string;
     items: ConfigPlugin['nav'];
-  }): NavPluginInfoJSONType | null {
-    for (const item of items) {
+  }):
+    | (ItemNavAuthAdminObj & {
+        children?: ItemNavAuthAdminObj[];
+        parent_code?: string;
+      })
+    | null {
+    for (const item of items ?? []) {
       if (item.code === code) {
-        return item;
+        return {
+          ...item,
+          keywords: item.keywords ?? [],
+          children: (item.children ?? []).map(child => ({
+            ...child,
+            keywords: child.keywords ?? [],
+          })),
+        };
       }
 
       if (item.children) {

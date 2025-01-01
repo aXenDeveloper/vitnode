@@ -1,12 +1,4 @@
-import { ApiProperty, OmitType } from '@nestjs/swagger';
-
-class PermissionsStaffInput {
-  @ApiProperty()
-  id: string;
-
-  @ApiProperty({ type: [String] })
-  permissions: string[];
-}
+import { ApiProperty } from '@nestjs/swagger';
 
 export class PermissionsStaff {
   @ApiProperty()
@@ -17,8 +9,8 @@ export class PermissionsStaff {
 }
 
 export class PermissionsStaffArgs {
-  @ApiProperty({ type: [PermissionsStaffInput] })
-  groups: PermissionsStaffInput[];
+  @ApiProperty({ type: [PermissionsStaff] })
+  groups: PermissionsStaff[];
 
   @ApiProperty()
   plugin_code: string;
@@ -34,8 +26,3 @@ export class PermissionsStaffObj {
   @ApiProperty()
   plugin_code: string;
 }
-
-export class PermissionsStaffObjWithoutPluginName extends OmitType(
-  PermissionsStaffObj,
-  ['plugin'] as const,
-) {}

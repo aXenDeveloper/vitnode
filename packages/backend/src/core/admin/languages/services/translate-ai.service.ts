@@ -79,13 +79,14 @@ export class TranslateAiLanguagesAdminService {
           Task: Translate the content below from en to ${code}.
 
           Translation Requirements:
-          - If the content is already translated and it is correct, do not change it,
           - Do not translate the code,
           - Maintain exact file structure, indentation, and formatting,
           - Preserve all object/property keys, syntax characters, and punctuation marks exactly,
           - Keep consistent capitalization, spacing, and line breaks,
           - Match source file's JSON/object structure precisely,
           - Wrap return JSON in \`\`\`json code block.
+
+          Important: Skip translation if is already translated (and not identical to source).
 
           Source content (en):
           ${JSON.stringify(textLang, null, 2)}

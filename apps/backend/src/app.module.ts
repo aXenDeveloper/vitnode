@@ -21,11 +21,11 @@ const google = createGoogleGenerativeAI({
         schemaDatabase,
       },
       ai: google('gemini-2.0-flash-exp'),
-      captcha: {
-        type: 'cloudflare_turnstile',
-        secret_key: '',
-        site_key: '',
-      },
+      // captcha: {
+      //   type: 'cloudflare_turnstile',
+      //   secret_key: '',
+      //   site_key: '',
+      // },
       // email: emailResend({
       //   api_key: process.env.EMAIL_RESEND_API_KEY,
       //   from: process.env.EMAIL_RESEND_FROM,

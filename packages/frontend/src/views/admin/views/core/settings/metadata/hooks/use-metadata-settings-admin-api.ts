@@ -19,7 +19,6 @@ export const useMetadataSettingsAdminApi = ({
   theme_color,
   background_color,
   display,
-  favicon,
   icon,
 }: React.ComponentProps<typeof ContentMetadataSettingsAdmin>) => {
   const t = useTranslations('core.global');
@@ -50,10 +49,6 @@ export const useMetadataSettingsAdminApi = ({
       .nullable()
       .default(icon ?? null)
       .optional(),
-    favicon: zodFile
-      .nullable()
-      .default(favicon ?? null)
-      .optional(),
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -77,12 +72,6 @@ export const useMetadataSettingsAdminApi = ({
         formData.append('icon', values.icon);
       } else if (values.icon === null) {
         formData.append('remove_icon', 'true');
-      }
-
-      if (values.favicon && values.favicon instanceof File) {
-        formData.append('favicon', values.favicon);
-      } else if (values.favicon === null) {
-        formData.append('remove_favicon', 'true');
       }
 
       await fetcherClient<ShowMetadataAdminObj, ShowMetadataAdminBody>({

@@ -1,3 +1,4 @@
+import { AdminPermission } from '@/helpers/auth/admin-permission.decorator';
 import { Controllers } from '@/helpers/controller.decorator';
 import { Body, Put } from '@nestjs/common';
 import { ApiOkResponse } from '@nestjs/swagger';
@@ -14,6 +15,11 @@ import { EditMainSettingsAdminService } from './services/edit.service';
 export class MainSettingsAdminController {
   constructor(private readonly editMainService: EditMainSettingsAdminService) {}
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'settings',
+    permission: 'can_manage_settings_main',
+  })
   @ApiOkResponse({
     type: MainSettingsAdminBody,
     description: 'Edit main settings',

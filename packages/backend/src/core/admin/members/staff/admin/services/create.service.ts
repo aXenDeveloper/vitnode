@@ -11,7 +11,6 @@ import {
   AdminStaffMembersAdmin,
   CreateAdminStaffMembersAdminBody,
 } from 'vitnode-shared/admin/members/staff/admin.dto';
-import { PermissionsStaffObjWithoutPluginName } from 'vitnode-shared/admin/staff.dto';
 
 @Injectable()
 export class CreateAdminStaffMembersAdminService {
@@ -47,7 +46,7 @@ export class CreateAdminStaffMembersAdminService {
       .values({
         user_id,
         group_id,
-        permissions,
+        data: { permissions },
       })
       .returning();
 
@@ -82,7 +81,7 @@ export class CreateAdminStaffMembersAdminService {
         user_or_group: {
           ...user,
         },
-        permissions: data.permissions as PermissionsStaffObjWithoutPluginName[],
+        permissions: data.data?.permissions ?? [],
       };
     }
 
@@ -96,7 +95,7 @@ export class CreateAdminStaffMembersAdminService {
         ...data.group,
         group_name: [],
       },
-      permissions: data.permissions as PermissionsStaffObjWithoutPluginName[],
+      permissions: data.data?.permissions ?? [],
     };
   }
 }
