@@ -1,4 +1,4 @@
-import { core_files } from '@/database/schema/files';
+import { core_config_files } from '@/database/schema/config';
 import { ConfigHelperService } from '@/helpers/config.service';
 import { FilesHelperService } from '@/helpers/files/files-helper.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
@@ -59,13 +59,16 @@ export class EditThemeEditorStylesAdminService {
           });
 
           await this.databaseService.db
-            .delete(core_files)
+            .delete(core_config_files)
             .where(
               and(
-                eq(core_files.dir_folder, current.dir_folder),
-                eq(core_files.file_name, current.file_name),
-                eq(core_files.file_size, current.file_size),
-                eq(core_files.file_name_original, current.file_name_original),
+                eq(core_config_files.dir_folder, current.dir_folder),
+                eq(core_config_files.file_name, current.file_name),
+                eq(core_config_files.file_size, current.file_size),
+                eq(
+                  core_config_files.file_name_original,
+                  current.file_name_original,
+                ),
               ),
             );
         }
@@ -78,7 +81,7 @@ export class EditThemeEditorStylesAdminService {
           });
 
           const [data] = await this.databaseService.db
-            .insert(core_files)
+            .insert(core_config_files)
             .values(file)
             .returning();
 

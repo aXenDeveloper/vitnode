@@ -1,4 +1,4 @@
-import { core_files } from '@/database/schema/files';
+import { core_config_files } from '@/database/schema/config';
 import { ConfigHelperService } from '@/helpers/config.service';
 import { EmailHelperService } from '@/helpers/email/email.service';
 import { FilesHelperService } from '@/helpers/files/files-helper.service';
@@ -49,8 +49,8 @@ export class EditEmailSettingsAdminService {
 
       await Promise.all([
         this.databaseService.db
-          .delete(core_files)
-          .where(eq(core_files.id, config.email_logo_file_id)),
+          .delete(core_config_files)
+          .where(eq(core_config_files.id, config.email_logo_file_id)),
         this.configHelpers.cleanCache(),
       ]);
     }
@@ -64,7 +64,7 @@ export class EditEmailSettingsAdminService {
       });
 
       const [fileFromDb] = await this.databaseService.db
-        .insert(core_files)
+        .insert(core_config_files)
         .values(file)
         .returning();
 
