@@ -37,8 +37,8 @@ export class ExportPluginsAdminService {
       return res.status(404).json({ message: 'Plugin not found' });
     }
 
-    // Update metadata.json
-    const pathInfoJSON = ABSOLUTE_PATHS.plugin({ code }).metadata;
+    // Update config.json
+    const pathInfoJSON = ABSOLUTE_PATHS.plugin({ code }).config;
     const configJSON: ConfigPlugin = JSON.parse(
       await readFile(pathInfoJSON, 'utf8'),
     );

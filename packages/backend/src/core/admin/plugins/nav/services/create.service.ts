@@ -24,7 +24,7 @@ export class CreateNavPluginsAdminService extends HelpersAdminNavPluginsService 
   }): Promise<ParentNavAuthAdminObj> {
     const pathConfig = ABSOLUTE_PATHS.plugin({
       code: plugin_code,
-    }).metadata;
+    }).config;
     if (!existsSync(pathConfig)) {
       throw new NotFoundException();
     }
@@ -42,7 +42,7 @@ export class CreateNavPluginsAdminService extends HelpersAdminNavPluginsService 
 
     // Update config
     if (parent_code) {
-      const parent = config.nav.find(nav => nav.code === parent_code);
+      const parent = (config.nav ?? []).find(nav => nav.code === parent_code);
 
       if (!parent) {
         throw new NotFoundException('PARENT_NOT_FOUND');
@@ -55,6 +55,7 @@ export class CreateNavPluginsAdminService extends HelpersAdminNavPluginsService 
         keywords,
       });
     } else {
+      config.nav = config.nav ?? [];
       config.nav.push({
         code: currentCode,
         icon,

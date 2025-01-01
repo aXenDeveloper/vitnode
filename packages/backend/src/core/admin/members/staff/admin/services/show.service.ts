@@ -34,7 +34,7 @@ export class ShowAdminStaffMembersAdminService {
       plugin => {
         const pathConfig = ABSOLUTE_PATHS.plugin({
           code: plugin.code,
-        }).metadata;
+        }).config;
         if (!existsSync(pathConfig)) {
           return {
             plugin_code: plugin.code,
@@ -50,7 +50,10 @@ export class ShowAdminStaffMembersAdminService {
         return {
           plugin_code: plugin.code,
           plugin: plugin.name,
-          groups: config.permissions_admin ?? [],
+          groups: (config.permissions_admin ?? []).map(group => ({
+            ...group,
+            permissions: group.permissions ?? [],
+          })),
         };
       },
     );

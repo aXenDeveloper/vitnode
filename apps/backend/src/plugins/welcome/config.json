@@ -1,4 +1,5 @@
 {
+  "$schema": "https://api.vitnode.com/public/vitnode/plugin.schema.json",
   "name": "Welcome",
   "description": "Basic plugin with default page.",
   "version": "1.0.0",
@@ -25,7 +26,7 @@
   "permissions_admin": [
     {
       "id": "test",
-      "permissions": ["test123"]
+      "permissions": []
     }
   ]
 }

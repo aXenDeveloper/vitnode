@@ -19,7 +19,7 @@ export class NavAuthAdminService {
 
   async nav({ user }: { user: User }): Promise<ShowAuthAdminObj['nav']> {
     const permissions: {
-      groups: { id: string; permissions: string[] }[];
+      groups: { id: string; permissions?: string[] }[];
       plugin_code: string;
     }[] = await this.userHelper.getUserAdminPermission({
       user,
@@ -35,7 +35,7 @@ export class NavAuthAdminService {
 
     const navFromPlugins = await Promise.all(
       adminNavPlugins.map(async ({ code }) => {
-        const pathConfig = ABSOLUTE_PATHS.plugin({ code }).metadata;
+        const pathConfig = ABSOLUTE_PATHS.plugin({ code }).config;
         if (!existsSync(pathConfig)) {
           return {
             code,
@@ -54,9 +54,20 @@ export class NavAuthAdminService {
       }),
     );
 
-    const nav = [...coreNav, ...navFromPlugins].filter(
-      plugin => plugin.nav.length > 0,
-    );
+    const nav: ShowAuthAdminObj['nav'] = [...coreNav, ...navFromPlugins]
+      .filter(plugin => (plugin.nav ?? []).length > 0)
+      .map(plugin => ({
+        ...plugin,
+        nav: (plugin.nav ?? []).map(nav => ({
+          ...nav,
+          keywords: nav.keywords ?? [],
+          children: (nav.children ?? []).map(child => ({
+            ...child,
+            keywords: child.keywords ?? [],
+          })),
+        })),
+      }));
+
     if (permissions.length === 0) return nav;
 
     // Create a map for quick lookup of permissions by plugin code
@@ -70,60 +81,62 @@ export class NavAuthAdminService {
     );
 
     // Map over the filtered plugins to process their nav items
-    const filterGroups = pluginsInPermissions.map(plugin => {
-      const pluginPermission = permissionMap.get(plugin.code);
-      if (!pluginPermission) return plugin;
+    const filterGroups: ShowAuthAdminObj['nav'] = pluginsInPermissions.map(
+      plugin => {
+        const pluginPermission = permissionMap.get(plugin.code);
+        if (!pluginPermission) return plugin;
 
-      // Create a map of group IDs to group objects with a Set of permissions
-      const groupMap = new Map();
-      pluginPermission.groups.forEach(group => {
-        groupMap.set(group.id, {
-          ...group,
-          permissionSet: new Set(group.permissions),
+        // Create a map of group IDs to group objects with a Set of permissions
+        const groupMap = new Map();
+        pluginPermission.groups.forEach(group => {
+          groupMap.set(group.id, {
+            ...group,
+            permissionSet: new Set(group.permissions),
+          });
         });
-      });
 
-      // Filter the nav items based on the permissions
-      const filteredNav = plugin.nav.filter(navItem => {
-        return (
-          groupMap.has(navItem.code) ||
-          groupMap.has(`can_manage_${navItem.code}`) ||
-          navItem.code === 'dashboard'
-        );
-      });
+        // Filter the nav items based on the permissions
+        const filteredNav = (plugin.nav ?? []).filter(navItem => {
+          return (
+            groupMap.has(navItem.code) ||
+            groupMap.has(`can_manage_${navItem.code}`) ||
+            navItem.code === 'dashboard'
+          );
+        });
 
-      // Map over filteredNav to process each navItem
-      const processedNav = filteredNav.map(navItem => {
-        const group =
-          groupMap.get(navItem.code) ||
-          groupMap.get(`can_manage_${navItem.code}`);
+        // Map over filteredNav to process each navItem
+        const processedNav = filteredNav.map(navItem => {
+          const group =
+            groupMap.get(navItem.code) ||
+            groupMap.get(`can_manage_${navItem.code}`);
 
-        if (!group) {
-          return { ...navItem, permissions: [] };
-        }
+          if (!group) {
+            return { ...navItem, permissions: [] };
+          }
 
-        // If group.permissions is empty, return navItem as is
-        if (group.permissions.length === 0) {
-          return navItem;
-        }
+          // If group.permissions is empty, return navItem as is
+          if (group.permissions.length === 0) {
+            return navItem;
+          }
 
-        // Filter navItem's children based on group.permissions
-        const filteredChildren = navItem.children?.filter(child =>
-          group.permissionSet.has(`can_manage_${group.id}_${child.code}`),
-        );
+          // Filter navItem's children based on group.permissions
+          const filteredChildren = navItem.children?.filter(child =>
+            group.permissionSet.has(`can_manage_${group.id}_${child.code}`),
+          );
+
+          return {
+            ...navItem,
+            children: filteredChildren,
+          };
+        });
 
         return {
-          ...navItem,
-          children: filteredChildren,
+          ...plugin,
+          nav: processedNav,
         };
-      });
+      },
+    );
 
-      return {
-        ...plugin,
-        nav: processedNav,
-      };
-    });
-
-    return filterGroups.filter(plugin => plugin.nav.length > 0);
+    return filterGroups.filter(plugin => (plugin.nav ?? []).length > 0);
   }
 }

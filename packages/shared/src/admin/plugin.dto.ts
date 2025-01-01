@@ -10,22 +10,25 @@ import {
 } from 'class-validator';
 
 import { TransformString } from '../utils/text-language';
-import { ItemNavAuthAdminObj } from './auth.dto';
 
 export interface ConfigPlugin extends CreatePluginsAdminBody {
   allow_default: boolean;
-  nav: NavPluginInfoJSONType[];
+  nav?: {
+    children?: {
+      code: string;
+      icon?: string;
+      keywords?: string[];
+    }[];
+    code: string;
+    icon?: string;
+    keywords?: string[];
+  }[];
   permissions_admin?: {
     id: string;
-    permissions: string[];
+    permissions?: string[];
   }[];
   version: string;
   version_code: number;
-}
-
-export interface NavPluginInfoJSONType extends ItemNavAuthAdminObj {
-  children?: ItemNavAuthAdminObj[];
-  parent_code?: string;
 }
 
 export class CreatePluginsAdminBody {

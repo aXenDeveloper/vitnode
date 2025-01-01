@@ -32,7 +32,10 @@ export class CreatePluginsAdminService {
     const nameWithCapitalLetters =
       this.changeFilesHelper.changeCodePluginToCapitalLetters(code);
 
-    const jsonFile: ConfigPlugin = {
+    const jsonFile: ConfigPlugin & {
+      $schema: string;
+    } = {
+      $schema: 'https://api.vitnode.com/public/vitnode/plugin.schema.json',
       code,
       ...rest,
       allow_default: true,
@@ -61,7 +64,7 @@ export class ${nameWithCapitalLetters}Module {}
 `,
           },
           {
-            name: 'metadata.json',
+            name: 'config.json',
             content: JSON.stringify(jsonFile, null, 2),
           },
         ],

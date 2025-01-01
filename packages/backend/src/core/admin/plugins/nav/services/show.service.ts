@@ -10,7 +10,7 @@ export class ShowNavPluginsAdminService {
   async show(code: string): Promise<ParentNavAuthAdminObj[]> {
     const pathConfig = ABSOLUTE_PATHS.plugin({
       code,
-    }).metadata;
+    }).config;
     if (!existsSync(pathConfig)) {
       throw new NotFoundException();
     }
@@ -20,7 +20,11 @@ export class ShowNavPluginsAdminService {
     return (config.nav ?? []).map(nav => {
       return {
         ...nav,
-        keywords: nav.keywords,
+        keywords: nav.keywords ?? [],
+        children: (nav.children ?? []).map(child => ({
+          ...child,
+          keywords: child.keywords ?? [],
+        })),
       };
     });
   }

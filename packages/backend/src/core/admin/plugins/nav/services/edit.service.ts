@@ -24,20 +24,22 @@ export class EditNavPluginsAdminService {
   }): Promise<ParentNavAuthAdminObj> {
     const pathConfig = ABSOLUTE_PATHS.plugin({
       code: plugin_code,
-    }).metadata;
+    }).config;
     if (!existsSync(pathConfig)) {
       throw new NotFoundException();
     }
     const config: ConfigPlugin = JSON.parse(await readFile(pathConfig, 'utf8'));
 
     const currentCode = removeSpecialCharacters(code);
-    const existsNavCode = config.nav.find(nav => nav.code === currentCode);
+    const existsNavCode = (config.nav ?? []).find(
+      nav => nav.code === currentCode,
+    );
     if (existsNavCode && code !== existsNavCode.code) {
       throw new ConflictException('CODE_ALREADY_EXISTS');
     }
 
     if (parent_code) {
-      const parent = config.nav.find(nav => nav.code === parent_code);
+      const parent = (config.nav ?? []).find(nav => nav.code === parent_code);
 
       if (!parent) {
         throw new NotFoundException('PARENT_NOT_FOUND');
@@ -53,7 +55,10 @@ export class EditNavPluginsAdminService {
         keywords,
       };
     } else {
-      const navIndex = config.nav.findIndex(nav => nav.code === previous_code);
+      const navIndex = (config.nav ?? []).findIndex(
+        nav => nav.code === previous_code,
+      );
+      config.nav = config.nav ?? [];
       config.nav[navIndex] = {
         code: currentCode,
         icon,

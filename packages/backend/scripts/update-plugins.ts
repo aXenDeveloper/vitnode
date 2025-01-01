@@ -33,13 +33,13 @@ export const updatePlugins = async ({
     await Promise.all(
       plugins.map(async (code, index) => {
         const pluginPath = join(pluginsPath, code);
-        const configPath = join(pluginPath, 'metadata.json');
+        const configPath = join(pluginPath, 'config.json');
         if (!existsSync(configPath)) {
           return;
         }
 
         const config = JSON.parse(
-          await readFile(join(pluginPath, 'metadata.json'), 'utf8'),
+          await readFile(join(pluginPath, 'config.json'), 'utf8'),
         );
 
         if (config.allow_default) {
