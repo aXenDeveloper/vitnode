@@ -27,7 +27,7 @@ const program = new Command()
 
 program.addOption(
   new Option(
-    '-pm, --package-manager <package-manager>',
+    '--package-manager <package-manager>',
     'Specify the package manager to use',
   ).choices(['npm', 'pnpm']),
 );
