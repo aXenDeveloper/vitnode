@@ -277,10 +277,6 @@
             "label": "Icon",
             "desc": "Represent your website on devices (PWA). Recommended size: 512x512px."
           },
-          "favicon": {
-            "label": "Favicon",
-            "desc": "Icon in browser tab. Recommended size: 32x32px."
-          },
           "display": {
             "label": "Display",
             "desc": "The display property controls how the app is displayed.",

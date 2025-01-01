@@ -107,20 +107,6 @@ export const ContentMetadataSettingsAdmin = (data: ShowMetadataAdminObj) => {
             />
           ),
         },
-        {
-          id: 'favicon',
-          label: t('favicon.label'),
-          description: t('favicon.desc'),
-          component: props => (
-            <AutoFormFileInput
-              {...props}
-              accept="image/x-icon, image/vnd.microsoft.icon"
-              acceptExtensions={['ico']}
-              maxFileSizeInMb={1}
-              showInfo
-            />
-          ),
-        },
       ]}
       formSchema={formSchema}
       onSubmit={onSubmit}

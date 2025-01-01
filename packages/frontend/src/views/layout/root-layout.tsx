@@ -23,7 +23,7 @@ export const generateMetadataRootLayout = async ({
   const metadata: Metadata = {
     manifest: `${CONFIG.backend_client_public_url}/assets/${locale}/manifest.webmanifest`,
     icons: {
-      icon: `${CONFIG.backend_client_public_url}/assets/favicon.ico`,
+      icon: '/favicon.ico',
     },
   };
 
