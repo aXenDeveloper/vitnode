@@ -1,5 +1,6 @@
 import { relations } from 'drizzle-orm';
 import { index, pgTable } from 'drizzle-orm/pg-core';
+import { PermissionsStaffArgs } from 'vitnode-shared/admin/staff.dto';
 
 import { core_groups } from './groups';
 import { core_sessions_known_devices } from './sessions';
@@ -18,7 +19,9 @@ export const core_admin_permissions = pgTable(
     created_at: t.timestamp().notNull().defaultNow(),
     updated_at: t.timestamp().notNull().defaultNow(),
     protected: t.boolean().notNull().default(false),
-    permissions: t.jsonb().default('[]'),
+    data: t.jsonb().$type<{ permissions: PermissionsStaffArgs[] }>().default({
+      permissions: [],
+    }),
   }),
   t => [
     index('core_admin_permissions_group_id_idx').on(t.group_id),

@@ -11,7 +11,6 @@ import {
   AdminStaffMembersAdmin,
   EditAdminStaffMembersAdminBody,
 } from 'vitnode-shared/admin/members/staff/admin.dto';
-import { PermissionsStaffObjWithoutPluginName } from 'vitnode-shared/admin/staff.dto';
 
 @Injectable()
 export class EditAdminStaffMembersAdminService {
@@ -43,7 +42,7 @@ export class EditAdminStaffMembersAdminService {
     await this.databaseService.db
       .update(core_admin_permissions)
       .set({
-        permissions,
+        data: { permissions },
       })
       .where(eq(core_admin_permissions.id, id));
 
@@ -78,7 +77,7 @@ export class EditAdminStaffMembersAdminService {
         user_or_group: {
           ...user,
         },
-        permissions: data.permissions as PermissionsStaffObjWithoutPluginName[],
+        permissions: data.data?.permissions ?? [],
       };
     }
 
@@ -92,7 +91,7 @@ export class EditAdminStaffMembersAdminService {
         ...data.group,
         group_name: [],
       },
-      permissions: data.permissions as PermissionsStaffObjWithoutPluginName[],
+      permissions: data.data?.permissions ?? [],
     };
   }
 }

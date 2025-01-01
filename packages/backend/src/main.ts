@@ -61,7 +61,6 @@ export const nestjsMainApp = async (app: INestApplication, options?: Args) => {
     new ValidationPipe({
       transform: true,
       whitelist: true,
-      transformOptions: { enableImplicitConversion: true },
       enableDebugMessages: process.env.NODE_ENV === 'development',
     }),
   );

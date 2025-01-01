@@ -116,7 +116,7 @@ export const ContentFilesSettings = ({
                     size: 'icon',
                     variant: 'ghost',
                   })}
-                  href={`${CONFIG.backend_public_url}/${row.dir_folder}/${row.file_name}`}
+                  href={`${CONFIG.backend_client_public_url}/${row.dir_folder}/${row.file_name}`}
                   target="_blank"
                 >
                   <Download />

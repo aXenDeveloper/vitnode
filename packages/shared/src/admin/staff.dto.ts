@@ -1,4 +1,4 @@
-import { ApiProperty, OmitType } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class PermissionsStaff {
   @ApiProperty()
@@ -26,8 +26,3 @@ export class PermissionsStaffObj {
   @ApiProperty()
   plugin_code: string;
 }
-
-export class PermissionsStaffObjWithoutPluginName extends OmitType(
-  PermissionsStaffObj,
-  ['plugin'] as const,
-) {}
