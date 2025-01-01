@@ -1,4 +1,5 @@
 import { OnlyForDevelopment } from '@/guards/dev.guard';
+import { AdminPermission } from '@/helpers/auth/admin-permission.decorator';
 import { Controllers } from '@/helpers/controller.decorator';
 import {
   Body,
@@ -40,6 +41,10 @@ export class LanguagesAdminController {
     private readonly translateAiService: TranslateAiLanguagesAdminService,
   ) {}
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'can_manage_langs',
+  })
   @ApiCreatedResponse({
     type: LanguagesAdminObj,
     description: 'Create language',
@@ -51,6 +56,10 @@ export class LanguagesAdminController {
     return await this.createService.create(body);
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'can_manage_langs',
+  })
   @ApiOkResponse({
     description: 'Delete language',
   })
@@ -59,6 +68,10 @@ export class LanguagesAdminController {
     await this.deleteService.delete(+id);
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'can_manage_langs',
+  })
   @ApiOkResponse({
     type: LanguagesAdminObj,
     description: 'Edit language',
@@ -71,6 +84,10 @@ export class LanguagesAdminController {
     return await this.editService.edit({ body, id: +id });
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'can_manage_langs',
+  })
   @ApiOkResponse({
     type: ShowLanguagesAdminObj,
     description: 'Show languages',
@@ -82,6 +99,10 @@ export class LanguagesAdminController {
     return await this.showService.show(query);
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'can_manage_langs',
+  })
   @ApiCreatedResponse({
     description: 'Translate content with AI',
   })

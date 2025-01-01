@@ -1,3 +1,4 @@
+import { AdminPermission } from '@/helpers/auth/admin-permission.decorator';
 import { Controllers } from '@/helpers/controller.decorator';
 import { Body, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
@@ -27,6 +28,11 @@ export class AdminStaffMembersAdminController {
     private readonly editService: EditAdminStaffMembersAdminService,
   ) {}
 
+  @AdminPermission({
+    plugin_code: 'members',
+    group: 'staff',
+    permission: 'can_manage_staff_admin',
+  })
   @ApiCreatedResponse({
     description: 'Create a new staff member',
     type: AdminStaffMembersAdmin,
@@ -38,6 +44,11 @@ export class AdminStaffMembersAdminController {
     return this.createService.create(body);
   }
 
+  @AdminPermission({
+    plugin_code: 'members',
+    group: 'staff',
+    permission: 'can_manage_staff_admin',
+  })
   @ApiOkResponse({
     description: 'Delete a staff member',
   })
@@ -46,6 +57,11 @@ export class AdminStaffMembersAdminController {
     await this.deleteService.delete(+id);
   }
 
+  @AdminPermission({
+    plugin_code: 'members',
+    group: 'staff',
+    permission: 'can_manage_staff_admin',
+  })
   @ApiOkResponse({
     description: 'Edit a staff member',
     type: AdminStaffMembersAdmin,
@@ -58,6 +74,11 @@ export class AdminStaffMembersAdminController {
     return this.editService.edit({ body, id: +id });
   }
 
+  @AdminPermission({
+    plugin_code: 'members',
+    group: 'staff',
+    permission: 'can_manage_staff_admin',
+  })
   @ApiOkResponse({
     description: 'List of staff members',
     type: AdminStaffMembersAdminObj,

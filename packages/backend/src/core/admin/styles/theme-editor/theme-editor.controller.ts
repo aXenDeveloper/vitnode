@@ -1,3 +1,4 @@
+import { AdminPermission } from '@/helpers/auth/admin-permission.decorator';
 import { Controllers } from '@/helpers/controller.decorator';
 import { FilesValidationPipe } from '@/helpers/files/files.pipe';
 import { UploadFilesMethod } from '@/helpers/upload-files.decorator';
@@ -21,6 +22,11 @@ export class ThemeEditorStylesAdminController {
     private readonly editService: EditThemeEditorStylesAdminService,
   ) {}
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'styles',
+    permission: 'can_manage_styles_theme-editor',
+  })
   @ApiOkResponse({
     description: 'Theme editor settings updated',
     type: EditThemeEditorStylesAdminObj,

@@ -1,3 +1,4 @@
+import { AdminPermission } from '@/helpers/auth/admin-permission.decorator';
 import { Controllers } from '@/helpers/controller.decorator';
 import { Body, Get, Post } from '@nestjs/common';
 import { ApiOkResponse } from '@nestjs/swagger';
@@ -18,6 +19,11 @@ export class AuthSettingsAdminController {
     private readonly editService: EditAuthSettingsAdminService,
   ) {}
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'settings',
+    permission: 'can_manage_settings_authorization',
+  })
   @ApiOkResponse({
     type: ShowAuthSettingsAdminObj,
     description: 'Edit auth settings',
@@ -29,6 +35,11 @@ export class AuthSettingsAdminController {
     return this.editService.edit(args);
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'settings',
+    permission: 'can_manage_settings_authorization',
+  })
   @ApiOkResponse({
     type: ShowAuthSettingsAdminObj,
     description: 'Show auth settings',

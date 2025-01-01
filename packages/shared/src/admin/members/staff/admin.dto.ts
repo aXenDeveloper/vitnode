@@ -4,7 +4,6 @@ import {
   getSchemaPath,
   OmitType,
 } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
 import {
   IsArray,
   IsEnum,
