@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 
 import { UserWithDangerousInfo } from '../user.dto';
-import { PermissionsStaffObjWithoutPluginName } from './staff.dto';
+import { PermissionsStaffArgs } from './staff.dto';
 
 export class ItemNavAuthAdminObj {
   @ApiProperty()
@@ -52,8 +52,8 @@ export class ShowAuthAdminObj {
   @ApiProperty({ type: [NavAuthAdminObj] })
   nav: NavAuthAdminObj[];
 
-  @ApiProperty({ type: [PermissionsStaffObjWithoutPluginName] })
-  permissions: PermissionsStaffObjWithoutPluginName[];
+  @ApiProperty({ type: [PermissionsStaffArgs] })
+  permissions: PermissionsStaffArgs[];
 
   @ApiProperty()
   restart_server: boolean;

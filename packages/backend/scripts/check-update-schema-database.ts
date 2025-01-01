@@ -130,7 +130,6 @@ export const checkUpdateSchemaDatabase = async ({
       await db.insert(core_admin_permissions).values({
         group_id: adminGroup.id,
         protected: true,
-        permissions: [],
       });
     }
 

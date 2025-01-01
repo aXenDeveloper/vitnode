@@ -11,24 +11,44 @@ import {
 export const createMutationApi = async (
   body: CreateAdminStaffMembersAdminBody,
 ) => {
-  await fetcher<AdminStaffMembersAdmin, CreateAdminStaffMembersAdminBody>({
-    url: '/admin/members/staff/admin',
-    method: 'POST',
-    body,
-  });
+  try {
+    await fetcher<AdminStaffMembersAdmin, CreateAdminStaffMembersAdminBody>({
+      url: '/admin/members/staff/admin',
+      method: 'POST',
+      body,
+    });
 
-  revalidatePath('/', 'layout');
+    revalidatePath('/', 'layout');
+  } catch (err) {
+    const error = err as Error;
+
+    if (error.message.includes('ALREADY_EXISTS')) {
+      return { message: 'already_exists' };
+    }
+
+    throw err;
+  }
 };
 
 export const editMutationApi = async ({
   id,
   ...body
 }: EditAdminStaffMembersAdminBody & { id: number }) => {
-  await fetcher<AdminStaffMembersAdmin, EditAdminStaffMembersAdminBody>({
-    url: `/admin/members/staff/admin/${id}`,
-    method: 'PUT',
-    body,
-  });
+  try {
+    await fetcher<AdminStaffMembersAdmin, EditAdminStaffMembersAdminBody>({
+      url: `/admin/members/staff/admin/${id}`,
+      method: 'PUT',
+      body,
+    });
 
-  revalidatePath('/', 'layout');
+    revalidatePath('/', 'layout');
+  } catch (err) {
+    const error = err as Error;
+
+    if (error.message.includes('ALREADY_EXISTS')) {
+      return { message: 'already_exists' };
+    }
+
+    throw err;
+  }
 };

@@ -4,17 +4,20 @@ import {
   getSchemaPath,
   OmitType,
 } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsNumber, IsOptional } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  IsArray,
+  IsEnum,
+  IsNumber,
+  IsObject,
+  IsOptional,
+} from 'class-validator';
 
 import { StringLanguage } from '../../../string-language.dto';
 import { GroupUser, User } from '../../../user.dto';
 import { PaginationObj, PaginationQuery } from '../../../utils/pagination.dto';
 import { SortDirectionEnum } from '../../../utils/pagination.enum';
-import {
-  PermissionsStaffArgs,
-  PermissionsStaffObj,
-  PermissionsStaffObjWithoutPluginName,
-} from '../../staff.dto';
+import { PermissionsStaffArgs, PermissionsStaffObj } from '../../staff.dto';
 import { ShowStaffMembersAdminSortEnum } from './admin.enum';
 
 export class StaffGroupUser extends OmitType(GroupUser, ['name'] as const) {
@@ -29,8 +32,8 @@ export class AdminStaffMembersAdmin {
   @ApiProperty()
   id: number;
 
-  @ApiProperty({ type: [PermissionsStaffObjWithoutPluginName] })
-  permissions: PermissionsStaffObjWithoutPluginName[];
+  @ApiProperty({ type: [PermissionsStaffArgs] })
+  permissions: PermissionsStaffArgs[];
 
   @ApiProperty()
   protected: boolean;
@@ -77,6 +80,7 @@ export class CreateAdminStaffMembersAdminBody {
 
   @ApiProperty({ type: [PermissionsStaffArgs] })
   @IsArray()
+  @IsObject({ each: true })
   permissions: PermissionsStaffArgs[];
 
   @ApiPropertyOptional()

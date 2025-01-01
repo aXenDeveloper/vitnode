@@ -2,7 +2,7 @@ import { core_files } from '@/database/schema/files';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { eq, sum } from 'drizzle-orm';
-import { PermissionsStaffObjWithoutPluginName } from 'vitnode-shared/admin/staff.dto';
+import { PermissionsStaffArgs } from 'vitnode-shared/admin/staff.dto';
 import { User, UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
 @Injectable()
@@ -13,7 +13,7 @@ export class UserHelper {
     user,
   }: {
     user: User;
-  }): Promise<PermissionsStaffObjWithoutPluginName[]> {
+  }): Promise<PermissionsStaffArgs[]> {
     const admin =
       await this.databaseService.db.query.core_admin_permissions.findFirst({
         where: (table, { or, eq }) =>
@@ -24,7 +24,7 @@ export class UserHelper {
       throw new ForbiddenException();
     }
 
-    return admin.permissions as PermissionsStaffObjWithoutPluginName[];
+    return admin.data?.permissions ?? [];
   }
   // Overload signatures
   async getUserById(params: {

@@ -74,39 +74,35 @@ export const useFormCreateEditFormGroupsMembersAdmin = ({
     values: z.infer<typeof formSchema>,
     form: UseFormReturn<z.infer<typeof formSchema>>,
   ) => {
-    try {
-      if (data) {
-        await editMutationApi({
-          id: data.id,
-          permissions: values.unrestricted ? [] : values.permissions,
-        });
-      } else {
-        await createMutationApi({
-          group_id:
-            values.type === 'group' && values.group?.[0].key
-              ? +values.group[0].key
-              : null,
-          user_id:
-            values.type === 'user' && values.user?.[0].key
-              ? +values.user[0].key
-              : null,
-          permissions: values.unrestricted ? [] : values.permissions,
-        });
-      }
+    let error = '';
 
-      setOpen?.(false);
-      toast.success(t(data ? 'edit.success' : 'add.success'), {
-        description:
-          values.type === 'group' && Array.isArray(values.group?.[0].value)
-            ? convertText(values.group[0].value)
-            : Array.isArray(values.user?.[0].value)
-              ? null
-              : values.user?.[0].value,
+    if (data) {
+      const mutation = await editMutationApi({
+        id: data.id,
+        permissions: values.unrestricted ? [] : values.permissions,
       });
-    } catch (err) {
-      const error = err as Error;
+      if (mutation?.message) {
+        error = mutation.message;
+      }
+    } else {
+      const mutation = await createMutationApi({
+        group_id:
+          values.type === 'group' && values.group?.[0].key
+            ? +values.group[0].key
+            : null,
+        user_id:
+          values.type === 'user' && values.user?.[0].key
+            ? +values.user[0].key
+            : null,
+        permissions: values.unrestricted ? [] : values.permissions,
+      });
+      if (mutation?.message) {
+        error = mutation.message;
+      }
+    }
 
-      if (error.message.includes('ALREADY_EXISTS')) {
+    if (error) {
+      if (error.includes('ALREADY_EXISTS')) {
         form.setError(values.type === 'user' ? 'user' : 'group', {
           type: 'manual',
           message: tShared('already_exists'),
@@ -118,7 +114,19 @@ export const useFormCreateEditFormGroupsMembersAdmin = ({
       toast.error(tCore('errors.title'), {
         description: tCore('errors.internal_server_error'),
       });
+
+      return;
     }
+
+    setOpen?.(false);
+    toast.success(t(data ? 'edit.success' : 'add.success'), {
+      description:
+        values.type === 'group' && Array.isArray(values.group?.[0].value)
+          ? convertText(values.group[0].value)
+          : Array.isArray(values.user?.[0].value)
+            ? null
+            : values.user?.[0].value,
+    });
   };
 
   return {
