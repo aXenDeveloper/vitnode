@@ -14,6 +14,7 @@ export class UserHelper {
   }: {
     user: User;
   }): Promise<PermissionsStaffArgs[]> {
+    // TODO: Add caching
     const admin =
       await this.databaseService.db.query.core_admin_permissions.findFirst({
         where: (table, { or, eq }) =>

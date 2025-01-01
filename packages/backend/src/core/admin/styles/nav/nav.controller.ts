@@ -1,4 +1,5 @@
 import { NavMiddlewareService } from '@/core/middleware/services/nav.service';
+import { AdminPermission } from '@/helpers/auth/admin-permission.decorator';
 import { Controllers } from '@/helpers/controller.decorator';
 import { Body, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
@@ -28,6 +29,11 @@ export class NavStylesAdminController {
     private readonly changePositionService: ChangePositionNavStylesAdminService,
   ) {}
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'styles',
+    permission: 'can_manage_styles_nav',
+  })
   @ApiOkResponse({
     description: 'Change position of nav style',
   })
@@ -38,6 +44,11 @@ export class NavStylesAdminController {
     await this.changePositionService.changePosition(body);
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'styles',
+    permission: 'can_manage_styles_nav',
+  })
   @ApiCreatedResponse({
     type: ShowNavStyles,
     description: 'Create a new nav style',
@@ -49,6 +60,11 @@ export class NavStylesAdminController {
     return await this.createService.create(body);
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'styles',
+    permission: 'can_manage_styles_nav',
+  })
   @ApiOkResponse({
     description: 'Delete a nav style',
   })
@@ -57,6 +73,11 @@ export class NavStylesAdminController {
     await this.deleteService.delete(+id);
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'styles',
+    permission: 'can_manage_styles_nav',
+  })
   @ApiOkResponse({
     type: ShowNavStyles,
     description: 'Edit a nav style',
@@ -69,6 +90,11 @@ export class NavStylesAdminController {
     return await this.editService.edit({ body, id: +id });
   }
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'styles',
+    permission: 'can_manage_styles_nav',
+  })
   @ApiOkResponse({
     type: [ShowNavStyles],
     description: 'Show all nav styles',

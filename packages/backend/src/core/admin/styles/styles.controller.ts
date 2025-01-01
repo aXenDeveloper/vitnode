@@ -1,3 +1,4 @@
+import { AdminPermission } from '@/helpers/auth/admin-permission.decorator';
 import { Controllers } from '@/helpers/controller.decorator';
 import { Body, Put } from '@nestjs/common';
 import { ApiOkResponse } from '@nestjs/swagger';
@@ -13,6 +14,11 @@ import { EditorStylesAdminService } from './services/editor.service';
 export class StylesAdminController {
   constructor(private readonly editorStyles: EditorStylesAdminService) {}
 
+  @AdminPermission({
+    plugin_code: 'core',
+    group: 'styles',
+    permission: 'can_manage_styles_editor',
+  })
   @ApiOkResponse({
     description: 'Editor settings updated',
     type: EditorStylesAdminBody,
