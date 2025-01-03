@@ -1,0 +1,54 @@
+---
+title: Sheet
+description: Builds upon the Dialog component to show supplementary content that enhances the main screen's information.
+---
+
+<Callout title="Shadcn UI">
+  This component is part of [Shadcn
+  UI](https://ui.shadcn.com/docs/components/sheet).
+</Callout>
+
+## Preview
+
+import { PreviewComponent } from '@/components/fumadocs/preview-component';
+import { SheetDemo } from './sheet';
+
+<PreviewComponent>
+  <SheetDemo />
+</PreviewComponent>
+
+## Usage
+
+```tsx
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from 'vitnode-frontend/components/ui/sheet';
+```
+
+```tsx
+<Sheet>
+  <SheetTrigger>Open</SheetTrigger>
+  <SheetContent>
+    <SheetHeader>
+      <SheetTitle>Are you absolutely sure?</SheetTitle>
+      <SheetDescription>
+        This action cannot be undone. This will permanently delete your account
+        and remove your data from our servers.
+      </SheetDescription>
+    </SheetHeader>
+  </SheetContent>
+</Sheet>
+```
+
+## Examples
+
+[Shadcn UI Sheet - Examples](https://ui.shadcn.com/docs/components/sheet#examples).
+
+## API Reference
+
+[Radix UI Dialog](https://www.radix-ui.com/primitives/docs/components/dialog#api-reference).

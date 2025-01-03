@@ -1,0 +1,421 @@
+---
+title: Data Table
+description: Powerful table compatible with SSR, search, pagination and more.
+---
+
+Data Table is a powerful table component build with scratch for VitNode. It's compatible with SSR, search, pagination and even in query state from the URL.
+
+## Preview
+
+import { PreviewComponent } from '@/components/fumadocs/preview-component';
+import { DataTable } from 'vitnode-frontend/components/ui/data-table';
+
+<PreviewComponent>
+  <DataTable
+    className="w-full"
+    data={[
+      { id: 1, name: 'John Doe' },
+      { id: 2, name: 'Jane Doe 2' },
+    ]}
+    columns={[
+      { title: 'ID', id: 'id' },
+      { title: 'Name', id: 'name' },
+    ]}
+    defaultSorting={{
+      sortBy: 'id',
+      sortDirection: 'desc',
+    }}
+  />
+</PreviewComponent>
+
+## Usage
+
+```tsx
+import { DataTable } from 'vitnode-frontend/components/ui/data-table';
+```
+
+```tsx
+<DataTable
+  data={[
+    { id: 1, name: 'John Doe' },
+    { id: 2, name: 'Jane Doe 2' },
+  ]}
+  columns={[
+    { title: 'ID', id: 'id' },
+    { title: 'Name', id: 'name' },
+  ]}
+  defaultSorting={{
+    sortBy: 'id',
+    sortDirection: 'desc',
+  }}
+/>
+```
+
+## Examples
+
+### With Pagination
+
+```tsx
+<DataTable
+  // [!code ++]
+  pageInfo={{
+    count: 2, // [!code ++]
+    endCursor: 2, // [!code ++]
+    hasNextPage: false, // [!code ++]
+    hasPreviousPage: false, // [!code ++]
+    startCursor: 1, // [!code ++]
+    totalCount: 2, // [!code ++]
+    // [!code ++]
+  }}
+  data={[
+    { id: 1, name: 'John Doe' },
+    { id: 2, name: 'Jane Doe 2' },
+  ]}
+  columns={[
+    { title: 'ID', id: 'id' },
+    { title: 'Name', id: 'name' },
+  ]}
+  defaultSorting={{
+    sortBy: 'id',
+    sortDirection: 'desc',
+  }}
+/>
+```
+
+<Callout title="Backend">
+  You can read how to implement [Pagination API
+  here](/docs/dev/database/pagination).
+</Callout>
+
+### With Search
+
+```tsx
+<DataTable
+  searchPlaceholder="Search users..." // [!code ++]
+  data={[
+    { id: 1, name: 'John Doe' },
+    { id: 2, name: 'Jane Doe 2' },
+  ]}
+  columns={[
+    { title: 'ID', id: 'id' },
+    { title: 'Name', id: 'name' },
+  ]}
+  defaultSorting={{
+    sortBy: 'id',
+    sortDirection: 'desc',
+  }}
+/>
+```
+
+### With Custom Cell
+
+```tsx
+<DataTable
+  data={[
+    { id: 1, name: 'John Doe' },
+    { id: 2, name: 'Jane Doe 2' },
+  ]}
+  columns={[
+    { title: 'ID', id: 'id' },
+    {
+      title: 'Name',
+      id: 'name',
+      // [!code ++]
+      cell: ({ row }) => {
+        return <span className="font-bold">{row.name}</span>; // [!code ++]
+        // [!code ++]
+      },
+    },
+  ]}
+  defaultSorting={{
+    sortBy: 'id',
+    sortDirection: 'desc',
+  }}
+/>
+```
+
+#### Actions
+
+We created special column for actions. You can add buttons, links or any other components. Flex is used for the layout with gap.
+
+```tsx
+<DataTable
+  data={[
+    { id: 1, name: 'John Doe' },
+    { id: 2, name: 'Jane Doe 2' },
+  ]}
+  columns={[
+    { title: 'ID', id: 'id' },
+    { title: 'Name', id: 'name' },
+    {
+      id: 'actions', // [!code ++]
+      cell: ({ row }) => {
+        return (
+          <>
+            <Button>Edit</Button>
+            <Button>Delete</Button>
+          </>
+        );
+      },
+    },
+  ]}
+  defaultSorting={{
+    sortBy: 'id',
+    sortDirection: 'desc',
+  }}
+/>
+```
+
+### With Sorting Column
+
+```tsx
+<DataTable
+  data={[
+    { id: 1, name: 'John Doe' },
+    { id: 2, name: 'Jane Doe 2' },
+  ]}
+  columns={[
+    { title: 'ID', id: 'id' },
+    {
+      title: 'Name',
+      id: 'name',
+      sortable: true, // [!code ++]
+    },
+  ]}
+  defaultSorting={{
+    sortBy: 'id',
+    sortDirection: 'desc',
+  }}
+/>
+```
+
+<Callout title="Backend">
+  You can read how to implement [Sorting API here](/docs/dev/database/sorting).
+</Callout>
+
+## API Reference
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    data: {
+      description: 'Data source for the table. (ID is required)',
+      type: '{ id: number; and others... }[]',
+    },
+    columns: {
+      description: 'Columns configuration for the table.',
+      type: '{ id: string; title: string; sortable?: boolean; cell?: ({ row: Data; data: Data[] }) => ReactNode; }[]',
+    },
+    defaultSorting: {
+      description: 'Default sorting configuration for the table.',
+      type: '{ sortBy: string; sortDirection: "asc" | "desc"; }',
+    },
+    searchPlaceholder: {
+      description: 'Placeholder for the search input.',
+      type: 'string',
+    },
+    pageInfo: {
+      description: 'Pagination information for the table.',
+      type: 'PageInfo from GraphQL',
+    },
+    defaultPageSize: {
+      description: 'Default page size for the table.',
+      type: '10 | 20 | 30 | 40 | 50',
+      default: 10,
+    },
+  }}
+/>
+
+## Usage with Pagination API
+
+<Callout title="Backend API">
+  You can read how to implement [Pagination API
+  here](/docs/dev/database/pagination).
+</Callout>
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+ 
+<Steps>
+<Step>
+
+### Get data from API
+
+Create `getData` function and privide in it the [`fetcher`](/docs/ui/fetch) function.
+
+```tsx title="example.tsx"
+import { fetcher } from 'vitnode-frontend/api/fetcher';
+
+const getData = async (query: ShowLanguagesAdminQuery) => {
+  const { data } = await fetcher<
+    ShowLanguagesAdminObj,
+    ShowLanguagesAdminQuery
+  >({
+    url: '/admin/core/languages',
+    query,
+    cache: 'force-cache',
+  });
+
+  return data;
+};
+```
+
+</Step>
+
+<Step>
+
+### Create the view
+
+Create the view function with `searchParams` argument.
+
+```tsx title="example.tsx"
+import { SearchParamsPagination } from 'vitnode-frontend/helpers/get-pagination-tool';
+
+export const LangsCoreAdminView = async ({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParamsPagination>;
+}) => {
+  return <></>;
+};
+```
+
+</Step>
+
+<Step>
+
+### Get data with getPaginationTool
+
+Use the `getPaginationTool` function to get the data and pagination information.
+
+```tsx title="example.tsx"
+import {
+  SearchParamsPagination,
+  getPaginationTool, // [!code ++]
+} from 'vitnode-frontend/helpers/get-pagination-tool';
+
+export const LangsCoreAdminView = async ({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParamsPagination>;
+}) => {
+  // [!code ++]
+  const variables = await getPaginationTool({
+    searchParams, // [!code ++]
+    // [!code ++]
+  });
+  // [!code ++]
+
+  const data = await getData(variables); // [!code ++]
+
+  return <></>;
+};
+```
+
+The `getPaginationTool()` function will automatically handle the pagination, search and sorting for you when you're using the `DataTable` component.
+
+</Step>
+
+<Step>
+
+### Data Table
+
+```tsx title="client-example.tsx"
+'use client';
+
+export const ContentLangsCoreAdmin = ({
+  edges,
+  page_info,
+}: ShowLanguagesAdminObj) => {
+  return (
+    <DataTable
+      data={edges} // [!code highlight]
+      columns={[
+        { title: 'ID', id: 'id' },
+        { title: 'Name', id: 'name' },
+      ]}
+      defaultSorting={{
+        sortBy: 'created_at',
+        sortDirection: 'asc',
+      }}
+      pageInfo={page_info} // [!code highlight]
+    />
+  );
+};
+```
+
+</Step>
+
+<Step>
+
+### Import DataTable into RSC
+
+```tsx title="example.tsx"
+import { ContentLangsCoreAdmin } from './client-example'; // [!code ++]
+
+export const LangsCoreAdminView = async ({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParamsPagination>;
+}) => {
+  return <></>; // [!code --]
+  return <ContentLangsCoreAdmin {...data} />; // [!code ++]
+};
+```
+
+</Step>
+
+</Steps>
+
+## Usage with Sorting API
+
+<Callout title="Backend API">
+  You can read how to implement [Sorting API here](/docs/dev/database/sorting).
+</Callout>
+
+<Callout title="Pagination Required" type="warn">
+  Sorting system is based on
+  [Pagination](/docs/ui/data-table#usage-with-pagination-api). Please make sure
+  you have implemented the pagination system before using the sorting system.
+</Callout>
+
+<Steps>
+
+<Step>
+
+### Provide enum in getPaginationTool
+
+```tsx title="example.tsx"
+import { ShowExampleWelcomeSortEnum } from 'shared/plugins/{your_plugin_code}/example.enum'; // [!code ++]
+
+const variables = await getPaginationTool({
+  searchParams,
+  sortEnum: ShowExampleWelcomeSortEnum, // [!code ++]
+});
+```
+
+</Step>
+
+<Step>
+
+### Set columns to sortable
+
+```tsx title="client-example.tsx"
+<DataTable
+  data={edges}
+  columns={[
+    { title: 'ID', id: 'id' },
+    { title: 'Name', id: 'name' },
+    { title: 'Created At', id: 'created_at', sortable: true }, // [!code ++]
+  ]}
+  defaultSorting={{
+    sortBy: 'created_at',
+    sortDirection: 'asc',
+  }}
+  pageInfo={page_info}
+/>
+```
+
+</Step>
+
+</Steps>

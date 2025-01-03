@@ -1,0 +1,94 @@
+---
+title: Overview
+description: Get started with self-hosting VitNode.
+---
+
+In this guide, you'll learn how to deploy a self-hosted VitNode app. Self-hosting allows you to run your own instance of VitNode on your own infrastructure like VPS, dedicated server, or even your own computer.
+
+## Prerequisites
+
+Before you start, make sure you have the following:
+
+- Server with: 2GB+ of RAM, 2 CPU cores, 5GB+ of disk space,
+- A server running on Linux _(Debian is recommended)_,
+- A domain name
+
+## Getting Started
+
+In this guide, we'll use the [Hetzner](https://www.hetzner.com/) Cloud VPS as an example. You can use any other provider you like.
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+<Steps>
+<Step>
+
+### Buy a Server
+
+Go to the [Hetzner Cloud](https://www.hetzner.com/cloud) website and create an account. Once you're logged in, click on the "Create" button to create a new server. Choose the server location, server type, and operating system.
+
+As an example we will buy a server with the following specs:
+
+- Location: Nuremberg (Germany)
+- Server type: CX32 (8GB RAM, 80GB SSD, 4 vCPUs)
+- Operating system: Debian 12
+
+We didn't choose any aditional features like backups, snapshots, SSH keys, etc. You can choose them if you want, but we want to keep it simple with minimal costs.
+
+</Step>
+
+<Step>
+
+### Connect to the Server
+
+When the server is ready, you'll receive an email with the server details. You can connect to the server using SSH. We will be using [Termius](https://termius.com/) as an SSH client.
+
+Create new connection and enter the server IP address, username, and password. Click on the "Connect" button to connect to the server.
+
+<Callout type="info">
+  Some hosts like [Hetzner](https://www.hetzner.com/) will ask (or force) you to
+  change the password on the first login. Change the password and remember it.
+</Callout>
+
+</Step>
+<Step>
+
+### Create new user
+
+When you connect to your server, you should create a new user and use it for all operations. Do not use the root user for daily operations.
+
+To create a new user, run the following command:
+
+```bash
+adduser {username}
+```
+
+### User to sudo group
+
+Next you need to add the user to the `sudo` group:
+
+```bash
+usermod -aG sudo {username}
+```
+
+Now you can switch to the new user:
+
+```bash
+su - {username}
+```
+
+<Callout type="warn" emoji="⚠️" title="Don't use root user!">
+  From this point on, you should avoid using the root user for daily operations.
+</Callout>
+
+</Step>
+<Step>
+
+### Update the System
+
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+
+</Step>
+
+</Steps>

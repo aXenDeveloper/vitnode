@@ -1,0 +1,124 @@
+---
+title: Sortable List with Drag & Drop
+description: Display a list of items that can be sorted by dragging and dropping.
+---
+
+import { PreviewComponent } from '@/components/fumadocs/preview-component';
+import { DragAndDropSortableListDemo } from './drag-and-drop-sortable-list';
+
+<PreviewComponent className="flex-col items-stretch">
+  <DragAndDropSortableListDemo />
+</PreviewComponent>
+
+## Usage
+
+```tsx
+'use client';
+
+import {
+  DragAndDropSortableList,
+  DragAndDropSortableItem,
+} from '@/components/drag&drop/sortable-list/list';
+```
+
+```tsx
+export const ExampleComponent = () => {
+  const data = [
+    {
+      id: 'Home',
+      children: [],
+    },
+    {
+      id: 'Collections',
+      children: [
+        { id: 'Spring', children: [] },
+        { id: 'Summer', children: [] },
+        { id: 'Fall', children: [] },
+        { id: 'Winter', children: [] },
+      ],
+    },
+    {
+      id: 'About Us',
+      children: [],
+    },
+    {
+      id: 'My Account',
+      children: [
+        { id: 'Addresses', children: [] },
+        { id: 'Order History', children: [] },
+      ],
+    },
+  ];
+
+  return (
+    <DragAndDropSortableList
+      componentItem={data => {
+        return <DragAndDropSortableItem>{data.id}</DragAndDropSortableItem>;
+      }}
+      data={data}
+    />
+  );
+};
+```
+
+### With actions
+
+```tsx
+export const ExampleComponent = () => {
+  return (
+    <DragAndDropSortableList
+      componentItem={data => {
+        return (
+          <DragAndDropSortableItem
+            // [!code ++]
+            actions={
+              // [!code ++]
+              <>
+                // [!code ++]
+                <Button>Edit</Button>
+                // [!code ++]
+                <Button>Delete</Button>
+                // [!code ++]
+              </>
+              // [!code ++]
+            }
+          >
+            {data.id}
+          </DragAndDropSortableItem>
+        );
+      }}
+      data={data}
+    />
+  );
+};
+```
+
+## API Reference
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    componentItem: {
+      description: 'Component to render each item in the list.',
+      type: '(data: any, parentId: string | number | null) => ReactNode',
+    },
+    data: {
+      description: 'Data to display in the list.',
+      type: 'any[]',
+    },
+    maxDepth: {
+      description: 'Maximum depth of the list.',
+      type: 'number',
+      defaultValue: 'undefined (unlimited)',
+    },
+    onCollapse: {
+      description: 'Callback when an item is collapsed.',
+      type: '(props: { id: string | number; isOpen: boolean }) => void',
+    },
+    onDragEnd: {
+      description: 'Callback when an item is dragged and dropped.',
+      type: '(props: { id: string | number; parentId: string | number | null; indexToMove: number; }) => void',
+    },
+  }}
+/>

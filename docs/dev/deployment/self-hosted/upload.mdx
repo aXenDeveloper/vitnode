@@ -1,0 +1,70 @@
+---
+title: Upload Files
+description: Send your app files to the server.
+---
+
+In this step, you will upload the VitNode files to your server.
+
+## Prepare script
+
+Before uploading the files, you need to prepare the `deploy.sh` script. This script will install the dependencies, configure the app, and start the server. Edit the `deploy.sh` script and change this values:
+
+```bash
+# Environment variables
+DOMAIN_MAIN_NAME="your_website.com"
+DOMAIN_FRONTEND_NAME="your_website.com"
+DOMAIN_BACKEND_NAME="backend.your_website.com"
+EMAIL="contact@your_website.com"
+DB_USER=$(openssl rand -base64 8) # Generate a random 8-character username
+DB_PASSWORD=$(openssl rand -base64 12)  # Generate a random 12-character password
+DB_DATABASE="vitnode"
+LOGIN_TOKEN_SECRET=$(openssl rand -base64 32)  # Generate a random 32-character secret
+```
+
+Most important values are `DOMAIN_MAIN_NAME`, `DOMAIN_FRONTEND_NAME`, `DOMAIN_BACKEND_NAME` and `EMAIL`. You can leave the rest as is.
+
+## Create a New Directory
+
+First, create a new directory on your server where you will upload the files. You can create a directory with the following command:
+
+```bash
+mkdir /home/{user}/vitnode
+```
+
+## Manually Upload Files
+
+You can manually upload the files to your server using an FTP client.
+
+## From Git
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+<Steps>
+<Step>
+
+### Install Git
+
+```bash
+sudo apt install git -y
+```
+
+</Step>
+
+<Step>
+
+### Clone the Repository
+
+```bash
+git clone {repository_url}
+```
+
+</Step>
+</Steps>
+
+## Run the Script
+
+After uploading the files, run the `deploy.sh` script to install the dependencies, configure the app, and start the server.
+
+```bash
+bash deploy.sh
+```

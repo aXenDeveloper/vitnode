@@ -1,0 +1,32 @@
+---
+title: Slider
+description: An input where the user selects a value from within a given range.
+---
+
+<Callout title="Shadcn UI">
+  This component is part of [Shadcn
+  UI](https://ui.shadcn.com/docs/components/slider).
+</Callout>
+
+## Preview
+
+import { Slider } from 'vitnode-frontend/components/ui/slider';
+import { PreviewComponent } from '@/components/fumadocs/preview-component';
+
+<PreviewComponent className="max-w-sm">
+  <Slider defaultValue={[33]} max={100} step={1} />
+</PreviewComponent>
+
+## Usage
+
+```tsx
+import { Slider } from 'vitnode-frontend/components/ui/slider';
+```
+
+```tsx
+<Slider defaultValue={[33]} max={100} step={1} />
+```
+
+## API Reference
+
+[Radix UI Slider](https://www.radix-ui.com/primitives/docs/components/slider#api-reference).

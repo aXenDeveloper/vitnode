@@ -1,0 +1,77 @@
+---
+title: Resend
+description: How to integrete Resend provider to send emails.
+---
+
+More information about [Resend](https://resend.com/).
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+<Steps>
+<Step>
+## Install package
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+<Tabs groupId='package-manager' persist items={['pnpm', 'npm']}>
+
+```bash tab="pnpm"
+pnpm i vitnode-backend-email-resend --filter backend
+```
+
+```bash tab="npm"
+npn i vitnode-backend-email-resend --workspace=backend
+```
+
+</Tabs>
+
+</Step>
+<Step>
+## .env file
+
+Add the following to your `.env` file:
+
+```env
+EMAIL_RESEND_API_KEY={your_api_key}
+EMAIL_RESEND_FROM={your_from_email}
+```
+
+</Step>
+
+<Step>
+## Provide config
+
+Provide `emailResend` to `VitNodeCoreModule`:
+
+```ts title="apps/backend/src/app.module.ts"
+import { Module } from '@nestjs/common';
+import { VitNodeCoreModule } from 'vitnode-backend';
+import { emailResend } from 'vitnode-backend-email-resend'; // [!code ++]
+
+import { DATABASE_ENVS, schemaDatabase } from './database/config';
+import { DatabaseModule } from './database/database.module';
+import { PluginsModule } from './plugins/plugins.module';
+
+@Module({
+  imports: [
+    VitNodeCoreModule.register({
+      database: {
+        config: DATABASE_ENVS,
+        schemaDatabase,
+      },
+      // [!code ++]
+      email: emailResend({
+        api_key: process.env.EMAIL_RESEND_API_KEY, // [!code ++]
+        from: process.env.EMAIL_RESEND_FROM, // [!code ++]
+        // [!code ++]
+      }),
+    }),
+    DatabaseModule,
+    PluginsModule,
+  ],
+})
+export class AppModule {}
+```
+
+</Step>
+</Steps>

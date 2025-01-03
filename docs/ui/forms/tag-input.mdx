@@ -1,0 +1,108 @@
+---
+title: Tag Input
+description: Tag Input is a component that allows users to input tags.
+---
+
+<Callout title="Unstable component" type="warn">
+  This component is unstable and may change in the future.
+</Callout>
+
+## Preview
+
+import { PreviewComponent } from '@/components/fumadocs/preview-component';
+import { TagInputDemo } from './tag-input';
+
+<PreviewComponent>
+  <TagInputDemo />
+</PreviewComponent>
+
+## Usage
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+<Tabs items={['Auto Form', 'Manual']}>
+  <Tab value="Auto Form">
+```ts
+import { z } from 'zod';
+import { AutoForm } from 'vitnode-frontend/form/auto-form';
+import { AutoFormTagInput } from 'vitnode-frontend/form/fields/tags';
+import { zodTag } from 'vitnode-frontend/helpers/zod';
+```
+
+```ts
+const formSchema = z.object({
+  keywords: zodTag,
+});
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: 'keywords',
+      component: AutoFormTagInput,
+    },
+  ]}
+/>
+```
+
+  </Tab>
+
+  <Tab value="Manual">
+```ts
+import { TagInput } from 'vitnode-frontend/components/ui/tag-input';
+```
+
+```tsx
+<TagInput onChange={onChange} value={value} />
+```
+
+  </Tab>
+</Tabs>
+
+### Multiple
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: 'keywords',
+      component: props => <AutoFormTagInput {...props} multiple />,
+    },
+  ]}
+/>
+```
+
+## API Reference
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    onChange: {
+      description: 'Callback when the value changes.',
+      type: 'TagInputItemProps | TagInputItemProps[] | undefined',
+    },
+    value: {
+      description: 'Value of the input.',
+      type: 'TagInputItemProps | TagInputItemProps[]',
+    },
+    placeholder: {
+      description: 'Placeholder text.',
+      type: 'string',
+      default: '',
+    },
+    multiple: {
+      description: 'Allow multiple tags.',
+      type: 'boolean',
+      default: 'false',
+    },
+    disabled: {
+      description: 'Disable input.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>

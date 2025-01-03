@@ -1,0 +1,281 @@
+---
+title: Permissions for Admin
+description: How to create permissions for Admin
+---
+
+<Callout type="info" title="Development only">
+  This guide requires [Dev Server](/docs/dev/install#start-dev-server) to be
+  running.
+</Callout>
+
+We're setting up permissions for the `admin` role to help you control who can access specific parts of the admin panel.
+
+## Structure of Permissions
+
+Permissions are divided into groups, and each group contains a set of permissions.
+
+For example, there's a group called settings, which includes permissions like `can_manage_settings_email` or `can_edit_email`.
+
+<Callout>
+  Each navigation item in the **Admin Control Panel (AdminCP)** has a permission
+  formatted as `can_manage_{your_nav_id}`. This prefix also applies to groups.
+</Callout>
+
+Example:
+
+| Group                 | Permissions                   | AdminCP Navigation Item                    | Description                                 |
+| --------------------- | ----------------------------- | ------------------------------------------ | ------------------------------------------- |
+| `settings`            | `can_manage_settings_email`   | `{your_plugin}` => `Settings` => `Email`   | Permission to show the email settings.      |
+| `settings`            | `can_manage_settings_general` | `{your_plugin}` => `Settings` => `General` | Permission to show the general settings.    |
+| `can_manage_settings` | -                             | `{your_plugin}` => `Settings`              | Permission to show the settings group.      |
+| `settings`            | `can_edit_email`              | N/A                                        | Own [permission to edit the email settings. |
+
+Explanation:
+
+- **Group**: The category under which permissions are organized (e.g., settings).
+- **Permission**: Specific actions that can be allowed or denied (e.g., can_manage_settings_email).
+- **AdminCP Navigation Item**: The path in the admin panel where the permission applies.
+- **Description**: Details about what the permission allows.
+
+By configuring these permissions, you can precisely manage admin access to various sections of the admin panel.
+
+## Create Permissions
+
+First we need to create a permission for our plugin.
+
+### Plugin Configuration
+
+Edit the `permissions_admin` in the `config.json` file from your plugin.
+
+```json title="config.json"
+{
+  "$schema": "https://api.vitnode.com/public/vitnode/plugin.schema.json",
+  "name": "Welcome",
+  "description": "Basic plugin with default page.",
+  "version": "1.0.0",
+  "version_code": 1,
+  "code": "welcome",
+  "author": "VitNode",
+  "author_url": "https://vitnode.com/",
+  "support_url": "https://github.com/VitNode/vitnode/issues",
+  "allow_default": true,
+  // [!code ++]
+  "permissions_admin": [
+    // [!code ++]
+    {
+      // [!code ++]
+      "id": "settings",
+      // [!code ++]
+      "permissions": [
+        // [!code ++]
+        "can_manage_settings_email",
+        // [!code ++]
+        "can_edit_email",
+        // [!code ++]
+        "can_manage_categories"
+        // [!code ++]
+      ]
+      // [!code ++]
+    }
+    // [!code ++]
+  ]
+}
+```
+
+### Internationalization (i18n)
+
+Now we need to add the language key inside the `langs` folder in `apps/frontend/src/plugins/{your_plugin_code}/langs/en.json` file in the frontend.
+
+import { File, Folder, Files } from 'fumadocs-ui/components/files';
+import { LanguagesIcon } from 'lucide-react';
+
+<Files>
+  <Folder name="apps" defaultOpen>
+    <Folder name="frontend" defaultOpen>
+      <Folder name="src" defaultOpen>
+        <Folder name="plugins" defaultOpen>
+          <Folder name="{your_plugin_code}" defaultOpen>
+            <Folder name="langs" defaultOpen>
+              <File
+                name="en.json"
+                icon={<LanguagesIcon className="text-primary" />}
+              />
+            </Folder>
+          </Folder>
+        </Folder>
+      </Folder>
+    </Folder>
+  </Folder>
+</Files>
+
+Default language is English `en`. If you have more then one language, you need to add the language key in other languages as well.
+
+Based on our example above, we need to add the following keys:
+
+```json title="apps/frontend/src/plugins/{your_plugin_code}/langs/en.json"
+{
+  "{your_plugin_code}": {},
+  "admin_{your_plugin_code}": {
+    "nav": {
+      "title": "Commerce",
+      "settings": "Settings",
+      "settings_email": "Email",
+      "categories": "Categories"
+    },
+    "admin_permissions": {
+      "settings": "Settings", // [!code highlight]
+      "can_manage_settings_email": "Can manage email settings?", // [!code highlight]
+      "can_edit_email": "Can edit email?", // [!code highlight]
+      "can_manage_categories": "Can manage categories?" // [!code highlight]
+    }
+  }
+}
+```
+
+### Usage
+
+### Frontend
+
+To check if admin has a specific permission, you can use the `checkAdminPermissionPage(permission)` for page.
+
+```tsx title="page.tsx"
+// [!code ++]
+import { checkAdminPermissionPage } from 'vitnode-frontend/api/get-session-admin-data';
+
+// [!code ++]
+const permission = {
+  plugin_code: '{your_plugin_code}', // [!code ++]
+  group: '{your_group}', // [!code ++]
+  permission: '{your_permission}', // [!code ++]
+}; // [!code ++]
+
+export const ExampleView = async () => {
+  const perm = await checkAdminPermissionPage(permission); // [!code ++]
+  if (perm) return perm; // [!code ++]
+
+  return <div>Hi!</div>;
+};
+```
+
+<Callout title="Build-in catch error feature in NextJS">
+  When backend throws an error with `403` code using `throw new
+  ForbiddenException()`, NextJS will render `403` page. You don't need to handle
+  this error in your page. Use `checkAdminPermissionPage()` to check if admin
+  has a specific permission when you haven't API endpoint.
+</Callout>
+
+#### Permissions in Metadata
+
+To check if admin has a specific permission, you can use the `checkAdminPermissionPageMetadata(permission)` for metadata.
+
+```tsx title="page.tsx"
+// [!code ++]
+import { checkAdminPermissionPageMetadata } from 'vitnode-frontend/api/get-session-admin-data';
+
+const permission = {
+  plugin_code: '{your_plugin_code}',
+  group: '{your_group}',
+  permission: '{your_permission}',
+};
+
+export const generateMetadata = async () => {
+  const perm = await checkAdminPermissionPageMetadata(permission); // [!code ++]
+  if (perm) return perm; // [!code ++]
+
+  return {
+    title: 'Page Title',
+    description: 'Page Description',
+  };
+};
+```
+
+#### Permissions in Component
+
+To check if admin has a specific permission to display a component, you can use the `isInAdminPermission(permission)`.
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+<Tabs id='async-sync' persist items={['Async (Server Components)', 'Sync (Client Components)']}>
+
+```tsx tab="Async (Server Components)"
+// [!code ++]
+import { isInAdminPermission } from 'vitnode-frontend/api/get-session-admin-data';
+
+export const ServerComponent = async () => {
+  // [!code ++]
+  const isAllowed = await isInAdminPermission({
+    plugin_code: '{your_plugin_code}', // [!code ++]
+    group: '{your_group}', // [!code ++]
+    permission: '{your_permission}', // [!code ++]
+    // [!code ++]
+  });
+
+  return <div>{isAllowed ? 'Allowed' : 'Not Allowed'}</div>;
+};
+```
+
+```tsx tab="Sync (Client Components)"
+'use client';
+
+// [!code ++]
+import { useSessionAdmin } from 'vitnode-frontend/hooks/use-session-admin';
+
+export const ServerComponent = () => {
+  // [!code ++]
+  const { isInAdminPermission } = useSessionAdmin();
+  // [!code ++]
+  const isAllowed = isInAdminPermission({
+    plugin_code: '{your_plugin_code}', // [!code ++]
+    group: '{your_group}', // [!code ++]
+    permission: '{your_permission}', // [!code ++]
+    // [!code ++]
+  });
+
+  return <div>{isAllowed ? 'Allowed' : 'Not Allowed'}</div>;
+};
+```
+
+</Tabs>
+
+### Backend
+
+To check if admin has a specific permission, you can use the `@AdminPermission()` decorator.
+
+```ts title="test.controller.ts"
+// [!code ++]
+import { AdminPermission } from 'vitnode-backend/helpers/auth/admin-permission.decorator';
+
+@Controllers({
+  plugin_name: 'Welcome',
+  plugin_code: 'welcome',
+  isAdmin: true, // [!code ++]
+})
+export class SettingsWelcomeAdminController {
+  constructor(private readonly showService: ShowSettingsWelcomeAdminService) {}
+
+  // [!code ++]
+  @AdminPermission({
+    // [!code ++]
+    plugin_code: 'welcome',
+    // [!code ++]
+    group: 'settings',
+    // [!code ++]
+    permission: 'can_manage_settings',
+    // [!code ++]
+  })
+  @ApiOkResponse({
+    type: ShowSettingsWelcomeAdminObj,
+    description: 'Show settings for welcome plugin.',
+  })
+  @Get()
+  show(): ShowSettingsWelcomeAdminObj {
+    return this.showService.show();
+  }
+}
+```
+
+<Callout title="Admin required">
+  `@AdminPermission()` decorator will not work if route is not protected for
+  admins. See more [how to protect routes for
+  admins](/docs/dev/authorization#Admin).
+</Callout>

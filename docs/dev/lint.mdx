@@ -1,0 +1,36 @@
+---
+title: Lint
+description: Lint your code with ESLint and Prettier.
+---
+
+Lint helps you to keep your code clean and consistent. VitNode uses [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/) to lint the code.
+
+## Checking Code
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+<Tabs groupId='package-manager' persist items={['pnpm', 'npm']}>
+
+```bash tab="pnpm"
+pnpm lint
+```
+
+```bash tab="npm"
+npm run lint
+```
+
+</Tabs>
+
+## Fixing Code
+
+<Tabs groupId='package-manager' persist items={['pnpm', 'npm']}>
+
+```bash tab="pnpm"
+pnpm lint:fix
+```
+
+```bash tab="npm"
+npm run lint:fix
+```
+
+</Tabs>

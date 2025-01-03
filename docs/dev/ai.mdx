@@ -1,0 +1,88 @@
+---
+title: Artificial Intelligence (AI)
+description: How to use AI in your application.
+---
+
+VitNode allows you to use AI in your application. You can use AI to make your application smarter and more user-friendly.
+
+## Installation
+
+Thanks to [Vercel AI SDK](https://sdk.vercel.ai/providers/ai-sdk-providers), you can choose from a variety of AI models to use in your application.
+
+Here is an example of how to install the [Google AI](https://sdk.vercel.ai/providers/ai-sdk-providers/google-generative-ai) model:
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+ 
+<Steps>
+<Step>
+ 
+### Install package
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+<Tabs groupId='package-manager' persist items={['pnpm', 'npm']}>
+
+```bash tab="pnpm"
+pnpm add @ai-sdk/openai
+```
+
+```bash tab="npm"
+npm i @ai-sdk/openai
+```
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Add environment variable
+
+```bash title=".env"
+AI_MODEL_API_KEY=your-api-key
+```
+
+</Step>
+ 
+<Step>
+ 
+### Import model
+
+```ts title="apps/backend/src/app.module.ts"
+import { createGoogleGenerativeAI } from '@ai-sdk/google'; // [!code ++]
+import { CacheModule } from '@nestjs/cache-manager';
+import { Module } from '@nestjs/common';
+import { VitNodeCoreModule } from 'vitnode-backend/app.module';
+
+import { DATABASE_ENVS, schemaDatabase } from './database/config';
+import { DatabaseModule } from './database/database.module';
+import { PluginsModule } from './plugins/plugins.module';
+
+// [!code ++]
+const modelAI = createGoogleGenerativeAI({
+  // [!code ++]
+  apiKey: process.env.AI_MODEL_API_KEY,
+  // [!code ++]
+});
+
+@Module({
+  imports: [
+    VitNodeCoreModule.register({
+      ai: modelAI('gemini-1.5-pro'), // [!code ++]
+      database: {
+        config: DATABASE_ENVS,
+        schemaDatabase,
+      },
+    }),
+    DatabaseModule,
+    PluginsModule,
+    CacheModule.register({
+      isGlobal: true,
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+</Step>
+</Steps>

@@ -1,0 +1,30 @@
+{
+  "title": "Development",
+  "description": "Make plugins and APIs",
+  "icon": "Braces",
+  "root": true,
+  "pages": [
+    "index",
+    "install",
+    "contribution",
+    "deployment",
+    "--- Tools ---",
+    "lint",
+    "swagger",
+    "pgadmin",
+    "--- Plugins ---",
+    "plugin-create",
+    "plugin-export",
+    "plugin-pages",
+    "permissions-admin",
+    "--- APIs ---",
+    "modules",
+    "controllers",
+    "dto",
+    "services",
+    "database",
+    "i18n",
+    "authorization",
+    "..."
+  ]
+}

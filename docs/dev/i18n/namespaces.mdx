@@ -1,0 +1,80 @@
+---
+title: Namespaces
+description: Provide a way to get access to the translation strings in client components on frontend.
+---
+
+By default VitNode provide a way to get access to the translation strings only for `core.global` namespace. But sometimes you need to get access to the translation strings in other namespaces.
+
+For example, you have a component that needs to get access to the translation strings in the `core.global` and `welcome.home` namespaces.
+
+<Callout title="Client Component Only">
+  Provide namespaces into components is only for client components. If you want
+  to use translation strings in server components you can avoid this guide.
+</Callout>
+
+## Structuring
+
+To translate your content, select the plugin in `frontend` folder, go to `langs` folder and pick the language you want to translate.
+
+```json title="apps/frontend/src/plugins/{your_plugin}/langs/en.json"
+{
+  "{your_plugin}": {
+    "home": {
+      "hello": "Hello World",
+      "world": "World"
+    }
+  }
+}
+```
+
+<Callout title="Primary key" type="warn">
+  Name your plugin should be a primary key in the JSON file or with the prefix `admin_` for admin plugins.
+
+```json title="apps/frontend/src/plugins/{your_plugin}/langs/en.json"
+{
+  "{your_plugin}": {
+    "hello": "Hello World" // ✅ This will work
+  },
+  "admin_{your_plugin}" {
+    "world": "World" // ✅ This will work
+  },
+  "world": "World" // ❌ This will not work
+}
+```
+
+</Callout>
+
+## Usage
+
+To get access to the translation strings in other namespaces you need to use the `TranslationsProvider` component.
+
+```tsx title="apps/frontend/src/app/[locale]/(main)/{your_plugin}/layout.tsx"
+import { TranslationsProvider } from 'vitnode-frontend/components/translations-provider';
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <TranslationsProvider namespaces={['welcome.home']}>
+      {children}
+    </TranslationsProvider>
+  );
+}
+```
+
+Provide the list of namespaces that you want to get access to the translation strings in the `namespaces` prop.
+
+<Callout title="Global namespace">
+  You don't need to include the `core.global` namespace in the `namespaces`
+  prop. It's already included by default.
+</Callout>
+
+### Default page
+
+VitNode has plugin system with option to set plugin as default. That means default plugin will be loaded on the home page.
+
+To set default page make sure your have `default-page.tsx` inside `templates` folder plugin with `export default` function.
+
+```tsx title="apps/frontend/src/plugins/{your_plugin}/templates/default-page.tsx"
+export default function Page() {
+  return <div>Hello World</div>;
+}
+```

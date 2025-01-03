@@ -1,0 +1,423 @@
+---
+title: Fields
+description: How to use built-in input and WYSIWYG with i18n support in backend.
+---
+
+As an example, we will create a translation field for the `title (input)` and `content (WYSIWYG)` fields in the `core_terms` table.
+
+## Database
+
+You need to create a new table in the database schema.
+
+```ts title="backend/plugins/{your_plugin}/admin/database/schema/terms.ts"
+import { pgTable, serial, timestamp, varchar } from 'drizzle-orm/pg-core';
+
+export const core_terms = pgTable('core_terms', {
+  id: serial('id').primaryKey(),
+  code: varchar('code').notNull().unique(),
+  created: timestamp('created').notNull().defaultNow(),
+  updated: timestamp('updated').notNull().defaultNow(),
+  href: varchar('href'),
+});
+```
+
+You can find more information about the database schema in the [documentation](/docs/dev/database/schema).
+
+As you can see in the example above, we haven't added the translation fields yet. We will add them in `service` later using `core_languages_words` table.
+
+## Show Translation
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+<Steps>
+<Step>
+
+### DTO Object
+
+For the translation fields to show data, you need to use `StringLanguage[]` type in the DTO for the object.
+
+```ts title="shared/plugins/{your_plugin}/legal.dto.ts"
+import { ApiProperty } from '@nestjs/swagger';
+
+import { StringLanguage } from 'vitnode-shared/string-language.dto'; // [!code ++]
+import { PaginationObj } from 'vitnode-shared/utils/pagination.dto';
+
+export class Legal {
+  @ApiProperty({ type: [StringLanguage] }) // [!code ++]
+  content: StringLanguage[]; // [!code ++]
+
+  @ApiProperty({ type: [StringLanguage] }) // [!code ++]
+  title: StringLanguage[]; // [!code ++]
+}
+
+export class LegalsObj extends PaginationObj {
+  @ApiProperty({ type: [Legal] })
+  edges: Legal[];
+}
+```
+
+### DTO for multipart/form-data
+
+If you are using `multipart/form-data` all fields will be `string` type. You need to transform them to `StringLanguage[]` type in the service.
+
+```ts title="shared/plugins/{your_plugin}/legal.dto.ts"
+export class Legal {
+  @ApiProperty({ type: [StringLanguage] })
+  // [!code ++]
+  @Transform(({ value }: { value: string }) => {
+    // [!code ++]
+    const current = JSON.parse(value);
+    // [!code ++]
+
+    // [!code ++]
+    return Array.isArray(current) ? current : [current];
+    // [!code ++]
+  })
+  title: StringLanguage[];
+}
+```
+
+</Step>
+
+<Step>
+### Service
+
+`core_languages_words` table doesn't have relation so you need to use `StringLanguageHelper` service with `show()` to get translations.
+
+In return service we will filter translation by `item_id` and `variable` to get the correct translation for the `title` and `content` fields.
+
+```ts title="backend/plugins/{your_plugin}/terms/show/show.service.ts"
+import { core_legal } from '@/database/schema/legal';
+import { StringLanguageHelper } from 'vitnode-backend/helpers/string_language/helpers.service'; // [!code ++]
+import { DatabaseService } from '@/database/database.service';
+import { Injectable } from '@nestjs/common';
+import { LegalsObj, LegalsQuery } from 'shared/legal.dto';
+import { SortDirectionEnum } from 'vitnode-shared/utils/pagination.enum';
+
+@Injectable()
+export class ShowLegalService {
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly stringLanguageHelper: StringLanguageHelper, // [!code ++]
+  ) {}
+
+  async show({ cursor, first, last }: LegalsQuery): Promise<LegalsObj> {
+    const pagination = await this.databaseService.paginationCursor({
+      cursor,
+      database: core_legal,
+      first,
+      last,
+      defaultSortBy: {
+        direction: SortDirectionEnum.desc,
+        column: 'updated_at',
+      },
+      query: async args =>
+        await this.databaseService.db.query.core_legal.findMany({
+          ...args,
+        }),
+    });
+
+    const ids = pagination.edges.map(edge => edge.id); // [!code ++]
+    // [!code ++]
+    const i18n = await this.stringLanguageHelper.get({
+      // [!code ++]
+      item_ids: ids,
+      // [!code ++]
+      database: core_legal,
+      // [!code ++]
+      plugin_code: 'core',
+      // [!code ++]
+      variables: ['title', 'content'],
+      // [!code ++]
+    });
+
+    const edges = pagination.edges.map(edge => {
+      const currentI18n = i18n.filter(item => item.item_id === edge.id);
+
+      return {
+        ...edge,
+        // [!code ++]
+        title: currentI18n
+          // [!code ++]
+          .filter(value => value.variable === 'title')
+          // [!code ++]
+          .map(value => ({
+            // [!code ++]
+            value: value.value,
+            // [!code ++]
+            language_code: value.language_code,
+            // [!code ++]
+          })),
+        // [!code ++]
+        content: currentI18n
+          // [!code ++]
+          .filter(value => value.variable === 'content')
+          // [!code ++]
+          .map(value => ({
+            // [!code ++]
+            value: value.value,
+            // [!code ++]
+            language_code: value.language_code,
+            // [!code ++]
+          })),
+      };
+    });
+
+    return { ...pagination, edges };
+  }
+}
+```
+
+### API Reference
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    item_ids: {
+      description: 'Item IDs from the main table.',
+      type: 'number[]',
+    },
+    database: {
+      description: 'Database schema.',
+      type: 'DatabaseSchema',
+    },
+    plugin_code: {
+      description: 'Plugin code.',
+      type: 'string',
+    },
+    variables: {
+      description: 'Variable names.',
+      type: 'string[]',
+    },
+  }}
+/>
+
+</Step>
+
+</Steps>
+
+## Create / Edit Translation
+
+<Steps>
+<Step>
+
+### DTO Input
+
+For the translation fields to work in the input, you need to use `StringLanguage` type in the DTO for the input and `class-validator` decorators.
+
+```ts title="shared/plugins/{your_plugin}/admin/legal.dto.ts"
+import { ApiProperty } from '@nestjs/swagger';
+import { ArrayMinSize, IsArray } from 'class-validator';
+import { StringLanguage } from 'vitnode-shared/string-language.dto';
+
+export class CreateLegalSettingsAdminBody {
+  @ApiProperty({ type: [StringLanguage] })
+  @ArrayMinSize(1)
+  @IsArray()
+  content: StringLanguage[];
+
+  @ApiProperty({ type: [StringLanguage] })
+  @ArrayMinSize(1)
+  @IsArray()
+  title: StringLanguage[];
+}
+```
+
+To required translation fields you can use `@ArrayMinSize(1)` decorator.
+
+</Step>
+
+<Step>
+
+### Service
+
+To create or edit translation fields you need to use `StringLanguageHelper` service with `parse()` method.
+
+As an example, we will create a translation field for the `title` and `content` fields in the `core_terms` table.
+
+```ts title="backend/plugins/{your_plugin}/terms/create/create.service.ts"
+import { core_legal } from '@/database/schema/legal';
+import { removeSpecialCharacters } from 'vitnode-backend/functions';
+import { StringLanguageHelper } from 'vitnode-backend/helpers/string_language/helpers.service'; // [!code ++]
+import { DatabaseService } from '@/database/database.service';
+import { ConflictException, Injectable } from '@nestjs/common';
+import { CreateLegalSettingsAdminBody } from 'shared/admin/settings/legal.dto';
+import { Legal } from 'shared/legal.dto';
+
+@Injectable()
+export class CreateLegalSettingsAdminService {
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly stringLanguageHelper: StringLanguageHelper, // [!code ++]
+  ) {}
+
+  async create({
+    title,
+    content,
+    href,
+    code,
+  }: CreateLegalSettingsAdminBody): Promise<Legal> {
+    const termExist = await this.databaseService.db.query.core_legal.findFirst({
+      where: (table, { eq }) => eq(table.code, code),
+    });
+
+    if (termExist) {
+      throw new ConflictException('LEGAL_ALREADY_EXISTS');
+    }
+
+    const [term] = await this.databaseService.db
+      .insert(core_legal)
+      .values({ href, code: removeSpecialCharacters(code) })
+      .returning();
+
+    // [!code ++]
+    const titleTerm = await this.stringLanguageHelper.parse({
+      // [!code ++]
+      item_id: term.id,
+      // [!code ++]
+      plugin_code: 'core',
+      // [!code ++]
+      database: core_legal,
+      // [!code ++]
+      data: title,
+      // [!code ++]
+      variable: 'title',
+      // [!code ++]
+    });
+
+    // [!code ++]
+    const contentTerm = await this.stringLanguageHelper.parse({
+      // [!code ++]
+      item_id: term.id,
+      // [!code ++]
+      plugin_code: 'core',
+      // [!code ++]
+      database: core_legal,
+      // [!code ++]
+      data: content,
+      // [!code ++]
+      variable: 'content',
+      // [!code ++]
+    });
+
+    return {
+      ...term,
+      title: titleTerm,
+      content: contentTerm,
+    };
+  }
+}
+```
+
+This method will create a translation inside `core_languages_words` table and processing content to send notifications, attachments, etc.
+
+### API Reference
+
+<TypeTable
+  type={{
+    item_id: {
+      description: 'Item ID from the main table.',
+      type: 'number',
+    },
+    plugin_code: {
+      description: 'Plugin code.',
+      type: 'string',
+    },
+    database: {
+      description: 'Database schema.',
+      type: 'DatabaseSchema',
+    },
+    data: {
+      description: 'Data to parse.',
+      type: 'StringLanguageInput[]',
+    },
+    variable: {
+      description: 'Variable name.',
+      type: 'string',
+    },
+  }}
+/>
+
+</Step>
+
+<Step>
+
+## Delete Service
+
+As we mention before, when you create or edit translation fields then our `parser()` method will processing content. To delete translations and other things related to it you need to use `delete()` method.
+
+```ts title="backend/plugins/{your_plugin}/terms/delete/delete.service.ts"
+import { core_legal } from '@/database/schema/legal';
+import { StringLanguageHelper } from 'vitnode-backend/helpers/string_language/helpers.service'; // [!code ++]
+import { DatabaseService } from '@/database/database.service';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { eq } from 'drizzle-orm';
+
+@Injectable()
+export class DeleteLegalSettingsAdminService {
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly stringLanguageHelper: StringLanguageHelper, // [!code ++]
+  ) {}
+
+  async delete(code: string): Promise<void> {
+    const term = await this.databaseService.db.query.core_legal.findFirst({
+      where: (table, { eq }) => eq(table.code, code),
+      columns: {
+        id: true,
+      },
+    });
+
+    if (!term) {
+      throw new NotFoundException();
+    }
+
+    // [!code ++]
+    await this.stringLanguageHelper.delete({
+      // [!code ++]
+      database: core_legal,
+      // [!code ++]
+      item_id: term.id,
+      // [!code ++]
+      plugin_code: 'core',
+      // [!code ++]
+    });
+
+    await this.databaseService.db
+      .delete(core_legal)
+      .where(eq(core_legal.id, term.id));
+  }
+}
+```
+
+<Callout
+  title="Always delete translation when delete primary record!"
+  type="error"
+>
+  This is important to delete translation. Otherwise, translations will be still
+  in the database.
+</Callout>
+
+### API Reference
+
+<TypeTable
+  type={{
+    database: {
+      description: 'Database schema.',
+      type: 'DatabaseSchema',
+    },
+    item_id: {
+      description: 'Item ID from the main table.',
+      type: 'number',
+    },
+    plugin_code: {
+      description: 'Plugin code.',
+      type: 'string',
+    },
+  }}
+/>
+
+</Step>
+
+</Steps>

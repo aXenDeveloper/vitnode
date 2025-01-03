@@ -1,0 +1,50 @@
+---
+title: Toggle Group
+description: A set of two-state buttons that can be toggled on or off.
+---
+
+<Callout title="Shadcn UI">
+  This component is part of [Shadcn
+  UI](https://ui.shadcn.com/docs/components/toggle-group).
+</Callout>
+
+## Preview
+
+import { PreviewComponent } from '@/components/fumadocs/preview-component';
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from 'vitnode-frontend/components/ui/toggle-group';
+
+<PreviewComponent>
+  <ToggleGroup type="single">
+    <ToggleGroupItem value="a">A</ToggleGroupItem>
+    <ToggleGroupItem value="b">B</ToggleGroupItem>
+    <ToggleGroupItem value="c">C</ToggleGroupItem>
+  </ToggleGroup>
+</PreviewComponent>
+
+## Usage
+
+```tsx
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from 'vitnode-frontend/components/ui/toggle-group';
+```
+
+```tsx
+<ToggleGroup type="single">
+  <ToggleGroupItem value="a">A</ToggleGroupItem>
+  <ToggleGroupItem value="b">B</ToggleGroupItem>
+  <ToggleGroupItem value="c">C</ToggleGroupItem>
+</ToggleGroup>
+```
+
+## Examples
+
+[Shadcn UI Toggle Group - Examples](https://ui.shadcn.com/docs/components/toggle-group#examples).
+
+## API Reference
+
+[Radix UI Toggle Group](https://www.radix-ui.com/primitives/docs/components/toggle-group#api-reference).

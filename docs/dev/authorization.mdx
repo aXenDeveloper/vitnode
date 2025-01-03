@@ -1,0 +1,137 @@
+---
+title: Authorization
+description: How to protect routes, objects, pages and more.
+---
+
+In VitNode we're implementing a simple way to handle authorization.
+
+## Protecting routers
+
+To protect routes for controllers you can set `isProtect` for `@Controllers` decorator. This will protect all routes in the controller.
+
+```ts title="apps/backend/src/plugins/{your_plugin_code}/example.controller.ts"
+import { Controllers } from 'vitnode-backend/helpers/controller.decorator';
+
+@Controllers({
+  plugin_name: 'Welcome',
+  plugin_code: 'welcome',
+  route: 'example',
+  // [!code ++]
+  isProtect: true,
+})
+```
+
+## Protecting per route
+
+To protect a route _(required sign in user)_, you need to add the `@UseGuards(AuthGuard)` decorator for user auth or `@UseGuards(AdminAuthGuard)` decorator for admin auth to the route.
+
+```ts title="apps/backend/src/plugins/{your_plugin_code}/example.controller.ts"
+import { Get, UseGuards } from '@nestjs/common';
+import { Controllers } from 'vitnode-backend/helpers/controller.decorator';
+import { AuthGuard } from 'vitnode-backend/guards/auth.guard'; // [!code ++]
+
+@Controllers({
+  plugin_name: 'Welcome',
+  plugin_code: 'welcome',
+  route: 'example',
+})
+export class ExampleWelcomeController {
+  @Get()
+  @UseGuards(AuthGuard) // [!code ++]
+  getHello(): string {
+    return 'Hello World!';
+  }
+}
+```
+
+## Admin
+
+### Protecting routers
+
+To protect routes for admin only, you can set `isAdmin` for `@Controllers` decorator. This will protect all routes in the controller.
+
+```ts title="apps/backend/src/plugins/{your_plugin_code}/example.controller.ts"
+@Controllers({
+  plugin_name: 'Welcome',
+  plugin_code: 'welcome',
+  route: 'example',
+  // [!code ++]
+  isAdmin: true,
+})
+```
+
+### [Admin] Protecting per route
+
+To protect a route for admin only, you need to add the `@UseGuards(AdminAuthGuard)` decorator to the route.
+
+```ts title="apps/backend/src/plugins/{your_plugin_code}/example.controller.ts"
+import { Get, UseGuards } from '@nestjs/common';
+import { Controllers } from 'vitnode-backend/helpers/controller.decorator';
+import { AdminAuthGuard } from 'vitnode-backend/guards/admin-auth.guard'; // [!code ++]
+
+@Controllers({
+  plugin_name: 'Welcome',
+  plugin_code: 'welcome',
+  route: 'example',
+})
+export class ExampleWelcomeController {
+  @Get()
+  @UseGuards(AdminAuthGuard) // [!code ++]
+  getHello(): string {
+    return 'Hello World!';
+  }
+}
+```
+
+## Current user data
+
+When you are using `@UseGuards(AuthGuards)`, `@UseGuards(AdminAuthGuards)` or `@Controllers` decorator with `isAdmin` or `isProtect` you can get access to the current user in the resolver by using the `@CurrentUser()` decorator as param route.
+
+```ts title="apps/backend/src/plugins/{your_plugin_code}/example.controller.ts"
+import { Get, UseGuards } from '@nestjs/common';
+import { Controllers } from 'vitnode-backend/helpers/controller.decorator';
+import { AuthGuard } from 'vitnode-backend/guards/auth.guard'; // [!code ++]
+import { CurrentUser } from 'vitnode-backend/helpers/user.decorator'; // [!code ++]
+import { User } from 'vitnode-shared/user.dto'; // [!code ++]
+
+@Controllers({
+  plugin_name: 'Welcome',
+  plugin_code: 'welcome',
+  route: 'example',
+})
+export class ExampleWelcomeController {
+  @Get()
+  @UseGuards(AuthGuard) // [!code ++]
+  // [!code ++]
+  getHello(@CurrentUser() user: User): string {
+    return `Hello ${user.name}!`;
+  }
+}
+```
+
+### Optional user data
+
+If you want to make the user data optional, you have to add `@OptionalAuth()` decorator to the route.
+
+```ts title="apps/backend/src/plugins/{your_plugin_code}/example.controller.ts"
+import { Get, UseGuards } from '@nestjs/common';
+import { Controllers } from 'vitnode-backend/helpers/controller.decorator';
+import { AuthGuard, OptionalAuth } from 'vitnode-backend/guards/auth.guard'; // [!code ++]
+import { CurrentUser } from 'vitnode-backend/helpers/user.decorator';
+import { User } from 'vitnode-shared/user.dto';
+
+@Controllers({
+  plugin_name: 'Welcome',
+  plugin_code: 'welcome',
+  route: 'example',
+})
+export class ExampleWelcomeController {
+  @Get()
+  @OptionalAuth() // [!code ++]
+  @UseGuards(AuthGuard)
+  // [!code ++]
+  getHello(@CurrentUser() user?: User): string {
+    return `Hello ${user.name}!`;
+  }
+}
+```

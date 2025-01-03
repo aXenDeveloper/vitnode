@@ -1,0 +1,53 @@
+---
+title: Icon
+description: How to use icon in your application using Lucide Icons.
+---
+
+VitNode uses [Lucide Icons](https://lucide.dev/icons/) and Emoji as icons.
+
+## Usage
+
+To use Lucide Icons, we're really recommend you to use JSX from `lucide-react`. It's the best way to use them.
+
+```tsx
+import { Home, KeyRound } from "lucide-react";
+```
+
+```tsx
+<>
+  <Home />
+  <KeyRound />
+</>
+```
+
+### Dynamic Icon
+
+You can use dynamic icons with JSX too. Use this component if you want to download the icons from "text".
+
+```tsx
+import { Icon } from "vitnode-frontend/components/icon/icon";
+
+return <Icon name="Home" />;
+```
+
+<Callout title="Only for Server-Side" type="warn">
+  This component requires Server Side Rendering _(SSR)_. It won't work on client side.
+</Callout>
+
+### Dynamic Icon on Client Side
+
+We also allow to using dynamic icon on client side.
+
+```tsx
+import { IconClient } from "vitnode-frontend/components/icon/icon-client";
+
+return <IconClient name="Home" />;
+```
+
+<Callout title="Avoid this component" type="error">
+  Please avoid using this component. It's not recommended. Use this only if you
+  really (REALLY!!!) need it.
+
+This component will download all icons from Lucide Icons to client.
+
+</Callout>

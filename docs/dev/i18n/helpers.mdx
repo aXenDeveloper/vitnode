@@ -1,0 +1,45 @@
+---
+title: Helpers
+description: Functions to help you with internationalization in VitNode.
+---
+
+## Display text
+
+You can display text from `StringLanguage` type as a string.
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+<Tabs id='async-sync' persist items={['Async (RSC)', 'Sync (Client)']}>
+
+```tsx tab="Async (RSC)"
+import { useTextLang } from 'vitnode-frontend/hooks/use-text-lang';
+import { StringLanguage } from '@/graphql/types';
+
+interface Props {
+  value: StringLanguage[];
+}
+
+export const ExampleComponent = async ({ value }: Props) => {
+  const { convertText } = await getTextLang(); // [!code highlight]
+
+  return <div>{convertText(value)}</div>;
+};
+```
+
+```tsx tab="Sync (Client)"
+import { useTextLang } from 'vitnode-frontend/hooks/use-text-lang';
+import { StringLanguage } from '@/graphql/types';
+
+interface Props {
+  value: StringLanguage[];
+}
+
+export const ExampleComponent = ({ value }: Props) => {
+  const { convertText } = useTextLang(); // [!code highlight]
+
+  return <div>{convertText(value)}</div>;
+};
+```
+
+</Tabs>
+

@@ -1,0 +1,64 @@
+---
+title: Services
+description: Logic for API endpoints.
+---
+
+<Callout type="info">
+  This guide is based of [NestJS
+  documentation](https://docs.nestjs.com/providers).
+</Callout>
+
+Services are used to encapsulate the business logic of your application. They are responsible for handling data and implementing the application's logic. Services are used by controllers to handle incoming requests.
+
+## Creating a service
+
+To create a new service, create a file in the `apps/backend/src/plugins/{your_plugin_code}/services` directory. The service should be decorated with the `@Injectable()` decorator.
+
+```ts title="apps/backend/src/plugins/{your_plugin_code}/services/example.service.ts"
+import { Injectable } from '@nestjs/common';
+import { CreateExampleWelcomeBody } from 'shared/plugins/{your_plugin_code}/example.dto';
+
+@Injectable()
+export class ExampleWelcomeService {
+  create(body: CreateExampleWelcomeBody): string {
+    return `This action adds a new example with name: ${body.name} and description: ${body.description}`;
+  }
+}
+```
+
+The `@Injectable()` decorator marks the class as a provider. This decorator is required for all providers in NestJS.
+
+## Import into module
+
+To use the service, import it into the module where it will be used. Go to the `module root` of your plugin. That's should be `apps/backend/src/plugins/{your_plugin_code}/{your_plugin_code}.module.ts`. Import the service and add it to the `providers` array.
+
+```ts title="apps/backend/src/plugins/{your_plugin_code}/{your_plugin_code}.module.ts"
+import { Module } from '@nestjs/common';
+import { ExampleWelcomeService } from './services/example.service'; // [!code ++]
+
+@Module({
+  providers: [ExampleWelcomeService], // [!code ++]
+})
+export class WelcomeModule {}
+```
+
+## Usage in controller
+
+To use the service in a controller, import it and inject it into the controller's constructor.
+
+```ts title="apps/backend/src/plugins/{your_plugin_code}/example.controller.ts"
+import { Controller, Post, Body } from '@nestjs/common';
+import { ExampleWelcomeService } from './services/example.service'; // [!code ++]
+import { CreateExampleWelcomeBody } from 'shared/plugins/{your_plugin_code}/example.dto';
+
+@Controller('welcome/example')
+export class ExampleWelcomeController {
+  constructor(private readonly exampleService: ExampleWelcomeService) {} // [!code ++]
+
+  @Post()
+  create(@Body() body: CreateExampleWelcomeBody) {
+    return `This action adds a new example with name: ${body.name} and description: ${body.description}`; // [!code --]
+    return this.exampleService.create(body); // [!code ++]
+  }
+}
+```
