@@ -1,0 +1,95 @@
+---
+title: Contribution
+description: How to contribute to the project.
+icon: HeartHandshake
+---
+
+Thank you so much if you are here. That's meen you want to contribute to this open-source project.
+
+## How to contribute?
+
+There are many ways to contribute to the project, including:
+
+- Reporting bugs,
+- Suggesting new features,
+- Writing documentation,
+- Fixing bugs,
+- Implementing new features,
+- Reviewing pull requests,
+- ...and more!
+
+## How to run VitNode dev?
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+ 
+<Steps>
+<Step>
+
+### Prerequisites
+
+To contribute to the project, you need to have the following software installed on your machine:
+
+- `Node.js` 22,
+- `Docker Composer` 2.0,
+- `pnpm` 9+
+
+</Step>
+
+<Step>
+
+### Fork the repository
+
+First, you need to fork the repository to your GitHub account. You can do this by clicking the "Fork" button on the top right of the repository page.
+
+import { ImgDocs } from '@/components/fumadocs/img';
+import forkGithub from '@/assets/fork_github.png';
+
+<ImgDocs src={forkGithub} alt="How to fork a repository on GitHub" />
+
+</Step>
+
+<Step>
+
+### Clone the repository
+
+```bash
+git clone {your_forked_repository_url}
+```
+
+</Step>
+
+<Step>
+
+### Install dependencies
+
+```bash
+pnpm install
+```
+
+</Step>
+
+<Step>
+
+### Start the development docker
+
+```bash
+pnpm docker:dev
+```
+
+</Step>
+
+<Step>
+
+### Start the development server
+
+```bash
+pnpm dev
+```
+
+</Step>
+
+</Steps>
+
+## Become a sponsor ❤️
+
+If you like this project and want to support its development, you can donate or sponsor the project on [GitHub](https://github.com/sponsors/VitNode).

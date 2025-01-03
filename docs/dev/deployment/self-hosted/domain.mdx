@@ -1,0 +1,28 @@
+---
+title: Domain
+description: How to set up a domain for your self-hosted VitNode app.
+---
+
+## Get a Domain
+
+You need to get a domain name. You can buy a domain from any domain registrar like [Squarespace](https://www.squarespace.com/).
+
+## Set up DNS
+
+After you get a domain, you need to set up the DNS records. You can set up the DNS records in the domain registrar's dashboard. Read the documentation of your domain registrar to learn how to set up DNS records.
+
+### A Record
+
+As an example we will use [Cloudflare](https://www.cloudflare.com/) as a domain registrar and DDoS protection service. In the Cloudflare dashboard, go to the DNS tab and add a new A record with the address IP of your server.
+
+VitNode works with separate subdomains for the frontend and backend. You need to set up two A records:
+
+- `api.yourdomain.com` with the IP address of your server for the `backend`,
+- `app.yourdomain.com` or `yourdomain.com` with the IP address of your server for the `frontend`.
+
+Example:
+
+import { ImgDocs } from '@/components/fumadocs/img';
+import dnsCF from '@/assets/dev/delpoyment/dns_cf.png';
+
+<ImgDocs src={dnsCF} alt="Cloudflare DNS Records" />

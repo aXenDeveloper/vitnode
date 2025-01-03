@@ -1,0 +1,133 @@
+---
+title: File Input
+description: Input for uploading file.
+---
+
+## Usage
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+<Tabs items={['Auto Form', 'Manual']}>
+  <Tab value="Auto Form">
+```ts
+import { z } from 'zod';
+import { AutoForm } from 'vitnode-frontend/form/auto-form';
+import { AutoFormFileInput } from 'vitnode-frontend/form/fields/file';
+import { zodFile } from 'vitnode-frontend/helpers/zod';
+```
+
+```ts
+const formSchema = z.object({
+  logo: zodFile, // [!code highlight]
+});
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={{
+    id: 'logo',
+    component: props => (
+      <AutoFormFileInput
+        {...props}
+        acceptExtensions={['png', 'jpg', 'gif']}
+        maxFileSizeInMb={2}
+        accept="image/png, image/gif, image/jpeg"
+        showInfo
+      />
+    ),
+  }}
+/>
+```
+
+  </Tab>
+
+  <Tab value="Manual">
+```ts
+import { FileInput } from 'vitnode-frontend/components/ui/file-input';
+```
+
+```tsx
+<FileInput onChange={onChange} value={value} />
+```
+
+  </Tab>
+</Tabs>
+
+### Multiple Files
+
+<Tabs items={['Auto Form', 'Manual']}>
+  <Tab value="Auto Form">
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: 'logo',
+       component: props => (
+      <AutoFormFileInput
+        {...props}
+        acceptExtensions={['png', 'jpg', 'gif']}
+        maxFileSizeInMb={2}
+        accept="image/png, image/gif, image/jpeg"
+        showInfo
+        multiple // [!code highlight]
+      />
+       ),
+    },
+  ]}
+/>
+```
+
+  </Tab>
+
+  <Tab value="Manual">
+```ts
+import { FileInput } from 'vitnode-frontend/components/ui/file-input';
+```
+
+```tsx
+<FileInput onChange={onChange} value={value} multiple />
+```
+
+  </Tab>
+</Tabs>
+
+## API Reference
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    acceptExtensions: {
+      description: 'Accepted file extensions.',
+      type: 'string[]',
+      default: '[]',
+    },
+    accept: {
+      description: 'Accepted file types.',
+      type: 'string',
+    },
+    disabled: {
+      description: 'Disable input.',
+      type: 'boolean',
+      default: 'false',
+    },
+    maxFileSizeInMb: {
+      description: 'Maximum file size in MB.',
+      type: 'number',
+      default: '0',
+    },
+    multiple: {
+      description: 'Allow multiple files.',
+      type: 'boolean',
+      default: 'false',
+    },
+    showInfo: {
+      description:
+        'Show info about input (max file size, accepted extensions).',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>

@@ -1,0 +1,89 @@
+---
+title: Textarea
+description: Renders a form textarea or a component designed to accept multi-line text input.
+---
+
+<Callout title="Shadcn UI">
+  This component is part of [Shadcn
+  UI](https://ui.shadcn.com/docs/components/textarea).
+</Callout>
+
+## Preview
+
+import { PreviewComponent } from '@/components/fumadocs/preview-component';
+import { Textarea } from 'vitnode-frontend/components/ui/textarea';
+
+<PreviewComponent className="max-w-sm">
+  <Textarea placeholder="Type your message here." />
+</PreviewComponent>
+
+## Usage
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+<Tabs items={['Auto Form', 'Manual']}>
+  <Tab value="Auto Form">
+```ts
+import { z } from 'zod';
+import { AutoForm } from 'vitnode-frontend/form/auto-form';
+```
+
+```ts
+const formSchema = z.object({
+  post: z.string(),
+});
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fieldConfig={{
+    post: {
+      label: 'Post',
+      fieldType: AutoFormTextArea,
+    },
+  }}
+/>
+```
+
+  </Tab>
+
+  <Tab value="Manual">
+```ts
+import { Textarea } from 'vitnode-frontend/components/ui/textarea';
+```
+
+```tsx
+<Textarea />
+```
+
+  </Tab>
+</Tabs>
+
+### With placeholder
+
+<Tabs items={['Auto Form', 'Manual']}>
+  <Tab value="Auto Form">
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fieldConfig={{
+    post: {
+      label: 'Post',
+      fieldType: props => (
+        <AutoFormTextArea {...props} placeholder="Type your thoughts here..." />
+      ),
+    },
+  }}
+/>
+```
+
+  </Tab>
+
+  <Tab value="Manual">
+```tsx
+<Textarea placeholder="Type your thoughts here..." />
+```
+
+  </Tab>
+</Tabs>

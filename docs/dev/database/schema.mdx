@@ -1,0 +1,135 @@
+---
+title: Schema
+description: How to create a database schema in VitNode.
+---
+
+VitNode use [Drizzle ORM](https://orm.drizzle.team/) with [PostgreSQL](https://www.postgresql.org/) to manage database.
+
+## Create File
+
+After [created plugin](/docs/dev/plugin-create) create new file inside `database/schema` folder _(`categories.ts` is an example here)_. If is your first schema, create folder `schema` inside `database` folder.
+
+import { File, Folder, Files } from 'fumadocs-ui/components/files';
+
+<Files>
+  <Folder name="apps" defaultOpen>
+    <Folder name="backend" defaultOpen>
+      <Folder name="src" defaultOpen>
+        <Folder name="plugins" defaultOpen>
+          <Folder name="{your_plugin}" defaultOpen>
+            <Folder name="admin" defaultOpen>
+              <Folder name="database" defaultOpen>
+                <Folder name="schema" defaultOpen>
+                  <File name="categories.ts" />
+                </Folder>
+                <File name="index.ts" />
+              </Folder>
+            </Folder>
+          </Folder>
+        </Folder>
+      </Folder>
+    </Folder>
+  </Folder>
+</Files>
+
+## Create Schema
+
+Inside your new file `categories.ts` create schema for your tables. Follow [Drizzle ORM](https://orm.drizzle.team/docs/sql-schema-declaration) documentation for more information how create schema.
+
+### Schema
+
+Here is example schema for `blog_categories` table:
+
+```ts title="apps/backend/src/plugins/{your_plugin}/admin/database/schema/categories.ts"
+import { pgTable } from 'drizzle-orm/pg-core';
+
+export const blog_categories = pgTable('blog_categories', t => ({
+  id: t.serial().primaryKey(),
+  color: t.varchar({ length: 6 }).notNull(),
+  position: t.integer().notNull().default(0),
+}));
+```
+
+You can read more about [column types here](https://orm.drizzle.team/docs/column-types/pg).
+
+#### Good to know
+
+- Inside `schema` folder you can create as many files as you want _(folders not supported)_,
+- You can create as many schemas as you want inside one file,
+- The best naming convention for tables is `snake_case` with `{your_plugin}_` prefix _(example: `blog_categories`)_,
+- You can import other schemas only from `core` plugin.
+
+### Indexes
+
+Indexes are important part of schema. Thanks to indexes your database will be faster.
+
+For example, if you have `blog_articles` table and you want to search by `author_id`, you can create index for this column.
+
+```ts title="apps/backend/src/plugins/{your_plugin}/admin/database/schema/articles.ts"
+import { core_users } from '@/plugins/core/admin/database/schema/users';
+import { index, pgTable } from 'drizzle-orm/pg-core'; // [!code ++]
+
+import { blog_categories } from './categories';
+
+export const blog_articles = pgTable(
+  'blog_articles',
+  t => ({
+    id: t.serial().primaryKey(),
+    author_id: t.integer().references(() => core_users.id, {
+      onDelete: 'cascade',
+    }),
+    category_id: t.integer().references(() => blog_categories.id, {
+      onDelete: 'cascade',
+    }),
+    created: t.timestamp().notNull().defaultNow(),
+    update: t.timestamp().notNull().defaultNow(),
+  }),
+  // [!code ++]
+  t => [
+    index('blog_articles_author_id_idx').on(t.author_id), // [!code ++]
+    index('blog_articles_category_id_idx').on(t.category_id), // [!code ++]
+    // [!code ++]
+  ],
+);
+```
+
+You can read more about [how to create indexes](https://orm.drizzle.team/docs/indexes-constraints#indexes).
+
+### Relations
+
+Relations is importatnt part of schema. Thanks to relations your database will be more readable and easier to use by you.
+
+```ts title="apps/backend/src/plugins/{your_plugin}/admin/database/schema/articles.ts"
+import { relations } from 'drizzle-orm';
+
+export const blog_articles_relations = relations(blog_articles, ({ one }) => ({
+  author: one(core_users, {
+    fields: [blog_articles.author_id],
+    references: [core_users.id],
+  }),
+  category: one(blog_categories, {
+    fields: [blog_articles.category_id],
+    references: [blog_categories.id],
+  }),
+}));
+```
+
+Your relations should be with `_relations` surfix.
+
+You can read more about [how to create relations](https://orm.drizzle.team/docs/rqb#declaring-relations).
+
+### Import schema to root file
+
+After created schema, you need to import it to `database/index.ts` file to add these schemas into TypeScript type. Inside `index.ts` file you can import as many schemas as you want.
+
+Here is example `index.ts` file:
+
+```ts title="apps/backend/src/plugins/{your_plugin}/admin/database/index.ts"
+import * as articles from './schema/articles';
+import * as categories from './schema/categories';
+
+export default {
+  ...articles,
+  ...categories,
+};
+```

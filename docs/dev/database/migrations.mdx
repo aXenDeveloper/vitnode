@@ -1,0 +1,30 @@
+---
+title: Migrations
+description: How to manage database migrations in VitNode
+---
+
+## Automatic
+
+You don't need to worry about migration when you're using VitNode, we will handle migrations for you.
+
+When you install, update or remove a plugin, VitNode will automatically generate and apply the migration to your database.
+
+## Manual
+
+If you're making a plugins and you don't want to restart the server, you can generate and apply the migration manually.
+
+We're created `vitnode-backend db` command for you. You can run this command using `package manager`:
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+<Tabs groupId='package-manager' persist items={['pnpm', 'npm']}>
+
+```bash tab="pnpm"
+pnpm db
+```
+
+```bash tab="npm"
+npm run db
+```
+
+</Tabs>

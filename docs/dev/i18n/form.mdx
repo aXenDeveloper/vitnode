@@ -1,0 +1,101 @@
+---
+title: Form
+description: Create form with translations
+---
+
+Create form with translations is very similar to normal Forms.
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+<Steps>
+<Step>
+## Define schema
+
+```ts title="use-example.ts"
+import * as z from 'zod';
+import { zodLanguageInput } from 'vitnode-frontend/helpers/zod';
+
+export const useExample = () => {
+  const formSchema = z.object({
+    title: zodLanguageInput, // [!code highlight]
+  });
+
+  return { formSchema };
+};
+```
+
+You can set `maxLength`:
+
+```ts title="use-example.ts"
+const formSchema = z.object({
+  content: zodLanguageInput
+    .min(1, {
+      message: t('errors.required'),
+    })
+    .refine(value => value.every(item => item.value.length <= 100), {
+      message: t('errors.max_length', { length: 100 }),
+    }),
+});
+```
+
+</Step>
+
+<Step>
+## Submit function
+
+Create a function to handle form submit and export it.
+
+```ts title="use-example.ts"
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { zodLanguageInput } from 'vitnode-frontend/helpers/zod';
+
+export const useExample = () => {
+  const formSchema = z.object({
+    title: zodLanguageInput,
+  });
+
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
+    // Do something
+  };
+
+  return { formSchema, onSubmit };
+};
+```
+
+</Step>
+
+<Step>
+
+## Build Form
+
+```tsx title="example-form.tsx"
+import { AutoForm } from 'vitnode-frontend/form/auto-form';
+import { AutoFormStringLanguageInput } from 'vitnode-frontend/form/fields/text-language-input'; // [!code highlight]
+import { useExample } from './use-example';
+
+export const ExampleForm = () => {
+  const { formSchema, onSubmit } = useExample();
+
+  return (
+    <AutoForm
+      formSchema={formSchema}
+      fields={[
+        {
+          id: 'title',
+          component: AutoFormStringLanguageInput, // [!code highlight]
+        },
+      ]}
+    />
+  );
+};
+```
+
+Support form fields:
+
+- [Text Language Input](/docs/ui/forms/text-language-input)
+- [WYSIWYG Editor](/docs/ui/forms/editor)
+
+</Step>
+
+</Steps>

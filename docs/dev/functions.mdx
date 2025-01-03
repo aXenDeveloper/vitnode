@@ -1,0 +1,275 @@
+---
+title: Functions
+description: List of functions available to help you build your application.
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+## Format text / number
+
+### Check Special Characters
+
+This function checks if a string contains special characters. It returns `true` if the string contains special characters, otherwise `false`.
+
+<Tabs items={['Frontend', 'Backend']}>
+  <Tab value="Frontend">
+```ts
+import { checkSpecialCharacters } from 'vitnode-frontend/helpers/special-characters';
+```
+
+  </Tab>
+  <Tab value="Backend">
+  ```ts
+import { checkSpecialCharacters } from 'vitnode-backend';
+```
+
+  </Tab>
+</Tabs>
+
+```ts
+checkSpecialCharacters(string): boolean;
+
+// Example
+checkSpecialCharacters('Hello, World!'); // true
+```
+
+### Remove Special Characters
+
+This function removes special characters from a string.
+
+<Tabs items={['Frontend', 'Backend']}>
+  <Tab value="Frontend">
+```ts
+import { removeSpecialCharacters } from 'vitnode-frontend/helpers/special-characters';
+```
+
+  </Tab>
+  <Tab value="Backend">
+  ```ts
+import { removeSpecialCharacters } from 'vitnode-backend';
+```
+
+  </Tab>
+</Tabs>
+
+```ts
+removeSpecialCharacters(string): string;
+
+// Example
+removeSpecialCharacters(' Hello, World! '); // Hello-World
+```
+
+### Format Bytes
+
+This function formats bytes into a human-readable format.
+
+<Tabs items={['Frontend']}>
+  <Tab value="Frontend">
+```ts
+import { formatBytes } from 'vitnode-frontend/helpers/format-bytes';
+```
+
+  </Tab>
+</Tabs>
+
+```ts
+formatBytes(bytes: number, decimals = 2): string;
+
+// Example
+formatBytes(100200300, 2); // 95.65 MB
+```
+
+As second argument, you can pass the number of decimal places to round the result. By default it is `2`.
+
+### Generate Random String
+
+This function generates a random string.
+
+<Tabs items={['Frontend', 'Backend']}>
+  <Tab value="Frontend">
+```ts
+import { generateRandomString } from 'vitnode-frontend/helpers/generate-random-string';
+```
+
+  </Tab>
+  <Tab value="Backend">
+  ```ts
+import { generateRandomString } from 'vitnode-backend';
+```
+
+  </Tab>
+</Tabs>
+
+```ts
+generateRandomString(length: number): string;
+
+// Example
+generateRandomString(10); // 5f4d6a7b8c
+```
+
+## Colors
+
+### HSL From String
+
+This function generates an HSL color from a string.
+
+<Tabs items={['Frontend', 'Backend']}>
+  <Tab value="Frontend">
+```ts
+import { getHSLFromString } from 'vitnode-frontend/helpers/color';
+```
+
+  </Tab>
+  
+  <Tab value="Backend">
+  ```ts
+import { getHSLFromString } from 'vitnode-backend';
+```
+
+  </Tab>
+</Tabs>
+
+```ts
+getHSLFromString(string: string): HSLColor;
+
+// Example
+getHSLFromString('hsl(0, 100%, 50%)'); // { h: 0, s: 100, l: 50 }
+```
+
+### String From HSL
+
+This function generates a string from an HSL color.
+
+<Tabs items={['Frontend', 'Backend']}>
+  <Tab value="Frontend">
+```ts
+import { getStringFromHSL } from 'vitnode-frontend/helpers/color';
+```
+
+  </Tab>
+
+  <Tab value="Backend">
+  ```ts
+import { getStringFromHSL } from 'vitnode-backend';
+```
+
+  </Tab>
+</Tabs>
+
+```ts
+getStringFromHSL(color: HSLColor): string;
+
+// Example
+getStringFromHSL({ h: 0, s: 100, l: 50 }); // hsl(0, 100%, 50%)
+```
+
+### Check Color Brightness
+
+This function checks if a color is bright.
+
+<Tabs items={['Frontend']}>
+  <Tab value="Frontend">
+```ts
+import { isColorBrightness } from 'vitnode-frontend/helpers/color';
+```
+
+  </Tab>
+</Tabs>
+
+```ts
+isColorBrightness(color: HslColor): boolean;
+
+// Example
+isColorBrightness({ h: 0, s: 100, l: 50 }); // true
+```
+
+### Convert colors
+
+This function converts a color from one format to another.
+
+<Tabs items={['Frontend', 'Backend']}>
+  <Tab value="Frontend">
+```ts
+import { convertColor } from 'vitnode-frontend/helpers/color';
+```
+
+  </Tab>
+
+  <Tab value="Backend">
+  ```ts
+import { convertColor } from 'vitnode-backend';
+```
+
+  </Tab>
+</Tabs>
+
+#### hslToHex
+
+Converts an HSL color to a HEX color.
+
+```ts
+convertColor.hslToHex(color: HSLColor): string;
+
+// Example
+convertColor.hslToHex({ h: 0, s: 100, l: 50 }); // #ff0000
+```
+
+#### hexToHSL
+
+Converts a HEX color to an HSL color.
+
+```ts
+convertColor.hexToHSL(color: string): HSLColor | undefined;
+
+// Example
+convertColor.hexToHSL('#ff0000'); // { h: 0, s: 100, l: 50 }
+```
+
+#### RGBToHSL
+
+Converts an RGB color to an HSL color.
+
+```ts
+convertColor.RGBToHSL(color: RGBColor): HSLColor;
+
+// Example
+convertColor.RGBToHSL({ r: 255, g: 0, b: 0 }); // { h: 0, s: 100, l: 50 }
+```
+
+#### hslToRgb
+
+Converts an HSL color to an RGB color.
+
+```ts
+convertColor.hslToRgb(color: HSLColor): RGBColor;
+
+// Example
+convertColor.hslToRgb({ h: 0, s: 100, l: 50 }); // { r: 255, g: 0, b: 0 }
+```
+
+## Check Color Type
+
+This function checks the type of a color.
+
+<Tabs items={['Frontend', 'Backend']}>
+  <Tab value="Frontend">
+```ts
+import { checkColorType } from 'vitnode-frontend/helpers/color';
+```
+
+  </Tab>
+
+  <Tab value="Backend">
+  ```ts
+import { checkColorType } from 'vitnode-backend';
+```
+
+  </Tab>
+</Tabs>
+
+```ts
+checkColorType(color: string): 'hex' | 'hsl' | 'rgb' | null;
+
+// Example
+checkColorType('hsl(0, 100%, 50%)'); // 'hsl'
+```

@@ -1,0 +1,102 @@
+---
+title: Service
+description: How to use database in service
+---
+
+To get access to the database in a service, you need to inject the `DatabaseService` into the service constructor.
+
+```ts title="show.service.ts"
+import { Injectable } from "@nestjs/common";
+import { DatabaseService } from "@/database/database.service";
+
+@Injectable()
+export class ExampleService {
+  constructor(private readonly databaseService: DatabaseService) {} // [!code highlight]
+}
+```
+
+## Query
+
+VitNode supports [query by Drizzle ORM](https://orm.drizzle.team/docs/rqb) in service to get data with relations from the database.
+
+```ts title="show.service.ts"
+import { Injectable } from "@nestjs/common";
+import { DatabaseService } from "@/database/database.service";
+
+@Injectable()
+export class ExampleService {
+  constructor(private readonly databaseService: DatabaseService) {}
+
+  async create(): Promise<string> {
+    // [!code word:this.database.db.query.core_test_table.findMany]
+    const data = await this.databaseService.db.query.core_test_table.findMany({
+      where: (table, { eq }) => eq(table.id, 1)
+    });
+  }
+}
+```
+
+Check [Drizzle ORM documentation - Query](https://orm.drizzle.team/docs/rqb) for more information.
+
+## Select
+
+```ts
+await this.database.db.select().from(core_test_table);
+```
+
+Check [Drizzle ORM documentation - Select](https://orm.drizzle.team/docs/select) for more information.
+
+## Insert
+
+```ts
+await this.database.db.insert(core_test_table).values({ name: "Andrew" });
+```
+
+Check [Drizzle ORM documentation - Insert](https://orm.drizzle.team/docs/insert) for more information.
+
+## Update
+
+```ts
+await this.database.db
+  .update(core_test_table)
+  .set({ name: "Mr. Dan" })
+  .where(eq(core_test_table.name, "Dan"));
+```
+
+Check [Drizzle ORM documentation - Update](https://orm.drizzle.team/docs/update) for more information.
+
+## Delete
+
+```ts
+await this.database.db.delete(core_test_table).where(eq(core_test_table.name, "Dan"));
+```
+
+Check [Drizzle ORM documentation - Delete](https://orm.drizzle.team/docs/delete) for more information.
+
+## Operations
+
+[Drizzle ORM documentation - Operations](https://orm.drizzle.team/docs/operators) supports many operations like `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `nin`, `like`, `ilike`, `is`, `isNot`, `between`, `notBetween`, etc.
+
+## Joins
+
+```ts
+await this.database.db
+  .select()
+  .from(core_test_table)
+  .join(core_test_table2)
+  .on(eq(core_test_table.id, core_test_table2.id));
+```
+
+Check [Drizzle ORM documentation - Joins](https://orm.drizzle.team/docs/delete) for more information.
+
+## Magic SQL
+
+You can use magic SQL to create raw SQL query with Drizzle ORM.
+
+```ts
+import { sql } from "drizzle-orm";
+const id = 69;
+await db.execute(sql`select * from ${usersTable} where ${usersTable.id} = ${id}`);
+```
+
+Check [Drizzle ORM documentation - Magic SQL](https://orm.drizzle.team/docs/sql) for more information.

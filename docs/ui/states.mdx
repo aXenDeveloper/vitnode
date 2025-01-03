@@ -1,0 +1,93 @@
+---
+title: States from Backend
+description: Learn how to use states from the backend in the frontend.
+---
+
+## Middleware Data State
+
+This state is used to get the middleware data from the server like:
+
+- Available languages,
+- Global settings: title, description, etc.
+- Plugins code,
+- Middleware settings, for example: editor settings, captcha provider etc.
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+<Tabs id='async-sync' persist items={['Async (Server Components)', 'Sync (Client Components)']}>
+
+```tsx tab="Async (Server Components)"
+import { getMiddlewareData } from "vitnode-frontend/api/get-middleware-data";
+
+const data = await getMiddlewareData();
+```
+
+```tsx tab="Sync (Client Components)"
+import { useMiddlewareData } from "vitnode-frontend/hooks/use-middleware-data";
+
+const data = useMiddlewareData();
+```
+
+</Tabs>
+
+## User Data State
+
+This state is used to get the user data with personal settings (for example: files settings).
+
+<Tabs id='async-sync' persist items={['Async (Server Components)', 'Sync (Client Components)']}>
+
+```tsx tab="Async (Server Components)"
+import { getSessionData } from "vitnode-frontend/api/get-session-data";
+
+const data = await getSessionData();
+```
+
+```tsx tab="Sync (Client Components)"
+import { useSession } from "vitnode-frontend/hooks/use-session";
+
+const data = useSession();
+```
+
+</Tabs>
+
+### Admin Data State
+
+Inside `admin` route you cannot use `useSession` hook or `getSessionData` function. You need to use `useAdminSession` hook or `getAdminSessionData` function.
+
+That's because `admin` has different settings and permissions.
+
+<Tabs id='async-sync' persist items={['Async (Server Components)', 'Sync (Client Components)']}>
+
+```tsx tab="Async (Server Components)"
+import { getSessionData } from "vitnode-frontend/api/get-session-admin-data";
+
+const data = await getSessionAdminData();
+```
+
+```tsx tab="Sync (Client Components)"
+import { useSessionAdmin } from "vitnode-frontend/hooks/use-session-admin";
+
+const data = useSessionAdmin();
+```
+
+</Tabs>
+
+## User Id from Cookie
+
+Sometimes might be useful to get the user id from the cookie. For example for `tags` in `fetch` cache.
+
+<Tabs id='user-admin' persist items={['User', 'Admin']}>
+
+```tsx tab="User"
+import { getUserIdCookie } from "vitnode-frontend/api/get-user-id-cookie";
+
+const userIdFromCookie = getUserIdCookie();
+```
+
+```tsx tab="Admin"
+import { getSessionData } from "vitnode-frontend/api/get-user-id-cookie";
+
+const adminIdFromCookie = getAdminIdCookie();
+```
+
+</Tabs>

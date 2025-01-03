@@ -1,0 +1,19 @@
+{
+  "title": "User Interface (UI)",
+  "description": "Make it pretty",
+  "icon": "Paintbrush",
+  "root": true,
+  "pages": [
+    "index",
+    "--- APIs ---",
+    "fetch",
+    "states",
+    "i18n",
+    "navigation",
+    "--- Styling ---",
+    "container-queries",
+    "--- Components ---",
+    "forms",
+    "..."
+  ]
+}

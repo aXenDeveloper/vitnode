@@ -1,0 +1,32 @@
+---
+title: Date
+description: Renders a date component to help you format date using next-intl library.
+---
+
+## Usage
+
+```tsx
+import { DateFormat } from 'vitnode-frontend/components/date-format';
+```
+
+```tsx
+<DateFormat date={data.joined} />
+```
+
+## API Reference
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    date: {
+      description: 'The date object to display.',
+      type: 'Date',
+    },
+    showFullDate: {
+      description: 'Show full date without relative time.',
+      type: 'boolean',
+      default: 'false',
+    },
+  }}
+/>

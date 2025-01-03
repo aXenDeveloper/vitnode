@@ -1,0 +1,190 @@
+---
+title: Dialog
+description: An overlay window that disables interaction with the underlying content, either over the primary window or another dialog.
+---
+
+<Callout title="Shadcn UI">
+  This component is part of [Shadcn
+  UI](https://ui.shadcn.com/docs/components/dialog) with some modifications.
+</Callout>
+
+## Preview
+
+import { PreviewComponent } from '@/components/fumadocs/preview-component';
+import { DialogDemo } from './dialog';
+
+<PreviewComponent>
+  <DialogDemo />
+</PreviewComponent>
+
+## Usage
+
+```tsx
+import { Button } from 'vitnode-frontend/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from 'vitnode-frontend/components/ui/dialog';
+```
+
+```tsx
+<Dialog>
+  <DialogTrigger asChild>
+    <Button>Open dialog</Button>
+  </DialogTrigger>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Are you absolutely sure?</DialogTitle>
+      <DialogDescription>
+        This action cannot be undone. This will permanently delete your account
+        and remove your data from our servers.
+      </DialogDescription>
+    </DialogHeader>
+    <DialogFooter className="mt-0 flex-row flex-wrap [&>button]:flex-1">
+      <Button>Submit</Button>
+      <DialogTrigger asChild>
+        <Button variant="outline">Cancel</Button>
+      </DialogTrigger>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+### Lazy Load Content
+
+To improve performance and reduce the size of the initial bundle use [React Lazy](https://react.dev/reference/react/lazy) to lazy load the dialog content. Use this if you have a large components inside the dialog.
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+ 
+<Steps>
+<Step>
+ 
+#### Trigger & Basic Content
+
+```tsx title="test.tsx"
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from 'vitnode-frontend/components/ui/dialog';
+import { Button } from 'vitnode-frontend/components/ui/button';
+
+export const Test = () => {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" ariaLabel="Edit">
+          <Pencil />
+        </Button>
+      </DialogTrigger>
+
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>This is title</DialogTitle>
+          <DialogDescription>This is description</DialogDescription>
+        </DialogHeader>
+
+        <div>Content</div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+```
+
+</Step>
+<Step>
+#### Content
+
+Your dialog content should be in a separate file, for example `content.tsx`.
+
+```tsx title="content.tsx"
+import { DialogFooter, DialogClose } from 'vitnode-frontend/components/ui/dialog';
+import { Button } from 'vitnode-frontend/components/ui/button';
+
+export const ContentTest = () => {
+  return (
+    <>
+      <div>Content</div>
+
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button variant="ghost">
+            Close
+          </Button>
+        </DialogClose>
+      </DialogFooter>
+    <>
+  );
+};
+```
+
+</Step>
+<Step>
+
+#### Lazy Load
+
+```tsx title="test.tsx"
+import React from 'react';
+
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from 'vitnode-frontend/components/ui/dialog';
+import { Loader } from 'vitnode-frontend/components/ui/loader';
+
+const Content = React.lazy(async () =>
+  import('./content').then(module => ({
+    default: module.ContentTest,
+  })),
+);
+
+export const Test = () => {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>...</DialogTrigger>
+
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>This is title</DialogTitle>
+          <DialogDescription>This is description</DialogDescription>
+        </DialogHeader>
+
+        <React.Suspense fallback={<Loader />}>
+          <Content /> // [!code highlight]
+        </React.Suspense>
+      </DialogContent>
+    </Dialog>
+  );
+};
+```
+
+</Step>
+</Steps>
+
+## Hook State
+
+We're created context to control dialog state `open` and `setOpen`. You can use it as hook inside dialog component.
+
+```tsx
+import { useDialog } from 'vitnode-frontend/components/ui/dialog';
+```
+
+```tsx
+const { open, setOpen } = useDialog();
+```
+
+## API Reference
+
+[Radix UI Dialog](https://www.radix-ui.com/primitives/docs/components/dialog#api-reference).
