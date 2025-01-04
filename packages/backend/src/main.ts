@@ -16,7 +16,7 @@ interface Args {
 }
 
 interface CorsOptionsMain extends Omit<CorsOptions, 'credentials'> {
-  origin?: (RegExp | string)[];
+  origin?: (RegExp | string)[] | string;
 }
 
 export const nestjsMainApp = async (app: INestApplication, options?: Args) => {
@@ -28,9 +28,7 @@ export const nestjsMainApp = async (app: INestApplication, options?: Args) => {
     credentials: true,
     exposedHeaders: ['Content-Disposition'],
     origin: [
-      process.env.NODE_ENV === 'development'
-        ? '*'
-        : (process.env.NEXT_PUBLIC_FRONTEND_URL ?? 'http://localhost:3000'),
+      process.env.NEXT_PUBLIC_FRONTEND_URL ?? 'http://localhost:3000',
       ...(options?.cors?.origin ?? []),
     ],
   });
@@ -83,7 +81,7 @@ export const nestjsMainApp = async (app: INestApplication, options?: Args) => {
   });
 };
 
-export const nestFactoryOptions: NestApplicationOptions = {
+export const nestFactoryOptions: Omit<NestApplicationOptions, 'cors'> = {
   rawBody: true,
   bodyParser: true,
 };
