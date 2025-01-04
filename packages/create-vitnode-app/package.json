@@ -1,6 +1,6 @@
 {
   "name": "create-vitnode-app",
-  "version": "0.1.0-rc.4",
+  "version": "0.1.0",
   "description": "Create a new VitNode app in seconds.",
   "author": "VitNode Team",
   "license": "MIT",
