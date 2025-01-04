@@ -3,4 +3,89 @@ title: Navigation
 description: How to navigate between pages.
 ---
 
-Don't use the `Link` component to navigate to a different page. Instead, use the `navigate` function from `@/utils/i18n`.
+VitNode has own navigation system based on [NextJS](https://nextjs.org/) and [next-intl](https://next-intl.dev/).
+
+## Link
+
+```tsx
+import { Link } from 'vitnode-frontend/navigation';
+
+export const Example = () => {
+  return (
+    <>
+      {/* When the user is on `/en`, the link will point to `/en/about` */}
+      <Link href="/about">About</Link>
+      {/* Search params can be added via `query` */}
+      <Link href={{ pathname: '/users', query: { sortBy: 'name' } }}>
+        Users
+      </Link>
+      {/* You can override the `locale` to switch to another language // (this
+      will set the `hreflang` attribute on the anchor tag) */}
+      <Link href="/" locale="de">
+        Switch to German
+      </Link>
+    </>
+  );
+};
+```
+
+## useRouter
+
+```tsx
+'use client';
+
+import { useRouter } from 'vitnode-frontend/navigation';
+
+export const Example = () => {
+  const router = useRouter();
+
+  const handleClick = () => {
+    // When the user is on `/en`, the router will navigate to `/en/about`
+    router.push('/about');
+
+    // Search params can be added via `query`
+    router.push({
+      pathname: '/users',
+      query: { sortBy: 'name' },
+    });
+
+    // You can override the `locale` to switch to another language
+    router.replace('/about', { locale: 'de' });
+  };
+};
+```
+
+## usePathname
+
+```tsx
+'use client';
+
+import { usePathname } from 'vitnode-frontend/navigation';
+
+export const Example = () => {
+  const pathname = usePathname();
+};
+```
+
+## redirect
+
+```tsx
+import { redirect } from 'vitnode-frontend/navigation';
+
+export const Example = async () => {
+  await redirect('/admin');
+};
+```
+
+## getPathname
+
+```tsx
+import { getPathname } from 'vitnode-frontend/navigation';
+
+export const Example = () => {
+  const pathname = getPathname({
+    locale: 'en',
+    href: '/about',
+  });
+};
+```
