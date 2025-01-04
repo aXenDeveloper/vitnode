@@ -177,7 +177,10 @@ export class VitNodeCoreModule {
     ai,
   }: {
     ai?: LanguageModel;
-    captcha?: CaptchaConfig;
+    captcha?: Pick<CaptchaConfig, 'type'> & {
+      secret_key: string | undefined;
+      site_key: string | undefined;
+    };
     database: DatabaseModuleArgs;
     email?: EmailSenderFunction;
     ssoLoginMethod?: SSOAuthItem[];
@@ -213,7 +216,18 @@ export class VitNodeCoreModule {
             maxAge: 31536000,
           },
         }),
-        GlobalHelpersModule.register({ email, ssoLoginMethod, captcha, ai }),
+        GlobalHelpersModule.register({
+          email,
+          ssoLoginMethod,
+          captcha: captcha
+            ? {
+                ...captcha,
+                secret_key: captcha?.secret_key ?? '',
+                site_key: captcha?.site_key ?? '',
+              }
+            : undefined,
+          ai,
+        }),
       ],
     };
   }

@@ -26,7 +26,7 @@ export function getShiki() {
 export async function loadHighlighter() {
   if (!highlighter && !highlighterPromise) {
     highlighterPromise = createHighlighter({
-      themes: ['vitesse-light', 'vitesse-dark'],
+      themes: ['min-dark', 'min-light'],
       langs: languagesSupportShiki,
     }).then(h => {
       highlighter = h;

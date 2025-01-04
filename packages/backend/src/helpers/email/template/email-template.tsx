@@ -132,7 +132,7 @@ export const EmailTemplate = ({
               {logo ? (
                 <Img
                   alt={site_name}
-                  className="max-w-xs"
+                  className="max-w-[200px]"
                   src={`${backend_url}/public/${logo.dir_folder}/${logo.file_name}`}
                 />
               ) : (

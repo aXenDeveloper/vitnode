@@ -88,9 +88,9 @@ Edit your `app.module.ts` file and add `captcha` object to the `VitNodeModule` c
         // [!code ++]
         type: 'cloudflare_turnstile',
         // [!code ++]
-        site_key: process.env.CAPTCHA_SITE_KEY ?? '',
+        site_key: process.env.CAPTCHA_SITE_KEY,
         // [!code ++]
-        secret_key: process.env.CAPTCHA_SECRET_KEY ?? '',
+        secret_key: process.env.CAPTCHA_SECRET_KEY,
         // [!code ++]
       },
     }),

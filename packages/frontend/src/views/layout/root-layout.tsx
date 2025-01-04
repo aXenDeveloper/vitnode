@@ -21,6 +21,7 @@ export const generateMetadataRootLayout = async ({
 }: Pick<Props, 'params'>): Promise<Metadata> => {
   const { locale } = await params;
   const metadata: Metadata = {
+    metadataBase: new URL(CONFIG.backend_client_public_url),
     manifest: `${CONFIG.backend_client_public_url}/assets/${locale}/manifest.webmanifest`,
     icons: {
       icon: '/favicon.ico',
@@ -38,6 +39,7 @@ export const generateMetadataRootLayout = async ({
         template: `%s - ${site_short_name}`,
       },
       openGraph: {
+        siteName: site_name,
         type: 'website',
         locale: language ? language.code : 'en_US',
       },

@@ -20,7 +20,7 @@ Open-source full-stack framework build on top of [Next.js](https://nextjs.org/),
 - **🌍 Multilingual Support**: Build applications that support multiple languages with ease including routing, inputs, and translations.
 - **📧 Email System**: Leverage dynamic React-based templates for transactional emails, complete with multilingual support and integration with providers like SMTP and Resend.
 - **🚀 Accelerate Development**: Reduce development time with prebuilt features like WYSIWYG editors, auto-generated forms, and built-in API helpers like pagination, upload files and more.
-- **🔒 Secure by Default**: Protect your application with built-in security features like CSRF protection, rate limiting, CAPTCHA, user-groups and more.
+- **🔒 Secure by Default**: Protect your application with built-in security features like rate limiting, CAPTCHA, user-groups and more.
 
 ## 📚 Documentation
 

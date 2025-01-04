@@ -53,16 +53,13 @@ export const languagesSupportShiki: BundledLanguage[] = [
 
 export const shikiParser = async (text: string, lang?: string) => {
   const highlighter = await getSingletonHighlighter({
-    themes: ['vitesse-light', 'vitesse-dark'],
+    themes: ['min-dark', 'min-light'],
     langs: languagesSupportShiki,
   });
 
   const out = highlighter.codeToHtml(text, {
     lang: lang ?? 'plaintext',
-    themes: {
-      light: 'vitesse-light',
-      dark: 'vitesse-dark',
-    },
+    themes: { dark: 'min-dark', light: 'min-light' },
     defaultColor: false,
     transformers: [
       {
