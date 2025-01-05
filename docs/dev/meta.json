@@ -15,7 +15,7 @@
     "--- Plugins ---",
     "plugin-create",
     "plugin-export",
-    "plugin-pages",
+    "pages",
     "permissions-admin",
     "--- APIs ---",
     "modules",

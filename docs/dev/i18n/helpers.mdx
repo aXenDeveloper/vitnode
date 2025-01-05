@@ -13,7 +13,7 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 
 ```tsx tab="Async (RSC)"
 import { useTextLang } from 'vitnode-frontend/hooks/use-text-lang';
-import { StringLanguage } from '@/graphql/types';
+import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 interface Props {
   value: StringLanguage[];
@@ -28,7 +28,7 @@ export const ExampleComponent = async ({ value }: Props) => {
 
 ```tsx tab="Sync (Client)"
 import { useTextLang } from 'vitnode-frontend/hooks/use-text-lang';
-import { StringLanguage } from '@/graphql/types';
+import { StringLanguage } from 'vitnode-shared/string-language.dto';
 
 interface Props {
   value: StringLanguage[];
@@ -42,4 +42,3 @@ export const ExampleComponent = ({ value }: Props) => {
 ```
 
 </Tabs>
-
