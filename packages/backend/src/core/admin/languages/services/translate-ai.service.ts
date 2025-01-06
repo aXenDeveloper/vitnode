@@ -71,6 +71,11 @@ export class TranslateAiLanguagesAdminService {
           return;
         }
 
+        const pluginPath = join(
+          ABSOLUTE_PATHS.plugin({ code: plugin.code }).frontend.languages,
+          `${code}.json`,
+        );
+
         const textLang = JSON.parse(await readFile(langPath, 'utf-8'));
         const { text } = await generateText({
           model,
@@ -88,8 +93,15 @@ export class TranslateAiLanguagesAdminService {
 
           Important: Skip translation if is already translated (and not identical to source).
 
-          Source content (en):
+          Source content (DEFAULT) (en):
           ${JSON.stringify(textLang, null, 2)}
+
+          ${
+            existsSync(pluginPath)
+              ? `Current content for (${code}):
+            ${JSON.stringify(pluginPath, null, 2)}`
+              : ''
+          }
 
           Return the same content with identical structure after translation.
           `,
