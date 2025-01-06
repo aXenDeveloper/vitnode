@@ -50,14 +50,16 @@ export const createPackagesJSON = async ({
           }
         : {}),
     },
-    devDependencies: {
-      ...(eslint
-        ? {
-            'eslint-config-typescript-vitnode': `^${pkg.version}`,
-          }
-        : {}),
+    dependencies: {
       turbo: '^2.3.3',
     },
+    ...(eslint
+      ? {
+          devDependencies: {
+            'eslint-config-typescript-vitnode': `^${pkg.version}`,
+          },
+        }
+      : {}),
     packageManager,
     workspaces: ['apps/*'],
   };
@@ -82,6 +84,8 @@ export const createPackagesJSON = async ({
     },
     dependencies: {
       '@hookform/resolvers': '^3.9.1',
+      autoprefixer: '^10.4.20',
+      'eslint-config-typescript-vitnode': `^${pkg.version}`,
       geist: '^1.3.1',
       'lucide-react': '^0.469.0',
       next: '^15.1.3',
@@ -92,6 +96,7 @@ export const createPackagesJSON = async ({
       recharts: '^2.15.0',
       shiki: '^1.26.1',
       sonner: '^1.7.1',
+      shared: packageManager.startsWith('npm') ? '*' : 'workspace:*',
       'vitnode-frontend': `^${pkg.version}`,
       zod: '^3.24.1',
     },
@@ -99,10 +104,7 @@ export const createPackagesJSON = async ({
       '@types/node': '^22.10.5',
       '@types/react': '^19.0.3',
       '@types/react-dom': '^19.0.2',
-      autoprefixer: '^10.4.20',
-      'eslint-config-typescript-vitnode': `^${pkg.version}`,
       postcss: '^8.4.49',
-      shared: packageManager.startsWith('npm') ? '*' : 'workspace:*',
       tailwindcss: '^3.4.17',
       typescript: '^5.7.2',
       'vitnode-shared': `^${pkg.version}`,
@@ -130,6 +132,7 @@ export const createPackagesJSON = async ({
     },
     dependencies: {
       '@nestjs/cache-manager': '^3.0.0-next.0',
+      '@nestjs/cli': '^10.4.9',
       '@nestjs/common': '^10.4.15',
       '@nestjs/core': '^10.4.15',
       '@nestjs/platform-express': '^10.4.15',
@@ -140,23 +143,22 @@ export const createPackagesJSON = async ({
       'class-validator': '^0.14.1',
       'drizzle-kit': '^0.30.1',
       'drizzle-orm': '^0.38.3',
+      'eslint-config-typescript-vitnode': `^${pkg.version}`,
       react: '^19.0.0',
       'react-dom': '^19.0.0',
       'reflect-metadata': '^0.2.2',
+      shared: packageManager.startsWith('npm') ? '*' : 'workspace:*',
       'vitnode-backend': `^${pkg.version}`,
+      'vitnode-shared': `^${pkg.version}`,
     },
     devDependencies: {
-      '@nestjs/cli': '^10.4.9',
       '@nestjs/schematics': '^10.2.3',
       '@swc/cli': '^0.5.2',
       '@types/express': '^5.0.0',
       '@types/node': '^22.10.5',
       '@types/react': '^19.0.3',
       'cross-env': '^7.0.3',
-      'eslint-config-typescript-vitnode': `^${pkg.version}`,
-      shared: packageManager.startsWith('npm') ? '*' : 'workspace:*',
       typescript: '^5.7.2',
-      'vitnode-shared': `^${pkg.version}`,
     },
   };
 
@@ -185,15 +187,15 @@ export const createPackagesJSON = async ({
     dependencies: {
       '@nestjs/common': '^10.4.15',
       '@nestjs/swagger': '^8.1.0',
+      'class-transformer': '^0.5.1',
+      'class-validator': '^0.14.1',
+      'eslint-config-typescript-vitnode': `^${pkg.version}`,
+      'vitnode-shared': `^${pkg.version}`,
+      typescript: '^5.7.2',
     },
     devDependencies: {
       '@types/multer': '^1.4.12',
       '@types/node': '^22.10.5',
-      'class-transformer': '^0.5.1',
-      'class-validator': '^0.14.1',
-      'eslint-config-typescript-vitnode': `^${pkg.version}`,
-      typescript: '^5.7.2',
-      'vitnode-shared': `^${pkg.version}`,
     },
   };
 

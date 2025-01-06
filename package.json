@@ -30,12 +30,14 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
-    "eslint-config-typescript-vitnode": "workspace:*",
-    "turbo": "^2.3.3"
+    "eslint-config-typescript-vitnode": "workspace:*"
   },
   "packageManager": "pnpm@9.12.2",
   "engines": {
     "node": ">=20",
     "pnpm": ">=9"
+  },
+  "dependencies": {
+    "turbo": "^2.3.3"
   }
 }

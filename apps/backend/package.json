@@ -15,6 +15,7 @@
   "dependencies": {
     "@ai-sdk/google": "^1.0.12",
     "@nestjs/cache-manager": "3.0.0-next.0",
+    "@nestjs/cli": "^10.4.9",
     "@nestjs/common": "^10.4.15",
     "@nestjs/core": "^10.4.15",
     "@nestjs/platform-express": "^10.4.15",
@@ -25,24 +26,23 @@
     "class-validator": "^0.14.1",
     "drizzle-kit": "^0.30.1",
     "drizzle-orm": "^0.38.3",
+    "eslint-config-typescript-vitnode": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "reflect-metadata": "^0.2.2",
+    "shared": "workspace:*",
     "vitnode-backend": "workspace:*",
     "vitnode-backend-email-resend": "workspace:*",
-    "vitnode-backend-email-smtp": "workspace:*"
+    "vitnode-backend-email-smtp": "workspace:*",
+    "vitnode-shared": "workspace:*"
   },
   "devDependencies": {
-    "@nestjs/cli": "^10.4.9",
     "@nestjs/schematics": "^10.2.3",
     "@swc/cli": "^0.5.2",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.3",
     "cross-env": "^7.0.3",
-    "eslint-config-typescript-vitnode": "workspace:*",
-    "shared": "workspace:*",
-    "typescript": "^5.7.2",
-    "vitnode-shared": "workspace:*"
+    "typescript": "^5.7.2"
   }
 }
