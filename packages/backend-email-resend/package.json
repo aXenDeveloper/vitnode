@@ -23,7 +23,7 @@
     "resend"
   ],
   "devDependencies": {
-    "@types/node": "^22.10.2",
+    "@types/node": "^22.10.5",
     "eslint-config-typescript-vitnode": "workspace:*",
     "typescript": "^5.7.2"
   },

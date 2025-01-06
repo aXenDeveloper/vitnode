@@ -197,6 +197,7 @@ if [ ! -f "./.env" ]; then
   echo "DB_USER=$DB_USER" >> "./.env"
   echo "DB_PASSWORD=$DB_PASSWORD" >> "./.env"
   echo "DB_DATABASE=$DB_DATABASE" >> "./.env"
+  echo "NODE_ENV=production" >> "./.env"
 else
   echo ".env file already exists. Skipping creation."
 fi
