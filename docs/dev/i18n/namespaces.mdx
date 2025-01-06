@@ -66,15 +66,3 @@ Provide the list of namespaces that you want to get access to the translation st
   You don't need to include the `core.global` namespace in the `namespaces`
   prop. It's already included by default.
 </Callout>
-
-### Default page
-
-VitNode has plugin system with option to set plugin as default. That means default plugin will be loaded on the home page.
-
-To set default page make sure your have `default-page.tsx` inside `templates` folder plugin with `export default` function.
-
-```tsx title="apps/frontend/src/plugins/{your_plugin}/templates/default-page.tsx"
-export default function Page() {
-  return <div>Hello World</div>;
-}
-```
