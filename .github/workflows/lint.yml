@@ -30,7 +30,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm i --ignore-scripts
+        run: pnpm i
 
       - name: Build shared projects
         run: pnpm build --filter=vitnode-shared

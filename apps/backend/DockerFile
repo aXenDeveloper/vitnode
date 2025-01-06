@@ -13,7 +13,7 @@ RUN turbo prune backend --docker
 FROM base AS installer
 WORKDIR /app
 COPY --from=builder /app/out/json/ .
-RUN pnpm i --ignore-scripts
+RUN pnpm i
 COPY --from=builder /app/out/full/ .
 RUN pnpm config:init -- --skip-database
 RUN pnpm turbo build --filter=backend...
