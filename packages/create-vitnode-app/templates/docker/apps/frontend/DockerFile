@@ -12,7 +12,7 @@ RUN turbo prune frontend --docker
 FROM base AS installer
 WORKDIR /app
 COPY --from=builder /app/out/json/ .
-RUN pnpm i --prod --ignore-scripts
+RUN pnpm i --ignore-scripts
 COPY --from=builder /app/out/full/ .
 COPY --from=builder /app/.prettierrc.mjs ./
 
