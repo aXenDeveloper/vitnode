@@ -1,5 +1,4 @@
 import { fetcher } from '@/api/fetcher';
-import { getSessionAdminData } from '@/api/get-session-admin-data';
 import { HeaderContent } from '@/components/ui/header-content';
 import { CONFIG } from '@/helpers/config-with-env';
 import {
@@ -44,10 +43,9 @@ export const PluginsAdminView = async ({
     searchParams,
     sortEnum: ShowPluginsAdminSortEnum,
   });
-  const [t, data, { restart_server }] = await Promise.all([
+  const [t, data] = await Promise.all([
     getTranslations('admin.core.plugins'),
     getData(variables),
-    getSessionAdminData(),
   ]);
 
   return (
@@ -57,10 +55,7 @@ export const PluginsAdminView = async ({
       </HeaderContent>
 
       <WarnReqRestartServer />
-      <ContentPluginsCoreAdmin
-        isRestartServerRequired={restart_server}
-        {...data}
-      />
+      <ContentPluginsCoreAdmin {...data} />
     </>
   );
 };

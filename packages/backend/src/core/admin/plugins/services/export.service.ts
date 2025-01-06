@@ -42,9 +42,6 @@ export class ExportPluginsAdminService {
     const configJSON: ConfigPlugin = JSON.parse(
       await readFile(pathInfoJSON, 'utf8'),
     );
-    const allow_default = existsSync(
-      ABSOLUTE_PATHS.plugin({ code }).frontend.default_page,
-    );
 
     if (
       (!version && !configJSON.version) ||
@@ -66,32 +63,19 @@ export class ExportPluginsAdminService {
       });
     }
 
-    configJSON.allow_default = allow_default;
     configJSON.version = version ?? configJSON.version;
     configJSON.version_code = version_code ?? configJSON.version_code;
 
     await writeFile(pathInfoJSON, JSON.stringify(configJSON, null, 2), 'utf8');
 
-    // Update only allow_default
-    if (!version || !version_code) {
-      await this.databaseService.db
-        .update(core_plugins)
-        .set({
-          allow_default,
-          updated_at: new Date(),
-        })
-        .where(eq(core_plugins.code, code));
-    } else {
-      await this.databaseService.db
-        .update(core_plugins)
-        .set({
-          version,
-          version_code,
-          allow_default,
-          updated_at: new Date(),
-        })
-        .where(eq(core_plugins.code, code));
-    }
+    await this.databaseService.db
+      .update(core_plugins)
+      .set({
+        version,
+        version_code,
+        updated_at: new Date(),
+      })
+      .where(eq(core_plugins.code, code));
 
     // Prepare the export
     const tempFolderName = removeSpecialCharacters(

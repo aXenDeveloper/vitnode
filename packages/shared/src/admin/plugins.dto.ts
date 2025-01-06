@@ -59,9 +59,6 @@ export class CreatePluginsAdminBody {
 
 export class ShowPluginAdmin {
   @ApiProperty()
-  allow_default: boolean;
-
-  @ApiProperty()
   author: string;
 
   @ApiPropertyOptional()
@@ -72,9 +69,6 @@ export class ShowPluginAdmin {
 
   @ApiProperty()
   created_at: Date;
-
-  @ApiProperty()
-  default: boolean;
 
   @ApiPropertyOptional()
   description: null | string;

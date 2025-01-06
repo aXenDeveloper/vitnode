@@ -46,13 +46,6 @@ export const ABSOLUTE_PATHS = {
       plugin: join(internalPaths.frontend, 'plugins', code),
       templates: join(internalPaths.frontend, 'plugins', code, 'templates'),
       languages: join(internalPaths.frontend, 'plugins', code, 'langs'),
-      default_page: join(
-        internalPaths.frontend,
-        'plugins',
-        code,
-        'templates',
-        'default-page.tsx',
-      ),
       admin_pages_auth: join(
         internalPaths.frontend,
         'app',

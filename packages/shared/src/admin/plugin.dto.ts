@@ -12,7 +12,6 @@ import {
 import { TransformString } from '../utils/text-language';
 
 export interface ConfigPlugin extends CreatePluginsAdminBody {
-  allow_default: boolean;
   nav?: {
     children?: {
       code: string;

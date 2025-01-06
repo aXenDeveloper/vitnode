@@ -1,7 +1,6 @@
 'use client';
 
 import { DateFormat } from '@/components/date-format';
-import { Badge } from '@/components/ui/badge';
 import { DataTable } from '@/components/ui/data-table';
 import { ExternalLink } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -13,12 +12,8 @@ import { ActionsItemPluginsAdmin } from './actions/actions';
 export const ContentPluginsCoreAdmin = ({
   edges,
   page_info,
-  isRestartServerRequired,
-}: ShowPluginsAdminObj & {
-  isRestartServerRequired: boolean;
-}) => {
+}: ShowPluginsAdminObj) => {
   const t = useTranslations('admin.core.plugins');
-  const tCore = useTranslations('core.global');
 
   return (
     <DataTable
@@ -29,10 +24,7 @@ export const ContentPluginsCoreAdmin = ({
           cell: ({ row }) => {
             return (
               <>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">{row.name}</span>
-                  {row.default && <Badge>{tCore('default')}</Badge>}
-                </div>
+                <span className="font-semibold">{row.name}</span>
                 {row.description && (
                   <p className="text-muted-foreground max-w-80 truncate text-sm">
                     {row.description}
@@ -91,7 +83,7 @@ export const ContentPluginsCoreAdmin = ({
           cell: ({ row }) => {
             return (
               <ActionsItemPluginsAdmin
-                isRestartServerRequired={isRestartServerRequired}
+                countPlugins={page_info.total_count}
                 {...row}
               />
             );
