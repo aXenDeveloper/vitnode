@@ -27,5 +27,5 @@
     "typescript": "^5.7.2",
     "vitnode-shared": "workspace:*"
   },
-  "version": "0.1.3-canary.0"
+  "version": "0.1.3-canary.1"
 }
