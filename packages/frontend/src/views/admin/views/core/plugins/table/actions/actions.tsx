@@ -14,14 +14,13 @@ import React from 'react';
 import { ShowPluginAdmin } from 'vitnode-shared/admin/plugins.dto';
 
 import { DeletePluginActionsAdmin } from './delete/delete';
-import { SetDefaultPluginActionsAdmin } from './set-default/set-default';
 import { UploadPluginActionsAdmin } from './upload';
 
 export const ActionsItemPluginsAdmin = ({
-  isRestartServerRequired,
+  countPlugins,
   ...props
 }: ShowPluginAdmin & {
-  isRestartServerRequired: boolean;
+  countPlugins: number;
 }) => {
   const t = useTranslations('admin.core.plugins');
   const tCore = useTranslations('core.global');
@@ -32,13 +31,6 @@ export const ActionsItemPluginsAdmin = ({
 
   return (
     <>
-      {!props.default &&
-        props.enabled &&
-        !isRestartServerRequired &&
-        (props.allow_default || CONFIG.node_development) && (
-          <SetDefaultPluginActionsAdmin {...props} />
-        )}
-
       <TooltipWrapper content={t('get_help')}>
         <Button ariaLabel={t('get_help')} asChild size="icon" variant="ghost">
           <Link
@@ -79,7 +71,7 @@ export const ActionsItemPluginsAdmin = ({
                 </Link>
               </DropdownMenuItem>
 
-              {!props.default && (
+              {!countPlugins && (
                 <DropdownMenuItem
                   destructive
                   onClick={() => {
@@ -98,7 +90,7 @@ export const ActionsItemPluginsAdmin = ({
             setOpen={setIsOpenUploadDialog}
           />
 
-          {!props.default && (
+          {countPlugins && (
             <DeletePluginActionsAdmin
               open={isOpenDeleteDialog}
               setOpen={setIsOpenDeleteDialog}

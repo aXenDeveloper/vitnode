@@ -15,8 +15,6 @@ export const core_plugins = pgTable(
     support_url: t.varchar({ length: 255 }).notNull(),
     author: t.varchar({ length: 100 }).notNull(),
     author_url: t.varchar({ length: 255 }),
-    default: t.boolean().notNull().default(false),
-    allow_default: t.boolean().notNull().default(true),
   }),
   t => [
     index('core_plugins_code_idx').on(t.code),

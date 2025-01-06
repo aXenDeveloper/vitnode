@@ -62,11 +62,7 @@ export const useCreateEditPluginAdmin = ({
   ) => {
     try {
       if (data) {
-        await mutationEditApi({
-          ...values,
-          default: data.default,
-        });
-
+        await mutationEditApi(values);
         toast.error(t('edit.success'), {
           description: values.name,
         });

@@ -146,9 +146,6 @@ export class ShowMiddlewareObj extends MainSettingsAdminBody {
   @ApiProperty({ type: [ShowNavStyles] })
   nav: ShowNavStyles[];
 
-  @ApiProperty()
-  plugin_code_default: string;
-
   @ApiProperty({ example: ['core', 'admin'] })
   plugins: string[];
 

@@ -38,7 +38,6 @@ export class CreatePluginsAdminService {
       $schema: 'https://api.vitnode.com/public/vitnode/plugin.schema.json',
       code,
       ...rest,
-      allow_default: true,
       nav: [],
       version: '0.0.1',
       version_code: 1,

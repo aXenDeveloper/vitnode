@@ -1,4 +1,5 @@
 {
+  "$schema": "https://api.vitnode.com/public/vitnode/plugin.schema.json",
   "name": "Welcome",
   "description": "Basic plugin with default page.",
   "version": "1.0.0",
@@ -7,6 +8,5 @@
   "author": "VitNode",
   "author_url": "https://vitnode.com/",
   "support_url": "https://github.com/VitNode/vitnode/issues",
-  "allow_default": true,
   "nav": []
 }

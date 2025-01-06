@@ -9,7 +9,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 import { existsSync } from 'fs';
 import { rm } from 'fs/promises';
 import { join } from 'path';
@@ -35,7 +35,6 @@ export class DeletePluginsAdminService {
       where: (table, { eq }) => eq(table.id, id),
       columns: {
         code: true,
-        default: true,
       },
     });
 
@@ -43,8 +42,14 @@ export class DeletePluginsAdminService {
       throw new NotFoundException();
     }
 
-    if (plugin.default) {
-      throw new BadRequestException('DEFAULT_PLUGIN_CANNOT_BE_DELETED');
+    const [pluginCount] = await this.databaseService.db
+      .select({
+        count: count(),
+      })
+      .from(core_plugins);
+
+    if (pluginCount.count === 1) {
+      throw new BadRequestException('Cannot delete the last plugin');
     }
 
     await this.changeFilesHelper.changeFiles({

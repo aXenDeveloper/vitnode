@@ -60,7 +60,6 @@ export class ShowMiddlewareService {
       this.databaseService.db.query.core_plugins.findMany({
         columns: {
           code: true,
-          default: true,
         },
       }),
       this.databaseService.db.query.core_languages.findMany({
@@ -76,10 +75,6 @@ export class ShowMiddlewareService {
       }),
     ]);
 
-    const plugin_code_default = plugins.find(plugin => plugin.default)?.code;
-    if (!plugin_code_default) {
-      throw new InternalServerErrorException('Plugin not found');
-    }
     const manifest = await this.getManifests({
       langCodes: langs.map(lang => lang.code),
     });
@@ -124,7 +119,6 @@ export class ShowMiddlewareService {
       editor: {
         sticky: configFromDb.editor_sticky ?? false,
       },
-      plugin_code_default,
       site_description: manifest.map(item => ({
         language_code: item.lang,
         value: item.description,

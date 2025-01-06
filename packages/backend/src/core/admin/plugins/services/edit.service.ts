@@ -6,7 +6,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { eq, ne } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { readFile, writeFile } from 'fs/promises';
 import {
   ConfigPlugin,
@@ -20,7 +20,7 @@ export class EditPluginsAdminService {
 
   async edit({
     code,
-    body: { default: isDefault = false, ...rest },
+    body,
   }: {
     body: EditPluginsAdminBody;
     code: string;
@@ -37,26 +37,9 @@ export class EditPluginsAdminService {
       throw new BadRequestException('PLUGIN_CODE_MISMATCH');
     }
 
-    if (isDefault) {
-      if (!plugin.enabled) {
-        throw new BadRequestException('PLUGIN_NOT_ENABLED');
-      }
-
-      // Set all other plugins to default: false
-      await this.databaseService.db
-        .update(core_plugins)
-        .set({
-          default: false,
-        })
-        .where(ne(core_plugins.code, code));
-    }
-
     const [updatePlugin] = await this.databaseService.db
       .update(core_plugins)
-      .set({
-        ...rest,
-        default: isDefault,
-      })
+      .set(body)
       .where(eq(core_plugins.code, code))
       .returning();
 
@@ -66,11 +49,11 @@ export class EditPluginsAdminService {
       await readFile(path, 'utf8'),
     );
 
-    config.name = rest.name;
-    config.description = rest.description;
-    config.author = rest.author;
-    config.author_url = rest.author_url;
-    config.support_url = rest.support_url;
+    config.name = body.name;
+    config.description = body.description;
+    config.author = body.author;
+    config.author_url = body.author_url;
+    config.support_url = body.support_url;
 
     await writeFile(path, JSON.stringify(config, null, 2));
 
