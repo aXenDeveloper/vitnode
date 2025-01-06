@@ -86,6 +86,7 @@ export class VerifyConfirmEmailAuthQuery {
 
   @ApiProperty()
   @IsNumber()
+  @Transform(({ value }) => +value)
   user_id: number;
 }
 
