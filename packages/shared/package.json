@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@types/multer": "^1.4.12",
-    "@types/node": "^22.10.2",
+    "@types/node": "^22.10.5",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "eslint-config-typescript-vitnode": "workspace:*",

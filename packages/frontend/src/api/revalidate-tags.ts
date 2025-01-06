@@ -24,6 +24,7 @@ export const revalidateTags = {
     revalidateTag(RevalidateTagEnum.Admin_Core_Sessions);
   },
   terms: (code: string, prevCode?: string) => {
+    revalidateTag(RevalidateTagEnum.Core_Terms_Show);
     revalidateTag(`${RevalidateTagEnum.Core_Terms_Show}--${code}`);
     if (prevCode) {
       revalidateTag(`${RevalidateTagEnum.Core_Terms_Show}--${prevCode}`);

@@ -41,7 +41,7 @@
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",
     "@types/figlet": "^1.7.0",
-    "@types/node": "^22.10.2",
+    "@types/node": "^22.10.5",
     "@types/prompts": "^2.4.9",
     "@types/validate-npm-package-name": "^4.0.2",
     "commander": "^13.0.0",
