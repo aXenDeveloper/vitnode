@@ -48,7 +48,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: pnpm i --prod --ignore-scripts
+        run: pnpm i --ignore-scripts
 
       - name: Build CLI
         run: pnpm run build:scripts
