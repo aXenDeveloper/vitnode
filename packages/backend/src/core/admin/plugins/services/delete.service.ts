@@ -63,7 +63,6 @@ export class DeletePluginsAdminService {
     const frontendPaths = [
       'pages',
       'pages_main',
-      'pages_main_layout',
       'admin_pages',
       'admin_pages_auth',
       'plugin',

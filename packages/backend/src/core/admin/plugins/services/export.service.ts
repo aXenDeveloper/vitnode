@@ -106,7 +106,6 @@ export class ExportPluginsAdminService {
       'admin_pages',
       'pages',
       'pages_main',
-      'pages_main_layout',
       'pages_root',
       'plugin',
     ] as const;

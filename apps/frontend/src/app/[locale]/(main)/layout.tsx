@@ -1,5 +1,12 @@
-import { AuthLayout } from 'vitnode-frontend/views/layout/auth/auth-layout';
+import { ThemeLayout } from 'vitnode-frontend/views/theme/layout/theme-layout';
+
+import { Footer } from './footer';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <AuthLayout>{children}</AuthLayout>;
+  return (
+    <>
+      <ThemeLayout>{children}</ThemeLayout>
+      <Footer />
+    </>
+  );
 }

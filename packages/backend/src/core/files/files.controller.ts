@@ -1,20 +1,7 @@
 import { Controllers } from '@/helpers/controller.decorator';
 import { CurrentUser } from '@/helpers/user.decorator';
-import {
-  Body,
-  Delete,
-  Post,
-  Query,
-  UploadedFiles,
-  UseInterceptors,
-} from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import {
-  ApiBody,
-  ApiConsumes,
-  ApiCreatedResponse,
-  ApiOkResponse,
-} from '@nestjs/swagger';
+import { Body, Delete, Post, Query, UploadedFiles } from '@nestjs/common';
+import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import {
   DeleteFilesQuery,
   ShowFile,
@@ -24,6 +11,8 @@ import { User } from 'vitnode-shared/user.dto';
 
 import { DeleteFilesService } from './services/delete.service';
 import { UploadFilesService } from './services/upload.service';
+import { UploadFilesMethod } from '@/helpers/upload-files.decorator';
+import { FilesValidationPipe } from '@/helpers/files/files.pipe';
 
 @Controllers({
   plugin_name: 'Core',
@@ -43,26 +32,27 @@ export class FilesController {
     return await this.deleteFileService.delete({ query, user });
   }
 
-  @ApiBody({
-    description: 'Upload files',
-    type: UploadFilesBody,
-  })
-  @ApiConsumes('multipart/form-data')
   @ApiCreatedResponse({
     type: ShowFile,
   })
   @Post()
-  @UseInterceptors(FileFieldsInterceptor([{ name: 'file', maxCount: 1 }]))
+  @UploadFilesMethod({ fields: ['file'] })
   async edit(
-    @UploadedFiles()
-    files: {
-      file: Express.Multer.File[];
-    },
+    @UploadedFiles(
+      new FilesValidationPipe({
+        file: {
+          maxSize: 1024 * 1024 * 10, // 10 MB
+          acceptMimeType: ['image/png', 'image/jpeg', 'image/webp'],
+          maxCount: 1,
+        },
+      }),
+    )
+    files: Pick<UploadFilesBody, 'file'>,
     @Body() body: Omit<UploadFilesBody, 'file'>,
     @CurrentUser() user: User,
   ): Promise<ShowFile> {
     return await this.uploadFileService.upload({
-      body: { file: files.file[0], ...body },
+      body: { file: files.file, ...body },
       user,
     });
   }

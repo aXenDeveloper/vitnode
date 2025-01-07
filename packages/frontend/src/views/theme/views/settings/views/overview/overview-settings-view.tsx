@@ -14,7 +14,7 @@ export const OverviewSettingsView = async () => {
     <div className="space-y-6">
       <Card className="flex flex-col items-center justify-between gap-4 p-6 sm:flex-row">
         <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:gap-6 sm:text-left">
-          <ChangeAvatarWrapper>
+          <ChangeAvatarWrapper user={user}>
             <AvatarUser sizeInRem={4} user={user} />
           </ChangeAvatarWrapper>
           <div className="leading-none">

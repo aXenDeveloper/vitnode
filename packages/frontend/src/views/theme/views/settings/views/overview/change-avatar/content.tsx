@@ -2,19 +2,20 @@ import { AutoForm, DependencyType } from '@/components/form/auto-form';
 import { AutoFormFileInput } from '@/components/form/fields/file-input';
 import { AutoFormRadioGroup } from '@/components/form/fields/radio-group';
 import { Button } from '@/components/ui/button';
-import { useSession } from '@/hooks/use-session';
 import { useTranslations } from 'next-intl';
 
 import { CopperChangeAvatar } from './cropper/cropper';
 import { useChangeAvatar } from './hooks/use-change-avatar';
+import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
-export const ContentChangeAvatar = () => {
+export const ContentChangeAvatar = ({
+  user,
+}: {
+  user: UserWithDangerousInfo;
+}) => {
   const { formSchema, cropperRef, onSubmit, setValues, values } =
-    useChangeAvatar();
-  const { user } = useSession();
+    useChangeAvatar({ user });
   const t = useTranslations('core.settings.overview.change_avatar');
-
-  if (!user) return null;
 
   return (
     <AutoForm

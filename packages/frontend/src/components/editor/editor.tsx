@@ -3,8 +3,6 @@
 import { fetcherClient } from '@/api/fetcher-client';
 import { formatBytes } from '@/helpers/format-bytes';
 import { useMiddlewareData } from '@/hooks/use-middleware-data';
-import { useSession } from '@/hooks/use-session';
-import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { Content, EditorContent, useEditor } from '@tiptap/react';
 import { useLocale, useTranslations } from 'next-intl';
 import React from 'react';
@@ -18,7 +16,6 @@ import { useExtensionsEditor } from './extensions/extensions';
 import { FilesHandlerStorage } from './extensions/files/files';
 import { deleteMutationApi } from './extensions/files/hooks/delete-mutation-api';
 import { getFilesFromContent } from './extensions/files/hooks/functions';
-import { useFilesExtensionEditor } from './extensions/files/hooks/use-files-extension-editor';
 import { FooterEditor } from './footer/footer';
 import { EditorStateContext } from './hooks/use-editor-state';
 import { ToolBarEditor } from './toolbar/toolbar';
@@ -57,13 +54,6 @@ export const Editor = ({
   const [selectedLanguage, setSelectedLanguage] = React.useState(
     locale || languages_code_default,
   );
-  const session = useSession();
-  const adminSession = useSessionAdmin();
-  const allowUploadFilesSession =
-    session.user?.files_permissions.allow_upload ??
-    adminSession.user?.files_permissions.allow_upload ??
-    false;
-  const { validateMimeTypeFile, validateSizeFile } = useFilesExtensionEditor();
 
   const handleUploadError = (error: Error, tempId: number) => {
     const updateFileError = (message: string) => {
@@ -74,8 +64,10 @@ export const Editor = ({
       );
     };
 
-    if (error.message.includes('MAX_STORAGE_EXTENDED')) {
-      const maxStorage = Number(error.message.split('.')[1]);
+    if (error.message.includes('exceeds size limit')) {
+      const maxStorage = Number(
+        error.message.split('Max size:')[1].replace(' bytes', ''),
+      );
       updateFileError(
         t('max_storage_extended', { size: formatBytes(maxStorage) }),
       );
@@ -83,9 +75,9 @@ export const Editor = ({
       return;
     }
 
-    if (error.message.includes('INVALID_FILE_TYPE')) {
-      const fileType = error.message.split('.')[1];
-      updateFileError(t('invalid_file_type', { type: fileType }));
+    if (error.message.includes('Invalid file')) {
+      const fileType = error.message.split('Allowed types: ')[1];
+      updateFileError(t('invalid_file_type', { types: fileType }));
 
       return;
     }
@@ -114,9 +106,9 @@ export const Editor = ({
     });
 
     try {
-      // Validate file
-      validateMimeTypeFile(file);
-      validateSizeFile({ file, files: allFiles });
+      // // Validate file
+      // validateMimeTypeFile(file);
+      // validateSizeFile({ file, files: allFiles });
 
       const formData = new FormData();
       formData.append('file', file);
@@ -234,7 +226,6 @@ export const Editor = ({
         onChange: onChange as (value: string | StringLanguage[]) => void,
         selectedLanguage,
         files,
-        allowUploadFiles: allowUploadFilesSession,
         onUploadFile,
         onRemoveFile,
       }}

@@ -1,7 +1,6 @@
 import { fetcherClient } from '@/api/fetcher-client';
 import { useDialog } from '@/components/ui/dialog';
 import { zodFile } from '@/helpers/zod';
-import { useSession } from '@/hooks/use-session';
 import { revalidateAllApi } from '@/views/admin/views/core/diagnostic/actions/clear_cache/hooks/revalidate-all-api';
 import { useTranslations } from 'next-intl';
 import React from 'react';
@@ -9,12 +8,14 @@ import { ReactCropperElement } from 'react-cropper';
 import { toast } from 'sonner';
 import { UploadAvatarUserSettingsAuthBody } from 'vitnode-shared/auth/settings/user.dto';
 import { z } from 'zod';
+import { ContentChangeAvatar } from '../content';
 
-export const useChangeAvatar = () => {
+export const useChangeAvatar = ({
+  user,
+}: React.ComponentProps<typeof ContentChangeAvatar>) => {
   const t = useTranslations('core.settings.overview.change_avatar');
   const tErrors = useTranslations('core.global.errors');
   const { setOpen } = useDialog();
-  const { user } = useSession();
   const cropperRef = React.useRef<ReactCropperElement>(null);
   const formSchema = z
     .object({
@@ -33,8 +34,6 @@ export const useChangeAvatar = () => {
   >({});
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!user) return;
-
     const formData = new FormData();
     if (values.type === 'upload') {
       const cropper = cropperRef.current?.cropper;

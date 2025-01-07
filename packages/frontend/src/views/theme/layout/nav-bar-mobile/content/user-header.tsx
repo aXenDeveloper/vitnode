@@ -1,12 +1,15 @@
 import { Button } from '@/components/ui/button';
 import { DrawerClose } from '@/components/ui/drawer';
-import { useSession } from '@/hooks/use-session';
 import { Link } from '@/navigation';
 import { useTranslations } from 'next-intl';
+import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
-export const UserHeaderNavBarMobile = () => {
+export const UserHeaderNavBarMobile = ({
+  user,
+}: {
+  user: UserWithDangerousInfo | null;
+}) => {
   const t = useTranslations('core.global');
-  const { user } = useSession();
 
   if (!user) {
     return (

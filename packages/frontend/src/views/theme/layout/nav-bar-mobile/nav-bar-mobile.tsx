@@ -3,7 +3,6 @@
 import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
 import { AvatarUser } from '@/components/ui/user/avatar';
 import { useMiddlewareData } from '@/hooks/use-middleware-data';
-import { useSession } from '@/hooks/use-session';
 import { usePathname, useRouter } from '@/navigation';
 import { DialogDescription, DialogTitle } from '@radix-ui/react-dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
@@ -14,10 +13,14 @@ import { UserFooterNavBarMobile } from './content/user-footer';
 import { UserHeaderNavBarMobile } from './content/user-header';
 import { ItemNavBarMobile } from './item';
 import { NavNavBarMobile } from './nav/nav';
+import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
-export const NavBarMobile = () => {
+export const NavBarMobile = ({
+  user,
+}: {
+  user: UserWithDangerousInfo | null;
+}) => {
   const t = useTranslations('core.global');
-  const { user } = useSession();
   const pathname = usePathname();
   const { back } = useRouter();
   const { nav } = useMiddlewareData();
@@ -46,9 +49,9 @@ export const NavBarMobile = () => {
             <DialogDescription>{t('mobile_nav.desc')}</DialogDescription>
           </VisuallyHidden>
 
-          <UserHeaderNavBarMobile />
+          <UserHeaderNavBarMobile user={user} />
           {nav.length > 0 && <NavNavBarMobile />}
-          {user && <UserFooterNavBarMobile />}
+          {user && <UserFooterNavBarMobile user={user} />}
         </DrawerContent>
       </Drawer>
     </>

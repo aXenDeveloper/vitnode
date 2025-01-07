@@ -1,14 +1,17 @@
 import { Separator } from '@/components/ui/separator';
-import { useSession } from '@/hooks/use-session';
 import { useSignOutApi } from '@/views/theme/layout/header/auth-user-bar/hooks/use-sign-out-api';
 import { KeyRoundIcon, LogOutIcon, SettingsIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { ItemUserNavBarMobile } from './item';
+import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
-export const UserFooterNavBarMobile = () => {
+export const UserFooterNavBarMobile = ({
+  user,
+}: {
+  user: UserWithDangerousInfo;
+}) => {
   const t = useTranslations('core.global.user-bar');
-  const { user } = useSession();
   const { onSubmit } = useSignOutApi({});
 
   return (
@@ -18,7 +21,7 @@ export const UserFooterNavBarMobile = () => {
         icon={<SettingsIcon />}
         name={t('settings')}
       />
-      {user?.is_admin && (
+      {user.is_admin && (
         <>
           <Separator className="my-1" />
 
