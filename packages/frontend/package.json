@@ -1,6 +1,6 @@
 {
   "name": "vitnode-frontend",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Frontend wrapper for VitNode projects",
   "author": "VitNode Team",
   "license": "MIT",

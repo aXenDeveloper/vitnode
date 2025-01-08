@@ -1,6 +1,6 @@
 {
   "name": "vitnode-backend-email-smtp",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "SMTP email provider for VitNode projects.",
   "author": "VitNode Team",
   "license": "MIT",
