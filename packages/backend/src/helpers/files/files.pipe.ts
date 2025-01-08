@@ -41,7 +41,7 @@ export class FilesValidationPipe implements PipeTransform {
 
     if (file.size > maxSize) {
       throw new BadRequestException(
-        `File ${file.originalname} (${file.size} bytes) exceeds size limit of ${maxSize} bytes for ${file.fieldname} field`,
+        `File ${file.originalname} (${file.size} bytes) exceeds size limit for ${file.fieldname} field. Max size: ${maxSize} bytes`,
       );
     }
   }
@@ -51,7 +51,7 @@ export class FilesValidationPipe implements PipeTransform {
 
     if (acceptMimeType.length && !acceptMimeType.includes(file.mimetype)) {
       throw new BadRequestException(
-        `Invalid file type for ${file.originalname} (${file.mimetype})`,
+        `Invalid file type for ${file.originalname} Allowed types: ${acceptMimeType.join(', ')}`,
       );
     }
   }

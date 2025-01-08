@@ -10,7 +10,6 @@ export class ValidateFilesPluginsAdminHelpersService {
       // Frontend - pages
       pluginPath.frontend.pages,
       pluginPath.frontend.pages_main,
-      pluginPath.frontend.pages_main_layout,
       // Frontend - admin pages
       pluginPath.frontend.admin_pages,
       pluginPath.frontend.admin_pages_auth,

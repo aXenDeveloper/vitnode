@@ -23,7 +23,8 @@ const ContentChangeAvatar = React.lazy(async () =>
 
 export const ChangeAvatarWrapper = ({
   children,
-}: {
+  ...props
+}: React.ComponentProps<typeof ContentChangeAvatar> & {
   children: React.ReactNode;
 }) => {
   const t = useTranslations('core.settings.overview.change_avatar');
@@ -52,7 +53,7 @@ export const ChangeAvatarWrapper = ({
           </DialogHeader>
 
           <React.Suspense fallback={<Loader />}>
-            <ContentChangeAvatar />
+            <ContentChangeAvatar {...props} />
           </React.Suspense>
         </DialogContent>
       </Dialog>

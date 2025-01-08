@@ -24,7 +24,7 @@ import { ToggleToolbarEditor } from './toggle';
 
 export const ToolBarEditor = () => {
   const middleware = useMiddlewareData();
-  const { editor, allowUploadFiles } = useEditorState();
+  const { editor } = useEditorState();
 
   return (
     <div
@@ -93,7 +93,7 @@ export const ToolBarEditor = () => {
       <TextAlignToolbarEditor />
       <LinkToolbarEditor />
       <EmojiToolbarEditor />
-      {allowUploadFiles && <UploadFilesToolbarEditor />}
+      <UploadFilesToolbarEditor />
 
       <ButtonToolbarEditor
         name="horizontal_rule"

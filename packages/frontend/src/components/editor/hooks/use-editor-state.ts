@@ -5,7 +5,6 @@ import { StringLanguage } from 'vitnode-shared/string-language.dto';
 import { FilesHandlerStorage } from '../extensions/files/files';
 
 interface Args {
-  allowUploadFiles: boolean;
   editor: Editor;
   files: FilesHandlerStorage[];
   onChange: (value: string | StringLanguage[]) => void;
@@ -21,7 +20,6 @@ export const EditorStateContext = React.createContext<Args>({
   onChange: () => {},
   selectedLanguage: '',
   files: [],
-  allowUploadFiles: false,
   onUploadFile: () => {},
   onRemoveFile: () => {},
 });

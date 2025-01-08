@@ -6,11 +6,7 @@ import { SSOAuthHelper } from '@/helpers/auth/sso/sso.service';
 import { ConfigHelperService } from '@/helpers/config.service';
 import { EmailHelperService } from '@/helpers/email/email.service';
 import { InternalDatabaseService } from '@/utils/database/internal_database.service';
-import {
-  Inject,
-  Injectable,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { AppTypeMainSettingsAdmin } from 'vitnode-shared/admin/settings/main.enum';

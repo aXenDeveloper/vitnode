@@ -1,4 +1,5 @@
 import { fetcher } from '@/api/fetcher';
+import { getSessionAdminData } from '@/api/get-session-admin-data';
 import { HeaderContent } from '@/components/ui/header-content';
 import { CONFIG } from '@/helpers/config-with-env';
 import {
@@ -43,15 +44,16 @@ export const PluginsAdminView = async ({
     searchParams,
     sortEnum: ShowPluginsAdminSortEnum,
   });
-  const [t, data] = await Promise.all([
+  const [t, data, { user }] = await Promise.all([
     getTranslations('admin.core.plugins'),
     getData(variables),
+    getSessionAdminData(),
   ]);
 
   return (
     <>
       <HeaderContent desc={t('desc')} h1={t('title')}>
-        {CONFIG.node_development && <ActionsPluginsAdmin />}
+        {CONFIG.node_development && <ActionsPluginsAdmin user={user} />}
       </HeaderContent>
 
       <WarnReqRestartServer />

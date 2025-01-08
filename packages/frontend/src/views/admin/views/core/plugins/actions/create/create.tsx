@@ -19,7 +19,9 @@ const Content = React.lazy(async () =>
   })),
 );
 
-export const CreateActionPluginAdmin = () => {
+export const CreateActionPluginAdmin = (
+  props: React.ComponentProps<typeof Content>,
+) => {
   const t = useTranslations('admin.core.plugins');
 
   return (
@@ -37,7 +39,7 @@ export const CreateActionPluginAdmin = () => {
         </DialogHeader>
 
         <React.Suspense fallback={<Loader />}>
-          <Content />
+          <Content {...props} />
         </React.Suspense>
       </DialogContent>
     </Dialog>

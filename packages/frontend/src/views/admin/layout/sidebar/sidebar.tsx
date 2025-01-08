@@ -1,4 +1,7 @@
-import { getSessionAdminData } from '@/api/get-session-admin-data';
+import {
+  getSessionAdminData,
+  isInAdminPermission,
+} from '@/api/get-session-admin-data';
 import { DynamicIcon } from '@/components/icon/dynamic-icon';
 import { LogoVitNode } from '@/components/logo-vitnode';
 import { LanguageSwitcher } from '@/components/switchers/language-switcher';
@@ -30,7 +33,7 @@ export interface TextAndIconsAsideAdmin {
 }
 
 export const SidebarAdmin = async () => {
-  const [t, { nav }] = await Promise.all([
+  const [t, { nav, user }] = await Promise.all([
     getTranslations(),
     getSessionAdminData(),
   ]);
@@ -118,7 +121,14 @@ export const SidebarAdmin = async () => {
           <LanguageSwitcher />
           <ThemeSwitcher />
 
-          <UserBarSidebarAdmin />
+          <UserBarSidebarAdmin
+            canShowDiagnosticTools={await isInAdminPermission({
+              plugin_code: 'core',
+              group: 'dashboard',
+              permission: 'can_manage_diagnostic_tools',
+            })}
+            user={user}
+          />
         </div>
       </SidebarHeader>
       <SearchSidebarAdmin textsAndIcons={textsAndIcons} />
