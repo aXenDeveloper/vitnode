@@ -3,10 +3,10 @@ import { AutoFormFileInput } from '@/components/form/fields/file-input';
 import { AutoFormRadioGroup } from '@/components/form/fields/radio-group';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from 'next-intl';
+import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
 import { CopperChangeAvatar } from './cropper/cropper';
 import { useChangeAvatar } from './hooks/use-change-avatar';
-import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
 export const ContentChangeAvatar = ({
   user,

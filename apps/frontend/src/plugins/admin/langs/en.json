@@ -470,13 +470,6 @@
             "desc_with_children": "You have sub-navigations. If you delete this navigation, all sub-navigations will be moved to the parent navigation.",
             "success": "Navigation has been deleted."
           }
-        },
-        "editor": {
-          "title": "Editor",
-          "sticky": {
-            "label": "Sticky Toolbar",
-            "desc": "The toolbar will be fixed at the top of the screen."
-          }
         }
       },
       "langs": {

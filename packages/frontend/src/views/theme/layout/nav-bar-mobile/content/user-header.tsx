@@ -7,7 +7,7 @@ import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 export const UserHeaderNavBarMobile = ({
   user,
 }: {
-  user: UserWithDangerousInfo | null;
+  user: null | UserWithDangerousInfo;
 }) => {
   const t = useTranslations('core.global');
 

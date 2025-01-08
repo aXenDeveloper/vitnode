@@ -1,9 +1,9 @@
 import { useDialog } from '@/components/ui/dialog';
-import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { useTranslations } from 'next-intl';
 import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import { ShowPluginAdmin } from 'vitnode-shared/admin/plugins.dto';
+import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 import { z } from 'zod';
 
 import { mutationCreateApi } from './mutation-create-api';
@@ -13,12 +13,13 @@ export const codePluginRegex = /^[a-z0-9-]*$/;
 
 export const useCreateEditPluginAdmin = ({
   data,
+  user,
 }: {
   data?: ShowPluginAdmin;
+  user: UserWithDangerousInfo;
 }) => {
   const t = useTranslations('admin.core.plugins');
   const tCore = useTranslations('core.global.errors');
-  const { user } = useSessionAdmin();
   const { setOpen } = useDialog();
 
   const formSchema = z.object({

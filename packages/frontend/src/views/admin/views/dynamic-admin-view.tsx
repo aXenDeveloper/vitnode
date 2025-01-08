@@ -52,10 +52,6 @@ import {
 } from './core/settings/main/main-settings-core-admin-view';
 import { MetadataSettingsAdminView } from './core/settings/metadata/metadata-settings-admin-view';
 import {
-  EditorStylesAdminView,
-  generateMetadataEditorStylesAdmin,
-} from './core/styles/editor/editor-admin-view';
-import {
   generateMetadataNavStyleAdmin,
   NavStyleAdminView,
 } from './core/styles/nav/nav-admin-view';
@@ -132,10 +128,6 @@ export const generateMetadataDynamic = async (props: {
     }
 
     if (slug[1] === 'styles' && !slug[3]) {
-      if (slug[2] === 'editor') {
-        return generateMetadataEditorStylesAdmin();
-      }
-
       if (slug[2] === 'nav') {
         return generateMetadataNavStyleAdmin();
       }
@@ -262,10 +254,6 @@ export const DynamicAdminView = async (props: {
     if (slug[1] === 'styles' && !slug[3]) {
       if (slug[2] === 'theme-editor') {
         return <ThemeEditorStyleAdminView />;
-      }
-
-      if (slug[2] === 'editor') {
-        return <EditorStylesAdminView />;
       }
 
       if (slug[2] === 'nav') {

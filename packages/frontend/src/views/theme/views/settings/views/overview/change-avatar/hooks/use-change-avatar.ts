@@ -8,6 +8,7 @@ import { ReactCropperElement } from 'react-cropper';
 import { toast } from 'sonner';
 import { UploadAvatarUserSettingsAuthBody } from 'vitnode-shared/auth/settings/user.dto';
 import { z } from 'zod';
+
 import { ContentChangeAvatar } from '../content';
 
 export const useChangeAvatar = ({

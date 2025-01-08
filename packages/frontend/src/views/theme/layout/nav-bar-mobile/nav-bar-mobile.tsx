@@ -8,17 +8,17 @@ import { DialogDescription, DialogTitle } from '@radix-ui/react-dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { ArrowLeftIcon, MenuIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
 import { UserFooterNavBarMobile } from './content/user-footer';
 import { UserHeaderNavBarMobile } from './content/user-header';
 import { ItemNavBarMobile } from './item';
 import { NavNavBarMobile } from './nav/nav';
-import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
 export const NavBarMobile = ({
   user,
 }: {
-  user: UserWithDangerousInfo | null;
+  user: null | UserWithDangerousInfo;
 }) => {
   const t = useTranslations('core.global');
   const pathname = usePathname();

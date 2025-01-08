@@ -42,25 +42,15 @@ const data = await getSessionData();
 
 ### Admin Data State
 
-Inside `admin` route you cannot use `useSession` hook or `getSessionData` function. You need to use `useAdminSession` hook or `getAdminSessionData` function.
+Inside `admin` route you cannot use `getSessionData` function. You need to use `getAdminSessionData` function.
 
 That's because `admin` has different settings and permissions.
 
-<Tabs id='async-sync' persist items={['Async (Server Components)', 'Sync (Client Components)']}>
-
-```tsx tab="Async (Server Components)"
+```tsx
 import { getSessionData } from 'vitnode-frontend/api/get-session-admin-data';
 
 const data = await getSessionAdminData();
 ```
-
-```tsx tab="Sync (Client Components)"
-import { useSessionAdmin } from 'vitnode-frontend/hooks/use-session-admin';
-
-const data = useSessionAdmin();
-```
-
-</Tabs>
 
 ## User Id from Cookie
 

@@ -1,4 +1,6 @@
 import { Controllers } from '@/helpers/controller.decorator';
+import { FilesValidationPipe } from '@/helpers/files/files.pipe';
+import { UploadFilesMethod } from '@/helpers/upload-files.decorator';
 import { CurrentUser } from '@/helpers/user.decorator';
 import { Body, Delete, Post, Query, UploadedFiles } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
@@ -11,8 +13,6 @@ import { User } from 'vitnode-shared/user.dto';
 
 import { DeleteFilesService } from './services/delete.service';
 import { UploadFilesService } from './services/upload.service';
-import { UploadFilesMethod } from '@/helpers/upload-files.decorator';
-import { FilesValidationPipe } from '@/helpers/files/files.pipe';
 
 @Controllers({
   plugin_name: 'Core',

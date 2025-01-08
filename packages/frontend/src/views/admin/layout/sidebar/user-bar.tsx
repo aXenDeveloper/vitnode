@@ -11,16 +11,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { AvatarUser } from '@/components/ui/user/avatar';
-import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { Link } from '@/navigation';
 import { useSignOutApi } from '@/views/theme/layout/header/auth-user-bar/hooks/use-sign-out-api';
 import { HammerIcon, HomeIcon, LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
-export const UserBarSidebarAdmin = () => {
+export const UserBarSidebarAdmin = ({
+  canShowDiagnosticTools,
+  user,
+}: {
+  canShowDiagnosticTools: boolean;
+  user: UserWithDangerousInfo;
+}) => {
   const t = useTranslations('admin.global');
   const tCore = useTranslations('core.global');
-  const { user, isInAdminPermission } = useSessionAdmin();
   const { name, email } = user;
   const { onSubmit } = useSignOutApi({ is_admin: true });
 
@@ -56,11 +61,7 @@ export const UserBarSidebarAdmin = () => {
               <span>{t('home_page')}</span>
             </Link>
           </DropdownMenuItem>
-          {isInAdminPermission({
-            plugin_code: 'core',
-            group: 'dashboard',
-            permission: 'can_manage_diagnostic_tools',
-          }) && (
+          {canShowDiagnosticTools && (
             <DropdownMenuItem asChild>
               <Link href="/admin/core/diagnostic">
                 <HammerIcon />

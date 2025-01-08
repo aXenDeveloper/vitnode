@@ -1,4 +1,5 @@
 import { fetcher } from '@/api/fetcher';
+import { getSessionAdminData } from '@/api/get-session-admin-data';
 import { Card } from '@/components/ui/card';
 import { AvatarUser } from '@/components/ui/user/avatar';
 import { GroupFormat } from '@/components/ui/user/group-format';
@@ -38,7 +39,10 @@ export const generateMetadataUserMembersAdmin = async ({ id }: Props) => {
 };
 
 export const UserMembersAdminView = async ({ id }: Props) => {
-  const data = await getData(+id);
+  const [data, { user }] = await Promise.all([
+    getData(+id),
+    getSessionAdminData(),
+  ]);
   const { name, group } = data;
 
   return (
@@ -65,7 +69,7 @@ export const UserMembersAdminView = async ({ id }: Props) => {
             </Link>
           </Button> */}
 
-          <ActionsUserMembersAdmin {...data} />
+          <ActionsUserMembersAdmin user={user} {...data} />
         </div>
       </Card>
 

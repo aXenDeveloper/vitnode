@@ -4,6 +4,7 @@ import { AutoForm, DependencyType } from '@/components/form/auto-form';
 import { AutoFormInput } from '@/components/form/fields/input';
 import { useTranslations } from 'next-intl';
 import { ShowPluginAdmin } from 'vitnode-shared/admin/plugins.dto';
+import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
 import { useCreateEditPluginAdmin } from './hooks/use-create-edit-plugin-admin';
 
@@ -11,13 +12,15 @@ export const FormCreateEditPluginAdmin = ({
   data,
   className,
   theme,
+  user,
 }: {
   className?: string;
   data?: ShowPluginAdmin;
   theme?: 'horizontal' | 'vertical';
+  user: UserWithDangerousInfo;
 }) => {
   const t = useTranslations('admin.core.plugins');
-  const { onSubmit, formSchema } = useCreateEditPluginAdmin({ data });
+  const { onSubmit, formSchema } = useCreateEditPluginAdmin({ data, user });
 
   return (
     <AutoForm

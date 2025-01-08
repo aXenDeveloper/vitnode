@@ -2,9 +2,9 @@ import { Separator } from '@/components/ui/separator';
 import { useSignOutApi } from '@/views/theme/layout/header/auth-user-bar/hooks/use-sign-out-api';
 import { KeyRoundIcon, LogOutIcon, SettingsIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
 import { ItemUserNavBarMobile } from './item';
-import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
 export const UserFooterNavBarMobile = ({
   user,

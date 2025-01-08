@@ -192,11 +192,7 @@ export const generateMetadata = async () => {
 
 To check if admin has a specific permission to display a component, you can use the `isInAdminPermission(permission)`.
 
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
-
-<Tabs id='async-sync' persist items={['Async (Server Components)', 'Sync (Client Components)']}>
-
-```tsx tab="Async (Server Components)"
+```tsx
 // [!code ++]
 import { isInAdminPermission } from 'vitnode-frontend/api/get-session-admin-data';
 
@@ -212,29 +208,6 @@ export const ServerComponent = async () => {
   return <div>{isAllowed ? 'Allowed' : 'Not Allowed'}</div>;
 };
 ```
-
-```tsx tab="Sync (Client Components)"
-'use client';
-
-// [!code ++]
-import { useSessionAdmin } from 'vitnode-frontend/hooks/use-session-admin';
-
-export const ServerComponent = () => {
-  // [!code ++]
-  const { isInAdminPermission } = useSessionAdmin();
-  // [!code ++]
-  const isAllowed = isInAdminPermission({
-    plugin_code: '{your_plugin_code}', // [!code ++]
-    group: '{your_group}', // [!code ++]
-    permission: '{your_permission}', // [!code ++]
-    // [!code ++]
-  });
-
-  return <div>{isAllowed ? 'Allowed' : 'Not Allowed'}</div>;
-};
-```
-
-</Tabs>
 
 ### Backend
 

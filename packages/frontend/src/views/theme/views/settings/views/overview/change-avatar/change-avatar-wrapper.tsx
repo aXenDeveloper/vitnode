@@ -24,9 +24,9 @@ const ContentChangeAvatar = React.lazy(async () =>
 export const ChangeAvatarWrapper = ({
   children,
   ...props
-}: {
+}: React.ComponentProps<typeof ContentChangeAvatar> & {
   children: React.ReactNode;
-} & React.ComponentProps<typeof ContentChangeAvatar>) => {
+}) => {
   const t = useTranslations('core.settings.overview.change_avatar');
 
   return (

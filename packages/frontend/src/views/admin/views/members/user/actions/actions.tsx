@@ -16,11 +16,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Loader } from '@/components/ui/loader';
-import { useSessionAdmin } from '@/hooks/use-session-admin';
 import { EllipsisIcon, Pencil, UserMinus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { UserMembersAdmin } from 'vitnode-shared/admin/members/users.dto';
+import { UserWithDangerousInfo } from 'vitnode-shared/user.dto';
 
 import { ConfirmEmailActionUserMembersAdmin } from './confirm-email/confirm-email';
 import { DeleteActionUserMembersAdmin } from './delete/delete';
@@ -34,12 +34,14 @@ const EditActionUserMembersAdmin = React.lazy(async () =>
 export const ActionsUserMembersAdmin = ({
   name,
   email_verified,
+  user,
   ...props
-}: UserMembersAdmin) => {
+}: UserMembersAdmin & {
+  user: UserWithDangerousInfo;
+}) => {
   const t = useTranslations('admin.members.users.item');
   const [isOpenEdit, setIsOpenEdit] = React.useState(false);
   const [isOpenDelete, setIsOpenDelete] = React.useState(false);
-  const { user } = useSessionAdmin();
 
   return (
     <>

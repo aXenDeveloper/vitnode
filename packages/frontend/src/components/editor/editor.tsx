@@ -88,7 +88,6 @@ export const Editor = ({
   const onUploadFile = async (file: File) => {
     if (!allowUploadFiles) return;
     const tempId = Math.floor(Math.random() * 1000) + file.size;
-    let allFiles: FilesHandlerStorage[] = [];
 
     setFiles(prev => {
       const current: FilesHandlerStorage[] = [
@@ -100,16 +99,10 @@ export const Editor = ({
         },
       ];
 
-      allFiles = current;
-
       return current;
     });
 
     try {
-      // // Validate file
-      // validateMimeTypeFile(file);
-      // validateSizeFile({ file, files: allFiles });
-
       const formData = new FormData();
       formData.append('file', file);
       formData.append('plugin_code', allowUploadFiles.plugin_code);

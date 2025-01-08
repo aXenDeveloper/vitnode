@@ -1,6 +1,7 @@
+import { getSessionData } from '@/api/get-session-data';
+
 import { Header } from './header/header';
 import { NavBarMobile } from './nav-bar-mobile/nav-bar-mobile';
-import { getSessionData } from '@/api/get-session-data';
 
 export const ThemeLayout = async ({
   children,
