@@ -18,31 +18,18 @@ export const useSignUpView = () => {
   const formSchema = z.object({
     name: z
       .string()
-      .min(3, {
-        message: tCore('errors.min_length', { length: 3 }),
-      })
-      .max(32, {
-        message: tCore('errors.max_length', { length: 32 }),
-      })
-      .refine(value => nameRegex.test(value), {
-        message: t('name.invalid'),
-      })
+      .min(3, tCore('errors.min_length', { length: 3 }))
+      .max(32, tCore('errors.max_length', { length: 32 }))
+      .refine(value => nameRegex.test(value), t('name.invalid'))
       .default(''),
-    email: z
-      .string()
-      .email({
-        message: t('email_invalid'),
-      })
-      .default(''),
+    email: z.string().email(t('email_invalid')).default(''),
     password: z
       .string()
-      .regex(/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+{};:,<.>]).{8,}$/)
+      .regex(/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+{};:,<.>]).{8,}$/, '')
       .default(''),
     terms: z
       .boolean()
-      .refine(value => value, {
-        message: t('terms.empty'),
-      })
+      .refine(value => value, t('terms.empty'))
       .default(false),
     newsletter: z.boolean().default(false).optional(),
   });

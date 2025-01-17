@@ -36,9 +36,7 @@ export const useCreateEditPluginAdmin = ({
       .string()
       .min(3)
       .max(50)
-      .refine(value => codePluginRegex.test(value), {
-        message: t('create.code.invalid'),
-      })
+      .refine(value => codePluginRegex.test(value), t('create.code.invalid'))
       .default(data?.code ?? ''),
     support_url: z
       .string()
