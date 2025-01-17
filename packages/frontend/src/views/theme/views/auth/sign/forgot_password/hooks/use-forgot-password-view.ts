@@ -12,7 +12,7 @@ export const useForgotPasswordView = () => {
   const { getTokenFromCaptcha, isReady } = useCaptcha();
 
   const formSchema = z.object({
-    email: z.string().email().default(''),
+    email: z.string().email(tError('invalid_email')).default(''),
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {

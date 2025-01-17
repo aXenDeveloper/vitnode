@@ -93,6 +93,7 @@ export function AutoForm<
   const form = useForm<z.infer<typeof objectFormSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues,
+    mode: 'onChange',
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {

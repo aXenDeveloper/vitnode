@@ -10,8 +10,8 @@ export const useSignInView = () => {
   const t = useTranslations('core.global.errors');
 
   const formSchema = z.object({
-    email: z.string().email().default(''),
-    password: z.string().min(1).default(''),
+    email: z.string().email(t('invalid_email')).default(''),
+    password: z.string().default(''),
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {

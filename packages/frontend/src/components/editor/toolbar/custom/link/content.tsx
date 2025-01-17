@@ -23,8 +23,8 @@ export const ContentLinkToolbarEditor = ({
   const tCore = useTranslations('core.global.errors');
   const { editor } = useEditorState();
   const formSchema = z.object({
-    text: z.string().min(1, { message: tCore('required') }),
-    href: z.string().min(1, { message: tCore('required') }),
+    text: z.string().min(1, tCore('required')),
+    href: z.string().min(1, tCore('required')),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({

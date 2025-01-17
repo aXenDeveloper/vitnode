@@ -33,22 +33,11 @@ export const EditActionUserMembersAdmin = ({
   const formSchema = z.object({
     name: z
       .string()
-      .min(3, {
-        message: tCore('min_length', { length: 3 }),
-      })
-      .max(32, {
-        message: tCore('max_length', { length: 32 }),
-      })
-      .refine(value => nameRegex.test(value), {
-        message: tSignUp('name.invalid'),
-      })
+      .min(3, tCore('min_length', { length: 3 }))
+      .max(32, tCore('max_length', { length: 32 }))
+      .refine(value => nameRegex.test(value), tSignUp('name.invalid'))
       .default(name),
-    email: z
-      .string()
-      .email({
-        message: tSignUp('email_invalid'),
-      })
-      .default(email),
+    email: z.string().email(tSignUp('email_invalid')).default(email),
     newsletter: z.boolean().default(newsletter).optional(),
     group: zodComboBoxWithFetcher.default([
       {

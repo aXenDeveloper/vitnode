@@ -16,7 +16,10 @@ export const useSettingsCoreAdmin = (data: ShowMiddlewareObj) => {
     site_description: zodLanguageInput
       .default(data.site_description ?? [])
       .optional(),
-    contact_email: z.string().email().default(data.contact_email),
+    contact_email: z
+      .string()
+      .email(t('errors.invalid_email'))
+      .default(data.contact_email),
     app_type: z.nativeEnum(AppTypeMainSettingsAdmin).default(data.app_type),
   });
 

@@ -71,6 +71,7 @@
         "403": "Access denied",
         "404": "Page not found",
         "500": "Internal server error",
+        "invalid_email": "Invalid email address.",
         "actions": {
           "back_home": "Home Page",
           "contact": "Contact with Us"
