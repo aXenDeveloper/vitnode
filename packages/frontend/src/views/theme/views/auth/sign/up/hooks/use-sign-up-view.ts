@@ -25,7 +25,10 @@ export const useSignUpView = () => {
     email: z.string().email(t('email_invalid')).default(''),
     password: z
       .string()
-      .regex(/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+{};:,<.>]).{8,}$/, '')
+      .regex(/^.{8,}$/, '')
+      .regex(/[A-Z]/, '')
+      .regex(/\d/, '')
+      .regex(/\W|_/, '')
       .default(''),
     terms: z
       .boolean()

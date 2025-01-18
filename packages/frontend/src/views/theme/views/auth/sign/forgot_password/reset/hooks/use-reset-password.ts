@@ -16,7 +16,10 @@ export const useResetPassword = ({
   const formSchema = z.object({
     password: z
       .string()
-      .regex(/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+{};:,<.>]).{8,}$/, '')
+      .regex(/^.{8,}$/, '')
+      .regex(/[A-Z]/, '')
+      .regex(/\d/, '')
+      .regex(/\W|_/, '')
       .default(''),
   });
 

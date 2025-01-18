@@ -29,7 +29,10 @@ export const useCreateUserAdmin = () => {
     email: z.string().email(tSignUp('email_invalid')).default(''),
     password: z
       .string()
-      .regex(/^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()\-_=+{};:,<.>]).{8,}$/, '')
+      .regex(/^.{8,}$/, '')
+      .regex(/[A-Z]/, '')
+      .regex(/\d/, '')
+      .regex(/\W|_/, '')
       .default(''),
   });
 
