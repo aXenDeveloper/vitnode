@@ -1,6 +1,6 @@
 {
   "name": "vitnode-backend",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Backend wrapper for VitNode projects",
   "author": "VitNode Team",
   "license": "MIT",
