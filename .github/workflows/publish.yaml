@@ -54,7 +54,7 @@ jobs:
         run: pnpm run build:scripts
 
       - name: Build Projects
-        run: pnpm run build --filter=vitnode-backend --filter=vitnode-frontend --filter=vitnode-backend-email-resend --filter=vitnode-backend-email-smtp --filter=vitnode-shared
+        run: pnpm run build --filter=vitnode-backend --filter=vitnode-frontend --filter=vitnode-backend-email-resend --filter=vitnode-backend-email-smtp
 
       - name: Run script to bump version & copy files
         if: github.event.inputs.skip_bump_version == 'false'
@@ -88,21 +88,21 @@ jobs:
 
       - name: Publish canary
         if: github.event.inputs.release == 'canary'
-        run: pnpm publish --access public --filter vitnode-backend --filter vitnode-backend-email-resend --filter vitnode-backend-email-smtp  --filter vitnode-frontend --filter create-vitnode-app --filter eslint-config-typescript-vitnode --filter vitnode-shared --tag canary --no-git-checks
+        run: pnpm publish --access public --filter vitnode-backend --filter vitnode-backend-email-resend --filter vitnode-backend-email-smtp  --filter vitnode-frontend --filter create-vitnode-app --filter eslint-config-typescript-vitnode --tag canary --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish release candidate
         if: github.event.inputs.release == 'release-candidate'
-        run: pnpm publish --access public --filter vitnode-backend --filter vitnode-backend-email-resend --filter vitnode-backend-email-smtp  --filter vitnode-frontend --filter create-vitnode-app --filter eslint-config-typescript-vitnode --filter vitnode-shared --tag rc --no-git-checks
+        run: pnpm publish --access public --filter vitnode-backend --filter vitnode-backend-email-resend --filter vitnode-backend-email-smtp  --filter vitnode-frontend --filter create-vitnode-app --filter eslint-config-typescript-vitnode --tag rc --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish stable
         if: github.event.inputs.release == 'stable'
-        run: pnpm publish --access public --filter vitnode-backend --filter vitnode-backend-email-resend --filter vitnode-backend-email-smtp  --filter vitnode-frontend --filter create-vitnode-app --filter eslint-config-typescript-vitnode --filter vitnode-shared --no-git-checks
+        run: pnpm publish --access public --filter vitnode-backend --filter vitnode-backend-email-resend --filter vitnode-backend-email-smtp  --filter vitnode-frontend --filter create-vitnode-app --filter eslint-config-typescript-vitnode --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true

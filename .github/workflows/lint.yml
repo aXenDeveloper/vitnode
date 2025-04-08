@@ -32,8 +32,5 @@ jobs:
       - name: Install dependencies
         run: pnpm i
 
-      - name: Build shared projects
-        run: pnpm build --filter=vitnode-shared
-
       - name: Check formatting
         run: pnpm lint
