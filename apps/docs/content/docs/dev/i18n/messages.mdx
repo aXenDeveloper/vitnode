@@ -1,0 +1,76 @@
+---
+title: Messages
+description: Display text from i18n messages.
+---
+
+## Basic usage
+
+Inside `getTranslations` or `useTranslations` pass the namespace of the message.
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+<Tabs id='async-sync' persist items={['Async (RSC)', 'Sync (Client / RSC)']}>
+
+```tsx tab="Async (RSC)"
+import { getTranslations } from "next-intl/server";
+
+export const ExampleComponent = async () => {
+  const t = await getTranslations("welcome.home"); // [!code highlight]
+
+  return <div>{t("hello")}</div>;
+};
+```
+
+```tsx tab="Sync (Client / RSC)"
+import { useTranslations } from "next-intl";
+
+export const ExampleComponent = () => {
+  const t = useTranslations("welcome.home"); // [!code highlight]
+
+  return <div>{t("hello")}</div>;
+};
+```
+
+</Tabs>
+
+## Example of usage
+
+### Dynamic values
+
+```json title="en.json"
+"message": "Hello {name}!"
+```
+
+```ts
+t("message", { name: "Jane" }); // "Hello Jane!"
+```
+
+### Pluralization
+
+```json title="en.json"
+"message": "You have {count, plural, one {# message} other {# messages}}"
+```
+
+```ts
+t("message", { count: 1 }); // "You have 1 message"
+t("message", { count: 2 }); // "You have 2 messages"
+```
+
+### Rich text
+
+```json title="en.json"
+{
+  "message": "Please refer to <guidelines>the guidelines</guidelines>."
+}
+```
+
+```tsx
+// Returns `<>Please refer to <a href="/guidelines">the guidelines</a>.</>`
+t.rich("message", {
+  guidelines: (chunks) => <a href="/guidelines">{chunks}</a>
+});
+```
+
+## next-intl Docs
+
+For more information, check the [next-intl documentation](https://next-intl.dev/docs/usage/messages).

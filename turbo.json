@@ -1,24 +1,28 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
-  "globalDependencies": [".env"],
   "tasks": {
-    "build": {
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
-      "dependsOn": ["^build"]
+    "db:migrate": {
+      "dependsOn": ["^db:migrate"]
     },
-    "start": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
-      "dependsOn": ["^start"],
-      "persistent": true
+      "env": [
+        "LOGIN_TOKEN_SECRET",
+        "POSTGRES_URL",
+        "POSTGRES_PORT",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+        "POSTGRES_NAME",
+        "POSTGRES_SSL"
+      ]
     },
     "build:scripts": {
-      "outputs": ["dist/**"],
-      "dependsOn": ["^build:scripts"]
-    },
-    "build:packages": {
-      "outputs": ["dist/**"],
-      "dependsOn": ["^build:packages"]
+      "dependsOn": ["^build:scripts"],
+      "inputs": ["$TURBO_DEFAULT$"],
+      "outputs": ["dist/**"]
     },
     "lint": {
       "dependsOn": ["^lint"]
@@ -26,20 +30,24 @@
     "lint:fix": {
       "dependsOn": ["^lint:fix"]
     },
-    "config:init": {
-      "dependsOn": ["^config:init"]
-    },
-    "dev:packages": {
-      "cache": false,
-      "persistent": true
+    "check-types": {
+      "dependsOn": ["^check-types"]
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": [
+        "LOGIN_TOKEN_SECRET",
+        "POSTGRES_URL",
+        "POSTGRES_PORT",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+        "POSTGRES_NAME",
+        "POSTGRES_SSL"
+      ]
     },
-    "db": {
-      "dependsOn": ["^db"],
-      "cache": false
+    "start": {
+      "dependsOn": ["^start"]
     }
   }
 }

@@ -1,0 +1,42 @@
+{
+  "name": "eslint-config-typescript-vitnode",
+  "version": "0.2.0",
+  "description": "ESLint, TypeScript (TSConfig), Prettier config for VitNode",
+  "author": "VitNode Team",
+  "license": "MIT",
+  "homepage": "https://vitnode.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VitNode/vitnode.git",
+    "directory": "packages/eslint"
+  },
+  "type": "module",
+  "exports": {
+    "./eslint": {
+      "import": "./eslint.config.mjs",
+      "default": "./eslint.config.mjs"
+    },
+    "./tsconfig": {
+      "import": "./tsconfig.json",
+      "default": "./tsconfig.json"
+    },
+    "./prettierrc": {
+      "import": "./prettierrc.mjs",
+      "default": "./prettierrc.mjs"
+    }
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@eslint/js": "^9.24.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-perfectionist": "^4.11.0",
+    "eslint-plugin-prettier": "^5.2.6",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-compiler": "19.0.0-beta-e993439-20250328",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "typescript-eslint": "^8.29.1"
+  }
+}

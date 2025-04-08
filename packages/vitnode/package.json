@@ -1,0 +1,85 @@
+{
+  "name": "vitnode",
+  "version": "0.2.0",
+  "devDependencies": {
+    "@hono/swagger-ui": "^0.5.1",
+    "@hono/zod-openapi": "^0.19.2",
+    "@hono/zod-validator": "^0.4.3",
+    "@hookform/resolvers": "^5.0.1",
+    "@react-email/components": "0.0.36",
+    "@swc/cli": "^0.6.0",
+    "@swc/core": "^1.11.16",
+    "@types/node": "^22.14.0",
+    "@types/nodemailer": "^6.4.17",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.1",
+    "chokidar": "^4.0.3",
+    "concurrently": "^9.1.2",
+    "dotenv": "^16.4.7",
+    "drizzle-kit": "^0.30.6",
+    "drizzle-orm": "^0.41.0",
+    "eslint": "^9.24.0",
+    "eslint-config-typescript-vitnode": "workspace:*",
+    "hono": "^4.7.5",
+    "lucide-react": "^0.487.0",
+    "next": "15.3.0-canary.39",
+    "next-intl": "^4.0.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-email": "^4.0.4",
+    "react-hook-form": "^7.55.0",
+    "sonner": "^2.0.3",
+    "tailwindcss": "^4.1.3",
+    "tailwindcss-animate": "^1.0.7",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.3",
+    "zod": "^3.24.2"
+  },
+  "bin": {
+    "vitnode": "./dist/scripts/scripts.cjs"
+  },
+  "exports": {
+    "./api/config": {
+      "import": "./dist/src/api/config.js",
+      "types": "./dist/src/api/config.d.ts",
+      "default": "./dist/src/api/config.js"
+    },
+    "./*": {
+      "import": "./dist/src/*.js",
+      "types": "./dist/src/*.d.ts",
+      "default": "./dist/src/*.js"
+    },
+    "./config/next.config": "./config/next.config.ts"
+  },
+  "scripts": {
+    "build:scripts": "tsup",
+    "start:scripts": "bun ./dist/scripts/scripts.js",
+    "build": "tsc && swc src -d dist --config-file .swcrc",
+    "dev": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\"",
+    "dev:email": "email dev",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "type": "module",
+  "dependencies": {
+    "@radix-ui/react-checkbox": "^1.1.4",
+    "@radix-ui/react-collapsible": "^1.1.3",
+    "@radix-ui/react-dialog": "^1.1.6",
+    "@radix-ui/react-dropdown-menu": "^2.1.6",
+    "@radix-ui/react-label": "^2.1.2",
+    "@radix-ui/react-separator": "^1.1.2",
+    "@radix-ui/react-slot": "^1.1.2",
+    "@radix-ui/react-tooltip": "^1.1.8",
+    "@tanstack/react-query": "^5.71.10",
+    "cache-manager": "^6.4.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "next-themes": "^0.4.6",
+    "nodemailer": "^6.10.0",
+    "postgres": "^3.4.5",
+    "react-scan": "^0.3.3",
+    "resend": "^4.2.0",
+    "tailwind-merge": "^3.1.0",
+    "vaul": "^1.1.2"
+  }
+}

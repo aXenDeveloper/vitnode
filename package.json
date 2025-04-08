@@ -1,41 +1,31 @@
 {
-  "name": "vitnode",
+  "name": "vitnode-bun",
   "private": true,
-  "license": "MIT",
   "scripts": {
-    "config:init:skip-database": "cd apps/backend && pnpm config:init --skip-database && cd ../..",
-    "config:init": "turbo config:init",
-    "build:scripts": "turbo build:scripts && pnpm i --ignore-scripts",
-    "build": "turbo build:packages && turbo build",
-    "build:packages": "turbo build:packages",
+    "db:migrate": "turbo db:migrate",
+    "docker:dev": "docker compose -f ./docker-compose.yml -p vitnode-dev-dun up -d",
+    "build:scripts": "turbo build:scripts && pnpm i",
+    "build": "turbo build",
     "start": "turbo start",
-    "dev": "turbo build:packages && pnpm build:scripts && turbo dev",
-    "dev:packages": "turbo dev:packages",
+    "dev": "pnpm build:scripts && turbo dev",
     "lint": "turbo lint",
     "lint:fix": "turbo lint:fix",
-    "docker:dev": "docker compose -f ./docker-compose-dev.yml -p vitnode-dev up -d",
-    "docker:prod": "docker compose -f ./docker-compose.yml -p vitnode-prod-vitnode-page up -d",
-    "docker:clear": "sudo docker system prune -a",
-    "release": "node ./bump-version.mjs",
-    "db": "turbo db"
-  },
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
-  "pnpm": {
-    "overrides": {
-      "esbuild": "0.24.0"
-    }
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "devDependencies": {
-    "@types/node": "^22.10.5",
     "eslint-config-typescript-vitnode": "workspace:*",
-    "turbo": "^2.3.3"
+    "prettier": "^3.5.3",
+    "prettier-plugin-tailwindcss": "^0.6.11",
+    "turbo": "^2.5.0",
+    "typescript": "5.8.2"
   },
-  "packageManager": "pnpm@9.12.2",
   "engines": {
-    "node": ">=20",
-    "pnpm": ">=9"
-  }
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.8.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "plugins/*"
+  ]
 }

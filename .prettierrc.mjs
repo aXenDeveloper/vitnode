@@ -1,4 +1,4 @@
-import vitnodePrettier from "eslint-config-typescript-vitnode/prettierrc.mjs";
+import vitnodePrettier from "eslint-config-typescript-vitnode/prettierrc";
 
 /**
  * @see https://prettier.io/docs/en/configuration.html

@@ -1,5 +1,0 @@
-{
-  "title": "Deployment",
-  "icon": "PackageOpen",
-  "pages": ["self-hosted", "cloud", "..."]
-}

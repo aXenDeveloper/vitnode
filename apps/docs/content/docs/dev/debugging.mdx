@@ -1,0 +1,57 @@
+---
+title: Debugging
+description: ddd
+---
+
+## React Scan
+
+In VitNode we implemented the [React Scan](https://react-scan.com/) feature that will show you re-rendering components in real-time. This feature will help you to optimize your React application.
+
+To enable **React Scan**, you need to pass `debug` props in `RootLayout` component:
+
+```tsx title="src/app/[locale]/layout.tsx"
+export default function LocaleLayout({
+  children,
+  ...props
+}: Pick<React.ComponentProps<typeof RootLayout>, 'children' | 'params'>) {
+  return (
+    <RootLayout
+      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      // [!code ++]
+      debug
+      theme={{
+        defaultTheme: 'dark',
+      }}
+      {...props}
+    >
+      {children}
+    </RootLayout>
+  );
+}
+```
+
+## Fetching logs
+
+[Next.js has a build-in fetch cache](https://nextjs.org/docs/app/building-your-application/data-fetching/fetching) that will cache the fetch requests. You can enable the fetch logs by passing the `logging` object in the `next.config.ts` file:
+
+```ts title="next.config.ts"
+import type { NextConfig } from 'next';
+import { vitNodeNextConfig } from 'vitnode/config/next.config';
+
+const nextConfig: NextConfig = {
+  // [!code ++]
+  logging: {
+    // [!code ++]
+    fetches: {
+      // [!code ++]
+      fullUrl: true,
+      // [!code ++]
+    },
+    // [!code ++]
+  },
+};
+
+export default vitNodeNextConfig(nextConfig);
+```
+
+You can read more about it in the [official documentation](https://nextjs.org/docs/app/api-reference/config/next-config-js/logging#fetching).
