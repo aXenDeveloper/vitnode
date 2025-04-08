@@ -1,0 +1,33 @@
+{
+  "name": "vitnode-blog",
+  "version": "0.2.0",
+  "description": "Backend wrapper for VitNode projects",
+  "author": "VitNode",
+  "homepage": "https://vitnode.com",
+  "type": "module",
+  "scripts": {
+    "build": "tsc && swc src -d dist --config-file .swcrc",
+    "dev": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\"",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "drizzle-kit": "^0.30.6",
+    "drizzle-orm": "^0.41.0",
+    "hono": "^4.7.5",
+    "lucide-react": "^0.487.0",
+    "next": "^15.2.4",
+    "next-intl": "^4.0.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "vitnode": "workspace:*"
+  },
+  "devDependencies": {
+    "@swc/cli": "^0.6.0",
+    "@swc/core": "^1.11.16",
+    "concurrently": "^9.1.2",
+    "eslint": "^9.24.0",
+    "eslint-config-typescript-vitnode": "workspace:*",
+    "typescript": "^5.8.3"
+  }
+}

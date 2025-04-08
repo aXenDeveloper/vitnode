@@ -1,0 +1,108 @@
+---
+title: Cloudflare Turnstile
+description: How to integrate Cloudflare Turnstile in your application.
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+<Steps>
+
+<Step>
+
+## Sign in to Cloudflare
+
+Go into [Cloudflare](https://dash.cloudflare.com/) and sign in.
+
+</Step>
+
+<Step>
+
+## Add a domain
+
+Select `Add a domain` button and add your domain.
+
+Follow the instructions to add your domain. If you have any trouble, you can check the [Cloudflare documentation](https://developers.cloudflare.com/fundamentals/setup/manage-domains/add-site/).
+
+</Step>
+
+<Step>
+
+## Create a widget
+
+Go to the `Turnstile` section and create a new widget.
+
+// import homeTurnstile from '@/assets/guides/captcha/cloudflare.png';
+
+{/* <ImgDocs src={homeTurnstile} alt="Cloudflare Turnstile Home" /> */}
+
+</Step>
+
+<Step>
+
+## Configure the widget
+
+Configure the widget to your needs. We support all the mods that Cloudflare provides like `Managed`, `Non-interactive` and `Invisible`.
+
+Remember to add your hostname to the `Hostname Management` list.
+
+</Step>
+
+<Step>
+
+## Get the Site Key & Secret Key
+
+After you create the widget, you will get the `Site Key` and `Secret Key`. Save it, You will need these keys to integrate the widget into your application.
+
+</Step>
+
+<Step>
+
+## Add keys to .env
+
+Add the keys to your `.env` file.
+
+```bash
+CAPTCHA_SECRET_KEY=XXX
+CAPTCHA_SITE_KEY=XXX
+```
+
+</Step>
+
+<Step>
+
+## Provide keys to VitNode
+
+Edit your `app.module.ts` file and add `captcha` object to the `VitNodeModule` configuration.
+
+```ts
+@Module({
+  imports: [
+    VitNodeCoreModule.register({
+      database: {
+        config: DATABASE_ENVS,
+        schemaDatabase,
+      },
+      // [!code ++]
+      captcha: {
+        // [!code ++]
+        type: 'cloudflare_turnstile',
+        // [!code ++]
+        site_key: process.env.CAPTCHA_SITE_KEY,
+        // [!code ++]
+        secret_key: process.env.CAPTCHA_SECRET_KEY,
+        // [!code ++]
+      },
+    }),
+    DatabaseModule,
+    PluginsModule,
+    CacheModule.register({
+      isGlobal: true,
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+</Step>
+
+</Steps>

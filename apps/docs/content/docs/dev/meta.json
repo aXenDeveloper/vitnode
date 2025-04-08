@@ -1,0 +1,18 @@
+{
+  "title": "Development",
+  "description": "Make plugins and APIs",
+  "icon": "Braces",
+  "root": true,
+  "pages": [
+    "index",
+    "contribution",
+    "structure",
+    "debugging",
+    "---Plugins---",
+    "create-plugins",
+    "modules",
+    "routes",
+    "---APIs---",
+    "..."
+  ]
+}

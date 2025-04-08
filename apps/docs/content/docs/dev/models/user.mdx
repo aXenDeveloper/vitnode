@@ -1,0 +1,15 @@
+---
+title: User
+description: sss
+---
+
+```ts
+import { UserModel } from 'vitnode/api/models/user';
+```
+
+## Get user by Id
+
+```ts
+const id = '5f7b1b3b-7b7b-4b7b-8b7b-9b7b1b3b7b7b';
+const user = await new UserModel().getUserById(id);
+```

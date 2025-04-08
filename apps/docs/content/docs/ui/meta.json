@@ -1,0 +1,7 @@
+{
+  "title": "User Interface (UI)",
+  "description": "Make it pretty",
+  "icon": "Paintbrush",
+  "root": true,
+  "pages": ["index", "..."]
+}

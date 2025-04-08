@@ -1,23 +1,3 @@
 {
-  "cSpell.words": [
-    "clsx",
-    "hljs",
-    "hookform",
-    "ilike",
-    "Localizable",
-    "lucide",
-    "nestjs",
-    "nextra",
-    "nprogress",
-    "sonner",
-    "Streamable",
-    "tailwindcss",
-    "tanstack",
-    "testid",
-    "tiptap",
-    "tsup",
-    "uagent",
-    "vitnode"
-  ],
-  "tailwindCSS.experimental.classRegex": ["class:\\s*?[\"'`]([^\"'`]*).*?,"]
+  "cSpell.words": ["vitnode"]
 }

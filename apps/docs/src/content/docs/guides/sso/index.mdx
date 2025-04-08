@@ -1,0 +1,28 @@
+---
+title: Single Sign-On (SSO)
+description: Integrate Single Sign-On (SSO) effortlessly into your application.
+---
+
+Single Sign-On simplifies the user experience by allowing access to multiple systems with a single authentication process. It also improves security by reducing the number of passwords a user needs to remember.
+
+## Supported SSO providers
+
+VitNode provides a build-in way to integrate Single Sign-On (SSO) in your application for:
+
+- [Google](/docs/guides/sso/google)
+- [Facebook](/docs/guides/sso/facebook)
+- [Custom SSO](/docs/dev/sso)
+
+Choose one of the providers and follow the guide to integrate it into your application.
+
+## How it works
+
+1. The user clicks on the SSO button.
+2. The user is redirected to the SSO provider's login page.
+3. The user logs in.
+4. The user is redirected back to your application with a token.
+5. Your application verifies the token and logs in the user.
+
+## Custom SSO
+
+If your application isn't on the list, you can create a custom SSO provider by following the [Custom SSO for Dev](/docs/dev/sso) guide.

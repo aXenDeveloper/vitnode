@@ -1,0 +1,14 @@
+{
+  "title": "Guides",
+  "description": "Learn how to use VitNode",
+  "icon": "BookOpenText",
+  "root": true,
+  "pages": [
+    "index",
+    "...",
+    "--- Authorization ---",
+    "sso",
+    "--- Security ---",
+    "captcha"
+  ]
+}

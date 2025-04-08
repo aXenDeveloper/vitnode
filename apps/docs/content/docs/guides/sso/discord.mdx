@@ -1,0 +1,97 @@
+---
+title: Discord
+description: Integrate Discord Single Sign-On (SSO) in your application.
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+<Steps>
+<Step>
+
+## Sign in to Discord
+
+Go to [Discord Developer Portal](https://discord.com/developers/applications) and sign in.
+
+</Step>
+<Step>
+
+## Create a new application
+
+Click on the `New Application` button to create a new application.
+
+</Step>
+<Step>
+
+## Redirect URL
+
+Go to `OAuth2` page and inside the `Redirects` section, add the redirect URL.
+
+<Callout title="redirect_uri">
+  Your redirect URL should be `https://your-domain.com/login/sso/discord`.
+</Callout>
+
+</Step>
+<Step>
+
+## Get the Client ID and Client Secret
+
+After creating the application, you will get the `Client ID` and `Client Secret`. Save them for later.
+
+</Step>
+
+<Step>
+
+## Environment Variables (.env)
+
+Add the `Client ID` and `Client Secret` to your `.env` file.
+
+```bash
+DISCORD_CLIENT_ID=XXX
+DISCORD_CLIENT_SECRET=XXX
+```
+
+</Step>
+
+<Step>
+
+## Configuration in VitNode
+
+Add the Discord SSO plugin to your API routes.
+
+```ts title="src/app/api/[...route]/route.ts"
+// [!code ++]
+import { DiscordSSOApiPlugin } from 'vitnode/api/plugins/sso/discord';
+
+VitNodeAPI({
+  app,
+  plugins: [],
+  // [!code ++]
+  authorization: {
+    // [!code ++]
+    ssoPlugins: [
+      // [!code ++]
+      new DiscordSSOApiPlugin({
+        // [!code ++]
+        clientId: process.env.DISCORD_CLIENT_ID,
+        // [!code ++]
+        clientSecret: process.env.DISCORD_CLIENT_SECRET,
+        // [!code ++]
+      }),
+      // [!code ++]
+    ],
+    // [!code ++]
+  },
+});
+```
+
+</Step>
+
+<Step>
+
+## Test the SSO
+
+Go to the login page and click on the `Discord` button to test the SSO.
+
+</Step>
+
+</Steps>

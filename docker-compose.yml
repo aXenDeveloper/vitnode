@@ -2,55 +2,34 @@ version: '3.8'
 
 services:
   database:
-    container_name: vitnode_database
-    image: postgres:16.3-alpine
+    container_name: vitnode_postgres_dev_bun
+    image: postgres:17.4-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_DATABASE:-vitnode}
-    ports:
-      - '${DB_PORT:-5432}:${DB_PORT:-5432}'
+      POSTGRES_USER: ${POSTGRES_USER-root}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD-root}
+      POSTGRES_DB: ${POSTGRES_NAME-vitnode}
+    command: ['postgres', '-c', 'log_statement=all'] # log all sql queries
     volumes:
-      - ./docker/prod/database:/var/lib/postgresql/data
-    networks:
-      - vitnode
-  backend:
-    container_name: vitnode_backend
-    build:
-      context: .
-      dockerfile: ./apps/backend/DockerFile
-    restart: unless-stopped
-    depends_on:
-      - database
-    environment:
-      DB_HOST: ${DB_HOST:-database}
-    env_file:
-      - .env
-    command: sh -c "cd apps/backend && npm run config:init && node dist/main.js"
+      - ./docker/dev:/var/lib/postgresql/data
     ports:
-      - '8080:8080'
-    volumes:
-      - ./apps/backend/uploads:/app/apps/backend/uploads # uploads
-      - ./apps/backend/src/plugins/core:/app/apps/backend/src/plugins/core # core
-      - ./apps/frontend/src/plugins/admin/langs:/app/apps/frontend/src/plugins/admin/langs # admin - langs
-      - ./apps/frontend/src/plugins/core/langs:/app/apps/frontend/src/plugins/core/langs # core - langs
+      - '5432:5432'
     networks:
-      - vitnode
-  frontend:
-    container_name: vitnode_frontend
-    build:
-      context: .
-      dockerfile: ./apps/frontend/DockerFile
-      args:
-        - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-http://backend:8080}
-        - NEXT_PUBLIC_BACKEND_CLIENT_URL=${NEXT_PUBLIC_BACKEND_CLIENT_URL:-http://localhost:8080}
-        - NEXT_PUBLIC_FRONTEND_URL=${NEXT_PUBLIC_FRONTEND_URL:-http://localhost:3000}
-    restart: unless-stopped
-    ports:
-      - '3000:3000'
-    networks:
-      - vitnode
+      - vitnode_dev
+
+  # pgadmin:
+  #   container_name: vitnode_pgadmin_dev_bun
+  #   image: dpage/pgadmin4:latest
+  #   restart: unless-stopped
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: admin@admin.com
+  #     PGADMIN_DEFAULT_PASSWORD: admin
+  #   ports:
+  #     - '5050:80'
+  #   depends_on:
+  #     - database
+  #   networks:
+  #     - vitnode_dev
 
 networks:
-  vitnode:
+  vitnode_dev:

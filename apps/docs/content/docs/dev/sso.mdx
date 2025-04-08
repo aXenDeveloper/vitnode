@@ -1,0 +1,394 @@
+---
+title: Single Sign-On (SSO)
+description: xddd
+---
+
+## Custom SSO Provider
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+<Steps>
+  <Step>
+  ### Create plugin function
+
+Create new file and create a function that has `SSOModelPlugin` type with `id` and `redirectUri` variables.
+
+```ts title="src/utils/sso/discord-api.ts"
+import { SSOApiPlugin, getRedirectUri } from 'vitnode/api/models/sso';
+
+export const DiscordSSOApiPlugin = ({
+  clientId,
+  clientSecret,
+}: {
+  clientId: string;
+  clientSecret: string;
+}): SSOApiPlugin => {
+  const id = 'discord';
+  const redirectUri = getRedirectUri(id);
+
+  return { id, name: 'Discord' };
+};
+```
+
+  </Step>
+  <Step>
+
+### `getUrl` method
+
+Implement `getUrl` method inside your function that returns the URL for the SSO provider.
+
+This url should contain `scope` to get access to `id`, `email` and `username` _(optional)_.
+
+```ts title="src/utils/sso/discord-api.ts"
+export const DiscordSSOApiPlugin = ({
+  clientId,
+  clientSecret,
+}: {
+  clientId: string;
+  clientSecret: string;
+}): SSOApiPlugin => {
+  const id = 'discord';
+  const redirectUri = getRedirectUri(id);
+
+  return {
+    id,
+    name: 'Discord',
+    // [!code ++]
+    getUrl: ({ state }) => {
+      // [!code ++]
+      const url = new URL('https://discord.com/oauth2/authorize');
+      // [!code ++]
+      url.searchParams.set('client_id', clientId);
+      // [!code ++]
+      url.searchParams.set('redirect_uri', redirectUri);
+      // [!code ++]
+      url.searchParams.set('response_type', 'code');
+      // [!code ++]
+      url.searchParams.set('scope', 'identify email');
+      // [!code ++]
+      url.searchParams.set('state', state);
+      // [!code ++]
+
+      // [!code ++]
+      return url.toString();
+      // [!code ++]
+    },
+  };
+};
+```
+
+<Callout type="warn" title="State for CSRF">
+  Remember to always use `state` parameter to prevent CSRF attacks.
+</Callout>
+
+  </Step>
+
+<Step>
+
+### `fetchToken` method
+
+Lets implement `POST` call from `fetch()` to get `access_token` and `token_type`:
+
+```ts title="src/utils/sso/discord-api.ts"
+export const DiscordSSOApiPlugin = ({
+  clientId,
+  clientSecret,
+}: {
+  clientId: string;
+  clientSecret: string;
+}): SSOApiPlugin => {
+  const id = 'discord';
+  const redirectUri = getRedirectUri(id);
+
+  return {
+    id,
+    name: 'Discord',
+    getUrl: ({ state }) => {},
+    // [!code ++]
+    fetchToken: async code => {
+      // [!code ++]
+      const res = await fetch('https://discord.com/api/oauth2/token', {
+        // [!code ++]
+        method: 'POST',
+        // [!code ++]
+        headers: {
+          // [!code ++]
+          'Content-Type': 'application/x-www-form-urlencoded',
+          // [!code ++]
+          Accept: 'application/json',
+          // [!code ++]
+        },
+        // [!code ++]
+        body: new URLSearchParams({
+          // [!code ++]
+          code,
+          // [!code ++]
+          redirect_uri: redirectUri,
+          // [!code ++]
+          grant_type: 'authorization_code',
+          // [!code ++]
+          client_id: clientId,
+          // [!code ++]
+          client_secret: clientSecret,
+          // [!code ++]
+        }),
+        // [!code ++]
+      });
+      // [!code ++]
+    },
+  };
+};
+```
+
+#### Error handling
+
+Next let's validate the code errors. It will help you to get the right message on the client. For example when user denied access to the app you can show him the message that he denied access.
+
+```ts title="src/utils/sso/discord-api.ts"
+import { HTTPException } from 'hono/http-exception'; // [!code ++]
+import { ContentfulStatusCode } from 'hono/utils/http-status'; // [!code ++]
+
+export const DiscordSSOApiPlugin = ({
+  clientId,
+  clientSecret,
+}: {
+  clientId: string;
+  clientSecret: string;
+}): SSOApiPlugin => {
+  const id = 'discord';
+  const redirectUri = getRedirectUri(id);
+
+  return {
+    id,
+    name: 'Discord',
+    getUrl: ({ state }) => {},
+    fetchToken: async code => {
+      const res = await fetch('https://discord.com/api/oauth2/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Accept: 'application/json',
+        },
+        body: new URLSearchParams({
+          code,
+          redirect_uri: redirectUri,
+          grant_type: 'authorization_code',
+          client_id: clientId,
+          client_secret: clientSecret,
+        }),
+      });
+
+      // [!code ++]
+      if (!res.ok) {
+        // [!code ++]
+        throw new HTTPException(
+          // [!code ++]
+          +res.status.toString() as ContentfulStatusCode,
+          // [!code ++]
+          {
+            // [!code ++]
+            message: 'Internal error requesting token',
+            // [!code ++]
+          },
+          // [!code ++]
+        );
+        // [!code ++]
+      }
+    },
+  };
+};
+```
+
+#### Parse response
+
+Now let's parse the response and return the `access_token` and `token_type`. We will use `zod` to validate the response.
+
+```ts title="src/utils/sso/discord-api.ts"
+export const DiscordSSOApiPlugin = ({
+  clientId,
+  clientSecret,
+}: {
+  clientId: string;
+  clientSecret: string;
+}): SSOApiPlugin => {
+  const id = 'discord';
+  const redirectUri = getRedirectUri(id);
+  // [!code ++]
+  const tokenSchema = z.object({
+    // [!code ++]
+    access_token: z.string(),
+    // [!code ++]
+    token_type: z.string(),
+    // [!code ++]
+  });
+
+  return {
+    id,
+    name: 'Discord',
+    getUrl: ({ state }) => {},
+    fetchToken: async code => {
+      const res = await fetch('https://discord.com/api/oauth2/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Accept: 'application/json',
+        },
+        body: new URLSearchParams({
+          code,
+          redirect_uri: redirectUri,
+          grant_type: 'authorization_code',
+          client_id: clientId,
+          client_secret: clientSecret,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new HTTPException(
+          +res.status.toString() as ContentfulStatusCode,
+          {
+            message: 'Internal error requesting token',
+          },
+        );
+      }
+
+      // [!code ++]
+      const { data, error } = tokenSchema.safeParse(await res.json());
+      // [!code ++]
+      if (error || !data) {
+        // [!code ++]
+        throw new HTTPException(400, {
+          // [!code ++]
+          message: 'Invalid token response',
+          // [!code ++]
+        });
+        // [!code ++]
+      }
+      // [!code ++]
+
+      // [!code ++]
+      return data;
+    },
+  };
+};
+```
+
+</Step>
+
+<Step>
+
+### `fetchUser` method
+
+Now let's implement `fetchUser` method that will fetch user data from the SSO provider and validate it with the schema.
+
+This function should return the user data `id`, `email` and `username` _(optional)_.
+
+```ts title="src/utils/sso/discord-api.ts"
+export const DiscordSSOApiPlugin = ({
+  clientId,
+  clientSecret,
+}: {
+  clientId: string;
+  clientSecret: string;
+}): SSOApiPlugin => {
+  const id = 'discord';
+  const redirectUri = getRedirectUri(id);
+  const tokenSchema = z.object({
+    access_token: z.string(),
+    token_type: z.string(),
+  });
+  // [!code ++]
+  const userSchema = z.object({
+    // [!code ++]
+    id: z.string(),
+    // [!code ++]
+    email: z.string(),
+    // [!code ++]
+    username: z.string(),
+    // [!code ++]
+  });
+
+  return {
+    id,
+    name: 'Discord',
+    getUrl: ({ state }) => {},
+    fetchToken: async code => {},
+    // [!code ++]
+    fetchUser: async ({ token_type, access_token }) => {
+      // [!code ++]
+      const res = await fetch('https://discord.com/api/users/@me', {
+        // [!code ++]
+        headers: {
+          // [!code ++]
+          Authorization: `${token_type} ${access_token}`,
+          // [!code ++]
+        },
+        // [!code ++]
+      });
+      // [!code ++]
+      const { data, error } = userSchema.safeParse(await res.json());
+      // [!code ++]
+      if (error || !data) {
+        // [!code ++]
+        throw new HTTPException(400, {
+          // [!code ++]
+          message: 'Invalid user response',
+          // [!code ++]
+        });
+        // [!code ++]
+      }
+      // [!code ++]
+
+      // [!code ++]
+      return data;
+      // [!code ++]
+    },
+  };
+};
+```
+
+<Callout type="warn" title="Validate active email">
+  Some OAuth2 providers show the user email even if it's not verified. If API
+  returns some validate fields like `verified_email` you can add it to the
+  schema and validate it.
+</Callout>
+
+</Step>
+
+<Step>
+
+### Register plugin
+
+Register your plugin in the API route file. Initialize the `DiscordSSOApiPlugin` class with `clientId` and `clientSecret` inside `authorization.ssoPlugins` array.
+
+```ts title="src/app/api/[...route]/route.ts"
+import { OpenAPIHono } from '@hono/zod-openapi';
+import { handle } from 'hono/vercel';
+import { VitNodeAPI } from 'vitnode/api/config';
+import { DiscordSSOApiPlugin } from '@/utils/seo/discord'; // [!code ++]
+
+const app = new OpenAPIHono().basePath('/api');
+VitNodeAPI({
+  app,
+  plugins: [],
+  // [!code ++]
+  authorization: {
+    // [!code ++]
+    ssoPlugins: [
+      // [!code ++]
+      DiscordSSOApiPlugin({
+        // [!code ++]
+        clientId: process.env.DISCORD_CLIENT_ID,
+        // [!code ++]
+        clientSecret: process.env.DISCORD_CLIENT_SECRET,
+        // [!code ++]
+      }),
+      // [!code ++]
+    ],
+    // [!code ++]
+  },
+});
+```
+
+</Step>
+
+  </Steps>

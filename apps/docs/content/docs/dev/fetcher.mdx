@@ -1,0 +1,216 @@
+---
+title: Fetcher
+description: Fetch data from the server.
+---
+
+## Usage
+
+<Callout type="warn" emoji="⚠️" title="Server-side only">
+  The `fetcher()` function is only server-side. You cannot use it on the
+  client-side.
+</Callout>
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+<Steps>
+  <Step>
+  
+  ### Initial client
+
+`fetcher()` is a function to create client. Pass generic type with the response type and pass the `plugin` and `module` as arguments.
+
+As an example, we will pass `UsersTypes` as a generic type.
+
+```ts
+import { fetcher } from 'vitnode/lib/fetcher';
+import { UsersTypes } from 'vitnode/api/modules/users/users.module';
+```
+
+```tsx
+const client = await fetcher<UsersTypes>({
+  plugin: 'core',
+  module: 'users',
+});
+```
+
+#### Options
+
+You can pass the `options` object to modify the `fetch` function. For example we can pass `cache` option to enable the cache.
+
+```tsx
+const client = await fetcher<UsersTypes>({
+  plugin: 'core',
+  module: 'users',
+  // [!code ++]
+  options: {
+    // [!code ++]
+    cache: 'force-cache',
+    // [!code ++]
+  },
+});
+```
+
+  </Step>
+
+  <Step>
+
+### Fetch data
+
+Call `client.{path}.{method}` with the data you want to send to the server as an argument.
+
+```tsx
+const data = await client.sign_in.$post(input);
+```
+
+  </Step>
+</Steps>
+
+## Server Functions
+
+Methods like `POST`, `PUT` and `DELETE` require to use [Server Functions](https://react.dev/reference/rsc/server-functions). You can create `mutation-api.ts` file and use it to call the `fetcher()` function with `FetcherInput` type.
+
+```ts title="mutation-api.ts"
+'use server';
+
+import { UsersTypes } from 'vitnode/api/modules/users/users.module';
+import { fetcher, FetcherInput } from 'vitnode/lib/fetcher';
+
+export const mutationApi = async (
+  input: FetcherInput<UsersTypes, '/sign_in', 'post'>,
+) => {
+  const res = await fetcher<UsersTypes>({
+    plugin: 'core',
+    module: 'users',
+  });
+
+  await res.sign_in.$post(input);
+};
+```
+
+Now you can call the `mutationApi()` function on the server-side.
+
+```ts title="useForm.ts"
+export const useForm = () => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    // [!code ++]
+    await mutationApi({
+      // [!code ++]
+      json: values,
+      // [!code ++]
+    });
+  };
+
+  return {
+    onSubmit,
+  };
+};
+```
+
+### Handling errors
+
+You can handle errors by checking the `status` property of the response.
+
+```ts title="mutation-api.ts"
+export const mutationApi = async (
+  input: FetcherInput<UsersTypes, '/sign_in', 'post'>,
+) => {
+  const res = await fetcher<UsersTypes>({
+    plugin: 'core',
+    module: 'users',
+  });
+
+  // [!code --]
+  await res.sign_in.$post(input);
+  // [!code ++]
+  const data = await res.sign_in.$post(input);
+  // [!code ++]
+
+  // [!code ++]
+  if (data.status !== 200) {
+    // [!code ++]
+    return { message: await data.text() };
+    // [!code ++]
+  }
+};
+```
+
+```ts title="useForm.ts"
+// [!code ++]
+import { useTranslations } from 'next-intl';
+// [!code ++]
+import { toast } from 'sonner';
+
+export const useForm = () => {
+  // [!code ++]
+  const t = useTranslations('core.global.errors');
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    const mutation = await mutationApi({
+      json: values,
+    });
+
+    // [!code ++]
+    if (!mutation?.message) return;
+    // [!code ++]
+
+    // [!code ++]
+    toast.error(t('title'), {
+      // [!code ++]
+      description: t('internal_server_error'),
+      // [!code ++]
+    });
+  };
+
+  return {
+    onSubmit,
+  };
+};
+```
+
+### Handling set-cookies
+
+React Server Components cannot handle `set-cookies` headers. You need to handle them by using the `handleCookiesFetcher()` function.
+
+```ts title="mutation-api.ts"
+'use server';
+
+import { UsersTypes } from 'vitnode/api/modules/users/users.module';
+import {
+  fetcher,
+  FetcherInput,
+  // [!code ++]
+  handleSetCookiesFetcher,
+} from 'vitnode/lib/fetcher';
+
+export const mutationApi = async (
+  input: FetcherInput<UsersTypes, '/sign_in', 'post'>,
+) => {
+  const res = await fetcher<UsersTypes>({
+    plugin: 'core',
+    module: 'users',
+  });
+
+  // [!code --]
+  await res.sign_in.$post(input);
+  // [!code ++]
+  const data = await res.sign_in.$post(input);
+  // [!code ++]
+  await handleSetCookiesFetcher(data);
+};
+```
+
+## Client-side
+
+If you want to use the `fetcher()` on the client-side, you need to use the `fetcherClient()` function.
+
+```tsx
+
+```
+
+## Custom fetcher
+
+If you want you can create your own `fetch` function, but you need to remember to pass headers like:
+
+- `x-forwarded-for` header - client IP address,
+- `Cookie` header - client cookies,
+- `user-agent` header - client user agent.

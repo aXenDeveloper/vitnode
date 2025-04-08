@@ -23,6 +23,7 @@ coverage
 
 # Build Outputs
 .next/
+out/
 build
 dist
 
@@ -36,8 +37,5 @@ yarn-error.log*
 .DS_Store
 *.pem
 
-# TypeScript
-tsconfig.tsbuildinfo
-
-# Docker
+# VitNode
 /docker

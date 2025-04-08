@@ -1,0 +1,117 @@
+{
+  "welcome": {
+    "home": {
+      "title": "Start Your Journey!",
+      "desc": "Dive in. Create or install your first plugin!",
+      "go_to_admin_cp": "Go to AdminCP",
+      "read_our_docs": "Read our Docs"
+    }
+  },
+  "core": {
+    "global": {
+      "register": "Register",
+      "login": "Login",
+      "save": "Save",
+      "submit": "Submit",
+      "cancel": "Cancel",
+      "optional": "Optional",
+      "loading": "Loading...",
+      "or": "or",
+      "back_home": "Back to home",
+      "go_back": "Go back",
+      "errors": {
+        "title": "Oops! Something went wrong.",
+        "internal_server_error": "Internal server error.",
+        "field_required": "This field is required.",
+        "404": {
+          "title": "Page Not Found",
+          "desc": "Oops! The page you're looking for doesn't exist."
+        },
+        "500": {
+          "title": "Internal Server Error",
+          "desc": "Sorry, we're experiencing technical difficulties on our server."
+        },
+        "400": {
+          "title": "Bad Request",
+          "desc": "The request couldn't be processed due to invalid parameters."
+        },
+        "403": {
+          "title": "Forbidden",
+          "desc": "You don't have permission to access this resource."
+        }
+      },
+      "user_bar": {
+        "log_out": "Log out",
+        "admin_cp": "Admin CP"
+      }
+    },
+    "auth": {
+      "sso": {
+        "or": "Or continue With",
+        "access_denied": "You have denied access to the application or the request has expired. Please try again."
+      },
+      "sign_up": {
+        "desc": "Hello there! Create your account to get started.",
+        "already_have_account": "You already have an account? <link>Sign in</link>.",
+        "submit": "Sign up",
+        "username": {
+          "label": "Username",
+          "min_length": "Username must be at least 3 characters long.",
+          "max_length": "Username must be at most 32 characters long.",
+          "exists": "Username already exists.",
+          "your_user_code": "Your user code: <code></code>"
+        },
+        "email": {
+          "label": "Email",
+          "invalid": "Invalid email address.",
+          "exists": "Email already exists."
+        },
+        "password": {
+          "label": "Password",
+          "invalid": "Password is too weak.",
+          "requirements": {
+            "label": "Password should contain:",
+            "min_length": "At least 8 characters",
+            "uppercase": "At least one uppercase letter",
+            "number": "At least one number",
+            "special_char": "At least one special character"
+          }
+        },
+        "terms": {
+          "label": "Accept terms and conditions",
+          "required": "You must accept the terms and conditions.",
+          "desc": "You agree to our <link>Legal documents & Policies</link>."
+        },
+        "newsletter": {
+          "label": "Newsletter",
+          "desc": "Receive the latest news and updates."
+        }
+      },
+      "sign_in": {
+        "desc": "Welcome back! Sign in to your account.",
+        "do_not_have_account": "Don't have an account? <link>Sign up</link>.",
+        "email": {
+          "label": "Email",
+          "invalid": "Invalid email address."
+        },
+        "password": "Password",
+        "errors": {
+          "access_denied": {
+            "title": "Invalid credentials",
+            "desc": "The email address or password was incorrect. Please try again (make sure your caps lock is off)."
+          }
+        },
+        "submit": "Sign in"
+      }
+    }
+  },
+  "admin": {
+    "global": {
+      "nav": {
+        "user_bar": {
+          "home_page": "Home Page"
+        }
+      }
+    }
+  }
+}
