@@ -2,7 +2,11 @@ import createMiddleware from 'next-intl/middleware';
 
 import { vitNodeConfig } from './vitnode.config';
 
-export default createMiddleware(vitNodeConfig.i18n);
+export default createMiddleware({
+  locales: vitNodeConfig.i18n.locales,
+  defaultLocale: vitNodeConfig.i18n.defaultLocale,
+  localePrefix: vitNodeConfig.i18n.localePrefix,
+});
 
 export const config = {
   matcher: [

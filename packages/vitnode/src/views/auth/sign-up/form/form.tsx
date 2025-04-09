@@ -23,7 +23,7 @@ export const FormSignUp = ({ isEmail }: { isEmail: boolean }) => {
             const value = (field.value ?? '') as string;
 
             return (
-              <>
+              <div className="space-y-2">
                 <AutoFormInput field={field} label={t('username.label')} />
                 {value.length >= 3 && (
                   <div className="text-muted-foreground text-sm">
@@ -36,7 +36,7 @@ export const FormSignUp = ({ isEmail }: { isEmail: boolean }) => {
                     })}
                   </div>
                 )}
-              </>
+              </div>
             );
           },
         },

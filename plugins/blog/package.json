@@ -14,9 +14,9 @@
   "dependencies": {
     "drizzle-kit": "^0.30.6",
     "drizzle-orm": "^0.41.0",
-    "hono": "^4.7.5",
+    "hono": "^4.7.6",
     "lucide-react": "^0.487.0",
-    "next": "^15.2.4",
+    "next": "^15.3.0",
     "next-intl": "^4.0.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@swc/cli": "^0.6.0",
-    "@swc/core": "^1.11.16",
+    "@swc/core": "^1.11.18",
     "concurrently": "^9.1.2",
     "eslint": "^9.24.0",
     "eslint-config-typescript-vitnode": "workspace:*",

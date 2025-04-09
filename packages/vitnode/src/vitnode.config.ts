@@ -16,6 +16,12 @@ export interface VitNodeConfig<AppLocales extends string[] = string[]> {
 
 export function getVitNodeConfig<AppLocales extends string[]>(
   args: VitNodeConfig<AppLocales>,
-) {
-  return args;
+): VitNodeConfig<AppLocales> {
+  return {
+    ...args,
+    i18n: {
+      ...args.i18n,
+      localePrefix: args.i18n.localePrefix ?? 'as-needed',
+    },
+  };
 }
