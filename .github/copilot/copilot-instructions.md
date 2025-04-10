@@ -83,6 +83,7 @@ VitNode is a comprehensive framework designed to simplify and accelerate applica
 - **Documentation**: Fumadocs & Swagger 3
 - **Schema validation**: zod 3 & @hono/zod-openapi
 - **Database**: PostgreSQL with Drizzle ORM
+- Use UUIDs for all database IDs
 
 ## Architecture
 

@@ -55,27 +55,31 @@ export class DeviceModel<T extends Env> {
       this.c.get('core').authorization.deviceCookieName,
     );
 
-    if (deviceIdFromCookie) {
-      const [device] = await dbClient
-        .select({
-          id: core_sessions_known_devices.id,
-        })
-        .from(core_sessions_known_devices)
-        .where(eq(core_sessions_known_devices.id, deviceIdFromCookie));
+    try {
+      if (deviceIdFromCookie) {
+        const [device] = await dbClient
+          .select({
+            id: core_sessions_known_devices.id,
+          })
+          .from(core_sessions_known_devices)
+          .where(eq(core_sessions_known_devices.id, deviceIdFromCookie));
 
-      if (!device) {
-        return await this.createDevice();
+        if (!device) {
+          return await this.createDevice();
+        }
+
+        await dbClient
+          .update(core_sessions_known_devices)
+          .set({
+            ip_address: getUserIp(this.c.req),
+            user_agent: this.getUserAgent(),
+          })
+          .where(eq(core_sessions_known_devices.id, deviceIdFromCookie));
+
+        return device.id;
       }
-
-      await dbClient
-        .update(core_sessions_known_devices)
-        .set({
-          ip_address: getUserIp(this.c.req),
-          user_agent: this.getUserAgent(),
-        })
-        .where(eq(core_sessions_known_devices.id, deviceIdFromCookie));
-
-      return device.id;
+    } catch (_) {
+      return await this.createDevice();
     }
 
     return await this.createDevice();
