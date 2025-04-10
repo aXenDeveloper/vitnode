@@ -8,62 +8,81 @@
   </a>
 </p>
 
-# VitNode
+# 🚀 VitNode
 
-Extendable framework for building applications with Next.js and Hono.js.
-
-## Whats new in VitNode 2.0?
-
-> [!WARNING]
-> You are in `canary` branch where is VitNode 2.0. This is the development branch and may contain unstable code.
-
-- **New architecture**: Completely rewritten the architecture of VitNode to make applications in single repo without monorepo.
-- **New backend framework**: Remove NestJS and replaced it with Hono.js.
-- **ESM Support Only**: Removed support for CommonJS and now we are using ESM only.
-- **AI Rules & MCP**: Added new features like AI Rules and MCP (Multi-Cloud Provider).
-- **Refactor CLI**: We have refactored the CLI and also added new CLI for plugins.
-- **New documentation & website**: We have completely rewritten the documentation and website to make it easier to use and understand.
-- **Simplified configuration**: We have simplified the configuration of VitNode to one config file _(including plug-in plugins into VitNode)_.
+**VitNode** is an extendable framework for building modern applications with Next.js and Hono.js. It provides a structured, plugin-based architecture that makes development faster and less complex.
 
 > [!NOTE]
-> If you are looking for the `v1` version of VitNode, please check the `v1` branch.
+> 🚧 You're viewing the `canary` branch (VitNode 2.0), which is under active development and may contain unstable code. For the stable version, check the `v1` branch.
 
-## 📚 Documentation
+## 🏁 Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (min: v20, recommended: v22)
+- [PostgreSQL](https://www.postgresql.org/) (min: v14, recommended: v16)
+- [Docker](https://www.docker.com/)
+- [pnpm](https://pnpm.io/)
+
+### Quick Setup
+
+1. **Install dependencies**
+
+   ```bash
+   pnpm install
+   ```
+
+2. **Start database container**
+
+   ```bash
+   pnpm docker:dev
+   ```
+
+3. **Launch development server**
+   ```bash
+   pnpm dev
+   ```
+
+## 📝 Available Scripts
+
+- `pnpm dev` - Start development server with auto-reload
+- `pnpm build` - Build for production
+- `pnpm start` - Start production server
+- `pnpm lint` - Check code quality
+- `pnpm lint:fix` - Fix code quality issues
+- `pnpm db:push` - Push database schema changes
+- `pnpm db:migrate` - Run database migrations
+- `pnpm dev:email` - Start email development server
+
+## ✨ What's New in VitNode 2.0
+
+- **Simplified Architecture**: Single-repo application structure (no monorepo)
+- **Modern Backend**: Hono.js replaces NestJS for better performance
+- **ESM-Only**: Full support for ECMAScript Modules
+- **AI Integration**: New AI Rules and Multi-Cloud Provider support
+- **Enhanced Plugin System**: Improved CLI tools for plugins
+- **Better Documentation**: Completely rewritten docs and website
+- **Streamlined Configuration**: Single config file for all settings
+
+## 🔍 Project Scope
+
+VitNode provides:
+
+- **Plugin Architecture**: Extend core functionality with custom plugins
+- **Admin Control Panel**: Built-in management interface
+- **Authentication System**: Support for credentials and SSO providers
+- **Role-Based Access Control**: Comprehensive permission management
+- **Internationalization**: Multi-language support out of the box
+- **Theme System**: Light/dark mode with customizable components
+- **API Documentation**: Auto-generated OpenAPI documentation
+
+## 📊 Project Status
+
+VitNode 2.0 is currently in **active development** (canary branch). While many features are functional, expect changes and improvements as we work toward a stable release.
 
 > [!NOTE]
-> The documentation is still in progress. Our page is under construction :)
+> 📚 Documentation is still in progress. Our website is under construction!
 
-## ⚠️ Requirements
+## 📄 License
 
-| 🛠️ Software | Minimum | Recommended |
-| :---------- | :------ | :---------- |
-| Node.js     | 20      | 22          |
-| PostgreSQL  | 14      | 16          |
-
-## 📦 Installation VitNode Dev
-
-### 1. Pre-Installation
-
-Download and install the following software:
-
-- [Node.js](https://nodejs.org/),
-- [Docker](https://www.docker.com/),
-- [pnpm](https://pnpm.io/).
-
-### 2. Install packages
-
-```bash
-pnpm install
-```
-
-### 3. Start database container
-
-```bash
-pnpm docker:dev
-```
-
-### 4. Start VitNode
-
-```bash
-pnpm dev
-```
+MIT License
