@@ -31,9 +31,13 @@ VitNode is a comprehensive framework designed to simplify and accelerate applica
 - Use the new Link component without requiring a child <a> tag
 - Leverage parallel routes for complex layouts and parallel data fetching
 - Implement intercepting routes for modal patterns and nested UIs
-- Use `next-intl` for internationalization and localization
-- Languages keys should be added in `apps/web/src/plugins/core/langs/{lang}.ts` file first to avoid type errors
-- Use always this package for translations _(Don't left any plain text in the code)_
+- Navigation api is in `vitnode/lib/navigation` file. Avoid using `next/navigation` directly
+
+### Internationalization (i18n) - Text Translation
+
+- Use `next-intl` for internationalization
+- Use `t('key')` for translation keys
+- Languages keys should be added in `apps/web/src/plugins/core/langs/{lang_key}.ts` file
 
 ## DOCS
 
@@ -91,7 +95,10 @@ VitNode is a comprehensive framework designed to simplify and accelerate applica
 - ESM (ECMAScript Modules) only
 - pnpm for package management
 - Turborepo for monorepo management
-- Respect Prettier & ESLint for code formatting and linting
+- Respect Prettier (.prettierrc.mjs)
+- Respect ESLint (each workspace has eslint.config.mjs) for code formatting and linting
+- Respect Typescript rules (each workspace has tsconfig.json)
+- Don't use deprecated or outdated features
 
 ## Project Structure
 
@@ -100,6 +107,8 @@ The code is organized into two main directories:
 ### Apps
 
 - `apps/web/` - the main frontend application,
+  - `apps/web/src/app/[locale]/(main)` - the main application code,
+  - `apps/web/src/app/[locale]/admin` - the admin panel code,
 - `apps/docs/` - the documentation application
 
 ### Packages
