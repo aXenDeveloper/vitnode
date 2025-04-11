@@ -1,7 +1,7 @@
 CREATE TYPE "public"."vitnode_core_app_type" AS ENUM('website', 'article', 'book', 'music.album', 'music.playlist', 'music.radio_station', 'music.song', 'profile', 'video.episode', 'video.movie', 'video.tv_show');--> statement-breakpoint
 CREATE TABLE "core_admin_permissions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"group_id" uuid,
+	"role_id" uuid,
 	"user_id" uuid,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp NOT NULL,
@@ -32,20 +32,6 @@ CREATE TABLE "core_config" (
 	"admin_note_updated_at" timestamp NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "core_groups" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp NOT NULL,
-	"protected" boolean DEFAULT false NOT NULL,
-	"default" boolean DEFAULT false NOT NULL,
-	"root" boolean DEFAULT false NOT NULL,
-	"guest" boolean DEFAULT false NOT NULL,
-	"color" varchar(19),
-	"files_allow_upload" boolean DEFAULT true NOT NULL,
-	"files_total_max_storage" integer DEFAULT 500000 NOT NULL,
-	"files_max_storage_for_submit" integer DEFAULT 5000 NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "core_languages" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"code" varchar(32) NOT NULL,
@@ -73,11 +59,25 @@ CREATE TABLE "core_languages_words" (
 --> statement-breakpoint
 CREATE TABLE "core_moderators_permissions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"group_id" uuid,
+	"role_id" uuid,
 	"user_id" uuid,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp NOT NULL,
 	"protected" boolean DEFAULT false NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "core_roles" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp NOT NULL,
+	"protected" boolean DEFAULT false NOT NULL,
+	"default" boolean DEFAULT false NOT NULL,
+	"root" boolean DEFAULT false NOT NULL,
+	"guest" boolean DEFAULT false NOT NULL,
+	"color" varchar(19),
+	"files_allow_upload" boolean DEFAULT true NOT NULL,
+	"files_total_max_storage" integer DEFAULT 500000 NOT NULL,
+	"files_max_storage_for_submit" integer DEFAULT 5000 NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "core_sessions" (
@@ -106,7 +106,7 @@ CREATE TABLE "core_users" (
 	"newsletter" boolean DEFAULT false NOT NULL,
 	"avatar_color" varchar(6) NOT NULL,
 	"email_verified" boolean DEFAULT false NOT NULL,
-	"group_id" uuid NOT NULL,
+	"role_id" uuid NOT NULL,
 	"birthday" timestamp,
 	"ip_address" varchar(40) NOT NULL,
 	"language" varchar(5) DEFAULT 'en' NOT NULL,
@@ -143,28 +143,28 @@ CREATE TABLE "core_users_sso" (
 	"updated_at" timestamp NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "core_admin_permissions" ADD CONSTRAINT "core_admin_permissions_group_id_core_groups_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."core_groups"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "core_admin_permissions" ADD CONSTRAINT "core_admin_permissions_role_id_core_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."core_roles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_admin_permissions" ADD CONSTRAINT "core_admin_permissions_user_id_core_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."core_users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_admin_sessions" ADD CONSTRAINT "core_admin_sessions_user_id_core_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."core_users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_admin_sessions" ADD CONSTRAINT "core_admin_sessions_device_id_core_sessions_known_devices_id_fk" FOREIGN KEY ("device_id") REFERENCES "public"."core_sessions_known_devices"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_languages_words" ADD CONSTRAINT "core_languages_words_language_code_core_languages_code_fk" FOREIGN KEY ("language_code") REFERENCES "public"."core_languages"("code") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "core_moderators_permissions" ADD CONSTRAINT "core_moderators_permissions_group_id_core_groups_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."core_groups"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "core_moderators_permissions" ADD CONSTRAINT "core_moderators_permissions_role_id_core_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."core_roles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_moderators_permissions" ADD CONSTRAINT "core_moderators_permissions_user_id_core_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."core_users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_sessions" ADD CONSTRAINT "core_sessions_user_id_core_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."core_users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_sessions" ADD CONSTRAINT "core_sessions_device_id_core_sessions_known_devices_id_fk" FOREIGN KEY ("device_id") REFERENCES "public"."core_sessions_known_devices"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "core_users" ADD CONSTRAINT "core_users_group_id_core_groups_id_fk" FOREIGN KEY ("group_id") REFERENCES "public"."core_groups"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "core_users" ADD CONSTRAINT "core_users_role_id_core_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."core_roles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_users" ADD CONSTRAINT "core_users_language_core_languages_code_fk" FOREIGN KEY ("language") REFERENCES "public"."core_languages"("code") ON DELETE set default ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_users_confirm_emails" ADD CONSTRAINT "core_users_confirm_emails_user_id_core_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."core_users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_users_forgot_password" ADD CONSTRAINT "core_users_forgot_password_user_id_core_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."core_users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_users_sso" ADD CONSTRAINT "core_users_sso_user_id_core_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."core_users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "core_admin_permissions_group_id_idx" ON "core_admin_permissions" USING btree ("group_id");--> statement-breakpoint
+CREATE INDEX "core_admin_permissions_role_id_idx" ON "core_admin_permissions" USING btree ("role_id");--> statement-breakpoint
 CREATE INDEX "core_admin_permissions_user_id_idx" ON "core_admin_permissions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "core_admin_sessions_token_idx" ON "core_admin_sessions" USING btree ("token");--> statement-breakpoint
 CREATE INDEX "core_admin_sessions_user_id_idx" ON "core_admin_sessions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "core_languages_code_idx" ON "core_languages" USING btree ("code");--> statement-breakpoint
 CREATE INDEX "core_languages_name_idx" ON "core_languages" USING btree ("name");--> statement-breakpoint
 CREATE INDEX "core_languages_words_lang_code_idx" ON "core_languages_words" USING btree ("language_code");--> statement-breakpoint
-CREATE INDEX "core_moderators_permissions_group_id_idx" ON "core_moderators_permissions" USING btree ("group_id");--> statement-breakpoint
+CREATE INDEX "core_moderators_permissions_role_id_idx" ON "core_moderators_permissions" USING btree ("role_id");--> statement-breakpoint
 CREATE INDEX "core_moderators_permissions_user_id_idx" ON "core_moderators_permissions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "core_sessions_user_id_idx" ON "core_sessions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "core_sessions_known_devices_ip_address_idx" ON "core_sessions_known_devices" USING btree ("ip_address");--> statement-breakpoint

@@ -1,8 +1,8 @@
 import { relations } from 'drizzle-orm';
 import { index, pgTable } from 'drizzle-orm/pg-core';
 
-import { core_groups } from './groups';
 import { core_languages } from './languages';
+import { core_roles } from './roles';
 
 export const core_users = pgTable(
   'core_users',
@@ -16,9 +16,9 @@ export const core_users = pgTable(
     newsletter: t.boolean().notNull().default(false),
     avatar_color: t.varchar({ length: 6 }).notNull(),
     email_verified: t.boolean().notNull().default(false),
-    group_id: t
+    role_id: t
       .uuid()
-      .references(() => core_groups.id)
+      .references(() => core_roles.id)
       .notNull(),
     birthday: t.timestamp(),
     ip_address: t.varchar({ length: 40 }).notNull(),
@@ -38,9 +38,9 @@ export const core_users = pgTable(
 );
 
 export const core_users_relations = relations(core_users, ({ one, many }) => ({
-  group: one(core_groups, {
-    fields: [core_users.group_id],
-    references: [core_groups.id],
+  group: one(core_roles, {
+    fields: [core_users.role_id],
+    references: [core_roles.id],
   }),
   language: one(core_languages, {
     fields: [core_users.language],

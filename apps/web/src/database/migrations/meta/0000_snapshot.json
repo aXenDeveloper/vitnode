@@ -1,5 +1,5 @@
 {
-  "id": "9754d8ae-08c8-4d73-8554-8f696083c5b1",
+  "id": "f44bf16f-11ed-4e2c-be2c-08b60fcf720a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -15,8 +15,8 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "group_id": {
-          "name": "group_id",
+        "role_id": {
+          "name": "role_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
@@ -49,11 +49,11 @@
         }
       },
       "indexes": {
-        "core_admin_permissions_group_id_idx": {
-          "name": "core_admin_permissions_group_id_idx",
+        "core_admin_permissions_role_id_idx": {
+          "name": "core_admin_permissions_role_id_idx",
           "columns": [
             {
-              "expression": "group_id",
+              "expression": "role_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -81,12 +81,12 @@
         }
       },
       "foreignKeys": {
-        "core_admin_permissions_group_id_core_groups_id_fk": {
-          "name": "core_admin_permissions_group_id_core_groups_id_fk",
+        "core_admin_permissions_role_id_core_roles_id_fk": {
+          "name": "core_admin_permissions_role_id_core_roles_id_fk",
           "tableFrom": "core_admin_permissions",
-          "tableTo": "core_groups",
+          "tableTo": "core_roles",
           "columnsFrom": [
-            "group_id"
+            "role_id"
           ],
           "columnsTo": [
             "id"
@@ -320,94 +320,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.core_groups": {
-      "name": "core_groups",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "protected": {
-          "name": "protected",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "default": {
-          "name": "default",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "root": {
-          "name": "root",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "guest": {
-          "name": "guest",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "color": {
-          "name": "color",
-          "type": "varchar(19)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "files_allow_upload": {
-          "name": "files_allow_upload",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "files_total_max_storage": {
-          "name": "files_total_max_storage",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 500000
-        },
-        "files_max_storage_for_submit": {
-          "name": "files_max_storage_for_submit",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 5000
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.core_languages": {
       "name": "core_languages",
       "schema": "",
@@ -631,8 +543,8 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "group_id": {
-          "name": "group_id",
+        "role_id": {
+          "name": "role_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
@@ -665,11 +577,11 @@
         }
       },
       "indexes": {
-        "core_moderators_permissions_group_id_idx": {
-          "name": "core_moderators_permissions_group_id_idx",
+        "core_moderators_permissions_role_id_idx": {
+          "name": "core_moderators_permissions_role_id_idx",
           "columns": [
             {
-              "expression": "group_id",
+              "expression": "role_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -697,12 +609,12 @@
         }
       },
       "foreignKeys": {
-        "core_moderators_permissions_group_id_core_groups_id_fk": {
-          "name": "core_moderators_permissions_group_id_core_groups_id_fk",
+        "core_moderators_permissions_role_id_core_roles_id_fk": {
+          "name": "core_moderators_permissions_role_id_core_roles_id_fk",
           "tableFrom": "core_moderators_permissions",
-          "tableTo": "core_groups",
+          "tableTo": "core_roles",
           "columnsFrom": [
-            "group_id"
+            "role_id"
           ],
           "columnsTo": [
             "id"
@@ -724,6 +636,94 @@
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.core_roles": {
+      "name": "core_roles",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "protected": {
+          "name": "protected",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "default": {
+          "name": "default",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "root": {
+          "name": "root",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "guest": {
+          "name": "guest",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "color": {
+          "name": "color",
+          "type": "varchar(19)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "files_allow_upload": {
+          "name": "files_allow_upload",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "files_total_max_storage": {
+          "name": "files_total_max_storage",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 500000
+        },
+        "files_max_storage_for_submit": {
+          "name": "files_max_storage_for_submit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 5000
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -942,8 +942,8 @@
           "notNull": true,
           "default": false
         },
-        "group_id": {
-          "name": "group_id",
+        "role_id": {
+          "name": "role_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -1016,12 +1016,12 @@
         }
       },
       "foreignKeys": {
-        "core_users_group_id_core_groups_id_fk": {
-          "name": "core_users_group_id_core_groups_id_fk",
+        "core_users_role_id_core_roles_id_fk": {
+          "name": "core_users_role_id_core_roles_id_fk",
           "tableFrom": "core_users",
-          "tableTo": "core_groups",
+          "tableTo": "core_roles",
           "columnsFrom": [
-            "group_id"
+            "role_id"
           ],
           "columnsTo": [
             "id"

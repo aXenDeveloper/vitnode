@@ -12,7 +12,7 @@ VitNode is a comprehensive framework designed to simplify and accelerate applica
 - **CI/CD**: GitHub Actions for automated testing, building, and deployment
 - ESM (ECMAScript Modules) only
 
-## FRONTEND
+## Frontend
 
 - **Framework**: Next.js 15
 - **Styling**: Tailwind CSS 4
@@ -39,7 +39,7 @@ VitNode is a comprehensive framework designed to simplify and accelerate applica
 - Use `t('key')` for translation keys
 - Languages keys should be added in `apps/web/src/plugins/core/langs/{lang_key}.ts` file
 
-## DOCS
+## Documentation
 
 - **Framework**: Fumadocs
 - Use easy and clear language for documentation to make it accessible to a wide audience
@@ -80,14 +80,19 @@ VitNode is a comprehensive framework designed to simplify and accelerate applica
 | Avatar       | `vitnode/components/avatar`       | `@/components/avatar`       |
 | Logo Vitnode | `vitnode/components/logo-vitnode` | `@/components/logo-vitnode` |
 
-## BACKEND
+## Backend
 
 - **Framework**: Hono.js
 - **RPC**: Type-safe API calls
 - **Documentation**: Fumadocs & Swagger 3
 - **Schema validation**: zod 3 & @hono/zod-openapi
-- **Database**: PostgreSQL with Drizzle ORM
+
+## Database
+
+- Use `PostgreSQL` with `Drizzle ORM`
 - Use UUIDs for all database IDs
+- You can find the database schema in the `apps/web/src/database/schema` files
+- Respect performance and security best practices when designing the database schema
 
 ## Architecture
 

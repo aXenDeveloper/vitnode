@@ -1,7 +1,7 @@
 import { getUserIp } from '@/api/lib/get-user-ip';
 import { generateAvatarColor } from '@/api/modules/users/utils/avatar-color';
 import { dbClient } from '@/database/client';
-import { core_groups } from '@/database/schema/groups';
+import { core_roles } from '@/database/schema/roles';
 import { core_users } from '@/database/schema/users';
 import { removeSpecialCharacters } from '@/lib/special-characters';
 import { and, count, eq, or } from 'drizzle-orm';
@@ -10,7 +10,7 @@ import { HTTPException } from 'hono/http-exception';
 
 const getDefaultData = async (): Promise<{
   email_verified: boolean;
-  group_id: string;
+  role_id: string;
 }> => {
   const [countUsers] = await dbClient
     .select({ count: count() })
@@ -18,42 +18,42 @@ const getDefaultData = async (): Promise<{
 
   // If no users, return root group
   if (countUsers.count === 0) {
-    const [defaultGroup] = await dbClient
+    const [defaultRole] = await dbClient
       .select({
-        id: core_groups.id,
+        id: core_roles.id,
       })
-      .from(core_groups)
-      .where(and(eq(core_groups.default, false), eq(core_groups.root, true)))
+      .from(core_roles)
+      .where(and(eq(core_roles.default, false), eq(core_roles.root, true)))
       .limit(1);
 
-    if (!defaultGroup) {
+    if (!defaultRole) {
       throw new HTTPException(400, {
         message: 'Default group not found.',
       });
     }
 
     return {
-      group_id: defaultGroup.id,
+      role_id: defaultRole.id,
       email_verified: true,
     };
   }
 
-  const [defaultGroup] = await dbClient
+  const [defaultRole] = await dbClient
     .select({
-      id: core_groups.id,
+      id: core_roles.id,
     })
-    .from(core_groups)
-    .where(and(eq(core_groups.default, true), eq(core_groups.root, false)))
+    .from(core_roles)
+    .where(and(eq(core_roles.default, true), eq(core_roles.root, false)))
     .limit(1);
 
-  if (!defaultGroup) {
+  if (!defaultRole) {
     throw new HTTPException(400, {
-      message: 'Default group not found.',
+      message: 'Default role not found.',
     });
   }
 
   return {
-    group_id: defaultGroup.id,
+    role_id: defaultRole.id,
     // TODO: Handle email verification
     email_verified: false,
   };
@@ -102,7 +102,7 @@ export const signUp = async (
     });
   }
 
-  const { group_id, email_verified } = await getDefaultData();
+  const { role_id, email_verified } = await getDefaultData();
   const [data] = await dbClient
     .insert(core_users)
     .values({
@@ -113,7 +113,7 @@ export const signUp = async (
       newsletter,
       password: hashedPassword,
       avatar_color: generateAvatarColor(name),
-      group_id,
+      role_id,
       email_verified,
       ip_address: getUserIp(req),
       // TODO: Handle language

@@ -3,12 +3,12 @@
 import { dbClient } from '@/database/client.js';
 import { core_admin_permissions } from '@/database/schema/admins.js';
 import { core_config } from '@/database/schema/config.js';
-import { core_groups } from '@/database/schema/groups.js';
 import {
   core_languages,
   core_languages_words,
 } from '@/database/schema/languages.js';
 import { core_moderators_permissions } from '@/database/schema/moderators.js';
+import { core_roles } from '@/database/schema/roles.js';
 import { count } from 'drizzle-orm';
 
 import { runInteractiveShellCommand } from './run-interactive-shell-command.js';
@@ -33,13 +33,13 @@ export const runMigrations = async () => {
 };
 
 export const initialDataForDatabase = async () => {
-  const [[config], [groupCount]] = await Promise.all([
+  const [[config], [roleCount]] = await Promise.all([
     dbClient.select().from(core_config).limit(1),
     dbClient
       .select({
         count: count(),
       })
-      .from(core_groups)
+      .from(core_roles)
       .limit(1),
   ]);
   if (!config) {
@@ -67,84 +67,84 @@ export const initialDataForDatabase = async () => {
     ]);
   }
 
-  if (groupCount.count === 0) {
-    const [guestGroup] = await dbClient
-      .insert(core_groups)
+  if (roleCount.count === 0) {
+    const [guestRole] = await dbClient
+      .insert(core_roles)
       .values({
         protected: true,
         guest: true,
         files_allow_upload: false,
       })
-      .returning({ id: core_groups.id });
+      .returning({ id: core_roles.id });
 
     await dbClient.insert(core_languages_words).values({
       language_code: 'en',
       plugin_code: 'core',
-      item_id: guestGroup.id,
+      item_id: guestRole.id,
       value: 'Guest',
-      table_name: 'core_groups',
+      table_name: 'core_roles',
       variable: 'name',
     });
 
-    const [memberGroup] = await dbClient
-      .insert(core_groups)
+    const [memberRole] = await dbClient
+      .insert(core_roles)
       .values({
         protected: true,
         default: true,
       })
-      .returning({ id: core_groups.id });
+      .returning({ id: core_roles.id });
 
     await dbClient.insert(core_languages_words).values({
       language_code: 'en',
       plugin_code: 'core',
-      item_id: memberGroup.id,
+      item_id: memberRole.id,
       value: 'Member',
-      table_name: 'core_groups',
+      table_name: 'core_roles',
       variable: 'name',
     });
 
-    const [moderatorGroup] = await dbClient
-      .insert(core_groups)
+    const [moderatorRole] = await dbClient
+      .insert(core_roles)
       .values({
         protected: true,
         color: 'hsl(122, 80%, 45%)',
       })
-      .returning({ id: core_groups.id });
+      .returning({ id: core_roles.id });
 
     await dbClient.insert(core_moderators_permissions).values({
-      group_id: moderatorGroup.id,
+      role_id: moderatorRole.id,
       protected: true,
     });
 
     await dbClient.insert(core_languages_words).values({
       language_code: 'en',
       plugin_code: 'core',
-      item_id: moderatorGroup.id,
+      item_id: moderatorRole.id,
       value: 'Moderator',
-      table_name: 'core_groups',
+      table_name: 'core_roles',
       variable: 'name',
     });
 
-    const [adminGroup] = await dbClient
-      .insert(core_groups)
+    const [adminRole] = await dbClient
+      .insert(core_roles)
       .values({
         protected: true,
         root: true,
         color: 'hsl(0, 100%, 50%)',
       })
-      .returning({ id: core_groups.id });
+      .returning({ id: core_roles.id });
 
     await dbClient.insert(core_languages_words).values({
       language_code: 'en',
       plugin_code: 'core',
-      item_id: adminGroup.id,
+      item_id: adminRole.id,
       value: 'Administrator',
-      table_name: 'core_groups',
+      table_name: 'core_roles',
       variable: 'name',
     });
 
     await dbClient.insert(core_admin_permissions).values({
-      group_id: adminGroup.id,
+      role_id: adminRole.id,
       protected: true,
     });
   }
