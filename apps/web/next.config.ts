@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
   //   },
   // },
   experimental: {
+    ppr: true,
     inlineCss: true,
     reactCompiler: true,
   },
