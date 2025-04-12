@@ -5,6 +5,9 @@
     "db:migrate": {
       "dependsOn": ["^db:migrate"]
     },
+    "db:push": {
+      "dependsOn": ["^db:push"]
+    },
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
@@ -29,9 +32,6 @@
     },
     "lint:fix": {
       "dependsOn": ["^lint:fix"]
-    },
-    "check-types": {
-      "dependsOn": ["^check-types"]
     },
     "dev": {
       "cache": false,
