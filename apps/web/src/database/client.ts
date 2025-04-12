@@ -18,5 +18,5 @@ export const POSTGRES_ENVS = {
 };
 
 export const dbClient = drizzle({
-  connection: process.env.POSTGRES_URL ? POSTGRES_ENVS.url : POSTGRES_ENVS,
+  connection: POSTGRES_ENVS.url,
 });

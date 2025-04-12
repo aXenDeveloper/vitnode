@@ -14,7 +14,7 @@ export const useFormSignIn = ({ isAdmin }: { isAdmin?: boolean }) => {
       .string()
       .email({ message: t('email.invalid') })
       .default(''),
-    password: z.string().default(''),
+    password: z.string().min(1).default(''),
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {

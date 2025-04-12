@@ -86,7 +86,7 @@ export const FormSignUp = ({ isEmail }: { isEmail: boolean }) => {
           : []),
       ]}
       formSchema={formSchema}
-      mode="onBlur"
+      mode="all"
       onSubmit={onSubmit}
       submitButtonProps={{
         className: 'w-full',

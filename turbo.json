@@ -3,10 +3,20 @@
   "ui": "tui",
   "tasks": {
     "db:migrate": {
-      "dependsOn": ["^db:migrate"]
+      "dependsOn": ["^db:migrate"],
+      "cache": false
     },
     "db:push": {
-      "dependsOn": ["^db:push"]
+      "dependsOn": ["^db:push"],
+      "cache": false,
+      "env": [
+        "POSTGRES_URL",
+        "POSTGRES_PORT",
+        "POSTGRES_USER",
+        "POSTGRES_PASSWORD",
+        "POSTGRES_NAME",
+        "POSTGRES_SSL"
+      ]
     },
     "build": {
       "dependsOn": ["^build"],
