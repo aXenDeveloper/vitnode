@@ -38,6 +38,7 @@ VitNode is a comprehensive framework designed to simplify and accelerate applica
 - Use `next-intl` for internationalization
 - Use `t('key')` for translation keys
 - Languages keys should be added in `apps/web/src/plugins/core/langs/{lang_key}.ts` file
+- Use `getTranslation` function for server component but `useTranslation` for client
 
 ## Documentation
 

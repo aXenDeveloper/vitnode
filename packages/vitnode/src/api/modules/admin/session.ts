@@ -22,7 +22,7 @@ const route = createApiRoute({
               newsletter: z.boolean(),
               avatar_color: z.string(),
               email_verified: z.boolean(),
-              group_id: z.string(),
+              role_id: z.string(),
               birthday: z.date().nullable(),
             }),
           }),

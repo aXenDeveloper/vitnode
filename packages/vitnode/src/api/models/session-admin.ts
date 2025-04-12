@@ -28,7 +28,7 @@ export class SessionAdminModel<T extends Env> extends DeviceModel<T> {
       .where(
         or(
           eq(core_admin_permissions.user_id, user.id),
-          eq(core_admin_permissions.group_id, user.group_id),
+          eq(core_admin_permissions.role_id, user.role_id),
         ),
       )
       .limit(1);

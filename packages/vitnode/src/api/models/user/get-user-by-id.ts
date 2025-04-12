@@ -13,7 +13,7 @@ export const getUserById = async (id: string) => {
       newsletter: core_users.newsletter,
       avatar_color: core_users.avatar_color,
       email_verified: core_users.email_verified,
-      group_id: core_users.group_id,
+      role_id: core_users.role_id,
       birthday: core_users.birthday,
     })
     .from(core_users)
