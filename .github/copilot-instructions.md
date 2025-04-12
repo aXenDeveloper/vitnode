@@ -105,6 +105,7 @@ VitNode is a comprehensive framework designed to simplify and accelerate applica
 - Respect ESLint (each workspace has eslint.config.mjs) for code formatting and linting
 - Respect Typescript rules (each workspace has tsconfig.json)
 - Don't use deprecated or outdated features
+- Use objects instead of enums in TypeScript
 
 ## Project Structure
 

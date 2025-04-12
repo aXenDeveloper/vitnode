@@ -1,22 +1,35 @@
 #!/usr/bin/env node
+import { input } from '@inquirer/prompts';
 import { Command, Option } from 'commander';
-import { existsSync } from 'fs';
-import { readFile } from 'fs/promises';
-import { basename, dirname, resolve } from 'path';
+import { basename, resolve } from 'path';
 import color from 'picocolors';
-import prompts from 'prompts';
 
-import { createCli } from './cli.js';
 import { createVitNode } from './create/create-vitnode.js';
-import { onPromptState } from './helpers/cli.js';
-import { isFolderEmpty } from './helpers/is-folder-empty.js';
-import { isWriteable } from './helpers/is-writeable.js';
-import { PackageJSON } from './helpers/packages-json.js';
+import { packageJson } from './helpers/get-package-json.js';
 import { validateNpmName } from './helpers/validate-pkg.js';
+import { createQuestionsCli } from './questions.js';
+import { validationProject } from './validation.js';
 
-const packageJson: PackageJSON = JSON.parse(
-  await readFile(new URL('../package.json', import.meta.url), 'utf-8'),
-);
+const [major] = process.versions.node.split('.').map(Number);
+if (major < 20) {
+  console.error(
+    color.red(
+      `\nError: VitNode requires Node.js version 20 or higher.\nYou are currently using Node.js ${process.versions.node}\n`,
+    ),
+  );
+  process.exit(1);
+}
+
+process.on('uncaughtException', (error: Error) => {
+  if (error.name === 'ExitPromptError') {
+    console.log(color.dim('👋 VitNode setup cancelled - see you next time!'));
+    process.exit(0);
+  }
+
+  console.error(color.red('An unexpected error occurred:'));
+  console.error(color.red(error.stack ?? error.message));
+  process.exit(1);
+});
 
 const init = async () => {
   let projectPath = '';
@@ -41,16 +54,10 @@ const init = async () => {
     'Skip installing packages after initializing the project.',
   );
 
-  /**
-   * Ask the user for the project name if not provided
-   */
   if (!projectPath) {
-    const response = await prompts({
-      onState: onPromptState,
-      type: 'text',
-      name: 'path',
+    projectPath = await input({
       message: 'What is your project named?',
-      initial: 'my-vitnode',
+      default: 'my-vitnode',
       validate: (name: string) => {
         const validation = validateNpmName({ name: basename(resolve(name)) });
         if (validation.valid) return true;
@@ -58,78 +65,14 @@ const init = async () => {
         return `Invalid project name: ${validation.problems[0]}`;
       },
     });
-
-    if (typeof response.path === 'string') {
-      projectPath = response.path.trim();
-    }
   }
 
-  /**
-   * Verify the project path is provided
-   */
-  if (!projectPath) {
-    console.log(
-      '\nPlease specify the project directory:\n' +
-        `  ${color.cyan(program.name())} ${color.green('<project-directory>')}\n` +
-        'For example:\n' +
-        `  ${color.cyan(program.name())} ${color.green('my-vitnode-app')}\n\n` +
-        `Run ${color.cyan(`${program.name()} --help`)} to see all options.`,
-    );
-    process.exit(1);
-  }
-
-  /**
-   * Verify the project name is valid
-   */
-  const resolvedProjectPath = resolve(projectPath);
-  const projectName = basename(resolvedProjectPath);
-  const validation = validateNpmName({ name: projectName });
-  if (!validation.valid) {
-    console.error(
-      `Could not create a project called ${color.red(
-        `"${projectName}"`,
-      )} because of npm naming restrictions:`,
-    );
-
-    validation.problems.forEach(p => {
-      console.error(`${color.red(color.bold('*'))} ${p}`);
-    });
-    process.exit(1);
-  }
-
-  /**
-   * Verify the project dir is empty or doesn't exist
-   */
-  const root = resolve(resolvedProjectPath);
-  const appName = basename(root);
-  const folderExists = existsSync(root);
-
-  if (folderExists && !isFolderEmpty(root, appName)) {
-    console.error('The specified directory is not empty.');
-    process.exit(1);
-  }
-
-  /**
-   * Verify the project dir is writeable
-   */
-  if (!(await isWriteable(dirname(root)))) {
-    console.error(
-      'The application path is not writable, please check folder permissions and try again.',
-    );
-    console.error(
-      'It is likely you do not have write permissions for this folder.',
-    );
-    process.exit(1);
-  }
-
-  /**
-   * Create the CLI
-   */
-  const choses = await createCli(program);
+  const { appName, root } = await validationProject(projectPath);
+  const options = await createQuestionsCli(program);
   await createVitNode({
     appName,
     root,
-    ...choses,
+    ...options,
   });
 };
 
