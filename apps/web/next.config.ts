@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
   //     fullUrl: true,
   //   },
   // },
+  experimental: {
+    inlineCss: true,
+    reactCompiler: true,
+  },
 };
 
 export default vitNodeNextConfig(nextConfig);

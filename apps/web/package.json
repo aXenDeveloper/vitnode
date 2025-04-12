@@ -10,7 +10,7 @@
     "db:migrate": "drizzle-kit up && drizzle-kit generate && drizzle-kit migrate",
     "dev": "vitnode prepare && vitnode init && next dev --turbopack",
     "dev:email": "email dev",
-    "build": "next build",
+    "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
@@ -20,6 +20,7 @@
     "@hono/zod-validator": "^0.4.3",
     "@hookform/resolvers": "^5.0.1",
     "@react-email/components": "0.0.36",
+    "babel-plugin-react-compiler": "19.0.0-beta-e993439-20250405",
     "dotenv": "^16.5.0",
     "drizzle-kit": "^0.30.6",
     "drizzle-orm": "^0.41.0",

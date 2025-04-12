@@ -2,7 +2,7 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
-} from '@/components/ui/sidebar-server';
+} from '@/components/ui/sidebar';
 import { HomeIcon } from 'lucide-react';
 
 import { ItemNavAdmin } from './item';

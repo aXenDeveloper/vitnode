@@ -11,7 +11,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-} from '@/components/ui/sidebar-server';
+} from '@/components/ui/sidebar';
 import { Link } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 import { ChevronRight, MenuIcon } from 'lucide-react';

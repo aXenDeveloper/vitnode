@@ -20,7 +20,9 @@ export const HeaderLayout = ({
       {...props}
     >
       <div className="container mx-auto flex h-16 items-center px-4">
-        <Link href="/">{logo}</Link>
+        <Link href="/" prefetch>
+          {logo}
+        </Link>
 
         <div className="ml-auto flex items-center gap-2">
           <ThemeSwitcher />

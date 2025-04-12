@@ -15,10 +15,14 @@ export const UserHeader = async () => {
     return (
       <>
         <Button asChild variant="ghost">
-          <Link href="/login">{t('login')}</Link>
+          <Link href="/login" prefetch>
+            {t('login')}
+          </Link>
         </Button>
         <Button asChild>
-          <Link href="/register">{t('register')}</Link>
+          <Link href="/register" prefetch>
+            {t('register')}
+          </Link>
         </Button>
       </>
     );
