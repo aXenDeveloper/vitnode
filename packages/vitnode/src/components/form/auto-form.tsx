@@ -21,7 +21,8 @@ export function AutoForm<
   fields,
   submitButtonProps,
   mode,
-}: {
+  ...props
+}: Omit<React.ComponentProps<'form'>, 'onSubmit'> & {
   fields: React.ComponentProps<typeof ItemAutoForm<T>>[];
   formSchema: T;
   mode?: Mode;
@@ -53,7 +54,7 @@ export function AutoForm<
   };
 
   return (
-    <Form form={form} onSubmit={onSubmit}>
+    <Form form={form} onSubmit={onSubmit} {...props}>
       {fields.map(field => (
         <ItemAutoForm key={field.id} {...field} />
       ))}

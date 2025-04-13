@@ -1,0 +1,68 @@
+---
+title: Textarea
+description: Input for multi-line text input.
+---
+
+<Callout title="Shadcn UI">
+  This component is part of [Shadcn
+  UI](https://ui.shadcn.com/docs/components/textarea).
+</Callout>
+
+## Usage
+
+```ts
+import { z } from 'zod';
+import { AutoForm } from 'vitnode/components/form/auto-form';
+import { AutoFormTextarea } from 'vitnode/components/form/fields/textarea';
+```
+
+```ts
+const formSchema = z.object({
+  desc: z.string().min(10, 'Description must be at least 10 characters'),
+});
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: 'desc',
+      component: props => (
+        <AutoFormTextarea
+          description="Write a short description of your application."
+          placeholder="My application is..."
+          label="Description"
+          {...props}
+        />
+      ),
+    },
+  ]}
+/>
+```
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    label: {
+      description:
+        'The label for the input field. This is displayed above the input.',
+      type: 'string',
+      default: '',
+    },
+    description: {
+      description:
+        'A short description of the input field. This is displayed below the input.',
+      type: 'string',
+      default: '',
+    },
+    placeholder: {
+      description: 'Placeholder text to display when the input is empty.',
+      type: 'string',
+      default: '',
+    },
+  }}
+/>

@@ -29,11 +29,13 @@ export function AutoFormCheckbox<T extends z.ZodTypeAny>({
         />
       </FormControl>
 
-      <div className="space-y-1 leading-none">
-        {label && <AutoFormLabel>{label}</AutoFormLabel>}
-        {description && <AutoFormDesc>{description}</AutoFormDesc>}
-        <FormMessage />
-      </div>
+      {!!(label ?? description) && (
+        <div className="space-y-1 leading-none">
+          {label && <AutoFormLabel>{label}</AutoFormLabel>}
+          {description && <AutoFormDesc>{description}</AutoFormDesc>}
+          <FormMessage />
+        </div>
+      )}
     </FormItem>
   );
 }

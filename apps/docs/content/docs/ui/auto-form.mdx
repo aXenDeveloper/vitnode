@@ -1,4 +1,207 @@
 ---
 title: Auto Form
-description: xxx
+description: Component creates form based on Zod schemas & react-hook-form with validation
 ---
+
+## Basic Usage
+
+```tsx
+import { z } from 'zod';
+import { AutoForm } from 'vitnode/components/form/auto-form';
+import { AutoFormInput } from 'vitnode/components/form/fields/input';
+```
+
+```ts
+const formSchema = z.object({
+  username: z.string(),
+});
+```
+
+```tsx
+<AutoForm
+  fields={[
+    {
+      id: 'username',
+      component: props => (
+        <AutoFormInput
+          description="This is the username for your application. It should be unique and not shared with anyone."
+          label="Username"
+          {...props}
+        />
+      ),
+    },
+  ]}
+  formSchema={formSchema}
+/>
+```
+
+## Zod Schema Configuration
+
+Auto Form is deeply integrated with Zod, supporting Zod validators. HTML input attributes are automatically applied based on your schema constraints.
+
+### Required vs Optional Fields
+
+By default, all fields are required. Make a field optional using the `optional` method:
+
+```ts
+const formSchema = z.object({
+  username: z.string(), // Required field
+  bio: z.string().optional(), // Optional field
+});
+```
+
+### Default Values
+
+Set default values for fields using the `default` method:
+
+```ts
+const formSchema = z.object({
+  username: z.string().default('user123'),
+  role: z.enum(['user', 'admin']).default('user'),
+});
+```
+
+### Advanced Validation
+
+Auto Form supports all Zod validators:
+
+```ts
+const formSchema = z.object({
+  username: z.string().min(3).max(20),
+  email: z.string().email(),
+  age: z.number().min(18).max(120),
+  password: z
+    .string()
+    .min(8)
+    .refine(val => /[A-Z]/.test(val), {
+      message: 'Password must contain at least one uppercase letter',
+    }),
+});
+```
+
+## Form Submission
+
+To activate submit button and handle form submission with the `onSubmit` callback:
+
+```tsx
+<AutoForm
+  fields={[
+    {
+      id: 'username',
+      component: props => (
+        <AutoFormInput
+          description="This is the username for your application."
+          label="Username"
+          {...props}
+        />
+      ),
+    },
+  ]}
+  formSchema={formSchema}
+  // [!code ++]
+  onSubmit={values => {
+    // [!code ++]
+    // Handle form submission
+    // [!code ++]
+  }}
+/>
+```
+
+### Accessing the Form Instance
+
+The `onSubmit` callback provides access to the React Hook Form instance as a second parameter:
+
+```tsx
+<AutoForm
+  fields={
+    [
+      /* ...field definitions */
+    ]
+  }
+  formSchema={formSchema}
+  onSubmit={(values, form) => {
+    // Access form methods
+    form.setError('username', {
+      type: 'manual',
+      message: 'Username already taken',
+    });
+  }}
+/>
+```
+
+You can also define the submission handler separately:
+
+```tsx
+const onSubmit = async (
+  values: z.infer<typeof formSchema>,
+  form: UseFormReturn<z.infer<typeof formSchema>>,
+) => {
+  try {
+    await saveData(values);
+    toast.success('Form submitted successfully');
+  } catch (error) {
+    form.setError('root', {
+      type: 'manual',
+      message: 'Failed to submit form',
+    });
+  }
+};
+
+// Then in your component
+<AutoForm
+  fields={
+    [
+      /* ...field definitions */
+    ]
+  }
+  formSchema={formSchema}
+  onSubmit={onSubmit}
+/>;
+```
+
+## Customizing the Submit Button
+
+Customize the submit button using the `submitButtonProps`:
+
+```tsx
+<AutoForm
+  fields={
+    [
+      /* ...field definitions */
+    ]
+  }
+  formSchema={formSchema}
+  // [!code ++]
+  submitButtonProps={{
+    // [!code ++]
+    variant: 'outline',
+    // [!code ++]
+    size: 'lg',
+    // [!code ++]
+    children: 'Save Changes',
+    // [!code ++]
+    className: 'w-full mt-4',
+    // [!code ++]
+  }}
+  onSubmit={values => {
+    console.log('Form submitted', values);
+  }}
+/>
+```
+
+## Form Layout and Styling
+
+You can control the form layout using standard CSS techniques:
+
+```tsx
+<AutoForm
+  // [!code ++]
+  className="grid grid-cols-1 gap-4 md:grid-cols-2"
+  fields={
+    [
+      /* ...field definitions */
+    ]
+  }
+  formSchema={formSchema}
+/>
+```

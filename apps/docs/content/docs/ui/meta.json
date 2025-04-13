@@ -3,5 +3,5 @@
   "description": "Make it pretty",
   "icon": "Paintbrush",
   "root": true,
-  "pages": ["index", "..."]
+  "pages": ["index", "---Forms---", "auto-form", "..."]
 }
