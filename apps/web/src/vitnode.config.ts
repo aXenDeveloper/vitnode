@@ -15,7 +15,11 @@ export const vitNodeConfig = getVitNodeConfig({
 });
 
 export default getRequestConfig(async ({ requestLocale }) => {
-  const locale = (await requestLocale) ?? vitNodeConfig.i18n.defaultLocale;
+  const reqLocale = await requestLocale;
+  const locale =
+    reqLocale && `${vitNodeConfig.i18n.locales}`.includes(reqLocale)
+      ? reqLocale
+      : vitNodeConfig.i18n.defaultLocale;
 
   return {
     locale,
