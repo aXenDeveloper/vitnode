@@ -1,11 +1,11 @@
 ---
-title: Radio Group
-description: Pick one option from a list.
+title: Select
+description: Choose an option from a list of options.
 ---
 
 <Callout title="Shadcn UI">
   This component is part of [Shadcn
-  UI](https://ui.shadcn.com/docs/components/radio-group).
+  UI](https://ui.shadcn.com/docs/components/select).
 </Callout>
 
 ## Usage
@@ -13,12 +13,12 @@ description: Pick one option from a list.
 ```ts
 import { z } from 'zod';
 import { AutoForm } from 'vitnode/components/form/auto-form';
-import { AutoFormRadioGroup } from 'vitnode/components/form/fields/radio-group';
+import { AutoFormSelect } from 'vitnode/components/form/fields/select';
 ```
 
 ```ts
 const formSchema = z.object({
-  options: z.enum(['option1', 'option2', 'option3']),
+  options: z.enum(['option1', 'option2', 'option3']).default('option1'),
 });
 ```
 
@@ -77,6 +77,12 @@ import { TypeTable } from 'fumadocs-ui/components/type-table';
         'An array of objects representing the radio button options. Each object should have a `value` and a `label` property.',
       type: '{ value: string; label: string }[]',
       default: '[]',
+    },
+    placeholder: {
+      description:
+        'A short hint that describes the expected value of the input field. This is displayed inside the input field when it is empty.',
+      type: 'string',
+      default: '',
     },
   }}
 />

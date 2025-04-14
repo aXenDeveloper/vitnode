@@ -1,11 +1,13 @@
+import { FormControl, FormItem, FormMessage } from '@/components/ui/form';
 import {
-  FormControl,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { getBaseSchema } from '@/lib/helpers/auto-form';
+import { useTranslations } from 'next-intl';
 import React from 'react';
 import { z } from 'zod';
 
@@ -13,19 +15,22 @@ import { AutoFormDesc } from '../common/desc';
 import { AutoFormLabel } from '../common/label';
 import { ItemAutoFormComponentProps } from './item';
 
-export function AutoFormRadioGroup<T extends z.ZodTypeAny>({
+export function AutoFormSelect<T extends z.ZodTypeAny>({
   label,
   field,
   description,
   shape,
+  placeholder,
   labels = [],
   ...props
 }: ItemAutoFormComponentProps<T> &
-  Omit<React.ComponentProps<typeof RadioGroup>, 'value'> & {
+  Omit<React.ComponentProps<typeof Select>, 'value'> & {
     description?: React.ReactNode;
     label?: React.ReactNode;
     labels?: { label: string; value: string }[];
+    placeholder?: string;
   }) {
+  const t = useTranslations('core.global');
   const baseValues = (
     getBaseSchema(shape, true) as unknown as z.ZodEnum<[string, ...string[]]>
   )._def.values;
@@ -38,29 +43,41 @@ export function AutoFormRadioGroup<T extends z.ZodTypeAny>({
     };
   });
 
+  const currentPlaceholder =
+    (values ?? labels).find(l => l.value === field.value)?.label ??
+    t('select_option');
+
   return (
     <FormItem className="space-y-3">
       {label && <AutoFormLabel>{label}</AutoFormLabel>}
 
       <FormControl>
-        <RadioGroup
+        <Select
           defaultValue={field.value}
           disabled={props.disabled}
-          onValueChange={field.onChange}
+          onValueChange={e => {
+            field.onChange(e);
+            props?.onValueChange?.(e);
+          }}
           {...props}
         >
-          {values.map(({ value, label }) => (
-            <FormItem
-              className="flex items-center space-x-3 space-y-0"
-              key={value}
+          <SelectTrigger {...props}>
+            <SelectValue
+              onBlur={field.onBlur}
+              placeholder={placeholder ?? currentPlaceholder}
             >
-              <FormControl>
-                <RadioGroupItem value={value} />
-              </FormControl>
-              <FormLabel className="font-normal">{label}</FormLabel>
-            </FormItem>
-          ))}
-        </RadioGroup>
+              {currentPlaceholder}
+            </SelectValue>
+          </SelectTrigger>
+
+          <SelectContent>
+            {values.map(({ value, label }) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </FormControl>
 
       {description && <AutoFormDesc>{description}</AutoFormDesc>}

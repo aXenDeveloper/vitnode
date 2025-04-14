@@ -8,11 +8,15 @@
     "contribution",
     "structure",
     "debugging",
-    "---Plugins---",
-    "create-plugins",
+    "swagger",
+    "---Framework---",
+    "auth",
+    "fetcher",
     "modules",
     "routes",
-    "---APIs---",
+    "---API---",
+    "sso",
+    "---Rest---",
     "..."
   ]
 }

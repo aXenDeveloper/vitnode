@@ -19,6 +19,8 @@
       "or": "or",
       "back_home": "Back to home",
       "go_back": "Go back",
+      "select_option": "Select an option",
+      "select_options": "Select options",
       "errors": {
         "title": "Oops! Something went wrong.",
         "internal_server_error": "Internal server error.",
