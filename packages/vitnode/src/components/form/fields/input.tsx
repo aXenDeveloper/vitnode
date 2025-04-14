@@ -5,14 +5,16 @@ import { z } from 'zod';
 
 import { AutoFormDesc } from '../common/desc';
 import { AutoFormLabel } from '../common/label';
-import { ItemAutoFormProps } from './item';
+import { ItemAutoFormComponentProps } from './item';
 
 export function AutoFormInput<T extends z.ZodTypeAny>({
   label,
   field,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  shape: _,
   description,
   ...props
-}: ItemAutoFormProps<T> &
+}: ItemAutoFormComponentProps<T> &
   Omit<React.ComponentProps<typeof Input>, 'value'> & {
     description?: React.ReactNode;
     label?: React.ReactNode;

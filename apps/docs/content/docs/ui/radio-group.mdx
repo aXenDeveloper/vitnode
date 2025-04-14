@@ -1,0 +1,82 @@
+---
+title: Radio Group
+description: A collection of radio buttons where only one option can be selected at a time, ensuring mutual exclusivity.
+---
+
+<Callout title="Shadcn UI">
+  This component is part of [Shadcn
+  UI](https://ui.shadcn.com/docs/components/radio-group).
+</Callout>
+
+## Usage
+
+```ts
+import { z } from 'zod';
+import { AutoForm } from 'vitnode/components/form/auto-form';
+import { AutoFormRadioGroup } from 'vitnode/components/form/fields/radio-group';
+```
+
+```ts
+const formSchema = z.object({
+  options: z.enum(['option1', 'option2', 'option3']),
+});
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: 'options',
+      component: props => (
+        <AutoFormRadioGroup
+          description="By checking this box, you agree to the terms and conditions."
+          label="I agree to the terms and conditions"
+          labels={[
+            {
+              value: 'option1',
+              label: 'Option 1 with a very long label that should be truncated',
+            },
+            {
+              value: 'option2',
+              label: 'Option 2',
+            },
+            {
+              value: 'option3',
+              label: 'Option 3',
+            },
+          ]}
+          {...props}
+        />
+      ),
+    },
+  ]}
+/>
+```
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    label: {
+      description:
+        'The label for the input field. This is displayed above the input.',
+      type: 'string',
+      default: '',
+    },
+    description: {
+      description:
+        'A short description of the input field. This is displayed below the input.',
+      type: 'string',
+      default: '',
+    },
+    labels: {
+      description:
+        'An array of objects representing the radio button options. Each object should have a `value` and a `label` property.',
+      type: '{ value: string; label: string }[]',
+      default: '[]',
+    },
+  }}
+/>

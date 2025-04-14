@@ -3,6 +3,7 @@
 import { AutoForm } from '@/components/form/auto-form';
 import { AutoFormCheckbox } from '@/components/form/fields/checkbox';
 import { AutoFormInput } from '@/components/form/fields/input';
+import { AutoFormRadioGroup } from '@/components/form/fields/radio-group';
 import { AutoFormTextarea } from '@/components/form/fields/textarea';
 import { z } from 'zod';
 
@@ -13,6 +14,7 @@ export const DashboardAdminView = () => {
     terms: z.boolean().refine(val => val, {
       message: 'You must accept the terms and conditions',
     }),
+    options: z.enum(['option1', 'option2', 'option3']).default('option1'),
   });
 
   return (
@@ -42,11 +44,36 @@ export const DashboardAdminView = () => {
           },
           {
             id: 'terms',
-            component: ({ field }) => (
+            component: props => (
               <AutoFormCheckbox
                 description="By checking this box, you agree to the terms and conditions."
-                field={field}
                 label="I agree to the terms and conditions"
+                {...props}
+              />
+            ),
+          },
+          {
+            id: 'options',
+            component: props => (
+              <AutoFormRadioGroup
+                description="By checking this box, you agree to the terms and conditions."
+                label="I agree to the terms and conditions"
+                labels={[
+                  {
+                    value: 'option1',
+                    label:
+                      'Option 1 with a very long label that should be truncated',
+                  },
+                  {
+                    value: 'option2',
+                    label: 'Option 2',
+                  },
+                  {
+                    value: 'option3',
+                    label: 'Option 3',
+                  },
+                ]}
+                {...props}
               />
             ),
           },

@@ -3,6 +3,7 @@
 import { AutoForm } from '@/components/form/auto-form';
 import { AutoFormCheckbox } from '@/components/form/fields/checkbox';
 import { AutoFormInput } from '@/components/form/fields/input';
+import { ItemAutoFormComponentProps } from '@/components/form/fields/item';
 import { Link } from '@/lib/navigation';
 import { removeSpecialCharacters } from '@/lib/special-characters';
 import { useTranslations } from 'next-intl';
@@ -19,12 +20,16 @@ export const FormSignUp = ({ isEmail }: { isEmail: boolean }) => {
       fields={[
         {
           id: 'name',
-          component: ({ field }) => {
+          component: ({ field, shape }) => {
             const value = (field.value ?? '') as string;
 
             return (
               <div className="space-y-2">
-                <AutoFormInput field={field} label={t('username.label')} />
+                <AutoFormInput
+                  field={field}
+                  label={t('username.label')}
+                  shape={shape}
+                />
                 {value.length >= 3 && (
                   <div className="text-muted-foreground text-sm">
                     {t.rich('username.your_user_code', {
@@ -42,12 +47,8 @@ export const FormSignUp = ({ isEmail }: { isEmail: boolean }) => {
         },
         {
           id: 'email',
-          component: ({ field }) => (
-            <AutoFormInput
-              field={field}
-              label={t('email.label')}
-              type="email"
-            />
+          component: props => (
+            <AutoFormInput label={t('email.label')} type="email" {...props} />
           ),
         },
         {
@@ -56,7 +57,7 @@ export const FormSignUp = ({ isEmail }: { isEmail: boolean }) => {
         },
         {
           id: 'terms',
-          component: ({ field }) => (
+          component: props => (
             <AutoFormCheckbox
               description={t.rich('terms.desc', {
                 link: text => (
@@ -65,8 +66,8 @@ export const FormSignUp = ({ isEmail }: { isEmail: boolean }) => {
                   </Link>
                 ),
               })}
-              field={field}
               label={t('terms.label')}
+              {...props}
             />
           ),
         },
@@ -74,11 +75,13 @@ export const FormSignUp = ({ isEmail }: { isEmail: boolean }) => {
           ? [
               {
                 id: 'newsletter' as const,
-                component: ({ field }) => (
+                component: (
+                  props: ItemAutoFormComponentProps<typeof formSchema>,
+                ) => (
                   <AutoFormCheckbox
                     description={t('newsletter.desc')}
-                    field={field}
                     label={t('newsletter.label')}
+                    {...props}
                   />
                 ),
               },

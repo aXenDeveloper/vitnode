@@ -1,6 +1,17 @@
 import { DefaultValues } from 'react-hook-form';
 import { z } from 'zod';
 
+export const getShapeFromSchema = (
+  schema: z.ZodEffects<z.ZodObject<z.ZodRawShape>> | z.ZodObject<z.ZodRawShape>,
+  id: string,
+): null | z.ZodAny => {
+  if (schema._def.typeName === z.ZodFirstPartyTypeKind.ZodEffects) {
+    return schema._def.schema.shape[id] as z.ZodAny;
+  }
+
+  return (schema as z.ZodObject<z.ZodRawShape>).shape[id] as z.ZodAny;
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ZodObjectOrWrapped = z.Schema<any, any>;
 

@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 import { Button } from '../ui/button';
 import { Form } from '../ui/form';
-import { ItemAutoForm } from './fields/item';
+import { ItemAutoForm, ItemAutoFormProps } from './fields/item';
 
 export function AutoForm<
   T extends
@@ -23,7 +23,7 @@ export function AutoForm<
   mode,
   ...props
 }: Omit<React.ComponentProps<'form'>, 'onSubmit'> & {
-  fields: React.ComponentProps<typeof ItemAutoForm<T>>[];
+  fields: ItemAutoFormProps<T>[];
   formSchema: T;
   mode?: Mode;
   onSubmit?: (
@@ -56,7 +56,7 @@ export function AutoForm<
   return (
     <Form form={form} onSubmit={onSubmit} {...props}>
       {fields.map(field => (
-        <ItemAutoForm key={field.id} {...field} />
+        <ItemAutoForm formSchema={formSchema} key={field.id} {...field} />
       ))}
       <Button
         disabled={!form.formState.isValid || form.formState.isSubmitting}
