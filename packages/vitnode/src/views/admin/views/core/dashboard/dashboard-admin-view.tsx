@@ -5,6 +5,7 @@ import { AutoFormCheckbox } from '@/components/form/fields/checkbox';
 import { AutoFormInput } from '@/components/form/fields/input';
 import { AutoFormRadioGroup } from '@/components/form/fields/radio-group';
 import { AutoFormSelect } from '@/components/form/fields/select';
+import { AutoFormSwitch } from '@/components/form/fields/switch';
 import { AutoFormTextarea } from '@/components/form/fields/textarea';
 import { z } from 'zod';
 
@@ -17,6 +18,7 @@ export const DashboardAdminView = () => {
     }),
     options: z.enum(['option1', 'option2', 'option3']).default('option1'),
     options_long: z.enum(['option1', 'option2', 'option3']).default('option2'),
+    switch: z.boolean().default(false),
   });
 
   return (
@@ -101,6 +103,16 @@ export const DashboardAdminView = () => {
                   },
                 ]}
                 placeholder="Select an option from the list"
+                {...props}
+              />
+            ),
+          },
+          {
+            id: 'switch',
+            component: props => (
+              <AutoFormSwitch
+                description="By checking this box, you agree to the terms and conditions."
+                label="I agree to the terms and conditions"
                 {...props}
               />
             ),

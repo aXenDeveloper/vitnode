@@ -1,11 +1,11 @@
 ---
-title: Checkbox
+title: Switch
 description: Toggle between checked and unchecked states.
 ---
 
 <Callout title="Shadcn UI">
   This component is part of [Shadcn
-  UI](https://ui.shadcn.com/docs/components/checkbox).
+  UI](https://ui.shadcn.com/docs/components/switch).
 </Callout>
 
 ## Usage
@@ -50,33 +50,12 @@ const formSchema = z.object({
 
   <Tab value="Manual">
 ```ts
-import { Checkbox } from 'vitnode-frontend/components/ui/checkbox';
+import { Switch } from 'vitnode-frontend/components/ui/switch';
 ```
 
 ```tsx
-<Checkbox onChange={onChange} checked={checked} />
+<Switch checked={value} onCheckedChange={onChange} />
 ```
 
   </Tab>
 </Tabs>
-
-## Props
-
-import { TypeTable } from 'fumadocs-ui/components/type-table';
-
-<TypeTable
-  type={{
-    label: {
-      description:
-        'The label for the checkbox. This is displayed next to the checkbox.',
-      type: 'string',
-      default: '',
-    },
-    description: {
-      description:
-        'A short description of the checkbox. This is displayed below the checkbox.',
-      type: 'string',
-      default: '',
-    },
-  }}
-/>

@@ -1,5 +1,8 @@
 import { FormLabel } from '@/components/ui/form';
 
-export const AutoFormLabel = ({ children }: { children: React.ReactNode }) => {
-  return <FormLabel>{children}</FormLabel>;
+export const AutoFormLabel = ({
+  children,
+  ...props
+}: React.ComponentProps<typeof FormLabel>) => {
+  return <FormLabel {...props}>{children}</FormLabel>;
 };
