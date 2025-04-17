@@ -110,6 +110,12 @@
   "admin": {
     "global": {
       "nav": {
+        "core": "Core",
+        "dashboard": "Dashboard",
+        "users": {
+          "title": "Users",
+          "list": "User List"
+        },
         "user_bar": {
           "home_page": "Home Page"
         }

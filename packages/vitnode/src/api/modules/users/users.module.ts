@@ -1,10 +1,10 @@
 import { createModuleApi } from '@/api/lib/module';
 import { OpenAPIHono } from '@hono/zod-openapi';
 
-import { sessionRoute } from './session';
-import { signInRoute } from './sign-in';
-import { signOutRoute } from './sign-out';
-import { signUpRoute } from './sign-up';
+import { sessionRoute } from './routes/session.route';
+import { signInRoute } from './routes/sign-in.route';
+import { signOutRoute } from './routes/sign-out.route';
+import { signUpRoute } from './routes/sign-up.route';
 import { ssoUserModule } from './sso/sso.module';
 
 export const usersModule = createModuleApi({

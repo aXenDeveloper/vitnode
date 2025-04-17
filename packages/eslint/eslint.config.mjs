@@ -73,6 +73,7 @@ export default [
   },
   {
     rules: {
+      '@typescript-eslint/no-confusing-void-expression': 'off',
       '@typescript-eslint/no-unnecessary-type-parameters': 'off',
       '@typescript-eslint/no-misused-spread': 'off',
       'perfectionist/sort-decorators': 'warn',

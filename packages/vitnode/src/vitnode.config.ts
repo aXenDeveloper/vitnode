@@ -14,7 +14,7 @@ export interface VitNodeConfig<AppLocales extends string[] = string[]> {
   plugins: VitNodePlugin[];
 }
 
-export function getVitNodeConfig<AppLocales extends string[]>(
+export function buildConfig<AppLocales extends string[]>(
   args: VitNodeConfig<AppLocales>,
 ): VitNodeConfig<AppLocales> {
   return {

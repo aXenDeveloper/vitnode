@@ -40,7 +40,7 @@ export const ItemNavAdmin = ({
   if (!items.length) {
     return (
       <SidebarMenuItem>
-        <SidebarMenuButton asChild>
+        <SidebarMenuButton asChild tooltip={title}>
           <Link href={href}>{content}</Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
@@ -51,9 +51,11 @@ export const ItemNavAdmin = ({
     <Collapsible asChild>
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton tooltip={title}>
-            {content}
-            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+          <SidebarMenuButton asChild tooltip={title}>
+            <Link href={href}>
+              {content}
+              <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+            </Link>
           </SidebarMenuButton>
         </CollapsibleTrigger>
 

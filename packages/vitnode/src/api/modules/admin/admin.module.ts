@@ -1,7 +1,7 @@
 import { createModuleApi } from '@/api/lib/module';
 import { OpenAPIHono } from '@hono/zod-openapi';
 
-import { sessionAdminRoute } from './session';
+import { sessionAdminRoute } from './routes/session.route';
 
 export const adminModule = createModuleApi({
   name: 'admin',

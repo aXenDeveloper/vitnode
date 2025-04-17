@@ -1,7 +1,7 @@
 import { getRequestConfig } from 'next-intl/server';
-import { getVitNodeConfig } from 'vitnode/vitnode.config';
+import { buildConfig } from 'vitnode/vitnode.config';
 
-export const vitNodeConfig = getVitNodeConfig({
+export const vitNodeConfig = buildConfig({
   metadata: {
     title: 'VitNode',
     shortTitle: 'VitNode',

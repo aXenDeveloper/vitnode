@@ -1,5 +1,5 @@
 import { getUserIp } from '@/api/lib/get-user-ip';
-import { generateAvatarColor } from '@/api/modules/users/utils/avatar-color';
+import { generateAvatarColor } from '@/api/modules/users/avatar-color';
 import { dbClient } from '@/database/client';
 import { core_roles } from '@/database/schema/roles';
 import { core_users } from '@/database/schema/users';

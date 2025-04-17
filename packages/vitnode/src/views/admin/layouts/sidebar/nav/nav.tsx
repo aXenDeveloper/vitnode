@@ -3,7 +3,8 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
 } from '@/components/ui/sidebar';
-import { HomeIcon } from 'lucide-react';
+import { LayoutDashboardIcon, UsersRoundIcon } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 
 import { ItemNavAdmin } from './item';
 
@@ -13,24 +14,25 @@ export interface NavAdminParent {
   title: string;
 }
 
-export const NavSidebarAdmin = () => {
+export const NavSidebarAdmin = async () => {
+  const t = await getTranslations('admin.global.nav');
   const rootItems: NavAdminParent[] = [
     {
       id: 'core',
-      title: 'Core',
+      title: t('core'),
       items: [
         {
-          href: '/admin/core/users',
-          title: 'test 123',
-          icon: <HomeIcon />,
+          href: '/admin/core/',
+          icon: <LayoutDashboardIcon />,
+          title: t('dashboard'),
         },
         {
-          href: '/admin/core',
-          title: 'test button',
-          icon: <HomeIcon />,
+          href: '/admin/core/users',
+          title: t('users.title'),
+          icon: <UsersRoundIcon />,
           items: [
             {
-              title: 'test 123',
+              title: t('users.list'),
               href: '/admin/core/users',
             },
           ],

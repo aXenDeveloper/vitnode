@@ -89,6 +89,9 @@ VitNode is a comprehensive framework designed to simplify and accelerate applica
 - **Documentation**: Fumadocs & Swagger 3
 - **Schema validation**: zod 3 & @hono/zod-openapi
 
+- Write backend code in `packages/vitnode/src/api` directory
+- Generate OpenAPI documentation using `@hono/zod-openapi` for all API endpoints
+
 ## Database
 
 - Use `PostgreSQL` with `Drizzle ORM`
@@ -112,14 +115,8 @@ VitNode is a comprehensive framework designed to simplify and accelerate applica
 
 The code is organized into two main directories:
 
-### Apps
-
 - `apps/web/` - the main frontend application,
   - `apps/web/src/app/[locale]/(main)` - the main application code,
   - `apps/web/src/app/[locale]/admin` - the admin panel code,
 - `apps/docs/` - the documentation application
-
-### Packages
-
-- `packages/eslint/` - custom ESLint configuration with Typescript,
-- `packages/vitnode/` - shared components for `web/` project to create frontend & backend
+- `packages/vitnode` - the core of the framework, which is used by the `web` application
