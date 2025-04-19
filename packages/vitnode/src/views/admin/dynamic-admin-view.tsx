@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 
 import { VitNodeConfig } from '../../vitnode.config';
 import { DashboardAdminView } from './views/core/dashboard/dashboard-admin-view';
+import { UsersAdminView } from './views/core/users/users-admin-view';
 
 export interface DynamicAdminViewProps {
   params: Promise<{
@@ -34,7 +35,7 @@ export const DynamicAdminView = async ({
 
   const views = {
     core: <DashboardAdminView />,
-    'core/users': <div>users view</div>,
+    'core/users': <UsersAdminView />,
   };
 
   const view = views[path];

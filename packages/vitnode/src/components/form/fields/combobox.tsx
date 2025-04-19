@@ -17,7 +17,7 @@ import { getBaseSchema } from '@/lib/helpers/auto-form';
 import { cn } from '@/lib/utils';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import React, { useState } from 'react';
+import React from 'react';
 import { z } from 'zod';
 
 import { AutoFormDesc } from '../common/desc';
