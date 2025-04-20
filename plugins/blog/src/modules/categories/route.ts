@@ -1,11 +1,14 @@
-import { OpenAPIHono } from '@hono/zod-openapi';
-import { z } from 'zod';
+import { OpenAPIHono, z } from '@hono/zod-openapi';
+import { createApiRoute } from 'vitnode/api/lib/route';
 
-export const listCategories = new OpenAPIHono().openapi(
-  {
+export const categoriesRoute = new OpenAPIHono().openapi(
+  createApiRoute({
     method: 'get',
-    description: 'Get categories',
     path: '/',
+    pluginConfig: {
+      id: 'blog',
+      name: 'Blog',
+    },
     responses: {
       200: {
         content: {
@@ -18,7 +21,7 @@ export const listCategories = new OpenAPIHono().openapi(
         description: 'Test',
       },
     },
-  },
+  }),
   c => {
     return c.json({
       test: 'test',
