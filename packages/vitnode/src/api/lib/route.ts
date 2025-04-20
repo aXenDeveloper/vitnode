@@ -1,3 +1,4 @@
+import { PluginConfig } from '@/plugin.config';
 import { createRoute as createRouteHono, RouteConfig } from '@hono/zod-openapi';
 import { MiddlewareHandler } from 'hono';
 
@@ -15,11 +16,11 @@ export function createApiRoute<
   },
 >({
   isAuth,
-  plugin,
+  pluginConfig,
   ...routeConfig
 }: R & {
   isAuth?: boolean;
-  plugin: string;
+  pluginConfig: PluginConfig;
 }): R & {
   getRoutingPath: () => RoutingPath<R['path']>;
 } {
@@ -28,10 +29,7 @@ export function createApiRoute<
       ? routeConfig.middleware
       : [routeConfig.middleware]
     : [];
-  const tags: string[] = [
-    plugin.charAt(0).toUpperCase() + plugin.slice(1),
-    ...(routeConfig.tags ?? []),
-  ];
+  const tags: string[] = [pluginConfig.name, ...(routeConfig.tags ?? [])];
 
   return createRouteHono({
     middleware: isAuth ? [sessionMiddleware(), ...middlewareFromConfig] : [],

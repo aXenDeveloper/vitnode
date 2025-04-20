@@ -9,7 +9,10 @@ const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 const route = createApiRoute({
   method: 'post',
   description: 'Create a new user',
-  plugin: 'core',
+  pluginConfig: {
+    id: 'core',
+    name: 'Core',
+  },
   path: '/',
   request: {
     body: {

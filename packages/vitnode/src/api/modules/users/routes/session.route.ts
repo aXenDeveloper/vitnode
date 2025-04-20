@@ -7,7 +7,10 @@ import { z } from 'zod';
 const route = createApiRoute({
   method: 'get',
   description: 'Verify session',
-  plugin: 'core',
+  pluginConfig: {
+    id: 'core',
+    name: 'Core',
+  },
   path: '/',
   responses: {
     200: {

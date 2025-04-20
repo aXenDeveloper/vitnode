@@ -8,7 +8,10 @@ import { z } from 'zod';
 const route = createApiRoute({
   method: 'post',
   description: 'Sign in with email and password',
-  plugin: 'core',
+  pluginConfig: {
+    id: 'core',
+    name: 'Core',
+  },
   path: '/',
   request: {
     body: {

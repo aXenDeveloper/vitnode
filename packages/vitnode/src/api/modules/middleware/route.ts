@@ -5,7 +5,10 @@ import { z } from 'zod';
 
 const route = createApiRoute({
   method: 'get',
-  plugin: 'core',
+  pluginConfig: {
+    id: 'core',
+    name: 'Core',
+  },
   description: 'Middleware route with user authentication',
   path: '/',
   responses: {

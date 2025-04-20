@@ -7,7 +7,10 @@ import { z } from 'zod';
 const route = createApiRoute({
   method: 'get',
   description: 'SSO Callback',
-  plugin: 'core',
+  pluginConfig: {
+    id: 'core',
+    name: 'Core',
+  },
   path: '/{providerId}/callback',
   request: {
     params: z.object({

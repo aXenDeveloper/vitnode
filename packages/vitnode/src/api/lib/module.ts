@@ -12,20 +12,15 @@ export interface ModuleApi<
   plugin: P;
 }
 
-export function createModuleApi<
-  E extends Env,
-  S extends Schema = Schema,
-  N extends string = string,
-  P extends string = string,
->({
+export function createModuleApi<E extends Env, S extends Schema = Schema>({
   name,
   plugin,
   routes,
 }: {
-  name: N;
-  plugin: P;
+  name: string;
+  plugin: string;
   routes: OpenAPIHono<E, S, string>;
-}): ModuleApi<E, S, N, P> {
+}) {
   const current = routes;
 
   return {

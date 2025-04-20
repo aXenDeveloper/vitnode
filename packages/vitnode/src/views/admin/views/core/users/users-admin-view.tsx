@@ -1,11 +1,21 @@
+'use client';
+
 import { DataTable } from '@/components/table/data-table';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { MoreVerticalIcon } from 'lucide-react';
 
 export const UsersAdminView = () => {
   return (
     <div className="container mx-auto p-4">
       <DataTable
         columns={[
-          { id: 'id', label: 'Id' },
           { id: 'name', label: 'Name' },
           { id: 'email', label: 'Email' },
           {
@@ -24,6 +34,31 @@ export const UsersAdminView = () => {
               >
                 {row.status}
               </span>
+            ),
+          },
+          {
+            id: 'id',
+            label: 'Actions',
+            cell: () => (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    className="text-muted-foreground data-[state=open]:bg-muted flex size-8"
+                    size="icon"
+                    variant="ghost"
+                  >
+                    <MoreVerticalIcon />
+                    <span className="sr-only">Open menu</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-32">
+                  <DropdownMenuItem>Edit</DropdownMenuItem>
+                  <DropdownMenuItem>Make a copy</DropdownMenuItem>
+                  <DropdownMenuItem>Favorite</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>Delete</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ),
           },
         ]}

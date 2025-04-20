@@ -6,7 +6,10 @@ import { OpenAPIHono, z } from '@hono/zod-openapi';
 const route = createApiRoute({
   method: 'delete',
   description: 'Sign out the current admin',
-  plugin: 'core',
+  pluginConfig: {
+    id: 'core',
+    name: 'Core',
+  },
   path: '/',
   request: {
     body: {

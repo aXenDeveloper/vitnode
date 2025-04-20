@@ -5,8 +5,11 @@ import { z } from 'zod';
 
 const route = createApiRoute({
   method: 'post',
+  pluginConfig: {
+    id: 'core',
+    name: 'Core',
+  },
   description: 'Generate SSO URL',
-  plugin: 'core',
   path: '/{providerId}',
   request: {
     params: z.object({
