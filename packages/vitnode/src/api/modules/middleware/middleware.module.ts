@@ -1,5 +1,5 @@
 import { createModuleApi } from '@/api/lib/module';
-import { test } from '@/test/module';
+import { test } from '@/test/test';
 import { OpenAPIHono } from '@hono/zod-openapi';
 
 import { middlewareRoute } from './route';
