@@ -1,4 +1,5 @@
-import { Route } from './route';
+import { Route } from '@/api/lib/route';
+
 import { Test } from './test';
 
 type FetcherParams<

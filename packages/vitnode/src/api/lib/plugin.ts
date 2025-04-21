@@ -1,31 +1,23 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { Env, Schema } from 'hono';
 
-import { ModuleApi } from './module';
+import { BuildModuleReturn } from './module';
 
-export interface PluginAPI<T extends Schema, Plugin extends string> {
-  app: OpenAPIHono<Env, T, string>;
-  name: Plugin;
+export interface BuildPluginReturn {
+  hono: OpenAPIHono;
+  name: string;
 }
 
-export function createPluginApi<
-  T extends Schema,
-  E extends Env = Env,
-  Plugin extends string = string,
->({
+export function buildPlugin<P extends string>({
   name,
-  modules,
+  modules = [],
 }: {
-  modules: ModuleApi<E, T, string, Plugin>[];
-  name: Plugin;
-}): PluginAPI<T, Plugin> {
-  const root = new OpenAPIHono();
+  modules?: BuildModuleReturn<P>[];
+  name: P;
+}): BuildPluginReturn {
+  const hono = new OpenAPIHono();
   modules.forEach(handler => {
-    root.route(`/${handler.name}`, handler.app);
+    hono.route(`/${handler.name}`, handler.hono);
   });
 
-  return {
-    name,
-    app: root,
-  };
+  return { name, hono };
 }

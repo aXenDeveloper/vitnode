@@ -1,3 +1,4 @@
+import { BuildPluginReturn } from './api/lib/plugin';
 import { PluginConfigReturn } from './plugin.config';
 
 export interface VitNodeConfig<AppLocales extends string[] = string[]> {
@@ -12,6 +13,7 @@ export interface VitNodeConfig<AppLocales extends string[] = string[]> {
     title: string;
   };
   plugins: PluginConfigReturn[];
+  pluginsNew: BuildPluginReturn[];
 }
 
 export function buildConfig<AppLocales extends string[]>(

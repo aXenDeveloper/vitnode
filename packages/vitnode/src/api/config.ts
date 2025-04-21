@@ -1,4 +1,4 @@
-import corePlugin from '@/api/plugin';
+import { newBuildPluginCore } from '@/api/plugin';
 import { swaggerUI } from '@hono/swagger-ui';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { Context, Env, Schema } from 'hono';
@@ -6,7 +6,7 @@ import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';
 import { HTTPException } from 'hono/http-exception';
 
-import { PluginAPI } from './lib/plugin';
+import { BuildPluginReturn } from './lib/plugin';
 import { globalMiddleware } from './middlewares/global/global';
 
 interface CORSOptions {
@@ -26,7 +26,7 @@ interface CSRFOptions {
   origin?: IsAllowedOriginHandler | string | string[];
 }
 
-export function VitNodeAPI<T extends Schema>({
+export function VitNodeAPI({
   app,
   cors: corsOptions,
   csrf: csrfOptions,
@@ -36,7 +36,7 @@ export function VitNodeAPI<T extends Schema>({
   app: OpenAPIHono<Env, Schema, string>;
   cors?: CORSOptions;
   csrf?: CSRFOptions;
-  plugins: PluginAPI<T, string>[];
+  plugins: BuildPluginReturn[];
 }) {
   app.doc('/swagger/doc', {
     openapi: '3.0.0',
@@ -69,8 +69,8 @@ export function VitNodeAPI<T extends Schema>({
     });
   });
 
-  [corePlugin, ...plugins].map(root => {
-    app.route(`/${root.name}`, root.app);
+  [newBuildPluginCore, ...plugins].map(root => {
+    app.route(`/${root.name}`, root.hono);
   });
 
   return app;

@@ -1,9 +1,11 @@
-import { OpenAPIHono } from '@hono/zod-openapi';
+import { buildModule } from 'vitnode/api/lib/module';
 
 import { categoriesRoute } from './route';
 
-export const categoriesModule = new OpenAPIHono()
-  .route('/categories', categoriesRoute)
-  .route('/test', categoriesRoute);
+export const categoriesModule = buildModule({
+  plugin: 'blog',
+  name: 'categories',
+  routes: [categoriesRoute],
+});
 
 export type CategoriesTypes = typeof categoriesModule;

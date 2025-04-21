@@ -1,15 +1,13 @@
-import { createModuleApi } from '@/api/lib/module';
-import { test } from '@/test/test';
-import { OpenAPIHono } from '@hono/zod-openapi';
+import { buildModule } from '@/api/lib/module';
 
-import { middlewareRoute } from './route';
-
-export const middlewareModule = createModuleApi({
-  name: 'middleware',
-  plugin: 'core',
-  routes: new OpenAPIHono()
-    .route('/', middlewareRoute)
-    .route('/testNew', test.hono),
-});
+import { routeMiddleware } from './route';
 
 export type MiddlewareTypes = typeof middlewareModule;
+
+export const middlewareModule = buildModule({
+  plugin: 'core',
+  name: 'middleware',
+  routes: [routeMiddleware],
+});
+
+export type BuildMiddlewareTypes = typeof middlewareModule;
