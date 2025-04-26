@@ -7,7 +7,6 @@ export const vitNodeConfig = buildConfig({
     shortTitle: 'VitNode',
   },
   plugins: [],
-  pluginsNew: [],
   i18n: {
     locales: ['en', 'pl'] as const,
     defaultLocale: 'en',

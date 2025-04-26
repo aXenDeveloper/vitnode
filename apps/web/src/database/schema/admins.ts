@@ -29,7 +29,7 @@ export const core_admin_permissions = pgTable(
     index('core_admin_permissions_role_id_idx').on(t.role_id),
     index('core_admin_permissions_user_id_idx').on(t.user_id),
   ],
-);
+).enableRLS();
 
 export const core_admin_permissions_relations = relations(
   core_admin_permissions,
@@ -69,7 +69,7 @@ export const core_admin_sessions = pgTable(
     index('core_admin_sessions_token_idx').on(t.token),
     index('core_admin_sessions_user_id_idx').on(t.user_id),
   ],
-);
+).enableRLS();
 
 export const core_admin_sessions_relations = relations(
   core_admin_sessions,

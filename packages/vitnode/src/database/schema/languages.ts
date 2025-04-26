@@ -23,7 +23,7 @@ export const core_languages = pgTable(
     index('core_languages_code_idx').on(t.code),
     index('core_languages_name_idx').on(t.name),
   ],
-);
+).enableRLS();
 
 export const core_languages_words = pgTable(
   'core_languages_words',
@@ -42,7 +42,7 @@ export const core_languages_words = pgTable(
     variable: t.varchar({ length: 255 }).notNull(),
   }),
   t => [index('core_languages_words_lang_code_idx').on(t.language_code)],
-);
+).enableRLS();
 
 export const core_languages_words_relations = relations(
   core_languages_words,

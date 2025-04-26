@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 export const routeMiddleware = buildRoute({
   route: {
+    isAuth: true,
     path: '/',
     method: 'get',
     description: 'Middleware route with user authentication',

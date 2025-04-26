@@ -1,12 +1,33 @@
+import { UsersTypes } from '@/api/modules/users/users.module';
 import { Card, CardDescription } from '@/components/ui/card';
 import { Link } from '@/lib/navigation';
-import { useTranslations } from 'next-intl';
+import { fetcher as fetcherTest } from '@/test/fetcher';
+import { test } from '@/test/test';
+import { fetcher } from '@/test/testtest';
 import { getTranslations } from 'next-intl/server';
 import { Metadata } from 'next/dist/types';
 import React from 'react';
 
 import { SSOButtons, SSOButtonsSkeleton } from '../sso/buttons/sso-buttons';
 import { FormSignIn } from './form/form';
+
+const getData = async () => {
+  const test123 = fetcher<UsersTypes>();
+  const test12312 = await fetcherTest<UsersTypes>({
+    path: '/session',
+    method: 'get',
+    plugin: 'core',
+    module: 'users',
+  });
+
+  const data = await test123.something.test123[':test'].$get({
+    param: {
+      test: 'test',
+    },
+  });
+
+  console.log('data', data);
+};
 
 export const generateMetadataSignInView = async (
   locale: string,
@@ -18,9 +39,10 @@ export const generateMetadataSignInView = async (
   };
 };
 
-export const SignInView = () => {
-  const t = useTranslations('core.auth.sign_in');
-  const tGlobal = useTranslations('core.global');
+export const SignInView = async () => {
+  const t = await getTranslations('core.auth.sign_in');
+  const tGlobal = await getTranslations('core.global');
+  await getData();
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-4 py-16">

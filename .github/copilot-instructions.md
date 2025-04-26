@@ -1,26 +1,22 @@
-# AI Rules for VitNode
+# VitNode
 
 VitNode is a comprehensive framework designed to simplify and accelerate application development with Next.js and Hono.js. Built as a monorepo solution managed by Turborepo, VitNode provides a structured environment that makes development faster and less complex. The framework includes an integrated AdminCP and plugin system to extend its core functionality.
 
-# VitNode Technology Stack
+> **Important:** VitNode is ESM-only (ECMAScript Modules)
 
-- **Frontend (Web)**: Next.js 15 with Tailwind CSS 4 and Shadcn UI components
-- **Backend (API)**: Hono.js with RPC for type-safe API calls
-- **Database**: PostgreSQL
-- **Documentation**: Fumadocs & Swagger 3
-- **Build System**: Turborepo for monorepo management
-- **CI/CD**: GitHub Actions for automated testing, building, and deployment
-- ESM (ECMAScript Modules) only
+## Frontend Development Guidelines
 
-## Frontend
+### Core Technologies
 
-- **Framework**: Next.js 15
-- **Styling**: Tailwind CSS 4
-- **UI Components**: Shadcn UI
-- **Internationalization**: next-intl 4
-- **Icons**: lucide-react 5
-- **Schema Validation**: zod 3
-- **Form Handling**: react-hook-form 7
+- **Framework:** Next.js 15
+- **Styling:** Tailwind CSS 4
+- **UI Components:** Shadcn UI
+- **Internationalization:** next-intl 4
+- **Icons:** lucide-react 5
+- **Schema Validation:** zod 3
+- **Form Handling:** react-hook-form 7
+
+### Architecture Requirements
 
 - Use App Router and Server Components for improved performance and SEO
 - Use server actions for form handling and data mutations from Server Components

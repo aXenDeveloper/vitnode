@@ -30,4 +30,4 @@ export const core_config = pgTable('core_config', t => ({
     .timestamp()
     .notNull()
     .$onUpdate(() => new Date()),
-}));
+})).enableRLS();

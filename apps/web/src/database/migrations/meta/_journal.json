@@ -8,6 +8,13 @@
       "when": 1744392720507,
       "tag": "0000_clever_wrecker",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1745350130388,
+      "tag": "0001_smooth_grandmaster",
+      "breakpoints": true
     }
   ]
 }
