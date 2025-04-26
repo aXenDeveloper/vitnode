@@ -7,5 +7,3 @@ export const categoriesModule = buildModule({
   name: 'categories',
   routes: [categoriesRoute],
 });
-
-export type CategoriesTypes = typeof categoriesModule;
