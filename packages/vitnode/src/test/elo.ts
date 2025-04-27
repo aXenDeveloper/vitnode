@@ -1,6 +1,8 @@
 import { BaseBuildModuleReturn, BuildModuleReturn } from '@/api/lib/module';
 import { Route } from '@/api/lib/route';
 import { usersModule } from '@/api/modules/users/users.module';
+import { RouteConfig } from '@hono/zod-openapi';
+import { z } from 'zod';
 
 // --- Core Type Definitions ---
 
@@ -46,8 +48,21 @@ type FindModuleNested<
   : // If Path is empty, it implies we are looking for the module M itself
     M;
 
+// --- Simplified Module Path Types ---
+
+// Creates a string union type of all possible module paths up to 3 levels deep
+type GetModulePaths<
+  MainModule extends string,
+  Modules extends readonly ModuleSpec[],
+> =
+  | `${MainModule}/${Modules[number]['name']}/${Extract<
+      Modules[number]['modules'],
+      readonly ModuleSpec[]
+    >[number]['name']}`
+  | `${MainModule}/${Modules[number]['name']}`
+  | MainModule;
+
 // Helper to get the target module specification based on the module path string
-// It handles the base module case and nested module cases.
 type GetTargetModule<
   ModulePath extends string,
   MainModuleName extends string,
@@ -73,9 +88,61 @@ type ExtractMethodForPath<
   P extends string,
 > = Extract<M['routes'][number], { route: { path: P } }>['route']['method'];
 
-// --- Derived Types for Fetcher ---
+// --- Type extraction utilities ---
 
-// Gets all valid path strings for a given module path (e.g., "users" or "users/sso")
+// Helper to extract types from Zod schemas that might be in different structures
+type ExtractZodType<T> = T extends z.ZodTypeAny ? z.infer<T> : never;
+
+// Infers the input type for a specific part of the route config (body, query, params)
+type InferInputType<
+  RouteCfg extends RouteConfig,
+  Part extends 'body' | 'params' | 'query',
+> = Part extends 'body'
+  ? RouteCfg extends {
+      request: {
+        body: { content: { 'application/json': { schema: infer S } } };
+      };
+    }
+    ? ExtractZodType<S>
+    : RouteCfg extends { request: { body: { schema?: infer S } } }
+      ? ExtractZodType<S>
+      : undefined
+  : Part extends 'query'
+    ? RouteCfg extends { request: { query: infer S } }
+      ? ExtractZodType<S>
+      : undefined
+    : Part extends 'params'
+      ? RouteCfg extends { request: { params: infer S } }
+        ? ExtractZodType<S>
+        : undefined
+      : never;
+
+// --- Route Configuration Extraction ---
+
+// Find the route configuration for a specific module path, route path, and method
+type FindRouteConfig<
+  M extends { routes: readonly Route[] },
+  P extends string,
+  Method extends string,
+> = Extract<
+  M['routes'][number],
+  { route: { method: Method; path: P } }
+>['route'];
+
+// Constructs the final Args type based on the inferred input types
+type BuildArgsType<RouteCfg extends RouteConfig> = {
+  // Use key remapping to filter out keys where the inferred type is undefined
+  [K in 'body' | 'params' | 'query' as InferInputType<
+    RouteCfg,
+    K
+  > extends undefined
+    ? never
+    : K]: InferInputType<RouteCfg, K>;
+};
+
+// --- Fetcher Types ---
+
+// Gets all valid path strings for a given module path
 type GetValidPathsForModule<
   ModulePath extends string,
   MainModuleName extends string,
@@ -85,7 +152,7 @@ type GetValidPathsForModule<
   GetTargetModule<ModulePath, MainModuleName, MainRoutes, SubModules>
 >;
 
-// Gets the valid method (lowercase) for a given module path and a specific path within that module
+// Gets the valid method for a given module path and route path
 type GetValidMethodForPath<
   ModulePath extends string,
   Path extends string,
@@ -98,79 +165,126 @@ type GetValidMethodForPath<
       GetTargetModule<ModulePath, MainModuleName, MainRoutes, SubModules>,
       Path
     >,
-    string // Ensure we only get string methods
+    string
   >
 >;
 
-// --- Fetcher Function Definition ---
+// --- Fetcher Parameters ---
 
-// Define the structure for the fetcher parameters, using the derived types for constraints
-interface FetcherParams<
-  // Generic parameters from BuildModuleReturn
-  P extends string,
+// Define the base parameters without args
+interface BaseFetcherParams<
   M extends string,
   Routes extends Route[],
-  Modules extends BaseBuildModuleReturn<P>[],
-  // The specific module path string provided by the user (e.g., "users/sso")
-  // This complex union type accurately constrains valid module paths.
-  ModuleName extends
-    | `${M}/${Modules[number]['name']}/${Extract<
-        Modules[number]['modules'],
-        readonly BaseBuildModuleReturn<P>[]
-      >[number]['name']}` // Second level sub-module
-    | `${M}/${Modules[number]['name']}` // First level sub-module (e.g., "users/sso")
-    // Add support for deeper nesting if necessary:
-    | M, // Base module name (e.g., "users")
-  // The specific path string selected within the chosen module
+  Modules extends BaseBuildModuleReturn[],
+  ModuleName extends GetModulePaths<M, Modules>,
   SelectedPath extends GetValidPathsForModule<ModuleName, M, Routes, Modules>,
 > {
-  input?: unknown; // TODO: Define input type based on the route if possible
   method: GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>;
   module: ModuleName;
   path: SelectedPath;
 }
 
-// The fetcher function signature
-export function fetcher<
-  // Generic parameters matching BuildModuleReturn
-  P extends string,
+// Use conditional type with intersection to define FetcherParams
+type FetcherParams<
+  // Module definition parameters
   M extends string,
   Routes extends Route[],
-  Modules extends BaseBuildModuleReturn<P>[],
-  // Constrain ModuleName to valid possibilities based on the module structure
-  ModuleName extends
-    | `${M}/${Modules[number]['name']}/${Extract<
-        Modules[number]['modules'],
-        readonly BaseBuildModuleReturn<P>[]
-      >[number]['name']}`
-    | `${M}/${Modules[number]['name']}`
-    | M,
-  // SelectedPath is constrained based on the chosen ModuleName
+  Modules extends BaseBuildModuleReturn[],
+  // Dynamic parameters based on user selection
+  ModuleName extends GetModulePaths<M, Modules>,
+  SelectedPath extends GetValidPathsForModule<ModuleName, M, Routes, Modules>,
+  // Extract the route configuration and build the args type
+  RouteConfig extends FindRouteConfig<
+    GetTargetModule<ModuleName, M, Routes, Modules>,
+    SelectedPath,
+    GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>
+  > = FindRouteConfig<
+    GetTargetModule<ModuleName, M, Routes, Modules>,
+    SelectedPath,
+    GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>
+  >,
+  ArgsType extends BuildArgsType<RouteConfig> = BuildArgsType<RouteConfig>,
+> = BaseFetcherParams<M, Routes, Modules, ModuleName, SelectedPath> & // Intersect with base
+  (keyof ArgsType extends never
+    ? { args?: undefined } // Args optional and undefined if ArgsType is empty
+    : { args: ArgsType }); // Args required if ArgsType is not empty
+
+// --- Fetcher Function ---
+
+// Simplified fetcher with fewer generic type parameters
+export function fetcher<
+  M extends string,
+  Routes extends Route[],
+  Modules extends BaseBuildModuleReturn[],
+  ModuleName extends GetModulePaths<M, Modules>,
   SelectedPath extends GetValidPathsForModule<ModuleName, M, Routes, Modules>,
 >(
-  _moduleInput: BuildModuleReturn<P, M, Routes, Modules>, // Mark as unused
-  params: FetcherParams<P, M, Routes, Modules, ModuleName, SelectedPath>,
+  _moduleInput: BuildModuleReturn<string, M, Routes, Modules>,
+  params: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath>,
 ): void {
   // Function implementation would go here
   void params; // Mark as unused for now
 }
 
+// Test cases
 (() => {
+  // Assuming /sign_in requires a body, this would now potentially error if args is missing
+  // If it doesn't require args, this is fine.
   fetcher(usersModule, {
-    path: '/test',
-    method: 'get',
+    path: '/sign_in',
+    method: 'post',
     module: 'users',
+    args: {
+      body: {
+        email: 'string',
+        password: 'string',
+      },
+    },
   });
 
   fetcher(usersModule, {
     path: '/{providerId}',
     method: 'post',
     module: 'users/sso',
+    args: {
+      // args is required because params exist
+      params: {
+        providerId: 'github',
+      },
+    },
   });
 
   fetcher(usersModule, {
     path: '/{providerId}/callback',
     method: 'get',
     module: 'users/sso',
+    args: {
+      // args is required because params and query exist
+      params: {
+        providerId: 'github',
+      },
+      query: {
+        code: 'some-code',
+        state: 'some-state',
+      },
+    },
   });
+
+  // Assuming /test does not require args, this is fine.
+  fetcher(usersModule, {
+    path: '/test',
+    method: 'post',
+    module: 'users/sso/test',
+    // args is optional here if ArgsType is empty
+  });
+
+  // Should trigger error if required args are missing
+  /* Error example (assuming /sign_in requires args):
+  fetcher(usersModule, {
+    path: '/sign_in',
+    method: 'post',
+    module: 'users',
+    // Missing required 'args' property
+  });
+  */
 })();

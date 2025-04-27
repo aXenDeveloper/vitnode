@@ -5,6 +5,11 @@ export const categoriesRoute = buildRoute({
   route: {
     method: 'get',
     path: '/',
+    request: {
+      query: z.object({
+        test: z.string(),
+      }),
+    },
     responses: {
       200: {
         content: {

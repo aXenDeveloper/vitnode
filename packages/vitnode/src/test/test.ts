@@ -80,3 +80,5 @@ export const test = new OpenAPIHono()
   .route('/something', test1);
 
 const client = hc<typeof test>('http://localhost:3000/api/core/test');
+
+await client.something.test123[':test'].$get({});

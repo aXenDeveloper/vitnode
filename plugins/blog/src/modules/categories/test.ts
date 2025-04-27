@@ -7,5 +7,10 @@ export const test = () => {
     module: 'categories',
     path: '/',
     method: 'get',
+    args: {
+      query: {
+        test: 'test',
+      },
+    },
   });
 };
