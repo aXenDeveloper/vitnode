@@ -30,7 +30,7 @@ export const signInRoute = buildRoute({
       },
     },
     responses: {
-      200: {
+      201: {
         content: {
           'application/json': {
             schema: z.object({
@@ -43,6 +43,12 @@ export const signInRoute = buildRoute({
       },
       403: {
         description: 'Access Denied',
+        'application/json': {
+          schema: z.object({
+            id: z.string(),
+            token: z.string(),
+          }),
+        },
       },
     },
   },

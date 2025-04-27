@@ -7,6 +7,9 @@ export const testRoute = buildRoute({
     description: 'Test route',
     path: '/test',
     responses: {
+      301: {
+        description: 'Redirect',
+      },
       200: {
         content: {
           'text/plain': {
@@ -26,6 +29,6 @@ export const testRoute = buildRoute({
     },
   },
   handler: c => {
-    return c.text('test');
+    return c.redirect('/', 301);
   },
 });

@@ -13,30 +13,26 @@ const test1 = new OpenAPIHono().openapi(
       }),
     },
     responses: {
-      200: {
+      201: {
         description: 'test',
         content: {
-          'application/json': {
-            schema: z.object({
-              test: z.string(),
-            }),
+          'text/plain': {
+            schema: z.string(),
           },
         },
       },
       403: {
         description: 'test',
         content: {
-          'application/json': {
-            schema: z.object({
-              test: z.string(),
-            }),
+          'text/plain': {
+            schema: z.string(),
           },
         },
       },
     },
   }),
   c => {
-    return c.json({ test: 'test' });
+    return c.text('123');
   },
 );
 
@@ -51,7 +47,7 @@ export const test = new OpenAPIHono()
         }),
       },
       responses: {
-        200: {
+        201: {
           description: 'test',
           content: {
             'application/json': {
@@ -81,4 +77,19 @@ export const test = new OpenAPIHono()
 
 const client = hc<typeof test>('http://localhost:3000/api/core/test');
 
-await client.something.test123[':test'].$get({});
+const test12 = await client.test.$get({
+  query: {
+    test: '123',
+  },
+});
+
+const elo = await test12.json();
+
+// eslint-disable-next-line no-console
+console.log(elo.test);
+
+const test124 = await client.something.test123[':test'].$get({
+  param: {
+    test: '123',
+  },
+});
