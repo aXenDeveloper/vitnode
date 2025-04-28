@@ -35,7 +35,7 @@ export const core_users = pgTable(
     index('core_users_name_idx').on(t.name),
     index('core_users_email_idx').on(t.email),
   ],
-);
+).enableRLS();
 
 export const core_users_relations = relations(core_users, ({ one, many }) => ({
   group: one(core_roles, {
@@ -75,7 +75,7 @@ export const core_users_sso = pgTable(
       .$onUpdate(() => new Date()),
   }),
   t => [index('core_users_sso_user_id_idx').on(t.user_id)],
-);
+).enableRLS();
 
 export const core_users_sso_relations = relations(
   core_users_sso,
@@ -101,7 +101,7 @@ export const core_users_confirm_emails = pgTable(
     created_at: t.timestamp().notNull().defaultNow(),
     expires: t.timestamp().notNull(),
   }),
-);
+).enableRLS();
 
 export const core_users_confirm_emails_relations = relations(
   core_users_confirm_emails,
@@ -129,7 +129,7 @@ export const core_users_forgot_password = pgTable(
     created_at: t.timestamp().notNull().defaultNow(),
     expires_at: t.timestamp().notNull(),
   }),
-);
+).enableRLS();
 
 export const core_users_forgot_password_relations = relations(
   core_users_forgot_password,

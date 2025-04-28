@@ -1,18 +1,15 @@
-import { AdminTypes } from '@/api/modules/admin/admin.module';
+import { adminModule } from '@/api/modules/admin/admin.module';
+import { fetcher } from '@/lib/fetcher';
 
-import { fetcher } from '../fetcher';
 import { redirect } from '../navigation';
 
 export const getSessionAdminApi = async () => {
-  const client = await fetcher<AdminTypes>({
-    plugin: 'core',
+  const res = await fetcher(adminModule, {
+    path: '/session',
+    method: 'get',
     module: 'admin',
-    options: {
-      cache: 'force-cache',
-    },
   });
 
-  const res = await client.session.$get();
   if (res.status !== 200) {
     await redirect('/admin');
 

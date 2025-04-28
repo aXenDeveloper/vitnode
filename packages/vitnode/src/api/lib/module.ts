@@ -1,36 +1,62 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { Env, Schema } from 'hono';
 
-export interface ModuleApi<
-  E extends Env,
-  T extends Schema,
-  N extends string,
-  P extends string,
-> {
-  app: OpenAPIHono<E, T, string>;
-  name: N;
-  plugin: P;
+import { Route } from './route';
+
+export interface BuildModuleType<T extends Route, Plugin extends string> {
+  plugin: Plugin;
+  routes: T;
 }
 
-export function createModuleApi<
-  E extends Env,
-  S extends Schema = Schema,
-  N extends string = string,
+export interface BaseBuildModuleReturn<
   P extends string = string,
->({
-  name,
-  plugin,
-  routes,
-}: {
-  name: N;
+  M extends string = string,
+  Routes extends Route[] = Route[],
+> {
+  hono: OpenAPIHono;
+  modules?: BaseBuildModuleReturn<P>[];
+  name: M;
   plugin: P;
-  routes: OpenAPIHono<E, S, string>;
-}): ModuleApi<E, S, N, P> {
-  const current = routes;
+  routes: Routes;
+}
 
-  return {
-    app: current,
-    plugin,
-    name,
-  };
+export interface BuildModuleReturn<
+  P extends string,
+  M extends string,
+  Routes extends Route[] = Route[],
+  Modules extends BaseBuildModuleReturn<P>[] = BaseBuildModuleReturn<P>[],
+> extends BaseBuildModuleReturn<P, M, Routes> {
+  modules?: Modules;
+}
+
+export function buildModule<
+  const P extends string,
+  const M extends string,
+  const Routes extends Route[],
+  Modules extends BaseBuildModuleReturn<P>[],
+>({
+  routes,
+  plugin,
+  name,
+  modules,
+}: {
+  modules?: Modules;
+  name: M;
+  plugin: P;
+  routes: Routes;
+}): BuildModuleReturn<P, M, Routes, Modules> {
+  const hono = new OpenAPIHono();
+
+  if (routes) {
+    routes.forEach(({ handler, route }) => {
+      hono.openapi(route, handler);
+    });
+  }
+
+  if (modules) {
+    modules.forEach(module => {
+      hono.route(`/${module.name}`, module.hono);
+    });
+  }
+
+  return { routes, plugin, hono, name, modules };
 }

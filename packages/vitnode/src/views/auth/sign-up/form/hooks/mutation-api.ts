@@ -1,18 +1,24 @@
 'use server';
 
-import { UsersTypes } from '@/api/modules/users/users.module';
-import { fetcher, FetcherInput } from '@/lib/fetcher';
+import { usersModule } from '@/api/modules/users/users.module';
+import { fetcher } from '@/lib/fetcher';
+import { z } from 'zod';
+
+import { buildSignUpFormSchema } from './use-form';
 
 export const mutationApi = async (
-  input: FetcherInput<UsersTypes, '/sign_up', 'post'>,
+  input: z.infer<ReturnType<typeof buildSignUpFormSchema>>,
 ) => {
-  const res = await fetcher<UsersTypes>({
-    plugin: 'core',
+  const res = await fetcher(usersModule, {
+    path: '/sign_up',
+    method: 'post',
     module: 'users',
+    args: {
+      body: input,
+    },
   });
-  const data = await res.sign_up.$post(input);
 
-  if (data.status !== 200) {
-    return { message: await data.text() };
+  if (res.status !== 200) {
+    return { message: await res.text() };
   }
 };

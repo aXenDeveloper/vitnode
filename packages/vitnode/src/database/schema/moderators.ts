@@ -25,7 +25,7 @@ export const core_moderators_permissions = pgTable(
     index('core_moderators_permissions_role_id_idx').on(t.role_id),
     index('core_moderators_permissions_user_id_idx').on(t.user_id),
   ],
-);
+).enableRLS();
 
 export const core_moderators_permissions_relations = relations(
   core_moderators_permissions,

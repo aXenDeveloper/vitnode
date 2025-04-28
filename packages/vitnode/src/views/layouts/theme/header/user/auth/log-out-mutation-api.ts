@@ -1,7 +1,7 @@
 'use server';
 
-import { UsersTypes } from '@/api/modules/users/users.module';
-import { fetcher, handleSetCookiesFetcher } from '@/lib/fetcher';
+import { usersModule } from '@/api/modules/users/users.module';
+import { fetcher } from '@/lib/fetcher';
 import { redirect } from '@/lib/navigation';
 import { revalidatePath } from 'next/cache';
 
@@ -10,17 +10,17 @@ export const logOutMutationApi = async ({
 }: {
   isAdmin?: boolean;
 }) => {
-  const res = await fetcher<UsersTypes>({
-    plugin: 'core',
+  const res = await fetcher(usersModule, {
+    path: '/sign_out',
+    method: 'delete',
+    allowSaveCookies: true,
     module: 'users',
+    args: {
+      body: { isAdmin },
+    },
   });
 
-  const data = await res.sign_out.$delete({
-    json: { isAdmin },
-  });
-  if (data.status === 200) {
-    await handleSetCookiesFetcher(data);
-
+  if (res.status === 200) {
     if (isAdmin) {
       revalidatePath('/admin/(main)', 'layout');
       await redirect('/admin');

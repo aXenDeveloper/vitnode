@@ -23,7 +23,7 @@ export const core_sessions = pgTable(
       .notNull(),
   }),
   t => [index('core_sessions_user_id_idx').on(t.user_id)],
-);
+).enableRLS();
 
 export const core_sessions_relations = relations(core_sessions, ({ one }) => ({
   user: one(core_users, {
@@ -45,7 +45,7 @@ export const core_sessions_known_devices = pgTable(
     last_seen: t.timestamp().notNull().defaultNow(),
   }),
   t => [index('core_sessions_known_devices_ip_address_idx').on(t.ip_address)],
-);
+).enableRLS();
 
 export const core_sessions_known_devices_relations = relations(
   core_sessions_known_devices,

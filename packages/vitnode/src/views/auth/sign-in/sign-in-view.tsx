@@ -1,6 +1,5 @@
 import { Card, CardDescription } from '@/components/ui/card';
 import { Link } from '@/lib/navigation';
-import { useTranslations } from 'next-intl';
 import { getTranslations } from 'next-intl/server';
 import { Metadata } from 'next/dist/types';
 import React from 'react';
@@ -18,9 +17,9 @@ export const generateMetadataSignInView = async (
   };
 };
 
-export const SignInView = () => {
-  const t = useTranslations('core.auth.sign_in');
-  const tGlobal = useTranslations('core.global');
+export const SignInView = async () => {
+  const t = await getTranslations('core.auth.sign_in');
+  const tGlobal = await getTranslations('core.global');
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-4 py-16">

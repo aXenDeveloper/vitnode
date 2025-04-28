@@ -1,7 +1,7 @@
 'use server';
 
-import { UsersTypes } from '@/api/modules/users/users.module';
-import { fetcher, handleSetCookiesFetcher } from '@/lib/fetcher';
+import { usersModule } from '@/api/modules/users/users.module';
+import { fetcher } from '@/lib/fetcher';
 import { revalidatePath } from 'next/cache';
 
 export const mutationApi = async ({
@@ -13,19 +13,21 @@ export const mutationApi = async ({
   providerId: string;
   state: string;
 }) => {
-  const client = await fetcher<UsersTypes>({
-    plugin: 'core',
-    module: 'users',
-  });
-
-  const res = await client.sso[':providerId'].callback.$get({
-    param: { providerId },
-    query: {
-      code,
-      state,
+  const res = await fetcher(usersModule, {
+    path: '/{providerId}/callback',
+    method: 'get',
+    module: 'users/sso',
+    allowSaveCookies: true,
+    args: {
+      params: {
+        providerId,
+      },
+      query: {
+        code,
+        state,
+      },
     },
   });
-  await handleSetCookiesFetcher(res);
 
   if (res.status !== 200) {
     return { error: 'Something went wrong' };

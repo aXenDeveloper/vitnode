@@ -1,17 +1,12 @@
-import { UsersTypes } from '@/api/modules/users/users.module';
-
-import { fetcher } from '../fetcher';
+import { usersModule } from '@/api/modules/users/users.module';
+import { fetcher } from '@/lib/fetcher';
 
 export const getSessionApi = async () => {
-  const client = await fetcher<UsersTypes>({
-    plugin: 'core',
+  const res = await fetcher(usersModule, {
+    path: '/session',
+    method: 'get',
     module: 'users',
-    options: {
-      cache: 'force-cache',
-    },
   });
-
-  const res = await client.session.$get();
 
   return await res.json();
 };

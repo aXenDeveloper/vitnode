@@ -1,12 +1,9 @@
-import { createModuleApi } from '@/api/lib/module';
-import { OpenAPIHono } from '@hono/zod-openapi';
+import { buildModule } from '@/api/lib/module';
 
 import { sessionAdminRoute } from './routes/session.route';
 
-export const adminModule = createModuleApi({
+export const adminModule = buildModule({
   name: 'admin',
   plugin: 'core',
-  routes: new OpenAPIHono().route('/session', sessionAdminRoute),
+  routes: [sessionAdminRoute],
 });
-
-export type AdminTypes = typeof adminModule;
