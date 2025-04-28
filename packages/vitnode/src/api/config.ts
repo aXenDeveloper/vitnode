@@ -6,7 +6,7 @@ import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';
 import { HTTPException } from 'hono/http-exception';
 
-import { BuildPluginReturn } from './lib/plugin';
+import { BuildPluginReturn } from '../lib/plugin';
 import { globalMiddleware } from './middlewares/global/global';
 
 interface CORSOptions {

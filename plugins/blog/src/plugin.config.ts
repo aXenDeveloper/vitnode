@@ -1,8 +1,10 @@
-import { buildPluginConfig } from 'vitnode/plugin.config';
+import { buildPlugin } from 'vitnode/lib/plugin';
+
+import { categoriesModule } from './modules/categories/categories.module';
 
 export const blogPlugin = () => {
-  return buildPluginConfig({
-    id: 'blog',
-    routes: [],
+  return buildPlugin({
+    name: 'blog',
+    modules: [categoriesModule],
   });
 };

@@ -1,4 +1,4 @@
-import { buildPlugin } from './lib/plugin';
+import { buildPlugin } from '../lib/plugin';
 import { adminModule } from './modules/admin/admin.module';
 import { middlewareModule } from './modules/middleware/middleware.module';
 import { usersModule } from './modules/users/users.module';

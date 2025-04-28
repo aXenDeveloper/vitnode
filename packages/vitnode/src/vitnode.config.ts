@@ -1,4 +1,4 @@
-import { BuildPluginReturn } from './api/lib/plugin';
+import { BuildPluginReturn } from './lib/plugin';
 
 export interface VitNodeConfig<AppLocales extends string[] = string[]> {
   debug?: boolean;
