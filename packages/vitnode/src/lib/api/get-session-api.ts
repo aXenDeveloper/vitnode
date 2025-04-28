@@ -6,6 +6,9 @@ export const getSessionApi = async () => {
     path: '/session',
     method: 'get',
     module: 'users',
+    options: {
+      cache: 'force-cache',
+    },
   });
 
   return await res.json();

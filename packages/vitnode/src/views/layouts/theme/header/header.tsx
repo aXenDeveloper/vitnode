@@ -1,8 +1,6 @@
 import { ThemeSwitcher } from '@/components/switchers/theme-switcher';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
-import { Suspense } from 'react';
 
 import { UserHeader } from './user/user';
 
@@ -26,9 +24,7 @@ export const HeaderLayout = ({
 
         <div className="ml-auto flex items-center gap-2">
           <ThemeSwitcher />
-          <Suspense fallback={<Skeleton className="h-9 w-32" />}>
-            <UserHeader />
-          </Suspense>
+          <UserHeader />
         </div>
       </div>
     </header>
