@@ -39,7 +39,6 @@ export class DeviceModel<T extends Env> {
       {
         httpOnly: true,
         secure: this.c.get('core').authorization.cookieSecure,
-        sameSite: 'strict',
         path: '/',
         domain: CONFIG.frontend.hostname,
         expires: new Date(

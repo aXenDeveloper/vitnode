@@ -51,14 +51,14 @@ export const globalMiddleware = ({
       site,
       emailProvider,
       authorization: {
-        cookieName: authorization?.cookieName ?? 'vitnode-auth',
+        cookieName: authorization?.cookieName ?? 'vitnode_auth',
         cookie_expires:
           authorization?.cookieExpires ?? 1000 * 60 * 60 * 24 * 90, // 90 days
         ssoPlugins: authorization?.ssoPlugins ?? [],
-        deviceCookieName: authorization?.deviceCookieName ?? 'vitnode-device',
+        deviceCookieName: authorization?.deviceCookieName ?? 'vitnode_device',
         deviceCookieExpires:
           authorization?.deviceCookieExpires ?? 1000 * 60 * 60 * 24 * 365, // 1 year,
-        adminCookieName: authorization?.adminCookieName ?? 'vitnode-admin',
+        adminCookieName: authorization?.adminCookieName ?? 'vitnode_auth_admin',
         adminCookieExpires:
           authorization?.adminCookieExpires ?? 1000 * 60 * 60 * 24 * 1, // 1 day
         cookieSecure: authorization?.cookieSecure ?? true,

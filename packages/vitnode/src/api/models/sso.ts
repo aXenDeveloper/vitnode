@@ -158,7 +158,6 @@ export class SSOModel {
       {
         httpOnly: true,
         secure: this.c.get('core').authorization.cookieSecure,
-        sameSite: 'strict',
         path: '/',
         domain: CONFIG.frontend.hostname,
       },

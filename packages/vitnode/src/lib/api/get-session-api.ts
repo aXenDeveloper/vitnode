@@ -11,7 +11,9 @@ export const getSessionApi = async () => {
     },
   });
 
-  return await res.json();
+  const data = await res.json();
+
+  return data;
 };
 
 export type SessionApi = Awaited<ReturnType<typeof getSessionApi>>;

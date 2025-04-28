@@ -64,6 +64,7 @@ export async function fetcher<
     method,
     module,
     args,
+    options,
     allowSaveCookies = false,
   }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath> & {
     allowSaveCookies?: boolean;
@@ -113,6 +114,7 @@ export async function fetcher<
         nextInternalHeaders.get('x-forwarded-for') ?? '0.0.0.0',
     }),
     body: args && 'body' in args ? JSON.stringify(args.body) : undefined,
+    ...options,
   });
 
   if (

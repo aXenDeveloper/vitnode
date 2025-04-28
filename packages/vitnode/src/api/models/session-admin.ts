@@ -54,7 +54,7 @@ export class SessionAdminModel<T extends Env> extends DeviceModel<T> {
     setCookie(this.c, this.c.get('core').authorization.adminCookieName, token, {
       httpOnly: true,
       secure: this.c.get('core').authorization.cookieSecure,
-      sameSite: 'strict',
+
       path: '/admin',
       expires: new Date(
         Date.now() + this.c.get('core').authorization.adminCookieExpires,
