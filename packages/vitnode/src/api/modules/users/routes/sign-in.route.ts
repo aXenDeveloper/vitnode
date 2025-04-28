@@ -30,6 +30,9 @@ export const signInRoute = buildRoute({
       },
     },
     responses: {
+      403: {
+        description: 'Access Denied',
+      },
       201: {
         content: {
           'application/json': {
@@ -40,15 +43,6 @@ export const signInRoute = buildRoute({
           },
         },
         description: 'User signed in',
-      },
-      403: {
-        description: 'Access Denied',
-        'application/json': {
-          schema: z.object({
-            id: z.string(),
-            token: z.string(),
-          }),
-        },
       },
     },
   },
@@ -61,10 +55,10 @@ export const signInRoute = buildRoute({
         data.id,
       );
 
-      return c.json({ id: data.id, token });
+      return c.json({ id: data.id, token }, 201);
     }
     const { token } = await new SessionModel(c).createSessionByUserId(data.id);
 
-    return c.json({ id: data.id, token });
+    return c.json({ id: data.id, token }, 201);
   },
 });

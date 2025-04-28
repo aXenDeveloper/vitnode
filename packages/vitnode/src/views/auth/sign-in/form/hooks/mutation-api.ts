@@ -1,29 +1,37 @@
 'use server';
 
-import { UsersTypes } from '@/api/modules/users/users.module';
-import { fetcher, FetcherInput, handleSetCookiesFetcher } from '@/lib/fetcher';
+import { usersModule } from '@/api/modules/users/users.module';
+import { fetcher } from '@/lib/fetcher';
 import { redirect } from '@/lib/navigation';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+
+import { createSignInFormSchema } from './use-form';
 
 export const mutationApi = async (
-  input: FetcherInput<UsersTypes, '/sign_in', 'post'>,
+  input: z.infer<ReturnType<typeof createSignInFormSchema>> & {
+    isAdmin?: boolean;
+  },
 ) => {
-  const res = await fetcher<UsersTypes>({
-    plugin: 'core',
+  const res = await fetcher(usersModule, {
+    path: '/sign_in',
+    method: 'post',
     module: 'users',
+    allowSaveCookies: true,
+    args: {
+      body: input,
+    },
   });
 
-  const data = await res.sign_in.$post(input);
-  if (data.status === 403) {
+  if (res.status === 403) {
     return { message: 'access_denied' } as const;
   }
 
-  if (data.status !== 200) {
+  if (res.status !== 201) {
     return { message: 'Internal Server Error' } as const;
   }
 
-  await handleSetCookiesFetcher(data);
-  if (input.json.isAdmin) {
+  if (input.isAdmin) {
     revalidatePath('/[locale]/admin', 'layout');
     await redirect('/admin/core');
 

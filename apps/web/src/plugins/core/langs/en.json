@@ -96,7 +96,10 @@
           "label": "Email",
           "invalid": "Invalid email address."
         },
-        "password": "Password",
+        "password": {
+          "label": "Password",
+          "required": "Password is required."
+        },
         "errors": {
           "access_denied": {
             "title": "Invalid credentials",

@@ -7,5 +7,3 @@ export const adminModule = buildModule({
   plugin: 'core',
   routes: [sessionAdminRoute],
 });
-
-export type AdminTypes = typeof adminModule;

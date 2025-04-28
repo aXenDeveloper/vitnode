@@ -1,9 +1,9 @@
-import { fetcher } from 'vitnode/test/elo';
+import { fetcher } from 'vitnode/lib/fetcher';
 
 import { categoriesModule } from './categories.module';
 
-export const test = () => {
-  fetcher(categoriesModule, {
+export const test = async () => {
+  await fetcher(categoriesModule, {
     module: 'categories',
     path: '/',
     method: 'get',

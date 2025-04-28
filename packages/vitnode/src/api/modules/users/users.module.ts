@@ -13,5 +13,3 @@ export const usersModule = buildModule({
   routes: [sessionRoute, signInRoute, signOutRoute, signUpRoute, testRoute],
   modules: [ssoUserModule],
 });
-
-export type UsersTypes = typeof usersModule;

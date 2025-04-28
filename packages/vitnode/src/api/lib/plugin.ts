@@ -11,7 +11,7 @@ export function buildPlugin<P extends string>({
   name,
   modules = [],
 }: {
-  modules?: BuildModuleReturn<P>[];
+  modules?: BuildModuleReturn<P, string>[];
   name: P;
 }): BuildPluginReturn {
   const hono = new OpenAPIHono();

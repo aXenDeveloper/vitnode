@@ -1,6 +1,5 @@
-import { BaseBuildModuleReturn, BuildModuleReturn } from '@/api/lib/module';
+import { BaseBuildModuleReturn } from '@/api/lib/module';
 import { Route } from '@/api/lib/route';
-import { usersModule } from '@/api/modules/users/users.module';
 import { RouteConfig } from '@hono/zod-openapi';
 import { ResponseFormat } from 'hono/types';
 import { StatusCode, SuccessStatusCode } from 'hono/utils/http-status';
@@ -71,7 +70,7 @@ type FindModuleNested<
     : never
   : M;
 
-type GetModulePaths<
+export type GetModulePaths<
   MainModule extends string,
   Modules extends readonly ModuleSpec[],
 > =
@@ -148,7 +147,7 @@ type BuildArgsType<RouteCfg extends RouteConfig> = {
     : K]: InferInputType<RouteCfg, K>;
 };
 
-type GetValidPathsForModule<
+export type GetValidPathsForModule<
   ModulePath extends string,
   MainModuleName extends string,
   MainRoutes extends readonly RouteShape[],
@@ -185,7 +184,7 @@ interface BaseFetcherParams<
   path: SelectedPath;
 }
 
-type FetcherParams<
+export type FetcherParams<
   M extends string,
   Routes extends Route[],
   Modules extends BaseBuildModuleReturn[],
@@ -204,7 +203,13 @@ type FetcherParams<
 > = BaseFetcherParams<M, Routes, Modules, ModuleName, SelectedPath> &
   (keyof ArgsType extends never ? { args?: undefined } : { args: ArgsType });
 
-type InferResponseType<
+type InferStatusCode<K> = K extends `${infer N extends number}`
+  ? N
+  : K extends number
+    ? K
+    : never;
+
+export type InferResponseType<
   M extends string,
   Routes extends Route[],
   Modules extends BaseBuildModuleReturn[],
@@ -221,84 +226,16 @@ type InferResponseType<
   >,
 > = RouteConfig extends { responses: infer S }
   ? {
-      [K in keyof S]: S[K] extends { content: infer C }
-        ? {
-            [Fmt in keyof C]: ClientResponse<
-              C[Fmt] extends { schema: infer S } ? ExtractZodType<S> : never,
-              K extends `${infer N extends number}`
-                ? N
-                : K extends number
-                  ? K
-                  : never,
-              Fmt extends string ? Fmt : string
-            >;
-          }[keyof C]
+      [K in keyof S]: S[K] extends infer Response
+        ? Response extends { content: infer C }
+          ? {
+              [Fmt in keyof C]: ClientResponse<
+                C[Fmt] extends { schema: infer S } ? ExtractZodType<S> : never,
+                InferStatusCode<K>,
+                Fmt extends string ? Fmt : string
+              >;
+            }[keyof C]
+          : ClientResponse<object, InferStatusCode<K>>
         : never;
     }[keyof S]
   : never;
-
-export async function fetcher<
-  M extends string,
-  Routes extends Route[],
-  Modules extends BaseBuildModuleReturn[],
-  ModuleName extends GetModulePaths<M, Modules>,
-  SelectedPath extends GetValidPathsForModule<ModuleName, M, Routes, Modules>,
->(
-  _moduleInput: BuildModuleReturn<string, M, Routes, Modules>,
-  params: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath>,
-): Promise<InferResponseType<M, Routes, Modules, ModuleName, SelectedPath>> {
-  void params;
-
-  await fetch('');
-
-  return {} as InferResponseType<M, Routes, Modules, ModuleName, SelectedPath>;
-}
-
-// Test cases
-void (async () => {
-  const test = await fetcher(usersModule, {
-    path: '/sign_in',
-    method: 'post',
-    module: 'users',
-    args: {
-      body: {
-        email: 'string',
-        password: 'string',
-      },
-    },
-  });
-
-  const tes123t = await test.json();
-
-  const test2 = await fetcher(usersModule, {
-    path: '/{providerId}',
-    method: 'post',
-    module: 'users/sso',
-    args: {
-      params: {
-        providerId: 'github',
-      },
-    },
-  });
-
-  const test3 = await fetcher(usersModule, {
-    path: '/{providerId}/callback',
-    method: 'get',
-    module: 'users/sso',
-    args: {
-      params: {
-        providerId: 'github',
-      },
-      query: {
-        code: 'some-code',
-        state: 'some-state',
-      },
-    },
-  });
-
-  const test4 = await fetcher(usersModule, {
-    path: '/test',
-    method: 'post',
-    module: 'users/sso/test',
-  });
-})();

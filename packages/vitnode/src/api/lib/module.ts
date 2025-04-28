@@ -22,8 +22,8 @@ export interface BaseBuildModuleReturn<
 export interface BuildModuleReturn<
   P extends string,
   M extends string,
-  Routes extends Route[] = [],
-  Modules extends BaseBuildModuleReturn<P>[] = [],
+  Routes extends Route[] = Route[],
+  Modules extends BaseBuildModuleReturn<P>[] = BaseBuildModuleReturn<P>[],
 > extends BaseBuildModuleReturn<P, M, Routes> {
   modules?: Modules;
 }

@@ -33,7 +33,11 @@ export const FormSignIn = ({ isAdmin }: { isAdmin?: boolean }) => {
           {
             id: 'password',
             component: props => (
-              <AutoFormInput label={t('password')} type="password" {...props} />
+              <AutoFormInput
+                label={t('password.label')}
+                type="password"
+                {...props}
+              />
             ),
           },
         ]}

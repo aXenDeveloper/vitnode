@@ -5,11 +5,16 @@ import { z } from 'zod';
 
 import { mutationApi } from './mutation-api';
 
-export const useFormSignUp = () => {
-  const t = useTranslations('core.auth.sign_up');
-  const tError = useTranslations('core.global.errors');
+export const buildSignUpFormSchema = ({
+  t,
+  tError,
+}: {
+  t: ReturnType<typeof useTranslations<'core.auth.sign_up'>>;
+  tError: ReturnType<typeof useTranslations<'core.global.errors'>>;
+}) => {
   const invalidPassword = t('password.invalid');
-  const formSchema = z.object({
+
+  return z.object({
     name: z
       .string({
         message: tError('field_required'),
@@ -33,14 +38,18 @@ export const useFormSignUp = () => {
     terms: z.boolean().refine(value => value, t('terms.required')),
     newsletter: z.boolean().optional(),
   });
+};
+
+export const useFormSignUp = () => {
+  const t = useTranslations('core.auth.sign_up');
+  const tError = useTranslations('core.global.errors');
+  const formSchema = buildSignUpFormSchema({ tError, t });
 
   const onSubmit = async (
     values: z.infer<typeof formSchema>,
     form: UseFormReturn<z.infer<typeof formSchema>>,
   ) => {
-    const mutation = await mutationApi({
-      json: values,
-    });
+    const mutation = await mutationApi(values);
     if (!mutation?.message) {
       toast('Event has been created.');
 
