@@ -29,7 +29,7 @@
   ],
   "devDependencies": {
     "@inquirer/prompts": "^7.5.0",
-    "@types/node": "^22.15.2",
+    "@types/node": "^22.15.3",
     "@types/prompts": "^2.4.9",
     "commander": "^13.1.0",
     "eslint": "^9.25.1",

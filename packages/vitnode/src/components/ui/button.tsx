@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
-import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { useTranslations } from 'next-intl';
+import { Slot } from 'radix-ui';
 import * as React from 'react';
 
 import { Loader } from './loader';
@@ -52,7 +52,7 @@ function Button({
     loadingText?: string;
   }) {
   const t = useTranslations('core.global');
-  const Comp = asChild ? Slot : 'button';
+  const Comp = asChild ? Slot.Root : 'button';
 
   if (isLoading) {
     const text = loadingText ?? t('loading');

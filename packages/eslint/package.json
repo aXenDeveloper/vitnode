@@ -37,6 +37,6 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-compiler": "19.1.0-rc.1",
     "eslint-plugin-react-hooks": "6.0.0-rc1",
-    "typescript-eslint": "^8.31.0"
+    "typescript-eslint": "^8.31.1"
   }
 }
