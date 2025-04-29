@@ -9,6 +9,9 @@
     "@react-email/components": "0.0.36",
     "@swc/cli": "^0.7.3",
     "@swc/core": "^1.11.24",
+    "@testing-library/react": "^14.2.1",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/coverage-v8": "^1.2.1",
     "@types/node": "^22.15.3",
     "@types/nodemailer": "^6.4.17",
     "@types/react": "^19.1.2",
@@ -21,6 +24,7 @@
     "eslint": "^9.25.1",
     "eslint-config-typescript-vitnode": "workspace:*",
     "hono": "^4.7.8",
+    "jsdom": "^23.2.0",
     "lucide-react": "^0.503.0",
     "next": "^15.3.1",
     "next-intl": "^4.1.0",
@@ -34,6 +38,8 @@
     "tsup": "^8.4.0",
     "tw-animate-css": "^1.2.8",
     "typescript": "^5.8.3",
+    "vite-tsconfig-paths": "^4.3.1",
+    "vitest": "^1.2.1",
     "zod": "^3.24.3"
   },
   "bin": {
@@ -59,7 +65,10 @@
     "dev": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\" \"tsc-alias -w\"",
     "dev:email": "email dev",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "type": "module",
   "dependencies": {

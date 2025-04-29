@@ -21,5 +21,12 @@
     }
   },
   "exclude": ["node_modules"],
-  "include": ["src", "scripts", "global.d.ts", "emails"]
+  "include": [
+    "src",
+    "scripts",
+    "global.d.ts",
+    "emails",
+    "vitest.config.ts",
+    "tsup.config.ts"
+  ]
 }
