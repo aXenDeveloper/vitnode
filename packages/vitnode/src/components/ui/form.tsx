@@ -2,9 +2,9 @@
 
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import * as LabelPrimitive from '@radix-ui/react-label';
-import { Slot } from '@radix-ui/react-slot';
 import { useTranslations } from 'next-intl';
+import { Label as LabelPrimitive } from 'radix-ui';
+import { Slot } from 'radix-ui';
 import * as React from 'react';
 import {
   Controller,
@@ -147,12 +147,12 @@ function FormLabel({
   );
 }
 
-function FormControl({ ...props }: React.ComponentProps<typeof Slot>) {
+function FormControl({ ...props }: React.ComponentProps<typeof Slot.Root>) {
   const { error, formItemId, formDescriptionId, formMessageId } =
     useFormField();
 
   return (
-    <Slot
+    <Slot.Root
       aria-describedby={
         !error ? formDescriptionId : `${formDescriptionId} ${formMessageId}`
       }
