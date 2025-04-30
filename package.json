@@ -11,7 +11,8 @@
     "dev": "pnpm build:scripts && turbo dev",
     "lint": "turbo lint",
     "lint:fix": "turbo lint:fix",
-    "test": "turbo test"
+    "test": "turbo test",
+    "test:e2e": "turbo test:e2e"
   },
   "devDependencies": {
     "eslint-config-typescript-vitnode": "workspace:*",
