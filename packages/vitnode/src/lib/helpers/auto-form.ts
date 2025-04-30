@@ -34,7 +34,7 @@ export function getObjectFormSchema(
  * Get the lowest level Zod type.
  * This will unpack optionals, refinements, etc.
  */
-export function getBaseSchema<T extends z.AnyZodObject | z.ZodAny = z.ZodAny>(
+export function getBaseSchema<T extends z.ZodTypeAny>(
   schema: T | z.ZodEffects<T>,
   isArray?: boolean,
 ): null | T {
@@ -42,9 +42,8 @@ export function getBaseSchema<T extends z.AnyZodObject | z.ZodAny = z.ZodAny>(
     return getBaseSchema(schema._def.innerType as T, isArray);
   }
   if ('schema' in schema._def) {
-    return getBaseSchema(schema._def.schema, isArray);
+    return getBaseSchema(schema._def.schema as T, isArray);
   }
-
   if ('type' in schema._def && isArray) {
     return getBaseSchema(schema._def.type as T, isArray);
   }
@@ -56,7 +55,7 @@ export function getBaseSchema<T extends z.AnyZodObject | z.ZodAny = z.ZodAny>(
  * Get the type name of the lowest level Zod type.
  * This will unpack optionals, refinements, etc.
  */
-export const getBaseType = (schema: z.ZodAny): string => {
+export const getBaseType = (schema: z.ZodTypeAny): string => {
   const baseSchema = getBaseSchema(schema);
 
   return baseSchema ? baseSchema._def.typeName : '';
@@ -65,28 +64,17 @@ export const getBaseType = (schema: z.ZodAny): string => {
 /**
  * Search for a "ZodDefult" in the Zod stack and return its value.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getDefaultValueInZodStack(schema: z.ZodAny): any {
-  const typedSchema = schema as unknown as z.ZodDefault<
-    z.ZodNumber | z.ZodString
-  >;
-
-  if (typedSchema._def.typeName === z.ZodFirstPartyTypeKind.ZodDefault) {
-    return typedSchema._def.defaultValue();
+export function getDefaultValueInZodStack(schema: z.ZodTypeAny): unknown {
+  if (schema._def.typeName === z.ZodFirstPartyTypeKind.ZodDefault) {
+    return (schema as z.ZodDefault<z.ZodTypeAny>)._def.defaultValue();
   }
 
-  if ('innerType' in typedSchema._def) {
-    return getDefaultValueInZodStack(
-      typedSchema._def.innerType as unknown as z.ZodAny,
-    );
+  if ('innerType' in schema._def) {
+    return getDefaultValueInZodStack(schema._def.innerType as z.ZodTypeAny);
   }
-  if ('schema' in typedSchema._def) {
+  if ('schema' in schema._def) {
     return getDefaultValueInZodStack(
-      (
-        typedSchema._def as {
-          schema: z.ZodAny;
-        }
-      ).schema,
+      (schema._def as { schema: z.ZodTypeAny }).schema,
     );
   }
 
@@ -109,26 +97,26 @@ export function getDefaultValues<Schema extends z.ZodObject<any, any>>(
     const item = shape[key] as z.ZodAny;
 
     if (getBaseType(item) === 'ZodObject') {
-      const defaultItems = getDefaultValues(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getBaseSchema(item) as unknown as z.ZodObject<any, any>,
-      );
+      const baseSchema = getBaseSchema(item);
+      if (baseSchema && 'shape' in baseSchema._def) {
+        const defaultItems = getDefaultValues(
+          baseSchema as unknown as z.ZodObject<z.ZodRawShape>,
+        );
 
-      if (defaultItems !== null) {
-        const obj: Record<string, unknown> = {};
+        if (defaultItems !== null) {
+          const obj: Record<string, unknown> = {};
 
-        for (const defaultItemKey of Object.keys(defaultItems)) {
-          obj[defaultItemKey] = defaultItems[defaultItemKey];
-          defaultValues[key as keyof DefaultValuesType] = obj as DefaultValues<
-            Partial<z.TypeOf<Schema>>
-          >[keyof DefaultValues<Partial<z.TypeOf<Schema>>>];
+          for (const defaultItemKey of Object.keys(defaultItems)) {
+            obj[defaultItemKey] = defaultItems[defaultItemKey];
+            (defaultValues as Record<string, unknown>)[key] = obj;
+          }
         }
       }
     } else {
       const defaultValue = getDefaultValueInZodStack(item);
 
       if (defaultValue !== undefined) {
-        defaultValues[key as keyof DefaultValuesType] = defaultValue;
+        (defaultValues as Record<string, unknown>)[key] = defaultValue;
       }
     }
   }

@@ -21,6 +21,8 @@ export const convertColor = {
   },
 
   hexToHSL: (hex: string): HslColor | undefined => {
+    if (!hexRegex.test(hex)) return undefined;
+
     let b = 0,
       g = 0,
       r = 0;
@@ -37,6 +39,11 @@ export const convertColor = {
       g = parseInt(hex[3] + hex[4], 16);
       b = parseInt(hex[5] + hex[6], 16);
     } else {
+      return undefined;
+    }
+
+    // Check if any of the parsed values are NaN
+    if (isNaN(r) || isNaN(g) || isNaN(b)) {
       return undefined;
     }
 
@@ -140,11 +147,13 @@ export const convertColor = {
 };
 
 export const hexRegex = /^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
-export const hslRegex = /^hsl\(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}%\s*\)$/;
+export const hslRegex =
+  /^hsl\(\s*(?:36[0]|3[0-5][0-9]|[12][0-9][0-9]|[1-9]?[0-9])\s*,\s*(?:100|[1-9]?[0-9])%\s*,\s*(?:100|[1-9]?[0-9])%\s*\)$/;
 export const rgbWithCommaRegex =
-  /^rgb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)$/;
+  /^rgb\(\s*([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\s*,\s*([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\s*,\s*([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\s*\)$/;
+
 export const rgbWithoutCommaRegex =
-  /^rgb\(\s*\d{1,3}\s+\d{1,3}\s+\d{1,3}\s*\)$/;
+  /^rgb\(\s*([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\s+([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\s+([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\s*\)$/;
 
 export const checkColorType = (
   strColor: string,

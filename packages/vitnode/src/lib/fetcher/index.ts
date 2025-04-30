@@ -3,53 +3,13 @@ import { Route } from '@/api/lib/route';
 import { cookies, headers } from 'next/headers';
 
 import { CONFIG } from '../config';
-import { cookieFromStringToObject } from '../cookie-from-string-to-object';
 import {
   FetcherParams,
   GetModulePaths,
   GetValidPathsForModule,
   InferResponseType,
 } from '../fetcher/types';
-
-const handleSetCookiesFetcher = async (res: Response) => {
-  await Promise.all(
-    cookieFromStringToObject(res.headers.getSetCookie()).map(async cookie => {
-      const key = Object.keys(cookie)[0];
-      const value = Object.values(cookie)[0];
-
-      if (typeof value !== 'string' || typeof key !== 'string') return;
-
-      (await cookies()).set(key, value, {
-        domain: cookie.Domain,
-        path: cookie.Path,
-        expires: new Date(cookie.Expires),
-        secure: cookie.Secure,
-        httpOnly: cookie.HttpOnly,
-        sameSite: cookie.SameSite,
-      });
-    }),
-  );
-};
-
-const buildSearchParams = (query: Record<string, string | string[]>) => {
-  const searchParams = new URLSearchParams();
-
-  for (const [k, v] of Object.entries(query)) {
-    if (v === undefined) {
-      continue;
-    }
-
-    if (Array.isArray(v)) {
-      for (const v2 of v) {
-        searchParams.append(k, v2);
-      }
-    } else {
-      searchParams.set(k, v);
-    }
-  }
-
-  return searchParams;
-};
+import { buildSearchParams, handleSetCookiesFetcher } from './helpers';
 
 export async function fetcher<
   M extends string,

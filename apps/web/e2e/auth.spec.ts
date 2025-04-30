@@ -1,8 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
 // Generate random user data for test isolation
 function generateTestUser() {
   const randomId = Math.floor(Math.random() * 1000000);
+
   return {
     name: `test_user_${randomId}`,
     email: `test_user_${randomId}@example.com`,

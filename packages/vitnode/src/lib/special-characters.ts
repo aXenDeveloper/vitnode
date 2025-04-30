@@ -9,9 +9,10 @@ export const removeSpecialCharacters = (
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
     .replace(/[#%&?^|'{}\\/]/g, '')
-    .replace(/ł/g, 'l')
+    .replace(/ł/gi, 'l')
     .replace(/@/g, '-at-')
     .replace(/\./g, '-')
+    .replace(/-+/g, '-')
     .trim();
 
 export const checkSpecialCharacters = (text: string): boolean => {

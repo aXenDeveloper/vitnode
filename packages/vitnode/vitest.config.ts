@@ -1,4 +1,5 @@
 import react from '@vitejs/plugin-react';
+import { resolve } from 'path';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
 
@@ -26,8 +27,10 @@ export default defineConfig({
         '**/*.d.ts', // Exclude type definition files
       ],
     },
+  },
+  resolve: {
     alias: {
-      '@': './src',
+      '@': resolve(__dirname, './src'),
     },
   },
 });
