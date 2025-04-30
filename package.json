@@ -11,7 +11,7 @@
     "dev": "pnpm build:scripts && turbo dev",
     "lint": "turbo lint",
     "lint:fix": "turbo lint:fix",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "test": "turbo test"
   },
   "devDependencies": {
     "eslint-config-typescript-vitnode": "workspace:*",
