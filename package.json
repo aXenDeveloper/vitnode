@@ -11,7 +11,8 @@
     "dev": "pnpm build:scripts && turbo dev",
     "lint": "turbo lint",
     "lint:fix": "turbo lint:fix",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "test": "turbo test",
+    "test:e2e": "turbo test:e2e"
   },
   "devDependencies": {
     "eslint-config-typescript-vitnode": "workspace:*",
@@ -23,7 +24,7 @@
   "engines": {
     "node": ">=22"
   },
-  "packageManager": "pnpm@10.8.0",
+  "packageManager": "pnpm@10.10.0",
   "workspaces": [
     "apps/*",
     "packages/*",

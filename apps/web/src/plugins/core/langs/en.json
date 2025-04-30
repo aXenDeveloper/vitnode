@@ -55,7 +55,7 @@
       "sign_up": {
         "desc": "Hello there! Create your account to get started.",
         "already_have_account": "You already have an account? <link>Sign in</link>.",
-        "submit": "Sign up",
+        "submit": "Register",
         "username": {
           "label": "Username",
           "min_length": "Username must be at least 3 characters long.",
@@ -106,7 +106,7 @@
             "desc": "The email address or password was incorrect. Please try again (make sure your caps lock is off)."
           }
         },
-        "submit": "Sign in"
+        "submit": "Login"
       }
     }
   },
