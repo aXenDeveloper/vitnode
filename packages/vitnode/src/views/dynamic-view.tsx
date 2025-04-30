@@ -2,6 +2,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { Metadata } from 'next/dist/types';
 import { notFound } from 'next/navigation';
 
+import { I18nProvider } from '../components/i18n-provider';
 import { VitNodeConfig } from '../vitnode.config';
 import {
   generateMetadataSignInView,
@@ -54,8 +55,16 @@ export const DynamicView = async ({
   }
 
   const views = {
-    register: <SignUpView />,
-    login: <SignInView />,
+    register: (
+      <I18nProvider namespaces={'core.auth.sign_up'}>
+        <SignUpView />
+      </I18nProvider>
+    ),
+    login: (
+      <I18nProvider namespaces={'core.auth.sign_in'}>
+        <SignInView />
+      </I18nProvider>
+    ),
   };
 
   const view = views[path];

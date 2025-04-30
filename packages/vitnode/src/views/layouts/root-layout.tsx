@@ -1,6 +1,6 @@
+import { I18nProvider } from '@/components/i18n-provider';
 import { VitNodeConfig } from '@/vitnode.config';
-import { NextIntlClientProvider } from 'next-intl';
-import { getMessages, setRequestLocale } from 'next-intl/server';
+import { setRequestLocale } from 'next-intl/server';
 import { Metadata } from 'next/dist/types';
 import React from 'react';
 
@@ -37,16 +37,15 @@ export const RootLayout = async ({
     head?: React.ReactNode;
   }) => {
   const { locale } = await params;
-  const messages = await getMessages();
   setRequestLocale(locale);
 
   return (
     <html lang={locale} suppressHydrationWarning>
       {head && <head>{head}</head>}
       <body className={className}>
-        <NextIntlClientProvider messages={messages}>
+        <I18nProvider namespaces={[]}>
           <RootProvider {...paramsForRoot}>{children}</RootProvider>
-        </NextIntlClientProvider>
+        </I18nProvider>
       </body>
     </html>
   );
