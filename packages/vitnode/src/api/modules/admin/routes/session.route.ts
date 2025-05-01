@@ -18,15 +18,15 @@ export const sessionAdminRoute = buildRoute({
           'application/json': {
             schema: z.object({
               user: z.object({
-                id: z.string(),
+                id: z.number(),
                 email: z.string(),
                 name: z.string(),
-                name_code: z.string(),
-                joined_at: z.date(),
+                nameCode: z.string(),
+                createdAt: z.date(),
                 newsletter: z.boolean(),
-                avatar_color: z.string(),
-                email_verified: z.boolean(),
-                role_id: z.string(),
+                avatarColor: z.string(),
+                emailVerified: z.boolean(),
+                roleId: z.number(),
                 birthday: z.date().nullable(),
               }),
             }),

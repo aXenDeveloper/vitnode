@@ -7,23 +7,23 @@ import { core_roles } from './roles';
 export const core_users = pgTable(
   'core_users',
   t => ({
-    id: t.uuid().defaultRandom().primaryKey(),
-    name_code: t.varchar({ length: 255 }).notNull().unique(),
+    id: t.serial().primaryKey(),
+    nameCode: t.varchar({ length: 255 }).notNull().unique(),
     name: t.varchar({ length: 255 }).notNull().unique(),
     email: t.varchar({ length: 255 }).notNull().unique(),
     password: t.varchar(),
-    joined_at: t.timestamp().notNull().defaultNow(),
+    createdAt: t.timestamp().notNull().defaultNow(),
     newsletter: t.boolean().notNull().default(false),
-    avatar_color: t.varchar({ length: 6 }).notNull(),
-    email_verified: t.boolean().notNull().default(false),
-    role_id: t
-      .uuid()
+    avatarColor: t.varchar({ length: 6 }).notNull(),
+    emailVerified: t.boolean().notNull().default(false),
+    roleId: t
+      .integer()
       .references(() => core_roles.id)
       .notNull(),
     birthday: t.timestamp(),
-    ip_address: t.varchar({ length: 40 }).notNull(),
+    ipAddress: t.varchar({ length: 40 }).notNull(),
     language: t
-      .varchar({ length: 5 })
+      .varchar({ length: 32 })
       .notNull()
       .default('en')
       .references(() => core_languages.code, {
@@ -31,7 +31,7 @@ export const core_users = pgTable(
       }),
   }),
   t => [
-    index('core_users_name_code_idx').on(t.name_code),
+    index('core_users_name_code_idx').on(t.nameCode),
     index('core_users_name_idx').on(t.name),
     index('core_users_email_idx').on(t.email),
   ],
@@ -39,7 +39,7 @@ export const core_users = pgTable(
 
 export const core_users_relations = relations(core_users, ({ one, many }) => ({
   group: one(core_roles, {
-    fields: [core_users.role_id],
+    fields: [core_users.roleId],
     references: [core_roles.id],
   }),
   language: one(core_languages, {
@@ -48,40 +48,40 @@ export const core_users_relations = relations(core_users, ({ one, many }) => ({
   }),
   confirm_email: one(core_users_confirm_emails, {
     fields: [core_users.id],
-    references: [core_users_confirm_emails.user_id],
+    references: [core_users_confirm_emails.userId],
   }),
   sso: many(core_users_sso),
   forgot_password: one(core_users_forgot_password, {
     fields: [core_users.id],
-    references: [core_users_forgot_password.user_id],
+    references: [core_users_forgot_password.userId],
   }),
 }));
 
 export const core_users_sso = pgTable(
   'core_users_sso',
   t => ({
-    user_id: t
-      .uuid()
+    userId: t
+      .integer()
       .references(() => core_users.id, {
         onDelete: 'cascade',
       })
       .notNull(),
-    provider_id: t.varchar({ length: 255 }).notNull(),
-    provider_account_id: t.varchar({ length: 255 }).notNull(),
-    created_at: t.timestamp().notNull().defaultNow(),
-    updated_at: t
+    providerId: t.varchar({ length: 255 }).notNull(),
+    providerAccountId: t.varchar({ length: 255 }).notNull(),
+    createdAt: t.timestamp().notNull().defaultNow(),
+    updatedAt: t
       .timestamp()
       .notNull()
       .$onUpdate(() => new Date()),
   }),
-  t => [index('core_users_sso_user_id_idx').on(t.user_id)],
+  t => [index('core_users_sso_user_id_idx').on(t.userId)],
 ).enableRLS();
 
 export const core_users_sso_relations = relations(
   core_users_sso,
   ({ one }) => ({
     user: one(core_users, {
-      fields: [core_users_sso.user_id],
+      fields: [core_users_sso.userId],
       references: [core_users.id],
     }),
   }),
@@ -90,15 +90,15 @@ export const core_users_sso_relations = relations(
 export const core_users_confirm_emails = pgTable(
   'core_users_confirm_emails',
   t => ({
-    id: t.uuid().defaultRandom().primaryKey(),
-    user_id: t
-      .uuid()
+    id: t.serial().primaryKey(),
+    userId: t
+      .integer()
       .references(() => core_users.id, {
         onDelete: 'cascade',
       })
       .notNull(),
     token: t.varchar({ length: 100 }).notNull().unique(),
-    created_at: t.timestamp().notNull().defaultNow(),
+    createdAt: t.timestamp().notNull().defaultNow(),
     expires: t.timestamp().notNull(),
   }),
 ).enableRLS();
@@ -107,7 +107,7 @@ export const core_users_confirm_emails_relations = relations(
   core_users_confirm_emails,
   ({ one }) => ({
     user: one(core_users, {
-      fields: [core_users_confirm_emails.user_id],
+      fields: [core_users_confirm_emails.userId],
       references: [core_users.id],
     }),
   }),
@@ -116,9 +116,9 @@ export const core_users_confirm_emails_relations = relations(
 export const core_users_forgot_password = pgTable(
   'core_users_forgot_password',
   t => ({
-    id: t.uuid().defaultRandom().primaryKey(),
-    user_id: t
-      .uuid()
+    id: t.serial().primaryKey(),
+    userId: t
+      .integer()
       .references(() => core_users.id, {
         onDelete: 'cascade',
       })
@@ -126,8 +126,8 @@ export const core_users_forgot_password = pgTable(
       .unique(),
     token: t.varchar({ length: 100 }).notNull().unique(),
     ip_address: t.varchar({ length: 40 }).notNull(),
-    created_at: t.timestamp().notNull().defaultNow(),
-    expires_at: t.timestamp().notNull(),
+    createdAt: t.timestamp().notNull().defaultNow(),
+    expiresAt: t.timestamp().notNull(),
   }),
 ).enableRLS();
 
@@ -135,7 +135,7 @@ export const core_users_forgot_password_relations = relations(
   core_users_forgot_password,
   ({ one }) => ({
     user: one(core_users, {
-      fields: [core_users_forgot_password.user_id],
+      fields: [core_users_forgot_password.userId],
       references: [core_users.id],
     }),
   }),

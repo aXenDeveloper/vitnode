@@ -62,7 +62,7 @@
     "build:scripts": "tsup",
     "start:scripts": "bun ./dist/scripts/scripts.js",
     "build": "tsc && swc src -d dist --config-file .swcrc && tsc-alias -p tsconfig.json",
-    "dev": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\" \"tsc-alias -w\"",
+    "dev": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\"",
     "dev:email": "email dev",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

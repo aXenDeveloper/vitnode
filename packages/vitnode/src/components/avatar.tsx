@@ -7,7 +7,7 @@ const generateLetterPhoto = (letter: string, color: string) =>
   )}`;
 
 export const Avatar = ({
-  user: { avatar_color, name },
+  user: { avatarColor, name },
   className,
   size,
   ...props
@@ -16,14 +16,14 @@ export const Avatar = ({
   'alt' | 'height' | 'src' | 'width'
 > & {
   size: number;
-  user: { avatar_color: string; name: string; name_code: string };
+  user: { avatarColor: string; name: string; nameCode: string };
 }) => {
   return (
     <Image
       alt={name}
       className={cn('rounded-full object-cover', className)}
       height={size}
-      src={generateLetterPhoto(name.slice(0, 1), avatar_color)}
+      src={generateLetterPhoto(name.slice(0, 1), avatarColor)}
       width={size}
       {...props}
     />

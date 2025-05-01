@@ -9,8 +9,8 @@ import { HonoRequest } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 
 const getDefaultData = async (): Promise<{
-  email_verified: boolean;
-  role_id: string;
+  emailVerified: boolean;
+  roleId: number;
 }> => {
   const [countUsers] = await dbClient
     .select({ count: count() })
@@ -33,8 +33,8 @@ const getDefaultData = async (): Promise<{
     }
 
     return {
-      role_id: defaultRole.id,
-      email_verified: true,
+      roleId: defaultRole.id,
+      emailVerified: true,
     };
   }
 
@@ -53,9 +53,9 @@ const getDefaultData = async (): Promise<{
   }
 
   return {
-    role_id: defaultRole.id,
+    roleId: defaultRole.id,
     // TODO: Handle email verification
-    email_verified: false,
+    emailVerified: false,
   };
 };
 
@@ -77,13 +77,13 @@ export const signUp = async (
   const checkIfUserExist = await dbClient
     .select({
       email: core_users.email,
-      name_code: core_users.name_code,
+      name_code: core_users.nameCode,
     })
     .from(core_users)
     .where(
       or(
         eq(core_users.email, email),
-        eq(core_users.name_code, convertToNameSEO),
+        eq(core_users.nameCode, convertToNameSEO),
       ),
     );
 
@@ -102,20 +102,20 @@ export const signUp = async (
     });
   }
 
-  const { role_id, email_verified } = await getDefaultData();
+  const { roleId, emailVerified } = await getDefaultData();
   const [data] = await dbClient
     .insert(core_users)
     .values({
       email,
       name,
-      name_code: convertToNameSEO,
+      nameCode: convertToNameSEO,
       // TODO: Handle newsletter only if email is allowed
       newsletter,
       password: hashedPassword,
-      avatar_color: generateAvatarColor(name),
-      role_id,
-      email_verified,
-      ip_address: getUserIp(req),
+      avatarColor: generateAvatarColor(name),
+      roleId,
+      emailVerified,
+      ipAddress: getUserIp(req),
       // TODO: Handle language
       // language: await this.getLanguage(req),
     })

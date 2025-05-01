@@ -77,12 +77,7 @@ export async function fetcher<
     ...options,
   });
 
-  if (
-    response.status >= 200 &&
-    response.status < 300 &&
-    allowSaveCookies &&
-    method !== 'get'
-  ) {
+  if (response.status >= 200 && response.status < 300 && allowSaveCookies) {
     await handleSetCookiesFetcher(response);
   }
 

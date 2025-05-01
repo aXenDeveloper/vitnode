@@ -22,7 +22,7 @@ export const callbackRoute = buildRoute({
         content: {
           'application/json': {
             schema: z.object({
-              id: z.string(),
+              id: z.number(),
               token: z.string(),
             }),
           },

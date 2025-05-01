@@ -2,18 +2,18 @@ import { dbClient } from '@/database/client';
 import { core_users } from '@/database/schema/users';
 import { eq } from 'drizzle-orm';
 
-export const getUserById = async (id: string) => {
+export const getUserById = async (id: number) => {
   const [user] = await dbClient
     .select({
       id: core_users.id,
       email: core_users.email,
       name: core_users.name,
-      name_code: core_users.name_code,
-      joined_at: core_users.joined_at,
+      nameCode: core_users.nameCode,
+      createdAt: core_users.createdAt,
       newsletter: core_users.newsletter,
-      avatar_color: core_users.avatar_color,
-      email_verified: core_users.email_verified,
-      role_id: core_users.role_id,
+      avatarColor: core_users.avatarColor,
+      emailVerified: core_users.emailVerified,
+      roleId: core_users.roleId,
       birthday: core_users.birthday,
     })
     .from(core_users)

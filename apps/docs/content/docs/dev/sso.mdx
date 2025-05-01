@@ -180,7 +180,7 @@ export const DiscordSSOApiPlugin = ({
   });
 
   const userSchema = z.object({
-    id: z.string(),
+    id: z.number(),
     email: z.string(),
     username: z.string(),
   });

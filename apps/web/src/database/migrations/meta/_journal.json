@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1744392720507,
-      "tag": "0000_clever_wrecker",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1745350130388,
-      "tag": "0001_smooth_grandmaster",
+      "when": 1746105704858,
+      "tag": "0000_hesitant_sumo",
       "breakpoints": true
     }
   ]
