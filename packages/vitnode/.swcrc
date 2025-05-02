@@ -1,6 +1,6 @@
 {
   "$schema": "https://swc.rs/schema.json",
-  "minify": true,
+  "minify": false,
   "jsc": {
     "baseUrl": "./",
     "target": "esnext",
