@@ -48,14 +48,12 @@ export const ItemNavAdmin = ({
   }
 
   return (
-    <Collapsible asChild>
+    <Collapsible asChild className="group/collapsible">
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton asChild tooltip={title}>
-            <Link href={href}>
-              {content}
-              <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-            </Link>
+          <SidebarMenuButton tooltip={title}>
+            {content}
+            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
           </SidebarMenuButton>
         </CollapsibleTrigger>
 

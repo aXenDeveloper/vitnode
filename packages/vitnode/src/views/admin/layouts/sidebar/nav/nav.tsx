@@ -35,6 +35,10 @@ export const NavSidebarAdmin = async () => {
               title: t('users.list'),
               href: '/admin/core/users',
             },
+            {
+              title: 'test',
+              href: '/admin/core/test',
+            },
           ],
         },
       ],
