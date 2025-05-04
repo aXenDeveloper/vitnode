@@ -1,0 +1,33 @@
+---
+title: Data Table
+description: A table component with sorting, filtering, and pagination compatible with VitNode API.
+---
+
+## Usage
+
+```ts
+import { DataTable } from 'vitnode/components/table/data-table';
+```
+
+```tsx
+<DataTable
+  columns={[
+    { id: 'name', label: 'Name' },
+    { id: 'email', label: 'Email' },
+    {
+      id: 'role',
+      label: 'Role',
+    },
+    {
+      id: 'status',
+      label: 'Status',
+    },
+    {
+      id: 'id',
+      label: 'Actions',
+    },
+  ]}
+  data={[]}
+  pageInfo={pageInfo}
+/>
+```

@@ -12,6 +12,7 @@ export interface DynamicAdminViewProps {
     locale: string;
     rest: string[];
   }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export const generateMetadataDynamicAdminView = async ({
@@ -25,18 +26,18 @@ export const generateMetadataDynamicAdminView = async ({
   return await views[path];
 };
 
-export const DynamicAdminView = async ({
-  params,
-}: DynamicAdminViewProps & {
-  config: VitNodeConfig;
-}) => {
-  const { rest, locale } = await params;
+export const DynamicAdminView = async (
+  props: DynamicAdminViewProps & {
+    config: VitNodeConfig;
+  },
+) => {
+  const { rest, locale } = await props.params;
   setRequestLocale(locale);
   const path = rest.join('/');
 
   const views = {
     core: <DashboardAdminView />,
-    'core/users': <UsersAdminView />,
+    'core/users': <UsersAdminView {...props} />,
     'core/test': <TestView />,
   };
 

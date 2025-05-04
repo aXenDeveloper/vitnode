@@ -1,0 +1,117 @@
+'use client';
+
+import { usePathname, useRouter } from '@/lib/navigation';
+import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
+import React from 'react';
+
+import { Button } from '../ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
+import { Skeleton } from '../ui/skeleton';
+
+const PAGE_SIZE_OPTIONS = [10, 20, 30, 40];
+
+export const PaginationDataTable = ({
+  pageInfo: { hasNextPage, hasPreviousPage },
+}: {
+  pageInfo: {
+    count: number;
+    endCursor: null | number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    startCursor: null | number;
+    totalCount: number;
+  };
+}) => {
+  const t = useTranslations('core.global');
+  const { push } = useRouter();
+  const [isPending, startTransition] = React.useTransition();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const pagination = {
+    first: searchParams.get('first'),
+    last: searchParams.get('last'),
+    cursor: searchParams.get('cursor'),
+  };
+  const pageSize = pagination.first ?? pagination.last ?? 10;
+
+  return (
+    <div className="flex w-full flex-col-reverse items-center justify-between gap-4 overflow-auto p-1 sm:flex-row sm:gap-8">
+      <div>test</div>
+
+      <div className="flex flex-col-reverse items-center gap-4 sm:flex-row sm:gap-6 lg:gap-8">
+        <Select
+          disabled={isPending}
+          onValueChange={value => {
+            startTransition(() => {
+              const params = new URLSearchParams(searchParams.toString());
+              if (params.has('last')) {
+                params.set('last', value);
+                params.delete('first');
+              } else {
+                params.set('first', value);
+                params.delete('last');
+              }
+              push(`${pathname}?${params.toString()}`, {
+                scroll: false,
+              });
+            });
+          }}
+          value={`${pageSize}`}
+        >
+          {isPending ? (
+            <Skeleton className="h-9 w-[4.5rem]" />
+          ) : (
+            <SelectTrigger className="h-8 w-[4.5rem]">
+              <SelectValue />
+            </SelectTrigger>
+          )}
+          <SelectContent side="top">
+            {PAGE_SIZE_OPTIONS.map(pageSize => (
+              <SelectItem key={pageSize} value={`${pageSize}`}>
+                {pageSize}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="flex items-center space-x-2">
+          {isPending ? (
+            <Skeleton className="size-8" />
+          ) : (
+            <Button
+              aria-label={t('go_to_prev_page')}
+              className="size-8"
+              disabled={!hasPreviousPage}
+              size="icon"
+              variant="outline"
+            >
+              <ChevronLeftIcon />
+            </Button>
+          )}
+
+          {isPending ? (
+            <Skeleton className="size-8" />
+          ) : (
+            <Button
+              aria-label={t('go_to_next_page')}
+              className="size-8"
+              disabled={!hasNextPage || isPending}
+              size="icon"
+              variant="outline"
+            >
+              <ChevronRightIcon />
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
