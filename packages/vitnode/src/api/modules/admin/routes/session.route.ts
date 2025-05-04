@@ -2,6 +2,8 @@ import { buildRoute } from '@/api/lib/route';
 import { SessionAdminModel } from '@/api/models/session-admin';
 import { z } from 'zod';
 
+import { getPackageJson } from '../../../lib/get-pacakge-json';
+
 export const sessionAdminRoute = buildRoute({
   route: {
     method: 'get',
@@ -29,6 +31,7 @@ export const sessionAdminRoute = buildRoute({
                 roleId: z.number(),
                 birthday: z.date().nullable(),
               }),
+              vitnode_version: z.string(),
             }),
           },
         },
@@ -44,6 +47,7 @@ export const sessionAdminRoute = buildRoute({
 
     return c.json({
       user,
+      vitnode_version: (await getPackageJson()).version,
     });
   },
 });

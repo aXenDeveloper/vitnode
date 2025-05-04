@@ -85,6 +85,14 @@ export const UsersAdminView = () => {
             status: 'active',
           },
         ]}
+        pageInfo={{
+          totalCount: 100,
+          count: 10,
+          hasNextPage: true,
+          hasPreviousPage: false,
+          startCursor: null,
+          endCursor: null,
+        }}
       />
     </div>
   );

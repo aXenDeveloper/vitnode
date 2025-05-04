@@ -6,6 +6,9 @@ export const getMiddlewareApi = async () => {
     path: '/',
     method: 'get',
     module: 'middleware',
+    options: {
+      cache: 'force-cache',
+    },
   });
 
   return await res.json();

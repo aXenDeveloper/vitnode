@@ -111,6 +111,10 @@
     }
   },
   "admin": {
+    "dashboard": {
+      "dev_mode": "Development Mode",
+      "version": "Version: {version}"
+    },
     "global": {
       "nav": {
         "core": "Core",

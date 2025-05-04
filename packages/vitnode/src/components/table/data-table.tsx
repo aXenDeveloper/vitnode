@@ -14,6 +14,7 @@ interface TMin {
 export function DataTable<T extends TMin>({
   data,
   columns,
+  pageInfo,
   ...props
 }: Omit<React.ComponentProps<typeof Table>, 'columns'> & {
   columns: {
@@ -22,6 +23,14 @@ export function DataTable<T extends TMin>({
     label: string;
   }[];
   data: T[];
+  pageInfo: {
+    count: number;
+    endCursor: null | number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    startCursor: null | number;
+    totalCount: number;
+  };
 }) {
   return (
     <div className="overflow-hidden rounded-lg border">
