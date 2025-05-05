@@ -59,8 +59,7 @@ export async function fetcher<
     const searchParams = buildSearchParams({
       ...args.query,
       ...(withPagination && {
-        first:
-          queryParams.first && !queryParams.last ? queryParams.first : '10',
+        first: !queryParams.last ? (queryParams.first ?? '10') : undefined,
         search: queryParams.search ?? '',
       }),
     });

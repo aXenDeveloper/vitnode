@@ -19,7 +19,7 @@ import { Skeleton } from '../ui/skeleton';
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40];
 
 export const PaginationDataTable = ({
-  pageInfo: { hasNextPage, hasPreviousPage },
+  pageInfo: { hasNextPage, hasPreviousPage, startCursor, endCursor },
 }: {
   pageInfo: {
     count: number;
@@ -52,13 +52,9 @@ export const PaginationDataTable = ({
           onValueChange={value => {
             startTransition(() => {
               const params = new URLSearchParams(searchParams.toString());
-              if (params.has('last')) {
-                params.set('last', value);
-                params.delete('first');
-              } else {
-                params.set('first', value);
-                params.delete('last');
-              }
+              params.set('first', value);
+              params.delete('last');
+              params.delete('cursor');
               push(`${pathname}?${params.toString()}`, {
                 scroll: false,
               });
@@ -90,6 +86,21 @@ export const PaginationDataTable = ({
               aria-label={t('go_to_prev_page')}
               className="size-8"
               disabled={!hasPreviousPage}
+              onClick={() => {
+                startTransition(() => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.set('last', `${Number(pageSize)}`);
+                  if (startCursor) {
+                    params.set('cursor', `${startCursor}`);
+                  } else {
+                    params.delete('cursor');
+                  }
+                  params.delete('first');
+                  push(`${pathname}?${params.toString()}`, {
+                    scroll: false,
+                  });
+                });
+              }}
               size="icon"
               variant="outline"
             >
@@ -104,6 +115,21 @@ export const PaginationDataTable = ({
               aria-label={t('go_to_next_page')}
               className="size-8"
               disabled={!hasNextPage || isPending}
+              onClick={() => {
+                startTransition(() => {
+                  const params = new URLSearchParams(searchParams.toString());
+                  params.set('first', `${Number(pageSize)}`);
+                  if (endCursor) {
+                    params.set('cursor', `${endCursor}`);
+                  } else {
+                    params.delete('cursor');
+                  }
+                  params.delete('last');
+                  push(`${pathname}?${params.toString()}`, {
+                    scroll: false,
+                  });
+                });
+              }}
               size="icon"
               variant="outline"
             >

@@ -8,7 +8,6 @@ import { AutoFormRadioGroup } from '@/components/form/fields/radio-group';
 import { AutoFormSelect } from '@/components/form/fields/select';
 import { AutoFormSwitch } from '@/components/form/fields/switch';
 import { AutoFormTextarea } from '@/components/form/fields/textarea';
-import { Card } from '@/components/ui/card';
 import { z } from 'zod';
 
 export const TestView = () => {

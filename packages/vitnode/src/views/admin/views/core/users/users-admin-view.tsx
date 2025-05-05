@@ -26,7 +26,15 @@ export const UsersAdminView = async ({
     <div className="container mx-auto p-4">
       <DataTable
         columns={[
-          { id: 'id', label: 'Id' },
+          {
+            id: 'id',
+            label: 'Id',
+            cell: ({ row, allData }) => (
+              <span>
+                {row.id} - all data {allData.length}
+              </span>
+            ),
+          },
           { id: 'createdAt', label: 'Created at' },
         ]}
         edges={data.edges}

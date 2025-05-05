@@ -31,3 +31,29 @@ import { DataTable } from 'vitnode/components/table/data-table';
   pageInfo={pageInfo}
 />
 ```
+
+### Cell Renderer
+
+```tsx
+<DataTable
+  columns={[
+    {
+      id: 'id',
+      label: 'Id',
+      // [!code ++]
+      cell: ({ row, allData }) => (
+        // [!code ++]
+        <span>
+          // [!code ++]
+          {row.id} - all data {allData.length}
+          // [!code ++]
+        </span>
+        // [!code ++]
+      ),
+    },
+    { id: 'createdAt', label: 'Created at' },
+  ]}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+/>
+```

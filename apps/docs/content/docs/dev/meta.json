@@ -13,9 +13,9 @@
     "modules",
     "---Framework---",
     "auth",
-    "fetcher",
     "routes",
     "---API---",
+    "fetcher",
     "sso",
     "---Rest---",
     "..."
