@@ -55,18 +55,17 @@ export function VitNodeAPI({
       return error.getResponse();
     }
 
-    if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.error(error);
+    // eslint-disable-next-line no-console
+    console.error(error);
 
-      return new Response(error.message, {
+    return new Response(
+      process.env.NODE_ENV === 'development'
+        ? error.message
+        : 'Internal Server Error',
+      {
         status: 500,
-      });
-    }
-
-    return new Response('Internal Server Error', {
-      status: 500,
-    });
+      },
+    );
   });
 
   [newBuildPluginCore, ...plugins].map(root => {
