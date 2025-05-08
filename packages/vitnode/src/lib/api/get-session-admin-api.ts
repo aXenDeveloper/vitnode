@@ -4,24 +4,29 @@ import { fetcher } from '@/lib/fetcher';
 import { redirect } from '../navigation';
 
 export const getSessionAdminApi = async () => {
-  const res = await fetcher(adminModule, {
-    path: '/session',
-    method: 'get',
-    module: 'admin',
-    options: {
-      cache: 'force-cache',
-    },
-  });
-  // eslint-disable-next-line no-console
-  console.log('getSessionAdminApi', res);
+  try {
+    const res = await fetcher(adminModule, {
+      path: '/session',
+      method: 'get',
+      module: 'admin',
+      options: {
+        cache: 'force-cache',
+      },
+    });
+    // eslint-disable-next-line no-console
+    console.log('getSessionAdminApi', res);
 
-  if (res.status !== 200) {
-    await redirect('/admin');
+    if (res.status !== 200) {
+      await redirect('/admin');
 
-    return;
+      return;
+    }
+
+    const data = await res.json();
+
+    return data;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('getSessionAdminApi error', error);
   }
-
-  const data = await res.json();
-
-  return data;
 };
