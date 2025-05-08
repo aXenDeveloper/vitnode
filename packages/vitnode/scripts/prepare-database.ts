@@ -2,7 +2,6 @@
 
 import { dbClient } from '@/database/client.js';
 import { core_admin_permissions } from '@/database/schema/admins.js';
-import { core_config } from '@/database/schema/config.js';
 import {
   core_languages,
   core_languages_words,
@@ -33,22 +32,12 @@ export const runMigrations = async () => {
 };
 
 export const initialDataForDatabase = async () => {
-  const [[config], [roleCount]] = await Promise.all([
-    dbClient.select().from(core_config).limit(1),
-    dbClient
-      .select({
-        count: count(),
-      })
-      .from(core_roles)
-      .limit(1),
-  ]);
-  if (!config) {
-    await dbClient.insert(core_config).values([{}]);
-  } else {
-    await dbClient.update(core_config).set({
-      restart_server: false,
-    });
-  }
+  const [roleCount] = await dbClient
+    .select({
+      count: count(),
+    })
+    .from(core_roles)
+    .limit(1);
 
   const [languageCount] = await dbClient
     .select({
@@ -68,85 +57,83 @@ export const initialDataForDatabase = async () => {
   }
 
   if (roleCount.count === 0) {
-    const [guestRole] = await dbClient
+    const roles = await dbClient
       .insert(core_roles)
-      .values({
-        protected: true,
-        guest: true,
-        files_allow_upload: false,
-      })
+      .values([
+        {
+          // Guest role
+          protected: true,
+          guest: true,
+        },
+        {
+          // Member role
+          protected: true,
+          default: true,
+        },
+        {
+          // Moderator role
+          protected: true,
+          color: 'hsl(122, 80%, 45%)',
+        },
+        {
+          // Administrator role
+          protected: true,
+          root: true,
+          color: 'hsl(0, 100%, 50%)',
+        },
+      ])
       .returning({ id: core_roles.id });
 
-    await dbClient.insert(core_languages_words).values({
-      language_code: 'en',
-      plugin_code: 'core',
-      item_id: guestRole.id,
-      value: 'Guest',
-      table_name: 'core_roles',
-      variable: 'name',
-    });
+    await dbClient.insert(core_languages_words).values([
+      {
+        // Guest role
+        languageCode: 'en',
+        pluginCode: 'core',
+        itemId: roles[0].id,
+        value: 'Guest',
+        tableName: 'core_roles',
+        variable: 'name',
+      },
+      {
+        // Member role
+        languageCode: 'en',
+        pluginCode: 'core',
+        itemId: roles[1].id,
+        value: 'Member',
+        tableName: 'core_roles',
+        variable: 'name',
+      },
+      {
+        // Moderator role
+        languageCode: 'en',
+        pluginCode: 'core',
+        itemId: roles[2].id,
+        value: 'Moderator',
+        tableName: 'core_roles',
+        variable: 'name',
+      },
+      {
+        // Administrator role
+        languageCode: 'en',
+        pluginCode: 'core',
+        itemId: roles[3].id,
+        value: 'Administrator',
+        tableName: 'core_roles',
+        variable: 'name',
+      },
+    ]);
 
-    const [memberRole] = await dbClient
-      .insert(core_roles)
-      .values({
+    // Insert default permissions
+    await Promise.all([
+      await dbClient.insert(core_moderators_permissions).values({
+        roleId: roles[2].id,
         protected: true,
-        default: true,
-      })
-      .returning({ id: core_roles.id });
-
-    await dbClient.insert(core_languages_words).values({
-      language_code: 'en',
-      plugin_code: 'core',
-      item_id: memberRole.id,
-      value: 'Member',
-      table_name: 'core_roles',
-      variable: 'name',
-    });
-
-    const [moderatorRole] = await dbClient
-      .insert(core_roles)
-      .values({
+      }),
+      await dbClient.insert(core_admin_permissions).values({
+        roleId: roles[3].id,
         protected: true,
-        color: 'hsl(122, 80%, 45%)',
-      })
-      .returning({ id: core_roles.id });
-
-    await dbClient.insert(core_moderators_permissions).values({
-      role_id: moderatorRole.id,
-      protected: true,
-    });
-
-    await dbClient.insert(core_languages_words).values({
-      language_code: 'en',
-      plugin_code: 'core',
-      item_id: moderatorRole.id,
-      value: 'Moderator',
-      table_name: 'core_roles',
-      variable: 'name',
-    });
-
-    const [adminRole] = await dbClient
-      .insert(core_roles)
-      .values({
-        protected: true,
-        root: true,
-        color: 'hsl(0, 100%, 50%)',
-      })
-      .returning({ id: core_roles.id });
-
-    await dbClient.insert(core_languages_words).values({
-      language_code: 'en',
-      plugin_code: 'core',
-      item_id: adminRole.id,
-      value: 'Administrator',
-      table_name: 'core_roles',
-      variable: 'name',
-    });
-
-    await dbClient.insert(core_admin_permissions).values({
-      role_id: adminRole.id,
-      protected: true,
-    });
+      }),
+    ]);
   }
 };
 

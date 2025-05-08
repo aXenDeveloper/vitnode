@@ -58,9 +58,9 @@ export class SSOModel {
       c.req,
     );
     await dbClient.insert(core_users_sso).values({
-      user_id: data.id,
-      provider_id: providerId,
-      provider_account_id: user.id,
+      userId: data.id,
+      providerId: providerId,
+      providerAccountId: user.id,
     });
 
     return { userId: data.id };
@@ -75,7 +75,7 @@ export class SSOModel {
     providerId: string;
     state: string;
   }): Promise<{
-    userId: string;
+    userId: number;
   }> {
     await this.verifyState(state);
     const provider = this.plugins.find(p => p.id === providerId);
@@ -89,14 +89,14 @@ export class SSOModel {
     return await dbClient.transaction(async tx => {
       const [dataSSOFromDb] = await tx
         .select({
-          user_id: core_users_sso.user_id,
+          userId: core_users_sso.userId,
         })
         .from(core_users_sso)
-        .leftJoin(core_users, eq(core_users.id, core_users_sso.user_id))
+        .leftJoin(core_users, eq(core_users.id, core_users_sso.userId))
         .where(
           and(
-            eq(core_users_sso.provider_id, providerId),
-            eq(core_users_sso.provider_account_id, userFromSSO.id),
+            eq(core_users_sso.providerId, providerId),
+            eq(core_users_sso.providerAccountId, userFromSSO.id),
           ),
         )
         .limit(1);
@@ -123,9 +123,9 @@ export class SSOModel {
 
         // If email exists, register SSO
         await tx.insert(core_users_sso).values({
-          provider_id: providerId,
-          provider_account_id: userFromSSO.id,
-          user_id: userWithEmail.id,
+          providerId: providerId,
+          providerAccountId: userFromSSO.id,
+          userId: userWithEmail.id,
         });
 
         return {
@@ -134,7 +134,7 @@ export class SSOModel {
       }
 
       return {
-        userId: dataSSOFromDb.user_id,
+        userId: dataSSOFromDb.userId,
       };
     });
   }

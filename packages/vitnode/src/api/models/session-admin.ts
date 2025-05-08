@@ -18,7 +18,7 @@ export class SessionAdminModel<T extends Env> extends DeviceModel<T> {
     super(c);
   }
 
-  async checkIfUserIsAdmin(userId: string) {
+  async checkIfUserIsAdmin(userId: number) {
     const user = await new UserModel().getUserById(userId);
     if (!user) return false;
 
@@ -27,8 +27,8 @@ export class SessionAdminModel<T extends Env> extends DeviceModel<T> {
       .from(core_admin_permissions)
       .where(
         or(
-          eq(core_admin_permissions.user_id, user.id),
-          eq(core_admin_permissions.role_id, user.role_id),
+          eq(core_admin_permissions.userId, user.id),
+          eq(core_admin_permissions.roleId, user.roleId),
         ),
       )
       .limit(1);
@@ -36,7 +36,7 @@ export class SessionAdminModel<T extends Env> extends DeviceModel<T> {
     return !!permission;
   }
 
-  async createSessionByUserId(userId: string) {
+  async createSessionByUserId(userId: number) {
     const isAdmin = await this.checkIfUserIsAdmin(userId);
     if (!isAdmin) throw new HTTPException(403);
     const token = crypto.randomBytes(64).toString('hex').normalize();
@@ -44,11 +44,11 @@ export class SessionAdminModel<T extends Env> extends DeviceModel<T> {
 
     await dbClient.insert(core_admin_sessions).values({
       token,
-      user_id: userId,
-      expires_at: new Date(
+      userId,
+      expiresAt: new Date(
         Date.now() + this.c.get('core').authorization.adminCookieExpires,
       ),
-      device_id: deviceId,
+      deviceId,
     });
 
     setCookie(this.c, this.c.get('core').authorization.adminCookieName, token, {
@@ -95,13 +95,13 @@ export class SessionAdminModel<T extends Env> extends DeviceModel<T> {
     const [session] = await dbClient
       .select({
         token: core_admin_sessions.token,
-        user_id: core_admin_sessions.user_id,
+        userId: core_admin_sessions.userId,
       })
       .from(core_admin_sessions)
       .where(
         and(
           eq(core_admin_sessions.token, token),
-          gt(core_admin_sessions.expires_at, new Date()),
+          gt(core_admin_sessions.expiresAt, new Date()),
         ),
       )
       .limit(1);
@@ -109,7 +109,7 @@ export class SessionAdminModel<T extends Env> extends DeviceModel<T> {
     if (!session || session.token !== token) {
       throw new HTTPException(403);
     }
-    const user = await new UserModel().getUserById(session.user_id);
+    const user = await new UserModel().getUserById(session.userId);
     if (!user) throw new HTTPException(403);
 
     return user;

@@ -1,69 +1,42 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '../ui/table';
+import React from 'react';
 
-interface TMin {
-  id: string;
+import { Table } from '../ui/table';
+import { ContentDataTable } from './content';
+import { PaginationDataTable } from './pagination';
+
+export interface DataTableTMin {
+  id: number;
 }
 
-export function DataTable<T extends TMin>({
-  data,
-  columns,
-  ...props
-}: Omit<React.ComponentProps<typeof Table>, 'columns'> & {
-  columns: {
-    cell?: (data: { allData: T[]; row: T }) => React.ReactNode;
-    id: keyof T;
-    label: string;
-  }[];
-  data: T[];
-}) {
+export interface SearchParamsDataTable {
+  cursor?: string;
+  first?: string;
+  last?: string;
+  order?: 'asc' | 'desc';
+  orderBy?: keyof DataTableTMin;
+}
+
+export function DataTable<T extends DataTableTMin>(
+  props: Omit<React.ComponentProps<typeof Table>, 'columns'> &
+    React.ComponentProps<typeof PaginationDataTable> & {
+      columns: {
+        cell?: (data: { allData: T[]; row: T }) => React.ReactNode;
+        id: keyof T;
+        label: string;
+      }[];
+      edges: T[];
+      order: {
+        columns?: (keyof T)[];
+        defaultOrder: {
+          column: keyof T;
+          order: 'asc' | 'desc';
+        };
+      };
+    },
+) {
   return (
-    <div className="overflow-hidden rounded-lg border">
-      <div className="relative w-full overflow-auto">
-        <Table {...props}>
-          <TableHeader className="bg-muted sticky top-0 z-10">
-            <TableRow>
-              {columns.map(column => (
-                <TableHead key={column.id.toString()}>{column.label}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-
-          <TableBody>
-            {data.length ? (
-              data.map(row => (
-                <TableRow key={row.id}>
-                  {columns.map(column => {
-                    const content =
-                      column.cell?.({
-                        allData: data,
-                        row,
-                      }) ?? String(row[column.id]);
-
-                    return (
-                      <TableCell key={`${row.id}_${column.id.toString()}`}>
-                        {content}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell className="text-center" colSpan={columns.length}>
-                  Not Found
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+    <React.Suspense fallback={<div>Loading...</div>}>
+      <ContentDataTable<T> {...props} />
+    </React.Suspense>
   );
 }

@@ -26,9 +26,11 @@ export async function fetcher<
     args,
     options,
     allowSaveCookies = false,
+    withPagination = false,
   }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath> & {
     allowSaveCookies?: boolean;
     options?: Omit<RequestInit, 'body'>;
+    withPagination?: boolean;
   },
 ): Promise<InferResponseType<M, Routes, Modules, ModuleName, SelectedPath>> {
   let currentPath: string = path;
@@ -53,9 +55,14 @@ export async function fetcher<
 
   // Add query parameters if they exist
   if (args && 'query' in args && args.query) {
-    const searchParams = buildSearchParams(
-      args.query as Record<string, string | string[]>,
-    );
+    const queryParams = args.query as Record<string, string | string[]>;
+    const searchParams = buildSearchParams({
+      ...args.query,
+      ...(withPagination && {
+        first: !queryParams.last ? (queryParams.first ?? '10') : undefined,
+        search: queryParams.search ?? '',
+      }),
+    });
     url.search = searchParams.toString();
   }
 
@@ -77,12 +84,7 @@ export async function fetcher<
     ...options,
   });
 
-  if (
-    response.status >= 200 &&
-    response.status < 300 &&
-    allowSaveCookies &&
-    method !== 'get'
-  ) {
+  if (response.status >= 200 && response.status < 300 && allowSaveCookies) {
     await handleSetCookiesFetcher(response);
   }
 

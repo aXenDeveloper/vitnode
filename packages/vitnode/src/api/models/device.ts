@@ -17,8 +17,8 @@ export class DeviceModel<T extends Env> {
     const [device] = await dbClient
       .insert(core_sessions_known_devices)
       .values({
-        ip_address: getUserIp(this.c.req),
-        user_agent: this.getUserAgent(),
+        ipAddress: getUserIp(this.c.req),
+        userAgent: this.getUserAgent(),
       })
       .returning({ id: core_sessions_known_devices.id });
 
@@ -31,11 +31,11 @@ export class DeviceModel<T extends Env> {
     return this.c.req.header('User-Agent') ?? 'node';
   }
 
-  private setCookieDevice(deviceId: string) {
+  private setCookieDevice(deviceId: number) {
     setCookie(
       this.c,
       this.c.get('core').authorization.deviceCookieName,
-      deviceId,
+      deviceId.toString(),
       {
         httpOnly: true,
         secure: this.c.get('core').authorization.cookieSecure,
@@ -49,9 +49,8 @@ export class DeviceModel<T extends Env> {
   }
 
   async getDeviceId() {
-    const deviceIdFromCookie = getCookie(
-      this.c,
-      this.c.get('core').authorization.deviceCookieName,
+    const deviceIdFromCookie = Number(
+      getCookie(this.c, this.c.get('core').authorization.deviceCookieName),
     );
 
     try {
@@ -70,8 +69,8 @@ export class DeviceModel<T extends Env> {
         await dbClient
           .update(core_sessions_known_devices)
           .set({
-            ip_address: getUserIp(this.c.req),
-            user_agent: this.getUserAgent(),
+            ipAddress: getUserIp(this.c.req),
+            userAgent: this.getUserAgent(),
           })
           .where(eq(core_sessions_known_devices.id, deviceIdFromCookie));
 

@@ -21,6 +21,8 @@
       "go_back": "Go back",
       "select_option": "Select an option",
       "select_options": "Select options",
+      "go_to_prev_page": "Go to previous page",
+      "go_to_next_page": "Go to next page",
       "errors": {
         "title": "Oops! Something went wrong.",
         "internal_server_error": "Internal server error.",
@@ -111,6 +113,10 @@
     }
   },
   "admin": {
+    "dashboard": {
+      "dev_mode": "Development Mode",
+      "version": "Version: {version}"
+    },
     "global": {
       "nav": {
         "core": "Core",

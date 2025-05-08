@@ -8,6 +8,9 @@ export const getSessionAdminApi = async () => {
     path: '/session',
     method: 'get',
     module: 'admin',
+    options: {
+      cache: 'force-cache',
+    },
   });
 
   if (res.status !== 200) {
@@ -15,6 +18,7 @@ export const getSessionAdminApi = async () => {
 
     return;
   }
+
   const data = await res.json();
 
   return data;

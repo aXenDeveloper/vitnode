@@ -86,7 +86,7 @@ The code is organized into two main directories:
 ### Database
 
 - Use `PostgreSQL` with `Drizzle ORM`
-- Use UUIDs for all database IDs
+- Use `t.serial().primaryKey()` for all database IDs
 - You can find the database schema in the `apps/web/src/database/schema` files
 - Respect performance and security best practices when designing the database schema
 

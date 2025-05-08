@@ -1,5 +1,5 @@
 {
-  "id": "f44bf16f-11ed-4e2c-be2c-08b60fcf720a",
+  "id": "95791a90-7337-433f-9510-8d6f9e4125ff",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -10,32 +10,31 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "serial",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
-        "role_id": {
-          "name": "role_id",
-          "type": "uuid",
+        "roleId": {
+          "name": "roleId",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
+        "userId": {
+          "name": "userId",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "created_at": {
-          "name": "created_at",
+        "createdAt": {
+          "name": "createdAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updated_at": {
-          "name": "updated_at",
+        "updatedAt": {
+          "name": "updatedAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
@@ -53,7 +52,7 @@
           "name": "core_admin_permissions_role_id_idx",
           "columns": [
             {
-              "expression": "role_id",
+              "expression": "roleId",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -68,7 +67,7 @@
           "name": "core_admin_permissions_user_id_idx",
           "columns": [
             {
-              "expression": "user_id",
+              "expression": "userId",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -81,12 +80,12 @@
         }
       },
       "foreignKeys": {
-        "core_admin_permissions_role_id_core_roles_id_fk": {
-          "name": "core_admin_permissions_role_id_core_roles_id_fk",
+        "core_admin_permissions_roleId_core_roles_id_fk": {
+          "name": "core_admin_permissions_roleId_core_roles_id_fk",
           "tableFrom": "core_admin_permissions",
           "tableTo": "core_roles",
           "columnsFrom": [
-            "role_id"
+            "roleId"
           ],
           "columnsTo": [
             "id"
@@ -94,12 +93,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "core_admin_permissions_user_id_core_users_id_fk": {
-          "name": "core_admin_permissions_user_id_core_users_id_fk",
+        "core_admin_permissions_userId_core_users_id_fk": {
+          "name": "core_admin_permissions_userId_core_users_id_fk",
           "tableFrom": "core_admin_permissions",
           "tableTo": "core_users",
           "columnsFrom": [
-            "user_id"
+            "userId"
           ],
           "columnsTo": [
             "id"
@@ -112,47 +111,53 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "isRLSEnabled": true
     },
     "public.core_admin_sessions": {
       "name": "core_admin_sessions",
       "schema": "",
       "columns": {
-        "token": {
-          "name": "token",
-          "type": "varchar(255)",
+        "id": {
+          "name": "id",
+          "type": "serial",
           "primaryKey": true,
           "notNull": true
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
+        "token": {
+          "name": "token",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
-        "created_at": {
-          "name": "created_at",
+        "userId": {
+          "name": "userId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "last_seen": {
-          "name": "last_seen",
+        "lastSeen": {
+          "name": "lastSeen",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "expires_at": {
-          "name": "expires_at",
+        "expiresAt": {
+          "name": "expiresAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
         },
-        "device_id": {
-          "name": "device_id",
-          "type": "uuid",
+        "deviceId": {
+          "name": "deviceId",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         }
@@ -177,7 +182,7 @@
           "name": "core_admin_sessions_user_id_idx",
           "columns": [
             {
-              "expression": "user_id",
+              "expression": "userId",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -190,12 +195,12 @@
         }
       },
       "foreignKeys": {
-        "core_admin_sessions_user_id_core_users_id_fk": {
-          "name": "core_admin_sessions_user_id_core_users_id_fk",
+        "core_admin_sessions_userId_core_users_id_fk": {
+          "name": "core_admin_sessions_userId_core_users_id_fk",
           "tableFrom": "core_admin_sessions",
           "tableTo": "core_users",
           "columnsFrom": [
-            "user_id"
+            "userId"
           ],
           "columnsTo": [
             "id"
@@ -203,12 +208,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "core_admin_sessions_device_id_core_sessions_known_devices_id_fk": {
-          "name": "core_admin_sessions_device_id_core_sessions_known_devices_id_fk",
+        "core_admin_sessions_deviceId_core_sessions_known_devices_id_fk": {
+          "name": "core_admin_sessions_deviceId_core_sessions_known_devices_id_fk",
           "tableFrom": "core_admin_sessions",
           "tableTo": "core_sessions_known_devices",
           "columnsFrom": [
-            "device_id"
+            "deviceId"
           ],
           "columnsTo": [
             "id"
@@ -218,107 +223,18 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.core_config": {
-      "name": "core_config",
-      "schema": "",
-      "columns": {
-        "app_type": {
-          "name": "app_type",
-          "type": "vitnode_core_app_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'website'"
-        },
-        "restart_server": {
-          "name": "restart_server",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "editor_sticky": {
-          "name": "editor_sticky",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "site_name": {
-          "name": "site_name",
-          "type": "varchar(150)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'VitNode'"
-        },
-        "site_short_name": {
-          "name": "site_short_name",
-          "type": "varchar(75)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'VitNode'"
-        },
-        "contact_email": {
-          "name": "contact_email",
-          "type": "varchar",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "''"
-        },
-        "last_updated": {
-          "name": "last_updated",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "auth_force_login": {
-          "name": "auth_force_login",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "auth_lock_register": {
-          "name": "auth_lock_register",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "auth_require_confirm_email": {
-          "name": "auth_require_confirm_email",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "admin_note": {
-          "name": "admin_note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'Enter your note here. :)'"
-        },
-        "admin_note_updated_at": {
-          "name": "admin_note_updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true
+      "uniqueConstraints": {
+        "core_admin_sessions_token_unique": {
+          "name": "core_admin_sessions_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token"
+          ]
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "isRLSEnabled": true
     },
     "public.core_languages": {
       "name": "core_languages",
@@ -326,10 +242,9 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "serial",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
         "code": {
           "name": "code",
@@ -371,15 +286,15 @@
           "notNull": true,
           "default": true
         },
-        "created_at": {
-          "name": "created_at",
+        "createdAt": {
+          "name": "createdAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updated_at": {
-          "name": "updated_at",
+        "updatedAt": {
+          "name": "updatedAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
@@ -444,7 +359,7 @@
       },
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "isRLSEnabled": true
     },
     "public.core_languages_words": {
       "name": "core_languages_words",
@@ -452,26 +367,25 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "serial",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
-        "language_code": {
-          "name": "language_code",
+        "languageCode": {
+          "name": "languageCode",
           "type": "varchar",
           "primaryKey": false,
           "notNull": true
         },
-        "plugin_code": {
-          "name": "plugin_code",
+        "pluginCode": {
+          "name": "pluginCode",
           "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
-        "item_id": {
-          "name": "item_id",
-          "type": "varchar",
+        "itemId": {
+          "name": "itemId",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -481,8 +395,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "table_name": {
-          "name": "table_name",
+        "tableName": {
+          "name": "tableName",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
@@ -499,7 +413,7 @@
           "name": "core_languages_words_lang_code_idx",
           "columns": [
             {
-              "expression": "language_code",
+              "expression": "languageCode",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -512,12 +426,12 @@
         }
       },
       "foreignKeys": {
-        "core_languages_words_language_code_core_languages_code_fk": {
-          "name": "core_languages_words_language_code_core_languages_code_fk",
+        "core_languages_words_languageCode_core_languages_code_fk": {
+          "name": "core_languages_words_languageCode_core_languages_code_fk",
           "tableFrom": "core_languages_words",
           "tableTo": "core_languages",
           "columnsFrom": [
-            "language_code"
+            "languageCode"
           ],
           "columnsTo": [
             "code"
@@ -530,7 +444,7 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "isRLSEnabled": true
     },
     "public.core_moderators_permissions": {
       "name": "core_moderators_permissions",
@@ -538,32 +452,31 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "serial",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
-        "role_id": {
-          "name": "role_id",
-          "type": "uuid",
+        "roleId": {
+          "name": "roleId",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
+        "userId": {
+          "name": "userId",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "created_at": {
-          "name": "created_at",
+        "createdAt": {
+          "name": "createdAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updated_at": {
-          "name": "updated_at",
+        "updatedAt": {
+          "name": "updatedAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
@@ -581,7 +494,7 @@
           "name": "core_moderators_permissions_role_id_idx",
           "columns": [
             {
-              "expression": "role_id",
+              "expression": "roleId",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -596,7 +509,7 @@
           "name": "core_moderators_permissions_user_id_idx",
           "columns": [
             {
-              "expression": "user_id",
+              "expression": "userId",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -609,12 +522,12 @@
         }
       },
       "foreignKeys": {
-        "core_moderators_permissions_role_id_core_roles_id_fk": {
-          "name": "core_moderators_permissions_role_id_core_roles_id_fk",
+        "core_moderators_permissions_roleId_core_roles_id_fk": {
+          "name": "core_moderators_permissions_roleId_core_roles_id_fk",
           "tableFrom": "core_moderators_permissions",
           "tableTo": "core_roles",
           "columnsFrom": [
-            "role_id"
+            "roleId"
           ],
           "columnsTo": [
             "id"
@@ -622,12 +535,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "core_moderators_permissions_user_id_core_users_id_fk": {
-          "name": "core_moderators_permissions_user_id_core_users_id_fk",
+        "core_moderators_permissions_userId_core_users_id_fk": {
+          "name": "core_moderators_permissions_userId_core_users_id_fk",
           "tableFrom": "core_moderators_permissions",
           "tableTo": "core_users",
           "columnsFrom": [
-            "user_id"
+            "userId"
           ],
           "columnsTo": [
             "id"
@@ -640,7 +553,7 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "isRLSEnabled": true
     },
     "public.core_roles": {
       "name": "core_roles",
@@ -648,20 +561,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "serial",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
-        "created_at": {
-          "name": "created_at",
+        "createdAt": {
+          "name": "createdAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updated_at": {
-          "name": "updated_at",
+        "updatedAt": {
+          "name": "updatedAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
@@ -699,27 +611,6 @@
           "type": "varchar(19)",
           "primaryKey": false,
           "notNull": false
-        },
-        "files_allow_upload": {
-          "name": "files_allow_upload",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "files_total_max_storage": {
-          "name": "files_total_max_storage",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 500000
-        },
-        "files_max_storage_for_submit": {
-          "name": "files_max_storage_for_submit",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 5000
         }
       },
       "indexes": {},
@@ -728,40 +619,46 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "isRLSEnabled": true
     },
     "public.core_sessions": {
       "name": "core_sessions",
       "schema": "",
       "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
         "token": {
           "name": "token",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
+        "userId": {
+          "name": "userId",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "created_at": {
-          "name": "created_at",
+        "createdAt": {
+          "name": "createdAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "expires_at": {
-          "name": "expires_at",
+        "expiresAt": {
+          "name": "expiresAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
         },
-        "device_id": {
-          "name": "device_id",
-          "type": "uuid",
+        "deviceId": {
+          "name": "deviceId",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         }
@@ -771,7 +668,7 @@
           "name": "core_sessions_user_id_idx",
           "columns": [
             {
-              "expression": "user_id",
+              "expression": "userId",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -784,12 +681,12 @@
         }
       },
       "foreignKeys": {
-        "core_sessions_user_id_core_users_id_fk": {
-          "name": "core_sessions_user_id_core_users_id_fk",
+        "core_sessions_userId_core_users_id_fk": {
+          "name": "core_sessions_userId_core_users_id_fk",
           "tableFrom": "core_sessions",
           "tableTo": "core_users",
           "columnsFrom": [
-            "user_id"
+            "userId"
           ],
           "columnsTo": [
             "id"
@@ -797,12 +694,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "core_sessions_device_id_core_sessions_known_devices_id_fk": {
-          "name": "core_sessions_device_id_core_sessions_known_devices_id_fk",
+        "core_sessions_deviceId_core_sessions_known_devices_id_fk": {
+          "name": "core_sessions_deviceId_core_sessions_known_devices_id_fk",
           "tableFrom": "core_sessions",
           "tableTo": "core_sessions_known_devices",
           "columnsFrom": [
-            "device_id"
+            "deviceId"
           ],
           "columnsTo": [
             "id"
@@ -823,7 +720,7 @@
       },
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "isRLSEnabled": true
     },
     "public.core_sessions_known_devices": {
       "name": "core_sessions_known_devices",
@@ -831,25 +728,24 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "serial",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
-        "ip_address": {
-          "name": "ip_address",
+        "ipAddress": {
+          "name": "ipAddress",
           "type": "varchar(40)",
           "primaryKey": false,
           "notNull": true
         },
-        "user_agent": {
-          "name": "user_agent",
+        "userAgent": {
+          "name": "userAgent",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "last_seen": {
-          "name": "last_seen",
+        "lastSeen": {
+          "name": "lastSeen",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -861,7 +757,7 @@
           "name": "core_sessions_known_devices_ip_address_idx",
           "columns": [
             {
-              "expression": "ip_address",
+              "expression": "ipAddress",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -878,7 +774,39 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "isRLSEnabled": true
+    },
+    "public.core_test": {
+      "name": "core_test",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "text": {
+          "name": "text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
     },
     "public.core_users": {
       "name": "core_users",
@@ -886,13 +814,12 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "serial",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
-        "name_code": {
-          "name": "name_code",
+        "nameCode": {
+          "name": "nameCode",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
@@ -915,8 +842,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "joined_at": {
-          "name": "joined_at",
+        "createdAt": {
+          "name": "createdAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -929,22 +856,22 @@
           "notNull": true,
           "default": false
         },
-        "avatar_color": {
-          "name": "avatar_color",
+        "avatarColor": {
+          "name": "avatarColor",
           "type": "varchar(6)",
           "primaryKey": false,
           "notNull": true
         },
-        "email_verified": {
-          "name": "email_verified",
+        "emailVerified": {
+          "name": "emailVerified",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "role_id": {
-          "name": "role_id",
-          "type": "uuid",
+        "roleId": {
+          "name": "roleId",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -954,15 +881,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "ip_address": {
-          "name": "ip_address",
+        "ipAddress": {
+          "name": "ipAddress",
           "type": "varchar(40)",
           "primaryKey": false,
           "notNull": true
         },
         "language": {
           "name": "language",
-          "type": "varchar(5)",
+          "type": "varchar(32)",
           "primaryKey": false,
           "notNull": true,
           "default": "'en'"
@@ -973,7 +900,7 @@
           "name": "core_users_name_code_idx",
           "columns": [
             {
-              "expression": "name_code",
+              "expression": "nameCode",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1016,12 +943,12 @@
         }
       },
       "foreignKeys": {
-        "core_users_role_id_core_roles_id_fk": {
-          "name": "core_users_role_id_core_roles_id_fk",
+        "core_users_roleId_core_roles_id_fk": {
+          "name": "core_users_roleId_core_roles_id_fk",
           "tableFrom": "core_users",
           "tableTo": "core_roles",
           "columnsFrom": [
-            "role_id"
+            "roleId"
           ],
           "columnsTo": [
             "id"
@@ -1045,11 +972,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "core_users_name_code_unique": {
-          "name": "core_users_name_code_unique",
+        "core_users_nameCode_unique": {
+          "name": "core_users_nameCode_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "name_code"
+            "nameCode"
           ]
         },
         "core_users_name_unique": {
@@ -1069,7 +996,7 @@
       },
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "isRLSEnabled": true
     },
     "public.core_users_confirm_emails": {
       "name": "core_users_confirm_emails",
@@ -1077,14 +1004,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "serial",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
+        "userId": {
+          "name": "userId",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -1094,8 +1020,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "created_at": {
-          "name": "created_at",
+        "createdAt": {
+          "name": "createdAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -1110,12 +1036,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "core_users_confirm_emails_user_id_core_users_id_fk": {
-          "name": "core_users_confirm_emails_user_id_core_users_id_fk",
+        "core_users_confirm_emails_userId_core_users_id_fk": {
+          "name": "core_users_confirm_emails_userId_core_users_id_fk",
           "tableFrom": "core_users_confirm_emails",
           "tableTo": "core_users",
           "columnsFrom": [
-            "user_id"
+            "userId"
           ],
           "columnsTo": [
             "id"
@@ -1136,7 +1062,7 @@
       },
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "isRLSEnabled": true
     },
     "public.core_users_forgot_password": {
       "name": "core_users_forgot_password",
@@ -1144,14 +1070,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "serial",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
+        "userId": {
+          "name": "userId",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -1167,15 +1092,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "created_at": {
-          "name": "created_at",
+        "createdAt": {
+          "name": "createdAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "expires_at": {
-          "name": "expires_at",
+        "expiresAt": {
+          "name": "expiresAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
@@ -1183,12 +1108,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "core_users_forgot_password_user_id_core_users_id_fk": {
-          "name": "core_users_forgot_password_user_id_core_users_id_fk",
+        "core_users_forgot_password_userId_core_users_id_fk": {
+          "name": "core_users_forgot_password_userId_core_users_id_fk",
           "tableFrom": "core_users_forgot_password",
           "tableTo": "core_users",
           "columnsFrom": [
-            "user_id"
+            "userId"
           ],
           "columnsTo": [
             "id"
@@ -1199,11 +1124,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "core_users_forgot_password_user_id_unique": {
-          "name": "core_users_forgot_password_user_id_unique",
+        "core_users_forgot_password_userId_unique": {
+          "name": "core_users_forgot_password_userId_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "user_id"
+            "userId"
           ]
         },
         "core_users_forgot_password_token_unique": {
@@ -1216,39 +1141,39 @@
       },
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "isRLSEnabled": true
     },
     "public.core_users_sso": {
       "name": "core_users_sso",
       "schema": "",
       "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
+        "userId": {
+          "name": "userId",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "provider_id": {
-          "name": "provider_id",
+        "providerId": {
+          "name": "providerId",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
-        "provider_account_id": {
-          "name": "provider_account_id",
+        "providerAccountId": {
+          "name": "providerAccountId",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
-        "created_at": {
-          "name": "created_at",
+        "createdAt": {
+          "name": "createdAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updated_at": {
-          "name": "updated_at",
+        "updatedAt": {
+          "name": "updatedAt",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
@@ -1259,7 +1184,7 @@
           "name": "core_users_sso_user_id_idx",
           "columns": [
             {
-              "expression": "user_id",
+              "expression": "userId",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1272,12 +1197,12 @@
         }
       },
       "foreignKeys": {
-        "core_users_sso_user_id_core_users_id_fk": {
-          "name": "core_users_sso_user_id_core_users_id_fk",
+        "core_users_sso_userId_core_users_id_fk": {
+          "name": "core_users_sso_userId_core_users_id_fk",
           "tableFrom": "core_users_sso",
           "tableTo": "core_users",
           "columnsFrom": [
-            "user_id"
+            "userId"
           ],
           "columnsTo": [
             "id"
@@ -1290,28 +1215,10 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
+      "isRLSEnabled": true
     }
   },
-  "enums": {
-    "public.vitnode_core_app_type": {
-      "name": "vitnode_core_app_type",
-      "schema": "public",
-      "values": [
-        "website",
-        "article",
-        "book",
-        "music.album",
-        "music.playlist",
-        "music.radio_station",
-        "music.song",
-        "profile",
-        "video.episode",
-        "video.movie",
-        "video.tv_show"
-      ]
-    }
-  },
+  "enums": {},
   "schemas": {},
   "sequences": {},
   "roles": {},

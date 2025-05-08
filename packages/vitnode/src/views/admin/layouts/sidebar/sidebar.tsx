@@ -7,9 +7,9 @@ import { NavSidebarAdmin } from './nav/nav';
 
 export const SidebarAdmin = () => {
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar variant="floating">
       <SidebarHeader className="flex h-16 flex-row items-center border-b">
-        <Link className="px-2" href="/admin/core">
+        <Link className="px-2" href="/admin/core" prefetch>
           <LogoVitNode className="size-8" small />
         </Link>
       </SidebarHeader>

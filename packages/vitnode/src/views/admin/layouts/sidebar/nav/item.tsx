@@ -41,21 +41,21 @@ export const ItemNavAdmin = ({
     return (
       <SidebarMenuItem>
         <SidebarMenuButton asChild tooltip={title}>
-          <Link href={href}>{content}</Link>
+          <Link href={href} prefetch>
+            {content}
+          </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
   }
 
   return (
-    <Collapsible asChild>
+    <Collapsible asChild className="group/collapsible">
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton asChild tooltip={title}>
-            <Link href={href}>
-              {content}
-              <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-            </Link>
+          <SidebarMenuButton tooltip={title}>
+            {content}
+            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
           </SidebarMenuButton>
         </CollapsibleTrigger>
 
@@ -68,7 +68,9 @@ export const ItemNavAdmin = ({
             {items.map(item => (
               <SidebarMenuSubItem key={item.href}>
                 <SidebarMenuSubButton asChild>
-                  <Link href={item.href}>{item.title}</Link>
+                  <Link href={item.href} prefetch>
+                    {item.title}
+                  </Link>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             ))}

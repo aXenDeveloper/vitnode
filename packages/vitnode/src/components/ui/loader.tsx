@@ -8,13 +8,13 @@ export const Loader = ({
   className?: string;
   small?: boolean;
 }) => {
+  if (small) {
+    return <Loader2 className={cn('size-4 animate-spin', className)} />;
+  }
+
   return (
     <div className={cn('flex items-center justify-center', className)}>
-      <Loader2
-        className={cn('size-10 animate-spin', {
-          'size-4': small,
-        })}
-      />
+      <Loader2 className={cn('size-10 animate-spin')} />
     </div>
   );
 };
