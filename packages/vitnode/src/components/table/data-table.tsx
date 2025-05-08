@@ -4,8 +4,6 @@ import { Table } from '../ui/table';
 import { ContentDataTable } from './content';
 import { PaginationDataTable } from './pagination';
 
-import 'server-only';
-
 export interface DataTableTMin {
   id: number;
 }
@@ -14,6 +12,8 @@ export interface SearchParamsDataTable {
   cursor?: string;
   first?: string;
   last?: string;
+  order?: 'asc' | 'desc';
+  orderBy?: keyof DataTableTMin;
 }
 
 export function DataTable<T extends DataTableTMin>(
@@ -25,6 +25,13 @@ export function DataTable<T extends DataTableTMin>(
         label: string;
       }[];
       edges: T[];
+      order: {
+        columns?: (keyof T)[];
+        defaultOrder: {
+          column: keyof T;
+          order: 'asc' | 'desc';
+        };
+      };
     },
 ) {
   return (

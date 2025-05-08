@@ -38,6 +38,13 @@ export const UsersAdminView = async ({
           { id: 'createdAt', label: 'Created at' },
         ]}
         edges={data.edges}
+        order={{
+          columns: ['createdAt', 'id'],
+          defaultOrder: {
+            column: 'createdAt',
+            order: 'desc',
+          },
+        }}
         pageInfo={data.pageInfo}
       />
     </div>

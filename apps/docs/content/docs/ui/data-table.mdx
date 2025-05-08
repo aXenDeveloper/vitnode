@@ -14,25 +14,69 @@ import { DataTable } from 'vitnode/components/table/data-table';
   columns={[
     { id: 'name', label: 'Name' },
     { id: 'email', label: 'Email' },
-    {
-      id: 'role',
-      label: 'Role',
-    },
-    {
-      id: 'status',
-      label: 'Status',
-    },
-    {
-      id: 'id',
-      label: 'Actions',
-    },
+    { id: 'role', label: 'Role' },
+    { id: 'status', label: 'Status' },
+    { id: 'id', label: 'Actions' },
   ]}
-  data={[]}
-  pageInfo={pageInfo}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{
+    defaultOrder: {
+      column: 'name',
+      order: 'asc',
+    },
+  }}
 />
 ```
 
-### Cell Renderer
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    columns: {
+      description: 'Array of column definitions',
+      required: true,
+      type: `{
+        id: string;
+        label: string;
+        cell?: (props: {
+          row: any;
+          allData: any[];
+        }) => JSX.Element;
+      }[]`,
+    },
+    edges: {
+      description: 'Data to be displayed in the table',
+      required: true,
+      type: 'Array',
+    },
+    order: {
+      description: 'Column sorting configuration',
+      required: true,
+      type: `{
+        columns?: string[];
+        defaultOrder: {
+          column: string;
+          order: 'asc' | 'desc';
+        };
+      }`,
+    },
+    pageInfo: {
+      description: 'Pagination information from the API',
+      required: true,
+      type: `{
+        hasNextPage: boolean;
+        hasPreviousPage: boolean;
+        startCursor: string;
+        endCursor: string;
+      }`,
+    },
+  }}
+/>
+
+## Cell Renderer
+
+You can customize how each cell is rendered using the `cell` property. The renderer function receives the current row data and all table data as parameters.
 
 ```tsx
 <DataTable
@@ -55,5 +99,88 @@ import { DataTable } from 'vitnode/components/table/data-table';
   ]}
   edges={data.edges}
   pageInfo={data.pageInfo}
+  order={{
+    columns: ['createdAt', 'id'],
+    defaultOrder: {
+      order: 'desc',
+    },
+  }}
 />
+```
+
+### Order Configuration
+
+If you want to enable sorting on specific columns, you can specify them in the `columns` property.
+
+```tsx
+order={{
+  // [!code ++]
+  columns: ['createdAt', 'id', 'name'],
+  defaultOrder: {
+    column: 'createdAt',
+    order: 'desc',
+  }
+}}
+```
+
+## Complete Example
+
+Here's a complete example showing how to use the `DataTable` component in a page:
+
+```tsx
+import {
+  DataTable,
+  SearchParamsDataTable,
+} from 'vitnode/components/table/data-table';
+import { userModule } from '@/api/modules/user/user.module';
+import { fetcher } from 'vitnode/lib/fetcher';
+
+export const UsersView = async ({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParamsDataTable>;
+}) => {
+  const query = await searchParams;
+  const res = await fetcher(userModule, {
+    path: '/users',
+    method: 'get',
+    module: 'user',
+    args: {
+      query,
+    },
+    withPagination: true,
+  });
+  const data = await res.json();
+
+  return (
+    <div className="container mx-auto p-4">
+      <DataTable
+        columns={[
+          {
+            id: 'id',
+            label: 'ID',
+          },
+          {
+            id: 'username',
+            label: 'Username',
+            cell: ({ row }) => (
+              <span className="font-medium">{row.username}</span>
+            ),
+          },
+          { id: 'email', label: 'Email' },
+          { id: 'createdAt', label: 'Created at' },
+        ]}
+        edges={data.edges}
+        order={{
+          columns: ['id', 'username', 'email', 'createdAt'],
+          defaultOrder: {
+            column: 'createdAt',
+            order: 'desc',
+          },
+        }}
+        pageInfo={data.pageInfo}
+      />
+    </div>
+  );
+};
 ```

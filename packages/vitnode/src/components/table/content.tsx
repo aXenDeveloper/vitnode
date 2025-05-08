@@ -7,12 +7,14 @@ import {
   TableRow,
 } from '../ui/table';
 import { DataTable, DataTableTMin } from './data-table';
+import { OrderTableHeadDataTable } from './order-table-head';
 import { PaginationDataTable } from './pagination';
 
 export function ContentDataTable<T extends DataTableTMin>({
   columns,
   edges,
   pageInfo,
+  order,
   ...props
 }: React.ComponentProps<typeof DataTable<T>>) {
   return (
@@ -24,7 +26,13 @@ export function ContentDataTable<T extends DataTableTMin>({
               <TableRow>
                 {columns.map(column => (
                   <TableHead key={column.id.toString()}>
-                    {column.label}
+                    {order.columns?.includes(column.id) ? (
+                      <OrderTableHeadDataTable id={column.id} order={order}>
+                        {column.label}
+                      </OrderTableHeadDataTable>
+                    ) : (
+                      column.label
+                    )}
                   </TableHead>
                 ))}
               </TableRow>

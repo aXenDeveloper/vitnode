@@ -1,6 +1,6 @@
 {
   "name": "vitnode-blog",
-  "version": "0.2.0",
+  "version": "2.0.0-canary.0",
   "description": "Backend wrapper for VitNode projects",
   "author": "VitNode",
   "homepage": "https://vitnode.com",

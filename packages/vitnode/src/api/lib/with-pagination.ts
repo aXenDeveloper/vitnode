@@ -154,8 +154,8 @@ export const zodPaginationPageInfo = z.object({
   endCursor: z.number().nullable(),
 });
 
-export const zodPaginationQuery = {
+export const zodPaginationQuery = z.object({
   cursor: z.string().optional(),
   first: z.string().optional(),
   last: z.string().optional(),
-};
+});

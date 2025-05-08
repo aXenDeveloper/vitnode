@@ -16,7 +16,10 @@ export const routeTestMiddleware = buildRoute({
     method: 'get',
     description: 'Testing',
     request: {
-      query: z.object(zodPaginationQuery),
+      query: zodPaginationQuery.extend({
+        order: z.enum(['asc', 'desc']).optional(),
+        orderBy: z.enum(['id', 'createdAt']).optional(),
+      }),
     },
     responses: {
       200: {
@@ -33,9 +36,10 @@ export const routeTestMiddleware = buildRoute({
     },
   },
   handler: async c => {
+    const query = c.req.valid('query');
     const data = await withPagination({
       params: {
-        query: c.req.valid('query'),
+        query,
       },
       primaryCursor: core_test.id,
       query: async ({ limit, where, orderBy }) =>
@@ -47,10 +51,9 @@ export const routeTestMiddleware = buildRoute({
           .limit(limit),
       table: core_test,
       orderBy: {
-        column: core_test.createdAt,
-        order: 'desc',
+        column: query.orderBy ? core_test[query.orderBy] : core_test.createdAt,
+        order: query.order ?? 'desc',
       },
-      // where: like(core_test.text, '%1%'),
     });
 
     return c.json(data);
