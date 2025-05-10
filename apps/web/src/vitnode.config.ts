@@ -19,6 +19,6 @@ export const vitNodeConfig = buildConfig({
 });
 
 // This is the request config for the app. It will be used in the app router.
-export default getRequestConfig(({ requestLocale }) =>
+export default getRequestConfig(async ({ requestLocale }) =>
   handleRequestConfig({ requestLocale, vitNodeConfig }),
 );

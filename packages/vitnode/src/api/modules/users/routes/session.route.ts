@@ -1,5 +1,4 @@
 import { buildRoute } from '@/api/lib/route';
-import { SessionModel } from '@/api/models/session';
 import { SessionAdminModel } from '@/api/models/session-admin';
 import { z } from 'zod';
 
@@ -37,7 +36,7 @@ export const sessionRoute = buildRoute({
     },
   },
   handler: async c => {
-    const user = await new SessionModel(c).verifySession();
+    const user = c.get('user');
     const admin = new SessionAdminModel(c);
 
     return c.json({

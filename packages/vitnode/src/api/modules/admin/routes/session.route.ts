@@ -43,7 +43,7 @@ export const sessionAdminRoute = buildRoute({
     },
   },
   handler: async c => {
-    const user = await new SessionAdminModel(c).verifySession();
+    const user = await new SessionAdminModel(c).getUser();
 
     return c.json({
       user,

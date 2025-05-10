@@ -9,13 +9,13 @@ import { Context, Env, Input } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { HTTPException } from 'hono/http-exception';
 
-import { DeviceModel } from './device';
 import { UserModel } from './user';
 
-export class SessionAdminModel<T extends Env> extends DeviceModel<T> {
+export class SessionAdminModel<T extends Env> {
   constructor(c: Context<T, '/', Input>) {
-    super(c);
+    this.c = c;
   }
+  protected readonly c: Context<T, '/', Input>;
 
   async checkIfUserIsAdmin(userId: number) {
     const user = await new UserModel().getUserById(userId);
@@ -45,7 +45,7 @@ export class SessionAdminModel<T extends Env> extends DeviceModel<T> {
     const token = Array.from(randomBytes)
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
-    const deviceId = await this.getDeviceId();
+    const deviceId = this.c.get('deviceId');
 
     await dbClient.insert(core_admin_sessions).values({
       token,
@@ -85,7 +85,7 @@ export class SessionAdminModel<T extends Env> extends DeviceModel<T> {
     });
   }
 
-  async verifySession() {
+  async getUser() {
     const token = getCookie(
       this.c,
       this.c.get('core').authorization.adminCookieName,

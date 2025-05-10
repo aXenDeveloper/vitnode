@@ -5,7 +5,6 @@ import { z } from 'zod';
 export const routeMiddleware = buildRoute({
   plugin: 'core',
   route: {
-    isAuth: true,
     path: '/',
     method: 'get',
     description: 'Middleware route with user authentication',

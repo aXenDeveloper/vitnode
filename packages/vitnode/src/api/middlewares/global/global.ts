@@ -1,4 +1,6 @@
+import { DeviceModel } from '@/api/models/device';
 import { EmailApiPlugin } from '@/api/models/email';
+import { SessionModel } from '@/api/models/session';
 import { Context, Env, Next } from 'hono';
 
 import { SSOApiPlugin } from '../../models/sso';
@@ -21,6 +23,19 @@ declare module 'hono' {
         shortTitle?: string;
         title: string;
       };
+    };
+    deviceId: number;
+    user: null | {
+      avatarColor: string;
+      birthday: Date | null;
+      createdAt: Date;
+      email: string;
+      emailVerified: boolean;
+      id: number;
+      name: string;
+      nameCode: string;
+      newsletter: boolean;
+      roleId: number;
     };
   }
 }
@@ -64,6 +79,11 @@ export const globalMiddleware = ({
         cookieSecure: authorization?.cookieSecure ?? true,
       },
     });
+
+    const deviceId = await new DeviceModel(c).getDeviceId();
+    c.set('deviceId', deviceId);
+    const user = await new SessionModel(c).getUser();
+    c.set('user', user);
 
     await next();
   };

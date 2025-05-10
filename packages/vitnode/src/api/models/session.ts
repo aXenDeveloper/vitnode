@@ -5,13 +5,13 @@ import { and, eq, gt } from 'drizzle-orm';
 import { Context, Env, Input } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 
-import { DeviceModel } from './device';
 import { UserModel } from './user';
 
-export class SessionModel<T extends Env> extends DeviceModel<T> {
+export class SessionModel<T extends Env> {
   constructor(c: Context<T, '/', Input>) {
-    super(c);
+    this.c = c;
   }
+  protected readonly c: Context<T, '/', Input>;
 
   async createSessionByUserId(userId: number) {
     // Generate secure random bytes using Web Crypto API
@@ -20,7 +20,7 @@ export class SessionModel<T extends Env> extends DeviceModel<T> {
     const token = Array.from(randomBytes)
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
-    const deviceId = await this.getDeviceId();
+    const deviceId = this.c.get('deviceId');
 
     await dbClient.insert(core_sessions).values({
       token,
@@ -58,7 +58,7 @@ export class SessionModel<T extends Env> extends DeviceModel<T> {
     deleteCookie(this.c, this.c.get('core').authorization.cookieName);
   }
 
-  async verifySession() {
+  async getUser() {
     const token = getCookie(
       this.c,
       this.c.get('core').authorization.cookieName,

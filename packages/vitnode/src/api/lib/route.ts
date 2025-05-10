@@ -4,8 +4,6 @@ import {
   RouteHandler,
 } from '@hono/zod-openapi';
 
-import { sessionMiddleware } from '../middlewares/session';
-
 type RoutingPath<P extends string> =
   P extends `${infer Head}/{${infer Param}}${infer Tail}`
     ? `${Head}/:${Param}${RoutingPath<Tail>}`
@@ -19,7 +17,6 @@ export const buildRoute = <
   Plugin extends string,
   P extends string,
   R extends Omit<RouteConfig, 'path'> & {
-    isAuth?: boolean;
     path: P;
   },
   H extends ValidHandler<R & { path: P }>,
@@ -38,26 +35,17 @@ export const buildRoute = <
     getRoutingPath: () => RoutingPath<R['path']>;
   };
 } => {
-  const { isAuth, middleware, ...restOfRoute } = route;
   const pluginTag = plugin
     .split(/[-_]/)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
   const tags = [pluginTag, ...(route.tags ?? [])];
-  const middlewareArray = middleware
-    ? Array.isArray(middleware)
-      ? middleware
-      : [middleware]
-    : [];
 
   return {
     route: createRouteHono({
-      middleware: isAuth
-        ? [sessionMiddleware(), ...middlewareArray]
-        : middlewareArray,
       tags,
-      ...restOfRoute,
+      ...route,
     }) as R & {
       getRoutingPath: () => RoutingPath<R['path']>;
     },

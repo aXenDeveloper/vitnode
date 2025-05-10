@@ -12,7 +12,6 @@ import {
 export const routeTestMiddleware = buildRoute({
   plugin: 'core',
   route: {
-    isAuth: true,
     path: '/test',
     method: 'get',
     description: 'Testing',
