@@ -10,6 +10,7 @@ import {
 } from '../../lib/with-pagination';
 
 export const routeTestMiddleware = buildRoute({
+  plugin: 'core',
   route: {
     isAuth: true,
     path: '/test',

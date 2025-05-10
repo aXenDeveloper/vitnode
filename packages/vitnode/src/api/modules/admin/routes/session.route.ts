@@ -1,10 +1,10 @@
+import { internalVitNodeConfig } from '@/api/internal-config';
 import { buildRoute } from '@/api/lib/route';
 import { SessionAdminModel } from '@/api/models/session-admin';
 import { z } from 'zod';
 
-import { getPackageJson } from '../../../lib/get-pacakge-json';
-
 export const sessionAdminRoute = buildRoute({
+  plugin: 'core',
   route: {
     method: 'get',
     description: 'Verify admin session',
@@ -47,7 +47,7 @@ export const sessionAdminRoute = buildRoute({
 
     return c.json({
       user,
-      vitnode_version: (await getPackageJson()).version,
+      vitnode_version: internalVitNodeConfig.version,
     });
   },
 });

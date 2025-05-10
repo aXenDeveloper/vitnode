@@ -3,6 +3,7 @@ import { EmailModel } from '@/api/models/email';
 import { z } from 'zod';
 
 export const routeMiddleware = buildRoute({
+  plugin: 'core',
   route: {
     isAuth: true,
     path: '/',

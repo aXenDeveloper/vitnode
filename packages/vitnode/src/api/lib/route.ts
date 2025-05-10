@@ -16,6 +16,7 @@ type ValidHandler<R extends RouteConfig> = (
 ) => ReturnType<RouteHandler<R>>;
 
 export const buildRoute = <
+  Plugin extends string,
   P extends string,
   R extends Omit<RouteConfig, 'path'> & {
     isAuthorization?: boolean;
@@ -25,17 +26,25 @@ export const buildRoute = <
 >({
   route,
   handler,
+  plugin,
 }: {
   handler: H;
+  plugin: Plugin;
   route: R;
 }): {
   handler: H;
+  plugin: Plugin;
   route: R & {
     getRoutingPath: () => RoutingPath<R['path']>;
   };
 } => {
   const { isAuthorization, middleware, ...restOfRoute } = route;
-  const tags: string[] = ['test123 from createRoute', ...(route.tags ?? [])];
+  const pluginTag = plugin
+    .split(/[-_]/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+
+  const tags = [pluginTag, ...(route.tags ?? [])];
   const middlewareArray = middleware
     ? Array.isArray(middleware)
       ? middleware
@@ -53,13 +62,16 @@ export const buildRoute = <
       getRoutingPath: () => RoutingPath<R['path']>;
     },
     handler,
+    plugin,
   };
 };
 
 export interface Route<
+  Plugin extends string = string,
   R extends RouteConfig = RouteConfig,
   H extends RouteHandler<R> = RouteHandler<R>,
 > {
   handler: H;
+  plugin: Plugin;
   route: R;
 }

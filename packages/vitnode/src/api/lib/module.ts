@@ -10,7 +10,7 @@ export interface BuildModuleType<T extends Route, Plugin extends string> {
 export interface BaseBuildModuleReturn<
   P extends string = string,
   M extends string = string,
-  Routes extends Route[] = Route[],
+  Routes extends Route<P>[] = Route<P>[],
 > {
   hono: OpenAPIHono;
   modules?: BaseBuildModuleReturn<P>[];
@@ -22,7 +22,7 @@ export interface BaseBuildModuleReturn<
 export interface BuildModuleReturn<
   P extends string,
   M extends string,
-  Routes extends Route[] = Route[],
+  Routes extends Route<P>[] = Route<P>[],
   Modules extends BaseBuildModuleReturn<P>[] = BaseBuildModuleReturn<P>[],
 > extends BaseBuildModuleReturn<P, M, Routes> {
   modules?: Modules;
@@ -31,7 +31,7 @@ export interface BuildModuleReturn<
 export function buildModule<
   const P extends string,
   const M extends string,
-  const Routes extends Route[],
+  const Routes extends Route<P>[],
   Modules extends BaseBuildModuleReturn<P>[],
 >({
   routes,

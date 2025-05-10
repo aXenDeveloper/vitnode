@@ -4,6 +4,7 @@ import { SSOModel } from '@/api/models/sso';
 import { z } from 'zod';
 
 export const callbackRoute = buildRoute({
+  plugin: 'core',
   route: {
     method: 'get',
     description: 'SSO Callback',

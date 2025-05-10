@@ -1,4 +1,5 @@
 import { getRequestConfig } from 'next-intl/server';
+import { blogPlugin } from 'vitnode-blog/plugin.config';
 import { buildConfig } from 'vitnode/vitnode.config';
 
 export const vitNodeConfig = buildConfig({
@@ -6,7 +7,7 @@ export const vitNodeConfig = buildConfig({
     title: 'VitNode',
     shortTitle: 'VitNode',
   },
-  plugins: [],
+  plugins: [blogPlugin()],
   i18n: {
     locales: ['en', 'pl'] as const,
     defaultLocale: 'en',

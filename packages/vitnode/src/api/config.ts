@@ -7,6 +7,7 @@ import { csrf } from 'hono/csrf';
 import { HTTPException } from 'hono/http-exception';
 
 import { BuildPluginReturn } from '../lib/plugin';
+import { internalVitNodeConfig } from './internal-config';
 import { globalMiddleware } from './middlewares/global/global';
 
 interface CORSOptions {
@@ -41,7 +42,7 @@ export function VitNodeAPI({
   app.doc('/swagger/doc', {
     openapi: '3.0.0',
     info: {
-      version: '0.2.0',
+      version: internalVitNodeConfig.version,
       title: 'VitNode API',
     },
   });

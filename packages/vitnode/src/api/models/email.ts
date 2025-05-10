@@ -4,8 +4,8 @@ import { HTTPException } from 'hono/http-exception';
 export interface EmailApiPlugin {
   sendEmail: (args: {
     html: string;
+    metadata: ContextVariableMap['core']['metadata'];
     replyTo?: string;
-    site: ContextVariableMap['core']['site'];
     subject: string;
     to: string;
   }) => Promise<void>;
@@ -39,7 +39,7 @@ export class EmailModel<T extends Env> {
     try {
       await provider.sendEmail({
         ...args,
-        site: core.site,
+        metadata: core.metadata,
       });
     } catch (e) {
       const error = e as Error;

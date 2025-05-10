@@ -17,9 +17,9 @@ declare module 'hono' {
         ssoPlugins: SSOApiPlugin[];
       };
       emailProvider?: EmailApiPlugin;
-      site: {
-        name: string;
-        nameShort?: string;
+      metadata: {
+        shortTitle?: string;
+        title: string;
       };
     };
   }
@@ -27,7 +27,7 @@ declare module 'hono' {
 
 export const globalMiddleware = ({
   authorization,
-  site,
+  metadata,
   emailProvider,
 }: {
   authorization?: {
@@ -41,14 +41,14 @@ export const globalMiddleware = ({
     ssoPlugins?: SSOApiPlugin[];
   };
   emailProvider?: EmailApiPlugin;
-  site: {
-    name: string;
-    nameShort?: string;
+  metadata: {
+    shortTitle?: string;
+    title: string;
   };
 }) => {
   return async (c: Context<Env, '*'>, next: Next) => {
     c.set('core', {
-      site,
+      metadata,
       emailProvider,
       authorization: {
         cookieName: authorization?.cookieName ?? 'vitnode_auth',

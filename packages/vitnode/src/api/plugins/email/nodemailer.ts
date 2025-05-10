@@ -17,7 +17,7 @@ export const NodemailerEmailPlugin = ({
   user: string | undefined;
 }): EmailApiPlugin => {
   return {
-    sendEmail: async ({ site, to, subject, html, replyTo }) => {
+    sendEmail: async ({ metadata, to, subject, html, replyTo }) => {
       if (!host || !user || !password || !from) {
         throw new Error('Missing nodemailer configuration');
       }
@@ -34,7 +34,7 @@ export const NodemailerEmailPlugin = ({
         },
         {
           from: {
-            name: site.nameShort ?? site.name,
+            name: metadata.shortTitle ?? metadata.title,
             address: from,
           },
           replyTo,
