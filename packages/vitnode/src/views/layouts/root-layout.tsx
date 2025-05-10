@@ -30,12 +30,12 @@ export const RootLayout = async ({
   className,
   params,
   head,
-  ...paramsForRoot
-}: React.ComponentProps<typeof RootProvider> &
-  RootLayoutProps & {
-    className?: string;
-    head?: React.ReactNode;
-  }) => {
+  config,
+}: RootLayoutProps & {
+  className?: string;
+  config: VitNodeConfig;
+  head?: React.ReactNode;
+}) => {
   const { locale } = await params;
   setRequestLocale(locale);
 
@@ -44,7 +44,9 @@ export const RootLayout = async ({
       {head && <head>{head}</head>}
       <body className={className}>
         <I18nProvider namespaces={[]}>
-          <RootProvider {...paramsForRoot}>{children}</RootProvider>
+          <RootProvider debug={config.debug} theme={config.theme}>
+            {children}
+          </RootProvider>
         </I18nProvider>
       </body>
     </html>

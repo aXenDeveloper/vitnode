@@ -29,9 +29,6 @@ export default function LocaleLayout(props: RootLayoutProps) {
     <RootLayout
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       config={vitNodeConfig}
-      theme={{
-        defaultTheme: 'dark',
-      }}
       {...props}
     />
   );

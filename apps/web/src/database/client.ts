@@ -19,5 +19,5 @@ export const POSTGRES_ENVS = {
 
 export const dbClient = drizzle({
   connection: POSTGRES_ENVS.url,
-  casing: 'snake_case',
+  casing: 'camelCase',
 });

@@ -1,6 +1,7 @@
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { getSessionApi } from '@/lib/api/get-session-api';
 import { Link } from '@/lib/navigation';
+import { cn } from '@/lib/utils';
 import { getTranslations } from 'next-intl/server';
 
 import { AuthUserHeader } from './auth/auth';
@@ -14,16 +15,21 @@ export const UserHeader = async () => {
   if (!session.user) {
     return (
       <>
-        <Button asChild variant="ghost">
-          <Link href="/login" prefetch>
-            {t('login')}
-          </Link>
-        </Button>
-        <Button asChild>
-          <Link href="/register" prefetch>
-            {t('register')}
-          </Link>
-        </Button>
+        <Link
+          className={cn(
+            buttonVariants({
+              variant: 'ghost',
+            }),
+          )}
+          href="/login"
+          prefetch
+        >
+          {t('login')}
+        </Link>
+
+        <Link className={cn(buttonVariants())} href="/register" prefetch>
+          {t('register')}
+        </Link>
       </>
     );
   }

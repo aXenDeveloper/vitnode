@@ -13,6 +13,9 @@ export const vitNodeConfig = buildConfig({
     defaultLocale: 'en',
   },
   debug: true,
+  theme: {
+    defaultTheme: 'dark',
+  },
 });
 
 export default getRequestConfig(async ({ requestLocale }) => {

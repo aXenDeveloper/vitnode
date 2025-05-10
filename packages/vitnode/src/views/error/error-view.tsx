@@ -1,5 +1,6 @@
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Link } from '@/lib/navigation';
+import { cn } from '@/lib/utils';
 import { ArrowLeft, HomeIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -31,12 +32,17 @@ export const ErrorView = ({
             {t('go_back')}
           </BackButtonNotFound>
 
-          <Button asChild size="lg">
-            <Link href="/">
-              <HomeIcon />
-              {t('back_home')}
-            </Link>
-          </Button>
+          <Link
+            className={cn(
+              buttonVariants({
+                size: 'lg',
+              }),
+            )}
+            href="/"
+          >
+            <HomeIcon />
+            {t('back_home')}
+          </Link>
         </div>
       </div>
     </div>

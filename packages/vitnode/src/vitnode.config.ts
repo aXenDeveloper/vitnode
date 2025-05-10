@@ -1,3 +1,5 @@
+import { ThemeProvider } from 'next-themes';
+
 import { BuildPluginReturn } from './lib/plugin';
 
 export interface VitNodeConfig<AppLocales extends string[] = string[]> {
@@ -12,6 +14,10 @@ export interface VitNodeConfig<AppLocales extends string[] = string[]> {
     title: string;
   };
   plugins: BuildPluginReturn[];
+  theme: Omit<
+    React.ComponentProps<typeof ThemeProvider>,
+    'attribute' | 'disableTransitionOnChange' | 'enableSystem'
+  >;
 }
 
 export function buildConfig<AppLocales extends string[]>(

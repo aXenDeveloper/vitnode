@@ -12,10 +12,10 @@ export const RootProvider = ({
   children,
   theme,
   toaster,
-  config,
+  debug,
 }: {
   children: React.ReactNode;
-  config: VitNodeConfig;
+  debug?: VitNodeConfig['debug'];
   theme: Omit<
     React.ComponentProps<typeof ThemeProvider>,
     'attribute' | 'disableTransitionOnChange' | 'enableSystem'
@@ -23,12 +23,12 @@ export const RootProvider = ({
   toaster?: React.ComponentProps<typeof Toaster>;
 }) => {
   React.useEffect(() => {
-    if (!config.debug || !CONFIG.node_development) return;
+    if (!debug || !CONFIG.node_development) return;
 
     scan({
       enabled: true,
     });
-  }, [config.debug]);
+  }, [debug]);
 
   const [queryClient] = React.useState(
     () =>
