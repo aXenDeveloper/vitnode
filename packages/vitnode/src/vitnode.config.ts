@@ -31,3 +31,22 @@ export function buildConfig<AppLocales extends string[]>(
     },
   };
 }
+
+export const handleRequestConfig = async ({
+  requestLocale,
+  vitNodeConfig,
+}: {
+  requestLocale: Promise<string | undefined>;
+  vitNodeConfig: VitNodeConfig;
+}) => {
+  const reqLocale = await requestLocale;
+  const locale =
+    reqLocale && `${vitNodeConfig.i18n.locales}`.includes(reqLocale)
+      ? reqLocale
+      : vitNodeConfig.i18n.defaultLocale;
+
+  return {
+    locale,
+    messages: (await import(`@/plugins/core/langs/${locale}.json`)).default,
+  };
+};

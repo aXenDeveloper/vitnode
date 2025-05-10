@@ -19,7 +19,7 @@ export const buildRoute = <
   Plugin extends string,
   P extends string,
   R extends Omit<RouteConfig, 'path'> & {
-    isAuthorization?: boolean;
+    isAuth?: boolean;
     path: P;
   },
   H extends ValidHandler<R & { path: P }>,
@@ -38,7 +38,7 @@ export const buildRoute = <
     getRoutingPath: () => RoutingPath<R['path']>;
   };
 } => {
-  const { isAuthorization, middleware, ...restOfRoute } = route;
+  const { isAuth, middleware, ...restOfRoute } = route;
   const pluginTag = plugin
     .split(/[-_]/)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -53,7 +53,7 @@ export const buildRoute = <
 
   return {
     route: createRouteHono({
-      middleware: isAuthorization
+      middleware: isAuth
         ? [sessionMiddleware(), ...middlewareArray]
         : middlewareArray,
       tags,

@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
+import { useTranslations } from 'next-intl';
 import { Slot } from 'radix-ui';
 import * as React from 'react';
 
@@ -50,11 +51,11 @@ function Button({
     isLoading?: boolean;
     loadingText?: string;
   }) {
-  // const t = useTranslations('core.global');
+  const t = useTranslations('core.global');
   const Comp = asChild ? Slot.Root : 'button';
 
   if (isLoading) {
-    const text = loadingText ?? 'loading';
+    const text = loadingText ?? t('loading');
 
     return (
       <Comp

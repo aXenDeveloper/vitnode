@@ -4,7 +4,6 @@ import {
   core_admin_sessions,
 } from '@/database/schema/admins';
 import { CONFIG } from '@/lib/config';
-import crypto from 'crypto';
 import { and, eq, gt, or } from 'drizzle-orm';
 import { Context, Env, Input } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
@@ -39,7 +38,13 @@ export class SessionAdminModel<T extends Env> extends DeviceModel<T> {
   async createSessionByUserId(userId: number) {
     const isAdmin = await this.checkIfUserIsAdmin(userId);
     if (!isAdmin) throw new HTTPException(403);
-    const token = crypto.randomBytes(64).toString('hex').normalize();
+
+    // Generate secure random bytes using Web Crypto API
+    const randomBytes = new Uint8Array(64);
+    crypto.getRandomValues(randomBytes);
+    const token = Array.from(randomBytes)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
     const deviceId = await this.getDeviceId();
 
     await dbClient.insert(core_admin_sessions).values({

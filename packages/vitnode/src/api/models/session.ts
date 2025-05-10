@@ -1,7 +1,6 @@
 import { dbClient } from '@/database/client';
 import { core_sessions } from '@/database/schema/sessions';
 import { CONFIG } from '@/lib/config';
-import crypto from 'crypto';
 import { and, eq, gt } from 'drizzle-orm';
 import { Context, Env, Input } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
@@ -15,7 +14,12 @@ export class SessionModel<T extends Env> extends DeviceModel<T> {
   }
 
   async createSessionByUserId(userId: number) {
-    const token = crypto.randomBytes(64).toString('hex').normalize();
+    // Generate secure random bytes using Web Crypto API
+    const randomBytes = new Uint8Array(64);
+    crypto.getRandomValues(randomBytes);
+    const token = Array.from(randomBytes)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
     const deviceId = await this.getDeviceId();
 
     await dbClient.insert(core_sessions).values({
