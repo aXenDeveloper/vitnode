@@ -18,18 +18,21 @@
   --secondary-foreground: oklch(0.21 0.006 285.885);
   --muted: oklch(0.967 0.001 286.375);
   --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.94 0.005 286); /* Adjusted for better contrast on muted */
+  --accent: oklch(0.94 0.005 286);
   --accent-foreground: oklch(0.21 0.006 285.885);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(
-    0.9 0.02 262.61
-  ); /* Similar hue to dark primary, lighter/desaturated */
-  --ring: oklch(0.7 0.16 262.61); /* Lighter version of dark primary */
+  --border: oklch(0.9 0.02 262.61);
+  --ring: oklch(0.7 0.16 262.61);
   --chart-1: oklch(0.65 0.22 40);
   --chart-2: oklch(0.6 0.15 185);
   --chart-3: oklch(0.42 0.09 230);
   --chart-4: oklch(0.83 0.19 85);
   --chart-5: oklch(0.77 0.18 70);
+
+  --dev-color: oklch(0.6 0.18 50);
+  --plugins-color: oklch(0.65 0.18 170);
+  --guides-color: oklch(0.45 0.16 262.61);
+  --ui-color: oklch(0.5 0.18 280);
 }
 
 .dark {
@@ -43,7 +46,7 @@
   --primary-foreground: oklch(0.99 0.005 240);
   --secondary: oklch(0.24 0.01 240);
   --secondary-foreground: oklch(0.98 0.005 240);
-  --muted: oklch(0.22 0.01 240); /* Made slightly darker */
+  --muted: oklch(0.22 0.01 240);
   --muted-foreground: oklch(0.75 0.005 240);
   --accent: oklch(0.28 0.015 240);
   --destructive: oklch(0.704 0.191 22.216);
@@ -54,6 +57,11 @@
   --chart-3: oklch(0.8 0.18 70);
   --chart-4: oklch(0.7 0.26 300);
   --chart-5: oklch(0.7 0.24 20);
+
+  --dev-color: oklch(0.75 0.18 50);
+  --plugins-color: oklch(0.7 0.18 170);
+  --guides-color: oklch(0.65 0.16 262.61);
+  --ui-color: oklch(0.78 0.18 280);
 }
 
 :root {
@@ -114,4 +122,20 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.dev {
+  --color-fd-primary: var(--dev-color);
+}
+
+.guides {
+  --color-fd-primary: var(--guides-color);
+}
+
+.plugins {
+  --color-fd-primary: var(--plugins-color);
+}
+
+.ui {
+  --color-fd-primary: var(--ui-color);
 }

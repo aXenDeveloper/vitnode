@@ -31,11 +31,13 @@
     "@inquirer/prompts": "^7.5.0",
     "@types/node": "^22.15.3",
     "@types/prompts": "^2.4.9",
+    "@types/validate-npm-package-name": "^4.0.2",
     "commander": "^13.1.0",
     "eslint": "^9.25.1",
     "eslint-config-typescript-vitnode": "workspace:*",
     "ora": "^8.2.0",
     "picocolors": "^1.1.1",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "validate-npm-package-name": "^6.0.0"
   }
 }

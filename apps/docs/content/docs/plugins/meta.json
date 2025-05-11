@@ -1,6 +1,6 @@
 {
   "title": "Plugins",
-  "description": "Learn how to use VitNode",
+  "description": "Create and share own plugins",
   "icon": "Plug",
   "root": true,
   "pages": ["index", "..."]

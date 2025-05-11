@@ -2,6 +2,7 @@ import './global.css';
 import { RootProvider } from 'fumadocs-ui/provider';
 import { Geist, Geist_Mono } from 'next/font/google';
 import type { ReactNode } from 'react';
+import { Body } from './layout.client';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -20,9 +21,9 @@ export default function Layout({ children }: { children: ReactNode }) {
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       suppressHydrationWarning
     >
-      <body className="flex min-h-screen flex-col">
+      <Body>
         <RootProvider>{children}</RootProvider>
-      </body>
+      </Body>
     </html>
   );
 }

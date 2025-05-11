@@ -32,7 +32,7 @@ VitNode is designed for individual developers and small teams who need a structu
 
 ### Plugin System
 
-- Monorepo-based plugin architecture created using `npx create-vitnode-plugin`
+- Monorepo-based plugin architecture created using `npx create-vitnode-app@canary --plugin`
 - Plugins can extend functionality by creating:
   - New pages and routes
   - API endpoints

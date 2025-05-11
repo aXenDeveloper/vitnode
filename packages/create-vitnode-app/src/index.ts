@@ -7,6 +7,7 @@ import color from 'picocolors';
 import { createVitNode } from './create/create-vitnode.js';
 import { packageJson } from './helpers/get-package-json.js';
 import { validateNpmName } from './helpers/validate-pkg.js';
+import { createPlugin } from './plugin/index.js';
 import { createQuestionsCli } from './questions.js';
 import { validationProject } from './validation.js';
 
@@ -53,6 +54,16 @@ const init = async () => {
     '--skip-install',
     'Skip installing packages after initializing the project.',
   );
+  program.option('--plugin', 'Enable plugin mode.');
+
+  program.parse(process.argv);
+
+  const opts = program.opts();
+  if (opts.plugin) {
+    await createPlugin(projectPath);
+
+    return;
+  }
 
   if (!projectPath) {
     projectPath = await input({
