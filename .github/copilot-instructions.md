@@ -40,7 +40,7 @@ VitNode is a comprehensive framework designed to simplify and accelerate applica
 ### Documentation
 
 - **Framework**: Fumadocs
-- Use easy and clear language for documentation to make it accessible to a wide audience
+- Use easy, clear and funny language for documentation to make it accessible to a wide audience
 - Use clear and concise examples to illustrate concepts
 - Use `// [!code ++]` to highlight code snippets and `// [!code --]` to hide code snippets
 

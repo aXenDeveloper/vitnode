@@ -1,12 +1,29 @@
-import { DeviceModel } from '@/api/models/device';
-import { EmailApiPlugin } from '@/api/models/email';
-import { SessionModel } from '@/api/models/session';
-import { Context, Env, Next } from 'hono';
+import type { EmailApiPlugin } from '@/api/models/email';
+import type { Context, Env, Next } from 'hono';
 
-import { SSOApiPlugin } from '../../models/sso';
+import { DeviceModel } from '@/api/models/device';
+import { SessionModel } from '@/api/models/session';
+import { SessionAdminModel } from '@/api/models/session-admin';
+import { HTTPException } from 'hono/http-exception';
+
+import type { SSOApiPlugin } from '../../models/sso';
 
 declare module 'hono' {
   interface ContextVariableMap {
+    admin: null | {
+      user: {
+        avatarColor: string;
+        birthday: Date | null;
+        createdAt: Date;
+        email: string;
+        emailVerified: boolean;
+        id: number;
+        name: string;
+        nameCode: string;
+        newsletter: boolean;
+        roleId: number;
+      };
+    };
     core: {
       authorization: {
         adminCookieExpires: number;
@@ -84,6 +101,19 @@ export const globalMiddleware = ({
     c.set('deviceId', deviceId);
     const user = await new SessionModel(c).getUser();
     c.set('user', user);
+    c.set('admin', null);
+
+    await next();
+  };
+};
+
+export const globalAdminMiddleware = () => {
+  return async (c: Context<Env, '*'>, next: Next) => {
+    const user = await new SessionAdminModel(c).getUser();
+    if (!user) throw new HTTPException(403);
+    c.set('admin', {
+      user,
+    });
 
     await next();
   };

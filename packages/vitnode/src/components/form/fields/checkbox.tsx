@@ -1,10 +1,12 @@
+import type { z } from 'zod';
+
 import { Checkbox } from '@/components/ui/checkbox';
 import { FormControl, FormItem, FormMessage } from '@/components/ui/form';
-import { z } from 'zod';
+
+import type { ItemAutoFormComponentProps } from './item';
 
 import { AutoFormDesc } from '../common/desc';
 import { AutoFormLabel } from '../common/label';
-import { ItemAutoFormComponentProps } from './item';
 
 export function AutoFormCheckbox<T extends z.ZodTypeAny>({
   label,

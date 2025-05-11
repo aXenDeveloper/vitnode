@@ -1,8 +1,9 @@
+import type { Context, Env, Input } from 'hono';
+
 import { dbClient } from '@/database/client';
 import { core_sessions } from '@/database/schema/sessions';
 import { CONFIG } from '@/lib/config';
 import { and, eq, gt } from 'drizzle-orm';
-import { Context, Env, Input } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 
 import { UserModel } from './user';
@@ -64,10 +65,7 @@ export class SessionModel<T extends Env> {
       this.c.get('core').authorization.cookieName,
     );
     if (!token) return null;
-    const deviceId = getCookie(
-      this.c,
-      this.c.get('core').authorization.deviceCookieName,
-    );
+    const deviceId = this.c.get('deviceId');
     if (!deviceId) return null;
 
     const [session] = await dbClient
@@ -79,6 +77,7 @@ export class SessionModel<T extends Env> {
       .where(
         and(
           eq(core_sessions.token, token),
+          eq(core_sessions.deviceId, deviceId),
           gt(core_sessions.expiresAt, new Date()),
         ),
       )

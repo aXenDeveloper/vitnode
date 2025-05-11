@@ -1,3 +1,5 @@
+import type { HonoRequest } from 'hono';
+
 import { getUserIp } from '@/api/lib/get-user-ip';
 import { generateAvatarColor } from '@/api/modules/users/avatar-color';
 import { dbClient } from '@/database/client';
@@ -5,7 +7,6 @@ import { core_roles } from '@/database/schema/roles';
 import { core_users } from '@/database/schema/users';
 import { removeSpecialCharacters } from '@/lib/special-characters';
 import { and, count, eq, or } from 'drizzle-orm';
-import { HonoRequest } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 
 const getDefaultData = async (): Promise<{

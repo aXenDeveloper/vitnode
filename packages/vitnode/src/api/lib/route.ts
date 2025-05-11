@@ -1,8 +1,6 @@
-import {
-  createRoute as createRouteHono,
-  RouteConfig,
-  RouteHandler,
-} from '@hono/zod-openapi';
+import type { RouteConfig, RouteHandler } from '@hono/zod-openapi';
+
+import { createRoute as createRouteHono } from '@hono/zod-openapi';
 
 type RoutingPath<P extends string> =
   P extends `${infer Head}/{${infer Param}}${infer Tail}`

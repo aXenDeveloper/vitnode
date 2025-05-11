@@ -1,3 +1,5 @@
+import type { DataTable, DataTableTMin } from './data-table';
+
 import {
   Table,
   TableBody,
@@ -6,7 +8,6 @@ import {
   TableHeader,
   TableRow,
 } from '../ui/table';
-import { DataTable, DataTableTMin } from './data-table';
 import { OrderTableHeadDataTable } from './order-table-head';
 import { PaginationDataTable } from './pagination';
 

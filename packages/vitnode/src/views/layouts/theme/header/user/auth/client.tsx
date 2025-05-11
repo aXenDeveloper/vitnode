@@ -1,11 +1,12 @@
 'use client';
 
+import type { SessionApi } from '@/lib/api/get-session-api';
+
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { SessionApi } from '@/lib/api/get-session-api';
 import { Link } from '@/lib/navigation';
 import { KeyRoundIcon, LogOutIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';

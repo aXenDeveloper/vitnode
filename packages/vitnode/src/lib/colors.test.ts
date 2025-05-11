@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import type { HslColor } from './colors';
+
 import {
   checkColorType,
   convertColor,
   getHSLFromString,
   getStringFromHSL,
-  HslColor,
 } from './colors';
 
 describe('convertColor', () => {

@@ -1,5 +1,7 @@
 import React from 'react';
 
+import type { PaginationDataTable } from './pagination';
+
 import { Skeleton } from '../ui/skeleton';
 import {
   Table,
@@ -9,7 +11,6 @@ import {
   TableRow,
 } from '../ui/table';
 import { ContentDataTable } from './content';
-import { PaginationDataTable } from './pagination';
 
 export interface DataTableTMin {
   id: number;

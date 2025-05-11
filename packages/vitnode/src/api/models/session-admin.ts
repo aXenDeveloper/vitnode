@@ -1,3 +1,5 @@
+import type { Context, Env, Input } from 'hono';
+
 import { dbClient } from '@/database/client';
 import {
   core_admin_permissions,
@@ -5,7 +7,6 @@ import {
 } from '@/database/schema/admins';
 import { CONFIG } from '@/lib/config';
 import { and, eq, gt, or } from 'drizzle-orm';
-import { Context, Env, Input } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { HTTPException } from 'hono/http-exception';
 
@@ -86,16 +87,11 @@ export class SessionAdminModel<T extends Env> {
   }
 
   async getUser() {
-    const token = getCookie(
-      this.c,
-      this.c.get('core').authorization.adminCookieName,
-    );
-    if (!token) throw new HTTPException(403);
-    const deviceId = getCookie(
-      this.c,
-      this.c.get('core').authorization.deviceCookieName,
-    );
-    if (!deviceId) throw new HTTPException(403);
+    const { authorization } = this.c.get('core');
+    const token = getCookie(this.c, authorization.adminCookieName);
+    if (!token) return null;
+    const deviceId = this.c.get('deviceId');
+    if (!deviceId) return null;
 
     const [session] = await dbClient
       .select({
@@ -106,16 +102,15 @@ export class SessionAdminModel<T extends Env> {
       .where(
         and(
           eq(core_admin_sessions.token, token),
+          eq(core_admin_sessions.deviceId, deviceId),
           gt(core_admin_sessions.expiresAt, new Date()),
         ),
       )
       .limit(1);
 
-    if (!session || session.token !== token) {
-      throw new HTTPException(403);
-    }
+    if (!session) return null;
     const user = await new UserModel().getUserById(session.userId);
-    if (!user) throw new HTTPException(403);
+    if (!user) return null;
 
     return user;
   }

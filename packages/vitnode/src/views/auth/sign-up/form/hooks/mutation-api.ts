@@ -1,10 +1,11 @@
 'use server';
 
+import type { z } from 'zod';
+
 import { usersModule } from '@/api/modules/users/users.module';
 import { fetcher } from '@/lib/fetcher';
-import { z } from 'zod';
 
-import { buildSignUpFormSchema } from './use-form';
+import type { buildSignUpFormSchema } from './use-form';
 
 export const mutationApi = async (
   input: z.infer<ReturnType<typeof buildSignUpFormSchema>>,

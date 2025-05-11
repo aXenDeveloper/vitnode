@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+
 import { FormControl, FormItem, FormMessage } from '@/components/ui/form';
 import {
   Select,
@@ -9,11 +11,11 @@ import {
 import { getBaseSchema } from '@/lib/helpers/auto-form';
 import { useTranslations } from 'next-intl';
 import React from 'react';
-import { z } from 'zod';
+
+import type { ItemAutoFormComponentProps } from './item';
 
 import { AutoFormDesc } from '../common/desc';
 import { AutoFormLabel } from '../common/label';
-import { ItemAutoFormComponentProps } from './item';
 
 export function AutoFormSelect<T extends z.ZodTypeAny>({
   label,

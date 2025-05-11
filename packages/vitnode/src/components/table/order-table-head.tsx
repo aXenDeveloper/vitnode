@@ -5,9 +5,10 @@ import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import React from 'react';
 
+import type { DataTable, DataTableTMin } from './data-table';
+
 import { Button } from '../ui/button';
 import { Loader } from '../ui/loader';
-import { DataTable, DataTableTMin } from './data-table';
 
 export function OrderTableHeadDataTable<T extends DataTableTMin>({
   id,

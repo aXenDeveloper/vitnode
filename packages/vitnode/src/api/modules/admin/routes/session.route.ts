@@ -1,6 +1,6 @@
 import { internalVitNodeConfig } from '@/api/internal-config';
 import { buildRoute } from '@/api/lib/route';
-import { SessionAdminModel } from '@/api/models/session-admin';
+import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 
 export const sessionAdminRoute = buildRoute({
@@ -42,8 +42,9 @@ export const sessionAdminRoute = buildRoute({
       },
     },
   },
-  handler: async c => {
-    const user = await new SessionAdminModel(c).getUser();
+  handler: c => {
+    const user = c.get('admin')?.user;
+    if (!user) throw new HTTPException(403);
 
     return c.json({
       user,

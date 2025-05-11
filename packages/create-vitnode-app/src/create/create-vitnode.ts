@@ -2,8 +2,9 @@ import { mkdir } from 'fs/promises';
 import ora from 'ora';
 import color from 'picocolors';
 
+import type { CreateCliReturn } from '../questions.js';
+
 import { isFolderEmpty } from '../helpers/is-folder-empty.js';
-import { CreateCliReturn } from '../questions.js';
 
 export const createVitNode = async ({
   root,

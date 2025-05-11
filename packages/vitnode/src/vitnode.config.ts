@@ -1,6 +1,6 @@
-import { ThemeProvider } from 'next-themes';
+import type { ThemeProvider } from 'next-themes';
 
-import { BuildPluginReturn } from './lib/plugin';
+import type { BuildPluginReturn } from './lib/plugin';
 
 export interface VitNodeConfig<AppLocales extends string[] = string[]> {
   debug?: boolean;

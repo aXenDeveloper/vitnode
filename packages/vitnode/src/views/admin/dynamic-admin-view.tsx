@@ -1,8 +1,10 @@
+import type { Metadata } from 'next/dist/types';
+
 import { setRequestLocale } from 'next-intl/server';
-import { Metadata } from 'next/dist/types';
 import { notFound } from 'next/navigation';
 
-import { VitNodeConfig } from '../../vitnode.config';
+import type { VitNodeConfig } from '../../vitnode.config';
+
 import { DashboardAdminView } from './views/core/dashboard/dashboard-admin-view';
 import { TestView } from './views/core/test';
 import { UsersAdminView } from './views/core/users/users-admin-view';

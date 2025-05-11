@@ -1,7 +1,8 @@
 'use client';
 
+import type { VitNodeConfig } from '@/vitnode.config';
+
 import { CONFIG } from '@/lib/config';
-import { VitNodeConfig } from '@/vitnode.config';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import React from 'react';

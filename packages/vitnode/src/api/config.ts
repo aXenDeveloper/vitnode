@@ -1,14 +1,19 @@
+import type { OpenAPIHono } from '@hono/zod-openapi';
+import type { Context, Env, Schema } from 'hono';
+
 import { newBuildPluginCore } from '@/api/plugin';
 import { swaggerUI } from '@hono/swagger-ui';
-import { OpenAPIHono } from '@hono/zod-openapi';
-import { Context, Env, Schema } from 'hono';
 import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';
 import { HTTPException } from 'hono/http-exception';
 
-import { BuildPluginReturn } from '../lib/plugin';
+import type { BuildPluginReturn } from '../lib/plugin';
+
 import { internalVitNodeConfig } from './internal-config';
-import { globalMiddleware } from './middlewares/global/global';
+import {
+  globalAdminMiddleware,
+  globalMiddleware,
+} from './middlewares/global/global';
 
 interface CORSOptions {
   allowHeaders?: string[];
@@ -50,6 +55,7 @@ export function VitNodeAPI({
   app.use(csrf(csrfOptions));
   app.get('/swagger', swaggerUI({ url: `/api/swagger/doc` }));
   app.use('*', globalMiddleware(options));
+  app.use('/*/admin/*', globalAdminMiddleware());
 
   app.onError(error => {
     if (error instanceof HTTPException) {

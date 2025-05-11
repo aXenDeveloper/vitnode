@@ -1,7 +1,8 @@
+import type { VitNodeConfig } from '@/vitnode.config';
+import type { Metadata } from 'next/dist/types';
+
 import { I18nProvider } from '@/components/i18n-provider';
-import { VitNodeConfig } from '@/vitnode.config';
 import { setRequestLocale } from 'next-intl/server';
-import { Metadata } from 'next/dist/types';
 import React from 'react';
 
 import { RootProvider } from './provider';

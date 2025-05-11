@@ -1,6 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 
-import { Route } from './route';
+import type { Route } from './route';
 
 export interface BuildModuleType<T extends Route, Plugin extends string> {
   plugin: Plugin;

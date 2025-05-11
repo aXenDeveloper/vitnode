@@ -1,14 +1,19 @@
-import { BaseBuildModuleReturn, BuildModuleReturn } from '@/api/lib/module';
-import { Route } from '@/api/lib/route';
+import type {
+  BaseBuildModuleReturn,
+  BuildModuleReturn,
+} from '@/api/lib/module';
+import type { Route } from '@/api/lib/route';
+
 import { cookies, headers } from 'next/headers';
 
-import { CONFIG } from '../config';
-import {
+import type {
   FetcherParams,
   GetModulePaths,
   GetValidPathsForModule,
   InferResponseType,
 } from '../fetcher/types';
+
+import { CONFIG } from '../config';
 import { buildSearchParams, handleSetCookiesFetcher } from './helpers';
 
 export async function fetcher<

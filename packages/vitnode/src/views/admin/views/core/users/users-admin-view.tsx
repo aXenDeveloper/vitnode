@@ -1,10 +1,9 @@
+import type { SearchParamsDataTable } from '@/components/table/data-table';
+
 import { adminModule } from '@/api/modules/admin/admin.module';
 import { Avatar } from '@/components/avatar';
 import { DateFormat } from '@/components/date-format';
-import {
-  DataTable,
-  SearchParamsDataTable,
-} from '@/components/table/data-table';
+import { DataTable } from '@/components/table/data-table';
 import {
   Tooltip,
   TooltipContent,

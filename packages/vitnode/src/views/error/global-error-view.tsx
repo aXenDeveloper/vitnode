@@ -1,6 +1,7 @@
+import type { VitNodeConfig } from '@/vitnode.config';
+
 import { LogoVitNode } from '@/components/logo-vitnode';
 import { Card, CardContent } from '@/components/ui/card';
-import { VitNodeConfig } from '@/vitnode.config';
 import { ThemeProvider } from 'next-themes';
 // eslint-disable-next-line no-restricted-imports
 import Link from 'next/link';

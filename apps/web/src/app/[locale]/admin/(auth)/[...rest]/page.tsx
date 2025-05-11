@@ -1,8 +1,9 @@
+import type { DynamicAdminViewProps } from 'vitnode/views/admin/dynamic-admin-view';
+
 import { vitNodeConfig } from '@/vitnode.config';
 import {
   DynamicAdminView,
   dynamicAdminViewGenerateStaticParams,
-  DynamicAdminViewProps,
   generateMetadataDynamicAdminView,
 } from 'vitnode/views/admin/dynamic-admin-view';
 

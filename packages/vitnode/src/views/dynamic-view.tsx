@@ -1,9 +1,11 @@
+import type { Metadata } from 'next/dist/types';
+
 import { setRequestLocale } from 'next-intl/server';
-import { Metadata } from 'next/dist/types';
 import { notFound } from 'next/navigation';
 
+import type { VitNodeConfig } from '../vitnode.config';
+
 import { I18nProvider } from '../components/i18n-provider';
-import { VitNodeConfig } from '../vitnode.config';
 import {
   generateMetadataSignInView,
   SignInView,

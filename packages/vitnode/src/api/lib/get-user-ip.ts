@@ -1,4 +1,4 @@
-import { HonoRequest } from 'hono';
+import type { HonoRequest } from 'hono';
 
 export const getUserIp = (req: HonoRequest): string => {
   const ip: string = req.header('x-forwarded-for')?.toString() ?? '0.0.0.0';

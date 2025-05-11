@@ -1,6 +1,8 @@
-import { createNavigation, QueryParams } from 'next-intl/navigation';
+import type { QueryParams } from 'next-intl/navigation';
+import type { RedirectType } from 'next/navigation';
+
+import { createNavigation } from 'next-intl/navigation';
 import { getLocale } from 'next-intl/server';
-import { RedirectType } from 'next/navigation';
 
 const {
   Link,

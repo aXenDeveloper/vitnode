@@ -1,12 +1,13 @@
 'use server';
 
+import type { z } from 'zod';
+
 import { usersModule } from '@/api/modules/users/users.module';
 import { fetcher } from '@/lib/fetcher';
 import { redirect } from '@/lib/navigation';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
 
-import { createSignInFormSchema } from './use-form';
+import type { createSignInFormSchema } from './use-form';
 
 export const mutationApi = async (
   input: z.infer<ReturnType<typeof createSignInFormSchema>> & {

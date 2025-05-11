@@ -1,6 +1,7 @@
+import type { Command } from 'commander';
+
 import { select } from '@inquirer/prompts';
 import { confirm } from '@inquirer/prompts';
-import { Command } from 'commander';
 import color from 'picocolors';
 
 import { getAvailablePackageManagers } from './helpers/get-available-package-managers.js';

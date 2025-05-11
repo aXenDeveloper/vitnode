@@ -1,4 +1,5 @@
-import { EmailApiPlugin } from '@/api/models/email';
+import type { EmailApiPlugin } from '@/api/models/email';
+
 import { Resend } from 'resend';
 
 export const ResendEmailPlugin = ({

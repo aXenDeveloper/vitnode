@@ -1,4 +1,5 @@
-import { Context, ContextVariableMap, Env, Input } from 'hono';
+import type { Context, ContextVariableMap, Env, Input } from 'hono';
+
 import { HTTPException } from 'hono/http-exception';
 
 export interface EmailApiPlugin {

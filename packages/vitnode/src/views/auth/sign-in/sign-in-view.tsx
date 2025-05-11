@@ -1,7 +1,8 @@
+import type { Metadata } from 'next/dist/types';
+
 import { Card, CardDescription } from '@/components/ui/card';
 import { Link } from '@/lib/navigation';
 import { getTranslations } from 'next-intl/server';
-import { Metadata } from 'next/dist/types';
 import React from 'react';
 
 import { SSOButtons, SSOButtonsSkeleton } from '../sso/buttons/sso-buttons';

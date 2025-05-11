@@ -1,9 +1,10 @@
 'use client';
 
+import type { ItemAutoFormComponentProps } from '@/components/form/fields/item';
+
 import { AutoForm } from '@/components/form/auto-form';
 import { AutoFormCheckbox } from '@/components/form/fields/checkbox';
 import { AutoFormInput } from '@/components/form/fields/input';
-import { ItemAutoFormComponentProps } from '@/components/form/fields/item';
 import { Link } from '@/lib/navigation';
 import { removeSpecialCharacters } from '@/lib/special-characters';
 import { useTranslations } from 'next-intl';

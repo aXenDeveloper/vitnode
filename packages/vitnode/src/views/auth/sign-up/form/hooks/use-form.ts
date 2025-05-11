@@ -1,5 +1,6 @@
+import type { UseFormReturn } from 'react-hook-form';
+
 import { useTranslations } from 'next-intl';
-import { UseFormReturn } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 

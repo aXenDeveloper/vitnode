@@ -1,6 +1,8 @@
-import { getRedirectUri, SSOApiPlugin } from '@/api/models/sso';
+import type { SSOApiPlugin } from '@/api/models/sso';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
+
+import { getRedirectUri } from '@/api/models/sso';
 import { HTTPException } from 'hono/http-exception';
-import { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 
 export const DiscordSSOApiPlugin = ({

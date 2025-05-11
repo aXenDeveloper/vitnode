@@ -1,9 +1,6 @@
-import {
-  Messages,
-  NamespaceKeys,
-  NestedKeyOf,
-  NextIntlClientProvider,
-} from 'next-intl';
+import type { Messages, NamespaceKeys, NestedKeyOf } from 'next-intl';
+
+import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import 'server-only';
 

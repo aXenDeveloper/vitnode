@@ -1,8 +1,9 @@
+import type { DynamicViewProps } from 'vitnode/views/dynamic-view';
+
 import { vitNodeConfig } from '@/vitnode.config';
 import {
   DynamicView,
   dynamicViewGenerateStaticParams,
-  DynamicViewProps,
   generateMetadataDynamicView,
 } from 'vitnode/views/dynamic-view';
 

@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+
 import {
   FormControl,
   FormItem,
@@ -7,11 +9,11 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { getBaseSchema } from '@/lib/helpers/auto-form';
 import React from 'react';
-import { z } from 'zod';
+
+import type { ItemAutoFormComponentProps } from './item';
 
 import { AutoFormDesc } from '../common/desc';
 import { AutoFormLabel } from '../common/label';
-import { ItemAutoFormComponentProps } from './item';
 
 export function AutoFormRadioGroup<T extends z.ZodTypeAny>({
   label,

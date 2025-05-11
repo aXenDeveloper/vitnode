@@ -1,9 +1,9 @@
-import { BaseBuildModuleReturn } from '@/api/lib/module';
-import { Route } from '@/api/lib/route';
-import { RouteConfig } from '@hono/zod-openapi';
-import { ResponseFormat } from 'hono/types';
-import { StatusCode, SuccessStatusCode } from 'hono/utils/http-status';
-import { z } from 'zod';
+import type { BaseBuildModuleReturn } from '@/api/lib/module';
+import type { Route } from '@/api/lib/route';
+import type { RouteConfig } from '@hono/zod-openapi';
+import type { ResponseFormat } from 'hono/types';
+import type { StatusCode, SuccessStatusCode } from 'hono/utils/http-status';
+import type { z } from 'zod';
 
 interface ClientResponse<
   T,

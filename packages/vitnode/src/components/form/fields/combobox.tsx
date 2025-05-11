@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -18,11 +20,11 @@ import { cn } from '@/lib/utils';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
-import { z } from 'zod';
+
+import type { ItemAutoFormComponentProps } from './item';
 
 import { AutoFormDesc } from '../common/desc';
 import { AutoFormLabel } from '../common/label';
-import { ItemAutoFormComponentProps } from './item';
 
 export function AutoFormCombobox<T extends z.ZodTypeAny>({
   label,

@@ -1,10 +1,12 @@
+import type { z } from 'zod';
+
 import { FormControl, FormItem } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
-import { z } from 'zod';
+
+import type { ItemAutoFormComponentProps } from './item';
 
 import { AutoFormDesc } from '../common/desc';
 import { AutoFormLabel } from '../common/label';
-import { ItemAutoFormComponentProps } from './item';
 
 export function AutoFormSwitch<T extends z.ZodTypeAny>({
   label,

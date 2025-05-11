@@ -1,5 +1,7 @@
 'use client';
 
+import type { getSessionAdminApi } from '@/lib/api/get-session-admin-api';
+
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -7,7 +9,6 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { getSessionAdminApi } from '@/lib/api/get-session-admin-api';
 
 import { ClientUserBarAdmin } from './client';
 

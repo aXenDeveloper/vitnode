@@ -1,7 +1,12 @@
+import type {
+  ControllerRenderProps,
+  FieldPath,
+  FieldValues,
+} from 'react-hook-form';
+import type { z } from 'zod';
+
 import { FormField } from '@/components/ui/form';
 import { getShapeFromSchema } from '@/lib/helpers/auto-form';
-import { ControllerRenderProps, FieldPath, FieldValues } from 'react-hook-form';
-import { z } from 'zod';
 
 export interface ItemAutoFormComponentProps<
   T extends z.ZodTypeAny,

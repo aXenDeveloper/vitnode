@@ -1,0 +1,7 @@
+{
+  "title": "Plugins",
+  "description": "Learn how to use VitNode",
+  "icon": "Plug",
+  "root": true,
+  "pages": ["index", "..."]
+}

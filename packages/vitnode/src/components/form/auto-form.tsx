@@ -1,14 +1,18 @@
 'use client';
 
+import type { DefaultValues, Mode, UseFormReturn } from 'react-hook-form';
+import type { z } from 'zod';
+
 import { getDefaultValues, getObjectFormSchema } from '@/lib/helpers/auto-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
-import { DefaultValues, Mode, useForm, UseFormReturn } from 'react-hook-form';
-import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+
+import type { ItemAutoFormProps } from './fields/item';
 
 import { Button } from '../ui/button';
 import { Form } from '../ui/form';
-import { ItemAutoForm, ItemAutoFormProps } from './fields/item';
+import { ItemAutoForm } from './fields/item';
 
 export function AutoForm<
   T extends
