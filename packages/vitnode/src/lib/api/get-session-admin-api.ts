@@ -12,8 +12,6 @@ export const getSessionAdminApi = async () => {
       cache: 'force-cache',
     },
   });
-  // eslint-disable-next-line no-console
-  console.log('getSessionAdminApi', res);
 
   if (res.status !== 200) {
     await redirect('/admin');

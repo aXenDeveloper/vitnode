@@ -8,6 +8,7 @@ export interface VitNodeConfig<AppLocales extends string[] = string[]> {
     defaultLocale: AppLocales[number];
     localePrefix?: 'always' | 'as-needed' | 'never';
     locales: AppLocales;
+    timeZone?: string;
   };
   metadata: {
     shortTitle?: string;
@@ -48,5 +49,6 @@ export const handleRequestConfig = async ({
   return {
     locale,
     messages: (await import(`@/plugins/core/langs/${locale}.json`)).default,
+    timeZone: vitNodeConfig.i18n.timeZone,
   };
 };

@@ -9,6 +9,9 @@
   },
   "core": {
     "global": {
+      "date": "{date, date}",
+      "date_medium": "{date, date, medium}",
+      "date_short": "{date, date, short}",
       "register": "Register",
       "login": "Login",
       "save": "Save",
@@ -128,6 +131,13 @@
         "user_bar": {
           "home_page": "Home Page"
         }
+      }
+    },
+    "user": {
+      "list": {
+        "user": "User",
+        "createdAt": "Created At",
+        "emailNotVerified": "Email Not Verified"
       }
     }
   }
