@@ -24,6 +24,40 @@ export interface SearchParamsDataTable<T = unknown> {
   orderBy?: keyof T;
 }
 
+export const DataTableSkeleton = ({ columns }: { columns: number }) => (
+  <div className="space-y-4">
+    <div className="overflow-hidden rounded-lg border">
+      <div className="relative w-full overflow-auto">
+        <Table className="min-w-full">
+          <TableHeader>
+            <TableRow>
+              {Array.from({ length: columns }).map((_, i) => (
+                <TableHead className="px-4 py-3" key={i}>
+                  <Skeleton className="h-4 w-24" />
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <TableRow key={i}>
+                {Array.from({ length: columns }).map((_, j) => (
+                  <td className="px-4 py-3" key={j}>
+                    <Skeleton className="h-4 w-full" />
+                  </td>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+    <div className="flex justify-end">
+      <Skeleton className="h-8 w-32" />
+    </div>
+  </div>
+);
+
 export function DataTable<T extends DataTableTMin>(
   props: Omit<React.ComponentProps<typeof Table>, 'columns'> &
     React.ComponentProps<typeof PaginationDataTable> & {
@@ -44,39 +78,7 @@ export function DataTable<T extends DataTableTMin>(
 ) {
   return (
     <React.Suspense
-      fallback={
-        <div className="space-y-4">
-          <div className="overflow-hidden rounded-lg border">
-            <div className="relative w-full overflow-auto">
-              <Table className="min-w-full">
-                <TableHeader>
-                  <TableRow>
-                    {props.columns.map(column => (
-                      <TableHead className="px-4 py-3" key={String(column.id)}>
-                        <Skeleton className="h-4 w-24" />
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <TableRow key={i}>
-                      {props.columns.map(column => (
-                        <td className="px-4 py-3" key={String(column.id)}>
-                          <Skeleton className="h-4 w-full" />
-                        </td>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Skeleton className="h-8 w-32" />
-          </div>
-        </div>
-      }
+      fallback={<DataTableSkeleton columns={props.columns.length} />}
     >
       <ContentDataTable<T> {...props} />
     </React.Suspense>
