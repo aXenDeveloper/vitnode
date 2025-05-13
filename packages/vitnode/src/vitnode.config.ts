@@ -1,6 +1,7 @@
 import type { ThemeProvider } from 'next-themes';
 
 import type { BuildPluginReturn } from './lib/plugin';
+import type { EmailApiPlugin } from './api/models/email';
 
 export interface VitNodeConfig<AppLocales extends string[] = string[]> {
   debug?: boolean;

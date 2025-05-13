@@ -1,0 +1,9 @@
+---
+description: Use while write text on frontend
+globs: 
+alwaysApply: false
+---
+- Use `next-intl` for internationalization
+- Use `t('key')` for translation keys
+- Use `getTranslation` function for server component but `useTranslation` for client
+- Languages keys should be added in [en.json](mdc:apps/web/src/plugins/core/langs/en.json) file

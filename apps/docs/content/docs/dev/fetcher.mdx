@@ -1,74 +1,72 @@
 ---
 title: Fetcher
-description: Fetch data with type-safe API
+description: Type-safe API data fetching with RPC-style interface
 ---
 
-Our fetcher has RPC (Remote Procedure Call) style API. It allows you to call any API endpoint with type-safe API.
+The VitNode fetcher provides a type-safe RPC (Remote Procedure Call) style interface for making API requests. It simplifies data fetching by providing strong typing and a consistent API across your application.
 
 <Callout type="warn" emoji="⚠️" title="Server-side only">
-  The `fetcher()` function is only server-side. You cannot use it on the
-  client-side.
+  The `fetcher()` function can only be used on the server-side. Client-side
+  usage is not supported.
 </Callout>
 
-## Usage
+## Getting Started
 
-To use the `fetcher()` function, you need to import it from the `vitnode/lib/fetcher` module. You also need to import the module you want to use.
-
-More about modules can be found in the [Modules](/docs/dev/modules) section.
+First, import the required dependencies:
 
 ```ts
 import { fetcher } from 'vitnode/lib/fetcher';
 import { usersModule } from 'vitnode/api/modules/users/users.module';
 ```
 
+Make your first API call:
+
 ```ts
-const res = await fetcher(usersModule, {
+const response = await fetcher(usersModule, {
   path: '/session',
   method: 'get',
   module: 'users',
 });
-```
 
-The response from `fetcher()` is compatible with the standard `fetch` Response API. Here are common way to work with the response:
-
-```ts
-// Basic response handling
-if (res.ok) {
-  const data = await res.json();
-  console.log(data);
+// Handle the response
+if (response.ok) {
+  const data = await response.json();
+  console.log('Session data:', data);
 }
 ```
 
-### Options
+The fetcher returns a standard Response object, just like the native `fetch` API. This makes it familiar and easy to work with.
 
-You can pass the `options` object to modify the `fetch` function. For example we can pass `cache` option to enable the cache from `next`:
+## Advanced Features
+
+### Caching Responses
+
+You can leverage Next.js caching by passing cache options:
 
 ```ts
-const res = await fetcher(usersModule, {
+const response = await fetcher(usersModule, {
   path: '/session',
   method: 'get',
   module: 'users',
-  // [!code ++]
   options: {
     // [!code ++]
-    cache: 'force-cache',
-    // [!code ++]
+    cache: 'force-cache', // Uses Next.js cache
   },
 });
 ```
 
-### Handle set-cookies
+### Cookie Management
 
-React Server Components cannot handle `set-cookies` headers from the server. To handle
-this, you need to pass the `allowSaveCookies` param to the `fetcher()` function. This will allow the cookies to be saved in the response.
+When working with authentication or sessions, you might need to handle cookies. React Server Components have special considerations for cookie handling:
 
-<Callout type="warn" emoji="⚠️" title="Server-side only">
-  The `allowSaveCookies` param works only when your request has method different
-  from `get` and response status has 2xx.
+<Callout type="info" title="Cookie Handling">
+  Cookie saving is only supported for requests that return a 2xx status code.
 </Callout>
 
+Here's how to enable cookie handling for a sign-in request:
+
 ```ts
-const res = await fetcher(usersModule, {
+const response = await fetcher(usersModule, {
   path: '/sign_in',
   method: 'post',
   module: 'users',
@@ -76,8 +74,8 @@ const res = await fetcher(usersModule, {
   allowSaveCookies: true,
   args: {
     body: {
-      email: '',
-      password: '',
+      email: 'user@example.com',
+      password: '********',
     },
   },
 });

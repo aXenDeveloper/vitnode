@@ -1,0 +1,15 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+ VitNode is a comprehensive framework designed to simplify and accelerate application development with Next.js and Hono.js. Built as a monorepo solution managed by Turborepo, VitNode provides a structured environment that makes development faster and less complex. The framework includes an integrated AdminCP and plugin system to extend its core functionality.
+ 
+ - Write ESModule only
+ - Always use snake_case for file name
+ - Use pnpm as pacakge manager
+ - Use zod 3 for schema validation
+ - Use react-hook-form 7 for forms
+ - Use Shadcn UI & Tailwind CSS 4 for UI
+ - Respect Prettier [prettierrc.mjs](mdc:packages/eslint/prettierrc.mjs) and ESLint [eslint.config.mjs](mdc:packages/eslint/eslint.config.mjs)
+ - Use TypeScript 5, React 19 & Hono.js 4
