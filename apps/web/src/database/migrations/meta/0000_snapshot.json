@@ -1,5 +1,5 @@
 {
-  "id": "95791a90-7337-433f-9510-8d6f9e4125ff",
+  "id": "fd378528-22f1-4e30-9108-4e06020776ba",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -299,19 +299,12 @@
           "primaryKey": false,
           "notNull": true
         },
-        "time_24": {
-          "name": "time_24",
+        "time24": {
+          "name": "time24",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
-        },
-        "allow_in_input": {
-          "name": "allow_in_input",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
         }
       },
       "indexes": {

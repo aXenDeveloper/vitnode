@@ -30,8 +30,7 @@ CREATE TABLE "core_languages" (
 	"enabled" boolean DEFAULT true NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp NOT NULL,
-	"time_24" boolean DEFAULT false NOT NULL,
-	"allow_in_input" boolean DEFAULT true NOT NULL,
+	"time24" boolean DEFAULT false NOT NULL,
 	CONSTRAINT "core_languages_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint

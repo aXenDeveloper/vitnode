@@ -1,4 +1,5 @@
 import type { EmailApiPlugin } from '@/api/models/email';
+import type { VitNodeApiConfig, VitNodeConfig } from '@/vitnode.config';
 import type { Context, Env, Next } from 'hono';
 
 import { DeviceModel } from '@/api/models/device';
@@ -61,23 +62,8 @@ export const globalMiddleware = ({
   authorization,
   metadata,
   emailProvider,
-}: {
-  authorization?: {
-    adminCookieExpires?: number;
-    adminCookieName?: string;
-    cookieExpires?: number;
-    cookieName?: string;
-    cookieSecure?: boolean;
-    deviceCookieExpires?: number;
-    deviceCookieName?: string;
-    ssoPlugins?: SSOApiPlugin[];
-  };
-  emailProvider?: EmailApiPlugin;
-  metadata: {
-    shortTitle?: string;
-    title: string;
-  };
-}) => {
+}: Pick<VitNodeApiConfig, 'authorization' | 'emailProvider'> &
+  Pick<VitNodeConfig, 'metadata'>) => {
   return async (c: Context<Env, '*'>, next: Next) => {
     c.set('core', {
       metadata,

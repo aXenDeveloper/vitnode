@@ -1,9 +1,9 @@
-import { buildPlugin } from 'vitnode/lib/plugin';
+import { buildApiPlugin } from 'vitnode/api/lib/plugin';
 
 import { categoriesModule } from './modules/categories/categories.module';
 
-export const blogPlugin = () => {
-  return buildPlugin({
+export const blogApiPlugin = () => {
+  return buildApiPlugin({
     name: 'blog',
     modules: [categoriesModule],
   });

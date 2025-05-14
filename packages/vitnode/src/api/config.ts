@@ -1,13 +1,12 @@
+import type { VitNodeApiConfig, VitNodeConfig } from '@/vitnode.config';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import type { Context, Env, Schema } from 'hono';
 
-import { newBuildPluginCore } from '@/api/plugin';
+import { newBuildPluginApiCore } from '@/api/plugin';
 import { swaggerUI } from '@hono/swagger-ui';
 import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';
 import { HTTPException } from 'hono/http-exception';
-
-import type { BuildPluginReturn } from '../lib/plugin';
 
 import { internalVitNodeConfig } from './internal-config';
 import {
@@ -36,13 +35,14 @@ export function VitNodeAPI({
   app,
   cors: corsOptions,
   csrf: csrfOptions,
-  plugins,
-  ...options
-}: Parameters<typeof globalMiddleware>[0] & {
+  vitNodeApiConfig,
+  vitNodeConfig,
+}: {
   app: OpenAPIHono<Env, Schema, string>;
   cors?: CORSOptions;
   csrf?: CSRFOptions;
-  plugins: BuildPluginReturn[];
+  vitNodeApiConfig: VitNodeApiConfig;
+  vitNodeConfig: VitNodeConfig;
 }) {
   app.doc('/swagger/doc', {
     openapi: '3.0.0',
@@ -54,7 +54,14 @@ export function VitNodeAPI({
   app.use(cors(corsOptions));
   app.use(csrf(csrfOptions));
   app.get('/swagger', swaggerUI({ url: `/api/swagger/doc` }));
-  app.use('*', globalMiddleware(options));
+  app.use(
+    '*',
+    globalMiddleware({
+      emailProvider: vitNodeApiConfig.emailProvider,
+      metadata: vitNodeConfig.metadata,
+      authorization: vitNodeApiConfig.authorization,
+    }),
+  );
   app.use('/*/admin/*', globalAdminMiddleware());
 
   app.onError(error => {
@@ -75,7 +82,7 @@ export function VitNodeAPI({
     );
   });
 
-  [newBuildPluginCore, ...plugins].map(root => {
+  [newBuildPluginApiCore, ...vitNodeApiConfig.plugins].map(root => {
     app.route(`/${root.name}`, root.hono);
   });
 

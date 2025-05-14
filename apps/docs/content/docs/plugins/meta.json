@@ -3,5 +3,5 @@
   "description": "Create and share own plugins",
   "icon": "Plug",
   "root": true,
-  "pages": ["index", "..."]
+  "pages": ["index", "---Plugins---", "blog", "---Custom Plugin---", "..."]
 }
