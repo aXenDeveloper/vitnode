@@ -1,13 +1,16 @@
 import { buildPlugin } from 'vitnode/lib/plugin';
 
 import { configPlugin } from './config';
-import { Test } from './views/test';
 
 export const blogPlugin = () => {
   return buildPlugin({
     ...configPlugin,
-    pages: () => {
-      return <Test />;
+    pages: {
+      component: ({ params }) => {
+        if (params[0] === 'blog' && !params[1]) {
+          return <div className="container mx-auto p-4">Page Blog plugin</div>;
+        }
+      },
     },
   });
 };

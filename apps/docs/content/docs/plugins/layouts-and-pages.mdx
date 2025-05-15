@@ -1,0 +1,170 @@
+---
+title: Layouts and Pages
+description: Learn how to create custom layouts and pages for your VitNode plugins
+---
+
+Welcome to the magical world of VitNode layouts and pages! Think of these as the digital feng shui for your plugin - they determine how things look and where everything goes. Let's dive in!
+
+## Create a Page
+
+Pages in VitNode are like unexpected guests - they show up when someone visits a URL matching your plugin's route. Here's how to roll out the welcome mat:
+
+```tsx title="plugins/blog/src/plugin.tsx"
+import { buildPlugin } from 'vitnode/lib/plugin';
+
+import { configPlugin } from './config';
+
+export const blogPlugin = () => {
+  return buildPlugin({
+    ...configPlugin,
+    // [!code ++]
+    pages: {
+      // [!code ++]
+      component: ({ params }) => {
+        // [!code ++]
+        if (params[0] === 'blog' && !params[1]) {
+          // [!code ++]
+          return (
+            // [!code ++]
+            <div className="container mx-auto p-4">Page Blog plugin</div>
+            // [!code ++]
+          );
+          // [!code ++]
+        }
+        // [!code ++]
+      },
+      // [!code ++]
+    },
+  });
+};
+```
+
+<Callout type="warn" title="RSC Require">
+  The page component must be a React Server Component (RSC). This means it
+  should be a function that returns JSX and does not use hooks or state. If you
+  want to use `use client;` then you need to create a new file and import the
+  page component.
+</Callout>
+
+## Page Parameters
+
+Your pages can access URL parameters like a nosy neighbor reading your mail. The `params` array contains each segment of the URL path:
+
+```tsx
+component: ({ params, locale, searchParams }) => {
+  // params[0] is the first segment after the base URL
+  // For example, in "/blog/post/123":
+  // params[0] would be "blog"
+  // params[1] would be "post"
+  // params[2] would be "123"
+
+  if (params[0] === 'blog' && params[1] === 'post' && params[2] && !params[3]) {
+    return <BlogPost id={params[2]} locale={locale} />;
+  }
+};
+```
+
+<Callout type="warn" title="Page Ending Condition">
+  Always end your page-matching conditionals with <code>!params[X]</code> to
+  ensure you only match the intended page and not sub-paths.
+</Callout>
+
+## Static Paths
+
+Sometimes you know exactly who's coming to dinner. For those cases, define your static paths:
+
+```tsx
+pages: {
+  component: ({ params }) => {
+    if (params[0] === 'about' && !params[1]) {
+      return <AboutPage />;
+    }
+  },
+  staticPaths: ['/about', '/terms', '/privacy'],
+}
+```
+
+These paths will be pre-rendered at build time - like preparing snacks before your guests arrive!
+
+## Layouts
+
+Layouts are like the interior designers of your plugin - they wrap your content in a consistent style. Unlike Next.js layouts that use file-system conventions, VitNode uses a more explicit approach:
+
+```tsx title="plugins/blog/src/plugin.tsx"
+import { BlogLayout } from './components/blog-layout';
+import { BlogListing } from './components/blog-listing';
+import { BlogPost } from './components/blog-post';
+import { AboutPage } from './components/about-page';
+
+export const blogPlugin = () => {
+  return buildPlugin({
+    ...configPlugin,
+    pages: {
+      component: ({ params }) => {
+        return (
+          <BlogLayout>
+            {/* Blog listing page: /blog */}
+            {params[0] === 'blog' && !params[1] && <BlogListing />}
+            {/* Blog post page: /blog/post/[id] */}
+            {params[0] === 'blog' &&
+              params[1] === 'post' &&
+              params[2] &&
+              !params[3] && <BlogPost id={params[2]} />}
+            {/* About page: /about */}
+            {params[0] === 'about' && !params[1] && <AboutPage />}
+            {/* You can add more pages here */}
+          </BlogLayout>
+        );
+      },
+      staticPaths: ['/blog', '/about'],
+    },
+  });
+};
+```
+
+Think of `searchParams` as that friend who always asks too many questions - sometimes annoying, but often useful!
+
+## Mixing Client and Server Components
+
+Want the best of both worlds? Here's how to dance the client-server tango:
+
+```tsx title="plugins/blog/src/components/blog-post.client.tsx"
+'use client';
+
+import { useState } from 'react';
+
+export function ClientBlogPost({ initialData }) {
+  const [likes, setLikes] = useState(initialData.likes);
+
+  return (
+    <div>
+      <h1>{initialData.title}</h1>
+      <p>{initialData.content}</p>
+      <button onClick={() => setLikes(likes + 1)}>Like ({likes})</button>
+    </div>
+  );
+}
+```
+
+```tsx title="plugins/blog/src/plugin.tsx"
+import { ClientBlogPost } from './components/blog-post.client';
+
+export const blogPlugin = () => {
+  return buildPlugin({
+    ...configPlugin,
+    pages: {
+      component: async ({ params }) => {
+        if (params[0] === 'blog' && params[1] && !params[2]) {
+          const postData = await fetchBlogPost(params[1]);
+
+          return (
+            <div className="container mx-auto p-4">
+              <ClientBlogPost initialData={postData} />
+            </div>
+          );
+        }
+      },
+    },
+  });
+};
+```

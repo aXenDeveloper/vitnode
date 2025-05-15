@@ -8,8 +8,7 @@ import {
 } from 'vitnode/views/admin/dynamic-admin-view';
 
 export const generateMetadata = generateMetadataDynamicAdminView;
-export const generateStaticParams = () =>
-  dynamicAdminViewGenerateStaticParams(vitNodeConfig.i18n.locales);
+export const generateStaticParams = dynamicAdminViewGenerateStaticParams;
 
 export default function CatchAllPage(props: DynamicAdminViewProps) {
   return <DynamicAdminView config={vitNodeConfig} {...props} />;

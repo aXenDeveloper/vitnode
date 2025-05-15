@@ -5,6 +5,7 @@ import { Link } from '@/lib/navigation';
 import { getTranslations } from 'next-intl/server';
 import React from 'react';
 
+import { I18nProvider } from '../../../components/i18n-provider';
 import { SSOButtons, SSOButtonsSkeleton } from '../sso/buttons/sso-buttons';
 import { FormSignIn } from './form/form';
 
@@ -23,32 +24,34 @@ export const SignInView = async () => {
   const tGlobal = await getTranslations('core.global');
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-4 py-16">
-      <Card className="bg-muted gap-0 p-0">
-        <div className="bg-card rounded-xl p-6">
-          <div className="mb-10 space-y-2 text-center">
-            <h1 className="text-2xl font-semibold leading-none tracking-tight">
-              {tGlobal('login')}
-            </h1>
-            <CardDescription>{t('desc')}</CardDescription>
+    <I18nProvider namespaces="core.auth.sign_in">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-4 py-16">
+        <Card className="bg-muted gap-0 p-0">
+          <div className="bg-card rounded-xl p-6">
+            <div className="mb-10 space-y-2 text-center">
+              <h1 className="text-2xl font-semibold leading-none tracking-tight">
+                {tGlobal('login')}
+              </h1>
+              <CardDescription>{t('desc')}</CardDescription>
+            </div>
+            <FormSignIn />
+
+            <React.Suspense fallback={<SSOButtonsSkeleton />}>
+              <SSOButtons />
+            </React.Suspense>
           </div>
-          <FormSignIn />
 
-          <React.Suspense fallback={<SSOButtonsSkeleton />}>
-            <SSOButtons />
-          </React.Suspense>
-        </div>
-
-        <div className="text-accent-foreground p-6 text-center text-sm">
-          {t.rich('do_not_have_account', {
-            link: text => (
-              <Link className="font-semibold" href="/register">
-                {text}
-              </Link>
-            ),
-          })}
-        </div>
-      </Card>
-    </div>
+          <div className="text-accent-foreground p-6 text-center text-sm">
+            {t.rich('do_not_have_account', {
+              link: text => (
+                <Link className="font-semibold" href="/register">
+                  {text}
+                </Link>
+              ),
+            })}
+          </div>
+        </Card>
+      </div>
+    </I18nProvider>
   );
 };

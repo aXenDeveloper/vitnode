@@ -52,9 +52,8 @@ export const DynamicAdminView = async (
   notFound();
 };
 
-export const dynamicAdminViewGenerateStaticParams = (locales: string[]) => {
-  return locales.map(locale => ({
-    locale,
-    rest: ['core', 'core/users', 'core/test'],
+export const dynamicAdminViewGenerateStaticParams = () => {
+  return ['core', 'core/users', 'core/test'].map(item => ({
+    rest: item.split('/'),
   }));
 };

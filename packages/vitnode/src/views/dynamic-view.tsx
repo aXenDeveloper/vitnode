@@ -5,7 +5,6 @@ import { notFound } from 'next/navigation';
 
 import type { VitNodeConfig } from '../vitnode.config';
 
-import { I18nProvider } from '../components/i18n-provider';
 import {
   generateMetadataSignInView,
   SignInView,
@@ -57,39 +56,35 @@ export const DynamicView = async ({
     );
   }
 
+  // Attempt to render a plugin view if available for any route
+  for (const plugin of config.plugins) {
+    if (typeof plugin.pages?.component === 'function') {
+      const page = plugin.pages.component({
+        locale,
+        searchParams,
+        params: rest,
+      });
+
+      if (page) {
+        return page;
+      }
+    }
+  }
+
   const views = {
-    register: (
-      <I18nProvider namespaces={'core.auth.sign_up'}>
-        <SignUpView />
-      </I18nProvider>
-    ),
-    login: (
-      <I18nProvider namespaces={'core.auth.sign_in'}>
-        <SignInView />
-      </I18nProvider>
-    ),
+    register: SignUpView,
+    login: SignInView,
   };
 
-  const view = views[path];
+  const view = views[path]?.();
 
   if (view) {
     return view;
   }
 
-  // Try to render a plugin view if available
-  const plugin = config.plugins.find(
-    p => p.name === rest[0] && typeof p.pages === 'function',
-  );
-
-  if (plugin?.pages) {
-    return plugin.pages();
-  }
-
   notFound();
 };
 
-export function dynamicViewGenerateStaticParams<
-  AppLocales extends string[] = string[],
->(locales: AppLocales) {
-  return locales.map(locale => ({ locale, rest: ['register', 'login'] }));
+export function dynamicViewGenerateStaticParams() {
+  return ['login', 'register'].map(item => ({ rest: item.split('/') }));
 }
