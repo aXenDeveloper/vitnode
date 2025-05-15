@@ -1,23 +1,11 @@
-import { OpenAPIHono } from '@hono/zod-openapi';
-
-import type { BuildModuleReturn } from '../api/lib/module';
-
-export interface BuildPluginReturn {
-  hono: OpenAPIHono;
-  name: string;
+export interface BuildPluginReturn<P extends string = string> {
+  name: P;
+  pages?: () => React.ReactNode;
 }
 
 export function buildPlugin<P extends string>({
   name,
-  modules = [],
-}: {
-  modules?: BuildModuleReturn<P, string>[];
-  name: P;
-}): BuildPluginReturn {
-  const hono = new OpenAPIHono();
-  modules.forEach(handler => {
-    hono.route(`/${handler.name}`, handler.hono);
-  });
-
-  return { name, hono };
+  pages,
+}: BuildPluginReturn<P>): BuildPluginReturn<P> {
+  return { name, pages };
 }

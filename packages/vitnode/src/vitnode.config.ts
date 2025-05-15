@@ -1,7 +1,9 @@
 import type { ThemeProvider } from 'next-themes';
 
-import type { BuildPluginReturn } from './lib/plugin';
+import type { BuildPluginApiReturn } from './api/lib/plugin';
 import type { EmailApiPlugin } from './api/models/email';
+import type { SSOApiPlugin } from './api/models/sso';
+import type { BuildPluginReturn } from './lib/plugin';
 
 export interface VitNodeConfig<AppLocales extends string[] = string[]> {
   debug?: boolean;
@@ -22,6 +24,21 @@ export interface VitNodeConfig<AppLocales extends string[] = string[]> {
   >;
 }
 
+export interface VitNodeApiConfig {
+  authorization?: {
+    adminCookieExpires?: number;
+    adminCookieName?: string;
+    cookieExpires?: number;
+    cookieName?: string;
+    cookieSecure?: boolean;
+    deviceCookieExpires?: number;
+    deviceCookieName?: string;
+    ssoPlugins?: SSOApiPlugin[];
+  };
+  emailProvider?: EmailApiPlugin;
+  plugins: BuildPluginApiReturn[];
+}
+
 export function buildConfig<AppLocales extends string[]>(
   args: VitNodeConfig<AppLocales>,
 ): VitNodeConfig<AppLocales> {
@@ -32,6 +49,10 @@ export function buildConfig<AppLocales extends string[]>(
       localePrefix: args.i18n.localePrefix ?? 'as-needed',
     },
   };
+}
+
+export function buildApiConfig(args: VitNodeApiConfig): VitNodeApiConfig {
+  return args;
 }
 
 export const handleRequestConfig = async ({

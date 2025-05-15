@@ -16,8 +16,7 @@ export const core_languages = pgTable(
       .timestamp()
       .notNull()
       .$onUpdate(() => new Date()),
-    time_24: t.boolean().notNull().default(false),
-    allow_in_input: t.boolean().default(true).notNull(),
+    time24: t.boolean().notNull().default(false),
   }),
   t => [
     index('core_languages_code_idx').on(t.code),

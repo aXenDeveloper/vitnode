@@ -41,6 +41,7 @@ export const generateMetadataDynamicView = async ({
 export const DynamicView = async ({
   params,
   searchParams,
+  config,
 }: DynamicViewProps & {
   config: VitNodeConfig;
 }) => {
@@ -73,6 +74,15 @@ export const DynamicView = async ({
 
   if (view) {
     return view;
+  }
+
+  // Try to render a plugin view if available
+  const plugin = config.plugins.find(
+    p => p.name === rest[0] && typeof p.pages === 'function',
+  );
+
+  if (plugin?.pages) {
+    return plugin.pages();
   }
 
   notFound();
