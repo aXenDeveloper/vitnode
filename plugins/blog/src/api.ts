@@ -1,10 +1,11 @@
 import { buildApiPlugin } from 'vitnode/api/lib/plugin';
 
-import { categoriesModule } from './modules/categories/categories.module';
+import { categoriesModule } from './api/modules/categories/categories.module';
+import { configPlugin } from './config';
 
 export const blogApiPlugin = () => {
   return buildApiPlugin({
-    name: 'blog',
+    ...configPlugin,
     modules: [categoriesModule],
   });
 };

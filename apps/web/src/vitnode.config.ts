@@ -1,4 +1,5 @@
 import { getRequestConfig } from 'next-intl/server';
+import { blogPlugin } from 'vitnode-blog/plugin';
 import { buildConfig, handleRequestConfig } from 'vitnode/vitnode.config';
 
 export const vitNodeConfig = buildConfig({
@@ -6,7 +7,7 @@ export const vitNodeConfig = buildConfig({
     title: 'VitNode',
     shortTitle: 'VitNode',
   },
-  plugins: [],
+  plugins: [blogPlugin()],
   i18n: {
     locales: ['en', 'pl'] as const,
     defaultLocale: 'en',
@@ -18,6 +19,6 @@ export const vitNodeConfig = buildConfig({
 });
 
 // This is the request config for the app. It will be used in the app router.
-export default getRequestConfig(async ({ requestLocale }) =>
-  handleRequestConfig({ requestLocale, vitNodeConfig }),
-);
+export default getRequestConfig(async ({ requestLocale }) => {
+  return await handleRequestConfig({ requestLocale, vitNodeConfig });
+});
