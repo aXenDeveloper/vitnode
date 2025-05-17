@@ -1,5 +1,5 @@
 {
-  "name": "vitnode-bun",
+  "name": "vitnode",
   "private": true,
   "scripts": {
     "db:migrate": "turbo db:migrate",

@@ -3,6 +3,7 @@
 import { existsSync } from 'fs';
 import { join } from 'path';
 
+import { processPlugin } from './plugin.js';
 import { prepareDatabase } from './prepare-database.js';
 import { prepareFiles } from './prepare-files.js';
 
@@ -23,6 +24,11 @@ if (process.argv[2] === 'prepare') {
   void prepareFiles({ pluginsPath: getPluginsPath(), initMessage });
 } else if (process.argv[2] === 'init') {
   void prepareDatabase({ initMessage });
+} else if (
+  process.argv[2] === 'plugin' &&
+  (process.argv[3] === '--w' || process.argv[3] === '--watch')
+) {
+  processPlugin({ initMessage });
 } else {
   console.log(
     `${initMessage} \x1b[31mCommand not found: "${process.argv[2] ?? ''}"\x1b[0m`,
