@@ -9,7 +9,15 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'fs';
-import { basename, dirname, extname, join, relative } from 'path';
+import {
+  basename,
+  dirname,
+  extname,
+  join,
+  normalize,
+  relative,
+  sep,
+} from 'path';
 
 // Regex patterns for import statements
 const relativeImportRegex =
@@ -17,6 +25,45 @@ const relativeImportRegex =
 const atImportRegex =
   /import\s+(?:(?:{[^}]*})|(?:[^{}\s,]*))?\s*(?:,\s*(?:{[^}]*}))?\s*from\s+['"](@\/[^'"]*)['"]/g;
 const jsExtensionRegex = /\.(js|jsx|ts|tsx)$/;
+const pageFileRegex = /^page\.(tsx|ts|jsx|js)$/i;
+
+const routeKey = (filePath: string, localeRoot: string): string => {
+  const rel = relative(localeRoot, filePath);
+  const parts = rel.split(sep);
+
+  // remove filename
+  parts.pop();
+
+  // drop any group folders
+  const filtered = parts.filter(p => !p.startsWith('('));
+
+  // '' represents the root route
+  return normalize(filtered.join('/'));
+};
+
+const buildInitialRouteMap = (localeRoot: string): Map<string, string> => {
+  const map = new Map<string, string>();
+
+  const visit = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+
+      if (entry.isDirectory()) {
+        visit(full);
+        continue;
+      }
+
+      if (pageFileRegex.test(entry.name)) {
+        const key = routeKey(full, localeRoot);
+        map.set(key, full);
+      }
+    }
+  };
+
+  visit(localeRoot);
+
+  return map;
+};
 
 // Function to transform file content by updating import statements
 const transformFileImports = (content: string, pluginName: string): string => {
@@ -56,57 +103,6 @@ const transformFileImports = (content: string, pluginName: string): string => {
   return transformedContent;
 };
 
-const copyFile = (srcPath: string, destPath: string, pluginName?: string) => {
-  try {
-    const destDir = destPath.substring(0, destPath.lastIndexOf('/'));
-    if (!existsSync(destDir)) {
-      mkdirSync(destDir, { recursive: true });
-    }
-
-    // Check if file should have imports processed (like .js, .jsx, .ts, .tsx files)
-    const ext = extname(srcPath);
-    if (pluginName && ['.js', '.jsx', '.ts', '.tsx'].includes(ext)) {
-      // Read file content
-      const content = readFileSync(srcPath, 'utf-8');
-      // Transform imports
-      const transformedContent = transformFileImports(content, pluginName);
-      // Write transformed content
-      writeFileSync(destPath, transformedContent);
-    } else {
-      // Copy file directly without transforming
-      copyFileSync(srcPath, destPath);
-    }
-
-    // Show even shorter, project-rooted paths for clarity
-    const repoRoot = findRepoRoot(process.cwd());
-    // Remove everything before '/src/app' in the source path if present
-    const srcAppIdx = srcPath.indexOf('/src/app');
-    const shortSrc =
-      srcAppIdx !== -1
-        ? srcPath.substring(srcAppIdx)
-        : srcPath.startsWith(repoRoot)
-          ? srcPath.substring(repoRoot.length + 1)
-          : srcPath;
-    const shortDest = destPath.startsWith(repoRoot)
-      ? destPath.substring(repoRoot.length + 1)
-      : destPath;
-    console.log(`\x1b[32mCopied:\x1b[0m ${shortSrc} → ${shortDest}`);
-  } catch (error) {
-    console.error(`\x1b[31mError copying file:\x1b[0m ${srcPath}`, error);
-  }
-};
-
-const removeFile = (filePath: string) => {
-  try {
-    if (existsSync(filePath)) {
-      unlinkSync(filePath);
-      console.log(`\x1b[33mRemoved:\x1b[0m ${filePath}`);
-    }
-  } catch (error) {
-    console.error(`\x1b[31mError removing file:\x1b[0m ${filePath}`, error);
-  }
-};
-
 function findRepoRoot(start: string): string {
   let dir = start;
   while (dir !== dirname(dir)) {
@@ -139,24 +135,12 @@ const getAllFiles = (dir: string): string[] => {
   return files;
 };
 
-const cleanupDeletedFiles = (sourceDir: string, destinationDir: string) => {
-  if (!existsSync(destinationDir)) return;
-
-  const destFiles = getAllFiles(destinationDir);
-  for (const destFile of destFiles) {
-    const relativePath = relative(destinationDir, destFile);
-    const sourceFile = join(sourceDir, relativePath);
-
-    if (!existsSync(sourceFile)) {
-      removeFile(destFile);
-    }
-  }
-};
-
 export const processPlugin = ({ initMessage }: { initMessage: string }) => {
   const pluginDir = process.cwd();
   const repoRoot = findRepoRoot(pluginDir);
   const pluginName = basename(pluginDir);
+  const localeRoot = join(repoRoot, 'apps', 'web', 'src', 'app', '[locale]');
+  const routeMap = buildInitialRouteMap(localeRoot);
 
   // Get the package name from package.json for imports
   let packageName = '';
@@ -171,6 +155,11 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
   }
 
   const sourceDir = join(pluginDir, 'src', 'app');
+  const pluginPath =
+    pluginName === 'vitnode'
+      ? join('(vitnode)')
+      : join('(plugins)', `(${pluginName})`);
+
   const destinationDir = join(
     repoRoot,
     'apps',
@@ -179,15 +168,110 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
     'app',
     '[locale]',
     '(main)',
-    pluginName === 'vitnode'
-      ? join('(vitnode)')
-      : join('(plugins)', `(${pluginName})`),
+    pluginPath,
   );
 
   // Create destination directory if it doesn't exist
   if (!existsSync(destinationDir)) {
     mkdirSync(destinationDir, { recursive: true });
   }
+
+  const copyFile = (srcPath: string, destPath: string, pluginName?: string) => {
+    const fileName = basename(srcPath);
+    if (pageFileRegex.test(fileName)) {
+      const key = routeKey(destPath, localeRoot);
+
+      const existing = routeMap.get(key);
+      // another file (not this exact one) already owns the route
+      if (existing && existing !== destPath) {
+        console.log(
+          `\x1b[31mSkipped duplicate page:\x1b[0m ${relative(
+            repoRoot,
+            destPath,
+          )} (collides with ${relative(repoRoot, existing)})`,
+        );
+
+        return; // 🔥 skip the copy
+      }
+    }
+
+    try {
+      const destDir = dirname(destPath);
+      if (!existsSync(destDir)) {
+        mkdirSync(destDir, { recursive: true });
+      }
+
+      // Check if file should have imports processed (like .js, .jsx, .ts, .tsx files)
+      const ext = extname(srcPath);
+      if (pluginName && ['.js', '.jsx', '.ts', '.tsx'].includes(ext)) {
+        // Read file content
+        const content = readFileSync(srcPath, 'utf-8');
+        // Transform imports
+        const transformedContent = transformFileImports(content, pluginName);
+        // Write transformed content
+        writeFileSync(destPath, transformedContent);
+      } else {
+        // Copy file directly without transforming
+        copyFileSync(srcPath, destPath);
+      }
+
+      // Show even shorter, project-rooted paths for clarity
+      const repoRoot = findRepoRoot(process.cwd());
+      // Remove everything before '/src/app' in the source path if present
+      const srcAppIdx = srcPath.indexOf(join('src', 'app'));
+      const shortSrc =
+        srcAppIdx !== -1
+          ? srcPath.substring(srcAppIdx)
+          : srcPath.startsWith(repoRoot)
+            ? relative(repoRoot, srcPath)
+            : srcPath;
+      const shortDest = destPath.startsWith(repoRoot)
+        ? relative(repoRoot, destPath)
+        : destPath;
+      console.log(`\x1b[32mCopied:\x1b[0m ${shortSrc} → ${shortDest}`);
+
+      // 📝  update the map now that the copy succeeded
+      if (pageFileRegex.test(basename(destPath))) {
+        const key = routeKey(destPath, localeRoot);
+        routeMap.set(key, destPath);
+      }
+    } catch (error) {
+      console.error(`\x1b[31mError copying file:\x1b[0m ${srcPath}`, error);
+    }
+  };
+
+  const removeFile = (filePath: string) => {
+    try {
+      if (existsSync(filePath)) {
+        unlinkSync(filePath);
+        console.log(`\x1b[33mRemoved:\x1b[0m ${filePath}`);
+
+        if (pageFileRegex.test(basename(filePath))) {
+          const key = routeKey(filePath, localeRoot);
+          // only delete if this exact file is the one in the map
+          if (routeMap.get(key) === filePath) {
+            routeMap.delete(key);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`\x1b[31mError removing file:\x1b[0m ${filePath}`, error);
+    }
+  };
+
+  const cleanupDeletedFiles = (sourceDir: string, destinationDir: string) => {
+    if (!existsSync(destinationDir)) return;
+
+    const destFiles = getAllFiles(destinationDir);
+    for (const destFile of destFiles) {
+      const relativePath = relative(destinationDir, destFile);
+      const sourceFile = join(sourceDir, relativePath);
+
+      if (!existsSync(sourceFile)) {
+        removeFile(destFile);
+      }
+    }
+  };
 
   // Clean up any files that were deleted while the script wasn't running
   cleanupDeletedFiles(sourceDir, destinationDir);
@@ -202,7 +286,7 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
   });
 
   const getDestinationPath = (srcPath: string): string => {
-    const relativePath = srcPath.substring(sourceDir.length);
+    const relativePath = relative(sourceDir, srcPath);
 
     return join(destinationDir, relativePath);
   };
