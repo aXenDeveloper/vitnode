@@ -135,6 +135,11 @@ const getAllFiles = (dir: string): string[] => {
   return files;
 };
 
+interface SourceConfig {
+  destinationDir: string;
+  sourceDir: string;
+}
+
 export const processPlugin = ({ initMessage }: { initMessage: string }) => {
   const pluginDir = process.cwd();
   const repoRoot = findRepoRoot(pluginDir);
@@ -154,13 +159,7 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
     console.error(`\x1b[31mError reading package.json:\x1b[0m`, error);
   }
 
-  const sourceDir = join(pluginDir, 'src', 'app');
-  const pluginPath =
-    pluginName === 'vitnode'
-      ? join('(vitnode)')
-      : join('(plugins)', `(${pluginName})`);
-
-  const destinationDir = join(
+  const mainDest = join(
     repoRoot,
     'apps',
     'web',
@@ -168,12 +167,38 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
     'app',
     '[locale]',
     '(main)',
-    pluginPath,
+    pluginName === 'vitnode'
+      ? join('(vitnode)')
+      : join('(plugins)', `(${pluginName})`),
+  );
+  const adminDest = join(
+    repoRoot,
+    'apps',
+    'web',
+    'src',
+    'app',
+    '[locale]',
+    'admin',
+    '(auth)',
+    pluginName === 'vitnode'
+      ? join('(vitnode)', 'core')
+      : join('(plugins)', pluginName),
   );
 
-  // Create destination directory if it doesn't exist
-  if (!existsSync(destinationDir)) {
-    mkdirSync(destinationDir, { recursive: true });
+  // tell the copier about both trees
+  const sources: SourceConfig[] = [
+    {
+      sourceDir: join(pluginDir, 'src', 'app_admin'),
+      destinationDir: adminDest,
+    },
+    { sourceDir: join(pluginDir, 'src', 'app'), destinationDir: mainDest },
+  ];
+
+  // Create destination directories if they don't exist
+  for (const { destinationDir } of sources) {
+    if (!existsSync(destinationDir)) {
+      mkdirSync(destinationDir, { recursive: true });
+    }
   }
 
   const copyFile = (srcPath: string, destPath: string, pluginName?: string) => {
@@ -274,21 +299,43 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
   };
 
   // Clean up any files that were deleted while the script wasn't running
-  cleanupDeletedFiles(sourceDir, destinationDir);
+  // Clean up deleted files for each source directory
+  for (const { sourceDir, destinationDir } of sources) {
+    cleanupDeletedFiles(sourceDir, destinationDir);
+  }
 
   console.log(
     `${initMessage} \x1b[34mWatching for changes in plugins...\x1b[0m`,
   );
 
-  const watcher = chokidar.watch(sourceDir, {
+  const sourceDirs = sources
+    .map(s => s.sourceDir)
+    .filter(dir => existsSync(dir));
+
+  const watcher = chokidar.watch(sourceDirs, {
     ignoreInitial: false,
     persistent: true,
   });
 
   const getDestinationPath = (srcPath: string): string => {
-    const relativePath = relative(sourceDir, srcPath);
+    // collect all matching sourceConfigs
+    const candidates = sources.filter(({ sourceDir }) =>
+      srcPath.startsWith(sourceDir),
+    );
 
-    return join(destinationDir, relativePath);
+    if (candidates.length === 0) {
+      throw new Error(`No matching source directory for: ${srcPath}`);
+    }
+
+    // pick the one with the longest sourceDir (most specific)
+    const sourceConfig = candidates.reduce((best, cur) =>
+      cur.sourceDir.length > best.sourceDir.length ? cur : best,
+    );
+
+    // now append the relative path
+    const relativePath = relative(sourceConfig.sourceDir, srcPath);
+
+    return join(sourceConfig.destinationDir, relativePath);
   };
 
   watcher

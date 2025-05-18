@@ -8,7 +8,7 @@ export default function Page() {
     <>
       <Test />
       <TestClient />
-      <Link href="/blog/test">Go to blog - test</Link>
+      <Link href="/blog/test">Go to blog - test 123</Link>
     </>
   );
 }
