@@ -2,6 +2,10 @@
 import { existsSync } from 'fs';
 import { cp, mkdir } from 'fs/promises';
 import { join } from 'path';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const copyDatabase = async (pluginsPath: string) => {
   const databasePath = join(__dirname, '..', '..', 'src', 'database');

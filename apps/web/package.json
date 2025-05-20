@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "init": "vitnode init",
+    "test": "vitnode test",
     "drizzle-kit": "drizzle-kit",
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit up && drizzle-kit generate && drizzle-kit migrate",

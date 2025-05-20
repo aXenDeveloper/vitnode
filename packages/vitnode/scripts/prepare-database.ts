@@ -146,7 +146,7 @@ export const prepareDatabase = async ({
   await generateDatabaseMigrations();
   console.log(`${initMessage} [2/3] Run migrations...`);
   await runMigrations();
-  console.log(`${initMessage} [3/3] Insert initial data...`);
+  console.log(`\n${initMessage} [3/3] Insert initial data...`);
   await initialDataForDatabase();
   console.log(`${initMessage} \x1b[32mDatabase prepared successfully.\x1b[0m`);
   process.exit(0);

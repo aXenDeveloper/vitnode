@@ -5,4 +5,15 @@ export default defineConfig({
   outDir: 'dist/scripts',
   clean: false,
   minify: true,
+  splitting: true,
+  format: 'esm',
+  target: 'esnext',
+  platform: 'node',
+  noExternal: ['fs'],
+  banner: {
+    js: `import 'tsx/esm';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+`,
+  },
 });
