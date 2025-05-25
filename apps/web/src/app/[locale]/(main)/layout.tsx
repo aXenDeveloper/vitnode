@@ -1,5 +1,5 @@
-import { LogoVitNode } from 'vitnode/components/logo-vitnode';
-import { ThemeLayout } from 'vitnode/views/layouts/theme/layout';
+import { LogoVitNode } from '@vitnode/core/components/logo-vitnode';
+import { ThemeLayout } from '@vitnode/core/views/layouts/theme/layout';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

@@ -22,9 +22,9 @@ export const checkPluginName = (pluginName: string): null | PackageJSON => {
 
   const path = join(process.cwd(), 'node_modules', pluginName, 'package.json');
 
-  if (!existsSync(path) && pluginName !== 'vitnode') {
+  if (!existsSync(path)) {
     throw new Error(
-      `package.json file not found at ${path}. If you are the developer of this plugin, please ensure you are using the correct plugin name as specified in its package.json.`,
+      `package.json file not found at ${path}. Please ensure you are using the correct plugin name as specified in its package.json.`,
     );
   }
 

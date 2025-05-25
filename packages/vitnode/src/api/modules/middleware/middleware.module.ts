@@ -4,7 +4,7 @@ import { routeMiddleware } from './route';
 import { routeTestMiddleware } from './test';
 
 export const middlewareModule = buildModule({
-  plugin: 'vitnode',
+  plugin: '@vitnode/core',
   name: 'middleware',
   routes: [routeMiddleware, routeTestMiddleware],
 });

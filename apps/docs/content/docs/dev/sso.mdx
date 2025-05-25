@@ -17,7 +17,7 @@ import { Callout } from 'fumadocs-ui/components/callout';
 Let's start with the basics. Create a new file for your SSO provider:
 
 ```ts title="src/utils/sso/discord_api.ts"
-import { SSOApiPlugin, getRedirectUri } from 'vitnode/api/models/sso';
+import { SSOApiPlugin, getRedirectUri } from '@vitnode/core/api/models/sso';
 
 export const DiscordSSOApiPlugin = ({
   clientId,
@@ -43,7 +43,7 @@ This is like creating a blueprint for your SSO provider. The `id` will be used i
 Now let's add the magic that sends users to Discord for login:
 
 ```ts title="src/utils/sso/discord_api.ts"
-import { SSOApiPlugin, getRedirectUri } from 'vitnode/api/models/sso';
+import { SSOApiPlugin, getRedirectUri } from '@vitnode/core/api/models/sso';
 
 export const DiscordSSOApiPlugin = ({
   clientId,
@@ -94,7 +94,7 @@ export const DiscordSSOApiPlugin = ({
 After the user approves access, Discord sends us a code. Let's exchange it for an access token:
 
 ```ts title="src/utils/sso/discord_api.ts"
-import { SSOApiPlugin, getRedirectUri } from 'vitnode/api/models/sso';
+import { SSOApiPlugin, getRedirectUri } from '@vitnode/core/api/models/sso';
 import { HTTPException } from 'hono/http-exception';
 import { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
@@ -205,7 +205,7 @@ export const DiscordSSOApiPlugin = ({
 Finally, let's get the user's profile data using our shiny new access token:
 
 ```ts title="src/utils/sso/discord_api.ts"
-import { SSOApiPlugin, getRedirectUri } from 'vitnode/api/models/sso';
+import { SSOApiPlugin, getRedirectUri } from '@vitnode/core/api/models/sso';
 import { HTTPException } from 'hono/http-exception';
 import { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
@@ -324,7 +324,7 @@ Last step! Let's plug your new SSO provider into your app:
 ```ts title="src/app/api/[...route]/route.ts"
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { handle } from 'hono/vercel';
-import { VitNodeAPI } from 'vitnode/api/config';
+import { VitNodeAPI } from '@vitnode/core/api/config';
 import { DiscordSSOApiPlugin } from '@/utils/sso/discord_api';
 
 const app = new OpenAPIHono().basePath('/api');

@@ -1,8 +1,8 @@
 import { vitNodeApiConfig } from '@/vitnode.api.config';
 import { vitNodeConfig } from '@/vitnode.config';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { VitNodeAPI } from '@vitnode/core/api/config';
 import { handle } from 'hono/vercel';
-import { VitNodeAPI } from 'vitnode/api/config';
 
 const app = new OpenAPIHono().basePath('/api');
 VitNodeAPI({

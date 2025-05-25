@@ -1,4 +1,4 @@
-import { cn } from 'vitnode/lib/utils';
+import { cn } from '@vitnode/core/lib/utils';
 
 export const LogoVitNode = ({
   className,

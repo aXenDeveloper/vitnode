@@ -16,8 +16,8 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
   <Tab value="Auto Form">
 ```ts
 import { z } from 'zod';
-import { AutoForm } from 'vitnode/components/form/auto-form';
-import { AutoFormRadioGroup } from 'vitnode/components/form/fields/radio-group';
+import { AutoForm } from '@vitnode/core/components/form/auto-form';
+import { AutoFormRadioGroup } from '@vitnode/core/components/form/fields/radio-group';
 ```
 
 ```ts
@@ -62,11 +62,11 @@ const formSchema = z.object({
 
   <Tab value="Manual">
 ```ts
-import { Label } from 'vitnode-frontend/components/ui/label';
+import { Label } from '@vitnode/core-frontend/components/ui/label';
 import {
   RadioGroup,
   RadioGroupItem,
-} from 'vitnode-frontend/components/ui/radio-group';
+} from '@vitnode/core-frontend/components/ui/radio-group';
 ```
 
 ```tsx

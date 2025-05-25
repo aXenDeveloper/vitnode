@@ -1,4 +1,4 @@
-import { CallbackSSOView } from 'vitnode/views/auth/sso/callback/callback-sso-view';
+import { CallbackSSOView } from '@vitnode/core/views/auth/sso/callback/callback-sso-view';
 
 export default async function Page({
   params,

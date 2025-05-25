@@ -1,9 +1,9 @@
-import { blogApiPlugin } from 'vitnode-blog/config.api';
-import { NodemailerEmailPlugin } from 'vitnode/api/plugins/email/nodemailer';
-import { DiscordSSOApiPlugin } from 'vitnode/api/plugins/sso/discord';
-import { FacebookSSOApiPlugin } from 'vitnode/api/plugins/sso/facebook';
-import { GoogleSSOApiPlugin } from 'vitnode/api/plugins/sso/google';
-import { buildApiConfig } from 'vitnode/vitnode.config';
+import { blogApiPlugin } from '@vitnode/blog/config.api';
+import { NodemailerEmailPlugin } from '@vitnode/core/api/plugins/email/nodemailer';
+import { DiscordSSOApiPlugin } from '@vitnode/core/api/plugins/sso/discord';
+import { FacebookSSOApiPlugin } from '@vitnode/core/api/plugins/sso/facebook';
+import { GoogleSSOApiPlugin } from '@vitnode/core/api/plugins/sso/google';
+import { buildApiConfig } from '@vitnode/core/vitnode.config';
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [blogApiPlugin()],

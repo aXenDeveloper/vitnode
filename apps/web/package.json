@@ -36,8 +36,8 @@
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.56.1",
     "sonner": "^2.0.3",
-    "vitnode": "workspace:*",
-    "vitnode-blog": "workspace:*",
+    "@vitnode/core": "workspace:*",
+    "@vitnode/blog": "workspace:*",
     "zod": "^3.24.3"
   },
   "devDependencies": {

@@ -44,6 +44,9 @@ export const preparePlugins = async () => {
         return;
       }
 
+      // Transform plugin name for path usage
+      const pluginPathName = pluginName.replace(/\//g, '-').replace(/@/g, '');
+
       const mainDest = join(
         repoRoot,
         'apps',
@@ -52,9 +55,7 @@ export const preparePlugins = async () => {
         'app',
         '[locale]',
         '(main)',
-        pluginName === 'vitnode'
-          ? join('(vitnode)')
-          : join('(plugins)', `(${pluginName})`),
+        join('(plugins)', `(${pluginPathName})`),
       );
       const adminDest = join(
         repoRoot,
@@ -65,9 +66,7 @@ export const preparePlugins = async () => {
         '[locale]',
         'admin',
         '(auth)',
-        pluginName === 'vitnode'
-          ? join('(vitnode)', 'core')
-          : join('(plugins)', `(${pluginName})`),
+        join('(plugins)', `(${pluginPathName})`),
       );
 
       // Define source configurations for this plugin

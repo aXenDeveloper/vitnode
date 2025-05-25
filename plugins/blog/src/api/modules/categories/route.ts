@@ -1,8 +1,8 @@
 import { z } from '@hono/zod-openapi';
-import { buildRoute } from 'vitnode/api/lib/route';
+import { buildRoute } from '@vitnode/core/api/lib/route';
 
 export const categoriesRoute = buildRoute({
-  plugin: 'vitnode-blog',
+  plugin: '@vitnode/blog',
   route: {
     method: 'get',
     path: '/',

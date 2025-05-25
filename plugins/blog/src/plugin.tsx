@@ -1,4 +1,4 @@
-import { buildPlugin } from 'vitnode/lib/plugin';
+import { buildPlugin } from '@vitnode/core/lib/plugin';
 
 import { configPlugin } from './config';
 

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next/dist/types';
 
+import { SignInView } from '@vitnode/core/views/auth/sign-in/sign-in-view';
 import { getTranslations } from 'next-intl/server';
-import { SignUpView } from 'vitnode/views/auth/sign-up/sign-up-view';
 
 export const generateMetadata = async ({
   locale,
@@ -11,10 +11,10 @@ export const generateMetadata = async ({
   const t = await getTranslations({ locale, namespace: 'core.global' });
 
   return {
-    title: t('register'),
+    title: t('login'),
   };
 };
 
 export default function Page() {
-  return <SignUpView />;
+  return <SignInView />;
 }

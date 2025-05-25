@@ -3,7 +3,7 @@ import { EmailModel } from '@/api/models/email';
 import { z } from 'zod';
 
 export const routeMiddleware = buildRoute({
-  plugin: 'vitnode',
+  plugin: '@vitnode/core',
   route: {
     path: '/',
     method: 'get',

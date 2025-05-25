@@ -1,4 +1,4 @@
-import { Link } from 'vitnode/lib/navigation';
+import { Link } from '@vitnode/core/lib/navigation';
 
 export default function Page() {
   return (

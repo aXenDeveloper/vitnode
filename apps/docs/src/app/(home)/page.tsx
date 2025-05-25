@@ -1,8 +1,8 @@
 import Link from 'fumadocs-core/link';
 import { PlusIcon } from 'lucide-react';
 import { Metadata } from 'next';
-import { buttonVariants } from 'vitnode/components/ui/button';
-import { cn } from 'vitnode/lib/utils';
+import { buttonVariants } from '@vitnode/core/components/ui/button';
+import { cn } from '@vitnode/core/lib/utils';
 
 export const metadata: Metadata = {
   title: 'VitNode: Extendable Framework for Building Apps',

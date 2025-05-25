@@ -1,4 +1,4 @@
-import { buildApiPlugin } from 'vitnode/api/lib/plugin';
+import { buildApiPlugin } from '@vitnode/core/api/lib/plugin';
 
 import { categoriesModule } from './api/modules/categories/categories.module';
 import { configPlugin } from './config';

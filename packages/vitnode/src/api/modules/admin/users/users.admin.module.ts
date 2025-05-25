@@ -4,6 +4,6 @@ import { listUsersAdminRoute } from './routes/list.route';
 
 export const usersAdminModule = buildModule({
   name: 'users',
-  plugin: 'vitnode',
+  plugin: '@vitnode/core',
   routes: [listUsersAdminRoute],
 });

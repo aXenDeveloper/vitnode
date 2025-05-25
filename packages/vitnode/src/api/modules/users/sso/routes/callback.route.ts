@@ -4,7 +4,7 @@ import { SSOModel } from '@/api/models/sso';
 import { z } from 'zod';
 
 export const callbackRoute = buildRoute({
-  plugin: 'vitnode',
+  plugin: '@vitnode/core',
   route: {
     method: 'get',
     description: 'SSO Callback',

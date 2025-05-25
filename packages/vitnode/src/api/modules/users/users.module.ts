@@ -8,7 +8,7 @@ import { testRoute } from './routes/test.route';
 import { ssoUserModule } from './sso/sso.module';
 
 export const usersModule = buildModule({
-  plugin: 'vitnode',
+  plugin: '@vitnode/core',
   name: 'users',
   routes: [sessionRoute, signInRoute, signOutRoute, signUpRoute, testRoute],
   modules: [ssoUserModule],

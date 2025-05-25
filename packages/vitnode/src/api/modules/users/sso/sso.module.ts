@@ -5,6 +5,6 @@ import { createUrlRoute } from './routes/create-url.route';
 
 export const ssoUserModule = buildModule({
   name: 'sso',
-  plugin: 'vitnode',
+  plugin: '@vitnode/core',
   routes: [callbackRoute, createUrlRoute],
 });
