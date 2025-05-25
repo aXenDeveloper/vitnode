@@ -5,6 +5,8 @@ import { join } from 'path';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 
+import { preparePlugins } from './prepare-plugins';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const copyDatabase = async (pluginsPath: string) => {
@@ -42,8 +44,9 @@ export const prepareFiles = async ({
   initMessage: string;
   pluginsPath: string;
 }) => {
-  console.log(`${initMessage} [1/1] Preparing files...`);
+  console.log(`${initMessage} Preparing files...`);
   await copyDatabase(pluginsPath);
+  await preparePlugins();
   console.log(`${initMessage} \x1b[32mFiles prepared successfully.\x1b[0m`);
   process.exit(0);
 };
