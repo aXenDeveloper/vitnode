@@ -49,7 +49,7 @@ To translate your content, select the plugin in `frontend` folder, go to `langs`
 To get access to the translation strings in other namespaces you need to use the `TranslationsProvider` component.
 
 ```tsx title="apps/frontend/src/app/[locale]/(main)/{your_plugin}/layout.tsx"
-import { I18nProvider } from 'vitnode/components/i18n-provider';
+import { I18nProvider } from '@vitnode/core/components/i18n-provider';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return <I18nProvider namespaces={['welcome.home']}>{children}</I18nProvider>;

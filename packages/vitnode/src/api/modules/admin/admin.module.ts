@@ -5,7 +5,7 @@ import { usersAdminModule } from './users/users.admin.module';
 
 export const adminModule = buildModule({
   name: 'admin',
-  plugin: 'vitnode',
+  plugin: '@vitnode/core',
   routes: [sessionAdminRoute],
   modules: [usersAdminModule],
 });

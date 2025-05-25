@@ -1,4 +1,4 @@
-import { Link } from 'vitnode/lib/navigation';
+import { Link } from '@vitnode/core/lib/navigation';
 
 import { Test } from '../../views/test';
 import { TestClient } from '../../views/test/client';

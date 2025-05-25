@@ -6,7 +6,7 @@ description: A table component with sorting, filtering, and pagination compatibl
 ## Usage
 
 ```ts
-import { DataTable } from 'vitnode/components/table/data-table';
+import { DataTable } from '@vitnode/core/components/table/data-table';
 ```
 
 ```tsx
@@ -131,9 +131,9 @@ Here's a complete example showing how to use the `DataTable` component in a page
 import {
   DataTable,
   SearchParamsDataTable,
-} from 'vitnode/components/table/data-table';
+} from '@vitnode/core/components/table/data-table';
 import { userModule } from '@/api/modules/user/user.module';
-import { fetcher } from 'vitnode/lib/fetcher';
+import { fetcher } from '@vitnode/core/lib/fetcher';
 
 export const UsersView = async ({
   searchParams,

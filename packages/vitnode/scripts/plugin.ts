@@ -33,6 +33,9 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
     return;
   }
 
+  // Transform plugin name for path usage
+  const pluginPathName = pluginName.replace(/\//g, '-').replace(/@/g, '');
+
   const mainDest = join(
     repoRoot,
     'apps',
@@ -41,9 +44,7 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
     'app',
     '[locale]',
     '(main)',
-    pluginName === 'vitnode'
-      ? join('(vitnode)')
-      : join('(plugins)', `(${pluginName})`),
+    join('(plugins)', `(${pluginPathName})`),
   );
   const adminDest = join(
     repoRoot,
@@ -54,9 +55,7 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
     '[locale]',
     'admin',
     '(auth)',
-    pluginName === 'vitnode'
-      ? join('(vitnode)', 'core')
-      : join('(plugins)', `(${pluginName})`),
+    join('(plugins)', `(${pluginPathName})`),
   );
 
   // tell the copier about both trees

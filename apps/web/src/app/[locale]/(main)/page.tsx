@@ -1,9 +1,9 @@
+import { LogoVitNode } from '@vitnode/core/components/logo-vitnode';
+import { buttonVariants } from '@vitnode/core/components/ui/button';
+import { Link } from '@vitnode/core/lib/navigation';
+import { cn } from '@vitnode/core/lib/utils';
 import { ArrowRight, Book, Terminal } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
-import { LogoVitNode } from 'vitnode/components/logo-vitnode';
-import { buttonVariants } from 'vitnode/components/ui/button';
-import { Link } from 'vitnode/lib/navigation';
-import { cn } from 'vitnode/lib/utils';
 
 export default async function Home({
   params,

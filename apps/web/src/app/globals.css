@@ -2,8 +2,8 @@
 
 @import 'tw-animate-css';
 
-@source "../../node_modules/vitnode/dist/src/components";
-@source "../../node_modules/vitnode/dist/src/views";
+@source "../../node_modules/@vitnode/core/dist/src/components";
+@source "../../node_modules/@vitnode/core/dist/src/views";
 
 @custom-variant dark (&:is(.dark *));
 

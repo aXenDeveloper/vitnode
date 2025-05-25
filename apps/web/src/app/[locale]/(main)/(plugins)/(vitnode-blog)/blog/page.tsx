@@ -1,6 +1,6 @@
-import { Test } from 'vitnode-blog/views/test';
-import { TestClient } from 'vitnode-blog/views/test/client';
-import { Link } from 'vitnode/lib/navigation';
+import { Test } from '@vitnode/blog/views/test';
+import { TestClient } from '@vitnode/blog/views/test/client';
+import { Link } from '@vitnode/core/lib/navigation';
 
 export default function Page() {
   return (

@@ -1,5 +1,5 @@
 import type { NextConfig } from 'next';
-import { vitNodeNextConfig } from 'vitnode/config/next.config';
+import { vitNodeNextConfig } from '@vitnode/core/config/next.config';
 
 const nextConfig: NextConfig = {
   /* config options here */

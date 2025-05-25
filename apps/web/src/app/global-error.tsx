@@ -1,11 +1,11 @@
 'use client';
 
 import { vitNodeConfig } from '@/vitnode.config';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { GlobalErrorView } from '@vitnode/core/views/error/global-error-view';
 
 import './globals.css';
 
-import { GlobalErrorView } from 'vitnode/views/error/global-error-view';
+import { Geist, Geist_Mono } from 'next/font/google';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
