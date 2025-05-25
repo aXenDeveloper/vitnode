@@ -8,8 +8,12 @@ export default async function Page({
   searchParams: Promise<Record<string, string>>;
 }) {
   const { providerId } = await params;
+  const currentSearchParams = await searchParams;
 
   return (
-    <CallbackSSOView providerId={providerId} searchParams={searchParams} />
+    <CallbackSSOView
+      providerId={providerId}
+      searchParams={currentSearchParams}
+    />
   );
 }
