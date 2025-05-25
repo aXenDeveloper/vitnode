@@ -4,7 +4,7 @@ import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 
 export const sessionAdminRoute = buildRoute({
-  plugin: 'core',
+  plugin: 'vitnode',
   route: {
     method: 'get',
     description: 'Verify admin session',

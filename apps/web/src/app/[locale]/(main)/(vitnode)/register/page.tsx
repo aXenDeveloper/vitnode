@@ -1,6 +1,7 @@
 import type { Metadata } from 'next/dist/types';
 
 import { getTranslations } from 'next-intl/server';
+
 import { SignUpView } from 'vitnode/views/auth/sign-up/sign-up-view';
 
 export const generateMetadata = async ({

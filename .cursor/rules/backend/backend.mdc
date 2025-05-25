@@ -1,8 +1,0 @@
----
-description: Rule is for generate backend code with Hono.js
-globs: 
-alwaysApply: false
----
-- Use @hono/zod-openapi or zod 3 for schema validation
-- Use PostgreSQL with Drizzle ORM
-- Use `t.serial().primaryKey()` for all database IDs

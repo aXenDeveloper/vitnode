@@ -3,7 +3,7 @@ import { SessionAdminModel } from '@/api/models/session-admin';
 import { z } from 'zod';
 
 export const sessionRoute = buildRoute({
-  plugin: 'core',
+  plugin: 'vitnode',
   route: {
     method: 'get',
     description: 'Verify session',

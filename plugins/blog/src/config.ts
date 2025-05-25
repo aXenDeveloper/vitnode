@@ -1,3 +1,3 @@
 export const configPlugin = {
-  name: 'blog',
+  name: 'vitnode-blog' as const,
 };

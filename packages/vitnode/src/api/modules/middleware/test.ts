@@ -10,7 +10,7 @@ import {
 } from '../../lib/with-pagination';
 
 export const routeTestMiddleware = buildRoute({
-  plugin: 'core',
+  plugin: 'vitnode',
   route: {
     path: '/test',
     method: 'get',

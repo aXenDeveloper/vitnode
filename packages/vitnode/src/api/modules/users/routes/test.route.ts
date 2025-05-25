@@ -2,7 +2,7 @@ import { buildRoute } from '@/api/lib/route';
 import { z } from 'zod';
 
 export const testRoute = buildRoute({
-  plugin: 'core',
+  plugin: 'vitnode',
   route: {
     method: 'get',
     description: 'Test route',
