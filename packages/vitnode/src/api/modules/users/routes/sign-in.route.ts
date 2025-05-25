@@ -5,7 +5,7 @@ import { UserModel } from '@/api/models/user';
 import { z } from 'zod';
 
 export const signInRoute = buildRoute({
-  plugin: 'core',
+  plugin: 'vitnode',
   route: {
     method: 'post',
     description: 'Sign in with email and password',

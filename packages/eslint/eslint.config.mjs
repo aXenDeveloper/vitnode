@@ -73,6 +73,7 @@ export default [
   },
   {
     rules: {
+      'perfectionist/sort-array-includes': 'warn',
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/no-confusing-void-expression': 'off',
       '@typescript-eslint/no-unnecessary-type-parameters': 'off',

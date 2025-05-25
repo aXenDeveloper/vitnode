@@ -33,10 +33,13 @@ export const buildRoute = <
     getRoutingPath: () => RoutingPath<R['path']>;
   };
 } => {
-  const pluginTag = plugin
-    .split(/[-_]/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+  const pluginTag =
+    plugin === 'vitnode'
+      ? 'Core'
+      : plugin
+          .split(/[-_]/)
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
 
   const tags = [pluginTag, ...(route.tags ?? [])];
 

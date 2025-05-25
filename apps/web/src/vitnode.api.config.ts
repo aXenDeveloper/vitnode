@@ -1,4 +1,4 @@
-import { blogApiPlugin } from 'vitnode-blog/api';
+import { blogApiPlugin } from 'vitnode-blog/config.api';
 import { NodemailerEmailPlugin } from 'vitnode/api/plugins/email/nodemailer';
 import { DiscordSSOApiPlugin } from 'vitnode/api/plugins/sso/discord';
 import { FacebookSSOApiPlugin } from 'vitnode/api/plugins/sso/facebook';

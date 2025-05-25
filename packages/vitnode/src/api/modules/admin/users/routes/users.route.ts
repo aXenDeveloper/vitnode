@@ -9,7 +9,7 @@ import { core_users } from '@/database/schema/users';
 import { z } from '@hono/zod-openapi';
 
 export const usersAdminRoute = buildRoute({
-  plugin: 'core',
+  plugin: 'vitnode',
   route: {
     method: 'get',
     description: 'Get list of all users (Admin only)',

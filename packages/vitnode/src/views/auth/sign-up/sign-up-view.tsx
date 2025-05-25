@@ -1,5 +1,3 @@
-import type { Metadata } from 'next/dist/types';
-
 import { Card, CardDescription } from '@/components/ui/card';
 import { getMiddlewareApi } from '@/lib/api/get-middleware-api';
 import { Link } from '@/lib/navigation';
@@ -9,16 +7,6 @@ import React from 'react';
 import { I18nProvider } from '../../../components/i18n-provider';
 import { SSOButtons, SSOButtonsSkeleton } from '../sso/buttons/sso-buttons';
 import { FormSignUp } from './form/form';
-
-export const generateMetadataSignUpView = async (
-  locale: string,
-): Promise<Metadata> => {
-  const t = await getTranslations({ locale, namespace: 'core.global' });
-
-  return {
-    title: t('register'),
-  };
-};
 
 export const SignUpView = async () => {
   const [t, tGlobal, { isEmail }] = await Promise.all([

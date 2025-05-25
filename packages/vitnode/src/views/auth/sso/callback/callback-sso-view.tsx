@@ -5,15 +5,12 @@ import { ClientCallbackSSO } from './client/client';
 
 export const CallbackSSOView = async ({
   providerId,
-  searchParams,
+  searchParams: { code, error, state },
 }: {
   providerId: string;
-  searchParams: Promise<Record<string, string>>;
+  searchParams: Record<string, string>;
 }) => {
-  const [{ code, error, state }, t] = await Promise.all([
-    searchParams,
-    getTranslations('core.auth.sso'),
-  ]);
+  const t = await getTranslations('core.auth.sso');
 
   if (error === 'access_denied') {
     return <ErrorView code={403} customDescription={t('access_denied')} />;

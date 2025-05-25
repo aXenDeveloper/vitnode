@@ -5,166 +5,86 @@ description: Learn how to create custom layouts and pages for your VitNode plugi
 
 Welcome to the magical world of VitNode layouts and pages! Think of these as the digital feng shui for your plugin - they determine how things look and where everything goes. Let's dive in!
 
-## Create a Page
+## How Routing Works
 
-Pages in VitNode are like unexpected guests - they show up when someone visits a URL matching your plugin's route. Here's how to roll out the welcome mat:
+VitNode follows Next.js app directory conventions for routing. Each plugin can define its own pages that get integrated into the main application. When developing a plugin:
 
-```tsx title="plugins/blog/src/plugin.tsx"
-import { buildPlugin } from 'vitnode/lib/plugin';
+- Files named `page.tsx` define a route
+- The route path is determined by the folder structure
+- Page files are automatically detected and copied to the appropriate location in the main app
 
-import { configPlugin } from './config';
+## Pages
 
-export const blogPlugin = () => {
-  return buildPlugin({
-    ...configPlugin,
-    // [!code ++]
-    pages: {
-      // [!code ++]
-      component: ({ params }) => {
-        // [!code ++]
-        if (params[0] === 'blog' && !params[1]) {
-          // [!code ++]
-          return (
-            // [!code ++]
-            <div className="container mx-auto p-4">Page Blog plugin</div>
-            // [!code ++]
-          );
-          // [!code ++]
-        }
-        // [!code ++]
-      },
-      // [!code ++]
-    },
-  });
-};
-```
+Pages in VitNode work the same way as in the Next.js framework. You can create a page by creating a `page.tsx` file in the `src/app` directory of your plugin.
 
-<Callout type="warn" title="RSC Require">
-  The page component must be a React Server Component (RSC). This means it
-  should be a function that returns JSX and does not use hooks or state. If you
-  want to use `use client;` then you need to create a new file and import the
-  page component.
-</Callout>
+For example, if you want to create a page at `/dashboard`, you would create:
 
-## Page Parameters
-
-Your pages can access URL parameters like a nosy neighbor reading your mail. The `params` array contains each segment of the URL path:
-
-```tsx
-component: ({ params, locale, searchParams }) => {
-  // params[0] is the first segment after the base URL
-  // For example, in "/blog/post/123":
-  // params[0] would be "blog"
-  // params[1] would be "post"
-  // params[2] would be "123"
-
-  if (params[0] === 'blog' && params[1] === 'post' && params[2] && !params[3]) {
-    return <BlogPost id={params[2]} locale={locale} />;
-  }
-};
-```
-
-<Callout type="warn" title="Page Ending Condition">
-  Always end your page-matching conditionals with <code>!params[X]</code> to
-  ensure you only match the intended page and not sub-paths.
-</Callout>
-
-## Static Paths
-
-Sometimes you know exactly who's coming to dinner. For those cases, define your static paths:
-
-```tsx
-pages: {
-  component: ({ params }) => {
-    if (params[0] === 'about' && !params[1]) {
-      return <AboutPage />;
-    }
-  },
-  staticPaths: ['/about', '/terms', '/privacy'],
+```tsx title="plugins/{plugin_name}/src/app/dashboard/page.tsx"
+export default function DashboardPage() {
+  return <div>Welcome to the dashboard!</div>;
 }
 ```
 
-These paths will be pre-rendered at build time - like preparing snacks before your guests arrive!
+When your plugin is loaded, VitNode will automatically copy this page to the appropriate location in the main application and handle all the routing.
 
 ## Layouts
 
-Layouts are like the interior designers of your plugin - they wrap your content in a consistent style. Unlike Next.js layouts that use file-system conventions, VitNode uses a more explicit approach:
+Layouts allow you to create shared UI for multiple pages. They follow Next.js conventions and should be defined as `layout.tsx` files.
 
-```tsx title="plugins/blog/src/plugin.tsx"
-import { BlogLayout } from './components/blog-layout';
-import { BlogListing } from './components/blog-listing';
-import { BlogPost } from './components/blog-post';
-import { AboutPage } from './components/about-page';
+For example, to create a layout for all pages under `/dashboard`:
 
-export const blogPlugin = () => {
-  return buildPlugin({
-    ...configPlugin,
-    pages: {
-      component: ({ params }) => {
-        return (
-          <BlogLayout>
-            {/* Blog listing page: /blog */}
-            {params[0] === 'blog' && !params[1] && <BlogListing />}
-            {/* Blog post page: /blog/post/[id] */}
-            {params[0] === 'blog' &&
-              params[1] === 'post' &&
-              params[2] &&
-              !params[3] && <BlogPost id={params[2]} />}
-            {/* About page: /about */}
-            {params[0] === 'about' && !params[1] && <AboutPage />}
-            {/* You can add more pages here */}
-          </BlogLayout>
-        );
-      },
-      staticPaths: ['/blog', '/about'],
-    },
-  });
-};
-```
-
-Think of `searchParams` as that friend who always asks too many questions - sometimes annoying, but often useful!
-
-## Mixing Client and Server Components
-
-Want the best of both worlds? Here's how to dance the client-server tango:
-
-```tsx title="plugins/blog/src/components/blog-post.client.tsx"
-'use client';
-
-import { useState } from 'react';
-
-export function ClientBlogPost({ initialData }) {
-  const [likes, setLikes] = useState(initialData.likes);
-
+```tsx title="plugins/{plugin_name}/src/app/dashboard/layout.tsx"
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <div>
-      <h1>{initialData.title}</h1>
-      <p>{initialData.content}</p>
-      <button onClick={() => setLikes(likes + 1)}>Like ({likes})</button>
+    <div className="container">
+      <nav>Dashboard Navigation</nav>
+      <main>{children}</main>
     </div>
   );
 }
 ```
 
-```tsx title="plugins/blog/src/plugin.tsx"
-import { ClientBlogPost } from './components/blog-post.client';
+This layout will wrap any pages within the `dashboard` directory.
 
-export const blogPlugin = () => {
-  return buildPlugin({
-    ...configPlugin,
-    pages: {
-      component: async ({ params }) => {
-        if (params[0] === 'blog' && params[1] && !params[2]) {
-          const postData = await fetchBlogPost(params[1]);
+## Admin Pages
 
-          return (
-            <div className="container mx-auto p-4">
-              <ClientBlogPost initialData={postData} />
-            </div>
-          );
-        }
-      },
-    },
-  });
-};
+For admin pages, follow the same pattern but create your files in the `src/app_admin` directory of your plugin. This is the only difference - the structure and implementation remain the same.
+
+For example, to create an admin page at `/admin/{plugin_name}/settings`:
+
 ```
+src/app_admin/settings/page.tsx
+```
+
+And for a layout:
+
+```
+src/app_admin/settings/layout.tsx
+```
+
+## Route Groups and Special Folders
+
+VitNode supports Next.js route grouping with parentheses:
+
+- `(group-name)` - Creates a logical group without affecting the URL path
+- `[dynamicParam]` - Creates a dynamic route segment
+
+For example:
+
+```
+src/app/(user-section)/profile/page.tsx  // Route: /profile
+src/app/products/[id]/page.tsx           // Route: /products/:id
+```
+
+## Import Considerations
+
+When developing your plugin pages, you can use:
+
+- Relative imports (e.g., `import { Button } from '../components/Button'`)
+- Imports with `@/` prefix (e.g., `import { utils } from '@/lib/utils'`)
+
+VitNode will automatically transform these imports when your plugin is integrated into the main application.

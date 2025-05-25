@@ -6,7 +6,7 @@ import { z } from 'zod';
 const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 
 export const signUpRoute = buildRoute({
-  plugin: 'core',
+  plugin: 'vitnode',
   route: {
     method: 'post',
     description: 'Create a new user',

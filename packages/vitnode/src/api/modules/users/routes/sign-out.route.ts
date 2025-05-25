@@ -4,7 +4,7 @@ import { SessionAdminModel } from '@/api/models/session-admin';
 import { z } from '@hono/zod-openapi';
 
 export const signOutRoute = buildRoute({
-  plugin: 'core',
+  plugin: 'vitnode',
   route: {
     method: 'delete',
     description: 'Sign out the current admin',
