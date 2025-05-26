@@ -2,6 +2,7 @@
   "name": "vitnode",
   "private": true,
   "scripts": {
+    "release": "node ./bump-version.mjs",
     "db:migrate": "turbo db:migrate",
     "db:push": "turbo db:push",
     "docker:dev": "docker compose -f ./docker-compose.yml -p vitnode-dev-dun up -d",

@@ -15,7 +15,7 @@
     "create-vitnode-app": "dist/src/index.js"
   },
   "scripts": {
-    "build:cli": "tsc",
+    "build:cli": "tsc && node dist/src/prepare/prepare.js",
     "cli": "node dist/src/index.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
