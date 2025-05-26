@@ -7,4 +7,7 @@ export default [
       'no-console': 'off',
     },
   },
+  {
+    ignores: ['copy-of-vitnode-app'],
+  },
 ];

@@ -1,10 +1,9 @@
 import { existsSync } from 'fs';
 import { cp, mkdir } from 'fs/promises';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
-
-import color from 'picocolors';
 import ora from 'ora';
+import { dirname, join } from 'path';
+import color from 'picocolors';
+import { fileURLToPath } from 'url';
 
 import type { CreateCliReturn } from '../questions.js';
 
