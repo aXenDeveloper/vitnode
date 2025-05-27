@@ -1,9 +1,6 @@
 {
   "name": "@vitnode/core",
   "version": "1.2.0-canary.1",
-  "publishConfig": {
-    "access": "public"
-  },
   "devDependencies": {
     "@hono/swagger-ui": "^0.5.1",
     "@hono/zod-openapi": "^0.19.6",

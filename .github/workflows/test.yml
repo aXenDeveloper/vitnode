@@ -19,10 +19,6 @@ on:
           - patch
           - minor
           - major
-      skip_bump_version:
-        description: 'Skip bumping version in package.json and release notes?'
-        required: false
-        type: boolean
 
 jobs:
   bump-version:
@@ -66,4 +62,4 @@ jobs:
           GITHUB_EMAIL: ${{ github.actor }}@users.noreply.github.com
 
       - name: Publish
-        run: pnpm publish --filter create-vitnode-app --tag canary --no-git-checks
+        run: pnpm publish --filter create-vitnode-app --tag canary --no-git-checks --access public

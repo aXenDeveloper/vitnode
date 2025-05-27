@@ -2,9 +2,6 @@
   "name": "create-vitnode-app",
   "version": "1.2.0-canary.1",
   "description": "Create a new VitNode app in seconds.",
-  "publishConfig": {
-    "access": "public"
-  },
   "author": "VitNode Team",
   "license": "MIT",
   "homepage": "https://vitnode.com",
