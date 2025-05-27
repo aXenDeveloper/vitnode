@@ -57,6 +57,7 @@ class Environment {
       GITHUB_HEAD_REF: process.env.GITHUB_HEAD_REF,
       GITHUB_REF: process.env.GITHUB_REF,
       GITHUB_ACTOR: process.env.GITHUB_ACTOR,
+      GITHUB_OPTION_MODE: process.env.GITHUB_OPTION_MODE,
       GIT_USER: {
         NAME: process.env.GITHUB_USER ?? 'Automated Version Bump',
         EMAIL:
@@ -121,6 +122,11 @@ class VersionManager {
   }
 
   async init() {
+    if (this.env.GITHUB_OPTION_MODE === 'publish') {
+      console.log('Skipping version bump in publish mode');
+      return;
+    }
+
     await this.validateSetup();
     const currentVersion = this.getCurrentVersion();
     const newVersion = await this.calculateNewVersion(currentVersion);
@@ -298,8 +304,6 @@ class FileCopyManager {
   }
 
   async init() {
-    console.log(this.env.GITHUB_OPTION_MODE, 'this.env.GITHUB_OPTION_MODE');
-
     const sourcePath = path.join(this.env.WORKSPACE, 'apps', 'web');
     const destPath = path.join(
       this.env.WORKSPACE,
@@ -387,8 +391,8 @@ async function main() {
   const fileCopyManager = new FileCopyManager(env);
   await fileCopyManager.init();
 
-  // const versionManager = new VersionManager(env);
-  // await versionManager.init();
+  const versionManager = new VersionManager(env);
+  await versionManager.init();
 
   console.log('✔ Process completed successfully! 🎉');
 }
