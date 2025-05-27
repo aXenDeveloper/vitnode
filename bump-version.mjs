@@ -130,8 +130,21 @@ class VersionManager {
 
   getCurrentVersion() {
     const pkgJson = JSON.parse(
-      readFileSync(path.join(this.env.WORKSPACE, 'package.json'), 'utf8'),
+      readFileSync(
+        path.join(
+          this.env.WORKSPACE,
+          'packages',
+          'create-vitnode-app',
+          'package.json',
+        ),
+        'utf8',
+      ),
     );
+
+    if (!pkgJson.version) {
+      throw new Error('No version found in package.json');
+    }
+
     return pkgJson.version.toString();
   }
 
