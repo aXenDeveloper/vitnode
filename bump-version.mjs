@@ -373,8 +373,8 @@ async function main() {
     const fileCopyManager = new FileCopyManager(env);
     await fileCopyManager.init();
 
-    // const versionManager = new VersionManager(env);
-    // await versionManager.init();
+    const versionManager = new VersionManager(env);
+    await versionManager.init();
 
     console.log('✔ Process completed successfully! 🎉');
   } catch (error) {
