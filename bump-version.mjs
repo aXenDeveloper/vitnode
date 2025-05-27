@@ -366,21 +366,16 @@ class FileCopyManager {
 
 // Main execution
 async function main() {
-  try {
-    console.log('🚀 Starting VitNode version bump and file copy process...');
-    const env = Environment.validate();
+  console.log('🚀 Starting VitNode version bump and file copy process...');
+  const env = Environment.validate();
 
-    const fileCopyManager = new FileCopyManager(env);
-    await fileCopyManager.init();
+  const fileCopyManager = new FileCopyManager(env);
+  await fileCopyManager.init();
 
-    const versionManager = new VersionManager(env);
-    await versionManager.init();
+  const versionManager = new VersionManager(env);
+  await versionManager.init();
 
-    console.log('✔ Process completed successfully! 🎉');
-  } catch (error) {
-    console.error('✖ Fatal error:', error.message);
-    process.exit(1);
-  }
+  console.log('✔ Process completed successfully! 🎉');
 }
 
 main();
