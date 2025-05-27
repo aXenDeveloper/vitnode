@@ -121,11 +121,6 @@ class VersionManager {
   }
 
   async init() {
-    if (this.env.MODE === 'publish') {
-      console.log('Skipping file copy in publish mode');
-      return;
-    }
-
     await this.validateSetup();
     const currentVersion = this.getCurrentVersion();
     const newVersion = await this.calculateNewVersion(currentVersion);
@@ -303,6 +298,8 @@ class FileCopyManager {
   }
 
   async init() {
+    console.log(this.env.MODE, 'this.env.MODE');
+
     const sourcePath = path.join(this.env.WORKSPACE, 'apps', 'web');
     const destPath = path.join(
       this.env.WORKSPACE,
@@ -390,8 +387,8 @@ async function main() {
   const fileCopyManager = new FileCopyManager(env);
   await fileCopyManager.init();
 
-  const versionManager = new VersionManager(env);
-  await versionManager.init();
+  // const versionManager = new VersionManager(env);
+  // await versionManager.init();
 
   console.log('✔ Process completed successfully! 🎉');
 }
