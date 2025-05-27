@@ -19,6 +19,14 @@ on:
           - patch
           - minor
           - major
+      mode:
+        description: 'Mode of package to publish'
+        required: true
+        type: choice
+        options:
+          - bump_and_publish
+          - bump
+          - publish
 
 jobs:
   bump-version:
@@ -60,6 +68,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USER: ${{ github.actor }}
           GITHUB_EMAIL: ${{ github.actor }}@users.noreply.github.com
+          MODE: ${{ github.event.inputs.mode }}
 
       - name: Publish
+        if: ${{ github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish' }}
         run: pnpm publish --filter create-vitnode-app --tag canary --no-git-checks --access public

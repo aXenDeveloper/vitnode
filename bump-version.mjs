@@ -121,6 +121,11 @@ class VersionManager {
   }
 
   async init() {
+    if (this.env.MODE === 'publish') {
+      console.log('Skipping file copy in publish mode');
+      return;
+    }
+
     await this.validateSetup();
     const currentVersion = this.getCurrentVersion();
     const newVersion = await this.calculateNewVersion(currentVersion);
