@@ -298,7 +298,7 @@ class FileCopyManager {
   }
 
   async init() {
-    console.log(this.env.MODE, 'this.env.MODE');
+    console.log(this.env.GITHUB_OPTION_MODE, 'this.env.GITHUB_OPTION_MODE');
 
     const sourcePath = path.join(this.env.WORKSPACE, 'apps', 'web');
     const destPath = path.join(

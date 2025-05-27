@@ -68,8 +68,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USER: ${{ github.actor }}
           GITHUB_EMAIL: ${{ github.actor }}@users.noreply.github.com
-          MODE: ${{ github.event.inputs.mode }}
+          GITHUB_OPTION_MODE: ${{ github.event.inputs.mode }}
 
       - name: Publish
         if: ${{ github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish' }}
         run: pnpm publish --filter create-vitnode-app --tag canary --no-git-checks --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
