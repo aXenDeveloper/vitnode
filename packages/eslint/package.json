@@ -7,7 +7,7 @@
   "homepage": "https://vitnode.com",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/VitNode/vitnode.git",
+    "url": "git+https://github.com/aXenDeveloper/vitnode.git",
     "directory": "packages/eslint"
   },
   "type": "module",
