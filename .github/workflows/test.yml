@@ -64,3 +64,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_USER: ${{ github.actor }}
           GITHUB_EMAIL: ${{ github.actor }}@users.noreply.github.com
+
+      - name: Publish
+        run: pnpm publish --filter create-vitnode-app --tag canary --no-git-checks

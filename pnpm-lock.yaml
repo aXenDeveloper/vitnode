@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@types/node':
+        specifier: ^22.15.17
+        version: 22.15.17
       eslint-config-typescript-vitnode:
         specifier: workspace:*
         version: link:packages/eslint
@@ -183,10 +186,23 @@ importers:
         version: 5.8.3
 
   packages/create-vitnode-app:
-    devDependencies:
+    dependencies:
       '@inquirer/prompts':
         specifier: ^7.5.0
         version: 7.5.0(@types/node@22.15.17)
+      commander:
+        specifier: ^13.1.0
+        version: 13.1.0
+      ora:
+        specifier: ^8.2.0
+        version: 8.2.0
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
+      validate-npm-package-name:
+        specifier: ^6.0.0
+        version: 6.0.0
+    devDependencies:
       '@types/node':
         specifier: ^22.15.3
         version: 22.15.17
@@ -196,27 +212,15 @@ importers:
       '@types/validate-npm-package-name':
         specifier: ^4.0.2
         version: 4.0.2
-      commander:
-        specifier: ^13.1.0
-        version: 13.1.0
       eslint:
         specifier: ^9.25.1
         version: 9.26.0(jiti@2.4.2)
       eslint-config-typescript-vitnode:
         specifier: workspace:*
         version: link:../eslint
-      ora:
-        specifier: ^8.2.0
-        version: 8.2.0
-      picocolors:
-        specifier: ^1.1.1
-        version: 1.1.1
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
-      validate-npm-package-name:
-        specifier: ^6.0.0
-        version: 6.0.0
 
   packages/eslint:
     dependencies:
