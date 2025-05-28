@@ -1,6 +1,5 @@
 import type { Context, Env, Input } from 'hono';
 
-import { dbClient } from '@/database/client';
 import { core_sessions } from '@/database/schema/sessions';
 import { CONFIG } from '@/lib/config';
 import { and, eq, gt } from 'drizzle-orm';
@@ -23,14 +22,17 @@ export class SessionModel<T extends Env> {
       .join('');
     const deviceId = this.c.get('deviceId');
 
-    await dbClient.insert(core_sessions).values({
-      token,
-      userId,
-      expiresAt: new Date(
-        Date.now() + this.c.get('core').authorization.cookie_expires,
-      ),
-      deviceId,
-    });
+    await this.c
+      .get('db')
+      .insert(core_sessions)
+      .values({
+        token,
+        userId,
+        expiresAt: new Date(
+          Date.now() + this.c.get('core').authorization.cookie_expires,
+        ),
+        deviceId,
+      });
 
     setCookie(this.c, this.c.get('core').authorization.cookieName, token, {
       httpOnly: true,
@@ -55,7 +57,10 @@ export class SessionModel<T extends Env> {
     );
     if (!token) return;
 
-    await dbClient.delete(core_sessions).where(eq(core_sessions.token, token));
+    await this.c
+      .get('db')
+      .delete(core_sessions)
+      .where(eq(core_sessions.token, token));
     deleteCookie(this.c, this.c.get('core').authorization.cookieName);
   }
 
@@ -68,7 +73,8 @@ export class SessionModel<T extends Env> {
     const deviceId = this.c.get('deviceId');
     if (!deviceId) return null;
 
-    const [session] = await dbClient
+    const [session] = await this.c
+      .get('db')
       .select({
         token: core_sessions.token,
         userId: core_sessions.userId,
@@ -86,7 +92,10 @@ export class SessionModel<T extends Env> {
     if (!session || session.token !== token) {
       return null;
     }
-    const user = await new UserModel().getUserById(session.userId);
+    const user = await new UserModel().getUserById({
+      id: session.userId,
+      c: this.c,
+    });
     if (!user) return null;
 
     return user;

@@ -25,16 +25,7 @@ const copyDatabase = async (pluginsPath: string) => {
   // Copy files
   await cp(databasePath, destinationPath, {
     recursive: true,
-    filter: src => !src.endsWith('client.ts'),
   });
-
-  // Copy client.ts if it doesn't exist
-  if (!existsSync(join(destinationPath, 'client.ts'))) {
-    await cp(
-      join(databasePath, 'client.ts'),
-      join(destinationPath, 'client.ts'),
-    );
-  }
 };
 
 export const prepareFiles = async ({

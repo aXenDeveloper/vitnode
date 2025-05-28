@@ -1,6 +1,5 @@
 import type { Context, Env, Input } from 'hono';
 
-import { dbClient } from '@/database/client';
 import { core_users, core_users_sso } from '@/database/schema/users';
 import { CONFIG } from '@/lib/config';
 import { removeSpecialCharacters } from '@/lib/special-characters';
@@ -56,9 +55,9 @@ export class SSOModel {
         newsletter: false,
         hashedPassword: undefined,
       },
-      c.req,
+      c,
     );
-    await dbClient.insert(core_users_sso).values({
+    await c.get('db').insert(core_users_sso).values({
       userId: data.id,
       providerId: providerId,
       providerAccountId: user.id,
@@ -87,7 +86,7 @@ export class SSOModel {
     const ssoToken = await provider.fetchToken(code);
     const userFromSSO = await provider.fetchUser(ssoToken);
 
-    return await dbClient.transaction(async tx => {
+    return await this.c.get('db').transaction(async tx => {
       const [dataSSOFromDb] = await tx
         .select({
           userId: core_users_sso.userId,

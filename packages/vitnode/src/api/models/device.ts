@@ -1,6 +1,5 @@
 import type { Context, Env, Input } from 'hono';
 
-import { dbClient } from '@/database/client';
 import { core_sessions_known_devices } from '@/database/schema/sessions';
 import { CONFIG } from '@/lib/config';
 import { eq } from 'drizzle-orm';
@@ -15,10 +14,11 @@ export class DeviceModel<T extends Env> {
   protected readonly c: Context<T, '/', Input>;
 
   private async createDevice() {
-    const [device] = await dbClient
+    const [device] = await this.c
+      .get('db')
       .insert(core_sessions_known_devices)
       .values({
-        ipAddress: getUserIp(this.c.req),
+        ipAddress: getUserIp(this.c),
         userAgent: this.getUserAgent(),
       })
       .returning({ id: core_sessions_known_devices.id });
@@ -56,7 +56,8 @@ export class DeviceModel<T extends Env> {
 
     try {
       if (deviceIdFromCookie) {
-        const [device] = await dbClient
+        const [device] = await this.c
+          .get('db')
           .select({
             id: core_sessions_known_devices.id,
           })
@@ -67,10 +68,11 @@ export class DeviceModel<T extends Env> {
           return await this.createDevice();
         }
 
-        await dbClient
+        await this.c
+          .get('db')
           .update(core_sessions_known_devices)
           .set({
-            ipAddress: getUserIp(this.c.req),
+            ipAddress: getUserIp(this.c),
             userAgent: this.getUserAgent(),
           })
           .where(eq(core_sessions_known_devices.id, deviceIdFromCookie));

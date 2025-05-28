@@ -31,7 +31,8 @@ export function AutoFormCombobox<T extends z.ZodTypeAny>({
   field,
   description,
   shape,
-  placeholder,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  placeholder: _,
   className,
   labels = [],
   ...props

@@ -1,25 +1,28 @@
-import type { HonoRequest } from 'hono';
+import type { Context, Env, Input } from 'hono';
 
 import { getUserIp } from '@/api/lib/get-user-ip';
 import { generateAvatarColor } from '@/api/modules/users/avatar-color';
-import { dbClient } from '@/database/client';
 import { core_roles } from '@/database/schema/roles';
 import { core_users } from '@/database/schema/users';
 import { removeSpecialCharacters } from '@/lib/special-characters';
 import { and, count, eq, or } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
 
-const getDefaultData = async (): Promise<{
+const getDefaultData = async (
+  c: Context<Env, '/', Input>,
+): Promise<{
   emailVerified: boolean;
   roleId: number;
 }> => {
-  const [countUsers] = await dbClient
+  const [countUsers] = await c
+    .get('db')
     .select({ count: count() })
     .from(core_users);
 
   // If no users, return root group
   if (countUsers.count === 0) {
-    const [defaultRole] = await dbClient
+    const [defaultRole] = await c
+      .get('db')
       .select({
         id: core_roles.id,
       })
@@ -39,7 +42,8 @@ const getDefaultData = async (): Promise<{
     };
   }
 
-  const [defaultRole] = await dbClient
+  const [defaultRole] = await c
+    .get('db')
     .select({
       id: core_roles.id,
     })
@@ -72,10 +76,11 @@ export const signUp = async (
     name: string;
     newsletter?: boolean;
   },
-  req: HonoRequest,
+  c: Context<Env, '/', Input>,
 ) => {
   const convertToNameSEO = removeSpecialCharacters(name);
-  const checkIfUserExist = await dbClient
+  const checkIfUserExist = await c
+    .get('db')
     .select({
       email: core_users.email,
       name_code: core_users.nameCode,
@@ -103,8 +108,9 @@ export const signUp = async (
     });
   }
 
-  const { roleId, emailVerified } = await getDefaultData();
-  const [data] = await dbClient
+  const { roleId, emailVerified } = await getDefaultData(c);
+  const [data] = await c
+    .get('db')
     .insert(core_users)
     .values({
       email,
@@ -116,7 +122,7 @@ export const signUp = async (
       avatarColor: generateAvatarColor(name),
       roleId,
       emailVerified,
-      ipAddress: getUserIp(req),
+      ipAddress: getUserIp(c),
       // TODO: Handle language
       // language: await this.getLanguage(req),
     })

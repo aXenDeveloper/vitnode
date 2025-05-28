@@ -1,9 +1,17 @@
-import { dbClient } from '@/database/client';
+import type { Context, Env, Input } from 'hono';
+
 import { core_users } from '@/database/schema/users';
 import { eq } from 'drizzle-orm';
 
-export const getUserById = async (id: number) => {
-  const [user] = await dbClient
+export async function getUserById<T extends Env>({
+  id,
+  c,
+}: {
+  c: Context<T, '/', Input>;
+  id: number;
+}) {
+  const [user] = await c
+    .get('db')
     .select({
       id: core_users.id,
       email: core_users.email,
@@ -22,4 +30,4 @@ export const getUserById = async (id: number) => {
   if (!user) return null;
 
   return user;
-};
+}

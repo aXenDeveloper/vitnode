@@ -1,7 +1,8 @@
-import type { HonoRequest } from 'hono';
+import type { Context, Input } from 'hono';
+import type { Env } from 'hono';
 
-export const getUserIp = (req: HonoRequest): string => {
-  const ip: string = req.header('x-forwarded-for')?.toString() ?? '0.0.0.0';
+export function getUserIp<T extends Env>(c: Context<T, '/', Input>): string {
+  const ip: string = c.req.header('x-forwarded-for')?.toString() ?? '0.0.0.0';
 
   if (ip === '0.0.0.0') {
     // eslint-disable-next-line no-console
@@ -11,4 +12,4 @@ export const getUserIp = (req: HonoRequest): string => {
   }
 
   return ip;
-};
+}
