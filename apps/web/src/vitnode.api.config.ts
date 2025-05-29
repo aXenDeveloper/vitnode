@@ -4,9 +4,25 @@ import { DiscordSSOApiPlugin } from '@vitnode/core/api/plugins/sso/discord';
 import { FacebookSSOApiPlugin } from '@vitnode/core/api/plugins/sso/facebook';
 import { GoogleSSOApiPlugin } from '@vitnode/core/api/plugins/sso/google';
 import { buildApiConfig } from '@vitnode/core/vitnode.config';
+import { drizzle } from 'drizzle-orm/postgres-js';
+
+// import * as dotenv from 'dotenv';
+// import { drizzle } from 'drizzle-orm/postgres-js';
+// import { join } from 'path';
+
+// dotenv.config({
+//   path: join(process.cwd(), '..', '..', '.env'),
+// });
+
+export const POSTGRES_URL =
+  process.env.POSTGRES_URL ?? 'postgresql://root:root@localhost:5432/vitnode';
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [blogApiPlugin()],
+  dbProvider: drizzle({
+    connection: POSTGRES_URL,
+    casing: 'camelCase',
+  }),
   emailProvider: NodemailerEmailPlugin({
     from: process.env.NODE_MAILER_FROM,
     host: process.env.NODE_MAILER_HOST,

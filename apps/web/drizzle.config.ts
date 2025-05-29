@@ -1,16 +1,12 @@
-import { POSTGRES_ENVS } from '@/database/client';
-import { defineConfig } from 'drizzle-kit';
+import { defineVitNodeDrizzleConfig } from '@vitnode/core/drizzle.config';
 
-const { url, ...rest } = POSTGRES_ENVS;
+import { POSTGRES_URL, vitNodeApiConfig } from './src/vitnode.api.config';
 
-export default defineConfig({
-  out: './src/database/migrations/',
-  // schema: ['./src/plugins/**/database/schema/*'],
-  schema: ['./src/database/schema/*'],
+export default defineVitNodeDrizzleConfig({
+  vitNodeApiConfig,
+  out: './migrations/',
   dialect: 'postgresql',
-  dbCredentials: process.env.POSTGRES_URL
-    ? {
-        url,
-      }
-    : rest,
+  dbCredentials: {
+    url: POSTGRES_URL,
+  },
 });

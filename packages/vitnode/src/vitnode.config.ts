@@ -1,3 +1,4 @@
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type { ThemeProvider } from 'next-themes';
 
 import type { BuildPluginApiReturn } from './api/lib/plugin';
@@ -35,6 +36,7 @@ export interface VitNodeApiConfig {
     deviceCookieName?: string;
     ssoPlugins?: SSOApiPlugin[];
   };
+  dbProvider: PostgresJsDatabase;
   emailProvider?: EmailApiPlugin;
   plugins: BuildPluginApiReturn[];
 }

@@ -49,7 +49,11 @@ export const signInRoute = buildRoute({
   },
   handler: async c => {
     const { password, isAdmin, email } = c.req.valid('json');
-    const data = await new UserModel().signInWithPassword({ password, email });
+    const data = await new UserModel().signInWithPassword({
+      password,
+      email,
+      c,
+    });
 
     if (isAdmin) {
       const { token } = await new SessionAdminModel(c).createSessionByUserId(

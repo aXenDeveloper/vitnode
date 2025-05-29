@@ -59,6 +59,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build scripts
+        run: pnpm run build:scripts
+
       - name: Run script to bump version & copy files
         run: pnpm run release
         id: version-bump

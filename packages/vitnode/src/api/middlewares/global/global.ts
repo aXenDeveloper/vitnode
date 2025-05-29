@@ -42,6 +42,7 @@ declare module 'hono' {
         title: string;
       };
     };
+    db: Pick<VitNodeApiConfig, 'dbProvider'>['dbProvider'];
     deviceId: number;
     user: null | {
       avatarColor: string;
@@ -62,7 +63,8 @@ export const globalMiddleware = ({
   authorization,
   metadata,
   emailProvider,
-}: Pick<VitNodeApiConfig, 'authorization' | 'emailProvider'> &
+  dbProvider,
+}: Pick<VitNodeApiConfig, 'authorization' | 'dbProvider' | 'emailProvider'> &
   Pick<VitNodeConfig, 'metadata'>) => {
   return async (c: Context<Env, '*'>, next: Next) => {
     c.set('core', {
@@ -82,6 +84,7 @@ export const globalMiddleware = ({
         cookieSecure: authorization?.cookieSecure ?? true,
       },
     });
+    c.set('db', dbProvider);
 
     const deviceId = await new DeviceModel(c).getDeviceId();
     c.set('deviceId', deviceId);

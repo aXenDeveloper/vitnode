@@ -55,7 +55,7 @@ export const signUpRoute = buildRoute({
     );
     const data = await new UserModel().signUp(
       { ...c.req.valid('json'), hashedPassword },
-      c.req,
+      c,
     );
 
     return c.json({ id: data.id });

@@ -4,8 +4,7 @@ import {
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from '@/api/lib/with-pagination';
-import { dbClient } from '@/database/client';
-import { core_users } from '@/database/schema/users';
+import { core_users } from '@/database/users';
 import { z } from '@hono/zod-openapi';
 
 export const listUsersAdminRoute = buildRoute({
@@ -56,7 +55,8 @@ export const listUsersAdminRoute = buildRoute({
       },
       primaryCursor: core_users.id,
       query: async ({ limit, where, orderBy }) =>
-        await dbClient
+        await c
+          .get('db')
           .select({
             id: core_users.id,
             name: core_users.name,
@@ -81,6 +81,7 @@ export const listUsersAdminRoute = buildRoute({
           : core_users.createdAt,
         order: query.order ?? 'desc',
       },
+      c,
     });
 
     return c.json(data);

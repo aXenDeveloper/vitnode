@@ -5,8 +5,8 @@ import type {
   PgTableWithColumns,
   TableConfig,
 } from 'drizzle-orm/pg-core';
+import type { Context, Env, Input } from 'hono';
 
-import { dbClient } from '@/database/client';
 import { z } from '@hono/zod-openapi';
 import { and, asc, count, desc, gt, lt } from 'drizzle-orm';
 
@@ -14,6 +14,7 @@ export async function withPagination<
   QueryMin extends Record<string, unknown>,
   T extends TableConfig,
   Primary extends ColumnBaseConfig<'number', string>,
+  E extends Env,
 >({
   query,
   table,
@@ -21,7 +22,9 @@ export async function withPagination<
   where: whereFromParams,
   primaryCursor,
   orderBy: orderByFromParams,
+  c,
 }: {
+  c: Context<E, '/', Input>;
   orderBy: {
     column: PgColumn;
     order: 'asc' | 'desc';
@@ -103,7 +106,8 @@ export async function withPagination<
   }
 
   // Get total count
-  const [{ count: totalCount }] = await dbClient
+  const [{ count: totalCount }] = await c
+    .get('db')
     .select({ count: count() })
     .from(table as PgTable)
     .where(whereFromParams);

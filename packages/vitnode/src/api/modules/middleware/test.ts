@@ -1,6 +1,5 @@
 import { buildRoute } from '@/api/lib/route';
-import { dbClient } from '@/database/client';
-import { core_test } from '@/database/schema/test';
+import { core_test } from '@/database/test';
 import { z } from 'zod';
 
 import {
@@ -43,7 +42,8 @@ export const routeTestMiddleware = buildRoute({
       },
       primaryCursor: core_test.id,
       query: async ({ limit, where, orderBy }) =>
-        await dbClient
+        await c
+          .get('db')
           .select()
           .from(core_test)
           .where(where)
@@ -54,6 +54,7 @@ export const routeTestMiddleware = buildRoute({
         column: query.orderBy ? core_test[query.orderBy] : core_test.createdAt,
         order: query.order ?? 'desc',
       },
+      c,
     });
 
     return c.json(data);

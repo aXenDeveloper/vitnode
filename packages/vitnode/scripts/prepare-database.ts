@@ -1,16 +1,27 @@
 /* eslint-disable no-console */
 
-import { dbClient } from '@/database/client.js';
-import { core_admin_permissions } from '@/database/schema/admins.js';
-import {
-  core_languages,
-  core_languages_words,
-} from '@/database/schema/languages.js';
-import { core_moderators_permissions } from '@/database/schema/moderators.js';
-import { core_roles } from '@/database/schema/roles.js';
+import { core_admin_permissions } from '@/database/admins.js';
+import { core_languages, core_languages_words } from '@/database/languages.js';
+import { core_moderators_permissions } from '@/database/moderators.js';
+import { core_roles } from '@/database/roles.js';
+import * as dotenv from 'dotenv';
 import { count } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { join } from 'path';
 
 import { runInteractiveShellCommand } from './run-interactive-shell-command.js';
+
+dotenv.config({
+  path: join(process.cwd(), '..', '..', '.env'),
+});
+
+console.log(join(process.cwd(), '..', '..', '.env'));
+
+const dbClient = drizzle({
+  connection:
+    process.env.POSTGRES_URL ?? 'postgresql://root:root@localhost:5432/vitnode',
+  casing: 'camelCase',
+});
 
 export const generateDatabaseMigrations = async () => {
   try {

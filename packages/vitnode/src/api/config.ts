@@ -60,9 +60,16 @@ export function VitNodeAPI({
       emailProvider: vitNodeApiConfig.emailProvider,
       metadata: vitNodeConfig.metadata,
       authorization: vitNodeApiConfig.authorization,
+      dbProvider: vitNodeApiConfig.dbProvider,
     }),
   );
-  app.use('/*/admin/*', globalAdminMiddleware());
+  app.use(async (c, next) => {
+    if (c.req.path.includes('/admin/')) {
+      return globalAdminMiddleware()(c, next);
+    }
+
+    return next();
+  });
 
   app.onError(error => {
     if (error instanceof HTTPException) {

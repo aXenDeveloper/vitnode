@@ -1,10 +1,6 @@
 import type { Context, Env, Input } from 'hono';
 
-import { dbClient } from '@/database/client';
-import {
-  core_admin_permissions,
-  core_admin_sessions,
-} from '@/database/schema/admins';
+import { core_admin_permissions, core_admin_sessions } from '@/database/admins';
 import { CONFIG } from '@/lib/config';
 import { and, eq, gt, or } from 'drizzle-orm';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
@@ -19,10 +15,11 @@ export class SessionAdminModel<T extends Env> {
   protected readonly c: Context<T, '/', Input>;
 
   async checkIfUserIsAdmin(userId: number) {
-    const user = await new UserModel().getUserById(userId);
+    const user = await new UserModel().getUserById({ id: userId, c: this.c });
     if (!user) return false;
 
-    const [permission] = await dbClient
+    const [permission] = await this.c
+      .get('db')
       .select()
       .from(core_admin_permissions)
       .where(
@@ -48,14 +45,17 @@ export class SessionAdminModel<T extends Env> {
       .join('');
     const deviceId = this.c.get('deviceId');
 
-    await dbClient.insert(core_admin_sessions).values({
-      token,
-      userId,
-      expiresAt: new Date(
-        Date.now() + this.c.get('core').authorization.adminCookieExpires,
-      ),
-      deviceId,
-    });
+    await this.c
+      .get('db')
+      .insert(core_admin_sessions)
+      .values({
+        token,
+        userId,
+        expiresAt: new Date(
+          Date.now() + this.c.get('core').authorization.adminCookieExpires,
+        ),
+        deviceId,
+      });
 
     setCookie(this.c, this.c.get('core').authorization.adminCookieName, token, {
       httpOnly: true,
@@ -78,7 +78,8 @@ export class SessionAdminModel<T extends Env> {
     );
     if (!token) return;
 
-    await dbClient
+    await this.c
+      .get('db')
       .delete(core_admin_sessions)
       .where(eq(core_admin_sessions.token, token));
     deleteCookie(this.c, this.c.get('core').authorization.adminCookieName, {
@@ -93,7 +94,8 @@ export class SessionAdminModel<T extends Env> {
     const deviceId = this.c.get('deviceId');
     if (!deviceId) return null;
 
-    const [session] = await dbClient
+    const [session] = await this.c
+      .get('db')
       .select({
         token: core_admin_sessions.token,
         userId: core_admin_sessions.userId,
@@ -109,7 +111,10 @@ export class SessionAdminModel<T extends Env> {
       .limit(1);
 
     if (!session) return null;
-    const user = await new UserModel().getUserById(session.userId);
+    const user = await new UserModel().getUserById({
+      id: session.userId,
+      c: this.c,
+    });
     if (!user) return null;
 
     return user;
