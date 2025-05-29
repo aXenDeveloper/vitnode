@@ -1,7 +1,7 @@
 import type { Context, Input } from 'hono';
 import type { Env } from 'hono';
 
-import { core_users } from '@/database/schema/users';
+import { core_users } from '@/database/users';
 import { eq } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
 

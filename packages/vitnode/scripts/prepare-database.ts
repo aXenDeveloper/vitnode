@@ -1,12 +1,9 @@
 /* eslint-disable no-console */
 
-import { core_admin_permissions } from '@/database/schema/admins.js';
-import {
-  core_languages,
-  core_languages_words,
-} from '@/database/schema/languages.js';
-import { core_moderators_permissions } from '@/database/schema/moderators.js';
-import { core_roles } from '@/database/schema/roles.js';
+import { core_admin_permissions } from '@/database/admins.js';
+import { core_languages, core_languages_words } from '@/database/languages.js';
+import { core_moderators_permissions } from '@/database/moderators.js';
+import { core_roles } from '@/database/roles.js';
 import * as dotenv from 'dotenv';
 import { count } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';

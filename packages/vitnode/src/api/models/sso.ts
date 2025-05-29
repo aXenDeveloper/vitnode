@@ -1,6 +1,6 @@
 import type { Context, Env, Input } from 'hono';
 
-import { core_users, core_users_sso } from '@/database/schema/users';
+import { core_users, core_users_sso } from '@/database/users';
 import { CONFIG } from '@/lib/config';
 import { removeSpecialCharacters } from '@/lib/special-characters';
 import crypto from 'crypto';

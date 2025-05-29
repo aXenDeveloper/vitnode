@@ -1,5 +1,5 @@
 import { buildRoute } from '@/api/lib/route';
-import { core_test } from '@/database/schema/test';
+import { core_test } from '@/database/test';
 import { z } from 'zod';
 
 import {

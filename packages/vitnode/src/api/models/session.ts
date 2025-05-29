@@ -1,6 +1,6 @@
 import type { Context, Env, Input } from 'hono';
 
-import { core_sessions } from '@/database/schema/sessions';
+import { core_sessions } from '@/database/sessions';
 import { CONFIG } from '@/lib/config';
 import { and, eq, gt } from 'drizzle-orm';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';

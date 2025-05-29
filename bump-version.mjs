@@ -365,6 +365,10 @@ class FileCopyManager {
         from: path.join(sourcePath, '.gitignore'),
         to: path.join(destPath, '.gitignore'),
       },
+      {
+        from: path.join(sourcePath, 'drizzle.config.ts'),
+        to: path.join(destPath, 'drizzle.config.ts'),
+      },
     ];
 
     for (const { from, to } of files) {

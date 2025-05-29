@@ -1,6 +1,6 @@
 import type { Context, Env, Input } from 'hono';
 
-import { core_users } from '@/database/schema/users';
+import { core_users } from '@/database/users';
 import { eq } from 'drizzle-orm';
 
 export async function getUserById<T extends Env>({

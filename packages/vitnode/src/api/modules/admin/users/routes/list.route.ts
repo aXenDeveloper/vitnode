@@ -4,7 +4,7 @@ import {
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from '@/api/lib/with-pagination';
-import { core_users } from '@/database/schema/users';
+import { core_users } from '@/database/users';
 import { z } from '@hono/zod-openapi';
 
 export const listUsersAdminRoute = buildRoute({
