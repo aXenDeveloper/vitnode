@@ -26,7 +26,10 @@ export function ContentDataTable<T extends DataTableTMin>({
             <TableHeader className="bg-muted sticky top-0 z-10">
               <TableRow>
                 {columns.map(column => (
-                  <TableHead key={column.id.toString()}>
+                  <TableHead
+                    className="[&:not(:first-child)]:pl-0"
+                    key={column.id.toString()}
+                  >
                     {order.columns?.includes(column.id) ? (
                       <OrderTableHeadDataTable id={column.id} order={order}>
                         {column.label}

@@ -1,7 +1,8 @@
 'use client';
 
-import { cn } from '@/lib/utils';
 import * as React from 'react';
+
+import { cn } from '@/lib/utils';
 
 function Table({ className, ...props }: React.ComponentProps<'table'>) {
   return (
@@ -31,7 +32,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
 function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
   return (
     <tbody
-      className={cn('[&_tr:last-child]:border-0', className)}
+      className={cn('bg-card [&_tr:last-child]:border-0', className)}
       data-slot="table-body"
       {...props}
     />

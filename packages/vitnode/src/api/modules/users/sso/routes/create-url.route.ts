@@ -1,6 +1,7 @@
+import { z } from 'zod';
+
 import { buildRoute } from '@/api/lib/route';
 import { SSOModel } from '@/api/models/sso';
-import { z } from 'zod';
 
 export const createUrlRoute = buildRoute({
   plugin: '@vitnode/core',

@@ -1,3 +1,7 @@
+import { MailIcon } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
+import React from 'react';
+
 import { adminModule } from '@/api/modules/admin/admin.module';
 import { Avatar } from '@/components/avatar';
 import { DateFormat } from '@/components/date-format';
@@ -8,9 +12,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { fetcher } from '@/lib/fetcher';
-import { MailIcon } from 'lucide-react';
-import { getTranslations } from 'next-intl/server';
-import React from 'react';
 
 import type { UsersAdminView } from './users-admin-view';
 

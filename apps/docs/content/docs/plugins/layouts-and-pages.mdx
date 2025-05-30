@@ -3,88 +3,85 @@ title: Layouts and Pages
 description: Learn how to create custom layouts and pages for your VitNode plugins
 ---
 
-Welcome to the magical world of VitNode layouts and pages! Think of these as the digital feng shui for your plugin - they determine how things look and where everything goes. Let's dive in!
+VitNode plugins follow the same patterns as Next.js for layouts and pages. Check out the [Next.js documentation](https://nextjs.org/docs/app/getting-started/layouts-and-pages) for detailed information.
 
-## How Routing Works
+<Callout>
+  Next.js patterns for **Layouts and Pages** work only within the `app` and
+  `app_admin` directories. Our watch mode will **automatically copy files** from
+  your plugin to the root of the VitNode application, allowing you to create
+  custom pages and layouts for your plugins.
+</Callout>
 
-VitNode follows Next.js app directory conventions for routing. Each plugin can define its own pages that get integrated into the main application. When developing a plugin:
+## Frontend Pages
 
-- Files named `page.tsx` define a route
-- The route path is determined by the folder structure
-- Page files are automatically detected and copied to the appropriate location in the main app
+Create pages in the `src/app` directory with a `page.tsx` file:
 
-## Pages
-
-Pages in VitNode work the same way as in the Next.js framework. You can create a page by creating a `page.tsx` file in the `src/app` directory of your plugin.
-
-For example, if you want to create a page at `/dashboard`, you would create:
-
-```tsx title="plugins/{plugin_name}/src/app/dashboard/page.tsx"
-export default function DashboardPage() {
-  return <div>Welcome to the dashboard!</div>;
+```tsx title="plugins/{plugin_name}/src/app/welcome/page.tsx"
+export default function Page() {
+  return <h1>Hello VitNode!</h1>;
 }
 ```
 
-When your plugin is loaded, VitNode will automatically copy this page to the appropriate location in the main application and handle all the routing.
+This creates a page at `http://localhost:3000/welcome`.
+
+### AdminCP Pages
+
+Create admin pages in the `src/app_admin` directory:
+
+```tsx title="plugins/{plugin_name}/src/app_admin/welcome/page.tsx"
+export default function Page() {
+  return <h1>Hello VitNode AdminCP!</h1>;
+}
+```
+
+This creates an admin page at `http://localhost:3000/admin/welcome`.
+
+<Callout>
+  All pages in the `app_admin` directory are protected by default.
+</Callout>
 
 ## Layouts
 
-Layouts allow you to create shared UI for multiple pages. They follow Next.js conventions and should be defined as `layout.tsx` files.
+Create shared layouts using `layout.tsx` files, just like in Next.js App Router.
 
-For example, to create a layout for all pages under `/dashboard`:
+### Frontend Layouts
 
-```tsx title="plugins/{plugin_name}/src/app/dashboard/layout.tsx"
-export default function DashboardLayout({
+Create layouts in the `src/app` directory:
+
+```tsx title="plugins/{plugin_name}/src/app/welcome/layout.tsx"
+export default function WelcomeLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="container">
-      <nav>Dashboard Navigation</nav>
+    <div>
+      <nav>Welcome Navigation</nav>
       <main>{children}</main>
     </div>
   );
 }
 ```
 
-This layout will wrap any pages within the `dashboard` directory.
+This layout will wrap all pages under the `/welcome` route.
 
-## Admin Pages
+### AdminCP Layouts
 
-For admin pages, follow the same pattern but create your files in the `src/app_admin` directory of your plugin. This is the only difference - the structure and implementation remain the same.
+Create admin layouts in the `src/app_admin` directory:
 
-For example, to create an admin page at `/admin/{plugin_name}/settings`:
-
-```
-src/app_admin/settings/page.tsx
-```
-
-And for a layout:
-
-```
-src/app_admin/settings/layout.tsx
-```
-
-## Route Groups and Special Folders
-
-VitNode supports Next.js route grouping with parentheses:
-
-- `(group-name)` - Creates a logical group without affecting the URL path
-- `[dynamicParam]` - Creates a dynamic route segment
-
-For example:
-
-```
-src/app/(user-section)/profile/page.tsx  // Route: /profile
-src/app/products/[id]/page.tsx           // Route: /products/:id
+```tsx title="plugins/{plugin_name}/src/app_admin/welcome/layout.tsx"
+export default function AdminWelcomeLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <aside>Admin Sidebar</aside>
+      <main>{children}</main>
+    </div>
+  );
+}
 ```
 
-## Import Considerations
-
-When developing your plugin pages, you can use:
-
-- Relative imports (e.g., `import { Button } from '../components/Button'`)
-- Imports with `@/` prefix (e.g., `import { utils } from '@/lib/utils'`)
-
-VitNode will automatically transform these imports when your plugin is integrated into the main application.
+This layout will wrap all admin pages under the `/admin/welcome` route.

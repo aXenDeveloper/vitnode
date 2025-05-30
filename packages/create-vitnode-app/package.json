@@ -15,8 +15,8 @@
     "create-vitnode-app": "dist/src/index.js"
   },
   "scripts": {
-    "build:cli": "tsc && node dist/src/prepare/prepare.js",
-    "cli": "node dist/src/index.js",
+    "build:scripts": "tsc && node dist/src/prepare/prepare.js",
+    "start": "node dist/src/index.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
@@ -28,17 +28,17 @@
     "typescript"
   ],
   "dependencies": {
-    "@inquirer/prompts": "^7.5.0",
+    "@inquirer/prompts": "^7.5.3",
     "commander": "^13.1.0",
     "ora": "^8.2.0",
     "picocolors": "^1.1.1",
     "validate-npm-package-name": "^6.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.15.3",
+    "@types/node": "^22.15.29",
     "@types/prompts": "^2.4.9",
     "@types/validate-npm-package-name": "^4.0.2",
-    "eslint": "^9.25.1",
+    "eslint": "^9.27.0",
     "eslint-config-typescript-vitnode": "workspace:*",
     "typescript": "^5.8.3"
   }

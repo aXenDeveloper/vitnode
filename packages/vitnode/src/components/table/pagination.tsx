@@ -1,10 +1,11 @@
 'use client';
 
-import { usePathname, useRouter } from '@/lib/navigation';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import React from 'react';
+
+import { usePathname, useRouter } from '@/lib/navigation';
 
 import { Button } from '../ui/button';
 import {

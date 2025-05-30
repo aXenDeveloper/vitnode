@@ -1,6 +1,7 @@
+import { z } from 'zod';
+
 import { buildRoute } from '@/api/lib/route';
 import { SessionAdminModel } from '@/api/models/session-admin';
-import { z } from 'zod';
 
 export const sessionRoute = buildRoute({
   plugin: '@vitnode/core',

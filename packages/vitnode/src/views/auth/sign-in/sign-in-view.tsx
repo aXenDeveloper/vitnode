@@ -1,7 +1,8 @@
-import { Card, CardDescription } from '@/components/ui/card';
-import { Link } from '@/lib/navigation';
 import { getTranslations } from 'next-intl/server';
 import React from 'react';
+
+import { Card, CardDescription } from '@/components/ui/card';
+import { Link } from '@/lib/navigation';
 
 import { I18nProvider } from '../../../components/i18n-provider';
 import { SSOButtons, SSOButtonsSkeleton } from '../sso/buttons/sso-buttons';

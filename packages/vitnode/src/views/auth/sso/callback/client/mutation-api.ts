@@ -1,8 +1,9 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+
 import { usersModule } from '@/api/modules/users/users.module';
 import { fetcher } from '@/lib/fetcher';
-import { revalidatePath } from 'next/cache';
 
 export const mutationApi = async ({
   code,

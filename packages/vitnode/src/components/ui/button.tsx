@@ -1,8 +1,9 @@
-import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { useTranslations } from 'next-intl';
 import { Slot } from 'radix-ui';
 import * as React from 'react';
+
+import { cn } from '@/lib/utils';
 
 import { Loader } from './loader';
 

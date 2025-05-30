@@ -1,3 +1,7 @@
+import { CheckIcon, XIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
 import { AutoFormLabel } from '@/components/form/common/label';
 import { FormControl, FormItem, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -7,9 +11,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { CheckIcon, XIcon } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import React from 'react';
 
 export const PasswordInput = ({
   value: valueFromProps,

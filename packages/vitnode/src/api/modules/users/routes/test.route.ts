@@ -1,5 +1,6 @@
-import { buildRoute } from '@/api/lib/route';
 import { z } from 'zod';
+
+import { buildRoute } from '@/api/lib/route';
 
 export const testRoute = buildRoute({
   plugin: '@vitnode/core',

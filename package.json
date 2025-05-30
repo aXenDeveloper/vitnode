@@ -16,11 +16,11 @@
     "test:e2e": "turbo test:e2e"
   },
   "devDependencies": {
-    "@types/node": "^22.15.17",
+    "@types/node": "^22.15.29",
     "eslint-config-typescript-vitnode": "workspace:*",
     "prettier": "^3.5.3",
-    "prettier-plugin-tailwindcss": "^0.6.11",
-    "turbo": "^2.5.2",
+    "prettier-plugin-tailwindcss": "^0.6.12",
+    "turbo": "^2.5.4",
     "typescript": "^5.8.3"
   },
   "engines": {

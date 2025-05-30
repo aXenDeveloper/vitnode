@@ -1,5 +1,7 @@
 'use client';
 
+import { ChevronRight, MenuIcon } from 'lucide-react';
+
 import {
   Collapsible,
   CollapsibleContent,
@@ -14,7 +16,6 @@ import {
 } from '@/components/ui/sidebar';
 import { Link } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
-import { ChevronRight, MenuIcon } from 'lucide-react';
 
 interface ItemNavAdminProps {
   href: string;

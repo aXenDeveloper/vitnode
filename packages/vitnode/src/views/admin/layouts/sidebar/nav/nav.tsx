@@ -1,10 +1,11 @@
+import { LayoutDashboardIcon, UsersRoundIcon } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
+
 import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
 } from '@/components/ui/sidebar';
-import { LayoutDashboardIcon, UsersRoundIcon } from 'lucide-react';
-import { getTranslations } from 'next-intl/server';
 
 import { ItemNavAdmin } from './item';
 

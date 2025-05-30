@@ -1,5 +1,7 @@
 'use client';
 
+import { z } from 'zod';
+
 import { AutoForm } from '@/components/form/auto-form';
 import { AutoFormCheckbox } from '@/components/form/fields/checkbox';
 import { AutoFormCombobox } from '@/components/form/fields/combobox';
@@ -8,7 +10,6 @@ import { AutoFormRadioGroup } from '@/components/form/fields/radio-group';
 import { AutoFormSelect } from '@/components/form/fields/select';
 import { AutoFormSwitch } from '@/components/form/fields/switch';
 import { AutoFormTextarea } from '@/components/form/fields/textarea';
-import { z } from 'zod';
 
 export const TestView = () => {
   const formSchema = z.object({

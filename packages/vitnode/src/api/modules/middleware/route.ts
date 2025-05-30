@@ -1,6 +1,7 @@
+import { z } from 'zod';
+
 import { buildRoute } from '@/api/lib/route';
 import { EmailModel } from '@/api/models/email';
-import { z } from 'zod';
 
 export const routeMiddleware = buildRoute({
   plugin: '@vitnode/core',

@@ -1,7 +1,8 @@
+import { z } from 'zod';
+
 import { buildRoute } from '@/api/lib/route';
 import { PasswordModel } from '@/api/models/password';
 import { UserModel } from '@/api/models/user';
-import { z } from 'zod';
 
 const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 

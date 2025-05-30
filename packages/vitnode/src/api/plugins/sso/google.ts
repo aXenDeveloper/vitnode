@@ -1,9 +1,11 @@
-import type { SSOApiPlugin } from '@/api/models/sso';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 
-import { getRedirectUri } from '@/api/models/sso';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
+
+import type { SSOApiPlugin } from '@/api/models/sso';
+
+import { getRedirectUri } from '@/api/models/sso';
 
 export const GoogleSSOApiPlugin = ({
   clientId,

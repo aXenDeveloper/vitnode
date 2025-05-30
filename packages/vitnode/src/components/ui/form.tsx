@@ -1,10 +1,7 @@
 'use client';
 
 import type { Label as LabelPrimitive } from 'radix-ui';
-import type { SubmitHandler } from 'react-hook-form';
 
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
 import { Slot } from 'radix-ui';
 import * as React from 'react';
@@ -14,9 +11,13 @@ import {
   type FieldPath,
   type FieldValues,
   FormProvider,
+  type SubmitHandler,
   useFormContext,
   useFormState,
 } from 'react-hook-form';
+
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 import { Button } from './button';
 

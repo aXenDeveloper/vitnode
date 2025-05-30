@@ -1,6 +1,6 @@
-import type { EmailApiPlugin } from '@/api/models/email';
-
 import { createTransport } from 'nodemailer';
+
+import type { EmailApiPlugin } from '@/api/models/email';
 
 export const NodemailerEmailPlugin = ({
   host = '',

@@ -1,8 +1,9 @@
+import { z } from 'zod';
+
 import { buildRoute } from '@/api/lib/route';
 import { SessionModel } from '@/api/models/session';
 import { SessionAdminModel } from '@/api/models/session-admin';
 import { UserModel } from '@/api/models/user';
-import { z } from 'zod';
 
 export const signInRoute = buildRoute({
   plugin: '@vitnode/core',

@@ -1,9 +1,10 @@
 import type { Context, Env, Input } from 'hono';
 
-import { core_sessions_known_devices } from '@/database/sessions';
-import { CONFIG } from '@/lib/config';
 import { eq } from 'drizzle-orm';
 import { getCookie, setCookie } from 'hono/cookie';
+
+import { core_sessions_known_devices } from '@/database/sessions';
+import { CONFIG } from '@/lib/config';
 
 import { getUserIp } from '../lib/get-user-ip';
 

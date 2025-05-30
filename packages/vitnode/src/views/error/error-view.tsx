@@ -1,8 +1,9 @@
+import { ArrowLeft, HomeIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+
 import { buttonVariants } from '@/components/ui/button';
 import { Link } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, HomeIcon } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 
 import { BackButtonNotFound } from './back-button';
 

@@ -1,5 +1,8 @@
 import type { z } from 'zod';
 
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
 import { FormControl, FormItem, FormMessage } from '@/components/ui/form';
 import {
   Select,
@@ -9,8 +12,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { getBaseSchema } from '@/lib/helpers/auto-form';
-import { useTranslations } from 'next-intl';
-import React from 'react';
 
 import type { ItemAutoFormComponentProps } from './item';
 

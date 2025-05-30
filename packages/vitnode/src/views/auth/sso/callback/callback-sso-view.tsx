@@ -1,5 +1,6 @@
-import { ErrorView } from '@/views/error/error-view';
 import { getTranslations } from 'next-intl/server';
+
+import { ErrorView } from '@/views/error/error-view';
 
 import { ClientCallbackSSO } from './client/client';
 

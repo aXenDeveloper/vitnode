@@ -1,11 +1,13 @@
+import type { Context, Env, Next } from 'hono';
+
+import { HTTPException } from 'hono/http-exception';
+
 import type { EmailApiPlugin } from '@/api/models/email';
 import type { VitNodeApiConfig, VitNodeConfig } from '@/vitnode.config';
-import type { Context, Env, Next } from 'hono';
 
 import { DeviceModel } from '@/api/models/device';
 import { SessionModel } from '@/api/models/session';
 import { SessionAdminModel } from '@/api/models/session-admin';
-import { HTTPException } from 'hono/http-exception';
 
 import type { SSOApiPlugin } from '../../models/sso';
 

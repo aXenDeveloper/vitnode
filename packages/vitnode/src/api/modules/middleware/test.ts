@@ -1,6 +1,7 @@
+import { z } from 'zod';
+
 import { buildRoute } from '@/api/lib/route';
 import { core_test } from '@/database/test';
-import { z } from 'zod';
 
 import {
   withPagination,

@@ -35,12 +35,16 @@ export const HeaderContent = ({
     >
       <div className="h-full flex-1 space-y-1 text-left sm:self-center">
         {h1 ? (
-          <h1 className="text-2xl font-bold tracking-tight">{h1}</h1>
+          <h1 className="scroll-m-20 text-balance text-4xl font-extrabold tracking-tight">
+            {h1}
+          </h1>
         ) : (
-          <h2 className="text-xl font-bold tracking-tight">{h2}</h2>
+          <h2 className="scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight">
+            {h2}
+          </h2>
         )}
         {desc && (
-          <div className="text-muted-foreground text-sm [&_p]:text-left">
+          <div className="text-muted-foreground text-sm leading-7 [&_p]:text-left">
             {desc}
           </div>
         )}

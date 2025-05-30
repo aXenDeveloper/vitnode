@@ -1,10 +1,10 @@
+import { cookies, headers } from 'next/headers';
+
 import type {
   BaseBuildModuleReturn,
   BuildModuleReturn,
 } from '@/api/lib/module';
 import type { Route } from '@/api/lib/route';
-
-import { cookies, headers } from 'next/headers';
 
 import type {
   FetcherParams,

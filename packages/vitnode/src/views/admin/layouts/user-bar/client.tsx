@@ -1,5 +1,8 @@
 'use client';
 
+import { HomeIcon, LogOut } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
@@ -8,8 +11,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Link } from '@/lib/navigation';
 import { logOutMutationApi } from '@/views/layouts/theme/header/user/auth/log-out-mutation-api';
-import { HomeIcon, LogOut } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 
 export const ClientUserBarAdmin = ({
   user,

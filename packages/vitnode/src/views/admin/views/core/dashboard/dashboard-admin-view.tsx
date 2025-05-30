@@ -1,9 +1,10 @@
+import { AlertTriangleIcon } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
+
 import { Badge } from '@/components/ui/badge';
 import { HeaderContent } from '@/components/ui/header-content';
 import { getSessionAdminApi } from '@/lib/api/get-session-admin-api';
 import { CONFIG } from '@/lib/config';
-import { AlertTriangleIcon } from 'lucide-react';
-import { getTranslations } from 'next-intl/server';
 
 export const DashboardAdminView = async () => {
   const session = await getSessionAdminApi();

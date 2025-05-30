@@ -1,13 +1,14 @@
 /* eslint-disable no-console */
 
-import { core_admin_permissions } from '@/database/admins.js';
-import { core_languages, core_languages_words } from '@/database/languages.js';
-import { core_moderators_permissions } from '@/database/moderators.js';
-import { core_roles } from '@/database/roles.js';
 import * as dotenv from 'dotenv';
 import { count } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { join } from 'path';
+
+import { core_admin_permissions } from '@/database/admins.js';
+import { core_languages, core_languages_words } from '@/database/languages.js';
+import { core_moderators_permissions } from '@/database/moderators.js';
+import { core_roles } from '@/database/roles.js';
 
 import { runInteractiveShellCommand } from './run-interactive-shell-command.js';
 

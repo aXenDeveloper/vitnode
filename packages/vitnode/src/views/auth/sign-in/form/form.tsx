@@ -1,10 +1,11 @@
 'use client';
 
+import { AlertCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+
 import { AutoForm } from '@/components/form/auto-form';
 import { AutoFormInput } from '@/components/form/fields/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 
 import { useFormSignIn } from './hooks/use-form';
 

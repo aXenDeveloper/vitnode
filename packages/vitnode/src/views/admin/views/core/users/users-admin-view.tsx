@@ -1,7 +1,8 @@
+import React from 'react';
+
 import type { SearchParamsDataTable } from '@/components/table/data-table';
 
 import { DataTableSkeleton } from '@/components/table/data-table';
-import React from 'react';
 
 import { ContentUsersAdmin } from './content';
 

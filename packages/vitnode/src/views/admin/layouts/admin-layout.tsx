@@ -1,8 +1,9 @@
+import { cookies } from 'next/headers';
+
 import { ThemeSwitcher } from '@/components/switchers/theme-switcher';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { getSessionAdminApi } from '@/lib/api/get-session-admin-api';
-import { cookies } from 'next/headers';
 
 import { SidebarAdmin } from './sidebar/sidebar';
 import { UserBarAdmin } from './user-bar/user-bar';

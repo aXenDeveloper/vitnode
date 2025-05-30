@@ -1,3 +1,5 @@
+import { z } from '@hono/zod-openapi';
+
 import { buildRoute } from '@/api/lib/route';
 import {
   withPagination,
@@ -5,7 +7,6 @@ import {
   zodPaginationQuery,
 } from '@/api/lib/with-pagination';
 import { core_users } from '@/database/users';
-import { z } from '@hono/zod-openapi';
 
 export const usersAdminRoute = buildRoute({
   plugin: '@vitnode/core',

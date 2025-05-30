@@ -2,10 +2,11 @@
 
 import type { z } from 'zod';
 
+import { revalidatePath } from 'next/cache';
+
 import { usersModule } from '@/api/modules/users/users.module';
 import { fetcher } from '@/lib/fetcher';
 import { redirect } from '@/lib/navigation';
-import { revalidatePath } from 'next/cache';
 
 import type { createSignInFormSchema } from './use-form';
 

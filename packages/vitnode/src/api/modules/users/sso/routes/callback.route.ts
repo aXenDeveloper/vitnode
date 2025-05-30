@@ -1,7 +1,8 @@
+import { z } from 'zod';
+
 import { buildRoute } from '@/api/lib/route';
 import { SessionModel } from '@/api/models/session';
 import { SSOModel } from '@/api/models/sso';
-import { z } from 'zod';
 
 export const callbackRoute = buildRoute({
   plugin: '@vitnode/core',

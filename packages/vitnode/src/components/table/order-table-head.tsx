@@ -1,9 +1,10 @@
 'use client';
 
-import { usePathname, useRouter } from '@/lib/navigation';
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import React from 'react';
+
+import { usePathname, useRouter } from '@/lib/navigation';
 
 import type { DataTable, DataTableTMin } from './data-table';
 
@@ -32,7 +33,7 @@ export function OrderTableHeadDataTable<T extends DataTableTMin>({
 
   return (
     <Button
-      className="[&_svg]:text-muted-foreground -ml-1.5 flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 [&_svg]:size-4 [&_svg]:shrink-0"
+      className="[&_svg]:text-muted-foreground flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 [&_svg]:size-4 [&_svg]:shrink-0"
       onClick={() => {
         startTransition(() => {
           const params = new URLSearchParams(searchParams.toString());

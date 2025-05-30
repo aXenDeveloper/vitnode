@@ -1,8 +1,9 @@
+import { getTranslations } from 'next-intl/server';
+
 import { buttonVariants } from '@/components/ui/button';
 import { getSessionApi } from '@/lib/api/get-session-api';
 import { Link } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
-import { getTranslations } from 'next-intl/server';
 
 import { AuthUserHeader } from './auth/auth';
 

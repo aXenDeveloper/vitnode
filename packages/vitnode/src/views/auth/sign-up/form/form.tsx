@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+
 import type { ItemAutoFormComponentProps } from '@/components/form/fields/item';
 
 import { AutoForm } from '@/components/form/auto-form';
@@ -7,7 +9,6 @@ import { AutoFormCheckbox } from '@/components/form/fields/checkbox';
 import { AutoFormInput } from '@/components/form/fields/input';
 import { Link } from '@/lib/navigation';
 import { removeSpecialCharacters } from '@/lib/special-characters';
-import { useTranslations } from 'next-intl';
 
 import { PasswordInput } from '../../components/password-input';
 import { useFormSignUp } from './hooks/use-form';

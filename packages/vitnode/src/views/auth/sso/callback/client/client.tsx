@@ -1,9 +1,10 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
+
 import { Loader } from '@/components/ui/loader';
 import { useRouter } from '@/lib/navigation';
 import { ErrorView } from '@/views/error/error-view';
-import { useQuery } from '@tanstack/react-query';
 
 import { mutationApi } from './mutation-api';
 

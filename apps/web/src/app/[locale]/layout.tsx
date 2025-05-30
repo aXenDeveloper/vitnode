@@ -1,12 +1,13 @@
 import type { RootLayoutProps } from '@vitnode/core/views/layouts/root-layout';
 import type { Metadata } from 'next';
 
-import { vitNodeConfig } from '@/vitnode.config';
 import {
   generateMetadataRootLayout,
   RootLayout,
 } from '@vitnode/core/views/layouts/root-layout';
 import { Geist, Geist_Mono } from 'next/font/google';
+
+import { vitNodeConfig } from '@/vitnode.config';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

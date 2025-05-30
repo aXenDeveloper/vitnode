@@ -1,6 +1,7 @@
+import { getTranslations } from 'next-intl/server';
+
 import { Skeleton } from '@/components/ui/skeleton';
 import { getMiddlewareApi } from '@/lib/api/get-middleware-api';
-import { getTranslations } from 'next-intl/server';
 
 import { ButtonSSOButtons } from './client';
 

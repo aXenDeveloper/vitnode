@@ -1,12 +1,13 @@
 import type { Context, Env, Input } from 'hono';
 
+import { and, count, eq, or } from 'drizzle-orm';
+import { HTTPException } from 'hono/http-exception';
+
 import { getUserIp } from '@/api/lib/get-user-ip';
 import { generateAvatarColor } from '@/api/modules/users/avatar-color';
 import { core_roles } from '@/database/roles';
 import { core_users } from '@/database/users';
 import { removeSpecialCharacters } from '@/lib/special-characters';
-import { and, count, eq, or } from 'drizzle-orm';
-import { HTTPException } from 'hono/http-exception';
 
 const getDefaultData = async (
   c: Context<Env, '/', Input>,

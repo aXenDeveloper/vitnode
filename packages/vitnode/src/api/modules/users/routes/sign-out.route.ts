@@ -1,7 +1,8 @@
+import { z } from '@hono/zod-openapi';
+
 import { buildRoute } from '@/api/lib/route';
 import { SessionModel } from '@/api/models/session';
 import { SessionAdminModel } from '@/api/models/session-admin';
-import { z } from '@hono/zod-openapi';
 
 export const signOutRoute = buildRoute({
   plugin: '@vitnode/core',

@@ -1,12 +1,14 @@
-import type { VitNodeApiConfig, VitNodeConfig } from '@/vitnode.config';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import type { Context, Env, Schema } from 'hono';
 
-import { newBuildPluginApiCore } from '@/api/plugin';
 import { swaggerUI } from '@hono/swagger-ui';
 import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';
 import { HTTPException } from 'hono/http-exception';
+
+import type { VitNodeApiConfig, VitNodeConfig } from '@/vitnode.config';
+
+import { newBuildPluginApiCore } from '@/api/plugin';
 
 import { internalVitNodeConfig } from './internal-config';
 import {

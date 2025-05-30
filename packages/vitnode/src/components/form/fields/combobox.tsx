@@ -1,5 +1,9 @@
 import type { z } from 'zod';
 
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import React from 'react';
+
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -17,9 +21,6 @@ import {
 } from '@/components/ui/popover';
 import { getBaseSchema } from '@/lib/helpers/auto-form';
 import { cn } from '@/lib/utils';
-import { Check, ChevronsUpDown } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import React from 'react';
 
 import type { ItemAutoFormComponentProps } from './item';
 

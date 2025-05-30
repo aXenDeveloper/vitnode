@@ -1,5 +1,8 @@
 'use client';
 
+import { KeyRoundIcon, LogOutIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+
 import type { SessionApi } from '@/lib/api/get-session-api';
 
 import {
@@ -8,8 +11,6 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Link } from '@/lib/navigation';
-import { KeyRoundIcon, LogOutIcon } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 
 import { logOutMutationApi } from './log-out-mutation-api';
 
