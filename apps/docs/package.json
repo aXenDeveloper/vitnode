@@ -1,6 +1,6 @@
 {
   "name": "docs",
-  "version": "1.2.0-canary.3",
+  "version": "1.2.0-canary.4",
   "private": true,
   "scripts": {
     "build": "next build --turbopack",
