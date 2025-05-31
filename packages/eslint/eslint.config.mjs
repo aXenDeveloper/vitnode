@@ -9,6 +9,30 @@ import hooksPlugin from 'eslint-plugin-react-hooks';
 import reactCompiler from 'eslint-plugin-react-compiler';
 
 export default [
+  {
+    ignores: [
+      'dist',
+      // 'apps/web/src/app/[locale]/(main)/(plugins)/**/*',
+      // 'apps/web/src/app/\\[locale\\]/(main)/(plugins)/**/*',
+      // 'apps/web/src/app/*/\\(main\\)/\\(plugins\\)/**/*',
+      // 'apps/web/src/app/[locale]/admin/(auth)/(main)/(plugins)/**/*',
+      // 'src/app/[locale]/(main)/(plugins)/**/*',
+      // 'src/app/[locale]/admin/(auth)/(main)/(plugins)/**/*',
+      '**/\\(main\\)/\\(plugins\\)/**',
+      '**/\\(auth\\)/\\(plugins\\)/**',
+      '.prettierrc.mjs',
+      'node_modules',
+      'eslint.config.mjs',
+      'next.config.ts',
+      'config/next.config.ts',
+      'postcss.config.mjs',
+      '.turbo',
+      '.next',
+      'global.d.ts',
+      'tsup.config.ts',
+      '*.test.tsx',
+    ],
+  },
   eslint.configs.recommended,
   ...tsEslint.configs.stylisticTypeChecked,
   ...tsEslint.configs.strictTypeChecked,
@@ -47,23 +71,8 @@ export default [
       'react/react-in-jsx-scope': 'off',
       ...hooksPlugin.configs.recommended.rules,
     },
-    ignores: ['*.test.tsx'],
   },
   { files: ['**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}'] },
-  {
-    ignores: [
-      'dist',
-      'node_modules',
-      'eslint.config.mjs',
-      'next.config.ts',
-      'config/next.config.ts',
-      'postcss.config.mjs',
-      '.turbo',
-      '.next',
-      'global.d.ts',
-      'tsup.config.ts',
-    ],
-  },
   {
     languageOptions: {
       parserOptions: {

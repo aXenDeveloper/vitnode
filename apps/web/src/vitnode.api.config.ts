@@ -15,7 +15,8 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 // });
 
 export const POSTGRES_URL =
-  process.env.POSTGRES_URL ?? 'postgresql://root:root@localhost:5432/vitnode';
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+  process.env.POSTGRES_URL || 'postgresql://root:root@localhost:5432/vitnode';
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [blogApiPlugin()],

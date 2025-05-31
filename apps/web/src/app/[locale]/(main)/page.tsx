@@ -20,10 +20,10 @@ export default async function Home({
         <LogoVitNode className="w-44" />
 
         <div className="space-y-4">
-          <h1 className="from-foreground to-foreground/70 text-balance bg-gradient-to-br bg-clip-text text-4xl font-bold tracking-tight text-transparent md:text-5xl lg:text-6xl">
+          <h1 className="from-foreground to-foreground/70 bg-gradient-to-br bg-clip-text text-4xl font-bold tracking-tight text-balance text-transparent md:text-5xl lg:text-6xl">
             {t('title')}
           </h1>
-          <p className="text-muted-foreground mx-auto max-w-2xl text-pretty text-lg">
+          <p className="text-muted-foreground mx-auto max-w-2xl text-lg text-pretty">
             {t('desc')}
           </p>
         </div>

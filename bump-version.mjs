@@ -323,66 +323,42 @@ class FileCopyManager {
     await this.copyFiles(sourcePath, destPath);
   }
 
+  async copyFileOrDirectory(sourcePath, destPath, relativePath) {
+    const from = path.join(sourcePath, relativePath);
+    const to = path.join(destPath, relativePath);
+
+    const stats = existsSync(from) ? statSync(from) : null;
+    if (!stats) {
+      console.warn(`⚠ Source does not exist: ${from}`);
+      return;
+    }
+
+    if (stats.isDirectory()) {
+      FileSystem.copyDirectoryExcludingPlugins(from, to);
+    } else {
+      FileSystem.copyFile(from, to);
+    }
+  }
+
   async copyFiles(sourcePath, destPath) {
-    const files = [
-      {
-        from: path.join(sourcePath, 'src/app/[locale]'),
-        to: path.join(destPath, 'src/app/[locale]'),
-      },
-      {
-        from: path.join(sourcePath, 'src/app/favicon.ico'),
-        to: path.join(destPath, 'src/app/favicon.ico'),
-      },
-      {
-        from: path.join(sourcePath, 'src/app/global-error.tsx'),
-        to: path.join(destPath, 'src/app/global-error.tsx'),
-      },
-      {
-        from: path.join(sourcePath, 'src/app/globals.css'),
-        to: path.join(destPath, 'src/app/globals.css'),
-      },
-      {
-        from: path.join(sourcePath, 'src/app/layout.tsx'),
-        to: path.join(destPath, 'src/app/layout.tsx'),
-      },
-      {
-        from: path.join(sourcePath, 'src/app/not-found.tsx'),
-        to: path.join(destPath, 'src/app/not-found.tsx'),
-      },
-      {
-        from: path.join(sourcePath, 'src/app/api'),
-        to: path.join(destPath, 'src/app/api'),
-      },
-      {
-        from: path.join(sourcePath, 'tsconfig.json'),
-        to: path.join(destPath, 'tsconfig.json'),
-      },
-      {
-        from: path.join(sourcePath, 'postcss.config.mjs'),
-        to: path.join(destPath, 'postcss.config.mjs'),
-      },
-      {
-        from: path.join(sourcePath, '.gitignore'),
-        to: path.join(destPath, '.gitignore'),
-      },
-      {
-        from: path.join(sourcePath, 'drizzle.config.ts'),
-        to: path.join(destPath, 'drizzle.config.ts'),
-      },
+    // Define files and directories to copy (relative paths)
+    const filesToCopy = [
+      'src/app/[locale]',
+      'src/app/favicon.ico',
+      'src/app/global-error.tsx',
+      'src/app/globals.css',
+      'src/app/layout.tsx',
+      'src/app/not-found.tsx',
+      'src/app/api',
+      'tsconfig.json',
+      'postcss.config.mjs',
+      '.gitignore',
+      'drizzle.config.ts',
+      '.prettierrc.mjs',
     ];
 
-    for (const { from, to } of files) {
-      const stats = existsSync(from) ? statSync(from) : null;
-      if (!stats) {
-        console.warn(`⚠ Source does not exist: ${from}`);
-        continue;
-      }
-
-      if (stats.isDirectory()) {
-        FileSystem.copyDirectoryExcludingPlugins(from, to);
-      } else {
-        FileSystem.copyFile(from, to);
-      }
+    for (const relativePath of filesToCopy) {
+      await this.copyFileOrDirectory(sourcePath, destPath, relativePath);
     }
   }
 }

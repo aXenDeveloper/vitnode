@@ -69,6 +69,8 @@ export const globalMiddleware = ({
 }: Pick<VitNodeApiConfig, 'authorization' | 'dbProvider' | 'emailProvider'> &
   Pick<VitNodeConfig, 'metadata'>) => {
   return async (c: Context<Env, '*'>, next: Next) => {
+    c.set('db', dbProvider);
+
     c.set('core', {
       metadata,
       emailProvider,
@@ -86,7 +88,6 @@ export const globalMiddleware = ({
         cookieSecure: authorization?.cookieSecure ?? true,
       },
     });
-    c.set('db', dbProvider);
 
     const deviceId = await new DeviceModel(c).getDeviceId();
     c.set('deviceId', deviceId);
