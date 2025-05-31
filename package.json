@@ -2,7 +2,7 @@
   "name": "vitnode",
   "private": true,
   "scripts": {
-    "release": "node ./bump-version.mjs",
+    "release": "tsx ./scripts/bump-version.ts",
     "db:migrate": "turbo db:migrate",
     "db:push": "turbo db:push",
     "docker:dev": "docker compose -f ./docker-compose.yml -p vitnode-dev-dun up -d",
@@ -20,6 +20,7 @@
     "eslint-config-typescript-vitnode": "workspace:*",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.12",
+    "tsx": "^4.19.4",
     "turbo": "^2.5.4",
     "typescript": "^5.8.3"
   },
