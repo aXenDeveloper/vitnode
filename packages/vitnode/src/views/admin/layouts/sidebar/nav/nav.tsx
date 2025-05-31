@@ -15,7 +15,11 @@ export interface NavAdminParent {
   title: string;
 }
 
-export const NavSidebarAdmin = async () => {
+export const NavSidebarAdmin = async ({
+  pluginNav,
+}: {
+  pluginNav: NavAdminParent[];
+}) => {
   const t = await getTranslations('admin.global.nav');
   const rootItems: NavAdminParent[] = [
     {
@@ -44,6 +48,7 @@ export const NavSidebarAdmin = async () => {
         },
       ],
     },
+    ...pluginNav,
   ];
 
   return rootItems.map(parent => (

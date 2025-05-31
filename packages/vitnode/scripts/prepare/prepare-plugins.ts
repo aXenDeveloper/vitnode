@@ -13,7 +13,7 @@ import {
 export const preparePlugins = async () => {
   const config = await getConfig();
   const plugins: string[] = [
-    ...config.plugins.map(plugin => plugin.name),
+    ...config.plugins.map(plugin => plugin.id),
     'vitnode',
   ];
 

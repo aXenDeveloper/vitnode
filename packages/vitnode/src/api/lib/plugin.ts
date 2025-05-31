@@ -2,22 +2,22 @@ import { OpenAPIHono } from '@hono/zod-openapi';
 
 import type { BuildModuleReturn } from './module';
 
-import { checkPluginName } from './check-plugin-name';
+import { checkPluginId } from './check-plugin-id';
 
 export interface BuildPluginApiReturn {
   hono: OpenAPIHono;
-  name: string;
+  id: string;
 }
 
 export function buildApiPlugin<P extends string>({
-  name,
+  id,
   modules = [],
 }: {
+  id: P;
   modules?: BuildModuleReturn<P, string>[];
-  name: P;
 }): BuildPluginApiReturn {
   // Run for checking if the plugin is valid
-  checkPluginName(name);
+  checkPluginId(id);
 
   const hono = new OpenAPIHono();
   modules.forEach(handler => {
@@ -25,7 +25,7 @@ export function buildApiPlugin<P extends string>({
   });
 
   return {
-    name: name,
+    id,
     hono,
   };
 }

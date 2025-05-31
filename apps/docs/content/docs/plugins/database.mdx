@@ -1,0 +1,23 @@
+---
+title: Working with Database
+description: elo123
+---
+
+VitNode plugins can interact with databases using [Drizzle ORM](https://orm.drizzle.team/) and [PostgreSQL](https://www.postgresql.org/).
+
+## Schema
+
+You can define your database schema in `database` directory of your plugin.
+
+```ts title="plugins/{plugin_name}/src/database/categories.ts"
+import { pgTable } from 'drizzle-orm/pg-core';
+
+export const blog_categories = pgTable('blog_categories', t => ({
+  id: t.serial().primaryKey(),
+  createdAt: t.timestamp().notNull().defaultNow(),
+  updatedAt: t
+    .timestamp()
+    .notNull()
+    .$onUpdate(() => new Date()),
+}));
+```

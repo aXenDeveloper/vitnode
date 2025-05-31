@@ -4,6 +4,6 @@ import { middlewareModule } from './modules/middleware/middleware.module';
 import { usersModule } from './modules/users/users.module';
 
 export const newBuildPluginApiCore = buildApiPlugin({
-  name: '@vitnode/core',
+  id: '@vitnode/core',
   modules: [middlewareModule, usersModule, adminModule],
 });
