@@ -8,7 +8,7 @@
     "drizzle-kit": "drizzle-kit",
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit up && drizzle-kit generate && drizzle-kit migrate",
-    "dev": "vitnode prepare && vitnode init && next dev --turbopack",
+    "dev": "vitnode init && next dev --turbopack",
     "dev:email": "email dev",
     "build": "next build --turbopack",
     "start": "next start",

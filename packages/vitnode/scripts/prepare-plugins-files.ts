@@ -2,15 +2,15 @@
 import { existsSync, readFileSync } from 'fs';
 import { join, relative } from 'path';
 
-import { getConfig } from '../get-config';
+import { getConfig } from './get-config';
 import {
   buildInitialRouteMap,
   copyDirectoryRecursive,
   findRepoRoot,
   type SourceConfig,
-} from '../shared/file-utils';
+} from './shared/file-utils';
 
-export const preparePlugins = async () => {
+export const preparePluginsFiles = async () => {
   const config = await getConfig();
   const plugins: string[] = [
     ...config.plugins.map(plugin => plugin.id),

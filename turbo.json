@@ -45,8 +45,7 @@
       "dependsOn": ["^lint"]
     },
     "lint:fix": {
-      "dependsOn": ["^lint:fix"],
-      "cache": false
+      "dependsOn": ["^lint:fix"]
     },
     "dev": {
       "cache": false,

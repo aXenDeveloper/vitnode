@@ -70,9 +70,28 @@ export const handleRequestConfig = async ({
       ? reqLocale
       : vitNodeConfig.i18n.defaultLocale;
 
+  const pluginsId: string[] = [
+    '@vitnode/core',
+    ...vitNodeConfig.plugins.map(plugin => plugin.id),
+  ];
+
+  // Import and merge messages from all plugins
+  const messagesPromises = pluginsId.map(async pluginId => {
+    try {
+      const messages = await import(`@/langs/${pluginId}/${locale}.json`);
+
+      return messages.default;
+    } catch {
+      return {};
+    }
+  });
+
+  const allMessages = await Promise.all(messagesPromises);
+  const messages = allMessages.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+
   return {
     locale,
-    messages: (await import(`@/plugins/core/langs/${locale}.json`)).default,
+    messages,
     timeZone: vitNodeConfig.i18n.timeZone,
   };
 };
