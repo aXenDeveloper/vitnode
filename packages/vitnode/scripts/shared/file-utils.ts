@@ -124,6 +124,23 @@ export function findRepoRoot(start: string): string {
   );
 }
 
+export function findLocaleRoot(repoRoot: string): string {
+  // Check for standalone structure (src/app/[locale])
+  const standalonePath = join(repoRoot, 'src', 'app', '[locale]');
+  if (existsSync(standalonePath)) {
+    return standalonePath;
+  }
+
+  // Check for monorepo structure first (apps/web/src/app/[locale])
+  const monorepoPath = join(repoRoot, 'apps', 'web', 'src', 'app', '[locale]');
+  if (existsSync(monorepoPath)) {
+    return monorepoPath;
+  }
+
+  // Default to monorepo structure if neither exists (for new projects)
+  return monorepoPath;
+}
+
 export const getAllFiles = (dir: string): string[] => {
   const files: string[] = [];
   if (!existsSync(dir)) return files;
@@ -140,6 +157,14 @@ export const getAllFiles = (dir: string): string[] => {
   }
 
   return files;
+};
+
+export const isDirectoryEmpty = (dir: string): boolean => {
+  if (!existsSync(dir)) return true;
+
+  const files = getAllFiles(dir);
+
+  return files.length === 0;
 };
 
 export interface SourceConfig {
@@ -231,7 +256,7 @@ export const copyDirectoryRecursive = (
   repoRoot: string,
   verbose = true,
 ) => {
-  if (!existsSync(sourceDir)) return;
+  if (!existsSync(sourceDir) || isDirectoryEmpty(sourceDir)) return;
 
   const files = getAllFiles(sourceDir);
 

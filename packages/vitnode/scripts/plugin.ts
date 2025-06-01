@@ -6,8 +6,10 @@ import { basename, join, relative } from 'path';
 import {
   buildInitialRouteMap,
   copyFile,
+  findLocaleRoot,
   findRepoRoot,
   getAllFiles,
+  isDirectoryEmpty,
   routeKey,
   type SourceConfig,
 } from './shared/file-utils';
@@ -15,7 +17,7 @@ import {
 export const processPlugin = ({ initMessage }: { initMessage: string }) => {
   const pluginDir = process.cwd();
   const repoRoot = findRepoRoot(pluginDir);
-  const localeRoot = join(repoRoot, 'apps', 'web', 'src', 'app', '[locale]');
+  const localeRoot = findLocaleRoot(repoRoot);
   const routeMap = buildInitialRouteMap(localeRoot);
 
   // Get the package name from package.json for imports
@@ -57,6 +59,7 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
     '(auth)',
     join('(plugins)', `(${pluginPathName})`),
   );
+  const langDest = join(repoRoot, 'apps', 'web', 'src', 'langs', pluginName);
 
   // tell the copier about both trees
   const sources: SourceConfig[] = [
@@ -65,11 +68,16 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
       destinationDir: adminDest,
     },
     { sourceDir: join(pluginDir, 'src', 'app'), destinationDir: mainDest },
+    { sourceDir: join(pluginDir, 'src', 'langs'), destinationDir: langDest },
   ];
 
-  // Create destination directories if they don't exist
-  for (const { destinationDir } of sources) {
-    if (!existsSync(destinationDir)) {
+  // Create destination directories if they don't exist and source directories are not empty
+  for (const { sourceDir, destinationDir } of sources) {
+    if (
+      existsSync(sourceDir) &&
+      !isDirectoryEmpty(sourceDir) &&
+      !existsSync(destinationDir)
+    ) {
       mkdirSync(destinationDir, { recursive: true });
     }
   }
@@ -123,7 +131,7 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
 
   const sourceDirs = sources
     .map(s => s.sourceDir)
-    .filter(dir => existsSync(dir));
+    .filter(dir => existsSync(dir) && !isDirectoryEmpty(dir));
 
   const watcher = chokidar.watch(sourceDirs, {
     ignoreInitial: false,
