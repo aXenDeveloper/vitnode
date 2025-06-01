@@ -9,6 +9,9 @@
   },
   "core": {
     "global": {
+      "date": "{date, date}",
+      "date_medium": "{date, date, medium}",
+      "date_short": "{date, date, short}",
       "register": "Register",
       "login": "Login",
       "save": "Save",
@@ -19,6 +22,10 @@
       "or": "or",
       "back_home": "Back to home",
       "go_back": "Go back",
+      "select_option": "Select an option",
+      "select_options": "Select options",
+      "go_to_prev_page": "Go to previous page",
+      "go_to_next_page": "Go to next page",
       "errors": {
         "title": "Oops! Something went wrong.",
         "internal_server_error": "Internal server error.",
@@ -41,7 +48,8 @@
         }
       },
       "user_bar": {
-        "log_out": "Log out"
+        "log_out": "Log out",
+        "admin_cp": "Admin CP"
       }
     },
     "auth": {
@@ -50,9 +58,9 @@
         "access_denied": "You have denied access to the application or the request has expired. Please try again."
       },
       "sign_up": {
-        "desc": "Create your account to get started.",
+        "desc": "Hello there! Create your account to get started.",
         "already_have_account": "You already have an account? <link>Sign in</link>.",
-        "submit": "Sign up",
+        "submit": "Register",
         "username": {
           "label": "Username",
           "min_length": "Username must be at least 3 characters long.",
@@ -87,20 +95,49 @@
         }
       },
       "sign_in": {
-        "desc": "Welcome back! Please sign in to your account.",
+        "desc": "Welcome back! Sign in to your account.",
         "do_not_have_account": "Don't have an account? <link>Sign up</link>.",
         "email": {
           "label": "Email",
           "invalid": "Invalid email address."
         },
-        "password": "Password",
+        "password": {
+          "label": "Password",
+          "required": "Password is required."
+        },
         "errors": {
           "access_denied": {
             "title": "Invalid credentials",
             "desc": "The email address or password was incorrect. Please try again (make sure your caps lock is off)."
           }
         },
-        "submit": "Sign in"
+        "submit": "Login"
+      }
+    }
+  },
+  "admin": {
+    "dashboard": {
+      "dev_mode": "Development Mode",
+      "version": "Version: {version}"
+    },
+    "global": {
+      "nav": {
+        "core": "Core",
+        "dashboard": "Dashboard",
+        "users": {
+          "title": "Users",
+          "list": "User List"
+        },
+        "user_bar": {
+          "home_page": "Home Page"
+        }
+      }
+    },
+    "user": {
+      "list": {
+        "user": "User",
+        "createdAt": "Created At",
+        "emailNotVerified": "Email Not Verified"
       }
     }
   }

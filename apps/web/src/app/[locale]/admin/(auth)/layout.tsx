@@ -1,7 +1,10 @@
-import { AdminLayout } from '@vitnode/core/views/admin/layouts/admin-layout';
+import {
+  AdminLayout,
+  type AdminLayoutProps,
+} from '@vitnode/core/views/admin/layouts/admin-layout';
 
-export default function Layout(
-  props: React.ComponentProps<typeof AdminLayout>,
-) {
-  return <AdminLayout {...props} />;
+import { vitNodeConfig } from '@/vitnode.config';
+
+export default function Layout(props: AdminLayoutProps) {
+  return <AdminLayout vitNodeConfig={vitNodeConfig} {...props} />;
 }

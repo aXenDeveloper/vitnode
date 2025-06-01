@@ -5,10 +5,12 @@
   "root": true,
   "pages": [
     "index",
-    "---Plugins---",
+    "---Plugins by VitNode---",
     "blog",
     "---Custom Plugin---",
     "create",
-    "..."
+    "...",
+    "---Database---",
+    "database"
   ]
 }

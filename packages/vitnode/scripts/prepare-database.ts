@@ -10,13 +10,12 @@ import { core_languages, core_languages_words } from '@/database/languages.js';
 import { core_moderators_permissions } from '@/database/moderators.js';
 import { core_roles } from '@/database/roles.js';
 
+import { preparePluginsFiles } from './prepare-plugins-files.js';
 import { runInteractiveShellCommand } from './run-interactive-shell-command.js';
 
 dotenv.config({
   path: join(process.cwd(), '..', '..', '.env'),
 });
-
-console.log(join(process.cwd(), '..', '..', '.env'));
 
 const dbClient = drizzle({
   connection:
@@ -154,11 +153,13 @@ export const prepareDatabase = async ({
 }: {
   initMessage: string;
 }) => {
-  console.log(`${initMessage} [1/3] Generate migrations...`);
+  console.log(`${initMessage} [1/4] Prepare plugins files...`);
+  await preparePluginsFiles();
+  console.log(`${initMessage} [2/4] Generate migrations...`);
   await generateDatabaseMigrations();
-  console.log(`${initMessage} [2/3] Run migrations...`);
+  console.log(`${initMessage} [3/4] Run migrations...`);
   await runMigrations();
-  console.log(`\n${initMessage} [3/3] Insert initial data...`);
+  console.log(`\n${initMessage} [4/4] Insert initial data...`);
   await initialDataForDatabase();
   console.log(`${initMessage} \x1b[32mDatabase prepared successfully.\x1b[0m`);
   process.exit(0);

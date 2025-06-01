@@ -2,23 +2,25 @@
 import { existsSync, readFileSync } from 'fs';
 import { join, relative } from 'path';
 
-import { getConfig } from '../get-config';
+import { getConfig } from './get-config';
 import {
   buildInitialRouteMap,
   copyDirectoryRecursive,
+  findLocaleRoot,
   findRepoRoot,
+  isDirectoryEmpty,
   type SourceConfig,
-} from '../shared/file-utils';
+} from './shared/file-utils';
 
-export const preparePlugins = async () => {
+export const preparePluginsFiles = async () => {
   const config = await getConfig();
   const plugins: string[] = [
-    ...config.plugins.map(plugin => plugin.name),
+    ...config.plugins.map(plugin => plugin.id),
     'vitnode',
   ];
 
   const repoRoot = findRepoRoot(process.cwd());
-  const localeRoot = join(repoRoot, 'apps', 'web', 'src', 'app', '[locale]');
+  const localeRoot = findLocaleRoot(repoRoot);
   const routeMap = buildInitialRouteMap(localeRoot);
 
   await Promise.all(
@@ -68,6 +70,14 @@ export const preparePlugins = async () => {
         '(auth)',
         join('(plugins)', `(${pluginPathName})`),
       );
+      const langDest = join(
+        repoRoot,
+        'apps',
+        'web',
+        'src',
+        'langs',
+        pluginName,
+      );
 
       // Define source configurations for this plugin
       const sources: SourceConfig[] = [
@@ -79,11 +89,15 @@ export const preparePlugins = async () => {
           sourceDir: join(pluginPath, 'src', 'app'),
           destinationDir: mainDest,
         },
+        {
+          sourceDir: join(pluginPath, 'src', 'langs'),
+          destinationDir: langDest,
+        },
       ];
 
       // Copy files for each source directory
       for (const { sourceDir, destinationDir } of sources) {
-        if (existsSync(sourceDir)) {
+        if (existsSync(sourceDir) && !isDirectoryEmpty(sourceDir)) {
           console.log(
             `\x1b[36mCopying ${pluginName}:\x1b[0m ${relative(repoRoot, sourceDir)} → ${relative(repoRoot, destinationDir)}`,
           );

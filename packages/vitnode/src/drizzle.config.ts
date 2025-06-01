@@ -12,14 +12,14 @@ export const defineVitNodeDrizzleConfig = ({
 }: Config & {
   vitNodeApiConfig: VitNodeApiConfig;
 }) => {
-  const pluginNames = vitNodeApiConfig.plugins.map(plugin => plugin.name);
+  const pluginId = vitNodeApiConfig.plugins.map(plugin => plugin.id);
 
-  const pluginPaths = ['@vitnode/core', ...pluginNames]
-    .map(pluginName => {
+  const pluginPaths = ['@vitnode/core', ...pluginId]
+    .map(itemId => {
       const pluginPath = resolve(
         process.cwd(),
         'node_modules',
-        pluginName,
+        itemId,
         'src',
         'database',
       );

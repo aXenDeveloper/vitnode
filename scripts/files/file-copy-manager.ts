@@ -53,7 +53,7 @@ export class FileCopyManager {
       'src/app/[locale]',
       'src/app/favicon.ico',
       'src/app/global-error.tsx',
-      'src/app/globals.css',
+      'src/app/global.css',
       'src/app/layout.tsx',
       'src/app/not-found.tsx',
       'src/app/api',

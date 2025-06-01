@@ -92,7 +92,7 @@ export function VitNodeAPI({
   });
 
   [newBuildPluginApiCore, ...vitNodeApiConfig.plugins].map(root => {
-    app.route(`/${root.name}`, root.hono);
+    app.route(`/${root.id}`, root.hono);
   });
 
   return app;

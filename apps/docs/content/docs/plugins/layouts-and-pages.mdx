@@ -3,85 +3,245 @@ title: Layouts and Pages
 description: Learn how to create custom layouts and pages for your VitNode plugins
 ---
 
-VitNode plugins follow the same patterns as Next.js for layouts and pages. Check out the [Next.js documentation](https://nextjs.org/docs/app/getting-started/layouts-and-pages) for detailed information.
+VitNode plugins use the same file-system based router as Next.js App Router. This means you can create pages and layouts using the same patterns you're familiar with from Next.js development.
 
 <Callout>
-  Next.js patterns for **Layouts and Pages** work only within the `app` and
-  `app_admin` directories. Our watch mode will **automatically copy files** from
-  your plugin to the root of the VitNode application, allowing you to create
-  custom pages and layouts for your plugins.
+  VitNode's watch mode automatically copies files from your plugin's `app` and
+  `app_admin` directories to the root application, enabling seamless integration
+  with Next.js App Router patterns.
 </Callout>
 
-## Frontend Pages
+## Pages
 
-Create pages in the `src/app` directory with a `page.tsx` file:
+Pages are React components exported from `page.tsx` files. They are the UI that is unique to a specific route.
 
-```tsx title="plugins/{plugin_name}/src/app/welcome/page.tsx"
-export default function Page() {
-  return <h1>Hello VitNode!</h1>;
+### Creating Pages
+
+Create a page by adding a `page.tsx` file inside the `src/app` directory:
+
+```tsx title="plugins/{plugin_name}/src/app/page.tsx"
+export default function HomePage() {
+  return <h1>Hello from Plugin Homepage!</h1>;
 }
 ```
 
-This creates a page at `http://localhost:3000/welcome`.
+This creates a page accessible at the root of your plugin's route.
 
-### AdminCP Pages
+### Nested Routes
 
-Create admin pages in the `src/app_admin` directory:
+Create nested routes by creating folders. Each folder represents a route segment:
 
-```tsx title="plugins/{plugin_name}/src/app_admin/welcome/page.tsx"
-export default function Page() {
-  return <h1>Hello VitNode AdminCP!</h1>;
+```tsx title="plugins/{plugin_name}/src/app/dashboard/page.tsx"
+export default function DashboardPage() {
+  return <h1>Dashboard Page</h1>;
 }
 ```
 
-This creates an admin page at `http://localhost:3000/admin/welcome`.
+```tsx title="plugins/{plugin_name}/src/app/dashboard/settings/page.tsx"
+export default function SettingsPage() {
+  return <h1>Settings Page</h1>;
+}
+```
 
-<Callout>
-  All pages in the `app_admin` directory are protected by default.
-</Callout>
+This creates:
+
+- `/dashboard` - Dashboard page
+- `/dashboard/settings` - Settings page
+
+### Dynamic Routes
+
+Create dynamic routes using square brackets `[folderName]`:
+
+```tsx title="plugins/{plugin_name}/src/app/posts/[id]/page.tsx"
+export default async function PostPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  return (
+    <div>
+      <h1>Post ID: {id}</h1>
+    </div>
+  );
+}
+```
+
+### Catch-all Routes
+
+Create catch-all routes using `[...folderName]`:
+
+```tsx title="plugins/{plugin_name}/src/app/docs/[...slug]/page.tsx"
+export default async function DocsPage({
+  params,
+}: {
+  params: Promise<{ slug: string[] }>;
+}) {
+  const { slug } = await params;
+
+  return (
+    <div>
+      <h1>Docs: {slug.join('/')}</h1>
+    </div>
+  );
+}
+```
 
 ## Layouts
 
-Create shared layouts using `layout.tsx` files, just like in Next.js App Router.
+Layouts are UI that is shared between multiple pages. They preserve state, remain interactive, and do not re-render.
 
-### Frontend Layouts
+### Root Layout
 
-Create layouts in the `src/app` directory:
+Create a root layout for your plugin:
 
-```tsx title="plugins/{plugin_name}/src/app/welcome/layout.tsx"
-export default function WelcomeLayout({
+```tsx title="plugins/{plugin_name}/src/app/layout.tsx"
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'My Plugin',
+  description: 'Welcome to my VitNode plugin',
+};
+
+export default function PluginLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <nav>Welcome Navigation</nav>
+    <div className="container mx-auto flex min-h-screen flex-col px-4">
+      <header>
+        <h1>My Plugin Header</h1>
+      </header>
       <main>{children}</main>
+      <footer>
+        <p>Plugin Footer</p>
+      </footer>
     </div>
   );
 }
 ```
 
-This layout will wrap all pages under the `/welcome` route.
+### Nested Layouts
 
-### AdminCP Layouts
+Create nested layouts for specific route segments:
 
-Create admin layouts in the `src/app_admin` directory:
-
-```tsx title="plugins/{plugin_name}/src/app_admin/welcome/layout.tsx"
-export default function AdminWelcomeLayout({
+```tsx title="plugins/{plugin_name}/src/app/dashboard/layout.tsx"
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <aside>Admin Sidebar</aside>
-      <main>{children}</main>
+    <div className="flex">
+      <nav className="w-64 border-r p-4">
+        <ul>
+          <li>
+            <a href="/dashboard">Overview</a>
+          </li>
+          <li>
+            <a href="/dashboard/settings">Settings</a>
+          </li>
+        </ul>
+      </nav>
+      <div className="flex-1 p-4">{children}</div>
     </div>
   );
 }
 ```
 
-This layout will wrap all admin pages under the `/admin/welcome` route.
+## AdminCP Pages and Layouts
+
+AdminCP follows the same patterns but uses the `src/app_admin` directory.
+
+### Pages
+
+```tsx title="plugins/{plugin_name}/src/app_admin/page.tsx"
+export default function AdminHomePage() {
+  return (
+    <div>
+      <h1>Plugin Admin Dashboard</h1>
+      <p>Manage your plugin settings here.</p>
+    </div>
+  );
+}
+```
+
+### Layouts
+
+```tsx title="plugins/{plugin_name}/src/app_admin/layout.tsx"
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="container mx-auto">
+      <aside className="w-64 border-r p-4">
+        <h2>Plugin Admin</h2>
+        <nav>
+          <ul>
+            <li>
+              <a href="/admin/plugin-name">Dashboard</a>
+            </li>
+            <li>
+              <a href="/admin/plugin-name/settings">Settings</a>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+      <main className="flex-1 p-4">{children}</main>
+    </div>
+  );
+}
+```
+
+<Callout>
+  All pages in the `app_admin` directory are automatically protected and require
+  admin authentication.
+</Callout>
+
+## Metadata
+
+Add metadata to your pages using the Metadata API:
+
+```tsx title="plugins/{plugin_name}/src/app/posts/[id]/page.tsx"
+import { Metadata } from 'next';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+
+  return {
+    title: `Post ${id}`,
+    description: `Details for post ${id}`,
+  };
+}
+
+export default async function PostPage({ params }: PageProps) {
+  const { id } = await params;
+
+  return <h1>Post: {id}</h1>;
+}
+```
+
+For more advanced patterns and features, check out the [Next.js App Router documentation - Metadata](https://nextjs.org/docs/app/getting-started/metadata-and-og-images).
+
+## API Reference
+
+<Cards>
+  <Card
+    title="page.js - Next.js Docs"
+    description="API reference for the page.js file."
+    href="https://nextjs.org/docs/app/api-reference/file-conventions/page"
+  />
+  <Card
+    title="layout.js - Next.js Docs"
+    description="API reference for the layout.js file."
+    href="https://nextjs.org/docs/app/api-reference/file-conventions/layout"
+  />
+</Cards>

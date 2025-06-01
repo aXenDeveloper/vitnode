@@ -1,5 +1,8 @@
 export interface BuildPluginReturn<P extends string = string> {
-  name: P;
+  adminNav?: {
+    label: string;
+  }[];
+  id: P;
 }
 
 export function buildPlugin<P extends string>(

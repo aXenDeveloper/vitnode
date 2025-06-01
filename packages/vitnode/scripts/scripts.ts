@@ -3,7 +3,6 @@
 
 import { processPlugin } from './plugin.js';
 import { prepareDatabase } from './prepare-database.js';
-import { prepareFiles } from './prepare/prepare-files.js';
 
 const initMessage = '\x1b[34m[VitNode]\x1b[0m';
 
@@ -19,10 +18,6 @@ switch (command) {
     if (flag === '--w' || flag === '--watch') {
       processPlugin({ initMessage });
     }
-    break;
-
-  case 'prepare':
-    void prepareFiles({ initMessage });
     break;
 
   default:

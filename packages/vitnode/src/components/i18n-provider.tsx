@@ -39,7 +39,7 @@ export async function I18nProvider<
   namespaces: NestedKey | NestedKey[];
 }) {
   const locale = await getLocale();
-  const messagesInit = await getMessages({ locale });
+  const messagesInit: object = await getMessages({ locale });
   const messages = pick(messagesInit, [
     'core.global',
     ...(Array.isArray(namespaces) ? namespaces : [namespaces]),

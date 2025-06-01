@@ -17,7 +17,7 @@ export interface PackageJSON {
   workspaces?: string[];
 }
 
-export const checkPluginName = (pluginName: string): null | PackageJSON => {
+export const checkPluginId = (pluginName: string): null | PackageJSON => {
   if (!CONFIG.node_development) return null;
 
   const path = join(process.cwd(), 'node_modules', pluginName, 'package.json');
