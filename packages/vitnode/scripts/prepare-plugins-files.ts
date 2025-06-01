@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
-import { existsSync, readFileSync } from 'fs';
+import { existsSync } from 'fs';
+import { readFile } from 'fs/promises';
 import { join, relative } from 'path';
 
 import { getConfig } from './get-config';
@@ -24,7 +25,7 @@ export const preparePluginsFiles = async () => {
   const routeMap = buildInitialRouteMap(localeRoot);
 
   await Promise.all(
-    plugins.map(pluginName => {
+    plugins.map(async pluginName => {
       const pluginPath = join(process.cwd(), 'node_modules', pluginName);
 
       // Get the package name from package.json for imports
@@ -33,7 +34,7 @@ export const preparePluginsFiles = async () => {
         const packageJsonPath = join(pluginPath, 'package.json');
         if (existsSync(packageJsonPath)) {
           const packageJson = JSON.parse(
-            readFileSync(packageJsonPath, 'utf-8'),
+            await readFile(packageJsonPath, 'utf-8'),
           );
           packageName = packageJson.name ?? '';
         }

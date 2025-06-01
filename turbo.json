@@ -13,28 +13,18 @@
     "db:push": {
       "dependsOn": ["^db:push"],
       "cache": false,
-      "env": [
-        "POSTGRES_URL",
-        "POSTGRES_PORT",
-        "POSTGRES_USER",
-        "POSTGRES_PASSWORD",
-        "POSTGRES_NAME",
-        "POSTGRES_SSL"
-      ]
+      "env": ["POSTGRES_URL"]
+    },
+    "build:plugins": {
+      "dependsOn": ["^build:plugins"],
+      "inputs": ["$TURBO_DEFAULT$"],
+      "outputs": ["dist/**"]
     },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build:plugins"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
-      "env": [
-        "LOGIN_TOKEN_SECRET",
-        "POSTGRES_URL",
-        "POSTGRES_PORT",
-        "POSTGRES_USER",
-        "POSTGRES_PASSWORD",
-        "POSTGRES_NAME",
-        "POSTGRES_SSL"
-      ]
+      "env": ["LOGIN_TOKEN_SECRET", "POSTGRES_URL"]
     },
     "build:scripts": {
       "dependsOn": ["^build:scripts"],
@@ -48,17 +38,10 @@
       "dependsOn": ["^lint:fix"]
     },
     "dev": {
+      "dependsOn": ["^build:plugins"],
       "cache": false,
       "persistent": true,
-      "env": [
-        "LOGIN_TOKEN_SECRET",
-        "POSTGRES_URL",
-        "POSTGRES_PORT",
-        "POSTGRES_USER",
-        "POSTGRES_PASSWORD",
-        "POSTGRES_NAME",
-        "POSTGRES_SSL"
-      ]
+      "env": ["LOGIN_TOKEN_SECRET", "POSTGRES_URL"]
     },
     "start": {
       "dependsOn": ["^start"]

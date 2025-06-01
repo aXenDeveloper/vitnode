@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "tsc && swc src -d dist --config-file .swcrc && tsc-alias -p tsconfig.json",
+    "build:plugins": "tsc && swc src -d dist --config-file .swcrc && tsc-alias -p tsconfig.json",
     "dev": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\" \"tsc-alias -w\" \"vitnode plugin --w\"",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
