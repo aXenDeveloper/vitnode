@@ -59,14 +59,31 @@ export class FileCopyManager {
       'src/app/api',
       'tsconfig.json',
       'postcss.config.mjs',
-      '.gitignore',
       'drizzle.config.ts',
       '.prettierrc.mjs',
-      '.gitignore',
     ];
+
+    // Handle special files with different names
+    const specialFiles = [{ source: '.gitignore', dest: 'gitignore_template' }];
 
     for (const relativePath of filesToCopy) {
       await this.copyFileOrDirectory(sourcePath, destPath, relativePath);
+    }
+
+    // Handle special files with different destination names
+    for (const { source, dest } of specialFiles) {
+      const from = join(sourcePath, source);
+      const to = join(destPath, dest);
+
+      const stats = existsSync(from) ? statSync(from) : null;
+      if (!stats) {
+        console.warn(`⚠ Source does not exist: ${from}`);
+        continue;
+      }
+
+      if (stats.isFile()) {
+        FileSystem.copyFile(from, to);
+      }
     }
   }
 }

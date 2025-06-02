@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto';
 import { existsSync } from 'fs';
-import { copyFile, cp, mkdir, readFile, writeFile } from 'fs/promises';
+import { copyFile, cp, mkdir, readFile, rename, writeFile } from 'fs/promises';
 import ora from 'ora';
 import { dirname, join } from 'path';
 import color from 'picocolors';
@@ -53,6 +53,10 @@ export const createVitNode = async ({
       recursive: true,
     });
   }
+
+  // Rename special files
+  spinner.text = 'Renaming special files...';
+  await rename(join(root, 'gitignore_template'), join(root, '.gitignore'));
 
   spinner.text = 'Creating package.json...';
   await createPackageJSON({
