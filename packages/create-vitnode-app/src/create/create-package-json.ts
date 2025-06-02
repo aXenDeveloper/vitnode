@@ -19,7 +19,7 @@ export const createPackageJSON = async ({
   root: string;
 }) => {
   const pkg: PackageJSON = JSON.parse(
-    await readFile(join(__dirname, '..', 'package.json'), 'utf-8'),
+    await readFile(join(__dirname, '..', '..', '..', 'package.json'), 'utf-8'),
   );
 
   const packageJson: PackageJSON = {

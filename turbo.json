@@ -21,7 +21,7 @@
       "outputs": ["dist/**"]
     },
     "build": {
-      "dependsOn": ["^build", "^build:plugins"],
+      "dependsOn": ["^build:plugins", "^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
       "env": ["LOGIN_TOKEN_SECRET", "POSTGRES_URL"]
@@ -38,7 +38,6 @@
       "dependsOn": ["^lint:fix"]
     },
     "dev": {
-      "dependsOn": ["^build:plugins"],
       "cache": false,
       "persistent": true,
       "env": ["LOGIN_TOKEN_SECRET", "POSTGRES_URL"]

@@ -63,7 +63,7 @@
   "scripts": {
     "build:scripts": "tsup",
     "start:scripts": "node dist/scripts/scripts.js plugin --w",
-    "build": "tsc && swc src -d dist --config-file .swcrc && tsc-alias -p tsconfig.json",
+    "build:plugins": "tsc && swc src -d dist --config-file .swcrc && tsc-alias -p tsconfig.json",
     "dev": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\" \"tsc-alias -w\" \"node dist/scripts/scripts.js plugin --w\"",
     "dev:email": "email dev",
     "lint": "eslint .",
