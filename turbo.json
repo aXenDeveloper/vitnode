@@ -21,7 +21,7 @@
       "outputs": ["dist/**"]
     },
     "build": {
-      "dependsOn": ["^build:plugins"],
+      "dependsOn": ["^build", "^build:plugins"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
       "env": ["LOGIN_TOKEN_SECRET", "POSTGRES_URL"]

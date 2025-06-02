@@ -1,5 +1,6 @@
+import { randomBytes } from 'crypto';
 import { existsSync } from 'fs';
-import { cp, mkdir } from 'fs/promises';
+import { copyFile, cp, mkdir, readFile, writeFile } from 'fs/promises';
 import ora from 'ora';
 import { dirname, join } from 'path';
 import color from 'picocolors';
@@ -7,12 +8,16 @@ import { fileURLToPath } from 'url';
 
 import type { CreateCliReturn } from '../questions.js';
 
+import { installDependencies } from '../helpers/install-dependencies.js';
 import { isFolderEmpty } from '../helpers/is-folder-empty.js';
+import { createPackageJSON } from './create-package-json.js';
 
 export const createVitNode = async ({
   root,
   appName,
   packageManager,
+  eslint,
+  install,
 }: CreateCliReturn & {
   appName: string;
   root: string;
@@ -37,11 +42,41 @@ export const createVitNode = async ({
     process.exit(1);
   }
 
-  // Copy the template files
   spinner.text = 'Copying files...';
   await cp(join(templatePath, 'root'), root, {
     recursive: true,
   });
+
+  if (eslint) {
+    spinner.text = 'Copying eslint files...';
+    await cp(join(templatePath, 'eslint'), root, {
+      recursive: true,
+    });
+  }
+
+  spinner.text = 'Creating package.json...';
+  await createPackageJSON({
+    root,
+    appName,
+    packageManager,
+    eslint,
+  });
+
+  spinner.text = 'Changing .env file...';
+  await copyFile(join(root, '.env.template'), join(root, '.env'));
+  const envPath = join(root, '.env');
+  const newEnv = (await readFile(envPath, 'utf-8')).replace(
+    'LOGIN_TOKEN_SECRET=vitnode_secret',
+    `LOGIN_TOKEN_SECRET=${randomBytes(32).toString('hex')}`,
+  );
+  await writeFile(envPath, newEnv);
+
+  if (install) {
+    spinner.text = 'Installing dependencies...';
+    await installDependencies({
+      packageManager,
+    });
+  }
 
   spinner.succeed(
     `${color.green('Success!')} Created ${color.cyan(appName)} at ${color.cyan(root)}`,

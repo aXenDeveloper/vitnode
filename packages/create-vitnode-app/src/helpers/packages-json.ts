@@ -8,6 +8,7 @@ export interface PackageJSON {
   pnpm?: Record<string, Record<string, string>>;
   private: boolean;
   scripts?: Record<string, string>;
+  type?: string;
   version: string;
   workspaces?: string[];
 }

@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "init": "vitnode init",
     "drizzle-kit": "drizzle-kit",
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit up && drizzle-kit generate && drizzle-kit migrate",
@@ -23,7 +22,7 @@
     "@hono/zod-openapi": "^0.19.8",
     "@hono/zod-validator": "^0.7.0",
     "@hookform/resolvers": "^5.0.1",
-    "@react-email/components": "0.0.41",
+    "@react-email/components": "^0.0.41",
     "@vitnode/blog": "workspace:*",
     "@vitnode/core": "workspace:*",
     "babel-plugin-react-compiler": "19.1.0-rc.2",
