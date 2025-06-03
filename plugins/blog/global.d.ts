@@ -1,5 +1,5 @@
-import type plugin from './src/langs/en.json';
-import type core from '@vitnode/core/langs/en.json';
+import type plugin from './src/locales/en.json';
+import type core from '@vitnode/core/locales/en.json';
 
 type Messages = typeof plugin & typeof core;
 

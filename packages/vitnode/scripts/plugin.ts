@@ -59,7 +59,7 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
     '(auth)',
     join('(plugins)', `(${pluginPathName})`),
   );
-  const langDest = join(repoRoot, 'apps', 'web', 'src', 'langs', pluginName);
+  const langDest = join(repoRoot, 'apps', 'web', 'src', 'locales', pluginName);
 
   // tell the copier about both trees
   const sources: SourceConfig[] = [
@@ -68,7 +68,7 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
       destinationDir: adminDest,
     },
     { sourceDir: join(pluginDir, 'src', 'app'), destinationDir: mainDest },
-    { sourceDir: join(pluginDir, 'src', 'langs'), destinationDir: langDest },
+    { sourceDir: join(pluginDir, 'src', 'locales'), destinationDir: langDest },
   ];
 
   // Create destination directories if they don't exist and source directories are not empty
@@ -131,7 +131,7 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
 
   const sourceDirs = sources
     .map(s => s.sourceDir)
-    .filter(dir => existsSync(dir) && !isDirectoryEmpty(dir));
+    .filter(dir => existsSync(dir));
 
   const watcher = chokidar.watch(sourceDirs, {
     ignoreInitial: false,

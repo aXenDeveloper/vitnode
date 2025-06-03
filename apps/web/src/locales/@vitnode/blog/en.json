@@ -1,0 +1,10 @@
+{
+  "@vitnode/blog": {
+    "title": "Blog",
+    "admin": {
+      "nav": {
+        "categories": "Categories"
+      }
+    }
+  }
+}

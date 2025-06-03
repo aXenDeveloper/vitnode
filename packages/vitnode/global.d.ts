@@ -1,4 +1,4 @@
-import type plugin from './src/langs/en.json';
+import type plugin from './src/locales/en.json';
 
 type Messages = typeof plugin;
 

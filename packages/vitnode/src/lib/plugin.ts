@@ -1,7 +1,19 @@
+import type { ItemNavAdmin } from '../views/admin/layouts/sidebar/nav/item';
+
+interface AdminNavItem
+  extends Pick<
+    React.ComponentProps<typeof ItemNavAdmin>,
+    'href' | 'icon' | 'isOpenInNewTab'
+  > {
+  id: string;
+}
+
 export interface BuildPluginReturn<P extends string = string> {
-  adminNav?: {
-    label: string;
-  }[];
+  admin?: {
+    nav?: (AdminNavItem & {
+      items?: Omit<AdminNavItem, 'icon'>[];
+    })[];
+  };
   id: P;
 }
 

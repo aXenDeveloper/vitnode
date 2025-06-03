@@ -29,6 +29,12 @@ or
 pnpm create vitnode-app@latest
 ```
 
+or
+
+```bash
+bun create vitnode-app@latest
+```
+
 ## Options
 
 | Option              | Description                                                |

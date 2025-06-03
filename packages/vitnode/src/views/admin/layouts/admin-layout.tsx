@@ -1,4 +1,4 @@
-import { ListIcon } from 'lucide-react';
+import { getTranslations } from 'next-intl/server';
 import { cookies } from 'next/headers';
 
 import { ThemeSwitcher } from '@/components/switchers/theme-switcher';
@@ -22,29 +22,34 @@ export const AdminLayout = async ({
 }: AdminLayoutProps & {
   vitNodeConfig: VitNodeConfig;
 }) => {
+  const t = await getTranslations();
   const session = await getSessionAdminApi();
   const cookieStore = await cookies();
-  const defaultOpen = cookieStore.get('sidebar_state')?.value === 'true';
+  const defaultOpen =
+    cookieStore.get(vitNodeConfig.admin?.sidebarCookieName ?? 'sidebar_state')
+      ?.value === 'true';
   if (!session) return null;
 
   const pluginNav: NavAdminParent[] = vitNodeConfig.plugins
-    .filter(plugin => plugin.adminNav)
+    .filter(plugin => plugin.admin?.nav)
     .map(plugin => ({
       id: plugin.id,
-      title: plugin.id,
-      items: [
-        {
-          href: '/admin/blog/categories',
-          title: 'Categories',
-          icon: <ListIcon />,
-          items: [
-            {
-              href: '/admin/blog/categories',
-              title: 'List',
-            },
-          ],
-        },
-      ],
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      title: t(`${plugin.id}.title`),
+      items: (plugin.admin?.nav ?? []).map(item => ({
+        ...item,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
+        title: t(`${plugin.id}.admin.nav.${item.id}`),
+        items:
+          item.items?.map(subItem => ({
+            ...subItem,
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            title: t(`${plugin.id}.admin.nav.${item.id}.${subItem.id}`),
+          })) ?? [],
+      })),
     }));
 
   return (

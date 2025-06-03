@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 interface ItemNavAdminProps {
   href: string;
   icon?: React.ReactNode;
+  isOpenInNewTab?: boolean;
   title: string;
 }
 
@@ -28,6 +29,7 @@ export const ItemNavAdmin = ({
   title,
   icon,
   items = [],
+  isOpenInNewTab,
 }: ItemNavAdminProps & {
   items?: Omit<ItemNavAdminProps, 'icon'>[];
 }) => {
@@ -42,7 +44,12 @@ export const ItemNavAdmin = ({
     return (
       <SidebarMenuItem>
         <SidebarMenuButton asChild tooltip={title}>
-          <Link href={href} prefetch>
+          <Link
+            href={href}
+            prefetch
+            rel={isOpenInNewTab ? 'noopener noreferrer' : undefined}
+            target={isOpenInNewTab ? '_blank' : undefined}
+          >
             {content}
           </Link>
         </SidebarMenuButton>
@@ -69,7 +76,14 @@ export const ItemNavAdmin = ({
             {items.map(item => (
               <SidebarMenuSubItem key={item.href}>
                 <SidebarMenuSubButton asChild>
-                  <Link href={item.href} prefetch>
+                  <Link
+                    href={item.href}
+                    prefetch
+                    rel={
+                      item.isOpenInNewTab ? 'noopener noreferrer' : undefined
+                    }
+                    target={item.isOpenInNewTab ? '_blank' : undefined}
+                  >
                     {item.title}
                   </Link>
                 </SidebarMenuSubButton>

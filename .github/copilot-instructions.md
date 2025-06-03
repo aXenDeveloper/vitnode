@@ -26,7 +26,6 @@ VitNode is a comprehensive framework designed to simplify and accelerate applica
 - Use `next-intl` for internationalization
 - Use `t('key')` for translation keys
 - Use `getTranslation` function for server components but `useTranslation` for client components
-- Language keys should be added in `apps/web/src/plugins/core/langs/en.json` file
 
 ## Backend Development (Hono.js)
 

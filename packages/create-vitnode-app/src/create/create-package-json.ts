@@ -82,7 +82,7 @@ export const createPackageJSON = async ({
   };
 
   await writeFile(
-    join(root, 'apps', 'frontend', 'package.json'),
+    join(root, 'package.json'),
     JSON.stringify(packageJson, null, 2),
   );
 };

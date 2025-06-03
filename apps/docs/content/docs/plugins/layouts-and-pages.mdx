@@ -151,57 +151,6 @@ export default function DashboardLayout({
 }
 ```
 
-## AdminCP Pages and Layouts
-
-AdminCP follows the same patterns but uses the `src/app_admin` directory.
-
-### Pages
-
-```tsx title="plugins/{plugin_name}/src/app_admin/page.tsx"
-export default function AdminHomePage() {
-  return (
-    <div>
-      <h1>Plugin Admin Dashboard</h1>
-      <p>Manage your plugin settings here.</p>
-    </div>
-  );
-}
-```
-
-### Layouts
-
-```tsx title="plugins/{plugin_name}/src/app_admin/layout.tsx"
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="container mx-auto">
-      <aside className="w-64 border-r p-4">
-        <h2>Plugin Admin</h2>
-        <nav>
-          <ul>
-            <li>
-              <a href="/admin/plugin-name">Dashboard</a>
-            </li>
-            <li>
-              <a href="/admin/plugin-name/settings">Settings</a>
-            </li>
-          </ul>
-        </nav>
-      </aside>
-      <main className="flex-1 p-4">{children}</main>
-    </div>
-  );
-}
-```
-
-<Callout>
-  All pages in the `app_admin` directory are automatically protected and require
-  admin authentication.
-</Callout>
-
 ## Metadata
 
 Add metadata to your pages using the Metadata API:

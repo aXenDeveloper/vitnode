@@ -7,6 +7,9 @@ import type { SSOApiPlugin } from './api/models/sso';
 import type { BuildPluginReturn } from './lib/plugin';
 
 export interface VitNodeConfig<AppLocales extends string[] = string[]> {
+  admin?: {
+    sidebarCookieName?: string;
+  };
   debug?: boolean;
   i18n: {
     defaultLocale: AppLocales[number];
@@ -78,7 +81,7 @@ export const handleRequestConfig = async ({
   // Import and merge messages from all plugins
   const messagesPromises = pluginsId.map(async pluginId => {
     try {
-      const messages = await import(`@/langs/${pluginId}/${locale}.json`);
+      const messages = await import(`@/locales/${pluginId}/${locale}.json`);
 
       return messages.default;
     } catch {

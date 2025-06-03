@@ -9,8 +9,11 @@
     "blog",
     "---Custom Plugin---",
     "create",
-    "...",
+    "---UI---",
+    "layouts-and-pages",
+    "admin-page",
     "---Database---",
-    "database"
+    "database",
+    "..."
   ]
 }

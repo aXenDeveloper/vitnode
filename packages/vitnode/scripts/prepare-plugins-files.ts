@@ -76,7 +76,7 @@ export const preparePluginsFiles = async () => {
         'apps',
         'web',
         'src',
-        'langs',
+        'locales',
         pluginName,
       );
 
@@ -91,7 +91,7 @@ export const preparePluginsFiles = async () => {
           destinationDir: mainDest,
         },
         {
-          sourceDir: join(pluginPath, 'src', 'langs'),
+          sourceDir: join(pluginPath, 'src', 'locales'),
           destinationDir: langDest,
         },
       ];

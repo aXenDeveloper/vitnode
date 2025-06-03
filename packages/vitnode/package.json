@@ -58,7 +58,7 @@
       "default": "./dist/src/*.js"
     },
     "./config/next.config": "./config/next.config.ts",
-    "./langs/en.json": "./src/langs/en.json"
+    "./locales/en.json": "./src/locales/en.json"
   },
   "scripts": {
     "build:scripts": "tsup",
