@@ -9,6 +9,7 @@ import { getSessionAdminApi } from '@/lib/api/get-session-admin-api';
 import type { VitNodeConfig } from '../../../vitnode.config';
 import type { NavAdminParent } from './sidebar/nav/nav';
 
+import { I18nProvider } from '../../../components/i18n-provider';
 import { SidebarAdmin } from './sidebar/sidebar';
 import { UserBarAdmin } from './user-bar/user-bar';
 
@@ -36,36 +37,38 @@ export const AdminLayout = async ({
       id: plugin.pluginId,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
-      title: t(`${plugin.id}.title`),
+      title: t(`${plugin.pluginId}.title`),
       items: (plugin.admin?.nav ?? []).map(item => ({
         ...item,
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-expect-error
-        title: t(`${plugin.id}.admin.nav.${item.id}`),
+        title: t(`${plugin.pluginId}.admin.nav.${item.id}`),
         items:
           item.items?.map(subItem => ({
             ...subItem,
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-expect-error
-            title: t(`${plugin.id}.admin.nav.${item.id}.${subItem.id}`),
+            title: t(`${plugin.pluginId}.admin.nav.${item.id}.${subItem.id}`),
           })) ?? [],
       })),
     }));
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <SidebarAdmin pluginNav={pluginNav} />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
+    <I18nProvider namespaces={['admin.global']}>
+      <SidebarProvider defaultOpen={defaultOpen}>
+        <SidebarAdmin pluginNav={pluginNav} />
+        <SidebarInset>
+          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+            <SidebarTrigger className="-ml-1" />
 
-          <div className="ml-auto flex items-center justify-center gap-2 px-2">
-            <ThemeSwitcher />
-            <UserBarAdmin user={session.user} />
-          </div>
-        </header>
-        {children}
-      </SidebarInset>
-    </SidebarProvider>
+            <div className="ml-auto flex items-center justify-center gap-2 px-2">
+              <ThemeSwitcher />
+              <UserBarAdmin user={session.user} />
+            </div>
+          </header>
+          {children}
+        </SidebarInset>
+      </SidebarProvider>
+    </I18nProvider>
   );
 };

@@ -1,4 +1,4 @@
-import type { Context, Env, Input } from 'hono';
+import type { Context } from 'hono';
 
 import { and, eq, gt } from 'drizzle-orm';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
@@ -8,11 +8,11 @@ import { CONFIG } from '@/lib/config';
 
 import { UserModel } from './user';
 
-export class SessionModel<T extends Env> {
-  constructor(c: Context<T, '/', Input>) {
+export class SessionModel {
+  constructor(c: Context) {
     this.c = c;
   }
-  protected readonly c: Context<T, '/', Input>;
+  protected readonly c: Context;
 
   async createSessionByUserId(userId: number) {
     // Generate secure random bytes using Web Crypto API

@@ -1,4 +1,4 @@
-import type { Context, Env, Input } from 'hono';
+import type { Context } from 'hono';
 
 import { and, count, eq, or } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
@@ -10,7 +10,7 @@ import { core_users } from '@/database/users';
 import { removeSpecialCharacters } from '@/lib/special-characters';
 
 const getDefaultData = async (
-  c: Context<Env, '/', Input>,
+  c: Context,
 ): Promise<{
   emailVerified: boolean;
   roleId: number;
@@ -77,7 +77,7 @@ export const signUp = async (
     name: string;
     newsletter?: boolean;
   },
-  c: Context<Env, '/', Input>,
+  c: Context,
 ) => {
   const convertToNameSEO = removeSpecialCharacters(name);
   const checkIfUserExist = await c

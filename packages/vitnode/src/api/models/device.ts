@@ -1,4 +1,4 @@
-import type { Context, Env, Input } from 'hono';
+import type { Context } from 'hono';
 
 import { eq } from 'drizzle-orm';
 import { getCookie, setCookie } from 'hono/cookie';
@@ -8,11 +8,11 @@ import { CONFIG } from '@/lib/config';
 
 import { getUserIp } from '../lib/get-user-ip';
 
-export class DeviceModel<T extends Env> {
-  constructor(c: Context<T, '/', Input>) {
+export class DeviceModel {
+  constructor(c: Context) {
     this.c = c;
   }
-  protected readonly c: Context<T, '/', Input>;
+  protected readonly c: Context;
 
   private async createDevice() {
     const [device] = await this.c

@@ -1,4 +1,4 @@
-import type { Context, Env, Input } from 'hono';
+import type { Context } from 'hono';
 
 import crypto from 'crypto';
 import { and, eq } from 'drizzle-orm';
@@ -28,12 +28,12 @@ export const getRedirectUri = (code: string) =>
   new URL(`${CONFIG.frontend.href}login/sso/${code}`).toString();
 
 export class SSOModel {
-  constructor(c: Context<Env, '/', Input>) {
+  constructor(c: Context) {
     this.c = c;
     this.plugins = c.get('core').authorization.ssoPlugins;
   }
 
-  private readonly c: Context<Env, '/', Input>;
+  private readonly c: Context;
   private readonly plugins: SSOApiPlugin[];
 
   private readonly signUpUser = async ({
@@ -41,7 +41,7 @@ export class SSOModel {
     user,
     c,
   }: {
-    c: Context<Env, '/', Input>;
+    c: Context;
     providerId: string;
     user: {
       email: string;

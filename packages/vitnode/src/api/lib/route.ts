@@ -2,13 +2,18 @@ import type { RouteConfig, RouteHandler } from '@hono/zod-openapi';
 
 import { createRoute as createRouteHono } from '@hono/zod-openapi';
 
+import {
+  type EnvVitNode,
+  pluginMiddleware,
+} from '../middlewares/global/global';
+
 type RoutingPath<P extends string> =
   P extends `${infer Head}/{${infer Param}}${infer Tail}`
     ? `${Head}/:${Param}${RoutingPath<Tail>}`
     : P;
 
 type ValidHandler<R extends RouteConfig> = (
-  c: Parameters<RouteHandler<R>>[0],
+  c: Parameters<RouteHandler<R, EnvVitNode>>[0],
 ) => ReturnType<RouteHandler<R>>;
 
 export const buildRoute = <
@@ -43,6 +48,14 @@ export const buildRoute = <
   return {
     route: createRouteHono({
       tags,
+      middleware: [
+        pluginMiddleware(pluginId),
+        ...(Array.isArray(route.middleware)
+          ? route.middleware
+          : route.middleware
+            ? [route.middleware]
+            : []),
+      ],
       ...route,
     }) as R & {
       getRoutingPath: () => RoutingPath<R['path']>;

@@ -1,7 +1,6 @@
-import type { Context, Input } from 'hono';
-import type { Env } from 'hono';
+import type { Context } from 'hono';
 
-export function getUserIp<T extends Env>(c: Context<T, '/', Input>): string {
+export const getUserIp = (c: Context): string => {
   const ip: string = c.req.header('x-forwarded-for')?.toString() ?? '0.0.0.0';
 
   if (ip === '0.0.0.0') {
@@ -12,4 +11,4 @@ export function getUserIp<T extends Env>(c: Context<T, '/', Input>): string {
   }
 
   return ip;
-}
+};

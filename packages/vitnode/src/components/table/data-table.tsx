@@ -63,9 +63,11 @@ export function DataTable<T extends DataTableTMin>(
     React.ComponentProps<typeof PaginationDataTable> & {
       columns: {
         cell?: (data: { allData: T[]; row: T }) => React.ReactNode;
+        className?: string;
         id: keyof T;
         label: string;
       }[];
+      customNotFoundComponent?: React.ReactNode;
       edges: T[];
       order: {
         columns?: (keyof T)[];

@@ -1,4 +1,4 @@
-import type { Context, Env, Input } from 'hono';
+import type { Context } from 'hono';
 
 import { and, eq, gt, or } from 'drizzle-orm';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
@@ -9,11 +9,11 @@ import { CONFIG } from '@/lib/config';
 
 import { UserModel } from './user';
 
-export class SessionAdminModel<T extends Env> {
-  constructor(c: Context<T, '/', Input>) {
+export class SessionAdminModel {
+  constructor(c: Context) {
     this.c = c;
   }
-  protected readonly c: Context<T, '/', Input>;
+  protected readonly c: Context;
 
   async checkIfUserIsAdmin(userId: number) {
     const user = await new UserModel().getUserById({ id: userId, c: this.c });

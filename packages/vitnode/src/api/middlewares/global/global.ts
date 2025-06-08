@@ -11,42 +11,13 @@ import { SessionAdminModel } from '@/api/models/session-admin';
 
 import type { SSOApiPlugin } from '../../models/sso';
 
-declare module 'hono' {
-  interface ContextVariableMap {
-    admin: null | {
-      user: {
-        avatarColor: string;
-        birthday: Date | null;
-        createdAt: Date;
-        email: string;
-        emailVerified: boolean;
-        id: number;
-        name: string;
-        nameCode: string;
-        newsletter: boolean;
-        roleId: number;
-      };
-    };
-    core: {
-      authorization: {
-        adminCookieExpires: number;
-        adminCookieName: string;
-        cookie_expires: number;
-        cookieName: string;
-        cookieSecure: boolean;
-        deviceCookieExpires: number;
-        deviceCookieName: string;
-        ssoPlugins: SSOApiPlugin[];
-      };
-      emailProvider?: EmailApiPlugin;
-      metadata: {
-        shortTitle?: string;
-        title: string;
-      };
-    };
-    db: Pick<VitNodeApiConfig, 'dbProvider'>['dbProvider'];
-    deviceId: number;
-    user: null | {
+export interface EnvVitNode extends Env {
+  Variables: EnvVariablesVitNode;
+}
+
+interface EnvVariablesVitNode {
+  admin: null | {
+    user: {
       avatarColor: string;
       birthday: Date | null;
       createdAt: Date;
@@ -58,7 +29,46 @@ declare module 'hono' {
       newsletter: boolean;
       roleId: number;
     };
-  }
+  };
+  core: {
+    authorization: {
+      adminCookieExpires: number;
+      adminCookieName: string;
+      cookie_expires: number;
+      cookieName: string;
+      cookieSecure: boolean;
+      deviceCookieExpires: number;
+      deviceCookieName: string;
+      ssoPlugins: SSOApiPlugin[];
+    };
+    emailProvider?: EmailApiPlugin;
+    metadata: {
+      shortTitle?: string;
+      title: string;
+    };
+  };
+  db: Pick<VitNodeApiConfig, 'dbProvider'>['dbProvider'];
+  deviceId: number;
+  plugin: {
+    id: string;
+  };
+  user: null | {
+    avatarColor: string;
+    birthday: Date | null;
+    createdAt: Date;
+    email: string;
+    emailVerified: boolean;
+    id: number;
+    name: string;
+    nameCode: string;
+    newsletter: boolean;
+    roleId: number;
+  };
+}
+
+declare module 'hono' {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  interface ContextVariableMap extends EnvVariablesVitNode {}
 }
 
 export const globalMiddleware = ({
@@ -68,7 +78,7 @@ export const globalMiddleware = ({
   dbProvider,
 }: Pick<VitNodeApiConfig, 'authorization' | 'dbProvider' | 'emailProvider'> &
   Pick<VitNodeConfig, 'metadata'>) => {
-  return async (c: Context<Env, '*'>, next: Next) => {
+  return async (c: Context, next: Next) => {
     c.set('db', dbProvider);
 
     c.set('core', {
@@ -99,8 +109,17 @@ export const globalMiddleware = ({
   };
 };
 
+export const pluginMiddleware = (pluginId: string) => {
+  return async (c: Context, next: Next) => {
+    c.set('plugin', {
+      id: pluginId,
+    });
+    await next();
+  };
+};
+
 export const globalAdminMiddleware = () => {
-  return async (c: Context<Env, '*'>, next: Next) => {
+  return async (c: Context, next: Next) => {
     const user = await new SessionAdminModel(c).getUser();
     if (!user) throw new HTTPException(403);
     c.set('admin', {

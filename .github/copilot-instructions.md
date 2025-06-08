@@ -32,6 +32,7 @@ VitNode is a comprehensive framework designed to simplify and accelerate applica
 - Use @hono/zod-openapi or Zod 3 for schema validation
 - Use PostgreSQL with Drizzle ORM
 - Use `t.serial().primaryKey()` for all database IDs
+- To get access to database, use `c.get('database')` by Hono.js context
 
 ## Documentation (\*.mdx files)
 

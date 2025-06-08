@@ -9,6 +9,10 @@
   },
   "core": {
     "global": {
+      "no_results": {
+        "title": "No results found",
+        "desc": "Try adjusting your search or filter criteria."
+      },
       "date": "{date, date}",
       "date_medium": "{date, date, medium}",
       "date_short": "{date, date, short}",

@@ -1,16 +1,10 @@
-import type { Context, Env, Input } from 'hono';
+import type { Context } from 'hono';
 
 import { eq } from 'drizzle-orm';
 
 import { core_users } from '@/database/users';
 
-export async function getUserById<T extends Env>({
-  id,
-  c,
-}: {
-  c: Context<T, '/', Input>;
-  id: number;
-}) {
+export const getUserById = async ({ id, c }: { c: Context; id: number }) => {
   const [user] = await c
     .get('db')
     .select({
@@ -31,4 +25,4 @@ export async function getUserById<T extends Env>({
   if (!user) return null;
 
   return user;
-}
+};

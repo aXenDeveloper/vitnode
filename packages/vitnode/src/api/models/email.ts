@@ -1,4 +1,4 @@
-import type { Context, ContextVariableMap, Env, Input } from 'hono';
+import type { Context, ContextVariableMap } from 'hono';
 
 import { HTTPException } from 'hono/http-exception';
 
@@ -12,12 +12,12 @@ export interface EmailApiPlugin {
   }) => Promise<void>;
 }
 
-export class EmailModel<T extends Env> {
-  constructor(c: Context<T, '/', Input>) {
+export class EmailModel {
+  constructor(c: Context) {
     this.c = c;
   }
 
-  protected readonly c: Context<T, '/', Input>;
+  protected readonly c: Context;
 
   isAvailable() {
     return !!this.c.get('core').emailProvider;

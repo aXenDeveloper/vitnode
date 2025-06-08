@@ -1,5 +1,4 @@
-import type { Context, Input } from 'hono';
-import type { Env } from 'hono';
+import type { Context } from 'hono';
 
 import { eq } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
@@ -13,7 +12,7 @@ export const signInWithPassword = async ({
   password,
   c,
 }: {
-  c: Context<Env, '/', Input>;
+  c: Context;
   email: string;
   password: string;
 }) => {

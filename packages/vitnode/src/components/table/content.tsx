@@ -1,5 +1,9 @@
+import { SearchXIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+
 import type { DataTable, DataTableTMin } from './data-table';
 
+import { cn } from '../../lib/utils';
 import {
   Table,
   TableBody,
@@ -16,8 +20,11 @@ export function ContentDataTable<T extends DataTableTMin>({
   edges,
   pageInfo,
   order,
+  customNotFoundComponent,
   ...props
 }: React.ComponentProps<typeof DataTable<T>>) {
+  const t = useTranslations('core.global');
+
   return (
     <div className="space-y-4">
       <div className="overflow-hidden rounded-lg border">
@@ -27,7 +34,10 @@ export function ContentDataTable<T extends DataTableTMin>({
               <TableRow>
                 {columns.map(column => (
                   <TableHead
-                    className="[&:not(:first-child)]:pl-0"
+                    className={cn(
+                      '[&:not(:first-child)]:pl-0',
+                      column.className,
+                    )}
                     key={column.id.toString()}
                   >
                     {order.columns?.includes(column.id) ? (
@@ -63,8 +73,24 @@ export function ContentDataTable<T extends DataTableTMin>({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell className="text-center" colSpan={columns.length}>
-                    Not Found
+                  <TableCell
+                    className="mx-auto max-w-sm whitespace-normal p-4 text-center sm:px-10 sm:py-12"
+                    colSpan={columns.length}
+                  >
+                    {customNotFoundComponent ?? (
+                      <div className="flex flex-col items-center justify-center gap-6">
+                        <SearchXIcon className="text-muted-foreground size-16 sm:size-24" />
+
+                        <div className="space-y-2 text-center">
+                          <h3 className="text-xl font-semibold tracking-tight">
+                            {t('no_results.title')}
+                          </h3>
+                          <p className="text-muted-foreground text-sm">
+                            {t('no_results.desc')}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               )}

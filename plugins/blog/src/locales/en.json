@@ -6,7 +6,11 @@
         "categories": "Categories"
       },
       "categories": {
-        "desc": "Manage blog categories."
+        "desc": "Manage blog categories.",
+        "table": {
+          "title": "Title",
+          "updated_at": "Updated At"
+        }
       }
     }
   }

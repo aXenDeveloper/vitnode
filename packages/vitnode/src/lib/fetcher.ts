@@ -11,10 +11,10 @@ import type {
   GetModulePaths,
   GetValidPathsForModule,
   InferResponseType,
-} from '../fetcher/types';
+} from './fetcher/types';
 
-import { CONFIG } from '../config';
-import { buildSearchParams, handleSetCookiesFetcher } from './helpers';
+import { CONFIG } from './config';
+import { buildSearchParams, handleSetCookiesFetcher } from './fetcher/helpers';
 
 export async function fetcher<
   M extends string,

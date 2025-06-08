@@ -9,11 +9,10 @@
     "blog",
     "---API---",
     "routing",
+    "database",
     "---UI---",
     "layouts-and-pages",
     "admin-page",
-    "---Database---",
-    "database",
     "---Advanced---",
     "..."
   ]
