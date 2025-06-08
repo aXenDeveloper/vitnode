@@ -1,9 +1,9 @@
-import type plugin from './src/locales/en.json';
+/// <reference types="next-intl" />
 
-type Messages = typeof plugin;
+import type plugin from './src/locales/en.json';
 
 declare module 'next-intl' {
   interface AppConfig {
-    Messages: Messages;
+    Messages: typeof plugin;
   }
 }

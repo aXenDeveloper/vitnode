@@ -1,8 +1,25 @@
-export default function CategoriesPage() {
+import type { Metadata } from 'next';
+
+import { HeaderContent } from '@vitnode/core/components/ui/header-content';
+import { getTranslations } from 'next-intl/server';
+
+export const generateMetadata = async (): Promise<Metadata> => {
+  const t = await getTranslations('@vitnode/blog.admin.nav');
+
+  return {
+    title: t('categories'),
+  };
+};
+
+export default async function CategoriesPage() {
+  const [t, tNav] = await Promise.all([
+    getTranslations('@vitnode/blog.admin.categories'),
+    getTranslations('@vitnode/blog.admin.nav'),
+  ]);
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold">Blog Categories</h1>
-      <p className="mt-4">Manage your blog categories here.</p>
+    <div className="container mx-auto p-4">
+      <HeaderContent desc={t('desc')} h1={tNav('categories')} />
     </div>
   );
 }

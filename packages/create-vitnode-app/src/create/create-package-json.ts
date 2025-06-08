@@ -52,7 +52,7 @@ export const createPackageJSON = async ({
       'drizzle-kit': '^0.31.1',
       'drizzle-orm': '^0.44.1',
       hono: '^4.7.10',
-      'lucide-react': '^0.511.0',
+      'lucide-react': '^0.513.0',
       next: '^15.3.3',
       'next-intl': '^4.1.0',
       react: '^19.1.0',

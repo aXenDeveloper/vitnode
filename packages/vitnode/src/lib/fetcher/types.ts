@@ -105,7 +105,7 @@ type ExtractMethodForPath<
   P extends string,
 > = Extract<M['routes'][number], { route: { path: P } }>['route']['method'];
 
-type ExtractZodType<T> = T extends z.ZodTypeAny ? z.infer<T> : never;
+type ExtractZodType<T> = T extends z.ZodType ? z.infer<T> : never;
 
 type InferInputType<
   RouteCfg extends RouteConfig,

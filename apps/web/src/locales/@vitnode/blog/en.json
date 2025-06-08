@@ -4,6 +4,9 @@
     "admin": {
       "nav": {
         "categories": "Categories"
+      },
+      "categories": {
+        "desc": "Manage blog categories."
       }
     }
   }

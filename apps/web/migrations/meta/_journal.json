@@ -15,6 +15,13 @@
       "when": 1748712016924,
       "tag": "0001_material_elektra",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1749376944007,
+      "tag": "0002_late_sauron",
+      "breakpoints": true
     }
   ]
 }

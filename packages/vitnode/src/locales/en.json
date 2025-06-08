@@ -135,6 +135,7 @@
     },
     "user": {
       "list": {
+        "desc": "Manage users of your application.",
         "user": "User",
         "createdAt": "Created At",
         "emailNotVerified": "Email Not Verified"

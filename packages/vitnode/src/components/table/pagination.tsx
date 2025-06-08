@@ -44,10 +44,8 @@ export const PaginationDataTable = ({
   const pageSize = pagination.first ?? pagination.last ?? 10;
 
   return (
-    <div className="flex w-full flex-col-reverse items-center justify-between gap-4 overflow-auto p-1 sm:flex-row sm:gap-8">
-      <div>test</div>
-
-      <div className="flex flex-col-reverse items-center gap-4 sm:flex-row sm:gap-6 lg:gap-8">
+    <div className="flex w-full flex-col-reverse items-center justify-end gap-4 overflow-auto p-1 sm:flex-row sm:gap-8">
+      <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 lg:gap-8">
         <Select
           disabled={isPending}
           onValueChange={value => {
