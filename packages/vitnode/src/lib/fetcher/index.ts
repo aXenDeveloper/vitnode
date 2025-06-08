@@ -23,7 +23,7 @@ export async function fetcher<
   ModuleName extends GetModulePaths<M, Modules>,
   SelectedPath extends GetValidPathsForModule<ModuleName, M, Routes, Modules>,
 >(
-  { plugin }: BuildModuleReturn<string, M, Routes, Modules>,
+  { pluginId }: BuildModuleReturn<string, M, Routes, Modules>,
   {
     path,
     method,
@@ -54,7 +54,7 @@ export async function fetcher<
 
   // Construct the base URL
   const url = new URL(
-    `/api/${plugin}/${module}${formattedPath}`,
+    `/api/${pluginId}/${module}${formattedPath}`,
     CONFIG.backend.origin,
   );
 

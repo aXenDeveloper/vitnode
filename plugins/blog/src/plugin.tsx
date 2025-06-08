@@ -1,11 +1,11 @@
 import { buildPlugin } from '@vitnode/core/lib/plugin';
 import { ListIcon } from 'lucide-react';
 
-import { configPlugin } from './config';
+import { CONFIG_PLUGIN } from '@/config';
 
 export const blogPlugin = () => {
   return buildPlugin({
-    ...configPlugin,
+    ...CONFIG_PLUGIN,
     admin: {
       nav: [
         {

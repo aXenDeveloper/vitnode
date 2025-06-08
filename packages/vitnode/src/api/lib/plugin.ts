@@ -6,18 +6,18 @@ import { checkPluginId } from './check-plugin-id';
 
 export interface BuildPluginApiReturn {
   hono: OpenAPIHono;
-  id: string;
+  pluginId: string;
 }
 
 export function buildApiPlugin<P extends string>({
-  id,
+  pluginId,
   modules = [],
 }: {
-  id: P;
   modules?: BuildModuleReturn<P, string>[];
+  pluginId: P;
 }): BuildPluginApiReturn {
   // Run for checking if the plugin is valid
-  checkPluginId(id);
+  checkPluginId(pluginId);
 
   const hono = new OpenAPIHono();
   modules.forEach(handler => {
@@ -25,7 +25,7 @@ export function buildApiPlugin<P extends string>({
   });
 
   return {
-    id,
+    pluginId,
     hono,
   };
 }

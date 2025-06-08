@@ -6,10 +6,11 @@ import {
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from '@/api/lib/with-pagination';
+import { CONFIG_PLUGIN } from '@/config';
 import { core_users } from '@/database/users';
 
 export const usersAdminRoute = buildRoute({
-  plugin: '@vitnode/core',
+  ...CONFIG_PLUGIN,
   route: {
     method: 'get',
     description: 'Get list of all users (Admin only)',

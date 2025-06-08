@@ -9,8 +9,8 @@ import { HTTPException } from 'hono/http-exception';
 import type { VitNodeApiConfig, VitNodeConfig } from '@/vitnode.config';
 
 import { newBuildPluginApiCore } from '@/api/plugin';
+import { CONFIG_PLUGIN } from '@/config';
 
-import { internalVitNodeConfig } from './internal-config';
 import {
   globalAdminMiddleware,
   globalMiddleware,
@@ -49,7 +49,7 @@ export function VitNodeAPI({
   app.doc('/swagger/doc', {
     openapi: '3.0.0',
     info: {
-      version: internalVitNodeConfig.version,
+      version: CONFIG_PLUGIN.version,
       title: 'VitNode API',
     },
   });
@@ -92,7 +92,7 @@ export function VitNodeAPI({
   });
 
   [newBuildPluginApiCore, ...vitNodeApiConfig.plugins].map(root => {
-    app.route(`/${root.id}`, root.hono);
+    app.route(`/${root.pluginId}`, root.hono);
   });
 
   return app;

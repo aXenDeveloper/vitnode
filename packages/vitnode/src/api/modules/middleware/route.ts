@@ -2,9 +2,10 @@ import { z } from 'zod';
 
 import { buildRoute } from '@/api/lib/route';
 import { EmailModel } from '@/api/models/email';
+import { CONFIG_PLUGIN } from '@/config';
 
 export const routeMiddleware = buildRoute({
-  plugin: '@vitnode/core',
+  ...CONFIG_PLUGIN,
   route: {
     path: '/',
     method: 'get',

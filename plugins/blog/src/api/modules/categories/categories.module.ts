@@ -1,9 +1,11 @@
 import { buildModule } from '@vitnode/core/api/lib/module';
 
-import { categoriesRoute } from './route';
+import { CONFIG_PLUGIN } from '@/config';
+
+import { categoriesRoute } from './routes/get.route';
 
 export const categoriesModule = buildModule({
-  plugin: '@vitnode/blog',
+  ...CONFIG_PLUGIN,
   name: 'categories',
   routes: [categoriesRoute],
 });

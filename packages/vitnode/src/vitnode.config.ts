@@ -75,7 +75,7 @@ export const handleRequestConfig = async ({
 
   const pluginsId: string[] = [
     '@vitnode/core',
-    ...vitNodeConfig.plugins.map(plugin => plugin.id),
+    ...vitNodeConfig.plugins.map(plugin => plugin.pluginId),
   ];
 
   // Import and merge messages from all plugins

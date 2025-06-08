@@ -33,7 +33,7 @@ export const AdminLayout = async ({
   const pluginNav: NavAdminParent[] = vitNodeConfig.plugins
     .filter(plugin => plugin.admin?.nav)
     .map(plugin => ({
-      id: plugin.id,
+      id: plugin.pluginId,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       title: t(`${plugin.id}.title`),

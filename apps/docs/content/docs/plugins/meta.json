@@ -7,11 +7,14 @@
     "index",
     "---Plugins by VitNode---",
     "blog",
+    "---API---",
+    "routing",
     "---UI---",
     "layouts-and-pages",
     "admin-page",
     "---Database---",
     "database",
+    "---Advanced---",
     "..."
   ]
 }

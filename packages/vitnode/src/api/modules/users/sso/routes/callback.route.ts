@@ -3,9 +3,10 @@ import { z } from 'zod';
 import { buildRoute } from '@/api/lib/route';
 import { SessionModel } from '@/api/models/session';
 import { SSOModel } from '@/api/models/sso';
+import { CONFIG_PLUGIN } from '@/config';
 
 export const callbackRoute = buildRoute({
-  plugin: '@vitnode/core',
+  ...CONFIG_PLUGIN,
   route: {
     method: 'get',
     description: 'SSO Callback',

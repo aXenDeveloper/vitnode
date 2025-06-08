@@ -15,7 +15,7 @@ export interface BaseBuildModuleReturn<
   hono: OpenAPIHono;
   modules?: BaseBuildModuleReturn<P>[];
   name: M;
-  plugin: P;
+  pluginId: P;
   routes: Routes;
 }
 
@@ -35,13 +35,13 @@ export function buildModule<
   Modules extends BaseBuildModuleReturn<P>[],
 >({
   routes,
-  plugin,
+  pluginId,
   name,
   modules,
 }: {
   modules?: Modules;
   name: M;
-  plugin: P;
+  pluginId: P;
   routes: Routes;
 }): BuildModuleReturn<P, M, Routes, Modules> {
   const hono = new OpenAPIHono();
@@ -58,5 +58,5 @@ export function buildModule<
     });
   }
 
-  return { routes, plugin, hono, name, modules };
+  return { routes, pluginId, hono, name, modules };
 }

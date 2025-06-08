@@ -21,19 +21,19 @@ export const buildRoute = <
 >({
   route,
   handler,
-  plugin,
+  pluginId,
 }: {
   handler: H;
-  plugin: Plugin;
+  pluginId: Plugin;
   route: R;
 }): {
   handler: H;
-  plugin: Plugin;
+  pluginId: Plugin;
   route: R & {
     getRoutingPath: () => RoutingPath<R['path']>;
   };
 } => {
-  const pluginTag = plugin
+  const pluginTag = pluginId
     .split(/[-_]/)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
@@ -48,7 +48,7 @@ export const buildRoute = <
       getRoutingPath: () => RoutingPath<R['path']>;
     },
     handler,
-    plugin,
+    pluginId,
   };
 };
 
@@ -58,6 +58,6 @@ export interface Route<
   H extends RouteHandler<R> = RouteHandler<R>,
 > {
   handler: H;
-  plugin: Plugin;
+  pluginId: Plugin;
   route: R;
 }

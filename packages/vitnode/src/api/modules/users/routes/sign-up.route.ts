@@ -3,11 +3,12 @@ import { z } from 'zod';
 import { buildRoute } from '@/api/lib/route';
 import { PasswordModel } from '@/api/models/password';
 import { UserModel } from '@/api/models/user';
+import { CONFIG_PLUGIN } from '@/config';
 
 const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 
 export const signUpRoute = buildRoute({
-  plugin: '@vitnode/core',
+  ...CONFIG_PLUGIN,
   route: {
     method: 'post',
     description: 'Create a new user',

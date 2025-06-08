@@ -66,23 +66,15 @@ import { configPlugin } from './config';
 export const blogPlugin = () => {
   return buildPlugin({
     ...configPlugin,
-    // [!code ++]
+    // [!code ++:9]
     admin: {
-      // [!code ++]
       nav: [
-        // [!code ++]
         {
-          // [!code ++]
           id: 'settings',
-          // [!code ++]
           href: '/admin/blog/settings',
-          // [!code ++]
           icon: <SettingsIcon />,
-          // [!code ++]
         },
-        // [!code ++]
       ],
-      // [!code ++]
     },
   });
 };
@@ -106,25 +98,16 @@ export const blogPlugin = () => {
           id: 'settings',
           href: '/admin/blog/settings',
           icon: <SettingsIcon />,
-          // [!code ++]
+          // [!code ++:10]
           items: [
-            // [!code ++]
             {
-              // [!code ++]
               id: 'general',
-              // [!code ++]
               href: '/admin/blog/settings/general',
-              // [!code ++]
             },
-            // [!code ++]
             {
-              // [!code ++]
               id: 'seo',
-              // [!code ++]
               href: '/admin/blog/settings/seo',
-              // [!code ++]
             },
-            // [!code ++]
           ],
         },
       ],
@@ -169,15 +152,11 @@ VitNode automatically uses the `id` as translation key for the navigation item.
 {
   "@vitnode/blog": {
     "title": "Blog",
-    // [!code ++]
+    // [!code ++:5]
     "admin": {
-      // [!code ++]
       "nav": {
-        // [!code ++]
         "settings": "Settings"
-        // [!code ++]
       }
-      // [!code ++]
     }
   }
 }
@@ -186,3 +165,13 @@ VitNode automatically uses the `id` as translation key for the navigation item.
 </Step>
   
 </Steps>
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Layouts and Pages"
+    description="Create custom layouts and pages"
+    href="/docs/plugins/layouts-and-pages"
+  />
+</Cards>

@@ -2,9 +2,10 @@ import { z } from 'zod';
 
 import { buildRoute } from '@/api/lib/route';
 import { SSOModel } from '@/api/models/sso';
+import { CONFIG_PLUGIN } from '@/config';
 
 export const createUrlRoute = buildRoute({
-  plugin: '@vitnode/core',
+  ...CONFIG_PLUGIN,
   route: {
     method: 'post',
     description: 'Generate SSO URL',

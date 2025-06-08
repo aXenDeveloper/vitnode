@@ -14,7 +14,7 @@ export interface BuildPluginReturn<P extends string = string> {
       items?: Omit<AdminNavItem, 'icon'>[];
     })[];
   };
-  id: P;
+  pluginId: P;
 }
 
 export function buildPlugin<P extends string>(

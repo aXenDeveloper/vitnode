@@ -1,3 +1,3 @@
-export const configPlugin = {
-  id: '@vitnode/blog' as const,
+export const CONFIG_PLUGIN = {
+  pluginId: '@vitnode/blog' as const,
 };

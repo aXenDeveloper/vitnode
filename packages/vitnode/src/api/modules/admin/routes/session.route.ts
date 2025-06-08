@@ -1,15 +1,14 @@
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 
-import { internalVitNodeConfig } from '@/api/internal-config';
 import { buildRoute } from '@/api/lib/route';
+import { CONFIG_PLUGIN } from '@/config';
 
 export const sessionAdminRoute = buildRoute({
-  plugin: '@vitnode/core',
+  ...CONFIG_PLUGIN,
   route: {
     method: 'get',
     description: 'Verify admin session',
-    plugin: 'core',
     pluginConfig: {
       id: 'core',
       name: 'Core',
@@ -49,7 +48,7 @@ export const sessionAdminRoute = buildRoute({
 
     return c.json({
       user,
-      vitnode_version: internalVitNodeConfig.version,
+      vitnode_version: CONFIG_PLUGIN.version,
     });
   },
 });
