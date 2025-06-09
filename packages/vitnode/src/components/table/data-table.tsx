@@ -2,6 +2,7 @@ import React from 'react';
 
 import type { PaginationDataTable } from './pagination';
 
+import { ErrorView } from '../../views/error/error-view';
 import { Skeleton } from '../ui/skeleton';
 import {
   Table,
@@ -78,6 +79,10 @@ export function DataTable<T extends DataTableTMin>(
       };
     },
 ) {
+  if (!props.edges || !props.pageInfo) {
+    return <ErrorView code={500} />;
+  }
+
   return (
     <React.Suspense
       fallback={<DataTableSkeleton columns={props.columns.length} />}

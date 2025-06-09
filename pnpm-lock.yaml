@@ -323,8 +323,8 @@ importers:
         specifier: 0.0.41
         version: 0.0.41(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@swc/cli':
-        specifier: 0.7.7
-        version: 0.7.7(@swc/core@1.11.31)(chokidar@4.0.3)
+        specifier: 0.6.0
+        version: 0.6.0(@swc/core@1.11.31)(chokidar@4.0.3)
       '@swc/core':
         specifier: ^1.11.31
         version: 1.11.31
@@ -468,8 +468,8 @@ importers:
         version: 3.25.56
     devDependencies:
       '@swc/cli':
-        specifier: 0.7.7
-        version: 0.7.7(@swc/core@1.11.31)(chokidar@4.0.3)
+        specifier: 0.6.0
+        version: 0.6.0(@swc/core@1.11.31)(chokidar@4.0.3)
       '@swc/core':
         specifier: ^1.11.24
         version: 1.11.31
@@ -2590,8 +2590,8 @@ packages:
   '@standard-schema/utils@0.3.0':
     resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
 
-  '@swc/cli@0.7.7':
-    resolution: {integrity: sha512-j4yYm9bx3pxWofaJKX1BFwj/3ngUDynN4UIQ2Xd2h0h/7Gt7zkReBTpDN7g5S13mgAYxacaTHTOUsz18097E8w==}
+  '@swc/cli@0.6.0':
+    resolution: {integrity: sha512-Q5FsI3Cw0fGMXhmsg7c08i4EmXCrcl+WnAxb6LYOLHw4JFFC3yzmx9LaXZ7QMbA+JZXbigU2TirI7RAfO0Qlnw==}
     engines: {node: '>= 16.14.0'}
     hasBin: true
     peerDependencies:
@@ -8605,7 +8605,7 @@ snapshots:
 
   '@standard-schema/utils@0.3.0': {}
 
-  '@swc/cli@0.7.7(@swc/core@1.11.31)(chokidar@4.0.3)':
+  '@swc/cli@0.6.0(@swc/core@1.11.31)(chokidar@4.0.3)':
     dependencies:
       '@swc/core': 1.11.31
       '@swc/counter': 0.1.3

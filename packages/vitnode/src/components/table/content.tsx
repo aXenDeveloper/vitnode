@@ -34,10 +34,7 @@ export function ContentDataTable<T extends DataTableTMin>({
               <TableRow>
                 {columns.map(column => (
                   <TableHead
-                    className={cn(
-                      '[&:not(:first-child)]:pl-0',
-                      column.className,
-                    )}
+                    className={cn(column.className)}
                     key={column.id.toString()}
                   >
                     {order.columns?.includes(column.id) ? (

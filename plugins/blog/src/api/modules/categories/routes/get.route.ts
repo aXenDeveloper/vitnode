@@ -24,7 +24,7 @@ export const categoriesRoute = buildRoute({
     request: {
       query: zodPaginationQuery.extend({
         order: z.enum(['asc', 'desc']).optional(),
-        orderBy: z.enum(['createdAt']).optional(),
+        orderBy: z.enum(['updatedAt']).optional(),
       }),
     },
     responses: {

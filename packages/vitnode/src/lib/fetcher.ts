@@ -9,6 +9,7 @@ import type { Route } from '@/api/lib/route';
 import type {
   FetcherParams,
   GetModulePaths,
+  GetValidMethodForPath,
   GetValidPathsForModule,
   InferResponseType,
 } from './fetcher/types';
@@ -22,6 +23,13 @@ export async function fetcher<
   Modules extends BaseBuildModuleReturn[],
   ModuleName extends GetModulePaths<M, Modules>,
   SelectedPath extends GetValidPathsForModule<ModuleName, M, Routes, Modules>,
+  Method extends GetValidMethodForPath<
+    ModuleName,
+    SelectedPath,
+    M,
+    Routes,
+    Modules
+  > = GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>,
 >(
   { pluginId }: BuildModuleReturn<string, M, Routes, Modules>,
   {
@@ -32,12 +40,14 @@ export async function fetcher<
     options,
     allowSaveCookies = false,
     withPagination = false,
-  }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath> & {
+  }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> & {
     allowSaveCookies?: boolean;
     options?: Omit<RequestInit, 'body'>;
     withPagination?: boolean;
   },
-): Promise<InferResponseType<M, Routes, Modules, ModuleName, SelectedPath>> {
+): Promise<
+  InferResponseType<M, Routes, Modules, ModuleName, SelectedPath, Method>
+> {
   let currentPath: string = path;
 
   // Replace path parameters

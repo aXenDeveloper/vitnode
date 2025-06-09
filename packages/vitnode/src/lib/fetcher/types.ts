@@ -157,7 +157,7 @@ export type GetValidPathsForModule<
   GetTargetModule<ModulePath, MainModuleName, MainRoutes, SubModules>
 >;
 
-type GetValidMethodForPath<
+export type GetValidMethodForPath<
   ModulePath extends string,
   Path extends string,
   MainModuleName extends string,
@@ -179,8 +179,9 @@ interface BaseFetcherParams<
   Modules extends BaseBuildModuleReturn[],
   ModuleName extends GetModulePaths<M, Modules>,
   SelectedPath extends GetValidPathsForModule<ModuleName, M, Routes, Modules>,
+  Method extends string,
 > {
-  method: GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>;
+  method: Method;
   module: ModuleName;
   path: SelectedPath;
 }
@@ -191,17 +192,24 @@ export type FetcherParams<
   Modules extends BaseBuildModuleReturn[],
   ModuleName extends GetModulePaths<M, Modules>,
   SelectedPath extends GetValidPathsForModule<ModuleName, M, Routes, Modules>,
+  Method extends GetValidMethodForPath<
+    ModuleName,
+    SelectedPath,
+    M,
+    Routes,
+    Modules
+  > = GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>,
   RouteConfig extends FindRouteConfig<
     GetTargetModule<ModuleName, M, Routes, Modules>,
     SelectedPath,
-    GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>
+    Method
   > = FindRouteConfig<
     GetTargetModule<ModuleName, M, Routes, Modules>,
     SelectedPath,
-    GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>
+    Method
   >,
   ArgsType extends BuildArgsType<RouteConfig> = BuildArgsType<RouteConfig>,
-> = BaseFetcherParams<M, Routes, Modules, ModuleName, SelectedPath> &
+> = BaseFetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> &
   (keyof ArgsType extends never ? { args?: undefined } : { args: ArgsType });
 
 type InferStatusCode<K> = K extends `${infer N extends number}`
@@ -216,14 +224,21 @@ export type InferResponseType<
   Modules extends BaseBuildModuleReturn[],
   ModuleName extends GetModulePaths<M, Modules>,
   SelectedPath extends GetValidPathsForModule<ModuleName, M, Routes, Modules>,
+  Method extends GetValidMethodForPath<
+    ModuleName,
+    SelectedPath,
+    M,
+    Routes,
+    Modules
+  > = GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>,
   RouteConfig extends FindRouteConfig<
     GetTargetModule<ModuleName, M, Routes, Modules>,
     SelectedPath,
-    GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>
+    Method
   > = FindRouteConfig<
     GetTargetModule<ModuleName, M, Routes, Modules>,
     SelectedPath,
-    GetValidMethodForPath<ModuleName, SelectedPath, M, Routes, Modules>
+    Method
   >,
 > = RouteConfig extends { responses: infer S }
   ? {
