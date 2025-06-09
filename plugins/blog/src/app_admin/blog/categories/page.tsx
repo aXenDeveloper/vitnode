@@ -1,9 +1,12 @@
 import type { Metadata } from 'next';
 
+import { I18nProvider } from '@vitnode/core/components/i18n-provider';
 import { HeaderContent } from '@vitnode/core/components/ui/header-content';
 import { getTranslations } from 'next-intl/server';
 
-import { CategoriesAdminView } from '@/views/admin/categories-admin-view';
+import { CategoriesAdminView } from '@/views/admin/categories/categories-admin-view';
+
+import { ActionsCategoriesAdmin } from '../../../views/admin/categories/actions/actions';
 
 export const generateMetadata = async (): Promise<Metadata> => {
   const t = await getTranslations('@vitnode/blog.admin.nav');
@@ -22,10 +25,14 @@ export default async function CategoriesPage(
   ]);
 
   return (
-    <div className="container mx-auto p-4">
-      <HeaderContent desc={t('desc')} h1={tNav('categories')} />
+    <I18nProvider namespaces={['@vitnode/blog.admin.categories']}>
+      <div className="container mx-auto p-4">
+        <HeaderContent desc={t('desc')} h1={tNav('categories')}>
+          <ActionsCategoriesAdmin />
+        </HeaderContent>
 
-      <CategoriesAdminView {...params} />
-    </div>
+        <CategoriesAdminView {...params} />
+      </div>
+    </I18nProvider>
   );
 }

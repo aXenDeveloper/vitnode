@@ -19,7 +19,9 @@ import {
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
+import { useBeforeUnload } from '../../hooks/use-before-unload';
 import { Button } from './button';
+import { useDialog } from './dialog';
 
 function Form<
   TFieldValues extends FieldValues,
@@ -32,6 +34,7 @@ function Form<
   onSubmit,
   ...props
 }: Omit<React.ComponentProps<'form'>, 'onSubmit'> & {
+  disableBeforeUnload?: boolean;
   form: Omit<
     React.ComponentProps<
       typeof FormProvider<TFieldValues, TContext, TTransformedValues>
@@ -40,6 +43,20 @@ function Form<
   >;
   onSubmit: SubmitHandler<TTransformedValues>;
 }) {
+  const t = useTranslations('core.global');
+  const formIsDirty = form.formState.isDirty;
+  useBeforeUnload(
+    formIsDirty && !props.disableBeforeUnload,
+    `${t('are_you_sure_want_to_leave_form.title')} ${t('are_you_sure_want_to_leave_form.desc')}`,
+  );
+  const { setIsDirty } = useDialog();
+
+  React.useEffect(() => {
+    if (props.disableBeforeUnload) return;
+
+    setIsDirty?.(formIsDirty);
+  }, [formIsDirty, props.disableBeforeUnload, setIsDirty]);
+
   return (
     <FormProvider {...form}>
       <form

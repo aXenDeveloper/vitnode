@@ -13,6 +13,12 @@
         "title": "No results found",
         "desc": "Try adjusting your search or filter criteria."
       },
+      "are_you_sure_want_to_leave_form": {
+        "title": "Are you sure you want to leave this form?",
+        "desc": "Your changes will not be saved.",
+        "cancel": "Cancel",
+        "confirm": "Yes, leave"
+      },
       "date": "{date, date}",
       "date_medium": "{date, date, medium}",
       "date_short": "{date, date, short}",

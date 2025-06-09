@@ -42,8 +42,11 @@ export const installDependencies = async ({
     });
     child.on('close', code => {
       if (code !== 0) {
-        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
-        reject({ command: `${packageManager} ${args.join(' ')}` });
+        reject(
+          new Error(
+            `Failed to install dependencies using ${packageManager}. Exit code: ${code}`,
+          ),
+        );
 
         return;
       }

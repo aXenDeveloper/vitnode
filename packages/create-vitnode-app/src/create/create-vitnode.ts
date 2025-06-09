@@ -56,7 +56,7 @@ export const createVitNode = async ({
 
   // Rename special files
   spinner.text = 'Renaming special files...';
-  await rename(join(root, 'gitignore_template'), join(root, '.gitignore'));
+  await rename(join(root, '.gitignore_template'), join(root, '.gitignore'));
 
   spinner.text = 'Creating package.json...';
   await createPackageJSON({

@@ -64,7 +64,9 @@ export class FileCopyManager {
     ];
 
     // Handle special files with different names
-    const specialFiles = [{ source: '.gitignore', dest: 'gitignore_template' }];
+    const specialFiles = [
+      { source: '.gitignore', dest: '.gitignore_template' },
+    ];
 
     for (const relativePath of filesToCopy) {
       await this.copyFileOrDirectory(sourcePath, destPath, relativePath);

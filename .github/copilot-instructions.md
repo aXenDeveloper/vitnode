@@ -20,6 +20,7 @@ VitNode is a comprehensive framework designed to simplify and accelerate applica
 - Use server actions for form handling and data mutations from Server Components
 - Leverage Next.js Image component with proper sizing for core web vitals optimization
 - Navigation API is in `vitnode/lib/navigation` file. Avoid using `next/navigation` directly
+- Alert Dialog & Dialog content should always have title and description with React lazy loading content
 
 ### Internationalization (i18n)
 

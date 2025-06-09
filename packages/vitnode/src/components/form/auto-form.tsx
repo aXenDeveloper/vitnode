@@ -12,6 +12,7 @@ import { getDefaultValues, getObjectFormSchema } from '@/lib/helpers/auto-form';
 import type { ItemAutoFormProps } from './fields/item';
 
 import { Button } from '../ui/button';
+import { DialogFooter, useDialog } from '../ui/dialog';
 import { Form } from '../ui/form';
 import { ItemAutoForm } from './fields/item';
 
@@ -40,6 +41,7 @@ export function AutoForm<
     'isLoading' | 'type'
   >;
 }) {
+  const { setOpen } = useDialog();
   const objectFormSchema = getObjectFormSchema(formSchema);
   const defaultValues = getDefaultValues(objectFormSchema) as DefaultValues<
     z.infer<T>
@@ -58,19 +60,32 @@ export function AutoForm<
     }
   };
 
+  const submitButton = (
+    <Button
+      disabled={!form.formState.isValid || form.formState.isSubmitting}
+      isLoading={form.formState.isSubmitting}
+      {...submitButtonProps}
+      type="submit"
+    >
+      {submitButtonProps?.children ?? t('submit')}
+    </Button>
+  );
+
   return (
     <Form form={form} onSubmit={onSubmit} {...props}>
       {fields.map(field => (
         <ItemAutoForm formSchema={formSchema} key={field.id} {...field} />
       ))}
-      <Button
-        disabled={!form.formState.isValid || form.formState.isSubmitting}
-        isLoading={form.formState.isSubmitting}
-        {...submitButtonProps}
-        type="submit"
-      >
-        {submitButtonProps?.children ?? t('submit')}
-      </Button>
+      {setOpen ? (
+        <DialogFooter>
+          <Button onClick={() => setOpen(false)} variant="outline">
+            {t('cancel')}
+          </Button>
+          {submitButton}
+        </DialogFooter>
+      ) : (
+        submitButton
+      )}
     </Form>
   );
 }

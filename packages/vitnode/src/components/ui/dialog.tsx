@@ -1,15 +1,105 @@
 'use client';
 
 import { XIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './alert-dialog';
+
+const DialogContext = React.createContext<{
+  isDirty?: boolean;
+  open?: boolean;
+  setIsDirty?: (value: boolean) => void;
+  setOpen?: (value: boolean) => void;
+}>({
+  open: false,
+  isDirty: false,
+});
+
+export const useDialog = () => React.useContext(DialogContext);
+
 function Dialog({
+  onOpenChange,
+  open: openProp,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+  const t = useTranslations('core.global');
+  const [open, setOpen] = React.useState(false);
+  const [isDirty, setIsDirty] = React.useState(false);
+  const [openAlertDialog, setOpenAlertDialog] = React.useState(false);
+
+  const handleOpenChange = (newOpen: boolean) => {
+    // Prevent closing if there are unsaved changes
+    if (!newOpen && isDirty) {
+      setOpenAlertDialog(true);
+
+      return;
+    }
+
+    // Reset dirty state when closing
+    if (!newOpen) {
+      setIsDirty(false);
+    }
+
+    onOpenChange?.(newOpen);
+    setOpen(newOpen);
+  };
+
+  return (
+    <DialogContext
+      value={{
+        open: openProp ?? open,
+        setOpen: handleOpenChange,
+        isDirty,
+        setIsDirty,
+      }}
+    >
+      <DialogPrimitive.Root
+        data-slot="dialog"
+        onOpenChange={handleOpenChange}
+        open={openProp ?? open}
+        {...props}
+      />
+
+      <AlertDialog onOpenChange={setOpenAlertDialog} open={openAlertDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('are_you_sure_want_to_leave_form.title')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('are_you_sure_want_to_leave_form.desc')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>
+              {t('are_you_sure_want_to_leave_form.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setIsDirty(false);
+                setTimeout(() => setOpen(false), 100);
+              }}
+            >
+              {t('are_you_sure_want_to_leave_form.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </DialogContext>
+  );
 }
 
 function DialogTrigger({
