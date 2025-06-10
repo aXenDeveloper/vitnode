@@ -4,8 +4,8 @@ import { buildRoute } from '@vitnode/core/api/lib/route';
 import { CONFIG_PLUGIN } from '@/config';
 import { blog_categories } from '@/database/categories';
 
-const zodCreateCategorySchema = z.object({
-  title: z.string().min(1, 'Title is required'),
+export const zodCreateCategorySchema = z.object({
+  title: z.string().min(3, 'Title must be at least 3 characters long'),
 });
 
 const zodCategoryResponseSchema = z.object({

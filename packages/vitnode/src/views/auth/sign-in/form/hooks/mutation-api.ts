@@ -4,14 +4,14 @@ import type { z } from 'zod';
 
 import { revalidatePath } from 'next/cache';
 
+import type { zodSignInSchema } from '@/api/modules/users/routes/sign-in.route';
+
 import { usersModule } from '@/api/modules/users/users.module';
 import { fetcher } from '@/lib/fetcher';
 import { redirect } from '@/lib/navigation';
 
-import type { createSignInFormSchema } from './use-form';
-
 export const mutationApi = async (
-  input: z.infer<ReturnType<typeof createSignInFormSchema>> & {
+  input: z.infer<typeof zodSignInSchema> & {
     isAdmin?: boolean;
   },
 ) => {

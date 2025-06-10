@@ -6,16 +6,11 @@ import { z } from 'zod';
 
 import { mutationApi } from './mutation-api';
 
-export const buildSignUpFormSchema = ({
-  t,
-  tError,
-}: {
-  t: ReturnType<typeof useTranslations<'core.auth.sign_up'>>;
-  tError: ReturnType<typeof useTranslations<'core.global.errors'>>;
-}) => {
+export const useFormSignUp = () => {
+  const t = useTranslations('core.auth.sign_up');
+  const tError = useTranslations('core.global.errors');
   const invalidPassword = t('password.invalid');
-
-  return z.object({
+  const formSchema = z.object({
     name: z
       .string({
         message: tError('field_required'),
@@ -39,12 +34,6 @@ export const buildSignUpFormSchema = ({
     terms: z.boolean().refine(value => value, t('terms.required')),
     newsletter: z.boolean().optional(),
   });
-};
-
-export const useFormSignUp = () => {
-  const t = useTranslations('core.auth.sign_up');
-  const tError = useTranslations('core.global.errors');
-  const formSchema = buildSignUpFormSchema({ tError, t });
 
   const onSubmit = async (
     values: z.infer<typeof formSchema>,

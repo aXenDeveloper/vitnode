@@ -2,14 +2,12 @@
 
 import type { z } from 'zod';
 
+import type { zodSignUpSchema } from '@/api/modules/users/routes/sign-up.route';
+
 import { usersModule } from '@/api/modules/users/users.module';
 import { fetcher } from '@/lib/fetcher';
 
-import type { buildSignUpFormSchema } from './use-form';
-
-export const mutationApi = async (
-  input: z.infer<ReturnType<typeof buildSignUpFormSchema>>,
-) => {
+export const mutationApi = async (input: z.infer<typeof zodSignUpSchema>) => {
   const res = await fetcher(usersModule, {
     path: '/sign_up',
     method: 'post',

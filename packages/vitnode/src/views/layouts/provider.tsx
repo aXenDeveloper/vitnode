@@ -4,11 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import React from 'react';
 import { scan } from 'react-scan';
-import { Toaster } from 'sonner';
 
 import type { VitNodeConfig } from '@/vitnode.config';
 
 import { CONFIG } from '@/lib/config';
+
+import { Toaster } from '../../components/ui/sonner';
 
 export const RootProvider = ({
   children,
@@ -52,8 +53,8 @@ export const RootProvider = ({
         enableSystem
         {...theme}
       >
-        {children}
         <Toaster closeButton {...toaster} />
+        {children}
       </ThemeProvider>
     </QueryClientProvider>
   );

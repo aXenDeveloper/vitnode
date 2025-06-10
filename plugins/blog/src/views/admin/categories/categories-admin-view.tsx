@@ -20,6 +20,9 @@ export const CategoriesAdminView = async ({
       query,
     },
     withPagination: true,
+    options: {
+      cache: 'force-cache',
+    },
   });
   const data = await res.json();
 
@@ -44,7 +47,7 @@ export const CategoriesAdminView = async ({
       ]}
       edges={data.edges}
       order={{
-        columns: ['updatedAt'],
+        columns: ['createdAt', 'updatedAt'],
         defaultOrder: {
           column: 'createdAt',
           order: 'desc',

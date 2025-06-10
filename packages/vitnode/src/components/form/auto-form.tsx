@@ -12,7 +12,7 @@ import { getDefaultValues, getObjectFormSchema } from '@/lib/helpers/auto-form';
 import type { ItemAutoFormProps } from './fields/item';
 
 import { Button } from '../ui/button';
-import { DialogFooter, useDialog } from '../ui/dialog';
+import { DialogClose, DialogFooter, useDialog } from '../ui/dialog';
 import { Form } from '../ui/form';
 import { ItemAutoForm } from './fields/item';
 
@@ -41,7 +41,7 @@ export function AutoForm<
     'isLoading' | 'type'
   >;
 }) {
-  const { setOpen } = useDialog();
+  const { setIsDirty } = useDialog();
   const objectFormSchema = getObjectFormSchema(formSchema);
   const defaultValues = getDefaultValues(objectFormSchema) as DefaultValues<
     z.infer<T>
@@ -76,11 +76,11 @@ export function AutoForm<
       {fields.map(field => (
         <ItemAutoForm formSchema={formSchema} key={field.id} {...field} />
       ))}
-      {setOpen ? (
+      {setIsDirty ? (
         <DialogFooter>
-          <Button onClick={() => setOpen(false)} variant="outline">
-            {t('cancel')}
-          </Button>
+          <DialogClose asChild>
+            <Button variant="outline">{t('cancel')}</Button>
+          </DialogClose>
           {submitButton}
         </DialogFooter>
       ) : (

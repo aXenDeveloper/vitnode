@@ -7,8 +7,5 @@
   ],
   "search.exclude": {
     "**/(plugins)/*": true
-  },
-  "files.exclude": {
-    "**/(plugins)/*": true
   }
 }

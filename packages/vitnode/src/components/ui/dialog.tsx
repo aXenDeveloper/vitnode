@@ -20,12 +20,15 @@ import {
 
 const DialogContext = React.createContext<{
   isDirty?: boolean;
-  open?: boolean;
+  open: boolean;
   setIsDirty?: (value: boolean) => void;
   setOpen?: (value: boolean) => void;
+  setOpenAlertDialogBeforeClose?: (value: boolean) => void;
 }>({
   open: false,
+  setOpen: () => {},
   isDirty: false,
+  setOpenAlertDialogBeforeClose: () => {},
 });
 
 export const useDialog = () => React.useContext(DialogContext);
@@ -38,21 +41,10 @@ function Dialog({
   const t = useTranslations('core.global');
   const [open, setOpen] = React.useState(false);
   const [isDirty, setIsDirty] = React.useState(false);
-  const [openAlertDialog, setOpenAlertDialog] = React.useState(false);
+  const [openAlertDialogBeforeClose, setOpenAlertDialogBeforeClose] =
+    React.useState(false);
 
   const handleOpenChange = (newOpen: boolean) => {
-    // Prevent closing if there are unsaved changes
-    if (!newOpen && isDirty) {
-      setOpenAlertDialog(true);
-
-      return;
-    }
-
-    // Reset dirty state when closing
-    if (!newOpen) {
-      setIsDirty(false);
-    }
-
     onOpenChange?.(newOpen);
     setOpen(newOpen);
   };
@@ -64,6 +56,7 @@ function Dialog({
         setOpen: handleOpenChange,
         isDirty,
         setIsDirty,
+        setOpenAlertDialogBeforeClose,
       }}
     >
       <DialogPrimitive.Root
@@ -73,7 +66,10 @@ function Dialog({
         {...props}
       />
 
-      <AlertDialog onOpenChange={setOpenAlertDialog} open={openAlertDialog}>
+      <AlertDialog
+        onOpenChange={setOpenAlertDialogBeforeClose}
+        open={openAlertDialogBeforeClose}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -117,7 +113,24 @@ function DialogPortal({
 function DialogClose({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Close>) {
-  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
+  const { setOpenAlertDialogBeforeClose, isDirty } = useDialog();
+
+  return (
+    <DialogPrimitive.Close
+      data-slot="dialog-close"
+      onClick={e => {
+        props?.onClick?.(e);
+        // Prevent closing the dialog if there are unsaved changes
+        if (isDirty) {
+          e.preventDefault();
+          setOpenAlertDialogBeforeClose?.(true);
+
+          return;
+        }
+      }}
+      {...props}
+    />
+  );
 }
 
 function DialogOverlay({
@@ -144,6 +157,8 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean;
 }) {
+  const { isDirty, setOpenAlertDialogBeforeClose } = useDialog();
+
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
@@ -153,6 +168,17 @@ function DialogContent({
           className,
         )}
         data-slot="dialog-content"
+        onInteractOutside={e => {
+          // Prevent dismissing the dialog when clicking on a toast
+          const isToastItem = (e.target as Element)?.closest(
+            '[data-sonner-toaster]',
+          );
+          if (isToastItem || isDirty) e.preventDefault();
+
+          if (props?.onInteractOutside) {
+            props.onInteractOutside(e);
+          }
+        }}
         {...props}
       >
         {children}
@@ -160,6 +186,14 @@ function DialogContent({
           <DialogPrimitive.Close
             className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground rounded-xs focus:outline-hidden absolute right-4 top-4 opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0"
             data-slot="dialog-close"
+            onClick={e => {
+              if (isDirty) {
+                e.preventDefault();
+                setOpenAlertDialogBeforeClose?.(true);
+
+                return;
+              }
+            }}
           >
             <XIcon />
             <span className="sr-only">Close</span>

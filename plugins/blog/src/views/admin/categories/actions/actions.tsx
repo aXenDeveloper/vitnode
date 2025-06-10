@@ -15,7 +15,7 @@ import { useTranslations } from 'next-intl';
 import React from 'react';
 
 const CreateEditActionCategoriesAdmin = React.lazy(async () =>
-  import('./create-edit').then(mod => ({
+  import('./create-edit/create-edit').then(mod => ({
     default: mod.CreateEditActionCategoriesAdmin,
   })),
 );

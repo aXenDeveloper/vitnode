@@ -6,6 +6,18 @@ import { SessionAdminModel } from '@/api/models/session-admin';
 import { UserModel } from '@/api/models/user';
 import { CONFIG_PLUGIN } from '@/config';
 
+export const zodSignInSchema = z.object({
+  email: z.string().email().toLowerCase().openapi({
+    example: 'test@test.com',
+  }),
+  password: z.string().openapi({
+    example: 'Test123!',
+  }),
+  isAdmin: z.boolean().optional().openapi({
+    example: false,
+  }),
+});
+
 export const signInRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
@@ -17,17 +29,7 @@ export const signInRoute = buildRoute({
         required: true,
         content: {
           'application/json': {
-            schema: z.object({
-              email: z.string().email().toLowerCase().openapi({
-                example: 'test@test.com',
-              }),
-              password: z.string().openapi({
-                example: 'Test123!',
-              }),
-              isAdmin: z.boolean().optional().openapi({
-                example: false,
-              }),
-            }),
+            schema: zodSignInSchema,
           },
         },
       },
