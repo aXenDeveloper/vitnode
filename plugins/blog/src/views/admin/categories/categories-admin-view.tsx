@@ -5,6 +5,8 @@ import { getTranslations } from 'next-intl/server';
 
 import { categoriesModule } from '@/api/modules/categories/categories.module';
 
+import { RowActions } from './row-actions/row-actions';
+
 export const CategoriesAdminView = async ({
   searchParams,
 }: {
@@ -44,8 +46,14 @@ export const CategoriesAdminView = async ({
           className: 'w-48',
           cell: ({ row }) => <DateFormat date={row.updatedAt} />,
         },
+        {
+          id: 'actions',
+          label: '',
+          className: 'w-10',
+          cell: ({ row }) => <RowActions {...row} />,
+        },
       ]}
-      edges={data.edges}
+      edges={data.edges.map(edge => ({ ...edge }))}
       order={{
         columns: ['createdAt', 'updatedAt'],
         defaultOrder: {

@@ -65,7 +65,7 @@ export function DataTable<T extends DataTableTMin>(
       columns: {
         cell?: (data: { allData: T[]; row: T }) => React.ReactNode;
         className?: string;
-        id: keyof T;
+        id: 'actions' | keyof T;
         label: string;
       }[];
       customNotFoundComponent?: React.ReactNode;

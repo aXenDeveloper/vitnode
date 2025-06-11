@@ -37,7 +37,7 @@ export function ContentDataTable<T extends DataTableTMin>({
                     className={cn(column.className)}
                     key={column.id.toString()}
                   >
-                    {order.columns?.includes(column.id) ? (
+                    {order.columns?.includes(column.id as keyof T) ? (
                       <OrderTableHeadDataTable id={column.id} order={order}>
                         {column.label}
                       </OrderTableHeadDataTable>
@@ -58,10 +58,17 @@ export function ContentDataTable<T extends DataTableTMin>({
                         column.cell?.({
                           allData: edges,
                           row,
-                        }) ?? String(row[column.id]);
+                        }) ??
+                        (column.id === 'actions' ? '' : String(row[column.id]));
 
                       return (
-                        <TableCell key={`${row.id}_${column.id.toString()}`}>
+                        <TableCell
+                          className={cn({
+                            'flex flex-wrap items-center justify-end gap-2':
+                              column.id === 'actions',
+                          })}
+                          key={`${row.id}_${column.id.toString()}`}
+                        >
                           {content}
                         </TableCell>
                       );

@@ -11,6 +11,12 @@
           "title": "Title",
           "updated_at": "Updated At"
         },
+        "delete": {
+          "title": "Delete Category",
+          "desc": "Are you sure you want to delete <title></title> category? This action cannot be undone.",
+          "confirm": "Yes, delete this category",
+          "success": "Category has been deleted successfully."
+        },
         "create": {
           "title": "Create Category",
           "desc": "A new category for your blog posts.",
