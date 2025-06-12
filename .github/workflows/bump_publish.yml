@@ -99,13 +99,13 @@ jobs:
           NPM_CONFIG_PROVENANCE: true
 
       - name: Create Pre-release
-        if: github.event.inputs.release == 'canary' || github.event.inputs.release == 'release-candidate' && github.event.inputs.skip_release_github_patch_notes == 'false'
+        if: github.event.inputs.release == 'canary' || github.event.inputs.release == 'release-candidate' && github.event.inputs.skip_release_github_patch_notes == 'true'
         run: gh release create ${{ steps.version-bump.outputs.newTag }} --generate-notes --prerelease
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create Release
-        if: github.event.inputs.release == 'stable' && github.event.inputs.skip_release_github_patch_notes == 'false'
+        if: github.event.inputs.release == 'stable' && github.event.inputs.skip_release_github_patch_notes == 'true'
         run: gh release create ${{ steps.version-bump.outputs.newTag }} --generate-notes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -7,7 +7,8 @@ import { getOnline } from './is-online.js';
 
 export const installDependencies = async ({
   packageManager: pm,
-}: Pick<CreateCliReturn, 'packageManager'>) => {
+  cwd,
+}: Pick<CreateCliReturn, 'packageManager'> & { cwd?: string }) => {
   const packageManager = pm.split('@')[0];
   const isOnline = await getOnline();
   const args: string[] = ['install'];
@@ -40,6 +41,7 @@ export const installDependencies = async ({
      */
     const child = spawn(packageManager, args, {
       stdio: 'pipe', // Change to 'pipe' to capture output
+      cwd, // Set the working directory
       env: {
         ...process.env,
         ADBLOCK: '1',

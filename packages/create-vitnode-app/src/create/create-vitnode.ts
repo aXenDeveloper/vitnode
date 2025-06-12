@@ -79,6 +79,7 @@ export const createVitNode = async ({
     spinner.text = 'Installing dependencies...';
     await installDependencies({
       packageManager,
+      cwd: root,
     });
   }
 
