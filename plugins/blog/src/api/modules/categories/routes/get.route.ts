@@ -62,7 +62,7 @@ export const categoriesRoute = buildRoute({
       orderBy: {
         column: query.orderBy
           ? blog_categories[query.orderBy]
-          : blog_categories.createdAt,
+          : blog_categories.updatedAt,
         order: query.order ?? 'desc',
       },
     });

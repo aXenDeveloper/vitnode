@@ -23,10 +23,14 @@
           "form": {
             "title": {
               "label": "Title",
-              "placeholder": "Enter category title"
+              "already_exists": "This category title already exists."
             }
           },
           "submit": "Create"
+        },
+        "edit": {
+          "title": "Edit Category",
+          "submit": "Save Changes"
         }
       }
     }

@@ -7,7 +7,7 @@ import { HTTPException } from 'hono/http-exception';
 import { CONFIG_PLUGIN } from '@/config';
 import { blog_categories } from '@/database/categories';
 
-export const zodCreateCategorySchema = z.object({
+export const zodEditCategorySchema = z.object({
   title: z
     .string()
     .min(3, 'Title must be at least 3 characters long')
@@ -21,37 +21,57 @@ const zodCategoryResponseSchema = z.object({
   updatedAt: z.date(),
 });
 
-export const createCategoryRoute = buildRoute({
+export const editCategoryRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'post',
-    path: '/',
+    method: 'put',
+    path: '/{id}',
     request: {
+      params: z.object({
+        id: z.string().transform(Number),
+      }),
       body: {
         content: {
           'application/json': {
-            schema: zodCreateCategorySchema,
+            schema: zodEditCategorySchema,
           },
         },
       },
     },
     responses: {
-      201: {
+      200: {
         content: {
           'application/json': {
             schema: zodCategoryResponseSchema,
           },
         },
-        description: 'Category created successfully',
+        description: 'Category updated successfully',
       },
       400: {
         description: 'Bad request - Invalid input data',
       },
+      404: {
+        description: 'Category not found',
+      },
     },
   },
   handler: async c => {
+    const { id } = c.req.valid('param');
     const { title } = c.req.valid('json');
     const titleSeo = removeSpecialCharacters(title);
+    const [editData] = await c
+      .get('db')
+      .select({
+        titleSeo: blog_categories.titleSeo,
+      })
+      .from(blog_categories)
+      .where(eq(blog_categories.id, id))
+      .limit(1);
+
+    if (!editData) {
+      throw new HTTPException(404);
+    }
+
     const [titleSEODuplocate] = await c
       .get('db')
       .select({
@@ -61,7 +81,10 @@ export const createCategoryRoute = buildRoute({
       .where(eq(blog_categories.titleSeo, titleSeo))
       .limit(1);
 
-    if (titleSEODuplocate?.titleSeo === titleSeo) {
+    if (
+      titleSEODuplocate?.titleSeo === titleSeo &&
+      titleSEODuplocate.titleSeo !== editData.titleSeo
+    ) {
       throw new HTTPException(400, {
         message: 'Category with this title already exists.',
       });
@@ -69,13 +92,14 @@ export const createCategoryRoute = buildRoute({
 
     const [category] = await c
       .get('db')
-      .insert(blog_categories)
-      .values({
+      .update(blog_categories)
+      .set({
         title,
         titleSeo: removeSpecialCharacters(title),
       })
+      .where(eq(blog_categories.id, id))
       .returning();
 
-    return c.json(category, 201);
+    return c.json(category);
   },
 });

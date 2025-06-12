@@ -53,7 +53,11 @@ export const RootProvider = ({
         enableSystem
         {...theme}
       >
-        <Toaster closeButton {...toaster} />
+        <Toaster
+          closeButton
+          position={toaster?.position ?? 'top-center'}
+          {...toaster}
+        />
         {children}
       </ThemeProvider>
     </QueryClientProvider>

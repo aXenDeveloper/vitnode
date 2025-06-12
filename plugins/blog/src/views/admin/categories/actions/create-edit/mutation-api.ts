@@ -9,7 +9,7 @@ import type { zodCreateCategorySchema } from '@/api/modules/categories/routes/cr
 
 import { categoriesModule } from '@/api/modules/categories/categories.module';
 
-export const mutationApi = async (
+export const createMutationApi = async (
   body: z.infer<typeof zodCreateCategorySchema>,
 ) => {
   const res = await fetcher(categoriesModule, {
@@ -22,7 +22,33 @@ export const mutationApi = async (
   });
 
   if (res.status !== 201) {
-    return { message: await res.text() };
+    return { error: await res.text() };
+  }
+
+  revalidatePath(
+    '/[locale]/admin/(auth)/(plugins)/(vitnode-blog)/blog/categories',
+    'page',
+  );
+};
+
+export const editMutationApi = async ({
+  id,
+  ...body
+}: z.infer<typeof zodCreateCategorySchema> & { id: number }) => {
+  const res = await fetcher(categoriesModule, {
+    method: 'put',
+    module: 'categories',
+    path: '/{id}',
+    args: {
+      params: {
+        id,
+      },
+      body,
+    },
+  });
+
+  if (res.status !== 200) {
+    return { error: await res.text() };
   }
 
   revalidatePath(

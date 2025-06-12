@@ -12,23 +12,37 @@ import {
   AlertDialogTrigger,
 } from '@vitnode/core/components/ui/alert-dialog';
 import { Button } from '@vitnode/core/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@vitnode/core/components/ui/tooltip';
 import { Trash2Icon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 import { mutationApi } from './mutation-api';
 
-export const RowActions = ({ title, id }: { id: number; title: string }) => {
+export const DeleteAction = ({ title, id }: { id: number; title: string }) => {
   const t = useTranslations('@vitnode/blog.admin.categories.delete');
   const tGlobal = useTranslations('core.global');
 
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button size="icon" variant="destructive">
-          <Trash2Icon className="size-4" />
-        </Button>
-      </AlertDialogTrigger>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <AlertDialogTrigger asChild>
+              <Button size="icon" variant="destructive">
+                <Trash2Icon className="size-4" />
+              </Button>
+            </AlertDialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>{t('title')}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t('title')}</AlertDialogTitle>

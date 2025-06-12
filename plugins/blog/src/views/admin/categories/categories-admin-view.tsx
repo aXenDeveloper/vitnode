@@ -5,7 +5,8 @@ import { getTranslations } from 'next-intl/server';
 
 import { categoriesModule } from '@/api/modules/categories/categories.module';
 
-import { RowActions } from './row-actions/row-actions';
+import { DeleteAction } from './row-actions/delete/delete-action';
+import { EditAction } from './row-actions/edit-action';
 
 export const CategoriesAdminView = async ({
   searchParams,
@@ -50,7 +51,12 @@ export const CategoriesAdminView = async ({
           id: 'actions',
           label: '',
           className: 'w-10',
-          cell: ({ row }) => <RowActions {...row} />,
+          cell: ({ row }) => (
+            <>
+              <EditAction data={row} />
+              <DeleteAction {...row} />
+            </>
+          ),
         },
       ]}
       edges={data.edges.map(edge => ({ ...edge }))}

@@ -24,26 +24,24 @@ export const ActionsCategoriesAdmin = () => {
   const t = useTranslations('@vitnode/blog.admin.categories.create');
 
   return (
-    <>
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button>
-            <PlusIcon />
-            {t('title')}
-          </Button>
-        </DialogTrigger>
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button>
+          <PlusIcon />
+          {t('title')}
+        </Button>
+      </DialogTrigger>
 
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('title')}</DialogTitle>
-            <DialogDescription>{t('desc')}</DialogDescription>
-          </DialogHeader>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription>{t('desc')}</DialogDescription>
+        </DialogHeader>
 
-          <React.Suspense fallback={<Loader />}>
-            <CreateEditActionCategoriesAdmin />
-          </React.Suspense>
-        </DialogContent>
-      </Dialog>
-    </>
+        <React.Suspense fallback={<Loader />}>
+          <CreateEditActionCategoriesAdmin />
+        </React.Suspense>
+      </DialogContent>
+    </Dialog>
   );
 };

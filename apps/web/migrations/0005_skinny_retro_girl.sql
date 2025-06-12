@@ -1,0 +1,1 @@
+ALTER TABLE "blog_categories" ADD CONSTRAINT "blog_categories_titleSeo_unique" UNIQUE("titleSeo");
