@@ -22,7 +22,7 @@ export interface VitNodeConfig<AppLocales extends string[] = string[]> {
     title: string;
   };
   plugins: BuildPluginReturn[];
-  theme: Omit<
+  theme?: Omit<
     React.ComponentProps<typeof ThemeProvider>,
     'attribute' | 'disableTransitionOnChange' | 'enableSystem'
   >;

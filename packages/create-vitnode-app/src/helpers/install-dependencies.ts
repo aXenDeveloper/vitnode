@@ -26,13 +26,6 @@ export const installDependencies = async ({
    * Return a Promise that resolves once the installation is finished.
    */
   return new Promise<void>((resolve, reject) => {
-    const command = `${packageManager} ${args.join(' ')}`;
-    console.log(
-      color.blue(
-        `Installing dependencies with: ${color.bold(command)}${!isOnline ? ' (offline mode)' : ''}`,
-      ),
-    );
-
     let stdout = '';
     let stderr = '';
 
@@ -57,12 +50,8 @@ export const installDependencies = async ({
       const output = data.toString();
       stdout += output;
       // Show real-time output for important messages
-      if (
-        output.includes('WARN') ||
-        output.includes('ERROR') ||
-        output.includes('FAIL')
-      ) {
-        console.log(color.yellow(output.trim()));
+      if (output.includes('ERROR') || output.includes('FAIL')) {
+        console.log('\n' + color.yellow(output.trim()));
       }
     });
 
@@ -129,7 +118,6 @@ export const installDependencies = async ({
         return;
       }
 
-      console.log(color.green('✅ Dependencies installed successfully!'));
       resolve();
     });
 
