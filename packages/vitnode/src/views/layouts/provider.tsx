@@ -19,7 +19,7 @@ export const RootProvider = ({
 }: {
   children: React.ReactNode;
   debug?: VitNodeConfig['debug'];
-  theme: Omit<
+  theme?: Omit<
     React.ComponentProps<typeof ThemeProvider>,
     'attribute' | 'disableTransitionOnChange' | 'enableSystem'
   >;
