@@ -1,9 +1,23 @@
 {
   "name": "@vitnode/blog",
   "version": "1.2.0-canary.10",
-  "description": "Blog plugin for VitNode",
-  "author": "VitNode",
+  "description": "Blog plugin for VitNode, providing a blogging platform with Next.js and Hono.js.",
+  "author": "VitNode Team",
+  "license": "MIT",
   "homepage": "https://vitnode.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aXenDeveloper/vitnode.git",
+    "directory": "plugins/blog"
+  },
+  "keywords": [
+    "vitnode",
+    "react",
+    "hono.js",
+    "next.js",
+    "typescript",
+    "blog"
+  ],
   "type": "module",
   "exports": {
     "./*": {
@@ -40,7 +54,7 @@
     "@types/react-dom": "^19.1.5",
     "concurrently": "^9.1.2",
     "eslint": "^9.25.1",
-    "eslint-config-typescript-vitnode": "workspace:*",
+    "@vitnode/eslint-config": "workspace:*",
     "tsc-alias": "^1.8.15",
     "typescript": "^5.8.3"
   }

@@ -6,7 +6,6 @@ import type { EnvironmentConfig } from './environment.ts';
 
 interface Config {
   ALLOWED_VERSION_TYPES: string[];
-  PACKAGES_TO_BUMP: string[];
   TAG_PREFIX: string;
   TAG_SUFFIX: string;
   COMMIT_MESSAGE: string;
@@ -20,7 +19,6 @@ const CONFIG: Config = {
     'minor',
     'patch',
   ],
-  PACKAGES_TO_BUMP: ['create-vitnode-app'],
   TAG_PREFIX: 'v',
   TAG_SUFFIX: '',
   COMMIT_MESSAGE: 'ci: version bump to {{version}}',
@@ -189,15 +187,6 @@ export class VersionManager {
   }
 
   async validateSetup(): Promise<void> {
-    // Validate packages exist
-    for (const pkg of CONFIG.PACKAGES_TO_BUMP) {
-      if (
-        !existsSync(join(this.env.WORKSPACE, 'packages', pkg, 'package.json'))
-      ) {
-        throw new Error(`Package ${pkg} does not exist`);
-      }
-    }
-
     // Validate version type
     if (!CONFIG.ALLOWED_VERSION_TYPES.includes(this.env.VERSION_TYPE)) {
       throw new Error(

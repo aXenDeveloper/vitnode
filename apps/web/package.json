@@ -46,7 +46,7 @@
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "eslint": "^9.27.0",
-    "eslint-config-typescript-vitnode": "workspace:*",
+    "@vitnode/eslint-config": "workspace:*",
     "prettier": "^3.5.3",
     "react-email": "^4.0.15",
     "tailwindcss": "^4.1.8",

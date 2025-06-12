@@ -1,4 +1,4 @@
-name: Test publish version
+name: Bump and Publish npm packages
 
 on:
   workflow_dispatch:
@@ -27,6 +27,10 @@ on:
           - bump_and_publish
           - bump
           - publish
+      skip_release_github_patch_notes:
+        description: 'Skip generating release notes for GitHub patch notes?'
+        required: false
+        type: boolean
 
 jobs:
   bump-version:
@@ -73,9 +77,35 @@ jobs:
           GITHUB_EMAIL: ${{ github.actor }}@users.noreply.github.com
           GITHUB_OPTION_MODE: ${{ github.event.inputs.mode }}
 
-      - name: Publish
+      - name: Publish canary
         if: ${{ github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish' }}
-        run: pnpm publish --filter create-vitnode-app --tag canary --no-git-checks --access public
+        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/eslint-config --filter @vitnode/blog --tag canary --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+
+      - name: Publish release candidate
+        if: ${{ github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish' }}
+        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/eslint-config --filter @vitnode/blog --tag rc --no-git-checks --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+
+      - name: Publish stable
+        if: ${{ github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish' }}
+        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/eslint-config --filter @vitnode/blog --tag latest --no-git-checks --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+
+      - name: Create Pre-release
+        if: github.event.inputs.release == 'canary' || github.event.inputs.release == 'release-candidate' && github.event.inputs.skip_release_github_patch_notes == 'false'
+        run: gh release create ${{ steps.version-bump.outputs.newTag }} --generate-notes --prerelease
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release
+        if: github.event.inputs.release == 'stable' && github.event.inputs.skip_release_github_patch_notes == 'false'
+        run: gh release create ${{ steps.version-bump.outputs.newTag }} --generate-notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

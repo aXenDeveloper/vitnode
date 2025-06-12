@@ -69,7 +69,7 @@ export const createPackageJSON = async ({
       ...(eslint
         ? {
             eslint: '^9.27.0',
-            'eslint-config-typescript-vitnode': `^${pkg.version}`,
+            '@vitnode/eslint-config': `^${pkg.version}`,
             prettier: '^3.5.3',
           }
         : {}),

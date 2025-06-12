@@ -1,5 +1,5 @@
 {
-  "name": "eslint-config-typescript-vitnode",
+  "name": "@vitnode/eslint-config",
   "version": "1.2.0-canary.10",
   "description": "ESLint, TypeScript (TSConfig), Prettier config for VitNode",
   "author": "VitNode Team",
@@ -10,6 +10,14 @@
     "url": "git+https://github.com/aXenDeveloper/vitnode.git",
     "directory": "packages/eslint"
   },
+  "keywords": [
+    "vitnode",
+    "eslint",
+    "eslint-config",
+    "typescript",
+    "tsconfig",
+    "prettier"
+  ],
   "type": "module",
   "exports": {
     "./eslint": {

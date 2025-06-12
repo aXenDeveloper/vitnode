@@ -1,4 +1,4 @@
-import eslintVitNode from 'eslint-config-typescript-vitnode/eslint';
+import eslintVitNode from '@vitnode/eslint-config/eslint';
 
 export default [
   ...eslintVitNode,

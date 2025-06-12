@@ -1,6 +1,23 @@
 {
   "name": "@vitnode/core",
   "version": "1.2.0-canary.10",
+  "description": "Core package for VitNode, providing essential functionalities and configurations.",
+  "author": "VitNode Team",
+  "license": "MIT",
+  "homepage": "https://vitnode.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aXenDeveloper/vitnode.git",
+    "directory": "packages/vitnode"
+  },
+  "keywords": [
+    "vitnode",
+    "react",
+    "hono.js",
+    "next.js",
+    "typescript",
+    "core"
+  ],
   "devDependencies": {
     "@hono/swagger-ui": "^0.5.1",
     "@hono/zod-openapi": "^0.19.8",
@@ -23,7 +40,7 @@
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "^0.44.2",
     "eslint": "^9.28.0",
-    "eslint-config-typescript-vitnode": "workspace:*",
+    "@vitnode/eslint-config": "workspace:*",
     "hono": "^4.7.11",
     "jsdom": "^26.1.0",
     "lucide-react": "^0.513.0",
