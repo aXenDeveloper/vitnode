@@ -1,6 +1,6 @@
 {
   "name": "@vitnode/core",
-  "version": "1.2.0-canary.13",
+  "version": "1.2.0-canary.14",
   "description": "Core package for VitNode, providing essential functionalities and configurations.",
   "author": "VitNode Team",
   "license": "MIT",
