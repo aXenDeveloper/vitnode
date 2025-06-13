@@ -49,10 +49,6 @@ export const installDependencies = async ({
     child.stdout?.on('data', (data: Buffer) => {
       const output = data.toString();
       stdout += output;
-      // Show real-time output for important messages
-      if (output.includes('ERROR') || output.includes('FAIL')) {
-        console.log('\n' + color.yellow(output.trim()));
-      }
     });
 
     // Capture stderr

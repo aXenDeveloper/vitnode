@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url';
 
 import type { PackageJSON } from '../helpers/packages-json.js';
 
+import { getAvailablePackageManagers } from '../helpers/get-available-package-managers.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -20,6 +22,7 @@ export const createPackageJSON = async ({
   packageManager: string;
   root: string;
 }) => {
+  const availablePackageManagers = await getAvailablePackageManagers();
   const pkg: PackageJSON = JSON.parse(
     await readFile(join(__dirname, '..', '..', '..', 'package.json'), 'utf-8'),
   );
@@ -45,8 +48,7 @@ export const createPackageJSON = async ({
         : {}),
       ...(docker
         ? {
-            'docker:dev':
-              'docker compose -f ./docker-compose.yml -p vitnode-dev-dun up -d',
+            'docker:dev': `docker compose -f ./docker-compose.yml -p ${appName}-vitnode-dev up -d`,
           }
         : {}),
     },
@@ -87,7 +89,7 @@ export const createPackageJSON = async ({
       'tw-animate-css': '^1.3.2',
       typescript: '^5.8.3',
     },
-    packageManager,
+    packageManager: `${packageManager}@${availablePackageManagers[packageManager]}`,
   };
 
   await writeFile(

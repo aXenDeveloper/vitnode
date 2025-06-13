@@ -114,14 +114,13 @@ export function findRepoRoot(start: string): string {
     if (
       existsSync(join(dir, 'turbo.json')) ||
       existsSync(join(dir, 'pnpm-workspace.yaml')) ||
-      existsSync(join(dir, '.git'))
+      existsSync(join(dir, '.git')) ||
+      existsSync(join(dir, 'package.json'))
     )
       return dir;
     dir = dirname(dir);
   }
-  throw new Error(
-    '❌  Could not locate monorepo root – add a marker file or pass it via CLI/env',
-  );
+  throw new Error('❌  Could not locate project root');
 }
 
 export function findLocaleRoot(repoRoot: string): string {
