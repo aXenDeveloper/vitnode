@@ -111,20 +111,21 @@ export const transformFileImports = (
 export function findRepoRoot(start: string): string {
   let dir = start;
   while (dir !== dirname(dir)) {
-    // Check for turbo.json first
+    // Check for turbo.json first (monorepo indicator)
     if (existsSync(join(dir, 'turbo.json'))) return dir;
 
-    // Then check for pnpm-workspace.yaml
-    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return dir;
-
-    // Then check for .git
+    // Then check for .git (repository root)
     if (existsSync(join(dir, '.git'))) return dir;
-
-    // Finally check for package.json as last resort
-    if (existsSync(join(dir, 'package.json'))) return dir;
 
     dir = dirname(dir);
   }
+
+  // Still here? So grab package.json as a last resort
+  const packageJsonPath = join(start, 'package.json');
+  if (existsSync(packageJsonPath)) {
+    return dirname(packageJsonPath);
+  }
+
   throw new Error('❌  Could not locate project root');
 }
 

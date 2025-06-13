@@ -1,4 +1,5 @@
 import { buildApiConfig } from '@vitnode/core/vitnode.config';
+import { drizzle } from 'drizzle-orm/postgres-js';
 
 export const POSTGRES_URL =
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
@@ -6,4 +7,8 @@ export const POSTGRES_URL =
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [],
+  dbProvider: drizzle({
+    connection: POSTGRES_URL,
+    casing: 'camelCase',
+  }),
 });

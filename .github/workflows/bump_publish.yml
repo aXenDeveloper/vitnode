@@ -66,8 +66,8 @@ jobs:
       - name: Build scripts
         run: pnpm run build:scripts
 
-      - name: Build packages
-        run: pnpm run build --filter=create-vitnode-app --filter=@vitnode/core --filter=@vitnode/eslint-config --filter=@vitnode/blog
+      - name: Build plugins
+        run: pnpm run build:plugins
 
       - name: Run script to bump version & copy files
         run: pnpm run release
