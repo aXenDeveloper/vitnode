@@ -7,6 +7,7 @@ import color from 'picocolors';
 import { getAvailablePackageManagers } from './helpers/get-available-package-managers.js';
 
 export interface CreateCliReturn {
+  docker?: boolean;
   eslint: boolean;
   install: boolean;
   packageManager: string;
@@ -20,6 +21,7 @@ export const createQuestionsCli = async (
     packageManager: optionsFromProgram.packageManager,
     eslint: optionsFromProgram.eslint,
     install: !optionsFromProgram.skipInstall,
+    docker: optionsFromProgram.docker,
   };
 
   if (!optionsFromProgram.packageManager) {
@@ -55,6 +57,12 @@ export const createQuestionsCli = async (
   if (optionsFromProgram.skipInstall === undefined) {
     options.install = await confirm({
       message: `Would you like to ${color.blue('Install dependencies')}?`,
+    });
+  }
+
+  if (optionsFromProgram.docker === undefined) {
+    options.docker = await confirm({
+      message: `Would you like to use ${color.blue('Docker')}?`,
     });
   }
 

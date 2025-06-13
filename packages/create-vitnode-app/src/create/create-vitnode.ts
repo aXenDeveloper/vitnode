@@ -18,6 +18,7 @@ export const createVitNode = async ({
   packageManager,
   eslint,
   install,
+  docker,
 }: CreateCliReturn & {
   appName: string;
   root: string;
@@ -64,6 +65,7 @@ export const createVitNode = async ({
     appName,
     packageManager,
     eslint,
+    docker,
   });
 
   spinner.text = 'Changing .env file...';
@@ -74,6 +76,23 @@ export const createVitNode = async ({
     `LOGIN_TOKEN_SECRET=${randomBytes(32).toString('hex')}`,
   );
   await writeFile(envPath, newEnv);
+
+  if (docker) {
+    spinner.text = 'Copying docker files...';
+    await copyFile(
+      join(templatePath, 'docker', 'docker-compose.yml'),
+      join(root, 'docker-compose.yml'),
+    );
+
+    // Update docker-compose.yml with app name
+    const dockerComposePath = join(root, 'docker-compose.yml');
+    const dockerComposeContent = await readFile(dockerComposePath, 'utf-8');
+    const updatedContent = dockerComposeContent.replace(
+      /vitnode_postgres_dev/g,
+      `${appName}_vitnode_postgres_dev`,
+    );
+    await writeFile(dockerComposePath, updatedContent);
+  }
 
   if (install) {
     spinner.text = 'Installing dependencies...';

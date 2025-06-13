@@ -12,8 +12,10 @@ export const createPackageJSON = async ({
   packageManager,
   root,
   eslint,
+  docker,
 }: {
   appName: string;
+  docker?: boolean;
   eslint: boolean;
   packageManager: string;
   root: string;
@@ -39,6 +41,12 @@ export const createPackageJSON = async ({
         ? {
             lint: 'eslint .',
             'lint:fix': 'eslint . --fix',
+          }
+        : {}),
+      ...(docker
+        ? {
+            'docker:dev':
+              'docker compose -f ./docker-compose.yml -p vitnode-dev-dun up -d',
           }
         : {}),
     },
@@ -70,6 +78,7 @@ export const createPackageJSON = async ({
         ? {
             eslint: '^9.27.0',
             '@vitnode/eslint-config': `^${pkg.version}`,
+            'prettier-plugin-tailwindcss': '^0.6.12',
             prettier: '^3.5.3',
           }
         : {}),
