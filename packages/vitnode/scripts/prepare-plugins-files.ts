@@ -17,7 +17,7 @@ export const preparePluginsFiles = async () => {
   const config = await getConfig();
   const plugins: string[] = [
     ...config.plugins.map(plugin => plugin.pluginId),
-    'vitnode',
+    '@vitnode/core',
   ];
 
   const repoRoot = findRepoRoot(process.cwd());

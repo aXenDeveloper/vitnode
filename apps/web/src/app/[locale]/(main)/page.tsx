@@ -3,16 +3,8 @@ import { buttonVariants } from '@vitnode/core/components/ui/button';
 import { Link } from '@vitnode/core/lib/navigation';
 import { cn } from '@vitnode/core/lib/utils';
 import { ArrowRight, Book, Terminal } from 'lucide-react';
-import { getTranslations } from 'next-intl/server';
 
-export default async function Home({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
-  const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: 'welcome.home' });
-
+export default function Page() {
   return (
     <main className="container mx-auto flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-16 px-4 py-16">
       {/* Hero Section */}
@@ -21,10 +13,10 @@ export default async function Home({
 
         <div className="space-y-4">
           <h1 className="from-foreground to-foreground/70 bg-gradient-to-br bg-clip-text text-4xl font-bold tracking-tight text-balance text-transparent md:text-5xl lg:text-6xl">
-            {t('title')}
+            Start Your Journey!
           </h1>
           <p className="text-muted-foreground mx-auto max-w-2xl text-lg text-pretty">
-            {t('desc')}
+            Dive in. Create or install your first plugin!
           </p>
         </div>
 
@@ -40,7 +32,7 @@ export default async function Home({
             target="_blank"
           >
             <Terminal className="mr-2 h-4 w-4" />
-            {t('go_to_admin_cp')}
+            Go to AdminCP
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
 
@@ -56,7 +48,7 @@ export default async function Home({
             target="_blank"
           >
             <Book className="mr-2 h-4 w-4" />
-            {t('read_our_docs')}
+            Read our Docs
           </Link>
 
           <Link

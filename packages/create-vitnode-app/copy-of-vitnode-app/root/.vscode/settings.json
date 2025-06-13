@@ -1,0 +1,6 @@
+{
+  "cSpell.words": ["vitnode"],
+  "search.exclude": {
+    "**/(plugins)/*": true
+  }
+}
