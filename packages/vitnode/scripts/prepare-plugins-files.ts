@@ -24,6 +24,9 @@ export const preparePluginsFiles = async () => {
   const localeRoot = findLocaleRoot(repoRoot);
   const routeMap = buildInitialRouteMap(localeRoot);
 
+  // For both monorepo apps and standalone projects: use current directory as base
+  const baseDir = process.cwd();
+
   await Promise.all(
     plugins.map(async pluginName => {
       const pluginPath = join(process.cwd(), 'node_modules', pluginName);
@@ -50,20 +53,18 @@ export const preparePluginsFiles = async () => {
       // Transform plugin name for path usage
       const pluginPathName = pluginName.replace(/\//g, '-').replace(/@/g, '');
 
+      // All projects (both monorepo apps and standalone) use the same structure
       const mainDest = join(
-        repoRoot,
-        'apps',
-        'web',
+        baseDir,
         'src',
         'app',
         '[locale]',
         '(main)',
         join('(plugins)', `(${pluginPathName})`),
       );
+
       const adminDest = join(
-        repoRoot,
-        'apps',
-        'web',
+        baseDir,
         'src',
         'app',
         '[locale]',
@@ -71,14 +72,8 @@ export const preparePluginsFiles = async () => {
         '(auth)',
         join('(plugins)', `(${pluginPathName})`),
       );
-      const langDest = join(
-        repoRoot,
-        'apps',
-        'web',
-        'src',
-        'locales',
-        pluginName,
-      );
+
+      const langDest = join(baseDir, 'src', 'locales', pluginName);
 
       // Define source configurations for this plugin
       const sources: SourceConfig[] = [

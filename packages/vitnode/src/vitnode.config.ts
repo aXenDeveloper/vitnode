@@ -63,7 +63,9 @@ export function buildApiConfig(args: VitNodeApiConfig): VitNodeApiConfig {
 export const handleRequestConfig = async ({
   requestLocale,
   vitNodeConfig,
+  pathToMessages,
 }: {
+  pathToMessages: (path: string) => Promise<{ default: object }>;
   requestLocale: Promise<string | undefined>;
   vitNodeConfig: VitNodeConfig;
 }) => {
@@ -73,15 +75,16 @@ export const handleRequestConfig = async ({
       ? reqLocale
       : vitNodeConfig.i18n.defaultLocale;
 
-  const pluginsId: string[] = [
+  const pluginIds: string[] = [
     '@vitnode/core',
     ...vitNodeConfig.plugins.map(plugin => plugin.pluginId),
   ];
 
   // Import and merge messages from all plugins
-  const messagesPromises = pluginsId.map(async pluginId => {
+  const messagesPromises = pluginIds.map(async pluginId => {
     try {
-      const messages = await import(`@/locales/${pluginId}/${locale}.json`);
+      const path = `${pluginId}/${locale}.json`;
+      const messages = await pathToMessages(path);
 
       return messages.default;
     } catch {
@@ -95,6 +98,7 @@ export const handleRequestConfig = async ({
   return {
     locale,
     messages,
+    pluginIds,
     timeZone: vitNodeConfig.i18n.timeZone,
   };
 };
