@@ -87,13 +87,6 @@ CREATE TABLE "core_sessions_known_devices" (
 );
 --> statement-breakpoint
 ALTER TABLE "core_sessions_known_devices" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
-CREATE TABLE "core_test" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"text" text NOT NULL
-);
---> statement-breakpoint
-ALTER TABLE "core_test" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "core_users" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"nameCode" varchar(255) NOT NULL,
@@ -145,6 +138,28 @@ CREATE TABLE "core_users_sso" (
 );
 --> statement-breakpoint
 ALTER TABLE "core_users_sso" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+CREATE TABLE "blog_categories" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"title" varchar(100) NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp NOT NULL,
+	"titleSeo" varchar(100) DEFAULT '' NOT NULL,
+	CONSTRAINT "blog_categories_titleSeo_unique" UNIQUE("titleSeo")
+);
+--> statement-breakpoint
+ALTER TABLE "blog_categories" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+CREATE TABLE "blog_posts" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"title" varchar(255) NOT NULL,
+	"titleSeo" varchar(255) NOT NULL,
+	"content" text NOT NULL,
+	"categoryId" integer NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp NOT NULL,
+	CONSTRAINT "blog_posts_titleSeo_unique" UNIQUE("titleSeo")
+);
+--> statement-breakpoint
+ALTER TABLE "blog_posts" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "core_admin_permissions" ADD CONSTRAINT "core_admin_permissions_roleId_core_roles_id_fk" FOREIGN KEY ("roleId") REFERENCES "public"."core_roles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_admin_permissions" ADD CONSTRAINT "core_admin_permissions_userId_core_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."core_users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_admin_sessions" ADD CONSTRAINT "core_admin_sessions_userId_core_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."core_users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -159,6 +174,7 @@ ALTER TABLE "core_users" ADD CONSTRAINT "core_users_language_core_languages_code
 ALTER TABLE "core_users_confirm_emails" ADD CONSTRAINT "core_users_confirm_emails_userId_core_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."core_users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_users_forgot_password" ADD CONSTRAINT "core_users_forgot_password_userId_core_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."core_users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "core_users_sso" ADD CONSTRAINT "core_users_sso_userId_core_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."core_users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "blog_posts" ADD CONSTRAINT "blog_posts_categoryId_blog_categories_id_fk" FOREIGN KEY ("categoryId") REFERENCES "public"."blog_categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "core_admin_permissions_role_id_idx" ON "core_admin_permissions" USING btree ("roleId");--> statement-breakpoint
 CREATE INDEX "core_admin_permissions_user_id_idx" ON "core_admin_permissions" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "core_admin_sessions_token_idx" ON "core_admin_sessions" USING btree ("token");--> statement-breakpoint

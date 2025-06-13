@@ -1,1 +1,0 @@
-ALTER TABLE "blog_categories" ADD COLUMN "title" text NOT NULL;

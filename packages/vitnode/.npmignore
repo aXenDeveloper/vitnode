@@ -3,8 +3,6 @@
 !/src/app/**
 !/src/app_admin
 !/src/app_admin/**
-!/src/database
-!/src/database/**
 !/src/locales
 !/src/locales/**
 !/src/drizzle.config.ts

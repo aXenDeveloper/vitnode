@@ -111,13 +111,18 @@ export const transformFileImports = (
 export function findRepoRoot(start: string): string {
   let dir = start;
   while (dir !== dirname(dir)) {
-    if (
-      existsSync(join(dir, 'turbo.json')) ||
-      existsSync(join(dir, 'pnpm-workspace.yaml')) ||
-      existsSync(join(dir, '.git')) ||
-      existsSync(join(dir, 'package.json'))
-    )
-      return dir;
+    // Check for turbo.json first
+    if (existsSync(join(dir, 'turbo.json'))) return dir;
+
+    // Then check for pnpm-workspace.yaml
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return dir;
+
+    // Then check for .git
+    if (existsSync(join(dir, '.git'))) return dir;
+
+    // Finally check for package.json as last resort
+    if (existsSync(join(dir, 'package.json'))) return dir;
+
     dir = dirname(dir);
   }
   throw new Error('❌  Could not locate project root');

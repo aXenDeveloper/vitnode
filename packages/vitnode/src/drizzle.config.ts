@@ -20,6 +20,7 @@ export const defineVitNodeDrizzleConfig = ({
         process.cwd(),
         'node_modules',
         itemId,
+        'dist',
         'src',
         'database',
       );
@@ -32,16 +33,11 @@ export const defineVitNodeDrizzleConfig = ({
       // Check if there are any .ts files in the directory
       try {
         const files = readdirSync(pluginPath);
-        const hasSchemaFiles = files.some(
-          file => file.endsWith('.ts') && !file.endsWith('.d.ts'),
-        );
-
-        if (!hasSchemaFiles) {
-          return null;
-        }
+        const hasSchemaFiles = files.some(file => file.endsWith('.js'));
+        if (!hasSchemaFiles) return null;
 
         // Return glob pattern for schema files
-        return join(pluginPath, '*.ts').replace(/\\/g, '/');
+        return join(pluginPath, '*.js').replace(/\\/g, '/');
       } catch {
         return null;
       }

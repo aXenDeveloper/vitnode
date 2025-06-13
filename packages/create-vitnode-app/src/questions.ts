@@ -54,15 +54,15 @@ export const createQuestionsCli = async (
     });
   }
 
-  if (optionsFromProgram.skipInstall === undefined) {
-    options.install = await confirm({
-      message: `Would you like to ${color.blue('Install dependencies')}?`,
-    });
-  }
-
   if (optionsFromProgram.docker === undefined) {
     options.docker = await confirm({
       message: `Would you like to use ${color.blue('Docker')}?`,
+    });
+  }
+
+  if (optionsFromProgram.skipInstall === undefined) {
+    options.install = await confirm({
+      message: `Would you like to ${color.blue('Install dependencies')}?`,
     });
   }
 
