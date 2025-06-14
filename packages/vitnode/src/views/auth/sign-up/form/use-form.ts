@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
+import { useWrapperSignUp } from '../wrapper';
 import { mutationApi } from './mutation-api';
 
 export const useFormSignUp = () => {
@@ -34,14 +35,17 @@ export const useFormSignUp = () => {
     terms: z.boolean().refine(value => value, t('terms.required')),
     newsletter: z.boolean().optional(),
   });
+  const { setShowSendingEmail } = useWrapperSignUp();
 
   const onSubmit = async (
     values: z.infer<typeof formSchema>,
     form: UseFormReturn<z.infer<typeof formSchema>>,
   ) => {
     const mutation = await mutationApi(values);
-    if (!mutation?.message) {
-      toast('Event has been created.');
+    if (mutation.data) {
+      if (!mutation.data.emailVerified) {
+        setShowSendingEmail(mutation.data.email);
+      }
 
       return;
     }
@@ -58,7 +62,7 @@ export const useFormSignUp = () => {
     } as const;
 
     const errorConfig =
-      errorMessages[mutation.message as keyof typeof errorMessages];
+      errorMessages[mutation.error as unknown as keyof typeof errorMessages];
 
     if (errorConfig) {
       form.setError(

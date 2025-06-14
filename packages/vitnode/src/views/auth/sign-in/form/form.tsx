@@ -7,7 +7,7 @@ import { AutoForm } from '@/components/form/auto-form';
 import { AutoFormInput } from '@/components/form/fields/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-import { useFormSignIn } from './hooks/use-form';
+import { useFormSignIn } from './use-form';
 
 export const FormSignIn = ({ isAdmin }: { isAdmin?: boolean }) => {
   const t = useTranslations('core.auth.sign_in');

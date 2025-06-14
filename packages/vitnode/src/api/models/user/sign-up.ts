@@ -60,8 +60,7 @@ const getDefaultData = async (
 
   return {
     roleId: defaultRole.id,
-    // TODO: Handle email verification
-    emailVerified: false,
+    emailVerified: !c.get('core').emailProvider,
   };
 };
 

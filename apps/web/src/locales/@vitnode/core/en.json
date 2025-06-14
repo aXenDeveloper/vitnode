@@ -95,6 +95,11 @@
         "newsletter": {
           "label": "Newsletter",
           "desc": "Receive the latest news and updates."
+        },
+        "email_confirmation": {
+          "title": "Check your email",
+          "desc": "We've sent a confirmation link to your email address",
+          "check_spam": "If you don't see the email in your inbox, please check your spam folder."
         }
       },
       "sign_in": {

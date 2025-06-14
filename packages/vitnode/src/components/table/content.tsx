@@ -64,7 +64,7 @@ export function ContentDataTable<T extends DataTableTMin>({
                       return (
                         <TableCell
                           className={cn({
-                            'flex flex-wrap items-center justify-end gap-2':
+                            'flex items-center justify-end gap-2':
                               column.id === 'actions',
                           })}
                           key={`${row.id}_${column.id.toString()}`}

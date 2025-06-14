@@ -15,8 +15,10 @@ export const SSOButtonsSkeleton = () => {
 };
 
 export const SSOButtons = async () => {
-  const t = await getTranslations('core.auth.sso');
-  const { sso } = await getMiddlewareApi();
+  const [t, { sso }] = await Promise.all([
+    getTranslations('core.auth.sso'),
+    getMiddlewareApi(),
+  ]);
 
   return (
     <>
@@ -24,9 +26,14 @@ export const SSOButtons = async () => {
         <div className="absolute inset-0 flex items-center">
           <span className="w-full border-t" />
         </div>
-        <div className="relative flex justify-center text-xs">
-          <span className="bg-card text-muted-foreground px-4">{t('or')}</span>
-        </div>
+
+        {sso.length > 0 && (
+          <div className="relative flex justify-center text-xs">
+            <span className="bg-card text-muted-foreground px-4">
+              {t('or')}
+            </span>
+          </div>
+        )}
       </div>
 
       {sso.length > 0 && (

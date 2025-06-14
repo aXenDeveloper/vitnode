@@ -11,7 +11,7 @@ import { Link } from '@/lib/navigation';
 import { removeSpecialCharacters } from '@/lib/special-characters';
 
 import { PasswordInput } from '../../components/password-input';
-import { useFormSignUp } from './hooks/use-form';
+import { useFormSignUp } from './use-form';
 
 export const FormSignUp = ({ isEmail }: { isEmail: boolean }) => {
   const t = useTranslations('core.auth.sign_up');

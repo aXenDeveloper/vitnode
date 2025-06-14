@@ -5,6 +5,8 @@ import { PasswordModel } from '@/api/models/password';
 import { UserModel } from '@/api/models/user';
 import { CONFIG_PLUGIN } from '@/config';
 
+import { SessionModel } from '../../../models/session';
+
 const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 
 export const zodSignUpSchema = z.object({
@@ -41,11 +43,13 @@ export const signUpRoute = buildRoute({
       },
     },
     responses: {
-      200: {
+      201: {
         content: {
           'application/json': {
             schema: z.object({
               id: z.number(),
+              emailVerified: z.boolean(),
+              email: z.string().email(),
             }),
           },
         },
@@ -62,6 +66,19 @@ export const signUpRoute = buildRoute({
       c,
     );
 
-    return c.json({ id: data.id });
+    if (data.emailVerified) {
+      await new SessionModel(c).createSessionByUserId(data.id);
+    } else {
+      // TODO: Send verification email
+    }
+
+    return c.json(
+      {
+        id: data.id,
+        emailVerified: data.emailVerified,
+        email: data.email,
+      },
+      201,
+    );
   },
 });

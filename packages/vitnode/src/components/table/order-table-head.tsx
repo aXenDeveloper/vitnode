@@ -33,7 +33,7 @@ export function OrderTableHeadDataTable<T extends DataTableTMin>({
 
   return (
     <Button
-      className="[&_svg]:text-muted-foreground flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 [&_svg]:size-4 [&_svg]:shrink-0"
+      className="[&_svg]:text-muted-foreground -ml-2 flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 [&_svg]:size-4 [&_svg]:shrink-0"
       onClick={() => {
         startTransition(() => {
           const params = new URLSearchParams(searchParams.toString());

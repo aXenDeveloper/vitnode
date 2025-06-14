@@ -7,12 +7,7 @@ import { HTTPException } from 'hono/http-exception';
 import { CONFIG_PLUGIN } from '@/const';
 import { blog_categories } from '@/database/categories';
 
-export const zodEditCategorySchema = z.object({
-  title: z
-    .string()
-    .min(3, 'Title must be at least 3 characters long')
-    .max(100, 'Title must not exceed 100 characters'),
-});
+import { zodCreateCategorySchema } from './create.route';
 
 const zodCategoryResponseSchema = z.object({
   id: z.number(),
@@ -33,7 +28,7 @@ export const editCategoryRoute = buildRoute({
       body: {
         content: {
           'application/json': {
-            schema: zodEditCategorySchema,
+            schema: zodCreateCategorySchema,
           },
         },
       },

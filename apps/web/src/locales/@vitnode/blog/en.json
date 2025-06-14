@@ -41,6 +41,19 @@
           "category": "Category",
           "updated_at": "Updated At"
         },
+        "create": {
+          "title": "Create Post",
+          "desc": "Write a new article for your blog.",
+          "form": {
+            "title": "Title",
+            "content": "Content"
+          },
+          "submit": "Create Post"
+        },
+        "edit": {
+          "title": "Edit Post",
+          "submit": "Save Changes"
+        },
         "delete": {
           "title": "Delete Post",
           "desc": "Are you sure you want to delete <title></title> post? This action cannot be undone.",

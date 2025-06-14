@@ -8,14 +8,7 @@ import { CONFIG_PLUGIN } from '@/const';
 import { blog_categories } from '@/database/categories';
 import { blog_posts } from '@/database/posts';
 
-export const zodEditPostSchema = z.object({
-  title: z
-    .string()
-    .min(3, 'Title must be at least 3 characters long')
-    .max(255, 'Title must not exceed 255 characters'),
-  content: z.string().min(10, 'Content must be at least 10 characters long'),
-  categoryId: z.number(),
-});
+import { zodCreatePostSchema } from './create.route';
 
 const zodPostResponseSchema = z.object({
   id: z.number(),
@@ -39,7 +32,7 @@ export const editPostRoute = buildRoute({
       body: {
         content: {
           'application/json': {
-            schema: zodEditPostSchema,
+            schema: zodCreatePostSchema,
           },
         },
       },

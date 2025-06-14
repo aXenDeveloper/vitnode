@@ -34,7 +34,7 @@ export const DeleteAction = ({ title, id }: { id: number; title: string }) => {
         <Tooltip>
           <TooltipTrigger asChild>
             <AlertDialogTrigger asChild>
-              <Button size="icon" variant="destructive">
+              <Button size="icon" variant="destructiveGhost">
                 <Trash2Icon className="size-4" />
               </Button>
             </AlertDialogTrigger>

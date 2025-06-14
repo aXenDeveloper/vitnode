@@ -39,6 +39,7 @@ export const mutationApi = async (
 
     return;
   }
+
   revalidatePath('/[locale]/(main)', 'layout');
   await redirect('/');
 };

@@ -7,13 +7,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { SidebarMenuButton } from '@/components/ui/sidebar';
+import { SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
 import {
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Link } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +34,9 @@ export const ItemNavAdmin = ({
 }: ItemNavAdminProps & {
   items?: Omit<ItemNavAdminProps, 'icon'>[];
 }) => {
+  const { toggleSidebar } = useSidebar();
+  const isMobile = useIsMobile();
+
   const content = (
     <>
       {icon ?? <MenuIcon />}
@@ -46,6 +50,11 @@ export const ItemNavAdmin = ({
         <SidebarMenuButton asChild tooltip={title}>
           <Link
             href={href}
+            onClick={() => {
+              if (isMobile) {
+                toggleSidebar();
+              }
+            }}
             prefetch
             rel={isOpenInNewTab ? 'noopener noreferrer' : undefined}
             target={isOpenInNewTab ? '_blank' : undefined}
@@ -78,6 +87,11 @@ export const ItemNavAdmin = ({
                 <SidebarMenuSubButton asChild>
                   <Link
                     href={item.href}
+                    onClick={() => {
+                      if (isMobile) {
+                        toggleSidebar();
+                      }
+                    }}
                     prefetch
                     rel={
                       item.isOpenInNewTab ? 'noopener noreferrer' : undefined
