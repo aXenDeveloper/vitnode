@@ -3,6 +3,7 @@
     "title": "Blog",
     "admin": {
       "nav": {
+        "posts": "Posts",
         "categories": "Categories"
       },
       "categories": {
@@ -31,6 +32,20 @@
         "edit": {
           "title": "Edit Category",
           "submit": "Save Changes"
+        }
+      },
+      "posts": {
+        "desc": "Write and manage your blog posts.",
+        "table": {
+          "title": "Title",
+          "category": "Category",
+          "updated_at": "Updated At"
+        },
+        "delete": {
+          "title": "Delete Post",
+          "desc": "Are you sure you want to delete <title></title> post? This action cannot be undone.",
+          "confirm": "Yes, delete this post",
+          "success": "Post has been deleted successfully."
         }
       }
     }

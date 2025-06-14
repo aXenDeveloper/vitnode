@@ -5,10 +5,11 @@ import { getTranslations } from 'next-intl/server';
 import { SignInView } from '../../views/auth/sign-in/sign-in-view';
 
 export const generateMetadata = async ({
-  locale,
+  params,
 }: {
-  locale: string;
+  params: Promise<{ locale: string }>;
 }): Promise<Metadata> => {
+  const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'core.global' });
 
   return {

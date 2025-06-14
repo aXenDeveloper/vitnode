@@ -1,6 +1,6 @@
 import { buildModule } from '@vitnode/core/api/lib/module';
 
-import { CONFIG_PLUGIN } from '@/config';
+import { CONFIG_PLUGIN } from '@/const';
 
 import { createCategoryRoute } from './routes/create.route';
 import { deleteCategoryRoute } from './routes/delete.route';

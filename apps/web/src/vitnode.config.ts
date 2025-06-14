@@ -1,4 +1,4 @@
-import { blogPlugin } from '@vitnode/blog/plugin';
+import { blogPlugin } from '@vitnode/blog/config';
 import { buildConfig, handleRequestConfig } from '@vitnode/core/vitnode.config';
 import { getRequestConfig } from 'next-intl/server';
 

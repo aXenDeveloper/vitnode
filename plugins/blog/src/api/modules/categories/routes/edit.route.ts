@@ -4,7 +4,7 @@ import { removeSpecialCharacters } from '@vitnode/core/lib/special-characters';
 import { eq } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
 
-import { CONFIG_PLUGIN } from '@/config';
+import { CONFIG_PLUGIN } from '@/const';
 import { blog_categories } from '@/database/categories';
 
 export const zodEditCategorySchema = z.object({

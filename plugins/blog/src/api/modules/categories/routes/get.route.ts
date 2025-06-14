@@ -6,7 +6,7 @@ import {
   zodPaginationQuery,
 } from '@vitnode/core/api/lib/with-pagination';
 
-import { CONFIG_PLUGIN } from '@/config';
+import { CONFIG_PLUGIN } from '@/const';
 import { blog_categories } from '@/database/categories';
 
 const zodCategorySchema = z.object({

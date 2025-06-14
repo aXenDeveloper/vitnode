@@ -29,18 +29,30 @@
 1. **Install dependencies**
 
    ```bash
-   pnpm install
+   pnpm create vitnode-app@canary
+   // or
+   bun create vitnode-app@canary
+   // or
+   npx create-vitnode-app@canary
    ```
 
 2. **Start database container**
 
    ```bash
    pnpm docker:dev
+   // or
+   bun docker:dev
+   // or
+   npm run docker:dev
    ```
 
 3. **Launch development server**
    ```bash
    pnpm dev
+   // or
+   bun dev
+   // or
+   npm run dev
    ```
 
 ## 📝 Available Scripts
