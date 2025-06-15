@@ -1,26 +1,32 @@
 # VitNode Development Guidelines
 
-VitNode is a comprehensive framework designed to simplify and accelerate application development with Next.js and Hono.js. Built as a monorepo solution managed by Turborepo, VitNode provides a structured environment that makes development faster and less complex. The framework includes an integrated AdminCP and plugin system to extend its core functionality.
+VitNode is a comprehensive framework designed to simplify and accelerate application development with Next.js and Hono.js. Built as a monorepo solution managed by Turborepo, VitNode provides a structured environment that makes development faster and less complex. The framework includes an integrated AdminCP, plugin system, authentication, role management, and comprehensive developer tools.
 
 ## Global Rules
 
 - Write ESModule only
 - Always use snake_case for file names
 - Use pnpm as package manager
-- Use Zod 3 for schema validation
+- Use Zod 3 for schema validation and runtime validation
 - Use react-hook-form 7 for forms
 - Use Shadcn UI & Tailwind CSS 4 for UI
 - Respect Prettier configuration in `packages/eslint/prettierrc.mjs` and ESLint configuration in `packages/eslint/eslint.config.mjs`
-- Use TypeScript 5, React 19 & Hono.js 4
+- Use TypeScript 5 with strict configuration, React 19 & Hono.js 4
+- Follow WCAG 2.1 AA compliance for accessibility
+- Aim for Lighthouse scores of 95+ and Core Web Vitals optimization
+- Implement proper error handling and validation at all levels
 
 ## Frontend Development (Next.js & React)
 
-- Use Next.js 15
-- Use App Router and Server Components
+- Use Next.js 15 with App Router and Server Components
 - Use server actions for form handling and data mutations from Server Components
 - Leverage Next.js Image component with proper sizing for core web vitals optimization
 - Navigation API is in `vitnode/lib/navigation` file. Avoid using `next/navigation` directly
 - Alert Dialog & Dialog content should always have title and description with React lazy loading content
+- Implement dark/light mode support with system preference detection
+- Ensure keyboard navigation support and screen reader compatibility
+- Use proper semantic HTML and ARIA attributes
+- Use XSS protection with content security policy
 
 ### Internationalization (i18n)
 
@@ -30,10 +36,16 @@ VitNode is a comprehensive framework designed to simplify and accelerate applica
 
 ## Backend Development (Hono.js)
 
-- Use @hono/zod-openapi or Zod 3 for schema validation
-- Use PostgreSQL with Drizzle ORM
+- Use @hono/zod-openapi or Zod 3 for schema validation and OpenAPI documentation
+- Use PostgreSQL with Drizzle ORM for database operations
 - Use `t.serial().primaryKey()` for all database IDs
 - To get access to database, use `c.get('database')` by Hono.js context
+- Implement rate limiting on API endpoints, especially authentication
+- Use secure session management with configurable duration
+- Implement proper error handling and logging
+- Follow RESTful API design principles
+- Support API versioning with backward compatibility
+- Include comprehensive OpenAPI 3.0 specifications
 
 ## Documentation (\*.mdx files)
 

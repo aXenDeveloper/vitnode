@@ -63,20 +63,48 @@ export const getBaseType = (schema: z.ZodTypeAny): string => {
 };
 
 /**
- * Search for a "ZodDefult" in the Zod stack and return its value.
+ * Search for a "ZodDefault" in the Zod stack and return its value.
  */
 export function getDefaultValueInZodStack(schema: z.ZodTypeAny): unknown {
+  // Check if this is a ZodDefault and return its value
   if (schema._def.typeName === z.ZodFirstPartyTypeKind.ZodDefault) {
-    return (schema as z.ZodDefault<z.ZodTypeAny>)._def.defaultValue();
+    const defaultValue = (
+      schema as z.ZodDefault<z.ZodTypeAny>
+    )._def.defaultValue();
+    // If defaultValue is a function, call it to get the actual value
+
+    return typeof defaultValue === 'function' ? defaultValue() : defaultValue;
   }
 
-  if ('innerType' in schema._def) {
-    return getDefaultValueInZodStack(schema._def.innerType as z.ZodTypeAny);
+  // Traverse through ZodEffects (like refinements) - check this first as it wraps the actual schema
+  if (schema._def.typeName === z.ZodFirstPartyTypeKind.ZodEffects) {
+    return getDefaultValueInZodStack(
+      (schema._def as { schema: z.ZodTypeAny }).schema,
+    );
   }
+
+  // Traverse through other types that have schema property
   if ('schema' in schema._def) {
     return getDefaultValueInZodStack(
       (schema._def as { schema: z.ZodTypeAny }).schema,
     );
+  }
+
+  // Traverse through ZodOptional, ZodNullable, etc.
+  if ('innerType' in schema._def) {
+    return getDefaultValueInZodStack(schema._def.innerType as z.ZodTypeAny);
+  }
+
+  // Traverse through ZodArray's element type
+  if (
+    'type' in schema._def &&
+    schema._def.typeName === z.ZodFirstPartyTypeKind.ZodArray
+  ) {
+    const innerDefault = getDefaultValueInZodStack(
+      schema._def.type as z.ZodTypeAny,
+    );
+
+    return innerDefault !== undefined ? [innerDefault] : undefined;
   }
 
   return undefined;
@@ -97,27 +125,22 @@ export function getDefaultValues<Schema extends z.ZodObject<any, any>>(
   for (const key of Object.keys(shape as object)) {
     const item = shape[key] as z.ZodAny;
 
-    if (getBaseType(item) === 'ZodObject') {
+    // First, try to get any default value from the current item (including nested defaults)
+    const defaultValue = getDefaultValueInZodStack(item);
+
+    if (defaultValue !== undefined) {
+      (defaultValues as Record<string, unknown>)[key] = defaultValue;
+    } else if (getBaseType(item) === 'ZodObject') {
+      // Only recurse into object shape if there's no default value at the current level
       const baseSchema = getBaseSchema(item);
       if (baseSchema && 'shape' in baseSchema._def) {
         const defaultItems = getDefaultValues(
           baseSchema as unknown as z.ZodObject<z.ZodRawShape>,
         );
 
-        if (defaultItems !== null) {
-          const obj: Record<string, unknown> = {};
-
-          for (const defaultItemKey of Object.keys(defaultItems)) {
-            obj[defaultItemKey] = defaultItems[defaultItemKey];
-            (defaultValues as Record<string, unknown>)[key] = obj;
-          }
+        if (defaultItems && Object.keys(defaultItems).length > 0) {
+          (defaultValues as Record<string, unknown>)[key] = defaultItems;
         }
-      }
-    } else {
-      const defaultValue = getDefaultValueInZodStack(item);
-
-      if (defaultValue !== undefined) {
-        (defaultValues as Record<string, unknown>)[key] = defaultValue;
       }
     }
   }

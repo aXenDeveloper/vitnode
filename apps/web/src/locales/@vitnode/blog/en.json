@@ -45,7 +45,10 @@
           "title": "Create Post",
           "desc": "Write a new article for your blog.",
           "form": {
-            "title": "Title",
+            "title": {
+              "label": "Title",
+              "already_exists": "This post title already exists."
+            },
             "content": "Content",
             "category": "Category"
           },

@@ -6,6 +6,7 @@ import { getTranslations } from 'next-intl/server';
 import { postsModule } from '@/api/modules/posts/posts.module';
 
 import { DeleteAction } from './row-actions/delete/delete-action';
+import { EditAction } from './row-actions/edit-action';
 
 export const PostsAdminView = async ({
   searchParams,
@@ -56,7 +57,12 @@ export const PostsAdminView = async ({
           id: 'actions',
           label: '',
           className: 'w-10',
-          cell: ({ row }) => <DeleteAction {...row} />,
+          cell: ({ row }) => (
+            <>
+              <EditAction data={row} />
+              <DeleteAction {...row} />
+            </>
+          ),
         },
       ]}
       edges={data.edges.map(edge => ({ ...edge }))}

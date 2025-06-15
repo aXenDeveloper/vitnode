@@ -151,6 +151,55 @@ describe('auto-form helpers', () => {
       expect(defaults).toEqual({});
     });
 
+    it('should handle complex default values with conditional logic', () => {
+      const data = {
+        category: {
+          id: 123,
+          title: 'Technology',
+        },
+      };
+
+      const schema = z.object({
+        title: z.string().default('Default Title'),
+        categoryId: z.object({ value: z.string(), label: z.string() }).default(
+          data?.category
+            ? {
+                value: data.category.id.toString(),
+                label: data.category.title,
+              }
+            : { value: '', label: '' },
+        ),
+      });
+
+      const defaults = getDefaultValues(schema);
+      expect(defaults).toEqual({
+        title: 'Default Title',
+        categoryId: {
+          value: '123',
+          label: 'Technology',
+        },
+      });
+    });
+
+    it('should handle complex default values with falsy data', () => {
+      // Test with a simpler approach - using a function that returns the default value
+      const getDefaultCategoryId = () => ({ value: '', label: '' });
+
+      const schema = z.object({
+        categoryId: z
+          .object({ value: z.string(), label: z.string() })
+          .default(getDefaultCategoryId()),
+      });
+
+      const defaults = getDefaultValues(schema);
+      expect(defaults).toEqual({
+        categoryId: {
+          value: '',
+          label: '',
+        },
+      });
+    });
+
     it('should return empty object for schema without shape', () => {
       const schema = z.string() as unknown as z.ZodObject<z.ZodRawShape>;
       const defaults = getDefaultValues(schema);
