@@ -1,6 +1,3 @@
-import 'server-only';
-import { cookies, headers } from 'next/headers';
-
 import type {
   BaseBuildModuleReturn,
   BuildModuleReturn,
@@ -16,9 +13,8 @@ import type {
 } from './fetcher/types';
 
 import { coreFetcher } from './fetcher/core';
-import { handleSetCookiesFetcher } from './fetcher/helpers-server';
 
-export async function fetcher<
+export async function fetcherClient<
   M extends string,
   Routes extends Route[],
   Modules extends BaseBuildModuleReturn[],
@@ -39,44 +35,20 @@ export async function fetcher<
     module,
     args,
     options,
-    allowSaveCookies = false,
     withPagination = false,
   }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> & {
-    allowSaveCookies?: boolean;
     options?: Omit<RequestInit, 'body'>;
     withPagination?: boolean;
   },
 ): Promise<
   InferResponseType<M, Routes, Modules, ModuleName, SelectedPath, Method>
 > {
-  const [nextInternalHeaders, cookie] = await Promise.all([
-    headers(),
-    cookies(),
-  ]);
-
-  const response = await coreFetcher(moduleReturn, {
+  return coreFetcher(moduleReturn, {
     path,
     method,
     module,
     args,
     options,
     withPagination,
-    additionalHeaders: {
-      Cookie: cookie.toString(),
-      ['user-agent']: nextInternalHeaders.get('user-agent') ?? 'node',
-      ['x-forwarded-for']:
-        nextInternalHeaders.get('x-forwarded-for') ?? '0.0.0.0',
-    },
   });
-
-  // Handle cookies on server-side for successful responses
-  if (
-    (response as Response).status >= 200 &&
-    (response as Response).status < 300 &&
-    allowSaveCookies
-  ) {
-    await handleSetCookiesFetcher(response as Response);
-  }
-
-  return response;
 }

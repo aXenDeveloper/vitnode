@@ -46,7 +46,8 @@
           "desc": "Write a new article for your blog.",
           "form": {
             "title": "Title",
-            "content": "Content"
+            "content": "Content",
+            "category": "Category"
           },
           "submit": "Create Post"
         },

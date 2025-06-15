@@ -16,7 +16,43 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
   <Tab value="Auto Form">
 
 ```ts
-const test = 'test';
+import { z } from 'zod';
+import { AutoForm } from '@vitnode/core/components/form/auto-form';
+import { AutoFormCombobox } from '@vitnode/core/components/form/fields/combobox';
+```
+
+```ts
+const formSchema = z.object({
+  type: z.enum(['option-one', 'option-two']),
+});
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: 'type',
+      component: props => (
+        <AutoFormCombobox
+          description="Select an option from the list"
+          label="Type"
+          labels={[
+            {
+              value: 'option-one',
+              label: 'Option One',
+            },
+            {
+              value: 'option-two',
+              label: 'Option Two',
+            },
+          ]}
+          {...props}
+        />
+      ),
+    },
+  ]}
+/>
 ```
 
   </Tab>
@@ -24,9 +60,138 @@ const test = 'test';
   <Tab value="Manual">
 
 ```tsx
-const test = 'test';
+'use client';
+
+import * as React from 'react';
+import { CheckIcon, ChevronsUpDownIcon } from 'lucide-react';
+
+import { cn } from '@vitnode/core/lib/utils';
+import { Button } from '@vitnode/core/components/ui/button';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@vitnode/core/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@vitnode/core/components/ui/popover';
+
+const frameworks = [
+  {
+    value: 'next.js',
+    label: 'Next.js',
+  },
+  {
+    value: 'sveltekit',
+    label: 'SvelteKit',
+  },
+  {
+    value: 'nuxt.js',
+    label: 'Nuxt.js',
+  },
+  {
+    value: 'remix',
+    label: 'Remix',
+  },
+  {
+    value: 'astro',
+    label: 'Astro',
+  },
+];
+
+export function ExampleCombobox() {
+  const [open, setOpen] = React.useState(false);
+  const [value, setValue] = React.useState('');
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-[200px] justify-between"
+        >
+          {value
+            ? frameworks.find(framework => framework.value === value)?.label
+            : 'Select framework...'}
+          <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[200px] p-0">
+        <Command>
+          <CommandInput placeholder="Search framework..." />
+          <CommandList>
+            <CommandEmpty>No framework found.</CommandEmpty>
+            <CommandGroup>
+              {frameworks.map(framework => (
+                <CommandItem
+                  key={framework.value}
+                  value={framework.value}
+                  onSelect={currentValue => {
+                    setValue(currentValue === value ? '' : currentValue);
+                    setOpen(false);
+                  }}
+                >
+                  <CheckIcon
+                    className={cn(
+                      'mr-2 h-4 w-4',
+                      value === framework.value ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
+                  {framework.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
 ```
 
   </Tab>
 
 </Tabs>
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    label: {
+      description: 'The label for the combobox, displayed above the input.',
+      type: 'string',
+      default: '',
+    },
+    description: {
+      description:
+        'An optional description for the combobox, displayed below the input.',
+      type: 'string',
+      default: '',
+    },
+    labels: {
+      description:
+        'An array of options for the combobox, each with a value and label.',
+      type: 'Array<{ value: string; label: string }>',
+      default: '[]',
+    },
+    placeholder: {
+      description: 'Placeholder text for the combobox input.',
+      type: 'string',
+      default: 'Select an option',
+    },
+    searchPlaceholder: {
+      description: 'Placeholder text for the search input within the combobox.',
+      type: 'string',
+      default: 'Search...',
+    },
+  }}
+/>

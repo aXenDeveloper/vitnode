@@ -45,7 +45,7 @@ export const TestView = () => {
               component: props => (
                 <AutoFormTextarea
                   description="This is the client secret for your application. It should be kept
-                secret and not shared with anyone."
+            secret and not shared with anyone."
                   label="Client Secret"
                   {...props}
                 />
@@ -144,9 +144,10 @@ export const TestView = () => {
             },
           ]}
           formSchema={formSchema}
-          onSubmit={values => {
+          onSubmit={async values => {
             // eslint-disable-next-line no-console
             console.log('Form submitted', values);
+            await new Promise(resolve => setTimeout(resolve, 3000));
           }}
         />
       </Card>

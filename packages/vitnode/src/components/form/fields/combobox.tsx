@@ -32,10 +32,10 @@ export function AutoFormCombobox<T extends z.ZodTypeAny>({
   field,
   description,
   shape,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  placeholder: _,
+  placeholder,
   className,
   labels = [],
+  searchPlaceholder,
   ...props
 }: ItemAutoFormComponentProps<T> &
   Omit<React.ComponentProps<typeof Button>, 'role' | 'variant'> & {
@@ -43,6 +43,7 @@ export function AutoFormCombobox<T extends z.ZodTypeAny>({
     label?: React.ReactNode;
     labels?: { label: string; value: string }[];
     placeholder?: string;
+    searchPlaceholder?: string;
   }) {
   const t = useTranslations('core.global');
   const baseValues = (
@@ -76,7 +77,7 @@ export function AutoFormCombobox<T extends z.ZodTypeAny>({
             >
               {field.value
                 ? values.find(({ value }) => value === field.value)?.label
-                : t('select_option')}
+                : (placeholder ?? t('select_option'))}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </FormControl>
@@ -84,9 +85,11 @@ export function AutoFormCombobox<T extends z.ZodTypeAny>({
 
         <PopoverContent className="w-[200px] p-0">
           <Command>
-            <CommandInput placeholder="Search language..." />
+            <CommandInput
+              placeholder={searchPlaceholder ?? t('search_placeholder')}
+            />
             <CommandList>
-              <CommandEmpty>No language found.</CommandEmpty>
+              <CommandEmpty>{t('results_not_found')}</CommandEmpty>
               <CommandGroup>
                 {values.map(({ label, value }) => (
                   <CommandItem

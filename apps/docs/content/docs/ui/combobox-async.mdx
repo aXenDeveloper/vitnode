@@ -1,0 +1,91 @@
+---
+title: Combobox Async
+description: Asynchronously load options for a combobox with search functionality.
+---
+
+## Usage
+
+```ts
+import { z } from 'zod';
+import { AutoForm } from '@vitnode/core/components/form/auto-form';
+import { AutoFormComboboxAsync } from '@vitnode/core/components/form/fields/combobox-async';
+import { fetcherClient } from '@vitnode/core/lib/fetcher-client';
+```
+
+```ts
+const formSchema = z.object({
+  categoryId: z.object({ value: z.string(), label: z.string() }),
+});
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: 'categoryId',
+      component: props => (
+        <AutoFormComboboxAsync
+          fetchData={async ({ search }) => {
+            const res = await fetcherClient(categoriesModule, {
+              path: '/',
+              method: 'get',
+              module: 'categories',
+              args: {
+                query: {
+                  search,
+                },
+              },
+            });
+            const data = await res.json();
+
+            return data.edges.map(category => ({
+              label: category.title,
+              value: category.id.toString(),
+            }));
+          }}
+          id="categoryId"
+          label="Category"
+          {...props}
+        />
+      ),
+    },
+  ]}
+/>
+```
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    label: {
+      description: 'The label for the combobox, displayed above the input.',
+      type: 'string',
+      default: '',
+    },
+    description: {
+      description:
+        'An optional description for the combobox, displayed below the input.',
+      type: 'string',
+      default: '',
+    },
+    labels: {
+      description:
+        'An array of options for the combobox, each with a value and label.',
+      type: 'Array<{ value: string; label: string }>',
+      default: '[]',
+    },
+    placeholder: {
+      description: 'Placeholder text for the combobox input.',
+      type: 'string',
+      default: 'Select an option',
+    },
+    searchPlaceholder: {
+      description: 'Placeholder text for the search input within the combobox.',
+      type: 'string',
+      default: 'Search...',
+    },
+  }}
+/>

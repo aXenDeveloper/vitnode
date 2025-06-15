@@ -5,6 +5,7 @@ import {
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from '@vitnode/core/api/lib/with-pagination';
+import { and, ilike } from 'drizzle-orm';
 
 import { CONFIG_PLUGIN } from '@/const';
 import { blog_categories } from '@/database/categories';
@@ -25,6 +26,7 @@ export const categoriesRoute = buildRoute({
       query: zodPaginationQuery.extend({
         order: z.enum(['asc', 'desc']).optional(),
         orderBy: z.enum(['updatedAt']).optional(),
+        search: z.string().optional(),
       }),
     },
     responses: {
@@ -50,14 +52,25 @@ export const categoriesRoute = buildRoute({
         query,
       },
       primaryCursor: blog_categories.id,
-      query: async ({ limit, where, orderBy }) =>
-        await c
+      query: async ({ limit, where, orderBy }) => {
+        const searchCondition = query.search
+          ? ilike(blog_categories.title, `%${query.search}%`)
+          : undefined;
+
+        const combinedWhere = searchCondition
+          ? where
+            ? and(where, searchCondition)
+            : searchCondition
+          : where;
+
+        return await c
           .get('db')
           .select()
           .from(blog_categories)
-          .where(where)
+          .where(combinedWhere)
           .orderBy(orderBy)
-          .limit(limit),
+          .limit(limit);
+      },
       table: blog_categories,
       orderBy: {
         column: query.orderBy
