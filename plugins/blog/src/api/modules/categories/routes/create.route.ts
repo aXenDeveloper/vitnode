@@ -8,10 +8,7 @@ import { CONFIG_PLUGIN } from '@/const';
 import { blog_categories } from '@/database/categories';
 
 export const zodCreateCategorySchema = z.object({
-  title: z
-    .string()
-    .min(3, 'Title must be at least 3 characters long')
-    .max(100, 'Title must not exceed 100 characters'),
+  title: z.string(),
 });
 
 const zodCategoryResponseSchema = z.object({

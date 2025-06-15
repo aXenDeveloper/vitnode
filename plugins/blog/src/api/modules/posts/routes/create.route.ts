@@ -13,7 +13,7 @@ export const zodCreatePostSchema = z.object({
     .string()
     .min(3, 'Title must be at least 3 characters long')
     .max(255, 'Title must not exceed 255 characters'),
-  content: z.string().min(10, 'Content must be at least 10 characters long'),
+  content: z.string(),
   categoryId: z.number(),
 });
 

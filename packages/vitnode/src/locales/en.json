@@ -11,6 +11,8 @@
         "cancel": "Cancel",
         "confirm": "Yes, leave"
       },
+      "search_placeholder": "Search...",
+      "results_not_found": "No results found",
       "date": "{date, date}",
       "date_medium": "{date, date, medium}",
       "date_short": "{date, date, short}",

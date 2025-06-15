@@ -1,18 +1,32 @@
+import type { UseFormReturn } from 'react-hook-form';
+
 import { AutoForm } from '@vitnode/core/components/form/auto-form';
+import { AutoFormComboboxAsync } from '@vitnode/core/components/form/fields/combobox-async';
 import { AutoFormInput } from '@vitnode/core/components/form/fields/input';
 import { AutoFormTextarea } from '@vitnode/core/components/form/fields/textarea';
+import { useDialog } from '@vitnode/core/components/ui/dialog';
+import { fetcherClient } from '@vitnode/core/lib/fetcher-client';
+import { usePathname, useRouter } from '@vitnode/core/lib/navigation';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import { z } from 'zod';
 
-import type { zodCreatePostSchema } from '@/api/modules/posts/routes/create.route';
+import type { zodPostSchema } from '@/api/modules/posts/routes/get.route';
+
+import { categoriesModule } from '@/api/modules/categories/categories.module';
+
+import { createMutationApi, editMutationApi } from './mutation-api';
 
 export const CreateEditActionPostsAdmin = ({
   data,
 }: {
-  data?: z.infer<typeof zodCreatePostSchema> & { id?: number };
+  data?: z.infer<typeof zodPostSchema> & { id?: number };
 }) => {
   const t = useTranslations('@vitnode/blog.admin.posts');
   const tCore = useTranslations('core.global.errors');
+  const { setOpen } = useDialog();
+  const { push } = useRouter();
+  const pathname = usePathname();
   const formSchema = z.object({
     title: z
       .string()
@@ -22,10 +36,64 @@ export const CreateEditActionPostsAdmin = ({
         }),
       })
       .default(data?.title ?? ''),
-    content: z.string().min(1, {
-      message: tCore('field_required'),
-    }),
+    content: z.string().default(data?.content ?? ''),
+    categoryId: z
+      .object({ value: z.string(), label: z.string() })
+      .refine(value => value.value !== '', {
+        message: tCore('field_required'),
+      })
+      .default(
+        data?.category
+          ? { value: data.category.id.toString(), label: data.category.title }
+          : { value: '', label: '' },
+      ),
   });
+
+  const onSubmit = async (
+    values: z.infer<typeof formSchema>,
+    form: UseFormReturn<z.infer<typeof formSchema>>,
+  ) => {
+    let error = '';
+    if (data?.id) {
+      const mutation = await editMutationApi({
+        id: data.id,
+        ...values,
+        categoryId: parseInt(values.categoryId.value, 10),
+      });
+
+      if (mutation?.error) {
+        error = mutation.error;
+      }
+    } else {
+      const mutation = await createMutationApi({
+        ...values,
+        categoryId: parseInt(values.categoryId.value, 10),
+      });
+
+      if (mutation?.error) {
+        error = mutation.error;
+      }
+    }
+
+    if (error) {
+      if (error.includes('already exists')) {
+        form.setError('title', {
+          type: 'manual',
+          message: t('create.form.title.already_exists'),
+        });
+
+        return;
+      }
+
+      toast.error(tCore('title'), {
+        description: tCore('internal_server_error'),
+      });
+
+      return;
+    }
+    setOpen?.(false);
+    push(pathname);
+  };
 
   return (
     <AutoForm
@@ -33,7 +101,35 @@ export const CreateEditActionPostsAdmin = ({
         {
           id: 'title',
           component: props => (
-            <AutoFormInput label={t('create.form.title')} {...props} />
+            <AutoFormInput label={t('create.form.title.label')} {...props} />
+          ),
+        },
+        {
+          id: 'categoryId',
+          component: props => (
+            <AutoFormComboboxAsync
+              fetchData={async ({ search }) => {
+                const res = await fetcherClient(categoriesModule, {
+                  path: '/',
+                  method: 'get',
+                  module: 'categories',
+                  args: {
+                    query: {
+                      search,
+                    },
+                  },
+                });
+                const data = await res.json();
+
+                return data.edges.map(category => ({
+                  label: category.title,
+                  value: category.id.toString(),
+                }));
+              }}
+              id="categoryId"
+              label={t('create.form.category')}
+              {...props}
+            />
           ),
         },
         {
@@ -48,6 +144,7 @@ export const CreateEditActionPostsAdmin = ({
         },
       ]}
       formSchema={formSchema}
+      onSubmit={onSubmit}
       submitButtonProps={{
         children: t(`${data ? 'edit' : 'create'}.submit`),
       }}

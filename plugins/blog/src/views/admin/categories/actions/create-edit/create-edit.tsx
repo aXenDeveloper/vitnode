@@ -23,14 +23,7 @@ export const CreateEditActionCategoriesAdmin = ({
   const { push } = useRouter();
   const pathname = usePathname();
   const formSchema = z.object({
-    title: z
-      .string()
-      .min(3, {
-        message: tCore('field_min_length', {
-          min: 3,
-        }),
-      })
-      .default(data?.title ?? ''),
+    title: z.string().default(data?.title ?? ''),
   });
 
   const onSubmit = async (

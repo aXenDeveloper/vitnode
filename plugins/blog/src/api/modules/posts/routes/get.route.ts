@@ -11,7 +11,7 @@ import { CONFIG_PLUGIN } from '@/const';
 import { blog_categories } from '@/database/categories';
 import { blog_posts } from '@/database/posts';
 
-const zodPostSchema = z.object({
+export const zodPostSchema = z.object({
   id: z.number(),
   title: z.string(),
   titleSeo: z.string(),
