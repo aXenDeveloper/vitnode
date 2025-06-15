@@ -13,7 +13,7 @@ export const DashboardAdminView = async () => {
   const { vitnode_version } = session;
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="p-4">
       <HeaderContent
         desc={t('version', { version: vitnode_version })}
         h1={

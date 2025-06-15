@@ -79,7 +79,7 @@ export function AutoForm<
       {setIsDirty ? (
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline">{t('cancel')}</Button>
+            <Button variant="ghost">{t('cancel')}</Button>
           </DialogClose>
           {submitButton}
         </DialogFooter>

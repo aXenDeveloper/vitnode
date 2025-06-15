@@ -64,7 +64,7 @@ export const PaginationDataTable = ({
           {isPending ? (
             <Skeleton className="h-9 w-[4.5rem]" />
           ) : (
-            <SelectTrigger className="h-8 w-[4.5rem]">
+            <SelectTrigger className="bg-card h-8 w-[4.5rem]">
               <SelectValue />
             </SelectTrigger>
           )}
@@ -83,7 +83,7 @@ export const PaginationDataTable = ({
           ) : (
             <Button
               aria-label={t('go_to_prev_page')}
-              className="size-8"
+              className="bg-card size-8"
               disabled={!hasPreviousPage}
               onClick={() => {
                 startTransition(() => {
@@ -112,7 +112,7 @@ export const PaginationDataTable = ({
           ) : (
             <Button
               aria-label={t('go_to_next_page')}
-              className="size-8"
+              className="bg-card size-8"
               disabled={!hasNextPage || isPending}
               onClick={() => {
                 startTransition(() => {

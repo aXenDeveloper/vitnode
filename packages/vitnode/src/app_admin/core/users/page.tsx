@@ -24,7 +24,7 @@ export default async function Page(
   ]);
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="p-4">
       <HeaderContent desc={t('desc')} h1={tNav('list')} />
 
       <React.Suspense fallback={<DataTableSkeleton columns={2} />}>

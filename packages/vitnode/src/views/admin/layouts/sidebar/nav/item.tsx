@@ -15,7 +15,7 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Link } from '@/lib/navigation';
+import { Link, usePathname } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 
 interface ItemNavAdminProps {
@@ -36,6 +36,23 @@ export const ItemNavAdmin = ({
 }) => {
   const { toggleSidebar } = useSidebar();
   const isMobile = useIsMobile();
+  const pathname = usePathname();
+
+  // Helper function to normalize URLs for comparison
+  const normalizeUrl = (url: string) => {
+    return url.endsWith('/') && url.length > 1 ? url.slice(0, -1) : url;
+  };
+
+  // Check if current path matches href (with normalization)
+  const isActive = normalizeUrl(pathname) === normalizeUrl(href);
+
+  // Check if any child item is active
+  const hasActiveChild = items.some(
+    item => normalizeUrl(pathname) === normalizeUrl(item.href),
+  );
+
+  // Open collapsible by default if has active child
+  const defaultOpen = hasActiveChild;
 
   const content = (
     <>
@@ -47,8 +64,13 @@ export const ItemNavAdmin = ({
   if (!items.length) {
     return (
       <SidebarMenuItem>
-        <SidebarMenuButton asChild tooltip={title}>
+        <SidebarMenuButton asChild isActive={isActive} tooltip={title}>
           <Link
+            className={cn(
+              'relative',
+              isActive &&
+                'before:bg-primary before:absolute before:bottom-1 before:left-0 before:top-1 before:h-auto before:w-1 before:rounded-r-sm',
+            )}
             href={href}
             onClick={() => {
               if (isMobile) {
@@ -67,10 +89,22 @@ export const ItemNavAdmin = ({
   }
 
   return (
-    <Collapsible asChild className="group/collapsible">
+    <Collapsible
+      asChild
+      className="group/collapsible"
+      defaultOpen={defaultOpen}
+    >
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
-          <SidebarMenuButton tooltip={title}>
+          <SidebarMenuButton
+            className={cn(
+              'relative',
+              (isActive || hasActiveChild) &&
+                'before:bg-primary before:absolute before:bottom-1 before:left-0 before:top-1 before:h-auto before:w-1 before:rounded-r-sm',
+            )}
+            isActive={isActive || hasActiveChild}
+            tooltip={title}
+          >
             {content}
             <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
           </SidebarMenuButton>
@@ -82,27 +116,37 @@ export const ItemNavAdmin = ({
           )}
         >
           <SidebarMenuSub>
-            {items.map(item => (
-              <SidebarMenuSubItem key={item.href}>
-                <SidebarMenuSubButton asChild>
-                  <Link
-                    href={item.href}
-                    onClick={() => {
-                      if (isMobile) {
-                        toggleSidebar();
+            {items.map(item => {
+              const isChildActive =
+                normalizeUrl(pathname) === normalizeUrl(item.href);
+
+              return (
+                <SidebarMenuSubItem key={item.href}>
+                  <SidebarMenuSubButton asChild isActive={isChildActive}>
+                    <Link
+                      className={cn(
+                        'relative',
+                        isChildActive &&
+                          'before:bg-primary before:absolute before:bottom-1 before:left-0 before:top-1 before:h-auto before:w-1 before:rounded-r-sm',
+                      )}
+                      href={item.href}
+                      onClick={() => {
+                        if (isMobile) {
+                          toggleSidebar();
+                        }
+                      }}
+                      prefetch
+                      rel={
+                        item.isOpenInNewTab ? 'noopener noreferrer' : undefined
                       }
-                    }}
-                    prefetch
-                    rel={
-                      item.isOpenInNewTab ? 'noopener noreferrer' : undefined
-                    }
-                    target={item.isOpenInNewTab ? '_blank' : undefined}
-                  >
-                    {item.title}
-                  </Link>
-                </SidebarMenuSubButton>
-              </SidebarMenuSubItem>
-            ))}
+                      target={item.isOpenInNewTab ? '_blank' : undefined}
+                    >
+                      {item.title}
+                    </Link>
+                  </SidebarMenuSubButton>
+                </SidebarMenuSubItem>
+              );
+            })}
           </SidebarMenuSub>
         </CollapsibleContent>
       </SidebarMenuItem>

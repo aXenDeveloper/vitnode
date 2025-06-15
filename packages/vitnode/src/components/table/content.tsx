@@ -30,7 +30,7 @@ export function ContentDataTable<T extends DataTableTMin>({
       <div className="overflow-hidden rounded-lg border">
         <div className="relative w-full overflow-auto">
           <Table {...props}>
-            <TableHeader className="bg-muted sticky top-0 z-10">
+            <TableHeader className="bg-card">
               <TableRow>
                 {columns.map(column => (
                   <TableHead

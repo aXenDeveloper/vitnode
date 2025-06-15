@@ -188,25 +188,23 @@ export const UsersAdminView = async ({
   const data = await res.json();
 
   return (
-    <div className="container mx-auto p-4">
-      <DataTable
-        columns={[
-          { id: 'id', label: 'ID' },
-          { id: 'username', label: 'Username' },
-          { id: 'email', label: 'Email' },
-          { id: 'createdAt', label: 'Created at' },
-        ]}
-        edges={data.edges}
-        order={{
-          columns: ['id', 'username', 'email', 'createdAt'],
-          defaultOrder: {
-            column: 'createdAt',
-            order: 'desc',
-          },
-        }}
-        pageInfo={data.pageInfo}
-      />
-    </div>
+    <DataTable
+      columns={[
+        { id: 'id', label: 'ID' },
+        { id: 'username', label: 'Username' },
+        { id: 'email', label: 'Email' },
+        { id: 'createdAt', label: 'Created at' },
+      ]}
+      edges={data.edges}
+      order={{
+        columns: ['id', 'username', 'email', 'createdAt'],
+        defaultOrder: {
+          column: 'createdAt',
+          order: 'desc',
+        },
+      }}
+      pageInfo={data.pageInfo}
+    />
   );
 };
 ```

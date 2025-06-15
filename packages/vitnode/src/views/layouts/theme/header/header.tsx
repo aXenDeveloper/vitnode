@@ -15,20 +15,22 @@ export const HeaderLayout = ({
   return (
     <header
       className={cn(
-        'bg-background/75 container sticky top-0 z-20 mx-auto flex w-full items-center border-b px-4 py-2 backdrop-blur sm:top-2 sm:rounded-xl sm:border',
+        'bg-card/75 sticky top-0 z-20 w-full border-b shadow-sm backdrop-blur',
         className,
       )}
       {...props}
     >
-      <Link href="/" prefetch>
-        {logo}
-      </Link>
+      <div className="container mx-auto flex h-14 items-center px-4 py-2">
+        <Link href="/" prefetch>
+          {logo}
+        </Link>
 
-      <div className="ml-auto flex items-center gap-2">
-        <ThemeSwitcher />
-        <Suspense fallback={<Skeleton className="h-9 w-32" />}>
-          <UserHeader />
-        </Suspense>
+        <div className="ml-auto flex items-center gap-2">
+          <ThemeSwitcher />
+          <Suspense fallback={<Skeleton className="h-9 w-32" />}>
+            <UserHeader />
+          </Suspense>
+        </div>
       </div>
     </header>
   );

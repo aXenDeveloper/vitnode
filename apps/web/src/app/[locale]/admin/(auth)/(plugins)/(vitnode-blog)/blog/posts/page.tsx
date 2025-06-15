@@ -25,7 +25,7 @@ export default async function PostsPage(
 
   return (
     <I18nProvider namespaces={['@vitnode/blog.admin.posts']}>
-      <div className="container mx-auto p-4">
+      <div className="p-4">
         <HeaderContent desc={t('desc')} h1={tNav('posts')}>
           <ActionsPostsAdmin />
         </HeaderContent>
