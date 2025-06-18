@@ -3,7 +3,8 @@
 @import 'fumadocs-ui/css/preset.css';
 
 @source '../../node_modules/fumadocs-ui/dist/**/*.js';
-@source '../../node_modules/vitnode/dist/**/*.js';
+@source "../../node_modules/@vitnode/core/dist/src/components";
+@source "../../node_modules/@vitnode/core/dist/src/views";
 
 :root:not(.dark) {
   --background: oklch(0.98 0 0);
