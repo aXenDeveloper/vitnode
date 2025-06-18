@@ -108,6 +108,12 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
   const cleanupDeletedFiles = (sourceDir: string, destinationDir: string) => {
     if (!existsSync(destinationDir)) return;
 
+    // Check if this is a locale directory - if so, skip cleanup to preserve other language files
+    const isLocaleDir = destinationDir.includes(join('src', 'locales'));
+    if (isLocaleDir) {
+      return; // Skip cleanup for locale directories to preserve files from other plugins/languages
+    }
+
     const destFiles = getAllFiles(destinationDir);
     for (const destFile of destFiles) {
       const relativePath = relative(destinationDir, destFile);

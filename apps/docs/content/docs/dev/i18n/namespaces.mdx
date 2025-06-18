@@ -16,43 +16,24 @@ For example, you have a component that needs to get access to the translation st
 
 To translate your content, select the plugin in `frontend` folder, go to `langs` folder and pick the language you want to translate.
 
-```json title="apps/frontend/src/plugins/{your_plugin}/langs/en.json"
-{
-  "{your_plugin}": {
-    "home": {
-      "hello": "Hello World",
-      "world": "World"
-    }
-  }
-}
-```
-
-<Callout title="Primary key" type="warn">
-  Name your plugin should be a primary key in the JSON file or with the prefix `admin_` for admin plugins.
-
-```json title="apps/frontend/src/plugins/{your_plugin}/langs/en.json"
+```json title="plugins/{your_plugin}/src/locales/en.json"
 {
   "{your_plugin}": {
     "hello": "Hello World" // ✅ This will work
-  },
-  "admin_{your_plugin}" {
-    "world": "World" // ✅ This will work
   },
   "world": "World" // ❌ This will not work
 }
 ```
 
-</Callout>
-
 ## Usage
 
 To get access to the translation strings in other namespaces you need to use the `TranslationsProvider` component.
 
-```tsx title="apps/frontend/src/app/[locale]/(main)/{your_plugin}/layout.tsx"
+```tsx title="plugins/{your_plugin}/src/app/blog/layout.tsx"
 import { I18nProvider } from '@vitnode/core/components/i18n-provider';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <I18nProvider namespaces={['welcome.home']}>{children}</I18nProvider>;
+  return <I18nProvider namespaces={['blog.home']}>{children}</I18nProvider>;
 }
 ```
 

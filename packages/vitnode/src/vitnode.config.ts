@@ -6,13 +6,20 @@ import type { EmailApiPlugin } from './api/models/email';
 import type { SSOApiPlugin } from './api/models/sso';
 import type { BuildPluginReturn } from './lib/plugin';
 
-export interface VitNodeConfig<AppLocales extends string[] = string[]> {
+export interface LocaleConfig {
+  code: string;
+  name: string;
+}
+
+export interface VitNodeConfig<
+  AppLocales extends LocaleConfig[] = LocaleConfig[],
+> {
   admin?: {
     sidebarCookieName?: string;
   };
   debug?: boolean;
   i18n: {
-    defaultLocale: AppLocales[number];
+    defaultLocale: AppLocales[number]['code'];
     localePrefix?: 'always' | 'as-needed' | 'never';
     locales: AppLocales;
     timeZone?: string;
@@ -37,14 +44,14 @@ export interface VitNodeApiConfig {
     cookieSecure?: boolean;
     deviceCookieExpires?: number;
     deviceCookieName?: string;
-    ssoPlugins?: SSOApiPlugin[];
+    ssoProviders?: SSOApiPlugin[];
   };
   dbProvider: PostgresJsDatabase;
   emailProvider?: EmailApiPlugin;
   plugins: BuildPluginApiReturn[];
 }
 
-export function buildConfig<AppLocales extends string[]>(
+export function buildConfig<AppLocales extends LocaleConfig[]>(
   args: VitNodeConfig<AppLocales>,
 ): VitNodeConfig<AppLocales> {
   return {
@@ -70,8 +77,9 @@ export const handleRequestConfig = async ({
   vitNodeConfig: VitNodeConfig;
 }) => {
   const reqLocale = await requestLocale;
+  const localeCodes = vitNodeConfig.i18n.locales.map(locale => locale.code);
   const locale =
-    reqLocale && `${vitNodeConfig.i18n.locales}`.includes(reqLocale)
+    reqLocale && localeCodes.includes(reqLocale)
       ? reqLocale
       : vitNodeConfig.i18n.defaultLocale;
 

@@ -1,6 +1,9 @@
-import { Suspense } from 'react';
+import React from 'react';
 
-import { ThemeSwitcher } from '@/components/switchers/theme-switcher';
+import type { VitNodeConfig } from '@/vitnode.config';
+
+import { LanguageSwitcher } from '@/components/switchers/langs/language-swietcher';
+import { ThemeSwitcher } from '@/components/switchers/themes/theme-switcher';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
@@ -10,8 +13,12 @@ import { UserHeader } from './user/user';
 export const HeaderLayout = ({
   logo,
   className,
+  vitNodeConfig,
   ...props
-}: React.ComponentProps<'header'> & { logo: React.ReactNode }) => {
+}: React.ComponentProps<'header'> & {
+  logo: React.ReactNode;
+  vitNodeConfig: VitNodeConfig;
+}) => {
   return (
     <header
       className={cn(
@@ -26,10 +33,11 @@ export const HeaderLayout = ({
         </Link>
 
         <div className="ml-auto flex items-center gap-2">
+          <LanguageSwitcher locales={vitNodeConfig.i18n.locales} />
           <ThemeSwitcher />
-          <Suspense fallback={<Skeleton className="h-9 w-32" />}>
+          <React.Suspense fallback={<Skeleton className="h-9 w-32" />}>
             <UserHeader />
-          </Suspense>
+          </React.Suspense>
         </div>
       </div>
     </header>
