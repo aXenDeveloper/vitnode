@@ -1,0 +1,96 @@
+---
+title: Database
+description: Learn how to work with databases in VitNode plugins using Drizzle ORM and PostgreSQL.
+---
+
+VitNode plugins seamlessly integrate with databases using [Drizzle ORM](https://orm.drizzle.team/) and [PostgreSQL](https://www.postgresql.org/). This guide shows you how to define schemas, perform database operations, and manage migrations.
+
+## Defining Schema
+
+Create your database schema in the `database` directory of your plugin. Each table should be defined in its own file for better organization.
+
+```ts title="plugins/{plugin_name}/src/database/categories.ts"
+import { pgTable, serial, timestamp } from 'drizzle-orm/pg-core';
+
+export const blog_categories = pgTable('blog_categories', {
+  id: serial().primaryKey(),
+  createdAt: timestamp().notNull().defaultNow(),
+  updatedAt: timestamp()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+```
+
+## Accessing Database
+
+Access the database in your plugin handlers using `c.get('database')` from the Hono context. This provides a Drizzle ORM instance for all your database operations.
+
+```ts title="plugins/{plugin_name}/src/routes/posts.ts"
+export const postsRoute = buildRoute({
+  ...CONFIG_PLUGIN,
+  route: {},
+  handler: async c => {
+    // [!code ++:7]
+    const data = await c
+      .get('database')
+      .select({
+        id: blog_posts.id,
+        title: blog_posts.title,
+      })
+      .from(blog_posts);
+
+    return c.json(data);
+  },
+});
+```
+
+## Database Operations
+
+VitNode provides convenient commands for managing your database schema and migrations.
+
+### Creating Migrations
+
+Generate migration files when you modify your database schema:
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+<Tabs groupId='package-manager' persist items={['pnpm', 'bun', 'npm']}>
+
+```bash tab="pnpm"
+pnpm db:migrate
+```
+
+```bash tab="bun"
+bun db:migrate
+```
+
+```bash tab="npm"
+npm run db:migrate
+```
+
+</Tabs>
+
+### Pushing Schema Changes
+
+Apply your schema changes directly to the database:
+
+<Tabs groupId='package-manager' persist items={['pnpm', 'bun', 'npm']}>
+
+```bash tab="pnpm"
+pnpm db:push
+```
+
+```bash tab="bun"
+bun db:push
+```
+
+```bash tab="npm"
+npm run db:push
+```
+
+</Tabs>
+
+<Callout type="info" title="Automatic Updates in Development">
+  VitNode automatically runs migrations and schema updates when you start your
+  application in development mode, keeping your database in sync with your code.
+</Callout>

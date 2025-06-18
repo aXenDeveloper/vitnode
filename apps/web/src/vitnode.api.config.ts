@@ -4,15 +4,13 @@ import { DiscordSSOApiPlugin } from '@vitnode/core/api/plugins/sso/discord';
 import { FacebookSSOApiPlugin } from '@vitnode/core/api/plugins/sso/facebook';
 import { GoogleSSOApiPlugin } from '@vitnode/core/api/plugins/sso/google';
 import { buildApiConfig } from '@vitnode/core/vitnode.config';
+import * as dotenv from 'dotenv';
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { join } from 'path';
 
-// import * as dotenv from 'dotenv';
-// import { drizzle } from 'drizzle-orm/postgres-js';
-// import { join } from 'path';
-
-// dotenv.config({
-//   path: join(process.cwd(), '..', '..', '.env'),
-// });
+dotenv.config({
+  path: join(process.cwd(), '..', '..', '.env'),
+});
 
 export const POSTGRES_URL =
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
@@ -31,7 +29,7 @@ export const vitNodeApiConfig = buildApiConfig({
     user: process.env.NOD_EMAILER_USER,
   }),
   authorization: {
-    ssoPlugins: [
+    ssoProviders: [
       DiscordSSOApiPlugin({
         clientId: process.env.DISCORD_CLIENT_ID,
         clientSecret: process.env.DISCORD_CLIENT_SECRET,

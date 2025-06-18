@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { cookies } from 'next/headers';
 
-import { ThemeSwitcher } from '@/components/switchers/theme-switcher';
+import { ThemeSwitcher } from '@/components/switchers/themes/theme-switcher';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { getSessionAdminApi } from '@/lib/api/get-session-admin-api';
@@ -12,6 +12,7 @@ import type { NavAdminParent } from './sidebar/nav/nav';
 import { I18nProvider } from '../../../components/i18n-provider';
 import { SidebarAdmin } from './sidebar/sidebar';
 import { UserBarAdmin } from './user-bar/user-bar';
+import { LanguageSwitcher } from '../../../components/switchers/langs/language-swietcher';
 
 export interface AdminLayoutProps {
   children: React.ReactNode;
@@ -62,6 +63,7 @@ export const AdminLayout = async ({
             <SidebarTrigger className="-ml-1" />
 
             <div className="ml-auto flex items-center justify-center gap-2 px-2">
+              <LanguageSwitcher locales={vitNodeConfig.i18n.locales} />
               <ThemeSwitcher />
               <UserBarAdmin user={session.user} />
             </div>

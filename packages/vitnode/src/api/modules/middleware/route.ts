@@ -25,7 +25,7 @@ export const routeMiddleware = buildRoute({
     },
   },
   handler: c => {
-    const sso = c.get('core').authorization.ssoPlugins;
+    const sso = c.get('core').authorization.ssoProviders;
     const email = new EmailModel(c);
 
     return c.json({

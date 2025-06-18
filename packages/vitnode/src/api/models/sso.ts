@@ -30,7 +30,7 @@ export const getRedirectUri = (code: string) =>
 export class SSOModel {
   constructor(c: Context) {
     this.c = c;
-    this.plugins = c.get('core').authorization.ssoPlugins;
+    this.plugins = c.get('core').authorization.ssoProviders;
   }
 
   private readonly c: Context;

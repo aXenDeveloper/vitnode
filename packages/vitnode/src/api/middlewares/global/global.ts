@@ -39,7 +39,7 @@ interface EnvVariablesVitNode {
       cookieSecure: boolean;
       deviceCookieExpires: number;
       deviceCookieName: string;
-      ssoPlugins: SSOApiPlugin[];
+      ssoProviders: SSOApiPlugin[];
     };
     emailProvider?: EmailApiPlugin;
     metadata: {
@@ -88,7 +88,7 @@ export const globalMiddleware = ({
         cookieName: authorization?.cookieName ?? 'vitnode_auth',
         cookie_expires:
           authorization?.cookieExpires ?? 1000 * 60 * 60 * 24 * 90, // 90 days
-        ssoPlugins: authorization?.ssoPlugins ?? [],
+        ssoProviders: authorization?.ssoProviders ?? [],
         deviceCookieName: authorization?.deviceCookieName ?? 'vitnode_device',
         deviceCookieExpires:
           authorization?.deviceCookieExpires ?? 1000 * 60 * 60 * 24 * 365, // 1 year,

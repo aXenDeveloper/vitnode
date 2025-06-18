@@ -23,7 +23,7 @@ export const generateMetadata = (): Metadata =>
   generateMetadataRootLayout(vitNodeConfig);
 
 export const generateStaticParams = () =>
-  vitNodeConfig.i18n.locales.map(locale => ({ locale }));
+  vitNodeConfig.i18n.locales.map(locale => ({ locale: locale.code }));
 
 export default function LocaleLayout(props: RootLayoutProps) {
   return (
