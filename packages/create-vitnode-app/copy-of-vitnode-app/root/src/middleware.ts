@@ -3,7 +3,7 @@ import createMiddleware from 'next-intl/middleware';
 import { vitNodeConfig } from './vitnode.config';
 
 export default createMiddleware({
-  locales: vitNodeConfig.i18n.locales,
+  locales: vitNodeConfig.i18n.locales.map(locale => locale.code),
   defaultLocale: vitNodeConfig.i18n.defaultLocale,
   localePrefix: vitNodeConfig.i18n.localePrefix,
 });

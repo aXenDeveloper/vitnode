@@ -1,14 +1,19 @@
+import type { VitNodeConfig } from '../../../vitnode.config';
+
 import { HeaderLayout } from './header/header';
 
 export const ThemeLayout = ({
   children,
   logo,
+  vitNodeConfig,
 }: React.ComponentProps<typeof HeaderLayout> & {
   children: React.ReactNode;
+  vitNodeConfig: VitNodeConfig;
 }) => {
   return (
     <>
-      <HeaderLayout logo={logo} /> <main>{children}</main>
+      <HeaderLayout logo={logo} vitNodeConfig={vitNodeConfig} />{' '}
+      <main>{children}</main>
     </>
   );
 };

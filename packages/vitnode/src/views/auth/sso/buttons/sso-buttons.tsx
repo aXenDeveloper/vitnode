@@ -20,6 +20,10 @@ export const SSOButtons = async () => {
     getMiddlewareApi(),
   ]);
 
+  if (!sso.length) {
+    return null;
+  }
+
   return (
     <>
       <div className="relative my-6">
@@ -27,24 +31,18 @@ export const SSOButtons = async () => {
           <span className="w-full border-t" />
         </div>
 
-        {sso.length > 0 && (
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-card text-muted-foreground px-4">
-              {t('or')}
-            </span>
-          </div>
-        )}
+        <div className="relative flex justify-center text-xs">
+          <span className="bg-card text-muted-foreground px-4">{t('or')}</span>
+        </div>
       </div>
 
-      {sso.length > 0 && (
-        <div className="flex flex-wrap items-center justify-center gap-4">
-          {sso.map(provider => (
-            <ButtonSSOButtons key={provider.id} providerId={provider.id}>
-              {provider.name}
-            </ButtonSSOButtons>
-          ))}
-        </div>
-      )}
+      <div className="flex flex-wrap items-center justify-center gap-4">
+        {sso.map(provider => (
+          <ButtonSSOButtons key={provider.id} providerId={provider.id}>
+            {provider.name}
+          </ButtonSSOButtons>
+        ))}
+      </div>
     </>
   );
 };

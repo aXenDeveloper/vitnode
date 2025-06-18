@@ -11,9 +11,16 @@
     "swagger",
     "---Framework---",
     "auth",
-    "---API---",
+    "---Plugins---",
+    "plugins",
+    "rest-api",
     "fetcher",
-    "---Rest---",
+    "database",
+    "---UI---",
+    "layouts-and-pages",
+    "admin-page",
+    "i18n",
+    "---Advanced---",
     "..."
   ]
 }

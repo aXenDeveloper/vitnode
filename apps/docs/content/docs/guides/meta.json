@@ -6,6 +6,8 @@
   "pages": [
     "index",
     "...",
+    "---Plugins by VitNode---",
+    "blog",
     "--- Authorization ---",
     "sso",
     "--- Security ---",

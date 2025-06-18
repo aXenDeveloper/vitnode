@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { cookies } from 'next/headers';
 
-import { ThemeSwitcher } from '@/components/switchers/theme-switcher';
+import { ThemeSwitcher } from '@/components/switchers/themes/theme-switcher';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { SidebarInset } from '@/components/ui/sidebar';
 import { getSessionAdminApi } from '@/lib/api/get-session-admin-api';
@@ -10,6 +10,7 @@ import type { VitNodeConfig } from '../../../vitnode.config';
 import type { NavAdminParent } from './sidebar/nav/nav';
 
 import { I18nProvider } from '../../../components/i18n-provider';
+import { LanguageSwitcher } from '../../../components/switchers/langs/language-swietcher';
 import { SidebarAdmin } from './sidebar/sidebar';
 import { UserBarAdmin } from './user-bar/user-bar';
 
@@ -62,6 +63,7 @@ export const AdminLayout = async ({
             <SidebarTrigger className="-ml-1" />
 
             <div className="ml-auto flex items-center justify-center gap-2 px-2">
+              <LanguageSwitcher locales={vitNodeConfig.i18n.locales} />
               <ThemeSwitcher />
               <UserBarAdmin user={session.user} />
             </div>

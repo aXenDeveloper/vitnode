@@ -61,8 +61,7 @@ export class SessionAdminModel {
     setCookie(this.c, this.c.get('core').authorization.adminCookieName, token, {
       httpOnly: true,
       secure: this.c.get('core').authorization.cookieSecure,
-
-      path: '/admin',
+      path: '/',
       expires: new Date(
         Date.now() + this.c.get('core').authorization.adminCookieExpires,
       ),

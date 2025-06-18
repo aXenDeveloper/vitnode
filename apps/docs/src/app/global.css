@@ -40,9 +40,8 @@
   --sidebar-ring: oklch(0.708 0 0);
 
   --dev-color: oklch(0.6 0.18 50);
-  --plugins-color: oklch(0.65 0.18 170);
+  --ui-color: oklch(0.65 0.18 170);
   --guides-color: oklch(0.45 0.16 262.61);
-  --ui-color: oklch(0.5 0.18 280);
 }
 
 .dark {
@@ -78,9 +77,8 @@
   --sidebar-ring: oklch(0.51 0.16 262.61);
 
   --dev-color: oklch(0.75 0.18 50);
-  --plugins-color: oklch(0.7 0.18 170);
+  --ui-color: oklch(0.7 0.18 170);
   --guides-color: oklch(0.65 0.16 262.61);
-  --ui-color: oklch(0.78 0.18 280);
 }
 
 :root {
