@@ -12,11 +12,11 @@ export const vitNodeConfig = buildConfig({
     locales: [
       {
         code: 'en',
-        name: 'English',
+        name: 'English (USA)',
       },
       {
         code: 'pl',
-        name: 'Polski',
+        name: 'Polski (PL)',
       },
     ],
     defaultLocale: 'en',

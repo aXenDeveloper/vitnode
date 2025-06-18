@@ -1,4 +1,5 @@
 import type { VitNodeConfig } from '../../../vitnode.config';
+
 import { HeaderLayout } from './header/header';
 
 export const ThemeLayout = ({
@@ -11,7 +12,7 @@ export const ThemeLayout = ({
 }) => {
   return (
     <>
-      <HeaderLayout vitNodeConfig={vitNodeConfig} logo={logo} />{' '}
+      <HeaderLayout logo={logo} vitNodeConfig={vitNodeConfig} />{' '}
       <main>{children}</main>
     </>
   );

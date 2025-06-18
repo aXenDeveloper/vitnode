@@ -1,7 +1,13 @@
 'use client';
 
-import { LanguagesIcon } from 'lucide-react';
-import type { LocaleConfig } from '../../../vitnode.config';
+import { CheckIcon, LanguagesIcon } from 'lucide-react';
+import { useLocale } from 'next-intl';
+import React from 'react';
+
+import type { LocaleConfig } from '@/vitnode.config';
+
+import { usePathname, useRouter } from '@/lib/navigation';
+
 import { Button } from '../../ui/button';
 import {
   DropdownMenu,
@@ -9,28 +15,41 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../ui/dropdown-menu';
-import { Link, usePathname, useRouter } from '../../../lib/navigation';
-import { useLocale } from 'next-intl';
 
 export const LanguageSwitcher = ({ locales }: { locales: LocaleConfig[] }) => {
-  const locale = useLocale();
-  const { push } = useRouter();
+  const currentLocale = useLocale();
+  const [isPending, startTransition] = React.useTransition();
+  const { replace } = useRouter();
+
   const pathname = usePathname();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className="relative" size="icon" variant="ghost">
+        <Button
+          className="relative"
+          isLoading={isPending}
+          size="icon"
+          variant="ghost"
+        >
           <LanguagesIcon />
         </Button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent>
         {locales.map(locale => (
-          <DropdownMenuItem key={locale.code} asChild>
-            <Link href={`${pathname}/${locale.code}`} lang={locale.code}>
-              {locale.name} - {`${pathname}/${locale.code}`}
-            </Link>
+          <DropdownMenuItem
+            key={locale.code}
+            onClick={() => {
+              startTransition(() => {
+                replace(pathname, {
+                  locale: locale.code,
+                });
+              });
+            }}
+          >
+            {locale.name}
+            {locale.code === currentLocale && <CheckIcon className="ml-auto" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

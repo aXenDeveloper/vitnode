@@ -10,9 +10,9 @@ import type { VitNodeConfig } from '../../../vitnode.config';
 import type { NavAdminParent } from './sidebar/nav/nav';
 
 import { I18nProvider } from '../../../components/i18n-provider';
+import { LanguageSwitcher } from '../../../components/switchers/langs/language-swietcher';
 import { SidebarAdmin } from './sidebar/sidebar';
 import { UserBarAdmin } from './user-bar/user-bar';
-import { LanguageSwitcher } from '../../../components/switchers/langs/language-swietcher';
 
 export interface AdminLayoutProps {
   children: React.ReactNode;
