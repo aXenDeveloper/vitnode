@@ -33,19 +33,24 @@
       "default": "./prettierrc.mjs"
     }
   },
+  "peerDependencies": {
+    "eslint": "^9.0.0",
+    "typescript": "5.8.x",
+    "prettier": "^3.0.0"
+  },
   "devDependencies": {
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@eslint/js": "^9.27.0",
+    "@eslint/js": "^9.29.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-perfectionist": "^4.13.0",
-    "eslint-plugin-prettier": "^5.4.1",
+    "eslint-plugin-perfectionist": "^4.15.0",
+    "eslint-plugin-prettier": "^5.5.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-compiler": "19.1.0-rc.2",
     "eslint-plugin-react-hooks": "6.0.0-rc1",
     "prettier-plugin-tailwindcss": "^0.6.12",
-    "typescript-eslint": "^8.33.0"
+    "typescript-eslint": "^8.34.1"
   }
 }
