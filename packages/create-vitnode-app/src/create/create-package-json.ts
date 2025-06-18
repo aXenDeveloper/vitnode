@@ -73,7 +73,7 @@ export const createPackageJSON = async ({
     },
     devDependencies: {
       '@tailwindcss/postcss': '^4.1.8',
-      '@types/node': '^22.15.29',
+      '@types/node': '^24',
       '@types/react': '^19.1.6',
       '@types/react-dom': '^19.1.5',
       ...(eslint
