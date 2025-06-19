@@ -1,5 +1,6 @@
 import type { Context } from 'hono';
 
+import { randomBytes } from 'crypto';
 import { eq } from 'drizzle-orm';
 import { getCookie, setCookie } from 'hono/cookie';
 
@@ -15,29 +16,32 @@ export class DeviceModel {
   protected readonly c: Context;
 
   private async createDevice() {
+    const publicId = randomBytes(16).toString('hex');
+
     const [device] = await this.c
       .get('db')
       .insert(core_sessions_known_devices)
       .values({
+        publicId,
         ipAddress: getUserIp(this.c),
         userAgent: this.getUserAgent(),
       })
       .returning({ id: core_sessions_known_devices.id });
 
-    this.setCookieDevice(device.id);
+    this.setCookieDevice(publicId);
 
-    return device.id;
+    return { id: device.id, publicId };
   }
 
   private getUserAgent() {
     return this.c.req.header('User-Agent') ?? 'node';
   }
 
-  private setCookieDevice(deviceId: number) {
+  private setCookieDevice(publicDeviceId: string) {
     setCookie(
       this.c,
       this.c.get('core').authorization.deviceCookieName,
-      deviceId.toString(),
+      publicDeviceId,
       {
         httpOnly: true,
         secure: this.c.get('core').authorization.cookieSecure,
@@ -51,8 +55,9 @@ export class DeviceModel {
   }
 
   async getDeviceId() {
-    const deviceIdFromCookie = Number(
-      getCookie(this.c, this.c.get('core').authorization.deviceCookieName),
+    const deviceIdFromCookie = getCookie(
+      this.c,
+      this.c.get('core').authorization.deviceCookieName,
     );
 
     try {
@@ -63,7 +68,7 @@ export class DeviceModel {
             id: core_sessions_known_devices.id,
           })
           .from(core_sessions_known_devices)
-          .where(eq(core_sessions_known_devices.id, deviceIdFromCookie));
+          .where(eq(core_sessions_known_devices.publicId, deviceIdFromCookie));
 
         if (!device) {
           return await this.createDevice();
@@ -76,12 +81,15 @@ export class DeviceModel {
             ipAddress: getUserIp(this.c),
             userAgent: this.getUserAgent(),
           })
-          .where(eq(core_sessions_known_devices.id, deviceIdFromCookie));
+          .where(eq(core_sessions_known_devices.publicId, deviceIdFromCookie));
 
-        return device.id;
+        return {
+          id: device.id,
+          publicId: deviceIdFromCookie,
+        };
       }
     } catch (_) {
-      return await this.createDevice();
+      /* empty */
     }
 
     return await this.createDevice();

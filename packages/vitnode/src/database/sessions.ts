@@ -41,6 +41,7 @@ export const core_sessions_known_devices = pgTable(
   'core_sessions_known_devices',
   t => ({
     id: t.serial().primaryKey(),
+    publicId: t.varchar({ length: 32 }).notNull().unique(),
     ipAddress: t.varchar({ length: 40 }).notNull(),
     userAgent: t.text().notNull(),
     lastSeen: t.timestamp().notNull().defaultNow(),

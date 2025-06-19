@@ -6,6 +6,7 @@ import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { core_sessions } from '@/database/sessions';
 import { CONFIG } from '@/lib/config';
 
+import { DeviceModel } from './device';
 import { UserModel } from './user';
 
 export class SessionModel {
@@ -14,6 +15,15 @@ export class SessionModel {
   }
   protected readonly c: Context;
 
+  private async hashToken(token: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(token);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
   async createSessionByUserId(userId: number) {
     // Generate secure random bytes using Web Crypto API
     const randomBytes = new Uint8Array(64);
@@ -21,18 +31,19 @@ export class SessionModel {
     const token = Array.from(randomBytes)
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
-    const deviceId = this.c.get('deviceId');
+    const device = await new DeviceModel(this.c).getDeviceId();
+    const hashedToken = await this.hashToken(token);
 
     await this.c
       .get('db')
       .insert(core_sessions)
       .values({
-        token,
+        token: hashedToken,
         userId,
         expiresAt: new Date(
           Date.now() + this.c.get('core').authorization.cookie_expires,
         ),
-        deviceId,
+        deviceId: device.id,
       });
 
     setCookie(this.c, this.c.get('core').authorization.cookieName, token, {
@@ -48,7 +59,7 @@ export class SessionModel {
       domain: CONFIG.frontend.hostname,
     });
 
-    return { token, deviceId };
+    return { token };
   }
 
   async deleteSession() {
@@ -56,12 +67,28 @@ export class SessionModel {
       this.c,
       this.c.get('core').authorization.cookieName,
     );
-    if (!token) return;
+    const device = await new DeviceModel(this.c).getDeviceId();
+
+    // Ensure both token and deviceId exist before proceeding
+    if (!token || !device.id) {
+      deleteCookie(this.c, this.c.get('core').authorization.cookieName);
+
+      return;
+    }
+
+    const hashedToken = await this.hashToken(token);
 
     await this.c
       .get('db')
       .delete(core_sessions)
-      .where(eq(core_sessions.token, token));
+      // Harden the query to ensure a user can only delete their own device's session
+      .where(
+        and(
+          eq(core_sessions.token, hashedToken),
+          eq(core_sessions.deviceId, device.id),
+        ),
+      );
+
     deleteCookie(this.c, this.c.get('core').authorization.cookieName);
   }
 
@@ -71,32 +98,38 @@ export class SessionModel {
       this.c.get('core').authorization.cookieName,
     );
     if (!token) return null;
-    const deviceId = this.c.get('deviceId');
-    if (!deviceId) return null;
+
+    const device = await new DeviceModel(this.c).getDeviceId();
+    if (!device) return null;
+
+    const hashedToken = await this.hashToken(token);
 
     const [session] = await this.c
       .get('db')
       .select({
-        token: core_sessions.token,
         userId: core_sessions.userId,
       })
       .from(core_sessions)
       .where(
         and(
-          eq(core_sessions.token, token),
-          eq(core_sessions.deviceId, deviceId),
+          eq(core_sessions.token, hashedToken),
+          eq(core_sessions.deviceId, device.id),
           gt(core_sessions.expiresAt, new Date()),
         ),
       )
       .limit(1);
 
-    if (!session || session.token !== token) {
+    if (!session) {
+      deleteCookie(this.c, this.c.get('core').authorization.cookieName);
+
       return null;
     }
+
     const user = await new UserModel().getUserById({
       id: session.userId,
       c: this.c,
     });
+
     if (!user) return null;
 
     return user;
