@@ -5,7 +5,6 @@ import { HTTPException } from 'hono/http-exception';
 import type { EmailApiPlugin } from '@/api/models/email';
 import type { VitNodeApiConfig, VitNodeConfig } from '@/vitnode.config';
 
-import { DeviceModel } from '@/api/models/device';
 import { SessionModel } from '@/api/models/session';
 import { SessionAdminModel } from '@/api/models/session-admin';
 
@@ -48,7 +47,6 @@ interface EnvVariablesVitNode {
     };
   };
   db: Pick<VitNodeApiConfig, 'dbProvider'>['dbProvider'];
-  deviceId: number;
   plugin: {
     id: string;
   };
@@ -99,8 +97,6 @@ export const globalMiddleware = ({
       },
     });
 
-    const deviceId = await new DeviceModel(c).getDeviceId();
-    c.set('deviceId', deviceId);
     const user = await new SessionModel(c).getUser();
     c.set('user', user);
     c.set('admin', null);

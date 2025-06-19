@@ -22,12 +22,12 @@ export const vitNodeApiConfig = buildApiConfig({
     connection: POSTGRES_URL,
     casing: 'camelCase',
   }),
-  emailProvider: NodemailerEmailPlugin({
-    from: process.env.NODE_MAILER_FROM,
-    host: process.env.NODE_MAILER_HOST,
-    password: process.env.NODE_MAILER_PASSWORD,
-    user: process.env.NOD_EMAILER_USER,
-  }),
+  // emailProvider: NodemailerEmailPlugin({
+  //   from: process.env.NODE_MAILER_FROM,
+  //   host: process.env.NODE_MAILER_HOST,
+  //   password: process.env.NODE_MAILER_PASSWORD,
+  //   user: process.env.NOD_EMAILER_USER,
+  // }),
   authorization: {
     ssoProviders: [
       DiscordSSOApiPlugin({
