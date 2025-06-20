@@ -19,21 +19,21 @@
     "core"
   ],
   "peerDependencies": {
+    "@hono/zod-openapi": "0.19.x",
+    "@swc/cli": "0.6.x",
+    "@swc/core": "1.12.x",
+    "@types/react": "19.1.x",
+    "@types/react-dom": "19.1.x",
     "drizzle-kit": "0.31.x",
     "drizzle-orm": "^0.44.x",
     "hono": "4.8.x",
     "next": "15.3.x",
+    "next-intl": "4.1.x",
     "react": "19.1.x",
     "react-dom": "19.1.x",
-    "@swc/cli": "0.6.x",
-    "@hono/zod-openapi": "0.19.x",
-    "next-intl": "4.1.x",
     "react-hook-form": "^7.0.0",
-    "zod": "3.25.x",
-    "@swc/core": "1.12.x",
-    "@types/react": "19.1.x",
-    "@types/react-dom": "19.1.x",
-    "typescript": "^5.8.x"
+    "typescript": "^5.8.x",
+    "zod": "3.25.x"
   },
   "devDependencies": {
     "@hono/zod-openapi": "^0.19.8",
@@ -119,6 +119,7 @@
     "nodemailer": "^7.0.3",
     "postgres": "^3.4.7",
     "radix-ui": "^1.4.2",
+    "rate-limiter-flexible": "^7.1.1",
     "react-scan": "^0.3.4",
     "resend": "^4.6.0",
     "tailwind-merge": "^3.3.1",

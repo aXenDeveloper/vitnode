@@ -2,7 +2,7 @@ import { Resend } from 'resend';
 
 import type { EmailApiPlugin } from '@/api/models/email';
 
-export const ResendEmailPlugin = ({
+export const ResendEmailAdapter = ({
   apiKey,
   from,
 }: {

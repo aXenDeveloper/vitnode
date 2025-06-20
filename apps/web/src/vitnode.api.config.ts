@@ -1,8 +1,8 @@
 import { blogApiPlugin } from '@vitnode/blog/config.api';
-import { NodemailerEmailPlugin } from '@vitnode/core/api/plugins/email/nodemailer';
-import { DiscordSSOApiPlugin } from '@vitnode/core/api/plugins/sso/discord';
-import { FacebookSSOApiPlugin } from '@vitnode/core/api/plugins/sso/facebook';
-import { GoogleSSOApiPlugin } from '@vitnode/core/api/plugins/sso/google';
+import { NodemailerEmailAdapter } from '@vitnode/core/api/adapters/email/nodemailer';
+import { DiscordSSOApiPlugin } from '@vitnode/core/api/adapters/sso/discord';
+import { FacebookSSOApiPlugin } from '@vitnode/core/api/adapters/sso/facebook';
+import { GoogleSSOApiPlugin } from '@vitnode/core/api/adapters/sso/google';
 import { buildApiConfig } from '@vitnode/core/vitnode.config';
 import * as dotenv from 'dotenv';
 import { drizzle } from 'drizzle-orm/postgres-js';
@@ -22,12 +22,16 @@ export const vitNodeApiConfig = buildApiConfig({
     connection: POSTGRES_URL,
     casing: 'camelCase',
   }),
-  // emailProvider: NodemailerEmailPlugin({
-  //   from: process.env.NODE_MAILER_FROM,
-  //   host: process.env.NODE_MAILER_HOST,
-  //   password: process.env.NODE_MAILER_PASSWORD,
-  //   user: process.env.NOD_EMAILER_USER,
-  // }),
+  rateLimiter: {
+    points: 20, // 20 requests
+    duration: 60, // per 60 seconds
+  },
+  emailAdapter: NodemailerEmailAdapter({
+    from: process.env.NODE_MAILER_FROM,
+    host: process.env.NODE_MAILER_HOST,
+    password: process.env.NODE_MAILER_PASSWORD,
+    user: process.env.NOD_EMAILER_USER,
+  }),
   authorization: {
     ssoProviders: [
       DiscordSSOApiPlugin({

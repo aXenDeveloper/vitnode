@@ -5,7 +5,7 @@ import { createRoute as createRouteHono } from '@hono/zod-openapi';
 import {
   type EnvVitNode,
   pluginMiddleware,
-} from '../middlewares/global/global';
+} from '../middlewares/global.middleware';
 
 type RoutingPath<P extends string> =
   P extends `${infer Head}/{${infer Param}}${infer Tail}`
