@@ -1,5 +1,6 @@
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type { ThemeProvider } from 'next-themes';
+import type { IRateLimiterOptions } from 'rate-limiter-flexible';
 
 import type { BuildPluginApiReturn } from './api/lib/plugin';
 import type { EmailApiPlugin } from './api/models/email';
@@ -47,8 +48,9 @@ export interface VitNodeApiConfig {
     ssoProviders?: SSOApiPlugin[];
   };
   dbProvider: PostgresJsDatabase;
-  emailProvider?: EmailApiPlugin;
+  emailAdapter?: EmailApiPlugin;
   plugins: BuildPluginApiReturn[];
+  rateLimiter?: Omit<IRateLimiterOptions, 'keyPrefix'>;
 }
 
 export function buildConfig<AppLocales extends LocaleConfig[]>(

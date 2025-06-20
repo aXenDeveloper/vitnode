@@ -19,10 +19,6 @@ export class EmailModel {
 
   protected readonly c: Context;
 
-  isAvailable() {
-    return !!this.c.get('core').emailProvider;
-  }
-
   async send(args: {
     html: string;
     replyTo?: string;
@@ -30,7 +26,7 @@ export class EmailModel {
     to: string;
   }) {
     const core = this.c.get('core');
-    const provider = core.emailProvider;
+    const provider = core.emailAdapter;
     if (!provider) {
       throw new HTTPException(500, {
         message: 'Email provider not found',

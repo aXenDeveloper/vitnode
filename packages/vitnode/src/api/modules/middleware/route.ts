@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 import { buildRoute } from '@/api/lib/route';
-import { EmailModel } from '@/api/models/email';
 import { CONFIG_PLUGIN } from '@/config';
 
 export const routeMiddleware = buildRoute({
@@ -26,10 +25,9 @@ export const routeMiddleware = buildRoute({
   },
   handler: c => {
     const sso = c.get('core').authorization.ssoProviders;
-    const email = new EmailModel(c);
 
     return c.json({
-      isEmail: email.isAvailable(),
+      isEmail: !!c.get('core').emailAdapter,
       sso: sso.map(s => ({ id: s.id, name: s.name })),
     });
   },

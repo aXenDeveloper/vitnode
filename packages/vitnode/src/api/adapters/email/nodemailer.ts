@@ -2,7 +2,7 @@ import { createTransport } from 'nodemailer';
 
 import type { EmailApiPlugin } from '@/api/models/email';
 
-export const NodemailerEmailPlugin = ({
+export const NodemailerEmailAdapter = ({
   host = '',
   port = 587,
   secure = false,

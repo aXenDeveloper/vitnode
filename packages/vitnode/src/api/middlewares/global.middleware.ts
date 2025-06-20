@@ -8,7 +8,7 @@ import type { VitNodeApiConfig, VitNodeConfig } from '@/vitnode.config';
 import { SessionModel } from '@/api/models/session';
 import { SessionAdminModel } from '@/api/models/session-admin';
 
-import type { SSOApiPlugin } from '../../models/sso';
+import type { SSOApiPlugin } from '../models/sso';
 
 export interface EnvVitNode extends Env {
   Variables: EnvVariablesVitNode;
@@ -40,7 +40,7 @@ interface EnvVariablesVitNode {
       deviceCookieName: string;
       ssoProviders: SSOApiPlugin[];
     };
-    emailProvider?: EmailApiPlugin;
+    emailAdapter?: EmailApiPlugin;
     metadata: {
       shortTitle?: string;
       title: string;
@@ -72,16 +72,16 @@ declare module 'hono' {
 export const globalMiddleware = ({
   authorization,
   metadata,
-  emailProvider,
+  emailAdapter,
   dbProvider,
-}: Pick<VitNodeApiConfig, 'authorization' | 'dbProvider' | 'emailProvider'> &
+}: Pick<VitNodeApiConfig, 'authorization' | 'dbProvider' | 'emailAdapter'> &
   Pick<VitNodeConfig, 'metadata'>) => {
   return async (c: Context, next: Next) => {
     c.set('db', dbProvider);
 
     c.set('core', {
       metadata,
-      emailProvider,
+      emailAdapter,
       authorization: {
         cookieName: authorization?.cookieName ?? 'vitnode_auth',
         cookie_expires:

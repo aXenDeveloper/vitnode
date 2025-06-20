@@ -13,9 +13,7 @@ You can configure the authentication settings in the `VitNodeAPI` function and `
 
 For example you can change the expiration time of the cookie:
 
-import { TypeTable } from 'fumadocs-ui/components/type-table';
-
-```ts title="src/app/api/[...route]/route.ts"
+```ts title="src/vitnode.api.config.ts"
 VitNodeAPI({
   app,
   plugins: [],
@@ -27,6 +25,8 @@ VitNodeAPI({
   },
 });
 ```
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
 
 ### Options
 
