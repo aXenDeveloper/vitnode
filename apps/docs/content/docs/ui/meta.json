@@ -3,5 +3,24 @@
   "description": "Make it pretty",
   "icon": "Paintbrush",
   "root": true,
-  "pages": ["index", "hooks", "---Forms---", "auto-form", "..."]
+  "pages": [
+    "index",
+    "hooks",
+    "not-found",
+    "---Components---",
+    "data-table",
+    "confirm-action-alert-dialog",
+    "---Forms---",
+    "auto-form",
+    "checkbox",
+    "combobox-async",
+    "combobox",
+    "input",
+    "radio-group",
+    "select",
+    "switch",
+    "textarea",
+    "---UI---",
+    "..."
+  ]
 }

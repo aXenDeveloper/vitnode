@@ -9,12 +9,14 @@ import {
 const createRateLimiter = ({
   keyPrefix,
   ...options
-}: {
+}: Omit<IRateLimiterOptions, 'keyPrefix'> & {
   keyPrefix: string;
-} & Omit<IRateLimiterOptions, 'keyPrefix'>): RateLimiterAbstract => {
+}): RateLimiterAbstract => {
+  // TODO: Add support for Redis or other storage options
+
   return new RateLimiterMemory({
     keyPrefix,
-    points: options?.points ?? 20, // 20 requests
+    points: options?.points ?? 40, // 40 requests
     duration: options?.duration ?? 60, // per 60 seconds
     ...options,
   });

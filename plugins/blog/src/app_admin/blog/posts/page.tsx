@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 
 import { I18nProvider } from '@vitnode/core/components/i18n-provider';
+import { DataTableSkeleton } from '@vitnode/core/components/table/data-table';
 import { HeaderContent } from '@vitnode/core/components/ui/header-content';
 import { getTranslations } from 'next-intl/server';
+import React from 'react';
 
 import { ActionsPostsAdmin } from '@/views/admin/posts/actions/actions';
 import { PostsAdminView } from '@/views/admin/posts/posts-admin-view';
@@ -30,7 +32,9 @@ export default async function PostsPage(
           <ActionsPostsAdmin />
         </HeaderContent>
 
-        <PostsAdminView {...params} />
+        <React.Suspense fallback={<DataTableSkeleton columns={5} />}>
+          <PostsAdminView {...params} />
+        </React.Suspense>
       </div>
     </I18nProvider>
   );

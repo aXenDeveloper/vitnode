@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 
 import { I18nProvider } from '@vitnode/core/components/i18n-provider';
+import { DataTableSkeleton } from '@vitnode/core/components/table/data-table';
 import { HeaderContent } from '@vitnode/core/components/ui/header-content';
 import { getTranslations } from 'next-intl/server';
+import React from 'react';
 
+import { ActionsCategoriesAdmin } from '@/views/admin/categories/actions/actions';
 import { CategoriesAdminView } from '@/views/admin/categories/categories-admin-view';
-
-import { ActionsCategoriesAdmin } from '../../../views/admin/categories/actions/actions';
 
 export const generateMetadata = async (): Promise<Metadata> => {
   const t = await getTranslations('@vitnode/blog.admin.nav');
@@ -31,7 +32,9 @@ export default async function CategoriesPage(
           <ActionsCategoriesAdmin />
         </HeaderContent>
 
-        <CategoriesAdminView {...params} />
+        <React.Suspense fallback={<DataTableSkeleton columns={4} />}>
+          <CategoriesAdminView {...params} />
+        </React.Suspense>
       </div>
     </I18nProvider>
   );

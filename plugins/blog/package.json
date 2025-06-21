@@ -37,7 +37,7 @@
     "@vitnode/core": "workspace:*",
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "^0.44.2",
-    "hono": "^4.8.0",
+    "hono": "^4.8.2",
     "lucide-react": "^0.517.0",
     "next": "^15.3.4",
     "next-intl": "^4.1.0",
@@ -49,7 +49,7 @@
   },
   "devDependencies": {
     "@swc/cli": "0.6.0",
-    "@swc/core": "^1.12.1",
+    "@swc/core": "^1.12.5",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitnode/eslint-config": "workspace:*",

@@ -1,0 +1,81 @@
+---
+title: Confirm Action Alert Dialog
+description: A dialog component for confirming destructive actions like delete operations, built on top of the Alert Dialog.
+---
+
+The Confirm Action Alert Dialog is a specialized dialog component built on top of the [Alert Dialog](/docs/ui/alert-dialog) that provides a consistent way to confirm potentially destructive or irreversible actions before they're executed.
+
+It's particularly useful for:
+
+- Deleting items (e.g., categories, posts, users)
+- Performing actions that cannot be undone (e.g., clearing data, resetting settings)
+- Confirming critical operations (e.g., account deletion, data migration)
+- Any action where user confirmation is necessary to prevent accidental execution
+
+## Usage
+
+```tsx
+import { ConfirmActionAlertDialog } from '@vitnode/core/components/confirm-action/confirm-action-alert-dialog';
+import { Button } from '@vitnode/core/components/ui/button';
+```
+
+```tsx
+<ConfirmActionAlertDialog
+  onSubmit={async ({ onClose }) => {
+    const result = await deleteCategoryApi(id);
+
+    if (result?.error) {
+      toast.error(tGlobal('errors.title'), {
+        description: tGlobal('errors.internal_server_error'),
+      });
+      return; // Keep dialog open on error
+    }
+
+    toast.success(t('success'), {
+      description: title,
+    });
+    onClose(); // Close dialog on success
+  }}
+>
+  <Button variant="destructive">Delete Category</Button>
+</ConfirmActionAlertDialog>
+```
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    children: {
+      description:
+        'The trigger element that opens the dialog. This should be a button or clickable element.',
+      type: 'ReactNode',
+      required: true,
+    },
+    onSubmit: {
+      description:
+        'Function called when the user confirms the action. Receives an object with `onClose` callback.',
+      type: '(params: { onClose: () => void }) => Promise<void>',
+      required: true,
+    },
+    title: {
+      description:
+        'Custom title for the dialog. Defaults to translated "Are you sure?"',
+      type: 'string',
+      default: 'Are you sure?',
+    },
+    description: {
+      description:
+        'Custom description explaining what will happen when the action is confirmed.',
+      type: 'ReactNode',
+      default: 'This action cannot be undone.',
+    },
+    textSubmit: {
+      description:
+        'Custom text for the submit button. Defaults to translated "Confirm".',
+      type: 'string',
+      default: 'Confirm',
+    },
+  }}
+/>
