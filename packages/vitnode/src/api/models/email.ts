@@ -19,12 +19,7 @@ export class EmailModel {
 
   protected readonly c: Context;
 
-  async send(args: {
-    html: string;
-    replyTo?: string;
-    subject: string;
-    to: string;
-  }) {
+  send(args: { html: string; replyTo?: string; subject: string; to: string }) {
     const core = this.c.get('core');
     const provider = core.emailAdapter;
     if (!provider) {
@@ -33,16 +28,10 @@ export class EmailModel {
       });
     }
 
-    try {
-      await provider.sendEmail({
-        ...args,
-        metadata: core.metadata,
-      });
-    } catch (e) {
-      const error = e as Error;
-      throw new HTTPException(500, {
-        message: error.message,
-      });
-    }
+    // TODO: Add logging when email is failed to send
+    void provider.sendEmail({
+      ...args,
+      metadata: core.metadata,
+    });
   }
 }

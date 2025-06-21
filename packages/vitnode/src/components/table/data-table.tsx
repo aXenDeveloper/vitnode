@@ -83,11 +83,5 @@ export function DataTable<T extends DataTableTMin>(
     return <ErrorView code={500} />;
   }
 
-  return (
-    <React.Suspense
-      fallback={<DataTableSkeleton columns={props.columns.length} />}
-    >
-      <ContentDataTable<T> {...props} />
-    </React.Suspense>
-  );
+  return <ContentDataTable<T> {...props} />;
 }

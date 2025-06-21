@@ -1,16 +1,6 @@
 'use client';
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@vitnode/core/components/ui/alert-dialog';
+import { ConfirmActionAlertDialog } from '@vitnode/core/components/confirm-action/confirm-action-alert-dialog';
 import { Button } from '@vitnode/core/components/ui/button';
 import {
   Tooltip,
@@ -29,53 +19,41 @@ export const DeleteAction = ({ title, id }: { id: number; title: string }) => {
   const tGlobal = useTranslations('core.global');
 
   return (
-    <AlertDialog>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <AlertDialogTrigger asChild>
-              <Button size="icon" variant="destructiveGhost">
-                <Trash2Icon className="size-4" />
-              </Button>
-            </AlertDialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent>{t('title')}</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t('title')}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {t.rich('desc', {
-              title: () => (
-                <span className="text-foreground font-bold">{title}</span>
-              ),
-            })}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{tGlobal('cancel')}</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={async () => {
-              const mutation = await mutationApi(id);
-              if (mutation?.error) {
-                toast.error(tGlobal('errors.title'), {
-                  description: tGlobal('errors.internal_server_error'),
-                });
-
-                return;
-              }
-
-              toast.success(t('success'), {
-                description: title,
+    <TooltipProvider>
+      <Tooltip>
+        <ConfirmActionAlertDialog
+          description={t.rich('desc', {
+            title: () => (
+              <span className="text-foreground font-bold">{title}</span>
+            ),
+          })}
+          onSubmit={async ({ onClose }) => {
+            const mutation = await mutationApi(id);
+            if (mutation?.error) {
+              toast.error(tGlobal('errors.title'), {
+                description: tGlobal('errors.internal_server_error'),
               });
-            }}
-          >
-            {t('confirm')}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+
+              return;
+            }
+
+            toast.success(t('success'), {
+              description: title,
+            });
+            onClose();
+          }}
+          textSubmit={t('confirm')}
+          title={t('title')}
+        >
+          <TooltipTrigger asChild>
+            <Button size="icon" variant="destructiveGhost">
+              <Trash2Icon className="size-4" />
+            </Button>
+          </TooltipTrigger>
+        </ConfirmActionAlertDialog>
+
+        <TooltipContent>{t('title')}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };

@@ -11,7 +11,7 @@ Rate limiting is a powerful feature that helps protect your API from abuse and b
 export const vitNodeApiConfig = buildApiConfig({
   // [!code ++:4]
   rateLimiter: {
-    points: 20,
+    points: 40,
     duration: 60,
   },
 });
@@ -27,7 +27,7 @@ import { TypeTable } from 'fumadocs-ui/components/type-table';
       description:
         'The number of requests allowed within the specified duration.',
       type: 'number',
-      default: '20',
+      default: '40',
     },
     duration: {
       description:

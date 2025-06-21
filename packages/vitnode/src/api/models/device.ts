@@ -88,7 +88,7 @@ export class DeviceModel {
           publicId: deviceIdFromCookie,
         };
       }
-    } catch (_) {
+    } catch {
       /* empty */
     }
 
