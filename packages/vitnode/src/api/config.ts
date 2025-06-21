@@ -75,13 +75,12 @@ export function VitNodeAPI({
     return next();
   });
 
-  app.onError(error => {
+  app.onError((error, c) => {
     if (error instanceof HTTPException) {
       return error.getResponse();
     }
 
-    // eslint-disable-next-line no-console
-    console.error(error);
+    c.get('log').error(`Unhandled error: ${error.message}`);
 
     return new Response(
       process.env.NODE_ENV === 'development'

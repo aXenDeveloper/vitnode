@@ -31,10 +31,7 @@ export const rateLimiterMiddleware = (
   });
 
   return async (c: Context, next: Next) => {
-    const key =
-      c.req.header('x-forwarded-for') ??
-      c.req.raw.headers.get('x-real-ip') ??
-      '127.0.0.1';
+    const key = c.get('ipAddress');
 
     try {
       await rateLimiter.consume(key);

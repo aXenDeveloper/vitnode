@@ -1,5 +1,5 @@
 {
-  "id": "d8197fc3-2d92-4d22-9381-9ebb1412c8fc",
+  "id": "cb9548b9-2232-46c0-9d83-f43632160676",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -439,6 +439,58 @@
       "checkConstraints": {},
       "isRLSEnabled": true
     },
+    "public.core_logs": {
+      "name": "core_logs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "pluginId": {
+          "name": "pluginId",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "coreLogsType",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'info'"
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "ipAddress": {
+          "name": "ipAddress",
+          "type": "varchar(45)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
     "public.core_moderators_permissions": {
       "name": "core_moderators_permissions",
       "schema": "",
@@ -725,6 +777,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "publicId": {
+          "name": "publicId",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
         "ipAddress": {
           "name": "ipAddress",
           "type": "varchar(40)",
@@ -764,7 +822,15 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "core_sessions_known_devices_publicId_unique": {
+          "name": "core_sessions_known_devices_publicId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "publicId"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": true
@@ -1310,7 +1376,18 @@
       "isRLSEnabled": true
     }
   },
-  "enums": {},
+  "enums": {
+    "public.coreLogsType": {
+      "name": "coreLogsType",
+      "schema": "public",
+      "values": [
+        "info",
+        "warn",
+        "error",
+        "debug"
+      ]
+    }
+  },
   "schemas": {},
   "sequences": {},
   "roles": {},

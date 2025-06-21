@@ -120,6 +120,9 @@ VitNode is designed for individual developers and small teams who need a structu
   - Component scaffolding
   - API endpoint generation
   - Database schema generation from models
+- Logging system with structured logs:
+  - Log levels (debug, info, warn, error)
+  - Contextual logging with request/response metadata
 
 ### File Management
 

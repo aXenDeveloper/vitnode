@@ -10,6 +10,11 @@ import { SessionAdminModel } from '@/api/models/session-admin';
 
 import type { SSOApiPlugin } from '../models/sso';
 
+import {
+  loggerMiddleware,
+  type LoggerMiddlewareType,
+} from '../lib/logger-middleware';
+
 export interface EnvVitNode extends Env {
   Variables: EnvVariablesVitNode;
 }
@@ -47,6 +52,8 @@ interface EnvVariablesVitNode {
     };
   };
   db: Pick<VitNodeApiConfig, 'dbProvider'>['dbProvider'];
+  ipAddress: string;
+  log: LoggerMiddlewareType;
   plugin: {
     id: string;
   };
@@ -77,6 +84,12 @@ export const globalMiddleware = ({
 }: Pick<VitNodeApiConfig, 'authorization' | 'dbProvider' | 'emailAdapter'> &
   Pick<VitNodeConfig, 'metadata'>) => {
   return async (c: Context, next: Next) => {
+    c.set(
+      'ipAddress',
+      c.req.header('x-forwarded-for') ??
+        c.req.raw.headers.get('x-real-ip') ??
+        '127.0.0.1',
+    );
     c.set('db', dbProvider);
 
     c.set('core', {
@@ -100,6 +113,7 @@ export const globalMiddleware = ({
     const user = await new SessionModel(c).getUser();
     c.set('user', user);
     c.set('admin', null);
+    c.set('log', loggerMiddleware(c));
 
     await next();
   };
