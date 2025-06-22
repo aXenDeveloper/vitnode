@@ -84,12 +84,50 @@ export const globalMiddleware = ({
 }: Pick<VitNodeApiConfig, 'authorization' | 'dbProvider' | 'emailAdapter'> &
   Pick<VitNodeConfig, 'metadata'>) => {
   return async (c: Context, next: Next) => {
-    c.set(
-      'ipAddress',
-      c.req.header('x-forwarded-for') ??
-        c.req.raw.headers.get('x-real-ip') ??
-        '127.0.0.1',
-    );
+    // Collect possible IP header keys in order of trust/preference
+    const ipHeaderKeys = [
+      'x-forwarded-for',
+      'x-real-ip',
+      'cf-connecting-ip',
+      'x-client-ip',
+      'x-forwarded',
+      'x-cluster-client-ip',
+      'forwarded-for',
+      'forwarded',
+      'via',
+      'remote-addr',
+      'client-ip',
+      'ip',
+      'x-ip',
+      'true-client-ip',
+      'fastly-client-ip',
+      'x-fastly-client-ip',
+    ];
+
+    let ipAddress: string | undefined;
+
+    // Try to get IP from Hono's request header method first
+    for (const key of ipHeaderKeys) {
+      const value = c.req.header(key);
+      if (value) {
+        ipAddress = value;
+        break;
+      }
+    }
+
+    // If not found, try raw headers (for edge runtimes, etc.)
+    if (!ipAddress) {
+      for (const key of ipHeaderKeys) {
+        const value = c.req.raw.headers.get(key);
+        if (value) {
+          ipAddress = value;
+          break;
+        }
+      }
+    }
+
+    // Fallback to localhost if nothing found
+    c.set('ipAddress', ipAddress ?? '127.0.0.1');
     c.set('db', dbProvider);
 
     c.set('core', {

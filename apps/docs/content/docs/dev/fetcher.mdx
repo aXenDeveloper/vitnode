@@ -39,6 +39,28 @@ The fetcher returns a standard Response object, just like the native `fetch` API
 
 ## Advanced Features
 
+### Path Prefixing
+
+When working with nested modules you can import the module and use it directly with the `fetcher` function and add the `prefixPath` option to specify a path prefix. This is useful for organizing your API endpoints and keeping them modular.
+
+```ts
+const response = await fetcher(categoriesAdminModule, {
+  // [!code ++]
+  prefixPath: '/admin', // Adds prefix to the path
+  path: '/categories',
+  method: 'post',
+  module: 'categories',
+  args: {
+    body: {
+      name: 'Technology',
+      description: 'Tech-related articles',
+    },
+  },
+});
+
+// This will make a request to: /admin/categories
+```
+
 ### Caching Responses
 
 You can leverage Next.js caching by passing cache options:

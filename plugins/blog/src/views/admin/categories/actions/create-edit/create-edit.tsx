@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
-import type { zodCreateCategorySchema } from '@/api/modules/categories/routes/create.route';
+import type { zodCreateCategorySchema } from '@/api/modules/admin/categories/routes/create.route';
 
 import { createMutationApi, editMutationApi } from './mutation-api';
 

@@ -36,8 +36,10 @@ export async function fetcherClient<
     args,
     options,
     withPagination = false,
+    prefixPath = '',
   }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> & {
     options?: Omit<RequestInit, 'body'>;
+    prefixPath?: string;
     withPagination?: boolean;
   },
 ): Promise<
@@ -50,5 +52,6 @@ export async function fetcherClient<
     args,
     options,
     withPagination,
+    prefixPath,
   });
 }

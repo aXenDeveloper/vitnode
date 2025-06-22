@@ -41,9 +41,11 @@ export async function fetcher<
     options,
     allowSaveCookies = false,
     withPagination = false,
+    prefixPath = '',
   }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> & {
     allowSaveCookies?: boolean;
     options?: Omit<RequestInit, 'body'>;
+    prefixPath?: string;
     withPagination?: boolean;
   },
 ): Promise<
@@ -61,6 +63,7 @@ export async function fetcher<
     args,
     options,
     withPagination,
+    prefixPath,
     additionalHeaders: {
       Cookie: cookie.toString(),
       ['user-agent']: nextInternalHeaders.get('user-agent') ?? 'node',
