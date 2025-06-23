@@ -39,7 +39,7 @@ export const testRoute = buildRoute({
 
     // throw new Error('Test error');
 
-    c.get('log').warn('This is a test warning log');
+    // c.get('log').warn('This is a test warn log');
 
     return c.text('test');
   },

@@ -22,6 +22,7 @@ const relativeImportRegex =
   /import\s+(?:(?:{[^}]*})|(?:[^{}\s,]*))?\s*(?:,\s*(?:{[^}]*}))?\s*from\s+['"]([./]+[^'"]*)['"]/g;
 const atImportRegex =
   /import\s+(?:(?:{[^}]*})|(?:[^{}\s,]*))?\s*(?:,\s*(?:{[^}]*}))?\s*from\s+['"](@\/[^'"]*)['"]/g;
+const dynamicAtImportRegex = /import\s*\(\s*['"](@\/[^'"]*)['"]\s*\)/g;
 const jsExtensionRegex = /\.(js|jsx|ts|tsx)$/;
 const pageFileRegex = /^page\.(tsx|ts|jsx|js)$/i;
 
@@ -94,6 +95,20 @@ export const transformFileImports = (
   // Then handle @/ imports
   transformedContent = transformedContent.replace(
     atImportRegex,
+    (match, importPath: string) => {
+      // Remove '@/' prefix and any file extensions
+      const cleanPath = importPath
+        .replace(/^@\//, '')
+        .replace(jsExtensionRegex, '');
+      // Return the package import format
+
+      return match.replace(importPath, `${pluginName}/${cleanPath}`);
+    },
+  );
+
+  // Handle dynamic imports (React.lazy) with @/ paths
+  transformedContent = transformedContent.replace(
+    dynamicAtImportRegex,
     (match, importPath: string) => {
       // Remove '@/' prefix and any file extensions
       const cleanPath = importPath

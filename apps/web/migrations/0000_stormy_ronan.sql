@@ -1,4 +1,4 @@
-CREATE TYPE "public"."coreLogsType" AS ENUM('info', 'warn', 'error', 'debug');--> statement-breakpoint
+CREATE TYPE "public"."coreLogsType" AS ENUM('warn', 'error', 'debug');--> statement-breakpoint
 CREATE TABLE "core_admin_permissions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"roleId" integer,
@@ -50,7 +50,7 @@ ALTER TABLE "core_languages_words" ENABLE ROW LEVEL SECURITY;--> statement-break
 CREATE TABLE "core_logs" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"pluginId" varchar(255) NOT NULL,
-	"type" "coreLogsType" DEFAULT 'info' NOT NULL,
+	"type" "coreLogsType" NOT NULL,
 	"content" text NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"ipAddress" varchar(45) NOT NULL

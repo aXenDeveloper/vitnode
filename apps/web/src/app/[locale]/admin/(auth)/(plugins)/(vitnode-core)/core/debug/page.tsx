@@ -1,9 +1,16 @@
 import { getTranslations } from 'next-intl/server';
+import React from 'react';
 
 import { I18nProvider } from '@vitnode/core/components/i18n-provider';
+import { DataTableSkeleton } from '@vitnode/core/components/table/data-table';
 import { HeaderContent } from '@vitnode/core/components/ui/header-content';
 import { ClearCacheAction } from '@vitnode/core/views/admin/views/core/debug/actions/clear-cache/clear-cache';
-import { DebugAdminView } from '@vitnode/core/views/admin/views/core/debug/debug-admin-view';
+
+const DebugAdminView = React.lazy(async () =>
+  import('@vitnode/core/views/admin/views/core/debug/debug-admin-view').then(module => ({
+    default: module.DebugAdminView,
+  })),
+);
 
 export const generateMetadata = async () => {
   const t = await getTranslations('admin.debug');
@@ -14,7 +21,9 @@ export const generateMetadata = async () => {
   };
 };
 
-export default async function Page() {
+export default async function Page(
+  props: React.ComponentProps<typeof DebugAdminView>,
+) {
   const t = await getTranslations('admin.debug');
 
   return (
@@ -24,7 +33,10 @@ export default async function Page() {
           <ClearCacheAction />
         </HeaderContent>
 
-        <DebugAdminView />
+        <HeaderContent h2={t('logs.title')} />
+        <React.Suspense fallback={<DataTableSkeleton columns={4} />}>
+          <DebugAdminView {...props} />
+        </React.Suspense>
       </div>
     </I18nProvider>
   );

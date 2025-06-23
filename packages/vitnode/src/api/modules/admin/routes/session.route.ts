@@ -9,10 +9,6 @@ export const sessionAdminRoute = buildRoute({
   route: {
     method: 'get',
     description: 'Verify admin session',
-    pluginConfig: {
-      id: 'core',
-      name: 'Core',
-    },
     path: '/session',
     responses: {
       200: {

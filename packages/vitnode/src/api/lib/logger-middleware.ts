@@ -6,7 +6,6 @@ import { core_logs, type CoreLogsType } from '@/database/logs';
 export interface LoggerMiddlewareType {
   debug: (content: string) => void;
   error: (content: string) => void;
-  info: (content: string) => void;
   warn: (content: string) => void;
 }
 
@@ -35,12 +34,8 @@ export const loggerMiddleware = (c: Context): LoggerMiddlewareType => {
         console.warn(
           `\x1b[34m[VitNode]\x1b[0m \x1b[33mWarning (${pluginId})\x1b[0m: ${msg}`,
         ),
-      info: msg =>
-        console.info(
-          `\x1b[34m[VitNode]\x1b[0m \x1b[36mInfo (${pluginId})\x1b[0m: ${msg}`,
-        ),
     };
-    (loggers[type] ?? loggers.info)(content);
+    (loggers[type] ?? loggers.debug)(content);
   };
 
   return {
@@ -49,9 +44,6 @@ export const loggerMiddleware = (c: Context): LoggerMiddlewareType => {
     },
     error: (content: string) => {
       void logToDbAndConsole(content, 'error');
-    },
-    info: (content: string) => {
-      void logToDbAndConsole(content, 'info');
     },
     warn: (content: string) => {
       void logToDbAndConsole(content, 'warn');

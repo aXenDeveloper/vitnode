@@ -12,8 +12,10 @@ import {
 export const DateFormat = ({
   date,
   updateInterval,
+  showFullDate,
 }: {
   date: Date | string;
+  showFullDate?: boolean;
   updateInterval?: number;
 }) => {
   const dateToFormat = typeof date === 'string' ? new Date(date) : date;
@@ -33,6 +35,10 @@ export const DateFormat = ({
     hour: 'numeric',
     minute: 'numeric',
   });
+
+  if (showFullDate) {
+    return fullDate;
+  }
 
   // When date is < 7 days
   if (now.getTime() - dateToFormat.getTime() < 604800000) {

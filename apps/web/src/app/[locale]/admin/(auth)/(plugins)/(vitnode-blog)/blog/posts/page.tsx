@@ -7,7 +7,12 @@ import { getTranslations } from 'next-intl/server';
 import React from 'react';
 
 import { ActionsPostsAdmin } from '@vitnode/blog/views/admin/posts/actions/actions';
-import { PostsAdminView } from '@vitnode/blog/views/admin/posts/posts-admin-view';
+
+const PostsAdminView = React.lazy(async () =>
+  import('@vitnode/blog/views/admin/posts/posts-admin-view').then(mod => ({
+    default: mod.PostsAdminView,
+  })),
+);
 
 export const generateMetadata = async (): Promise<Metadata> => {
   const t = await getTranslations('@vitnode/blog.admin.nav');
