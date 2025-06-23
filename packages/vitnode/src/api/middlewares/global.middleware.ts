@@ -10,6 +10,11 @@ import { SessionAdminModel } from '@/api/models/session-admin';
 
 import type { SSOApiPlugin } from '../models/sso';
 
+import {
+  loggerMiddleware,
+  type LoggerMiddlewareType,
+} from '../lib/logger-middleware';
+
 export interface EnvVitNode extends Env {
   Variables: EnvVariablesVitNode;
 }
@@ -47,6 +52,8 @@ interface EnvVariablesVitNode {
     };
   };
   db: Pick<VitNodeApiConfig, 'dbProvider'>['dbProvider'];
+  ipAddress: string;
+  log: LoggerMiddlewareType;
   plugin: {
     id: string;
   };
@@ -77,6 +84,50 @@ export const globalMiddleware = ({
 }: Pick<VitNodeApiConfig, 'authorization' | 'dbProvider' | 'emailAdapter'> &
   Pick<VitNodeConfig, 'metadata'>) => {
   return async (c: Context, next: Next) => {
+    // Collect possible IP header keys in order of trust/preference
+    const ipHeaderKeys = [
+      'x-forwarded-for',
+      'x-real-ip',
+      'cf-connecting-ip',
+      'x-client-ip',
+      'x-forwarded',
+      'x-cluster-client-ip',
+      'forwarded-for',
+      'forwarded',
+      'via',
+      'remote-addr',
+      'client-ip',
+      'ip',
+      'x-ip',
+      'true-client-ip',
+      'fastly-client-ip',
+      'x-fastly-client-ip',
+    ];
+
+    let ipAddress: string | undefined;
+
+    // Try to get IP from Hono's request header method first
+    for (const key of ipHeaderKeys) {
+      const value = c.req.header(key);
+      if (value) {
+        ipAddress = value;
+        break;
+      }
+    }
+
+    // If not found, try raw headers (for edge runtimes, etc.)
+    if (!ipAddress) {
+      for (const key of ipHeaderKeys) {
+        const value = c.req.raw.headers.get(key);
+        if (value) {
+          ipAddress = value;
+          break;
+        }
+      }
+    }
+
+    // Fallback to localhost if nothing found
+    c.set('ipAddress', ipAddress ?? '127.0.0.1');
     c.set('db', dbProvider);
 
     c.set('core', {
@@ -100,6 +151,7 @@ export const globalMiddleware = ({
     const user = await new SessionModel(c).getUser();
     c.set('user', user);
     c.set('admin', null);
+    c.set('log', loggerMiddleware(c));
 
     await next();
   };

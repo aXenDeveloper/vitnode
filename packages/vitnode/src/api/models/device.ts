@@ -7,8 +7,6 @@ import { getCookie, setCookie } from 'hono/cookie';
 import { core_sessions_known_devices } from '@/database/sessions';
 import { CONFIG } from '@/lib/config';
 
-import { getUserIp } from '../lib/get-user-ip';
-
 export class DeviceModel {
   constructor(c: Context) {
     this.c = c;
@@ -23,7 +21,7 @@ export class DeviceModel {
       .insert(core_sessions_known_devices)
       .values({
         publicId,
-        ipAddress: getUserIp(this.c),
+        ipAddress: this.c.get('ipAddress'),
         userAgent: this.getUserAgent(),
       })
       .returning({ id: core_sessions_known_devices.id });
@@ -78,7 +76,7 @@ export class DeviceModel {
           .get('db')
           .update(core_sessions_known_devices)
           .set({
-            ipAddress: getUserIp(this.c),
+            ipAddress: this.c.get('ipAddress'),
             userAgent: this.getUserAgent(),
           })
           .where(eq(core_sessions_known_devices.publicId, deviceIdFromCookie));

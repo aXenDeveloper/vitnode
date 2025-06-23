@@ -28,10 +28,18 @@ export class EmailModel {
       });
     }
 
-    // TODO: Add logging when email is failed to send
-    void provider.sendEmail({
-      ...args,
-      metadata: core.metadata,
-    });
+    void provider
+      .sendEmail({
+        ...args,
+        metadata: core.metadata,
+      })
+      .catch((err: unknown) => {
+        const error =
+          err instanceof Error
+            ? err
+            : new Error('Unknown error from email provider');
+
+        this.c.get('log').error(`Failed to send email: ${error.message}`);
+      });
   }
 }

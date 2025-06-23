@@ -1,2 +1,0 @@
-ALTER TABLE "core_sessions_known_devices" ADD COLUMN "publicId" varchar(32) NOT NULL;--> statement-breakpoint
-ALTER TABLE "core_sessions_known_devices" ADD CONSTRAINT "core_sessions_known_devices_publicId_unique" UNIQUE("publicId");

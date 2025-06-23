@@ -170,6 +170,19 @@
           "success": "Cache cleared successfully.",
           "confirm": "Yes, clear cache"
         }
+      },
+      "logs": {
+        "title": "System Logs",
+        "id": "ID",
+        "created_at": "Created At",
+        "plugin": "Plugin",
+        "content": "Content",
+        "type": "Type",
+        "types": {
+          "warn": "Warning",
+          "error": "Error",
+          "debug": "Debug"
+        }
       }
     }
   }

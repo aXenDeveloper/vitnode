@@ -6,6 +6,8 @@ import {
   RateLimiterMemory,
 } from 'rate-limiter-flexible';
 
+import { CONFIG } from '../../lib/config';
+
 const createRateLimiter = ({
   keyPrefix,
   ...options
@@ -16,7 +18,7 @@ const createRateLimiter = ({
 
   return new RateLimiterMemory({
     keyPrefix,
-    points: options?.points ?? 40, // 40 requests
+    points: CONFIG.node_development ? 120 : (options?.points ?? 80), // 120 req in dev, 80 in prod
     duration: options?.duration ?? 60, // per 60 seconds
     ...options,
   });
@@ -31,10 +33,7 @@ export const rateLimiterMiddleware = (
   });
 
   return async (c: Context, next: Next) => {
-    const key =
-      c.req.header('x-forwarded-for') ??
-      c.req.raw.headers.get('x-real-ip') ??
-      '127.0.0.1';
+    const key = c.get('ipAddress');
 
     try {
       await rateLimiter.consume(key);

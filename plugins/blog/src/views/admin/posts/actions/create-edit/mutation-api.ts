@@ -5,14 +5,15 @@ import type { z } from 'zod';
 import { fetcher } from '@vitnode/core/lib/fetcher';
 import { revalidatePath } from 'next/cache';
 
-import type { zodCreatePostSchema } from '@/api/modules/posts/routes/create.route';
+import type { zodCreatePostSchema } from '@/api/modules/admin/posts/routes/create.route';
 
-import { postsModule } from '@/api/modules/posts/posts.module';
+import { postsAdminModule } from '@/api/modules/admin/posts/posts.admin.module';
 
 export const createMutationApi = async (
   body: z.infer<typeof zodCreatePostSchema>,
 ) => {
-  const res = await fetcher(postsModule, {
+  const res = await fetcher(postsAdminModule, {
+    prefixPath: '/admin',
     method: 'post',
     module: 'posts',
     path: '/',
@@ -35,7 +36,8 @@ export const editMutationApi = async ({
   id,
   ...body
 }: z.infer<typeof zodCreatePostSchema> & { id: number }) => {
-  const res = await fetcher(postsModule, {
+  const res = await fetcher(postsAdminModule, {
+    prefixPath: '/admin',
     method: 'put',
     module: 'posts',
     path: '/{id}',

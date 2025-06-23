@@ -42,6 +42,7 @@ interface CoreFetcherOptions<
   module: ModuleName;
   options?: Omit<RequestInit, 'body' | 'headers'>;
   path: SelectedPath;
+  prefixPath?: string;
   withPagination?: boolean;
 }
 
@@ -68,6 +69,7 @@ export async function coreFetcher<
     options,
     additionalHeaders = {},
     withPagination = false,
+    prefixPath = '',
   }: CoreFetcherOptions<M, Routes, Modules, ModuleName, SelectedPath, Method>,
 ): Promise<
   InferResponseType<M, Routes, Modules, ModuleName, SelectedPath, Method>
@@ -90,7 +92,7 @@ export async function coreFetcher<
 
   // Construct the base URL
   const url = new URL(
-    `/api/${pluginId}/${module}${formattedPath}`,
+    `/api/${pluginId}${prefixPath}/${module}${formattedPath}`,
     CONFIG.backend.origin,
   );
 

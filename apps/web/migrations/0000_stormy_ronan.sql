@@ -1,3 +1,4 @@
+CREATE TYPE "public"."coreLogsType" AS ENUM('warn', 'error', 'debug');--> statement-breakpoint
 CREATE TABLE "core_admin_permissions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"roleId" integer,
@@ -46,6 +47,16 @@ CREATE TABLE "core_languages_words" (
 );
 --> statement-breakpoint
 ALTER TABLE "core_languages_words" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+CREATE TABLE "core_logs" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"pluginId" varchar(255) NOT NULL,
+	"type" "coreLogsType" NOT NULL,
+	"content" text NOT NULL,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"ipAddress" varchar(45) NOT NULL
+);
+--> statement-breakpoint
+ALTER TABLE "core_logs" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "core_moderators_permissions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"roleId" integer,
@@ -81,9 +92,11 @@ CREATE TABLE "core_sessions" (
 ALTER TABLE "core_sessions" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "core_sessions_known_devices" (
 	"id" serial PRIMARY KEY NOT NULL,
+	"publicId" varchar(32) NOT NULL,
 	"ipAddress" varchar(40) NOT NULL,
 	"userAgent" text NOT NULL,
-	"lastSeen" timestamp DEFAULT now() NOT NULL
+	"lastSeen" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "core_sessions_known_devices_publicId_unique" UNIQUE("publicId")
 );
 --> statement-breakpoint
 ALTER TABLE "core_sessions_known_devices" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
