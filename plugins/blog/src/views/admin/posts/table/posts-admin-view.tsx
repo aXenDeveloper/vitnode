@@ -5,8 +5,8 @@ import { getTranslations } from 'next-intl/server';
 
 import { postsModule } from '@/api/modules/posts/posts.module';
 
-import { DeleteAction } from './row-actions/delete/delete-action';
-import { EditAction } from './row-actions/edit-action';
+import { DeleteAction } from './actions/delete/delete-action';
+import { EditAction } from './actions/edit-action';
 
 export const PostsAdminView = async ({
   searchParams,

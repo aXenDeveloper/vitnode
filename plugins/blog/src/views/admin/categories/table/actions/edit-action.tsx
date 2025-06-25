@@ -20,16 +20,16 @@ import { PencilIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
-const CreateEditActionPostsAdmin = React.lazy(async () =>
-  import('../actions/create-edit/create-edit').then(mod => ({
-    default: mod.CreateEditActionPostsAdmin,
+const CreateEditActionCategoriesAdmin = React.lazy(async () =>
+  import('../..//actions/create-edit/create-edit').then(mod => ({
+    default: mod.CreateEditActionCategoriesAdmin,
   })),
 );
 
 export const EditAction = (
-  props: Required<React.ComponentProps<typeof CreateEditActionPostsAdmin>>,
+  props: Required<React.ComponentProps<typeof CreateEditActionCategoriesAdmin>>,
 ) => {
-  const t = useTranslations('@vitnode/blog.admin.posts.edit');
+  const t = useTranslations('@vitnode/blog.admin.categories.edit');
 
   return (
     <Dialog>
@@ -53,7 +53,7 @@ export const EditAction = (
         </DialogHeader>
 
         <React.Suspense fallback={<Loader />}>
-          <CreateEditActionPostsAdmin {...props} />
+          <CreateEditActionCategoriesAdmin {...props} />
         </React.Suspense>
       </DialogContent>
     </Dialog>

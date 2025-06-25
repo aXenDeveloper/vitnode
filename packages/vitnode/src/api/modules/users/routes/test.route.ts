@@ -8,7 +8,7 @@ import { CONFIG_PLUGIN } from '@/config';
 export const testRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'get',
+    method: 'post',
     description: 'Test route',
     path: '/test',
     responses: {
@@ -39,7 +39,7 @@ export const testRoute = buildRoute({
 
     // throw new Error('Test error');
 
-    // c.get('log').warn('This is a test warn log');
+    c.get('log').warn('This is a test warn log');
 
     return c.text('test');
   },

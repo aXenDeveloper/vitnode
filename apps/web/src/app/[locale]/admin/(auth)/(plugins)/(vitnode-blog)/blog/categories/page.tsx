@@ -9,7 +9,7 @@ import React from 'react';
 import { ActionsCategoriesAdmin } from '@vitnode/blog/views/admin/categories/actions/actions';
 
 const CategoriesAdminView = React.lazy(async () =>
-  import('@vitnode/blog/views/admin/categories/categories-admin-view').then(mod => ({
+  import('@vitnode/blog/views/admin/categories/table/categories-admin-view').then(mod => ({
     default: mod.CategoriesAdminView,
   })),
 );
