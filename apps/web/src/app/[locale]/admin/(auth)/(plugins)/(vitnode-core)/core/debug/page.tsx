@@ -6,10 +6,12 @@ import { DataTableSkeleton } from '@vitnode/core/components/table/data-table';
 import { HeaderContent } from '@vitnode/core/components/ui/header-content';
 import { ClearCacheAction } from '@vitnode/core/views/admin/views/core/debug/actions/clear-cache/clear-cache';
 
-const DebugAdminView = React.lazy(async () =>
-  import('@vitnode/core/views/admin/views/core/debug/debug-admin-view').then(module => ({
-    default: module.DebugAdminView,
-  })),
+const SystemLogsView = React.lazy(async () =>
+  import('@vitnode/core/views/admin/views/core/debug/system-logs/system-logs-view').then(
+    module => ({
+      default: module.SystemLogsView,
+    }),
+  ),
 );
 
 export const generateMetadata = async () => {
@@ -22,7 +24,7 @@ export const generateMetadata = async () => {
 };
 
 export default async function Page(
-  props: React.ComponentProps<typeof DebugAdminView>,
+  props: React.ComponentProps<typeof SystemLogsView>,
 ) {
   const t = await getTranslations('admin.debug');
 
@@ -35,7 +37,7 @@ export default async function Page(
 
         <HeaderContent h2={t('logs.title')} />
         <React.Suspense fallback={<DataTableSkeleton columns={4} />}>
-          <DebugAdminView {...props} />
+          <SystemLogsView {...props} />
         </React.Suspense>
       </div>
     </I18nProvider>

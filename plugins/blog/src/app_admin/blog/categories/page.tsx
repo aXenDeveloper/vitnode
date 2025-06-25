@@ -9,7 +9,7 @@ import React from 'react';
 import { ActionsCategoriesAdmin } from '@/views/admin/categories/actions/actions';
 
 const CategoriesAdminView = React.lazy(async () =>
-  import('@/views/admin/categories/categories-admin-view').then(mod => ({
+  import('@/views/admin/categories/table/categories-admin-view').then(mod => ({
     default: mod.CategoriesAdminView,
   })),
 );

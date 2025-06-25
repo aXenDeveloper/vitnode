@@ -1,8 +1,10 @@
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { CONFIG_PLUGIN } from '@/config';
 import { core_logs, coreLogsType } from '@/database/logs';
 
+import { core_users } from '../../../../../database/users';
 import { buildRoute } from '../../../../lib/route';
 import {
   withPagination,
@@ -35,6 +37,17 @@ export const logsDebugAdminRoute = buildRoute({
                   content: z.string(),
                   createdAt: z.date(),
                   ipAddress: z.string(),
+                  method: z.string(),
+                  path: z.string(),
+                  userAgent: z.string().nullable(),
+                  statusCode: z.number(),
+                  user: z
+                    .object({
+                      id: z.number(),
+                      name: z.string(),
+                      nameCode: z.string(),
+                    })
+                    .nullable(),
                 }),
               ),
               pageInfo: zodPaginationPageInfo,
@@ -62,8 +75,18 @@ export const logsDebugAdminRoute = buildRoute({
             content: core_logs.content,
             createdAt: core_logs.createdAt,
             ipAddress: core_logs.ipAddress,
+            method: core_logs.method,
+            path: core_logs.path,
+            userAgent: core_logs.userAgent,
+            statusCode: core_logs.statusCode,
+            user: {
+              id: core_users.id,
+              name: core_users.name,
+              nameCode: core_users.nameCode,
+            },
           })
           .from(core_logs)
+          .leftJoin(core_users, eq(core_users.id, core_logs.userId))
           .where(where)
           .orderBy(orderBy)
           .limit(limit),

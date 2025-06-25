@@ -173,7 +173,6 @@
       },
       "logs": {
         "title": "System Logs",
-        "id": "ID",
         "created_at": "Created At",
         "plugin": "Plugin",
         "content": "Content",
@@ -182,6 +181,31 @@
           "warn": "Warning",
           "error": "Error",
           "debug": "Debug"
+        },
+        "status_code": "Status Code",
+        "more": {
+          "title": "More Details",
+          "desc": "Log ID: <logId></logId>",
+          "log_overview": {
+            "title": "Log Overview",
+            "log_type": "Log Type",
+            "status_code": "Status Code",
+            "log_id": "Log ID",
+            "created_at": "Created At",
+            "plugin": "Plugin",
+            "user": "User"
+          },
+          "request_information": {
+            "title": "Request Information",
+            "ip_address": "IP Address",
+            "request_method": "Request Method",
+            "request_url": "Request URL",
+            "user_agent": "User Agent"
+          },
+          "log_content": {
+            "title": "Log Content",
+            "full_log": "Full Log Message"
+          }
         }
       }
     }
