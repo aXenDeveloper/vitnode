@@ -3,7 +3,7 @@ import { useTranslations } from 'next-intl';
 
 import { Badge } from '@/components/ui/badge';
 
-import type { ContentMoreActionSystemLogs } from './actions/more/content';
+import type { ContentMoreActionSystemLogs } from '../actions/more/content';
 
 export const BadgeTypeLog = ({
   type,
