@@ -55,8 +55,6 @@ export const installDependencies = async ({
     child.stderr?.on('data', (data: Buffer) => {
       const output = data.toString();
       stderr += output;
-      // Show error output in real-time
-      console.error(color.red(output.trim()));
     });
 
     child.on('close', code => {

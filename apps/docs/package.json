@@ -11,24 +11,24 @@
   "dependencies": {
     "@vitnode/core": "workspace:*",
     "babel-plugin-react-compiler": "19.1.0-rc.2",
-    "fumadocs-core": "^15.5.3",
+    "fumadocs-core": "^15.5.5",
     "fumadocs-mdx": "^11.6.9",
-    "fumadocs-ui": "^15.5.3",
+    "fumadocs-ui": "^15.5.5",
     "lucide-react": "^0.517.0",
-    "motion": "^12.18.1",
+    "motion": "^12.19.1",
     "next": "^15.3.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.10",
+    "@tailwindcss/postcss": "^4.1.11",
     "@types/mdx": "^2.0.13",
-    "@types/node": "^24.0.3",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
+    "@types/node": "^24",
+    "@types/react": "^19.1",
+    "@types/react-dom": "^19.1",
     "postcss": "^8.5.6",
     "shiki": "^3.7.0",
-    "tailwindcss": "^4.1.10",
+    "tailwindcss": "^4.1.11",
     "typescript": "^5.8.3"
   }
 }

@@ -1,4 +1,3 @@
-import { randomBytes } from 'crypto';
 import { existsSync } from 'fs';
 import { copyFile, cp, mkdir, readFile, rename, writeFile } from 'fs/promises';
 import ora from 'ora';
@@ -67,15 +66,6 @@ export const createVitNode = async ({
     eslint,
     docker,
   });
-
-  spinner.text = 'Changing .env file...';
-  await copyFile(join(root, '.env.example'), join(root, '.env'));
-  const envPath = join(root, '.env');
-  const newEnv = (await readFile(envPath, 'utf-8')).replace(
-    'LOGIN_TOKEN_SECRET=vitnode_secret',
-    `LOGIN_TOKEN_SECRET=${randomBytes(32).toString('hex')}`,
-  );
-  await writeFile(envPath, newEnv);
 
   if (docker) {
     spinner.text = 'Copying docker files...';

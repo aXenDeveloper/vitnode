@@ -1,12 +1,6 @@
 /src/*
-!/src/app
-!/src/app/**
-!/src/app_admin
-!/src/app_admin/**
 !/src/locales
 !/src/locales/**
-!/src/drizzle.config.ts
-!/src/vitnode.config.ts
 
 /node_modules
 /.turbo
