@@ -1,4 +1,8 @@
 /src/*
+!/src/app
+!/src/app/**Add commentMore actions
+!/src/app_admin
+!/src/app_admin/**
 !/src/locales
 !/src/locales/**
 
