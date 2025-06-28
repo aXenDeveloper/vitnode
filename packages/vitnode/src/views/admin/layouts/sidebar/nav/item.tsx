@@ -77,7 +77,6 @@ export const ItemNavAdmin = ({
                 toggleSidebar();
               }
             }}
-            prefetch
             rel={isOpenInNewTab ? 'noopener noreferrer' : undefined}
             target={isOpenInNewTab ? '_blank' : undefined}
           >
@@ -135,7 +134,6 @@ export const ItemNavAdmin = ({
                           toggleSidebar();
                         }
                       }}
-                      prefetch
                       rel={
                         item.isOpenInNewTab ? 'noopener noreferrer' : undefined
                       }

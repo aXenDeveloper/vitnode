@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { InfiniteSlider } from '../../../../components/infinite-slider';
+import { InfiniteSlider } from '@/components/infinite-slider';
 import { NextJSLogo } from './logos/nextjs';
 import { HonoJSLogo } from './logos/honojs';
 import { TailwindCSSLogo } from './logos/tailwindcss';
@@ -70,16 +70,6 @@ export const PoweringBySection = () => {
 
             <div className="bg-linear-to-r from-background absolute inset-y-0 left-0 w-20"></div>
             <div className="bg-linear-to-l from-background absolute inset-y-0 right-0 w-20"></div>
-            {/* <ProgressiveBlur
-              className="pointer-events-none absolute left-0 top-0 h-full w-20"
-              direction="left"
-              blurIntensity={1}
-            />
-            <ProgressiveBlur
-              className="pointer-events-none absolute right-0 top-0 h-full w-20"
-              direction="right"
-              blurIntensity={1}
-            /> */}
           </div>
         </div>
       </div>

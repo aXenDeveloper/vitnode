@@ -4,6 +4,7 @@ import { buttonVariants } from '@vitnode/core/components/ui/button';
 import { cn } from '@vitnode/core/lib/utils';
 import { CallToActionSection } from './sections/call-to-action';
 import { PoweringBySection } from './sections/powering-by/powering-by';
+import { AdminSection } from './sections/admin/admin';
 
 export const metadata: Metadata = {
   title: 'VitNode: Extendable Framework for Building Apps',
@@ -43,7 +44,6 @@ export default function HomePage() {
                 }),
               )}
               href="/docs/dev"
-              prefetch
             >
               Get Started
             </Link>
@@ -79,6 +79,7 @@ export default function HomePage() {
       </section>
 
       <PoweringBySection />
+      <AdminSection />
 
       <CallToActionSection />
     </div>

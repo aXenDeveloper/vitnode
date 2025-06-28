@@ -11,7 +11,7 @@ export const SidebarAdmin = ({
   return (
     <Sidebar variant="floating">
       <SidebarHeader className="flex h-16 flex-row items-center border-b">
-        <Link className="px-2" href="/admin/core" prefetch>
+        <Link className="px-2" href="/admin/core">
           <LogoVitNode className="size-8" small />
         </Link>
       </SidebarHeader>
