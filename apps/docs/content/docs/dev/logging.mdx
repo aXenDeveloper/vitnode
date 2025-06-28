@@ -1,0 +1,47 @@
+---
+title: Logging
+description: Structured logging system for VitNode applications
+---
+
+VitNode provides a logging system that allows you to log messages at different levels _(debug, warn, error)_ with structured logs. This is useful for debugging and monitoring your application.
+
+All logs are stored in your database. You can view them in the `Debug Panel`.
+
+## Usage
+
+```ts
+import { buildRoute } from '@vitnode/core/api/lib/route';
+```
+
+```ts
+export const testRoute = buildRoute(
+  {},
+  {
+    handler: c => {
+      c.get('log').warn('This is a test warn log'); // [!code ++]
+
+      return c.text('test');
+    },
+  },
+);
+```
+
+### Variants
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+<Tabs id='logging-variants' persist items={['Debug', 'Warn', 'Error']}>
+
+```ts tab="Debug"
+c.get('log').debug('This is a test debug log');
+```
+
+```ts tab="Warn"
+c.get('log').warn('This is a test warning log');
+```
+
+```ts tab="Error"
+c.get('log').error('This is a test error log');
+```
+
+</Tabs>

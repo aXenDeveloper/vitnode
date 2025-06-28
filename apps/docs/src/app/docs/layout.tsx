@@ -14,18 +14,17 @@ export default function Layout({ children }: { children: ReactNode }) {
             const meta = source.getNodeMeta(node);
             if (!meta || !node.icon) return option;
 
-            const color = `var(--${meta.file.dirname}-color, var(--color-fd-foreground))`;
+            const color = `var(--${meta.path.split('/')[0]}-color, var(--color-fd-foreground))`;
 
             return {
               ...option,
               icon: (
                 <div
-                  className="[&_svg]:size-6.5 rounded-md p-1 shadow-lg ring-2 md:[&_svg]:size-5"
+                  className="max-md:bg-(--tab-color)/10 size-full rounded-lg max-md:border max-md:p-1.5 [&_svg]:size-full"
                   style={
                     {
                       color,
-                      border: `1px solid color-mix(in oklab, ${color} 50%, transparent)`,
-                      '--tw-ring-color': `color-mix(in oklab, ${color} 20%, transparent)`,
+                      '--tab-color': color,
                     } as object
                   }
                 >

@@ -3,10 +3,12 @@ import { z } from 'zod';
 import { buildRoute } from '@/api/lib/route';
 import { CONFIG_PLUGIN } from '@/config';
 
+// import { EmailModel } from '../../../models/email';
+
 export const testRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'get',
+    method: 'post',
     description: 'Test route',
     path: '/test',
     responses: {
@@ -29,6 +31,16 @@ export const testRoute = buildRoute({
     },
   },
   handler: c => {
+    // new EmailModel(c).send({
+    //   html: '<p>Test email</p>',
+    //   to: 'ithereplay@gmail.com',
+    //   subject: 'Test Email',
+    // });
+
+    // throw new Error('Test error');
+
+    c.get('log').warn('This is a test warn log');
+
     return c.text('test');
   },
 });

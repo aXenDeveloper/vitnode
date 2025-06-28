@@ -6,10 +6,40 @@ import * as React from 'react';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+import { Skeleton } from './skeleton';
+
+const AlertDialogContext = React.createContext<{
+  open: boolean;
+  setOpen?: (value: boolean) => void;
+}>({
+  open: false,
+  setOpen: () => {},
+});
+
+export const useAlertDialog = () => React.useContext(AlertDialogContext);
+
 function AlertDialog({
+  onOpenChange,
+  open: openProp,
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Root>) {
-  return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />;
+  const [open, setOpen] = React.useState(false);
+
+  const handleOpenChange = (newOpen: boolean) => {
+    onOpenChange?.(newOpen);
+    setOpen(newOpen);
+  };
+
+  return (
+    <AlertDialogContext value={{ open, setOpen }}>
+      <AlertDialogPrimitive.Root
+        data-slot="alert-dialog"
+        onOpenChange={handleOpenChange}
+        open={openProp ?? open}
+        {...props}
+      />
+    </AlertDialogContext>
+  );
 }
 
 function AlertDialogTrigger({
@@ -92,6 +122,25 @@ function AlertDialogFooter({
   );
 }
 
+function AlertDialogFooterSkeleton({
+  className,
+  ...props
+}: Omit<React.ComponentProps<'div'>, 'children'>) {
+  return (
+    <div
+      className={cn(
+        'flex flex-col-reverse gap-2 sm:flex-row sm:justify-end',
+        className,
+      )}
+      data-slot="alert-dialog-footer"
+      {...props}
+    >
+      <Skeleton className="h-9 sm:w-24" />
+      <Skeleton className="h-9 sm:w-24" />
+    </div>
+  );
+}
+
 function AlertDialogTitle({
   className,
   ...props
@@ -149,6 +198,7 @@ export {
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
+  AlertDialogFooterSkeleton,
   AlertDialogHeader,
   AlertDialogOverlay,
   AlertDialogPortal,

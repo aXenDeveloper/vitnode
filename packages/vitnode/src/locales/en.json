@@ -11,6 +11,12 @@
         "cancel": "Cancel",
         "confirm": "Yes, leave"
       },
+      "confirm_action": {
+        "title": "Are you sure?",
+        "desc": "This action cannot be undone.",
+        "cancel": "Cancel",
+        "confirm": "Yes, confirm"
+      },
       "search_placeholder": "Search...",
       "results_not_found": "No results found",
       "date": "{date, date}",
@@ -139,7 +145,9 @@
           "list": "User List"
         },
         "user_bar": {
-          "home_page": "Home Page"
+          "home_page": "Home Page",
+          "debug": "Debug Panel",
+          "log_out": "Log Out"
         }
       }
     },
@@ -149,6 +157,56 @@
         "user": "User",
         "createdAt": "Created At",
         "emailNotVerified": "Email Not Verified"
+      }
+    },
+    "debug": {
+      "title": "Debug Panel",
+      "desc": "Check logs, errors, and other debug information.",
+      "actions": {
+        "clear_cache": {
+          "label": "Clear Cache",
+          "title": "Are you sure you want to clear the cache?",
+          "desc": "This action will remove all cached data, which may affect performance temporarily.",
+          "success": "Cache cleared successfully.",
+          "confirm": "Yes, clear cache"
+        }
+      },
+      "logs": {
+        "title": "System Logs",
+        "created_at": "Created At",
+        "plugin": "Plugin",
+        "content": "Content",
+        "type": "Type",
+        "types": {
+          "warn": "Warning",
+          "error": "Error",
+          "debug": "Debug"
+        },
+        "status_code": "Status Code",
+        "more": {
+          "title": "More Details",
+          "desc": "Log ID: <logId></logId>",
+          "log_overview": {
+            "title": "Log Overview",
+            "log_type": "Log Type",
+            "status_code": "Status Code",
+            "log_id": "Log ID",
+            "created_at": "Created At",
+            "plugin": "Plugin",
+            "user": "User"
+          },
+          "request_information": {
+            "title": "Request Information",
+            "ip_address": "IP Address",
+            "request_method": "Request Method",
+            "request_url": "Request URL",
+            "user_agent": "User Agent"
+          },
+          "log_content": {
+            "title": "Log Content",
+            "full_log": "Full Log Message"
+          }
+        }
       }
     }
   }

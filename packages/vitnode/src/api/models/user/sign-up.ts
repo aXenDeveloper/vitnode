@@ -3,7 +3,6 @@ import type { Context } from 'hono';
 import { and, count, eq, or } from 'drizzle-orm';
 import { HTTPException } from 'hono/http-exception';
 
-import { getUserIp } from '@/api/lib/get-user-ip';
 import { generateAvatarColor } from '@/api/modules/users/avatar-color';
 import { core_roles } from '@/database/roles';
 import { core_users } from '@/database/users';
@@ -60,7 +59,7 @@ const getDefaultData = async (
 
   return {
     roleId: defaultRole.id,
-    emailVerified: !c.get('core').emailProvider,
+    emailVerified: !c.get('core').emailAdapter,
   };
 };
 
@@ -122,7 +121,7 @@ export const signUp = async (
       avatarColor: generateAvatarColor(name),
       roleId,
       emailVerified,
-      ipAddress: getUserIp(c),
+      ipAddress: c.get('ipAddress'),
       // TODO: Handle language
       // language: await this.getLanguage(req),
     })

@@ -5,7 +5,12 @@ import React from 'react';
 
 import { DataTableSkeleton } from '@/components/table/data-table';
 import { HeaderContent } from '@/components/ui/header-content';
-import { UsersAdminView } from '@/views/admin/views/core/users/users-admin-view';
+
+const UsersAdminView = React.lazy(async () =>
+  import('@/views/admin/views/core/users/users-admin-view').then(module => ({
+    default: module.UsersAdminView,
+  })),
+);
 
 export const generateMetadata = async (): Promise<Metadata> => {
   const t = await getTranslations('admin.global.nav.users');

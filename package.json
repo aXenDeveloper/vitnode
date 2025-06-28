@@ -19,8 +19,8 @@
   "devDependencies": {
     "@types/node": "^24",
     "@vitnode/eslint-config": "workspace:*",
-    "prettier": "^3.5.3",
-    "prettier-plugin-tailwindcss": "^0.6.12",
+    "prettier": "^3.6.1",
+    "prettier-plugin-tailwindcss": "^0.6.13",
     "tsx": "^4.20.3",
     "turbo": "^2.5.4",
     "typescript": "^5.8.3"
@@ -28,7 +28,7 @@
   "engines": {
     "node": ">=22"
   },
-  "packageManager": "pnpm@10.12.1",
+  "packageManager": "pnpm@10.12.4",
   "workspaces": [
     "apps/*",
     "packages/*",

@@ -6,11 +6,9 @@
   "pages": [
     "index",
     "contribution",
-    "structure",
     "debugging",
     "swagger",
-    "---Framework---",
-    "auth",
+    "deployments",
     "---Plugins---",
     "plugins",
     "rest-api",
@@ -20,6 +18,9 @@
     "layouts-and-pages",
     "admin-page",
     "i18n",
+    "---Framework---",
+    "config",
+    "logging",
     "---Advanced---",
     "..."
   ]

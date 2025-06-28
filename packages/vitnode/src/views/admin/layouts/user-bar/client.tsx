@@ -1,6 +1,6 @@
 'use client';
 
-import { HomeIcon, LogOut } from 'lucide-react';
+import { BugIcon, HomeIcon, LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import {
@@ -20,7 +20,7 @@ export const ClientUserBarAdmin = ({
     name: string;
   };
 }) => {
-  const t = useTranslations('core.global.user_bar');
+  const t = useTranslations('admin.global.nav.user_bar');
 
   return (
     <>
@@ -34,8 +34,14 @@ export const ClientUserBarAdmin = ({
       <DropdownMenuGroup>
         <DropdownMenuItem asChild>
           <Link href="/" target="_blank">
-            <HomeIcon className="size-4" />
-            Home
+            <HomeIcon />
+            {t('home_page')}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/admin/core/debug">
+            <BugIcon />
+            {t('debug')}
           </Link>
         </DropdownMenuItem>
       </DropdownMenuGroup>
@@ -46,7 +52,7 @@ export const ClientUserBarAdmin = ({
           await logOutMutationApi({ isAdmin: true });
         }}
       >
-        <LogOut className="size-4" />
+        <LogOut />
         {t('log_out')}
       </DropdownMenuItem>
     </>

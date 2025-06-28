@@ -127,18 +127,13 @@ On the frontend, the pagination system works seamlessly with the DataTable compo
 When fetching data from the API, include the pagination parameters in your request:
 
 ```tsx
+const query = await searchParams; // Assume searchParams is a Promise from the Next.js page context
 const res = await fetcher(userModule, {
   path: '/users',
   method: 'get',
   module: 'user',
   args: {
-    query: {
-      cursor: searchParams.cursor,
-      first: searchParams.first,
-      last: searchParams.last,
-      order: searchParams.order,
-      orderBy: searchParams.orderBy,
-    },
+    query,
   },
   withPagination: true, // Important flag for pagination
 });

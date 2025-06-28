@@ -2,6 +2,7 @@ import { source } from '@/lib/source';
 import { DocsPage, DocsBody } from 'fumadocs-ui/page';
 import { notFound, redirect } from 'next/navigation';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
+import { ViewOptions } from './page.client';
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
@@ -10,20 +11,12 @@ export default async function Page(props: {
   if (!params.slug) {
     redirect('/docs/dev');
   }
-
   const page = source.getPage(params.slug);
   if (!page) notFound();
-  const path = `docs/${page.file.path}`;
   const MDX = page.data.body;
 
   return (
     <DocsPage
-      editOnGithub={{
-        repo: 'vitnode',
-        owner: 'vitnode',
-        sha: 'canary',
-        path,
-      }}
       tableOfContent={{
         style: 'clerk',
         single: false,
@@ -36,6 +29,13 @@ export default async function Page(props: {
           {page.data.title}
         </h1>
         <p className="text-muted-foreground text-lg">{page.data.description}</p>
+
+        <div className="flex flex-row items-center gap-2 border-b pb-6 pt-2">
+          <ViewOptions
+            markdownUrl={page.url}
+            githubUrl={`https://github.com/aXenDeveloper/vitnode/blob/canary/apps/docs/content/docs/${page.path}`}
+          />
+        </div>
       </div>
 
       <DocsBody>

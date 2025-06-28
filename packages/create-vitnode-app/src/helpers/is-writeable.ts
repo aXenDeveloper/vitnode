@@ -6,7 +6,7 @@ export async function isWriteable(directory: string): Promise<boolean> {
     await access(directory, W_OK);
 
     return true;
-  } catch (_) {
+  } catch {
     return false;
   }
 }

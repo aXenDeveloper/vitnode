@@ -42,7 +42,7 @@ function getProxy(): string | undefined {
     const httpsProxy = execSync('npm config get https-proxy').toString().trim();
 
     return httpsProxy !== 'null' ? httpsProxy : undefined;
-  } catch (_) {
+  } catch {
     return;
   }
 }

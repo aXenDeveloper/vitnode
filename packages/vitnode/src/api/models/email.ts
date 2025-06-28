@@ -19,34 +19,27 @@ export class EmailModel {
 
   protected readonly c: Context;
 
-  isAvailable() {
-    return !!this.c.get('core').emailProvider;
-  }
-
-  async send(args: {
-    html: string;
-    replyTo?: string;
-    subject: string;
-    to: string;
-  }) {
+  send(args: { html: string; replyTo?: string; subject: string; to: string }) {
     const core = this.c.get('core');
-    const provider = core.emailProvider;
+    const provider = core.emailAdapter;
     if (!provider) {
       throw new HTTPException(500, {
         message: 'Email provider not found',
       });
     }
 
-    try {
-      await provider.sendEmail({
+    void provider
+      .sendEmail({
         ...args,
         metadata: core.metadata,
+      })
+      .catch((err: unknown) => {
+        const error =
+          err instanceof Error
+            ? err
+            : new Error('Unknown error from email provider');
+
+        this.c.get('log').error(`Failed to send email: ${error.message}`);
       });
-    } catch (e) {
-      const error = e as Error;
-      throw new HTTPException(500, {
-        message: error.message,
-      });
-    }
   }
 }

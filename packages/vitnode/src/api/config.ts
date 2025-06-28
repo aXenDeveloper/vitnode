@@ -14,7 +14,8 @@ import { CONFIG_PLUGIN } from '@/config';
 import {
   globalAdminMiddleware,
   globalMiddleware,
-} from './middlewares/global/global';
+} from './middlewares/global.middleware';
+import { rateLimiterMiddleware } from './middlewares/rate-limiter.middleware';
 
 interface CORSOptions {
   allowHeaders?: string[];
@@ -55,11 +56,12 @@ export function VitNodeAPI({
   });
   app.use(cors(corsOptions));
   app.use(csrf(csrfOptions));
+  app.use('*', rateLimiterMiddleware(vitNodeApiConfig.rateLimiter));
   app.get('/swagger', swaggerUI({ url: `/api/swagger/doc` }));
   app.use(
     '*',
     globalMiddleware({
-      emailProvider: vitNodeApiConfig.emailProvider,
+      emailAdapter: vitNodeApiConfig.emailAdapter,
       metadata: vitNodeConfig.metadata,
       authorization: vitNodeApiConfig.authorization,
       dbProvider: vitNodeApiConfig.dbProvider,
@@ -73,13 +75,12 @@ export function VitNodeAPI({
     return next();
   });
 
-  app.onError(error => {
+  app.onError((error, c) => {
     if (error instanceof HTTPException) {
       return error.getResponse();
     }
 
-    // eslint-disable-next-line no-console
-    console.error(error);
+    c.get('log').error(`Unhandled error: ${error.message}`);
 
     return new Response(
       process.env.NODE_ENV === 'development'

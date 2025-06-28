@@ -1,12 +1,11 @@
 import type { Context } from 'hono';
 
+import { randomBytes } from 'crypto';
 import { eq } from 'drizzle-orm';
 import { getCookie, setCookie } from 'hono/cookie';
 
 import { core_sessions_known_devices } from '@/database/sessions';
 import { CONFIG } from '@/lib/config';
-
-import { getUserIp } from '../lib/get-user-ip';
 
 export class DeviceModel {
   constructor(c: Context) {
@@ -15,29 +14,32 @@ export class DeviceModel {
   protected readonly c: Context;
 
   private async createDevice() {
+    const publicId = randomBytes(16).toString('hex');
+
     const [device] = await this.c
       .get('db')
       .insert(core_sessions_known_devices)
       .values({
-        ipAddress: getUserIp(this.c),
+        publicId,
+        ipAddress: this.c.get('ipAddress'),
         userAgent: this.getUserAgent(),
       })
       .returning({ id: core_sessions_known_devices.id });
 
-    this.setCookieDevice(device.id);
+    this.setCookieDevice(publicId);
 
-    return device.id;
+    return { id: device.id, publicId };
   }
 
   private getUserAgent() {
     return this.c.req.header('User-Agent') ?? 'node';
   }
 
-  private setCookieDevice(deviceId: number) {
+  private setCookieDevice(publicDeviceId: string) {
     setCookie(
       this.c,
       this.c.get('core').authorization.deviceCookieName,
-      deviceId.toString(),
+      publicDeviceId,
       {
         httpOnly: true,
         secure: this.c.get('core').authorization.cookieSecure,
@@ -51,8 +53,9 @@ export class DeviceModel {
   }
 
   async getDeviceId() {
-    const deviceIdFromCookie = Number(
-      getCookie(this.c, this.c.get('core').authorization.deviceCookieName),
+    const deviceIdFromCookie = getCookie(
+      this.c,
+      this.c.get('core').authorization.deviceCookieName,
     );
 
     try {
@@ -63,7 +66,7 @@ export class DeviceModel {
             id: core_sessions_known_devices.id,
           })
           .from(core_sessions_known_devices)
-          .where(eq(core_sessions_known_devices.id, deviceIdFromCookie));
+          .where(eq(core_sessions_known_devices.publicId, deviceIdFromCookie));
 
         if (!device) {
           return await this.createDevice();
@@ -73,15 +76,18 @@ export class DeviceModel {
           .get('db')
           .update(core_sessions_known_devices)
           .set({
-            ipAddress: getUserIp(this.c),
+            ipAddress: this.c.get('ipAddress'),
             userAgent: this.getUserAgent(),
           })
-          .where(eq(core_sessions_known_devices.id, deviceIdFromCookie));
+          .where(eq(core_sessions_known_devices.publicId, deviceIdFromCookie));
 
-        return device.id;
+        return {
+          id: device.id,
+          publicId: deviceIdFromCookie,
+        };
       }
-    } catch (_) {
-      return await this.createDevice();
+    } catch {
+      /* empty */
     }
 
     return await this.createDevice();
