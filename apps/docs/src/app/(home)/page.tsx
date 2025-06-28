@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import { buttonVariants } from '@vitnode/core/components/ui/button';
 import { cn } from '@vitnode/core/lib/utils';
 import { CallToActionSection } from './sections/call-to-action';
+import { PoweringBySection } from './sections/powering-by/powering-by';
 
 export const metadata: Metadata = {
   title: 'VitNode: Extendable Framework for Building Apps',
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <div className="container">
-      <section className="my-20 flex justify-between gap-20">
+      <section className="my-20 flex flex-col justify-between gap-20 lg:flex-row">
         <div className="flex max-w-2xl flex-col">
           <span className="group relative mx-0 mb-6 flex max-w-fit flex-row items-center justify-center rounded-2xl bg-white/40 px-4 py-1.5 text-sm font-medium shadow-[inset_0_-8px_10px_#8fdfff1f] backdrop-blur-sm transition-shadow duration-500 ease-out [--bg-size:300%] hover:shadow-[inset_0_-5px_10px_#8fdfff3f] dark:bg-black/40">
             <div
@@ -72,14 +73,12 @@ export default function HomePage() {
               View on GitHub
             </Link>
           </div>
-
-          <p className="text-muted-foreground sm:text-md mt-8 max-w-xl text-pretty text-sm">
-            Powered by Next.js & Hono.js.
-          </p>
         </div>
 
-        <div>test123</div>
+        <div>Here will be some img or something else</div>
       </section>
+
+      <PoweringBySection />
 
       <CallToActionSection />
     </div>
