@@ -23,12 +23,11 @@ export const UserHeader = async () => {
             }),
           )}
           href="/login"
-          prefetch
         >
           {t('login')}
         </Link>
 
-        <Link className={cn(buttonVariants())} href="/register" prefetch>
+        <Link className={cn(buttonVariants())} href="/register">
           {t('register')}
         </Link>
       </>

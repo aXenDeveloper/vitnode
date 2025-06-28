@@ -28,9 +28,7 @@ export const HeaderLayout = ({
       {...props}
     >
       <div className="container mx-auto flex h-14 items-center px-4 py-2">
-        <Link href="/" prefetch>
-          {logo}
-        </Link>
+        <Link href="/">{logo}</Link>
 
         <div className="ml-auto flex items-center gap-2">
           <LanguageSwitcher locales={vitNodeConfig.i18n.locales} />
