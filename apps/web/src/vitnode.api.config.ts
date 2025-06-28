@@ -33,7 +33,7 @@ export const vitNodeApiConfig = buildApiConfig({
     user: process.env.NOD_EMAILER_USER,
   }),
   authorization: {
-    ssoProviders: [
+    ssoAdapters: [
       DiscordSSOApiPlugin({
         clientId: process.env.DISCORD_CLIENT_ID,
         clientSecret: process.env.DISCORD_CLIENT_SECRET,

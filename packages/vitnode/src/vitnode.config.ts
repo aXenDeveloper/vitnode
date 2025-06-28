@@ -45,7 +45,7 @@ export interface VitNodeApiConfig {
     cookieSecure?: boolean;
     deviceCookieExpires?: number;
     deviceCookieName?: string;
-    ssoProviders?: SSOApiPlugin[];
+    ssoAdapters?: SSOApiPlugin[];
   };
   dbProvider: PostgresJsDatabase;
   emailAdapter?: EmailApiPlugin;
