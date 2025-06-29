@@ -65,6 +65,7 @@ export function VitNodeAPI({
       metadata: vitNodeConfig.metadata,
       authorization: vitNodeApiConfig.authorization,
       dbProvider: vitNodeApiConfig.dbProvider,
+      captcha: vitNodeApiConfig.captcha,
     }),
   );
   app.use(async (c, next) => {

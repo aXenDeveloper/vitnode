@@ -1,8 +1,8 @@
-import type { UseFormReturn } from 'react-hook-form';
-
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { z } from 'zod';
+
+import type { AutoFormOnSubmit } from '@/components/form/auto-form';
 
 import { useWrapperSignUp } from '../wrapper';
 import { mutationApi } from './mutation-api';
@@ -37,11 +37,12 @@ export const useFormSignUp = () => {
   });
   const { setShowSendingEmail } = useWrapperSignUp();
 
-  const onSubmit = async (
-    values: z.infer<typeof formSchema>,
-    form: UseFormReturn<z.infer<typeof formSchema>>,
+  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (
+    values,
+    form,
+    { captchaToken },
   ) => {
-    const mutation = await mutationApi(values);
+    const mutation = await mutationApi({ ...values, captchaToken });
     if (mutation.data) {
       if (!mutation.data.emailVerified) {
         setShowSendingEmail(mutation.data.email);

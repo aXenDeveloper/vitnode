@@ -42,8 +42,10 @@ export async function fetcher<
     allowSaveCookies = false,
     withPagination = false,
     prefixPath = '',
+    captchaToken,
   }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> & {
     allowSaveCookies?: boolean;
+    captchaToken?: string;
     options?: Omit<RequestInit, 'body'>;
     prefixPath?: string;
     withPagination?: boolean;
@@ -56,6 +58,17 @@ export async function fetcher<
     cookies(),
   ]);
 
+  const additionalHeaders: Record<string, string> = {
+    Cookie: cookie.toString(),
+    ['user-agent']: nextInternalHeaders.get('user-agent') ?? 'node',
+    ['x-forwarded-for']:
+      nextInternalHeaders.get('x-forwarded-for') ?? '0.0.0.0',
+  };
+
+  if (captchaToken) {
+    additionalHeaders['x-vitnode-captcha-token'] = captchaToken;
+  }
+
   const response = await coreFetcher(moduleReturn, {
     path,
     method,
@@ -64,12 +77,7 @@ export async function fetcher<
     options,
     withPagination,
     prefixPath,
-    additionalHeaders: {
-      Cookie: cookie.toString(),
-      ['user-agent']: nextInternalHeaders.get('user-agent') ?? 'node',
-      ['x-forwarded-for']:
-        nextInternalHeaders.get('x-forwarded-for') ?? '0.0.0.0',
-    },
+    additionalHeaders,
   });
 
   // Handle cookies on server-side for successful responses

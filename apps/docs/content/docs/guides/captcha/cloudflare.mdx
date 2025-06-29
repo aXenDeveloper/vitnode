@@ -31,9 +31,11 @@ Follow the instructions to add your domain. If you have any trouble, you can che
 
 Go to the `Turnstile` section and create a new widget.
 
-// import homeTurnstile from '@/assets/guides/captcha/cloudflare.png';
+import homeTurnstile from './cloudflare.png';
 
-{/* <ImgDocs src={homeTurnstile} alt="Cloudflare Turnstile Home" /> */}
+import { ImgDocs } from '@/components/fumadocs/img';
+
+<ImgDocs src={homeTurnstile} alt="Cloudflare Turnstile Home" />
 
 </Step>
 
@@ -62,8 +64,8 @@ After you create the widget, you will get the `Site Key` and `Secret Key`. Save 
 Add the keys to your `.env` file.
 
 ```bash
-CAPTCHA_SECRET_KEY=XXX
-CAPTCHA_SITE_KEY=XXX
+CLOUDFLARE_TURNSTILE_SITE_KEY=XXX
+CLOUDFLARE_TURNSTILE_SECRET_KEY=XXX
 ```
 
 </Step>
@@ -72,35 +74,17 @@ CAPTCHA_SITE_KEY=XXX
 
 ## Provide keys to VitNode
 
-Edit your `app.module.ts` file and add `captcha` object to the `VitNodeModule` configuration.
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/core/vitnode.config';
 
-```ts
-@Module({
-  imports: [
-    VitNodeCoreModule.register({
-      database: {
-        config: DATABASE_ENVS,
-        schemaDatabase,
-      },
-      // [!code ++]
-      captcha: {
-        // [!code ++]
-        type: 'cloudflare_turnstile',
-        // [!code ++]
-        site_key: process.env.CAPTCHA_SITE_KEY,
-        // [!code ++]
-        secret_key: process.env.CAPTCHA_SECRET_KEY,
-        // [!code ++]
-      },
-    }),
-    DatabaseModule,
-    PluginsModule,
-    CacheModule.register({
-      isGlobal: true,
-    }),
-  ],
-})
-export class AppModule {}
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:5]
+  captcha: {
+    type: 'cloudflare_turnstile',
+    siteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY,
+    secretKey: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+  },
+});
 ```
 
 </Step>

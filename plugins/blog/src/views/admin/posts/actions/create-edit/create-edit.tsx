@@ -1,6 +1,7 @@
-import type { UseFormReturn } from 'react-hook-form';
-
-import { AutoForm } from '@vitnode/core/components/form/auto-form';
+import {
+  AutoForm,
+  type AutoFormOnSubmit,
+} from '@vitnode/core/components/form/auto-form';
 import { AutoFormComboboxAsync } from '@vitnode/core/components/form/fields/combobox-async';
 import { AutoFormInput } from '@vitnode/core/components/form/fields/input';
 import { AutoFormTextarea } from '@vitnode/core/components/form/fields/textarea';
@@ -49,9 +50,9 @@ export const CreateEditActionPostsAdmin = ({
       ),
   });
 
-  const onSubmit = async (
-    values: z.infer<typeof formSchema>,
-    form: UseFormReturn<z.infer<typeof formSchema>>,
+  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (
+    values,
+    form,
   ) => {
     let error = '';
     if (data?.id) {

@@ -37,7 +37,9 @@ export async function fetcherClient<
     options,
     withPagination = false,
     prefixPath = '',
+    captchaToken,
   }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> & {
+    captchaToken?: string;
     options?: Omit<RequestInit, 'body'>;
     prefixPath?: string;
     withPagination?: boolean;
@@ -45,6 +47,12 @@ export async function fetcherClient<
 ): Promise<
   InferResponseType<M, Routes, Modules, ModuleName, SelectedPath, Method>
 > {
+  const additionalHeaders: Record<string, string> = {};
+
+  if (captchaToken) {
+    additionalHeaders['x-vitnode-captcha-token'] = captchaToken;
+  }
+
   return coreFetcher(moduleReturn, {
     path,
     method,
@@ -53,5 +61,6 @@ export async function fetcherClient<
     options,
     withPagination,
     prefixPath,
+    additionalHeaders,
   });
 }

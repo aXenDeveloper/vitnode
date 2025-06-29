@@ -3,6 +3,17 @@ import { z } from 'zod';
 import { buildRoute } from '@/api/lib/route';
 import { CONFIG_PLUGIN } from '@/config';
 
+export const routeMiddlewareSchema = z.object({
+  sso: z.array(z.object({ id: z.string(), name: z.string() })),
+  isEmail: z.boolean(),
+  captcha: z
+    .object({
+      siteKey: z.string(),
+      type: z.enum(['cloudflare_turnstile', 'recaptcha_v3']),
+    })
+    .optional(),
+});
+
 export const routeMiddleware = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
@@ -13,10 +24,7 @@ export const routeMiddleware = buildRoute({
       200: {
         content: {
           'application/json': {
-            schema: z.object({
-              sso: z.array(z.object({ id: z.string(), name: z.string() })),
-              isEmail: z.boolean(),
-            }),
+            schema: routeMiddlewareSchema,
           },
         },
         description: 'Middleware route',
@@ -26,9 +34,18 @@ export const routeMiddleware = buildRoute({
   handler: c => {
     const sso = c.get('core').authorization.ssoAdapters;
 
-    return c.json({
-      isEmail: !!c.get('core').emailAdapter,
-      sso: sso.map(s => ({ id: s.id, name: s.name })),
-    });
+    return c.json(
+      {
+        isEmail: !!c.get('core').emailAdapter,
+        sso: sso.map(s => ({ id: s.id, name: s.name })),
+        captcha: c.get('core').captcha
+          ? {
+              siteKey: c.get('core').captcha?.siteKey ?? '',
+              type: c.get('core').captcha?.type ?? 'cloudflare_turnstile',
+            }
+          : undefined,
+      },
+      200,
+    );
   },
 });
