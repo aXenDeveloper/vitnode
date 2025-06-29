@@ -45,8 +45,7 @@ export const useCaptcha = (
 
   React.useEffect(() => {
     if (!captcha) return;
-    const googleCaptchaDomain =
-      'https://www.google.com/recaptcha/api.js?hl=${locale}';
+    const googleCaptchaDomain = `https://www.google.com/recaptcha/api.js?hl=${locale}`;
 
     // Load script
     const script = document.createElement('script');
