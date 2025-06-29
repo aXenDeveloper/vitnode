@@ -17,6 +17,11 @@ export const POSTGRES_URL =
   process.env.POSTGRES_URL || 'postgresql://root:root@localhost:5432/vitnode';
 
 export const vitNodeApiConfig = buildApiConfig({
+  captcha: {
+    type: 'cloudflare_turnstile',
+    siteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY,
+    secretKey: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+  },
   plugins: [blogApiPlugin()],
   dbProvider: drizzle({
     connection: POSTGRES_URL,

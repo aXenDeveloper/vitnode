@@ -11,7 +11,7 @@ import { FormSignUp } from './form/form';
 import { WrapperSignUp } from './wrapper';
 
 export const SignUpView = async () => {
-  const [t, tGlobal, { isEmail }] = await Promise.all([
+  const [t, tGlobal, { isEmail, captcha }] = await Promise.all([
     getTranslations('core.auth.sign_up'),
     getTranslations('core.global'),
     getMiddlewareApi(),
@@ -29,7 +29,7 @@ export const SignUpView = async () => {
                 </h1>
                 <CardDescription>{t('desc')}</CardDescription>
               </div>
-              <FormSignUp isEmail={isEmail} />
+              <FormSignUp captcha={captcha} isEmail={isEmail} />
 
               <React.Suspense fallback={<SSOButtonsSkeleton />}>
                 <SSOButtons />

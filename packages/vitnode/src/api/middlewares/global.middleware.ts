@@ -45,6 +45,7 @@ interface EnvVariablesVitNode {
       deviceCookieName: string;
       ssoAdapters: SSOApiPlugin[];
     };
+    captcha?: Pick<VitNodeApiConfig, 'captcha'>['captcha'];
     emailAdapter?: EmailApiPlugin;
     metadata: {
       shortTitle?: string;
@@ -81,7 +82,11 @@ export const globalMiddleware = ({
   metadata,
   emailAdapter,
   dbProvider,
-}: Pick<VitNodeApiConfig, 'authorization' | 'dbProvider' | 'emailAdapter'> &
+  captcha,
+}: Pick<
+  VitNodeApiConfig,
+  'authorization' | 'captcha' | 'dbProvider' | 'emailAdapter'
+> &
   Pick<VitNodeConfig, 'metadata'>) => {
   return async (c: Context, next: Next) => {
     // Collect possible IP header keys in order of trust/preference
@@ -146,6 +151,7 @@ export const globalMiddleware = ({
           authorization?.adminCookieExpires ?? 1000 * 60 * 60 * 24 * 1, // 1 day
         cookieSecure: authorization?.cookieSecure ?? true,
       },
+      captcha,
     });
 
     const user = await new SessionModel(c).getUser();

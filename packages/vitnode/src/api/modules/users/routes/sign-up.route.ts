@@ -32,6 +32,7 @@ export const signUpRoute = buildRoute({
     method: 'post',
     description: 'Create a new user',
     path: '/sign_up',
+    withCaptcha: true,
     request: {
       body: {
         required: true,

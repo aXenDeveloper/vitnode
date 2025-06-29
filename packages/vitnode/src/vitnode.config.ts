@@ -47,6 +47,11 @@ export interface VitNodeApiConfig {
     deviceCookieName?: string;
     ssoAdapters?: SSOApiPlugin[];
   };
+  captcha?: {
+    secretKey: string | undefined;
+    siteKey: string | undefined;
+    type: 'cloudflare_turnstile';
+  };
   dbProvider: PostgresJsDatabase;
   emailAdapter?: EmailApiPlugin;
   plugins: BuildPluginApiReturn[];

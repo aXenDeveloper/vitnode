@@ -2,6 +2,7 @@ import type { RouteConfig, RouteHandler } from '@hono/zod-openapi';
 
 import { createRoute as createRouteHono } from '@hono/zod-openapi';
 
+import { captchaMiddleware } from '../middlewares/captcha.middleware';
 import {
   type EnvVitNode,
   pluginMiddleware,
@@ -21,6 +22,7 @@ export const buildRoute = <
   P extends string,
   R extends Omit<RouteConfig, 'path'> & {
     path: P;
+    withCaptcha?: boolean;
   },
   H extends ValidHandler<R & { path: P }>,
 >({
@@ -50,6 +52,7 @@ export const buildRoute = <
       tags,
       middleware: [
         pluginMiddleware(pluginId),
+        ...(route.withCaptcha ? [captchaMiddleware()] : []),
         ...(Array.isArray(route.middleware)
           ? route.middleware
           : route.middleware

@@ -3,6 +3,8 @@ import React from 'react';
 import { toast } from 'sonner';
 import { z } from 'zod';
 
+import type { AutoFormOnSubmit } from '../../../../components/form/auto-form';
+
 import { mutationApi } from './mutation-api';
 
 export const useFormSignIn = ({ isAdmin }: { isAdmin?: boolean }) => {
@@ -20,7 +22,7 @@ export const useFormSignIn = ({ isAdmin }: { isAdmin?: boolean }) => {
       .default(''),
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
     setError('');
     const mutation = await mutationApi({ ...values, isAdmin });
 

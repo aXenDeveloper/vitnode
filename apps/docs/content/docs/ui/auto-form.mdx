@@ -131,11 +131,12 @@ The `onSubmit` callback provides access to the React Hook Form instance as a sec
 
 You can also define the submission handler separately:
 
+```ts
+import type { AutoFormOnSubmit } from '@vitnode/core/components/form/auto-form';
+```
+
 ```tsx
-const onSubmit = async (
-  values: z.infer<typeof formSchema>,
-  form: UseFormReturn<z.infer<typeof formSchema>>,
-) => {
+const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (values, form) => {
   try {
     await saveData(values);
     toast.success('Form submitted successfully');

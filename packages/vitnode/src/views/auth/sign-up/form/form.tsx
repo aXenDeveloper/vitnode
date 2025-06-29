@@ -1,7 +1,10 @@
 'use client';
 
+import type { z } from 'zod';
+
 import { useTranslations } from 'next-intl';
 
+import type { routeMiddlewareSchema } from '@/api/modules/middleware/route';
 import type { ItemAutoFormComponentProps } from '@/components/form/fields/item';
 
 import { AutoForm } from '@/components/form/auto-form';
@@ -13,12 +16,19 @@ import { removeSpecialCharacters } from '@/lib/special-characters';
 import { PasswordInput } from '../../components/password-input';
 import { useFormSignUp } from './use-form';
 
-export const FormSignUp = ({ isEmail }: { isEmail: boolean }) => {
+export const FormSignUp = ({
+  isEmail,
+  captcha,
+}: {
+  captcha: z.infer<typeof routeMiddlewareSchema>['captcha'];
+  isEmail: boolean;
+}) => {
   const t = useTranslations('core.auth.sign_up');
   const { onSubmit, formSchema } = useFormSignUp();
 
   return (
     <AutoForm<typeof formSchema>
+      captcha={captcha}
       fields={[
         {
           id: 'name',

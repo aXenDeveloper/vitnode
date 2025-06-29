@@ -21,6 +21,7 @@
     "---Framework---",
     "config",
     "logging",
+    "captcha",
     "---Advanced---",
     "..."
   ]
