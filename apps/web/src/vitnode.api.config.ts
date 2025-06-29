@@ -18,9 +18,9 @@ export const POSTGRES_URL =
 
 export const vitNodeApiConfig = buildApiConfig({
   captcha: {
-    type: 'cloudflare_turnstile',
-    siteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY,
-    secretKey: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+    type: 'recaptcha_v3',
+    siteKey: process.env.RECAPTCHA_SITE_KEY_v3,
+    secretKey: process.env.RECAPTCHA_SECRET_KEY_v3,
   },
   plugins: [blogApiPlugin()],
   dbProvider: drizzle({

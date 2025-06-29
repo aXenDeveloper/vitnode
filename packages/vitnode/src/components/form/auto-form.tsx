@@ -52,7 +52,7 @@ export function AutoForm<
 }) {
   const {
     isReady,
-    token: captchaToken,
+    getToken: getTokenCaptcha,
     onReset: onResetCaptcha,
   } = useCaptcha(captcha);
   const { setIsDirty } = useDialog();
@@ -71,7 +71,7 @@ export function AutoForm<
     const parsedValues = formSchema.safeParse(values);
     if (parsedValues.success) {
       await onSubmitProp?.(parsedValues.data as z.infer<T>, form, {
-        captchaToken,
+        captchaToken: captcha ? await getTokenCaptcha() : '',
       });
 
       if (captcha) {

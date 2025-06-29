@@ -39,6 +39,25 @@ const getResFromReCaptcha = async ({
       score: data.success ? 1 : 0,
       'error-codes': data['error-codes'],
     };
+  } else if (captchaConfig.type === 'recaptcha_v3') {
+    const res = await fetch(
+      `https://www.google.com/recaptcha/api/siteverify?secret=${captchaConfig.secretKey}&response=${token}&remoteip=${userIp}`,
+      {
+        method: 'POST',
+      },
+    );
+
+    const data: {
+      'error-codes'?: string[];
+      score: number;
+      success: boolean;
+    } = await res.json();
+
+    return {
+      success: data.success,
+      score: data.score ?? 0,
+      'error-codes': data['error-codes'],
+    };
   }
 
   return {

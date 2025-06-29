@@ -9,7 +9,7 @@ export const routeMiddlewareSchema = z.object({
   captcha: z
     .object({
       siteKey: z.string(),
-      type: z.literal('cloudflare_turnstile'),
+      type: z.enum(['cloudflare_turnstile', 'recaptcha_v3']),
     })
     .optional(),
 });

@@ -7,9 +7,13 @@ export const ImgDocs = ({
   ...props
 }: React.ComponentProps<typeof ImageZoom>) => {
   return (
-    <ImageZoom
-      className={cn('rounded-lg border shadow-lg', className)}
-      {...props}
-    />
+    <div
+      className={cn(
+        'from-fd-primary/10 flex items-center justify-center rounded-xl border bg-gradient-to-br *:max-w-[16rem]',
+        className,
+      )}
+    >
+      <ImageZoom className="rounded-lg" {...props} />
+    </div>
   );
 };

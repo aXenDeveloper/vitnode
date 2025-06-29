@@ -3,6 +3,25 @@ title: Captcha
 description: Protect your forms and API call with captcha validation.
 ---
 
+## Support
+
+VitNode supports multiple captcha providers. You can choose the one that fits your needs. Currently, we support:
+
+<Cards>
+  <Card
+    title="Cloudflare Turnstile"
+    description="By Cloudflare"
+    href="/docs/guides/captcha/cloudflare"
+  />
+  <Card
+    title="reCAPTCHA v3"
+    description="By Google"
+    href="/docs/guides/captcha/recaptcha"
+  />
+</Cards>
+
+If you need more providers, feel free to open a **Feature Request** on our [GitHub repository](https://github.com/aXenDeveloper/vitnode/issues) :)
+
 ## Usage
 
 In this example, we will show you how to use captcha in your forms. We will use the `AutoForm` component to render the form and handle the captcha validation.
@@ -220,12 +239,12 @@ export const FormSignUp = ({
   captcha: z.infer<typeof routeMiddlewareSchema>['captcha']; // [!code ++]
 }) => {
   // [!code ++]
-  const { isReady, token, onReset } = useCaptcha(captcha);
+  const { isReady, getToken, onReset } = useCaptcha(captcha);
 
   const onSubmit = async () => {
     await mutationApi({
       // ...other values,
-      captchaToken: token, // [!code ++]
+      captchaToken: await getToken(), // [!code ++]
     });
 
     // Handle success or error

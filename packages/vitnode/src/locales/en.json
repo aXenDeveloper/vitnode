@@ -41,6 +41,7 @@
         "internal_server_error": "Internal server error.",
         "field_required": "This field is required.",
         "field_min_length": "This field must be at least {min} characters.",
+        "captcha_internal_error": "Captcha validation failed. Please try again later.",
         "404": {
           "title": "Page Not Found",
           "desc": "Oops! The page you're looking for doesn't exist."

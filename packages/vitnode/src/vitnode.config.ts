@@ -50,7 +50,7 @@ export interface VitNodeApiConfig {
   captcha?: {
     secretKey: string | undefined;
     siteKey: string | undefined;
-    type: 'cloudflare_turnstile';
+    type: 'cloudflare_turnstile' | 'recaptcha_v3';
   };
   dbProvider: PostgresJsDatabase;
   emailAdapter?: EmailApiPlugin;
