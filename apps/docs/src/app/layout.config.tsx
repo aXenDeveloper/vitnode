@@ -1,5 +1,6 @@
-import { LogoVitNode } from '@/components/logo-vitnode';
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
+
+import { LogoVitNode } from '@/components/logo-vitnode';
 
 /**
  * Shared layout configurations

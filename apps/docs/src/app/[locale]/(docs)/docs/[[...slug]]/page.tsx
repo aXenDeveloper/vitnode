@@ -1,16 +1,19 @@
-import { source } from '@/lib/source';
-import { DocsPage, DocsBody } from 'fumadocs-ui/page';
-import { notFound, redirect } from 'next/navigation';
+import { redirect } from '@vitnode/core/lib/navigation';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
-import { ViewOptions } from './page.client';
+import { DocsBody, DocsPage } from 'fumadocs-ui/page';
+import { notFound } from 'next/navigation';
+
 import { Preview } from '@/components/fumadocs/preview';
+import { source } from '@/lib/source';
+
+import { ViewOptions } from './page.client';
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
 }) {
   const params = await props.params;
   if (!params.slug) {
-    redirect('/docs/dev');
+    await redirect('/docs/dev');
   }
   const page = source.getPage(params.slug);
   if (!page) notFound();
@@ -18,12 +21,12 @@ export default async function Page(props: {
 
   return (
     <DocsPage
+      full={page.data.full}
       tableOfContent={{
         style: 'clerk',
         single: false,
       }}
       toc={page.data.toc}
-      full={page.data.full}
     >
       <div className="space-y-2">
         <h1 className="text-foreground text-3xl font-bold sm:text-4xl">
@@ -31,10 +34,10 @@ export default async function Page(props: {
         </h1>
         <p className="text-muted-foreground text-lg">{page.data.description}</p>
 
-        <div className="flex flex-row items-center gap-2 border-b pb-6 pt-2">
+        <div className="flex flex-row items-center gap-2 border-b pt-2 pb-6">
           <ViewOptions
-            markdownUrl={page.url}
             githubUrl={`https://github.com/aXenDeveloper/vitnode/blob/canary/apps/docs/content/docs/${page.path}`}
+            markdownUrl={page.url}
           />
         </div>
       </div>
@@ -46,7 +49,7 @@ export default async function Page(props: {
   );
 }
 
-export async function generateStaticParams() {
+export function generateStaticParams() {
   return source.generateParams();
 }
 

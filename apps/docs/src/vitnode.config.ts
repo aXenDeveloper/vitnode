@@ -12,17 +12,13 @@ export const vitNodeConfig = buildConfig({
     locales: [
       {
         code: 'en',
-        name: 'English (USA)',
-      },
-      {
-        code: 'pl',
-        name: 'Polski (PL)',
+        name: 'English',
       },
     ],
     defaultLocale: 'en',
   },
   theme: {
-    defaultTheme: 'dark',
+    defaultTheme: 'light',
   },
 });
 

@@ -2,10 +2,10 @@ export const PostgreSQLLogo = () => {
   return (
     <>
       <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 25.6 25.6"
-        className="size-8 grayscale"
         aria-label="PostgreSQL logotype"
+        className="size-8 grayscale"
+        viewBox="0 0 25.6 25.6"
+        xmlns="http://www.w3.org/2000/svg"
       >
         <g fill="none" stroke="#fff">
           <path

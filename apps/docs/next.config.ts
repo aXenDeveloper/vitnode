@@ -1,17 +1,14 @@
 import type { NextConfig } from 'next';
+import { createMDX } from 'fumadocs-mdx/next';
 import { vitNodeNextConfig } from '@vitnode/core/config/next.config';
 
+const withMDX = createMDX();
+
 const nextConfig: NextConfig = {
-  /* config options here */
-  // logging: {
-  //   fetches: {
-  //     fullUrl: true,
-  //   },
-  // },
   experimental: {
     inlineCss: true,
     reactCompiler: true,
   },
 };
 
-export default vitNodeNextConfig(nextConfig);
+export default withMDX(vitNodeNextConfig(nextConfig));

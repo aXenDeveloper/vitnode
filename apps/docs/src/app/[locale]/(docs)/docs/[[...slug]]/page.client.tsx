@@ -2,23 +2,23 @@
 
 // Source: https://github.com/fuma-nama/fumadocs/blob/dev/apps/docs/app/docs/%5B...slug%5D/page.client.tsx
 
-import { ChevronDown } from 'fumadocs-ui/internal/icons';
-import { ExternalLinkIcon, MessageCircleIcon } from 'lucide-react';
 import { cva } from 'class-variance-authority';
+import { buttonVariants } from 'fumadocs-ui/components/ui/button';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from 'fumadocs-ui/components/ui/popover';
+import { ChevronDown } from 'fumadocs-ui/internal/icons';
 import { cn } from 'fumadocs-ui/utils/cn';
-import { buttonVariants } from 'fumadocs-ui/components/ui/button';
+import { ExternalLinkIcon, MessageCircleIcon } from 'lucide-react';
 import React from 'react';
 
 const optionVariants = cva(
   'text-sm p-2 rounded-lg inline-flex items-center gap-2 hover:text-fd-accent-foreground hover:bg-fd-accent [&_svg]:size-4',
 );
 
-export function ViewOptions(props: { markdownUrl: string; githubUrl: string }) {
+export function ViewOptions(props: { githubUrl: string; markdownUrl: string }) {
   const markdownUrl = new URL(props.markdownUrl, 'https://vitnode.com/');
   const q = `Read ${markdownUrl}, I want to ask questions about it.`;
 
@@ -64,9 +64,9 @@ export function ViewOptions(props: { markdownUrl: string; githubUrl: string }) {
             href: gpt,
             icon: (
               <svg
+                fill="currentColor"
                 role="img"
                 viewBox="0 0 24 24"
-                fill="currentColor"
                 xmlns="http://www.w3.org/2000/svg"
               >
                 <title>OpenAI</title>
@@ -96,11 +96,11 @@ export function ViewOptions(props: { markdownUrl: string; githubUrl: string }) {
           },
         ].map(item => (
           <a
-            key={item.href}
+            className={cn(optionVariants())}
             href={item.href}
+            key={item.href}
             rel="noreferrer noopener"
             target="_blank"
-            className={cn(optionVariants())}
           >
             {item.icon}
             {item.title}
