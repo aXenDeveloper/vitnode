@@ -7,7 +7,7 @@ export class FileCopyManager {
   constructor(private env: EnvironmentConfig) {}
 
   async init(): Promise<void> {
-    const sourcePath = join(this.env.WORKSPACE, 'apps', 'web');
+    const sourcePath = join(this.env.WORKSPACE, 'apps', 'docs');
     const destPath = join(
       this.env.WORKSPACE,
       'packages',
