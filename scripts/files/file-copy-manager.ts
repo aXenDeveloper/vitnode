@@ -52,7 +52,7 @@ export class FileCopyManager {
     const filesToCopy = [
       'src/app/[locale]/(main)/[...rest]',
       'src/app/[locale]/(main)/not-found.tsx',
-      'src/app/[locale]/(admin)',
+      'src/app/[locale]/admin',
       'src/app/favicon.ico',
       'src/app/global-error.tsx',
       'src/app/layout.tsx',
