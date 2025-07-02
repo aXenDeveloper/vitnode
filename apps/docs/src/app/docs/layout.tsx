@@ -6,7 +6,8 @@ import type { ReactNode } from 'react';
 export default function Layout({ children }: { children: ReactNode }) {
   return (
     <DocsLayout
-      {...baseOptions}
+      nav={{ ...baseOptions.nav, mode: 'top' }}
+      githubUrl={baseOptions.githubUrl}
       tree={source.pageTree}
       sidebar={{
         tabs: {

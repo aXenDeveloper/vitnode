@@ -3,6 +3,7 @@ import { DocsPage, DocsBody } from 'fumadocs-ui/page';
 import { notFound, redirect } from 'next/navigation';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { ViewOptions } from './page.client';
+import { Preview } from '@/components/fumadocs/preview';
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
@@ -39,7 +40,7 @@ export default async function Page(props: {
       </div>
 
       <DocsBody>
-        <MDX components={{ ...defaultMdxComponents }} />
+        <MDX components={{ ...defaultMdxComponents, Preview }} />
       </DocsBody>
     </DocsPage>
   );
