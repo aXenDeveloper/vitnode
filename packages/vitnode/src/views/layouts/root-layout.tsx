@@ -30,28 +30,19 @@ export const generateMetadataRootLayout = ({
 
 export const RootLayout = async ({
   children,
-  className,
   params,
-  head,
   config,
 }: RootLayoutProps & {
-  className?: string;
   config: VitNodeConfig;
-  head?: React.ReactNode;
 }) => {
   const { locale } = await params;
   setRequestLocale(locale);
 
   return (
-    <html lang={locale} suppressHydrationWarning>
-      {head && <head>{head}</head>}
-      <body className={className}>
-        <I18nProvider namespaces={[]}>
-          <RootProvider debug={config.debug} theme={config.theme}>
-            {children}
-          </RootProvider>
-        </I18nProvider>
-      </body>
-    </html>
+    <I18nProvider namespaces={[]}>
+      <RootProvider debug={config.debug} theme={config.theme}>
+        {children}
+      </RootProvider>
+    </I18nProvider>
   );
 };

@@ -9,6 +9,7 @@ import { LogoVitNode } from '@/components/logo-vitnode';
  * Home Layout: app/(home)/layout.tsx
  * Docs Layout: app/docs/layout.tsx
  */
+// TODO: Remove this
 export const baseOptions: BaseLayoutProps = {
   githubUrl: 'https://github.com/VitNode/vitnode',
   nav: {

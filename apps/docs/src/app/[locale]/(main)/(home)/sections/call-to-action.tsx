@@ -1,7 +1,7 @@
 import { Card } from '@vitnode/core/components/ui/card';
 import { cn } from '@vitnode/core/lib/utils';
 
-import { CodeBlock } from '../../../components/fumadocs/code-block';
+import { CodeBlock } from '../../../../../components/fumadocs/code-block';
 
 export const CallToActionSection = () => {
   return (

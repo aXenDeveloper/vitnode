@@ -11,12 +11,12 @@ export function useMode(): string | undefined {
 
 export function Body({
   children,
+  className,
 }: {
   children: React.ReactNode;
+  className?: string;
 }): React.ReactElement {
   const mode = useMode();
 
-  return (
-    <body className={cn(mode, 'flex min-h-screen flex-col')}>{children}</body>
-  );
+  return <body className={cn(mode, className)}>{children}</body>;
 }

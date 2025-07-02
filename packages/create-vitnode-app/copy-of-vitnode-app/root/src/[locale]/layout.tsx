@@ -5,12 +5,9 @@ import {
   generateMetadataRootLayout,
   RootLayout,
 } from '@vitnode/core/views/layouts/root-layout';
-import { RootProvider } from 'fumadocs-ui/provider';
 import { Geist, Geist_Mono } from 'next/font/google';
 
 import { vitNodeConfig } from '@/vitnode.config';
-
-import { Body } from './(main)/layout.client';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -33,13 +30,11 @@ export default async function LocaleLayout(props: RootLayoutProps) {
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <Body
+      <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <RootProvider>
-          <RootLayout config={vitNodeConfig} {...props} />
-        </RootProvider>
-      </Body>
+        <RootLayout config={vitNodeConfig} {...props} />
+      </body>
     </html>
   );
 }
