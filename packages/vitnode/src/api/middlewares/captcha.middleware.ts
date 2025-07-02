@@ -70,7 +70,13 @@ export const captchaMiddleware = () => {
   return async (c: Context, next: Next) => {
     const token = c.req.header('x-vitnode-captcha-token');
     const captchaConfig = c.get('core').captcha;
-    if (!token || !captchaConfig) {
+    if (!captchaConfig) {
+      await next();
+
+      return;
+    }
+
+    if (!token) {
       throw new HTTPException(400, {
         message: 'Captcha token is required',
       });

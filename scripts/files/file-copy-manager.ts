@@ -58,7 +58,7 @@ export class FileCopyManager {
       'src/app/global.css',
       'src/app/layout.tsx',
       'src/app/not-found.tsx',
-      'src/app/api',
+      'src/app/api/[...route]',
       'tsconfig.json',
       'postcss.config.mjs',
       'drizzle.config.ts',
