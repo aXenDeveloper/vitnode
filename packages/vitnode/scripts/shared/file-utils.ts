@@ -151,14 +151,65 @@ export function findLocaleRoot(repoRoot: string): string {
     return standalonePath;
   }
 
-  // Check for monorepo structure first (apps/web/src/app/[locale])
-  const monorepoPath = join(repoRoot, 'apps', 'web', 'src', 'app', '[locale]');
-  if (existsSync(monorepoPath)) {
-    return monorepoPath;
+  // Function to recursively search for [locale] directories
+  const findLocaleDirectories = (searchDir: string): string[] => {
+    const localeDirectories: string[] = [];
+    if (!existsSync(searchDir)) return localeDirectories;
+
+    const visit = (currentDir: string, depth = 0) => {
+      // Limit search depth to avoid infinite recursion and performance issues
+      if (depth > 4) return;
+
+      try {
+        const entries = readdirSync(currentDir, { withFileTypes: true });
+
+        for (const entry of entries) {
+          if (!entry.isDirectory()) continue;
+
+          const fullPath = join(currentDir, entry.name);
+
+          // Check if this is a [locale] directory with app structure
+          if (entry.name === '[locale]') {
+            // Verify it's inside an app directory structure
+            const parentPath = dirname(fullPath);
+            if (parentPath.endsWith(join('src', 'app'))) {
+              localeDirectories.push(fullPath);
+              continue;
+            }
+          }
+
+          // Continue searching in subdirectories
+          visit(fullPath, depth + 1);
+        }
+      } catch (_error) {
+        // Skip directories we can't read
+      }
+    };
+
+    visit(searchDir);
+
+    return localeDirectories;
+  };
+
+  // Search for any directory structure containing src/app/[locale]
+  const localeDirectories = findLocaleDirectories(repoRoot);
+
+  if (localeDirectories.length > 0) {
+    // Return the first found locale directory
+    return localeDirectories[0];
   }
 
-  // Default to monorepo structure if neither exists (for new projects)
-  return monorepoPath;
+  // Default to apps/docs structure if nothing is found (for new projects)
+  const defaultAppDir = join(
+    repoRoot,
+    'apps',
+    'docs',
+    'src',
+    'app',
+    '[locale]',
+  );
+
+  return defaultAppDir;
 }
 
 export const getAllFiles = (dir: string): string[] => {

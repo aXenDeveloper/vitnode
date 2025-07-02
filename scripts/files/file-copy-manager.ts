@@ -7,7 +7,7 @@ export class FileCopyManager {
   constructor(private env: EnvironmentConfig) {}
 
   async init(): Promise<void> {
-    const sourcePath = join(this.env.WORKSPACE, 'apps', 'web');
+    const sourcePath = join(this.env.WORKSPACE, 'apps', 'docs');
     const destPath = join(
       this.env.WORKSPACE,
       'packages',
@@ -50,7 +50,9 @@ export class FileCopyManager {
   async copyFiles(sourcePath: string, destPath: string): Promise<void> {
     // Define files and directories to copy (relative paths)
     const filesToCopy = [
-      'src/app/[locale]',
+      'src/app/[locale]/(main)/[...rest]',
+      'src/app/[locale]/(main)/not-found.tsx',
+      'src/app/[locale]/(admin)',
       'src/app/favicon.ico',
       'src/app/global-error.tsx',
       'src/app/global.css',

@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-This document outlines the testing strategy for the VitNode framework. The goal is to ensure the reliability, functionality, and performance of the core framework (`packages/vitnode`), the web application (`apps/web`), and associated plugins. We will utilize Vitest for unit and integration testing and Playwright for end-to-end testing.
+This document outlines the testing strategy for the VitNode framework. The goal is to ensure the reliability, functionality, and performance of the core framework (`packages/vitnode`), the web application (`apps/docs`), and associated plugins. We will utilize Vitest for unit and integration testing and Playwright for end-to-end testing.
 
 ## 2. Goals
 
@@ -24,13 +24,13 @@ This document outlines the testing strategy for the VitNode framework. The goal 
 ### 4.1. Unit Tests (Vitest)
 
 **Scope:** Test individual functions, components, and utilities in isolation.
-**Location:** Primarily within `packages/vitnode` and utility directories in `apps/web`.
+**Location:** Primarily within `packages/vitnode` and utility directories in `apps/docs`.
 
 **Areas to Cover:**
 
 - **Core Utilities:** Functions in `packages/vitnode/src/lib`, helpers, etc.
 - **API Helpers:** Route building, validation logic using `@hono/zod-openapi`.
-- **UI Components:** Basic rendering tests, prop validation for components in `packages/vitnode/src/components` and `apps/web/src/components`.
+- **UI Components:** Basic rendering tests, prop validation for components in `packages/vitnode/src/components` and `apps/docs/src/components`.
 - **Configuration Loading:** Ensure `vitnode.config.ts` is loaded and parsed correctly.
 - **Internationalization (i18n):** Test translation loading and formatting utilities.
 
@@ -42,7 +42,7 @@ This document outlines the testing strategy for the VitNode framework. The goal 
 **Areas to Cover:**
 
 - **API Endpoints:** Test request handling, validation, middleware execution, and response generation for Hono.js routes defined in `packages/vitnode/src/api`. Example: [`testRoute`](packages/vitnode/src/api/modules/users/routes/test.route.ts).
-- **Server Actions:** Test form submissions, data mutations, and interactions with the database within `apps/web`.
+- **Server Actions:** Test form submissions, data mutations, and interactions with the database within `apps/docs`.
 - **Database Interactions:** Verify Drizzle ORM queries, schema interactions, and data integrity (using a test database).
 - **Authentication Logic:** Test credential verification, session creation/validation (including durations), email verification, password reset, and SSO provider interactions (Google, GitHub, Facebook).
 - **Plugin Integration:** Test how core systems interact with plugin-provided extensions (routes, hooks, etc.).
@@ -50,7 +50,7 @@ This document outlines the testing strategy for the VitNode framework. The goal 
 ### 4.3. End-to-End Tests (Playwright)
 
 **Scope:** Simulate real user scenarios by interacting with the application through a browser.
-**Location:** A dedicated `e2e` or `tests` directory at the root or within `apps/web`.
+**Location:** A dedicated `e2e` or `tests` directory at the root or within `apps/docs`.
 
 **Areas to Cover:**
 

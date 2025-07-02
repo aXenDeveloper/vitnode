@@ -41,7 +41,7 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
   const mainDest = join(
     repoRoot,
     'apps',
-    'web',
+    'docs',
     'src',
     'app',
     '[locale]',
@@ -51,7 +51,7 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
   const adminDest = join(
     repoRoot,
     'apps',
-    'web',
+    'docs',
     'src',
     'app',
     '[locale]',
@@ -59,7 +59,7 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
     '(auth)',
     join('(plugins)', `(${pluginPathName})`),
   );
-  const langDest = join(repoRoot, 'apps', 'web', 'src', 'locales', pluginName);
+  const langDest = join(repoRoot, 'apps', 'docs', 'src', 'locales', pluginName);
 
   // tell the copier about both trees
   const sources: SourceConfig[] = [

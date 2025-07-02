@@ -1,19 +1,19 @@
 'use client';
 
 import { cn } from '@vitnode/core/lib/utils';
-import { useMotionValue, animate, motion } from 'motion/react';
-import { useState, useEffect } from 'react';
+import { animate, motion, useMotionValue } from 'motion/react';
+import { useEffect, useState } from 'react';
 import { useMeasure } from 'react-use';
 
-export type InfiniteSliderProps = {
+export interface InfiniteSliderProps {
   children: React.ReactNode;
+  className?: string;
+  direction?: 'horizontal' | 'vertical';
   gap?: number;
+  reverse?: boolean;
   speed?: number;
   speedOnHover?: number;
-  direction?: 'horizontal' | 'vertical';
-  reverse?: boolean;
-  className?: string;
-};
+}
 
 export function InfiniteSlider({
   children,
@@ -95,6 +95,7 @@ export function InfiniteSlider({
     <div className={cn('overflow-hidden', className)}>
       <motion.div
         className="flex w-max"
+        ref={ref}
         style={{
           ...(direction === 'horizontal'
             ? { x: translation }
@@ -102,7 +103,6 @@ export function InfiniteSlider({
           gap: `${gap}px`,
           flexDirection: direction === 'horizontal' ? 'row' : 'column',
         }}
-        ref={ref}
         {...hoverProps}
       >
         {children}

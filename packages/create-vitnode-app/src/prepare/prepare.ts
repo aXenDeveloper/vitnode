@@ -7,7 +7,7 @@ const prepare = async () => {
   if (!existsSync(toRootPath)) {
     await mkdir(toRootPath);
   }
-  const fromRootPath = join(process.cwd(), '..', '..', 'apps', 'web');
+  const fromRootPath = join(process.cwd(), '..', '..', 'apps', 'docs');
   if (!existsSync(fromRootPath)) {
     console.error(
       `\x1b[31mThe path ${fromRootPath} does not exist. Please check the directory structure.\x1b[0m`,

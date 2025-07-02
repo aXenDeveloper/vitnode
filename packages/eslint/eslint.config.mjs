@@ -12,12 +12,6 @@ export default [
   {
     ignores: [
       'dist',
-      // 'apps/web/src/app/[locale]/(main)/(plugins)/**/*',
-      // 'apps/web/src/app/\\[locale\\]/(main)/(plugins)/**/*',
-      // 'apps/web/src/app/*/\\(main\\)/\\(plugins\\)/**/*',
-      // 'apps/web/src/app/[locale]/admin/(auth)/(main)/(plugins)/**/*',
-      // 'src/app/[locale]/(main)/(plugins)/**/*',
-      // 'src/app/[locale]/admin/(auth)/(main)/(plugins)/**/*',
       '**/\\(main\\)/\\(plugins\\)/**',
       '**/\\(auth\\)/\\(plugins\\)/**',
       '.prettierrc.mjs',

@@ -56,7 +56,7 @@ export const createQuestionsCli = async (
 
   if (optionsFromProgram.docker === undefined) {
     options.docker = await confirm({
-      message: `Would you like to use ${color.blue('Docker')}?`,
+      message: `Would you like to use ${color.blue('Docker Container')}?`,
     });
   }
 

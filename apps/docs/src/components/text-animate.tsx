@@ -1,47 +1,30 @@
 'use client';
 
-import { cn } from '@vitnode/core/lib/utils';
-import { AnimatePresence, motion, MotionProps, Variants } from 'motion/react';
-import { ElementType, memo } from 'react';
+import type { MotionProps, Variants } from 'motion/react';
+import type { ElementType } from 'react';
 
-type AnimationType = 'text' | 'word' | 'character' | 'line';
+import { cn } from '@vitnode/core/lib/utils';
+import { AnimatePresence, motion } from 'motion/react';
+import { memo } from 'react';
+
+type AnimationType = 'character' | 'line' | 'text' | 'word';
 type AnimationVariant =
-  | 'fadeIn'
   | 'blurIn'
-  | 'blurInUp'
   | 'blurInDown'
-  | 'slideUp'
+  | 'blurInUp'
+  | 'fadeIn'
+  | 'scaleDown'
+  | 'scaleUp'
   | 'slideDown'
   | 'slideLeft'
   | 'slideRight'
-  | 'scaleUp'
-  | 'scaleDown';
+  | 'slideUp';
 
 interface TextAnimateProps extends MotionProps {
   /**
-   * The text content to animate
+   * The animation preset to use
    */
-  children: string;
-  /**
-   * The class name to be applied to the component
-   */
-  className?: string;
-  /**
-   * The class name to be applied to each segment
-   */
-  segmentClassName?: string;
-  /**
-   * The delay before the animation starts
-   */
-  delay?: number;
-  /**
-   * The duration of the animation
-   */
-  duration?: number;
-  /**
-   * Custom motion variants for the animation
-   */
-  variants?: Variants;
+  animation?: AnimationVariant;
   /**
    * The element type to render
    */
@@ -51,17 +34,37 @@ interface TextAnimateProps extends MotionProps {
    */
   by?: AnimationType;
   /**
-   * Whether to start animation when component enters viewport
+   * The text content to animate
    */
-  startOnView?: boolean;
+  children: string;
+  /**
+   * The class name to be applied to the component
+   */
+  className?: string;
+  /**
+   * The delay before the animation starts
+   */
+  delay?: number;
+  /**
+   * The duration of the animation
+   */
+  duration?: number;
   /**
    * Whether to animate only once
    */
   once?: boolean;
   /**
-   * The animation preset to use
+   * The class name to be applied to each segment
    */
-  animation?: AnimationVariant;
+  segmentClassName?: string;
+  /**
+   * Whether to start animation when component enters viewport
+   */
+  startOnView?: boolean;
+  /**
+   * Custom motion variants for the animation
+   */
+  variants?: Variants;
 }
 
 const staggerTimings: Record<AnimationType, number> = {
@@ -315,14 +318,14 @@ const TextAnimateBase = ({
 
   let segments: string[] = [];
   switch (by) {
-    case 'word':
-      segments = children.split(/(\s+)/);
-      break;
     case 'character':
       segments = children.split('');
       break;
     case 'line':
       segments = children.split('\n');
+      break;
+    case 'word':
+      segments = children.split(/(\s+)/);
       break;
     case 'text':
     default:
@@ -378,25 +381,25 @@ const TextAnimateBase = ({
   return (
     <AnimatePresence mode="popLayout">
       <MotionComponent
-        variants={finalVariants.container as Variants}
-        initial="hidden"
-        whileInView={startOnView ? 'show' : undefined}
         animate={startOnView ? undefined : 'show'}
-        exit="exit"
         className={cn('whitespace-pre-wrap', className)}
+        exit="exit"
+        initial="hidden"
+        variants={finalVariants.container as Variants}
         viewport={{ once }}
+        whileInView={startOnView ? 'show' : undefined}
         {...props}
       >
         {segments.map((segment, i) => (
           <motion.span
-            key={`${by}-${segment}-${i}`}
-            variants={finalVariants.item}
-            custom={i * staggerTimings[by]}
             className={cn(
               by === 'line' ? 'block' : 'inline-block whitespace-pre',
               by === 'character' && '',
               segmentClassName,
             )}
+            custom={i * staggerTimings[by]}
+            key={`${by}-${segment}-${i}`}
+            variants={finalVariants.item}
           >
             {segment}
           </motion.span>
