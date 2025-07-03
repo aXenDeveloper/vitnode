@@ -42,7 +42,17 @@ export const runMigrations = async () => {
   }
 };
 
+export const runPush = async () => {
+  try {
+    await runInteractiveShellCommand('npm', ['run', 'drizzle-kit', 'push']);
+  } catch (err) {
+    console.error('\x1b[31m%s\x1b[0m', err);
+    process.exit(1);
+  }
+};
+
 export const initialDataForDatabase = async () => {
+  await runPush();
   const [roleCount] = await dbClient
     .select({
       count: count(),

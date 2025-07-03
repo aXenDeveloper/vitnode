@@ -1,5 +1,5 @@
 {
-  "id": "77ac3265-847d-4978-a374-6d31424be57a",
+  "id": "5b8bbb47-7354-434d-9fdb-c95d4adc0981",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -457,8 +457,7 @@
         },
         "type": {
           "name": "type",
-          "type": "coreLogsType",
-          "typeSchema": "public",
+          "type": "varchar(10)",
           "primaryKey": false,
           "notNull": true
         },
@@ -513,6 +512,13 @@
           "type": "bigint",
           "primaryKey": false,
           "notNull": false
+        },
+        "test123": {
+          "name": "test123",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {},
@@ -1422,17 +1428,7 @@
       "isRLSEnabled": true
     }
   },
-  "enums": {
-    "public.coreLogsType": {
-      "name": "coreLogsType",
-      "schema": "public",
-      "values": [
-        "warn",
-        "error",
-        "debug"
-      ]
-    }
-  },
+  "enums": {},
   "schemas": {},
   "sequences": {},
   "roles": {},

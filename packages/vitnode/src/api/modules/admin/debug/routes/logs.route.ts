@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { CONFIG_PLUGIN } from '@/config';
-import { core_logs, coreLogsType } from '@/database/logs';
+import { core_logs } from '@/database/logs';
 
 import { core_users } from '../../../../../database/users';
 import { buildRoute } from '../../../../lib/route';
@@ -33,7 +33,7 @@ export const logsDebugAdminRoute = buildRoute({
                 z.object({
                   id: z.number(),
                   pluginId: z.string(),
-                  type: z.enum(coreLogsType.enumValues),
+                  type: z.enum(['warn', 'error', 'debug']),
                   content: z.string(),
                   createdAt: z.date(),
                   ipAddress: z.string(),

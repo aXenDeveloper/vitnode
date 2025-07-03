@@ -1,7 +1,9 @@
 /* eslint-disable no-console */
 import type { Context } from 'hono';
 
-import { core_logs, type CoreLogsType } from '@/database/logs';
+import { core_logs } from '@/database/logs';
+
+type CoreLogsType = 'debug' | 'error' | 'warn';
 
 export interface LoggerMiddlewareType {
   debug: (content: string) => void;

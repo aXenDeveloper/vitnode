@@ -33,10 +33,8 @@ export const createPackageJSON = async ({
     private: true,
     type: 'module',
     scripts: {
-      'drizzle-kit': 'drizzle-kit',
-      'db:push': 'drizzle-kit push',
-      'db:migrate':
-        'drizzle-kit up && drizzle-kit generate && drizzle-kit migrate',
+      'db:push': 'vitnode push',
+      'db:migrate': 'vitnode migrate',
       dev: 'vitnode init && next dev --turbopack',
       build: 'next build --turbopack',
       start: 'next start',
@@ -51,6 +49,7 @@ export const createPackageJSON = async ({
             'docker:dev': `docker compose -f ./docker-compose.yml -p ${appName}-vitnode-dev up -d`,
           }
         : {}),
+      'drizzle-kit': 'drizzle-kit',
     },
     dependencies: {
       '@hono/zod-openapi': '^0.19.8',

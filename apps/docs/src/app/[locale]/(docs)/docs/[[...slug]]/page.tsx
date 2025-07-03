@@ -1,4 +1,5 @@
 import { redirect } from '@vitnode/core/lib/navigation';
+import { Step, Steps } from 'fumadocs-ui/components/steps';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { DocsBody, DocsPage } from 'fumadocs-ui/page';
 import { notFound } from 'next/navigation';
@@ -43,7 +44,7 @@ export default async function Page(props: {
       </div>
 
       <DocsBody>
-        <MDX components={{ ...defaultMdxComponents, Preview }} />
+        <MDX components={{ ...defaultMdxComponents, Preview, Steps, Step }} />
       </DocsBody>
     </DocsPage>
   );

@@ -4,9 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "drizzle-kit": "drizzle-kit",
-    "db:push": "drizzle-kit push",
-    "db:migrate": "drizzle-kit up && drizzle-kit generate && drizzle-kit migrate",
+    "db:push": "vitnode push",
+    "db:migrate": "vitnode migrate",
     "dev": "vitnode init && next dev --turbopack",
     "dev:email": "email dev",
     "build": "next build --turbopack",
@@ -17,7 +16,8 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report",
-    "postinstall": "fumadocs-mdx"
+    "postinstall": "fumadocs-mdx",
+    "drizzle-kit": "drizzle-kit"
   },
   "dependencies": {
     "@hono/zod-openapi": "^0.19.8",

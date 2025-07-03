@@ -7,6 +7,10 @@ import { fileURLToPath } from 'url';
 
 import type { CreateCliReturn } from '../questions.js';
 
+import {
+  generateMigrationsVitnode,
+  initFilesVitnode,
+} from '../helpers/init-vitnode.js';
 import { installDependencies } from '../helpers/install-dependencies.js';
 import { isFolderEmpty } from '../helpers/is-folder-empty.js';
 import { createPackageJSON } from './create-package-json.js';
@@ -87,6 +91,18 @@ export const createVitNode = async ({
   if (install) {
     spinner.text = 'Installing dependencies...';
     await installDependencies({
+      packageManager,
+      cwd: root,
+    });
+
+    spinner.text = 'Initializing VitNode files...';
+    initFilesVitnode({
+      packageManager,
+      cwd: root,
+    });
+
+    spinner.text = 'Generating migrations...';
+    generateMigrationsVitnode({
       packageManager,
       cwd: root,
     });

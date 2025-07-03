@@ -2,7 +2,13 @@
 /* eslint-disable no-console */
 
 import { processPlugin } from './plugin.js';
-import { prepareDatabase } from './prepare-database.js';
+import {
+  generateDatabaseMigrations,
+  initialDataForDatabase,
+  prepareDatabase,
+  runMigrations,
+} from './prepare-database.js';
+import { preparePluginsFiles } from './prepare-plugins-files.js';
 
 const initMessage = '\x1b[34m[VitNode]\x1b[0m';
 
@@ -14,10 +20,40 @@ switch (command) {
     void prepareDatabase({ initMessage });
     break;
 
+  case 'migrate':
+    await generateDatabaseMigrations();
+    if (flag === '--generate') {
+      console.log(
+        `${initMessage} \x1b[32mDatabase migrations generated successfully.\x1b[0m`,
+      );
+      process.exit(0);
+    }
+    await runMigrations();
+
+    console.log(
+      `${initMessage} \x1b[32mDatabase migrated successfully.\x1b[0m`,
+    );
+    process.exit(0);
+    break;
+
   case 'plugin':
     if (flag === '--w' || flag === '--watch') {
       processPlugin({ initMessage });
     }
+    break;
+
+  case 'prepare-plugins':
+    await preparePluginsFiles();
+    console.log(`${initMessage} \x1b[32mPlugins prepared successfully.\x1b[0m`);
+    process.exit(0);
+
+    break;
+
+  case 'push':
+    void initialDataForDatabase();
+
+    console.log(`${initMessage} \x1b[32mDatabase pushed successfully.\x1b[0m`);
+    process.exit(0);
     break;
 
   default:

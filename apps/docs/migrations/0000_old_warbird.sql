@@ -1,4 +1,3 @@
-CREATE TYPE "public"."coreLogsType" AS ENUM('warn', 'error', 'debug');--> statement-breakpoint
 CREATE TABLE "core_admin_permissions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"roleId" integer,
@@ -50,7 +49,7 @@ ALTER TABLE "core_languages_words" ENABLE ROW LEVEL SECURITY;--> statement-break
 CREATE TABLE "core_logs" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"pluginId" varchar(255) NOT NULL,
-	"type" "coreLogsType" NOT NULL,
+	"type" varchar(10) NOT NULL,
 	"content" text NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"ipAddress" varchar(45) NOT NULL,
@@ -58,7 +57,8 @@ CREATE TABLE "core_logs" (
 	"path" text DEFAULT 'localhost' NOT NULL,
 	"userAgent" text,
 	"statusCode" integer DEFAULT 500 NOT NULL,
-	"userId" bigint
+	"userId" bigint,
+	"test123" boolean DEFAULT false NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "core_logs" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint

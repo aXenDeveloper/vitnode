@@ -22,7 +22,7 @@ export const HeaderLayout = ({
   return (
     <header
       className={cn(
-        'bg-card/75 sticky top-0 z-20 w-full border-b shadow-sm backdrop-blur',
+        'bg-background/75 sticky top-0 z-20 w-full border-b shadow-sm backdrop-blur',
         className,
       )}
       {...props}

@@ -8,11 +8,14 @@
     },
     "db:migrate": {
       "dependsOn": ["^db:migrate"],
-      "cache": false
+      "persistent": true,
+      "cache": false,
+      "env": ["POSTGRES_URL"]
     },
     "db:push": {
       "dependsOn": ["^db:push"],
       "cache": false,
+      "persistent": true,
       "env": ["POSTGRES_URL"]
     },
     "build:plugins": {
