@@ -1,0 +1,32 @@
+---
+title: Popover
+description: A popover component for displaying additional content on user interaction.
+---
+
+## Preview
+
+<Preview name="popover" />
+
+## Usage
+
+```ts
+import { Button } from '@vitnode/core/components/ui/button';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@vitnode/core/components/ui/popover';
+```
+
+```tsx
+<Popover>
+  <PopoverTrigger asChild>
+    <Button variant="outline">Open</Button>
+  </PopoverTrigger>
+  <PopoverContent>Place content for the popover here.</PopoverContent>
+</Popover>
+```
+
+## API Reference
+
+[Radix UI - Popover](https://www.radix-ui.com/primitives/docs/components/popover#api-reference)

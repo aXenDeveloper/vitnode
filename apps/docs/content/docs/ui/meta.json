@@ -6,6 +6,8 @@
   "pages": [
     "index",
     "hooks",
+    "typography",
+    "colors",
     "not-found",
     "---Components---",
     "data-table",

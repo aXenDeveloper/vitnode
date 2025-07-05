@@ -1,0 +1,46 @@
+---
+title: Drawer
+description: A component for displaying content in a sliding panel.
+---
+
+## Preview
+
+<Preview name="drawer" />
+
+## Usage
+
+```ts
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@vitnode/core/components/ui/drawer';
+```
+
+```tsx
+<Drawer>
+  <DrawerTrigger>Open</DrawerTrigger>
+  <DrawerContent>
+    <DrawerHeader>
+      <DrawerTitle>Are you absolutely sure?</DrawerTitle>
+      <DrawerDescription>This action cannot be undone.</DrawerDescription>
+    </DrawerHeader>
+
+    <DrawerFooter>
+      <Button>Submit</Button>
+      <DrawerClose asChild>
+        <Button variant="outline">Cancel</Button>
+      </DrawerClose>
+    </DrawerFooter>
+  </DrawerContent>
+</Drawer>
+```
+
+## Documentation
+
+[Vaul - Documentation](https://vaul.emilkowal.ski/getting-started)

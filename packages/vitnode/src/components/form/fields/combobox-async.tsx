@@ -93,7 +93,7 @@ export function AutoFormComboboxAsync<T extends z.ZodTypeAny>({
               {field.value && field.value.label
                 ? field.value.label
                 : (placeholder ?? t('select_option'))}
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
             </Button>
           </FormControl>
         </PopoverTrigger>

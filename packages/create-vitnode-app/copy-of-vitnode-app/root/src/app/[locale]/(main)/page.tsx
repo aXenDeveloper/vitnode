@@ -31,9 +31,9 @@ export default function Page() {
             href="/admin"
             target="_blank"
           >
-            <Terminal className="mr-2 h-4 w-4" />
+            <Terminal className="mr-2 size-4" />
             Go to AdminCP
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <ArrowRight className="ml-2 size-4" />
           </Link>
 
           <Link
@@ -47,7 +47,7 @@ export default function Page() {
             rel="noopener noreferrer"
             target="_blank"
           >
-            <Book className="mr-2 h-4 w-4" />
+            <Book className="mr-2 size-4" />
             Read our Docs
           </Link>
 
@@ -63,7 +63,7 @@ export default function Page() {
             target="_blank"
           >
             <svg
-              className="mr-2 h-4 w-4"
+              className="mr-2 size-4"
               role="img"
               viewBox="0 0 24 24"
               xmlns="http://www.w3.org/2000/svg"

@@ -1,0 +1,34 @@
+---
+title: Tooltip
+description: A tooltip component for displaying additional information on hover or focus.
+---
+
+## Preview
+
+<Preview name="tooltip" />
+
+## Usage
+
+```ts
+import { Button } from '@vitnode/core/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@vitnode/core/components/ui/tooltip';
+```
+
+```tsx
+<Tooltip>
+  <TooltipTrigger asChild>
+    <Button variant="outline">Hover</Button>
+  </TooltipTrigger>
+  <TooltipContent>
+    <p>Add to library</p>
+  </TooltipContent>
+</Tooltip>
+```
+
+## API Reference
+
+[Radix UI - Tooltip](https://www.radix-ui.com/primitives/docs/components/tooltip#api-reference)

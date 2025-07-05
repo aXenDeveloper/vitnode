@@ -62,7 +62,7 @@ export default function HomePage() {
               target="_blank"
             >
               <svg
-                className="mr-2 h-4 w-4"
+                className="mr-2 size-4"
                 role="img"
                 viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
