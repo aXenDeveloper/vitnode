@@ -12,9 +12,10 @@ import {
 import { Loader } from '@vitnode/core/components/ui/loader';
 import { PlusIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import dynamic from 'next/dynamic';
 import React from 'react';
 
-const CreateEditActionPostsAdmin = React.lazy(async () =>
+const CreateEditActionPostsAdmin = dynamic(async () =>
   import('./create-edit/create-edit').then(module => ({
     default: module.CreateEditActionPostsAdmin,
   })),

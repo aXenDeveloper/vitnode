@@ -15,9 +15,6 @@ export interface LocaleConfig {
 export interface VitNodeConfig<
   AppLocales extends LocaleConfig[] = LocaleConfig[],
 > {
-  admin?: {
-    sidebarCookieName?: string;
-  };
   debug?: boolean;
   i18n: {
     defaultLocale: AppLocales[number]['code'];

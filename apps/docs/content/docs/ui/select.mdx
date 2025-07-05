@@ -3,10 +3,9 @@ title: Select
 description: Choose an option from a list of options.
 ---
 
-<Callout title="Shadcn UI">
-  This component is part of [Shadcn
-  UI](https://ui.shadcn.com/docs/components/select).
-</Callout>
+## Preview
+
+<Preview name="select" />
 
 ## Usage
 
@@ -34,9 +33,9 @@ const formSchema = z.object({
     {
       id: 'options',
       component: props => (
-        <AutoFormRadioGroup
-          description="By checking this box, you agree to the terms and conditions."
-          label="I agree to the terms and conditions"
+        <AutoFormSelect
+          description="Choose one of the options."
+          label="Select an option"
           labels={[
             {
               value: 'option1',

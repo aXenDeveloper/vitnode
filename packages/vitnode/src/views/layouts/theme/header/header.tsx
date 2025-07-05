@@ -31,7 +31,9 @@ export const HeaderLayout = ({
         <Link href="/">{logo}</Link>
 
         <div className="ml-auto flex items-center gap-2">
-          <LanguageSwitcher locales={vitNodeConfig.i18n.locales} />
+          {vitNodeConfig.i18n.locales.length > 1 && (
+            <LanguageSwitcher locales={vitNodeConfig.i18n.locales} />
+          )}
           <ThemeSwitcher />
           <React.Suspense fallback={<Skeleton className="h-9 w-32" />}>
             <UserHeader />

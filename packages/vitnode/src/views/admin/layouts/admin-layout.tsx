@@ -28,8 +28,8 @@ export const AdminLayout = async ({
   const session = await getSessionAdminApi();
   const cookieStore = await cookies();
   const defaultOpen =
-    cookieStore.get(vitNodeConfig.admin?.sidebarCookieName ?? 'sidebar_state')
-      ?.value === 'true';
+    !cookieStore.get('vitnode_admin_sidebar_state') ||
+    cookieStore.get('vitnode_admin_sidebar_state')?.value === 'true';
   if (!session) return null;
 
   const pluginNav: NavAdminParent[] = vitNodeConfig.plugins
@@ -63,7 +63,9 @@ export const AdminLayout = async ({
             <SidebarTrigger className="-ml-1" />
 
             <div className="ml-auto flex items-center justify-center gap-2 px-2">
-              <LanguageSwitcher locales={vitNodeConfig.i18n.locales} />
+              {vitNodeConfig.i18n.locales.length > 1 && (
+                <LanguageSwitcher locales={vitNodeConfig.i18n.locales} />
+              )}
               <ThemeSwitcher />
               <UserBarAdmin user={session.user} />
             </div>

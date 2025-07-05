@@ -1,12 +1,13 @@
 import type { Metadata } from 'next/dist/types';
 
 import { getTranslations } from 'next-intl/server';
+import dynamic from 'next/dynamic';
 import React from 'react';
 
 import { DataTableSkeleton } from '@vitnode/core/components/table/data-table';
 import { HeaderContent } from '@vitnode/core/components/ui/header-content';
 
-const UsersAdminView = React.lazy(async () =>
+const UsersAdminView = dynamic(async () =>
   import('@vitnode/core/views/admin/views/core/users/users-admin-view').then(module => ({
     default: module.UsersAdminView,
   })),

@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import dynamic from 'next/dynamic';
 import React from 'react';
 
 import { I18nProvider } from '@/components/i18n-provider';
@@ -6,7 +7,7 @@ import { DataTableSkeleton } from '@/components/table/data-table';
 import { HeaderContent } from '@/components/ui/header-content';
 import { ClearCacheAction } from '@/views/admin/views/core/debug/actions/clear-cache/clear-cache';
 
-const SystemLogsView = React.lazy(async () =>
+const SystemLogsView = dynamic(async () =>
   import('@/views/admin/views/core/debug/system-logs/system-logs-view').then(
     module => ({
       default: module.SystemLogsView,

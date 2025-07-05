@@ -1,13 +1,36 @@
 import { Loader } from '@vitnode/core/components/ui/loader';
+import { cn } from '@vitnode/core/lib/utils';
+import dynamic from 'next/dynamic';
 import React from 'react';
 
-export const Preview = ({ name }: { name: string }) => {
-  const Component = React.lazy(
-    async () => import(`../../examples/${name}.tsx`),
-  );
+export const Preview = ({
+  name,
+  className,
+  withoutBackground,
+}: {
+  className?: string;
+  name: string;
+  withoutBackground?: boolean;
+}) => {
+  const Component = dynamic(async () => import(`../../examples/${name}.tsx`));
+
+  if (withoutBackground) {
+    return (
+      <div className="[&_p]:m-0 [&_table]:my-0 [&_table]:rounded-md [&_table]:border-none [&_table]:bg-transparent">
+        <React.Suspense fallback={<Loader />}>
+          <Component />
+        </React.Suspense>
+      </div>
+    );
+  }
 
   return (
-    <div className="from-fd-primary/10 flex items-center justify-center rounded-xl border bg-gradient-to-br p-4 *:max-w-[16rem]">
+    <div
+      className={cn(
+        'from-fd-primary/1 bg-card/50 flex items-center justify-center rounded-xl border bg-gradient-to-br p-6 [&_p]:m-0',
+        className,
+      )}
+    >
       <React.Suspense fallback={<Loader />}>
         <Component />
       </React.Suspense>

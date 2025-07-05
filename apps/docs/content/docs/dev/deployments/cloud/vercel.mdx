@@ -18,6 +18,31 @@ description: How to deploy your Vitnode app on Vercel.
 <Steps>
 <Step>
 
+### Generate migrations
+
+Run the following command to generate migrations for your Vitnode project:
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+<Tabs groupId='package-manager' persist items={['pnpm', 'bun', 'npm']} label='Generate Migrations'>
+
+```bash tab="pnpm"
+pnpm db:migrate
+```
+
+```bash tab="bun"
+bun db:migrate
+```
+
+```bash tab="npm"
+npm run db:migrate
+```
+
+</Tabs>
+
+</Step>
+<Step>
+
 ### Upload your project / changes to Git
 
 Make sure your Vitnode project is pushed to a Git repository.
@@ -38,4 +63,3 @@ Click on "New Project" in your Vercel dashboard. Select the repository where you
 
 </Step>
 </Steps>
-```

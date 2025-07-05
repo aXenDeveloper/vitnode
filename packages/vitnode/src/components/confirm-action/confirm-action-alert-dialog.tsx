@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import dynamic from 'next/dynamic';
 import React from 'react';
 
 import {
@@ -13,7 +14,7 @@ import {
   AlertDialogTrigger,
 } from '../ui/alert-dialog';
 
-const ContentConfirmAction = React.lazy(async () =>
+const ContentConfirmAction = dynamic(async () =>
   import('./content').then(module => ({
     default: module.ContentConfirmAction,
   })),

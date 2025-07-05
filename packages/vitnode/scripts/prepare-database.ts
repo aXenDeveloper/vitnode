@@ -52,7 +52,6 @@ export const runPush = async () => {
 };
 
 export const initialDataForDatabase = async () => {
-  await runPush();
   const [roleCount] = await dbClient
     .select({
       count: count(),

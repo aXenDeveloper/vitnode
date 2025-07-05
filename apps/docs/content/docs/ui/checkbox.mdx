@@ -3,10 +3,9 @@ title: Checkbox
 description: Toggle between checked and unchecked states.
 ---
 
-<Callout title="Shadcn UI">
-  This component is part of [Shadcn
-  UI](https://ui.shadcn.com/docs/components/checkbox).
-</Callout>
+## Preview
+
+<Preview name="checkbox" />
 
 ## Usage
 
@@ -23,7 +22,7 @@ import { AutoFormCheckbox } from '@vitnode/core/components/form/fields/checkbox'
 
 ```ts
 const formSchema = z.object({
-  acceptTerms: z.boolean().refine(val => val === true, {
+  acceptTerms: z.boolean().refine(val => val, {
     message: 'You must accept the terms and conditions',
   }),
 });

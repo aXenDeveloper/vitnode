@@ -2,6 +2,7 @@
 
 import { SearchIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import dynamic from 'next/dynamic';
 import React from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-const ContentMoreActionSystemLogs = React.lazy(async () =>
+const ContentMoreActionSystemLogs = dynamic(async () =>
   import('./content').then(module => ({
     default: module.ContentMoreActionSystemLogs,
   })),

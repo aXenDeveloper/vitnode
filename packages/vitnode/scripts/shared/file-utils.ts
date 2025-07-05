@@ -120,6 +120,19 @@ export const transformFileImports = (
     },
   );
 
+  // Handle Next.js dynamic() imports with @/ paths
+  // Example: dynamic(() => import('@/some/path'))
+  transformedContent = transformedContent.replace(
+    /dynamic\s*\(\s*\(\s*=>\s*import\s*\(\s*['"](@\/[^'"]*)['"]\s*\)\s*\)\s*\)/g,
+    (match, importPath: string) => {
+      const cleanPath = importPath
+        .replace(/^@\//, '')
+        .replace(jsExtensionRegex, '');
+
+      return match.replace(importPath, `${pluginName}/${cleanPath}`);
+    },
+  );
+
   return transformedContent;
 };
 

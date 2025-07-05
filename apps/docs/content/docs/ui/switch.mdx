@@ -3,10 +3,9 @@ title: Switch
 description: Toggle between checked and unchecked states.
 ---
 
-<Callout title="Shadcn UI">
-  This component is part of [Shadcn
-  UI](https://ui.shadcn.com/docs/components/switch).
-</Callout>
+## Preview
+
+<Preview name="switch" />
 
 ## Usage
 
@@ -18,12 +17,12 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 ```ts
 import { z } from 'zod';
 import { AutoForm } from '@vitnode/core/components/form/auto-form';
-import { AutoFormCheckbox } from '@vitnode/core/components/form/fields/checkbox';
+import { AutoFormSwitch } from '@vitnode/core/components/form/fields/switch';
 ```
 
 ```ts
 const formSchema = z.object({
-  acceptTerms: z.boolean().refine(val => val === true, {
+  acceptTerms: z.boolean().refine(val => val, {
     message: 'You must accept the terms and conditions',
   }),
 });
@@ -36,10 +35,7 @@ const formSchema = z.object({
     {
       id: 'acceptTerms',
       component: props => (
-        <AutoFormCheckbox
-          label="I accept the terms and conditions"
-          {...props}
-        />
+        <AutoFormSwitch label="I accept the terms and conditions" {...props} />
       ),
     },
   ]}

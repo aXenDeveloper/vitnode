@@ -1,3 +1,6 @@
+'use client';
+
+import { Button } from '@vitnode/core/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +13,9 @@ import {
 export default function DropdownMenuExample() {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger>Open</DropdownMenuTrigger>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline">Open</Button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuLabel>My Account</DropdownMenuLabel>
         <DropdownMenuSeparator />

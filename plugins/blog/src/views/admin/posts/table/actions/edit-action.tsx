@@ -18,9 +18,10 @@ import {
 } from '@vitnode/core/components/ui/tooltip';
 import { PencilIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import dynamic from 'next/dynamic';
 import React from 'react';
 
-const CreateEditActionPostsAdmin = React.lazy(async () =>
+const CreateEditActionPostsAdmin = dynamic(async () =>
   import('../../actions/create-edit/create-edit').then(mod => ({
     default: mod.CreateEditActionPostsAdmin,
   })),
