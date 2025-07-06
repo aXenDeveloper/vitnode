@@ -1,11 +1,31 @@
 ---
-title: Single Sign-On (SSO)
-description: Learn how to implement custom Single Sign-On providers in VitNode
+title: Overview
+description: Single Sign-On (SSO) simplifies the user experience by allowing access to multiple systems with a single authentication process.
 ---
 
-## Getting Started
+## How it works
 
-Want to let your users sign in with their favorite services? Let's build a custom SSO provider! We'll use Discord as an example, but you can adapt this guide for any OAuth2 provider.
+1. The user clicks on the SSO button.
+2. The user is redirected to the SSO provider's login page.
+3. The user logs in.
+4. The user is redirected back to your application with a token.
+5. Your application verifies the token and logs in the user.
+
+## Adapters
+
+Before you can use SSO, you need to provide an adapter to your application.
+
+<Cards>
+  <Card title="Discord" href="/docs/dev/sso/discord" />
+  <Card title="Facebook" href="/docs/dev/sso/facebook" />
+  <Card title="Google" href="/docs/dev/sso/google" />
+</Cards>
+
+or create your own custom SSO adapter...
+
+## Custom SSO Adapter
+
+Want to let your users sign in with their favorite services? Let's build a custom SSO adapter! We'll use Discord as an example, but you can adapt this guide for any OAuth2 provider.
 
 import { Callout } from 'fumadocs-ui/components/callout';
 

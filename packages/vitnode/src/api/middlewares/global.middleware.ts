@@ -2,9 +2,13 @@ import type { Context, Env, Next } from 'hono';
 
 import { HTTPException } from 'hono/http-exception';
 
-import type { EmailApiPlugin } from '@/api/models/email';
 import type { VitNodeApiConfig, VitNodeConfig } from '@/vitnode.config';
 
+import {
+  type EmailApiPlugin,
+  EmailModel,
+  type EmailModelSendArgs,
+} from '@/api/models/email';
 import { SessionModel } from '@/api/models/session';
 import { SessionAdminModel } from '@/api/models/session-admin';
 
@@ -53,6 +57,9 @@ interface EnvVariablesVitNode {
     };
   };
   db: Pick<VitNodeApiConfig, 'dbProvider'>['dbProvider'];
+  email: {
+    send: (args: EmailModelSendArgs) => Promise<void>;
+  };
   ipAddress: string;
   log: LoggerMiddlewareType;
   plugin: {
@@ -134,6 +141,7 @@ export const globalMiddleware = ({
     // Fallback to localhost if nothing found
     c.set('ipAddress', ipAddress ?? '127.0.0.1');
     c.set('db', dbProvider);
+    c.set('email', new EmailModel(c));
 
     c.set('core', {
       metadata,

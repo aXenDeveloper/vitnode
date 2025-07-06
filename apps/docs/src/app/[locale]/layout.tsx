@@ -10,6 +10,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 
 import { vitNodeConfig } from '@/vitnode.config';
 
+import SearchDialogFumadocs from '../../components/fumadocs/search-dialog';
 import { Body } from './(main)/layout.client';
 
 const geistSans = Geist({
@@ -36,7 +37,11 @@ export default async function LocaleLayout(props: RootLayoutProps) {
       <Body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <RootProvider>
+        <RootProvider
+          search={{
+            SearchDialog: SearchDialogFumadocs,
+          }}
+        >
           <RootLayout config={vitNodeConfig} {...props} />
         </RootProvider>
       </Body>

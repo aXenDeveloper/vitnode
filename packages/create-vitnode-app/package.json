@@ -28,18 +28,18 @@
     "typescript"
   ],
   "dependencies": {
-    "@inquirer/prompts": "^7.5.3",
+    "@inquirer/prompts": "^7.6.0",
     "commander": "^14.0.0",
     "ora": "^8.2.0",
     "picocolors": "^1.1.1",
     "validate-npm-package-name": "^6.0.1"
   },
   "devDependencies": {
-    "@types/node": "^24",
+    "@types/node": "^24.0.10",
     "@types/prompts": "^2.4.9",
     "@types/validate-npm-package-name": "^4.0.2",
     "@vitnode/eslint-config": "workspace:*",
-    "eslint": "^9.29.0",
+    "eslint": "^9.30.1",
     "typescript": "^5.8.3"
   }
 }

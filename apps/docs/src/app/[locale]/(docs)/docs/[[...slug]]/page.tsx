@@ -1,4 +1,5 @@
 import { redirect } from '@vitnode/core/lib/navigation';
+import { getBreadcrumbItems } from 'fumadocs-core/breadcrumb';
 import { Step, Steps } from 'fumadocs-ui/components/steps';
 import defaultMdxComponents from 'fumadocs-ui/mdx';
 import { DocsBody, DocsPage } from 'fumadocs-ui/page';
@@ -61,8 +62,14 @@ export async function generateMetadata(props: {
   const page = source.getPage(params.slug);
   if (!page) notFound();
 
+  const breadcrumb = getBreadcrumbItems(page.url, source.pageTree, {});
+  const lastItemsBreadcrumb = breadcrumb
+    .slice(0, -1)
+    .reverse()
+    .map(item => item.name as string);
+
   return {
-    title: page.data.title,
+    title: `${page.data.title}${lastItemsBreadcrumb.length > 0 ? ` - ${lastItemsBreadcrumb.join(' - ')}` : ''}`,
     description: page.data.description,
   };
 }

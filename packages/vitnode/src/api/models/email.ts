@@ -12,6 +12,13 @@ export interface EmailApiPlugin {
   }) => Promise<void>;
 }
 
+export interface EmailModelSendArgs {
+  html: string;
+  replyTo?: string;
+  subject: string;
+  to: string;
+}
+
 export class EmailModel {
   constructor(c: Context) {
     this.c = c;
@@ -19,7 +26,7 @@ export class EmailModel {
 
   protected readonly c: Context;
 
-  send(args: { html: string; replyTo?: string; subject: string; to: string }) {
+  async send(args: EmailModelSendArgs) {
     const core = this.c.get('core');
     const provider = core.emailAdapter;
     if (!provider) {
@@ -28,7 +35,7 @@ export class EmailModel {
       });
     }
 
-    void provider
+    await provider
       .sendEmail({
         ...args,
         metadata: core.metadata,
