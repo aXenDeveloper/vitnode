@@ -31,12 +31,14 @@ export const vitNodeApiConfig = buildApiConfig({
     points: 20, // 20 requests
     duration: 60, // per 60 seconds
   },
-  emailAdapter: NodemailerEmailAdapter({
-    from: process.env.NODE_MAILER_FROM,
-    host: process.env.NODE_MAILER_HOST,
-    password: process.env.NODE_MAILER_PASSWORD,
-    user: process.env.NOD_EMAILER_USER,
-  }),
+  email: {
+    adapter: NodemailerEmailAdapter({
+      from: process.env.NODE_MAILER_FROM,
+      host: process.env.NODE_MAILER_HOST,
+      password: process.env.NODE_MAILER_PASSWORD,
+      user: process.env.NOD_EMAILER_USER,
+    }),
+  },
   authorization: {
     ssoAdapters: [
       DiscordSSOApiPlugin({

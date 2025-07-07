@@ -23,7 +23,7 @@ export interface EnvVitNode extends Env {
   Variables: EnvVariablesVitNode;
 }
 
-interface EnvVariablesVitNode {
+export interface EnvVariablesVitNode {
   admin: null | {
     user: {
       avatarColor: string;
@@ -50,7 +50,15 @@ interface EnvVariablesVitNode {
       ssoAdapters: SSOApiPlugin[];
     };
     captcha?: Pick<VitNodeApiConfig, 'captcha'>['captcha'];
-    emailAdapter?: EmailApiPlugin;
+    email?: {
+      adapter?: EmailApiPlugin;
+      options?: {
+        logo?: {
+          className?: string;
+          src: Blob | string;
+        };
+      };
+    };
     metadata: {
       shortTitle?: string;
       title: string;
@@ -87,12 +95,12 @@ declare module 'hono' {
 export const globalMiddleware = ({
   authorization,
   metadata,
-  emailAdapter,
+  email,
   dbProvider,
   captcha,
 }: Pick<
   VitNodeApiConfig,
-  'authorization' | 'captcha' | 'dbProvider' | 'emailAdapter'
+  'authorization' | 'captcha' | 'dbProvider' | 'email'
 > &
   Pick<VitNodeConfig, 'metadata'>) => {
   return async (c: Context, next: Next) => {
@@ -145,7 +153,7 @@ export const globalMiddleware = ({
 
     c.set('core', {
       metadata,
-      emailAdapter,
+      email,
       authorization: {
         cookieName: authorization?.cookieName ?? 'vitnode_auth',
         cookie_expires:

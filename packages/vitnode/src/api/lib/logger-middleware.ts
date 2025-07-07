@@ -6,9 +6,9 @@ import { core_logs } from '@/database/logs';
 type CoreLogsType = 'debug' | 'error' | 'warn';
 
 export interface LoggerMiddlewareType {
-  debug: (content: string) => void;
-  error: (content: string) => void;
-  warn: (content: string) => void;
+  debug: (content: string) => Promise<void>;
+  error: (content: string) => Promise<void>;
+  warn: (content: string) => Promise<void>;
 }
 
 export const loggerMiddleware = (c: Context): LoggerMiddlewareType => {
@@ -49,14 +49,14 @@ export const loggerMiddleware = (c: Context): LoggerMiddlewareType => {
   };
 
   return {
-    debug: (content: string) => {
-      void logToDbAndConsole(content, 'debug');
+    debug: async (content: string) => {
+      await logToDbAndConsole(content, 'debug');
     },
-    error: (content: string) => {
-      void logToDbAndConsole(content, 'error');
+    error: async (content: string) => {
+      await logToDbAndConsole(content, 'error');
     },
-    warn: (content: string) => {
-      void logToDbAndConsole(content, 'warn');
+    warn: async (content: string) => {
+      await logToDbAndConsole(content, 'warn');
     },
   };
 };

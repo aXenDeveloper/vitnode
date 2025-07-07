@@ -61,7 +61,7 @@ export function VitNodeAPI({
   app.use(
     '*',
     globalMiddleware({
-      emailAdapter: vitNodeApiConfig.emailAdapter,
+      email: vitNodeApiConfig.email,
       metadata: vitNodeConfig.metadata,
       authorization: vitNodeApiConfig.authorization,
       dbProvider: vitNodeApiConfig.dbProvider,
@@ -76,12 +76,12 @@ export function VitNodeAPI({
     return next();
   });
 
-  app.onError((error, c) => {
+  app.onError(async (error, c) => {
     if (error instanceof HTTPException) {
       return error.getResponse();
     }
 
-    c.get('log').error(`Unhandled error: ${error.message}`);
+    await c.get('log').error(`Unhandled error: ${error.message}`);
 
     return new Response(
       process.env.NODE_ENV === 'development'

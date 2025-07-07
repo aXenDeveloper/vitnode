@@ -3,6 +3,33 @@ title: Badge
 description: Display small labels or indicators.
 ---
 
-<Callout type="warn" title="This documentation is under construction! 🚧">
-  We're working hard to bring you the best documentation experience.
-</Callout>
+## Preview
+
+<Preview name="badge" />
+
+## Usage
+
+```ts
+import { Home } from 'lucide-react';
+import { Badge } from '@vitnode/core/components/ui/badge';
+```
+
+```tsx
+<Badge>
+  <Home /> Default
+</Badge>
+```
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    variant: {
+      description: 'The variant of the badge.',
+      type: 'default | secondary | outline | destructive',
+      default: 'default',
+    },
+  }}
+/>

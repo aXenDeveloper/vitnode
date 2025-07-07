@@ -7,7 +7,7 @@
     "db:push": "vitnode push",
     "db:migrate": "vitnode migrate",
     "dev": "vitnode init && next dev --turbopack",
-    "dev:email": "email dev",
+    "dev:email": "email dev --dir src/emails",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint .",

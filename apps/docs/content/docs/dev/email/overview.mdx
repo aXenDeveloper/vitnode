@@ -26,9 +26,9 @@ export const testRoute = buildRoute({
   handler: async c => {
     // [!code ++:5]
     await c.get('email').send({
-      html: '<p>Test email</p>',
       to: 'test@test.com',
       subject: 'Test Email',
+      content: 'This is a test email.',
     });
 
     return c.text('test');
@@ -49,11 +49,7 @@ Here is your template for a custom email adapter.
 ```ts title="src/utils/email/mailer.ts"
 import type { EmailApiPlugin } from '@vitnode/core/api/models/email';
 
-export const MailerEmailAdapter = (): EmailApiPlugin => {
-  return {
-    sendEmail: async ({ metadata, to, subject, html, replyTo }) => {},
-  };
-};
+export const MailerEmailAdapter = (): EmailApiPlugin => {};
 ```
 
 </Step>
@@ -112,7 +108,7 @@ export const MailerEmailAdapter = ({
 }): EmailApiPlugin => {
   // [!code ++:3]
   return {
-    sendEmail: async ({ metadata, to, subject, html, replyTo }) => {},
+    sendEmail: async ({ metadata, to, subject, html, replyTo, text }) => {},
   };
 };
 ```

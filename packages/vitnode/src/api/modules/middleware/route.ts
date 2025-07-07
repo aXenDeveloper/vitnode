@@ -36,7 +36,7 @@ export const routeMiddleware = buildRoute({
 
     return c.json(
       {
-        isEmail: !!c.get('core').emailAdapter,
+        isEmail: !!c.get('core').email?.adapter,
         sso: sso.map(s => ({ id: s.id, name: s.name })),
         captcha: c.get('core').captcha
           ? {

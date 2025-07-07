@@ -1,7 +1,9 @@
+import { render } from '@react-email/components';
 import { z } from 'zod';
 
 import { buildRoute } from '@/api/lib/route';
 import { CONFIG_PLUGIN } from '@/config';
+import DefaultTemplate from '@/emails/default-template';
 
 export const testRoute = buildRoute({
   ...CONFIG_PLUGIN,
@@ -30,14 +32,14 @@ export const testRoute = buildRoute({
   },
   handler: async c => {
     await c.get('email').send({
-      html: '<p>Test email</p>',
       to: 'ithereplay@gmail.com',
       subject: 'Test Email',
+      content: 'This is a test email',
     });
 
     // throw new Error('Test error');
 
-    c.get('log').warn('This is a test warn log');
+    await c.get('log').warn('This is a test warn log');
 
     return c.text('test');
   },

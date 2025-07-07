@@ -17,8 +17,8 @@ import { buildRoute } from '@vitnode/core/api/lib/route';
 export const testRoute = buildRoute(
   {},
   {
-    handler: c => {
-      c.get('log').warn('This is a test warn log'); // [!code ++]
+    handler: async c => {
+      await c.get('log').warn('This is a test warn log'); // [!code ++]
 
       return c.text('test');
     },
@@ -33,15 +33,15 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 <Tabs id='logging-variants' persist items={['Debug', 'Warn', 'Error']}>
 
 ```ts tab="Debug"
-c.get('log').debug('This is a test debug log');
+await c.get('log').debug('This is a test debug log');
 ```
 
 ```ts tab="Warn"
-c.get('log').warn('This is a test warning log');
+await c.get('log').warn('This is a test warning log');
 ```
 
 ```ts tab="Error"
-c.get('log').error('This is a test error log');
+await c.get('log').error('This is a test error log');
 ```
 
 </Tabs>
