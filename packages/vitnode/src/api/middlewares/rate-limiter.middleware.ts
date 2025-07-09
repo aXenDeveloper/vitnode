@@ -18,7 +18,7 @@ const createRateLimiter = ({
 
   return new RateLimiterMemory({
     keyPrefix,
-    points: CONFIG.node_development ? 120 : (options?.points ?? 80), // 120 req in dev, 80 in prod
+    points: options?.points ?? 80, // 80 in prod
     duration: options?.duration ?? 60, // per 60 seconds
     ...options,
   });
@@ -27,6 +27,13 @@ const createRateLimiter = ({
 export const rateLimiterMiddleware = (
   options?: Omit<IRateLimiterOptions, 'keyPrefix'>,
 ) => {
+  if (CONFIG.node_development) {
+    // In development, we disable the rate limiter for easier testing
+    return async (c: Context, next: Next) => {
+      await next();
+    };
+  }
+
   const rateLimiter = createRateLimiter({
     ...options,
     keyPrefix: 'vitnode-api-rate-limiter',
@@ -37,10 +44,10 @@ export const rateLimiterMiddleware = (
 
     try {
       await rateLimiter.consume(key);
-
-      await next();
     } catch {
       return c.text('Too Many Requests', 429);
     }
+
+    await next();
   };
 };

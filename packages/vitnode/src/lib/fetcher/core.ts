@@ -92,8 +92,8 @@ export async function coreFetcher<
 
   // Construct the base URL
   const url = new URL(
-    `/api/${pluginId}${prefixPath}/${module}${formattedPath}`,
-    CONFIG.backend.origin,
+    `/api/${pluginId}${prefixPath}/${module}${formattedPath === '/' ? '' : formattedPath}`,
+    CONFIG.api.origin,
   );
 
   // Add query parameters if they exist
@@ -121,6 +121,13 @@ export async function coreFetcher<
     body: args && 'body' in args ? JSON.stringify(args.body) : undefined,
     ...options,
   });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `${response.status} - ${url.toString()}\n${response.statusText ?? errorText}`,
+    );
+  }
 
   return response as InferResponseType<
     M,

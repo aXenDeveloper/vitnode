@@ -7,6 +7,7 @@ import color from 'picocolors';
 import { getAvailablePackageManagers } from './helpers/get-available-package-managers.js';
 
 export interface CreateCliReturn {
+  apiMonorepo?: boolean;
   docker?: boolean;
   eslint: boolean;
   install: boolean;
@@ -22,6 +23,7 @@ export const createQuestionsCli = async (
     eslint: optionsFromProgram.eslint,
     install: !optionsFromProgram.skipInstall,
     docker: optionsFromProgram.docker,
+    apiMonorepo: optionsFromProgram.apiMonorepo,
   };
 
   if (!optionsFromProgram.packageManager) {
@@ -57,6 +59,13 @@ export const createQuestionsCli = async (
   if (optionsFromProgram.docker === undefined) {
     options.docker = await confirm({
       message: `Would you like to use ${color.blue('Docker Container')}?`,
+    });
+  }
+
+  if (optionsFromProgram.apiMonorepo === undefined) {
+    options.apiMonorepo = await confirm({
+      message: `Would you like to set up a monorepo with separate ${color.blue('API (Hono.js)')} and ${color.blue('web (Next.js)')} projects?`,
+      default: false,
     });
   }
 

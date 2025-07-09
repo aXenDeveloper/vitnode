@@ -22,6 +22,7 @@ export const createVitNode = async ({
   eslint,
   install,
   docker,
+  apiMonorepo,
 }: CreateCliReturn & {
   appName: string;
   root: string;
@@ -69,6 +70,7 @@ export const createVitNode = async ({
     packageManager,
     eslint,
     docker,
+    apiMonorepo,
   });
 
   if (docker) {

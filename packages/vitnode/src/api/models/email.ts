@@ -48,7 +48,7 @@ export class EmailModel {
         children: content,
         metadata: {
           ...core.metadata,
-          url: CONFIG.frontend.href,
+          url: CONFIG.web.href,
         },
         logo: core.email?.options?.logo,
       });

@@ -33,6 +33,82 @@ importers:
         specifier: ^3.25.74
         version: 3.25.74
 
+  apps/api:
+    dependencies:
+      '@hono/zod-openapi':
+        specifier: ^0.19.8
+        version: 0.19.9(hono@4.8.4)(zod@3.25.74)
+      '@hono/zod-validator':
+        specifier: ^0.7.0
+        version: 0.7.0(hono@4.8.4)(zod@3.25.74)
+      '@react-email/components':
+        specifier: ^0.1.1
+        version: 0.1.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@vitnode/core':
+        specifier: workspace:*
+        version: link:../../packages/vitnode
+      drizzle-kit:
+        specifier: ^0.31.3
+        version: 0.31.4
+      drizzle-orm:
+        specifier: ^0.44.2
+        version: 0.44.2(@neondatabase/serverless@0.10.4)(@types/pg@8.11.10)(gel@2.1.0)(pg@8.13.1)(postgres@3.4.7)
+      hono:
+        specifier: ^4.8.3
+        version: 4.8.4
+      next-intl:
+        specifier: ^4.3.1
+        version: 4.3.4(next@15.3.5(@playwright/test@1.53.2)(babel-plugin-react-compiler@19.1.0-rc.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)(typescript@5.8.3)
+      react:
+        specifier: ^19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: ^19.1.0
+        version: 19.1.0(react@19.1.0)
+      zod:
+        specifier: ^3.25.67
+        version: 3.25.74
+    devDependencies:
+      '@hono/node-server':
+        specifier: ^1.15.0
+        version: 1.15.0(hono@4.8.4)
+      '@types/node':
+        specifier: ^24
+        version: 24.0.10
+      '@types/react':
+        specifier: ^19.1
+        version: 19.1.8
+      '@types/react-dom':
+        specifier: ^19.1
+        version: 19.1.6(@types/react@19.1.8)
+      '@vitnode/eslint-config':
+        specifier: workspace:*
+        version: link:../../packages/eslint
+      dotenv:
+        specifier: ^17.1.0
+        version: 17.1.0
+      eslint:
+        specifier: ^9.29.0
+        version: 9.30.1(jiti@2.4.2)
+      prettier:
+        specifier: ^3.6.1
+        version: 3.6.2
+      prettier-plugin-tailwindcss:
+        specifier: ^0.6.12
+        version: 0.6.13(prettier-plugin-astro@0.7.2)(prettier@3.6.2)
+      react-email:
+        specifier: ^4.0.17
+        version: 4.0.17(@playwright/test@1.53.2)(babel-plugin-react-compiler@19.1.0-rc.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
+      tsx:
+        specifier: ^4.20.3
+        version: 4.20.3
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+
   apps/docs:
     dependencies:
       '@hono/zod-openapi':
@@ -123,9 +199,6 @@ importers:
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
-      dotenv:
-        specifier: ^17.0.1
-        version: 17.0.1
       eslint:
         specifier: ^9.30.1
         version: 9.30.1(jiti@2.4.2)
@@ -248,9 +321,6 @@ importers:
       cmdk:
         specifier: ^1.1.1
         version: 1.1.1(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      dotenv:
-        specifier: ^17.0.1
-        version: 17.0.1
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -336,6 +406,9 @@ importers:
       concurrently:
         specifier: ^9.2.0
         version: 9.2.0
+      dotenv:
+        specifier: ^17.1.0
+        version: 17.1.0
       drizzle-kit:
         specifier: ^0.31.4
         version: 0.31.4
@@ -1052,6 +1125,12 @@ packages:
     peerDependencies:
       fumadocs-core: ^14.0.0 || ^15.0.0
       react: 18.x.x || 19.x.x
+
+  '@hono/node-server@1.15.0':
+    resolution: {integrity: sha512-MjmK4l5N4dQpZ9OSWN0tCj7ejuc7WvuWMzSKtc89bnknJykAeHxzRigXBTYZk85H6Awrii6RM59iUiUluApu2A==}
+    engines: {node: '>=18.14.1'}
+    peerDependencies:
+      hono: ^4
 
   '@hono/swagger-ui@0.5.2':
     resolution: {integrity: sha512-7wxLKdb8h7JTdZ+K8DJNE3KXQMIpJejkBTQjrYlUWF28Z1PGOKw6kUykARe5NTfueIN37jbyG/sBYsbzXzG53A==}
@@ -3548,8 +3627,8 @@ packages:
   domutils@3.2.2:
     resolution: {integrity: sha512-6kZKyUajlDuqlHKVX1w7gyslj9MPIXzIFiz/rGu35uC1wMi+kMhQwGhl4lt9unC9Vb9INnY9Z3/ZA3+FhASLaw==}
 
-  dotenv@17.0.1:
-    resolution: {integrity: sha512-GLjkduuAL7IMJg/ZnOPm9AnWKJ82mSE2tzXLaJ/6hD6DhwGfZaXG77oB8qbReyiczNxnbxQKyh0OE5mXq0bAHA==}
+  dotenv@17.1.0:
+    resolution: {integrity: sha512-tG9VUTJTuju6GcXgbdsOuRhupE8cb4mRgY5JLRCh4MtGoVo3/gfGUtOMwmProM6d0ba2mCFvv+WrpYJV6qgJXQ==}
     engines: {node: '>=12'}
 
   drizzle-kit@0.31.4:
@@ -7256,6 +7335,10 @@ snapshots:
       - supports-color
     optional: true
 
+  '@hono/node-server@1.15.0(hono@4.8.4)':
+    dependencies:
+      hono: 4.8.4
+
   '@hono/swagger-ui@0.5.2(hono@4.8.4)':
     dependencies:
       hono: 4.8.4
@@ -9756,7 +9839,7 @@ snapshots:
       domelementtype: 2.3.0
       domhandler: 5.0.3
 
-  dotenv@17.0.1: {}
+  dotenv@17.1.0: {}
 
   drizzle-kit@0.31.4:
     dependencies:

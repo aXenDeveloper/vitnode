@@ -51,7 +51,6 @@
     "@types/react-dom": "^19.1.6",
     "@vitnode/eslint-config": "workspace:*",
     "class-variance-authority": "^0.7.1",
-    "dotenv": "^17.0.1",
     "eslint": "^9.30.1",
     "postcss": "^8.5.6",
     "react-email": "^4.0.17",

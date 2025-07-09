@@ -1,27 +1,15 @@
 /* eslint-disable no-console */
 
-import * as dotenv from 'dotenv';
 import { count } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { join } from 'path';
 
 import { core_admin_permissions } from '@/database/admins.js';
 import { core_languages, core_languages_words } from '@/database/languages.js';
 import { core_moderators_permissions } from '@/database/moderators.js';
 import { core_roles } from '@/database/roles.js';
 
+import { getConfig } from './get-config.js';
 import { preparePluginsFiles } from './prepare-plugins-files.js';
 import { runInteractiveShellCommand } from './run-interactive-shell-command.js';
-
-dotenv.config({
-  path: join(process.cwd(), '..', '..', '.env'),
-});
-
-const dbClient = drizzle({
-  connection:
-    process.env.POSTGRES_URL ?? 'postgresql://root:root@localhost:5432/vitnode',
-  casing: 'camelCase',
-});
 
 export const generateDatabaseMigrations = async () => {
   try {
@@ -52,6 +40,9 @@ export const runPush = async () => {
 };
 
 export const initialDataForDatabase = async () => {
+  const config = await getConfig({ type: 'api.config' });
+  const dbClient = config.dbProvider;
+
   const [roleCount] = await dbClient
     .select({
       count: count(),
@@ -164,10 +155,10 @@ export const prepareDatabase = async ({
 }) => {
   console.log(`${initMessage} [1/4] Prepare plugins files...`);
   await preparePluginsFiles();
-  console.log(`${initMessage} [2/4] Generate migrations...`);
-  await generateDatabaseMigrations();
-  console.log(`${initMessage} [3/4] Run migrations...`);
-  await runMigrations();
+  // console.log(`${initMessage} [2/4] Generate migrations...`);
+  // await generateDatabaseMigrations();
+  // console.log(`${initMessage} [3/4] Run migrations...`);
+  // await runMigrations();
   console.log(`\n${initMessage} [4/4] Insert initial data...`);
   await initialDataForDatabase();
   console.log(`${initMessage} \x1b[32mDatabase prepared successfully.\x1b[0m`);

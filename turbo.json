@@ -10,28 +10,29 @@
       "dependsOn": ["^db:migrate"],
       "persistent": true,
       "cache": false,
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "env": ["POSTGRES_URL"]
     },
     "db:push": {
       "dependsOn": ["^db:push"],
       "cache": false,
       "persistent": true,
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "env": ["POSTGRES_URL"]
     },
     "build:plugins": {
       "dependsOn": ["^build:plugins"],
-      "inputs": ["$TURBO_DEFAULT$"],
       "outputs": ["dist/**"]
     },
     "build": {
       "dependsOn": ["^build:plugins", "^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
-      "env": ["POSTGRES_URL"]
+      "env": ["POSTGRES_URL", "NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_WEB_URL"]
     },
     "build:scripts": {
       "dependsOn": ["^build:scripts"],
-      "inputs": ["$TURBO_DEFAULT$"],
+      "cache": false,
       "outputs": ["dist/**"]
     },
     "lint": {
@@ -43,7 +44,8 @@
     "dev": {
       "cache": false,
       "persistent": true,
-      "env": ["POSTGRES_URL"]
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "env": ["POSTGRES_URL", "NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_WEB_URL"]
     },
     "start": {
       "dependsOn": ["^start"]

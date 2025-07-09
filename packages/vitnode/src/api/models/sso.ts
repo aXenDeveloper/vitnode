@@ -25,7 +25,7 @@ export interface SSOApiPlugin {
 }
 
 export const getRedirectUri = (code: string) =>
-  new URL(`${CONFIG.frontend.href}login/sso/${code}`).toString();
+  new URL(`${CONFIG.web.href}login/sso/${code}`).toString();
 
 export class SSOModel {
   constructor(c: Context) {
@@ -160,7 +160,7 @@ export class SSOModel {
         httpOnly: true,
         secure: this.c.get('core').authorization.cookieSecure,
         path: '/',
-        domain: CONFIG.frontend.hostname,
+        domain: CONFIG.web.hostname,
       },
     );
 

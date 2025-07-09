@@ -1,0 +1,42 @@
+{
+  "name": "api",
+  "version": "1.2.0-canary.31",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc && tsc-alias -p tsconfig.json",
+    "start": "node dist/index.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "drizzle-kit": "drizzle-kit"
+  },
+  "dependencies": {
+    "@hono/zod-openapi": "^0.19.8",
+    "@hono/zod-validator": "^0.7.0",
+    "@react-email/components": "^0.1.1",
+    "@vitnode/core": "workspace:*",
+    "drizzle-kit": "^0.31.3",
+    "drizzle-orm": "^0.44.2",
+    "hono": "^4.8.3",
+    "next-intl": "^4.3.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^1.15.0",
+    "@types/node": "^24",
+    "@types/react": "^19.1",
+    "@types/react-dom": "^19.1",
+    "@vitnode/eslint-config": "workspace:*",
+    "dotenv": "^17.1.0",
+    "eslint": "^9.29.0",
+    "prettier": "^3.6.1",
+    "prettier-plugin-tailwindcss": "^0.6.12",
+    "react-email": "^4.0.17",
+    "tsc-alias": "^1.8.16",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

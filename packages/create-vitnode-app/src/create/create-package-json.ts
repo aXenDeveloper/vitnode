@@ -15,7 +15,9 @@ export const createPackageJSON = async ({
   root,
   eslint,
   docker,
+  apiMonorepo,
 }: {
+  apiMonorepo?: boolean;
   appName: string;
   docker?: boolean;
   eslint: boolean;
@@ -84,6 +86,7 @@ export const createPackageJSON = async ({
           }
         : {}),
       'react-email': '^4.0.17',
+      turbo: '^2.5.4',
       tailwindcss: '^4.1.11',
       'tw-animate-css': '^1.3.5',
       typescript: '^5.8.3',
