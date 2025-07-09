@@ -36,7 +36,7 @@ const init = async () => {
   let projectPath = '';
 
   const program = new Command()
-    .version(packageJson.version)
+    .version(packageJson.version ?? '0.1.0')
     .argument('[project-directory]')
     .usage(`${color.green('[project-directory]')} [options]`)
     .action(name => {
