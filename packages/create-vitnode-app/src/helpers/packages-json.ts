@@ -9,6 +9,6 @@ export interface PackageJSON {
   private: boolean;
   scripts?: Record<string, string>;
   type?: string;
-  version: string;
+  version?: string;
   workspaces?: string[];
 }

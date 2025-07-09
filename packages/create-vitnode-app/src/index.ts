@@ -36,7 +36,7 @@ const init = async () => {
   let projectPath = '';
 
   const program = new Command()
-    .version(packageJson.version)
+    .version(packageJson.version ?? '0.1.0')
     .argument('[project-directory]')
     .usage(`${color.green('[project-directory]')} [options]`)
     .action(name => {
@@ -55,6 +55,12 @@ const init = async () => {
     'Skip installing packages after initializing the project.',
   );
   program.option('--plugin', 'Enable plugin mode.');
+  program.addOption(
+    new Option(
+      '--mode <mode>',
+      'What type of app do you want to create?',
+    ).choices(['singleApp', 'apiMonorepo', 'onlyApi']),
+  );
 
   program.parse(process.argv);
 

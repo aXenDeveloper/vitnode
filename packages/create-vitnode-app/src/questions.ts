@@ -10,6 +10,7 @@ export interface CreateCliReturn {
   docker?: boolean;
   eslint: boolean;
   install: boolean;
+  mode: 'apiMonorepo' | 'onlyApi' | 'singleApp';
   packageManager: string;
 }
 
@@ -22,6 +23,7 @@ export const createQuestionsCli = async (
     eslint: optionsFromProgram.eslint,
     install: !optionsFromProgram.skipInstall,
     docker: optionsFromProgram.docker,
+    mode: optionsFromProgram.mode,
   };
 
   if (!optionsFromProgram.packageManager) {
@@ -45,6 +47,32 @@ export const createQuestionsCli = async (
           disabled: !availablePackageManagers.bun,
         },
       ],
+    });
+  }
+
+  if (optionsFromProgram.mode === undefined) {
+    options.mode = await select({
+      message: `What type of ${color.blue('app')} do you want to create?`,
+      choices: [
+        {
+          name: `Single App - ${color.blue('Next.js')} & ${color.blue('Hono.js')}`,
+          description:
+            'Create a single app with Next.js and Hono.js in the same project.',
+          value: 'singleApp',
+        },
+        {
+          name: `Monorepo App - ${color.blue('Next.js')} & ${color.blue('Hono.js')}`,
+          description:
+            'Create a monorepo with both Next.js and Hono.js apps separately.',
+          value: 'apiMonorepo',
+        },
+        {
+          name: `Only API - ${color.blue('Hono.js')}`,
+          description: 'Create only an API app using Hono.js without Next.js.',
+          value: 'onlyApi',
+        },
+      ],
+      default: 'singleApp',
     });
   }
 

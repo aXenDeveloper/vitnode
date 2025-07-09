@@ -2,16 +2,25 @@
 import { join } from 'path';
 import { pathToFileURL } from 'url';
 
-import type { VitNodeConfig } from '../src/vitnode.config';
+import type { VitNodeApiConfig, VitNodeConfig } from '../src/vitnode.config';
 
-export const getConfig = async (): Promise<VitNodeConfig> => {
-  const configPath = join(process.cwd(), 'src', 'vitnode.config.ts');
+type ConfigType<T extends 'api.config' | 'config'> = T extends 'config'
+  ? VitNodeConfig
+  : VitNodeApiConfig;
+
+export const getConfig = async <T extends 'api.config' | 'config'>({
+  type = 'config' as T,
+}: {
+  type?: T;
+}): Promise<ConfigType<T>> => {
+  const configPath = join(process.cwd(), 'src', `vitnode.${type}.ts`);
   try {
     const configUrl = pathToFileURL(configPath).href;
     const loaded = await import(configUrl);
-    const config = loaded.vitNodeConfig;
+    const config =
+      type === 'config' ? loaded.vitNodeConfig : loaded.vitNodeApiConfig;
 
-    return config;
+    return config as ConfigType<T>;
   } catch (error) {
     console.error('Failed to load config:', error);
     process.exit(1);

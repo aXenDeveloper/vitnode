@@ -5,7 +5,11 @@ export const runInteractiveShellCommand = async (
   args: string[] = [],
 ) => {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, { stdio: 'inherit', shell: true });
+    const child = spawn(cmd, args, {
+      stdio: 'inherit',
+      shell: true,
+      env: process.env,
+    });
 
     child.on('error', error => {
       reject(error);

@@ -50,7 +50,9 @@ export interface VitNodeApiConfig {
     type: 'cloudflare_turnstile' | 'recaptcha_v3';
   };
   dbProvider: PostgresJsDatabase;
-  emailAdapter?: EmailApiPlugin;
+  email?: {
+    adapter?: EmailApiPlugin;
+  };
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, 'keyPrefix'>;
 }

@@ -24,7 +24,7 @@
   "include": [
     "src",
     "scripts",
-    "emails",
+    "src/emails",
     "vitest.config.ts",
     "tsup.config.ts",
     "global.d.ts"

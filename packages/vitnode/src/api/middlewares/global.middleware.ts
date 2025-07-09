@@ -2,9 +2,13 @@ import type { Context, Env, Next } from 'hono';
 
 import { HTTPException } from 'hono/http-exception';
 
-import type { EmailApiPlugin } from '@/api/models/email';
 import type { VitNodeApiConfig, VitNodeConfig } from '@/vitnode.config';
 
+import {
+  type EmailApiPlugin,
+  EmailModel,
+  type EmailModelSendArgs,
+} from '@/api/models/email';
 import { SessionModel } from '@/api/models/session';
 import { SessionAdminModel } from '@/api/models/session-admin';
 
@@ -19,7 +23,7 @@ export interface EnvVitNode extends Env {
   Variables: EnvVariablesVitNode;
 }
 
-interface EnvVariablesVitNode {
+export interface EnvVariablesVitNode {
   admin: null | {
     user: {
       avatarColor: string;
@@ -46,13 +50,24 @@ interface EnvVariablesVitNode {
       ssoAdapters: SSOApiPlugin[];
     };
     captcha?: Pick<VitNodeApiConfig, 'captcha'>['captcha'];
-    emailAdapter?: EmailApiPlugin;
+    email?: {
+      adapter?: EmailApiPlugin;
+      options?: {
+        logo?: {
+          className?: string;
+          src: Blob | string;
+        };
+      };
+    };
     metadata: {
       shortTitle?: string;
       title: string;
     };
   };
   db: Pick<VitNodeApiConfig, 'dbProvider'>['dbProvider'];
+  email: {
+    send: (args: EmailModelSendArgs) => Promise<void>;
+  };
   ipAddress: string;
   log: LoggerMiddlewareType;
   plugin: {
@@ -80,12 +95,12 @@ declare module 'hono' {
 export const globalMiddleware = ({
   authorization,
   metadata,
-  emailAdapter,
+  email,
   dbProvider,
   captcha,
 }: Pick<
   VitNodeApiConfig,
-  'authorization' | 'captcha' | 'dbProvider' | 'emailAdapter'
+  'authorization' | 'captcha' | 'dbProvider' | 'email'
 > &
   Pick<VitNodeConfig, 'metadata'>) => {
   return async (c: Context, next: Next) => {
@@ -134,10 +149,11 @@ export const globalMiddleware = ({
     // Fallback to localhost if nothing found
     c.set('ipAddress', ipAddress ?? '127.0.0.1');
     c.set('db', dbProvider);
+    c.set('email', new EmailModel(c));
 
     c.set('core', {
       metadata,
-      emailAdapter,
+      email,
       authorization: {
         cookieName: authorization?.cookieName ?? 'vitnode_auth',
         cookie_expires:
