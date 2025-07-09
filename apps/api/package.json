@@ -20,8 +20,8 @@
     "drizzle-orm": "^0.44.2",
     "hono": "^4.8.3",
     "next-intl": "^4.3.1",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "^19.1",
+    "react-dom": "^19.1",
     "zod": "^3.25.67"
   },
   "devDependencies": {

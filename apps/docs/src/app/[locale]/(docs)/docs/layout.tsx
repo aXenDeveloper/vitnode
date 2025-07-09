@@ -22,7 +22,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               ...option,
               icon: (
                 <div
-                  className="size-full rounded-lg max-md:border max-md:bg-(--tab-color)/10 max-md:p-1.5 [&_svg]:size-full"
+                  className="max-md:bg-(--tab-color)/10 size-full rounded-lg max-md:border max-md:p-1.5 [&_svg]:size-full"
                   style={
                     {
                       color,

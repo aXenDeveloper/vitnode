@@ -55,6 +55,12 @@ const init = async () => {
     'Skip installing packages after initializing the project.',
   );
   program.option('--plugin', 'Enable plugin mode.');
+  program.addOption(
+    new Option(
+      '--mode <mode>',
+      'What type of app do you want to create?',
+    ).choices(['singleApp', 'apiMonorepo', 'onlyApi']),
+  );
 
   program.parse(process.argv);
 

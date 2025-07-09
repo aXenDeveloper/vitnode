@@ -37,9 +37,9 @@ bun create vitnode-app@latest
 
 ## Options
 
-| Option              | Description                                                                 |
-| ------------------- | --------------------------------------------------------------------------- |
-| `--package-manager` | Specify the package manager to use. Support `npm`, `pnpm`.                  |
-| `--eslint`          | Initialize with eslint config.                                              |
-| `--skip-install`    | Skip installing packages after initializing the project.                    |
-| `--api-monorepo`    | Scaffold both API (Hono.js) and frontend (Next.js) in a monorepo structure. |
+| Option              | Description                                                                       |
+| ------------------- | --------------------------------------------------------------------------------- |
+| `--package-manager` | Specify the package manager to use. Support `npm`, `pnpm`.                        |
+| `--eslint`          | Initialize with eslint config.                                                    |
+| `--skip-install`    | Skip installing packages after initializing the project.                          |
+| `--mode`            | Specify the type of app to create. Support `singleApp`, `apiMonorepo`, `onlyApi`. |

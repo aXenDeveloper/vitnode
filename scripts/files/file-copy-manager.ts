@@ -15,15 +15,52 @@ export class FileCopyManager {
       'copy-of-vitnode-app',
       'root',
     );
+    const singleAppApiDestPath = join(
+      this.env.WORKSPACE,
+      'packages',
+      'create-vitnode-app',
+      'copy-of-vitnode-app',
+      'apps',
+      'api-single-app',
+    );
 
-    if (
-      !FileSystem.validatePath(sourcePath, 'web app directory') ||
-      !FileSystem.validatePath(destPath, 'copy-of-vitnode-app directory')
-    ) {
+    if (!FileSystem.validatePath(sourcePath, 'web app directory')) {
       throw new Error('Required paths not found');
     }
 
-    await this.copyFiles(sourcePath, destPath);
+    await this.copyFiles(sourcePath, destPath, [
+      'src/app/[locale]/(main)/[...rest]',
+      'src/app/[locale]/(main)/not-found.tsx',
+      'src/app/[locale]/admin',
+      'src/app/favicon.ico',
+      'src/app/global-error.tsx',
+      'src/app/layout.tsx',
+      'src/app/not-found.tsx',
+      'postcss.config.mjs',
+      '.prettierrc.mjs',
+    ]);
+
+    const apiSourcePath = join(this.env.WORKSPACE, 'apps', 'api');
+    const apiDestPath = join(
+      this.env.WORKSPACE,
+      'packages',
+      'create-vitnode-app',
+      'copy-of-vitnode-app',
+      'apps',
+      'api',
+    );
+
+    await this.copyFiles(apiSourcePath, apiDestPath, [
+      'src',
+      'tsconfig.json',
+      'drizzle.config.ts',
+      'package.json',
+    ]);
+
+    await this.copyFiles(apiSourcePath, singleAppApiDestPath, [
+      'src/app/api/[...route]',
+      'drizzle.config.ts',
+    ]);
   }
 
   async copyFileOrDirectory(
@@ -47,23 +84,11 @@ export class FileCopyManager {
     }
   }
 
-  async copyFiles(sourcePath: string, destPath: string): Promise<void> {
-    // Define files and directories to copy (relative paths)
-    const filesToCopy = [
-      'src/app/[locale]/(main)/[...rest]',
-      'src/app/[locale]/(main)/not-found.tsx',
-      'src/app/[locale]/admin',
-      'src/app/favicon.ico',
-      'src/app/global-error.tsx',
-      'src/app/layout.tsx',
-      'src/app/not-found.tsx',
-      'src/app/api/[...route]',
-      'tsconfig.json',
-      'postcss.config.mjs',
-      'drizzle.config.ts',
-      '.prettierrc.mjs',
-    ];
-
+  async copyFiles(
+    sourcePath: string,
+    destPath: string,
+    filesToCopy: string[],
+  ): Promise<void> {
     // Handle special files with different names
     const specialFiles = [
       { source: '.gitignore', dest: '.gitignore_template' },

@@ -7,10 +7,10 @@ import color from 'picocolors';
 import { getAvailablePackageManagers } from './helpers/get-available-package-managers.js';
 
 export interface CreateCliReturn {
-  apiMonorepo?: boolean;
   docker?: boolean;
   eslint: boolean;
   install: boolean;
+  mode: 'apiMonorepo' | 'onlyApi' | 'singleApp';
   packageManager: string;
 }
 
@@ -23,7 +23,7 @@ export const createQuestionsCli = async (
     eslint: optionsFromProgram.eslint,
     install: !optionsFromProgram.skipInstall,
     docker: optionsFromProgram.docker,
-    apiMonorepo: optionsFromProgram.apiMonorepo,
+    mode: optionsFromProgram.mode,
   };
 
   if (!optionsFromProgram.packageManager) {
@@ -50,6 +50,32 @@ export const createQuestionsCli = async (
     });
   }
 
+  if (optionsFromProgram.mode === undefined) {
+    options.mode = await select({
+      message: `What type of ${color.blue('app')} do you want to create?`,
+      choices: [
+        {
+          name: `Single App - ${color.blue('Next.js')} & ${color.blue('Hono.js')}`,
+          description:
+            'Create a single app with Next.js and Hono.js in the same project.',
+          value: 'singleApp',
+        },
+        {
+          name: `Monorepo App - ${color.blue('Next.js')} & ${color.blue('Hono.js')}`,
+          description:
+            'Create a monorepo with both Next.js and Hono.js apps separately.',
+          value: 'apiMonorepo',
+        },
+        {
+          name: `Only API - ${color.blue('Hono.js')}`,
+          description: 'Create only an API app using Hono.js without Next.js.',
+          value: 'onlyApi',
+        },
+      ],
+      default: 'singleApp',
+    });
+  }
+
   if (optionsFromProgram.eslint === undefined) {
     options.eslint = await confirm({
       message: `Would you like to use ${color.blue('ESLint')}?`,
@@ -59,13 +85,6 @@ export const createQuestionsCli = async (
   if (optionsFromProgram.docker === undefined) {
     options.docker = await confirm({
       message: `Would you like to use ${color.blue('Docker Container')}?`,
-    });
-  }
-
-  if (optionsFromProgram.apiMonorepo === undefined) {
-    options.apiMonorepo = await confirm({
-      message: `Would you like to set up a monorepo with separate ${color.blue('API (Hono.js)')} and ${color.blue('web (Next.js)')} projects?`,
-      default: false,
     });
   }
 
