@@ -21,19 +21,19 @@ export default function HomePage() {
         <div className="flex max-w-2xl flex-col">
           <span className="group relative mx-0 mb-6 flex max-w-fit flex-row items-center justify-center rounded-2xl bg-white/40 px-4 py-1.5 text-sm font-medium shadow-[inset_0_-8px_10px_#8fdfff1f] backdrop-blur-sm transition-shadow duration-500 ease-out [--bg-size:300%] hover:shadow-[inset_0_-5px_10px_#8fdfff3f] dark:bg-black/40">
             <div
-              className={`animate-gradient absolute inset-0 block h-full w-full [border-radius:inherit] bg-gradient-to-r from-[#ffaa40]/50 via-[#9c40ff]/50 to-[#ffaa40]/50 bg-[length:var(--bg-size)_100%] ![mask-composite:subtract] p-[1px] [mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)]`}
+              className={`animate-gradient absolute inset-0 block h-full w-full bg-gradient-to-r from-[#ffaa40]/50 via-[#9c40ff]/50 to-[#ffaa40]/50 bg-[length:var(--bg-size)_100%] p-[1px] [border-radius:inherit] ![mask-composite:subtract] [mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)]`}
             />
             🎉{` `}
             VitNode 2.0 in progress...
             {/* <ChevronRight className="ml-1 size-3 transition-transform duration-300 ease-in-out group-hover:translate-x-0.5" /> */}
           </span>
 
-          <h1 className="text-5xl font-semibold tracking-tight text-balance sm:text-6xl">
+          <h1 className="text-balance text-5xl font-semibold tracking-tight sm:text-6xl">
             Extendable <span className="text-primary">Framework</span> for
             Building <span className="text-primary">Apps</span>
           </h1>
 
-          <p className="text-muted-foreground mt-6 leading-relaxed text-balance md:text-lg">
+          <p className="text-muted-foreground mt-6 text-balance leading-relaxed md:text-lg">
             Simplifies development with a powerful Plugin System, Admin Control
             Panel and extensible architecture.
           </p>

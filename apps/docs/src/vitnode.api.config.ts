@@ -4,13 +4,7 @@ import { DiscordSSOApiPlugin } from '@vitnode/core/api/adapters/sso/discord';
 import { FacebookSSOApiPlugin } from '@vitnode/core/api/adapters/sso/facebook';
 import { GoogleSSOApiPlugin } from '@vitnode/core/api/adapters/sso/google';
 import { buildApiConfig } from '@vitnode/core/vitnode.config';
-import * as dotenv from 'dotenv';
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { join } from 'path';
-
-dotenv.config({
-  path: join(process.cwd(), '..', '..', '.env'),
-});
 
 export const POSTGRES_URL =
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing

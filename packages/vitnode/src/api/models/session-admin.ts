@@ -78,7 +78,7 @@ export class SessionAdminModel {
       expires: new Date(
         Date.now() + this.c.get('core').authorization.adminCookieExpires,
       ),
-      domain: CONFIG.frontend.hostname,
+      domain: CONFIG.web.hostname,
     });
 
     return { token };
@@ -100,7 +100,7 @@ export class SessionAdminModel {
 
     deleteCookie(this.c, this.c.get('core').authorization.adminCookieName, {
       path: '/',
-      domain: CONFIG.frontend.hostname,
+      domain: CONFIG.web.hostname,
     });
   }
 
@@ -132,7 +132,7 @@ export class SessionAdminModel {
     if (!session) {
       deleteCookie(this.c, this.c.get('core').authorization.adminCookieName, {
         path: '/',
-        domain: CONFIG.frontend.hostname,
+        domain: CONFIG.web.hostname,
       });
 
       return null;

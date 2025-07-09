@@ -23,7 +23,7 @@ export class FileSystem {
       }
 
       for (const item of readdirSync(from)) {
-        if (item === '(plugins)') continue;
+        if (item === '(plugins)' || item === '.env') continue;
 
         const sourcePath = join(from, item);
         const destinationPath = join(to, item);
@@ -44,6 +44,7 @@ export class FileSystem {
 
   static validatePath(filePath: string, description: string): boolean {
     if (existsSync(filePath)) return true;
+
     console.error(`✖ Missing ${description}: ${filePath}`);
     return false;
   }

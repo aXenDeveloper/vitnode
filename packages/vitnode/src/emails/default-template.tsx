@@ -14,19 +14,18 @@ import {
 } from '@react-email/components';
 import { createTranslator } from 'next-intl';
 
-import type { EnvVariablesVitNode } from '../api/middlewares/global.middleware';
-
 import { CONFIG } from '../lib/config';
-
-type EmailFromMiddlewareType = NonNullable<
-  NonNullable<EnvVariablesVitNode['core']['email']>['options']
->;
 
 interface DefaultTemplateEmailProps {
   children: React.ReactNode;
   head?: React.ReactNode;
-  logo?: EmailFromMiddlewareType['logo'];
-  metadata: EnvVariablesVitNode['core']['metadata'] & {
+  logo?: {
+    className?: string;
+    src: Blob | string;
+  };
+  metadata: {
+    shortTitle?: string;
+    title: string;
     url: string;
   };
   previewText?: string;
@@ -39,7 +38,14 @@ export default function DefaultTemplateEmail({
   logo,
   metadata,
 }: DefaultTemplateEmailProps) {
-  const intl = createTranslator({ messages: {}, locale: 'en' });
+  const intl = createTranslator({
+    messages: {
+      email: {
+        previewText: 'This is a preview text for the email template.',
+      },
+    },
+    locale: 'en',
+  });
 
   return (
     <Html>
@@ -50,10 +56,9 @@ export default function DefaultTemplateEmail({
           theme: {
             extend: {
               colors: {
-                background: '#edf2f8',
+                background: '#ffffff',
                 primary: '#3160c0',
                 foreground: '#0e1216',
-                card: '#ffffff',
                 border: '#d9dfe4',
               },
             },
@@ -76,9 +81,9 @@ export default function DefaultTemplateEmail({
               )}
             </Section>
 
-            <Section className="bg-card border-border my-[40px] rounded-md border border-solid p-[20px]">
+            <Section className="border-border my-[40px] rounded-md border border-solid p-[20px]">
               <Heading className="mx-0 my-[30px] p-0 text-center text-[24px] font-normal text-black">
-                Join Us for an Exciting Event!
+                Join Us for an Exciting Event! - {intl('email.previewText')}
               </Heading>
               <Text className="text-[14px] leading-[24px] text-black">
                 Hello
@@ -111,7 +116,7 @@ DefaultTemplateEmail.PreviewProps = {
   metadata: {
     title: 'VitNode - Email Template',
     shortTitle: 'VitNode',
-    url: CONFIG.frontend.href,
+    url: CONFIG.web.href,
   },
   logo: {
     src: 'https://www.reactemailtemplate.com/_next/static/media/reactemailtemplate-logo.b3fb12d9.png',

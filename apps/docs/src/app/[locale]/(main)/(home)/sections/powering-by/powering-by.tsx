@@ -70,8 +70,8 @@ export const PoweringBySection = () => {
               </Link>
             </InfiniteSlider>
 
-            <div className="from-background absolute inset-y-0 left-0 w-20 bg-linear-to-r"></div>
-            <div className="from-background absolute inset-y-0 right-0 w-20 bg-linear-to-l"></div>
+            <div className="from-background bg-linear-to-r absolute inset-y-0 left-0 w-20"></div>
+            <div className="from-background bg-linear-to-l absolute inset-y-0 right-0 w-20"></div>
           </div>
         </div>
       </div>

@@ -44,7 +44,7 @@ export class DeviceModel {
         httpOnly: true,
         secure: this.c.get('core').authorization.cookieSecure,
         path: '/',
-        domain: CONFIG.frontend.hostname,
+        domain: CONFIG.web.hostname,
         expires: new Date(
           Date.now() + this.c.get('core').authorization.deviceCookieExpires,
         ),

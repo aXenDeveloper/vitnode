@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
 
+import * as dotenv from 'dotenv';
+
 import { processPlugin } from './plugin.js';
 import {
   generateDatabaseMigrations,
@@ -10,6 +12,8 @@ import {
   runPush,
 } from './prepare-database.js';
 import { preparePluginsFiles } from './prepare-plugins-files.js';
+
+dotenv.config();
 
 const initMessage = '\x1b[34m[VitNode]\x1b[0m';
 

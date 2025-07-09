@@ -1,9 +1,7 @@
-import { render } from '@react-email/components';
 import { z } from 'zod';
 
 import { buildRoute } from '@/api/lib/route';
 import { CONFIG_PLUGIN } from '@/config';
-import DefaultTemplate from '@/emails/default-template';
 
 export const testRoute = buildRoute({
   ...CONFIG_PLUGIN,

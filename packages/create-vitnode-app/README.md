@@ -37,8 +37,9 @@ bun create vitnode-app@latest
 
 ## Options
 
-| Option              | Description                                                |
-| ------------------- | ---------------------------------------------------------- |
-| `--package-manager` | Specify the package manager to use. Support `npm`, `pnpm`. |
-| `--eslint`          | Initialize with eslint config.                             |
-| `--skip-install`    | Skip installing packages after initializing the project.   |
+| Option              | Description                                                                       |
+| ------------------- | --------------------------------------------------------------------------------- |
+| `--package-manager` | Specify the package manager to use. Support `npm`, `pnpm`.                        |
+| `--eslint`          | Initialize with eslint config.                                                    |
+| `--skip-install`    | Skip installing packages after initializing the project.                          |
+| `--mode`            | Specify the type of app to create. Support `singleApp`, `apiMonorepo`, `onlyApi`. |

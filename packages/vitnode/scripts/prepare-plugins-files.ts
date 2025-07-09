@@ -14,7 +14,7 @@ import {
 } from './shared/file-utils';
 
 export const preparePluginsFiles = async () => {
-  const config = await getConfig();
+  const config = await getConfig({});
   const plugins: string[] = [
     ...config.plugins.map(plugin => plugin.pluginId),
     '@vitnode/core',

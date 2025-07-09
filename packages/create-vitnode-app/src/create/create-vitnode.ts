@@ -22,6 +22,7 @@ export const createVitNode = async ({
   eslint,
   install,
   docker,
+  mode,
 }: CreateCliReturn & {
   appName: string;
   root: string;
@@ -45,11 +46,44 @@ export const createVitNode = async ({
   if (!isFolderEmpty(root, appName)) {
     process.exit(1);
   }
+  const monorepoStructure = {
+    api: join(root, 'apps', 'api'),
+    web: join(root, 'apps', 'web'),
+  };
+
+  if (mode === 'apiMonorepo') {
+    spinner.text = 'Preparing monorepo structure...';
+    // Create api, web folders
+    await Promise.all([
+      mkdir(monorepoStructure.api, { recursive: true }),
+      mkdir(monorepoStructure.web, { recursive: true }),
+    ]);
+  }
 
   spinner.text = 'Copying files...';
-  await cp(join(templatePath, 'root'), root, {
-    recursive: true,
-  });
+  if (mode === 'singleApp') {
+    await Promise.all([
+      cp(join(templatePath, 'root'), root, {
+        recursive: true,
+      }),
+      cp(join(templatePath, 'api-single-app'), root, {
+        recursive: true,
+      }),
+    ]);
+  } else if (mode === 'apiMonorepo') {
+    await Promise.all([
+      cp(join(templatePath, 'root'), monorepoStructure.web, {
+        recursive: true,
+      }),
+      cp(join(templatePath, 'api'), monorepoStructure.api, {
+        recursive: true,
+      }),
+    ]);
+  } else if (mode === 'onlyApi') {
+    await cp(join(templatePath, 'api'), root, {
+      recursive: true,
+    });
+  }
 
   if (eslint) {
     spinner.text = 'Copying eslint files...';
@@ -58,7 +92,6 @@ export const createVitNode = async ({
     });
   }
 
-  // Rename special files
   spinner.text = 'Renaming special files...';
   await rename(join(root, '.gitignore_template'), join(root, '.gitignore'));
 
@@ -69,6 +102,7 @@ export const createVitNode = async ({
     packageManager,
     eslint,
     docker,
+    mode,
   });
 
   if (docker) {

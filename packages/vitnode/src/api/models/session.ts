@@ -56,7 +56,7 @@ export class SessionModel {
               Date.now() + this.c.get('core').authorization.cookie_expires,
             )
           : undefined,
-      domain: CONFIG.frontend.hostname,
+      domain: CONFIG.web.hostname,
     });
 
     return { token };
