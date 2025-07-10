@@ -20,7 +20,6 @@ export class FileCopyManager {
       'packages',
       'create-vitnode-app',
       'copy-of-vitnode-app',
-      'apps',
       'api-single-app',
     );
 
@@ -46,7 +45,6 @@ export class FileCopyManager {
       'packages',
       'create-vitnode-app',
       'copy-of-vitnode-app',
-      'apps',
       'api',
     );
 
