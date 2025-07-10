@@ -35,7 +35,7 @@
     "validate-npm-package-name": "^6.0.1"
   },
   "devDependencies": {
-    "@types/node": "^24.0.10",
+    "@types/node": "^24.0.12",
     "@types/prompts": "^2.4.9",
     "@types/validate-npm-package-name": "^4.0.2",
     "@vitnode/eslint-config": "workspace:*",

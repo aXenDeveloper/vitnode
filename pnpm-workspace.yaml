@@ -5,3 +5,4 @@ packages:
 
 ignoredBuiltDependencies:
   - '@swc/core'
+  - sharp

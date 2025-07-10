@@ -72,6 +72,9 @@ export const createVitNode = async ({
     ]);
   } else if (mode === 'apiMonorepo') {
     await Promise.all([
+      cp(join(templatePath, 'monorepo'), root, {
+        recursive: true,
+      }),
       cp(join(templatePath, 'root'), monorepoStructure.web, {
         recursive: true,
       }),
@@ -94,6 +97,18 @@ export const createVitNode = async ({
 
   spinner.text = 'Renaming special files...';
   await rename(join(root, '.gitignore_template'), join(root, '.gitignore'));
+  if (mode === 'apiMonorepo') {
+    await Promise.all([
+      rename(
+        join(monorepoStructure.api, '.gitignore_template'),
+        join(monorepoStructure.api, '.gitignore'),
+      ),
+      rename(
+        join(monorepoStructure.web, '.gitignore_template'),
+        join(monorepoStructure.web, '.gitignore'),
+      ),
+    ]);
+  }
 
   spinner.text = 'Creating package.json...';
   await createPackageJSON({

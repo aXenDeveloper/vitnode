@@ -7,6 +7,7 @@ import jsxA11y from 'eslint-plugin-jsx-a11y';
 import reactPlugin from 'eslint-plugin-react';
 import hooksPlugin from 'eslint-plugin-react-hooks';
 import reactCompiler from 'eslint-plugin-react-compiler';
+import eslintReact from '@eslint-react/eslint-plugin';
 
 export default [
   {
@@ -28,6 +29,7 @@ export default [
     ],
   },
   eslint.configs.recommended,
+  eslintReact.configs.recommended,
   ...tsEslint.configs.stylisticTypeChecked,
   ...tsEslint.configs.strictTypeChecked,
   eslintPluginPrettierRecommended,
