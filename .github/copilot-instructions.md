@@ -1,59 +1,63 @@
-# VitNode Development Guidelines
+# VitNode AI Coding Agent Guidelines (Extended)
 
-VitNode is a comprehensive framework designed to simplify and accelerate application development with Next.js and Hono.js. Built as a monorepo solution managed by Turborepo, VitNode provides a structured environment that makes development faster and less complex. The framework includes an integrated AdminCP, plugin system, authentication, role management, and comprehensive developer tools.
+## Architecture & Key Patterns
 
-## Global Rules
+- **Monorepo Structure:**
+  - `apps/` contains main apps (`api` for backend, `docs` for docs site)
+  - `packages/` holds shared code, core framework, ESLint/Prettier configs, and CLI tools
+  - `plugins/` for extendable features
+- **Frontend:**
+  - Next.js 15, App Router, Server Components
+  - Use `vitnode/lib/navigation` for navigation (not `next/navigation`)
+  - Forms: Use `react-hook-form@7`, server actions for mutations
+  - UI: Shadcn UI, Tailwind CSS 4, dark/light mode with system detection
+  - i18n: Use `next-intl`, `t('key')` for translations, `getTranslation` (server), `useTranslation` (client)
+  - Accessibility: WCAG 2.1 AA, semantic HTML, ARIA, keyboard/screen reader support
+- **Backend:**
+  - Hono.js 4, OpenAPI via `@hono/zod-openapi`, Zod 3 for validation
+  - Database: PostgreSQL via Drizzle ORM, access via `c.get('database')`
+  - API: RESTful, versioned, rate-limited, secure session management
+  - Error handling: Use Hono's error middleware, log via `c.get('log')`
+  - Plugins: Register via `VitNodeAPI` config, routes auto-mounted by pluginId
+- **Docs:**
+  - Written in `.mdx` using Fumadocs, main entry: `apps/docs/content/docs/dev/index.mdx`
+  - Use `// [!code ++]` to highlight code, `// [!code --]` to hide
+  - No h1 tags, no emoji in headings
 
-- Write ESModule only
-- Always use snake_case for file names
-- Use pnpm as package manager
-- Use Zod 3 for schema validation and runtime validation
-- Use react-hook-form 7 for forms
-- Use Shadcn UI & Tailwind CSS 4 for UI
-- Respect Prettier configuration in `packages/eslint/prettierrc.mjs` and ESLint configuration in `packages/eslint/eslint.config.mjs`
-- Use TypeScript 5 with strict configuration, React 19 & Hono.js 4
-- Follow WCAG 2.1 AA compliance for accessibility
-- Aim for Lighthouse scores of 95+ and Core Web Vitals optimization
-- Implement proper error handling and validation at all levels
+## Developer Workflow
 
-## Frontend Development (Next.js & React)
+- **Package Manager:** Use `pnpm` for all installs/scripts
+- **Scripts:**
+  - `pnpm dev` (dev server), `pnpm build`, `pnpm lint`, `pnpm db:push`, `pnpm db:migrate`, `pnpm docker:dev`
+- **CLI:**
+  - Create apps/plugins via `pnpm create vitnode-app@canary` (see `packages/create-vitnode-app`)
+  - CLI prompts for package manager, app mode, ESLint, Docker, install (see `questions.ts`)
+- **Linting/Formatting:**
+  - Use configs from `packages/eslint/`
+  - File names: snake_case, ESModule only
+  - TypeScript 5 strict mode
+- **Testing:**
+  - Use Vitest (see `vitest.config.ts`)
+- **Config:**
+  - Centralized in `vitnode.config.ts` and `api/config.ts`
+  - Extend via plugins in config arrays
 
-- Use Next.js 15 with App Router and Server Components
-- Use server actions for form handling and data mutations from Server Components
-- Leverage Next.js Image component with proper sizing for core web vitals optimization
-- Navigation API is in `vitnode/lib/navigation` file. Avoid using `next/navigation` directly
-- Alert Dialog & Dialog content should always have title and description with React lazy loading content
-- Implement dark/light mode support with system preference detection
-- Ensure keyboard navigation support and screen reader compatibility
-- Use proper semantic HTML and ARIA attributes
-- Use XSS protection with content security policy
+## Integration & Conventions
 
-### Internationalization (i18n)
+- **External:**
+  - Next.js, Hono.js, Drizzle ORM, Zod, react-hook-form, Shadcn UI, Tailwind, next-intl
+- **Internal:**
+  - Navigation, config, API, middleware, plugin system
+- **Security:**
+  - XSS protection, content security policy, secure cookies
 
-- Use `next-intl` for internationalization
-- Use `t('key')` for translation keys
-- Use `getTranslation` function for server components but `useTranslation` for client components
+## Examples
 
-## Backend Development (Hono.js)
+- See `apps/api/src/index.ts` for backend API setup
+- See `packages/vitnode/src/api/config.ts` for API registration and middleware
+- See `packages/vitnode/src/lib/navigation.ts` for navigation API
+- See `apps/docs/next.config.ts` for docs site config
 
-- Use @hono/zod-openapi or Zod 3 for schema validation and OpenAPI documentation
-- Use PostgreSQL with Drizzle ORM for database operations
-- Use `t.serial().primaryKey()` for all database IDs
-- To get access to database, use `c.get('database')` by Hono.js context
-- Implement rate limiting on API endpoints, especially authentication
-- Use secure session management with configurable duration
-- Implement proper error handling and logging
-- Follow RESTful API design principles
-- Support API versioning with backward compatibility
-- Include comprehensive OpenAPI 3.0 specifications
+---
 
-## Documentation (\*.mdx files)
-
-- Use Fumadocs framework
-- Write docs in `.mdx` files
-- `apps/docs/content/docs/dev/index.mdx` contains the main documentation
-- Use easy, clear and funny language for documentation to make it accessible to a wide audience (exclude title and description)
-- Use clear and concise examples to illustrate concepts
-- Use `// [!code ++]` to highlight code snippets and `// [!code --]` to hide code snippets
-- Don't add h1 tag in markdown
-- Don't use emoji on headings
+For unclear or missing patterns, ask for clarification or request more examples from maintainers.

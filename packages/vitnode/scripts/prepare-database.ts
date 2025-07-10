@@ -155,10 +155,10 @@ export const prepareDatabase = async ({
 }) => {
   console.log(`${initMessage} [1/4] Prepare plugins files...`);
   await preparePluginsFiles();
-  // console.log(`${initMessage} [2/4] Generate migrations...`);
-  // await generateDatabaseMigrations();
-  // console.log(`${initMessage} [3/4] Run migrations...`);
-  // await runMigrations();
+  console.log(`${initMessage} [2/4] Generate migrations...`);
+  await generateDatabaseMigrations();
+  console.log(`${initMessage} [3/4] Run migrations...`);
+  await runMigrations();
   console.log(`\n${initMessage} [4/4] Insert initial data...`);
   await initialDataForDatabase();
   console.log(`${initMessage} \x1b[32mDatabase prepared successfully.\x1b[0m`);

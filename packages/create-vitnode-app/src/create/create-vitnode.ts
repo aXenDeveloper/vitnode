@@ -123,6 +123,12 @@ export const createVitNode = async ({
     mode,
   });
 
+  if (mode === 'apiMonorepo' && packageManager === 'pnpm') {
+    spinner.text = 'Creating pnpm-workspace.yaml...';
+    const pnpmWorkspaceContent = `packages:\n  - 'apps/*'\n  - 'plugins/*'\n`;
+    await writeFile(join(root, 'pnpm-workspace.yaml'), pnpmWorkspaceContent);
+  }
+
   if (docker) {
     spinner.text = 'Copying docker files...';
     await copyFile(
@@ -150,13 +156,13 @@ export const createVitNode = async ({
     spinner.text = 'Initializing VitNode files...';
     initFilesVitnode({
       packageManager,
-      cwd: root,
+      cwd: mode === 'apiMonorepo' ? monorepoStructure.web : root,
     });
 
     spinner.text = 'Generating migrations...';
     generateMigrationsVitnode({
       packageManager,
-      cwd: root,
+      cwd: mode === 'apiMonorepo' ? monorepoStructure.api : root,
     });
   }
 

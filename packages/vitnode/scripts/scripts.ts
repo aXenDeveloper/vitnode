@@ -13,7 +13,9 @@ import {
 } from './prepare-database.js';
 import { preparePluginsFiles } from './prepare-plugins-files.js';
 
-dotenv.config();
+dotenv.config({
+  quiet: true,
+});
 
 const initMessage = '\x1b[34m[VitNode]\x1b[0m';
 

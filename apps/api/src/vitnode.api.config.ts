@@ -2,7 +2,9 @@ import { buildApiConfig } from '@vitnode/core/vitnode.config';
 import * as dotenv from 'dotenv';
 import { drizzle } from 'drizzle-orm/postgres-js';
 
-dotenv.config();
+dotenv.config({
+  quiet: true,
+});
 
 export const POSTGRES_URL =
   // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
