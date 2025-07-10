@@ -16,7 +16,7 @@ const AlertDialogContext = React.createContext<{
   setOpen: () => {},
 });
 
-export const useAlertDialog = () => React.useContext(AlertDialogContext);
+export const useAlertDialog = () => React.use(AlertDialogContext);
 
 function AlertDialog({
   onOpenChange,
@@ -30,8 +30,13 @@ function AlertDialog({
     setOpen(newOpen);
   };
 
+  const contextValue = React.useMemo(
+    () => ({ open, setOpen }),
+    [open, setOpen],
+  );
+
   return (
-    <AlertDialogContext value={{ open, setOpen }}>
+    <AlertDialogContext value={contextValue}>
       <AlertDialogPrimitive.Root
         data-slot="alert-dialog"
         onOpenChange={handleOpenChange}

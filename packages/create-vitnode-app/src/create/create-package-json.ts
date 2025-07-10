@@ -36,6 +36,8 @@ export const createPackageJSON = async ({
     private: true,
     type: 'module',
     scripts: {
+      'db:push': 'vitnode push',
+      'db:migrate': 'vitnode migrate',
       dev: 'tsx watch src/index.ts',
       build: 'tsc && tsc-alias -p tsconfig.json',
       start: 'node dist/index.js',
@@ -169,9 +171,18 @@ export const createPackageJSON = async ({
         'db:push': 'turbo db:push',
         build: 'turbo build',
         start: 'turbo start',
-        dev: ' turbo dev',
-        lint: 'turbo lint',
-        'lint:fix': 'turbo lint:fix',
+        dev: 'turbo dev',
+        ...(eslint
+          ? {
+              lint: 'eslint .',
+              'lint:fix': 'eslint . --fix',
+            }
+          : {}),
+        ...(docker
+          ? {
+              'docker:dev': `docker compose -f ./docker-compose.yml -p ${appName}-vitnode-dev up -d`,
+            }
+          : {}),
       },
       devDependencies: {
         '@types/node': '^24',
@@ -209,8 +220,12 @@ export const createPackageJSON = async ({
         dev: 'vitnode init && next dev --turbopack',
         build: 'next build --turbopack',
         start: 'next start',
-        lint: 'eslint .',
-        'lint:fix': 'eslint . --fix',
+        ...(eslint
+          ? {
+              lint: 'eslint .',
+              'lint:fix': 'eslint . --fix',
+            }
+          : {}),
       },
       dependencies: {
         '@vitnode/core': `^${pkg.version}`,

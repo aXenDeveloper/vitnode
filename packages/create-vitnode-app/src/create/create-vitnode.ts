@@ -61,6 +61,9 @@ export const createVitNode = async ({
   }
 
   spinner.text = 'Copying files...';
+  await cp(join(templatePath, '.vscode'), join(root, '.vscode'), {
+    recursive: true,
+  });
   if (mode === 'singleApp') {
     await Promise.all([
       cp(join(templatePath, 'root'), root, {

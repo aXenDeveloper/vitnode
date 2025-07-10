@@ -78,6 +78,8 @@ export default [
   },
   {
     rules: {
+      '@eslint-react/no-context-provider': 'off',
+      '@eslint-react/no-unstable-default-props': 'off',
       'perfectionist/sort-array-includes': 'warn',
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/no-confusing-void-expression': 'off',

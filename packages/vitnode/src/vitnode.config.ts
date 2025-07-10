@@ -22,10 +22,7 @@ export interface VitNodeConfig<
     locales: AppLocales;
     timeZone?: string;
   };
-  metadata: {
-    shortTitle?: string;
-    title: string;
-  };
+  metadata: VitNodeApiConfig['metadata'];
   plugins: BuildPluginReturn[];
   theme?: Omit<
     React.ComponentProps<typeof ThemeProvider>,
@@ -52,6 +49,10 @@ export interface VitNodeApiConfig {
   dbProvider: PostgresJsDatabase;
   email?: {
     adapter?: EmailApiPlugin;
+  };
+  metadata: {
+    shortTitle?: string;
+    title: string;
   };
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, 'keyPrefix'>;

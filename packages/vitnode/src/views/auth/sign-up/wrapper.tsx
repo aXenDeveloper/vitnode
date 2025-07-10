@@ -10,14 +10,18 @@ const WrapperSignUpContext = React.createContext<{
   setShowSendingEmail: () => {},
 });
 
-export const useWrapperSignUp = () => React.useContext(WrapperSignUpContext);
+export const useWrapperSignUp = () => React.use(WrapperSignUpContext);
 
 export const WrapperSignUp = ({ children }: { children: React.ReactNode }) => {
   const [sendingEmail, setShowSendingEmail] = React.useState('');
+  const contextValue = React.useMemo(
+    () => ({ setShowSendingEmail }),
+    [setShowSendingEmail],
+  );
 
   return (
-    <WrapperSignUpContext.Provider value={{ setShowSendingEmail }}>
+    <WrapperSignUpContext value={contextValue}>
       {sendingEmail ? <EmailConfirmationView email={sendingEmail} /> : children}
-    </WrapperSignUpContext.Provider>
+    </WrapperSignUpContext>
   );
 };

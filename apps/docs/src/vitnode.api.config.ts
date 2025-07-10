@@ -16,6 +16,10 @@ export const vitNodeApiConfig = buildApiConfig({
     siteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY,
     secretKey: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
   },
+  metadata: {
+    title: 'VitNode API',
+    shortTitle: 'VitNode',
+  },
   plugins: [blogApiPlugin()],
   dbProvider: drizzle({
     connection: POSTGRES_URL,

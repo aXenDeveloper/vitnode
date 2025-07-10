@@ -45,7 +45,7 @@ interface SidebarContextProps {
 const SidebarContext = React.createContext<null | SidebarContextProps>(null);
 
 function useSidebar() {
-  const context = React.useContext(SidebarContext);
+  const context = React.use(SidebarContext);
   if (!context) {
     throw new Error('useSidebar must be used within a SidebarProvider.');
   }
@@ -129,7 +129,7 @@ function SidebarProvider({
   );
 
   return (
-    <SidebarContext.Provider value={contextValue}>
+    <SidebarContext value={contextValue}>
       <TooltipProvider delayDuration={0}>
         <div
           className={cn(
@@ -149,7 +149,7 @@ function SidebarProvider({
           {children}
         </div>
       </TooltipProvider>
-    </SidebarContext.Provider>
+    </SidebarContext>
   );
 }
 
@@ -301,6 +301,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<'button'>) {
       onClick={toggleSidebar}
       tabIndex={-1}
       title="Toggle Sidebar"
+      type="button"
       {...props}
     />
   );

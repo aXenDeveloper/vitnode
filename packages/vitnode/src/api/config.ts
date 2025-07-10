@@ -6,7 +6,7 @@ import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';
 import { HTTPException } from 'hono/http-exception';
 
-import type { VitNodeApiConfig, VitNodeConfig } from '@/vitnode.config';
+import type { VitNodeApiConfig } from '@/vitnode.config';
 
 import { newBuildPluginApiCore } from '@/api/plugin';
 import { CONFIG_PLUGIN } from '@/config';
@@ -39,13 +39,11 @@ export function VitNodeAPI({
   cors: corsOptions,
   csrf: csrfOptions,
   vitNodeApiConfig,
-  vitNodeConfig,
 }: {
   app: OpenAPIHono<Env, Schema, string>;
   cors?: CORSOptions;
   csrf?: CSRFOptions;
   vitNodeApiConfig: VitNodeApiConfig;
-  vitNodeConfig: VitNodeConfig;
 }) {
   app.doc('/swagger/doc', {
     openapi: '3.0.0',
@@ -62,7 +60,7 @@ export function VitNodeAPI({
     '*',
     globalMiddleware({
       email: vitNodeApiConfig.email,
-      metadata: vitNodeConfig.metadata,
+      metadata: vitNodeApiConfig.metadata,
       authorization: vitNodeApiConfig.authorization,
       dbProvider: vitNodeApiConfig.dbProvider,
       captcha: vitNodeApiConfig.captcha,

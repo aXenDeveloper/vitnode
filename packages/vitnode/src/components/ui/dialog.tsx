@@ -31,7 +31,7 @@ const DialogContext = React.createContext<{
   setOpenAlertDialogBeforeClose: () => {},
 });
 
-export const useDialog = () => React.useContext(DialogContext);
+export const useDialog = () => React.use(DialogContext);
 
 function Dialog({
   onOpenChange,
@@ -44,21 +44,27 @@ function Dialog({
   const [openAlertDialogBeforeClose, setOpenAlertDialogBeforeClose] =
     React.useState(false);
 
-  const handleOpenChange = (newOpen: boolean) => {
-    onOpenChange?.(newOpen);
-    setOpen(newOpen);
-  };
+  const handleOpenChange = React.useCallback(
+    (newOpen: boolean) => {
+      onOpenChange?.(newOpen);
+      setOpen(newOpen);
+    },
+    [onOpenChange],
+  );
+
+  const contextValue = React.useMemo(
+    () => ({
+      open: openProp ?? open,
+      setOpen: handleOpenChange,
+      isDirty,
+      setIsDirty,
+      setOpenAlertDialogBeforeClose,
+    }),
+    [openProp, open, handleOpenChange, isDirty],
+  );
 
   return (
-    <DialogContext
-      value={{
-        open: openProp ?? open,
-        setOpen: handleOpenChange,
-        isDirty,
-        setIsDirty,
-        setOpenAlertDialogBeforeClose,
-      }}
-    >
+    <DialogContext value={contextValue}>
       <DialogPrimitive.Root
         data-slot="dialog"
         onOpenChange={handleOpenChange}

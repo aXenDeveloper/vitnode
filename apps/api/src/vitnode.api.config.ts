@@ -14,4 +14,8 @@ export const vitNodeApiConfig = buildApiConfig({
     connection: POSTGRES_URL,
     casing: 'camelCase',
   }),
+  metadata: {
+    title: 'VitNode API',
+    shortTitle: 'VitNode',
+  },
 });
