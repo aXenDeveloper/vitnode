@@ -24,7 +24,7 @@ const flag = process.argv[3];
 
 switch (command) {
   case 'init':
-    void prepareDatabase({ initMessage });
+    void prepareDatabase({ initMessage, flag });
     break;
 
   case 'migrate':

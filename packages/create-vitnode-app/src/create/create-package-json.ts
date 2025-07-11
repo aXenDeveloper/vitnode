@@ -38,7 +38,7 @@ export const createPackageJSON = async ({
     scripts: {
       'db:push': 'vitnode push',
       'db:migrate': 'vitnode migrate',
-      dev: 'tsx watch src/index.ts',
+      dev: 'vitnode init --api && tsx watch src/index.ts',
       build: 'tsc && tsc-alias -p tsconfig.json',
       start: 'node dist/index.js',
       ...(eslint
@@ -217,7 +217,7 @@ export const createPackageJSON = async ({
       private: true,
       type: 'module',
       scripts: {
-        dev: 'vitnode init && next dev --turbopack',
+        dev: 'vitnode init --web && next dev --turbopack',
         build: 'next build --turbopack',
         start: 'next start',
         ...(eslint

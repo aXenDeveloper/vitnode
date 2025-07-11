@@ -150,17 +150,65 @@ export const initialDataForDatabase = async () => {
 
 export const prepareDatabase = async ({
   initMessage,
+  flag,
 }: {
+  flag: string;
   initMessage: string;
 }) => {
-  console.log(`${initMessage} [1/4] Prepare plugins files...`);
-  await preparePluginsFiles();
-  console.log(`${initMessage} [2/4] Generate migrations...`);
-  await generateDatabaseMigrations();
-  console.log(`${initMessage} [3/4] Run migrations...`);
-  await runMigrations();
-  console.log(`\n${initMessage} [4/4] Insert initial data...`);
-  await initialDataForDatabase();
-  console.log(`${initMessage} \x1b[32mDatabase prepared successfully.\x1b[0m`);
+  const steps: { action: () => Promise<void>; label: string }[] = [];
+
+  if (flag === '--web') {
+    steps.push({
+      label: 'Prepare plugins files...',
+      action: preparePluginsFiles,
+    });
+  } else if (flag === '-api') {
+    steps.push(
+      {
+        label: 'Generate migrations...',
+        action: generateDatabaseMigrations,
+      },
+      {
+        label: 'Run migrations...',
+        action: runMigrations,
+      },
+      {
+        label: 'Insert initial data...',
+        action: initialDataForDatabase,
+      },
+    );
+  } else {
+    steps.push(
+      {
+        label: 'Prepare plugins files...',
+        action: preparePluginsFiles,
+      },
+      {
+        label: 'Generate migrations...',
+        action: generateDatabaseMigrations,
+      },
+      {
+        label: 'Run migrations...',
+        action: runMigrations,
+      },
+      {
+        label: 'Insert initial data...',
+        action: initialDataForDatabase,
+      },
+    );
+  }
+
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    const stepNum = `[${i + 1}/${steps.length}]`;
+    if (step.label === 'Insert initial data...') {
+      console.log(`\n${initMessage} ${stepNum} ${step.label}`);
+    } else {
+      console.log(`${initMessage} ${stepNum} ${step.label}`);
+    }
+    await step.action();
+  }
+
+  console.log(`${initMessage} \x1b[32mInitial setup completed.\x1b[0m`);
   process.exit(0);
 };
