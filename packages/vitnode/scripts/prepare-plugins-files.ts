@@ -27,9 +27,37 @@ export const preparePluginsFiles = async () => {
   // For both monorepo apps and standalone projects: use current directory as base
   const baseDir = process.cwd();
 
+  const findPluginPath = (pluginName: string): null | string => {
+    const cwd = process.cwd();
+
+    // Check in current working directory first
+    const cwdPluginPath = join(cwd, 'node_modules', pluginName);
+    if (existsSync(cwdPluginPath)) {
+      return cwdPluginPath;
+    }
+
+    // Check in monorepo root if it exists and is different from cwd
+    if (repoRoot && repoRoot !== cwd) {
+      const rootPluginPath = join(repoRoot, 'node_modules', pluginName);
+      if (existsSync(rootPluginPath)) {
+        return rootPluginPath;
+      }
+    }
+
+    return null;
+  };
+
   await Promise.all(
     plugins.map(async pluginName => {
-      const pluginPath = join(process.cwd(), 'node_modules', pluginName);
+      const pluginPath = findPluginPath(pluginName);
+
+      if (!pluginPath) {
+        console.error(
+          `\x1b[31mPlugin not found:\x1b[0m ${pluginName} in node_modules`,
+        );
+
+        return;
+      }
 
       // Get the package name from package.json for imports
       let packageName = '';

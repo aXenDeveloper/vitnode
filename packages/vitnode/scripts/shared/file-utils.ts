@@ -14,6 +14,7 @@ import {
   join,
   normalize,
   relative,
+  resolve,
   sep,
 } from 'path';
 
@@ -136,22 +137,15 @@ export const transformFileImports = (
   return transformedContent;
 };
 
-export function findRepoRoot(start: string): string {
-  let dir = start;
-  while (dir !== dirname(dir)) {
-    // Check for turbo.json first (monorepo indicator)
-    if (existsSync(join(dir, 'turbo.json'))) return dir;
+export function findRepoRoot(startPath: string): string {
+  let currentPath = startPath;
+  while (currentPath !== resolve(currentPath, '..')) {
+    const turboConfigPath = join(currentPath, 'turbo.json');
 
-    // Then check for .git (repository root)
-    if (existsSync(join(dir, '.git'))) return dir;
-
-    dir = dirname(dir);
-  }
-
-  // Still here? So grab package.json as a last resort
-  const packageJsonPath = join(start, 'package.json');
-  if (existsSync(packageJsonPath)) {
-    return dirname(packageJsonPath);
+    if (existsSync(turboConfigPath)) {
+      return currentPath;
+    }
+    currentPath = resolve(currentPath, '..');
   }
 
   throw new Error('❌  Could not locate project root');
