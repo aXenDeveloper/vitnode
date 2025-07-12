@@ -6,6 +6,7 @@
   "scripts": {
     "db:push": "vitnode push",
     "db:migrate": "vitnode migrate",
+    "init": "vitnode init",
     "dev": "vitnode init && next dev --turbopack",
     "dev:email": "email dev --dir src/emails",
     "build": "next build --turbopack",

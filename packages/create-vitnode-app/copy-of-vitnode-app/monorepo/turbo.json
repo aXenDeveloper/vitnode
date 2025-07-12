@@ -36,6 +36,12 @@
     },
     "start": {
       "dependsOn": ["^start"]
+    },
+    "init": {
+      "cache": false,
+      "persistent": true,
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "env": ["POSTGRES_URL", "NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_WEB_URL"]
     }
   }
 }

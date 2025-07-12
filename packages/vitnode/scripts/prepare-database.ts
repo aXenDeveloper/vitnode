@@ -162,7 +162,7 @@ export const prepareDatabase = async ({
       label: 'Prepare plugins files...',
       action: preparePluginsFiles,
     });
-  } else if (flag === '-api') {
+  } else if (flag === '--api') {
     steps.push(
       {
         label: 'Generate migrations...',

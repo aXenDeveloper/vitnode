@@ -43,3 +43,5 @@ bun create vitnode-app@latest
 | `--eslint`          | Initialize with eslint config.                                                    |
 | `--skip-install`    | Skip installing packages after initializing the project.                          |
 | `--mode`            | Specify the type of app to create. Support `singleApp`, `apiMonorepo`, `onlyApi`. |
+| `--monorepo`        | Create project with monorepo structure.                                           |
+| `--docker`          | Initialize with Docker support.                                                   |

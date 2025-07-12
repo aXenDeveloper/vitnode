@@ -6,7 +6,8 @@
   "scripts": {
     "db:push": "vitnode push",
     "db:migrate": "vitnode migrate",
-    "dev": "tsx watch src/index.ts",
+    "init": "vitnode init --api",
+    "dev": "vitnode init --api && tsx watch src/index.ts",
     "build": "tsc && tsc-alias -p tsconfig.json",
     "start": "node dist/index.js",
     "lint": "eslint .",

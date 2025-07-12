@@ -23,6 +23,7 @@ export const createVitNode = async ({
   install,
   docker,
   mode,
+  monorepo,
 }: CreateCliReturn & {
   appName: string;
   root: string;
@@ -51,33 +52,25 @@ export const createVitNode = async ({
     web: join(root, 'apps', 'web'),
   };
 
-  if (mode === 'apiMonorepo') {
-    spinner.text = 'Preparing monorepo structure...';
-    // Create api, web folders
-    await Promise.all([
-      mkdir(monorepoStructure.api, { recursive: true }),
-      mkdir(monorepoStructure.web, { recursive: true }),
-    ]);
-  }
-
   spinner.text = 'Copying files...';
   await cp(join(templatePath, '.vscode'), join(root, '.vscode'), {
     recursive: true,
   });
   if (mode === 'singleApp') {
     await Promise.all([
-      cp(join(templatePath, 'root'), root, {
+      cp(join(templatePath, 'root'), monorepo ? monorepoStructure.web : root, {
         recursive: true,
       }),
-      cp(join(templatePath, 'api-single-app'), root, {
-        recursive: true,
-      }),
+      cp(
+        join(templatePath, 'api-single-app'),
+        monorepo ? monorepoStructure.web : root,
+        {
+          recursive: true,
+        },
+      ),
     ]);
   } else if (mode === 'apiMonorepo') {
     await Promise.all([
-      cp(join(templatePath, 'monorepo'), root, {
-        recursive: true,
-      }),
       cp(join(templatePath, 'root'), monorepoStructure.web, {
         recursive: true,
       }),
@@ -85,8 +78,34 @@ export const createVitNode = async ({
         recursive: true,
       }),
     ]);
+
+    if (packageManager === 'bun') {
+      await cp(join(templatePath, 'api-bun'), monorepoStructure.api, {
+        recursive: true,
+      });
+    }
   } else if (mode === 'onlyApi') {
-    await cp(join(templatePath, 'api'), root, {
+    await cp(
+      join(templatePath, 'api'),
+      monorepo ? monorepoStructure.api : root,
+      {
+        recursive: true,
+      },
+    );
+
+    if (packageManager === 'bun') {
+      await cp(
+        join(templatePath, 'api-bun'),
+        monorepo ? monorepoStructure.api : root,
+        {
+          recursive: true,
+        },
+      );
+    }
+  }
+
+  if (mode === 'apiMonorepo' || monorepo) {
+    await cp(join(templatePath, 'monorepo'), root, {
       recursive: true,
     });
   }
@@ -100,17 +119,19 @@ export const createVitNode = async ({
 
   spinner.text = 'Renaming special files...';
   await rename(join(root, '.gitignore_template'), join(root, '.gitignore'));
-  if (mode === 'apiMonorepo') {
-    await Promise.all([
-      rename(
+  if (mode === 'apiMonorepo' || monorepo) {
+    if (existsSync(join(monorepoStructure.api, '.gitignore_template'))) {
+      await rename(
         join(monorepoStructure.api, '.gitignore_template'),
         join(monorepoStructure.api, '.gitignore'),
-      ),
-      rename(
+      );
+    }
+    if (existsSync(join(monorepoStructure.web, '.gitignore_template'))) {
+      await rename(
         join(monorepoStructure.web, '.gitignore_template'),
         join(monorepoStructure.web, '.gitignore'),
-      ),
-    ]);
+      );
+    }
   }
 
   spinner.text = 'Creating package.json...';
@@ -121,6 +142,7 @@ export const createVitNode = async ({
     eslint,
     docker,
     mode,
+    monorepo,
   });
 
   if (mode === 'apiMonorepo' && packageManager === 'pnpm') {
@@ -153,16 +175,18 @@ export const createVitNode = async ({
       cwd: root,
     });
 
-    spinner.text = 'Initializing VitNode files...';
-    initFilesVitnode({
-      packageManager,
-      cwd: mode === 'apiMonorepo' ? monorepoStructure.web : root,
-    });
+    if (mode !== 'onlyApi') {
+      spinner.text = 'Initializing VitNode files...';
+      initFilesVitnode({
+        packageManager,
+        cwd: mode === 'apiMonorepo' || monorepo ? monorepoStructure.web : root,
+      });
+    }
 
     spinner.text = 'Generating migrations...';
     generateMigrationsVitnode({
       packageManager,
-      cwd: mode === 'apiMonorepo' ? monorepoStructure.api : root,
+      cwd: mode === 'apiMonorepo' || monorepo ? monorepoStructure.api : root,
     });
   }
 

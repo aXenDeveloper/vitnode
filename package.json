@@ -10,6 +10,7 @@
     "build:plugins": "turbo build:plugins",
     "build": "turbo build",
     "start": "turbo start",
+    "init": "turbo init",
     "dev": "pnpm build:scripts && turbo build:plugins && turbo dev",
     "lint": "turbo lint",
     "lint:fix": "turbo lint:fix",

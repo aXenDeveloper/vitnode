@@ -11,6 +11,7 @@ export interface CreateCliReturn {
   eslint: boolean;
   install: boolean;
   mode: 'apiMonorepo' | 'onlyApi' | 'singleApp';
+  monorepo?: boolean;
   packageManager: string;
 }
 
@@ -24,6 +25,7 @@ export const createQuestionsCli = async (
     install: !optionsFromProgram.skipInstall,
     docker: optionsFromProgram.docker,
     mode: optionsFromProgram.mode,
+    monorepo: optionsFromProgram.monorepo,
   };
 
   if (!optionsFromProgram.packageManager) {
@@ -73,6 +75,16 @@ export const createQuestionsCli = async (
         },
       ],
       default: 'singleApp',
+    });
+  }
+
+  if (
+    optionsFromProgram.monorepo === undefined &&
+    options.mode !== 'apiMonorepo'
+  ) {
+    options.monorepo = await confirm({
+      message: `Would you like to use ${color.blue('TurboRepo')} for monorepo management? ${color.red('(Required for plugins development)')}`,
+      default: false,
     });
   }
 

@@ -17,11 +17,13 @@ export const createPackageJSON = async ({
   eslint,
   docker,
   mode,
+  monorepo,
 }: {
   appName: string;
   docker?: boolean;
   eslint: boolean;
   mode: CreateCliReturn['mode'];
+  monorepo?: boolean;
   packageManager: string;
   root: string;
 }) => {
@@ -29,18 +31,73 @@ export const createPackageJSON = async ({
   const pkg: PackageJSON = JSON.parse(
     await readFile(join(__dirname, '..', '..', '..', 'package.json'), 'utf-8'),
   );
+  const pkgVitNodeVersion = `^${pkg.version}`;
+
+  if (mode === 'apiMonorepo' || monorepo) {
+    const rootPackageJson: PackageJSON = {
+      name: appName,
+      private: true,
+      scripts: {
+        'db:migrate': 'turbo db:migrate',
+        'db:push': 'turbo db:push',
+        init: 'turbo init',
+        dev: 'turbo dev',
+        build: 'turbo build',
+        start: 'turbo start',
+        ...(eslint
+          ? {
+              lint: 'eslint .',
+              'lint:fix': 'eslint . --fix',
+            }
+          : {}),
+        ...(docker
+          ? {
+              'docker:dev': `docker compose -f ./docker-compose.yml -p ${appName}-vitnode-dev up -d`,
+            }
+          : {}),
+      },
+      devDependencies: {
+        '@types/node': '^24',
+        '@vitnode/eslint-config': pkgVitNodeVersion,
+        ...(eslint
+          ? {
+              'prettier-plugin-tailwindcss': '^0.6.14',
+              prettier: '^3.6.2',
+            }
+          : {}),
+        turbo: '^2.5.4',
+        typescript: '^5.8.3',
+        zod: '^3.25.74',
+      },
+      packageManager: `${packageManager}@${availablePackageManagers[packageManager]}`,
+      workspaces: ['apps/*', 'plugins/*'],
+    };
+
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify(rootPackageJson, null, 2),
+    );
+  }
 
   const apiPackageJson: PackageJSON = {
-    name: mode === 'apiMonorepo' ? 'api' : appName,
+    name: mode === 'apiMonorepo' || monorepo ? 'api' : appName,
     version: '0.1.0',
     private: true,
     type: 'module',
     scripts: {
       'db:push': 'vitnode push',
       'db:migrate': 'vitnode migrate',
-      dev: 'vitnode init --api && tsx watch src/index.ts',
-      build: 'tsc && tsc-alias -p tsconfig.json',
-      start: 'node dist/index.js',
+      init: 'vitnode init --api',
+      ...(packageManager === 'bun'
+        ? {
+            dev: 'vitnode init --api && bun run --hot src/index.ts',
+            start: 'NODE_ENV=production bun run src/index.ts',
+          }
+        : {
+            dev: 'vitnode init --api && tsx watch src/index.ts',
+            build: 'tsc && tsc-alias -p tsconfig.json',
+            start: 'node dist/index.js',
+          }),
       ...(eslint
         ? {
             lint: 'eslint .',
@@ -58,7 +115,7 @@ export const createPackageJSON = async ({
       '@hono/zod-openapi': '^0.19.8',
       '@hono/zod-validator': '^0.7.0',
       '@react-email/components': '^0.2.0',
-      '@vitnode/core': `^${pkg.version}`,
+      '@vitnode/core': pkgVitNodeVersion,
       'drizzle-kit': '^0.31.3',
       'drizzle-orm': '^0.44.2',
       hono: '^4.8.3',
@@ -69,10 +126,15 @@ export const createPackageJSON = async ({
     },
     devDependencies: {
       '@hono/node-server': '^1.15.0',
+      ...(packageManager === 'bun'
+        ? {
+            '@types/bun': 'latest',
+          }
+        : {}),
       '@types/node': '^24',
       '@types/react': '^19.1',
       '@types/react-dom': '^19.1',
-      '@vitnode/eslint-config': `^${pkg.version}`,
+      '@vitnode/eslint-config': pkgVitNodeVersion,
       dotenv: '^17.2.0',
       ...(eslint
         ? {
@@ -94,13 +156,14 @@ export const createPackageJSON = async ({
 
   if (mode === 'singleApp') {
     const packageJson: PackageJSON = {
-      name: appName,
+      name: monorepo ? 'web' : appName,
       version: '0.1.0',
       private: true,
       type: 'module',
       scripts: {
         'db:push': 'vitnode push',
         'db:migrate': 'vitnode migrate',
+        init: 'vitnode init',
         dev: 'vitnode init && next dev --turbopack',
         build: 'next build --turbopack',
         start: 'next start',
@@ -122,7 +185,7 @@ export const createPackageJSON = async ({
         '@hono/zod-validator': '^0.7.0',
         '@hookform/resolvers': '^5.1.1',
         '@react-email/components': '^0.2.0',
-        '@vitnode/core': `^${pkg.version}`,
+        '@vitnode/core': pkgVitNodeVersion,
         'babel-plugin-react-compiler': '19.1.0-rc.2',
         'drizzle-kit': '^0.31.4',
         'drizzle-orm': '^0.44.2',
@@ -141,7 +204,7 @@ export const createPackageJSON = async ({
         '@types/node': '^24',
         '@types/react': '^19.1',
         '@types/react-dom': '^19.1',
-        '@vitnode/eslint-config': `^${pkg.version}`,
+        '@vitnode/eslint-config': pkgVitNodeVersion,
         ...(eslint
           ? {
               eslint: '^9.30.1',
@@ -163,49 +226,6 @@ export const createPackageJSON = async ({
       JSON.stringify(packageJson, null, 2),
     );
   } else if (mode === 'apiMonorepo') {
-    const rootPackageJson: PackageJSON = {
-      name: appName,
-      private: true,
-      scripts: {
-        'db:migrate': 'turbo db:migrate',
-        'db:push': 'turbo db:push',
-        build: 'turbo build',
-        start: 'turbo start',
-        dev: 'turbo dev',
-        ...(eslint
-          ? {
-              lint: 'eslint .',
-              'lint:fix': 'eslint . --fix',
-            }
-          : {}),
-        ...(docker
-          ? {
-              'docker:dev': `docker compose -f ./docker-compose.yml -p ${appName}-vitnode-dev up -d`,
-            }
-          : {}),
-      },
-      devDependencies: {
-        '@types/node': '^24',
-        '@vitnode/eslint-config': `^${pkg.version}`,
-        ...(eslint
-          ? {
-              'prettier-plugin-tailwindcss': '^0.6.14',
-              prettier: '^3.6.2',
-            }
-          : {}),
-        turbo: '^2.5.4',
-        typescript: '^5.8.3',
-        zod: '^3.25.74',
-      },
-      packageManager: `${packageManager}@${availablePackageManagers[packageManager]}`,
-      workspaces: ['apps/*', 'plugins/*'],
-    };
-
-    await writeFile(
-      join(root, 'package.json'),
-      JSON.stringify(rootPackageJson, null, 2),
-    );
-
     await writeFile(
       join(root, 'apps', 'api', 'package.json'),
       JSON.stringify(apiPackageJson, null, 2),
@@ -217,6 +237,7 @@ export const createPackageJSON = async ({
       private: true,
       type: 'module',
       scripts: {
+        init: 'vitnode init --web',
         dev: 'vitnode init --web && next dev --turbopack',
         build: 'next build --turbopack',
         start: 'next start',
@@ -228,7 +249,7 @@ export const createPackageJSON = async ({
           : {}),
       },
       dependencies: {
-        '@vitnode/core': `^${pkg.version}`,
+        '@vitnode/core': pkgVitNodeVersion,
         'babel-plugin-react-compiler': '19.1.0-rc.2',
         'lucide-react': '^0.525.0',
         next: '^15.3.5',
@@ -245,7 +266,7 @@ export const createPackageJSON = async ({
         '@types/node': '^24',
         '@types/react': '^19.1',
         '@types/react-dom': '^19.1',
-        '@vitnode/eslint-config': `^${pkg.version}`,
+        '@vitnode/eslint-config': pkgVitNodeVersion,
         'class-variance-authority': '^0.7.1',
         ...(eslint
           ? {

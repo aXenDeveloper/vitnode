@@ -61,6 +61,8 @@ const init = async () => {
       'What type of app do you want to create?',
     ).choices(['singleApp', 'apiMonorepo', 'onlyApi']),
   );
+  program.option('--monorepo', 'Create project with monorepo structure.');
+  program.option('--docker', 'Initialize with Docker support.');
 
   program.parse(process.argv);
 
