@@ -38,7 +38,7 @@ export const EditAction = (
         <Tooltip>
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
-              <Button size="icon" variant="ghost">
+              <Button aria-label={t('title')} size="icon" variant="ghost">
                 <PencilIcon />
               </Button>
             </DialogTrigger>

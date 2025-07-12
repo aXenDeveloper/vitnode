@@ -2,6 +2,7 @@
 
 import { cva, type VariantProps } from 'class-variance-authority';
 import { PanelLeftIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Slot } from 'radix-ui';
 import * as React from 'react';
 
@@ -261,9 +262,11 @@ function SidebarTrigger({
   ...props
 }: React.ComponentProps<typeof Button>) {
   const { toggleSidebar } = useSidebar();
+  const t = useTranslations('core.global');
 
   return (
     <Button
+      aria-label={t('toggle_sidebar')}
       className={cn('size-7', className)}
       data-sidebar="trigger"
       data-slot="sidebar-trigger"
@@ -276,7 +279,6 @@ function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon />
-      <span className="sr-only">Toggle Sidebar</span>
     </Button>
   );
 }

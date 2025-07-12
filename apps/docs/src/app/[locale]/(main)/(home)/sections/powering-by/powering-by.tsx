@@ -8,6 +8,7 @@ import { NextIntlLogo } from './logos/next-intl';
 import { NextJSLogo } from './logos/nextjs';
 import { PostgreSQLLogo } from './logos/postgresql';
 import { TailwindCSSLogo } from './logos/tailwindcss';
+import { TurboRepoLogo } from './logos/turborepo';
 
 export const PoweringBySection = () => {
   return (
@@ -42,6 +43,14 @@ export const PoweringBySection = () => {
                 target="_blank"
               >
                 <HonoJSLogo />
+              </Link>
+              <Link
+                className="flex items-center justify-center gap-2"
+                href="https://turborepo.com/"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                <TurboRepoLogo />
               </Link>
               <Link
                 className="flex items-center justify-center"

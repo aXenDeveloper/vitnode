@@ -1,6 +1,9 @@
 {
   "core": {
     "global": {
+      "theme_switcher": "Toggle Theme",
+      "language_switcher": "Switch Language",
+      "toggle_sidebar": "Toggle Sidebar",
       "no_results": {
         "title": "No results found",
         "desc": "Try adjusting your search or filter criteria."

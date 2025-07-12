@@ -89,6 +89,7 @@ export function AutoForm<
       }
       isLoading={form.formState.isSubmitting}
       {...submitButtonProps}
+      aria-label={submitButtonProps?.['aria-label'] ?? t('submit')}
       type="submit"
     >
       {submitButtonProps?.children ?? t('submit')}

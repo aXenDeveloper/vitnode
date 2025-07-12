@@ -1,7 +1,5 @@
 import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
-
-import { CONFIG } from '../../lib/config';
+import { join, resolve } from 'path';
 
 export interface PackageJSON {
   dependencies?: Record<string, string>;
@@ -18,13 +16,51 @@ export interface PackageJSON {
 }
 
 export const checkPluginId = (pluginName: string): null | PackageJSON => {
-  if (!CONFIG.node_development) return null;
+  const findMonorepoRoot = (startPath: string): null | string => {
+    let currentPath = startPath;
+    while (currentPath !== resolve(currentPath, '..')) {
+      const turboConfigPath = join(currentPath, 'turbo.json');
 
-  const path = join(process.cwd(), 'node_modules', pluginName, 'package.json');
+      if (existsSync(turboConfigPath)) {
+        return currentPath;
+      }
+      currentPath = resolve(currentPath, '..');
+    }
 
-  if (!existsSync(path)) {
+    return null;
+  };
+
+  const findPluginPath = (pluginName: string): null | string => {
+    const cwd = process.cwd();
+    const monorepoRoot = findMonorepoRoot(cwd);
+
+    // Check in current working directory first
+    const cwdPluginPath = join(cwd, 'node_modules', pluginName, 'package.json');
+    if (existsSync(cwdPluginPath)) {
+      return cwdPluginPath;
+    }
+
+    // Check in monorepo root if it exists and is different from cwd
+    if (monorepoRoot && monorepoRoot !== cwd) {
+      const rootPluginPath = join(
+        monorepoRoot,
+        'node_modules',
+        pluginName,
+        'package.json',
+      );
+      if (existsSync(rootPluginPath)) {
+        return rootPluginPath;
+      }
+    }
+
+    return null;
+  };
+
+  const path = findPluginPath(pluginName);
+
+  if (!path) {
     throw new Error(
-      `package.json file not found at ${path}. Please ensure you are using the correct plugin name as specified in its package.json.`,
+      `package.json file not found for plugin "${pluginName}". Please ensure you are using the correct plugin name as specified in its package.json.`,
     );
   }
 

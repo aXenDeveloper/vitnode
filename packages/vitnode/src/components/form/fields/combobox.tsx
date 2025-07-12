@@ -66,6 +66,7 @@ export function AutoFormCombobox<T extends z.ZodTypeAny>({
         <PopoverTrigger asChild>
           <FormControl>
             <Button
+              aria-label="Combobox"
               className={cn(
                 'w-[200px] justify-between',
                 !field.value && 'text-muted-foreground',

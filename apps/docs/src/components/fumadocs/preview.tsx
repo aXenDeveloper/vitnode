@@ -27,7 +27,7 @@ export const Preview = ({
   return (
     <div
       className={cn(
-        'from-fd-primary/1 bg-card/50 flex min-h-[450px] items-center justify-center rounded-xl border bg-gradient-to-br p-6 *:max-w-[24rem] [&_p]:m-0',
+        'from-fd-primary/1 bg-card/50 flex min-h-[450px] items-center justify-center rounded-xl border bg-gradient-to-br p-6 *:max-w-[30rem] [&_p]:m-0',
         className,
       )}
     >

@@ -40,6 +40,16 @@ const buttonVariants = cva(
   },
 );
 
+type ButtonProps = React.ComponentProps<'button'> &
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean;
+    isLoading?: boolean;
+    loadingText?: string;
+  } & (
+    | { 'aria-label': string; size: 'icon' }
+    | { 'aria-label'?: string; size?: 'default' | 'lg' | 'sm' }
+  );
+
 function Button({
   className,
   variant,
@@ -48,12 +58,7 @@ function Button({
   isLoading,
   loadingText,
   ...props
-}: React.ComponentProps<'button'> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-    isLoading?: boolean;
-    loadingText?: string;
-  }) {
+}: ButtonProps) {
   const t = useTranslations('core.global');
   const Comp = asChild ? Slot.Root : 'button';
 

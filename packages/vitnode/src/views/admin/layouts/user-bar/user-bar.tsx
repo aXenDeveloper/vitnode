@@ -21,7 +21,7 @@ export const UserBarAdmin = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size="icon" variant="ghost">
+        <Button aria-label={user.name} size="icon" variant="ghost">
           <Avatar size={24} user={user} />
         </Button>
       </DropdownMenuTrigger>

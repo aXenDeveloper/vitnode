@@ -3,6 +3,39 @@ title: Button
 description: A button component for triggering actions in your application.
 ---
 
-<Callout type="warn" title="This documentation is under construction! 🚧">
-  We're working hard to bring you the best documentation experience.
-</Callout>
+## Preview
+
+<Preview name="button" />
+
+## Usage
+
+```ts
+import { Home } from 'lucide-react';
+import { Button } from '@vitnode/core/components/ui/button';
+```
+
+```tsx
+<Button>
+  <Home />
+  Default
+</Button>
+```
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    variant: {
+      description: 'The variant of the button.',
+      type: 'default | secondary | outline | ghost | link | destructive| destructiveGhost',
+      default: 'default',
+    },
+    size: {
+      description: 'The size of the button.',
+      type: 'default | sm | lg | icon',
+      default: 'default',
+    },
+  }}
+/>
