@@ -198,9 +198,17 @@ export const createVitNode = async ({
     }
 
     spinner.text = 'Generating migrations...';
+    let migrationsCwd: string;
+    if (mode === 'apiMonorepo' || (monorepo && mode !== 'singleApp')) {
+      migrationsCwd = monorepoStructure.api;
+    } else if (mode === 'singleApp' && monorepo) {
+      migrationsCwd = monorepoStructure.web;
+    } else {
+      migrationsCwd = root;
+    }
     generateMigrationsVitnode({
       packageManager,
-      cwd: mode === 'apiMonorepo' || monorepo ? monorepoStructure.api : root,
+      cwd: migrationsCwd,
     });
   }
 
