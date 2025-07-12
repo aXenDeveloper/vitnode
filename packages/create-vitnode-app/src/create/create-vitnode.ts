@@ -52,6 +52,20 @@ export const createVitNode = async ({
     web: join(root, 'apps', 'web'),
   };
 
+  spinner.text = 'Preparing the project structure...';
+  if (monorepo || mode === 'apiMonorepo') {
+    const dirsToCreate: string[] = [];
+    if (mode === 'apiMonorepo' || (monorepo && mode === 'onlyApi')) {
+      dirsToCreate.push(monorepoStructure.api);
+    }
+    if (mode === 'apiMonorepo' || (monorepo && mode === 'singleApp')) {
+      dirsToCreate.push(monorepoStructure.web);
+    }
+    await Promise.all(
+      dirsToCreate.map(async dir => mkdir(dir, { recursive: true })),
+    );
+  }
+
   spinner.text = 'Copying files...';
   await cp(join(templatePath, '.vscode'), join(root, '.vscode'), {
     recursive: true,
