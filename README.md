@@ -17,12 +17,11 @@
 
 ## 🏁 Getting Started
 
-### Prerequisites
+### Supported Package Managers
 
-- [Node.js](https://nodejs.org/) (min: v20, recommended: v22)
-- [PostgreSQL](https://www.postgresql.org/) (min: v14, recommended: v16)
-- [Docker](https://www.docker.com/)
-- [pnpm](https://pnpm.io/)
+- [bun](https://bun.com/) (min: v1.1, recommended: v1.2)
+- [pnpm](https://pnpm.io/) (min: v9, recommended: v10)
+- [node.js](https://nodejs.org/) (min: v20, recommended: v22)
 
 ### Quick Setup
 

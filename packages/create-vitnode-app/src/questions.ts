@@ -34,9 +34,9 @@ export const createQuestionsCli = async (
       message: `Which ${color.blue('package manager')} do you want to use?`,
       choices: [
         {
-          name: `npm${availablePackageManagers.npm ? `@${availablePackageManagers.npm}` : ''}`,
-          value: 'npm',
-          disabled: !availablePackageManagers.npm,
+          name: `bun${availablePackageManagers.bun ? `@${availablePackageManagers.bun}` : ''}`,
+          value: 'bun',
+          disabled: !availablePackageManagers.bun,
         },
         {
           name: `pnpm${availablePackageManagers.pnpm ? `@${availablePackageManagers.pnpm}` : ''}`,
@@ -44,9 +44,9 @@ export const createQuestionsCli = async (
           disabled: !availablePackageManagers.pnpm,
         },
         {
-          name: `bun${availablePackageManagers.bun ? `@${availablePackageManagers.bun}` : ''}`,
-          value: 'bun',
-          disabled: !availablePackageManagers.bun,
+          name: `npm${availablePackageManagers.npm ? `@${availablePackageManagers.npm}` : ''}`,
+          value: 'npm',
+          disabled: !availablePackageManagers.npm,
         },
       ],
     });

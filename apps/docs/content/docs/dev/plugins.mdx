@@ -30,14 +30,14 @@ By creating a plugin, you can extend the functionality like:
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 
-<Tabs groupId='package-manager' persist items={['pnpm', 'bun', 'npm']} label='Create a Plugin'>
-
-```bash tab="pnpm"
-pnpm create vitnode-app@canary --plugin
-```
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Create a Plugin'>
 
 ```bash tab="bun"
 bun create vitnode-app@canary --plugin
+```
+
+```bash tab="pnpm"
+pnpm create vitnode-app@canary --plugin
 ```
 
 ```bash tab="npm"

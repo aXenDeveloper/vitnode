@@ -31,14 +31,14 @@ Run the following command to generate migrations for your Vitnode project:
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 
-<Tabs groupId='package-manager' persist items={['pnpm', 'bun', 'npm']} label='Generate Migrations'>
-
-```bash tab="pnpm"
-pnpm db:migrate
-```
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Generate Migrations'>
 
 ```bash tab="bun"
 bun db:migrate
+```
+
+```bash tab="pnpm"
+pnpm db:migrate
 ```
 
 ```bash tab="npm"

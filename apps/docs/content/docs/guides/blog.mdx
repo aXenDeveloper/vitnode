@@ -17,14 +17,14 @@ icon: BookText
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 
-<Tabs groupId='package-manager' persist items={['pnpm', 'bun', 'npm']}>
-
-```bash tab="pnpm"
-pnpm i @vitnode/blog@canary
-```
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
 
 ```bash tab="bun"
 bun i @vitnode/blog@canary
+```
+
+```bash tab="pnpm"
+pnpm i @vitnode/blog@canary
 ```
 
 ```bash tab="npm"
@@ -67,14 +67,14 @@ export const vitNodeApiConfig = buildApiConfig({
 
 ### Run dev server
 
-<Tabs groupId='package-manager' persist items={['pnpm', 'bun', 'npm']}>
-
-```bash tab="pnpm"
-pnpm dev
-```
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
 
 ```bash tab="bun"
 bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
 ```
 
 ```bash tab="npm"

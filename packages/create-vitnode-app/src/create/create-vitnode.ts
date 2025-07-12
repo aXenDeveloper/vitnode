@@ -159,7 +159,7 @@ export const createVitNode = async ({
     monorepo,
   });
 
-  if (mode === 'apiMonorepo' && packageManager === 'pnpm') {
+  if ((mode === 'apiMonorepo' || monorepo) && packageManager === 'pnpm') {
     spinner.text = 'Creating pnpm-workspace.yaml...';
     const pnpmWorkspaceContent = `packages:\n  - 'apps/*'\n  - 'plugins/*'\n`;
     await writeFile(join(root, 'pnpm-workspace.yaml'), pnpmWorkspaceContent);

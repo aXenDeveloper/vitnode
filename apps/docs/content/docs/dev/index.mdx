@@ -12,14 +12,14 @@ icon: Power
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 
-<Tabs groupId='package-manager' persist items={['pnpm', 'bun', 'npm']} label='Create a Plugin'>
-
-```bash tab="pnpm"
-pnpm create vitnode-app@canary
-```
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Create a Plugin'>
 
 ```bash tab="bun"
 bun create vitnode-app@canary
+```
+
+```bash tab="pnpm"
+pnpm create vitnode-app@canary
 ```
 
 ```bash tab="npm"

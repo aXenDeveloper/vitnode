@@ -54,14 +54,14 @@ Generate migration files when you modify your database schema:
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 
-<Tabs groupId='package-manager' persist items={['pnpm', 'bun', 'npm']}>
-
-```bash tab="pnpm"
-pnpm db:migrate
-```
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
 
 ```bash tab="bun"
 bun db:migrate
+```
+
+```bash tab="pnpm"
+pnpm db:migrate
 ```
 
 ```bash tab="npm"
@@ -74,14 +74,14 @@ npm run db:migrate
 
 Apply your schema changes directly to the database:
 
-<Tabs groupId='package-manager' persist items={['pnpm', 'bun', 'npm']}>
-
-```bash tab="pnpm"
-pnpm db:push
-```
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
 
 ```bash tab="bun"
 bun db:push
+```
+
+```bash tab="pnpm"
+pnpm db:push
 ```
 
 ```bash tab="npm"
