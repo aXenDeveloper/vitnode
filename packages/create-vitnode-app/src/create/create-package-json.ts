@@ -32,6 +32,10 @@ export const createPackageJSON = async ({
     await readFile(join(__dirname, '..', '..', '..', 'package.json'), 'utf-8'),
   );
   const pkgVitNodeVersion = `^${pkg.version}`;
+  const monorepoStructure = {
+    api: join(root, 'apps', 'api'),
+    web: join(root, 'apps', 'web'),
+  };
 
   if (mode === 'apiMonorepo' || monorepo) {
     const rootPackageJson: PackageJSON = {
@@ -222,7 +226,7 @@ export const createPackageJSON = async ({
     };
 
     await writeFile(
-      join(root, 'package.json'),
+      join(monorepo ? monorepoStructure.web : root, 'package.json'),
       JSON.stringify(packageJson, null, 2),
     );
   } else if (mode === 'apiMonorepo') {
@@ -288,7 +292,7 @@ export const createPackageJSON = async ({
     );
   } else if (mode === 'onlyApi') {
     await writeFile(
-      join(root, 'package.json'),
+      join(monorepo ? monorepoStructure.api : root, 'package.json'),
       JSON.stringify(apiPackageJson, null, 2),
     );
   }
