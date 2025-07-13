@@ -264,7 +264,7 @@ export const createPackageJSON = async ({
         sonner: '^2.0.6',
       },
       devDependencies: {
-        '@playwright/test': '^1.53.2',
+        '@hookform/resolvers': '^5.1.1',
         '@tailwindcss/postcss': '^4.1.11',
         '@types/mdx': '^2.0.13',
         '@types/node': '^24',

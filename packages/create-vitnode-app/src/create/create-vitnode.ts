@@ -183,7 +183,11 @@ export const createVitNode = async ({
   }
 
   spinner.text = 'Updating VitNode paths...';
-  if ((mode === 'apiMonorepo' || monorepo) && packageManager !== 'pnpm') {
+  if (
+    (mode === 'apiMonorepo' || monorepo) &&
+    packageManager !== 'pnpm' &&
+    mode !== 'onlyApi'
+  ) {
     const globalCssPath = join(
       monorepoStructure.web,
       'src',
@@ -193,9 +197,17 @@ export const createVitNode = async ({
     const globalCssContent = await readFile(globalCssPath, 'utf-8');
     const updatedGlobalCssContent = globalCssContent.replaceAll(
       '@source "../../node_modules/@vitnode/',
-      '@source "../../../../node_modules/@vitnode',
+      '@source "../../../../node_modules/@vitnode/',
     );
     await writeFile(globalCssPath, updatedGlobalCssContent);
+  }
+
+  if (mode === 'apiMonorepo') {
+    spinner.text = 'Setting up environment variables...';
+    const envExamplePath = join(monorepoStructure.web, '.env.example');
+    if (existsSync(envExamplePath)) {
+      await rename(envExamplePath, join(monorepoStructure.web, '.env'));
+    }
   }
 
   if (install) {
