@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'fs';
 import { join, resolve } from 'path';
 
+import { CONFIG } from '../../lib/config';
+
 export interface PackageJSON {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
@@ -31,6 +33,8 @@ export const checkPluginId = (pluginName: string): null | PackageJSON => {
   };
 
   const findPluginPath = (pluginName: string): null | string => {
+    if (CONFIG.node_development) return null;
+
     const cwd = process.cwd();
     const monorepoRoot = findMonorepoRoot(cwd);
 
