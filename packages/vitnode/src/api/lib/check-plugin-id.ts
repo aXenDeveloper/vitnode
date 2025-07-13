@@ -18,6 +18,8 @@ export interface PackageJSON {
 }
 
 export const checkPluginId = (pluginName: string): null | PackageJSON => {
+  if (!CONFIG.node_development) return null;
+
   const findMonorepoRoot = (startPath: string): null | string => {
     let currentPath = startPath;
     while (currentPath !== resolve(currentPath, '..')) {
@@ -33,8 +35,6 @@ export const checkPluginId = (pluginName: string): null | PackageJSON => {
   };
 
   const findPluginPath = (pluginName: string): null | string => {
-    if (CONFIG.node_development) return null;
-
     const cwd = process.cwd();
     const monorepoRoot = findMonorepoRoot(cwd);
 
