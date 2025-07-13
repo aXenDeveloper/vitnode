@@ -148,7 +148,12 @@ export function findRepoRoot(startPath: string): string {
     currentPath = resolve(currentPath, '..');
   }
 
-  throw new Error('❌  Could not locate project root');
+  const packagePath = join(startPath, 'package.json');
+  if (existsSync(packagePath)) {
+    return startPath;
+  }
+
+  throw new Error('❌ Could not locate project root');
 }
 
 export function findLocaleRoot(repoRoot: string): string {

@@ -182,6 +182,22 @@ export const createVitNode = async ({
     await writeFile(dockerComposePath, updatedContent);
   }
 
+  spinner.text = 'Updating VitNode paths...';
+  if ((mode === 'apiMonorepo' || monorepo) && packageManager !== 'pnpm') {
+    const globalCssPath = join(
+      monorepoStructure.web,
+      'src',
+      'app',
+      'global.css',
+    );
+    const globalCssContent = await readFile(globalCssPath, 'utf-8');
+    const updatedGlobalCssContent = globalCssContent.replaceAll(
+      '@source "../../node_modules/@vitnode/',
+      '@source "../../../../node_modules/@vitnode',
+    );
+    await writeFile(globalCssPath, updatedGlobalCssContent);
+  }
+
   if (install) {
     spinner.text = 'Installing dependencies...';
     await installDependencies({
