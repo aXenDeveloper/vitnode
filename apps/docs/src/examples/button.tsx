@@ -25,7 +25,7 @@ export default function ButtonExample() {
         <ArrowRight />
         Link
       </Button>
-      <Button variant="destructive">
+      <Button size="sm" variant="destructive">
         <Trash2 />
         Destructive
       </Button>

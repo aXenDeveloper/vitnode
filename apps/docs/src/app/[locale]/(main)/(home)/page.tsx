@@ -4,6 +4,7 @@ import { buttonVariants } from '@vitnode/core/components/ui/button';
 import { cn } from '@vitnode/core/lib/utils';
 import Link from 'fumadocs-core/link';
 
+import { AnimatedBeamHome } from '../../../../components/animated-beam/animated-beam-home';
 import { AdminSection } from './sections/admin/admin';
 import { CallToActionSection } from './sections/call-to-action';
 import { PoweringBySection } from './sections/powering-by/powering-by';
@@ -77,7 +78,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div>Here will be some img or something else</div>
+        <AnimatedBeamHome />
       </section>
 
       <PoweringBySection />
