@@ -33,6 +33,7 @@ const formSchema = z.object({
       id: 'options',
       component: props => (
         <AutoFormRadioGroup
+          {...props}
           description="By checking this box, you agree to the terms and conditions."
           label="I agree to the terms and conditions"
           labels={[
@@ -49,7 +50,6 @@ const formSchema = z.object({
               label: 'Option 3',
             },
           ]}
-          {...props}
         />
       ),
     },

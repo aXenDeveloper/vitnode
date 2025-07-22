@@ -74,6 +74,7 @@
 - **Enhanced Plugin System**: Improved CLI tools for plugins
 - **Better Documentation**: Completely rewritten docs and website
 - **Streamlined Configuration**: Single config file for all settings
+- **Zod 4**: Upgraded to the latest version for schema validation
 
 ## 🔍 Project Scope
 

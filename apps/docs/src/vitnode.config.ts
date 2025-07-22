@@ -8,6 +8,7 @@ export const vitNodeConfig = buildConfig({
     shortTitle: 'VitNode',
   },
   plugins: [blogPlugin()],
+  debug: true,
   i18n: {
     locales: [
       {

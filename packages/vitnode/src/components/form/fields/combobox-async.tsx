@@ -1,5 +1,3 @@
-import type { z } from 'zod';
-
 import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -23,27 +21,25 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
-import type { ItemAutoFormComponentProps } from './item';
+import type { ItemAutoFormComponentProps } from '../auto-form';
 
 import { Skeleton } from '../../ui/skeleton';
 import { AutoFormDesc } from '../common/desc';
 import { AutoFormLabel } from '../common/label';
 
-export function AutoFormComboboxAsync<T extends z.ZodTypeAny>({
+export const AutoFormComboboxAsync = ({
   label,
   field,
   description,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  shape: _s,
   placeholder,
   className,
   id,
+  otherProps: { isOptional },
   searchPlaceholder,
   fetchData,
   ...props
-}: ItemAutoFormComponentProps<T> &
+}: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Button>, 'role' | 'variant'> & {
-    description?: React.ReactNode;
     fetchData: (params: { search: string }) =>
       | Promise<
           {
@@ -56,10 +52,9 @@ export function AutoFormComboboxAsync<T extends z.ZodTypeAny>({
           value: string;
         }[];
     id: string;
-    label?: React.ReactNode;
     placeholder?: string;
     searchPlaceholder?: string;
-  }) {
+  }) => {
   const t = useTranslations('core.global');
   const [search, setSearch] = React.useState('');
   const { data, isLoading } = useQuery({
@@ -75,7 +70,7 @@ export function AutoFormComboboxAsync<T extends z.ZodTypeAny>({
 
   return (
     <FormItem className="flex flex-col">
-      {label && <AutoFormLabel>{label}</AutoFormLabel>}
+      {label && <AutoFormLabel isOptional={isOptional}>{label}</AutoFormLabel>}
 
       <Popover>
         <PopoverTrigger asChild>
@@ -91,9 +86,7 @@ export function AutoFormComboboxAsync<T extends z.ZodTypeAny>({
               variant="outline"
               {...props}
             >
-              {field.value && field.value.label
-                ? field.value.label
-                : (placeholder ?? t('select_option'))}
+              {field.value?.label ?? placeholder ?? t('select_option')}
               <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
             </Button>
           </FormControl>
@@ -155,4 +148,4 @@ export function AutoFormComboboxAsync<T extends z.ZodTypeAny>({
       <FormMessage />
     </FormItem>
   );
-}
+};

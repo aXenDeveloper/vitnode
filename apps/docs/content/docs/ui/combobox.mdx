@@ -34,6 +34,7 @@ const formSchema = z.object({
       id: 'type',
       component: props => (
         <AutoFormCombobox
+          {...props}
           description="Select an option from the list"
           label="Type"
           labels={[
@@ -46,7 +47,6 @@ const formSchema = z.object({
               label: 'Option Two',
             },
           ]}
-          {...props}
         />
       ),
     },

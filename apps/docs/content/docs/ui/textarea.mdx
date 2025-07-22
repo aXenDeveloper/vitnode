@@ -34,10 +34,10 @@ const formSchema = z.object({
       id: 'desc',
       component: props => (
         <AutoFormTextarea
+          {...props}
           description="Write a short description of your application."
           placeholder="My application is..."
           label="Description"
-          {...props}
         />
       ),
     },

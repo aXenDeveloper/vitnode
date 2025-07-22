@@ -2,6 +2,8 @@ import { CheckIcon, XIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
+import type { ItemAutoFormComponentProps } from '@/components/form/auto-form';
+
 import { AutoFormLabel } from '@/components/form/common/label';
 import { FormControl, FormItem, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -13,12 +15,17 @@ import {
 } from '@/components/ui/tooltip';
 
 export const PasswordInput = ({
-  value: valueFromProps,
+  label,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  description: _,
+  field,
+  otherProps: { maxLength, minLength, pattern },
   ...props
-}: Omit<React.ComponentProps<typeof Input>, 'type'>) => {
+}: ItemAutoFormComponentProps &
+  Omit<React.ComponentProps<typeof Input>, 'type'>) => {
   const t = useTranslations('core.auth.sign_up');
   const [openTooltip, setOpenTooltip] = React.useState(false);
-  const value = valueFromProps?.toString() ?? '';
+  const value: string = field.value ?? '';
   const regexArray = [
     {
       regex: /^.{8,}$/.test(value),
@@ -40,7 +47,7 @@ export const PasswordInput = ({
 
   return (
     <FormItem>
-      <AutoFormLabel>{t('password.label')}</AutoFormLabel>
+      <AutoFormLabel>{label}</AutoFormLabel>
 
       <TooltipProvider delayDuration={0}>
         <Tooltip open={openTooltip}>
@@ -48,16 +55,22 @@ export const PasswordInput = ({
             <FormControl>
               <Input
                 type="password"
-                value={value}
-                {...props}
+                {...field}
+                maxLength={maxLength ?? props.maxLength}
+                minLength={minLength ?? props.minLength}
                 onBlur={e => {
                   setOpenTooltip(false);
+                  field.onBlur();
                   props.onBlur?.(e);
                 }}
-                onFocus={e => {
+                onChange={e => {
                   setOpenTooltip(true);
-                  props.onFocus?.(e);
+                  field.onChange(e);
+                  props.onChange?.(e);
                 }}
+                pattern={pattern ?? props.pattern}
+                value={field.value ?? ''}
+                {...props}
               />
             </FormControl>
           </TooltipTrigger>

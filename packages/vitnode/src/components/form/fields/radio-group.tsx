@@ -1,5 +1,3 @@
-import type { z } from 'zod';
-
 import React from 'react';
 
 import {
@@ -9,30 +7,24 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { getBaseSchema } from '@/lib/helpers/auto-form';
 
-import type { ItemAutoFormComponentProps } from './item';
+import type { ItemAutoFormComponentProps } from '../auto-form';
 
 import { AutoFormDesc } from '../common/desc';
 import { AutoFormLabel } from '../common/label';
 
-export function AutoFormRadioGroup<T extends z.ZodTypeAny>({
+export const AutoFormRadioGroup = ({
   label,
   field,
   description,
-  shape,
+  otherProps: { enum: enumValues = [], isOptional },
   labels = [],
   ...props
-}: ItemAutoFormComponentProps<T> &
+}: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof RadioGroup>, 'value'> & {
-    description?: React.ReactNode;
-    label?: React.ReactNode;
     labels?: { label: string; value: string }[];
-  }) {
-  const baseValues = (
-    getBaseSchema(shape, true) as unknown as z.ZodEnum<[string, ...string[]]>
-  )._def.values;
-  const values: { label: string; value: string }[] = baseValues.map(value => {
+  }) => {
+  const values: { label: string; value: string }[] = enumValues.map(value => {
     const label = labels.find(l => l.value === value)?.label;
 
     return {
@@ -43,7 +35,7 @@ export function AutoFormRadioGroup<T extends z.ZodTypeAny>({
 
   return (
     <FormItem className="space-y-3">
-      {label && <AutoFormLabel>{label}</AutoFormLabel>}
+      {label && <AutoFormLabel isOptional={isOptional}>{label}</AutoFormLabel>}
 
       <FormControl>
         <RadioGroup
@@ -70,4 +62,4 @@ export function AutoFormRadioGroup<T extends z.ZodTypeAny>({
       <FormMessage />
     </FormItem>
   );
-}
+};

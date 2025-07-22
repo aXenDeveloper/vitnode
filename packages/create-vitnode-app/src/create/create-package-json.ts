@@ -69,9 +69,9 @@ export const createPackageJSON = async ({
               prettier: '^3.6.2',
             }
           : {}),
-        turbo: '^2.5.4',
+        turbo: '^2.5.5',
         typescript: '^5.8.3',
-        zod: '^3.25.74',
+        zod: '^4.0.5',
       },
       packageManager: `${packageManager}@${availablePackageManagers[packageManager]}`,
       workspaces: ['apps/*', 'plugins/*'],
@@ -116,9 +116,9 @@ export const createPackageJSON = async ({
       'drizzle-kit': 'drizzle-kit',
     },
     dependencies: {
-      '@hono/zod-openapi': '^0.19.10',
-      '@hono/zod-validator': '^0.7.1',
-      '@react-email/components': '^0.2.0',
+      '@hono/zod-openapi': '^1.0.2',
+      '@hono/zod-validator': '^0.7.2',
+      '@react-email/components': '^0.3.2',
       '@vitnode/core': pkgVitNodeVersion,
       'drizzle-kit': '^0.31.3',
       'drizzle-orm': '^0.44.3',
@@ -126,10 +126,10 @@ export const createPackageJSON = async ({
       'next-intl': '^4.3.1',
       react: '^19.1',
       'react-dom': '^19.1',
-      zod: '^3.25.67',
+      zod: '^4.0.5',
     },
     devDependencies: {
-      '@hono/node-server': '^1.15.0',
+      '@hono/node-server': '^1.17.1',
       ...(packageManager === 'bun'
         ? {
             '@types/bun': 'latest',
@@ -151,7 +151,7 @@ export const createPackageJSON = async ({
               : {}),
           }
         : {}),
-      'react-email': '^4.1.3',
+      'react-email': '^4.2.3',
       'tsc-alias': '^1.8.16',
       tsx: '^4.20.3',
       typescript: '^5.8.3',
@@ -169,7 +169,7 @@ export const createPackageJSON = async ({
         'db:migrate': 'vitnode migrate',
         init: 'vitnode init',
         dev: 'vitnode init && next dev --turbopack',
-        build: 'next build --turbopack',
+        build: 'next build',
         start: 'next start',
         ...(eslint
           ? {
@@ -185,23 +185,23 @@ export const createPackageJSON = async ({
         'drizzle-kit': 'drizzle-kit',
       },
       dependencies: {
-        '@hono/zod-openapi': '^0.19.10',
-        '@hono/zod-validator': '^0.7.1',
+        '@hono/zod-openapi': '^1.0.2',
+        '@hono/zod-validator': '^0.7.2',
         '@hookform/resolvers': '^5.1.1',
-        '@react-email/components': '^0.2.0',
+        '@react-email/components': '^0.3.2',
         '@vitnode/core': pkgVitNodeVersion,
         'babel-plugin-react-compiler': '19.1.0-rc.2',
         'drizzle-kit': '^0.31.4',
         'drizzle-orm': '^0.44.3',
         hono: '^4.8.5',
         'lucide-react': '^0.525.0',
-        next: '^15.4.1',
+        next: '^15.4.2',
         'next-intl': '^4.3.4',
         react: '^19.1',
         'react-dom': '^19.1',
         'react-hook-form': '^7.60.0',
         sonner: '^2.0.6',
-        zod: '^3.25.74',
+        zod: '^4.0.5',
       },
       devDependencies: {
         '@tailwindcss/postcss': '^4.1.11',
@@ -216,8 +216,8 @@ export const createPackageJSON = async ({
               prettier: '^3.6.2',
             }
           : {}),
-        'react-email': '^4.1.3',
-        turbo: '^2.5.4',
+        'react-email': '^4.2.3',
+        turbo: '^2.5.5',
         tailwindcss: '^4.1.11',
         'tw-animate-css': '^1.3.5',
         typescript: '^5.8.3',
@@ -243,7 +243,7 @@ export const createPackageJSON = async ({
       scripts: {
         init: 'vitnode init --web',
         dev: 'vitnode init --web && next dev --turbopack',
-        build: 'next build --turbopack',
+        build: 'next build',
         start: 'next start',
         ...(eslint
           ? {
@@ -256,7 +256,7 @@ export const createPackageJSON = async ({
         '@vitnode/core': pkgVitNodeVersion,
         'babel-plugin-react-compiler': '19.1.0-rc.2',
         'lucide-react': '^0.525.0',
-        next: '^15.4.1',
+        next: '^15.4.2',
         'next-intl': '^4.3.4',
         react: '^19.1',
         'react-dom': '^19.1',
@@ -281,7 +281,7 @@ export const createPackageJSON = async ({
         tailwindcss: '^4.1.11',
         'tw-animate-css': '^1.3.5',
         typescript: '^5.8.3',
-        zod: '^3.25.74',
+        zod: '^4.0.5',
       },
     };
 

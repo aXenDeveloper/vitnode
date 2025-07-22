@@ -10,7 +10,9 @@ import { z } from 'zod';
 export default function AutoFormExample() {
   const formSchema = z.object({
     username: z.string().min(3, 'Username must be at least 3 characters'),
-    email: z.string().email('Please enter a valid email address'),
+    email: z
+      .email('Please enter a valid email address')
+      .describe("We'll use this email to contact you. (from zod schema)"),
     user_type: z.enum(['admin', 'editor', 'viewer']),
     accept_terms: z.boolean().refine(val => val, {
       message: 'You must accept the terms and conditions',
@@ -36,12 +38,7 @@ export default function AutoFormExample() {
         {
           id: 'email',
           component: props => (
-            <AutoFormInput
-              description="We'll use this email to contact you."
-              label="Email Address"
-              type="email"
-              {...props}
-            />
+            <AutoFormInput label="Email Address" type="email" {...props} />
           ),
         },
         {

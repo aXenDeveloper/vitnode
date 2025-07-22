@@ -28,14 +28,14 @@
     "typescript"
   ],
   "dependencies": {
-    "@inquirer/prompts": "^7.6.0",
+    "@inquirer/prompts": "^7.7.1",
     "commander": "^14.0.0",
     "ora": "^8.2.0",
     "picocolors": "^1.1.1",
-    "validate-npm-package-name": "^6.0.1"
+    "validate-npm-package-name": "^6.0.2"
   },
   "devDependencies": {
-    "@types/node": "^24.0.13",
+    "@types/node": "^24.1.0",
     "@types/prompts": "^2.4.9",
     "@types/validate-npm-package-name": "^4.0.2",
     "@vitnode/eslint-config": "workspace:*",

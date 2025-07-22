@@ -5,9 +5,11 @@ import type { z } from 'zod';
 import { useTranslations } from 'next-intl';
 
 import type { routeMiddlewareSchema } from '@/api/modules/middleware/route';
-import type { ItemAutoFormComponentProps } from '@/components/form/fields/item';
 
-import { AutoForm } from '@/components/form/auto-form';
+import {
+  AutoForm,
+  type ItemAutoFormComponentProps,
+} from '@/components/form/auto-form';
 import { AutoFormCheckbox } from '@/components/form/fields/checkbox';
 import { AutoFormInput } from '@/components/form/fields/input';
 import { Link } from '@/lib/navigation';
@@ -27,20 +29,20 @@ export const FormSignUp = ({
   const { onSubmit, formSchema } = useFormSignUp();
 
   return (
-    <AutoForm<typeof formSchema>
+    <AutoForm
       captcha={captcha}
       fields={[
         {
           id: 'name',
-          component: ({ field, shape }) => {
-            const value = (field.value ?? '') as string;
+          component: ({ field, ...props }) => {
+            const value: string = field.value ?? '';
 
             return (
               <div className="space-y-2">
                 <AutoFormInput
                   field={field}
                   label={t('username.label')}
-                  shape={shape}
+                  {...props}
                 />
                 {value.length >= 3 && (
                   <div className="text-muted-foreground text-sm">
@@ -65,12 +67,15 @@ export const FormSignUp = ({
         },
         {
           id: 'password',
-          component: ({ field }) => <PasswordInput {...field} />,
+          component: props => (
+            <PasswordInput label={t('password.label')} {...props} />
+          ),
         },
         {
           id: 'terms',
           component: props => (
             <AutoFormCheckbox
+              {...props}
               description={t.rich('terms.desc', {
                 link: text => (
                   <Link className="text-primary" href="/terms">
@@ -79,7 +84,6 @@ export const FormSignUp = ({
                 ),
               })}
               label={t('terms.label')}
-              {...props}
             />
           ),
         },
@@ -87,18 +91,25 @@ export const FormSignUp = ({
           ? [
               {
                 id: 'newsletter' as const,
-                component: (
-                  props: ItemAutoFormComponentProps<typeof formSchema>,
-                ) => (
+                component: (props: ItemAutoFormComponentProps) => (
                   <AutoFormCheckbox
+                    {...props}
                     description={t('newsletter.desc')}
                     label={t('newsletter.label')}
-                    {...props}
                   />
                 ),
               },
             ]
           : []),
+        {
+          id: 'test',
+          label: 'elo',
+          description: 'Test with default',
+        },
+        {
+          id: 'test.test123',
+          component: props => <AutoFormInput label="fsaf" {...props} />,
+        },
       ]}
       formSchema={formSchema}
       mode="all"

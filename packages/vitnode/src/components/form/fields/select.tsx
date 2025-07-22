@@ -1,5 +1,3 @@
-import type { z } from 'zod';
-
 import { useTranslations } from 'next-intl';
 import React from 'react';
 
@@ -11,33 +9,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getBaseSchema } from '@/lib/helpers/auto-form';
 
-import type { ItemAutoFormComponentProps } from './item';
+import type { ItemAutoFormComponentProps } from '../auto-form';
 
 import { AutoFormDesc } from '../common/desc';
 import { AutoFormLabel } from '../common/label';
 
-export function AutoFormSelect<T extends z.ZodTypeAny>({
+export const AutoFormSelect = ({
   label,
   field,
   description,
-  shape,
+  otherProps: { enum: enumValues = [], isOptional },
   placeholder,
   labels = [],
   ...props
-}: ItemAutoFormComponentProps<T> &
+}: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Select>, 'value'> & {
-    description?: React.ReactNode;
-    label?: React.ReactNode;
     labels?: { label: string; value: string }[];
     placeholder?: string;
-  }) {
+  }) => {
   const t = useTranslations('core.global');
-  const baseValues = (
-    getBaseSchema(shape, true) as unknown as z.ZodEnum<[string, ...string[]]>
-  )._def.values;
-  const values: { label: string; value: string }[] = baseValues.map(value => {
+  const values: { label: string; value: string }[] = enumValues.map(value => {
     const label = labels.find(l => l.value === value)?.label;
 
     return {
@@ -52,7 +44,7 @@ export function AutoFormSelect<T extends z.ZodTypeAny>({
 
   return (
     <FormItem className="space-y-3">
-      {label && <AutoFormLabel>{label}</AutoFormLabel>}
+      {label && <AutoFormLabel isOptional={isOptional}>{label}</AutoFormLabel>}
 
       <FormControl>
         <Select
@@ -87,4 +79,4 @@ export function AutoFormSelect<T extends z.ZodTypeAny>({
       <FormMessage />
     </FormItem>
   );
-}
+};

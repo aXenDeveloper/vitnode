@@ -1,33 +1,32 @@
-import type { z } from 'zod';
-
 import React from 'react';
 
 import { FormControl, FormItem, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 
-import type { ItemAutoFormComponentProps } from './item';
+import type { ItemAutoFormComponentProps } from '../auto-form';
 
 import { AutoFormDesc } from '../common/desc';
 import { AutoFormLabel } from '../common/label';
 
-export function AutoFormTextarea<T extends z.ZodTypeAny>({
+export const AutoFormTextarea = ({
   label,
-  field,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  shape: _,
   description,
+  otherProps: { isOptional, maxLength, minLength },
+  field,
   ...props
-}: ItemAutoFormComponentProps<T> &
+}: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Textarea>, 'value'> & {
     description?: React.ReactNode;
     label?: React.ReactNode;
-  }) {
+  }) => {
   return (
     <FormItem>
-      {label && <AutoFormLabel>{label}</AutoFormLabel>}
+      {label && <AutoFormLabel isOptional={isOptional}>{label}</AutoFormLabel>}
 
       <FormControl>
         <Textarea
+          maxLength={maxLength}
+          minLength={minLength}
           onBlur={e => {
             field.onBlur();
             props.onBlur?.(e);
@@ -45,4 +44,4 @@ export function AutoFormTextarea<T extends z.ZodTypeAny>({
       <FormMessage />
     </FormItem>
   );
-}
+};

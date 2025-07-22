@@ -17,13 +17,15 @@ export const useFormSignUp = () => {
         message: tError('field_required'),
       })
       .min(3, t('username.min_length'))
-      .max(32, t('username.max_length')),
+      .max(32, t('username.max_length'))
+      .default('')
+      .describe('Username'),
     // .refine(value => nameRegex.test(value), t('name.invalid'))
     email: z
-      .string({
-        message: tError('field_required'),
+      .email({
+        message: t('email.invalid'),
       })
-      .email(t('email.invalid')),
+      .default('test@test.com'),
     password: z
       .string({
         message: tError('field_required'),
@@ -31,10 +33,18 @@ export const useFormSignUp = () => {
       .regex(/^.{8,}$/, invalidPassword)
       .regex(/[A-Z]/, invalidPassword)
       .regex(/\d/, invalidPassword)
-      .regex(/\W|_/, invalidPassword),
-    terms: z.boolean().refine(value => value, t('terms.required')),
-    newsletter: z.boolean().optional(),
+      .regex(/\W|_/, invalidPassword)
+      .default(''),
+    terms: z
+      .boolean()
+      .refine(value => value, t('terms.required'))
+      .default(false),
+    newsletter: z.boolean().default(false).optional(),
+    test: z.object({
+      test123: z.string().default('test with default'),
+    }),
   });
+
   const { setShowSendingEmail } = useWrapperSignUp();
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (

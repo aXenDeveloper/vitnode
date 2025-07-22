@@ -1,50 +1,86 @@
 'use client';
 
-import type { DefaultValues, Mode, UseFormReturn } from 'react-hook-form';
-import type { z } from 'zod';
-
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from 'next-intl';
-import { useForm } from 'react-hook-form';
-
-import { getDefaultValues, getObjectFormSchema } from '@/lib/helpers/auto-form';
+import {
+  type ControllerRenderProps,
+  type FieldPath,
+  type FieldValues,
+  type Mode,
+  useForm,
+  type UseFormReturn,
+} from 'react-hook-form';
+import * as z from 'zod';
 
 import type { routeMiddlewareSchema } from '../../api/modules/middleware/route';
-import type { ItemAutoFormProps } from './fields/item';
 
 import { useCaptcha } from '../../hooks/use-captcha';
+import {
+  getDefaults,
+  getNestedParam,
+  getZodInputParams,
+} from '../../lib/helpers/auto-form';
 import { Button } from '../ui/button';
 import { DialogClose, DialogFooter, useDialog } from '../ui/dialog';
-import { Form } from '../ui/form';
-import { ItemAutoForm } from './fields/item';
+import { Form, FormField } from '../ui/form';
 
-export type AutoFormOnSubmit<T extends z.ZodTypeAny> = (
+export interface ItemAutoFormComponentProps {
+  description?: React.ReactNode;
+  field: ControllerRenderProps<FieldValues, string>;
+  label?: React.ReactNode;
+  otherProps: {
+    enum?: string[];
+    isOptional?: boolean;
+    maxLength?: number;
+    minLength?: number;
+    pattern?: string;
+    type?: string;
+  };
+}
+
+type ItemAutoFormProps<
+  T extends z.ZodObject<z.ZodRawShape> = z.ZodObject<z.ZodRawShape>,
+  TName extends FieldPath<z.infer<T>> = FieldPath<z.infer<T>>,
+> =
+  | {
+      component: (props: ItemAutoFormComponentProps) => React.ReactNode;
+      id: TName;
+    }
+  | {
+      component?: never;
+      description?: React.ReactNode;
+      id: TName;
+      label?: React.ReactNode;
+    };
+
+export type AutoFormOnSubmit<
+  T extends z.ZodObject<z.ZodRawShape>,
+  TContext = unknown,
+> = (
   values: z.infer<T>,
-  form: UseFormReturn<z.infer<T>>,
+  form: UseFormReturn<z.input<T>, TContext, z.output<T>>,
   options: {
     captchaToken: string;
   },
 ) => Promise<void> | void;
 
 export function AutoForm<
-  T extends
-    | z.ZodEffects<z.ZodObject<z.ZodRawShape>>
-    | z.ZodObject<z.ZodRawShape>,
+  T extends z.ZodObject<z.ZodRawShape>,
   TContext = unknown,
 >({
   formSchema,
+  mode,
   onSubmit: onSubmitProp,
+  captcha,
   fields,
   submitButtonProps,
-  mode,
-  captcha,
   ...props
 }: Omit<React.ComponentProps<'form'>, 'onSubmit'> & {
   captcha?: z.infer<typeof routeMiddlewareSchema>['captcha'];
   fields: ItemAutoFormProps<T>[];
   formSchema: T;
   mode?: Mode;
-  onSubmit?: AutoFormOnSubmit<T>;
+  onSubmit?: AutoFormOnSubmit<T, TContext>;
   submitButtonProps?: Omit<
     React.ComponentProps<typeof Button>,
     'isLoading' | 'type'
@@ -56,21 +92,19 @@ export function AutoForm<
     onReset: onResetCaptcha,
   } = useCaptcha(captcha);
   const { setIsDirty } = useDialog();
-  const objectFormSchema = getObjectFormSchema(formSchema);
-  const defaultValues = getDefaultValues(objectFormSchema) as DefaultValues<
-    z.infer<T>
-  >;
   const t = useTranslations('core.global');
-  const form = useForm<z.infer<T>, TContext>({
+  const jsonSchema: z.core.JSONSchema.JSONSchema = z.toJSONSchema(formSchema);
+  const inputParams = getZodInputParams(jsonSchema);
+  const form = useForm<z.core.input<T>, TContext, z.core.output<T>>({
     resolver: zodResolver(formSchema),
-    defaultValues,
+    defaultValues: getDefaults<T>(jsonSchema),
     mode,
   });
 
   const onSubmit = async (values: z.infer<T>) => {
     const parsedValues = formSchema.safeParse(values);
     if (parsedValues.success) {
-      await onSubmitProp?.(parsedValues.data as z.infer<T>, form, {
+      await onSubmitProp?.(parsedValues.data, form, {
         captchaToken: captcha ? await getTokenCaptcha() : '',
       });
 
@@ -98,9 +132,69 @@ export function AutoForm<
 
   return (
     <Form form={form} onSubmit={onSubmit} {...props}>
-      {fields.map(field => (
-        <ItemAutoForm formSchema={formSchema} key={field.id} {...field} />
-      ))}
+      {fields.map(item => {
+        const params = getNestedParam(inputParams, item.id);
+        if (!params) return null;
+
+        if (!item.component && (item.label || item.description)) {
+          return (
+            <div key={item.id}>
+              {item.label && (
+                <span className="text-xl font-semibold leading-none tracking-tight">
+                  {item.label}
+                </span>
+              )}
+              {item.description && (
+                <div className="text-muted-foreground text-sm">
+                  {item.description}
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        if (!item.component) return null;
+
+        return (
+          <FormField
+            key={item.id}
+            name={item.id}
+            render={({ field }) => {
+              return (
+                <>
+                  {item.component({
+                    field,
+                    description:
+                      typeof params.description === 'string'
+                        ? params.description
+                        : '',
+                    otherProps: {
+                      isOptional: !params.required,
+                      enum: Array.isArray(params.enum)
+                        ? params.enum
+                        : undefined,
+                      maxLength:
+                        typeof params.maxLength === 'number'
+                          ? params.maxLength
+                          : undefined,
+                      minLength:
+                        typeof params.minLength === 'number'
+                          ? params.minLength
+                          : undefined,
+                      pattern:
+                        typeof params.pattern === 'string'
+                          ? params.pattern
+                          : undefined,
+                      type: params.type === 'string' ? params.type : undefined,
+                    },
+                  })}
+                </>
+              );
+            }}
+          />
+        );
+      })}
+
       {captcha && <div id="vitnode_captcha" />}
       {setIsDirty ? (
         <DialogFooter>

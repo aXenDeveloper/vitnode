@@ -7,7 +7,7 @@ import { z } from 'zod';
 export default function InputExample() {
   const formSchema = z.object({
     username: z.string().min(3, 'Username must be at least 3 characters'),
-    email: z.string().email('Please enter a valid email address'),
+    email: z.email('Please enter a valid email address'),
   });
 
   return (

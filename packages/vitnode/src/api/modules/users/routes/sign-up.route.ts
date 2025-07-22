@@ -10,7 +10,7 @@ import { SessionModel } from '../../../models/session';
 const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 
 export const zodSignUpSchema = z.object({
-  email: z.string().email().toLowerCase().openapi({
+  email: z.email().toLowerCase().openapi({
     example: 'test@test.com',
   }),
   name: z
@@ -50,7 +50,7 @@ export const signUpRoute = buildRoute({
             schema: z.object({
               id: z.number(),
               emailVerified: z.boolean(),
-              email: z.string().email(),
+              email: z.email(),
             }),
           },
         },

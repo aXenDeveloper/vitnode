@@ -1,33 +1,26 @@
-import type { z } from 'zod';
+import type { ItemAutoFormComponentProps } from '../auto-form';
 
-import React from 'react';
-
-import { FormControl, FormItem, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-
-import type { ItemAutoFormComponentProps } from './item';
-
+import { FormControl, FormItem, FormMessage } from '../../ui/form';
+import { Input } from '../../ui/input';
 import { AutoFormDesc } from '../common/desc';
 import { AutoFormLabel } from '../common/label';
 
-export function AutoFormInput<T extends z.ZodTypeAny>({
+export const AutoFormInput = ({
   label,
-  field,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  shape: _,
   description,
+  otherProps: { isOptional, maxLength, minLength, pattern, type },
+  field,
   ...props
-}: ItemAutoFormComponentProps<T> &
-  Omit<React.ComponentProps<typeof Input>, 'value'> & {
-    description?: React.ReactNode;
-    label?: React.ReactNode;
-  }) {
+}: ItemAutoFormComponentProps &
+  Omit<React.ComponentProps<typeof Input>, 'value'>) => {
   return (
     <FormItem>
-      {label && <AutoFormLabel>{label}</AutoFormLabel>}
-
+      {label && <AutoFormLabel isOptional={isOptional}>{label}</AutoFormLabel>}
       <FormControl>
         <Input
+          {...field}
+          maxLength={maxLength}
+          minLength={minLength}
           onBlur={e => {
             field.onBlur();
             props.onBlur?.(e);
@@ -36,6 +29,8 @@ export function AutoFormInput<T extends z.ZodTypeAny>({
             field.onChange(e);
             props.onChange?.(e);
           }}
+          pattern={pattern}
+          type={type ?? 'text'}
           value={field.value ?? ''}
           {...props}
         />
@@ -45,4 +40,4 @@ export function AutoFormInput<T extends z.ZodTypeAny>({
       <FormMessage />
     </FormItem>
   );
-}
+};
