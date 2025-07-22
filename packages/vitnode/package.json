@@ -32,6 +32,7 @@
     "react": "19.1.x",
     "react-dom": "19.1.x",
     "react-hook-form": "^7.x.x",
+    "motion": "^12.x.x",
     "typescript": "^5.8.x",
     "zod": "4.x.x"
   },
@@ -115,6 +116,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "input-otp": "^1.4.2",
+    "motion": "^12.23.6",
     "next-themes": "^0.4.6",
     "nodemailer": "^7.0.5",
     "postgres": "^3.4.7",

@@ -10,7 +10,7 @@ export const Loader = ({
   small?: boolean;
 }) => {
   if (small) {
-    return <Loader2 className={cn('size-4 animate-spin', className)} />;
+    return <Loader2 className={cn('size-5 animate-spin', className)} />;
   }
 
   return (
