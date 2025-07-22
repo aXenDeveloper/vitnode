@@ -14,7 +14,7 @@
   - i18n: Use `next-intl`, `t('key')` for translations, `getTranslation` (server), `useTranslation` (client)
   - Accessibility: WCAG 2.1 AA, semantic HTML, ARIA, keyboard/screen reader support
 - **Backend:**
-  - Hono.js 4, OpenAPI via `@hono/zod-openapi`, Zod 3 for validation
+  - Hono.js 4, OpenAPI via `@hono/zod-openapi`, Zod 4 for validation
   - Database: PostgreSQL via Drizzle ORM, access via `c.get('database')`
   - API: RESTful, versioned, rate-limited, secure session management
   - Error handling: Use Hono's error middleware, log via `c.get('log')`

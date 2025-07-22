@@ -1,149 +1,156 @@
 import type { DefaultValues } from 'react-hook-form';
+import type { z } from 'zod';
 
-import { z } from 'zod';
-
-export const getShapeFromSchema = (
-  schema: z.ZodEffects<z.ZodObject<z.ZodRawShape>> | z.ZodObject<z.ZodRawShape>,
-  id: string,
-): null | z.ZodAny => {
-  if (schema._def.typeName === z.ZodFirstPartyTypeKind.ZodEffects) {
-    return schema._def.schema.shape[id] as z.ZodAny;
+export function getDefaults<T extends z.ZodType>(
+  jsonSchema?: z.core.JSONSchema.JSONSchema,
+): DefaultValues<z.input<T>> {
+  if (!jsonSchema?.properties) {
+    return {} as DefaultValues<z.input<T>>;
   }
 
-  return (schema as z.ZodObject<z.ZodRawShape>).shape[id] as z.ZodAny;
-};
+  const defaultValues: Record<string, unknown> = {};
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ZodObjectOrWrapped = z.Schema<any, any>;
+  // Iterate over each property in the schema
+  for (const key in jsonSchema.properties) {
+    const prop = jsonSchema.properties[key] as z.core.JSONSchema.JSONSchema;
 
-export function getObjectFormSchema(
-  schema: ZodObjectOrWrapped,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): z.ZodObject<any, any> {
-  if (schema._def.typeName === 'ZodEffects') {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const typedSchema = schema as z.ZodEffects<z.ZodObject<any, any>>;
+    // Case 1: The property has a 'default' key.
+    if (prop.default !== undefined) {
+      defaultValues[key] = prop.default;
+      continue; // Move to the next property
+    }
 
-    return getObjectFormSchema(typedSchema._def.schema);
-  }
+    // Case 2: The property is a nested object. Recurse into it.
+    if (prop.type === 'object' && prop.properties) {
+      const nestedDefaults = getDefaults(prop);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return schema as z.ZodObject<any, any>;
-}
-
-/**
- * Get the lowest level Zod type.
- * This will unpack optionals, refinements, etc.
- */
-export function getBaseSchema<T extends z.ZodTypeAny>(
-  schema: T | z.ZodEffects<T>,
-  isArray?: boolean,
-): null | T {
-  if ('innerType' in schema._def) {
-    return getBaseSchema(schema._def.innerType as T, isArray);
-  }
-  if ('schema' in schema._def) {
-    return getBaseSchema(schema._def.schema as T, isArray);
-  }
-  if ('type' in schema._def && isArray) {
-    return getBaseSchema(schema._def.type as T, isArray);
-  }
-
-  return schema as T;
-}
-
-/**
- * Get the type name of the lowest level Zod type.
- * This will unpack optionals, refinements, etc.
- */
-export const getBaseType = (schema: z.ZodTypeAny): string => {
-  const baseSchema = getBaseSchema(schema);
-
-  return baseSchema ? baseSchema._def.typeName : '';
-};
-
-/**
- * Search for a "ZodDefault" in the Zod stack and return its value.
- */
-export function getDefaultValueInZodStack(schema: z.ZodTypeAny): unknown {
-  // Check if this is a ZodDefault and return its value
-  if (schema._def.typeName === z.ZodFirstPartyTypeKind.ZodDefault) {
-    const defaultValue = (
-      schema as z.ZodDefault<z.ZodTypeAny>
-    )._def.defaultValue();
-    // If defaultValue is a function, call it to get the actual value
-
-    return typeof defaultValue === 'function' ? defaultValue() : defaultValue;
-  }
-
-  // Traverse through ZodEffects (like refinements) - check this first as it wraps the actual schema
-  if (schema._def.typeName === z.ZodFirstPartyTypeKind.ZodEffects) {
-    return getDefaultValueInZodStack(
-      (schema._def as { schema: z.ZodTypeAny }).schema,
-    );
-  }
-
-  // Traverse through other types that have schema property
-  if ('schema' in schema._def) {
-    return getDefaultValueInZodStack(
-      (schema._def as { schema: z.ZodTypeAny }).schema,
-    );
-  }
-
-  // Traverse through ZodOptional, ZodNullable, etc.
-  if ('innerType' in schema._def) {
-    return getDefaultValueInZodStack(schema._def.innerType as z.ZodTypeAny);
-  }
-
-  // Traverse through ZodArray's element type
-  if (
-    'type' in schema._def &&
-    schema._def.typeName === z.ZodFirstPartyTypeKind.ZodArray
-  ) {
-    const innerDefault = getDefaultValueInZodStack(
-      schema._def.type as z.ZodTypeAny,
-    );
-
-    return innerDefault !== undefined ? [innerDefault] : undefined;
-  }
-
-  return undefined;
-}
-
-/**
- * Get all default values from a Zod schema.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getDefaultValues<Schema extends z.ZodObject<any, any>>(
-  schema: Schema,
-): DefaultValues<Partial<z.TypeOf<Schema>>> {
-  const { shape } = schema;
-  type DefaultValuesType = DefaultValues<Partial<z.infer<Schema>>>;
-  const defaultValues = {} as DefaultValuesType;
-  if (!shape) return defaultValues;
-
-  for (const key of Object.keys(shape as object)) {
-    const item = shape[key] as z.ZodAny;
-
-    // First, try to get any default value from the current item (including nested defaults)
-    const defaultValue = getDefaultValueInZodStack(item);
-
-    if (defaultValue !== undefined) {
-      (defaultValues as Record<string, unknown>)[key] = defaultValue;
-    } else if (getBaseType(item) === 'ZodObject') {
-      // Only recurse into object shape if there's no default value at the current level
-      const baseSchema = getBaseSchema(item);
-      if (baseSchema && 'shape' in baseSchema._def) {
-        const defaultItems = getDefaultValues(
-          baseSchema as unknown as z.ZodObject<z.ZodRawShape>,
-        );
-
-        if (defaultItems && Object.keys(defaultItems).length > 0) {
-          (defaultValues as Record<string, unknown>)[key] = defaultItems;
-        }
+      // Only add the nested object if it contains default values.
+      if (Object.keys(nestedDefaults).length > 0) {
+        defaultValues[key] = nestedDefaults;
       }
     }
   }
 
-  return defaultValues;
+  return defaultValues as DefaultValues<z.input<T>>;
+}
+
+export interface InputParams {
+  [key: string]:
+    | InputParams
+    | {
+        description?: string;
+        enum?: string[];
+
+        maxLength?: number;
+        minLength?: number;
+
+        pattern?: string;
+        patterns?: string[];
+        required?: boolean;
+        type?: string;
+      };
+}
+
+export function getZodInputParams(
+  jsonSchema?: z.core.JSONSchema.JSONSchema,
+  parentRequired: string[] = [],
+): InputParams {
+  // Base case: If there's no schema or properties, return an empty object.
+  if (!jsonSchema?.properties) {
+    return {};
+  }
+
+  const extractedParams: InputParams = {};
+  const requiredFields = new Set(jsonSchema.required ?? parentRequired);
+
+  // Iterate over each property in the current schema level.
+  for (const key in jsonSchema.properties) {
+    const prop = jsonSchema.properties[key] as z.core.JSONSchema.JSONSchema;
+    const fieldParams: Record<string, unknown> = {};
+
+    // 1. Handle 'required' status
+    if (requiredFields.has(key)) {
+      fieldParams.required = true;
+    }
+
+    // 2. Handle standard string constraints
+    if (prop.minLength !== undefined) {
+      fieldParams.minLength = prop.minLength;
+    }
+    if (prop.maxLength !== undefined) {
+      fieldParams.maxLength = prop.maxLength;
+    }
+    if (prop.pattern !== undefined) {
+      fieldParams.pattern = prop.pattern;
+    }
+    if (prop.enum) {
+      fieldParams.enum = prop.enum;
+    }
+
+    // 3. Handle complex patterns from `allOf` (used for password)
+    if (prop.allOf) {
+      fieldParams.patterns = prop.allOf.map(p => p.pattern).filter(Boolean); // Filter out any undefined patterns
+    }
+
+    if (prop.description) {
+      fieldParams.description = prop.description;
+    }
+
+    // 4. Determine the input type based on schema type and format
+    switch (prop.type) {
+      case 'boolean':
+        fieldParams.type = 'checkbox';
+        break;
+      case 'integer':
+      case 'number':
+        fieldParams.type = 'number';
+        break;
+      case 'string':
+        // Check format for special string types
+        if (prop.format === 'email') {
+          fieldParams.type = 'email';
+        } else if (key.toLowerCase().includes('password')) {
+          // Infer password type by key name for better UX
+          fieldParams.type = 'password';
+        } else {
+          fieldParams.type = 'text';
+        }
+        break;
+    }
+
+    // 5. Handle nested objects by making a recursive call
+    if (prop.type === 'object') {
+      // Pass the 'required' array from the nested object itself.
+      extractedParams[key] = getZodInputParams(prop, prop.required);
+    } else {
+      extractedParams[key] = fieldParams;
+    }
+  }
+
+  return extractedParams;
+}
+
+type NestedParamValue = InputParams[string] | undefined;
+
+export function getNestedParam(
+  obj: InputParams,
+  path: string,
+): NestedParamValue {
+  return path
+    .split('.')
+    .reduce<NestedParamValue>(
+      (acc: NestedParamValue, key: string): NestedParamValue => {
+        if (
+          acc &&
+          typeof acc === 'object' &&
+          !Array.isArray(acc) &&
+          key in acc
+        ) {
+          return (acc as InputParams)[key];
+        }
+
+        return undefined;
+      },
+      obj,
+    );
 }

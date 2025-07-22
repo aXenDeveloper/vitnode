@@ -33,28 +33,28 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@hono/zod-openapi": "^0.19.9",
+    "@hono/zod-openapi": "^1.0.2",
     "@vitnode/core": "workspace:*",
     "drizzle-kit": "^0.31.4",
-    "drizzle-orm": "^0.44.2",
-    "hono": "^4.8.4",
+    "drizzle-orm": "^0.44.3",
+    "hono": "^4.8.5",
     "lucide-react": "^0.525.0",
-    "next": "^15.3.5",
+    "next": "^15.4.2",
     "next-intl": "^4.3.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.60.0",
     "sonner": "^2.0.6",
-    "zod": "^3.25.76"
+    "zod": "^4.0.5"
   },
   "devDependencies": {
     "@swc/cli": "0.6.0",
-    "@swc/core": "^1.12.11",
+    "@swc/core": "^1.13.1",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitnode/eslint-config": "workspace:*",
     "concurrently": "^9.2.0",
-    "eslint": "^9.30.1",
+    "eslint": "^9.31.0",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.8.3"
   }

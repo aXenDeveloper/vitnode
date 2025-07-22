@@ -7,7 +7,7 @@ import { UserModel } from '@/api/models/user';
 import { CONFIG_PLUGIN } from '@/config';
 
 export const zodSignInSchema = z.object({
-  email: z.string().email().toLowerCase().openapi({
+  email: z.email().toLowerCase().openapi({
     example: 'test@test.com',
   }),
   password: z.string().openapi({

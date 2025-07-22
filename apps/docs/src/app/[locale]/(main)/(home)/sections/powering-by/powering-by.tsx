@@ -12,7 +12,7 @@ import { TurboRepoLogo } from './logos/turborepo';
 
 export const PoweringBySection = () => {
   return (
-    <section className="bg-background overflow-hidden py-16">
+    <section className="bg-background border-border/75 dark:border-border/50 overflow-hidden border">
       <div className="group relative m-auto max-w-7xl px-6">
         <div className="flex flex-col items-center md:flex-row">
           <div className="md:max-w-44 md:border-r md:pr-6">

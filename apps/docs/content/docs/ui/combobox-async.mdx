@@ -32,6 +32,7 @@ const formSchema = z.object({
       id: 'categoryId',
       component: props => (
         <AutoFormComboboxAsync
+          {...props}
           fetchData={async ({ search }) => {
             const res = await fetcherClient(categoriesModule, {
               path: '/',
@@ -52,7 +53,6 @@ const formSchema = z.object({
           }}
           id="categoryId"
           label="Category"
-          {...props}
         />
       ),
     },

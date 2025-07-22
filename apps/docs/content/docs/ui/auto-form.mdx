@@ -21,7 +21,9 @@ import { z } from 'zod';
 ```ts
 const formSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
-  email: z.string().email('Please enter a valid email address'),
+  email: z
+    .email('Please enter a valid email address')
+    .describe("We'll use this email to contact you. (from zod schema)"),
   user_type: z.enum(['admin', 'editor', 'viewer']),
   accept_terms: z.boolean().refine(val => val, {
     message: 'You must accept the terms and conditions',
@@ -37,27 +39,23 @@ const formSchema = z.object({
       id: 'username',
       component: props => (
         <AutoFormInput
+          {...props}
           description="This is the username for your application. It should be unique and not shared with anyone."
           label="Username"
-          {...props}
         />
       ),
     },
     {
       id: 'email',
       component: props => (
-        <AutoFormInput
-          description="We'll use this email to contact you."
-          label="Email Address"
-          type="email"
-          {...props}
-        />
+        <AutoFormInput {...props} label="Email Address" type="email" />
       ),
     },
     {
       id: 'user_type',
       component: props => (
         <AutoFormSelect
+          {...props}
           description="Select the type of user."
           label="User Type"
           labels={[
@@ -65,7 +63,6 @@ const formSchema = z.object({
             { value: 'editor', label: 'Editor' },
             { value: 'viewer', label: 'Viewer' },
           ]}
-          {...props}
         />
       ),
     },
@@ -73,8 +70,8 @@ const formSchema = z.object({
       id: 'accept_terms',
       component: props => (
         <AutoFormCheckbox
-          label="I accept the terms and conditions"
           {...props}
+          label="I accept the terms and conditions"
         />
       ),
     },
@@ -82,10 +79,10 @@ const formSchema = z.object({
       id: 'description',
       component: props => (
         <AutoFormTextarea
+          {...props}
           description="Write a short description of your application."
           label="Description"
           placeholder="My application is..."
-          {...props}
         />
       ),
     },
@@ -127,7 +124,7 @@ Auto Form supports all Zod validators:
 ```ts
 const formSchema = z.object({
   username: z.string().min(3).max(20),
-  email: z.string().email(),
+  email: z.email(),
   age: z.number().min(18).max(120),
   password: z
     .string()
@@ -137,6 +134,12 @@ const formSchema = z.object({
     }),
 });
 ```
+
+## Custom Fields
+
+<Callout type="warn" title="This documentation is under construction! 🚧">
+  We're working hard to bring you the best documentation experience.
+</Callout>
 
 ## Form Submission
 
@@ -149,9 +152,9 @@ To activate submit button and handle form submission with the `onSubmit` callbac
       id: 'username',
       component: props => (
         <AutoFormInput
+          {...props}
           description="This is the username for your application."
           label="Username"
-          {...props}
         />
       ),
     },

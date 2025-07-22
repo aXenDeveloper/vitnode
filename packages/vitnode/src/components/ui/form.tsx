@@ -148,10 +148,10 @@ function FormItem({ className, ...props }: React.ComponentProps<'div'>) {
 function FormLabel({
   className,
   children,
-  optional,
+  isOptional,
   ...props
 }: React.ComponentProps<typeof LabelPrimitive.Root> & {
-  optional?: boolean;
+  isOptional?: boolean;
 }) {
   const t = useTranslations('core.global');
   const { error, formItemId } = useFormField();
@@ -165,7 +165,7 @@ function FormLabel({
       {...props}
     >
       {children}
-      {optional && (
+      {isOptional && (
         <span className="text-muted-foreground text-xs">{t('optional')}</span>
       )}
     </Label>

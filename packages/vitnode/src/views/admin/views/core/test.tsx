@@ -14,14 +14,27 @@ import { Card } from '@/components/ui/card';
 
 export const TestView = () => {
   const formSchema = z.object({
-    provider: z.string().min(1, { message: 'Provider is required' }),
-    client_secret: z.string().min(1, { message: 'Client Secret is required' }),
-    terms: z.boolean().refine(val => val, {
-      message: 'You must accept the terms and conditions',
-    }),
+    provider: z
+      .string()
+      .min(1, { message: 'Provider is required' })
+      .describe(
+        'This is the provider for your application. It should be a valid provider name.',
+      ),
+    client_secret: z
+      .string()
+      .min(1, { message: 'Client Secret is required' })
+      .describe(
+        'This is the client secret for your application. It should be kept secret and not shared with anyone.',
+      ),
+    terms: z
+      .boolean()
+      .refine(val => val, {
+        message: 'You must accept the terms and conditions',
+      })
+      .describe('By checking this box, you agree to the terms and conditions.'),
     options: z.enum(['option1', 'option2', 'option3']).default('option1'),
     options_long: z.enum(['option1', 'option2', 'option3']).default('option2'),
-    switch: z.boolean().default(false),
+    switch: z.boolean().default(false).describe('elo'),
     type: z.enum(['option-one', 'option-two']),
   });
 
@@ -116,9 +129,9 @@ export const TestView = () => {
               id: 'switch',
               component: props => (
                 <AutoFormSwitch
+                  {...props}
                   description="By checking this box, you agree to the terms and conditions."
                   label="I agree to the terms and conditions"
-                  {...props}
                 />
               ),
             },

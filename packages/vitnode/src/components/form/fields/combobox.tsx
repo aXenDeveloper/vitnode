@@ -1,5 +1,3 @@
-import type { z } from 'zod';
-
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
@@ -19,37 +17,32 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { getBaseSchema } from '@/lib/helpers/auto-form';
 import { cn } from '@/lib/utils';
 
-import type { ItemAutoFormComponentProps } from './item';
+import type { ItemAutoFormComponentProps } from '../auto-form';
 
 import { AutoFormDesc } from '../common/desc';
 import { AutoFormLabel } from '../common/label';
 
-export function AutoFormCombobox<T extends z.ZodTypeAny>({
+export const AutoFormCombobox = ({
   label,
   field,
   description,
-  shape,
   placeholder,
   className,
+  otherProps: { enum: enumValues = [], isOptional },
   labels = [],
   searchPlaceholder,
   ...props
-}: ItemAutoFormComponentProps<T> &
+}: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Button>, 'role' | 'variant'> & {
-    description?: React.ReactNode;
-    label?: React.ReactNode;
     labels?: { label: string; value: string }[];
     placeholder?: string;
     searchPlaceholder?: string;
-  }) {
+  }) => {
   const t = useTranslations('core.global');
-  const baseValues = (
-    getBaseSchema(shape, true) as unknown as z.ZodEnum<[string, ...string[]]>
-  )._def.values;
-  const values: { label: string; value: string }[] = baseValues.map(value => {
+
+  const values: { label: string; value: string }[] = enumValues.map(value => {
     const label = labels.find(l => l.value === value)?.label;
 
     return {
@@ -60,7 +53,7 @@ export function AutoFormCombobox<T extends z.ZodTypeAny>({
 
   return (
     <FormItem className="flex flex-col">
-      {label && <AutoFormLabel>{label}</AutoFormLabel>}
+      {label && <AutoFormLabel isOptional={isOptional}>{label}</AutoFormLabel>}
 
       <Popover>
         <PopoverTrigger asChild>
@@ -119,4 +112,4 @@ export function AutoFormCombobox<T extends z.ZodTypeAny>({
       <FormMessage />
     </FormItem>
   );
-}
+};

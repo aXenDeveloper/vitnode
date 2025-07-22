@@ -150,7 +150,7 @@ VitNode is designed for individual developers and small teams who need a structu
 - React 19 with Server Components
 - TypeScript 5 with strict configuration
 - Tailwind CSS 4 with Shadcn UI components
-- Zod 3 for runtime validation
+- Zod 4 for runtime validation
 - React Hook Form 7 for form management
 - Next-intl for internationalization
 
