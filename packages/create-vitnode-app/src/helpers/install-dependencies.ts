@@ -35,6 +35,7 @@ export const installDependencies = async ({
     const child = spawn(packageManager, args, {
       stdio: 'pipe', // Change to 'pipe' to capture output
       cwd, // Set the working directory
+      shell: true, // Use shell to properly handle Windows batch files
       env: {
         ...process.env,
         ADBLOCK: '1',

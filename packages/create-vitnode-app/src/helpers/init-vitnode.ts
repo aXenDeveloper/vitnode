@@ -11,6 +11,7 @@ export const initFilesVitnode = ({
 
   spawn(packageManager, args, {
     cwd,
+    shell: true, // Use shell to properly handle Windows batch files
   });
 };
 
@@ -23,5 +24,6 @@ export const generateMigrationsVitnode = ({
 
   spawn(packageManager, args, {
     cwd,
+    shell: true, // Use shell to properly handle Windows batch files
   });
 };
