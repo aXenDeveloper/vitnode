@@ -32,7 +32,7 @@ export const testRoute = buildRoute({
     await c.get('email').send({
       to: 'ithereplay@gmail.com',
       subject: 'Test Email',
-      content: 'This is a test email',
+      content: ({ locale }) => `This is a test email in ${locale} locale.`,
     });
 
     // throw new Error('Test error');

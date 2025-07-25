@@ -217,11 +217,26 @@ export const createVitNode = async ({
       cwd: root,
     });
 
-    if (mode !== 'onlyApi') {
-      spinner.text = 'Initializing VitNode files...';
+    spinner.text = 'Initializing VitNode files...';
+    if (mode === 'apiMonorepo') {
+      await Promise.all([
+        initFilesVitnode({
+          packageManager,
+          cwd: monorepoStructure.web,
+        }),
+        initFilesVitnode({
+          packageManager,
+          cwd: monorepoStructure.api,
+        }),
+        initFilesVitnode({
+          packageManager,
+          cwd: root,
+        }),
+      ]);
+    } else {
       initFilesVitnode({
         packageManager,
-        cwd: mode === 'apiMonorepo' || monorepo ? monorepoStructure.web : root,
+        cwd: root,
       });
     }
 

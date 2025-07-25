@@ -27,12 +27,12 @@
     "drizzle-kit": "0.31.x",
     "drizzle-orm": "^0.44.x",
     "hono": "4.8.x",
+    "motion": "^12.x.x",
     "next": "15.3.x",
     "next-intl": "4.x.x",
     "react": "19.1.x",
     "react-dom": "19.1.x",
     "react-hook-form": "^7.x.x",
-    "motion": "^12.x.x",
     "typescript": "^5.8.x",
     "zod": "4.x.x"
   },
@@ -126,6 +126,7 @@
     "resend": "^4.7.0",
     "tailwind-merge": "^3.3.1",
     "use-debounce": "^10.0.5",
+    "use-intl": "^4.3.4",
     "vaul": "^1.1.2"
   }
 }

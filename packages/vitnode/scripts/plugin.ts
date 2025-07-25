@@ -1,6 +1,12 @@
 /* eslint-disable no-console */
 import chokidar from 'chokidar';
-import { existsSync, mkdirSync, readFileSync, unlinkSync } from 'fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  unlinkSync,
+} from 'fs';
 import { basename, join, relative } from 'path';
 
 import {
@@ -38,38 +44,135 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
   // Transform plugin name for path usage
   const pluginPathName = pluginName.replace(/\//g, '-').replace(/@/g, '');
 
-  const mainDest = join(
-    repoRoot,
-    'apps',
-    'docs',
-    'src',
-    'app',
-    '[locale]',
-    '(main)',
-    join('(plugins)', `(${pluginPathName})`),
-  );
-  const adminDest = join(
-    repoRoot,
-    'apps',
-    'docs',
-    'src',
-    'app',
-    '[locale]',
-    'admin',
-    '(auth)',
-    join('(plugins)', `(${pluginPathName})`),
-  );
-  const langDest = join(repoRoot, 'apps', 'docs', 'src', 'locales', pluginName);
+  // Detect app types by checking for config files
+  const detectAppType = (appPath: string) => {
+    const hasWebConfig = existsSync(join(appPath, 'src', 'vitnode.config.ts'));
+    const hasApiConfig = existsSync(
+      join(appPath, 'src', 'vitnode.api.config.ts'),
+    );
+
+    if (hasApiConfig && !hasWebConfig) return 'api';
+    if (hasWebConfig) return 'web';
+
+    return null;
+  };
+
+  // Check if we're in a monorepo by looking for apps directories
+  const appsDir = join(repoRoot, 'apps');
+  const isMonorepo = existsSync(appsDir);
+
+  const sources: SourceConfig[] = [];
+
+  if (isMonorepo) {
+    // Monorepo: scan all apps and detect their types
+    const appDirs = existsSync(appsDir)
+      ? readdirSync(appsDir, { withFileTypes: true })
+          .filter(dirent => dirent.isDirectory())
+          .map(dirent => dirent.name)
+      : [];
+
+    for (const appName of appDirs) {
+      const appPath = join(repoRoot, 'apps', appName);
+      const appType = detectAppType(appPath);
+
+      if (appType === 'web') {
+        // Web app: copy app, app_admin, and locales
+        const mainDest = join(
+          appPath,
+          'src',
+          'app',
+          '[locale]',
+          '(main)',
+          join('(plugins)', `(${pluginPathName})`),
+        );
+        const adminDest = join(
+          appPath,
+          'src',
+          'app',
+          '[locale]',
+          'admin',
+          '(auth)',
+          join('(plugins)', `(${pluginPathName})`),
+        );
+        const langDest = join(appPath, 'src', 'locales', pluginName);
+
+        sources.push(
+          {
+            sourceDir: join(pluginDir, 'src', 'app_admin'),
+            destinationDir: adminDest,
+          },
+          {
+            sourceDir: join(pluginDir, 'src', 'app'),
+            destinationDir: mainDest,
+          },
+          {
+            sourceDir: join(pluginDir, 'src', 'locales'),
+            destinationDir: langDest,
+          },
+        );
+      } else if (appType === 'api') {
+        // API app: copy only locales
+        const apiLangDest = join(appPath, 'src', 'locales', pluginName);
+
+        sources.push({
+          sourceDir: join(pluginDir, 'src', 'locales'),
+          destinationDir: apiLangDest,
+        });
+      }
+    }
+  } else {
+    // Standalone project: check if we're running from within an app directory
+    // or if we need to copy to the current working directory
+    const cwd = process.cwd();
+    const projectType = detectAppType(cwd);
+
+    if (projectType === 'web') {
+      // Web project: copy all files to current working directory
+      const mainDest = join(
+        cwd,
+        'src',
+        'app',
+        '[locale]',
+        '(main)',
+        join('(plugins)', `(${pluginPathName})`),
+      );
+      const adminDest = join(
+        cwd,
+        'src',
+        'app',
+        '[locale]',
+        'admin',
+        '(auth)',
+        join('(plugins)', `(${pluginPathName})`),
+      );
+      const langDest = join(cwd, 'src', 'locales', pluginName);
+
+      sources.push(
+        {
+          sourceDir: join(pluginDir, 'src', 'app_admin'),
+          destinationDir: adminDest,
+        },
+        {
+          sourceDir: join(pluginDir, 'src', 'app'),
+          destinationDir: mainDest,
+        },
+        {
+          sourceDir: join(pluginDir, 'src', 'locales'),
+          destinationDir: langDest,
+        },
+      );
+    } else if (projectType === 'api') {
+      // API project: copy only locales to current working directory
+      const langDest = join(cwd, 'src', 'locales', pluginName);
+
+      sources.push({
+        sourceDir: join(pluginDir, 'src', 'locales'),
+        destinationDir: langDest,
+      });
+    }
+  }
 
   // tell the copier about both trees
-  const sources: SourceConfig[] = [
-    {
-      sourceDir: join(pluginDir, 'src', 'app_admin'),
-      destinationDir: adminDest,
-    },
-    { sourceDir: join(pluginDir, 'src', 'app'), destinationDir: mainDest },
-    { sourceDir: join(pluginDir, 'src', 'locales'), destinationDir: langDest },
-  ];
 
   // Create destination directories if they don't exist and source directories are not empty
   for (const { sourceDir, destinationDir } of sources) {
@@ -144,39 +247,50 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
     persistent: true,
   });
 
-  const getDestinationPath = (srcPath: string): string => {
+  const getDestinationPaths = (srcPath: string): string[] => {
     // collect all matching sourceConfigs
-    const candidates = sources.filter(({ sourceDir }) =>
-      srcPath.startsWith(sourceDir),
-    );
+    const candidates = sources.filter(({ sourceDir }) => {
+      // Ensure exact directory matching by checking if the path starts with sourceDir
+      // followed by a path separator (or is exactly the sourceDir)
+      const normalizedSrcPath = srcPath.replace(/\\/g, '/');
+      const normalizedSourceDir = sourceDir.replace(/\\/g, '/');
+      
+      return (
+        normalizedSrcPath === normalizedSourceDir ||
+        normalizedSrcPath.startsWith(normalizedSourceDir + '/')
+      );
+    });
 
     if (candidates.length === 0) {
       throw new Error(`No matching source directory for: ${srcPath}`);
     }
 
-    // pick the one with the longest sourceDir (most specific)
-    const sourceConfig = candidates.reduce((best, cur) =>
-      cur.sourceDir.length > best.sourceDir.length ? cur : best,
-    );
+    // Return all matching destination paths instead of just one
+    return candidates.map(sourceConfig => {
+      const relativePath = relative(sourceConfig.sourceDir, srcPath);
 
-    // now append the relative path
-    const relativePath = relative(sourceConfig.sourceDir, srcPath);
-
-    return join(sourceConfig.destinationDir, relativePath);
+      return join(sourceConfig.destinationDir, relativePath);
+    });
   };
 
   watcher
     .on('add', filePath => {
-      const destPath = getDestinationPath(filePath);
-      copyFileWrapper(filePath, destPath);
+      const destPaths = getDestinationPaths(filePath);
+      destPaths.forEach(destPath => {
+        copyFileWrapper(filePath, destPath);
+      });
     })
     .on('change', filePath => {
-      const destPath = getDestinationPath(filePath);
-      copyFileWrapper(filePath, destPath);
+      const destPaths = getDestinationPaths(filePath);
+      destPaths.forEach(destPath => {
+        copyFileWrapper(filePath, destPath);
+      });
     })
     .on('unlink', filePath => {
-      const destPath = getDestinationPath(filePath);
-      removeFile(destPath);
+      const destPaths = getDestinationPaths(filePath);
+      destPaths.forEach(destPath => {
+        removeFile(destPath);
+      });
     })
     .on('error', error => {
       console.error('\x1b[31mWatcher error:\x1b[0m', error);

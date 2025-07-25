@@ -12,7 +12,7 @@ import {
   Tailwind,
   Text,
 } from '@react-email/components';
-import { createTranslator } from 'next-intl';
+import { createTranslator } from 'use-intl';
 
 import { CONFIG } from '../lib/config';
 
@@ -29,6 +29,8 @@ interface DefaultTemplateEmailProps {
     url: string;
   };
   previewText?: string;
+  messages: Record<string, string>;
+  locale: string;
 }
 
 export default function DefaultTemplateEmail({
@@ -37,18 +39,13 @@ export default function DefaultTemplateEmail({
   children,
   logo,
   metadata,
+  messages,
+  locale,
 }: DefaultTemplateEmailProps) {
-  const intl = createTranslator({
-    messages: {
-      email: {
-        previewText: 'This is a preview text for the email template.',
-      },
-    },
-    locale: 'en',
-  });
+  const t = createTranslator({ locale, messages });
 
   return (
-    <Html>
+    <Html lang={locale}>
       <Head>{head}</Head>
       {previewText && <Preview>{previewText}</Preview>}
       <Tailwind
@@ -83,7 +80,7 @@ export default function DefaultTemplateEmail({
 
             <Section className="border-border my-[40px] rounded-md border border-solid p-[20px]">
               <Heading className="mx-0 my-[30px] p-0 text-center text-[24px] font-normal text-black">
-                Join Us for an Exciting Event! - {intl('email.previewText')}
+                Join Us for an Exciting Event! - {t('core.auth.sign_in.desc')}
               </Heading>
               <Text className="text-[14px] leading-[24px] text-black">
                 Hello
@@ -121,4 +118,6 @@ DefaultTemplateEmail.PreviewProps = {
   logo: {
     src: 'https://www.reactemailtemplate.com/_next/static/media/reactemailtemplate-logo.b3fb12d9.png',
   },
+  messages: {},
+  locale: 'en',
 } satisfies DefaultTemplateEmailProps;

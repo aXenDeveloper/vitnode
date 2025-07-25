@@ -39,6 +39,7 @@ export interface EnvVariablesVitNode {
     };
   };
   core: {
+    plugins: { id: string }[];
     authorization: {
       adminCookieExpires: number;
       adminCookieName: string;
@@ -98,9 +99,10 @@ export const globalMiddleware = ({
   email,
   dbProvider,
   captcha,
+  plugins,
 }: Pick<
   VitNodeApiConfig,
-  'authorization' | 'captcha' | 'dbProvider' | 'email'
+  'authorization' | 'captcha' | 'dbProvider' | 'email' | 'plugins'
 > &
   Pick<VitNodeConfig, 'metadata'>) => {
   return async (c: Context, next: Next) => {
@@ -168,6 +170,9 @@ export const globalMiddleware = ({
         cookieSecure: authorization?.cookieSecure ?? true,
       },
       captcha,
+      plugins: plugins.map(plugin => ({
+        id: plugin.pluginId,
+      })),
     });
 
     const user = await new SessionModel(c).getUser();

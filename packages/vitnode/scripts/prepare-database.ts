@@ -160,10 +160,14 @@ export const prepareDatabase = async ({
   if (flag === '--web') {
     steps.push({
       label: 'Prepare plugins files...',
-      action: preparePluginsFiles,
+      action: async () => await preparePluginsFiles(flag),
     });
   } else if (flag === '--api') {
     steps.push(
+      {
+        label: 'Prepare plugins files...',
+        action: async () => await preparePluginsFiles(flag),
+      },
       {
         label: 'Generate migrations...',
         action: generateDatabaseMigrations,
@@ -181,7 +185,7 @@ export const prepareDatabase = async ({
     steps.push(
       {
         label: 'Prepare plugins files...',
-        action: preparePluginsFiles,
+        action: async () => await preparePluginsFiles(flag),
       },
       {
         label: 'Generate migrations...',
