@@ -19,7 +19,7 @@ export interface EmailApiPlugin {
 }
 
 export interface EmailModelSendArgs {
-  content: React.ReactNode;
+  content: (props: { locale: string }) => React.ReactNode;
   html?: string;
   replyTo?: string;
   subject: string;
@@ -42,15 +42,40 @@ export class EmailModel {
       });
     }
 
+    const locale = 'en';
+    const pluginIds: string[] = [
+      '@vitnode/core',
+      ...this.c.get('core').plugins.map(plugin => plugin.id),
+    ];
+
+    const messagesPromises = pluginIds.map(async pluginId => {
+      try {
+        const path = `${pluginId}/${locale}.json`;
+        const messages = await core.pathToMessages(path);
+
+        return messages.default;
+      } catch {
+        return {};
+      }
+    });
+
+    const allMessages = await Promise.all(messagesPromises);
+    const messages = allMessages.reduce(
+      (acc, curr) => ({ ...acc, ...curr }),
+      {},
+    ) as Record<string, string>;
+
     const htmlContent =
       html ??
       DefaultTemplateEmail({
-        children: content,
+        children: content({ locale }),
         metadata: {
           ...core.metadata,
           url: CONFIG.web.href,
         },
         logo: core.email?.options?.logo,
+        locale,
+        messages,
       });
 
     try {

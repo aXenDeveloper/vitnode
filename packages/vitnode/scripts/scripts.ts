@@ -51,7 +51,7 @@ switch (command) {
     break;
 
   case 'prepare-plugins':
-    await preparePluginsFiles();
+    await preparePluginsFiles(flag);
     console.log(`${initMessage} \x1b[32mPlugins prepared successfully.\x1b[0m`);
     process.exit(0);
 

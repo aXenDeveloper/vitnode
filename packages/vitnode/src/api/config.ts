@@ -59,11 +59,13 @@ export function VitNodeAPI({
   app.use(
     '*',
     globalMiddleware({
+      pathToMessages: vitNodeApiConfig.pathToMessages,
       email: vitNodeApiConfig.email,
       metadata: vitNodeApiConfig.metadata,
       authorization: vitNodeApiConfig.authorization,
       dbProvider: vitNodeApiConfig.dbProvider,
       captcha: vitNodeApiConfig.captcha,
+      plugins: vitNodeApiConfig.plugins,
     }),
   );
   app.use(async (c, next) => {

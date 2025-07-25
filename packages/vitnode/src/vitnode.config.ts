@@ -54,6 +54,7 @@ export interface VitNodeApiConfig {
     shortTitle?: string;
     title: string;
   };
+  pathToMessages: (path: string) => Promise<{ default: object }>;
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, 'keyPrefix'>;
 }

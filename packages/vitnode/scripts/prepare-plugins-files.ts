@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { existsSync } from 'fs';
+import { existsSync, readdirSync } from 'fs';
 import { readFile } from 'fs/promises';
 import { join, relative } from 'path';
 
@@ -13,8 +13,31 @@ import {
   type SourceConfig,
 } from './shared/file-utils';
 
-export const preparePluginsFiles = async () => {
-  const config = await getConfig({});
+export const preparePluginsFiles = async (flag?: string) => {
+  // Detect which config file to load based on flag or auto-detection
+  const cwd = process.cwd();
+  const hasWebConfig = existsSync(join(cwd, 'src', 'vitnode.config.ts'));
+  const hasApiConfig = existsSync(join(cwd, 'src', 'vitnode.api.config.ts'));
+
+  let config: { plugins: { pluginId: string }[] };
+
+  if (flag === '--api' && hasApiConfig) {
+    // Force API config when --api flag is used
+    config = await getConfig({ type: 'api.config' });
+  } else if (flag === '--web' && hasWebConfig) {
+    // Force web config when --web flag is used
+    config = await getConfig({});
+  } else if (hasApiConfig && !hasWebConfig) {
+    // API config only (auto-detect)
+    config = await getConfig({ type: 'api.config' });
+  } else if (hasWebConfig) {
+    // Web config (may also have API config but web takes precedence in auto-detect)
+    config = await getConfig({});
+  } else {
+    // No config found, use empty plugins array
+    config = { plugins: [] };
+  }
+
   const plugins: string[] = [
     ...config.plugins.map(plugin => plugin.pluginId),
     '@vitnode/core',
@@ -81,43 +104,121 @@ export const preparePluginsFiles = async () => {
       // Transform plugin name for path usage
       const pluginPathName = pluginName.replace(/\//g, '-').replace(/@/g, '');
 
-      // All projects (both monorepo apps and standalone) use the same structure
-      const mainDest = join(
-        baseDir,
-        'src',
-        'app',
-        '[locale]',
-        '(main)',
-        join('(plugins)', `(${pluginPathName})`),
-      );
+      // Detect app types by checking for config files
+      const detectAppType = (appPath: string) => {
+        const hasWebConfig = existsSync(
+          join(appPath, 'src', 'vitnode.config.ts'),
+        );
+        const hasApiConfig = existsSync(
+          join(appPath, 'src', 'vitnode.api.config.ts'),
+        );
 
-      const adminDest = join(
-        baseDir,
-        'src',
-        'app',
-        '[locale]',
-        'admin',
-        '(auth)',
-        join('(plugins)', `(${pluginPathName})`),
-      );
+        if (hasApiConfig && !hasWebConfig) return 'api';
+        if (hasWebConfig) return 'web';
 
-      const langDest = join(baseDir, 'src', 'locales', pluginName);
+        return null;
+      };
+
+      // Check if we're in a monorepo by looking for apps directories
+      const appsDir = join(repoRoot, 'apps');
+      const isMonorepo = existsSync(appsDir);
 
       // Define source configurations for this plugin
-      const sources: SourceConfig[] = [
-        {
-          sourceDir: join(pluginPath, 'src', 'app_admin'),
-          destinationDir: adminDest,
-        },
-        {
-          sourceDir: join(pluginPath, 'src', 'app'),
-          destinationDir: mainDest,
-        },
-        {
-          sourceDir: join(pluginPath, 'src', 'locales'),
-          destinationDir: langDest,
-        },
-      ];
+      const sources: SourceConfig[] = [];
+
+      if (isMonorepo) {
+        // Monorepo: scan all apps and detect their types
+        const appDirs = existsSync(appsDir)
+          ? readdirSync(appsDir, { withFileTypes: true })
+              .filter(dirent => dirent.isDirectory())
+              .map(dirent => dirent.name)
+          : [];
+
+        for (const appName of appDirs) {
+          const appPath = join(repoRoot, 'apps', appName);
+          const appType = detectAppType(appPath);
+
+          if (appType === 'web') {
+            // Web app: copy app, app_admin, and locales
+            const mainDest = join(
+              appPath,
+              'src',
+              'app',
+              '[locale]',
+              '(main)',
+              join('(plugins)', `(${pluginPathName})`),
+            );
+            const adminDest = join(
+              appPath,
+              'src',
+              'app',
+              '[locale]',
+              'admin',
+              '(auth)',
+              join('(plugins)', `(${pluginPathName})`),
+            );
+            const langDest = join(appPath, 'src', 'locales', pluginName);
+
+            sources.push(
+              {
+                sourceDir: join(pluginPath, 'src', 'app_admin'),
+                destinationDir: adminDest,
+              },
+              {
+                sourceDir: join(pluginPath, 'src', 'app'),
+                destinationDir: mainDest,
+              },
+              {
+                sourceDir: join(pluginPath, 'src', 'locales'),
+                destinationDir: langDest,
+              },
+            );
+          } else if (appType === 'api') {
+            // API app: copy only locales
+            const apiLangDest = join(appPath, 'src', 'locales', pluginName);
+
+            sources.push({
+              sourceDir: join(pluginPath, 'src', 'locales'),
+              destinationDir: apiLangDest,
+            });
+          }
+        }
+      } else {
+        // Standalone project: use current directory as base
+        const mainDest = join(
+          baseDir,
+          'src',
+          'app',
+          '[locale]',
+          '(main)',
+          join('(plugins)', `(${pluginPathName})`),
+        );
+        const adminDest = join(
+          baseDir,
+          'src',
+          'app',
+          '[locale]',
+          'admin',
+          '(auth)',
+          join('(plugins)', `(${pluginPathName})`),
+        );
+        const langDest = join(baseDir, 'src', 'locales', pluginName);
+
+        sources.push(
+          {
+            sourceDir: join(pluginPath, 'src', 'app_admin'),
+            destinationDir: adminDest,
+          },
+          {
+            sourceDir: join(pluginPath, 'src', 'app'),
+            destinationDir: mainDest,
+          },
+          {
+            sourceDir: join(pluginPath, 'src', 'locales'),
+            destinationDir: langDest,
+          },
+        );
+      }
 
       // Copy files for each source directory
       for (const { sourceDir, destinationDir } of sources) {
