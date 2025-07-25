@@ -13,6 +13,7 @@ export const POSTGRES_URL =
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [],
+  pathToMessages: async path => await import(`./locales/${path}`),
   dbProvider: drizzle({
     connection: POSTGRES_URL,
     casing: 'camelCase',

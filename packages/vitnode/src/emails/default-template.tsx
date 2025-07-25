@@ -19,18 +19,18 @@ import { CONFIG } from '../lib/config';
 interface DefaultTemplateEmailProps {
   children: React.ReactNode;
   head?: React.ReactNode;
+  locale: string;
   logo?: {
     className?: string;
     src: Blob | string;
   };
+  messages: Record<string, string>;
   metadata: {
     shortTitle?: string;
     title: string;
     url: string;
   };
   previewText?: string;
-  messages: Record<string, string>;
-  locale: string;
 }
 
 export default function DefaultTemplateEmail({

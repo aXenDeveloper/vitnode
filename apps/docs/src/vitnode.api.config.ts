@@ -11,6 +11,7 @@ export const POSTGRES_URL =
   process.env.POSTGRES_URL || 'postgresql://root:root@localhost:5432/vitnode';
 
 export const vitNodeApiConfig = buildApiConfig({
+  pathToMessages: async path => await import(`./locales/${path}`),
   captcha: {
     type: 'cloudflare_turnstile',
     siteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY,

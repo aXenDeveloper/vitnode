@@ -39,7 +39,6 @@ export interface EnvVariablesVitNode {
     };
   };
   core: {
-    plugins: { id: string }[];
     authorization: {
       adminCookieExpires: number;
       adminCookieName: string;
@@ -64,6 +63,8 @@ export interface EnvVariablesVitNode {
       shortTitle?: string;
       title: string;
     };
+    pathToMessages: (path: string) => Promise<{ default: object }>;
+    plugins: { id: string }[];
   };
   db: Pick<VitNodeApiConfig, 'dbProvider'>['dbProvider'];
   email: {
@@ -100,9 +101,15 @@ export const globalMiddleware = ({
   dbProvider,
   captcha,
   plugins,
+  pathToMessages,
 }: Pick<
   VitNodeApiConfig,
-  'authorization' | 'captcha' | 'dbProvider' | 'email' | 'plugins'
+  | 'authorization'
+  | 'captcha'
+  | 'dbProvider'
+  | 'email'
+  | 'pathToMessages'
+  | 'plugins'
 > &
   Pick<VitNodeConfig, 'metadata'>) => {
   return async (c: Context, next: Next) => {
@@ -154,6 +161,7 @@ export const globalMiddleware = ({
     c.set('email', new EmailModel(c));
 
     c.set('core', {
+      pathToMessages,
       metadata,
       email,
       authorization: {

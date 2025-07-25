@@ -254,7 +254,7 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
       // followed by a path separator (or is exactly the sourceDir)
       const normalizedSrcPath = srcPath.replace(/\\/g, '/');
       const normalizedSourceDir = sourceDir.replace(/\\/g, '/');
-      
+
       return (
         normalizedSrcPath === normalizedSourceDir ||
         normalizedSrcPath.startsWith(normalizedSourceDir + '/')

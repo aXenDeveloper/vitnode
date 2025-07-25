@@ -6,8 +6,6 @@ import { HTTPException } from 'hono/http-exception';
 
 import DefaultTemplateEmail from '../../emails/default-template';
 import { CONFIG } from '../../lib/config';
-import { join } from 'path';
-import { readFile } from 'fs/promises';
 
 export interface EmailApiPlugin {
   sendEmail: (args: {
@@ -52,16 +50,10 @@ export class EmailModel {
 
     const messagesPromises = pluginIds.map(async pluginId => {
       try {
-        const path = join(
-          process.cwd(),
-          'src',
-          'locales',
-          pluginId,
-          `${locale}.json`,
-        );
-        const messages = await readFile(path, 'utf-8');
+        const path = `${pluginId}/${locale}.json`;
+        const messages = await core.pathToMessages(path);
 
-        return JSON.parse(messages);
+        return messages.default;
       } catch {
         return {};
       }
@@ -71,7 +63,7 @@ export class EmailModel {
     const messages = allMessages.reduce(
       (acc, curr) => ({ ...acc, ...curr }),
       {},
-    );
+    ) as Record<string, string>;
 
     const htmlContent =
       html ??
