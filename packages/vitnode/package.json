@@ -28,7 +28,7 @@
     "drizzle-orm": "^0.44.x",
     "hono": "4.8.x",
     "motion": "^12.x.x",
-    "next": "15.3.x",
+    "next": "15.4.x",
     "next-intl": "4.x.x",
     "react": "19.1.x",
     "react-dom": "19.1.x",

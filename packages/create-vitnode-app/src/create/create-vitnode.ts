@@ -223,10 +223,12 @@ export const createVitNode = async ({
         initFilesVitnode({
           packageManager,
           cwd: monorepoStructure.web,
+          flag: 'web',
         }),
         initFilesVitnode({
           packageManager,
           cwd: monorepoStructure.api,
+          flag: 'api',
         }),
         initFilesVitnode({
           packageManager,
