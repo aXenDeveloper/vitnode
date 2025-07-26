@@ -49,10 +49,8 @@ export class FileCopyManager {
     );
 
     await this.copyFiles(apiSourcePath, apiDestPath, [
-      'src',
       'tsconfig.json',
       'drizzle.config.ts',
-      'package.json',
     ]);
 
     await this.copyFiles(sourcePath, singleAppApiDestPath, [
