@@ -66,8 +66,6 @@ export const useCaptcha = (
       script.removeEventListener('error', handleError);
       document.body.removeChild(script);
     };
-    // eslint-disable-next-line react-compiler/react-compiler
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onReset = () => {

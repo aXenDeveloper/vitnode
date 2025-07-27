@@ -75,6 +75,7 @@ export default [
   { files: ['**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}'] },
   {
     rules: {
+      'react-hooks/exhaustive-deps': 'off',
       '@eslint-react/no-context-provider': 'off',
       '@eslint-react/no-unstable-default-props': 'off',
       'perfectionist/sort-array-includes': 'warn',

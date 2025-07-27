@@ -28,7 +28,7 @@ export const testRoute = buildRoute({
     await c.get('email').send({
       to: 'test@test.com',
       subject: 'Test Email',
-      content: 'This is a test email.',
+      content: () => 'This is a test email.',
     });
 
     return c.text('test');

@@ -30,6 +30,10 @@ export const mutationApi = async ({
     },
   });
 
+  if (res.status === 409) {
+    return { error: 'Email already exists' };
+  }
+
   if (res.status !== 200) {
     return { error: 'Something went wrong' };
   }

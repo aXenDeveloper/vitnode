@@ -122,7 +122,7 @@ export async function coreFetcher<
     ...options,
   });
 
-  if (!response.ok) {
+  if (response.status === 500) {
     const errorText = await response.text();
     throw new Error(
       `${response.status} - ${url.toString()}\n${response.statusText ?? errorText}`,

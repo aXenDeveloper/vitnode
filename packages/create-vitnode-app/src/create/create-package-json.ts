@@ -71,7 +71,7 @@ export const createPackageJSON = async ({
           : {}),
         turbo: '^2.5.5',
         typescript: '^5.8.3',
-        zod: '^4.0.5',
+        zod: '^4.0.10',
       },
       packageManager: `${packageManager}@${availablePackageManagers[packageManager]}`,
       workspaces: ['apps/*', 'plugins/*'],
@@ -122,11 +122,11 @@ export const createPackageJSON = async ({
       '@vitnode/core': pkgVitNodeVersion,
       'drizzle-kit': '^0.31.3',
       'drizzle-orm': '^0.44.3',
-      hono: '^4.8.5',
+      hono: '^4.8.9',
       'next-intl': '^4.3.1',
       react: '^19.1',
       'react-dom': '^19.1',
-      zod: '^4.0.5',
+      zod: '^4.0.10',
     },
     devDependencies: {
       '@hono/node-server': '^1.17.1',
@@ -139,10 +139,10 @@ export const createPackageJSON = async ({
       '@types/react': '^19.1',
       '@types/react-dom': '^19.1',
       '@vitnode/eslint-config': pkgVitNodeVersion,
-      dotenv: '^17.2.0',
+      dotenv: '^17.2.1',
       ...(eslint
         ? {
-            eslint: '^9.31.0',
+            eslint: '^9.32.0',
             ...(mode === 'onlyApi'
               ? {
                   'prettier-plugin-tailwindcss': '^0.6.14',
@@ -151,7 +151,7 @@ export const createPackageJSON = async ({
               : {}),
           }
         : {}),
-      'react-email': '^4.2.3',
+      'react-email': '^4.2.4',
       'tsc-alias': '^1.8.16',
       tsx: '^4.20.3',
       typescript: '^5.8.3',
@@ -193,15 +193,15 @@ export const createPackageJSON = async ({
         'babel-plugin-react-compiler': '19.1.0-rc.2',
         'drizzle-kit': '^0.31.4',
         'drizzle-orm': '^0.44.3',
-        hono: '^4.8.5',
-        'lucide-react': '^0.525.0',
-        next: '^15.4.2',
+        hono: '^4.8.9',
+        'lucide-react': '^0.526.0',
+        next: '^15.4.4',
         'next-intl': '^4.3.4',
         react: '^19.1',
         'react-dom': '^19.1',
-        'react-hook-form': '^7.60.0',
+        'react-hook-form': '^7.61.1',
         sonner: '^2.0.6',
-        zod: '^4.0.5',
+        zod: '^4.0.10',
       },
       devDependencies: {
         '@tailwindcss/postcss': '^4.1.11',
@@ -211,15 +211,15 @@ export const createPackageJSON = async ({
         '@vitnode/eslint-config': pkgVitNodeVersion,
         ...(eslint
           ? {
-              eslint: '^9.31.0',
+              eslint: '^9.32.0',
               'prettier-plugin-tailwindcss': '^0.6.14',
               prettier: '^3.6.2',
             }
           : {}),
-        'react-email': '^4.2.3',
+        'react-email': '^4.2.4',
         turbo: '^2.5.5',
         tailwindcss: '^4.1.11',
-        'tw-animate-css': '^1.3.5',
+        'tw-animate-css': '^1.3.6',
         typescript: '^5.8.3',
       },
       packageManager: `${packageManager}@${availablePackageManagers[packageManager]}`,
@@ -255,12 +255,12 @@ export const createPackageJSON = async ({
       dependencies: {
         '@vitnode/core': pkgVitNodeVersion,
         'babel-plugin-react-compiler': '19.1.0-rc.2',
-        'lucide-react': '^0.525.0',
-        next: '^15.4.2',
+        'lucide-react': '^0.526.0',
+        next: '^15.4.4',
         'next-intl': '^4.3.4',
         react: '^19.1',
         'react-dom': '^19.1',
-        'react-hook-form': '^7.60.0',
+        'react-hook-form': '^7.61.1',
         sonner: '^2.0.6',
       },
       devDependencies: {
@@ -274,14 +274,14 @@ export const createPackageJSON = async ({
         'class-variance-authority': '^0.7.1',
         ...(eslint
           ? {
-              eslint: '^9.31.0',
+              eslint: '^9.32.0',
             }
           : {}),
         postcss: '^8.5.6',
         tailwindcss: '^4.1.11',
-        'tw-animate-css': '^1.3.5',
+        'tw-animate-css': '^1.3.6',
         typescript: '^5.8.3',
-        zod: '^4.0.5',
+        zod: '^4.0.10',
       },
     };
 

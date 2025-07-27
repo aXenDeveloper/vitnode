@@ -101,15 +101,6 @@ export const FormSignUp = ({
               },
             ]
           : []),
-        {
-          id: 'test',
-          label: 'elo',
-          description: 'Test with default',
-        },
-        {
-          id: 'test.test123',
-          component: props => <AutoFormInput label="fsaf" {...props} />,
-        },
       ]}
       formSchema={formSchema}
       mode="all"

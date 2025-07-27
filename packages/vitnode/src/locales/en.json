@@ -60,6 +60,10 @@
         "403": {
           "title": "Forbidden",
           "desc": "You don't have permission to access this resource."
+        },
+        "409": {
+          "title": "Conflict",
+          "desc": "The request could not be completed due to a conflict with the current state of the resource."
         }
       },
       "user_bar": {
@@ -70,7 +74,12 @@
     "auth": {
       "sso": {
         "or": "Or continue With",
-        "access_denied": "You have denied access to the application or the request has expired. Please try again."
+        "access_denied": "You have denied access to the application or the request has expired. Please try again.",
+        "email_exists": {
+          "title": "You cannot sign in with <provider></provider>",
+          "desc": "An account with this email already exists. Please sign in with another method and connect your <provider></provider> account in your profile settings.",
+          "sign_in": "Go to Login Page"
+        }
       },
       "sign_up": {
         "desc": "Hello there! Create your account to get started.",

@@ -32,6 +32,9 @@ export const callbackRoute = buildRoute({
         },
         description: 'URL',
       },
+      409: {
+        description: 'Email already exists',
+      },
     },
   },
   handler: async c => {

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { buildRoute } from '@/api/lib/route';
 import { CONFIG_PLUGIN } from '@/config';
+import TestTemplateEmail from '@/emails/test-template';
 
 export const testRoute = buildRoute({
   ...CONFIG_PLUGIN,
@@ -32,10 +33,8 @@ export const testRoute = buildRoute({
     await c.get('email').send({
       to: 'ithereplay@gmail.com',
       subject: 'Test Email',
-      content: ({ locale }) => `This is a test email in ${locale} locale.`,
+      content: TestTemplateEmail,
     });
-
-    // throw new Error('Test error');
 
     await c.get('log').warn('This is a test warn log');
 

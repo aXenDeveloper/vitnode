@@ -10,9 +10,13 @@ import { BackButtonNotFound } from './back-button';
 export const ErrorView = ({
   code,
   customDescription,
+  customTitle,
+  customActions,
 }: {
-  code: 400 | 403 | 404 | 500;
-  customDescription?: string;
+  code: 400 | 403 | 404 | 409 | 500;
+  customActions?: React.ReactNode;
+  customDescription?: React.ReactNode;
+  customTitle?: React.ReactNode;
 }) => {
   const t = useTranslations('core.global');
 
@@ -21,29 +25,35 @@ export const ErrorView = ({
       <div className="max-w-md space-y-6 text-center">
         <div className="space-y-2">
           <h1 className="text-primary text-8xl font-bold">{code}</h1>
-          <h2 className="text-2xl font-medium">{t(`errors.${code}.title`)}</h2>
+          <h2 className="text-2xl font-medium">
+            {customTitle ?? t(`errors.${code}.title`)}
+          </h2>
           <p className="text-muted-foreground">
             {customDescription ?? t(`errors.${code}.desc`)}
           </p>
         </div>
 
         <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <BackButtonNotFound>
-            <ArrowLeft />
-            {t('go_back')}
-          </BackButtonNotFound>
+          {customActions ?? (
+            <>
+              <BackButtonNotFound>
+                <ArrowLeft />
+                {t('go_back')}
+              </BackButtonNotFound>
 
-          <Link
-            className={cn(
-              buttonVariants({
-                size: 'lg',
-              }),
-            )}
-            href="/"
-          >
-            <HomeIcon />
-            {t('back_home')}
-          </Link>
+              <Link
+                className={cn(
+                  buttonVariants({
+                    size: 'lg',
+                  }),
+                )}
+                href="/"
+              >
+                <HomeIcon />
+                {t('back_home')}
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </div>

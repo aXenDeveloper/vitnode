@@ -122,12 +122,15 @@ export class SSOModel {
           return signUpUser;
         }
 
-        // If email exists, register SSO
-        await tx.insert(core_users_sso).values({
-          providerId: providerId,
-          providerAccountId: userFromSSO.id,
-          userId: userWithEmail.id,
+        // If email exists, throw an error
+        throw new HTTPException(409, {
+          message: 'Email already exists',
         });
+        // await tx.insert(core_users_sso).values({
+        //   providerId: providerId,
+        //   providerAccountId: userFromSSO.id,
+        //   userId: userWithEmail.id,
+        // });
 
         return {
           userId: userWithEmail.id,

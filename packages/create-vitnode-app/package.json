@@ -39,7 +39,7 @@
     "@types/prompts": "^2.4.9",
     "@types/validate-npm-package-name": "^4.0.2",
     "@vitnode/eslint-config": "workspace:*",
-    "eslint": "^9.31.0",
+    "eslint": "^9.32.0",
     "typescript": "^5.8.3"
   }
 }

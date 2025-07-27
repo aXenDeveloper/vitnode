@@ -94,7 +94,7 @@ export const signUp = async (
 
   const findEmail = checkIfUserExist.find(user => user.email === email);
   if (findEmail) {
-    throw new HTTPException(400, {
+    throw new HTTPException(409, {
       message: 'Email already exists',
     });
   }
@@ -102,7 +102,7 @@ export const signUp = async (
     user => user.name_code === convertToNameSEO,
   );
   if (findName) {
-    throw new HTTPException(400, {
+    throw new HTTPException(409, {
       message: 'Name already exists',
     });
   }

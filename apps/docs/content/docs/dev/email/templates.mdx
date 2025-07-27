@@ -13,6 +13,44 @@ VitNode uses [React Email](https://react.email/) to create email templates. This
   The current `TailwindCSS` version used for this component is **3.4.10**
 </Callout>
 
+## Usage
+
+Inside your:
+
+- plugin directory => `plugins/{your_plugin}/src/emails/`,
+- or in the directory of your application => `src/emails/`
+
+you can create your email templates. The templates should be React components that return JSX and to be exported as default.
+
+```tsx title="src/emails/test-template.tsx"
+import { Text } from '@react-email/components';
+
+export default function TestTemplateEmail() {
+  return <Text>This is a test email template.</Text>;
+}
+```
+
+```ts title="src/api/modules/users/routes/test.route.ts"
+import { z } from 'zod';
+import { buildRoute } from '@vitnode/core/api/lib/route';
+
+// [!code ++]
+import TestTemplateEmail from '@/emails/test-template';
+
+export const testRoute = buildRoute({
+  handler: async c => {
+    await c.get('email').send({
+      to: 'test@test.com',
+      subject: 'Test Email',
+      // [!code ++]
+      content: TestTemplateEmail,
+    });
+
+    return c.text('test');
+  },
+});
+```
+
 ## Components
 
 <Cards>

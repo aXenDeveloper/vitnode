@@ -18,8 +18,7 @@ export const useFormSignUp = () => {
       })
       .min(3, t('username.min_length'))
       .max(32, t('username.max_length'))
-      .default('')
-      .describe('Username'),
+      .default(''),
     // .refine(value => nameRegex.test(value), t('name.invalid'))
     email: z
       .email({
@@ -40,9 +39,6 @@ export const useFormSignUp = () => {
       .refine(value => value, t('terms.required'))
       .default(false),
     newsletter: z.boolean().default(false).optional(),
-    test: z.object({
-      test123: z.string().default('test with default'),
-    }),
   });
 
   const { setShowSendingEmail } = useWrapperSignUp();

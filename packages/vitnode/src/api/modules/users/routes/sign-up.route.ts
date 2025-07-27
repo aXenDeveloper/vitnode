@@ -56,6 +56,12 @@ export const signUpRoute = buildRoute({
         },
         description: 'User created',
       },
+      400: {
+        description: 'Bad Request',
+      },
+      409: {
+        description: 'Email or name already exists',
+      },
     },
   },
   handler: async c => {
