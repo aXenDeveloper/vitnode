@@ -5,6 +5,7 @@ import type { IRateLimiterOptions } from 'rate-limiter-flexible';
 import type { BuildPluginApiReturn } from './api/lib/plugin';
 import type { EmailApiPlugin } from './api/models/email';
 import type { SSOApiPlugin } from './api/models/sso';
+import type { DefaultTemplateEmailProps } from './emails/default-template';
 import type { BuildPluginReturn } from './lib/plugin';
 
 export interface LocaleConfig {
@@ -49,6 +50,8 @@ export interface VitNodeApiConfig {
   dbProvider: PostgresJsDatabase;
   email?: {
     adapter?: EmailApiPlugin;
+    logo?: DefaultTemplateEmailProps['templateProps']['logo'];
+    tailwindConfig?: DefaultTemplateEmailProps['templateProps']['tailwindConfig'];
   };
   metadata: {
     shortTitle?: string;

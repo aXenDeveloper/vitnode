@@ -1,5 +1,7 @@
 # VitNode AI Coding Agent Guidelines (Extended)
 
+The repository is a monorepo for the VitNode framework, which includes a backend API, frontend documentation site, and shared packages. The codebase uses modern web technologies and follows specific conventions for development based on Next.js 15 and Hono.js 4.
+
 ## Architecture & Key Patterns
 
 - **Monorepo Structure:**
@@ -8,7 +10,7 @@
   - `plugins/` for extendable features
 - **Frontend:**
   - Next.js 15, App Router, Server Components
-  - Use `vitnode/lib/navigation` for navigation (not `next/navigation`)
+  - Avoid using `next/navigation` directly, use `vitnode/lib/navigation`
   - Forms: Use `react-hook-form@7`, server actions for mutations
   - UI: Shadcn UI, Tailwind CSS 4, dark/light mode with system detection
   - i18n: Use `next-intl`, `t('key')` for translations, `getTranslation` (server), `useTranslation` (client)
@@ -61,3 +63,14 @@
 ---
 
 For unclear or missing patterns, ask for clarification or request more examples from maintainers.
+
+## New Code
+
+If you add new code or change existing code, always verify that
+everything still works by running _each_ of the following checks:
+
+1. `npm run lint` to run the linter.
+2. `npm run lint:fix` to fix any linting issues.
+3. `npm run test` to run the tests.
+
+Complete the task only after all checks pass.

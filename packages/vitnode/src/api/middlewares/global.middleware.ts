@@ -4,11 +4,7 @@ import { HTTPException } from 'hono/http-exception';
 
 import type { VitNodeApiConfig, VitNodeConfig } from '@/vitnode.config';
 
-import {
-  type EmailApiPlugin,
-  EmailModel,
-  type EmailModelSendArgs,
-} from '@/api/models/email';
+import { EmailModel, type EmailModelSendArgs } from '@/api/models/email';
 import { SessionModel } from '@/api/models/session';
 import { SessionAdminModel } from '@/api/models/session-admin';
 
@@ -50,15 +46,7 @@ export interface EnvVariablesVitNode {
       ssoAdapters: SSOApiPlugin[];
     };
     captcha?: Pick<VitNodeApiConfig, 'captcha'>['captcha'];
-    email?: {
-      adapter?: EmailApiPlugin;
-      options?: {
-        logo?: {
-          className?: string;
-          src: Blob | string;
-        };
-      };
-    };
+    email?: VitNodeApiConfig['email'];
     metadata: {
       shortTitle?: string;
       title: string;

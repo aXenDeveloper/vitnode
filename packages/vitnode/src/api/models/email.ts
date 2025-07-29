@@ -4,7 +4,7 @@ import type React from 'react';
 import { render } from '@react-email/components';
 import { HTTPException } from 'hono/http-exception';
 
-import DefaultTemplateEmail from '../../emails/default-template';
+import { type DefaultTemplateEmailProps } from '../../emails/default-template';
 import { CONFIG } from '../../lib/config';
 
 export interface EmailApiPlugin {
@@ -19,7 +19,9 @@ export interface EmailApiPlugin {
 }
 
 export interface EmailModelSendArgs {
-  content: (props: { locale: string }) => React.ReactNode;
+  content: (
+    props: Omit<DefaultTemplateEmailProps, 'children'>,
+  ) => React.ReactNode;
   html?: string;
   replyTo?: string;
   subject: string;
@@ -67,14 +69,15 @@ export class EmailModel {
 
     const htmlContent =
       html ??
-      DefaultTemplateEmail({
-        children: content({ locale }),
-        metadata: {
-          ...core.metadata,
-          url: CONFIG.web.href,
-        },
-        logo: core.email?.options?.logo,
+      content({
         locale,
+        templateProps: {
+          metadata: {
+            ...core.metadata,
+            url: CONFIG.web.href,
+          },
+          logo: core.email?.logo,
+        },
         messages,
       });
 

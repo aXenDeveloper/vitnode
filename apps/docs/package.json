@@ -9,7 +9,7 @@
     "init": "vitnode init",
     "dev": "vitnode init && next dev --turbopack",
     "dev:email": "email dev --dir src/emails",
-    "build": "next build",
+    "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
