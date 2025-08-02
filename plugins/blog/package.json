@@ -36,26 +36,26 @@
     "@hono/zod-openapi": "^1.0.2",
     "@vitnode/core": "workspace:*",
     "drizzle-kit": "^0.31.4",
-    "drizzle-orm": "^0.44.3",
-    "hono": "^4.8.9",
+    "drizzle-orm": "^0.44.4",
+    "hono": "^4.8.10",
     "lucide-react": "^0.526.0",
-    "next": "^15.4.4",
+    "next": "^15.4.5",
     "next-intl": "^4.3.4",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
     "react-hook-form": "^7.61.1",
     "sonner": "^2.0.6",
-    "zod": "^4.0.10"
+    "zod": "^4.0.14"
   },
   "devDependencies": {
     "@swc/cli": "0.6.0",
-    "@swc/core": "^1.13.2",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
+    "@swc/core": "^1.13.3",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
     "@vitnode/eslint-config": "workspace:*",
     "concurrently": "^9.2.0",
     "eslint": "^9.32.0",
     "tsc-alias": "^1.8.16",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.2"
   }
 }
