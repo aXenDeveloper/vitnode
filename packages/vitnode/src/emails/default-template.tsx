@@ -89,7 +89,7 @@ export default function DefaultTemplateEmail({
                   tailwindConfig?.theme?.extend?.colors?.['muted'] ?? '#eaeff5',
                 'muted-foreground':
                   tailwindConfig?.theme?.extend?.colors?.['muted-foreground'] ??
-                  '#373b40',
+                  '#686c72',
                 accent:
                   tailwindConfig?.theme?.extend?.colors?.['accent'] ??
                   '#e0e5eb',
@@ -130,9 +130,7 @@ export default function DefaultTemplateEmail({
               )}
             </Section>
 
-            <Section className="border-border bg-card rounded-xl border border-solid p-[20px]">
-              {children}
-            </Section>
+            {children}
 
             <Section className="my-8 text-center text-sm">
               <Link className="text-muted-foreground" href={metadata.url}>

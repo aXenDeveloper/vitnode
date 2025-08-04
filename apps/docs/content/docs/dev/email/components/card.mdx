@@ -1,0 +1,42 @@
+---
+title: Card
+description: Display content in a card layout for emails.
+---
+
+## Preview
+
+import { ImgDocs } from '@/components/fumadocs/img';
+import cardPreviewImg from './card-preview.png';
+
+<ImgDocs src={cardPreviewImg} alt="Card Preview" />
+
+## Usage
+
+```tsx
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@vitnode/core/emails/ui/card';
+import { Text } from '@react-email/components';
+```
+
+```tsx
+<Card>
+  <CardHeader>
+    <CardTitle>Card Title</CardTitle>
+    <CardDescription>Card Description</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <Text className="m-0">
+      This is the content of the card. You can put any content here.
+    </Text>
+  </CardContent>
+  <CardFooter>
+    <Text className="m-0">Footer</Text>
+  </CardFooter>
+</Card>
+```

@@ -1,9 +1,18 @@
-import { Button, Text } from '@react-email/components';
+import { Section, Text } from '@react-email/components';
 import { createTranslator } from 'use-intl';
 
 import DefaultTemplateEmail, {
   type DefaultTemplateEmailProps,
 } from './default-template';
+import { Button } from './ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from './ui/card';
 
 export default function TestTemplateEmail({
   messages,
@@ -14,13 +23,38 @@ export default function TestTemplateEmail({
 
   return (
     <DefaultTemplateEmail locale={locale} messages={messages} {...props}>
-      <Text>Hello - {t('core.auth.sign_in.desc')}</Text>
-      <Button
-        className="bg-primary px-3 py-2 font-medium leading-4 text-white"
-        href="https://example.com"
-      >
-        Click me
-      </Button>
+      <Card className="p-6">
+        {(
+          [
+            { variant: 'default', label: 'Default', size: 'lg' as const },
+            { variant: 'secondary', label: 'Secondary' },
+            { variant: 'outline', label: 'Outline' },
+            { variant: 'ghost', label: 'Ghost' },
+            { variant: 'link', label: 'Link' },
+            {
+              variant: 'destructive',
+              label: 'Destructive',
+              size: 'sm' as const,
+            },
+          ] as {
+            label: string;
+            size?: 'lg' | 'sm';
+            variant:
+              | 'default'
+              | 'destructive'
+              | 'ghost'
+              | 'link'
+              | 'outline'
+              | 'secondary';
+          }[]
+        ).map(({ variant, label, size }) => (
+          <Section className="mb-2" key={variant}>
+            <Button size={size} variant={variant}>
+              {label}
+            </Button>
+          </Section>
+        ))}
+      </Card>
     </DefaultTemplateEmail>
   );
 }
