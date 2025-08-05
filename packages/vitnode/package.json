@@ -41,7 +41,6 @@
     "@hono/zod-validator": "^0.7.2",
     "@hookform/resolvers": "^5.2.1",
     "@react-email/components": "^0.4.0",
-    "@react-email/preview-server": "^4.2.7",
     "@swc/cli": "0.6.0",
     "@swc/core": "^1.13.3",
     "@testing-library/dom": "^10.4.1",
@@ -112,6 +111,7 @@
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@hono/swagger-ui": "^0.5.2",
+    "@react-email/preview-server": "^4.2.7",
     "@tanstack/react-query": "^5.84.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

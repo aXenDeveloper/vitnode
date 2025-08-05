@@ -44,6 +44,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.54.2",
+    "@react-email/components": "^0.4.0",
     "@tailwindcss/postcss": "^4.1.11",
     "@types/mdx": "^2.0.13",
     "@types/node": "^24.1.0",

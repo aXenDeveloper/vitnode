@@ -1,18 +1,11 @@
-import { Section, Text } from '@react-email/components';
+import { Section } from '@react-email/components';
 import { createTranslator } from 'use-intl';
 
 import DefaultTemplateEmail, {
   type DefaultTemplateEmailProps,
 } from './default-template';
 import { Button } from './ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from './ui/card';
+import { Card } from './ui/card';
 
 export default function TestTemplateEmail({
   messages,
@@ -49,7 +42,11 @@ export default function TestTemplateEmail({
           }[]
         ).map(({ variant, label, size }) => (
           <Section className="mb-2" key={variant}>
-            <Button size={size} variant={variant}>
+            <Button
+              href="http://localhost:3000/api/swagger"
+              size={size}
+              variant={variant}
+            >
               {label}
             </Button>
           </Section>

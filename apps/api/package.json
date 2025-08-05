@@ -8,6 +8,7 @@
     "db:migrate": "vitnode migrate",
     "init": "vitnode init --api",
     "dev": "vitnode init --api && tsx watch src/index.ts",
+    "dev:email": "email dev --dir src/emails",
     "build": "tsc && tsc-alias -p tsconfig.json",
     "start": "node dist/index.js",
     "lint": "eslint .",
@@ -17,7 +18,6 @@
   "dependencies": {
     "@hono/zod-openapi": "^1.0.2",
     "@hono/zod-validator": "^0.7.2",
-    "@react-email/components": "^0.3.3",
     "@vitnode/core": "workspace:*",
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.4",
@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@hono/node-server": "^1.18.0",
+    "@react-email/components": "^0.3.3",
     "@types/node": "^24.1.0",
     "@types/react": "^19.1.9",
     "@types/react-dom": "^19.1.7",

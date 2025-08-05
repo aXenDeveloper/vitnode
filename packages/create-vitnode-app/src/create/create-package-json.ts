@@ -102,6 +102,7 @@ export const createPackageJSON = async ({
             build: 'tsc && tsc-alias -p tsconfig.json',
             start: 'node dist/index.js',
           }),
+      'dev:email': 'email dev --dir src/emails',
       ...(eslint
         ? {
             lint: 'eslint .',
@@ -169,6 +170,7 @@ export const createPackageJSON = async ({
         'db:migrate': 'vitnode migrate',
         init: 'vitnode init',
         dev: 'vitnode init && next dev --turbopack',
+        'dev:email': 'email dev --dir src/emails',
         build: 'next build',
         start: 'next start',
         ...(eslint

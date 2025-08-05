@@ -29,6 +29,7 @@
   "scripts": {
     "build:plugins": "tsc && swc src -d dist --config-file .swcrc && tsc-alias -p tsconfig.json",
     "dev": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\" \"tsc-alias -w\" \"vitnode plugin --w\"",
+    "dev:email": "email dev --dir src/emails",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
@@ -43,11 +44,13 @@
     "next-intl": "^4.3.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-email": "^4.2.7",
     "react-hook-form": "^7.61.1",
     "sonner": "^2.0.6",
     "zod": "^4.0.14"
   },
   "devDependencies": {
+    "@react-email/components": "^0.4.0",
     "@swc/cli": "0.6.0",
     "@swc/core": "^1.13.3",
     "@types/react": "^19.1.9",

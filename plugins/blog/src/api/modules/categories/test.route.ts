@@ -1,7 +1,7 @@
+import { buildRoute } from '@vitnode/core/api/lib/route';
 import { z } from 'zod';
 
-import { buildRoute } from '@/api/lib/route';
-import { CONFIG_PLUGIN } from '@/config';
+import { CONFIG_PLUGIN } from '@/const';
 import TestTemplateEmail from '@/emails/test-template';
 
 export const testRoute = buildRoute({

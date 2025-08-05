@@ -9,6 +9,28 @@ description: Template for email messages
 
 VitNode uses [React Email](https://react.email/) to create email templates. This allows us to create responsive and customizable email templates that can be used in various applications with React components.
 
+## Preview Server
+
+To preview your email templates, you can run the preview server. This server will render your email templates and allow you to see how they look in a browser with fast refresh capabilities.
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Email Preview Server'>
+
+```bash tab="bun"
+bun dev:email
+```
+
+```bash tab="pnpm"
+pnpm dev:email
+```
+
+```bash tab="npm"
+npm run dev:email
+```
+
+</Tabs>
+
 ## Usage
 
 Inside your:
@@ -57,6 +79,19 @@ export const testRoute = buildRoute({
 });
 ```
 
+### Preview
+
+Here is how `DefaultTemplateEmail` component looks like in the preview server:
+
+import { ImgDocs } from '@/components/fumadocs/img';
+import defaultTemplatePreviewImg from './default_template_preview.png';
+
+<ImgDocs src={defaultTemplatePreviewImg} alt="Default Template Preview" />
+
+Of course, you can customize the `DefaultTemplateEmail` component to fit your needs like for example changing the logo, colors etc.
+
+The `DefaultTemplateEmail` component is a wrapper around your email content that provides a consistent layout and styling.
+
 ## TailwindCSS
 
 We implemented [TailwindCSS](https://react.email/docs/components/tailwind) in the email templates to allow you to use utility classes for styling. You can use Tailwind classes directly in your email components.
@@ -65,7 +100,7 @@ We implemented [TailwindCSS](https://react.email/docs/components/tailwind) in th
   The current `TailwindCSS` version used is **3.4.10**.
 </Callout>
 
-## Components
+### Components
 
 <Cards>
   <Card
@@ -84,3 +119,7 @@ We implemented [TailwindCSS](https://react.email/docs/components/tailwind) in th
     href="https://react.email/docs/components"
   />
 </Cards>
+
+## Internationalization (I18n)
+
+TODO

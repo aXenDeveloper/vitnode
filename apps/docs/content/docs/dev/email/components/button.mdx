@@ -17,7 +17,7 @@ import { Button } from '@vitnode/core/emails/ui/button';
 ```
 
 ```tsx
-<Button>Default</Button>
+<Button href="https://vitnode.com/">Default</Button>
 ```
 
 ## Props
@@ -35,6 +35,11 @@ import { TypeTable } from 'fumadocs-ui/components/type-table';
       description: 'The size of the button.',
       type: 'default | sm | lg',
       default: 'default',
+    },
+    href: {
+      description: 'The URL the button links to.',
+      type: 'string',
+      default: '',
     },
   }}
 />
