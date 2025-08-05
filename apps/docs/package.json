@@ -6,6 +6,7 @@
   "scripts": {
     "db:push": "vitnode push",
     "db:migrate": "vitnode migrate",
+    "docker:dev": "docker compose -f ./docker-compose.yml -p vitnode-dev-dun up -d",
     "init": "vitnode init",
     "dev": "vitnode init && next dev --turbopack",
     "dev:email": "email dev --dir src/emails",

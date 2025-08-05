@@ -14,15 +14,15 @@
     "rest-api",
     "fetcher",
     "database",
-    "---Integrations---",
-    "sso",
-    "captcha",
-    "email",
     "---UI---",
     "layouts-and-pages",
     "admin-page",
     "i18n",
     "advanced",
+    "---Integrations---",
+    "sso",
+    "captcha",
+    "email",
     "..."
   ]
 }

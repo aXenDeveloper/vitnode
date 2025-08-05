@@ -1,4 +1,5 @@
 import { buildRoute } from '@vitnode/core/api/lib/route';
+import { UserModel } from '@vitnode/core/api/models/user';
 import { z } from 'zod';
 
 import { CONFIG_PLUGIN } from '@/const';
@@ -30,10 +31,17 @@ export const testRoute = buildRoute({
     },
   },
   handler: async c => {
+    const user = await new UserModel().getUserById({
+      id: 3,
+      c,
+    });
+
+    if (!user) throw new Error('User not found');
+
     await c.get('email').send({
-      to: 'axendeveloper@gmail.com',
       subject: 'Test Email',
       content: TestTemplateEmail,
+      user,
     });
 
     await c.get('log').warn('This is a test warn log');

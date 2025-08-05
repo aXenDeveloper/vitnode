@@ -347,7 +347,7 @@ importers:
         version: 7.2.0
       react-scan:
         specifier: ^0.4.3
-        version: 0.4.3(@types/react@19.1.9)(next@15.4.5(@babel/core@7.28.0)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(rollup@4.46.2)
+        version: 0.4.3(@types/react@19.1.9)(next@15.4.5(@babel/core@7.26.10)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(rollup@4.46.2)
       resend:
         specifier: ^4.7.0
         version: 4.7.0(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
@@ -438,10 +438,10 @@ importers:
         version: 0.536.0(react@19.1.1)
       next:
         specifier: ^15.4.5
-        version: 15.4.5(@babel/core@7.28.0)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+        version: 15.4.5(@babel/core@7.26.10)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       next-intl:
         specifier: ^4.3.4
-        version: 4.3.4(next@15.4.5(@babel/core@7.28.0)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1)(typescript@5.9.2)
+        version: 4.3.4(next@15.4.5(@babel/core@7.26.10)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1)(typescript@5.9.2)
       react:
         specifier: ^19.1.1
         version: 19.1.1
@@ -526,6 +526,9 @@ importers:
       sonner:
         specifier: ^2.0.6
         version: 2.0.6(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      use-intl:
+        specifier: ^4.3.4
+        version: 4.3.4(react@19.1.1)
       zod:
         specifier: ^4.0.14
         version: 4.0.14
@@ -11011,7 +11014,7 @@ snapshots:
     dependencies:
       '@types/node': 24.2.0
       tapable: 2.2.2
-      webpack: 5.101.0(@swc/core@1.13.3)(esbuild@0.25.8)
+      webpack: 5.101.0(@swc/core@1.13.3)(esbuild@0.25.0)
     transitivePeerDependencies:
       - '@swc/core'
       - esbuild
@@ -14107,11 +14110,11 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  next-intl@4.3.4(next@15.4.5(@babel/core@7.28.0)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1)(typescript@5.9.2):
+  next-intl@4.3.4(next@15.4.5(@babel/core@7.26.10)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1)(typescript@5.9.2):
     dependencies:
       '@formatjs/intl-localematcher': 0.5.10
       negotiator: 1.0.0
-      next: 15.4.5(@babel/core@7.28.0)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      next: 15.4.5(@babel/core@7.26.10)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       react: 19.1.1
       use-intl: 4.3.4(react@19.1.1)
     optionalDependencies:
@@ -14156,7 +14159,7 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
-  next@15.4.5(@babel/core@7.28.0)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+  next@15.4.5(@babel/core@7.26.10)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
       '@next/env': 15.4.5
       '@swc/helpers': 0.5.15
@@ -14164,7 +14167,7 @@ snapshots:
       postcss: 8.4.31
       react: 19.1.1
       react-dom: 19.1.1(react@19.1.1)
-      styled-jsx: 5.1.6(@babel/core@7.28.0)(react@19.1.1)
+      styled-jsx: 5.1.6(@babel/core@7.26.10)(react@19.1.1)
     optionalDependencies:
       '@next/swc-darwin-arm64': 15.4.5
       '@next/swc-darwin-x64': 15.4.5
@@ -14188,7 +14191,7 @@ snapshots:
       postcss: 8.4.31
       react: 19.1.1
       react-dom: 19.1.1(react@19.1.1)
-      styled-jsx: 5.1.6(@babel/core@7.28.0)(react@19.1.1)
+      styled-jsx: 5.1.6(@babel/core@7.26.10)(react@19.1.1)
     optionalDependencies:
       '@next/swc-darwin-arm64': 15.4.5
       '@next/swc-darwin-x64': 15.4.5
@@ -14813,7 +14816,7 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.1.9
 
-  react-scan@0.4.3(@types/react@19.1.9)(next@15.4.5(@babel/core@7.28.0)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(rollup@4.46.2):
+  react-scan@0.4.3(@types/react@19.1.9)(next@15.4.5(@babel/core@7.26.10)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(rollup@4.46.2):
     dependencies:
       '@babel/core': 7.28.0
       '@babel/generator': 7.28.0
@@ -14835,7 +14838,7 @@ snapshots:
       react-dom: 19.1.1(react@19.1.1)
       tsx: 4.20.3
     optionalDependencies:
-      next: 15.4.5(@babel/core@7.28.0)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+      next: 15.4.5(@babel/core@7.26.10)(@playwright/test@1.54.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       unplugin: 2.1.0
     transitivePeerDependencies:
       - '@types/react'
@@ -15567,12 +15570,12 @@ snapshots:
     optionalDependencies:
       '@babel/core': 7.26.10
 
-  styled-jsx@5.1.6(@babel/core@7.28.0)(react@19.1.1):
+  styled-jsx@5.1.6(@babel/core@7.26.10)(react@19.1.1):
     dependencies:
       client-only: 0.0.1
       react: 19.1.1
     optionalDependencies:
-      '@babel/core': 7.28.0
+      '@babel/core': 7.26.10
 
   stylis@4.3.6: {}
 
@@ -15663,14 +15666,14 @@ snapshots:
       mkdirp: 3.0.1
       yallist: 5.0.0
 
-  terser-webpack-plugin@5.3.14(@swc/core@1.13.3)(esbuild@0.25.0)(webpack@5.101.0(@swc/core@1.13.3)(esbuild@0.25.0)):
+  terser-webpack-plugin@5.3.14(@swc/core@1.13.3)(esbuild@0.25.0)(webpack@5.101.0(@swc/core@1.13.3)(esbuild@0.25.8)):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.29
       jest-worker: 27.5.1
       schema-utils: 4.3.2
       serialize-javascript: 6.0.2
       terser: 5.43.1
-      webpack: 5.101.0(@swc/core@1.13.3)(esbuild@0.25.8)
+      webpack: 5.101.0(@swc/core@1.13.3)(esbuild@0.25.0)
     optionalDependencies:
       '@swc/core': 1.13.3
       esbuild: 0.25.0
@@ -16179,7 +16182,7 @@ snapshots:
   webpack-virtual-modules@0.6.2:
     optional: true
 
-  webpack@5.101.0(@swc/core@1.13.3)(esbuild@0.25.8):
+  webpack@5.101.0(@swc/core@1.13.3)(esbuild@0.25.0):
     dependencies:
       '@types/eslint-scope': 3.7.7
       '@types/estree': 1.0.8
@@ -16203,7 +16206,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 4.3.2
       tapable: 2.2.2
-      terser-webpack-plugin: 5.3.14(@swc/core@1.13.3)(esbuild@0.25.0)(webpack@5.101.0(@swc/core@1.13.3)(esbuild@0.25.0))
+      terser-webpack-plugin: 5.3.14(@swc/core@1.13.3)(esbuild@0.25.0)(webpack@5.101.0(@swc/core@1.13.3)(esbuild@0.25.8))
       watchpack: 2.4.4
       webpack-sources: 3.3.3
     transitivePeerDependencies:

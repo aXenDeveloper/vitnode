@@ -7,7 +7,7 @@
     "db:push": "vitnode push",
     "db:migrate": "vitnode migrate",
     "init": "vitnode init --api",
-    "dev": "vitnode init --api && tsx watch src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "dev:email": "email dev --dir src/emails",
     "build": "tsc && tsc-alias -p tsconfig.json",
     "start": "node dist/index.js",

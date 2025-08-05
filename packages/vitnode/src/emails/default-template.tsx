@@ -13,9 +13,12 @@ import {
   Text,
 } from '@react-email/components';
 
+import type { EmailModelSendArgs } from '@/api/models/email';
+
 import { CONFIG } from '../lib/config';
 
-export interface DefaultTemplateEmailProps {
+export interface DefaultTemplateEmailProps
+  extends Pick<EmailModelSendArgs, 'user'> {
   locale: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   messages: Record<string, any>;
@@ -80,7 +83,7 @@ export default function DefaultTemplateEmail({
                   ] ?? '#fafafa',
                 secondary:
                   tailwindConfig?.theme?.extend?.colors?.['secondary'] ??
-                  '#e2ecf9',
+                  '#f4f9ff',
                 'secondary-foreground':
                   tailwindConfig?.theme?.extend?.colors?.[
                     'secondary-foreground'

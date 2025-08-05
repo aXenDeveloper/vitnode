@@ -33,6 +33,7 @@ export const testRoute = buildRoute({
     await c.get('email').send({
       to: 'axendeveloper@gmail.com',
       subject: 'Test Email',
+      locale: 'en',
       content: TestTemplateEmail,
     });
 

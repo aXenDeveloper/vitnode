@@ -3,10 +3,17 @@ import DefaultTemplateEmail, {
   type DefaultTemplateEmailProps,
 } from '@vitnode/core/emails/default-template';
 
-export default function TestTemplateEmail(props: DefaultTemplateEmailProps) {
+export default function TestTemplateEmail({
+  locale,
+  messages,
+  user,
+  ...props
+}: DefaultTemplateEmailProps) {
+  if (!user) return null;
+
   return (
-    <DefaultTemplateEmail {...props}>
-      <Text>This is a test email template.</Text>
+    <DefaultTemplateEmail locale={locale} messages={messages} {...props}>
+      <Text>This message is for {user.name}</Text>
     </DefaultTemplateEmail>
   );
 }

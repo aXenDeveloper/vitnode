@@ -18,6 +18,7 @@ export const getUserById = async ({ id, c }: { c: Context; id: number }) => {
       emailVerified: core_users.emailVerified,
       roleId: core_users.roleId,
       birthday: core_users.birthday,
+      language: core_users.language,
     })
     .from(core_users)
     .where(eq(core_users.id, id))

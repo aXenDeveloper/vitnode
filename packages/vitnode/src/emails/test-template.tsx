@@ -47,7 +47,7 @@ export default function TestTemplateEmail({
               size={size}
               variant={variant}
             >
-              {label}
+              {label} - {t('core.global.no_results.desc')}
             </Button>
           </Section>
         ))}

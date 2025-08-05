@@ -12,7 +12,7 @@ Before you can use email functionality, you need to provide an adapter to your a
   <Card title="SMTP" href="/docs/dev/email/smtp" />
 </Cards>
 
-or create your own custom email adapter...
+or create your own [custom email adapter](/docs/dev/email/overview#custom-email-adapter)...
 
 ## Usage
 
@@ -21,14 +21,43 @@ To send an email, you can use the context `c.get('email').send()` in your route 
 ```ts
 import { z } from 'zod';
 import { buildRoute } from '@vitnode/core/api/lib/route';
+import { UserModel } from '@vitnode/core/api/models/user';
 
 export const testRoute = buildRoute({
   handler: async c => {
+    const user = await new UserModel().getUserById({
+      id: 3,
+      c,
+    });
+
+    if (!user) throw new Error('User not found');
+
     // [!code ++:5]
+    await c.get('email').send({
+      subject: 'Test Email',
+      content: () => 'This is a test email.',
+      user,
+    });
+
+    return c.text('test');
+  },
+});
+```
+
+or if you don't want to use `user` then you can just pass `to` field with `locale`:
+
+```ts
+import { z } from 'zod';
+import { buildRoute } from '@vitnode/core/api/lib/route';
+
+export const testRoute = buildRoute({
+  handler: async c => {
+    // [!code ++:6]
     await c.get('email').send({
       to: 'test@test.com',
       subject: 'Test Email',
       content: () => 'This is a test email.',
+      locale: 'en',
     });
 
     return c.text('test');
