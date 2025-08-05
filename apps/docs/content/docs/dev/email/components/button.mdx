@@ -1,0 +1,45 @@
+---
+title: Button
+description: A button or link component for emails.
+---
+
+## Preview
+
+import { ImgDocs } from '@/components/fumadocs/img';
+import buttonPreviewImg from './button-preview.png';
+
+<ImgDocs src={buttonPreviewImg} alt="Buttons Preview" />
+
+## Usage
+
+```ts
+import { Button } from '@vitnode/core/emails/ui/button';
+```
+
+```tsx
+<Button href="https://vitnode.com/">Default</Button>
+```
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table';
+
+<TypeTable
+  type={{
+    variant: {
+      description: 'The variant of the button.',
+      type: 'default | secondary | outline | ghost | link | destructive | destructiveGhost',
+      default: 'default',
+    },
+    size: {
+      description: 'The size of the button.',
+      type: 'default | sm | lg',
+      default: 'default',
+    },
+    href: {
+      description: 'The URL the button links to.',
+      type: 'string',
+      default: '',
+    },
+  }}
+/>

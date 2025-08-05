@@ -71,7 +71,7 @@ export const createPackageJSON = async ({
           : {}),
         turbo: '^2.5.5',
         typescript: '^5.8.3',
-        zod: '^4.0.10',
+        zod: '^4.0.14',
       },
       packageManager: `${packageManager}@${availablePackageManagers[packageManager]}`,
       workspaces: ['apps/*', 'plugins/*'],
@@ -102,6 +102,7 @@ export const createPackageJSON = async ({
             build: 'tsc && tsc-alias -p tsconfig.json',
             start: 'node dist/index.js',
           }),
+      'dev:email': 'email dev --dir src/emails',
       ...(eslint
         ? {
             lint: 'eslint .',
@@ -118,18 +119,18 @@ export const createPackageJSON = async ({
     dependencies: {
       '@hono/zod-openapi': '^1.0.2',
       '@hono/zod-validator': '^0.7.2',
-      '@react-email/components': '^0.3.2',
+      '@react-email/components': '^0.4.0',
       '@vitnode/core': pkgVitNodeVersion,
       'drizzle-kit': '^0.31.3',
-      'drizzle-orm': '^0.44.3',
-      hono: '^4.8.9',
+      'drizzle-orm': '^0.44.4',
+      hono: '^4.8.10',
       'next-intl': '^4.3.1',
       react: '^19.1',
       'react-dom': '^19.1',
-      zod: '^4.0.10',
+      zod: '^4.0.14',
     },
     devDependencies: {
-      '@hono/node-server': '^1.17.1',
+      '@hono/node-server': '^1.18.0',
       ...(packageManager === 'bun'
         ? {
             '@types/bun': 'latest',
@@ -151,7 +152,7 @@ export const createPackageJSON = async ({
               : {}),
           }
         : {}),
-      'react-email': '^4.2.4',
+      'react-email': '^4.2.7',
       'tsc-alias': '^1.8.16',
       tsx: '^4.20.3',
       typescript: '^5.8.3',
@@ -169,6 +170,7 @@ export const createPackageJSON = async ({
         'db:migrate': 'vitnode migrate',
         init: 'vitnode init',
         dev: 'vitnode init && next dev --turbopack',
+        'dev:email': 'email dev --dir src/emails',
         build: 'next build',
         start: 'next start',
         ...(eslint
@@ -188,20 +190,20 @@ export const createPackageJSON = async ({
         '@hono/zod-openapi': '^1.0.2',
         '@hono/zod-validator': '^0.7.2',
         '@hookform/resolvers': '^5.1.1',
-        '@react-email/components': '^0.3.2',
+        '@react-email/components': '^0.4.0',
         '@vitnode/core': pkgVitNodeVersion,
         'babel-plugin-react-compiler': '19.1.0-rc.2',
         'drizzle-kit': '^0.31.4',
-        'drizzle-orm': '^0.44.3',
-        hono: '^4.8.9',
-        'lucide-react': '^0.526.0',
-        next: '^15.4.4',
+        'drizzle-orm': '^0.44.4',
+        hono: '^4.8.10',
+        'lucide-react': '^0.536.0',
+        next: '^15.4.5',
         'next-intl': '^4.3.4',
         react: '^19.1',
         'react-dom': '^19.1',
         'react-hook-form': '^7.61.1',
         sonner: '^2.0.6',
-        zod: '^4.0.10',
+        zod: '^4.0.14',
       },
       devDependencies: {
         '@tailwindcss/postcss': '^4.1.11',
@@ -216,7 +218,7 @@ export const createPackageJSON = async ({
               prettier: '^3.6.2',
             }
           : {}),
-        'react-email': '^4.2.4',
+        'react-email': '^4.2.7',
         turbo: '^2.5.5',
         tailwindcss: '^4.1.11',
         'tw-animate-css': '^1.3.6',
@@ -255,7 +257,7 @@ export const createPackageJSON = async ({
       dependencies: {
         '@vitnode/core': pkgVitNodeVersion,
         'babel-plugin-react-compiler': '19.1.0-rc.2',
-        'lucide-react': '^0.526.0',
+        'lucide-react': '^0.536.0',
         next: '^15.4.4',
         'next-intl': '^4.3.4',
         react: '^19.1',
@@ -281,7 +283,7 @@ export const createPackageJSON = async ({
         tailwindcss: '^4.1.11',
         'tw-animate-css': '^1.3.6',
         typescript: '^5.8.3',
-        zod: '^4.0.10',
+        zod: '^4.0.14',
       },
     };
 

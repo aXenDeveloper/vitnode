@@ -6,6 +6,13 @@
       "dependsOn": ["^test"],
       "cache": false
     },
+    "docker:dev": {
+      "dependsOn": ["^docker:dev"],
+      "cache": false,
+      "persistent": true,
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "env": ["POSTGRES_URL", "NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_WEB_URL"]
+    },
     "db:migrate": {
       "dependsOn": ["^db:migrate"],
       "persistent": true,

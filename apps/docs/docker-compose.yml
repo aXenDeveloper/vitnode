@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD-root}
       POSTGRES_DB: ${POSTGRES_NAME-vitnode}
     volumes:
-      - ./docker/dev:/var/lib/postgresql/data
+      - ../../docker/dev:/var/lib/postgresql/data
     ports:
       - '5432:5432'
     networks:

@@ -25,6 +25,10 @@ export const vitNodeApiConfig = buildApiConfig({
       password: process.env.NODE_MAILER_PASSWORD,
       user: process.env.NOD_EMAILER_USER,
     }),
+    logo: {
+      text: 'VitNode Email Test',
+      src: 'http://localhost:3000/logo_vitnode_dark.png',
+    },
   },
   metadata: {
     title: 'VitNode API',

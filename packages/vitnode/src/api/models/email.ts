@@ -4,7 +4,7 @@ import type React from 'react';
 import { render } from '@react-email/components';
 import { HTTPException } from 'hono/http-exception';
 
-import DefaultTemplateEmail from '../../emails/default-template';
+import { type DefaultTemplateEmailProps } from '../../emails/default-template';
 import { CONFIG } from '../../lib/config';
 
 export interface EmailApiPlugin {
@@ -18,13 +18,35 @@ export interface EmailApiPlugin {
   }) => Promise<void>;
 }
 
-export interface EmailModelSendArgs {
-  content: (props: { locale: string }) => React.ReactNode;
+interface EmailModelSendArgsWithUser {
+  locale?: never;
+  to?: never;
+  user: {
+    email: string;
+    id: number;
+    language: string;
+    name?: string;
+    nameCode?: string;
+  };
+}
+
+interface EmailModelSendArgsWithEmail {
+  locale: string;
+  to: string;
+  user?: never;
+}
+
+export type EmailModelSendArgs = {
+  content: (
+    props: Omit<DefaultTemplateEmailProps, 'children'> &
+      Pick<EmailModelSendArgs, 'user'>,
+  ) => React.ReactNode;
   html?: string;
+  locale?: string;
   replyTo?: string;
   subject: string;
-  to: string;
-}
+  // eslint-disable-next-line perfectionist/sort-intersection-types
+} & (EmailModelSendArgsWithEmail | EmailModelSendArgsWithUser);
 
 export class EmailModel {
   constructor(c: Context) {
@@ -33,7 +55,15 @@ export class EmailModel {
 
   protected readonly c: Context;
 
-  async send({ html, replyTo, subject, to, content }: EmailModelSendArgs) {
+  async send({
+    html,
+    replyTo,
+    subject,
+    to,
+    user,
+    content,
+    locale: localeFromArgs,
+  }: EmailModelSendArgs) {
     const core = this.c.get('core');
     const provider = core.email?.adapter;
     if (!provider) {
@@ -42,7 +72,7 @@ export class EmailModel {
       });
     }
 
-    const locale = 'en';
+    const locale = localeFromArgs ?? user?.language ?? 'en';
     const pluginIds: string[] = [
       '@vitnode/core',
       ...this.c.get('core').plugins.map(plugin => plugin.id),
@@ -67,21 +97,30 @@ export class EmailModel {
 
     const htmlContent =
       html ??
-      DefaultTemplateEmail({
-        children: content({ locale }),
-        metadata: {
-          ...core.metadata,
-          url: CONFIG.web.href,
-        },
-        logo: core.email?.options?.logo,
+      content({
         locale,
+        templateProps: {
+          metadata: {
+            ...core.metadata,
+            url: CONFIG.web.href,
+          },
+          logo: core.email?.logo,
+        },
         messages,
+        user,
       });
+
+    const emailTo = user?.email ?? to;
+    if (!emailTo) {
+      throw new HTTPException(400, {
+        message: 'Email address is required',
+      });
+    }
 
     try {
       await provider.sendEmail({
         html: await render(htmlContent),
-        to,
+        to: emailTo,
         subject,
         replyTo,
         metadata: core.metadata,

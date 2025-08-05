@@ -1,0 +1,22 @@
+import { Text } from '@react-email/components';
+import DefaultTemplateEmail, {
+  type DefaultTemplateEmailProps,
+} from '@vitnode/core/emails/default-template';
+
+export default function TestTemplateEmail({
+  locale,
+  messages,
+  user,
+  ...props
+}: DefaultTemplateEmailProps) {
+  if (!user) return null;
+
+  return (
+    <DefaultTemplateEmail locale={locale} messages={messages} {...props}>
+      <Text>This message is for {user.name}</Text>
+    </DefaultTemplateEmail>
+  );
+}
+
+TestTemplateEmail.PreviewProps =
+  DefaultTemplateEmail.PreviewProps satisfies DefaultTemplateEmailProps;

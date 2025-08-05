@@ -7,7 +7,8 @@
     "db:push": "vitnode push",
     "db:migrate": "vitnode migrate",
     "init": "vitnode init --api",
-    "dev": "vitnode init --api && tsx watch src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "dev:email": "email dev --dir src/emails",
     "build": "tsc && tsc-alias -p tsconfig.json",
     "start": "node dist/index.js",
     "lint": "eslint .",
@@ -17,27 +18,27 @@
   "dependencies": {
     "@hono/zod-openapi": "^1.0.2",
     "@hono/zod-validator": "^0.7.2",
-    "@react-email/components": "^0.3.2",
     "@vitnode/core": "workspace:*",
     "drizzle-kit": "^0.31.4",
-    "drizzle-orm": "^0.44.3",
-    "hono": "^4.8.9",
+    "drizzle-orm": "^0.44.4",
+    "hono": "^4.8.10",
     "next-intl": "^4.3.4",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "zod": "^4.0.10"
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "zod": "^4.0.14"
   },
   "devDependencies": {
-    "@hono/node-server": "^1.17.1",
+    "@hono/node-server": "^1.18.0",
+    "@react-email/components": "^0.3.3",
     "@types/node": "^24.1.0",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
     "@vitnode/eslint-config": "workspace:*",
     "dotenv": "^17.2.1",
     "eslint": "^9.32.0",
-    "react-email": "^4.2.4",
+    "react-email": "^4.2.7",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.20.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.2"
   }
 }
