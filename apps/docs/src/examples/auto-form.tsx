@@ -38,7 +38,7 @@ export default function AutoFormExample() {
         {
           id: 'email',
           component: props => (
-            <AutoFormInput label="Email Address" type="email" {...props} />
+            <AutoFormInput label="Email Address" {...props} />
           ),
         },
         {

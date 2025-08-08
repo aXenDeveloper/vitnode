@@ -9,7 +9,7 @@ export const SignInAdminView = () => {
       <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-10 px-4 py-16">
         <LogoVitNode className="w-64" />
         <Card className="w-full p-6">
-          <FormSignIn isAdmin />
+          <FormSignIn isAdmin isEmail={false} />
         </Card>
       </div>
     </I18nProvider>

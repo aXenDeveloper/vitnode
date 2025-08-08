@@ -29,7 +29,10 @@ export const CardTitle = ({
   ...props
 }: React.ComponentProps<typeof Text>) => {
   return (
-    <Text className={cn('font-semibold leading-[0]', className)} {...props} />
+    <Text
+      className={cn('text-xl font-semibold leading-[0]', className)}
+      {...props}
+    />
   );
 };
 

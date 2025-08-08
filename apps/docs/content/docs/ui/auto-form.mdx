@@ -47,9 +47,7 @@ const formSchema = z.object({
     },
     {
       id: 'email',
-      component: props => (
-        <AutoFormInput {...props} label="Email Address" type="email" />
-      ),
+      component: props => <AutoFormInput {...props} label="Email Address" />,
     },
     {
       id: 'user_type',
@@ -103,6 +101,57 @@ By default, all fields are required. Make a field optional using the `optional` 
 const formSchema = z.object({
   username: z.string(), // Required field
   bio: z.string().optional(), // Optional field
+});
+```
+
+### Labels
+
+Set field labels using the `label` property in the field definition:
+
+```tsx
+{
+  id: 'username',
+  component: props => (
+    <AutoFormInput {...props} label="Username" />
+  ),
+}
+```
+
+#### Right Labels
+
+You can also add a label on the right side of the field using the `labelRight` property:
+
+```tsx
+{
+  id: 'username',
+  component: props => (
+    <AutoFormInput {...props} label="Username" labelRight="Required" />
+  ),
+}
+```
+
+### Descriptions
+
+Add descriptions to fields using the `description` property:
+
+```tsx
+{
+  id: 'username',
+  component: props => (
+    <AutoFormInput
+      {...props}
+      label="Username"
+      description="This is the username for your application."
+    />
+  ),
+}
+```
+
+or using the `describe` method in Zod:
+
+```ts
+const formSchema = z.object({
+  username: z.string().describe('This is the username for your application.'),
 });
 ```
 

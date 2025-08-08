@@ -6,10 +6,17 @@ import { useTranslations } from 'next-intl';
 import { AutoForm } from '@/components/form/auto-form';
 import { AutoFormInput } from '@/components/form/fields/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Link } from '@/lib/navigation';
 
 import { useFormSignIn } from './use-form';
 
-export const FormSignIn = ({ isAdmin }: { isAdmin?: boolean }) => {
+export const FormSignIn = ({
+  isAdmin,
+  isEmail,
+}: {
+  isAdmin?: boolean;
+  isEmail: boolean;
+}) => {
   const t = useTranslations('core.auth.sign_in');
   const { onSubmit, error, formSchema } = useFormSignIn({ isAdmin });
 
@@ -28,7 +35,7 @@ export const FormSignIn = ({ isAdmin }: { isAdmin?: boolean }) => {
           {
             id: 'email',
             component: props => (
-              <AutoFormInput label={t('email.label')} type="email" {...props} />
+              <AutoFormInput label={t('email.label')} {...props} />
             ),
           },
           {
@@ -36,6 +43,16 @@ export const FormSignIn = ({ isAdmin }: { isAdmin?: boolean }) => {
             component: props => (
               <AutoFormInput
                 label={t('password.label')}
+                labelRight={
+                  isEmail ? (
+                    <Link
+                      className="text-primary hover:underline"
+                      href="/login/password_reset"
+                    >
+                      {t('password.reset')}
+                    </Link>
+                  ) : undefined
+                }
                 type="password"
                 {...props}
               />

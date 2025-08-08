@@ -132,7 +132,8 @@
         },
         "password": {
           "label": "Password",
-          "required": "Password is required."
+          "required": "Password is required.",
+          "reset": "Forgot password?"
         },
         "errors": {
           "access_denied": {
@@ -141,6 +142,11 @@
           }
         },
         "submit": "Login"
+      },
+      "password_reset": {
+        "title": "Reset Password",
+        "desc": "Please enter your email address below to receive a password reset link.",
+        "submit": "Send Reset Link"
       }
     }
   },

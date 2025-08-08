@@ -11,6 +11,7 @@ import { AutoFormLabel } from '../common/label';
 export const AutoFormTextarea = ({
   label,
   description,
+  labelRight,
   otherProps: { isOptional, maxLength, minLength },
   field,
   ...props
@@ -21,7 +22,11 @@ export const AutoFormTextarea = ({
   }) => {
   return (
     <FormItem>
-      {label && <AutoFormLabel isOptional={isOptional}>{label}</AutoFormLabel>}
+      {label && (
+        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+          {label}
+        </AutoFormLabel>
+      )}
 
       <FormControl>
         <Textarea

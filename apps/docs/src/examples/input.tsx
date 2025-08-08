@@ -29,7 +29,6 @@ export default function InputExample() {
             <AutoFormInput
               description="We'll use this email to contact you."
               label="Email Address"
-              type="email"
               {...props}
             />
           ),

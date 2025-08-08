@@ -70,7 +70,7 @@ export const createPackageJSON = async ({
             }
           : {}),
         turbo: '^2.5.5',
-        typescript: '^5.8.3',
+        typescript: '^5.9.2',
         zod: '^4.0.14',
       },
       packageManager: `${packageManager}@${availablePackageManagers[packageManager]}`,
@@ -127,6 +127,7 @@ export const createPackageJSON = async ({
       'next-intl': '^4.3.1',
       react: '^19.1',
       'react-dom': '^19.1',
+      'use-intl': '^4.3.4',
       zod: '^4.0.14',
     },
     devDependencies: {
@@ -155,7 +156,7 @@ export const createPackageJSON = async ({
       'react-email': '^4.2.7',
       'tsc-alias': '^1.8.16',
       tsx: '^4.20.3',
-      typescript: '^5.8.3',
+      typescript: '^5.9.2',
     },
   };
 
@@ -203,6 +204,7 @@ export const createPackageJSON = async ({
         'react-dom': '^19.1',
         'react-hook-form': '^7.61.1',
         sonner: '^2.0.6',
+        'use-intl': '^4.3.4',
         zod: '^4.0.14',
       },
       devDependencies: {
@@ -222,7 +224,7 @@ export const createPackageJSON = async ({
         turbo: '^2.5.5',
         tailwindcss: '^4.1.11',
         'tw-animate-css': '^1.3.6',
-        typescript: '^5.8.3',
+        typescript: '^5.9.2',
       },
       packageManager: `${packageManager}@${availablePackageManagers[packageManager]}`,
     };
@@ -282,7 +284,7 @@ export const createPackageJSON = async ({
         postcss: '^8.5.6',
         tailwindcss: '^4.1.11',
         'tw-animate-css': '^1.3.6',
-        typescript: '^5.8.3',
+        typescript: '^5.9.2',
         zod: '^4.0.14',
       },
     };

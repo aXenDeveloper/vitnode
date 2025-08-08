@@ -60,6 +60,7 @@
     "tailwindcss": "^4.1.11",
     "tw-animate-css": "^1.3.6",
     "typescript": "^5.9.2",
+    "use-intl": "^4.3.4",
     "zod": "^4.0.14"
   }
 }

@@ -25,6 +25,7 @@
     "next-intl": "^4.3.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "use-intl": "^4.3.4",
     "zod": "^4.0.14"
   },
   "devDependencies": {

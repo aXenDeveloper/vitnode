@@ -33,6 +33,7 @@ export const AutoFormComboboxAsync = ({
   description,
   placeholder,
   className,
+  labelRight,
   id,
   otherProps: { isOptional },
   searchPlaceholder,
@@ -70,7 +71,11 @@ export const AutoFormComboboxAsync = ({
 
   return (
     <FormItem className="flex flex-col">
-      {label && <AutoFormLabel isOptional={isOptional}>{label}</AutoFormLabel>}
+      {label && (
+        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+          {label}
+        </AutoFormLabel>
+      )}
 
       <Popover>
         <PopoverTrigger asChild>
