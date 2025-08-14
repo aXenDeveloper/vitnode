@@ -100,6 +100,7 @@ export const core_users_confirm_emails = pgTable(
     token: t.varchar({ length: 100 }).notNull().unique(),
     createdAt: t.timestamp().notNull().defaultNow(),
     expires: t.timestamp().notNull(),
+    ipAddress: t.varchar({ length: 40 }).notNull(),
   }),
 ).enableRLS();
 
@@ -125,7 +126,7 @@ export const core_users_forgot_password = pgTable(
       .notNull()
       .unique(),
     token: t.varchar({ length: 100 }).notNull().unique(),
-    ip_address: t.varchar({ length: 40 }).notNull(),
+    ipAddress: t.varchar({ length: 40 }).notNull(),
     createdAt: t.timestamp().notNull().defaultNow(),
     expiresAt: t.timestamp().notNull(),
   }),

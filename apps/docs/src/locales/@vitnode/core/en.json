@@ -143,10 +143,15 @@
         },
         "submit": "Login"
       },
-      "password_reset": {
+      "reset_password": {
         "title": "Reset Password",
         "desc": "Please enter your email address below to receive a password reset link.",
-        "submit": "Send Reset Link"
+        "submit": "Send Reset Link",
+        "confirmation": {
+          "title": "Check your email",
+          "desc": "We've sent a password reset link to your email address:",
+          "check_spam": "If you don't see the email in your inbox, please check your spam folder."
+        }
       }
     }
   },

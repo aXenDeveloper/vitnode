@@ -12,7 +12,7 @@ export const generateMetadata = async ({
   const { locale } = await params;
   const t = await getTranslations({
     locale,
-    namespace: 'core.auth.password_reset',
+    namespace: 'core.auth.reset_password',
   });
 
   return {
