@@ -18,14 +18,14 @@
     "test:e2e": "turbo test:e2e"
   },
   "devDependencies": {
-    "@types/node": "^24.1.0",
+    "@types/node": "^24.2.1",
     "@vitnode/eslint-config": "workspace:*",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",
-    "tsx": "^4.20.3",
+    "tsx": "^4.20.4",
     "turbo": "^2.5.5",
     "typescript": "^5.9.2",
-    "zod": "^4.0.14"
+    "zod": "^4.0.17"
   },
   "engines": {
     "node": ">=22"
