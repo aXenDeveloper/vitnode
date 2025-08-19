@@ -8,14 +8,13 @@ import { Button } from './ui/button';
 import { Card } from './ui/card';
 
 export default function TestTemplateEmail({
-  messages,
-  locale,
+  i18n,
   ...props
 }: DefaultTemplateEmailProps) {
-  const t = createTranslator({ locale, messages });
+  const t = createTranslator(i18n);
 
   return (
-    <DefaultTemplateEmail locale={locale} messages={messages} {...props}>
+    <DefaultTemplateEmail i18n={i18n} {...props}>
       <Card className="p-6">
         {(
           [
@@ -58,11 +57,14 @@ export default function TestTemplateEmail({
 
 TestTemplateEmail.PreviewProps = {
   ...DefaultTemplateEmail.PreviewProps,
-  messages: {
-    core: {
-      auth: {
-        sign_in: {
-          desc: 'Sign in to your account to access exclusive features and content.',
+  i18n: {
+    ...DefaultTemplateEmail.PreviewProps.i18n,
+    messages: {
+      core: {
+        auth: {
+          sign_in: {
+            desc: 'Sign in to your account to access exclusive features and content.',
+          },
         },
       },
     },

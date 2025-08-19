@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import { createTranslator } from 'use-intl';
 import { z } from 'zod';
 
 import { buildRoute } from '@/api/lib/route';
@@ -75,7 +76,8 @@ export const resetPasswordRoute = buildRoute({
           expiresAt: EXPIRES_AT,
           token: hashToken,
           ipAddress: c.get('ipAddress'),
-        });
+        })
+        .where(eq(core_users_forgot_password.id, findLastRecord.id));
     } else {
       await c
         .get('db')
@@ -92,7 +94,11 @@ export const resetPasswordRoute = buildRoute({
     await c.get('email').send({
       user: findUser,
       content: () => `email123 - ${hashToken} - userId - ${findUser.id}`,
-      subject: 'Reset Password',
+      subject: ({ i18n }) => {
+        const t = createTranslator(i18n);
+
+        return t('core.global.theme_switcher');
+      },
     });
 
     return RESPONSE_TEXT;

@@ -19,9 +19,11 @@ import { CONFIG } from '../lib/config';
 
 export interface DefaultTemplateEmailProps
   extends Pick<EmailModelSendArgs, 'user'> {
-  locale: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  messages: Record<string, any>;
+  i18n: {
+    locale: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    messages: Record<string, any>;
+  };
   templateProps: {
     head?: React.ReactNode;
     logo?: {
@@ -40,7 +42,7 @@ export interface DefaultTemplateEmailProps
 
 export default function DefaultTemplateEmail({
   children,
-  locale,
+  i18n: { locale },
   templateProps: { logo, metadata, previewText, head, tailwindConfig },
 }: DefaultTemplateEmailProps & { children: React.ReactNode }) {
   return (
@@ -160,6 +162,8 @@ DefaultTemplateEmail.PreviewProps = {
       src: 'http://localhost:3000/logo_vitnode_dark.png',
     },
   },
-  messages: {},
-  locale: 'en',
+  i18n: {
+    messages: {},
+    locale: 'en',
+  },
 } satisfies DefaultTemplateEmailProps & { children: React.ReactNode };

@@ -152,22 +152,69 @@ import DefaultTemplateEmail, {
 import { createTranslator } from 'use-intl'; // [!code ++]
 
 export default function TestTemplateEmail({
-  locale,
-  messages,
+  i18n,
   ...props
 }: DefaultTemplateEmailProps) {
-  const t = createTranslator({ locale, messages }); // [!code ++]
+  const t = createTranslator(i18n); // [!code ++]
 
   // [!code ++:5]
   return (
-    <DefaultTemplateEmail locale={locale} messages={messages} {...props}>
+    <DefaultTemplateEmail i18n={i18n} {...props}>
       <Text>{t('@vitnode/blog.title')}</Text>
     </DefaultTemplateEmail>
   );
 }
 
-TestTemplateEmail.PreviewProps =
-  DefaultTemplateEmail.PreviewProps satisfies DefaultTemplateEmailProps;
+TestTemplateEmail.PreviewProps = {
+  ...DefaultTemplateEmail.PreviewProps,
+  i18n: {
+    ...DefaultTemplateEmail.PreviewProps.i18n,
+    // [!code ++:5]
+    messages: {
+      '@vitnode/blog': {
+        title: 'Blog',
+      },
+    },
+  },
+} satisfies DefaultTemplateEmailProps;
+```
+
+### Subject Translation
+
+You can also translate the subject of the email using the `createTranslator` function. This allows you to have localized subjects for your emails.
+
+```ts title="src/api/modules/users/routes/test.route.ts"
+import { z } from 'zod';
+// [!code ++]
+import { createTranslator } from 'use-intl';
+import { buildRoute } from '@vitnode/core/api/lib/route';
+import { UserModel } from '@vitnode/core/api/models/user';
+
+import TestTemplateEmail from '@/emails/test-template';
+
+export const testRoute = buildRoute({
+  handler: async c => {
+    const user = await new UserModel().getUserById({
+      id: 3,
+      c,
+    });
+
+    if (!user) throw new Error('User not found');
+
+    await c.get('email').send({
+      // [!code ++:5]
+      subject: ({ i18n }) => {
+        const t = createTranslator(i18n);
+
+        return t('@vitnode/blog.title');
+      },
+      content: TestTemplateEmail,
+      user,
+    });
+
+    return c.text('test');
+  },
+});
 ```
 
 ## User in Email
