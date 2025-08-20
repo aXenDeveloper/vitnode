@@ -2,7 +2,7 @@ import type { Metadata } from 'next/dist/types';
 
 import { getTranslations } from 'next-intl/server';
 
-import { PasswordResetView } from '@vitnode/core/views/auth/password-reset/password-reset-view';
+import { PasswordResetView } from '@/views/auth/password-reset/password-reset-view';
 
 export const generateMetadata = async ({
   params,
@@ -20,6 +20,8 @@ export const generateMetadata = async ({
   };
 };
 
-export default function Page() {
-  return <PasswordResetView />;
+export default function Page(
+  props: React.ComponentProps<typeof PasswordResetView>,
+) {
+  return <PasswordResetView {...props} />;
 }

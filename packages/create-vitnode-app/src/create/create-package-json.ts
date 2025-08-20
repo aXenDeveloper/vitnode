@@ -46,7 +46,7 @@ const versions = {
 
   react: '^19.1',
   reactDom: '^19.1',
-  nextSingle: '^15.4.7',
+  nextSingle: '^15.5.0',
   nextWebInMonorepo: '^15.4.6',
   nextIntl: '^4.3.4',
   useIntl: '^4.3.4',
@@ -64,7 +64,7 @@ const versions = {
   honoZodOpenapi: '^1.1.0',
   honoZodValidator: '^0.7.2',
   reactEmail: '^4.2.8',
-  reactEmailComponents: '^0.5.0',
+  reactEmailComponents: '^0.5.1',
   zod: '^4.0.17',
 
   babelReactCompiler: '19.1.0-rc.2',

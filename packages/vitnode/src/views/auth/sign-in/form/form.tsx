@@ -47,7 +47,7 @@ export const FormSignIn = ({
                   isEmail ? (
                     <Link
                       className="text-primary hover:underline"
-                      href="/login/reset_password"
+                      href="/login/reset-password"
                     >
                       {t('password.reset')}
                     </Link>

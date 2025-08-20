@@ -6,13 +6,15 @@ import { buildRoute } from '@/api/lib/route';
 import { ForgotPasswordTokenModel } from '@/api/models/password';
 import { CONFIG_PLUGIN } from '@/config';
 import { core_users, core_users_forgot_password } from '@/database/users';
+import ResetPasswordEmailTemplate from '@/emails/reset-password';
+import { CONFIG } from '@/lib/config';
 
 export const resetPasswordRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
     method: 'post',
     description: 'Request a password reset',
-    path: '/reset_password',
+    path: '/reset-password',
     request: {
       body: {
         required: true,
@@ -91,13 +93,28 @@ export const resetPasswordRoute = buildRoute({
     }
 
     // Send email
+    const resetUrlNative = new URL(
+      `login/reset-password?token=${hashToken}&userId=${findUser.id}`,
+      CONFIG.web.href,
+    );
+
     await c.get('email').send({
-      user: findUser,
-      content: () => `email123 - ${hashToken} - userId - ${findUser.id}`,
+      user: {
+        id: findUser.id,
+        email: findUser.email,
+        language: findUser.language,
+      },
+      content: props =>
+        ResetPasswordEmailTemplate({
+          ...props,
+          resetUrl: resetUrlNative.href,
+          expiryDate: EXPIRES_AT,
+          userIpAddress: c.get('ipAddress'),
+        }),
       subject: ({ i18n }) => {
         const t = createTranslator(i18n);
 
-        return t('core.global.theme_switcher');
+        return t('core.auth.reset_password.email.subject');
       },
     });
 

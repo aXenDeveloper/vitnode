@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@hono/node-server": "^1.19.0",
-    "@react-email/components": "^0.5.0",
+    "@react-email/components": "^0.5.1",
     "@types/node": "^24.3.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
