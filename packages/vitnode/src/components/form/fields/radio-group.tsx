@@ -15,6 +15,7 @@ import { AutoFormLabel } from '../common/label';
 
 export const AutoFormRadioGroup = ({
   label,
+  labelRight,
   field,
   description,
   otherProps: { enum: enumValues = [], isOptional },
@@ -35,7 +36,11 @@ export const AutoFormRadioGroup = ({
 
   return (
     <FormItem className="space-y-3">
-      {label && <AutoFormLabel isOptional={isOptional}>{label}</AutoFormLabel>}
+      {label && (
+        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+          {label}
+        </AutoFormLabel>
+      )}
 
       <FormControl>
         <RadioGroup

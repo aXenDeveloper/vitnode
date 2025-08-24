@@ -44,7 +44,9 @@ export type EmailModelSendArgs = {
   html?: string;
   locale?: string;
   replyTo?: string;
-  subject: string;
+  subject:
+    | ((props: Pick<DefaultTemplateEmailProps, 'i18n'>) => string)
+    | string;
   // eslint-disable-next-line perfectionist/sort-intersection-types
 } & (EmailModelSendArgsWithEmail | EmailModelSendArgsWithUser);
 
@@ -98,7 +100,10 @@ export class EmailModel {
     const htmlContent =
       html ??
       content({
-        locale,
+        i18n: {
+          locale,
+          messages,
+        },
         templateProps: {
           metadata: {
             ...core.metadata,
@@ -106,7 +111,6 @@ export class EmailModel {
           },
           logo: core.email?.logo,
         },
-        messages,
         user,
       });
 
@@ -121,7 +125,10 @@ export class EmailModel {
       await provider.sendEmail({
         html: await render(htmlContent),
         to: emailTo,
-        subject,
+        subject:
+          typeof subject === 'function'
+            ? subject({ i18n: { locale, messages } })
+            : subject,
         replyTo,
         metadata: core.metadata,
         text: await render(htmlContent, {

@@ -28,6 +28,7 @@ export interface ItemAutoFormComponentProps {
   description?: React.ReactNode;
   field: ControllerRenderProps<FieldValues, string>;
   label?: React.ReactNode;
+  labelRight?: React.ReactNode;
   otherProps: {
     enum?: string[];
     isOptional?: boolean;
@@ -74,6 +75,7 @@ export function AutoForm<
   captcha,
   fields,
   submitButtonProps,
+  children,
   ...props
 }: Omit<React.ComponentProps<'form'>, 'onSubmit'> & {
   captcha?: z.infer<typeof routeMiddlewareSchema>['captcha'];
@@ -185,7 +187,10 @@ export function AutoForm<
                         typeof params.pattern === 'string'
                           ? params.pattern
                           : undefined,
-                      type: params.type === 'string' ? params.type : undefined,
+                      type:
+                        typeof params.type === 'string'
+                          ? params.type
+                          : undefined,
                     },
                   })}
                 </>
@@ -194,6 +199,8 @@ export function AutoForm<
           />
         );
       })}
+
+      {children}
 
       {captcha && <div id="vitnode_captcha" />}
       {setIsDirty ? (

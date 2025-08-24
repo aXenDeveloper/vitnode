@@ -7,10 +7,27 @@ import type { AutoFormOnSubmit } from '@/components/form/auto-form';
 import { useWrapperSignUp } from '../wrapper';
 import { mutationApi } from './mutation-api';
 
-export const useFormSignUp = () => {
+export const usePasswordZodSchema = () => {
   const t = useTranslations('core.auth.sign_up');
   const tError = useTranslations('core.global.errors');
   const invalidPassword = t('password.invalid');
+
+  return z
+    .string({
+      message: tError('field_required'),
+    })
+    .regex(/^.{8,}$/, invalidPassword)
+    .regex(/[A-Z]/, invalidPassword)
+    .regex(/\d/, invalidPassword)
+    .regex(/\W|_/, invalidPassword)
+    .default('');
+};
+
+export const useFormSignUp = () => {
+  const t = useTranslations('core.auth.sign_up');
+  const tError = useTranslations('core.global.errors');
+  const passwordSchema = usePasswordZodSchema();
+
   const formSchema = z.object({
     name: z
       .string({
@@ -25,15 +42,7 @@ export const useFormSignUp = () => {
         message: t('email.invalid'),
       })
       .default('test@test.com'),
-    password: z
-      .string({
-        message: tError('field_required'),
-      })
-      .regex(/^.{8,}$/, invalidPassword)
-      .regex(/[A-Z]/, invalidPassword)
-      .regex(/\d/, invalidPassword)
-      .regex(/\W|_/, invalidPassword)
-      .default(''),
+    password: passwordSchema,
     terms: z
       .boolean()
       .refine(value => value, t('terms.required'))

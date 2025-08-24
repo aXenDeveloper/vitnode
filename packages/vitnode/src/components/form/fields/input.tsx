@@ -7,6 +7,7 @@ import { AutoFormLabel } from '../common/label';
 
 export const AutoFormInput = ({
   label,
+  labelRight,
   description,
   otherProps: { isOptional, maxLength, minLength, pattern, type },
   field,
@@ -15,7 +16,11 @@ export const AutoFormInput = ({
   Omit<React.ComponentProps<typeof Input>, 'value'>) => {
   return (
     <FormItem>
-      {label && <AutoFormLabel isOptional={isOptional}>{label}</AutoFormLabel>}
+      {label && (
+        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+          {label}
+        </AutoFormLabel>
+      )}
       <FormControl>
         <Input
           {...field}

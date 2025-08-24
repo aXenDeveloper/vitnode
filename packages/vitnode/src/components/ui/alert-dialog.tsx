@@ -30,10 +30,7 @@ function AlertDialog({
     setOpen(newOpen);
   };
 
-  const contextValue = React.useMemo(
-    () => ({ open, setOpen }),
-    [open, setOpen],
-  );
+  const contextValue = React.useMemo(() => ({ open, setOpen }), [open]);
 
   return (
     <AlertDialogContext value={contextValue}>

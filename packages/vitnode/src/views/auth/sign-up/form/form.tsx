@@ -15,7 +15,7 @@ import { AutoFormInput } from '@/components/form/fields/input';
 import { Link } from '@/lib/navigation';
 import { removeSpecialCharacters } from '@/lib/special-characters';
 
-import { PasswordInput } from '../../components/password-input';
+import { PasswordInput } from '../components/password-input';
 import { useFormSignUp } from './use-form';
 
 export const FormSignUp = ({
@@ -62,7 +62,7 @@ export const FormSignUp = ({
         {
           id: 'email',
           component: props => (
-            <AutoFormInput label={t('email.label')} type="email" {...props} />
+            <AutoFormInput label={t('email.label')} {...props} />
           ),
         },
         {

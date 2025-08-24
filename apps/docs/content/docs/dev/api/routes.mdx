@@ -1,56 +1,9 @@
 ---
-title: Restful API
-description: Learn how to create and organize API routes in your VitNode plugins with modules, handlers, and parameter validation.
+title: Routes
+description: xxx
 ---
 
-Building a RESTful API in VitNode is like assembling LEGO blocks - you create modules, add routes to them, and connect everything together. Let's dive into this architectural adventure!
-
-## Setting Up Your API Structure
-
-<Steps>
-  <Step>
-
-### Create Module
-
-Think of modules as containers for related API endpoints. They help organize your routes logically - perfect for keeping your sanity intact!
-
-```ts title="plugins/blog/src/api/modules/categories/categories.module.ts"
-import { buildModule } from '@vitnode/core/api/lib/module';
-
-import { CONFIG_PLUGIN } from '@/config';
-
-export const categoriesModule = buildModule({
-  pluginId: CONFIG_PLUGIN.id,
-  name: 'categories',
-  routes: [], // We'll populate this soon!
-});
-```
-
-#### Nested Modules
-
-Want to create a module hierarchy? VitNode's got your back! Nested modules are perfect for complex APIs.
-
-```ts title="plugins/blog/src/api/modules/categories/categories.module.ts"
-import { buildModule } from '@vitnode/core/api/lib/module';
-
-import { CONFIG_PLUGIN } from '@/config';
-
-import { postsModule } from './posts/posts.module'; // [!code ++]
-
-export const categoriesModule = buildModule({
-  pluginId: CONFIG_PLUGIN.id,
-  name: 'categories',
-  routes: [],
-  modules: [postsModule], // [!code ++]
-});
-```
-
-This creates a beautiful structure: `/api/{plugin_id}/categories/posts/*`
-
-  </Step>
-  <Step>
-
-### Craft Routes
+## Usage
 
 Now for the fun part - creating actual endpoints! Each route is a small but mighty function that handles HTTP requests.
 
@@ -96,29 +49,7 @@ export const getCategoriesRoute = buildRoute({
 });
 ```
 
-  </Step>
-  <Step>
-
-### Connect Everything
-
-The final step is connecting your modules to your plugin's API configuration. It's like plugging in the last cable!
-
-```ts title="plugins/blog/src/config.api.ts"
-import { buildApiPlugin } from '@vitnode/core/api/lib/plugin';
-
-import { CONFIG_PLUGIN } from '@/config';
-
-import { categoriesModule } from './api/modules/categories/categories.module'; // [!code ++]
-
-export const blogApiPlugin = () => {
-  return buildApiPlugin({
-    ...CONFIG_PLUGIN,
-    modules: [categoriesModule], // [!code ++]
-  });
-};
-```
-
-Don't forget to add your routes to the module:
+### Connecting Routes to Modules
 
 ```ts title="plugins/blog/src/api/modules/categories/categories.module.ts"
 import { buildModule } from '@vitnode/core/api/lib/module';
@@ -133,10 +64,7 @@ export const categoriesModule = buildModule({
 });
 ```
 
-  </Step>
-</Steps>
-
-## Working with Parameters
+## Inputs
 
 ### Path Parameters
 

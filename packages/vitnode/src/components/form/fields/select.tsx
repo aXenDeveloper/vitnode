@@ -21,6 +21,7 @@ export const AutoFormSelect = ({
   description,
   otherProps: { enum: enumValues = [], isOptional },
   placeholder,
+  labelRight,
   labels = [],
   ...props
 }: ItemAutoFormComponentProps &
@@ -44,7 +45,11 @@ export const AutoFormSelect = ({
 
   return (
     <FormItem className="space-y-3">
-      {label && <AutoFormLabel isOptional={isOptional}>{label}</AutoFormLabel>}
+      {label && (
+        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+          {label}
+        </AutoFormLabel>
+      )}
 
       <FormControl>
         <Select

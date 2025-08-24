@@ -13,7 +13,7 @@ import { redirect } from '@/lib/navigation';
 export const mutationApi = async ({
   captchaToken,
   ...input
-}: z.infer<typeof zodSignUpSchema> & { captchaToken }) => {
+}: z.infer<typeof zodSignUpSchema> & { captchaToken: string }) => {
   const res = await fetcher(usersModule, {
     path: '/sign_up',
     method: 'post',

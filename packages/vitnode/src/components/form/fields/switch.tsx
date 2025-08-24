@@ -9,6 +9,7 @@ import { AutoFormLabel } from '../common/label';
 export const AutoFormSwitch = ({
   label,
   field,
+  labelRight,
   otherProps: { isOptional },
   description,
   ...props
@@ -20,7 +21,11 @@ export const AutoFormSwitch = ({
       {(label || description) && (
         <div className="space-y-0.5">
           {label && (
-            <AutoFormLabel className="text-base" isOptional={isOptional}>
+            <AutoFormLabel
+              className="text-base"
+              isOptional={isOptional}
+              labelRight={labelRight}
+            >
               {label}
             </AutoFormLabel>
           )}

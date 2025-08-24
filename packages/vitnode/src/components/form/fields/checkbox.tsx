@@ -7,6 +7,7 @@ import { AutoFormLabel } from '../common/label';
 
 export const AutoFormCheckbox = ({
   label,
+  labelRight,
   description,
   otherProps: { isOptional },
   field,
@@ -30,7 +31,9 @@ export const AutoFormCheckbox = ({
       {!!(label ?? description) && (
         <div className="space-y-1 leading-none">
           {label && (
-            <AutoFormLabel isOptional={isOptional}>{label}</AutoFormLabel>
+            <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+              {label}
+            </AutoFormLabel>
           )}
           {description && <AutoFormDesc>{description}</AutoFormDesc>}
           <FormMessage />

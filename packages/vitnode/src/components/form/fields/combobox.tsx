@@ -32,6 +32,7 @@ export const AutoFormCombobox = ({
   className,
   otherProps: { enum: enumValues = [], isOptional },
   labels = [],
+  labelRight,
   searchPlaceholder,
   ...props
 }: ItemAutoFormComponentProps &
@@ -53,7 +54,11 @@ export const AutoFormCombobox = ({
 
   return (
     <FormItem className="flex flex-col">
-      {label && <AutoFormLabel isOptional={isOptional}>{label}</AutoFormLabel>}
+      {label && (
+        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+          {label}
+        </AutoFormLabel>
+      )}
 
       <Popover>
         <PopoverTrigger asChild>

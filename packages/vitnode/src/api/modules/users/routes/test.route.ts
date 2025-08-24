@@ -2,7 +2,6 @@ import { z } from 'zod';
 
 import { buildRoute } from '@/api/lib/route';
 import { CONFIG_PLUGIN } from '@/config';
-import TestTemplateEmail from '@/emails/test-template';
 
 export const testRoute = buildRoute({
   ...CONFIG_PLUGIN,
@@ -30,13 +29,6 @@ export const testRoute = buildRoute({
     },
   },
   handler: async c => {
-    await c.get('email').send({
-      to: 'axendeveloper@gmail.com',
-      subject: 'Test Email',
-      locale: 'en',
-      content: TestTemplateEmail,
-    });
-
     await c.get('log').warn('This is a test warn log');
 
     return c.text('test');

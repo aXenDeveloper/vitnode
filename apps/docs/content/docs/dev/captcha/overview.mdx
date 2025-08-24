@@ -156,7 +156,7 @@ export const mutationApi = async ({
   captchaToken, // [!code ++]
   ...input
   // [!code ++]
-}: z.infer<typeof zodSignUpSchema> & { captchaToken }) => {
+}: z.infer<typeof zodSignUpSchema> & { captchaToken: string }) => {
   const res = await fetcher(usersModule, {
     path: '/sign_up',
     method: 'post',

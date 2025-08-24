@@ -39,7 +39,7 @@ export const SignUpView = async () => {
             <div className="text-accent-foreground p-6 text-center text-sm">
               {t.rich('already_have_account', {
                 link: text => (
-                  <Link className="font-semibold" href="/login">
+                  <Link className="text-primary font-semibold" href="/login">
                     {text}
                   </Link>
                 ),

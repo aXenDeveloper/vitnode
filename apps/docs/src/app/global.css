@@ -9,7 +9,7 @@
 @source "../../node_modules/@vitnode/core/dist/src/views";
 
 :root:not(.dark) {
-  --background: oklch(0.99 0.01 250);
+  --background: oklch(0.96 0.01 250);
   --foreground: oklch(0.18 0.01 250);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.22 0.01 250);
