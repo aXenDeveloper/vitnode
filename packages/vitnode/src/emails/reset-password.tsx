@@ -4,14 +4,14 @@ import { createTranslator } from 'use-intl';
 import DefaultTemplateEmail, {
   type DefaultTemplateEmailProps,
 } from './default-template';
-import { Button } from './ui/button';
+import { EmailButton } from './ui/button';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
+  EmailCard,
+  EmailCardContent,
+  EmailCardDescription,
+  EmailCardFooter,
+  EmailCardHeader,
+  EmailCardTitle,
 } from './ui/card';
 
 interface ResetPasswordEmailTemplateProps extends DefaultTemplateEmailProps {
@@ -41,21 +41,21 @@ export default function ResetPasswordEmailTemplate({
       }}
       user={user}
     >
-      <Card>
-        <CardHeader>
-          <CardTitle>
+      <EmailCard>
+        <EmailCardHeader>
+          <EmailCardTitle>
             {t('core.auth.reset_password.email.greeting', { name: userName })}
-          </CardTitle>
-          <CardDescription>
+          </EmailCardTitle>
+          <EmailCardDescription>
             {t('core.auth.reset_password.email.intro')}
-          </CardDescription>
-        </CardHeader>
+          </EmailCardDescription>
+        </EmailCardHeader>
 
-        <CardContent>
+        <EmailCardContent>
           <Section className="text-center">
-            <Button className="min-w-[200px]" href={resetUrl} size="lg">
+            <EmailButton className="min-w-[200px]" href={resetUrl} size="lg">
               {t('core.auth.reset_password.email.button')}
-            </Button>
+            </EmailButton>
           </Section>
 
           <Text className="text-muted-foreground mt-6 text-sm leading-relaxed">
@@ -74,9 +74,9 @@ export default function ResetPasswordEmailTemplate({
               }),
             })}
           </Text>
-        </CardContent>
+        </EmailCardContent>
 
-        <CardFooter>
+        <EmailCardFooter>
           <Hr className="border-border my-4 w-full border-t border-solid" />
 
           <Text className="text-muted-foreground m-0 text-sm leading-relaxed">
@@ -90,8 +90,8 @@ export default function ResetPasswordEmailTemplate({
               })}
             </Text>
           )}
-        </CardFooter>
-      </Card>
+        </EmailCardFooter>
+      </EmailCard>
 
       {/* Fallback URL section for email clients that don't support buttons */}
       <Section className="mt-6">

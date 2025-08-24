@@ -29,7 +29,7 @@ const buttonVariants = cva(
   },
 );
 
-export const Button = ({
+export const EmailButton = ({
   className,
   variant,
   size,

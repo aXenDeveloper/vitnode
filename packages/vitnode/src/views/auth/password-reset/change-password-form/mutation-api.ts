@@ -1,22 +1,23 @@
 'use server';
 
+import type z from 'zod';
+
+import type { zodChangePasswordSchema } from '@/api/modules/users/routes/change-password.route';
+
 import { usersModule } from '@/api/modules/users/users.module';
 import { fetcher } from '@/lib/fetcher';
 
 export const mutationApi = async ({
-  email,
-  captchaToken,
-}: {
-  captchaToken: string;
-  email: string;
-}) => {
+  password,
+  token,
+  userId,
+}: z.infer<typeof zodChangePasswordSchema>) => {
   const res = await fetcher(usersModule, {
     module: 'users',
-    path: '/reset-password',
+    path: '/change-password',
     method: 'post',
-    captchaToken,
     args: {
-      body: { email },
+      body: { password, token, userId },
     },
   });
 

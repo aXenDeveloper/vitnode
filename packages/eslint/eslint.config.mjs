@@ -1,21 +1,23 @@
 // @ts-check
-import eslint from '@eslint/js';
-import tsEslint from 'typescript-eslint';
-import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
-import perfectionist from 'eslint-plugin-perfectionist';
-import jsxA11y from 'eslint-plugin-jsx-a11y';
-import reactPlugin from 'eslint-plugin-react';
-import hooksPlugin from 'eslint-plugin-react-hooks';
-import reactCompiler from 'eslint-plugin-react-compiler';
-import eslintReact from '@eslint-react/eslint-plugin';
-import { fileURLToPath } from 'node:url';
+
 import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import eslint from '@eslint/js';
+import eslintReact from '@eslint-react/eslint-plugin';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
+import perfectionist from 'eslint-plugin-perfectionist';
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import reactPlugin from 'eslint-plugin-react';
+import reactCompiler from 'eslint-plugin-react-compiler';
+import hooksPlugin from 'eslint-plugin-react-hooks';
+import tsEslint from 'typescript-eslint';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default [
   {
     ignores: [
+      'next-env.d.ts',
       'dist',
       '**/\\(main\\)/\\(plugins\\)/**',
       '**/\\(auth\\)/\\(plugins\\)/**',

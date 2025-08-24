@@ -163,6 +163,15 @@
           "help": "If you're having trouble with the button above, copy and paste the URL below into your web browser:",
           "expire_time": "This link will expire on {date}"
         }
+      },
+      "change_password": {
+        "title": "Change Password",
+        "desc": "Please enter your new password below.",
+        "submit": "Change Password",
+        "success": {
+          "title": "Password changed successfully",
+          "desc": "You can now log in with your new password."
+        }
       }
     }
   },

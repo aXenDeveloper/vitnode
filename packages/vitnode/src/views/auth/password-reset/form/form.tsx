@@ -1,7 +1,11 @@
 'use client';
 
+import type z from 'zod';
+
 import { MailCheckIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+
+import type { routeMiddlewareSchema } from '@/api/modules/middleware/route';
 
 import { AutoForm } from '@/components/form/auto-form';
 import { AutoFormInput } from '@/components/form/fields/input';
@@ -19,7 +23,7 @@ import { useForm } from './use-form';
 
 function ConfirmationView({ email }: { email: string }) {
   const t = useTranslations('core.auth.reset_password');
-  const tSignIn = useTranslations('core.auth.sign_in');
+  const tSignUp = useTranslations('core.auth.sign_up');
 
   return (
     <>
@@ -36,7 +40,7 @@ function ConfirmationView({ email }: { email: string }) {
       </CardHeader>
 
       <CardContent className="space-y-2">
-        <Label htmlFor="email">{tSignIn('email.label')}</Label>
+        <Label htmlFor="email">{tSignUp('email.label')}</Label>
         <Input className="w-full" id="email" readOnly value={email} />
       </CardContent>
 
@@ -47,10 +51,14 @@ function ConfirmationView({ email }: { email: string }) {
   );
 }
 
-export const PasswordResetForm = () => {
+export const PasswordResetForm = ({
+  captcha,
+}: {
+  captcha: z.infer<typeof routeMiddlewareSchema>['captcha'];
+}) => {
   const { formSchema, onSubmit, sentEmail } = useForm();
   const t = useTranslations('core.auth.reset_password');
-  const tSignIn = useTranslations('core.auth.sign_in');
+  const tSignUp = useTranslations('core.auth.sign_up');
 
   if (sentEmail) {
     return <ConfirmationView email={sentEmail} />;
@@ -67,11 +75,12 @@ export const PasswordResetForm = () => {
 
       <CardContent>
         <AutoForm
+          captcha={captcha}
           fields={[
             {
               id: 'email',
               component: props => (
-                <AutoFormInput {...props} label={tSignIn('email.label')} />
+                <AutoFormInput {...props} label={tSignUp('email.label')} />
               ),
             },
           ]}

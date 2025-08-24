@@ -3,10 +3,12 @@ import React from 'react';
 import { toast } from 'sonner';
 import z from 'zod';
 
+import type { AutoFormOnSubmit } from '@/components/form/auto-form';
+
 import { mutationApi } from './mutation-api';
 
 export const useForm = () => {
-  const t = useTranslations('core.auth.sign_in');
+  const t = useTranslations('core.auth.sign_up');
   const tError = useTranslations('core.global.errors');
   const [sentEmail, setSentEmail] = React.useState('');
 
@@ -14,8 +16,12 @@ export const useForm = () => {
     email: z.email({ message: t('email.invalid') }).default(''),
   });
 
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    const mutation = await mutationApi(data.email);
+  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (
+    data,
+    _form,
+    { captchaToken },
+  ) => {
+    const mutation = await mutationApi({ email: data.email, captchaToken });
     if (mutation?.error) {
       toast.error(tError('title'), {
         description: tError('internal_server_error'),

@@ -14,29 +14,29 @@ import cardPreviewImg from './card-preview.png';
 
 ```tsx
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
+  EmailCard,
+  EmailCardContent,
+  EmailCardDescription,
+  EmailCardFooter,
+  EmailCardHeader,
+  EmailCardTitle,
 } from '@vitnode/core/emails/ui/card';
 import { Text } from '@react-email/components';
 ```
 
 ```tsx
-<Card>
-  <CardHeader>
-    <CardTitle>Card Title</CardTitle>
-    <CardDescription>Card Description</CardDescription>
+<EmailCard>
+  <EmailCardHeader>
+    <EmailCardTitle>Card Title</EmailCardTitle>
+    <EmailCardDescription>Card Description</EmailCardDescription>
   </CardHeader>
-  <CardContent>
+  <EmailCardContent>
     <Text className="m-0">
       This is the content of the card. You can put any content here.
     </Text>
-  </CardContent>
-  <CardFooter>
+  </EmailCardContent>
+  <EmailCardFooter>
     <Text className="m-0">Footer</Text>
-  </CardFooter>
-</Card>
+  </EmailCardFooter>
+</EmailCard>
 ```

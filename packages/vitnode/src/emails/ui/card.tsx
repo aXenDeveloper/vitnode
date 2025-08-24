@@ -2,7 +2,7 @@ import { Section, Text } from '@react-email/components';
 
 import { cn } from '@/lib/utils';
 
-export const Card = ({
+export const EmailCard = ({
   className,
   ...props
 }: React.ComponentProps<typeof Section>) => {
@@ -17,14 +17,14 @@ export const Card = ({
   );
 };
 
-export const CardHeader = ({
+export const EmailCardHeader = ({
   className,
   ...props
 }: React.ComponentProps<typeof Section>) => {
   return <Section className={cn('mb-6 px-6', className)} {...props} />;
 };
 
-export const CardTitle = ({
+export const EmailCardTitle = ({
   className,
   ...props
 }: React.ComponentProps<typeof Text>) => {
@@ -36,7 +36,7 @@ export const CardTitle = ({
   );
 };
 
-export const CardDescription = ({
+export const EmailCardDescription = ({
   className,
   ...props
 }: React.ComponentProps<typeof Text>) => {
@@ -48,14 +48,14 @@ export const CardDescription = ({
   );
 };
 
-export const CardContent = ({
+export const EmailCardContent = ({
   className,
   ...props
 }: React.ComponentProps<typeof Section>) => {
   return <Section className={cn('px-6', className)} {...props} />;
 };
 
-export const CardFooter = ({
+export const EmailCardFooter = ({
   className,
   ...props
 }: React.ComponentProps<typeof Section>) => {

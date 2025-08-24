@@ -15,6 +15,7 @@ export const resetPasswordRoute = buildRoute({
     method: 'post',
     description: 'Request a password reset',
     path: '/reset-password',
+    withCaptcha: true,
     request: {
       body: {
         required: true,
@@ -62,8 +63,8 @@ export const resetPasswordRoute = buildRoute({
       .where(eq(core_users_forgot_password.userId, findUser.id))
       .limit(1);
 
-    // If a record will be found with createdAt in the last 15 minutes, skip
-    if (findLastRecord?.createdAt > new Date(Date.now() - 1000 * 60 * 15)) {
+    // If a record will be found with createdAt in the last 5 minutes, skip
+    if (findLastRecord?.createdAt > new Date(Date.now() - 1000 * 60 * 5)) {
       return RESPONSE_TEXT;
     }
 

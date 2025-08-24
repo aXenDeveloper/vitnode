@@ -1,6 +1,7 @@
 import { buildModule } from '@/api/lib/module';
 import { CONFIG_PLUGIN } from '@/config';
 
+import { changePasswordRoute } from './routes/change-password.route';
 import { resetPasswordRoute } from './routes/reset-passowrd.route';
 import { sessionRoute } from './routes/session.route';
 import { signInRoute } from './routes/sign-in.route';
@@ -19,6 +20,7 @@ export const usersModule = buildModule({
     signUpRoute,
     testRoute,
     resetPasswordRoute,
+    changePasswordRoute,
   ],
   modules: [ssoUserModule],
 });
