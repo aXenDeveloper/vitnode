@@ -40,7 +40,7 @@ bun create vitnode-app@latest
 | Option              | Description                                                                       |
 | ------------------- | --------------------------------------------------------------------------------- |
 | `--package-manager` | Specify the package manager to use. Support `npm`, `pnpm`.                        |
-| `--eslint`          | Initialize with eslint config.                                                    |
+| `--biome`           | Initialize with Biome config.                                                     |
 | `--skip-install`    | Skip installing packages after initializing the project.                          |
 | `--mode`            | Specify the type of app to create. Support `singleApp`, `apiMonorepo`, `onlyApi`. |
 | `--monorepo`        | Create project with monorepo structure.                                           |

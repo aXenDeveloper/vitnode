@@ -7,12 +7,13 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
 import {
+  SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Link, usePathname } from '@/lib/navigation';

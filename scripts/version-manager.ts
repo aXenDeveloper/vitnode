@@ -1,7 +1,9 @@
-import { execSync, spawn } from 'child_process';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { EOL } from 'os';
+/** biome-ignore-all lint/suspicious/noConsole: <No need this> */
+
+import { execSync, spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { EOL } from 'node:os';
+import { join } from 'node:path';
 import type { EnvironmentConfig } from './environment.ts';
 
 interface Config {
@@ -33,9 +35,9 @@ export class VersionManager {
       return;
     }
 
-    await this.validateSetup();
+    this.validateSetup();
     const currentVersion = this.getCurrentVersion();
-    const newVersion = await this.calculateNewVersion(currentVersion);
+    const newVersion = this.calculateNewVersion(currentVersion);
     await this.applyVersion(currentVersion, newVersion);
     await this.commitAndPush(newVersion);
   }
@@ -60,7 +62,7 @@ export class VersionManager {
     return pkgJson.version.toString();
   }
 
-  async calculateNewVersion(currentVersion: string): Promise<string> {
+  calculateNewVersion(currentVersion: string) {
     const versionType = this.getVersionType(currentVersion);
     const npmOutput = execSync(
       `npm version --git-tag-version=false --commit-hooks=false --workspaces --workspaces-update=false ${versionType}`,
@@ -105,7 +107,7 @@ export class VersionManager {
     await this.exposeNewVersion(newVersion);
   }
 
-  async runNpmVersion(version: string): Promise<void> {
+  runNpmVersion(version: string) {
     return this.runInWorkspace('npm', [
       'version',
       '--allow-same-version=true',
@@ -117,7 +119,7 @@ export class VersionManager {
     ]);
   }
 
-  async exposeNewVersion(version: string): Promise<void> {
+  exposeNewVersion(version: string) {
     return this.runInWorkspace('sh', [
       '-c',
       `echo "newTag=${version}" >> $GITHUB_OUTPUT`,
@@ -125,13 +127,13 @@ export class VersionManager {
   }
 
   async commitAndPush(version: string): Promise<void> {
-    const branch = await this.getCurrentBranch();
+    const branch = this.getCurrentBranch();
     await this.setupGit();
     await this.createCommit(version);
     await this.pushChanges(branch);
   }
 
-  async getCurrentBranch(): Promise<string> {
+  getCurrentBranch() {
     const { GITHUB_HEAD_REF, GITHUB_REF } = this.env;
     if (GITHUB_HEAD_REF) return GITHUB_HEAD_REF;
     if (!GITHUB_REF) throw new Error('No branch found');
@@ -159,14 +161,20 @@ export class VersionManager {
   async pushChanges(branch: string): Promise<void> {
     const { GITHUB_ACTOR, GITHUB_TOKEN, GITHUB_REPOSITORY } = this.env;
     const remoteRepo = `https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git`;
-    await this.runInWorkspace('git', ['push', remoteRepo]);
+    // push the branch and set upstream so future pushes can be done with just `git push`
+    await this.runInWorkspace('git', [
+      'push',
+      '--set-upstream',
+      remoteRepo,
+      branch,
+    ]);
   }
 
   /**
    * Runs a command in the workspace
    */
   async runInWorkspace(command: string, args: string[]): Promise<void> {
-    return new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
       const child = spawn(command, args, { cwd: this.env.WORKSPACE });
       const errorMessages: Buffer[] = [];
 
@@ -186,7 +194,7 @@ export class VersionManager {
     });
   }
 
-  async validateSetup(): Promise<void> {
+  validateSetup() {
     // Validate version type
     if (!CONFIG.ALLOWED_VERSION_TYPES.includes(this.env.VERSION_TYPE)) {
       throw new Error(

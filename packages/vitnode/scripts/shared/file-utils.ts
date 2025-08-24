@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/** biome-ignore-all lint/suspicious/noConsole: <no need> */
 import {
   copyFileSync,
   existsSync,
@@ -6,7 +6,7 @@ import {
   readdirSync,
   readFileSync,
   writeFileSync,
-} from 'fs';
+} from 'node:fs';
 import {
   basename,
   dirname,
@@ -16,7 +16,7 @@ import {
   relative,
   resolve,
   sep,
-} from 'path';
+} from 'node:path';
 
 // Regex patterns for import statements
 const relativeImportRegex =
@@ -168,6 +168,7 @@ export function findLocaleRoot(repoRoot: string): string {
     const localeDirectories: string[] = [];
     if (!existsSync(searchDir)) return localeDirectories;
 
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
     const visit = (currentDir: string, depth = 0) => {
       // Limit search depth to avoid infinite recursion and performance issues
       if (depth > 4) return;
@@ -263,6 +264,7 @@ export const copyFile = (
   localeRoot: string,
   repoRoot: string,
   verbose = true,
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
 ) => {
   const fileName = basename(srcPath);
   if (pageFileRegex.test(fileName)) {
@@ -308,12 +310,14 @@ export const copyFile = (
       // Show even shorter, project-rooted paths for clarity
       // Remove everything before '/src/app' in the source path if present
       const srcAppIdx = srcPath.indexOf(join('src', 'app'));
-      const shortSrc =
-        srcAppIdx !== -1
-          ? srcPath.substring(srcAppIdx)
-          : srcPath.startsWith(repoRoot)
-            ? relative(repoRoot, srcPath)
-            : srcPath;
+      let shortSrc: string;
+      if (srcAppIdx !== -1) {
+        shortSrc = srcPath.substring(srcAppIdx);
+      } else if (srcPath.startsWith(repoRoot)) {
+        shortSrc = relative(repoRoot, srcPath);
+      } else {
+        shortSrc = srcPath;
+      }
       const shortDest = destPath.startsWith(repoRoot)
         ? relative(repoRoot, destPath)
         : destPath;

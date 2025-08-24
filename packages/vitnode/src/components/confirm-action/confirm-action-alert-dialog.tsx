@@ -1,7 +1,7 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 import React from 'react';
 
 import {

@@ -158,7 +158,7 @@ export const TestView = () => {
           ]}
           formSchema={formSchema}
           onSubmit={async values => {
-            // eslint-disable-next-line no-console
+            // biome-ignore lint/suspicious/noConsole: <needed>
             console.log('Form submitted', values);
             await new Promise(resolve => setTimeout(resolve, 3000));
           }}

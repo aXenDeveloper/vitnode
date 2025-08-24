@@ -1,10 +1,14 @@
 import { highlight } from 'fumadocs-core/highlight';
-import * as Base from 'fumadocs-ui/components/codeblock';
+import {
+  CodeBlock as BaseCodeBlock,
+  type CodeBlockProps as BaseCodeBlockProps,
+  Pre,
+} from 'fumadocs-ui/components/codeblock';
 
 export interface CodeBlockProps {
   code: string;
   lang: string;
-  wrapper?: Base.CodeBlockProps;
+  wrapper?: BaseCodeBlockProps;
 }
 
 export async function CodeBlock({ code, lang, wrapper }: CodeBlockProps) {
@@ -15,9 +19,9 @@ export async function CodeBlock({ code, lang, wrapper }: CodeBlockProps) {
       dark: 'vesper',
     },
     components: {
-      pre: Base.Pre,
+      pre: Pre,
     },
   });
 
-  return <Base.CodeBlock {...wrapper}>{rendered}</Base.CodeBlock>;
+  return <BaseCodeBlock {...wrapper}>{rendered}</BaseCodeBlock>;
 }

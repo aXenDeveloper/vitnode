@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/dot-notation */
 import {
   Body,
   Container,
@@ -17,11 +16,29 @@ import type { EmailModelSendArgs } from '@/api/models/email';
 
 import { CONFIG } from '../lib/config';
 
+DefaultTemplateEmail.PreviewProps = {
+  children: 'This is a preview text for the email template.',
+  templateProps: {
+    metadata: {
+      title: 'VitNode - Email Template',
+      shortTitle: 'VitNode',
+      url: CONFIG.web.href,
+    },
+    logo: {
+      src: 'http://localhost:3000/logo_vitnode_dark.png',
+    },
+  },
+  i18n: {
+    messages: {},
+    locale: 'en',
+  },
+} satisfies DefaultTemplateEmailProps & { children: React.ReactNode };
+
 export interface DefaultTemplateEmailProps
   extends Pick<EmailModelSendArgs, 'user'> {
   i18n: {
     locale: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: <any needed>
     messages: Record<string, any>;
   };
   templateProps: {
@@ -40,6 +57,7 @@ export interface DefaultTemplateEmailProps
   };
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
 export default function DefaultTemplateEmail({
   children,
   i18n: { locale },
@@ -149,21 +167,3 @@ export default function DefaultTemplateEmail({
     </Html>
   );
 }
-
-DefaultTemplateEmail.PreviewProps = {
-  children: 'This is a preview text for the email template.',
-  templateProps: {
-    metadata: {
-      title: 'VitNode - Email Template',
-      shortTitle: 'VitNode',
-      url: CONFIG.web.href,
-    },
-    logo: {
-      src: 'http://localhost:3000/logo_vitnode_dark.png',
-    },
-  },
-  i18n: {
-    messages: {},
-    locale: 'en',
-  },
-} satisfies DefaultTemplateEmailProps & { children: React.ReactNode };

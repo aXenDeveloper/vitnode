@@ -17,8 +17,8 @@ import {
   TooltipTrigger,
 } from '@vitnode/core/components/ui/tooltip';
 import { PencilIcon } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 import React from 'react';
 
 const CreateEditActionPostsAdmin = dynamic(async () =>

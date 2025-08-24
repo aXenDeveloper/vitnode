@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 'use client';
 
 import { Button } from '@vitnode/core/components/ui/button';
@@ -12,6 +11,7 @@ export default function SonnerDemo() {
           description: 'Sunday, December 03, 2023 at 9:00 AM',
           action: {
             label: 'Undo',
+            // biome-ignore lint/suspicious/noConsole: <test>
             onClick: () => console.log('Undo'),
           },
         })

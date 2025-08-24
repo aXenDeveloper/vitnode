@@ -69,7 +69,7 @@ export const SystemLogsView = async ({
             const content = row.content;
             const isLong = content.length > CHARACTERS;
             const displayContent = isLong
-              ? content.slice(0, CHARACTERS) + '...'
+              ? `${content.slice(0, CHARACTERS)}...`
               : content;
 
             return <span>{displayContent}</span>;

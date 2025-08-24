@@ -1,12 +1,10 @@
 import React from 'react';
-
-import type { VitNodeConfig } from '@/vitnode.config';
-
 import { LanguageSwitcher } from '@/components/switchers/langs/language-swietcher';
 import { ThemeSwitcher } from '@/components/switchers/themes/theme-switcher';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
+import type { VitNodeConfig } from '@/vitnode.config';
 
 import { UserHeader } from './user/user';
 

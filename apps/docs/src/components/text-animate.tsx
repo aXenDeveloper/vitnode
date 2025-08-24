@@ -1,10 +1,9 @@
 'use client';
 
-import type { MotionProps, Variants } from 'motion/react';
-import type { ElementType } from 'react';
-
 import { cn } from '@vitnode/core/lib/utils';
+import type { MotionProps, Variants } from 'motion/react';
 import { AnimatePresence, motion } from 'motion/react';
+import type { ElementType } from 'react';
 import { memo } from 'react';
 
 type AnimationType = 'character' | 'line' | 'text' | 'word';
@@ -328,55 +327,63 @@ const TextAnimateBase = ({
       segments = children.split(/(\s+)/);
       break;
     case 'text':
+      segments = [children];
+      break;
     default:
       segments = [children];
       break;
   }
 
-  const finalVariants = variants
-    ? {
-        container: {
-          hidden: { opacity: 0 },
-          show: {
-            opacity: 1,
-            transition: {
-              opacity: { duration: 0.01, delay },
-              delayChildren: delay,
-              staggerChildren: duration / segments.length,
-            },
-          },
-          exit: {
-            opacity: 0,
-            transition: {
-              staggerChildren: duration / segments.length,
-              staggerDirection: -1,
-            },
+  let finalVariants: { container: Variants; item: Variants };
+  if (variants) {
+    finalVariants = {
+      container: {
+        hidden: { opacity: 0 },
+        show: {
+          opacity: 1,
+          transition: {
+            opacity: { duration: 0.01, delay },
+            delayChildren: delay,
+            staggerChildren: duration / segments.length,
           },
         },
-        item: variants,
-      }
-    : animation
-      ? {
-          container: {
-            ...defaultItemAnimationVariants[animation].container,
-            show: {
-              ...defaultItemAnimationVariants[animation].container.show,
-              transition: {
-                delayChildren: delay,
-                staggerChildren: duration / segments.length,
-              },
-            },
-            exit: {
-              ...defaultItemAnimationVariants[animation].container.exit,
-              transition: {
-                staggerChildren: duration / segments.length,
-                staggerDirection: -1,
-              },
-            },
+        exit: {
+          opacity: 0,
+          transition: {
+            staggerChildren: duration / segments.length,
+            staggerDirection: -1,
           },
-          item: defaultItemAnimationVariants[animation].item,
-        }
-      : { container: defaultContainerVariants, item: defaultItemVariants };
+        },
+      },
+      item: variants,
+    };
+  } else if (animation) {
+    finalVariants = {
+      container: {
+        ...defaultItemAnimationVariants[animation].container,
+        show: {
+          ...defaultItemAnimationVariants[animation].container.show,
+          transition: {
+            delayChildren: delay,
+            staggerChildren: duration / segments.length,
+          },
+        },
+        exit: {
+          ...defaultItemAnimationVariants[animation].container.exit,
+          transition: {
+            staggerChildren: duration / segments.length,
+            staggerDirection: -1,
+          },
+        },
+      },
+      item: defaultItemAnimationVariants[animation].item,
+    };
+  } else {
+    finalVariants = {
+      container: defaultContainerVariants,
+      item: defaultItemVariants,
+    };
+  }
 
   return (
     <AnimatePresence mode="popLayout">
@@ -398,8 +405,10 @@ const TextAnimateBase = ({
               segmentClassName,
             )}
             custom={i * staggerTimings[by]}
-            // eslint-disable-next-line @eslint-react/no-array-index-key
-            key={`${by}-${segment}-${i}`}
+            key={`${by}-${segment}-${
+              // biome-ignore lint/suspicious/noArrayIndexKey: <text animate>
+              i
+            }`}
             variants={finalVariants.item}
           >
             {segment}

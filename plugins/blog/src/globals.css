@@ -1,8 +1,10 @@
-@import 'tailwindcss' source('./src');
+/** biome-ignore-all lint/correctness/noInvalidPositionAtImportRule: <tailwind> */
+/** biome-ignore-all lint/suspicious/noUnknownAtRules: <tailwind> */
+@import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
 
-@import 'tw-animate-css';
+@import "tw-animate-css";
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);

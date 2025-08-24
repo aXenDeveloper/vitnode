@@ -1,14 +1,12 @@
+import { confirm, select } from '@inquirer/prompts';
 import type { Command } from 'commander';
-
-import { select } from '@inquirer/prompts';
-import { confirm } from '@inquirer/prompts';
 import color from 'picocolors';
 
 import { getAvailablePackageManagers } from './helpers/get-available-package-managers.js';
 
 export interface CreateCliReturn {
   docker?: boolean;
-  eslint: boolean;
+  biome: boolean;
   install: boolean;
   mode: 'apiMonorepo' | 'onlyApi' | 'singleApp';
   monorepo?: boolean;
@@ -21,7 +19,7 @@ export const createQuestionsCli = async (
   const optionsFromProgram = program.opts();
   const options: CreateCliReturn = {
     packageManager: optionsFromProgram.packageManager,
-    eslint: optionsFromProgram.eslint,
+    biome: optionsFromProgram.biome,
     install: !optionsFromProgram.skipInstall,
     docker: optionsFromProgram.docker,
     mode: optionsFromProgram.mode,
@@ -88,9 +86,9 @@ export const createQuestionsCli = async (
     });
   }
 
-  if (optionsFromProgram.eslint === undefined) {
-    options.eslint = await confirm({
-      message: `Would you like to use ${color.blue('ESLint')}?`,
+  if (optionsFromProgram.biome === undefined) {
+    options.biome = await confirm({
+      message: `Would you like to use ${color.blue('Biome')}?`,
     });
   }
 

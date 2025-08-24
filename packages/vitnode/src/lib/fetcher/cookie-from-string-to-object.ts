@@ -1,7 +1,6 @@
 export const cookieFromStringToObject = (
   str: string[],
 ): {
-  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   [key: string]: 'lax' | 'none' | 'strict' | boolean | string | undefined;
   Domain: string;
   Expires: string;

@@ -11,7 +11,7 @@ export const ResendEmailAdapter = ({
 }): EmailApiPlugin => {
   return {
     sendEmail: async ({ to, subject, replyTo, metadata, html }) => {
-      if (!apiKey || !from) {
+      if (!(apiKey && from)) {
         throw new Error('Missing Resend configuration');
       }
 

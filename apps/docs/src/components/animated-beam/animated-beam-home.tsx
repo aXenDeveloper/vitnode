@@ -18,7 +18,8 @@ import {
   Sparkle,
   Users,
 } from 'lucide-react';
-import React, { useRef } from 'react';
+import type React from 'react';
+import { useRef } from 'react';
 
 import { LogoVitNode } from '../logo-vitnode';
 import { AnimatedBeam } from './animated-beam';
@@ -91,6 +92,7 @@ export function AnimatedBeamHome() {
           <Circle href="/" ref={div2Ref} tooltip="Languages">
             <Languages />
           </Circle>
+
           <Circle className="size-16" href="/docs/dev" ref={div4Ref}>
             <LogoVitNode small />
           </Circle>

@@ -24,7 +24,7 @@ export const DateFormat = ({
     updateInterval:
       updateInterval ??
       // Update it every 1 minute if the date is from today, otherwise don't update
-      (new Date().getTime() - dateToFormat.getTime() < 86400000 ? 60000 : 0),
+      (Date.now() - dateToFormat.getTime() < 86400000 ? 60000 : 0),
   });
 
   const fullDate = format.dateTime(dateToFormat, {

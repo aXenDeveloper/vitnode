@@ -3,6 +3,9 @@ import DefaultTemplateEmail, {
   type DefaultTemplateEmailProps,
 } from '@vitnode/core/emails/default-template';
 
+TestTemplateEmail.PreviewProps =
+  DefaultTemplateEmail.PreviewProps satisfies DefaultTemplateEmailProps;
+
 export default function TestTemplateEmail({
   user,
   ...props
@@ -15,6 +18,3 @@ export default function TestTemplateEmail({
     </DefaultTemplateEmail>
   );
 }
-
-TestTemplateEmail.PreviewProps =
-  DefaultTemplateEmail.PreviewProps satisfies DefaultTemplateEmailProps;

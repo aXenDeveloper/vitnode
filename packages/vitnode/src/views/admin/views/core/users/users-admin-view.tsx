@@ -1,6 +1,5 @@
 import { MailIcon } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
-import React from 'react';
 
 import { adminModule } from '@/api/modules/admin/admin.module';
 import { Avatar } from '@/components/avatar';

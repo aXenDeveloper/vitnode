@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
+/** biome-ignore-all lint/suspicious/noConsole: <no need> */
 
-import * as dotenv from 'dotenv';
+import { config } from 'dotenv';
 
 import { processPlugin } from './plugin.js';
 import {
@@ -13,7 +13,7 @@ import {
 } from './prepare-database.js';
 import { preparePluginsFiles } from './prepare-plugins-files.js';
 
-dotenv.config({
+config({
   quiet: true,
 });
 

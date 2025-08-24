@@ -7,13 +7,11 @@ import {
   type FieldPath,
   type FieldValues,
   type Mode,
-  useForm,
   type UseFormReturn,
+  useForm,
 } from 'react-hook-form';
-import * as z from 'zod';
-
+import z from 'zod';
 import type { routeMiddlewareSchema } from '../../api/modules/middleware/route';
-
 import { useCaptcha } from '../../hooks/use-captcha';
 import {
   getDefaults,
@@ -23,21 +21,6 @@ import {
 import { Button } from '../ui/button';
 import { DialogClose, DialogFooter, useDialog } from '../ui/dialog';
 import { Form, FormField } from '../ui/form';
-
-export interface ItemAutoFormComponentProps {
-  description?: React.ReactNode;
-  field: ControllerRenderProps<FieldValues, string>;
-  label?: React.ReactNode;
-  labelRight?: React.ReactNode;
-  otherProps: {
-    enum?: string[];
-    isOptional?: boolean;
-    maxLength?: number;
-    minLength?: number;
-    pattern?: string;
-    type?: string;
-  };
-}
 
 type ItemAutoFormProps<
   T extends z.ZodObject<z.ZodRawShape> = z.ZodObject<z.ZodRawShape>,
@@ -53,6 +36,21 @@ type ItemAutoFormProps<
       id: TName;
       label?: React.ReactNode;
     };
+
+export interface ItemAutoFormComponentProps {
+  description?: React.ReactNode;
+  field: ControllerRenderProps<FieldValues, string>;
+  label?: React.ReactNode;
+  labelRight?: React.ReactNode;
+  otherProps: {
+    enum?: string[];
+    isOptional?: boolean;
+    maxLength?: number;
+    minLength?: number;
+    pattern?: string;
+    type?: string;
+  };
+}
 
 export type AutoFormOnSubmit<
   T extends z.ZodObject<z.ZodRawShape>,
@@ -161,6 +159,7 @@ export function AutoForm<
           <FormField
             key={item.id}
             name={item.id}
+            // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
             render={({ field }) => {
               return (
                 <>

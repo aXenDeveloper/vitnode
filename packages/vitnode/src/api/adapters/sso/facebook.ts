@@ -1,6 +1,5 @@
-import type { ContentfulStatusCode } from 'hono/utils/http-status';
-
 import { HTTPException } from 'hono/http-exception';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import { z } from 'zod';
 
 import type { SSOApiPlugin } from '@/api/models/sso';
@@ -30,7 +29,7 @@ export const FacebookSSOApiPlugin = ({
     id,
     name: 'Facebook',
     fetchToken: async code => {
-      if (!clientId || !clientSecret) {
+      if (!(clientId && clientSecret)) {
         throw new Error('Missing Facebook client ID or secret');
       }
 

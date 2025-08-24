@@ -1,5 +1,5 @@
+import { basename, resolve } from 'node:path';
 import { input } from '@inquirer/prompts';
-import { basename, resolve } from 'path';
 
 import { validateNpmName } from '../helpers/validate-pkg.js';
 

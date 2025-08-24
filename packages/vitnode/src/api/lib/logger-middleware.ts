@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+/** biome-ignore-all lint/suspicious/noConsole: <no need> */
 import type { Context } from 'hono';
 
 import { core_logs } from '@/database/logs';

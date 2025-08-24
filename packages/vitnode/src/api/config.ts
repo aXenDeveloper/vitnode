@@ -1,15 +1,12 @@
+import { swaggerUI } from '@hono/swagger-ui';
 import type { OpenAPIHono } from '@hono/zod-openapi';
 import type { Context, Env, Schema } from 'hono';
-
-import { swaggerUI } from '@hono/swagger-ui';
 import { cors } from 'hono/cors';
 import { csrf } from 'hono/csrf';
 import { HTTPException } from 'hono/http-exception';
-
-import type { VitNodeApiConfig } from '@/vitnode.config';
-
 import { newBuildPluginApiCore } from '@/api/plugin';
 import { CONFIG_PLUGIN } from '@/config';
+import type { VitNodeApiConfig } from '@/vitnode.config';
 
 import {
   globalAdminMiddleware,
@@ -55,7 +52,7 @@ export function VitNodeAPI({
   app.use(cors(corsOptions));
   app.use(csrf(csrfOptions));
   app.use('*', rateLimiterMiddleware(vitNodeApiConfig.rateLimiter));
-  app.get('/swagger', swaggerUI({ url: `/api/swagger/doc` }));
+  app.get('/swagger', swaggerUI({ url: '/api/swagger/doc' }));
   app.use(
     '*',
     globalMiddleware({
@@ -70,7 +67,7 @@ export function VitNodeAPI({
   );
   app.use(async (c, next) => {
     if (c.req.path.includes('/admin/')) {
-      return globalAdminMiddleware()(c, next);
+      return await globalAdminMiddleware()(c, next);
     }
 
     return next();

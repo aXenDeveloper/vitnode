@@ -55,7 +55,8 @@ export const buildRoute = <
         ...(route.withCaptcha ? [captchaMiddleware()] : []),
         ...(Array.isArray(route.middleware)
           ? route.middleware
-          : route.middleware
+          : // biome-ignore lint/style/noNestedTernary: <needed>
+            route.middleware
             ? [route.middleware]
             : []),
       ],

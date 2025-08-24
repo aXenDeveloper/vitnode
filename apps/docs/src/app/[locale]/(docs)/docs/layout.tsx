@@ -1,6 +1,5 @@
-import type { ReactNode } from 'react';
-
 import { DocsLayout } from 'fumadocs-ui/layouts/notebook';
+import type { ReactNode } from 'react';
 
 import { baseOptions } from '@/app/[locale]/(main)/layout.config';
 import { source } from '@/lib/source';
@@ -14,7 +13,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         tabs: {
           transform(option, node) {
             const meta = source.getNodeMeta(node);
-            if (!meta || !node.icon) return option;
+            if (!(meta && node.icon)) return option;
 
             const color = `var(--${meta.path.split('/')[0]}-color, var(--color-fd-foreground))`;
 

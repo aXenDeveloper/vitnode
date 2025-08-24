@@ -1,6 +1,9 @@
 import { LogoVitNode } from '@/components/logo-vitnode';
-import { Sidebar } from '@/components/ui/sidebar';
-import { SidebarContent, SidebarHeader } from '@/components/ui/sidebar';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+} from '@/components/ui/sidebar';
 import { Link } from '@/lib/navigation';
 
 import { NavSidebarAdmin } from './nav/nav';

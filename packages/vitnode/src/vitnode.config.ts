@@ -112,6 +112,7 @@ export const handleRequestConfig = async ({
   });
 
   const allMessages = await Promise.all(messagesPromises);
+  // biome-ignore lint/performance/noAccumulatingSpread: <needed>
   const messages = allMessages.reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
   return {

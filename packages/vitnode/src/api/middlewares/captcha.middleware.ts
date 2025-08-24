@@ -39,7 +39,8 @@ const getResFromReCaptcha = async ({
       score: data.success ? 1 : 0,
       'error-codes': data['error-codes'],
     };
-  } else if (captchaConfig.type === 'recaptcha_v3') {
+  }
+  if (captchaConfig.type === 'recaptcha_v3') {
     const res = await fetch(
       `https://www.google.com/recaptcha/api/siteverify?secret=${captchaConfig.secretKey}&response=${token}&remoteip=${userIp}`,
       {

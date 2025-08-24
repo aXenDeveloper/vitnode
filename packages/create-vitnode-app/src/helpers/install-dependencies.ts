@@ -1,9 +1,44 @@
-import { spawn } from 'child_process';
+/** biome-ignore-all lint/suspicious/noConsole: <no need> */
+import { spawn } from 'node:child_process';
 import color from 'picocolors';
 
 import type { CreateCliReturn } from '../questions.js';
 
 import { getOnline } from './is-online.js';
+
+function printInstallErrorSuggestions(
+  stderr: string,
+  color: typeof import('picocolors'),
+) {
+  if (stderr.includes('ENOTFOUND') || stderr.includes('network')) {
+    console.error(
+      color.yellow(
+        '💡 Network error detected. Please check your internet connection.',
+      ),
+    );
+  } else if (
+    stderr.includes('EACCES') ||
+    stderr.includes('permission denied')
+  ) {
+    console.error(
+      color.yellow(
+        '💡 Permission error detected. Try running with elevated privileges or check file permissions.',
+      ),
+    );
+  } else if (stderr.includes('ENOSPC')) {
+    console.error(
+      color.yellow(
+        '💡 Disk space error detected. Please free up some disk space.',
+      ),
+    );
+  } else if (stderr.includes('ERR_PNPM_PEER_DEP_ISSUES')) {
+    console.error(
+      color.yellow(
+        '💡 Peer dependency issues detected. Consider using --force flag or resolve conflicts manually.',
+      ),
+    );
+  }
+}
 
 export const installDependencies = async ({
   packageManager: pm,
@@ -75,34 +110,7 @@ export const installDependencies = async ({
         }
 
         // Provide helpful suggestions based on common errors
-        if (stderr.includes('ENOTFOUND') || stderr.includes('network')) {
-          console.error(
-            color.yellow(
-              '💡 Network error detected. Please check your internet connection.',
-            ),
-          );
-        } else if (
-          stderr.includes('EACCES') ||
-          stderr.includes('permission denied')
-        ) {
-          console.error(
-            color.yellow(
-              '💡 Permission error detected. Try running with elevated privileges or check file permissions.',
-            ),
-          );
-        } else if (stderr.includes('ENOSPC')) {
-          console.error(
-            color.yellow(
-              '💡 Disk space error detected. Please free up some disk space.',
-            ),
-          );
-        } else if (stderr.includes('ERR_PNPM_PEER_DEP_ISSUES')) {
-          console.error(
-            color.yellow(
-              '💡 Peer dependency issues detected. Consider using --force flag or resolve conflicts manually.',
-            ),
-          );
-        }
+        printInstallErrorSuggestions(stderr, color);
 
         reject(
           new Error(

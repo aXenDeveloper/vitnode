@@ -1,8 +1,6 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
-
-import type { BuildModuleReturn } from './module';
-
 import { checkPluginId } from './check-plugin-id';
+import type { BuildModuleReturn } from './module';
 
 export interface BuildPluginApiReturn {
   hono: OpenAPIHono;

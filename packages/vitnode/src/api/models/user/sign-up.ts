@@ -1,6 +1,5 @@
-import type { Context } from 'hono';
-
 import { and, count, eq, or } from 'drizzle-orm';
+import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 
 import { generateAvatarColor } from '@/api/modules/users/avatar-color';
@@ -127,7 +126,6 @@ export const signUp = async (
     })
     .returning();
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password: _, ...user } = data;
 
   return user;

@@ -46,7 +46,7 @@ VitNode is designed for individual developers and small teams who need a structu
 ### CI/CD
 
 - Automated workflows using GitHub Actions:
-  - Code quality checks (ESLint, Prettier, TypeScript)
+  - Code quality checks (Biome, TypeScript)
   - Test suite execution with Vitest and Playwright
   - Dependency security scanning with npm audit
   - Automated builds and deployments to Vercel
@@ -165,7 +165,7 @@ VitNode is designed for individual developers and small teams who need a structu
 - Turborepo for monorepo management
 - Vitest for unit testing
 - Playwright for end-to-end testing
-- ESLint and Prettier for code quality
+- Biome for code quality
 - Docker for containerization
 
 ## Features Planned for Future Releases

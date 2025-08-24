@@ -5,7 +5,7 @@ import {
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from '@vitnode/core/api/lib/with-pagination';
-import { and, ilike } from 'drizzle-orm';
+import { and, ilike, type SQL } from 'drizzle-orm';
 
 import { CONFIG_PLUGIN } from '@/const';
 import { blog_categories } from '@/database/categories';
@@ -57,11 +57,16 @@ export const categoriesRoute = buildRoute({
           ? ilike(blog_categories.title, `%${query.search}%`)
           : undefined;
 
-        const combinedWhere = searchCondition
-          ? where
-            ? and(where, searchCondition)
-            : searchCondition
-          : where;
+        let combinedWhere: SQL | undefined;
+        if (searchCondition) {
+          if (where) {
+            combinedWhere = and(where, searchCondition);
+          } else {
+            combinedWhere = searchCondition;
+          }
+        } else {
+          combinedWhere = where;
+        }
 
         return await c
           .get('db')

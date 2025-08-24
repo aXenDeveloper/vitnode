@@ -1,8 +1,7 @@
 'use client';
 
-import type { z } from 'zod';
-
 import { useTranslations } from 'next-intl';
+import type { z } from 'zod';
 
 import type { routeMiddlewareSchema } from '@/api/modules/middleware/route';
 

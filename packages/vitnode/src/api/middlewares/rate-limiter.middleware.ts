@@ -29,7 +29,7 @@ export const rateLimiterMiddleware = (
 ) => {
   if (CONFIG.node_development) {
     // In development, we disable the rate limiter for easier testing
-    return async (c: Context, next: Next) => {
+    return async (_c: Context, next: Next) => {
       await next();
     };
   }

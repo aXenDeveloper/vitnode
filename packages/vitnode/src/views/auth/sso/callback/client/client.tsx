@@ -6,10 +6,8 @@ import { useTranslations } from 'next-intl';
 import { Loader } from '@/components/ui/loader';
 import { Link, useRouter } from '@/lib/navigation';
 import { ErrorView } from '@/views/error/error-view';
-
-import type { getMiddlewareApi } from '../../../../../lib/api/get-middleware-api';
-
 import { Button } from '../../../../../components/ui/button';
+import type { getMiddlewareApi } from '../../../../../lib/api/get-middleware-api';
 import { mutationApi } from './mutation-api';
 
 export const ClientCallbackSSO = ({

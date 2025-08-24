@@ -1,6 +1,8 @@
 import type { DefaultValues } from 'react-hook-form';
 import type { z } from 'zod';
 
+type NestedParamValue = InputParams[string] | undefined;
+
 export function getDefaults<T extends z.ZodType>(
   jsonSchema?: z.core.JSONSchema.JSONSchema,
 ): DefaultValues<z.input<T>> {
@@ -51,6 +53,7 @@ export interface InputParams {
       };
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <it's complex and needs to be>
 export function getZodInputParams(
   jsonSchema?: z.core.JSONSchema.JSONSchema,
   parentRequired: string[] = [],
@@ -129,8 +132,6 @@ export function getZodInputParams(
 
   return extractedParams;
 }
-
-type NestedParamValue = InputParams[string] | undefined;
 
 export function getNestedParam(
   obj: InputParams,

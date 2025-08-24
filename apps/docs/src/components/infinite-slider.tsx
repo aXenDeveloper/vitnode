@@ -1,8 +1,13 @@
 'use client';
 
 import { cn } from '@vitnode/core/lib/utils';
-import { animate, motion, useMotionValue } from 'motion/react';
-import { useEffect, useState } from 'react';
+import {
+  type AnimationPlaybackControlsWithThen,
+  animate,
+  motion,
+  useMotionValue,
+} from 'motion/react';
+import React from 'react';
 import { useMeasure } from 'react-use';
 
 export interface InfiniteSliderProps {
@@ -24,14 +29,15 @@ export function InfiniteSlider({
   reverse = false,
   className,
 }: InfiniteSliderProps) {
-  const [currentSpeed, setCurrentSpeed] = useState(speed);
+  const [currentSpeed, setCurrentSpeed] = React.useState(speed);
   const [ref, { width, height }] = useMeasure<HTMLDivElement>();
   const translation = useMotionValue(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [key, setKey] = useState(0);
+  const [isTransitioning, setIsTransitioning] = React.useState(false);
+  const [key, setKey] = React.useState(0);
 
-  useEffect(() => {
-    let controls;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <we need key to reset the animation>
+  React.useEffect(() => {
+    let controls: AnimationPlaybackControlsWithThen | undefined;
     const size = direction === 'horizontal' ? width : height;
     const contentSize = size + gap;
     const from = reverse ? -contentSize / 2 : 0;

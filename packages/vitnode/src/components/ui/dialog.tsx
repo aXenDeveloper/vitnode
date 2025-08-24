@@ -3,7 +3,7 @@
 import { XIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Dialog as DialogPrimitive } from 'radix-ui';
-import * as React from 'react';
+import React from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -31,7 +31,7 @@ const DialogContext = React.createContext<{
   setOpenAlertDialogBeforeClose: () => {},
 });
 
-export const useDialog = () => React.use(DialogContext);
+const useDialog = () => React.use(DialogContext);
 
 function Dialog({
   onOpenChange,
@@ -271,4 +271,5 @@ export {
   DialogPortal,
   DialogTitle,
   DialogTrigger,
+  useDialog,
 };

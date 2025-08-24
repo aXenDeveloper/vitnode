@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noConsole: <No need> */
 import { serve } from '@hono/node-server';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { VitNodeAPI } from '@vitnode/core/api/config';
@@ -19,7 +20,6 @@ serve(
   info => {
     const initMessage = '\x1b[34m[VitNode]\x1b[0m';
 
-    // eslint-disable-next-line no-console
     console.log(
       `${initMessage} API server is running on http://localhost:${info.port}`,
     );

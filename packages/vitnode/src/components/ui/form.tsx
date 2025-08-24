@@ -1,10 +1,9 @@
 'use client';
 
-import type { Label as LabelPrimitive } from 'radix-ui';
-
 import { useTranslations } from 'next-intl';
+import type { Label as LabelPrimitive } from 'radix-ui';
 import { Slot } from 'radix-ui';
-import * as React from 'react';
+import React from 'react';
 import {
   Controller,
   type ControllerProps,
@@ -179,7 +178,7 @@ function FormControl({ ...props }: React.ComponentProps<typeof Slot.Root>) {
   return (
     <Slot.Root
       aria-describedby={
-        !error ? formDescriptionId : `${formDescriptionId} ${formMessageId}`
+        error ? `${formDescriptionId} ${formMessageId}` : formDescriptionId
       }
       aria-invalid={!!error}
       data-slot="form-control"

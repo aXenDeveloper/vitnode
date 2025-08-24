@@ -1,19 +1,19 @@
 import type { Context, Env, Next } from 'hono';
 
 import { HTTPException } from 'hono/http-exception';
-
-import type { VitNodeApiConfig, VitNodeConfig } from '@/vitnode.config';
-
 import { EmailModel, type EmailModelSendArgs } from '@/api/models/email';
 import { SessionModel } from '@/api/models/session';
 import { SessionAdminModel } from '@/api/models/session-admin';
-
+import type { VitNodeApiConfig, VitNodeConfig } from '@/vitnode.config';
+import {
+  type LoggerMiddlewareType,
+  loggerMiddleware,
+} from '../lib/logger-middleware';
 import type { SSOApiPlugin } from '../models/sso';
 
-import {
-  loggerMiddleware,
-  type LoggerMiddlewareType,
-} from '../lib/logger-middleware';
+declare module 'hono' {
+  interface ContextVariableMap extends EnvVariablesVitNode {}
+}
 
 export interface EnvVitNode extends Env {
   Variables: EnvVariablesVitNode;
@@ -77,11 +77,6 @@ export interface EnvVariablesVitNode {
   };
 }
 
-declare module 'hono' {
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
-  interface ContextVariableMap extends EnvVariablesVitNode {}
-}
-
 export const globalMiddleware = ({
   authorization,
   metadata,
@@ -100,6 +95,7 @@ export const globalMiddleware = ({
   | 'plugins'
 > &
   Pick<VitNodeConfig, 'metadata'>) => {
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
   return async (c: Context, next: Next) => {
     // Collect possible IP header keys in order of trust/preference
     const ipHeaderKeys = [

@@ -7,15 +7,15 @@ import { HTTPException } from 'hono/http-exception';
 import { CONFIG_PLUGIN } from '@/const';
 import { blog_categories } from '@/database/categories';
 
-export const zodCreateCategorySchema = z.object({
-  title: z.string(),
-});
-
 const zodCategoryResponseSchema = z.object({
   id: z.number(),
   title: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
+});
+
+export const zodCreateCategorySchema = z.object({
+  title: z.string(),
 });
 
 export const createCategoryRoute = buildRoute({

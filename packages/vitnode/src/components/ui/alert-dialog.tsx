@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertDialog as AlertDialogPrimitive } from 'radix-ui';
-import * as React from 'react';
+import React from 'react';
 
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -16,7 +16,7 @@ const AlertDialogContext = React.createContext<{
   setOpen: () => {},
 });
 
-export const useAlertDialog = () => React.use(AlertDialogContext);
+const useAlertDialog = () => React.use(AlertDialogContext);
 
 function AlertDialog({
   onOpenChange,
@@ -206,4 +206,5 @@ export {
   AlertDialogPortal,
   AlertDialogTitle,
   AlertDialogTrigger,
+  useAlertDialog,
 };

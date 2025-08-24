@@ -1,7 +1,6 @@
-import type { Context } from 'hono';
-
-import { randomBytes } from 'crypto';
+import { randomBytes } from 'node:crypto';
 import { eq } from 'drizzle-orm';
+import type { Context } from 'hono';
 import { getCookie, setCookie } from 'hono/cookie';
 
 import { core_sessions_known_devices } from '@/database/sessions';

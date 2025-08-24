@@ -19,7 +19,7 @@ export const NodemailerEmailAdapter = ({
 }): EmailApiPlugin => {
   return {
     sendEmail: async ({ metadata, to, subject, html, replyTo }) => {
-      if (!host || !user || !password || !from) {
+      if (!(host && user && password && from)) {
         throw new Error('Missing nodemailer configuration');
       }
 

@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from 'fs';
-import { join, resolve } from 'path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 
 import { CONFIG } from '../../lib/config';
 

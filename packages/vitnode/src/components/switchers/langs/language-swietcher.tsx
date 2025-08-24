@@ -3,10 +3,8 @@
 import { CheckIcon, LanguagesIcon } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import React from 'react';
-
-import type { LocaleConfig } from '@/vitnode.config';
-
 import { usePathname, useRouter } from '@/lib/navigation';
+import type { LocaleConfig } from '@/vitnode.config';
 
 import { Button } from '../../ui/button';
 import {

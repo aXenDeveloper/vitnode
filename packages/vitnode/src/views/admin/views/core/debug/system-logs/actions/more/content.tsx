@@ -15,11 +15,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Link } from '@/lib/navigation';
-
-import type { getSystemLogsData } from '../../system-logs-view';
-
 import { BadgeStatus } from '../../badges/badge-status';
 import { BadgeTypeLog } from '../../badges/badge-type-log';
+import type { getSystemLogsData } from '../../system-logs-view';
 
 export const ContentMoreActionSystemLogs = ({
   content,

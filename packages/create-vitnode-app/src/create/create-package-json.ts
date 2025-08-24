@@ -1,11 +1,9 @@
-import { readFile, writeFile } from 'fs/promises';
-import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
-
+import { readFile, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { getAvailablePackageManagers } from '../helpers/get-available-package-managers.js';
 import type { PackageJSON } from '../helpers/packages-json.js';
 import type { CreateCliReturn } from '../questions.js';
-
-import { getAvailablePackageManagers } from '../helpers/get-available-package-managers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -278,14 +276,14 @@ export const createPackageJSON = async ({
   appName,
   packageManager,
   root,
-  eslint,
+  biome,
   docker,
   mode,
   monorepo,
 }: {
   appName: string;
   docker?: boolean;
-  eslint: boolean;
+  biome: boolean;
   mode: Mode;
   monorepo?: boolean;
   packageManager: string;

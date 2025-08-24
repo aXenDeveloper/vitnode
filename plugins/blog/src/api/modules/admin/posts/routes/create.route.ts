@@ -8,15 +8,6 @@ import { CONFIG_PLUGIN } from '@/const';
 import { blog_categories } from '@/database/categories';
 import { blog_posts } from '@/database/posts';
 
-export const zodCreatePostSchema = z.object({
-  title: z
-    .string()
-    .min(3, 'Title must be at least 3 characters long')
-    .max(255, 'Title must not exceed 255 characters'),
-  content: z.string(),
-  categoryId: z.number(),
-});
-
 const zodPostResponseSchema = z.object({
   id: z.number(),
   title: z.string(),
@@ -25,6 +16,15 @@ const zodPostResponseSchema = z.object({
   categoryId: z.number(),
   createdAt: z.date(),
   updatedAt: z.date(),
+});
+
+export const zodCreatePostSchema = z.object({
+  title: z
+    .string()
+    .min(3, 'Title must be at least 3 characters long')
+    .max(255, 'Title must not exceed 255 characters'),
+  content: z.string(),
+  categoryId: z.number(),
 });
 
 export const createPostRoute = buildRoute({

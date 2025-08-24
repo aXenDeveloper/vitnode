@@ -1,7 +1,12 @@
-import { join } from 'path';
-import { FileSystem } from './file-system.ts';
-import { existsSync, statSync } from 'fs';
+/** biome-ignore-all lint/suspicious/noConsole: <errors> */
+import { existsSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import type { EnvironmentConfig } from '../environment.ts';
+import {
+  copyDirectoryExcludingPlugins,
+  copyFile,
+  validatePath,
+} from './file-system.ts';
 
 export class FileCopyManager {
   constructor(private env: EnvironmentConfig) {}
@@ -23,7 +28,7 @@ export class FileCopyManager {
       'api-single-app',
     );
 
-    if (!FileSystem.validatePath(sourcePath, 'web app directory')) {
+    if (!validatePath(sourcePath, 'web app directory')) {
       throw new Error('Required paths not found');
     }
 
@@ -59,11 +64,11 @@ export class FileCopyManager {
     ]);
   }
 
-  async copyFileOrDirectory(
+  copyFileOrDirectory(
     sourcePath: string,
     destPath: string,
     relativePath: string,
-  ): Promise<void> {
+  ) {
     const from = join(sourcePath, relativePath);
     const to = join(destPath, relativePath);
 
@@ -74,24 +79,20 @@ export class FileCopyManager {
     }
 
     if (stats.isDirectory()) {
-      FileSystem.copyDirectoryExcludingPlugins(from, to);
+      copyDirectoryExcludingPlugins(from, to);
     } else {
-      FileSystem.copyFile(from, to);
+      copyFile(from, to);
     }
   }
 
-  async copyFiles(
-    sourcePath: string,
-    destPath: string,
-    filesToCopy: string[],
-  ): Promise<void> {
+  copyFiles(sourcePath: string, destPath: string, filesToCopy: string[]) {
     // Handle special files with different names
     const specialFiles = [
       { source: '.gitignore', dest: '.gitignore_template' },
     ];
 
     for (const relativePath of filesToCopy) {
-      await this.copyFileOrDirectory(sourcePath, destPath, relativePath);
+      this.copyFileOrDirectory(sourcePath, destPath, relativePath);
     }
 
     // Handle special files with different destination names
@@ -106,7 +107,7 @@ export class FileCopyManager {
       }
 
       if (stats.isFile()) {
-        FileSystem.copyFile(from, to);
+        copyFile(from, to);
       }
     }
   }

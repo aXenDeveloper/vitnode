@@ -8,6 +8,7 @@ export const HonoJSLogo = () => {
         viewBox="0 0 76 98"
         xmlns="http://www.w3.org/2000/svg"
       >
+        <title>HonoJS logotype</title>
         <path
           d="m11 25 7 9s9-18 22-34c17 20 36 48 36 64 0 20-19 34-37 34C17 98 0 81 0 61c0-6 3-24 11-36Z"
           fill="url(#a)"

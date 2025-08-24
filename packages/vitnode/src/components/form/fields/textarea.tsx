@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 
 import { FormControl, FormItem, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';

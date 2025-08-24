@@ -23,18 +23,18 @@ export const convertColor = {
   hexToHSL: (hex: string): HslColor | undefined => {
     if (!hexRegex.test(hex)) return undefined;
 
-    let b = 0,
-      g = 0,
-      r = 0;
+    let b = 0;
+    let g = 0;
+    let r = 0;
 
     // 3 digits
-    if (hex.length == 4) {
+    if (hex.length === 4) {
       r = parseInt(hex[1] + hex[1], 16);
       g = parseInt(hex[2] + hex[2], 16);
       b = parseInt(hex[3] + hex[3], 16);
     }
     // 6 digits
-    else if (hex.length == 7) {
+    else if (hex.length === 7) {
       r = parseInt(hex[1] + hex[2], 16);
       g = parseInt(hex[3] + hex[4], 16);
       b = parseInt(hex[5] + hex[6], 16);
@@ -43,7 +43,7 @@ export const convertColor = {
     }
 
     // Check if any of the parsed values are NaN
-    if (isNaN(r) || isNaN(g) || isNaN(b)) {
+    if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) {
       return undefined;
     }
 
@@ -51,13 +51,13 @@ export const convertColor = {
     g /= 255;
     b /= 255;
 
-    const max = Math.max(r, g, b),
-      min = Math.min(r, g, b),
-      l = (max + min) / 2;
-    let h = 0,
-      s = 0;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    let h = 0;
+    let s = 0;
 
-    if (max == min) {
+    if (max === min) {
       h = s = 0; // achromatic
     } else {
       const d = max - min;
@@ -90,18 +90,18 @@ export const convertColor = {
     b /= 255;
 
     // Find greatest and smallest channel values
-    const cmax = Math.max(r, g, b),
-      cmin = Math.min(r, g, b),
-      delta = cmax - cmin;
+    const cmax = Math.max(r, g, b);
+    const cmin = Math.min(r, g, b);
+    const delta = cmax - cmin;
 
-    let h = 0,
-      l = 0,
-      s = 0;
+    let h = 0;
+    let l = 0;
+    let s = 0;
 
     // Calculate hue
-    if (delta == 0) h = 0;
-    else if (cmax == r) h = ((g - b) / delta) % 6;
-    else if (cmax == g) h = (b - r) / delta + 2;
+    if (delta === 0) h = 0;
+    else if (cmax === r) h = ((g - b) / delta) % 6;
+    else if (cmax === g) h = (b - r) / delta + 2;
     else h = (r - g) / delta + 4;
 
     h = Math.round(h * 60);
@@ -113,7 +113,7 @@ export const convertColor = {
     l = (cmax + cmin) / 2;
 
     // Calculate saturation
-    s = delta == 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+    s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
 
     // Multiply l and s by 100
     s = +(s * 100).toFixed(1);

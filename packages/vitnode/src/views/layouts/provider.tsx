@@ -4,10 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
 import React from 'react';
 import { scan } from 'react-scan';
-
-import type { VitNodeConfig } from '@/vitnode.config';
-
 import { CONFIG } from '@/lib/config';
+import type { VitNodeConfig } from '@/vitnode.config';
 
 import { Toaster } from '../../components/ui/sonner';
 
@@ -26,7 +24,7 @@ export const RootProvider = ({
   toaster?: React.ComponentProps<typeof Toaster>;
 }) => {
   React.useEffect(() => {
-    if (!debug || !CONFIG.node_development) return;
+    if (!(debug && CONFIG.node_development)) return;
 
     scan({
       enabled: true,

@@ -1,13 +1,10 @@
 'use server';
 
-import type { z } from 'zod';
-
 import { fetcher } from '@vitnode/core/lib/fetcher';
 import { revalidatePath } from 'next/cache';
-
-import type { zodCreatePostSchema } from '@/api/modules/admin/posts/routes/create.route';
-
+import type { z } from 'zod';
 import { postsAdminModule } from '@/api/modules/admin/posts/posts.admin.module';
+import type { zodCreatePostSchema } from '@/api/modules/admin/posts/routes/create.route';
 
 export const createMutationApi = async (
   body: z.infer<typeof zodCreatePostSchema>,

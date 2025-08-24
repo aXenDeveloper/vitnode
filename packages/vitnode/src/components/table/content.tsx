@@ -1,8 +1,5 @@
 import { SearchXIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-
-import type { DataTable, DataTableTMin } from './data-table';
-
 import { cn } from '../../lib/utils';
 import {
   Table,
@@ -12,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '../ui/table';
+import type { DataTable, DataTableTMin } from './data-table';
 import { OrderTableHeadDataTable } from './order-table-head';
 import { PaginationDataTable } from './pagination';
 

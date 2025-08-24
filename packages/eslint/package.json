@@ -12,11 +12,8 @@
   },
   "keywords": [
     "vitnode",
-    "eslint",
-    "eslint-config",
     "typescript",
-    "tsconfig",
-    "prettier"
+    "tsconfig"
   ],
   "type": "module",
   "exports": {
@@ -35,23 +32,12 @@
   },
   "peerDependencies": {
     "eslint": "^9.0.0",
-    "prettier": "^3.0.0",
     "typescript": "5.9.x"
   },
   "devDependencies": {
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@eslint-react/eslint-plugin": "^1.52.6",
-    "@eslint/js": "^9.33.0",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-perfectionist": "^4.15.0",
-    "eslint-plugin-prettier": "^5.5.4",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-compiler": "19.1.0-rc.2",
-    "eslint-plugin-react-hooks": "6.0.0-rc1",
-    "prettier-plugin-tailwindcss": "^0.6.14",
     "typescript-eslint": "^8.40.0"
   }
 }

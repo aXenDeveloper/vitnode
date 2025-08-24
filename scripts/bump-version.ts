@@ -5,10 +5,11 @@
  * It copies files and folders from the main web app to the create-vitnode-app template
  * and manages package version updates across the workspace.
  */
+/** biome-ignore-all lint/suspicious/noConsole: <No need this> */
 
+import { Environment } from './environment.ts';
 import { FileCopyManager } from './files/file-copy-manager.ts';
 import { VersionManager } from './version-manager.ts';
-import { Environment } from './environment.ts';
 
 // Main execution
 async function main(): Promise<void> {

@@ -16,7 +16,6 @@ import {
 
 export const PasswordInput = ({
   label,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   description: _,
   field,
   otherProps: { maxLength, minLength, pattern },

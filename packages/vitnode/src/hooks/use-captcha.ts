@@ -1,11 +1,9 @@
-/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
-
-import type { z } from 'zod';
-
+/** biome-ignore-all lint/suspicious/noConsole: <no needed> */
 import { useLocale, useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
 import React from 'react';
 import { toast } from 'sonner';
+import type { z } from 'zod';
 
 import { usePathname } from '@/lib/navigation';
 
@@ -27,7 +25,6 @@ export const useCaptcha = (
     const elementId = 'vitnode_captcha';
 
     if (captcha.type === 'cloudflare_turnstile') {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       window.turnstile.render(`#${elementId}`, {
         sitekey: captcha.siteKey,
@@ -55,6 +52,7 @@ export const useCaptcha = (
     });
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <needed>
   React.useEffect(() => {
     if (!captcha) {
       // If no captcha is required, consider it "ready"
@@ -102,14 +100,18 @@ export const useCaptcha = (
   const onReset = () => {
     if (!captcha) return;
 
-    if (captcha.type === 'cloudflare_turnstile') {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    if (
+      captcha.type === 'cloudflare_turnstile' &&
+      (
+        window as {
+          turnstile?: {
+            reset: () => void;
+          };
+        }
+      ).turnstile
+    ) {
       // @ts-expect-error
-      if (window.turnstile) {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        window.turnstile.reset();
-      }
+      window.turnstile.reset();
     }
 
     setToken('');
@@ -120,12 +122,10 @@ export const useCaptcha = (
     if (!captcha) return '';
 
     if (captcha.type === 'recaptcha_v3') {
-      return new Promise<string>(resolve => {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      return await new Promise<string>(resolve => {
         // @ts-expect-error
         window.grecaptcha.ready(async () => {
           try {
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-expect-error
             const token: string = await window.grecaptcha.execute(
               captcha.siteKey,
@@ -135,7 +135,6 @@ export const useCaptcha = (
             );
             resolve(token);
           } catch (error) {
-            // eslint-disable-next-line no-console
             console.error('Captcha error', error);
             resolve('');
           }

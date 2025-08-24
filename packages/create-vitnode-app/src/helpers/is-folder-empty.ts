@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/suspicious/noConsole: <no need> */
 import { lstatSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import colors from 'picocolors';
@@ -27,10 +28,7 @@ export function isFolderEmpty(root: string, name: string): boolean {
   ];
 
   const conflicts = readdirSync(root).filter(
-    file =>
-      !validFiles.includes(file) &&
-      // Support IntelliJ IDEA-based editors
-      !file.endsWith('.iml'),
+    file => !(validFiles.includes(file) || file.endsWith('.iml')),
   );
 
   if (conflicts.length > 0) {

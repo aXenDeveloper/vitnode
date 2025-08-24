@@ -1,5 +1,5 @@
-import { getTranslations } from 'next-intl/server';
 import dynamic from 'next/dynamic';
+import { getTranslations } from 'next-intl/server';
 import React from 'react';
 
 import { I18nProvider } from '@/components/i18n-provider';

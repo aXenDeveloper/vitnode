@@ -1,8 +1,4 @@
-/* eslint-disable @eslint-react/no-array-index-key */
 import React from 'react';
-
-import type { PaginationDataTable } from './pagination';
-
 import { ErrorView } from '../../views/error/error-view';
 import { Skeleton } from '../ui/skeleton';
 import {
@@ -13,6 +9,7 @@ import {
   TableRow,
 } from '../ui/table';
 import { ContentDataTable } from './content';
+import type { PaginationDataTable } from './pagination';
 
 export interface DataTableTMin {
   id: number;
@@ -26,38 +23,59 @@ export interface SearchParamsDataTable<T = unknown> {
   orderBy?: keyof T;
 }
 
-export const DataTableSkeleton = ({ columns }: { columns: number }) => (
-  <div className="space-y-4">
-    <div className="[&>div]:rounded-md [&>div]:border">
-      <Table className="min-w-full">
-        <TableHeader>
-          <TableRow>
-            {Array.from({ length: columns }).map((_, i) => (
-              <TableHead className="px-4 py-3" key={i}>
-                <Skeleton className="h-4 w-24" />
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <TableRow key={i}>
-              {Array.from({ length: columns }).map((_, j) => (
-                <td className="px-4 py-3" key={j}>
-                  <Skeleton className="h-4 w-full" />
-                </td>
+export const DataTableSkeleton = ({ columns }: { columns: number }) => {
+  const headerIds = React.useMemo(
+    () =>
+      Array.from({ length: columns }).map(
+        () => `s-head-${Math.random().toString(36).slice(2, 9)}`,
+      ),
+    [columns],
+  );
+
+  const rowIds = React.useMemo(
+    () =>
+      Array.from({ length: 6 }).map(
+        () => `s-row-${Math.random().toString(36).slice(2, 9)}`,
+      ),
+    [],
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="[&>div]:rounded-md [&>div]:border">
+        <Table className="min-w-full">
+          <TableHeader>
+            <TableRow>
+              {headerIds.map(hid => (
+                <TableHead className="px-4 py-3" key={hid}>
+                  <Skeleton className="h-4 w-24" />
+                </TableHead>
               ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+          </TableHeader>
+          <TableBody>
+            {rowIds.map(rid => (
+              <TableRow key={rid}>
+                {headerIds.map((_, j) => {
+                  const cellId = `s-cell-${rid}-${j}`;
+                  return (
+                    <td className="px-4 py-3" key={cellId}>
+                      <Skeleton className="h-4 w-full" />
+                    </td>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
-    <div className="flex justify-end">
-      <Skeleton className="h-8 w-32" />
+      <div className="flex justify-end">
+        <Skeleton className="h-8 w-32" />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export function DataTable<T extends DataTableTMin>(
   props: Omit<React.ComponentProps<typeof Table>, 'columns'> &
@@ -79,7 +97,7 @@ export function DataTable<T extends DataTableTMin>(
       };
     },
 ) {
-  if (!props.edges || !props.pageInfo) {
+  if (!(props.edges && props.pageInfo)) {
     return <ErrorView code={500} />;
   }
 

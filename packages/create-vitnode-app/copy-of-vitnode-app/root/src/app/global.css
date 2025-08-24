@@ -1,6 +1,7 @@
-@import 'tailwindcss';
+/** biome-ignore-all lint/suspicious/noUnknownAtRules: <tailwind> */
+@import "tailwindcss";
 
-@import 'tw-animate-css';
+@import "tw-animate-css";
 
 @source "../../node_modules/@vitnode/core/dist/src/components";
 @source "../../node_modules/@vitnode/core/dist/src/views";

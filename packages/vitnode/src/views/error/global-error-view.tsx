@@ -1,24 +1,16 @@
-import { ThemeProvider } from 'next-themes';
-// eslint-disable-next-line no-restricted-imports
+import type { Metadata } from 'next/dist/types';
 import Link from 'next/link';
-
-import type { VitNodeConfig } from '@/vitnode.config';
-
+import { ThemeProvider } from 'next-themes';
 import { LogoVitNode } from '@/components/logo-vitnode';
 import { Card, CardContent } from '@/components/ui/card';
 
-export const GlobalErrorView = ({
-  className,
-  config,
-}: {
-  className?: string;
-  config: VitNodeConfig;
-}) => {
+export const metadata: Metadata = {
+  title: 'Error 500!',
+};
+
+export const GlobalErrorView = ({ className }: { className?: string }) => {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <title>Error 500! - {config.metadata.title}</title>
-      </head>
       <body className={className}>
         <ThemeProvider attribute="class" disableTransitionOnChange enableSystem>
           <div className="bg-background flex min-h-screen flex-col items-center justify-center p-4">

@@ -3,10 +3,8 @@ import { toast } from 'sonner';
 import z from 'zod';
 
 import { useRouter } from '@/lib/navigation';
-
-import type { ChangePasswordForm } from './form';
-
 import { usePasswordZodSchema } from '../../sign-up/form/use-form';
+import type { ChangePasswordForm } from './form';
 import { mutationApi } from './mutation-api';
 
 export const useForm = ({

@@ -1,6 +1,7 @@
-import { existsSync } from 'fs';
-import { mkdir } from 'fs/promises';
-import { join } from 'path';
+/** biome-ignore-all lint/suspicious/noConsole: <no need> */
+import { existsSync } from 'node:fs';
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
 
 const prepare = async () => {
   const toRootPath = join(process.cwd(), 'copy-of-vitnode-app');

@@ -69,7 +69,6 @@ export const AnimatedBeam = ({
 
         const svgWidth = containerRect.width;
         const svgHeight = containerRect.height;
-        // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
         setSvgDimensions({ width: svgWidth, height: svgHeight });
 
         const startX =
@@ -85,7 +84,6 @@ export const AnimatedBeam = ({
         const d = `M ${startX},${startY} Q ${
           (startX + endX) / 2
         },${controlY} ${endX},${endY}`;
-        // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
         setPathD(d);
       }
     };
@@ -93,7 +91,6 @@ export const AnimatedBeam = ({
     // Initialize ResizeObserver
     const resizeObserver = new ResizeObserver(entries => {
       // For all entries, recalculate the path
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for (const _entry of entries) {
         updatePath();
       }
@@ -134,6 +131,7 @@ export const AnimatedBeam = ({
       width={svgDimensions.width}
       xmlns="http://www.w3.org/2000/svg"
     >
+      <title>Animated beam</title>
       <path
         d={pathD}
         stroke={pathColor}
@@ -173,14 +171,10 @@ export const AnimatedBeam = ({
             repeatDelay: 0,
           }}
         >
-          <stop stopColor={gradientStartColor} stopOpacity="0"></stop>
-          <stop stopColor={gradientStartColor}></stop>
-          <stop offset="32.5%" stopColor={gradientStopColor}></stop>
-          <stop
-            offset="100%"
-            stopColor={gradientStopColor}
-            stopOpacity="0"
-          ></stop>
+          <stop stopColor={gradientStartColor} stopOpacity="0" />
+          <stop stopColor={gradientStartColor} />
+          <stop offset="32.5%" stopColor={gradientStopColor} />
+          <stop offset="100%" stopColor={gradientStopColor} stopOpacity="0" />
         </motion.linearGradient>
       </defs>
     </svg>

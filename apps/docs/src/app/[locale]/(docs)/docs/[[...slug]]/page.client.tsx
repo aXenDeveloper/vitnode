@@ -12,7 +12,6 @@ import {
 import { ChevronDown } from 'fumadocs-ui/internal/icons';
 import { cn } from 'fumadocs-ui/utils/cn';
 import { ExternalLinkIcon, MessageCircleIcon } from 'lucide-react';
-import React from 'react';
 
 const optionVariants = cva(
   'text-sm p-2 rounded-lg inline-flex items-center gap-2 hover:text-fd-accent-foreground hover:bg-fd-accent [&_svg]:size-4',

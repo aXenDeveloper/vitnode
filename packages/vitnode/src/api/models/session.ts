@@ -1,6 +1,5 @@
-import type { Context } from 'hono';
-
 import { and, eq, gt } from 'drizzle-orm';
+import type { Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 
 import { core_sessions } from '@/database/sessions';
@@ -70,7 +69,7 @@ export class SessionModel {
     const device = await new DeviceModel(this.c).getDeviceId();
 
     // Ensure both token and deviceId exist before proceeding
-    if (!token || !device.id) {
+    if (!(token && device.id)) {
       deleteCookie(this.c, this.c.get('core').authorization.cookieName);
 
       return;

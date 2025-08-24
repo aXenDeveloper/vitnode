@@ -6,7 +6,8 @@ import type {
   BuildModuleReturn,
 } from '@/api/lib/module';
 import type { Route } from '@/api/lib/route';
-
+import { coreFetcher } from './fetcher/core';
+import { handleSetCookiesFetcher } from './fetcher/helpers-server';
 import type {
   FetcherParams,
   GetModulePaths,
@@ -14,9 +15,6 @@ import type {
   GetValidPathsForModule,
   InferResponseType,
 } from './fetcher/types';
-
-import { coreFetcher } from './fetcher/core';
-import { handleSetCookiesFetcher } from './fetcher/helpers-server';
 
 export async function fetcher<
   M extends string,

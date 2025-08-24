@@ -1,6 +1,7 @@
+/** biome-ignore-all lint/suspicious/noConsole: <no need> */
+import { existsSync } from 'node:fs';
+import { basename, dirname, resolve } from 'node:path';
 import { program } from 'commander';
-import { existsSync } from 'fs';
-import { basename, dirname, resolve } from 'path';
 import color from 'picocolors';
 
 import { isFolderEmpty } from './helpers/is-folder-empty.js';

@@ -20,10 +20,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-
-import type { ItemAutoFormComponentProps } from '../auto-form';
-
 import { Skeleton } from '../../ui/skeleton';
+import type { ItemAutoFormComponentProps } from '../auto-form';
 import { AutoFormDesc } from '../common/desc';
 import { AutoFormLabel } from '../common/label';
 
@@ -107,43 +105,47 @@ export const AutoFormComboboxAsync = ({
             />
 
             <CommandList>
-              {isLoading ? (
-                <div className="space-y-2 p-2">
-                  <Skeleton className="h-6 rounded-sm" />
-                  <Skeleton className="h-6 rounded-sm" />
-                </div>
-              ) : (
-                <>
-                  {data?.length === 0 ? (
-                    <CommandEmpty>{t('results_not_found')}</CommandEmpty>
-                  ) : (
-                    <CommandGroup>
-                      {(data ?? []).map(({ label, value }) => (
-                        <CommandItem
-                          key={value}
-                          onSelect={() => {
-                            field.onChange({
-                              label,
-                              value,
-                            });
-                          }}
-                          value={label}
-                        >
-                          {label}
-                          <Check
-                            className={cn(
-                              'ml-auto',
-                              value === field.value?.value
-                                ? 'opacity-100'
-                                : 'opacity-0',
-                            )}
-                          />
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  )}
-                </>
-              )}
+              {(() => {
+                if (isLoading) {
+                  return (
+                    <div className="space-y-2 p-2">
+                      <Skeleton className="h-6 rounded-sm" />
+                      <Skeleton className="h-6 rounded-sm" />
+                    </div>
+                  );
+                }
+
+                if ((data ?? []).length === 0) {
+                  return <CommandEmpty>{t('results_not_found')}</CommandEmpty>;
+                }
+
+                return (
+                  <CommandGroup>
+                    {(data ?? []).map(({ label, value }) => (
+                      <CommandItem
+                        key={value}
+                        onSelect={() => {
+                          field.onChange({
+                            label,
+                            value,
+                          });
+                        }}
+                        value={label}
+                      >
+                        {label}
+                        <Check
+                          className={cn(
+                            'ml-auto',
+                            value === field.value?.value
+                              ? 'opacity-100'
+                              : 'opacity-0',
+                          )}
+                        />
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                );
+              })()}
             </CommandList>
           </Command>
         </PopoverContent>

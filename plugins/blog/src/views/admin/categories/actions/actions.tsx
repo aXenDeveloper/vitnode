@@ -11,8 +11,8 @@ import {
 } from '@vitnode/core/components/ui/dialog';
 import { Loader } from '@vitnode/core/components/ui/loader';
 import { PlusIcon } from 'lucide-react';
-import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
+import { useTranslations } from 'next-intl';
 import React from 'react';
 
 const CreateEditActionCategoriesAdmin = dynamic(async () =>

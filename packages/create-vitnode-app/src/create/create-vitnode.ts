@@ -1,25 +1,30 @@
-import { existsSync } from 'fs';
-import { copyFile, cp, mkdir, readFile, rename, writeFile } from 'fs/promises';
+import { existsSync } from 'node:fs';
+import {
+  copyFile,
+  cp,
+  mkdir,
+  readFile,
+  rename,
+  writeFile,
+} from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import ora from 'ora';
-import { dirname, join } from 'path';
 import color from 'picocolors';
-import { fileURLToPath } from 'url';
-
-import type { CreateCliReturn } from '../questions.js';
-
 import {
   generateMigrationsVitnode,
   initFilesVitnode,
 } from '../helpers/init-vitnode.js';
 import { installDependencies } from '../helpers/install-dependencies.js';
 import { isFolderEmpty } from '../helpers/is-folder-empty.js';
+import type { CreateCliReturn } from '../questions.js';
 import { createPackageJSON } from './create-package-json.js';
 
 export const createVitNode = async ({
   root,
   appName,
   packageManager,
-  eslint,
+  biome,
   install,
   docker,
   mode,
@@ -27,6 +32,7 @@ export const createVitNode = async ({
 }: CreateCliReturn & {
   appName: string;
   root: string;
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
 }) => {
   const spinner = ora(
     `Creating a new VitNode app in ${color.green(root)}. Using ${color.green(packageManager)}...`,
@@ -124,9 +130,9 @@ export const createVitNode = async ({
     });
   }
 
-  if (eslint) {
-    spinner.text = 'Copying eslint files...';
-    await cp(join(templatePath, 'eslint'), root, {
+  if (biome) {
+    spinner.text = 'Copying Biome files...';
+    await cp(join(templatePath, 'biome'), root, {
       recursive: true,
     });
   }
@@ -153,7 +159,7 @@ export const createVitNode = async ({
     root,
     appName,
     packageManager,
-    eslint,
+    biome,
     docker,
     mode,
     monorepo,

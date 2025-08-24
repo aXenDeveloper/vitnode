@@ -1,11 +1,11 @@
-import { exec } from 'child_process';
+import { exec } from 'node:child_process';
 
 export type PackageManager = 'bun' | 'npm' | 'pnpm';
 
 export const execShellCommand = async (
   cmd: string,
 ): Promise<string | undefined> => {
-  return new Promise(resolve => {
+  return await new Promise(resolve => {
     exec(cmd, (error, stdout, stderr) => {
       if (error) {
         resolve(undefined);

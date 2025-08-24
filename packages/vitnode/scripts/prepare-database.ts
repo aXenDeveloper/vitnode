@@ -1,5 +1,4 @@
-/* eslint-disable no-console */
-
+/** biome-ignore-all lint/suspicious/noConsole: <no need> */
 import { count } from 'drizzle-orm';
 
 import { core_admin_permissions } from '@/database/admins.js';
@@ -202,16 +201,18 @@ export const prepareDatabase = async ({
     );
   }
 
-  for (let i = 0; i < steps.length; i++) {
-    const step = steps[i];
-    const stepNum = `[${i + 1}/${steps.length}]`;
-    if (step.label === 'Insert initial data...') {
-      console.log(`\n${initMessage} ${stepNum} ${step.label}`);
-    } else {
-      console.log(`${initMessage} ${stepNum} ${step.label}`);
-    }
-    await step.action();
-  }
+  await Promise.all(
+    steps.map((step, i) => {
+      const stepNum = `[${i + 1}/${steps.length}]`;
+      if (step.label === 'Insert initial data...') {
+        console.log(`\n${initMessage} ${stepNum} ${step.label}`);
+      } else {
+        console.log(`${initMessage} ${stepNum} ${step.label}`);
+      }
+
+      return step.action();
+    }),
+  );
 
   console.log(`${initMessage} \x1b[32mInitial setup completed.\x1b[0m`);
   process.exit(0);

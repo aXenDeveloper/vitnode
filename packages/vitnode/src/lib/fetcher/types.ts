@@ -71,17 +71,6 @@ type FindModuleNested<
     : never
   : M;
 
-export type GetModulePaths<
-  MainModule extends string,
-  Modules extends readonly ModuleSpec[],
-> =
-  | `${MainModule}/${Modules[number]['name']}/${Extract<
-      Modules[number]['modules'],
-      readonly ModuleSpec[]
-    >[number]['name']}`
-  | `${MainModule}/${Modules[number]['name']}`
-  | MainModule;
-
 type GetTargetModule<
   ModulePath extends string,
   MainModuleName extends string,
@@ -148,30 +137,11 @@ type BuildArgsType<RouteCfg extends RouteConfig> = {
     : K]: InferInputType<RouteCfg, K>;
 };
 
-export type GetValidPathsForModule<
-  ModulePath extends string,
-  MainModuleName extends string,
-  MainRoutes extends readonly RouteShape[],
-  SubModules extends readonly ModuleSpec[],
-> = ExtractPaths<
-  GetTargetModule<ModulePath, MainModuleName, MainRoutes, SubModules>
->;
-
-export type GetValidMethodForPath<
-  ModulePath extends string,
-  Path extends string,
-  MainModuleName extends string,
-  MainRoutes extends readonly RouteShape[],
-  SubModules extends readonly ModuleSpec[],
-> = Lowercase<
-  Extract<
-    ExtractMethodForPath<
-      GetTargetModule<ModulePath, MainModuleName, MainRoutes, SubModules>,
-      Path
-    >,
-    string
-  >
->;
+type InferStatusCode<K> = K extends `${infer N extends number}`
+  ? N
+  : K extends number
+    ? K
+    : never;
 
 interface BaseFetcherParams<
   M extends string,
@@ -212,11 +182,41 @@ export type FetcherParams<
 > = BaseFetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> &
   (keyof ArgsType extends never ? { args?: undefined } : { args: ArgsType });
 
-type InferStatusCode<K> = K extends `${infer N extends number}`
-  ? N
-  : K extends number
-    ? K
-    : never;
+export type GetValidPathsForModule<
+  ModulePath extends string,
+  MainModuleName extends string,
+  MainRoutes extends readonly RouteShape[],
+  SubModules extends readonly ModuleSpec[],
+> = ExtractPaths<
+  GetTargetModule<ModulePath, MainModuleName, MainRoutes, SubModules>
+>;
+
+export type GetModulePaths<
+  MainModule extends string,
+  Modules extends readonly ModuleSpec[],
+> =
+  | `${MainModule}/${Modules[number]['name']}/${Extract<
+      Modules[number]['modules'],
+      readonly ModuleSpec[]
+    >[number]['name']}`
+  | `${MainModule}/${Modules[number]['name']}`
+  | MainModule;
+
+export type GetValidMethodForPath<
+  ModulePath extends string,
+  Path extends string,
+  MainModuleName extends string,
+  MainRoutes extends readonly RouteShape[],
+  SubModules extends readonly ModuleSpec[],
+> = Lowercase<
+  Extract<
+    ExtractMethodForPath<
+      GetTargetModule<ModulePath, MainModuleName, MainRoutes, SubModules>,
+      Path
+    >,
+    string
+  >
+>;
 
 export type InferResponseType<
   M extends string,

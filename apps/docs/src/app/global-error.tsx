@@ -5,8 +5,6 @@ import { Geist, Geist_Mono } from 'next/font/google';
 
 import './global.css';
 
-import { vitNodeConfig } from '@/vitnode.config';
-
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -21,7 +19,6 @@ export default function GlobalError() {
   return (
     <GlobalErrorView
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      config={vitNodeConfig}
     />
   );
 }

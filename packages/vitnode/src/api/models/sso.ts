@@ -1,7 +1,6 @@
-import type { Context } from 'hono';
-
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
+import type { Context } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { HTTPException } from 'hono/http-exception';
 
@@ -131,10 +130,6 @@ export class SSOModel {
         //   providerAccountId: userFromSSO.id,
         //   userId: userWithEmail.id,
         // });
-
-        return {
-          userId: userWithEmail.id,
-        };
       }
 
       return {
@@ -151,7 +146,7 @@ export class SSOModel {
       crypto.scrypt(state, salt, 16, (err, derivedKey) => {
         if (err) reject(err);
 
-        resolve(salt + ':' + derivedKey.toString('hex'));
+        resolve(`${salt}:${derivedKey.toString('hex')}`);
       });
     });
 

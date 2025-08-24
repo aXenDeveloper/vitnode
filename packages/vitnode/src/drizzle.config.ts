@@ -1,8 +1,7 @@
+import { existsSync, readdirSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import type { Config } from 'drizzle-kit';
-
 import { defineConfig } from 'drizzle-kit';
-import { existsSync, readdirSync } from 'fs';
-import { join, resolve } from 'path';
 
 import type { VitNodeApiConfig } from './vitnode.config';
 
@@ -77,15 +76,16 @@ export const defineVitNodeDrizzleConfig = ({
     })
     .filter((pluginPath): pluginPath is string => pluginPath !== null);
 
+  // Normalize args.schema into an array without nested ternary expressions
+  let baseSchemas: string[] = [];
+  if (Array.isArray(args.schema)) {
+    baseSchemas = args.schema;
+  } else if (args.schema) {
+    baseSchemas = [args.schema];
+  }
+
   return defineConfig({
     ...args,
-    schema: [
-      ...(Array.isArray(args.schema)
-        ? args.schema
-        : args.schema
-          ? [args.schema]
-          : []),
-      ...pluginPaths,
-    ],
+    schema: [...baseSchemas, ...pluginPaths],
   });
 };

@@ -19,7 +19,7 @@ serve(
   info => {
     const initMessage = '\x1b[34m[VitNode]\x1b[0m';
 
-    // eslint-disable-next-line no-console
+    // biome-ignore lint/suspicious/noConsole: <start>
     console.log(
       `${initMessage} API server is running on http://localhost:${info.port}`,
     );

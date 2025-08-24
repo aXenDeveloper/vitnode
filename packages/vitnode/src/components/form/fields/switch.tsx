@@ -17,7 +17,6 @@ export const AutoFormSwitch = ({
   Omit<React.ComponentProps<typeof Switch>, 'checked'>) => {
   return (
     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-      {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing */}
       {(label || description) && (
         <div className="space-y-0.5">
           {label && (
