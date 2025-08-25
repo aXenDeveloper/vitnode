@@ -1,6 +1,6 @@
-import Image from 'next/image';
+import Image from "next/image";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 const generateLetterPhoto = (letter: string, color: string) =>
   `data:image/svg+xml,${encodeURIComponent(
@@ -14,7 +14,7 @@ export const Avatar = ({
   ...props
 }: Omit<
   React.ComponentProps<typeof Image>,
-  'alt' | 'height' | 'src' | 'width'
+  "alt" | "height" | "src" | "width"
 > & {
   size: number;
   user: { avatarColor: string; name: string; nameCode: string };
@@ -22,7 +22,7 @@ export const Avatar = ({
   return (
     <Image
       alt={name}
-      className={cn('rounded-full object-cover', className)}
+      className={cn("rounded-full object-cover", className)}
       height={size}
       src={generateLetterPhoto(name.slice(0, 1), avatarColor)}
       width={size}

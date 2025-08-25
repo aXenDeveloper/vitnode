@@ -1,18 +1,18 @@
-import { buttonVariants } from '@vitnode/core/components/ui/button';
-import { cn } from '@vitnode/core/lib/utils';
-import Link from 'fumadocs-core/link';
-import { ChevronRight } from 'lucide-react';
-import type { Metadata } from 'next';
+import { buttonVariants } from "@vitnode/core/components/ui/button";
+import { cn } from "@vitnode/core/lib/utils";
+import Link from "fumadocs-core/link";
+import { ChevronRight } from "lucide-react";
+import type { Metadata } from "next";
 
-import { AnimatedBeamHome } from '../../../../components/animated-beam/animated-beam-home';
-import { AdminSection } from './sections/admin/admin';
-import { CallToActionSection } from './sections/call-to-action';
-import { PoweringBySection } from './sections/powering-by/powering-by';
+import { AnimatedBeamHome } from "../../../../components/animated-beam/animated-beam-home";
+import { AdminSection } from "./sections/admin/admin";
+import { CallToActionSection } from "./sections/call-to-action";
+import { PoweringBySection } from "./sections/powering-by/powering-by";
 
 export const metadata: Metadata = {
-  title: 'VitNode: Extendable Framework for Building Apps',
+  title: "VitNode: Extendable Framework for Building Apps",
   description:
-    'Build with Next.js and Hono.js. It provides a structured, plugin-based architecture with Admin Control Panel that makes development faster and less complex.',
+    "Build with Next.js and Hono.js. It provides a structured, plugin-based architecture with Admin Control Panel that makes development faster and less complex.",
 };
 
 export default function HomePage() {
@@ -34,7 +34,7 @@ export default function HomePage() {
             <Link
               className={cn(
                 buttonVariants({
-                  size: 'lg',
+                  size: "lg",
                 }),
               )}
               href="/docs/dev"
@@ -45,10 +45,10 @@ export default function HomePage() {
             <Link
               className={cn(
                 buttonVariants({
-                  size: 'lg',
-                  variant: 'link',
+                  size: "lg",
+                  variant: "link",
                 }),
-                'text-foreground',
+                "text-foreground",
               )}
               href="https://github.com/VitNode/vitnode"
               rel="noopener noreferrer"

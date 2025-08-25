@@ -1,16 +1,16 @@
-import { z } from '@hono/zod-openapi';
-import { buildRoute } from '@vitnode/core/api/lib/route';
-import { eq } from 'drizzle-orm';
-import { HTTPException } from 'hono/http-exception';
+import { z } from "@hono/zod-openapi";
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import { eq } from "drizzle-orm";
+import { HTTPException } from "hono/http-exception";
 
-import { CONFIG_PLUGIN } from '@/const';
-import { blog_posts } from '@/database/posts';
+import { CONFIG_PLUGIN } from "@/const";
+import { blog_posts } from "@/database/posts";
 
 export const deletePostRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'delete',
-    path: '/{id}',
+    method: "delete",
+    path: "/{id}",
     request: {
       params: z.object({
         id: z.string().transform(Number),
@@ -18,18 +18,18 @@ export const deletePostRoute = buildRoute({
     },
     responses: {
       204: {
-        description: 'Post deleted successfully',
+        description: "Post deleted successfully",
       },
       404: {
-        description: 'Post not found',
+        description: "Post not found",
       },
     },
   },
   handler: async c => {
-    const { id } = c.req.valid('param');
+    const { id } = c.req.valid("param");
 
     const result = await c
-      .get('db')
+      .get("db")
       .delete(blog_posts)
       .where(eq(blog_posts.id, id))
       .returning();

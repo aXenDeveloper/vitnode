@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { Button } from '@vitnode/core/components/ui/button';
+import { Button } from "@vitnode/core/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@vitnode/core/components/ui/tooltip';
+} from "@vitnode/core/components/ui/tooltip";
 
 export default function TooltipDemo() {
   return (

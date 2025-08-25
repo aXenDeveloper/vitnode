@@ -4,8 +4,8 @@ import {
   mkdirSync,
   readdirSync,
   statSync,
-} from 'node:fs';
-import { dirname, join } from 'node:path';
+} from "node:fs";
+import { dirname, join } from "node:path";
 
 export function copyFile(from: string, to: string): void {
   try {
@@ -28,7 +28,7 @@ export function copyDirectoryExcludingPlugins(from: string, to: string): void {
     }
 
     for (const item of readdirSync(from)) {
-      if (item === '(plugins)' || item === '.env') continue;
+      if (item === "(plugins)" || item === ".env") continue;
 
       const sourcePath = join(from, item);
       const destinationPath = join(to, item);

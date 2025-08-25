@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { Button } from '@vitnode/core/components/ui/button';
+import { Button } from "@vitnode/core/components/ui/button";
 import {
   Sheet,
   SheetClose,
@@ -10,7 +10,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from '@vitnode/core/components/ui/sheet';
+} from "@vitnode/core/components/ui/sheet";
 
 export default function SheetDemo() {
   return (

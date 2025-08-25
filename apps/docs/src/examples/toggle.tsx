@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { Toggle } from '@vitnode/core/components/ui/toggle';
-import { Bold } from 'lucide-react';
+import { Toggle } from "@vitnode/core/components/ui/toggle";
+import { Bold } from "lucide-react";
 
 export default function SonnerDemo() {
   return (

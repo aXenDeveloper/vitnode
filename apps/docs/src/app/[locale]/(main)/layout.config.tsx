@@ -1,6 +1,6 @@
-import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
+import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 
-import { LogoVitNode } from '@/components/logo-vitnode';
+import { LogoVitNode } from "@/components/logo-vitnode";
 
 /**
  * Shared layout configurations
@@ -11,7 +11,7 @@ import { LogoVitNode } from '@/components/logo-vitnode';
  */
 // TODO: Remove this
 export const baseOptions: BaseLayoutProps = {
-  githubUrl: 'https://github.com/VitNode/vitnode',
+  githubUrl: "https://github.com/VitNode/vitnode",
   nav: {
     title: (
       <>
@@ -21,9 +21,9 @@ export const baseOptions: BaseLayoutProps = {
   },
   links: [
     {
-      text: 'Documentation',
-      url: '/docs',
-      active: 'nested-url',
+      text: "Documentation",
+      url: "/docs",
+      active: "nested-url",
     },
   ],
 };

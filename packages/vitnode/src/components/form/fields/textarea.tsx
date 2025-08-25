@@ -1,12 +1,12 @@
-import type React from 'react';
+import type React from "react";
 
-import { FormControl, FormItem, FormMessage } from '@/components/ui/form';
-import { Textarea } from '@/components/ui/textarea';
+import { FormControl, FormItem, FormMessage } from "@/components/ui/form";
+import { Textarea } from "@/components/ui/textarea";
 
-import type { ItemAutoFormComponentProps } from '../auto-form';
+import type { ItemAutoFormComponentProps } from "../auto-form";
 
-import { AutoFormDesc } from '../common/desc';
-import { AutoFormLabel } from '../common/label';
+import { AutoFormDesc } from "../common/desc";
+import { AutoFormLabel } from "../common/label";
 
 export const AutoFormTextarea = ({
   label,
@@ -16,7 +16,7 @@ export const AutoFormTextarea = ({
   field,
   ...props
 }: ItemAutoFormComponentProps &
-  Omit<React.ComponentProps<typeof Textarea>, 'value'> & {
+  Omit<React.ComponentProps<typeof Textarea>, "value"> & {
     description?: React.ReactNode;
     label?: React.ReactNode;
   }) => {
@@ -40,7 +40,7 @@ export const AutoFormTextarea = ({
             field.onChange(e);
             props.onChange?.(e);
           }}
-          value={field.value ?? ''}
+          value={field.value ?? ""}
           {...props}
         />
       </FormControl>

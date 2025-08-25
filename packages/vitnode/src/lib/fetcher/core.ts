@@ -1,17 +1,17 @@
 import type {
   BaseBuildModuleReturn,
   BuildModuleReturn,
-} from '@/api/lib/module';
-import type { Route } from '@/api/lib/route';
-import { CONFIG } from '../config';
-import { buildSearchParams } from './helpers';
+} from "@/api/lib/module";
+import type { Route } from "@/api/lib/route";
+import { CONFIG } from "../config";
+import { buildSearchParams } from "./helpers";
 import type {
   FetcherParams,
   GetModulePaths,
   GetValidMethodForPath,
   GetValidPathsForModule,
   InferResponseType,
-} from './types';
+} from "./types";
 
 interface CoreFetcherOptions<
   M extends string,
@@ -35,10 +35,10 @@ interface CoreFetcherOptions<
     ModuleName,
     SelectedPath,
     Method
-  >['args'];
+  >["args"];
   method: Method;
   module: ModuleName;
-  options?: Omit<RequestInit, 'body' | 'headers'>;
+  options?: Omit<RequestInit, "body" | "headers">;
   path: SelectedPath;
   prefixPath?: string;
   withPagination?: boolean;
@@ -68,7 +68,7 @@ export async function coreFetcher<
     options,
     additionalHeaders = {},
     withPagination = false,
-    prefixPath = '',
+    prefixPath = "",
   }: CoreFetcherOptions<M, Routes, Modules, ModuleName, SelectedPath, Method>,
 ): Promise<
   InferResponseType<M, Routes, Modules, ModuleName, SelectedPath, Method>
@@ -76,7 +76,7 @@ export async function coreFetcher<
   let currentPath: string = path;
 
   // Replace path parameters
-  if (args && 'params' in args && args.params) {
+  if (args && "params" in args && args.params) {
     for (const [key, value] of Object.entries(
       args.params as Record<string, unknown>,
     )) {
@@ -85,24 +85,24 @@ export async function coreFetcher<
   }
 
   // Ensure path starts with a slash
-  const formattedPath = currentPath.startsWith('/')
+  const formattedPath = currentPath.startsWith("/")
     ? currentPath
     : `/${currentPath}`;
 
   // Construct the base URL
   const url = new URL(
-    `/api/${pluginId}${prefixPath}/${module}${formattedPath === '/' ? '' : formattedPath}`,
+    `/api/${pluginId}${prefixPath}/${module}${formattedPath === "/" ? "" : formattedPath}`,
     CONFIG.api.origin,
   );
 
   // Add query parameters if they exist
-  if (args && 'query' in args && args.query) {
+  if (args && "query" in args && args.query) {
     const queryParams = args.query as Record<string, string | string[]>;
     const searchParams = buildSearchParams({
       ...(args.query as Record<string, string | string[]>),
       ...(withPagination && {
-        first: queryParams.last ? undefined : (queryParams.first ?? '10'),
-        search: queryParams.search ?? '',
+        first: queryParams.last ? undefined : (queryParams.first ?? "10"),
+        search: queryParams.search ?? "",
       }),
     });
     url.search = searchParams.toString();
@@ -110,14 +110,14 @@ export async function coreFetcher<
 
   // Build headers
   const headers = new Headers({
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...additionalHeaders,
   });
 
   const response = await fetch(url, {
     method: method.toUpperCase(),
     headers,
-    body: args && 'body' in args ? JSON.stringify(args.body) : undefined,
+    body: args && "body" in args ? JSON.stringify(args.body) : undefined,
     ...options,
   });
 

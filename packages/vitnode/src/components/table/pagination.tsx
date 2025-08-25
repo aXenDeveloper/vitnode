@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
-import { useTranslations } from 'next-intl';
-import React from 'react';
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import React from "react";
 
-import { usePathname, useRouter } from '@/lib/navigation';
+import { usePathname, useRouter } from "@/lib/navigation";
 
-import { Button } from '../ui/button';
+import { Button } from "../ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select';
-import { Skeleton } from '../ui/skeleton';
+} from "../ui/select";
+import { Skeleton } from "../ui/skeleton";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 40];
 
@@ -31,15 +31,15 @@ export const PaginationDataTable = ({
     totalCount: number;
   };
 }) => {
-  const t = useTranslations('core.global');
+  const t = useTranslations("core.global");
   const { push } = useRouter();
   const [isPending, startTransition] = React.useTransition();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const pagination = {
-    first: searchParams.get('first'),
-    last: searchParams.get('last'),
-    cursor: searchParams.get('cursor'),
+    first: searchParams.get("first"),
+    last: searchParams.get("last"),
+    cursor: searchParams.get("cursor"),
   };
   const pageSize = pagination.first ?? pagination.last ?? 10;
 
@@ -51,9 +51,9 @@ export const PaginationDataTable = ({
           onValueChange={value => {
             startTransition(() => {
               const params = new URLSearchParams(searchParams.toString());
-              params.set('first', value);
-              params.delete('last');
-              params.delete('cursor');
+              params.set("first", value);
+              params.delete("last");
+              params.delete("cursor");
               push(`${pathname}?${params.toString()}`, {
                 scroll: false,
               });
@@ -82,19 +82,19 @@ export const PaginationDataTable = ({
             <Skeleton className="size-8" />
           ) : (
             <Button
-              aria-label={t('go_to_prev_page')}
+              aria-label={t("go_to_prev_page")}
               className="bg-card size-8"
               disabled={!hasPreviousPage}
               onClick={() => {
                 startTransition(() => {
                   const params = new URLSearchParams(searchParams.toString());
-                  params.set('last', `${Number(pageSize)}`);
+                  params.set("last", `${Number(pageSize)}`);
                   if (startCursor) {
-                    params.set('cursor', `${startCursor}`);
+                    params.set("cursor", `${startCursor}`);
                   } else {
-                    params.delete('cursor');
+                    params.delete("cursor");
                   }
-                  params.delete('first');
+                  params.delete("first");
                   push(`${pathname}?${params.toString()}`, {
                     scroll: false,
                   });
@@ -111,19 +111,19 @@ export const PaginationDataTable = ({
             <Skeleton className="size-8" />
           ) : (
             <Button
-              aria-label={t('go_to_next_page')}
+              aria-label={t("go_to_next_page")}
               className="bg-card size-8"
               disabled={!hasNextPage || isPending}
               onClick={() => {
                 startTransition(() => {
                   const params = new URLSearchParams(searchParams.toString());
-                  params.set('first', `${Number(pageSize)}`);
+                  params.set("first", `${Number(pageSize)}`);
                   if (endCursor) {
-                    params.set('cursor', `${endCursor}`);
+                    params.set("cursor", `${endCursor}`);
                   } else {
-                    params.delete('cursor');
+                    params.delete("cursor");
                   }
-                  params.delete('last');
+                  params.delete("last");
                   push(`${pathname}?${params.toString()}`, {
                     scroll: false,
                   });

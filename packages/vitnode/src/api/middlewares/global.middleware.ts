@@ -1,17 +1,17 @@
-import type { Context, Env, Next } from 'hono';
+import type { Context, Env, Next } from "hono";
 
-import { HTTPException } from 'hono/http-exception';
-import { EmailModel, type EmailModelSendArgs } from '@/api/models/email';
-import { SessionModel } from '@/api/models/session';
-import { SessionAdminModel } from '@/api/models/session-admin';
-import type { VitNodeApiConfig, VitNodeConfig } from '@/vitnode.config';
+import { HTTPException } from "hono/http-exception";
+import { EmailModel, type EmailModelSendArgs } from "@/api/models/email";
+import { SessionModel } from "@/api/models/session";
+import { SessionAdminModel } from "@/api/models/session-admin";
+import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
 import {
   type LoggerMiddlewareType,
   loggerMiddleware,
-} from '../lib/logger-middleware';
-import type { SSOApiPlugin } from '../models/sso';
+} from "../lib/logger-middleware";
+import type { SSOApiPlugin } from "../models/sso";
 
-declare module 'hono' {
+declare module "hono" {
   interface ContextVariableMap extends EnvVariablesVitNode {}
 }
 
@@ -45,8 +45,8 @@ export interface EnvVariablesVitNode {
       deviceCookieName: string;
       ssoAdapters: SSOApiPlugin[];
     };
-    captcha?: Pick<VitNodeApiConfig, 'captcha'>['captcha'];
-    email?: VitNodeApiConfig['email'];
+    captcha?: Pick<VitNodeApiConfig, "captcha">["captcha"];
+    email?: VitNodeApiConfig["email"];
     metadata: {
       shortTitle?: string;
       title: string;
@@ -54,7 +54,7 @@ export interface EnvVariablesVitNode {
     pathToMessages: (path: string) => Promise<{ default: object }>;
     plugins: { id: string }[];
   };
-  db: Pick<VitNodeApiConfig, 'dbProvider'>['dbProvider'];
+  db: Pick<VitNodeApiConfig, "dbProvider">["dbProvider"];
   email: {
     send: (args: EmailModelSendArgs) => Promise<void>;
   };
@@ -87,34 +87,34 @@ export const globalMiddleware = ({
   pathToMessages,
 }: Pick<
   VitNodeApiConfig,
-  | 'authorization'
-  | 'captcha'
-  | 'dbProvider'
-  | 'email'
-  | 'pathToMessages'
-  | 'plugins'
+  | "authorization"
+  | "captcha"
+  | "dbProvider"
+  | "email"
+  | "pathToMessages"
+  | "plugins"
 > &
-  Pick<VitNodeConfig, 'metadata'>) => {
+  Pick<VitNodeConfig, "metadata">) => {
   // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
   return async (c: Context, next: Next) => {
     // Collect possible IP header keys in order of trust/preference
     const ipHeaderKeys = [
-      'x-forwarded-for',
-      'x-real-ip',
-      'cf-connecting-ip',
-      'x-client-ip',
-      'x-forwarded',
-      'x-cluster-client-ip',
-      'forwarded-for',
-      'forwarded',
-      'via',
-      'remote-addr',
-      'client-ip',
-      'ip',
-      'x-ip',
-      'true-client-ip',
-      'fastly-client-ip',
-      'x-fastly-client-ip',
+      "x-forwarded-for",
+      "x-real-ip",
+      "cf-connecting-ip",
+      "x-client-ip",
+      "x-forwarded",
+      "x-cluster-client-ip",
+      "forwarded-for",
+      "forwarded",
+      "via",
+      "remote-addr",
+      "client-ip",
+      "ip",
+      "x-ip",
+      "true-client-ip",
+      "fastly-client-ip",
+      "x-fastly-client-ip",
     ];
 
     let ipAddress: string | undefined;
@@ -140,23 +140,23 @@ export const globalMiddleware = ({
     }
 
     // Fallback to localhost if nothing found
-    c.set('ipAddress', ipAddress ?? '127.0.0.1');
-    c.set('db', dbProvider);
-    c.set('email', new EmailModel(c));
+    c.set("ipAddress", ipAddress ?? "127.0.0.1");
+    c.set("db", dbProvider);
+    c.set("email", new EmailModel(c));
 
-    c.set('core', {
+    c.set("core", {
       pathToMessages,
       metadata,
       email,
       authorization: {
-        cookieName: authorization?.cookieName ?? 'vitnode_auth',
+        cookieName: authorization?.cookieName ?? "vitnode_auth",
         cookie_expires:
           authorization?.cookieExpires ?? 1000 * 60 * 60 * 24 * 90, // 90 days
         ssoAdapters: authorization?.ssoAdapters ?? [],
-        deviceCookieName: authorization?.deviceCookieName ?? 'vitnode_device',
+        deviceCookieName: authorization?.deviceCookieName ?? "vitnode_device",
         deviceCookieExpires:
           authorization?.deviceCookieExpires ?? 1000 * 60 * 60 * 24 * 365, // 1 year,
-        adminCookieName: authorization?.adminCookieName ?? 'vitnode_auth_admin',
+        adminCookieName: authorization?.adminCookieName ?? "vitnode_auth_admin",
         adminCookieExpires:
           authorization?.adminCookieExpires ?? 1000 * 60 * 60 * 24 * 1, // 1 day
         cookieSecure: authorization?.cookieSecure ?? true,
@@ -168,9 +168,9 @@ export const globalMiddleware = ({
     });
 
     const user = await new SessionModel(c).getUser();
-    c.set('user', user);
-    c.set('admin', null);
-    c.set('log', loggerMiddleware(c));
+    c.set("user", user);
+    c.set("admin", null);
+    c.set("log", loggerMiddleware(c));
 
     await next();
   };
@@ -178,7 +178,7 @@ export const globalMiddleware = ({
 
 export const pluginMiddleware = (pluginId: string) => {
   return async (c: Context, next: Next) => {
-    c.set('plugin', {
+    c.set("plugin", {
       id: pluginId,
     });
     await next();
@@ -189,7 +189,7 @@ export const globalAdminMiddleware = () => {
   return async (c: Context, next: Next) => {
     const user = await new SessionAdminModel(c).getUser();
     if (!user) throw new HTTPException(403);
-    c.set('admin', {
+    c.set("admin", {
       user,
     });
 

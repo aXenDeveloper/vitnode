@@ -1,10 +1,10 @@
-import { HTTPException } from 'hono/http-exception';
-import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import { z } from 'zod';
+import { HTTPException } from "hono/http-exception";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { z } from "zod";
 
-import type { SSOApiPlugin } from '@/api/models/sso';
+import type { SSOApiPlugin } from "@/api/models/sso";
 
-import { getRedirectUri } from '@/api/models/sso';
+import { getRedirectUri } from "@/api/models/sso";
 
 export const FacebookSSOApiPlugin = ({
   clientId,
@@ -13,7 +13,7 @@ export const FacebookSSOApiPlugin = ({
   clientId: string | undefined;
   clientSecret: string | undefined;
 }): SSOApiPlugin => {
-  const id = 'facebook';
+  const id = "facebook";
   const redirectUri = getRedirectUri(id);
   const tokenSchema = z.object({
     access_token: z.string(),
@@ -27,25 +27,25 @@ export const FacebookSSOApiPlugin = ({
 
   return {
     id,
-    name: 'Facebook',
+    name: "Facebook",
     fetchToken: async code => {
       if (!(clientId && clientSecret)) {
-        throw new Error('Missing Facebook client ID or secret');
+        throw new Error("Missing Facebook client ID or secret");
       }
 
       const url = new URL(
-        'https://graph.facebook.com/v22.0/oauth/access_token',
+        "https://graph.facebook.com/v22.0/oauth/access_token",
       );
-      url.searchParams.set('code', code);
-      url.searchParams.set('redirect_uri', redirectUri);
-      url.searchParams.set('client_id', clientId);
-      url.searchParams.set('client_secret', clientSecret);
+      url.searchParams.set("code", code);
+      url.searchParams.set("redirect_uri", redirectUri);
+      url.searchParams.set("client_id", clientId);
+      url.searchParams.set("client_secret", clientSecret);
       const res = await fetch(url.toString());
       if (!res.ok) {
         throw new HTTPException(
           +res.status.toString() as ContentfulStatusCode,
           {
-            message: 'Internal error requesting token',
+            message: "Internal error requesting token",
           },
         );
       }
@@ -53,7 +53,7 @@ export const FacebookSSOApiPlugin = ({
       const { data, error } = tokenSchema.safeParse(await res.json());
       if (error || !data) {
         throw new HTTPException(400, {
-          message: 'Invalid token response',
+          message: "Invalid token response",
         });
       }
 
@@ -61,15 +61,15 @@ export const FacebookSSOApiPlugin = ({
     },
 
     fetchUser: async ({ access_token }) => {
-      const url = new URL('https://graph.facebook.com/v22.0/me');
-      url.searchParams.set('fields', 'id,name,email');
-      url.searchParams.set('access_token', access_token);
+      const url = new URL("https://graph.facebook.com/v22.0/me");
+      url.searchParams.set("fields", "id,name,email");
+      url.searchParams.set("access_token", access_token);
       const res = await fetch(url.toString());
       if (!res.ok) {
         throw new HTTPException(
           +res.status.toString() as ContentfulStatusCode,
           {
-            message: 'Internal error requesting user',
+            message: "Internal error requesting user",
           },
         );
       }
@@ -78,7 +78,7 @@ export const FacebookSSOApiPlugin = ({
       );
       if (userError || !userData) {
         throw new HTTPException(400, {
-          message: 'Invalid user response',
+          message: "Invalid user response",
         });
       }
 
@@ -87,15 +87,15 @@ export const FacebookSSOApiPlugin = ({
 
     getUrl: ({ state }) => {
       if (!clientId) {
-        throw new Error('Missing Facebook client ID');
+        throw new Error("Missing Facebook client ID");
       }
 
-      const url = new URL('https://www.facebook.com/v22.0/dialog/oauth');
-      url.searchParams.set('client_id', clientId);
-      url.searchParams.set('redirect_uri', redirectUri);
-      url.searchParams.set('scope', 'public_profile,email');
-      url.searchParams.set('response_type', 'code');
-      url.searchParams.set('state', state);
+      const url = new URL("https://www.facebook.com/v22.0/dialog/oauth");
+      url.searchParams.set("client_id", clientId);
+      url.searchParams.set("redirect_uri", redirectUri);
+      url.searchParams.set("scope", "public_profile,email");
+      url.searchParams.set("response_type", "code");
+      url.searchParams.set("state", state);
 
       return url.toString();
     },

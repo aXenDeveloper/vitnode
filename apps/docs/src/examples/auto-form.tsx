@@ -1,32 +1,32 @@
-'use client';
+"use client";
 
-import { AutoForm } from '@vitnode/core/components/form/auto-form';
-import { AutoFormCheckbox } from '@vitnode/core/components/form/fields/checkbox';
-import { AutoFormInput } from '@vitnode/core/components/form/fields/input';
-import { AutoFormSelect } from '@vitnode/core/components/form/fields/select';
-import { AutoFormTextarea } from '@vitnode/core/components/form/fields/textarea';
-import { z } from 'zod';
+import { AutoForm } from "@vitnode/core/components/form/auto-form";
+import { AutoFormCheckbox } from "@vitnode/core/components/form/fields/checkbox";
+import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
+import { AutoFormSelect } from "@vitnode/core/components/form/fields/select";
+import { AutoFormTextarea } from "@vitnode/core/components/form/fields/textarea";
+import { z } from "zod";
 
 export default function AutoFormExample() {
   const formSchema = z.object({
-    username: z.string().min(3, 'Username must be at least 3 characters'),
+    username: z.string().min(3, "Username must be at least 3 characters"),
     email: z
-      .email('Please enter a valid email address')
+      .email("Please enter a valid email address")
       .describe("We'll use this email to contact you. (from zod schema)"),
-    user_type: z.enum(['admin', 'editor', 'viewer']),
+    user_type: z.enum(["admin", "editor", "viewer"]),
     accept_terms: z.boolean().refine(val => val, {
-      message: 'You must accept the terms and conditions',
+      message: "You must accept the terms and conditions",
     }),
     description: z
       .string()
-      .min(10, 'Description must be at least 10 characters'),
+      .min(10, "Description must be at least 10 characters"),
   });
 
   return (
     <AutoForm
       fields={[
         {
-          id: 'username',
+          id: "username",
           component: props => (
             <AutoFormInput
               description="This is the username for your application. It should be unique and not shared with anyone."
@@ -36,28 +36,28 @@ export default function AutoFormExample() {
           ),
         },
         {
-          id: 'email',
+          id: "email",
           component: props => (
             <AutoFormInput label="Email Address" {...props} />
           ),
         },
         {
-          id: 'user_type',
+          id: "user_type",
           component: props => (
             <AutoFormSelect
               description="Select the type of user."
               label="User Type"
               labels={[
-                { value: 'admin', label: 'Admin' },
-                { value: 'editor', label: 'Editor' },
-                { value: 'viewer', label: 'Viewer' },
+                { value: "admin", label: "Admin" },
+                { value: "editor", label: "Editor" },
+                { value: "viewer", label: "Viewer" },
               ]}
               {...props}
             />
           ),
         },
         {
-          id: 'accept_terms',
+          id: "accept_terms",
           component: props => (
             <AutoFormCheckbox
               label="I accept the terms and conditions"
@@ -66,7 +66,7 @@ export default function AutoFormExample() {
           ),
         },
         {
-          id: 'description',
+          id: "description",
           component: props => (
             <AutoFormTextarea
               description="Write a short description of your application."

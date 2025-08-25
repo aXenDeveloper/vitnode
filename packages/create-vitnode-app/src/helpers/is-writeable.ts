@@ -1,5 +1,5 @@
-import { W_OK } from 'node:constants';
-import { access } from 'node:fs/promises';
+import { W_OK } from "node:constants";
+import { access } from "node:fs/promises";
 
 export async function isWriteable(directory: string): Promise<boolean> {
   try {

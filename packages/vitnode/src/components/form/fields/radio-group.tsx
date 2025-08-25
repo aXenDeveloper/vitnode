@@ -1,17 +1,17 @@
-import type React from 'react';
+import type React from "react";
 
 import {
   FormControl,
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+} from "@/components/ui/form";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-import type { ItemAutoFormComponentProps } from '../auto-form';
+import type { ItemAutoFormComponentProps } from "../auto-form";
 
-import { AutoFormDesc } from '../common/desc';
-import { AutoFormLabel } from '../common/label';
+import { AutoFormDesc } from "../common/desc";
+import { AutoFormLabel } from "../common/label";
 
 export const AutoFormRadioGroup = ({
   label,
@@ -22,7 +22,7 @@ export const AutoFormRadioGroup = ({
   labels = [],
   ...props
 }: ItemAutoFormComponentProps &
-  Omit<React.ComponentProps<typeof RadioGroup>, 'value'> & {
+  Omit<React.ComponentProps<typeof RadioGroup>, "value"> & {
     labels?: { label: string; value: string }[];
   }) => {
   const values: { label: string; value: string }[] = enumValues.map(value => {

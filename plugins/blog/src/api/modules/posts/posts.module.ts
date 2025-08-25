@@ -1,11 +1,11 @@
-import { buildModule } from '@vitnode/core/api/lib/module';
+import { buildModule } from "@vitnode/core/api/lib/module";
 
-import { CONFIG_PLUGIN } from '@/const';
+import { CONFIG_PLUGIN } from "@/const";
 
-import { postsRoute } from './routes/get.route';
+import { postsRoute } from "./routes/get.route";
 
 export const postsModule = buildModule({
   ...CONFIG_PLUGIN,
-  name: 'posts',
+  name: "posts",
   routes: [postsRoute],
 });

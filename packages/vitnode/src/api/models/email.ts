@@ -1,10 +1,10 @@
-import { render } from '@react-email/components';
-import type { Context, ContextVariableMap } from 'hono';
-import { HTTPException } from 'hono/http-exception';
-import type React from 'react';
+import { render } from "@react-email/components";
+import type { Context, ContextVariableMap } from "hono";
+import { HTTPException } from "hono/http-exception";
+import type React from "react";
 
-import type { DefaultTemplateEmailProps } from '../../emails/default-template';
-import { CONFIG } from '../../lib/config';
+import type { DefaultTemplateEmailProps } from "../../emails/default-template";
+import { CONFIG } from "../../lib/config";
 
 interface EmailModelSendArgsWithUser {
   locale?: never;
@@ -27,7 +27,7 @@ interface EmailModelSendArgsWithEmail {
 export interface EmailApiPlugin {
   sendEmail: (args: {
     html: string;
-    metadata: ContextVariableMap['core']['metadata'];
+    metadata: ContextVariableMap["core"]["metadata"];
     replyTo?: string;
     subject: string;
     text: string;
@@ -37,14 +37,14 @@ export interface EmailApiPlugin {
 
 export type EmailModelSendArgs = {
   content: (
-    props: Omit<DefaultTemplateEmailProps, 'children'> &
-      Pick<EmailModelSendArgs, 'user'>,
+    props: Omit<DefaultTemplateEmailProps, "children"> &
+      Pick<EmailModelSendArgs, "user">,
   ) => React.ReactNode;
   html?: string;
   locale?: string;
   replyTo?: string;
   subject:
-    | ((props: Pick<DefaultTemplateEmailProps, 'i18n'>) => string)
+    | ((props: Pick<DefaultTemplateEmailProps, "i18n">) => string)
     | string;
 } & (EmailModelSendArgsWithEmail | EmailModelSendArgsWithUser);
 
@@ -64,18 +64,18 @@ export class EmailModel {
     content,
     locale: localeFromArgs,
   }: EmailModelSendArgs) {
-    const core = this.c.get('core');
+    const core = this.c.get("core");
     const provider = core.email?.adapter;
     if (!provider) {
       throw new HTTPException(500, {
-        message: 'Email provider not found',
+        message: "Email provider not found",
       });
     }
 
-    const locale = localeFromArgs ?? user?.language ?? 'en';
+    const locale = localeFromArgs ?? user?.language ?? "en";
     const pluginIds: string[] = [
-      '@vitnode/core',
-      ...this.c.get('core').plugins.map(plugin => plugin.id),
+      "@vitnode/core",
+      ...this.c.get("core").plugins.map(plugin => plugin.id),
     ];
 
     const messagesPromises = pluginIds.map(async pluginId => {
@@ -116,7 +116,7 @@ export class EmailModel {
     const emailTo = user?.email ?? to;
     if (!emailTo) {
       throw new HTTPException(400, {
-        message: 'Email address is required',
+        message: "Email address is required",
       });
     }
 
@@ -125,7 +125,7 @@ export class EmailModel {
         html: await render(htmlContent),
         to: emailTo,
         subject:
-          typeof subject === 'function'
+          typeof subject === "function"
             ? subject({ i18n: { locale, messages } })
             : subject,
         replyTo,
@@ -138,9 +138,9 @@ export class EmailModel {
       const error =
         err instanceof Error
           ? err
-          : new Error('Unknown error from email provider');
+          : new Error("Unknown error from email provider");
 
-      await this.c.get('log').error(`Failed to send email: ${error.message}`);
+      await this.c.get("log").error(`Failed to send email: ${error.message}`);
     }
   }
 }

@@ -1,8 +1,8 @@
-import { LogoVitNode } from '@vitnode/core/components/logo-vitnode';
-import { buttonVariants } from '@vitnode/core/components/ui/button';
-import { Link } from '@vitnode/core/lib/navigation';
-import { cn } from '@vitnode/core/lib/utils';
-import { ArrowRight, Book, Terminal } from 'lucide-react';
+import { LogoVitNode } from "@vitnode/core/components/logo-vitnode";
+import { buttonVariants } from "@vitnode/core/components/ui/button";
+import { Link } from "@vitnode/core/lib/navigation";
+import { cn } from "@vitnode/core/lib/utils";
+import { ArrowRight, Book, Terminal } from "lucide-react";
 
 export default function Page() {
   return (
@@ -25,7 +25,7 @@ export default function Page() {
           <Link
             className={cn(
               buttonVariants({
-                size: 'lg',
+                size: "lg",
               }),
             )}
             href="/admin"
@@ -39,8 +39,8 @@ export default function Page() {
           <Link
             className={cn(
               buttonVariants({
-                size: 'lg',
-                variant: 'outline',
+                size: "lg",
+                variant: "outline",
               }),
             )}
             href="https://vitnode.com/docs"
@@ -54,8 +54,8 @@ export default function Page() {
           <Link
             className={cn(
               buttonVariants({
-                size: 'lg',
-                variant: 'ghost',
+                size: "lg",
+                variant: "ghost",
               }),
             )}
             href="https://github.com/VitNode/vitnode"

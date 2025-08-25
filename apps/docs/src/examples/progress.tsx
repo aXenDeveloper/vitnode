@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { Progress } from '@vitnode/core/components/ui/progress';
-import React from 'react';
+import { Progress } from "@vitnode/core/components/ui/progress";
+import React from "react";
 
 export default function ProgressDemo() {
   const [progress, setProgress] = React.useState(13);

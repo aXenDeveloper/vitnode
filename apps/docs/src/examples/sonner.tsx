@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { Button } from '@vitnode/core/components/ui/button';
-import { toast } from 'sonner';
+import { Button } from "@vitnode/core/components/ui/button";
+import { toast } from "sonner";
 
 export default function SonnerDemo() {
   return (
     <Button
       onClick={() =>
-        toast('Event has been created', {
-          description: 'Sunday, December 03, 2023 at 9:00 AM',
+        toast("Event has been created", {
+          description: "Sunday, December 03, 2023 at 9:00 AM",
           action: {
-            label: 'Undo',
+            label: "Undo",
             // biome-ignore lint/suspicious/noConsole: <test>
-            onClick: () => console.log('Undo'),
+            onClick: () => console.log("Undo"),
           },
         })
       }

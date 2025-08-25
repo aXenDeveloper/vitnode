@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { Button } from '@vitnode/core/components/ui/button';
+import { Button } from "@vitnode/core/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@vitnode/core/components/ui/popover';
+} from "@vitnode/core/components/ui/popover";
 
 export default function PopoverDemo() {
   return (

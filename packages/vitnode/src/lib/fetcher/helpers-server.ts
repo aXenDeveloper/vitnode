@@ -1,7 +1,7 @@
-import 'server-only';
-import { cookies } from 'next/headers';
+import "server-only";
+import { cookies } from "next/headers";
 
-import { cookieFromStringToObject } from './cookie-from-string-to-object';
+import { cookieFromStringToObject } from "./cookie-from-string-to-object";
 
 export const handleSetCookiesFetcher = async (res: Response) => {
   await Promise.all(
@@ -9,7 +9,7 @@ export const handleSetCookiesFetcher = async (res: Response) => {
       const key = Object.keys(cookie)[0];
       const value = Object.values(cookie)[0];
 
-      if (typeof value !== 'string' || typeof key !== 'string') return;
+      if (typeof value !== "string" || typeof key !== "string") return;
 
       (await cookies()).set(key, value, {
         domain: cookie.Domain,

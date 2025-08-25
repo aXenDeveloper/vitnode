@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { SearchIcon } from 'lucide-react';
-import dynamic from 'next/dynamic';
-import { useTranslations } from 'next-intl';
-import React from 'react';
+import { SearchIcon } from "lucide-react";
+import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
+import React from "react";
 
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -13,17 +13,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { Loader } from '@/components/ui/loader';
+} from "@/components/ui/dialog";
+import { Loader } from "@/components/ui/loader";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/tooltip";
 
 const ContentMoreActionSystemLogs = dynamic(async () =>
-  import('./content').then(module => ({
+  import("./content").then(module => ({
     default: module.ContentMoreActionSystemLogs,
   })),
 );
@@ -31,7 +31,7 @@ const ContentMoreActionSystemLogs = dynamic(async () =>
 export const MoreActionSystemLogs = (
   props: React.ComponentProps<typeof ContentMoreActionSystemLogs>,
 ) => {
-  const t = useTranslations('admin.debug.logs.more');
+  const t = useTranslations("admin.debug.logs.more");
 
   return (
     <Dialog>
@@ -39,12 +39,12 @@ export const MoreActionSystemLogs = (
         <Tooltip>
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
-              <Button aria-label={t('title')} size="icon" variant="ghost">
+              <Button aria-label={t("title")} size="icon" variant="ghost">
                 <SearchIcon />
               </Button>
             </DialogTrigger>
           </TooltipTrigger>
-          <TooltipContent>{t('title')}</TooltipContent>
+          <TooltipContent>{t("title")}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
 
@@ -52,10 +52,10 @@ export const MoreActionSystemLogs = (
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <SearchIcon className="size-5" />
-            {t('title')}
+            {t("title")}
           </DialogTitle>
           <DialogDescription>
-            {t.rich('desc', {
+            {t.rich("desc", {
               logId: () => <span className="font-semibold">#{props.id}</span>,
             })}
           </DialogDescription>

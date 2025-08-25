@@ -1,13 +1,13 @@
-import { z } from '@hono/zod-openapi';
-import type { ColumnBaseConfig, Placeholder, SQL } from 'drizzle-orm';
-import { and, asc, count, desc, gt, lt } from 'drizzle-orm';
+import { z } from "@hono/zod-openapi";
+import type { ColumnBaseConfig, Placeholder, SQL } from "drizzle-orm";
+import { and, asc, count, desc, gt, lt } from "drizzle-orm";
 import type {
   PgColumn,
   PgTable,
   PgTableWithColumns,
   TableConfig,
-} from 'drizzle-orm/pg-core';
-import type { Context } from 'hono';
+} from "drizzle-orm/pg-core";
+import type { Context } from "hono";
 
 function parsePaginationParams(params: {
   query: { cursor?: string; first?: string; last?: string };
@@ -23,13 +23,13 @@ function parsePaginationParams(params: {
     : undefined;
 
   if (first !== undefined && last !== undefined) {
-    throw new Error('Cannot specify both first and last');
+    throw new Error("Cannot specify both first and last");
   }
   if (first !== undefined && first < 0) {
-    throw new Error('first must be positive');
+    throw new Error("first must be positive");
   }
   if (last !== undefined && last < 0) {
-    throw new Error('last must be positive');
+    throw new Error("last must be positive");
   }
 
   return { cursor, first, last };
@@ -37,28 +37,28 @@ function parsePaginationParams(params: {
 
 function getOrderFn(
   isForward: boolean,
-  order: 'asc' | 'desc',
+  order: "asc" | "desc",
 ): typeof asc | typeof desc {
   if (isForward) {
-    return order === 'asc' ? asc : desc;
+    return order === "asc" ? asc : desc;
   }
-  return order === 'asc' ? desc : asc;
+  return order === "asc" ? desc : asc;
 }
 
 function buildWhereWithCursor<
-  Primary extends ColumnBaseConfig<'number', string>,
+  Primary extends ColumnBaseConfig<"number", string>,
 >(
   baseWhere: SQL | undefined,
   cursor: number | undefined,
   isForward: boolean,
-  order: 'asc' | 'desc',
+  order: "asc" | "desc",
   table: PgTable,
   primaryCursor: PgColumn<Primary>,
 ): SQL | undefined {
   if (!cursor) return baseWhere;
 
   const cursorFilter =
-    (isForward && order === 'asc') || (!isForward && order === 'desc')
+    (isForward && order === "asc") || (!isForward && order === "desc")
       ? gt
       : lt;
 
@@ -72,7 +72,7 @@ async function fetchTotalCount(
   where: SQL | undefined,
 ): Promise<number> {
   const [{ count: totalCount }] = await c
-    .get('db')
+    .get("db")
     .select({ count: count() })
     .from(table)
     .where(where);
@@ -82,7 +82,7 @@ async function fetchTotalCount(
 export async function withPagination<
   QueryMin extends Record<string, unknown>,
   T extends TableConfig,
-  Primary extends ColumnBaseConfig<'number', string>,
+  Primary extends ColumnBaseConfig<"number", string>,
 >({
   query,
   table,
@@ -95,7 +95,7 @@ export async function withPagination<
   c: Context;
   orderBy: {
     column: PgColumn;
-    order: 'asc' | 'desc';
+    order: "asc" | "desc";
   };
   params: {
     query: {
@@ -110,7 +110,7 @@ export async function withPagination<
     orderBy: SQL;
     where: SQL | undefined;
   }) => Promise<QueryMin[]>;
-  table: Omit<PgTableWithColumns<T>, 'enableRLS'>;
+  table: Omit<PgTableWithColumns<T>, "enableRLS">;
   where?: SQL;
 }): Promise<{
   edges: QueryMin[];

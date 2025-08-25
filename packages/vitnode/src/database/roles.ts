@@ -1,6 +1,6 @@
-import { pgTable } from 'drizzle-orm/pg-core';
+import { pgTable } from "drizzle-orm/pg-core";
 
-export const core_roles = pgTable('core_roles', t => ({
+export const core_roles = pgTable("core_roles", t => ({
   id: t.serial().primaryKey(),
   createdAt: t.timestamp().notNull().defaultNow(),
   updatedAt: t

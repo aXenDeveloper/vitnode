@@ -1,5 +1,5 @@
-import { vitNodeNextConfig } from '@vitnode/core/config/next.config';
-import type { NextConfig } from 'next';
+import { vitNodeNextConfig } from "@vitnode/core/config/next.config";
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {

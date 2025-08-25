@@ -1,14 +1,14 @@
-import { Link } from '@vitnode/core/lib/navigation';
+import { Link } from "@vitnode/core/lib/navigation";
 
-import { InfiniteSlider } from '@/components/infinite-slider';
+import { InfiniteSlider } from "@/components/infinite-slider";
 
-import { DrizzleORMLogo } from './logos/drizzleorm';
-import { HonoJSLogo } from './logos/honojs';
-import { NextIntlLogo } from './logos/next-intl';
-import { NextJSLogo } from './logos/nextjs';
-import { PostgreSQLLogo } from './logos/postgresql';
-import { TailwindCSSLogo } from './logos/tailwindcss';
-import { TurboRepoLogo } from './logos/turborepo';
+import { DrizzleORMLogo } from "./logos/drizzleorm";
+import { HonoJSLogo } from "./logos/honojs";
+import { NextIntlLogo } from "./logos/next-intl";
+import { NextJSLogo } from "./logos/nextjs";
+import { PostgreSQLLogo } from "./logos/postgresql";
+import { TailwindCSSLogo } from "./logos/tailwindcss";
+import { TurboRepoLogo } from "./logos/turborepo";
 
 export const PoweringBySection = () => {
   return (

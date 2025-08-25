@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 
-import { EmailConfirmationView } from './email-confirmation-view';
+import { EmailConfirmationView } from "./email-confirmation-view";
 
 const WrapperSignUpContext = React.createContext<{
   setShowSendingEmail: React.Dispatch<React.SetStateAction<string>>;
@@ -13,7 +13,7 @@ const WrapperSignUpContext = React.createContext<{
 export const useWrapperSignUp = () => React.use(WrapperSignUpContext);
 
 export const WrapperSignUp = ({ children }: { children: React.ReactNode }) => {
-  const [sendingEmail, setShowSendingEmail] = React.useState('');
+  const [sendingEmail, setShowSendingEmail] = React.useState("");
 
   return (
     <WrapperSignUpContext value={{ setShowSendingEmail }}>

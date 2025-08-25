@@ -1,20 +1,20 @@
-import { adminModule } from '@/api/modules/admin/admin.module';
-import { fetcher } from '@/lib/fetcher';
+import { adminModule } from "@/api/modules/admin/admin.module";
+import { fetcher } from "@/lib/fetcher";
 
-import { redirect } from '../navigation';
+import { redirect } from "../navigation";
 
 export const getSessionAdminApi = async () => {
   const res = await fetcher(adminModule, {
-    path: '/session',
-    method: 'get',
-    module: 'admin',
+    path: "/session",
+    method: "get",
+    module: "admin",
     options: {
-      cache: 'force-cache',
+      cache: "force-cache",
     },
   });
 
   if (res.status !== 200) {
-    await redirect('/admin');
+    await redirect("/admin");
 
     return;
   }

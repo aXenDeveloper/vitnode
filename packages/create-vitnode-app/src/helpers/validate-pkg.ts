@@ -1,4 +1,4 @@
-import validateProjectName from 'validate-npm-package-name';
+import validateProjectName from "validate-npm-package-name";
 
 type ValidateNpmNameResult =
   | {

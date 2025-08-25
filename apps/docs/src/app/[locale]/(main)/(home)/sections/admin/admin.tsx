@@ -1,7 +1,7 @@
-import { CpuIcon, LockIcon, SparklesIcon } from 'lucide-react';
-import Image from 'next/image';
+import { CpuIcon, LockIcon, SparklesIcon } from "lucide-react";
+import Image from "next/image";
 
-import debugPanelImg from './debug_panel.png';
+import debugPanelImg from "./debug_panel.png";
 
 export const AdminSection = () => {
   return (

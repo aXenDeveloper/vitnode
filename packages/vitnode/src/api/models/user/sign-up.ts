@@ -1,11 +1,11 @@
-import { and, count, eq, or } from 'drizzle-orm';
-import type { Context } from 'hono';
-import { HTTPException } from 'hono/http-exception';
+import { and, count, eq, or } from "drizzle-orm";
+import type { Context } from "hono";
+import { HTTPException } from "hono/http-exception";
 
-import { generateAvatarColor } from '@/api/modules/users/avatar-color';
-import { core_roles } from '@/database/roles';
-import { core_users } from '@/database/users';
-import { removeSpecialCharacters } from '@/lib/special-characters';
+import { generateAvatarColor } from "@/api/modules/users/avatar-color";
+import { core_roles } from "@/database/roles";
+import { core_users } from "@/database/users";
+import { removeSpecialCharacters } from "@/lib/special-characters";
 
 const getDefaultData = async (
   c: Context,
@@ -14,14 +14,14 @@ const getDefaultData = async (
   roleId: number;
 }> => {
   const [countUsers] = await c
-    .get('db')
+    .get("db")
     .select({ count: count() })
     .from(core_users);
 
   // If no users, return root group
   if (countUsers.count === 0) {
     const [defaultRole] = await c
-      .get('db')
+      .get("db")
       .select({
         id: core_roles.id,
       })
@@ -31,7 +31,7 @@ const getDefaultData = async (
 
     if (!defaultRole) {
       throw new HTTPException(400, {
-        message: 'Default group not found.',
+        message: "Default group not found.",
       });
     }
 
@@ -42,7 +42,7 @@ const getDefaultData = async (
   }
 
   const [defaultRole] = await c
-    .get('db')
+    .get("db")
     .select({
       id: core_roles.id,
     })
@@ -52,13 +52,13 @@ const getDefaultData = async (
 
   if (!defaultRole) {
     throw new HTTPException(400, {
-      message: 'Default role not found.',
+      message: "Default role not found.",
     });
   }
 
   return {
     roleId: defaultRole.id,
-    emailVerified: !c.get('core').email?.adapter,
+    emailVerified: !c.get("core").email?.adapter,
   };
 };
 
@@ -78,7 +78,7 @@ export const signUp = async (
 ) => {
   const convertToNameSEO = removeSpecialCharacters(name);
   const checkIfUserExist = await c
-    .get('db')
+    .get("db")
     .select({
       email: core_users.email,
       name_code: core_users.nameCode,
@@ -94,7 +94,7 @@ export const signUp = async (
   const findEmail = checkIfUserExist.find(user => user.email === email);
   if (findEmail) {
     throw new HTTPException(409, {
-      message: 'Email already exists',
+      message: "Email already exists",
     });
   }
   const findName = checkIfUserExist.find(
@@ -102,13 +102,13 @@ export const signUp = async (
   );
   if (findName) {
     throw new HTTPException(409, {
-      message: 'Name already exists',
+      message: "Name already exists",
     });
   }
 
   const { roleId, emailVerified } = await getDefaultData(c);
   const [data] = await c
-    .get('db')
+    .get("db")
     .insert(core_users)
     .values({
       email,
@@ -120,7 +120,7 @@ export const signUp = async (
       avatarColor: generateAvatarColor(name),
       roleId,
       emailVerified,
-      ipAddress: c.get('ipAddress'),
+      ipAddress: c.get("ipAddress"),
       // TODO: Handle language
       // language: await this.getLanguage(req),
     })

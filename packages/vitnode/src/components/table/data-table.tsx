@@ -1,15 +1,15 @@
-import React from 'react';
-import { ErrorView } from '../../views/error/error-view';
-import { Skeleton } from '../ui/skeleton';
+import React from "react";
+import { ErrorView } from "../../views/error/error-view";
+import { Skeleton } from "../ui/skeleton";
 import {
   Table,
   TableBody,
   TableHead,
   TableHeader,
   TableRow,
-} from '../ui/table';
-import { ContentDataTable } from './content';
-import type { PaginationDataTable } from './pagination';
+} from "../ui/table";
+import { ContentDataTable } from "./content";
+import type { PaginationDataTable } from "./pagination";
 
 export interface DataTableTMin {
   id: number;
@@ -19,7 +19,7 @@ export interface SearchParamsDataTable<T = unknown> {
   cursor?: string;
   first?: string;
   last?: string;
-  order?: 'asc' | 'desc';
+  order?: "asc" | "desc";
   orderBy?: keyof T;
 }
 
@@ -78,12 +78,12 @@ export const DataTableSkeleton = ({ columns }: { columns: number }) => {
 };
 
 export function DataTable<T extends DataTableTMin>(
-  props: Omit<React.ComponentProps<typeof Table>, 'columns'> &
+  props: Omit<React.ComponentProps<typeof Table>, "columns"> &
     React.ComponentProps<typeof PaginationDataTable> & {
       columns: {
         cell?: (data: { allData: T[]; row: T }) => React.ReactNode;
         className?: string;
-        id: 'actions' | keyof T;
+        id: "actions" | keyof T;
         label: string;
       }[];
       customNotFoundComponent?: React.ReactNode;
@@ -92,7 +92,7 @@ export function DataTable<T extends DataTableTMin>(
         columns?: (keyof T)[];
         defaultOrder: {
           column: keyof T;
-          order: 'asc' | 'desc';
+          order: "asc" | "desc";
         };
       };
     },

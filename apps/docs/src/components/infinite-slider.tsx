@@ -1,19 +1,19 @@
-'use client';
+"use client";
 
-import { cn } from '@vitnode/core/lib/utils';
+import { cn } from "@vitnode/core/lib/utils";
 import {
   type AnimationPlaybackControlsWithThen,
   animate,
   motion,
   useMotionValue,
-} from 'motion/react';
-import React from 'react';
-import { useMeasure } from 'react-use';
+} from "motion/react";
+import React from "react";
+import { useMeasure } from "react-use";
 
 export interface InfiniteSliderProps {
   children: React.ReactNode;
   className?: string;
-  direction?: 'horizontal' | 'vertical';
+  direction?: "horizontal" | "vertical";
   gap?: number;
   reverse?: boolean;
   speed?: number;
@@ -25,7 +25,7 @@ export function InfiniteSlider({
   gap = 16,
   speed = 100,
   speedOnHover,
-  direction = 'horizontal',
+  direction = "horizontal",
   reverse = false,
   className,
 }: InfiniteSliderProps) {
@@ -38,7 +38,7 @@ export function InfiniteSlider({
   // biome-ignore lint/correctness/useExhaustiveDependencies: <we need key to reset the animation>
   React.useEffect(() => {
     let controls: AnimationPlaybackControlsWithThen | undefined;
-    const size = direction === 'horizontal' ? width : height;
+    const size = direction === "horizontal" ? width : height;
     const contentSize = size + gap;
     const from = reverse ? -contentSize / 2 : 0;
     const to = reverse ? 0 : -contentSize / 2;
@@ -51,7 +51,7 @@ export function InfiniteSlider({
       const transitionDuration = remainingDistance / currentSpeed;
 
       controls = animate(translation, [translation.get(), to], {
-        ease: 'linear',
+        ease: "linear",
         duration: transitionDuration,
         onComplete: () => {
           setIsTransitioning(false);
@@ -60,10 +60,10 @@ export function InfiniteSlider({
       });
     } else {
       controls = animate(translation, [from, to], {
-        ease: 'linear',
+        ease: "linear",
         duration: duration,
         repeat: Infinity,
-        repeatType: 'loop',
+        repeatType: "loop",
         repeatDelay: 0,
         onRepeat: () => {
           translation.set(from);
@@ -98,16 +98,16 @@ export function InfiniteSlider({
     : {};
 
   return (
-    <div className={cn('overflow-hidden', className)}>
+    <div className={cn("overflow-hidden", className)}>
       <motion.div
         className="flex w-max"
         ref={ref}
         style={{
-          ...(direction === 'horizontal'
+          ...(direction === "horizontal"
             ? { x: translation }
             : { y: translation }),
           gap: `${gap}px`,
-          flexDirection: direction === 'horizontal' ? 'row' : 'column',
+          flexDirection: direction === "horizontal" ? "row" : "column",
         }}
         {...hoverProps}
       >

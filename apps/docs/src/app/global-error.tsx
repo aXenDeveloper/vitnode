@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { GlobalErrorView } from '@vitnode/core/views/error/global-error-view';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { GlobalErrorView } from "@vitnode/core/views/error/global-error-view";
+import { Geist, Geist_Mono } from "next/font/google";
 
-import './global.css';
+import "./global.css";
 
 const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
 });
 
 export default function GlobalError() {

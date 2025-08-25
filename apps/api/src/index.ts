@@ -1,10 +1,10 @@
-import { serve } from '@hono/node-server';
-import { OpenAPIHono } from '@hono/zod-openapi';
-import { VitNodeAPI } from '@vitnode/core/api/config';
+import { serve } from "@hono/node-server";
+import { OpenAPIHono } from "@hono/zod-openapi";
+import { VitNodeAPI } from "@vitnode/core/api/config";
 
-import { vitNodeApiConfig } from './vitnode.api.config.js';
+import { vitNodeApiConfig } from "./vitnode.api.config.js";
 
-const app = new OpenAPIHono().basePath('/api');
+const app = new OpenAPIHono().basePath("/api");
 
 VitNodeAPI({
   app,
@@ -17,7 +17,7 @@ serve(
     port: 8080,
   },
   info => {
-    const initMessage = '\x1b[34m[VitNode]\x1b[0m';
+    const initMessage = "\x1b[34m[VitNode]\x1b[0m";
 
     // biome-ignore lint/suspicious/noConsole: <start>
     console.log(

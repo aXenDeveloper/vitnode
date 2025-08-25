@@ -1,21 +1,21 @@
-import { redirect } from '@vitnode/core/lib/navigation';
-import { getBreadcrumbItems } from 'fumadocs-core/breadcrumb';
-import { Step, Steps } from 'fumadocs-ui/components/steps';
-import defaultMdxComponents from 'fumadocs-ui/mdx';
-import { DocsBody, DocsPage } from 'fumadocs-ui/page';
-import { notFound } from 'next/navigation';
+import { redirect } from "@vitnode/core/lib/navigation";
+import { getBreadcrumbItems } from "fumadocs-core/breadcrumb";
+import { Step, Steps } from "fumadocs-ui/components/steps";
+import defaultMdxComponents from "fumadocs-ui/mdx";
+import { DocsBody, DocsPage } from "fumadocs-ui/page";
+import { notFound } from "next/navigation";
 
-import { Preview } from '@/components/fumadocs/preview';
-import { source } from '@/lib/source';
+import { Preview } from "@/components/fumadocs/preview";
+import { source } from "@/lib/source";
 
-import { ViewOptions } from './page.client';
+import { ViewOptions } from "./page.client";
 
 export default async function Page(props: {
   params: Promise<{ slug?: string[] }>;
 }) {
   const params = await props.params;
   if (!params.slug) {
-    await redirect('/docs/dev');
+    await redirect("/docs/dev");
   }
   const page = source.getPage(params.slug);
   if (!page) notFound();
@@ -25,7 +25,7 @@ export default async function Page(props: {
     <DocsPage
       full={page.data.full}
       tableOfContent={{
-        style: 'clerk',
+        style: "clerk",
         single: false,
       }}
       toc={page.data.toc}
@@ -69,7 +69,7 @@ export async function generateMetadata(props: {
     .map(item => item.name as string);
 
   return {
-    title: `${page.data.title}${lastItemsBreadcrumb.length > 0 ? ` - ${lastItemsBreadcrumb.join(' - ')}` : ''}`,
+    title: `${page.data.title}${lastItemsBreadcrumb.length > 0 ? ` - ${lastItemsBreadcrumb.join(" - ")}` : ""}`,
     description: page.data.description,
   };
 }

@@ -1,19 +1,19 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { buildRoute } from '@/api/lib/route';
-import { SessionAdminModel } from '@/api/models/session-admin';
-import { CONFIG_PLUGIN } from '@/config';
+import { buildRoute } from "@/api/lib/route";
+import { SessionAdminModel } from "@/api/models/session-admin";
+import { CONFIG_PLUGIN } from "@/config";
 
 export const sessionRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'get',
-    description: 'Verify session',
-    path: '/session',
+    method: "get",
+    description: "Verify session",
+    path: "/session",
     responses: {
       200: {
         content: {
-          'application/json': {
+          "application/json": {
             schema: z.object({
               user: z
                 .object({
@@ -33,12 +33,12 @@ export const sessionRoute = buildRoute({
             }),
           },
         },
-        description: 'User',
+        description: "User",
       },
     },
   },
   handler: async c => {
-    const user = c.get('user');
+    const user = c.get("user");
     const admin = new SessionAdminModel(c);
 
     return c.json({

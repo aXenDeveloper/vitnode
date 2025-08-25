@@ -1,4 +1,4 @@
-import { CallbackSSOView } from '@/views/auth/sso/callback/callback-sso-view';
+import { CallbackSSOView } from "@/views/auth/sso/callback/callback-sso-view";
 
 export default async function Page({
   params,

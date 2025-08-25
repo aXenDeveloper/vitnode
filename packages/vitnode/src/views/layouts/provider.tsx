@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ThemeProvider } from 'next-themes';
-import React from 'react';
-import { scan } from 'react-scan';
-import { CONFIG } from '@/lib/config';
-import type { VitNodeConfig } from '@/vitnode.config';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "next-themes";
+import React from "react";
+import { scan } from "react-scan";
+import { CONFIG } from "@/lib/config";
+import type { VitNodeConfig } from "@/vitnode.config";
 
-import { Toaster } from '../../components/ui/sonner';
+import { Toaster } from "../../components/ui/sonner";
 
 export const RootProvider = ({
   children,
@@ -16,10 +16,10 @@ export const RootProvider = ({
   debug,
 }: {
   children: React.ReactNode;
-  debug?: VitNodeConfig['debug'];
+  debug?: VitNodeConfig["debug"];
   theme?: Omit<
     React.ComponentProps<typeof ThemeProvider>,
-    'attribute' | 'disableTransitionOnChange' | 'enableSystem'
+    "attribute" | "disableTransitionOnChange" | "enableSystem"
   >;
   toaster?: React.ComponentProps<typeof Toaster>;
 }) => {
@@ -53,7 +53,7 @@ export const RootProvider = ({
       >
         <Toaster
           closeButton
-          position={toaster?.position ?? 'top-center'}
+          position={toaster?.position ?? "top-center"}
           {...toaster}
         />
         {children}

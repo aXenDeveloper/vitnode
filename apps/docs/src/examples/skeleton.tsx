@@ -1,4 +1,4 @@
-import { Skeleton } from '@vitnode/core/components/ui/skeleton';
+import { Skeleton } from "@vitnode/core/components/ui/skeleton";
 
 export default function SkeletonDemo() {
   return (

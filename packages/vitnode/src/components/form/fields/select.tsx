@@ -1,19 +1,19 @@
-import { useTranslations } from 'next-intl';
-import type React from 'react';
+import { useTranslations } from "next-intl";
+import type React from "react";
 
-import { FormControl, FormItem, FormMessage } from '@/components/ui/form';
+import { FormControl, FormItem, FormMessage } from "@/components/ui/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 
-import type { ItemAutoFormComponentProps } from '../auto-form';
+import type { ItemAutoFormComponentProps } from "../auto-form";
 
-import { AutoFormDesc } from '../common/desc';
-import { AutoFormLabel } from '../common/label';
+import { AutoFormDesc } from "../common/desc";
+import { AutoFormLabel } from "../common/label";
 
 export const AutoFormSelect = ({
   label,
@@ -25,11 +25,11 @@ export const AutoFormSelect = ({
   labels = [],
   ...props
 }: ItemAutoFormComponentProps &
-  Omit<React.ComponentProps<typeof Select>, 'value'> & {
+  Omit<React.ComponentProps<typeof Select>, "value"> & {
     labels?: { label: string; value: string }[];
     placeholder?: string;
   }) => {
-  const t = useTranslations('core.global');
+  const t = useTranslations("core.global");
   const values: { label: string; value: string }[] = enumValues.map(value => {
     const label = labels.find(l => l.value === value)?.label;
 
@@ -41,7 +41,7 @@ export const AutoFormSelect = ({
 
   const currentPlaceholder =
     (values ?? labels).find(l => l.value === field.value)?.label ??
-    t('select_option');
+    t("select_option");
 
   return (
     <FormItem className="space-y-3">

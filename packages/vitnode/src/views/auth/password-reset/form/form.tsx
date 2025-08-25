@@ -1,28 +1,28 @@
-'use client';
+"use client";
 
-import { MailCheckIcon } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import type z from 'zod';
+import { MailCheckIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
+import type z from "zod";
 
-import type { routeMiddlewareSchema } from '@/api/modules/middleware/route';
+import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
 
-import { AutoForm } from '@/components/form/auto-form';
-import { AutoFormInput } from '@/components/form/fields/input';
+import { AutoForm } from "@/components/form/auto-form";
+import { AutoFormInput } from "@/components/form/fields/input";
 import {
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-import { useForm } from './use-form';
+import { useForm } from "./use-form";
 
 function ConfirmationView({ email }: { email: string }) {
-  const t = useTranslations('core.auth.reset_password');
-  const tSignUp = useTranslations('core.auth.sign_up');
+  const t = useTranslations("core.auth.reset_password");
+  const tSignUp = useTranslations("core.auth.sign_up");
 
   return (
     <>
@@ -31,20 +31,20 @@ function ConfirmationView({ email }: { email: string }) {
           <MailCheckIcon className="size-8" />
         </div>
         <CardTitle className="text-balance">
-          {t('confirmation.title')}
+          {t("confirmation.title")}
         </CardTitle>
         <CardDescription className="text-pretty">
-          {t('confirmation.desc')}
+          {t("confirmation.desc")}
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-2">
-        <Label htmlFor="email">{tSignUp('email.label')}</Label>
+        <Label htmlFor="email">{tSignUp("email.label")}</Label>
         <Input className="w-full" id="email" readOnly value={email} />
       </CardContent>
 
       <CardFooter>
-        <CardDescription>{t('confirmation.check_spam')}</CardDescription>
+        <CardDescription>{t("confirmation.check_spam")}</CardDescription>
       </CardFooter>
     </>
   );
@@ -53,11 +53,11 @@ function ConfirmationView({ email }: { email: string }) {
 export const PasswordResetForm = ({
   captcha,
 }: {
-  captcha: z.infer<typeof routeMiddlewareSchema>['captcha'];
+  captcha: z.infer<typeof routeMiddlewareSchema>["captcha"];
 }) => {
   const { formSchema, onSubmit, sentEmail } = useForm();
-  const t = useTranslations('core.auth.reset_password');
-  const tSignUp = useTranslations('core.auth.sign_up');
+  const t = useTranslations("core.auth.reset_password");
+  const tSignUp = useTranslations("core.auth.sign_up");
 
   if (sentEmail) {
     return <ConfirmationView email={sentEmail} />;
@@ -67,9 +67,9 @@ export const PasswordResetForm = ({
     <>
       <CardHeader className="text-center">
         <CardTitle>
-          <h1>{t('title')}</h1>
+          <h1>{t("title")}</h1>
         </CardTitle>
-        <CardDescription>{t('desc')}</CardDescription>
+        <CardDescription>{t("desc")}</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -77,17 +77,17 @@ export const PasswordResetForm = ({
           captcha={captcha}
           fields={[
             {
-              id: 'email',
+              id: "email",
               component: props => (
-                <AutoFormInput {...props} label={tSignUp('email.label')} />
+                <AutoFormInput {...props} label={tSignUp("email.label")} />
               ),
             },
           ]}
           formSchema={formSchema}
           onSubmit={onSubmit}
           submitButtonProps={{
-            className: 'w-full',
-            children: t('submit'),
+            className: "w-full",
+            children: t("submit"),
           }}
         />
       </CardContent>

@@ -1,8 +1,8 @@
-import { Checkbox } from '../../ui/checkbox';
-import { FormControl, FormItem, FormMessage } from '../../ui/form';
-import type { ItemAutoFormComponentProps } from '../auto-form';
-import { AutoFormDesc } from '../common/desc';
-import { AutoFormLabel } from '../common/label';
+import { Checkbox } from "../../ui/checkbox";
+import { FormControl, FormItem, FormMessage } from "../../ui/form";
+import type { ItemAutoFormComponentProps } from "../auto-form";
+import { AutoFormDesc } from "../common/desc";
+import { AutoFormLabel } from "../common/label";
 
 export const AutoFormCheckbox = ({
   label,
@@ -12,7 +12,7 @@ export const AutoFormCheckbox = ({
   field,
   ...props
 }: ItemAutoFormComponentProps &
-  Omit<React.ComponentProps<typeof Checkbox>, 'checked'>) => {
+  Omit<React.ComponentProps<typeof Checkbox>, "checked">) => {
   return (
     <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
       <FormControl>

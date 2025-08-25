@@ -1,34 +1,34 @@
 /** biome-ignore-all lint/suspicious/noConsole: <no need> */
-import { lstatSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
-import colors from 'picocolors';
+import { lstatSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import colors from "picocolors";
 
 export function isFolderEmpty(root: string, name: string): boolean {
   const validFiles = [
-    '.DS_Store',
-    '.git',
-    '.gitattributes',
-    '.gitignore',
-    '.gitlab-ci.yml',
-    '.hg',
-    '.hgcheck',
-    '.hgignore',
-    '.idea',
-    '.npmignore',
-    '.travis.yml',
-    'LICENSE',
-    'Thumbs.db',
-    'docs',
-    'mkdocs.yml',
-    'npm-debug.log',
-    'yarn-debug.log',
-    'yarn-error.log',
-    'yarnrc.yml',
-    '.yarn',
+    ".DS_Store",
+    ".git",
+    ".gitattributes",
+    ".gitignore",
+    ".gitlab-ci.yml",
+    ".hg",
+    ".hgcheck",
+    ".hgignore",
+    ".idea",
+    ".npmignore",
+    ".travis.yml",
+    "LICENSE",
+    "Thumbs.db",
+    "docs",
+    "mkdocs.yml",
+    "npm-debug.log",
+    "yarn-debug.log",
+    "yarn-error.log",
+    "yarnrc.yml",
+    ".yarn",
   ];
 
   const conflicts = readdirSync(root).filter(
-    file => !(validFiles.includes(file) || file.endsWith('.iml')),
+    file => !(validFiles.includes(file) || file.endsWith(".iml")),
   );
 
   if (conflicts.length > 0) {
@@ -49,7 +49,7 @@ export function isFolderEmpty(root: string, name: string): boolean {
     }
 
     console.log(
-      '\nEither try using a new directory name, or remove the files listed above.\n',
+      "\nEither try using a new directory name, or remove the files listed above.\n",
     );
 
     return false;

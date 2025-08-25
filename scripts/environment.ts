@@ -37,10 +37,10 @@ export function validateEnvironment(): EnvironmentConfig {
     GITHUB_ACTOR: process.env.GITHUB_ACTOR,
     GITHUB_OPTION_MODE: process.env.GITHUB_OPTION_MODE,
     GIT_USER: {
-      NAME: process.env.GITHUB_USER ?? 'Automated Version Bump',
+      NAME: process.env.GITHUB_USER ?? "Automated Version Bump",
       EMAIL:
         process.env.GITHUB_EMAIL ??
-        'gh-action-bump-version@users.noreply.github.com',
+        "gh-action-bump-version@users.noreply.github.com",
     },
   } as EnvironmentConfig;
 }

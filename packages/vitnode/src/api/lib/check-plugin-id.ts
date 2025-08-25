@@ -1,7 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 
-import { CONFIG } from '../../lib/config';
+import { CONFIG } from "../../lib/config";
 
 export interface PackageJSON {
   dependencies?: Record<string, string>;
@@ -22,13 +22,13 @@ export const checkPluginId = (pluginName: string): null | PackageJSON => {
 
   const findMonorepoRoot = (startPath: string): null | string => {
     let currentPath = startPath;
-    while (currentPath !== resolve(currentPath, '..')) {
-      const turboConfigPath = join(currentPath, 'turbo.json');
+    while (currentPath !== resolve(currentPath, "..")) {
+      const turboConfigPath = join(currentPath, "turbo.json");
 
       if (existsSync(turboConfigPath)) {
         return currentPath;
       }
-      currentPath = resolve(currentPath, '..');
+      currentPath = resolve(currentPath, "..");
     }
 
     return null;
@@ -39,7 +39,7 @@ export const checkPluginId = (pluginName: string): null | PackageJSON => {
     const monorepoRoot = findMonorepoRoot(cwd);
 
     // Check in current working directory first
-    const cwdPluginPath = join(cwd, 'node_modules', pluginName, 'package.json');
+    const cwdPluginPath = join(cwd, "node_modules", pluginName, "package.json");
     if (existsSync(cwdPluginPath)) {
       return cwdPluginPath;
     }
@@ -48,9 +48,9 @@ export const checkPluginId = (pluginName: string): null | PackageJSON => {
     if (monorepoRoot && monorepoRoot !== cwd) {
       const rootPluginPath = join(
         monorepoRoot,
-        'node_modules',
+        "node_modules",
         pluginName,
-        'package.json',
+        "package.json",
       );
       if (existsSync(rootPluginPath)) {
         return rootPluginPath;
@@ -68,7 +68,7 @@ export const checkPluginId = (pluginName: string): null | PackageJSON => {
     );
   }
 
-  const content: PackageJSON = JSON.parse(readFileSync(path, 'utf-8'));
+  const content: PackageJSON = JSON.parse(readFileSync(path, "utf-8"));
   if (content.name !== pluginName) {
     throw new Error(
       `The plugin name in package.json (${content.name}) does not match the requested plugin name (${pluginName}). Please check the plugin name.`,

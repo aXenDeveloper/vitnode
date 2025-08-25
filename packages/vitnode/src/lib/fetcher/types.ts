@@ -1,10 +1,10 @@
-import type { RouteConfig } from '@hono/zod-openapi';
-import type { ResponseFormat } from 'hono/types';
-import type { StatusCode, SuccessStatusCode } from 'hono/utils/http-status';
-import type { z } from 'zod';
+import type { RouteConfig } from "@hono/zod-openapi";
+import type { ResponseFormat } from "hono/types";
+import type { StatusCode, SuccessStatusCode } from "hono/utils/http-status";
+import type { z } from "zod";
 
-import type { BaseBuildModuleReturn } from '@/api/lib/module';
-import type { Route } from '@/api/lib/route';
+import type { BaseBuildModuleReturn } from "@/api/lib/module";
+import type { Route } from "@/api/lib/route";
 
 interface ClientResponse<
   T,
@@ -18,9 +18,9 @@ interface ClientResponse<
   clone: () => Response;
   formData: () => Promise<FormData>;
   headers: Headers;
-  json: () => F extends 'text/html' | 'text/plain'
+  json: () => F extends "text/html" | "text/plain"
     ? Promise<never>
-    : F extends 'application/json'
+    : F extends "application/json"
       ? Promise<T>
       : Promise<unknown>;
   ok: U extends SuccessStatusCode
@@ -31,7 +31,7 @@ interface ClientResponse<
   redirect: (url: string, status: number) => Response;
   status: U;
   statusText: string;
-  text: () => F extends 'text/html' | 'text/plain'
+  text: () => F extends "text/html" | "text/plain"
     ? T extends string
       ? Promise<T>
       : Promise<never>
@@ -54,7 +54,7 @@ interface ModuleSpec {
 
 type SplitPath<S extends string> = S extends `${infer First}/${infer Rest}`
   ? [First, ...SplitPath<Rest>]
-  : S extends ''
+  : S extends ""
     ? []
     : [S];
 
@@ -62,9 +62,9 @@ type FindModuleNested<
   M extends { modules?: readonly ModuleSpec[] },
   Path extends string[],
 > = Path extends [infer First extends string, ...infer Rest extends string[]]
-  ? Extract<M['modules'], readonly ModuleSpec[]>[number] extends infer SubModule
+  ? Extract<M["modules"], readonly ModuleSpec[]>[number] extends infer SubModule
     ? SubModule extends ModuleSpec & { name: First }
-      ? Rest['length'] extends 0
+      ? Rest["length"] extends 0
         ? SubModule
         : FindModuleNested<SubModule, Rest>
       : never
@@ -80,40 +80,40 @@ type GetTargetModule<
   ? { modules: SubModules; name: MainModuleName; routes: MainRoutes }
   : ModulePath extends `${MainModuleName}/${infer Rest}`
     ? SplitPath<Rest> extends infer PathArray extends string[]
-      ? PathArray['length'] extends 0
+      ? PathArray["length"] extends 0
         ? never
         : FindModuleNested<{ modules: SubModules }, PathArray>
       : never
     : never;
 
 type ExtractPaths<M extends { routes: readonly RouteShape[] }> =
-  M['routes'][number]['route']['path'];
+  M["routes"][number]["route"]["path"];
 
 type ExtractMethodForPath<
   M extends { routes: readonly RouteShape[] },
   P extends string,
-> = Extract<M['routes'][number], { route: { path: P } }>['route']['method'];
+> = Extract<M["routes"][number], { route: { path: P } }>["route"]["method"];
 
 type ExtractZodType<T> = T extends z.ZodType ? z.infer<T> : never;
 
 type InferInputType<
   RouteCfg extends RouteConfig,
-  Part extends 'body' | 'params' | 'query',
-> = Part extends 'body'
+  Part extends "body" | "params" | "query",
+> = Part extends "body"
   ? RouteCfg extends {
       request: {
-        body: { content: { 'application/json': { schema: infer S } } };
+        body: { content: { "application/json": { schema: infer S } } };
       };
     }
     ? ExtractZodType<S>
     : RouteCfg extends { request: { body: { schema?: infer S } } }
       ? ExtractZodType<S>
       : undefined
-  : Part extends 'query'
+  : Part extends "query"
     ? RouteCfg extends { request: { query: infer S } }
       ? ExtractZodType<S>
       : undefined
-    : Part extends 'params'
+    : Part extends "params"
       ? RouteCfg extends { request: { params: infer S } }
         ? ExtractZodType<S>
         : undefined
@@ -124,12 +124,12 @@ type FindRouteConfig<
   P extends string,
   Method extends string,
 > = Extract<
-  M['routes'][number],
+  M["routes"][number],
   { route: { method: Method; path: P } }
->['route'];
+>["route"];
 
 type BuildArgsType<RouteCfg extends RouteConfig> = {
-  [K in 'body' | 'params' | 'query' as InferInputType<
+  [K in "body" | "params" | "query" as InferInputType<
     RouteCfg,
     K
   > extends undefined
@@ -195,11 +195,11 @@ export type GetModulePaths<
   MainModule extends string,
   Modules extends readonly ModuleSpec[],
 > =
-  | `${MainModule}/${Modules[number]['name']}/${Extract<
-      Modules[number]['modules'],
+  | `${MainModule}/${Modules[number]["name"]}/${Extract<
+      Modules[number]["modules"],
       readonly ModuleSpec[]
-    >[number]['name']}`
-  | `${MainModule}/${Modules[number]['name']}`
+    >[number]["name"]}`
+  | `${MainModule}/${Modules[number]["name"]}`
   | MainModule;
 
 export type GetValidMethodForPath<

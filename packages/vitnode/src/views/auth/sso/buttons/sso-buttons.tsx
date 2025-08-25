@@ -1,9 +1,9 @@
-import { getTranslations } from 'next-intl/server';
+import { getTranslations } from "next-intl/server";
 
-import { Skeleton } from '@/components/ui/skeleton';
-import { getMiddlewareApi } from '@/lib/api/get-middleware-api';
+import { Skeleton } from "@/components/ui/skeleton";
+import { getMiddlewareApi } from "@/lib/api/get-middleware-api";
 
-import { ButtonSSOButtons } from './client';
+import { ButtonSSOButtons } from "./client";
 
 export const SSOButtonsSkeleton = () => {
   return (
@@ -16,7 +16,7 @@ export const SSOButtonsSkeleton = () => {
 
 export const SSOButtons = async () => {
   const [t, { sso }] = await Promise.all([
-    getTranslations('core.auth.sso'),
+    getTranslations("core.auth.sso"),
     getMiddlewareApi(),
   ]);
 
@@ -32,7 +32,7 @@ export const SSOButtons = async () => {
         </div>
 
         <div className="relative flex justify-center text-xs">
-          <span className="bg-card text-muted-foreground px-4">{t('or')}</span>
+          <span className="bg-card text-muted-foreground px-4">{t("or")}</span>
         </div>
       </div>
 

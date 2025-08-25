@@ -1,13 +1,13 @@
-import { and, eq, gt, or } from 'drizzle-orm'; // Removed 'or' as it's safer not to use it here
-import type { Context } from 'hono';
-import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { HTTPException } from 'hono/http-exception';
+import { and, eq, gt, or } from "drizzle-orm"; // Removed 'or' as it's safer not to use it here
+import type { Context } from "hono";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { HTTPException } from "hono/http-exception";
 
-import { core_admin_permissions, core_admin_sessions } from '@/database/admins';
-import { CONFIG } from '@/lib/config';
+import { core_admin_permissions, core_admin_sessions } from "@/database/admins";
+import { CONFIG } from "@/lib/config";
 
-import { DeviceModel } from './device';
-import { UserModel } from './user';
+import { DeviceModel } from "./device";
+import { UserModel } from "./user";
 
 export class SessionAdminModel {
   constructor(c: Context) {
@@ -18,10 +18,10 @@ export class SessionAdminModel {
   private async hashToken(token: string): Promise<string> {
     const encoder = new TextEncoder();
     const data = encoder.encode(token);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
 
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
   }
 
   async checkIfUserIsAdmin(userId: number) {
@@ -29,7 +29,7 @@ export class SessionAdminModel {
     if (!user) return false;
 
     const [permission] = await this.c
-      .get('db')
+      .get("db")
       .select()
       .from(core_admin_permissions)
       .where(
@@ -46,36 +46,36 @@ export class SessionAdminModel {
   async createSessionByUserId(userId: number) {
     const isAdmin = await this.checkIfUserIsAdmin(userId);
     if (!isAdmin) {
-      throw new HTTPException(403, { message: 'Forbidden' });
+      throw new HTTPException(403, { message: "Forbidden" });
     }
 
     const randomBytes = new Uint8Array(64);
     crypto.getRandomValues(randomBytes);
     const token = Array.from(randomBytes)
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
 
     const hashedToken = await this.hashToken(token);
     const device = await new DeviceModel(this.c).getDeviceId();
 
     await this.c
-      .get('db')
+      .get("db")
       .insert(core_admin_sessions)
       .values({
         token: hashedToken,
         userId,
         expiresAt: new Date(
-          Date.now() + this.c.get('core').authorization.adminCookieExpires,
+          Date.now() + this.c.get("core").authorization.adminCookieExpires,
         ),
         deviceId: device.id,
       });
 
-    setCookie(this.c, this.c.get('core').authorization.adminCookieName, token, {
+    setCookie(this.c, this.c.get("core").authorization.adminCookieName, token, {
       httpOnly: true,
-      secure: this.c.get('core').authorization.cookieSecure,
-      path: '/',
+      secure: this.c.get("core").authorization.cookieSecure,
+      path: "/",
       expires: new Date(
-        Date.now() + this.c.get('core').authorization.adminCookieExpires,
+        Date.now() + this.c.get("core").authorization.adminCookieExpires,
       ),
       domain: CONFIG.web.hostname,
     });
@@ -86,25 +86,25 @@ export class SessionAdminModel {
   async deleteSession() {
     const token = getCookie(
       this.c,
-      this.c.get('core').authorization.adminCookieName,
+      this.c.get("core").authorization.adminCookieName,
     );
     if (!token) return;
 
     const hashedToken = await this.hashToken(token);
 
     await this.c
-      .get('db')
+      .get("db")
       .delete(core_admin_sessions)
       .where(eq(core_admin_sessions.token, hashedToken));
 
-    deleteCookie(this.c, this.c.get('core').authorization.adminCookieName, {
-      path: '/',
+    deleteCookie(this.c, this.c.get("core").authorization.adminCookieName, {
+      path: "/",
       domain: CONFIG.web.hostname,
     });
   }
 
   async getUser() {
-    const { authorization } = this.c.get('core');
+    const { authorization } = this.c.get("core");
     const token = getCookie(this.c, authorization.adminCookieName);
     if (!token) return null;
 
@@ -114,7 +114,7 @@ export class SessionAdminModel {
     const hashedToken = await this.hashToken(token);
 
     const [session] = await this.c
-      .get('db')
+      .get("db")
       .select({
         userId: core_admin_sessions.userId,
       })
@@ -129,8 +129,8 @@ export class SessionAdminModel {
       .limit(1);
 
     if (!session) {
-      deleteCookie(this.c, this.c.get('core').authorization.adminCookieName, {
-        path: '/',
+      deleteCookie(this.c, this.c.get("core").authorization.adminCookieName, {
+        path: "/",
         domain: CONFIG.web.hostname,
       });
 

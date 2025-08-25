@@ -5,9 +5,9 @@ import {
   readdirSync,
   readFileSync,
   unlinkSync,
-} from 'node:fs';
-import { basename, join, relative } from 'node:path';
-import chokidar from 'chokidar';
+} from "node:fs";
+import { basename, join, relative } from "node:path";
+import chokidar from "chokidar";
 
 import {
   buildInitialRouteMap,
@@ -18,19 +18,19 @@ import {
   isDirectoryEmpty,
   routeKey,
   type SourceConfig,
-} from './shared/file-utils';
+} from "./shared/file-utils";
 
 /**
  * Helper: detect if an app path is web, api, or null
  */
 const detectAppType = (appPath: string) => {
-  const hasWebConfig = existsSync(join(appPath, 'src', 'vitnode.config.ts'));
+  const hasWebConfig = existsSync(join(appPath, "src", "vitnode.config.ts"));
   const hasApiConfig = existsSync(
-    join(appPath, 'src', 'vitnode.api.config.ts'),
+    join(appPath, "src", "vitnode.api.config.ts"),
   );
 
-  if (hasApiConfig && !hasWebConfig) return 'api';
-  if (hasWebConfig) return 'web';
+  if (hasApiConfig && !hasWebConfig) return "api";
+  if (hasWebConfig) return "web";
   return null;
 };
 
@@ -45,7 +45,7 @@ const collectSources = (
   // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
 ): SourceConfig[] => {
   const sources: SourceConfig[] = [];
-  const appsDir = join(repoRoot, 'apps');
+  const appsDir = join(repoRoot, "apps");
   const isMonorepo = existsSync(appsDir);
 
   if (isMonorepo) {
@@ -56,43 +56,43 @@ const collectSources = (
       : [];
 
     for (const appName of appDirs) {
-      const appPath = join(repoRoot, 'apps', appName);
+      const appPath = join(repoRoot, "apps", appName);
       const appType = detectAppType(appPath);
 
-      if (appType === 'web') {
+      if (appType === "web") {
         sources.push(
           {
-            sourceDir: join(pluginDir, 'src', 'app_admin'),
+            sourceDir: join(pluginDir, "src", "app_admin"),
             destinationDir: join(
               appPath,
-              'src',
-              'app',
-              '[locale]',
-              'admin',
-              '(auth)',
-              join('(plugins)', `(${pluginPathName})`),
+              "src",
+              "app",
+              "[locale]",
+              "admin",
+              "(auth)",
+              join("(plugins)", `(${pluginPathName})`),
             ),
           },
           {
-            sourceDir: join(pluginDir, 'src', 'app'),
+            sourceDir: join(pluginDir, "src", "app"),
             destinationDir: join(
               appPath,
-              'src',
-              'app',
-              '[locale]',
-              '(main)',
-              join('(plugins)', `(${pluginPathName})`),
+              "src",
+              "app",
+              "[locale]",
+              "(main)",
+              join("(plugins)", `(${pluginPathName})`),
             ),
           },
           {
-            sourceDir: join(pluginDir, 'src', 'locales'),
-            destinationDir: join(appPath, 'src', 'locales', pluginName),
+            sourceDir: join(pluginDir, "src", "locales"),
+            destinationDir: join(appPath, "src", "locales", pluginName),
           },
         );
-      } else if (appType === 'api') {
+      } else if (appType === "api") {
         sources.push({
-          sourceDir: join(pluginDir, 'src', 'locales'),
-          destinationDir: join(appPath, 'src', 'locales', pluginName),
+          sourceDir: join(pluginDir, "src", "locales"),
+          destinationDir: join(appPath, "src", "locales", pluginName),
         });
       }
     }
@@ -100,40 +100,40 @@ const collectSources = (
     const cwd = process.cwd();
     const projectType = detectAppType(cwd);
 
-    if (projectType === 'web') {
+    if (projectType === "web") {
       sources.push(
         {
-          sourceDir: join(pluginDir, 'src', 'app_admin'),
+          sourceDir: join(pluginDir, "src", "app_admin"),
           destinationDir: join(
             cwd,
-            'src',
-            'app',
-            '[locale]',
-            'admin',
-            '(auth)',
-            join('(plugins)', `(${pluginPathName})`),
+            "src",
+            "app",
+            "[locale]",
+            "admin",
+            "(auth)",
+            join("(plugins)", `(${pluginPathName})`),
           ),
         },
         {
-          sourceDir: join(pluginDir, 'src', 'app'),
+          sourceDir: join(pluginDir, "src", "app"),
           destinationDir: join(
             cwd,
-            'src',
-            'app',
-            '[locale]',
-            '(main)',
-            join('(plugins)', `(${pluginPathName})`),
+            "src",
+            "app",
+            "[locale]",
+            "(main)",
+            join("(plugins)", `(${pluginPathName})`),
           ),
         },
         {
-          sourceDir: join(pluginDir, 'src', 'locales'),
-          destinationDir: join(cwd, 'src', 'locales', pluginName),
+          sourceDir: join(pluginDir, "src", "locales"),
+          destinationDir: join(cwd, "src", "locales", pluginName),
         },
       );
-    } else if (projectType === 'api') {
+    } else if (projectType === "api") {
       sources.push({
-        sourceDir: join(pluginDir, 'src', 'locales'),
-        destinationDir: join(cwd, 'src', 'locales', pluginName),
+        sourceDir: join(pluginDir, "src", "locales"),
+        destinationDir: join(cwd, "src", "locales", pluginName),
       });
     }
   }
@@ -200,7 +200,7 @@ const cleanupDeletedFiles = (
 ) => {
   if (!existsSync(destinationDir)) return;
 
-  const isLocaleDir = destinationDir.includes(join('src', 'locales'));
+  const isLocaleDir = destinationDir.includes(join("src", "locales"));
   if (isLocaleDir) return;
 
   const destFiles = getAllFiles(destinationDir);
@@ -220,8 +220,8 @@ const cleanupDeletedFiles = (
 const makeGetDestinationPaths = (sources: SourceConfig[]) => {
   return (srcPath: string): string[] => {
     const candidates = sources.filter(({ sourceDir }) => {
-      const normalizedSrcPath = srcPath.replace(/\\/g, '/');
-      const normalizedSourceDir = sourceDir.replace(/\\/g, '/');
+      const normalizedSrcPath = srcPath.replace(/\\/g, "/");
+      const normalizedSourceDir = sourceDir.replace(/\\/g, "/");
 
       return (
         normalizedSrcPath === normalizedSourceDir ||
@@ -255,20 +255,20 @@ const setupWatcher = (
   });
 
   watcher
-    .on('add', filePath => {
+    .on("add", filePath => {
       const destPaths = getDestinationPaths(filePath);
       destPaths.forEach(destPath => copyFileWrapper(filePath, destPath));
     })
-    .on('change', filePath => {
+    .on("change", filePath => {
       const destPaths = getDestinationPaths(filePath);
       destPaths.forEach(destPath => copyFileWrapper(filePath, destPath));
     })
-    .on('unlink', filePath => {
+    .on("unlink", filePath => {
       const destPaths = getDestinationPaths(filePath);
       destPaths.forEach(destPath => removeFile(destPath));
     })
-    .on('error', error => {
-      console.error('\x1b[31mWatcher error:\x1b[0m', error);
+    .on("error", error => {
+      console.error("\x1b[31mWatcher error:\x1b[0m", error);
     });
 
   return watcher;
@@ -285,17 +285,17 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
 
   let pluginName = basename(pluginDir);
   try {
-    const packageJsonPath = join(pluginDir, 'package.json');
+    const packageJsonPath = join(pluginDir, "package.json");
     if (existsSync(packageJsonPath)) {
-      const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
-      pluginName = packageJson.name ?? '';
+      const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+      pluginName = packageJson.name ?? "";
     }
   } catch (error) {
-    console.error('\x1b[31mError reading package.json:\x1b[0m', error);
+    console.error("\x1b[31mError reading package.json:\x1b[0m", error);
     return;
   }
 
-  const pluginPathName = pluginName.replace(/\//g, '-').replace(/@/g, '');
+  const pluginPathName = pluginName.replace(/\//g, "-").replace(/@/g, "");
 
   const sources = collectSources(
     pluginDir,

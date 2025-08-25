@@ -1,6 +1,6 @@
-import { SearchXIcon } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import { cn } from '../../lib/utils';
+import { SearchXIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { cn } from "../../lib/utils";
 import {
   Table,
   TableBody,
@@ -8,10 +8,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../ui/table';
-import type { DataTable, DataTableTMin } from './data-table';
-import { OrderTableHeadDataTable } from './order-table-head';
-import { PaginationDataTable } from './pagination';
+} from "../ui/table";
+import type { DataTable, DataTableTMin } from "./data-table";
+import { OrderTableHeadDataTable } from "./order-table-head";
+import { PaginationDataTable } from "./pagination";
 
 export function ContentDataTable<T extends DataTableTMin>({
   columns,
@@ -21,7 +21,7 @@ export function ContentDataTable<T extends DataTableTMin>({
   customNotFoundComponent,
   ...props
 }: React.ComponentProps<typeof DataTable<T>>) {
-  const t = useTranslations('core.global');
+  const t = useTranslations("core.global");
 
   return (
     <div className="space-y-4">
@@ -56,13 +56,13 @@ export function ContentDataTable<T extends DataTableTMin>({
                         allData: edges,
                         row,
                       }) ??
-                      (column.id === 'actions' ? '' : String(row[column.id]));
+                      (column.id === "actions" ? "" : String(row[column.id]));
 
                     return (
                       <TableCell
                         className={cn({
-                          'flex items-center justify-end gap-2':
-                            column.id === 'actions',
+                          "flex items-center justify-end gap-2":
+                            column.id === "actions",
                         })}
                         key={`${row.id}_${column.id.toString()}`}
                       >
@@ -84,10 +84,10 @@ export function ContentDataTable<T extends DataTableTMin>({
 
                       <div className="space-y-2 text-center">
                         <h3 className="text-xl font-semibold tracking-tight">
-                          {t('no_results.title')}
+                          {t("no_results.title")}
                         </h3>
                         <p className="text-muted-foreground text-sm">
-                          {t('no_results.desc')}
+                          {t("no_results.desc")}
                         </p>
                       </div>
                     </div>

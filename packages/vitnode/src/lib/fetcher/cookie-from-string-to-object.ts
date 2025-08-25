@@ -1,17 +1,17 @@
 export const cookieFromStringToObject = (
   str: string[],
 ): {
-  [key: string]: 'lax' | 'none' | 'strict' | boolean | string | undefined;
+  [key: string]: "lax" | "none" | "strict" | boolean | string | undefined;
   Domain: string;
   Expires: string;
   HttpOnly: boolean;
   Path: string;
-  SameSite: 'lax' | 'none' | 'strict' | boolean | undefined;
+  SameSite: "lax" | "none" | "strict" | boolean | undefined;
   Secure: boolean;
 }[] => {
   return str.map(item =>
     Object.fromEntries(
-      item.split('; ').map(v => {
+      item.split("; ").map(v => {
         const current = v.split(/=(.*)/s).map(decodeURIComponent);
 
         if (current.length === 1) {

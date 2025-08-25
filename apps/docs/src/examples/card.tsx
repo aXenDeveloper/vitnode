@@ -6,7 +6,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@vitnode/core/components/ui/card';
+} from "@vitnode/core/components/ui/card";
 
 export default function CardExample() {
   return (

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 
-import { mutationApi } from './mutation-api';
+import { mutationApi } from "./mutation-api";
 
 export const ButtonSSOButtons = ({
   children,
@@ -14,7 +14,7 @@ export const ButtonSSOButtons = ({
   children: React.ReactNode;
   providerId: string;
 }) => {
-  const tErrors = useTranslations('core.global.errors');
+  const tErrors = useTranslations("core.global.errors");
 
   return (
     <Button
@@ -23,8 +23,8 @@ export const ButtonSSOButtons = ({
         const mutation = await mutationApi(providerId);
 
         if (mutation?.message) {
-          toast.error(tErrors('title'), {
-            description: tErrors('internal_server_error'),
+          toast.error(tErrors("title"), {
+            description: tErrors("internal_server_error"),
           });
         }
       }}

@@ -1,6 +1,6 @@
-import { vitNodeNextConfig } from '@vitnode/core/config/next.config';
-import { createMDX } from 'fumadocs-mdx/next';
-import type { NextConfig } from 'next';
+import { vitNodeNextConfig } from "@vitnode/core/config/next.config";
+import { createMDX } from "fumadocs-mdx/next";
+import type { NextConfig } from "next";
 
 const withMDX = createMDX();
 

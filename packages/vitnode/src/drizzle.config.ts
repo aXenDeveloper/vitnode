@@ -1,9 +1,9 @@
-import { existsSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import type { Config } from 'drizzle-kit';
-import { defineConfig } from 'drizzle-kit';
+import { existsSync, readdirSync } from "node:fs";
+import { join, resolve } from "node:path";
+import type { Config } from "drizzle-kit";
+import { defineConfig } from "drizzle-kit";
 
-import type { VitNodeApiConfig } from './vitnode.config';
+import type { VitNodeApiConfig } from "./vitnode.config";
 
 export const defineVitNodeDrizzleConfig = ({
   vitNodeApiConfig,
@@ -15,13 +15,13 @@ export const defineVitNodeDrizzleConfig = ({
 
   const findMonorepoRoot = (startPath: string): null | string => {
     let currentPath = startPath;
-    while (currentPath !== resolve(currentPath, '..')) {
-      const turboConfigPath = join(currentPath, 'turbo.json');
+    while (currentPath !== resolve(currentPath, "..")) {
+      const turboConfigPath = join(currentPath, "turbo.json");
 
       if (existsSync(turboConfigPath)) {
         return currentPath;
       }
-      currentPath = resolve(currentPath, '..');
+      currentPath = resolve(currentPath, "..");
     }
 
     return null;
@@ -30,11 +30,11 @@ export const defineVitNodeDrizzleConfig = ({
   const checkPluginPath = (basePath: string, itemId: string): null | string => {
     const pluginPath = resolve(
       basePath,
-      'node_modules',
+      "node_modules",
       itemId,
-      'dist',
-      'src',
-      'database',
+      "dist",
+      "src",
+      "database",
     );
 
     // Check if the plugin path exists
@@ -45,11 +45,11 @@ export const defineVitNodeDrizzleConfig = ({
     // Check if there are any .js files in the directory
     try {
       const files = readdirSync(pluginPath);
-      const hasSchemaFiles = files.some(file => file.endsWith('.js'));
+      const hasSchemaFiles = files.some(file => file.endsWith(".js"));
       if (!hasSchemaFiles) return null;
 
       // Return glob pattern for schema files
-      return join(pluginPath, '*.js').replace(/\\/g, '/');
+      return join(pluginPath, "*.js").replace(/\\/g, "/");
     } catch {
       return null;
     }
@@ -58,7 +58,7 @@ export const defineVitNodeDrizzleConfig = ({
   const cwd = process.cwd();
   const monorepoRoot = findMonorepoRoot(cwd);
 
-  const pluginPaths = ['@vitnode/core', ...pluginId]
+  const pluginPaths = ["@vitnode/core", ...pluginId]
     .flatMap(itemId => {
       const paths: string[] = [];
 

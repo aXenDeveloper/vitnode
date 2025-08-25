@@ -5,14 +5,14 @@ export const removeSpecialCharacters = (
   text
     .trimStart()
     .trimEnd()
-    .replace(/\s/g, replaceSpace ? '-' : ' ')
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .replace(/[#%&?^|'{}\\/]/g, '')
-    .replace(/ł/gi, 'l')
-    .replace(/@/g, '-at-')
-    .replace(/\./g, '-')
-    .replace(/-+/g, '-')
+    .replace(/\s/g, replaceSpace ? "-" : " ")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[#%&?^|'{}\\/]/g, "")
+    .replace(/ł/gi, "l")
+    .replace(/@/g, "-at-")
+    .replace(/\./g, "-")
+    .replace(/-+/g, "-")
     .trim();
 
 export const checkSpecialCharacters = (text: string): boolean => {

@@ -6,7 +6,7 @@ import {
   readdirSync,
   readFileSync,
   writeFileSync,
-} from 'node:fs';
+} from "node:fs";
 import {
   basename,
   dirname,
@@ -16,7 +16,7 @@ import {
   relative,
   resolve,
   sep,
-} from 'node:path';
+} from "node:path";
 
 // Regex patterns for import statements
 const relativeImportRegex =
@@ -35,10 +35,10 @@ export const routeKey = (filePath: string, localeRoot: string): string => {
   parts.pop();
 
   // drop any group folders
-  const filtered = parts.filter(p => !p.startsWith('('));
+  const filtered = parts.filter(p => !p.startsWith("("));
 
   // '' represents the root route
-  return normalize(filtered.join('/'));
+  return normalize(filtered.join("/"));
 };
 
 export const buildInitialRouteMap = (
@@ -79,11 +79,11 @@ export const transformFileImports = (
     relativeImportRegex,
     (match, importPath: string) => {
       // Only transform relative imports (starting with ./ or ../)
-      if (importPath.startsWith('.')) {
+      if (importPath.startsWith(".")) {
         // Remove any file extensions from the import path
-        const cleanPath = importPath.replace(jsExtensionRegex, '');
+        const cleanPath = importPath.replace(jsExtensionRegex, "");
         // Extract the path after removing leading '../' sequences
-        const normalizedPath = cleanPath.replace(/^(?:\.\.\/)+/, '');
+        const normalizedPath = cleanPath.replace(/^(?:\.\.\/)+/, "");
         // Return the package import format
 
         return match.replace(importPath, `${pluginName}/${normalizedPath}`);
@@ -99,8 +99,8 @@ export const transformFileImports = (
     (match, importPath: string) => {
       // Remove '@/' prefix and any file extensions
       const cleanPath = importPath
-        .replace(/^@\//, '')
-        .replace(jsExtensionRegex, '');
+        .replace(/^@\//, "")
+        .replace(jsExtensionRegex, "");
       // Return the package import format
 
       return match.replace(importPath, `${pluginName}/${cleanPath}`);
@@ -113,8 +113,8 @@ export const transformFileImports = (
     (match, importPath: string) => {
       // Remove '@/' prefix and any file extensions
       const cleanPath = importPath
-        .replace(/^@\//, '')
-        .replace(jsExtensionRegex, '');
+        .replace(/^@\//, "")
+        .replace(jsExtensionRegex, "");
       // Return the package import format
 
       return match.replace(importPath, `${pluginName}/${cleanPath}`);
@@ -127,8 +127,8 @@ export const transformFileImports = (
     /dynamic\s*\(\s*\(\s*=>\s*import\s*\(\s*['"](@\/[^'"]*)['"]\s*\)\s*\)\s*\)/g,
     (match, importPath: string) => {
       const cleanPath = importPath
-        .replace(/^@\//, '')
-        .replace(jsExtensionRegex, '');
+        .replace(/^@\//, "")
+        .replace(jsExtensionRegex, "");
 
       return match.replace(importPath, `${pluginName}/${cleanPath}`);
     },
@@ -139,26 +139,26 @@ export const transformFileImports = (
 
 export function findRepoRoot(startPath: string): string {
   let currentPath = startPath;
-  while (currentPath !== resolve(currentPath, '..')) {
-    const turboConfigPath = join(currentPath, 'turbo.json');
+  while (currentPath !== resolve(currentPath, "..")) {
+    const turboConfigPath = join(currentPath, "turbo.json");
 
     if (existsSync(turboConfigPath)) {
       return currentPath;
     }
-    currentPath = resolve(currentPath, '..');
+    currentPath = resolve(currentPath, "..");
   }
 
-  const packagePath = join(startPath, 'package.json');
+  const packagePath = join(startPath, "package.json");
   if (existsSync(packagePath)) {
     return startPath;
   }
 
-  throw new Error('❌ Could not locate project root');
+  throw new Error("❌ Could not locate project root");
 }
 
 export function findLocaleRoot(repoRoot: string): string {
   // Check for standalone structure (src/app/[locale])
-  const standalonePath = join(repoRoot, 'src', 'app', '[locale]');
+  const standalonePath = join(repoRoot, "src", "app", "[locale]");
   if (existsSync(standalonePath)) {
     return standalonePath;
   }
@@ -182,10 +182,10 @@ export function findLocaleRoot(repoRoot: string): string {
           const fullPath = join(currentDir, entry.name);
 
           // Check if this is a [locale] directory with app structure
-          if (entry.name === '[locale]') {
+          if (entry.name === "[locale]") {
             // Verify it's inside an app directory structure
             const parentPath = dirname(fullPath);
-            if (parentPath.endsWith(join('src', 'app'))) {
+            if (parentPath.endsWith(join("src", "app"))) {
               localeDirectories.push(fullPath);
               continue;
             }
@@ -215,11 +215,11 @@ export function findLocaleRoot(repoRoot: string): string {
   // Default to apps/docs structure if nothing is found (for new projects)
   const defaultAppDir = join(
     repoRoot,
-    'apps',
-    'docs',
-    'src',
-    'app',
-    '[locale]',
+    "apps",
+    "docs",
+    "src",
+    "app",
+    "[locale]",
   );
 
   return defaultAppDir;
@@ -294,9 +294,9 @@ export const copyFile = (
 
     // Check if file should have imports processed (like .js, .jsx, .ts, .tsx files)
     const ext = extname(srcPath);
-    if (pluginName && ['.js', '.jsx', '.ts', '.tsx'].includes(ext)) {
+    if (pluginName && [".js", ".jsx", ".ts", ".tsx"].includes(ext)) {
       // Read file content
-      const content = readFileSync(srcPath, 'utf-8');
+      const content = readFileSync(srcPath, "utf-8");
       // Transform imports
       const transformedContent = transformFileImports(content, pluginName);
       // Write transformed content
@@ -309,7 +309,7 @@ export const copyFile = (
     if (verbose) {
       // Show even shorter, project-rooted paths for clarity
       // Remove everything before '/src/app' in the source path if present
-      const srcAppIdx = srcPath.indexOf(join('src', 'app'));
+      const srcAppIdx = srcPath.indexOf(join("src", "app"));
       let shortSrc: string;
       if (srcAppIdx !== -1) {
         shortSrc = srcPath.substring(srcAppIdx);

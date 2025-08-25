@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { cn } from 'fumadocs-ui/utils/cn';
-import { useParams } from 'next/navigation';
+import { cn } from "fumadocs-ui/utils/cn";
+import { useParams } from "next/navigation";
 
 export function useMode(): string | undefined {
   const { slug } = useParams();

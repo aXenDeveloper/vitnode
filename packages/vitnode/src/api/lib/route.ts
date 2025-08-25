@@ -1,12 +1,12 @@
-import type { RouteConfig, RouteHandler } from '@hono/zod-openapi';
+import type { RouteConfig, RouteHandler } from "@hono/zod-openapi";
 
-import { createRoute as createRouteHono } from '@hono/zod-openapi';
+import { createRoute as createRouteHono } from "@hono/zod-openapi";
 
-import { captchaMiddleware } from '../middlewares/captcha.middleware';
+import { captchaMiddleware } from "../middlewares/captcha.middleware";
 import {
   type EnvVitNode,
   pluginMiddleware,
-} from '../middlewares/global.middleware';
+} from "../middlewares/global.middleware";
 
 type RoutingPath<P extends string> =
   P extends `${infer Head}/{${infer Param}}${infer Tail}`
@@ -20,7 +20,7 @@ type ValidHandler<R extends RouteConfig> = (
 export const buildRoute = <
   Plugin extends string,
   P extends string,
-  R extends Omit<RouteConfig, 'path'> & {
+  R extends Omit<RouteConfig, "path"> & {
     path: P;
     withCaptcha?: boolean;
   },
@@ -37,13 +37,13 @@ export const buildRoute = <
   handler: H;
   pluginId: Plugin;
   route: R & {
-    getRoutingPath: () => RoutingPath<R['path']>;
+    getRoutingPath: () => RoutingPath<R["path"]>;
   };
 } => {
   const pluginTag = pluginId
     .split(/[-_]/)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+    .join(" ");
 
   const tags = [pluginTag, ...(route.tags ?? [])];
 
@@ -62,7 +62,7 @@ export const buildRoute = <
       ],
       ...route,
     }) as R & {
-      getRoutingPath: () => RoutingPath<R['path']>;
+      getRoutingPath: () => RoutingPath<R["path"]>;
     },
     handler,
     pluginId,

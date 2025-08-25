@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { logOutMutationApi } from '@/views/layouts/theme/header/user/auth/log-out-mutation-api';
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { logOutMutationApi } from "@/views/layouts/theme/header/user/auth/log-out-mutation-api";
 
 export const SignOutUserFooterSidebarAdmin = ({
   children,

@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { Button } from '@vitnode/core/components/ui/button';
+import { Button } from "@vitnode/core/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,21 +8,21 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@vitnode/core/components/ui/dialog';
-import { Loader } from '@vitnode/core/components/ui/loader';
+} from "@vitnode/core/components/ui/dialog";
+import { Loader } from "@vitnode/core/components/ui/loader";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@vitnode/core/components/ui/tooltip';
-import { PencilIcon } from 'lucide-react';
-import dynamic from 'next/dynamic';
-import { useTranslations } from 'next-intl';
-import React from 'react';
+} from "@vitnode/core/components/ui/tooltip";
+import { PencilIcon } from "lucide-react";
+import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
+import React from "react";
 
 const CreateEditActionCategoriesAdmin = dynamic(async () =>
-  import('../..//actions/create-edit/create-edit').then(mod => ({
+  import("../..//actions/create-edit/create-edit").then(mod => ({
     default: mod.CreateEditActionCategoriesAdmin,
   })),
 );
@@ -30,7 +30,7 @@ const CreateEditActionCategoriesAdmin = dynamic(async () =>
 export const EditAction = (
   props: Required<React.ComponentProps<typeof CreateEditActionCategoriesAdmin>>,
 ) => {
-  const t = useTranslations('@vitnode/blog.admin.categories.edit');
+  const t = useTranslations("@vitnode/blog.admin.categories.edit");
 
   return (
     <Dialog>
@@ -38,18 +38,18 @@ export const EditAction = (
         <Tooltip>
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
-              <Button aria-label={t('title')} size="icon" variant="ghost">
+              <Button aria-label={t("title")} size="icon" variant="ghost">
                 <PencilIcon />
               </Button>
             </DialogTrigger>
           </TooltipTrigger>
-          <TooltipContent>{t('title')}</TooltipContent>
+          <TooltipContent>{t("title")}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
 
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>{props.data.title}</DialogDescription>
         </DialogHeader>
 

@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { Avatar } from '@/components/avatar';
-import { Button } from '@/components/ui/button';
+import { Avatar } from "@/components/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import type { getSessionAdminApi } from '@/lib/api/get-session-admin-api';
+} from "@/components/ui/dropdown-menu";
+import type { getSessionAdminApi } from "@/lib/api/get-session-admin-api";
 
-import { ClientUserBarAdmin } from './client';
+import { ClientUserBarAdmin } from "./client";
 
 export const UserBarAdmin = ({
   user,
 }: Pick<
   NonNullable<Awaited<ReturnType<typeof getSessionAdminApi>>>,
-  'user'
+  "user"
 >) => {
   return (
     <DropdownMenu>

@@ -1,9 +1,9 @@
 /** biome-ignore-all lint/suspicious/noConsole: <no need> */
-import type { Context } from 'hono';
+import type { Context } from "hono";
 
-import { core_logs } from '@/database/logs';
+import { core_logs } from "@/database/logs";
 
-type CoreLogsType = 'debug' | 'error' | 'warn';
+type CoreLogsType = "debug" | "error" | "warn";
 
 export interface LoggerMiddlewareType {
   debug: (content: string) => Promise<void>;
@@ -13,11 +13,11 @@ export interface LoggerMiddlewareType {
 
 export const loggerMiddleware = (c: Context): LoggerMiddlewareType => {
   const logToDbAndConsole = async (content: string, type: CoreLogsType) => {
-    const pluginId = c.get('plugin')?.id ?? 'core';
-    const ipAddress = c.get('ipAddress');
+    const pluginId = c.get("plugin")?.id ?? "core";
+    const ipAddress = c.get("ipAddress");
 
     await c
-      .get('db')
+      .get("db")
       .insert(core_logs)
       .values({
         pluginId,
@@ -26,9 +26,9 @@ export const loggerMiddleware = (c: Context): LoggerMiddlewareType => {
         ipAddress,
         method: c.req.method.toUpperCase(),
         path: c.req.path,
-        userAgent: c.req.header('User-Agent'),
+        userAgent: c.req.header("User-Agent"),
         statusCode: c.res.status,
-        userId: c.get('user')?.id,
+        userId: c.get("user")?.id,
       });
 
     const loggers: Record<CoreLogsType, (msg: string) => void> = {
@@ -50,13 +50,13 @@ export const loggerMiddleware = (c: Context): LoggerMiddlewareType => {
 
   return {
     debug: async (content: string) => {
-      await logToDbAndConsole(content, 'debug');
+      await logToDbAndConsole(content, "debug");
     },
     error: async (content: string) => {
-      await logToDbAndConsole(content, 'error');
+      await logToDbAndConsole(content, "error");
     },
     warn: async (content: string) => {
-      await logToDbAndConsole(content, 'warn');
+      await logToDbAndConsole(content, "warn");
     },
   };
 };

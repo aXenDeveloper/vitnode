@@ -1,9 +1,9 @@
 /** biome-ignore-all lint/suspicious/noConsole: <no need> */
-import { existsSync, readdirSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
-import { join, relative } from 'node:path';
+import { existsSync, readdirSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { join, relative } from "node:path";
 
-import { getConfig } from './get-config';
+import { getConfig } from "./get-config";
 import {
   buildInitialRouteMap,
   copyDirectoryRecursive,
@@ -11,25 +11,25 @@ import {
   findRepoRoot,
   isDirectoryEmpty,
   type SourceConfig,
-} from './shared/file-utils';
+} from "./shared/file-utils";
 
 export const preparePluginsFiles = async (flag?: string) => {
   // Detect which config file to load based on flag or auto-detection
   const cwd = process.cwd();
-  const hasWebConfig = existsSync(join(cwd, 'src', 'vitnode.config.ts'));
-  const hasApiConfig = existsSync(join(cwd, 'src', 'vitnode.api.config.ts'));
+  const hasWebConfig = existsSync(join(cwd, "src", "vitnode.config.ts"));
+  const hasApiConfig = existsSync(join(cwd, "src", "vitnode.api.config.ts"));
 
   let config: { plugins: { pluginId: string }[] };
 
-  if (flag === '--api' && hasApiConfig) {
+  if (flag === "--api" && hasApiConfig) {
     // Force API config when --api flag is used
-    config = await getConfig({ type: 'api.config' });
-  } else if (flag === '--web' && hasWebConfig) {
+    config = await getConfig({ type: "api.config" });
+  } else if (flag === "--web" && hasWebConfig) {
     // Force web config when --web flag is used
     config = await getConfig({});
   } else if (hasApiConfig && !hasWebConfig) {
     // API config only (auto-detect)
-    config = await getConfig({ type: 'api.config' });
+    config = await getConfig({ type: "api.config" });
   } else if (hasWebConfig) {
     // Web config (may also have API config but web takes precedence in auto-detect)
     config = await getConfig({});
@@ -40,7 +40,7 @@ export const preparePluginsFiles = async (flag?: string) => {
 
   const plugins: string[] = [
     ...config.plugins.map(plugin => plugin.pluginId),
-    '@vitnode/core',
+    "@vitnode/core",
   ];
 
   const repoRoot = findRepoRoot(process.cwd());
@@ -54,14 +54,14 @@ export const preparePluginsFiles = async (flag?: string) => {
     const cwd = process.cwd();
 
     // Check in current working directory first
-    const cwdPluginPath = join(cwd, 'node_modules', pluginName);
+    const cwdPluginPath = join(cwd, "node_modules", pluginName);
     if (existsSync(cwdPluginPath)) {
       return cwdPluginPath;
     }
 
     // Check in monorepo root if it exists and is different from cwd
     if (repoRoot && repoRoot !== cwd) {
-      const rootPluginPath = join(repoRoot, 'node_modules', pluginName);
+      const rootPluginPath = join(repoRoot, "node_modules", pluginName);
       if (existsSync(rootPluginPath)) {
         return rootPluginPath;
       }
@@ -84,14 +84,14 @@ export const preparePluginsFiles = async (flag?: string) => {
       }
 
       // Get the package name from package.json for imports
-      let packageName = '';
+      let packageName = "";
       try {
-        const packageJsonPath = join(pluginPath, 'package.json');
+        const packageJsonPath = join(pluginPath, "package.json");
         if (existsSync(packageJsonPath)) {
           const packageJson = JSON.parse(
-            await readFile(packageJsonPath, 'utf-8'),
+            await readFile(packageJsonPath, "utf-8"),
           );
-          packageName = packageJson.name ?? '';
+          packageName = packageJson.name ?? "";
         }
       } catch (error) {
         console.error(
@@ -103,25 +103,25 @@ export const preparePluginsFiles = async (flag?: string) => {
       }
 
       // Transform plugin name for path usage
-      const pluginPathName = pluginName.replace(/\//g, '-').replace(/@/g, '');
+      const pluginPathName = pluginName.replace(/\//g, "-").replace(/@/g, "");
 
       // Detect app types by checking for config files
       const detectAppType = (appPath: string) => {
         const hasWebConfig = existsSync(
-          join(appPath, 'src', 'vitnode.config.ts'),
+          join(appPath, "src", "vitnode.config.ts"),
         );
         const hasApiConfig = existsSync(
-          join(appPath, 'src', 'vitnode.api.config.ts'),
+          join(appPath, "src", "vitnode.api.config.ts"),
         );
 
-        if (hasApiConfig && !hasWebConfig) return 'api';
-        if (hasWebConfig) return 'web';
+        if (hasApiConfig && !hasWebConfig) return "api";
+        if (hasWebConfig) return "web";
 
         return null;
       };
 
       // Check if we're in a monorepo by looking for apps directories
-      const appsDir = join(repoRoot, 'apps');
+      const appsDir = join(repoRoot, "apps");
       const isMonorepo = existsSync(appsDir);
 
       // Define source configurations for this plugin
@@ -136,50 +136,50 @@ export const preparePluginsFiles = async (flag?: string) => {
           : [];
 
         for (const appName of appDirs) {
-          const appPath = join(repoRoot, 'apps', appName);
+          const appPath = join(repoRoot, "apps", appName);
           const appType = detectAppType(appPath);
 
-          if (appType === 'web') {
+          if (appType === "web") {
             // Web app: copy app, app_admin, and locales
             const mainDest = join(
               appPath,
-              'src',
-              'app',
-              '[locale]',
-              '(main)',
-              join('(plugins)', `(${pluginPathName})`),
+              "src",
+              "app",
+              "[locale]",
+              "(main)",
+              join("(plugins)", `(${pluginPathName})`),
             );
             const adminDest = join(
               appPath,
-              'src',
-              'app',
-              '[locale]',
-              'admin',
-              '(auth)',
-              join('(plugins)', `(${pluginPathName})`),
+              "src",
+              "app",
+              "[locale]",
+              "admin",
+              "(auth)",
+              join("(plugins)", `(${pluginPathName})`),
             );
-            const langDest = join(appPath, 'src', 'locales', pluginName);
+            const langDest = join(appPath, "src", "locales", pluginName);
 
             sources.push(
               {
-                sourceDir: join(pluginPath, 'src', 'app_admin'),
+                sourceDir: join(pluginPath, "src", "app_admin"),
                 destinationDir: adminDest,
               },
               {
-                sourceDir: join(pluginPath, 'src', 'app'),
+                sourceDir: join(pluginPath, "src", "app"),
                 destinationDir: mainDest,
               },
               {
-                sourceDir: join(pluginPath, 'src', 'locales'),
+                sourceDir: join(pluginPath, "src", "locales"),
                 destinationDir: langDest,
               },
             );
-          } else if (appType === 'api') {
+          } else if (appType === "api") {
             // API app: copy only locales
-            const apiLangDest = join(appPath, 'src', 'locales', pluginName);
+            const apiLangDest = join(appPath, "src", "locales", pluginName);
 
             sources.push({
-              sourceDir: join(pluginPath, 'src', 'locales'),
+              sourceDir: join(pluginPath, "src", "locales"),
               destinationDir: apiLangDest,
             });
           }
@@ -188,34 +188,34 @@ export const preparePluginsFiles = async (flag?: string) => {
         // Standalone project: use current directory as base
         const mainDest = join(
           baseDir,
-          'src',
-          'app',
-          '[locale]',
-          '(main)',
-          join('(plugins)', `(${pluginPathName})`),
+          "src",
+          "app",
+          "[locale]",
+          "(main)",
+          join("(plugins)", `(${pluginPathName})`),
         );
         const adminDest = join(
           baseDir,
-          'src',
-          'app',
-          '[locale]',
-          'admin',
-          '(auth)',
-          join('(plugins)', `(${pluginPathName})`),
+          "src",
+          "app",
+          "[locale]",
+          "admin",
+          "(auth)",
+          join("(plugins)", `(${pluginPathName})`),
         );
-        const langDest = join(baseDir, 'src', 'locales', pluginName);
+        const langDest = join(baseDir, "src", "locales", pluginName);
 
         sources.push(
           {
-            sourceDir: join(pluginPath, 'src', 'app_admin'),
+            sourceDir: join(pluginPath, "src", "app_admin"),
             destinationDir: adminDest,
           },
           {
-            sourceDir: join(pluginPath, 'src', 'app'),
+            sourceDir: join(pluginPath, "src", "app"),
             destinationDir: mainDest,
           },
           {
-            sourceDir: join(pluginPath, 'src', 'locales'),
+            sourceDir: join(pluginPath, "src", "locales"),
             destinationDir: langDest,
           },
         );

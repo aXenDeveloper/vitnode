@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { ChevronRight, MenuIcon } from 'lucide-react';
+import { ChevronRight, MenuIcon } from "lucide-react";
 
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+} from "@/components/ui/collapsible";
 import {
   SidebarMenuButton,
   SidebarMenuItem,
@@ -14,10 +14,10 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   useSidebar,
-} from '@/components/ui/sidebar';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { Link, usePathname } from '@/lib/navigation';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Link, usePathname } from "@/lib/navigation";
+import { cn } from "@/lib/utils";
 
 interface ItemNavAdminProps {
   href: string;
@@ -33,7 +33,7 @@ export const ItemNavAdmin = ({
   items = [],
   isOpenInNewTab,
 }: ItemNavAdminProps & {
-  items?: Omit<ItemNavAdminProps, 'icon'>[];
+  items?: Omit<ItemNavAdminProps, "icon">[];
 }) => {
   const { toggleSidebar } = useSidebar();
   const isMobile = useIsMobile();
@@ -41,7 +41,7 @@ export const ItemNavAdmin = ({
 
   // Helper function to normalize URLs for comparison
   const normalizeUrl = (url: string) => {
-    return url.endsWith('/') && url.length > 1 ? url.slice(0, -1) : url;
+    return url.endsWith("/") && url.length > 1 ? url.slice(0, -1) : url;
   };
 
   // Check if current path matches href (with normalization)
@@ -68,9 +68,9 @@ export const ItemNavAdmin = ({
         <SidebarMenuButton asChild isActive={isActive} tooltip={title}>
           <Link
             className={cn(
-              'relative',
+              "relative",
               isActive &&
-                'before:bg-primary before:absolute before:bottom-1 before:left-0 before:top-1 before:h-auto before:w-1 before:rounded-r-sm',
+                "before:bg-primary before:absolute before:bottom-1 before:left-0 before:top-1 before:h-auto before:w-1 before:rounded-r-sm",
             )}
             href={href}
             onClick={() => {
@@ -78,8 +78,8 @@ export const ItemNavAdmin = ({
                 toggleSidebar();
               }
             }}
-            rel={isOpenInNewTab ? 'noopener noreferrer' : undefined}
-            target={isOpenInNewTab ? '_blank' : undefined}
+            rel={isOpenInNewTab ? "noopener noreferrer" : undefined}
+            target={isOpenInNewTab ? "_blank" : undefined}
           >
             {content}
           </Link>
@@ -98,9 +98,9 @@ export const ItemNavAdmin = ({
         <CollapsibleTrigger asChild>
           <SidebarMenuButton
             className={cn(
-              'relative',
+              "relative",
               (isActive || hasActiveChild) &&
-                'before:bg-primary before:absolute before:bottom-1 before:left-0 before:top-1 before:h-auto before:w-1 before:rounded-r-sm',
+                "before:bg-primary before:absolute before:bottom-1 before:left-0 before:top-1 before:h-auto before:w-1 before:rounded-r-sm",
             )}
             isActive={isActive || hasActiveChild}
             tooltip={title}
@@ -112,7 +112,7 @@ export const ItemNavAdmin = ({
 
         <CollapsibleContent
           className={cn(
-            'text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 outline-none',
+            "text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 outline-none",
           )}
         >
           <SidebarMenuSub>
@@ -125,9 +125,9 @@ export const ItemNavAdmin = ({
                   <SidebarMenuSubButton asChild isActive={isChildActive}>
                     <Link
                       className={cn(
-                        'relative',
+                        "relative",
                         isChildActive &&
-                          'before:bg-primary before:absolute before:bottom-1 before:left-0 before:top-1 before:h-auto before:w-1 before:rounded-r-sm',
+                          "before:bg-primary before:absolute before:bottom-1 before:left-0 before:top-1 before:h-auto before:w-1 before:rounded-r-sm",
                       )}
                       href={item.href}
                       onClick={() => {
@@ -136,9 +136,9 @@ export const ItemNavAdmin = ({
                         }
                       }}
                       rel={
-                        item.isOpenInNewTab ? 'noopener noreferrer' : undefined
+                        item.isOpenInNewTab ? "noopener noreferrer" : undefined
                       }
-                      target={item.isOpenInNewTab ? '_blank' : undefined}
+                      target={item.isOpenInNewTab ? "_blank" : undefined}
                     >
                       {item.title}
                     </Link>

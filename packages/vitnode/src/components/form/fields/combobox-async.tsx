@@ -1,10 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
-import { Check, ChevronsUpDown } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import React from 'react';
-import { useDebouncedCallback } from 'use-debounce';
+import { useQuery } from "@tanstack/react-query";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { useTranslations } from "next-intl";
+import React from "react";
+import { useDebouncedCallback } from "use-debounce";
 
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -12,18 +12,18 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command';
-import { FormControl, FormItem, FormMessage } from '@/components/ui/form';
+} from "@/components/ui/command";
+import { FormControl, FormItem, FormMessage } from "@/components/ui/form";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { Skeleton } from '../../ui/skeleton';
-import type { ItemAutoFormComponentProps } from '../auto-form';
-import { AutoFormDesc } from '../common/desc';
-import { AutoFormLabel } from '../common/label';
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Skeleton } from "../../ui/skeleton";
+import type { ItemAutoFormComponentProps } from "../auto-form";
+import { AutoFormDesc } from "../common/desc";
+import { AutoFormLabel } from "../common/label";
 
 export const AutoFormComboboxAsync = ({
   label,
@@ -38,7 +38,7 @@ export const AutoFormComboboxAsync = ({
   fetchData,
   ...props
 }: ItemAutoFormComponentProps &
-  Omit<React.ComponentProps<typeof Button>, 'role' | 'variant'> & {
+  Omit<React.ComponentProps<typeof Button>, "role" | "variant"> & {
     fetchData: (params: { search: string }) =>
       | Promise<
           {
@@ -54,8 +54,8 @@ export const AutoFormComboboxAsync = ({
     placeholder?: string;
     searchPlaceholder?: string;
   }) => {
-  const t = useTranslations('core.global');
-  const [search, setSearch] = React.useState('');
+  const t = useTranslations("core.global");
+  const [search, setSearch] = React.useState("");
   const { data, isLoading } = useQuery({
     queryKey: [id, { search }],
     queryFn: async () => {
@@ -81,15 +81,15 @@ export const AutoFormComboboxAsync = ({
             <Button
               aria-label="Combobox"
               className={cn(
-                'w-[200px] justify-between bg-transparent',
-                !field.value && 'text-muted-foreground',
+                "w-[200px] justify-between bg-transparent",
+                !field.value && "text-muted-foreground",
                 className,
               )}
               role="combobox"
               variant="outline"
               {...props}
             >
-              {field.value?.label ?? placeholder ?? t('select_option')}
+              {field.value?.label ?? placeholder ?? t("select_option")}
               <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
             </Button>
           </FormControl>
@@ -101,7 +101,7 @@ export const AutoFormComboboxAsync = ({
               onChangeCapture={e => {
                 handleChangeSearch(e.currentTarget.value);
               }}
-              placeholder={searchPlaceholder ?? t('search_placeholder')}
+              placeholder={searchPlaceholder ?? t("search_placeholder")}
             />
 
             <CommandList>
@@ -116,7 +116,7 @@ export const AutoFormComboboxAsync = ({
                 }
 
                 if ((data ?? []).length === 0) {
-                  return <CommandEmpty>{t('results_not_found')}</CommandEmpty>;
+                  return <CommandEmpty>{t("results_not_found")}</CommandEmpty>;
                 }
 
                 return (
@@ -135,10 +135,10 @@ export const AutoFormComboboxAsync = ({
                         {label}
                         <Check
                           className={cn(
-                            'ml-auto',
+                            "ml-auto",
                             value === field.value?.value
-                              ? 'opacity-100'
-                              : 'opacity-0',
+                              ? "opacity-100"
+                              : "opacity-0",
                           )}
                         />
                       </CommandItem>

@@ -1,18 +1,18 @@
-import { useTranslations } from 'next-intl';
-import { toast } from 'sonner';
-import z from 'zod';
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
+import z from "zod";
 
-import { useRouter } from '@/lib/navigation';
-import { usePasswordZodSchema } from '../../sign-up/form/use-form';
-import type { ChangePasswordForm } from './form';
-import { mutationApi } from './mutation-api';
+import { useRouter } from "@/lib/navigation";
+import { usePasswordZodSchema } from "../../sign-up/form/use-form";
+import type { ChangePasswordForm } from "./form";
+import { mutationApi } from "./mutation-api";
 
 export const useForm = ({
   token,
   userId,
 }: React.ComponentProps<typeof ChangePasswordForm>) => {
-  const t = useTranslations('core.auth.change_password');
-  const tError = useTranslations('core.global.errors');
+  const t = useTranslations("core.auth.change_password");
+  const tError = useTranslations("core.global.errors");
   const passwordSchema = usePasswordZodSchema();
   const { replace } = useRouter();
 
@@ -28,17 +28,17 @@ export const useForm = ({
     });
 
     if (mutation?.error) {
-      toast.error(tError('title'), {
-        description: tError('internal_server_error'),
+      toast.error(tError("title"), {
+        description: tError("internal_server_error"),
       });
 
       return;
     }
 
-    toast.success(t('success.title'), {
-      description: t('success.desc'),
+    toast.success(t("success.title"), {
+      description: t("success.desc"),
     });
-    replace('/login');
+    replace("/login");
   };
 
   return {

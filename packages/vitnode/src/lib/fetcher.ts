@@ -1,20 +1,20 @@
-import 'server-only';
-import { cookies, headers } from 'next/headers';
+import "server-only";
+import { cookies, headers } from "next/headers";
 
 import type {
   BaseBuildModuleReturn,
   BuildModuleReturn,
-} from '@/api/lib/module';
-import type { Route } from '@/api/lib/route';
-import { coreFetcher } from './fetcher/core';
-import { handleSetCookiesFetcher } from './fetcher/helpers-server';
+} from "@/api/lib/module";
+import type { Route } from "@/api/lib/route";
+import { coreFetcher } from "./fetcher/core";
+import { handleSetCookiesFetcher } from "./fetcher/helpers-server";
 import type {
   FetcherParams,
   GetModulePaths,
   GetValidMethodForPath,
   GetValidPathsForModule,
   InferResponseType,
-} from './fetcher/types';
+} from "./fetcher/types";
 
 export async function fetcher<
   M extends string,
@@ -39,12 +39,12 @@ export async function fetcher<
     options,
     allowSaveCookies = false,
     withPagination = false,
-    prefixPath = '',
+    prefixPath = "",
     captchaToken,
   }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> & {
     allowSaveCookies?: boolean;
     captchaToken?: string;
-    options?: Omit<RequestInit, 'body'>;
+    options?: Omit<RequestInit, "body">;
     prefixPath?: string;
     withPagination?: boolean;
   },
@@ -58,13 +58,13 @@ export async function fetcher<
 
   const additionalHeaders: Record<string, string> = {
     Cookie: cookie.toString(),
-    ['user-agent']: nextInternalHeaders.get('user-agent') ?? 'node',
-    ['x-forwarded-for']:
-      nextInternalHeaders.get('x-forwarded-for') ?? '0.0.0.0',
+    ["user-agent"]: nextInternalHeaders.get("user-agent") ?? "node",
+    ["x-forwarded-for"]:
+      nextInternalHeaders.get("x-forwarded-for") ?? "0.0.0.0",
   };
 
   if (captchaToken) {
-    additionalHeaders['x-vitnode-captcha-token'] = captchaToken;
+    additionalHeaders["x-vitnode-captcha-token"] = captchaToken;
   }
 
   const response = await coreFetcher(moduleReturn, {

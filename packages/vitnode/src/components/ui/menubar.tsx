@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { CheckIcon, ChevronRightIcon, CircleIcon } from 'lucide-react';
-import { Menubar as MenubarPrimitive } from 'radix-ui';
-import type * as React from 'react';
+import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
+import { Menubar as MenubarPrimitive } from "radix-ui";
+import type * as React from "react";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 function Menubar({
   className,
@@ -13,7 +13,7 @@ function Menubar({
   return (
     <MenubarPrimitive.Root
       className={cn(
-        'bg-background shadow-xs flex h-9 items-center gap-1 rounded-md border p-1',
+        "bg-background shadow-xs flex h-9 items-center gap-1 rounded-md border p-1",
         className,
       )}
       data-slot="menubar"
@@ -55,7 +55,7 @@ function MenubarTrigger({
   return (
     <MenubarPrimitive.Trigger
       className={cn(
-        'focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground outline-hidden flex select-none items-center rounded-sm px-2 py-1 text-sm font-medium',
+        "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground outline-hidden flex select-none items-center rounded-sm px-2 py-1 text-sm font-medium",
         className,
       )}
       data-slot="menubar-trigger"
@@ -66,7 +66,7 @@ function MenubarTrigger({
 
 function MenubarContent({
   className,
-  align = 'start',
+  align = "start",
   alignOffset = -4,
   sideOffset = 8,
   ...props
@@ -77,7 +77,7 @@ function MenubarContent({
         align={align}
         alignOffset={alignOffset}
         className={cn(
-          'bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-(--radix-menubar-content-transform-origin) z-50 min-w-[12rem] overflow-hidden rounded-md border p-1 shadow-md',
+          "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-(--radix-menubar-content-transform-origin) z-50 min-w-[12rem] overflow-hidden rounded-md border p-1 shadow-md",
           className,
         )}
         data-slot="menubar-content"
@@ -91,11 +91,11 @@ function MenubarContent({
 function MenubarItem({
   className,
   inset,
-  variant = 'default',
+  variant = "default",
   ...props
 }: React.ComponentProps<typeof MenubarPrimitive.Item> & {
   inset?: boolean;
-  variant?: 'default' | 'destructive';
+  variant?: "default" | "destructive";
 }) {
   return (
     <MenubarPrimitive.Item
@@ -171,7 +171,7 @@ function MenubarLabel({
   return (
     <MenubarPrimitive.Label
       className={cn(
-        'px-2 py-1.5 text-sm font-medium data-[inset]:pl-8',
+        "px-2 py-1.5 text-sm font-medium data-[inset]:pl-8",
         className,
       )}
       data-inset={inset}
@@ -187,7 +187,7 @@ function MenubarSeparator({
 }: React.ComponentProps<typeof MenubarPrimitive.Separator>) {
   return (
     <MenubarPrimitive.Separator
-      className={cn('bg-border -mx-1 my-1 h-px', className)}
+      className={cn("bg-border -mx-1 my-1 h-px", className)}
       data-slot="menubar-separator"
       {...props}
     />
@@ -197,11 +197,11 @@ function MenubarSeparator({
 function MenubarShortcut({
   className,
   ...props
-}: React.ComponentProps<'span'>) {
+}: React.ComponentProps<"span">) {
   return (
     <span
       className={cn(
-        'text-muted-foreground ml-auto text-xs tracking-widest',
+        "text-muted-foreground ml-auto text-xs tracking-widest",
         className,
       )}
       data-slot="menubar-shortcut"
@@ -227,7 +227,7 @@ function MenubarSubTrigger({
   return (
     <MenubarPrimitive.SubTrigger
       className={cn(
-        'focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[inset]:pl-8',
+        "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[inset]:pl-8",
         className,
       )}
       data-inset={inset}
@@ -247,7 +247,7 @@ function MenubarSubContent({
   return (
     <MenubarPrimitive.SubContent
       className={cn(
-        'bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-(--radix-menubar-content-transform-origin) z-50 min-w-[8rem] overflow-hidden rounded-md border p-1 shadow-lg',
+        "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-(--radix-menubar-content-transform-origin) z-50 min-w-[8rem] overflow-hidden rounded-md border p-1 shadow-lg",
         className,
       )}
       data-slot="menubar-sub-content"

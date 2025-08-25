@@ -1,17 +1,17 @@
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 export const LogoVitNode = ({
   className,
   small,
   ...props
-}: React.ComponentProps<'svg'> & {
+}: React.ComponentProps<"svg"> & {
   small?: boolean;
 }) => {
   if (small)
     return (
       <svg
         aria-label="Logo VitNode"
-        className={cn('text-foreground', className)}
+        className={cn("text-foreground", className)}
         fill="none"
         viewBox="0 0 375 376"
         xmlns="http://www.w3.org/2000/svg"
@@ -47,7 +47,7 @@ export const LogoVitNode = ({
   return (
     <svg
       aria-label="Logo VitNode"
-      className={cn('text-foreground', className)}
+      className={cn("text-foreground", className)}
       fill="none"
       viewBox="0 0 762 191"
       xmlns="http://www.w3.org/2000/svg"

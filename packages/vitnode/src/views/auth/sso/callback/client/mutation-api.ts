@@ -1,9 +1,9 @@
-'use server';
+"use server";
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath } from "next/cache";
 
-import { usersModule } from '@/api/modules/users/users.module';
-import { fetcher } from '@/lib/fetcher';
+import { usersModule } from "@/api/modules/users/users.module";
+import { fetcher } from "@/lib/fetcher";
 
 export const mutationApi = async ({
   code,
@@ -15,9 +15,9 @@ export const mutationApi = async ({
   state: string;
 }) => {
   const res = await fetcher(usersModule, {
-    path: '/{providerId}/callback',
-    method: 'get',
-    module: 'users/sso',
+    path: "/{providerId}/callback",
+    method: "get",
+    module: "users/sso",
     allowSaveCookies: true,
     args: {
       params: {
@@ -31,12 +31,12 @@ export const mutationApi = async ({
   });
 
   if (res.status === 409) {
-    return { error: 'Email already exists' };
+    return { error: "Email already exists" };
   }
 
   if (res.status !== 200) {
-    return { error: 'Something went wrong' };
+    return { error: "Something went wrong" };
   }
 
-  revalidatePath('/[locale]/(main)', 'layout');
+  revalidatePath("/[locale]/(main)", "layout");
 };

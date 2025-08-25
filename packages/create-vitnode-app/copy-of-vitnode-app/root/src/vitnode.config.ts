@@ -1,23 +1,23 @@
-import { buildConfig, handleRequestConfig } from '@vitnode/core/vitnode.config';
-import { getRequestConfig } from 'next-intl/server';
+import { buildConfig, handleRequestConfig } from "@vitnode/core/vitnode.config";
+import { getRequestConfig } from "next-intl/server";
 
 export const vitNodeConfig = buildConfig({
   metadata: {
-    title: 'VitNode',
-    shortTitle: 'VitNode',
+    title: "VitNode",
+    shortTitle: "VitNode",
   },
   plugins: [],
   i18n: {
     locales: [
       {
-        code: 'en',
-        name: 'English',
+        code: "en",
+        name: "English",
       },
     ],
-    defaultLocale: 'en',
+    defaultLocale: "en",
   },
   theme: {
-    defaultTheme: 'light',
+    defaultTheme: "light",
   },
 });
 

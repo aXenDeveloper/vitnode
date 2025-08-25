@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { AlertCircle } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { AlertCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 
-import { AutoForm } from '@/components/form/auto-form';
-import { AutoFormInput } from '@/components/form/fields/input';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Link } from '@/lib/navigation';
+import { AutoForm } from "@/components/form/auto-form";
+import { AutoFormInput } from "@/components/form/fields/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Link } from "@/lib/navigation";
 
-import { useFormSignIn } from './use-form';
+import { useFormSignIn } from "./use-form";
 
 export const FormSignIn = ({
   isAdmin,
@@ -17,7 +17,7 @@ export const FormSignIn = ({
   isAdmin?: boolean;
   isEmail: boolean;
 }) => {
-  const t = useTranslations('core.auth.sign_in');
+  const t = useTranslations("core.auth.sign_in");
   const { onSubmit, error, formSchema } = useFormSignIn({ isAdmin });
 
   return (
@@ -33,23 +33,23 @@ export const FormSignIn = ({
       <AutoForm
         fields={[
           {
-            id: 'email',
+            id: "email",
             component: props => (
-              <AutoFormInput label={t('email.label')} {...props} />
+              <AutoFormInput label={t("email.label")} {...props} />
             ),
           },
           {
-            id: 'password',
+            id: "password",
             component: props => (
               <AutoFormInput
-                label={t('password.label')}
+                label={t("password.label")}
                 labelRight={
                   isEmail ? (
                     <Link
                       className="text-primary hover:underline"
                       href="/login/reset-password"
                     >
-                      {t('password.reset')}
+                      {t("password.reset")}
                     </Link>
                   ) : undefined
                 }
@@ -62,8 +62,8 @@ export const FormSignIn = ({
         formSchema={formSchema}
         onSubmit={onSubmit}
         submitButtonProps={{
-          className: 'w-full',
-          children: t('submit'),
+          className: "w-full",
+          children: t("submit"),
         }}
       />
     </div>

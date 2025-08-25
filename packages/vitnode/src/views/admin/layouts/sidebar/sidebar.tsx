@@ -1,12 +1,12 @@
-import { LogoVitNode } from '@/components/logo-vitnode';
+import { LogoVitNode } from "@/components/logo-vitnode";
 import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
-} from '@/components/ui/sidebar';
-import { Link } from '@/lib/navigation';
+} from "@/components/ui/sidebar";
+import { Link } from "@/lib/navigation";
 
-import { NavSidebarAdmin } from './nav/nav';
+import { NavSidebarAdmin } from "./nav/nav";
 
 export const SidebarAdmin = ({
   pluginNav,

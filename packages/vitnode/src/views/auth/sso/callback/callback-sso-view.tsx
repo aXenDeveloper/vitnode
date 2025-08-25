@@ -1,10 +1,10 @@
-import { getTranslations } from 'next-intl/server';
+import { getTranslations } from "next-intl/server";
 
-import { I18nProvider } from '@/components/i18n-provider';
-import { ErrorView } from '@/views/error/error-view';
+import { I18nProvider } from "@/components/i18n-provider";
+import { ErrorView } from "@/views/error/error-view";
 
-import { getMiddlewareApi } from '../../../../lib/api/get-middleware-api';
-import { ClientCallbackSSO } from './client/client';
+import { getMiddlewareApi } from "../../../../lib/api/get-middleware-api";
+import { ClientCallbackSSO } from "./client/client";
 
 export const CallbackSSOView = async ({
   providerId,
@@ -14,18 +14,18 @@ export const CallbackSSOView = async ({
   searchParams: Record<string, string>;
 }) => {
   const [t, { sso }] = await Promise.all([
-    getTranslations('core.auth.sso'),
+    getTranslations("core.auth.sso"),
     getMiddlewareApi(),
   ]);
 
-  if (error === 'access_denied') {
-    return <ErrorView code={403} customDescription={t('access_denied')} />;
+  if (error === "access_denied") {
+    return <ErrorView code={403} customDescription={t("access_denied")} />;
   }
 
   return (
-    <I18nProvider namespaces={['core.auth.sso']}>
-      {error === 'access_denied' ? (
-        <ErrorView code={403} customDescription={t('access_denied')} />
+    <I18nProvider namespaces={["core.auth.sso"]}>
+      {error === "access_denied" ? (
+        <ErrorView code={403} customDescription={t("access_denied")} />
       ) : (
         <ClientCallbackSSO
           code={code}

@@ -1,12 +1,12 @@
-import { Badge } from '@/components/ui/badge';
+import { Badge } from "@/components/ui/badge";
 
 export const BadgeStatus = ({ statusCode }: { statusCode: number }) => {
-  let variant: 'default' | 'secondary' | 'destructive' = 'secondary';
+  let variant: "default" | "secondary" | "destructive" = "secondary";
 
   if (statusCode >= 200 && statusCode < 300) {
-    variant = 'default';
+    variant = "default";
   } else if (statusCode >= 400) {
-    variant = 'destructive';
+    variant = "destructive";
   }
 
   return <Badge variant={variant}>{statusCode}</Badge>;

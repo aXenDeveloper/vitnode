@@ -1,19 +1,19 @@
-import { cookies } from 'next/headers';
-import { getTranslations } from 'next-intl/server';
+import { cookies } from "next/headers";
+import { getTranslations } from "next-intl/server";
 
-import { ThemeSwitcher } from '@/components/switchers/themes/theme-switcher';
+import { ThemeSwitcher } from "@/components/switchers/themes/theme-switcher";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from '@/components/ui/sidebar';
-import { getSessionAdminApi } from '@/lib/api/get-session-admin-api';
-import { I18nProvider } from '../../../components/i18n-provider';
-import { LanguageSwitcher } from '../../../components/switchers/langs/language-swietcher';
-import type { VitNodeConfig } from '../../../vitnode.config';
-import type { NavAdminParent } from './sidebar/nav/nav';
-import { SidebarAdmin } from './sidebar/sidebar';
-import { UserBarAdmin } from './user-bar/user-bar';
+} from "@/components/ui/sidebar";
+import { getSessionAdminApi } from "@/lib/api/get-session-admin-api";
+import { I18nProvider } from "../../../components/i18n-provider";
+import { LanguageSwitcher } from "../../../components/switchers/langs/language-swietcher";
+import type { VitNodeConfig } from "../../../vitnode.config";
+import type { NavAdminParent } from "./sidebar/nav/nav";
+import { SidebarAdmin } from "./sidebar/sidebar";
+import { UserBarAdmin } from "./user-bar/user-bar";
 
 export interface AdminLayoutProps {
   children: React.ReactNode;
@@ -29,8 +29,8 @@ export const AdminLayout = async ({
   const session = await getSessionAdminApi();
   const cookieStore = await cookies();
   const defaultOpen =
-    !cookieStore.get('vitnode_admin_sidebar_state') ||
-    cookieStore.get('vitnode_admin_sidebar_state')?.value === 'true';
+    !cookieStore.get("vitnode_admin_sidebar_state") ||
+    cookieStore.get("vitnode_admin_sidebar_state")?.value === "true";
   if (!session) return null;
 
   const pluginNav: NavAdminParent[] = vitNodeConfig.plugins
@@ -53,7 +53,7 @@ export const AdminLayout = async ({
     }));
 
   return (
-    <I18nProvider namespaces={['admin.global']}>
+    <I18nProvider namespaces={["admin.global"]}>
       <SidebarProvider defaultOpen={defaultOpen}>
         <SidebarAdmin pluginNav={pluginNav} />
         <SidebarInset>

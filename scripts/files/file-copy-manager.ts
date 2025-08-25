@@ -1,66 +1,66 @@
 /** biome-ignore-all lint/suspicious/noConsole: <errors> */
-import { existsSync, statSync } from 'node:fs';
-import { join } from 'node:path';
-import type { EnvironmentConfig } from '../environment.ts';
+import { existsSync, statSync } from "node:fs";
+import { join } from "node:path";
+import type { EnvironmentConfig } from "../environment.ts";
 import {
   copyDirectoryExcludingPlugins,
   copyFile,
   validatePath,
-} from './file-system.ts';
+} from "./file-system.ts";
 
 export class FileCopyManager {
   constructor(private env: EnvironmentConfig) {}
 
   async init(): Promise<void> {
-    const sourcePath = join(this.env.WORKSPACE, 'apps', 'docs');
+    const sourcePath = join(this.env.WORKSPACE, "apps", "docs");
     const destPath = join(
       this.env.WORKSPACE,
-      'packages',
-      'create-vitnode-app',
-      'copy-of-vitnode-app',
-      'root',
+      "packages",
+      "create-vitnode-app",
+      "copy-of-vitnode-app",
+      "root",
     );
     const singleAppApiDestPath = join(
       this.env.WORKSPACE,
-      'packages',
-      'create-vitnode-app',
-      'copy-of-vitnode-app',
-      'api-single-app',
+      "packages",
+      "create-vitnode-app",
+      "copy-of-vitnode-app",
+      "api-single-app",
     );
 
-    if (!validatePath(sourcePath, 'web app directory')) {
-      throw new Error('Required paths not found');
+    if (!validatePath(sourcePath, "web app directory")) {
+      throw new Error("Required paths not found");
     }
 
     await this.copyFiles(sourcePath, destPath, [
-      'src/app/[locale]/(main)/[...rest]',
-      'src/app/[locale]/(main)/not-found.tsx',
-      'src/app/[locale]/admin',
-      'src/app/favicon.ico',
-      'src/app/global-error.tsx',
-      'src/app/layout.tsx',
-      'src/app/not-found.tsx',
-      'postcss.config.mjs',
-      '.prettierrc.mjs',
+      "src/app/[locale]/(main)/[...rest]",
+      "src/app/[locale]/(main)/not-found.tsx",
+      "src/app/[locale]/admin",
+      "src/app/favicon.ico",
+      "src/app/global-error.tsx",
+      "src/app/layout.tsx",
+      "src/app/not-found.tsx",
+      "postcss.config.mjs",
+      ".prettierrc.mjs",
     ]);
 
-    const apiSourcePath = join(this.env.WORKSPACE, 'apps', 'api');
+    const apiSourcePath = join(this.env.WORKSPACE, "apps", "api");
     const apiDestPath = join(
       this.env.WORKSPACE,
-      'packages',
-      'create-vitnode-app',
-      'copy-of-vitnode-app',
-      'api',
+      "packages",
+      "create-vitnode-app",
+      "copy-of-vitnode-app",
+      "api",
     );
 
     await this.copyFiles(apiSourcePath, apiDestPath, [
-      'tsconfig.json',
-      'drizzle.config.ts',
+      "tsconfig.json",
+      "drizzle.config.ts",
     ]);
 
     await this.copyFiles(sourcePath, singleAppApiDestPath, [
-      'src/app/api/[...route]',
-      'drizzle.config.ts',
+      "src/app/api/[...route]",
+      "drizzle.config.ts",
     ]);
   }
 
@@ -88,7 +88,7 @@ export class FileCopyManager {
   copyFiles(sourcePath: string, destPath: string, filesToCopy: string[]) {
     // Handle special files with different names
     const specialFiles = [
-      { source: '.gitignore', dest: '.gitignore_template' },
+      { source: ".gitignore", dest: ".gitignore_template" },
     ];
 
     for (const relativePath of filesToCopy) {

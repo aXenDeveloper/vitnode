@@ -1,19 +1,19 @@
-import { HTTPException } from 'hono/http-exception';
-import { z } from 'zod';
+import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
 
-import { buildRoute } from '@/api/lib/route';
-import { CONFIG_PLUGIN } from '@/config';
+import { buildRoute } from "@/api/lib/route";
+import { CONFIG_PLUGIN } from "@/config";
 
 export const sessionAdminRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'get',
-    description: 'Verify admin session',
-    path: '/session',
+    method: "get",
+    description: "Verify admin session",
+    path: "/session",
     responses: {
       200: {
         content: {
-          'application/json': {
+          "application/json": {
             schema: z.object({
               user: z.object({
                 id: z.number(),
@@ -31,15 +31,15 @@ export const sessionAdminRoute = buildRoute({
             }),
           },
         },
-        description: 'User',
+        description: "User",
       },
       403: {
-        description: 'Access Denied',
+        description: "Access Denied",
       },
     },
   },
   handler: c => {
-    const user = c.get('admin')?.user;
+    const user = c.get("admin")?.user;
     if (!user) throw new HTTPException(403);
 
     return c.json({
