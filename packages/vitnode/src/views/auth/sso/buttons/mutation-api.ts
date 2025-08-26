@@ -1,14 +1,14 @@
-'use server';
+"use server";
 
-import { usersModule } from '@/api/modules/users/users.module';
-import { fetcher } from '@/lib/fetcher';
-import { redirect } from '@/lib/navigation';
+import { usersModule } from "@/api/modules/users/users.module";
+import { fetcher } from "@/lib/fetcher";
+import { redirect } from "@/lib/navigation";
 
 export const mutationApi = async (providerId: string) => {
   const res = await fetcher(usersModule, {
-    path: '/{providerId}',
-    method: 'post',
-    module: 'users/sso',
+    path: "/{providerId}",
+    method: "post",
+    module: "users/sso",
     args: {
       params: {
         providerId,
@@ -18,7 +18,7 @@ export const mutationApi = async (providerId: string) => {
   });
 
   if (res.status !== 200) {
-    return { message: 'Something is wrong' };
+    return { message: "Something is wrong" };
   }
 
   const data = await res.json();

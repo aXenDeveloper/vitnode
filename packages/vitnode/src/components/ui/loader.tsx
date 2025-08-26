@@ -1,6 +1,6 @@
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from "lucide-react";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 export const Loader = ({
   className,
@@ -10,12 +10,12 @@ export const Loader = ({
   small?: boolean;
 }) => {
   if (small) {
-    return <Loader2 className={cn('size-5 animate-spin', className)} />;
+    return <Loader2 className={cn("size-5 animate-spin", className)} />;
   }
 
   return (
-    <div className={cn('flex items-center justify-center', className)}>
-      <Loader2 className={cn('size-10 animate-spin')} />
+    <div className={cn("flex items-center justify-center", className)}>
+      <Loader2 className={cn("size-10 animate-spin")} />
     </div>
   );
 };

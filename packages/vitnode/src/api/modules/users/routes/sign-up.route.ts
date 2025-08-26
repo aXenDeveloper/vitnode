@@ -1,27 +1,27 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { buildRoute } from '@/api/lib/route';
-import { PasswordModel } from '@/api/models/password';
-import { UserModel } from '@/api/models/user';
-import { CONFIG_PLUGIN } from '@/config';
+import { buildRoute } from "@/api/lib/route";
+import { PasswordModel } from "@/api/models/password";
+import { UserModel } from "@/api/models/user";
+import { CONFIG_PLUGIN } from "@/config";
 
-import { SessionModel } from '../../../models/session';
+import { SessionModel } from "../../../models/session";
 
 const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 
 export const zodSignUpSchema = z.object({
   email: z.email().toLowerCase().openapi({
-    example: 'test@test.com',
+    example: "test@test.com",
   }),
   name: z
     .string()
-    .openapi({ example: 'test' })
+    .openapi({ example: "test" })
     .min(3)
     .refine(val => nameRegex.test(val), {
-      message: 'Invalid name',
+      message: "Invalid name",
     }),
   password: z.string().min(8).openapi({
-    example: 'Test123!',
+    example: "Test123!",
   }),
   newsletter: z.boolean().default(false).optional(),
 });
@@ -29,15 +29,15 @@ export const zodSignUpSchema = z.object({
 export const signUpRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'post',
-    description: 'Create a new user',
-    path: '/sign_up',
+    method: "post",
+    description: "Create a new user",
+    path: "/sign_up",
     withCaptcha: true,
     request: {
       body: {
         required: true,
         content: {
-          'application/json': {
+          "application/json": {
             schema: zodSignUpSchema,
           },
         },
@@ -46,7 +46,7 @@ export const signUpRoute = buildRoute({
     responses: {
       201: {
         content: {
-          'application/json': {
+          "application/json": {
             schema: z.object({
               id: z.number(),
               emailVerified: z.boolean(),
@@ -54,22 +54,22 @@ export const signUpRoute = buildRoute({
             }),
           },
         },
-        description: 'User created',
+        description: "User created",
       },
       400: {
-        description: 'Bad Request',
+        description: "Bad Request",
       },
       409: {
-        description: 'Email or name already exists',
+        description: "Email or name already exists",
       },
     },
   },
   handler: async c => {
     const hashedPassword = await new PasswordModel().encryptPassword(
-      c.req.valid('json').password,
+      c.req.valid("json").password,
     );
     const data = await new UserModel().signUp(
-      { ...c.req.valid('json'), hashedPassword },
+      { ...c.req.valid("json"), hashedPassword },
       c,
     );
 

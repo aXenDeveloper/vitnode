@@ -11,8 +11,6 @@
     "dev:email": "email dev --dir src/emails",
     "build": "tsc && tsc-alias -p tsconfig.json",
     "start": "node dist/index.js",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
     "drizzle-kit": "drizzle-kit"
   },
   "dependencies": {
@@ -34,9 +32,8 @@
     "@types/node": "^24.3.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
-    "@vitnode/eslint-config": "workspace:*",
+    "@vitnode/config": "workspace:*",
     "dotenv": "^17.2.1",
-    "eslint": "^9.33.0",
     "react-email": "^4.2.8",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.20.4",

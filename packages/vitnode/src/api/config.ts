@@ -1,21 +1,18 @@
-import type { OpenAPIHono } from '@hono/zod-openapi';
-import type { Context, Env, Schema } from 'hono';
-
-import { swaggerUI } from '@hono/swagger-ui';
-import { cors } from 'hono/cors';
-import { csrf } from 'hono/csrf';
-import { HTTPException } from 'hono/http-exception';
-
-import type { VitNodeApiConfig } from '@/vitnode.config';
-
-import { newBuildPluginApiCore } from '@/api/plugin';
-import { CONFIG_PLUGIN } from '@/config';
+import { swaggerUI } from "@hono/swagger-ui";
+import type { OpenAPIHono } from "@hono/zod-openapi";
+import type { Context, Env, Schema } from "hono";
+import { cors } from "hono/cors";
+import { csrf } from "hono/csrf";
+import { HTTPException } from "hono/http-exception";
+import { newBuildPluginApiCore } from "@/api/plugin";
+import { CONFIG_PLUGIN } from "@/config";
+import type { VitNodeApiConfig } from "@/vitnode.config";
 
 import {
   globalAdminMiddleware,
   globalMiddleware,
-} from './middlewares/global.middleware';
-import { rateLimiterMiddleware } from './middlewares/rate-limiter.middleware';
+} from "./middlewares/global.middleware";
+import { rateLimiterMiddleware } from "./middlewares/rate-limiter.middleware";
 
 interface CORSOptions {
   allowHeaders?: string[];
@@ -45,19 +42,19 @@ export function VitNodeAPI({
   csrf?: CSRFOptions;
   vitNodeApiConfig: VitNodeApiConfig;
 }) {
-  app.doc('/swagger/doc', {
-    openapi: '3.0.0',
+  app.doc("/swagger/doc", {
+    openapi: "3.0.0",
     info: {
       version: CONFIG_PLUGIN.version,
-      title: 'VitNode API',
+      title: "VitNode API",
     },
   });
   app.use(cors(corsOptions));
   app.use(csrf(csrfOptions));
-  app.use('*', rateLimiterMiddleware(vitNodeApiConfig.rateLimiter));
-  app.get('/swagger', swaggerUI({ url: `/api/swagger/doc` }));
+  app.use("*", rateLimiterMiddleware(vitNodeApiConfig.rateLimiter));
+  app.get("/swagger", swaggerUI({ url: "/api/swagger/doc" }));
   app.use(
-    '*',
+    "*",
     globalMiddleware({
       pathToMessages: vitNodeApiConfig.pathToMessages,
       email: vitNodeApiConfig.email,
@@ -69,8 +66,8 @@ export function VitNodeAPI({
     }),
   );
   app.use(async (c, next) => {
-    if (c.req.path.includes('/admin/')) {
-      return globalAdminMiddleware()(c, next);
+    if (c.req.path.includes("/admin/")) {
+      return await globalAdminMiddleware()(c, next);
     }
 
     return next();
@@ -81,12 +78,12 @@ export function VitNodeAPI({
       return error.getResponse();
     }
 
-    await c.get('log').error(`Unhandled error: ${error.message}`);
+    await c.get("log").error(`Unhandled error: ${error.message}`);
 
     return new Response(
-      process.env.NODE_ENV === 'development'
+      process.env.NODE_ENV === "development"
         ? error.message
-        : 'Internal Server Error',
+        : "Internal Server Error",
       {
         status: 500,
       },

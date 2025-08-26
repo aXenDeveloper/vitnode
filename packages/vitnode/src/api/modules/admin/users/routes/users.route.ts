@@ -1,30 +1,30 @@
-import { z } from '@hono/zod-openapi';
+import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from '@/api/lib/route';
+import { buildRoute } from "@/api/lib/route";
 import {
   withPagination,
   zodPaginationPageInfo,
   zodPaginationQuery,
-} from '@/api/lib/with-pagination';
-import { CONFIG_PLUGIN } from '@/config';
-import { core_users } from '@/database/users';
+} from "@/api/lib/with-pagination";
+import { CONFIG_PLUGIN } from "@/config";
+import { core_users } from "@/database/users";
 
 export const usersAdminRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'get',
-    description: 'Get list of all users (Admin only)',
-    path: '/list',
+    method: "get",
+    description: "Get list of all users (Admin only)",
+    path: "/list",
     request: {
       query: zodPaginationQuery.extend({
-        order: z.enum(['asc', 'desc']).optional(),
-        orderBy: z.enum(['id', 'name', 'email', 'createdAt']).optional(),
+        order: z.enum(["asc", "desc"]).optional(),
+        orderBy: z.enum(["id", "name", "email", "createdAt"]).optional(),
       }),
     },
     responses: {
       200: {
         content: {
-          'application/json': {
+          "application/json": {
             schema: z.object({
               edges: z.array(
                 z.object({
@@ -45,15 +45,15 @@ export const usersAdminRoute = buildRoute({
             }),
           },
         },
-        description: 'List of users',
+        description: "List of users",
       },
       403: {
-        description: 'Access Denied',
+        description: "Access Denied",
       },
     },
   },
   handler: async c => {
-    const query = c.req.valid('query');
+    const query = c.req.valid("query");
     const data = await withPagination({
       params: {
         query,
@@ -61,7 +61,7 @@ export const usersAdminRoute = buildRoute({
       primaryCursor: core_users.id,
       query: async ({ limit, where, orderBy }) =>
         await c
-          .get('db')
+          .get("db")
           .select({
             id: core_users.id,
             name: core_users.name,
@@ -84,7 +84,7 @@ export const usersAdminRoute = buildRoute({
         column: query.orderBy
           ? core_users[query.orderBy]
           : core_users.createdAt,
-        order: query.order ?? 'desc',
+        order: query.order ?? "desc",
       },
       c,
     });

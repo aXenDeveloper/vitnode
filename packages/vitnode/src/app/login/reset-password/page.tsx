@@ -1,8 +1,8 @@
-import type { Metadata } from 'next/dist/types';
+import type { Metadata } from "next/dist/types";
 
-import { getTranslations } from 'next-intl/server';
+import { getTranslations } from "next-intl/server";
 
-import { PasswordResetView } from '@/views/auth/password-reset/password-reset-view';
+import { PasswordResetView } from "@/views/auth/password-reset/password-reset-view";
 
 export const generateMetadata = async ({
   params,
@@ -12,11 +12,11 @@ export const generateMetadata = async ({
   const { locale } = await params;
   const t = await getTranslations({
     locale,
-    namespace: 'core.auth.reset_password',
+    namespace: "core.auth.reset_password",
   });
 
   return {
-    title: t('title'),
+    title: t("title"),
   };
 };
 

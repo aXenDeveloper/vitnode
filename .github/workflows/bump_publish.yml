@@ -12,7 +12,7 @@ on:
           - stable
           - release-candidate
       type:
-        description: 'Type of package to publish'
+        description: "Type of package to publish"
         required: true
         type: choice
         options:
@@ -20,7 +20,7 @@ on:
           - minor
           - major
       mode:
-        description: 'Mode of package to publish'
+        description: "Mode of package to publish"
         required: true
         type: choice
         options:
@@ -28,13 +28,13 @@ on:
           - bump
           - publish
       skip_release_github_patch_notes:
-        description: 'Skip generating release notes for GitHub patch notes?'
+        description: "Skip generating release notes for GitHub patch notes?"
         required: false
         type: boolean
 
 jobs:
   bump-version:
-    name: 'Bump Version'
+    name: "Bump Version"
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -57,7 +57,7 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          registry-url: 'https://registry.npmjs.org/'
+          registry-url: "https://registry.npmjs.org/"
           node-version: 22
 
       - name: Install dependencies
@@ -82,21 +82,21 @@ jobs:
 
       - name: Publish canary
         if: ${{ (github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish') && github.event.inputs.release == 'canary' }}
-        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/eslint-config --filter @vitnode/blog --tag canary --no-git-checks --access public
+        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/config --filter @vitnode/blog --tag canary --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish release candidate
         if: ${{ (github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish') && github.event.inputs.release == 'release-candidate' }}
-        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/eslint-config --filter @vitnode/blog --tag rc --no-git-checks --access public
+        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/config --filter @vitnode/blog --tag rc --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish stable
         if: ${{ (github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish') && github.event.inputs.release == 'stable' }}
-        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/eslint-config --filter @vitnode/blog --tag latest --no-git-checks --access public
+        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/config --filter @vitnode/blog --tag latest --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true

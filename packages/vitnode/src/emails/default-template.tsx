@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/dot-notation */
 import {
   Body,
   Container,
@@ -11,17 +10,35 @@ import {
   Tailwind,
   type TailwindConfig,
   Text,
-} from '@react-email/components';
+} from "@react-email/components";
 
-import type { EmailModelSendArgs } from '@/api/models/email';
+import type { EmailModelSendArgs } from "@/api/models/email";
 
-import { CONFIG } from '../lib/config';
+import { CONFIG } from "../lib/config";
+
+DefaultTemplateEmail.PreviewProps = {
+  children: "This is a preview text for the email template.",
+  templateProps: {
+    metadata: {
+      title: "VitNode - Email Template",
+      shortTitle: "VitNode",
+      url: CONFIG.web.href,
+    },
+    logo: {
+      src: "http://localhost:3000/logo_vitnode_dark.png",
+    },
+  },
+  i18n: {
+    messages: {},
+    locale: "en",
+  },
+} satisfies DefaultTemplateEmailProps & { children: React.ReactNode };
 
 export interface DefaultTemplateEmailProps
-  extends Pick<EmailModelSendArgs, 'user'> {
+  extends Pick<EmailModelSendArgs, "user"> {
   i18n: {
     locale: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: <any needed>
     messages: Record<string, any>;
   };
   templateProps: {
@@ -40,6 +57,7 @@ export interface DefaultTemplateEmailProps
   };
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
 export default function DefaultTemplateEmail({
   children,
   i18n: { locale },
@@ -59,61 +77,61 @@ export default function DefaultTemplateEmail({
               colors: {
                 ...tailwindConfig?.theme?.extend?.colors,
                 background:
-                  tailwindConfig?.theme?.extend?.colors?.['background'] ??
-                  '#edf2f8',
+                  tailwindConfig?.theme?.extend?.colors?.["background"] ??
+                  "#edf2f8",
                 foreground:
-                  tailwindConfig?.theme?.extend?.colors?.['foreground'] ??
-                  '#0e1216',
+                  tailwindConfig?.theme?.extend?.colors?.["foreground"] ??
+                  "#0e1216",
                 card:
-                  tailwindConfig?.theme?.extend?.colors?.['card'] ?? '#ffffff',
-                'card-foreground':
-                  tailwindConfig?.theme?.extend?.colors?.['card-foreground'] ??
-                  '#171b1f',
+                  tailwindConfig?.theme?.extend?.colors?.["card"] ?? "#ffffff",
+                "card-foreground":
+                  tailwindConfig?.theme?.extend?.colors?.["card-foreground"] ??
+                  "#171b1f",
                 popover:
-                  tailwindConfig?.theme?.extend?.colors?.['popover'] ??
-                  '#ffffff',
-                'popover-foreground':
+                  tailwindConfig?.theme?.extend?.colors?.["popover"] ??
+                  "#ffffff",
+                "popover-foreground":
                   tailwindConfig?.theme?.extend?.colors?.[
-                    'popover-foreground'
-                  ] ?? '#171b1f',
+                    "popover-foreground"
+                  ] ?? "#171b1f",
                 primary:
-                  tailwindConfig?.theme?.extend?.colors?.['primary'] ??
-                  '#3160c0',
-                'primary-foreground':
+                  tailwindConfig?.theme?.extend?.colors?.["primary"] ??
+                  "#3160c0",
+                "primary-foreground":
                   tailwindConfig?.theme?.extend?.colors?.[
-                    'primary-foreground'
-                  ] ?? '#fafafa',
+                    "primary-foreground"
+                  ] ?? "#fafafa",
                 secondary:
-                  tailwindConfig?.theme?.extend?.colors?.['secondary'] ??
-                  '#f4f9ff',
-                'secondary-foreground':
+                  tailwindConfig?.theme?.extend?.colors?.["secondary"] ??
+                  "#f4f9ff",
+                "secondary-foreground":
                   tailwindConfig?.theme?.extend?.colors?.[
-                    'secondary-foreground'
-                  ] ?? '#1e2226',
+                    "secondary-foreground"
+                  ] ?? "#1e2226",
                 muted:
-                  tailwindConfig?.theme?.extend?.colors?.['muted'] ?? '#eaeff5',
-                'muted-foreground':
-                  tailwindConfig?.theme?.extend?.colors?.['muted-foreground'] ??
-                  '#686c72',
+                  tailwindConfig?.theme?.extend?.colors?.["muted"] ?? "#eaeff5",
+                "muted-foreground":
+                  tailwindConfig?.theme?.extend?.colors?.["muted-foreground"] ??
+                  "#686c72",
                 accent:
-                  tailwindConfig?.theme?.extend?.colors?.['accent'] ??
-                  '#e0e5eb',
-                'accent-foreground':
+                  tailwindConfig?.theme?.extend?.colors?.["accent"] ??
+                  "#e0e5eb",
+                "accent-foreground":
                   tailwindConfig?.theme?.extend?.colors?.[
-                    'accent-foreground'
-                  ] ?? '#1e2226',
+                    "accent-foreground"
+                  ] ?? "#1e2226",
                 destructive:
-                  tailwindConfig?.theme?.extend?.colors?.['destructive'] ??
-                  '#de3b3f',
+                  tailwindConfig?.theme?.extend?.colors?.["destructive"] ??
+                  "#de3b3f",
                 warn:
-                  tailwindConfig?.theme?.extend?.colors?.['warn'] ?? '#906600',
+                  tailwindConfig?.theme?.extend?.colors?.["warn"] ?? "#906600",
                 border:
-                  tailwindConfig?.theme?.extend?.colors?.['border'] ??
-                  '#d9dfe4',
+                  tailwindConfig?.theme?.extend?.colors?.["border"] ??
+                  "#d9dfe4",
                 input:
-                  tailwindConfig?.theme?.extend?.colors?.['input'] ?? '#d9dfe4',
+                  tailwindConfig?.theme?.extend?.colors?.["input"] ?? "#d9dfe4",
                 ring:
-                  tailwindConfig?.theme?.extend?.colors?.['ring'] ?? '#5aa3ec',
+                  tailwindConfig?.theme?.extend?.colors?.["ring"] ?? "#5aa3ec",
               },
             },
           },
@@ -139,7 +157,7 @@ export default function DefaultTemplateEmail({
 
             <Section className="my-8 text-center text-sm">
               <Link className="text-muted-foreground" href={metadata.url}>
-                {metadata.shortTitle ?? metadata.title} ©{' '}
+                {metadata.shortTitle ?? metadata.title} ©{" "}
                 {new Date().getFullYear()}
               </Link>
             </Section>
@@ -149,21 +167,3 @@ export default function DefaultTemplateEmail({
     </Html>
   );
 }
-
-DefaultTemplateEmail.PreviewProps = {
-  children: 'This is a preview text for the email template.',
-  templateProps: {
-    metadata: {
-      title: 'VitNode - Email Template',
-      shortTitle: 'VitNode',
-      url: CONFIG.web.href,
-    },
-    logo: {
-      src: 'http://localhost:3000/logo_vitnode_dark.png',
-    },
-  },
-  i18n: {
-    messages: {},
-    locale: 'en',
-  },
-} satisfies DefaultTemplateEmailProps & { children: React.ReactNode };

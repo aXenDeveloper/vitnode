@@ -1,23 +1,21 @@
-'use client';
+"use client";
 
-import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
-import React from 'react';
+import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import React from "react";
 
-import { usePathname, useRouter } from '@/lib/navigation';
-
-import type { DataTable, DataTableTMin } from './data-table';
-
-import { Button } from '../ui/button';
-import { Loader } from '../ui/loader';
+import { usePathname, useRouter } from "@/lib/navigation";
+import { Button } from "../ui/button";
+import { Loader } from "../ui/loader";
+import type { DataTable, DataTableTMin } from "./data-table";
 
 export function OrderTableHeadDataTable<T extends DataTableTMin>({
   id,
   children,
   order: { defaultOrder },
-}: Pick<React.ComponentProps<typeof DataTable<T>>, 'order'> & {
+}: Pick<React.ComponentProps<typeof DataTable<T>>, "order"> & {
   children: React.ReactNode;
-  id: React.ComponentProps<typeof DataTable<T>>['columns'][0]['id'];
+  id: React.ComponentProps<typeof DataTable<T>>["columns"][0]["id"];
 }) {
   const [isPending, startTransition] = React.useTransition();
   const searchParams = useSearchParams();
@@ -25,11 +23,11 @@ export function OrderTableHeadDataTable<T extends DataTableTMin>({
   const { push } = useRouter();
 
   const currentOrderBy =
-    searchParams.get('orderBy') ?? defaultOrder.column.toString();
-  const currentOrder = searchParams.get('order') ?? defaultOrder.order;
+    searchParams.get("orderBy") ?? defaultOrder.column.toString();
+  const currentOrder = searchParams.get("order") ?? defaultOrder.order;
 
   const isActive = currentOrderBy === id.toString();
-  const nextOrder = isActive && currentOrder === 'asc' ? 'desc' : 'asc';
+  const nextOrder = isActive && currentOrder === "asc" ? "desc" : "asc";
 
   return (
     <Button
@@ -37,8 +35,8 @@ export function OrderTableHeadDataTable<T extends DataTableTMin>({
       onClick={() => {
         startTransition(() => {
           const params = new URLSearchParams(searchParams.toString());
-          params.set('orderBy', id.toString());
-          params.set('order', nextOrder);
+          params.set("orderBy", id.toString());
+          params.set("order", nextOrder);
           push(`${pathname}?${params.toString()}`, {
             scroll: false,
           });
@@ -48,17 +46,18 @@ export function OrderTableHeadDataTable<T extends DataTableTMin>({
       variant="ghost"
     >
       {children}
-      {isPending ? (
-        <Loader small />
-      ) : isActive ? (
-        currentOrder === 'asc' ? (
-          <ArrowUp />
-        ) : (
-          <ArrowDown />
-        )
-      ) : (
-        <ChevronsUpDown />
-      )}
+      {(() => {
+        if (isPending) {
+          return <Loader small />;
+        }
+        if (isActive) {
+          if (currentOrder === "asc") {
+            return <ArrowUp />;
+          }
+          return <ArrowDown />;
+        }
+        return <ChevronsUpDown />;
+      })()}
     </Button>
   );
 }

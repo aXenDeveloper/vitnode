@@ -1,6 +1,6 @@
-import type { VitNodeConfig } from '../../../vitnode.config';
+import type { VitNodeConfig } from "../../../vitnode.config";
 
-import { HeaderLayout } from './header/header';
+import { HeaderLayout } from "./header/header";
 
 export const ThemeLayout = ({
   children,
@@ -12,7 +12,7 @@ export const ThemeLayout = ({
 }) => {
   return (
     <>
-      <HeaderLayout logo={logo} vitNodeConfig={vitNodeConfig} />{' '}
+      <HeaderLayout logo={logo} vitNodeConfig={vitNodeConfig} />{" "}
       <main>{children}</main>
     </>
   );

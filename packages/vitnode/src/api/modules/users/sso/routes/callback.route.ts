@@ -1,16 +1,16 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { buildRoute } from '@/api/lib/route';
-import { SessionModel } from '@/api/models/session';
-import { SSOModel } from '@/api/models/sso';
-import { CONFIG_PLUGIN } from '@/config';
+import { buildRoute } from "@/api/lib/route";
+import { SessionModel } from "@/api/models/session";
+import { SSOModel } from "@/api/models/sso";
+import { CONFIG_PLUGIN } from "@/config";
 
 export const callbackRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'get',
-    description: 'SSO Callback',
-    path: '/{providerId}/callback',
+    method: "get",
+    description: "SSO Callback",
+    path: "/{providerId}/callback",
     request: {
       params: z.object({
         providerId: z.string(),
@@ -23,23 +23,23 @@ export const callbackRoute = buildRoute({
     responses: {
       200: {
         content: {
-          'application/json': {
+          "application/json": {
             schema: z.object({
               id: z.number(),
               token: z.string(),
             }),
           },
         },
-        description: 'URL',
+        description: "URL",
       },
       409: {
-        description: 'Email already exists',
+        description: "Email already exists",
       },
     },
   },
   handler: async c => {
-    const { providerId } = c.req.valid('param');
-    const { code, state } = c.req.valid('query');
+    const { providerId } = c.req.valid("param");
+    const { code, state } = c.req.valid("query");
     const sso = await new SSOModel(c).callback({ providerId, code, state });
     const { token } = await new SessionModel(c).createSessionByUserId(
       sso.userId,

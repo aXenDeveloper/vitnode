@@ -1,10 +1,10 @@
-import { relations } from 'drizzle-orm';
-import { index, pgTable } from 'drizzle-orm/pg-core';
+import { relations } from "drizzle-orm";
+import { index, pgTable } from "drizzle-orm/pg-core";
 
-import { core_users } from './users';
+import { core_users } from "./users";
 
 export const core_sessions = pgTable(
-  'core_sessions',
+  "core_sessions",
   t => ({
     id: t.serial().primaryKey(),
     token: t.varchar({ length: 255 }).notNull().unique(),
@@ -12,18 +12,18 @@ export const core_sessions = pgTable(
       .integer()
       .notNull()
       .references(() => core_users.id, {
-        onDelete: 'cascade',
+        onDelete: "cascade",
       }),
     createdAt: t.timestamp().notNull().defaultNow(),
     expiresAt: t.timestamp().notNull(),
     deviceId: t
       .integer()
       .references(() => core_sessions_known_devices.id, {
-        onDelete: 'cascade',
+        onDelete: "cascade",
       })
       .notNull(),
   }),
-  t => [index('core_sessions_user_id_idx').on(t.userId)],
+  t => [index("core_sessions_user_id_idx").on(t.userId)],
 ).enableRLS();
 
 export const core_sessions_relations = relations(core_sessions, ({ one }) => ({
@@ -38,7 +38,7 @@ export const core_sessions_relations = relations(core_sessions, ({ one }) => ({
 }));
 
 export const core_sessions_known_devices = pgTable(
-  'core_sessions_known_devices',
+  "core_sessions_known_devices",
   t => ({
     id: t.serial().primaryKey(),
     publicId: t.varchar({ length: 32 }).notNull().unique(),
@@ -46,7 +46,7 @@ export const core_sessions_known_devices = pgTable(
     userAgent: t.text().notNull(),
     lastSeen: t.timestamp().notNull().defaultNow(),
   }),
-  t => [index('core_sessions_known_devices_ip_address_idx').on(t.ipAddress)],
+  t => [index("core_sessions_known_devices_ip_address_idx").on(t.ipAddress)],
 ).enableRLS();
 
 export const core_sessions_known_devices_relations = relations(

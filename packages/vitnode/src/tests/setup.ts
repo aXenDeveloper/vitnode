@@ -1,4 +1,4 @@
-import '@testing-library/react';
+import "@testing-library/react";
 // import { expect, vi } from 'vitest';
 
 // Set up global mocks if needed

@@ -1,20 +1,20 @@
-import { z } from '@hono/zod-openapi';
+import { z } from "@hono/zod-openapi";
 
-import { buildRoute } from '@/api/lib/route';
-import { SessionModel } from '@/api/models/session';
-import { SessionAdminModel } from '@/api/models/session-admin';
-import { CONFIG_PLUGIN } from '@/config';
+import { buildRoute } from "@/api/lib/route";
+import { SessionModel } from "@/api/models/session";
+import { SessionAdminModel } from "@/api/models/session-admin";
+import { CONFIG_PLUGIN } from "@/config";
 
 export const signOutRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'delete',
-    description: 'Sign out the current admin',
-    path: '/sign_out',
+    method: "delete",
+    description: "Sign out the current admin",
+    path: "/sign_out",
     request: {
       body: {
         content: {
-          'application/json': {
+          "application/json": {
             schema: z.object({
               isAdmin: z.boolean().optional().openapi({
                 example: false,
@@ -26,15 +26,15 @@ export const signOutRoute = buildRoute({
     },
     responses: {
       200: {
-        description: 'User signed out',
+        description: "User signed out",
       },
       403: {
-        description: 'Access Denied',
+        description: "Access Denied",
       },
     },
   },
   handler: async c => {
-    const { isAdmin } = c.req.valid('json');
+    const { isAdmin } = c.req.valid("json");
     if (isAdmin) {
       await new SessionAdminModel(c).deleteSession();
 

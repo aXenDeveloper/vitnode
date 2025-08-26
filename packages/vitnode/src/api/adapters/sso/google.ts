@@ -1,11 +1,10 @@
-import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { HTTPException } from "hono/http-exception";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { z } from "zod";
 
-import { HTTPException } from 'hono/http-exception';
-import { z } from 'zod';
+import type { SSOApiPlugin } from "@/api/models/sso";
 
-import type { SSOApiPlugin } from '@/api/models/sso';
-
-import { getRedirectUri } from '@/api/models/sso';
+import { getRedirectUri } from "@/api/models/sso";
 
 export const GoogleSSOApiPlugin = ({
   clientId,
@@ -14,7 +13,7 @@ export const GoogleSSOApiPlugin = ({
   clientId: string | undefined;
   clientSecret: string | undefined;
 }): SSOApiPlugin => {
-  const id = 'google';
+  const id = "google";
   const redirectUri = getRedirectUri(id);
   const tokenSchema = z.object({
     access_token: z.string(),
@@ -29,22 +28,22 @@ export const GoogleSSOApiPlugin = ({
 
   return {
     id,
-    name: 'Google',
+    name: "Google",
     fetchToken: async code => {
-      if (!clientId || !clientSecret) {
-        throw new Error('Missing Google client ID or secret');
+      if (!(clientId && clientSecret)) {
+        throw new Error("Missing Google client ID or secret");
       }
 
-      const res = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
+      const res = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Accept: 'application/json',
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
         },
         body: new URLSearchParams({
           code,
           redirect_uri: redirectUri,
-          grant_type: 'authorization_code',
+          grant_type: "authorization_code",
           client_id: clientId,
           client_secret: clientSecret,
         }),
@@ -54,7 +53,7 @@ export const GoogleSSOApiPlugin = ({
         throw new HTTPException(
           +res.status.toString() as ContentfulStatusCode,
           {
-            message: 'Internal error requesting token',
+            message: "Internal error requesting token",
           },
         );
       }
@@ -62,14 +61,14 @@ export const GoogleSSOApiPlugin = ({
       const { data, error } = tokenSchema.safeParse(await res.json());
       if (error || !data) {
         throw new HTTPException(400, {
-          message: 'Invalid token response',
+          message: "Invalid token response",
         });
       }
 
       return data;
     },
     fetchUser: async ({ token_type, access_token }) => {
-      const res = await fetch('https://www.googleapis.com/oauth2/v1/userinfo', {
+      const res = await fetch("https://www.googleapis.com/oauth2/v1/userinfo", {
         headers: {
           Authorization: `${token_type} ${access_token}`,
         },
@@ -78,13 +77,13 @@ export const GoogleSSOApiPlugin = ({
       const { data, error } = userSchema.safeParse(dataFromRes);
       if (error || !data) {
         throw new HTTPException(400, {
-          message: 'Invalid user response',
+          message: "Invalid user response",
         });
       }
 
       if (!data.verified_email) {
         throw new HTTPException(400, {
-          message: 'Email not verified',
+          message: "Email not verified",
         });
       }
 
@@ -95,15 +94,15 @@ export const GoogleSSOApiPlugin = ({
     },
     getUrl: ({ state }) => {
       if (!clientId) {
-        throw new Error('Missing Google client ID');
+        throw new Error("Missing Google client ID");
       }
 
-      const url = new URL('https://accounts.google.com/o/oauth2/auth');
-      url.searchParams.set('client_id', clientId);
-      url.searchParams.set('redirect_uri', redirectUri);
-      url.searchParams.set('response_type', 'code');
-      url.searchParams.set('scope', 'openid profile email');
-      url.searchParams.set('state', state);
+      const url = new URL("https://accounts.google.com/o/oauth2/auth");
+      url.searchParams.set("client_id", clientId);
+      url.searchParams.set("redirect_uri", redirectUri);
+      url.searchParams.set("response_type", "code");
+      url.searchParams.set("scope", "openid profile email");
+      url.searchParams.set("state", state);
 
       return url.toString();
     },

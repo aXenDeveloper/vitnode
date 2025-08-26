@@ -1,5 +1,7 @@
-import type { DefaultValues } from 'react-hook-form';
-import type { z } from 'zod';
+import type { DefaultValues } from "react-hook-form";
+import type { z } from "zod";
+
+type NestedParamValue = InputParams[string] | undefined;
 
 export function getDefaults<T extends z.ZodType>(
   jsonSchema?: z.core.JSONSchema.JSONSchema,
@@ -21,7 +23,7 @@ export function getDefaults<T extends z.ZodType>(
     }
 
     // Case 2: The property is a nested object. Recurse into it.
-    if (prop.type === 'object' && prop.properties) {
+    if (prop.type === "object" && prop.properties) {
       const nestedDefaults = getDefaults(prop);
 
       // Only add the nested object if it contains default values.
@@ -51,6 +53,7 @@ export interface InputParams {
       };
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <it's complex and needs to be>
 export function getZodInputParams(
   jsonSchema?: z.core.JSONSchema.JSONSchema,
   parentRequired: string[] = [],
@@ -98,28 +101,28 @@ export function getZodInputParams(
 
     // 4. Determine the input type based on schema type and format
     switch (prop.type) {
-      case 'boolean':
-        fieldParams.type = 'checkbox';
+      case "boolean":
+        fieldParams.type = "checkbox";
         break;
-      case 'integer':
-      case 'number':
-        fieldParams.type = 'number';
+      case "integer":
+      case "number":
+        fieldParams.type = "number";
         break;
-      case 'string':
+      case "string":
         // Check format for special string types
-        if (prop.format === 'email') {
-          fieldParams.type = 'email';
-        } else if (key.toLowerCase().includes('password')) {
+        if (prop.format === "email") {
+          fieldParams.type = "email";
+        } else if (key.toLowerCase().includes("password")) {
           // Infer password type by key name for better UX
-          fieldParams.type = 'password';
+          fieldParams.type = "password";
         } else {
-          fieldParams.type = 'text';
+          fieldParams.type = "text";
         }
         break;
     }
 
     // 5. Handle nested objects by making a recursive call
-    if (prop.type === 'object') {
+    if (prop.type === "object") {
       // Pass the 'required' array from the nested object itself.
       extractedParams[key] = getZodInputParams(prop, prop.required);
     } else {
@@ -130,19 +133,17 @@ export function getZodInputParams(
   return extractedParams;
 }
 
-type NestedParamValue = InputParams[string] | undefined;
-
 export function getNestedParam(
   obj: InputParams,
   path: string,
 ): NestedParamValue {
   return path
-    .split('.')
+    .split(".")
     .reduce<NestedParamValue>(
       (acc: NestedParamValue, key: string): NestedParamValue => {
         if (
           acc &&
-          typeof acc === 'object' &&
+          typeof acc === "object" &&
           !Array.isArray(acc) &&
           key in acc
         ) {

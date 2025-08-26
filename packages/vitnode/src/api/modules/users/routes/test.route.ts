@@ -1,36 +1,36 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { buildRoute } from '@/api/lib/route';
-import { CONFIG_PLUGIN } from '@/config';
+import { buildRoute } from "@/api/lib/route";
+import { CONFIG_PLUGIN } from "@/config";
 
 export const testRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'post',
-    description: 'Test route',
-    path: '/test',
+    method: "post",
+    description: "Test route",
+    path: "/test",
     responses: {
       200: {
         content: {
-          'text/plain': {
+          "text/plain": {
             schema: z.string(),
           },
         },
-        description: 'User',
+        description: "User",
       },
       201: {
         content: {
-          'text/plain': {
+          "text/plain": {
             schema: z.string(),
           },
         },
-        description: 'User',
+        description: "User",
       },
     },
   },
   handler: async c => {
-    await c.get('log').warn('This is a test warn log');
+    await c.get("log").warn("This is a test warn log");
 
-    return c.text('test');
+    return c.text("test");
   },
 });

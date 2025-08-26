@@ -1,0 +1,37 @@
+{
+  "name": "@vitnode/config",
+  "version": "1.2.0-canary.52",
+  "description": "Biome, TypeScript (TSConfig) config for VitNode",
+  "author": "VitNode Team",
+  "license": "MIT",
+  "homepage": "https://vitnode.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aXenDeveloper/vitnode.git",
+    "directory": "packages/config"
+  },
+  "keywords": [
+    "vitnode",
+    "typescript",
+    "tsconfig",
+    "biome"
+  ],
+  "type": "module",
+  "exports": {
+    "./tsconfig": {
+      "import": "./tsconfig.json",
+      "default": "./tsconfig.json"
+    },
+    "./biome": {
+      "import": "./biome.json",
+      "default": "./biome.json"
+    }
+  },
+  "peerDependencies": {
+    "typescript": "5.9.x"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.2",
+    "typescript": "^5.9.2"
+  }
+}

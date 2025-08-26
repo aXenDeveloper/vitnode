@@ -1,21 +1,12 @@
-import { z } from '@hono/zod-openapi';
-import { buildRoute } from '@vitnode/core/api/lib/route';
-import { removeSpecialCharacters } from '@vitnode/core/lib/special-characters';
-import { eq } from 'drizzle-orm';
-import { HTTPException } from 'hono/http-exception';
+import { z } from "@hono/zod-openapi";
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import { removeSpecialCharacters } from "@vitnode/core/lib/special-characters";
+import { eq } from "drizzle-orm";
+import { HTTPException } from "hono/http-exception";
 
-import { CONFIG_PLUGIN } from '@/const';
-import { blog_categories } from '@/database/categories';
-import { blog_posts } from '@/database/posts';
-
-export const zodCreatePostSchema = z.object({
-  title: z
-    .string()
-    .min(3, 'Title must be at least 3 characters long')
-    .max(255, 'Title must not exceed 255 characters'),
-  content: z.string(),
-  categoryId: z.number(),
-});
+import { CONFIG_PLUGIN } from "@/const";
+import { blog_categories } from "@/database/categories";
+import { blog_posts } from "@/database/posts";
 
 const zodPostResponseSchema = z.object({
   id: z.number(),
@@ -27,15 +18,24 @@ const zodPostResponseSchema = z.object({
   updatedAt: z.date(),
 });
 
+export const zodCreatePostSchema = z.object({
+  title: z
+    .string()
+    .min(3, "Title must be at least 3 characters long")
+    .max(255, "Title must not exceed 255 characters"),
+  content: z.string(),
+  categoryId: z.number(),
+});
+
 export const createPostRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'post',
-    path: '/',
+    method: "post",
+    path: "/",
     request: {
       body: {
         content: {
-          'application/json': {
+          "application/json": {
             schema: zodCreatePostSchema,
           },
         },
@@ -44,27 +44,27 @@ export const createPostRoute = buildRoute({
     responses: {
       201: {
         content: {
-          'application/json': {
+          "application/json": {
             schema: zodPostResponseSchema,
           },
         },
-        description: 'Post created successfully',
+        description: "Post created successfully",
       },
       400: {
-        description: 'Bad request - Invalid input data',
+        description: "Bad request - Invalid input data",
       },
       404: {
-        description: 'Category not found',
+        description: "Category not found",
       },
     },
   },
   handler: async c => {
-    const { title, content, categoryId } = c.req.valid('json');
+    const { title, content, categoryId } = c.req.valid("json");
     const titleSeo = removeSpecialCharacters(title);
 
     // Check if category exists
     const [category] = await c
-      .get('db')
+      .get("db")
       .select({ id: blog_categories.id })
       .from(blog_categories)
       .where(eq(blog_categories.id, categoryId))
@@ -72,13 +72,13 @@ export const createPostRoute = buildRoute({
 
     if (!category) {
       throw new HTTPException(404, {
-        message: 'Category not found.',
+        message: "Category not found.",
       });
     }
 
     // Check if title SEO already exists
     const [titleSEODuplicate] = await c
-      .get('db')
+      .get("db")
       .select({ titleSeo: blog_posts.titleSeo })
       .from(blog_posts)
       .where(eq(blog_posts.titleSeo, titleSeo))
@@ -86,12 +86,12 @@ export const createPostRoute = buildRoute({
 
     if (titleSEODuplicate?.titleSeo === titleSeo) {
       throw new HTTPException(400, {
-        message: 'Post with this title already exists.',
+        message: "Post with this title already exists.",
       });
     }
 
     const [post] = await c
-      .get('db')
+      .get("db")
       .insert(blog_posts)
       .values({
         title,

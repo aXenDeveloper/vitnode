@@ -1,32 +1,31 @@
-'use client';
+"use client";
 
 // Source: https://github.com/fuma-nama/fumadocs/blob/dev/apps/docs/app/docs/%5B...slug%5D/page.client.tsx
 
-import { cva } from 'class-variance-authority';
-import { buttonVariants } from 'fumadocs-ui/components/ui/button';
+import { cva } from "class-variance-authority";
+import { buttonVariants } from "fumadocs-ui/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from 'fumadocs-ui/components/ui/popover';
-import { ChevronDown } from 'fumadocs-ui/internal/icons';
-import { cn } from 'fumadocs-ui/utils/cn';
-import { ExternalLinkIcon, MessageCircleIcon } from 'lucide-react';
-import React from 'react';
+} from "fumadocs-ui/components/ui/popover";
+import { ChevronDown } from "fumadocs-ui/internal/icons";
+import { cn } from "fumadocs-ui/utils/cn";
+import { ExternalLinkIcon, MessageCircleIcon } from "lucide-react";
 
 const optionVariants = cva(
-  'text-sm p-2 rounded-lg inline-flex items-center gap-2 hover:text-fd-accent-foreground hover:bg-fd-accent [&_svg]:size-4',
+  "text-sm p-2 rounded-lg inline-flex items-center gap-2 hover:text-fd-accent-foreground hover:bg-fd-accent [&_svg]:size-4",
 );
 
 export function ViewOptions(props: { githubUrl: string; markdownUrl: string }) {
-  const markdownUrl = new URL(props.markdownUrl, 'https://vitnode.com/');
+  const markdownUrl = new URL(props.markdownUrl, "https://vitnode.com/");
   const q = `Read ${markdownUrl}, I want to ask questions about it.`;
 
   const claude = `https://claude.ai/new?${new URLSearchParams({
     q,
   })}`;
   const gpt = `https://chatgpt.com/?${new URLSearchParams({
-    hints: 'search',
+    hints: "search",
     q,
   })}`;
   const t3 = `https://t3.chat/new?${new URLSearchParams({
@@ -38,9 +37,9 @@ export function ViewOptions(props: { githubUrl: string; markdownUrl: string }) {
       <PopoverTrigger
         className={cn(
           buttonVariants({
-            color: 'secondary',
-            size: 'sm',
-            className: 'gap-2',
+            color: "secondary",
+            size: "sm",
+            className: "gap-2",
           }),
         )}
       >
@@ -50,7 +49,7 @@ export function ViewOptions(props: { githubUrl: string; markdownUrl: string }) {
       <PopoverContent className="flex flex-col overflow-auto">
         {[
           {
-            title: 'Open in GitHub',
+            title: "Open in GitHub",
             href: props.githubUrl,
             icon: (
               <svg fill="currentColor" role="img" viewBox="0 0 24 24">
@@ -60,7 +59,7 @@ export function ViewOptions(props: { githubUrl: string; markdownUrl: string }) {
             ),
           },
           {
-            title: 'Open in ChatGPT',
+            title: "Open in ChatGPT",
             href: gpt,
             icon: (
               <svg
@@ -75,7 +74,7 @@ export function ViewOptions(props: { githubUrl: string; markdownUrl: string }) {
             ),
           },
           {
-            title: 'Open in Claude',
+            title: "Open in Claude",
             href: claude,
             icon: (
               <svg
@@ -90,7 +89,7 @@ export function ViewOptions(props: { githubUrl: string; markdownUrl: string }) {
             ),
           },
           {
-            title: 'Open in T3 Chat',
+            title: "Open in T3 Chat",
             href: t3,
             icon: <MessageCircleIcon />,
           },

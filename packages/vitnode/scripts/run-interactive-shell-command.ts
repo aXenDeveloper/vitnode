@@ -1,21 +1,21 @@
-import { spawn } from 'child_process';
+import { spawn } from "node:child_process";
 
 export const runInteractiveShellCommand = async (
   cmd: string,
   args: string[] = [],
 ) => {
-  return new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     const child = spawn(cmd, args, {
-      stdio: 'inherit',
+      stdio: "inherit",
       shell: true,
       env: process.env,
     });
 
-    child.on('error', error => {
+    child.on("error", error => {
       reject(error);
     });
 
-    child.on('close', code => {
+    child.on("close", code => {
       if (code !== 0) {
         reject(new Error(`Command failed with exit code ${code}`));
       } else {

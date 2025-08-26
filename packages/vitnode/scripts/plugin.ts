@@ -1,13 +1,13 @@
-/* eslint-disable no-console */
-import chokidar from 'chokidar';
+/** biome-ignore-all lint/suspicious/noConsole: <no need> */
 import {
   existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   unlinkSync,
-} from 'fs';
-import { basename, join, relative } from 'path';
+} from "node:fs";
+import { basename, join, relative } from "node:path";
+import chokidar from "chokidar";
 
 import {
   buildInitialRouteMap,
@@ -18,53 +18,37 @@ import {
   isDirectoryEmpty,
   routeKey,
   type SourceConfig,
-} from './shared/file-utils';
+} from "./shared/file-utils";
 
-export const processPlugin = ({ initMessage }: { initMessage: string }) => {
-  const pluginDir = process.cwd();
-  const repoRoot = findRepoRoot(pluginDir);
-  const localeRoot = findLocaleRoot(repoRoot);
-  const routeMap = buildInitialRouteMap(localeRoot);
+/**
+ * Helper: detect if an app path is web, api, or null
+ */
+const detectAppType = (appPath: string) => {
+  const hasWebConfig = existsSync(join(appPath, "src", "vitnode.config.ts"));
+  const hasApiConfig = existsSync(
+    join(appPath, "src", "vitnode.api.config.ts"),
+  );
 
-  // Get the package name from package.json for imports
-  let pluginName = basename(pluginDir);
-  try {
-    const packageJsonPath = join(pluginDir, 'package.json');
+  if (hasApiConfig && !hasWebConfig) return "api";
+  if (hasWebConfig) return "web";
+  return null;
+};
 
-    if (existsSync(packageJsonPath)) {
-      const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
-      pluginName = packageJson.name ?? '';
-    }
-  } catch (error) {
-    console.error(`\x1b[31mError reading package.json:\x1b[0m`, error);
-
-    return;
-  }
-
-  // Transform plugin name for path usage
-  const pluginPathName = pluginName.replace(/\//g, '-').replace(/@/g, '');
-
-  // Detect app types by checking for config files
-  const detectAppType = (appPath: string) => {
-    const hasWebConfig = existsSync(join(appPath, 'src', 'vitnode.config.ts'));
-    const hasApiConfig = existsSync(
-      join(appPath, 'src', 'vitnode.api.config.ts'),
-    );
-
-    if (hasApiConfig && !hasWebConfig) return 'api';
-    if (hasWebConfig) return 'web';
-
-    return null;
-  };
-
-  // Check if we're in a monorepo by looking for apps directories
-  const appsDir = join(repoRoot, 'apps');
+/**
+ * Helper: collect source/destination mappings for a plugin
+ */
+const collectSources = (
+  pluginDir: string,
+  repoRoot: string,
+  pluginName: string,
+  pluginPathName: string,
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
+): SourceConfig[] => {
+  const sources: SourceConfig[] = [];
+  const appsDir = join(repoRoot, "apps");
   const isMonorepo = existsSync(appsDir);
 
-  const sources: SourceConfig[] = [];
-
   if (isMonorepo) {
-    // Monorepo: scan all apps and detect their types
     const appDirs = existsSync(appsDir)
       ? readdirSync(appsDir, { withFileTypes: true })
           .filter(dirent => dirent.isDirectory())
@@ -72,109 +56,95 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
       : [];
 
     for (const appName of appDirs) {
-      const appPath = join(repoRoot, 'apps', appName);
+      const appPath = join(repoRoot, "apps", appName);
       const appType = detectAppType(appPath);
 
-      if (appType === 'web') {
-        // Web app: copy app, app_admin, and locales
-        const mainDest = join(
-          appPath,
-          'src',
-          'app',
-          '[locale]',
-          '(main)',
-          join('(plugins)', `(${pluginPathName})`),
-        );
-        const adminDest = join(
-          appPath,
-          'src',
-          'app',
-          '[locale]',
-          'admin',
-          '(auth)',
-          join('(plugins)', `(${pluginPathName})`),
-        );
-        const langDest = join(appPath, 'src', 'locales', pluginName);
-
+      if (appType === "web") {
         sources.push(
           {
-            sourceDir: join(pluginDir, 'src', 'app_admin'),
-            destinationDir: adminDest,
+            sourceDir: join(pluginDir, "src", "app_admin"),
+            destinationDir: join(
+              appPath,
+              "src",
+              "app",
+              "[locale]",
+              "admin",
+              "(auth)",
+              join("(plugins)", `(${pluginPathName})`),
+            ),
           },
           {
-            sourceDir: join(pluginDir, 'src', 'app'),
-            destinationDir: mainDest,
+            sourceDir: join(pluginDir, "src", "app"),
+            destinationDir: join(
+              appPath,
+              "src",
+              "app",
+              "[locale]",
+              "(main)",
+              join("(plugins)", `(${pluginPathName})`),
+            ),
           },
           {
-            sourceDir: join(pluginDir, 'src', 'locales'),
-            destinationDir: langDest,
+            sourceDir: join(pluginDir, "src", "locales"),
+            destinationDir: join(appPath, "src", "locales", pluginName),
           },
         );
-      } else if (appType === 'api') {
-        // API app: copy only locales
-        const apiLangDest = join(appPath, 'src', 'locales', pluginName);
-
+      } else if (appType === "api") {
         sources.push({
-          sourceDir: join(pluginDir, 'src', 'locales'),
-          destinationDir: apiLangDest,
+          sourceDir: join(pluginDir, "src", "locales"),
+          destinationDir: join(appPath, "src", "locales", pluginName),
         });
       }
     }
   } else {
-    // Standalone project: check if we're running from within an app directory
-    // or if we need to copy to the current working directory
     const cwd = process.cwd();
     const projectType = detectAppType(cwd);
 
-    if (projectType === 'web') {
-      // Web project: copy all files to current working directory
-      const mainDest = join(
-        cwd,
-        'src',
-        'app',
-        '[locale]',
-        '(main)',
-        join('(plugins)', `(${pluginPathName})`),
-      );
-      const adminDest = join(
-        cwd,
-        'src',
-        'app',
-        '[locale]',
-        'admin',
-        '(auth)',
-        join('(plugins)', `(${pluginPathName})`),
-      );
-      const langDest = join(cwd, 'src', 'locales', pluginName);
-
+    if (projectType === "web") {
       sources.push(
         {
-          sourceDir: join(pluginDir, 'src', 'app_admin'),
-          destinationDir: adminDest,
+          sourceDir: join(pluginDir, "src", "app_admin"),
+          destinationDir: join(
+            cwd,
+            "src",
+            "app",
+            "[locale]",
+            "admin",
+            "(auth)",
+            join("(plugins)", `(${pluginPathName})`),
+          ),
         },
         {
-          sourceDir: join(pluginDir, 'src', 'app'),
-          destinationDir: mainDest,
+          sourceDir: join(pluginDir, "src", "app"),
+          destinationDir: join(
+            cwd,
+            "src",
+            "app",
+            "[locale]",
+            "(main)",
+            join("(plugins)", `(${pluginPathName})`),
+          ),
         },
         {
-          sourceDir: join(pluginDir, 'src', 'locales'),
-          destinationDir: langDest,
+          sourceDir: join(pluginDir, "src", "locales"),
+          destinationDir: join(cwd, "src", "locales", pluginName),
         },
       );
-    } else if (projectType === 'api') {
-      // API project: copy only locales to current working directory
-      const langDest = join(cwd, 'src', 'locales', pluginName);
-
+    } else if (projectType === "api") {
       sources.push({
-        sourceDir: join(pluginDir, 'src', 'locales'),
-        destinationDir: langDest,
+        sourceDir: join(pluginDir, "src", "locales"),
+        destinationDir: join(cwd, "src", "locales", pluginName),
       });
     }
   }
 
-  // tell the copier about both trees
+  return sources;
+};
 
-  // Create destination directories if they don't exist and source directories are not empty
+/**
+ * Ensure destination directories exist for non-empty source dirs
+ */
+const ensureDestinationDirs = (sources: SourceConfig[]) => {
   for (const { sourceDir, destinationDir } of sources) {
     if (
       existsSync(sourceDir) &&
@@ -184,7 +154,17 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
       mkdirSync(destinationDir, { recursive: true });
     }
   }
+};
 
+/**
+ * Create wrappers for copy and remove operations that close over routeMap/localeRoot/repoRoot
+ */
+const createFileOps = (
+  pluginName: string,
+  routeMap: Map<string, string>,
+  localeRoot: string,
+  repoRoot: string,
+) => {
   const copyFileWrapper = (srcPath: string, destPath: string) => {
     copyFile(srcPath, destPath, pluginName, routeMap, localeRoot, repoRoot);
   };
@@ -197,7 +177,6 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
 
         if (/^page\.(tsx|ts|jsx|js)$/i.test(basename(filePath))) {
           const key = routeKey(filePath, localeRoot);
-          // only delete if this exact file is the one in the map
           if (routeMap.get(key) === filePath) {
             routeMap.delete(key);
           }
@@ -208,30 +187,135 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
     }
   };
 
-  const cleanupDeletedFiles = (sourceDir: string, destinationDir: string) => {
-    if (!existsSync(destinationDir)) return;
+  return { copyFileWrapper, removeFile };
+};
 
-    // Check if this is a locale directory - if so, skip cleanup to preserve other language files
-    const isLocaleDir = destinationDir.includes(join('src', 'locales'));
-    if (isLocaleDir) {
-      return; // Skip cleanup for locale directories to preserve files from other plugins/languages
+/**
+ * Remove files in destination that no longer exist in source (skip locales)
+ */
+const cleanupDeletedFiles = (
+  sourceDir: string,
+  destinationDir: string,
+  removeFileFn: (p: string) => void,
+) => {
+  if (!existsSync(destinationDir)) return;
+
+  const isLocaleDir = destinationDir.includes(join("src", "locales"));
+  if (isLocaleDir) return;
+
+  const destFiles = getAllFiles(destinationDir);
+  for (const destFile of destFiles) {
+    const relativePath = relative(destinationDir, destFile);
+    const sourceFile = join(sourceDir, relativePath);
+
+    if (!existsSync(sourceFile)) {
+      removeFileFn(destFile);
+    }
+  }
+};
+
+/**
+ * Resolve destination paths for a given source path across all source configs
+ */
+const makeGetDestinationPaths = (sources: SourceConfig[]) => {
+  return (srcPath: string): string[] => {
+    const candidates = sources.filter(({ sourceDir }) => {
+      const normalizedSrcPath = srcPath.replace(/\\/g, "/");
+      const normalizedSourceDir = sourceDir.replace(/\\/g, "/");
+
+      return (
+        normalizedSrcPath === normalizedSourceDir ||
+        normalizedSrcPath.startsWith(`${normalizedSourceDir}/`)
+      );
+    });
+
+    if (candidates.length === 0) {
+      throw new Error(`No matching source directory for: ${srcPath}`);
     }
 
-    const destFiles = getAllFiles(destinationDir);
-    for (const destFile of destFiles) {
-      const relativePath = relative(destinationDir, destFile);
-      const sourceFile = join(sourceDir, relativePath);
-
-      if (!existsSync(sourceFile)) {
-        removeFile(destFile);
-      }
-    }
+    return candidates.map(sourceConfig => {
+      const relativePath = relative(sourceConfig.sourceDir, srcPath);
+      return join(sourceConfig.destinationDir, relativePath);
+    });
   };
+};
 
-  // Clean up any files that were deleted while the script wasn't running
-  // Clean up deleted files for each source directory
+/**
+ * Setup chokidar watcher with handlers
+ */
+const setupWatcher = (
+  sourceDirs: string[],
+  getDestinationPaths: (p: string) => string[],
+  copyFileWrapper: (s: string, d: string) => void,
+  removeFile: (p: string) => void,
+) => {
+  const watcher = chokidar.watch(sourceDirs, {
+    ignoreInitial: false,
+    persistent: true,
+  });
+
+  watcher
+    .on("add", filePath => {
+      const destPaths = getDestinationPaths(filePath);
+      destPaths.forEach(destPath => copyFileWrapper(filePath, destPath));
+    })
+    .on("change", filePath => {
+      const destPaths = getDestinationPaths(filePath);
+      destPaths.forEach(destPath => copyFileWrapper(filePath, destPath));
+    })
+    .on("unlink", filePath => {
+      const destPaths = getDestinationPaths(filePath);
+      destPaths.forEach(destPath => removeFile(destPath));
+    })
+    .on("error", error => {
+      console.error("\x1b[31mWatcher error:\x1b[0m", error);
+    });
+
+  return watcher;
+};
+
+/**
+ * Main exported function (kept small and delegating to helpers)
+ */
+export const processPlugin = ({ initMessage }: { initMessage: string }) => {
+  const pluginDir = process.cwd();
+  const repoRoot = findRepoRoot(pluginDir);
+  const localeRoot = findLocaleRoot(repoRoot);
+  const routeMap = buildInitialRouteMap(localeRoot);
+
+  let pluginName = basename(pluginDir);
+  try {
+    const packageJsonPath = join(pluginDir, "package.json");
+    if (existsSync(packageJsonPath)) {
+      const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
+      pluginName = packageJson.name ?? "";
+    }
+  } catch (error) {
+    console.error("\x1b[31mError reading package.json:\x1b[0m", error);
+    return;
+  }
+
+  const pluginPathName = pluginName.replace(/\//g, "-").replace(/@/g, "");
+
+  const sources = collectSources(
+    pluginDir,
+    repoRoot,
+    pluginName,
+    pluginPathName,
+  );
+
+  ensureDestinationDirs(sources);
+
+  const { copyFileWrapper, removeFile } = createFileOps(
+    pluginName,
+    routeMap,
+    localeRoot,
+    repoRoot,
+  );
+
+  // Cleanup deleted files that might have been removed while this script wasn't running
   for (const { sourceDir, destinationDir } of sources) {
-    cleanupDeletedFiles(sourceDir, destinationDir);
+    cleanupDeletedFiles(sourceDir, destinationDir, removeFile);
   }
 
   console.log(
@@ -242,57 +326,7 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
     .map(s => s.sourceDir)
     .filter(dir => existsSync(dir));
 
-  const watcher = chokidar.watch(sourceDirs, {
-    ignoreInitial: false,
-    persistent: true,
-  });
+  const getDestinationPaths = makeGetDestinationPaths(sources);
 
-  const getDestinationPaths = (srcPath: string): string[] => {
-    // collect all matching sourceConfigs
-    const candidates = sources.filter(({ sourceDir }) => {
-      // Ensure exact directory matching by checking if the path starts with sourceDir
-      // followed by a path separator (or is exactly the sourceDir)
-      const normalizedSrcPath = srcPath.replace(/\\/g, '/');
-      const normalizedSourceDir = sourceDir.replace(/\\/g, '/');
-
-      return (
-        normalizedSrcPath === normalizedSourceDir ||
-        normalizedSrcPath.startsWith(normalizedSourceDir + '/')
-      );
-    });
-
-    if (candidates.length === 0) {
-      throw new Error(`No matching source directory for: ${srcPath}`);
-    }
-
-    // Return all matching destination paths instead of just one
-    return candidates.map(sourceConfig => {
-      const relativePath = relative(sourceConfig.sourceDir, srcPath);
-
-      return join(sourceConfig.destinationDir, relativePath);
-    });
-  };
-
-  watcher
-    .on('add', filePath => {
-      const destPaths = getDestinationPaths(filePath);
-      destPaths.forEach(destPath => {
-        copyFileWrapper(filePath, destPath);
-      });
-    })
-    .on('change', filePath => {
-      const destPaths = getDestinationPaths(filePath);
-      destPaths.forEach(destPath => {
-        copyFileWrapper(filePath, destPath);
-      });
-    })
-    .on('unlink', filePath => {
-      const destPaths = getDestinationPaths(filePath);
-      destPaths.forEach(destPath => {
-        removeFile(destPath);
-      });
-    })
-    .on('error', error => {
-      console.error('\x1b[31mWatcher error:\x1b[0m', error);
-    });
+  setupWatcher(sourceDirs, getDestinationPaths, copyFileWrapper, removeFile);
 };

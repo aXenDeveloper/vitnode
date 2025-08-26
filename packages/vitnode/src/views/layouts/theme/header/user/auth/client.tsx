@@ -1,25 +1,23 @@
-'use client';
+"use client";
 
-import { KeyRoundIcon, LogOutIcon } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-
-import type { SessionApi } from '@/lib/api/get-session-api';
-
+import { KeyRoundIcon, LogOutIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import { Link } from '@/lib/navigation';
+} from "@/components/ui/dropdown-menu";
+import type { SessionApi } from "@/lib/api/get-session-api";
+import { Link } from "@/lib/navigation";
 
-import { logOutMutationApi } from './log-out-mutation-api';
+import { logOutMutationApi } from "./log-out-mutation-api";
 
 export const ClientAuthUserHeader = ({
   user,
 }: {
-  user: NonNullable<SessionApi['user']>;
+  user: NonNullable<SessionApi["user"]>;
 }) => {
-  const t = useTranslations('core.global.user_bar');
+  const t = useTranslations("core.global.user_bar");
 
   return (
     <>
@@ -29,7 +27,7 @@ export const ClientAuthUserHeader = ({
             <DropdownMenuItem asChild>
               <Link href="/admin" target="_blank">
                 <KeyRoundIcon />
-                <span>{t('admin_cp')}</span>
+                <span>{t("admin_cp")}</span>
               </Link>
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -45,7 +43,7 @@ export const ClientAuthUserHeader = ({
           }}
         >
           <LogOutIcon />
-          <span>{t('log_out')}</span>
+          <span>{t("log_out")}</span>
         </DropdownMenuItem>
       </DropdownMenuGroup>
     </>

@@ -1,14 +1,14 @@
-import { z } from '@hono/zod-openapi';
-import { buildRoute } from '@vitnode/core/api/lib/route';
+import { z } from "@hono/zod-openapi";
+import { buildRoute } from "@vitnode/core/api/lib/route";
 import {
   withPagination,
   zodPaginationPageInfo,
   zodPaginationQuery,
-} from '@vitnode/core/api/lib/with-pagination';
-import { and, ilike } from 'drizzle-orm';
+} from "@vitnode/core/api/lib/with-pagination";
+import { and, ilike, type SQL } from "drizzle-orm";
 
-import { CONFIG_PLUGIN } from '@/const';
-import { blog_categories } from '@/database/categories';
+import { CONFIG_PLUGIN } from "@/const";
+import { blog_categories } from "@/database/categories";
 
 const zodCategorySchema = z.object({
   id: z.number(),
@@ -20,31 +20,31 @@ const zodCategorySchema = z.object({
 export const categoriesRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'get',
-    path: '/',
+    method: "get",
+    path: "/",
     request: {
       query: zodPaginationQuery.extend({
-        order: z.enum(['asc', 'desc']).optional(),
-        orderBy: z.enum(['updatedAt']).optional(),
+        order: z.enum(["asc", "desc"]).optional(),
+        orderBy: z.enum(["updatedAt"]).optional(),
         search: z.string().optional(),
       }),
     },
     responses: {
       200: {
         content: {
-          'application/json': {
+          "application/json": {
             schema: z.object({
               edges: z.array(zodCategorySchema),
               pageInfo: zodPaginationPageInfo,
             }),
           },
         },
-        description: 'Categories retrieved successfully',
+        description: "Categories retrieved successfully",
       },
     },
   },
   handler: async c => {
-    const query = c.req.valid('query');
+    const query = c.req.valid("query");
 
     const data = await withPagination({
       c,
@@ -57,14 +57,19 @@ export const categoriesRoute = buildRoute({
           ? ilike(blog_categories.title, `%${query.search}%`)
           : undefined;
 
-        const combinedWhere = searchCondition
-          ? where
-            ? and(where, searchCondition)
-            : searchCondition
-          : where;
+        let combinedWhere: SQL | undefined;
+        if (searchCondition) {
+          if (where) {
+            combinedWhere = and(where, searchCondition);
+          } else {
+            combinedWhere = searchCondition;
+          }
+        } else {
+          combinedWhere = where;
+        }
 
         return await c
-          .get('db')
+          .get("db")
           .select()
           .from(blog_categories)
           .where(combinedWhere)
@@ -76,7 +81,7 @@ export const categoriesRoute = buildRoute({
         column: query.orderBy
           ? blog_categories[query.orderBy]
           : blog_categories.updatedAt,
-        order: query.order ?? 'desc',
+        order: query.order ?? "desc",
       },
     });
 

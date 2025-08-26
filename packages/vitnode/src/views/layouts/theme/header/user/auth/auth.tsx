@@ -1,13 +1,13 @@
-import { Avatar } from '@/components/avatar';
-import { Button } from '@/components/ui/button';
+import { Avatar } from "@/components/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { getSessionApi } from '@/lib/api/get-session-api';
+} from "@/components/ui/dropdown-menu";
+import { getSessionApi } from "@/lib/api/get-session-api";
 
-import { ClientAuthUserHeader } from './client';
+import { ClientAuthUserHeader } from "./client";
 
 export const AuthUserHeader = async () => {
   const { user } = await getSessionApi();

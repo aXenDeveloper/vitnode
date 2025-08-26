@@ -1,5 +1,5 @@
-import { Badge } from '@vitnode/core/components/ui/badge';
-import { BadgeCheckIcon } from 'lucide-react';
+import { Badge } from "@vitnode/core/components/ui/badge";
+import { BadgeCheckIcon } from "lucide-react";
 
 export default function BadgeDemo() {
   return (

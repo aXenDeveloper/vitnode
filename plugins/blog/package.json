@@ -29,9 +29,7 @@
   "scripts": {
     "build:plugins": "tsc && swc src -d dist --config-file .swcrc && tsc-alias -p tsconfig.json",
     "dev": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\" \"tsc-alias -w\" \"vitnode plugin --w\"",
-    "dev:email": "email dev --dir src/emails",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "dev:email": "email dev --dir src/emails"
   },
   "dependencies": {
     "@hono/zod-openapi": "^1.1.0",
@@ -56,9 +54,8 @@
     "@swc/core": "^1.13.3",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
-    "@vitnode/eslint-config": "workspace:*",
+    "@vitnode/config": "workspace:*",
     "concurrently": "^9.2.0",
-    "eslint": "^9.33.0",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.9.2"
   }

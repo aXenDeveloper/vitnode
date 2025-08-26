@@ -1,13 +1,13 @@
-import { usersModule } from '@/api/modules/users/users.module';
-import { fetcher } from '@/lib/fetcher';
+import { usersModule } from "@/api/modules/users/users.module";
+import { fetcher } from "@/lib/fetcher";
 
 export const getSessionApi = async () => {
   const res = await fetcher(usersModule, {
-    path: '/session',
-    method: 'get',
-    module: 'users',
+    path: "/session",
+    method: "get",
+    module: "users",
     options: {
-      cache: 'force-cache',
+      cache: "force-cache",
     },
   });
 

@@ -1,15 +1,15 @@
-import { z } from '@hono/zod-openapi';
-import { buildRoute } from '@vitnode/core/api/lib/route';
+import { z } from "@hono/zod-openapi";
+import { buildRoute } from "@vitnode/core/api/lib/route";
 import {
   withPagination,
   zodPaginationPageInfo,
   zodPaginationQuery,
-} from '@vitnode/core/api/lib/with-pagination';
-import { eq } from 'drizzle-orm';
+} from "@vitnode/core/api/lib/with-pagination";
+import { eq } from "drizzle-orm";
 
-import { CONFIG_PLUGIN } from '@/const';
-import { blog_categories } from '@/database/categories';
-import { blog_posts } from '@/database/posts';
+import { CONFIG_PLUGIN } from "@/const";
+import { blog_categories } from "@/database/categories";
+import { blog_posts } from "@/database/posts";
 
 export const zodPostSchema = z.object({
   id: z.number(),
@@ -29,31 +29,31 @@ export const zodPostSchema = z.object({
 export const postsRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'get',
-    path: '/',
+    method: "get",
+    path: "/",
     request: {
       query: zodPaginationQuery.extend({
-        order: z.enum(['asc', 'desc']).optional(),
-        orderBy: z.enum(['updatedAt', 'createdAt']).optional(),
+        order: z.enum(["asc", "desc"]).optional(),
+        orderBy: z.enum(["updatedAt", "createdAt"]).optional(),
         categoryId: z.string().transform(Number).optional(),
       }),
     },
     responses: {
       200: {
         content: {
-          'application/json': {
+          "application/json": {
             schema: z.object({
               edges: z.array(zodPostSchema),
               pageInfo: zodPaginationPageInfo,
             }),
           },
         },
-        description: 'Posts retrieved successfully',
+        description: "Posts retrieved successfully",
       },
     },
   },
   handler: async c => {
-    const query = c.req.valid('query');
+    const query = c.req.valid("query");
 
     const data = await withPagination({
       c,
@@ -63,7 +63,7 @@ export const postsRoute = buildRoute({
       primaryCursor: blog_posts.id,
       query: async ({ limit, where, orderBy }) =>
         await c
-          .get('db')
+          .get("db")
           .select({
             id: blog_posts.id,
             title: blog_posts.title,
@@ -95,7 +95,7 @@ export const postsRoute = buildRoute({
         column: query.orderBy
           ? blog_posts[query.orderBy]
           : blog_posts.updatedAt,
-        order: query.order ?? 'desc',
+        order: query.order ?? "desc",
       },
     });
 

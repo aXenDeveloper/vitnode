@@ -1,16 +1,14 @@
-import type { Command } from 'commander';
+import { confirm, select } from "@inquirer/prompts";
+import type { Command } from "commander";
+import color from "picocolors";
 
-import { select } from '@inquirer/prompts';
-import { confirm } from '@inquirer/prompts';
-import color from 'picocolors';
-
-import { getAvailablePackageManagers } from './helpers/get-available-package-managers.js';
+import { getAvailablePackageManagers } from "./helpers/get-available-package-managers.js";
 
 export interface CreateCliReturn {
   docker?: boolean;
-  eslint: boolean;
+  biome: boolean;
   install: boolean;
-  mode: 'apiMonorepo' | 'onlyApi' | 'singleApp';
+  mode: "apiMonorepo" | "onlyApi" | "singleApp";
   monorepo?: boolean;
   packageManager: string;
 }
@@ -21,7 +19,7 @@ export const createQuestionsCli = async (
   const optionsFromProgram = program.opts();
   const options: CreateCliReturn = {
     packageManager: optionsFromProgram.packageManager,
-    eslint: optionsFromProgram.eslint,
+    biome: optionsFromProgram.biome,
     install: !optionsFromProgram.skipInstall,
     docker: optionsFromProgram.docker,
     mode: optionsFromProgram.mode,
@@ -31,21 +29,21 @@ export const createQuestionsCli = async (
   if (!optionsFromProgram.packageManager) {
     const availablePackageManagers = await getAvailablePackageManagers();
     options.packageManager = await select({
-      message: `Which ${color.blue('package manager')} do you want to use?`,
+      message: `Which ${color.blue("package manager")} do you want to use?`,
       choices: [
         {
-          name: `bun${availablePackageManagers.bun ? `@${availablePackageManagers.bun}` : ''}`,
-          value: 'bun',
+          name: `bun${availablePackageManagers.bun ? `@${availablePackageManagers.bun}` : ""}`,
+          value: "bun",
           disabled: !availablePackageManagers.bun,
         },
         {
-          name: `pnpm${availablePackageManagers.pnpm ? `@${availablePackageManagers.pnpm}` : ''}`,
-          value: 'pnpm',
+          name: `pnpm${availablePackageManagers.pnpm ? `@${availablePackageManagers.pnpm}` : ""}`,
+          value: "pnpm",
           disabled: !availablePackageManagers.pnpm,
         },
         {
-          name: `npm${availablePackageManagers.npm ? `@${availablePackageManagers.npm}` : ''}`,
-          value: 'npm',
+          name: `npm${availablePackageManagers.npm ? `@${availablePackageManagers.npm}` : ""}`,
+          value: "npm",
           disabled: !availablePackageManagers.npm,
         },
       ],
@@ -54,55 +52,55 @@ export const createQuestionsCli = async (
 
   if (optionsFromProgram.mode === undefined) {
     options.mode = await select({
-      message: `What type of ${color.blue('app')} do you want to create?`,
+      message: `What type of ${color.blue("app")} do you want to create?`,
       choices: [
         {
-          name: `Single App - ${color.blue('Next.js')} & ${color.blue('Hono.js')}`,
+          name: `Single App - ${color.blue("Next.js")} & ${color.blue("Hono.js")}`,
           description:
-            'Create a single app with Next.js and Hono.js in the same project.',
-          value: 'singleApp',
+            "Create a single app with Next.js and Hono.js in the same project.",
+          value: "singleApp",
         },
         {
-          name: `Monorepo App - ${color.blue('Next.js')} & ${color.blue('Hono.js')}`,
+          name: `Monorepo App - ${color.blue("Next.js")} & ${color.blue("Hono.js")}`,
           description:
-            'Create a monorepo with both Next.js and Hono.js apps separately.',
-          value: 'apiMonorepo',
+            "Create a monorepo with both Next.js and Hono.js apps separately.",
+          value: "apiMonorepo",
         },
         {
-          name: `Only API - ${color.blue('Hono.js')}`,
-          description: 'Create only an API app using Hono.js without Next.js.',
-          value: 'onlyApi',
+          name: `Only API - ${color.blue("Hono.js")}`,
+          description: "Create only an API app using Hono.js without Next.js.",
+          value: "onlyApi",
         },
       ],
-      default: 'singleApp',
+      default: "singleApp",
     });
   }
 
   if (
     optionsFromProgram.monorepo === undefined &&
-    options.mode !== 'apiMonorepo'
+    options.mode !== "apiMonorepo"
   ) {
     options.monorepo = await confirm({
-      message: `Would you like to use ${color.blue('TurboRepo')} for monorepo management? ${color.red('(Required for plugins development)')}`,
+      message: `Would you like to use ${color.blue("TurboRepo")} for monorepo management? ${color.red("(Required for plugins development)")}`,
       default: false,
     });
   }
 
-  if (optionsFromProgram.eslint === undefined) {
-    options.eslint = await confirm({
-      message: `Would you like to use ${color.blue('ESLint')}?`,
+  if (optionsFromProgram.biome === undefined) {
+    options.biome = await confirm({
+      message: `Would you like to use ${color.blue("Biome")}?`,
     });
   }
 
   if (optionsFromProgram.docker === undefined) {
     options.docker = await confirm({
-      message: `Would you like to use ${color.blue('Docker Container')}?`,
+      message: `Would you like to use ${color.blue("Docker Container")}?`,
     });
   }
 
   if (optionsFromProgram.skipInstall === undefined) {
     options.install = await confirm({
-      message: `Would you like to ${color.blue('Install dependencies')}?`,
+      message: `Would you like to ${color.blue("Install dependencies")}?`,
     });
   }
 

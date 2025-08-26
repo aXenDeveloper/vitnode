@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@vitnode/core/components/ui/tooltip';
-import { Link } from '@vitnode/core/lib/navigation';
-import { cn } from '@vitnode/core/lib/utils';
+} from "@vitnode/core/components/ui/tooltip";
+import { Link } from "@vitnode/core/lib/navigation";
+import { cn } from "@vitnode/core/lib/utils";
 import {
   AtSign,
   Database,
@@ -17,11 +17,12 @@ import {
   ShieldCheck,
   Sparkle,
   Users,
-} from 'lucide-react';
-import React, { useRef } from 'react';
+} from "lucide-react";
+import type React from "react";
+import { useRef } from "react";
 
-import { LogoVitNode } from '../logo-vitnode';
-import { AnimatedBeam } from './animated-beam';
+import { LogoVitNode } from "../logo-vitnode";
+import { AnimatedBeam } from "./animated-beam";
 
 const Circle = ({
   className,
@@ -31,7 +32,7 @@ const Circle = ({
   tooltip?: string;
 }) => {
   const classNameLink = cn(
-    'bg-card hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-ring/50 z-10 flex size-12 items-center justify-center rounded-md border p-3 transition-all focus-visible:ring-[3px]',
+    "bg-card hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-ring/50 z-10 flex size-12 items-center justify-center rounded-md border p-3 transition-all focus-visible:ring-[3px]",
     className,
   );
 
@@ -52,7 +53,7 @@ const Circle = ({
   );
 };
 
-Circle.displayName = 'Circle';
+Circle.displayName = "Circle";
 
 export function AnimatedBeamHome() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -91,6 +92,7 @@ export function AnimatedBeamHome() {
           <Circle href="/" ref={div2Ref} tooltip="Languages">
             <Languages />
           </Circle>
+
           <Circle className="size-16" href="/docs/dev" ref={div4Ref}>
             <LogoVitNode small />
           </Circle>

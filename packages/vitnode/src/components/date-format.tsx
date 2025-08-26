@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useFormatter, useNow } from 'next-intl';
+import { useFormatter, useNow } from "next-intl";
 
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from './ui/tooltip';
+} from "./ui/tooltip";
 
 export const DateFormat = ({
   date,
@@ -18,22 +18,22 @@ export const DateFormat = ({
   showFullDate?: boolean;
   updateInterval?: number;
 }) => {
-  const dateToFormat = typeof date === 'string' ? new Date(date) : date;
+  const dateToFormat = typeof date === "string" ? new Date(date) : date;
   const format = useFormatter();
   const now = useNow({
     updateInterval:
       updateInterval ??
       // Update it every 1 minute if the date is from today, otherwise don't update
-      (new Date().getTime() - dateToFormat.getTime() < 86400000 ? 60000 : 0),
+      (Date.now() - dateToFormat.getTime() < 86400000 ? 60000 : 0),
   });
 
   const fullDate = format.dateTime(dateToFormat, {
     year:
-      dateToFormat.getFullYear() === now.getFullYear() ? undefined : 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
+      dateToFormat.getFullYear() === now.getFullYear() ? undefined : "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
   });
 
   if (showFullDate) {

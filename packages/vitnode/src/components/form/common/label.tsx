@@ -1,5 +1,5 @@
-import { FormLabel } from '@/components/ui/form';
-import { cn } from '@/lib/utils';
+import { FormLabel } from "@/components/ui/form";
+import { cn } from "@/lib/utils";
 
 export const AutoFormLabel = ({
   children,
@@ -13,7 +13,7 @@ export const AutoFormLabel = ({
     <FormLabel
       className={cn(
         {
-          'flex flex-wrap items-center': labelRight,
+          "flex flex-wrap items-center": labelRight,
         },
         className,
       )}

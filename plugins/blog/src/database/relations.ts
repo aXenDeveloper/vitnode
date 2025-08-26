@@ -1,7 +1,7 @@
-import { relations } from 'drizzle-orm';
+import { relations } from "drizzle-orm";
 
-import { blog_categories } from './categories';
-import { blog_posts } from './posts';
+import { blog_categories } from "./categories";
+import { blog_posts } from "./posts";
 
 export const blog_posts_relations = relations(blog_posts, ({ one }) => ({
   category: one(blog_categories, {

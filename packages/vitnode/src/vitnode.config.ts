@@ -1,12 +1,12 @@
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import type { ThemeProvider } from 'next-themes';
-import type { IRateLimiterOptions } from 'rate-limiter-flexible';
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { ThemeProvider } from "next-themes";
+import type { IRateLimiterOptions } from "rate-limiter-flexible";
 
-import type { BuildPluginApiReturn } from './api/lib/plugin';
-import type { EmailApiPlugin } from './api/models/email';
-import type { SSOApiPlugin } from './api/models/sso';
-import type { DefaultTemplateEmailProps } from './emails/default-template';
-import type { BuildPluginReturn } from './lib/plugin';
+import type { BuildPluginApiReturn } from "./api/lib/plugin";
+import type { EmailApiPlugin } from "./api/models/email";
+import type { SSOApiPlugin } from "./api/models/sso";
+import type { DefaultTemplateEmailProps } from "./emails/default-template";
+import type { BuildPluginReturn } from "./lib/plugin";
 
 export interface LocaleConfig {
   code: string;
@@ -18,16 +18,16 @@ export interface VitNodeConfig<
 > {
   debug?: boolean;
   i18n: {
-    defaultLocale: AppLocales[number]['code'];
-    localePrefix?: 'always' | 'as-needed' | 'never';
+    defaultLocale: AppLocales[number]["code"];
+    localePrefix?: "always" | "as-needed" | "never";
     locales: AppLocales;
     timeZone?: string;
   };
-  metadata: VitNodeApiConfig['metadata'];
+  metadata: VitNodeApiConfig["metadata"];
   plugins: BuildPluginReturn[];
   theme?: Omit<
     React.ComponentProps<typeof ThemeProvider>,
-    'attribute' | 'disableTransitionOnChange' | 'enableSystem'
+    "attribute" | "disableTransitionOnChange" | "enableSystem"
   >;
 }
 
@@ -45,13 +45,13 @@ export interface VitNodeApiConfig {
   captcha?: {
     secretKey: string | undefined;
     siteKey: string | undefined;
-    type: 'cloudflare_turnstile' | 'recaptcha_v3';
+    type: "cloudflare_turnstile" | "recaptcha_v3";
   };
   dbProvider: PostgresJsDatabase;
   email?: {
     adapter?: EmailApiPlugin;
-    logo?: DefaultTemplateEmailProps['templateProps']['logo'];
-    tailwindConfig?: DefaultTemplateEmailProps['templateProps']['tailwindConfig'];
+    logo?: DefaultTemplateEmailProps["templateProps"]["logo"];
+    tailwindConfig?: DefaultTemplateEmailProps["templateProps"]["tailwindConfig"];
   };
   metadata: {
     shortTitle?: string;
@@ -59,7 +59,7 @@ export interface VitNodeApiConfig {
   };
   pathToMessages: (path: string) => Promise<{ default: object }>;
   plugins: BuildPluginApiReturn[];
-  rateLimiter?: Omit<IRateLimiterOptions, 'keyPrefix'>;
+  rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix">;
 }
 
 export function buildConfig<AppLocales extends LocaleConfig[]>(
@@ -69,7 +69,7 @@ export function buildConfig<AppLocales extends LocaleConfig[]>(
     ...args,
     i18n: {
       ...args.i18n,
-      localePrefix: args.i18n.localePrefix ?? 'as-needed',
+      localePrefix: args.i18n.localePrefix ?? "as-needed",
     },
   };
 }
@@ -95,7 +95,7 @@ export const handleRequestConfig = async ({
       : vitNodeConfig.i18n.defaultLocale;
 
   const pluginIds: string[] = [
-    '@vitnode/core',
+    "@vitnode/core",
     ...vitNodeConfig.plugins.map(plugin => plugin.pluginId),
   ];
 
@@ -112,6 +112,7 @@ export const handleRequestConfig = async ({
   });
 
   const allMessages = await Promise.all(messagesPromises);
+  // biome-ignore lint/performance/noAccumulatingSpread: <needed>
   const messages = allMessages.reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
   return {

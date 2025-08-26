@@ -1,4 +1,4 @@
-import { Separator } from '@vitnode/core/components/ui/separator';
+import { Separator } from "@vitnode/core/components/ui/separator";
 
 export default function ProgressDemo() {
   return (

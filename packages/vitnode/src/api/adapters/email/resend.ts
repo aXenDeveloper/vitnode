@@ -1,6 +1,6 @@
-import { Resend } from 'resend';
+import { Resend } from "resend";
 
-import type { EmailApiPlugin } from '@/api/models/email';
+import type { EmailApiPlugin } from "@/api/models/email";
 
 export const ResendEmailAdapter = ({
   apiKey,
@@ -11,8 +11,8 @@ export const ResendEmailAdapter = ({
 }): EmailApiPlugin => {
   return {
     sendEmail: async ({ to, subject, replyTo, metadata, html }) => {
-      if (!apiKey || !from) {
-        throw new Error('Missing Resend configuration');
+      if (!(apiKey && from)) {
+        throw new Error("Missing Resend configuration");
       }
 
       const resend = new Resend(apiKey);

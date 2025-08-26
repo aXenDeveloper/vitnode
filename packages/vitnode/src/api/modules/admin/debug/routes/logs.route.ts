@@ -1,39 +1,39 @@
-import { eq } from 'drizzle-orm';
-import { z } from 'zod';
+import { eq } from "drizzle-orm";
+import { z } from "zod";
 
-import { CONFIG_PLUGIN } from '@/config';
-import { core_logs } from '@/database/logs';
+import { CONFIG_PLUGIN } from "@/config";
+import { core_logs } from "@/database/logs";
 
-import { core_users } from '../../../../../database/users';
-import { buildRoute } from '../../../../lib/route';
+import { core_users } from "../../../../../database/users";
+import { buildRoute } from "../../../../lib/route";
 import {
   withPagination,
   zodPaginationPageInfo,
   zodPaginationQuery,
-} from '../../../../lib/with-pagination';
+} from "../../../../lib/with-pagination";
 
 export const logsDebugAdminRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'get',
-    description: 'Get Admin Debug Logs',
-    path: '/logs',
+    method: "get",
+    description: "Get Admin Debug Logs",
+    path: "/logs",
     request: {
       query: zodPaginationQuery.extend({
-        order: z.enum(['asc', 'desc']).optional(),
-        orderBy: z.enum(['type', 'createdAt', 'pluginId']).optional(),
+        order: z.enum(["asc", "desc"]).optional(),
+        orderBy: z.enum(["type", "createdAt", "pluginId"]).optional(),
       }),
     },
     responses: {
       200: {
         content: {
-          'application/json': {
+          "application/json": {
             schema: z.object({
               edges: z.array(
                 z.object({
                   id: z.number(),
                   pluginId: z.string(),
-                  type: z.enum(['warn', 'error', 'debug']),
+                  type: z.enum(["warn", "error", "debug"]),
                   content: z.string(),
                   createdAt: z.date(),
                   ipAddress: z.string(),
@@ -54,12 +54,12 @@ export const logsDebugAdminRoute = buildRoute({
             }),
           },
         },
-        description: 'List of users',
+        description: "List of users",
       },
     },
   },
   handler: async c => {
-    const query = c.req.valid('query');
+    const query = c.req.valid("query");
     const data = await withPagination({
       params: {
         query,
@@ -67,7 +67,7 @@ export const logsDebugAdminRoute = buildRoute({
       primaryCursor: core_logs.id,
       query: async ({ limit, where, orderBy }) =>
         await c
-          .get('db')
+          .get("db")
           .select({
             id: core_logs.id,
             pluginId: core_logs.pluginId,
@@ -93,7 +93,7 @@ export const logsDebugAdminRoute = buildRoute({
       table: core_logs,
       orderBy: {
         column: query.orderBy ? core_logs[query.orderBy] : core_logs.createdAt,
-        order: query.order ?? 'desc',
+        order: query.order ?? "desc",
       },
       c,
     });

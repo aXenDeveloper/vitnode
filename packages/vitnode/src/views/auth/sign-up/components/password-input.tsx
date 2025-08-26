@@ -1,47 +1,46 @@
-import { CheckIcon, XIcon } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import React from 'react';
+import { CheckIcon, XIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
+import React from "react";
 
-import type { ItemAutoFormComponentProps } from '@/components/form/auto-form';
+import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 
-import { AutoFormLabel } from '@/components/form/common/label';
-import { FormControl, FormItem, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { AutoFormLabel } from "@/components/form/common/label";
+import { FormControl, FormItem, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/tooltip";
 
 export const PasswordInput = ({
   label,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   description: _,
   field,
   otherProps: { maxLength, minLength, pattern },
   ...props
 }: ItemAutoFormComponentProps &
-  Omit<React.ComponentProps<typeof Input>, 'type'>) => {
-  const t = useTranslations('core.auth.sign_up');
+  Omit<React.ComponentProps<typeof Input>, "type">) => {
+  const t = useTranslations("core.auth.sign_up");
   const [openTooltip, setOpenTooltip] = React.useState(false);
-  const value: string = field.value ?? '';
+  const value: string = field.value ?? "";
   const regexArray = [
     {
       regex: /^.{8,}$/.test(value),
-      id: 'min_length' as const,
+      id: "min_length" as const,
     },
     {
       regex: /[A-Z]/.test(value),
-      id: 'uppercase' as const,
+      id: "uppercase" as const,
     },
     {
       regex: /\d/.test(value),
-      id: 'number' as const,
+      id: "number" as const,
     },
     {
       regex: /\W|_/.test(value),
-      id: 'special_char' as const,
+      id: "special_char" as const,
     },
   ];
 
@@ -69,7 +68,7 @@ export const PasswordInput = ({
                   props.onChange?.(e);
                 }}
                 pattern={pattern ?? props.pattern}
-                value={field.value ?? ''}
+                value={field.value ?? ""}
                 {...props}
               />
             </FormControl>
@@ -79,7 +78,7 @@ export const PasswordInput = ({
             sideOffset={8}
           >
             <span className="text-based font-semibold">
-              {t('password.requirements.label')}
+              {t("password.requirements.label")}
             </span>
             <ul className="space-y-1">
               {regexArray.map(({ regex, id }) => (

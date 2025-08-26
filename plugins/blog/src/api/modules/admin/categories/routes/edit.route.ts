@@ -1,13 +1,13 @@
-import { z } from '@hono/zod-openapi';
-import { buildRoute } from '@vitnode/core/api/lib/route';
-import { removeSpecialCharacters } from '@vitnode/core/lib/special-characters';
-import { eq } from 'drizzle-orm';
-import { HTTPException } from 'hono/http-exception';
+import { z } from "@hono/zod-openapi";
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import { removeSpecialCharacters } from "@vitnode/core/lib/special-characters";
+import { eq } from "drizzle-orm";
+import { HTTPException } from "hono/http-exception";
 
-import { CONFIG_PLUGIN } from '@/const';
-import { blog_categories } from '@/database/categories';
+import { CONFIG_PLUGIN } from "@/const";
+import { blog_categories } from "@/database/categories";
 
-import { zodCreateCategorySchema } from './create.route';
+import { zodCreateCategorySchema } from "./create.route";
 
 const zodCategoryResponseSchema = z.object({
   id: z.number(),
@@ -19,15 +19,15 @@ const zodCategoryResponseSchema = z.object({
 export const editCategoryRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'put',
-    path: '/{id}',
+    method: "put",
+    path: "/{id}",
     request: {
       params: z.object({
         id: z.string().transform(Number),
       }),
       body: {
         content: {
-          'application/json': {
+          "application/json": {
             schema: zodCreateCategorySchema,
           },
         },
@@ -36,26 +36,26 @@ export const editCategoryRoute = buildRoute({
     responses: {
       200: {
         content: {
-          'application/json': {
+          "application/json": {
             schema: zodCategoryResponseSchema,
           },
         },
-        description: 'Category updated successfully',
+        description: "Category updated successfully",
       },
       400: {
-        description: 'Bad request - Invalid input data',
+        description: "Bad request - Invalid input data",
       },
       404: {
-        description: 'Category not found',
+        description: "Category not found",
       },
     },
   },
   handler: async c => {
-    const { id } = c.req.valid('param');
-    const { title } = c.req.valid('json');
+    const { id } = c.req.valid("param");
+    const { title } = c.req.valid("json");
     const titleSeo = removeSpecialCharacters(title);
     const [editData] = await c
-      .get('db')
+      .get("db")
       .select({
         titleSeo: blog_categories.titleSeo,
       })
@@ -68,7 +68,7 @@ export const editCategoryRoute = buildRoute({
     }
 
     const [titleSEODuplocate] = await c
-      .get('db')
+      .get("db")
       .select({
         titleSeo: blog_categories.titleSeo,
       })
@@ -81,12 +81,12 @@ export const editCategoryRoute = buildRoute({
       titleSEODuplocate.titleSeo !== editData.titleSeo
     ) {
       throw new HTTPException(400, {
-        message: 'Category with this title already exists.',
+        message: "Category with this title already exists.",
       });
     }
 
     const [category] = await c
-      .get('db')
+      .get("db")
       .update(blog_categories)
       .set({
         title,

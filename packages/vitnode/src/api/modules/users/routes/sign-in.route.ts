@@ -1,17 +1,17 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { buildRoute } from '@/api/lib/route';
-import { SessionModel } from '@/api/models/session';
-import { SessionAdminModel } from '@/api/models/session-admin';
-import { UserModel } from '@/api/models/user';
-import { CONFIG_PLUGIN } from '@/config';
+import { buildRoute } from "@/api/lib/route";
+import { SessionModel } from "@/api/models/session";
+import { SessionAdminModel } from "@/api/models/session-admin";
+import { UserModel } from "@/api/models/user";
+import { CONFIG_PLUGIN } from "@/config";
 
 export const zodSignInSchema = z.object({
   email: z.email().toLowerCase().openapi({
-    example: 'test@test.com',
+    example: "test@test.com",
   }),
   password: z.string().openapi({
-    example: 'Test123!',
+    example: "Test123!",
   }),
   isAdmin: z.boolean().optional().openapi({
     example: false,
@@ -21,14 +21,14 @@ export const zodSignInSchema = z.object({
 export const signInRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'post',
-    description: 'Sign in with email and password',
-    path: '/sign_in',
+    method: "post",
+    description: "Sign in with email and password",
+    path: "/sign_in",
     request: {
       body: {
         required: true,
         content: {
-          'application/json': {
+          "application/json": {
             schema: zodSignInSchema,
           },
         },
@@ -36,23 +36,23 @@ export const signInRoute = buildRoute({
     },
     responses: {
       403: {
-        description: 'Access Denied',
+        description: "Access Denied",
       },
       201: {
         content: {
-          'application/json': {
+          "application/json": {
             schema: z.object({
               id: z.number(),
               token: z.string(),
             }),
           },
         },
-        description: 'User signed in',
+        description: "User signed in",
       },
     },
   },
   handler: async c => {
-    const { password, isAdmin, email } = c.req.valid('json');
+    const { password, isAdmin, email } = c.req.valid("json");
     const data = await new UserModel().signInWithPassword({
       password,
       email,

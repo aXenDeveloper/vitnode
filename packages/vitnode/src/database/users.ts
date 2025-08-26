@@ -1,11 +1,11 @@
-import { relations } from 'drizzle-orm';
-import { index, pgTable } from 'drizzle-orm/pg-core';
+import { relations } from "drizzle-orm";
+import { index, pgTable } from "drizzle-orm/pg-core";
 
-import { core_languages } from './languages';
-import { core_roles } from './roles';
+import { core_languages } from "./languages";
+import { core_roles } from "./roles";
 
 export const core_users = pgTable(
-  'core_users',
+  "core_users",
   t => ({
     id: t.serial().primaryKey(),
     nameCode: t.varchar({ length: 255 }).notNull().unique(),
@@ -25,15 +25,15 @@ export const core_users = pgTable(
     language: t
       .varchar({ length: 32 })
       .notNull()
-      .default('en')
+      .default("en")
       .references(() => core_languages.code, {
-        onDelete: 'set default',
+        onDelete: "set default",
       }),
   }),
   t => [
-    index('core_users_name_code_idx').on(t.nameCode),
-    index('core_users_name_idx').on(t.name),
-    index('core_users_email_idx').on(t.email),
+    index("core_users_name_code_idx").on(t.nameCode),
+    index("core_users_name_idx").on(t.name),
+    index("core_users_email_idx").on(t.email),
   ],
 ).enableRLS();
 
@@ -58,12 +58,12 @@ export const core_users_relations = relations(core_users, ({ one, many }) => ({
 }));
 
 export const core_users_sso = pgTable(
-  'core_users_sso',
+  "core_users_sso",
   t => ({
     userId: t
       .integer()
       .references(() => core_users.id, {
-        onDelete: 'cascade',
+        onDelete: "cascade",
       })
       .notNull(),
     providerId: t.varchar({ length: 255 }).notNull(),
@@ -74,7 +74,7 @@ export const core_users_sso = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
   }),
-  t => [index('core_users_sso_user_id_idx').on(t.userId)],
+  t => [index("core_users_sso_user_id_idx").on(t.userId)],
 ).enableRLS();
 
 export const core_users_sso_relations = relations(
@@ -88,13 +88,13 @@ export const core_users_sso_relations = relations(
 );
 
 export const core_users_confirm_emails = pgTable(
-  'core_users_confirm_emails',
+  "core_users_confirm_emails",
   t => ({
     id: t.serial().primaryKey(),
     userId: t
       .integer()
       .references(() => core_users.id, {
-        onDelete: 'cascade',
+        onDelete: "cascade",
       })
       .notNull(),
     token: t.varchar({ length: 100 }).notNull().unique(),
@@ -115,13 +115,13 @@ export const core_users_confirm_emails_relations = relations(
 );
 
 export const core_users_forgot_password = pgTable(
-  'core_users_forgot_password',
+  "core_users_forgot_password",
   t => ({
     id: t.serial().primaryKey(),
     userId: t
       .integer()
       .references(() => core_users.id, {
-        onDelete: 'cascade',
+        onDelete: "cascade",
       })
       .notNull()
       .unique(),

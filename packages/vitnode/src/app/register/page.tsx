@@ -1,8 +1,8 @@
-import type { Metadata } from 'next/dist/types';
+import type { Metadata } from "next/dist/types";
 
-import { getTranslations } from 'next-intl/server';
+import { getTranslations } from "next-intl/server";
 
-import { SignUpView } from '../../views/auth/sign-up/sign-up-view';
+import { SignUpView } from "../../views/auth/sign-up/sign-up-view";
 
 export const generateMetadata = async ({
   params,
@@ -10,10 +10,10 @@ export const generateMetadata = async ({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> => {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: 'core.global' });
+  const t = await getTranslations({ locale, namespace: "core.global" });
 
   return {
-    title: t('register'),
+    title: t("register"),
   };
 };
 

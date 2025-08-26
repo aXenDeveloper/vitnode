@@ -5,21 +5,19 @@ import {
   PlugIcon,
   ServerIcon,
   UserIcon,
-} from 'lucide-react';
-import { useTranslations } from 'next-intl';
+} from "lucide-react";
+import { useTranslations } from "next-intl";
 
-import { DateFormat } from '@/components/date-format';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Link } from '@/lib/navigation';
-
-import type { getSystemLogsData } from '../../system-logs-view';
-
-import { BadgeStatus } from '../../badges/badge-status';
-import { BadgeTypeLog } from '../../badges/badge-type-log';
+import { DateFormat } from "@/components/date-format";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Link } from "@/lib/navigation";
+import { BadgeStatus } from "../../badges/badge-status";
+import { BadgeTypeLog } from "../../badges/badge-type-log";
+import type { getSystemLogsData } from "../../system-logs-view";
 
 export const ContentMoreActionSystemLogs = ({
   content,
@@ -33,8 +31,8 @@ export const ContentMoreActionSystemLogs = ({
   userAgent,
   statusCode,
   user,
-}: Awaited<ReturnType<typeof getSystemLogsData>>['edges'][number]) => {
-  const t = useTranslations('admin.debug.logs.more');
+}: Awaited<ReturnType<typeof getSystemLogsData>>["edges"][number]) => {
+  const t = useTranslations("admin.debug.logs.more");
 
   return (
     <div className="space-y-6">
@@ -42,7 +40,7 @@ export const ContentMoreActionSystemLogs = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <HashIcon className="size-4" />
-            {t('log_overview.title')}
+            {t("log_overview.title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -52,13 +50,13 @@ export const ContentMoreActionSystemLogs = ({
                 className="text-muted-foreground text-xs font-medium"
                 htmlFor="log-type"
               >
-                {t('log_overview.log_type')}
+                {t("log_overview.log_type")}
               </Label>
               <BadgeTypeLog type={type} />
             </div>
             <div className="space-y-2">
               <Label className="text-muted-foreground text-xs font-medium">
-                {t('log_overview.status_code')}
+                {t("log_overview.status_code")}
               </Label>
               <BadgeStatus statusCode={statusCode} />
             </div>
@@ -67,7 +65,7 @@ export const ContentMoreActionSystemLogs = ({
                 className="text-muted-foreground text-xs font-medium"
                 htmlFor="log-id"
               >
-                {t('log_overview.log_id')}
+                {t("log_overview.log_id")}
               </Label>
               <Input id="log-id" readOnly value={`#${id}`} />
             </div>
@@ -80,7 +78,7 @@ export const ContentMoreActionSystemLogs = ({
                 htmlFor="created-at"
               >
                 <CalendarIcon className="size-3" />
-                {t('log_overview.created_at')}
+                {t("log_overview.created_at")}
               </Label>
               <div className="text-sm" id="created-at">
                 <DateFormat date={createdAt} />
@@ -92,7 +90,7 @@ export const ContentMoreActionSystemLogs = ({
                 htmlFor="plugin-id"
               >
                 <PlugIcon className="size-3" />
-                {t('log_overview.plugin')}
+                {t("log_overview.plugin")}
               </Label>
               <Input id="plugin-id" readOnly value={pluginId} />
             </div>
@@ -103,7 +101,7 @@ export const ContentMoreActionSystemLogs = ({
                   htmlFor="user-link"
                 >
                   <UserIcon className="size-3" />
-                  {t('log_overview.user')}
+                  {t("log_overview.user")}
                 </Label>
                 <Link
                   className="border-input bg-background hover:bg-accent hover:text-accent-foreground block rounded-md border px-3 py-2 text-sm font-medium"
@@ -122,7 +120,7 @@ export const ContentMoreActionSystemLogs = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <GlobeIcon className="size-4" />
-            {t('request_information.title')}
+            {t("request_information.title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -132,7 +130,7 @@ export const ContentMoreActionSystemLogs = ({
                 className="text-muted-foreground text-xs font-medium"
                 htmlFor="ip-address"
               >
-                {t('request_information.ip_address')}
+                {t("request_information.ip_address")}
               </Label>
               <Input id="ip-address" readOnly value={ipAddress} />
             </div>
@@ -141,7 +139,7 @@ export const ContentMoreActionSystemLogs = ({
                 className="text-muted-foreground text-xs font-medium"
                 htmlFor="request-method"
               >
-                {t('request_information.request_method')}
+                {t("request_information.request_method")}
               </Label>
               <div className="flex">
                 <Badge
@@ -160,7 +158,7 @@ export const ContentMoreActionSystemLogs = ({
               className="text-muted-foreground text-xs font-medium"
               htmlFor="request-url"
             >
-              {t('request_information.request_url')}
+              {t("request_information.request_url")}
             </Label>
             <Input id="request-url" readOnly value={path} />
           </div>
@@ -171,7 +169,7 @@ export const ContentMoreActionSystemLogs = ({
                 className="text-muted-foreground text-xs font-medium"
                 htmlFor="user-agent"
               >
-                {t('request_information.user_agent')}
+                {t("request_information.user_agent")}
               </Label>
               <Textarea
                 className="resize-none font-mono text-sm"
@@ -188,7 +186,7 @@ export const ContentMoreActionSystemLogs = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ServerIcon className="size-4" />
-            {t('log_content.title')}
+            {t("log_content.title")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -197,7 +195,7 @@ export const ContentMoreActionSystemLogs = ({
               className="text-muted-foreground text-xs font-medium"
               htmlFor="log-content"
             >
-              {t('log_content.full_log')}
+              {t("log_content.full_log")}
             </Label>
             <Textarea
               className="min-h-[120px] font-mono text-sm"

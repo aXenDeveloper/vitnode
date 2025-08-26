@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { Button } from '@/components/ui/button';
-import { useRouter } from '@/lib/navigation';
+import { Button } from "@/components/ui/button";
+import { useRouter } from "@/lib/navigation";
 
 export const BackButtonNotFound = ({
   children,

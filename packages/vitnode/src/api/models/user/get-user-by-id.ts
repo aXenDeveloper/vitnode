@@ -1,12 +1,11 @@
-import type { Context } from 'hono';
+import { eq } from "drizzle-orm";
+import type { Context } from "hono";
 
-import { eq } from 'drizzle-orm';
-
-import { core_users } from '@/database/users';
+import { core_users } from "@/database/users";
 
 export const getUserById = async ({ id, c }: { c: Context; id: number }) => {
   const [user] = await c
-    .get('db')
+    .get("db")
     .select({
       id: core_users.id,
       email: core_users.email,

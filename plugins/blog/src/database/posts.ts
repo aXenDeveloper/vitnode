@@ -1,8 +1,8 @@
-import { pgTable } from 'drizzle-orm/pg-core';
+import { pgTable } from "drizzle-orm/pg-core";
 
-import { blog_categories } from './categories';
+import { blog_categories } from "./categories";
 
-export const blog_posts = pgTable('blog_posts', t => ({
+export const blog_posts = pgTable("blog_posts", t => ({
   id: t.serial().primaryKey(),
   title: t.varchar({ length: 255 }).notNull(),
   titleSeo: t.varchar({ length: 255 }).notNull().unique(),

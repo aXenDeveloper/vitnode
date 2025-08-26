@@ -1,13 +1,12 @@
-import type { Context } from 'hono';
+import { and, eq, gt } from "drizzle-orm";
+import type { Context } from "hono";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 
-import { and, eq, gt } from 'drizzle-orm';
-import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
+import { core_sessions } from "@/database/sessions";
+import { CONFIG } from "@/lib/config";
 
-import { core_sessions } from '@/database/sessions';
-import { CONFIG } from '@/lib/config';
-
-import { DeviceModel } from './device';
-import { UserModel } from './user';
+import { DeviceModel } from "./device";
+import { UserModel } from "./user";
 
 export class SessionModel {
   constructor(c: Context) {
@@ -18,10 +17,10 @@ export class SessionModel {
   private async hashToken(token: string): Promise<string> {
     const encoder = new TextEncoder();
     const data = encoder.encode(token);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
 
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
   }
 
   async createSessionByUserId(userId: number) {
@@ -29,31 +28,31 @@ export class SessionModel {
     const randomBytes = new Uint8Array(64);
     crypto.getRandomValues(randomBytes);
     const token = Array.from(randomBytes)
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
     const device = await new DeviceModel(this.c).getDeviceId();
     const hashedToken = await this.hashToken(token);
 
     await this.c
-      .get('db')
+      .get("db")
       .insert(core_sessions)
       .values({
         token: hashedToken,
         userId,
         expiresAt: new Date(
-          Date.now() + this.c.get('core').authorization.cookie_expires,
+          Date.now() + this.c.get("core").authorization.cookie_expires,
         ),
         deviceId: device.id,
       });
 
-    setCookie(this.c, this.c.get('core').authorization.cookieName, token, {
+    setCookie(this.c, this.c.get("core").authorization.cookieName, token, {
       httpOnly: true,
-      secure: this.c.get('core').authorization.cookieSecure,
-      path: '/',
+      secure: this.c.get("core").authorization.cookieSecure,
+      path: "/",
       expires:
-        this.c.get('core').authorization.cookie_expires > 0
+        this.c.get("core").authorization.cookie_expires > 0
           ? new Date(
-              Date.now() + this.c.get('core').authorization.cookie_expires,
+              Date.now() + this.c.get("core").authorization.cookie_expires,
             )
           : undefined,
       domain: CONFIG.web.hostname,
@@ -65,13 +64,13 @@ export class SessionModel {
   async deleteSession() {
     const token = getCookie(
       this.c,
-      this.c.get('core').authorization.cookieName,
+      this.c.get("core").authorization.cookieName,
     );
     const device = await new DeviceModel(this.c).getDeviceId();
 
     // Ensure both token and deviceId exist before proceeding
-    if (!token || !device.id) {
-      deleteCookie(this.c, this.c.get('core').authorization.cookieName);
+    if (!(token && device.id)) {
+      deleteCookie(this.c, this.c.get("core").authorization.cookieName);
 
       return;
     }
@@ -79,7 +78,7 @@ export class SessionModel {
     const hashedToken = await this.hashToken(token);
 
     await this.c
-      .get('db')
+      .get("db")
       .delete(core_sessions)
       // Harden the query to ensure a user can only delete their own device's session
       .where(
@@ -89,13 +88,13 @@ export class SessionModel {
         ),
       );
 
-    deleteCookie(this.c, this.c.get('core').authorization.cookieName);
+    deleteCookie(this.c, this.c.get("core").authorization.cookieName);
   }
 
   async getUser() {
     const token = getCookie(
       this.c,
-      this.c.get('core').authorization.cookieName,
+      this.c.get("core").authorization.cookieName,
     );
     if (!token) return null;
 
@@ -105,7 +104,7 @@ export class SessionModel {
     const hashedToken = await this.hashToken(token);
 
     const [session] = await this.c
-      .get('db')
+      .get("db")
       .select({
         userId: core_sessions.userId,
       })
@@ -120,7 +119,7 @@ export class SessionModel {
       .limit(1);
 
     if (!session) {
-      deleteCookie(this.c, this.c.get('core').authorization.cookieName);
+      deleteCookie(this.c, this.c.get("core").authorization.cookieName);
 
       return null;
     }

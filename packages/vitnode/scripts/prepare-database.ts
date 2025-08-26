@@ -1,46 +1,45 @@
-/* eslint-disable no-console */
+/** biome-ignore-all lint/suspicious/noConsole: <no need> */
+import { count } from "drizzle-orm";
 
-import { count } from 'drizzle-orm';
+import { core_admin_permissions } from "@/database/admins.js";
+import { core_languages, core_languages_words } from "@/database/languages.js";
+import { core_moderators_permissions } from "@/database/moderators.js";
+import { core_roles } from "@/database/roles.js";
 
-import { core_admin_permissions } from '@/database/admins.js';
-import { core_languages, core_languages_words } from '@/database/languages.js';
-import { core_moderators_permissions } from '@/database/moderators.js';
-import { core_roles } from '@/database/roles.js';
-
-import { getConfig } from './get-config.js';
-import { preparePluginsFiles } from './prepare-plugins-files.js';
-import { runInteractiveShellCommand } from './run-interactive-shell-command.js';
+import { getConfig } from "./get-config.js";
+import { preparePluginsFiles } from "./prepare-plugins-files.js";
+import { runInteractiveShellCommand } from "./run-interactive-shell-command.js";
 
 export const generateDatabaseMigrations = async () => {
   try {
-    await runInteractiveShellCommand('npm', ['run', 'drizzle-kit', 'up']);
-    await runInteractiveShellCommand('npm', ['run', 'drizzle-kit', 'generate']);
+    await runInteractiveShellCommand("npm", ["run", "drizzle-kit", "up"]);
+    await runInteractiveShellCommand("npm", ["run", "drizzle-kit", "generate"]);
   } catch (err) {
-    console.error('\x1b[31m%s\x1b[0m', err);
+    console.error("\x1b[31m%s\x1b[0m", err);
     process.exit(1);
   }
 };
 
 export const runMigrations = async () => {
   try {
-    await runInteractiveShellCommand('npm', ['run', 'drizzle-kit', 'migrate']);
+    await runInteractiveShellCommand("npm", ["run", "drizzle-kit", "migrate"]);
   } catch (err) {
-    console.error('\x1b[31m%s\x1b[0m', err);
+    console.error("\x1b[31m%s\x1b[0m", err);
     process.exit(1);
   }
 };
 
 export const runPush = async () => {
   try {
-    await runInteractiveShellCommand('npm', ['run', 'drizzle-kit', 'push']);
+    await runInteractiveShellCommand("npm", ["run", "drizzle-kit", "push"]);
   } catch (err) {
-    console.error('\x1b[31m%s\x1b[0m', err);
+    console.error("\x1b[31m%s\x1b[0m", err);
     process.exit(1);
   }
 };
 
 export const initialDataForDatabase = async () => {
-  const config = await getConfig({ type: 'api.config' });
+  const config = await getConfig({ type: "api.config" });
   const dbClient = config.dbProvider;
 
   const [roleCount] = await dbClient
@@ -58,11 +57,11 @@ export const initialDataForDatabase = async () => {
   if (languageCount.count === 0) {
     await dbClient.insert(core_languages).values([
       {
-        code: 'en',
-        name: 'English (USA)',
+        code: "en",
+        name: "English (USA)",
         default: true,
         protected: true,
-        timezone: 'America/New_York',
+        timezone: "America/New_York",
       },
     ]);
   }
@@ -84,13 +83,13 @@ export const initialDataForDatabase = async () => {
         {
           // Moderator role
           protected: true,
-          color: 'hsl(122, 80%, 45%)',
+          color: "hsl(122, 80%, 45%)",
         },
         {
           // Administrator role
           protected: true,
           root: true,
-          color: 'hsl(0, 100%, 50%)',
+          color: "hsl(0, 100%, 50%)",
         },
       ])
       .returning({ id: core_roles.id });
@@ -98,39 +97,39 @@ export const initialDataForDatabase = async () => {
     await dbClient.insert(core_languages_words).values([
       {
         // Guest role
-        languageCode: 'en',
-        pluginCode: 'core',
+        languageCode: "en",
+        pluginCode: "core",
         itemId: roles[0].id,
-        value: 'Guest',
-        tableName: 'core_roles',
-        variable: 'name',
+        value: "Guest",
+        tableName: "core_roles",
+        variable: "name",
       },
       {
         // Member role
-        languageCode: 'en',
-        pluginCode: 'core',
+        languageCode: "en",
+        pluginCode: "core",
         itemId: roles[1].id,
-        value: 'Member',
-        tableName: 'core_roles',
-        variable: 'name',
+        value: "Member",
+        tableName: "core_roles",
+        variable: "name",
       },
       {
         // Moderator role
-        languageCode: 'en',
-        pluginCode: 'core',
+        languageCode: "en",
+        pluginCode: "core",
         itemId: roles[2].id,
-        value: 'Moderator',
-        tableName: 'core_roles',
-        variable: 'name',
+        value: "Moderator",
+        tableName: "core_roles",
+        variable: "name",
       },
       {
         // Administrator role
-        languageCode: 'en',
-        pluginCode: 'core',
+        languageCode: "en",
+        pluginCode: "core",
         itemId: roles[3].id,
-        value: 'Administrator',
-        tableName: 'core_roles',
-        variable: 'name',
+        value: "Administrator",
+        tableName: "core_roles",
+        variable: "name",
       },
     ]);
 
@@ -157,61 +156,63 @@ export const prepareDatabase = async ({
 }) => {
   const steps: { action: () => Promise<void>; label: string }[] = [];
 
-  if (flag === '--web') {
+  if (flag === "--web") {
     steps.push({
-      label: 'Prepare plugins files...',
+      label: "Prepare plugins files...",
       action: async () => await preparePluginsFiles(flag),
     });
-  } else if (flag === '--api') {
+  } else if (flag === "--api") {
     steps.push(
       {
-        label: 'Prepare plugins files...',
+        label: "Prepare plugins files...",
         action: async () => await preparePluginsFiles(flag),
       },
       {
-        label: 'Generate migrations...',
+        label: "Generate migrations...",
         action: generateDatabaseMigrations,
       },
       {
-        label: 'Run migrations...',
+        label: "Run migrations...",
         action: runMigrations,
       },
       {
-        label: 'Insert initial data...',
+        label: "Insert initial data...",
         action: initialDataForDatabase,
       },
     );
   } else {
     steps.push(
       {
-        label: 'Prepare plugins files...',
+        label: "Prepare plugins files...",
         action: async () => await preparePluginsFiles(flag),
       },
       {
-        label: 'Generate migrations...',
+        label: "Generate migrations...",
         action: generateDatabaseMigrations,
       },
       {
-        label: 'Run migrations...',
+        label: "Run migrations...",
         action: runMigrations,
       },
       {
-        label: 'Insert initial data...',
+        label: "Insert initial data...",
         action: initialDataForDatabase,
       },
     );
   }
 
-  for (let i = 0; i < steps.length; i++) {
-    const step = steps[i];
-    const stepNum = `[${i + 1}/${steps.length}]`;
-    if (step.label === 'Insert initial data...') {
-      console.log(`\n${initMessage} ${stepNum} ${step.label}`);
-    } else {
-      console.log(`${initMessage} ${stepNum} ${step.label}`);
-    }
-    await step.action();
-  }
+  await Promise.all(
+    steps.map((step, i) => {
+      const stepNum = `[${i + 1}/${steps.length}]`;
+      if (step.label === "Insert initial data...") {
+        console.log(`\n${initMessage} ${stepNum} ${step.label}`);
+      } else {
+        console.log(`${initMessage} ${stepNum} ${step.label}`);
+      }
+
+      return step.action();
+    }),
+  );
 
   console.log(`${initMessage} \x1b[32mInitial setup completed.\x1b[0m`);
   process.exit(0);

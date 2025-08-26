@@ -1,18 +1,16 @@
 import type {
   BaseBuildModuleReturn,
   BuildModuleReturn,
-} from '@/api/lib/module';
-import type { Route } from '@/api/lib/route';
-
+} from "@/api/lib/module";
+import type { Route } from "@/api/lib/route";
+import { coreFetcher } from "./fetcher/core";
 import type {
   FetcherParams,
   GetModulePaths,
   GetValidMethodForPath,
   GetValidPathsForModule,
   InferResponseType,
-} from './fetcher/types';
-
-import { coreFetcher } from './fetcher/core';
+} from "./fetcher/types";
 
 export async function fetcherClient<
   M extends string,
@@ -36,11 +34,11 @@ export async function fetcherClient<
     args,
     options,
     withPagination = false,
-    prefixPath = '',
+    prefixPath = "",
     captchaToken,
   }: FetcherParams<M, Routes, Modules, ModuleName, SelectedPath, Method> & {
     captchaToken?: string;
-    options?: Omit<RequestInit, 'body'>;
+    options?: Omit<RequestInit, "body">;
     prefixPath?: string;
     withPagination?: boolean;
   },
@@ -50,10 +48,10 @@ export async function fetcherClient<
   const additionalHeaders: Record<string, string> = {};
 
   if (captchaToken) {
-    additionalHeaders['x-vitnode-captcha-token'] = captchaToken;
+    additionalHeaders["x-vitnode-captcha-token"] = captchaToken;
   }
 
-  return coreFetcher(moduleReturn, {
+  return await coreFetcher(moduleReturn, {
     path,
     method,
     module,

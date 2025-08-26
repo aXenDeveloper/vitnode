@@ -1,10 +1,10 @@
-'use server';
+"use server";
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath } from "next/cache";
 
-import { usersModule } from '@/api/modules/users/users.module';
-import { fetcher } from '@/lib/fetcher';
-import { redirect } from '@/lib/navigation';
+import { usersModule } from "@/api/modules/users/users.module";
+import { fetcher } from "@/lib/fetcher";
+import { redirect } from "@/lib/navigation";
 
 export const logOutMutationApi = async ({
   isAdmin = false,
@@ -12,10 +12,10 @@ export const logOutMutationApi = async ({
   isAdmin?: boolean;
 }) => {
   const res = await fetcher(usersModule, {
-    path: '/sign_out',
-    method: 'delete',
+    path: "/sign_out",
+    method: "delete",
     allowSaveCookies: true,
-    module: 'users',
+    module: "users",
     args: {
       body: { isAdmin },
     },
@@ -23,12 +23,12 @@ export const logOutMutationApi = async ({
 
   if (res.status === 200) {
     if (isAdmin) {
-      revalidatePath('/admin/(main)', 'layout');
-      await redirect('/admin');
+      revalidatePath("/admin/(main)", "layout");
+      await redirect("/admin");
 
       return;
     }
-    revalidatePath('/[locale]/(main)', 'layout');
-    await redirect('/');
+    revalidatePath("/[locale]/(main)", "layout");
+    await redirect("/");
   }
 };

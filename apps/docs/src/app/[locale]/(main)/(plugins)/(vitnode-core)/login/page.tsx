@@ -1,8 +1,6 @@
-import type { Metadata } from 'next/dist/types';
-
-import { getTranslations } from 'next-intl/server';
-
-import { SignInView } from '@vitnode/core/views/auth/sign-in/sign-in-view';
+import { SignInView } from "@vitnode/core/views/auth/sign-in/sign-in-view";
+import type { Metadata } from "next/dist/types";
+import { getTranslations } from "next-intl/server";
 
 export const generateMetadata = async ({
   params,
@@ -10,10 +8,10 @@ export const generateMetadata = async ({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> => {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: 'core.global' });
+  const t = await getTranslations({ locale, namespace: "core.global" });
 
   return {
-    title: t('login'),
+    title: t("login"),
   };
 };
 

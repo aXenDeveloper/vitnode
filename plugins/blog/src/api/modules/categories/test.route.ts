@@ -1,32 +1,32 @@
-import { buildRoute } from '@vitnode/core/api/lib/route';
-import { UserModel } from '@vitnode/core/api/models/user';
-import { z } from 'zod';
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import { UserModel } from "@vitnode/core/api/models/user";
+import { z } from "zod";
 
-import { CONFIG_PLUGIN } from '@/const';
-import TestTemplateEmail from '@/emails/test-template';
+import { CONFIG_PLUGIN } from "@/const";
+import TestTemplateEmail from "@/emails/test-template";
 
 export const testRoute = buildRoute({
   ...CONFIG_PLUGIN,
   route: {
-    method: 'post',
-    description: 'Test route',
-    path: '/test',
+    method: "post",
+    description: "Test route",
+    path: "/test",
     responses: {
       200: {
         content: {
-          'text/plain': {
+          "text/plain": {
             schema: z.string(),
           },
         },
-        description: 'User',
+        description: "User",
       },
       201: {
         content: {
-          'text/plain': {
+          "text/plain": {
             schema: z.string(),
           },
         },
-        description: 'User',
+        description: "User",
       },
     },
   },
@@ -36,16 +36,16 @@ export const testRoute = buildRoute({
       c,
     });
 
-    if (!user) throw new Error('User not found');
+    if (!user) throw new Error("User not found");
 
-    await c.get('email').send({
-      subject: 'Test Email',
+    await c.get("email").send({
+      subject: "Test Email",
       content: TestTemplateEmail,
       user,
     });
 
-    await c.get('log').warn('This is a test warn log');
+    await c.get("log").warn("This is a test warn log");
 
-    return c.text('test');
+    return c.text("test");
   },
 });

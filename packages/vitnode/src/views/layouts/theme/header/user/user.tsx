@@ -1,15 +1,15 @@
-import { getTranslations } from 'next-intl/server';
+import { getTranslations } from "next-intl/server";
 
-import { buttonVariants } from '@/components/ui/button';
-import { getSessionApi } from '@/lib/api/get-session-api';
-import { Link } from '@/lib/navigation';
-import { cn } from '@/lib/utils';
+import { buttonVariants } from "@/components/ui/button";
+import { getSessionApi } from "@/lib/api/get-session-api";
+import { Link } from "@/lib/navigation";
+import { cn } from "@/lib/utils";
 
-import { AuthUserHeader } from './auth/auth';
+import { AuthUserHeader } from "./auth/auth";
 
 export const UserHeader = async () => {
   const [t, session] = await Promise.all([
-    getTranslations('core.global'),
+    getTranslations("core.global"),
     getSessionApi(),
   ]);
 
@@ -19,16 +19,16 @@ export const UserHeader = async () => {
         <Link
           className={cn(
             buttonVariants({
-              variant: 'ghost',
+              variant: "ghost",
             }),
           )}
           href="/login"
         >
-          {t('login')}
+          {t("login")}
         </Link>
 
         <Link className={cn(buttonVariants())} href="/register">
-          {t('register')}
+          {t("register")}
         </Link>
       </>
     );

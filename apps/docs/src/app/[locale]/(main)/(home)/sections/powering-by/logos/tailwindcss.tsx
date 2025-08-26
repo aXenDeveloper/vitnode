@@ -7,6 +7,7 @@ export const TailwindCSSLogo = () => {
       viewBox="0 0 262 33"
       xmlns="http://www.w3.org/2000/svg"
     >
+      <title>TailwindCSS logotype</title>
       <g clipPath="url(#prefix__clip0)" clipRule="evenodd" fillRule="evenodd">
         <path
           className="grayscale"

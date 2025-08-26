@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import { BugIcon, HomeIcon, LogOut } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { BugIcon, HomeIcon, LogOut } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import { Link } from '@/lib/navigation';
-import { logOutMutationApi } from '@/views/layouts/theme/header/user/auth/log-out-mutation-api';
+} from "@/components/ui/dropdown-menu";
+import { Link } from "@/lib/navigation";
+import { logOutMutationApi } from "@/views/layouts/theme/header/user/auth/log-out-mutation-api";
 
 export const ClientUserBarAdmin = ({
   user,
@@ -20,7 +20,7 @@ export const ClientUserBarAdmin = ({
     name: string;
   };
 }) => {
-  const t = useTranslations('admin.global.nav.user_bar');
+  const t = useTranslations("admin.global.nav.user_bar");
 
   return (
     <>
@@ -35,13 +35,13 @@ export const ClientUserBarAdmin = ({
         <DropdownMenuItem asChild>
           <Link href="/" target="_blank">
             <HomeIcon />
-            {t('home_page')}
+            {t("home_page")}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/admin/core/debug">
             <BugIcon />
-            {t('debug')}
+            {t("debug")}
           </Link>
         </DropdownMenuItem>
       </DropdownMenuGroup>
@@ -53,7 +53,7 @@ export const ClientUserBarAdmin = ({
         }}
       >
         <LogOut />
-        {t('log_out')}
+        {t("log_out")}
       </DropdownMenuItem>
     </>
   );

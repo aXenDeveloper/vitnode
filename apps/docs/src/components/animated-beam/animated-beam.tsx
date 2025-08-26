@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { cn } from '@vitnode/core/lib/utils';
-import { motion } from 'motion/react';
-import { type RefObject, useEffect, useId, useState } from 'react';
+import { cn } from "@vitnode/core/lib/utils";
+import { motion } from "motion/react";
+import { type RefObject, useEffect, useId, useState } from "react";
 
 export const AnimatedBeam = ({
   className,
@@ -13,11 +13,11 @@ export const AnimatedBeam = ({
   reverse = false, // Include the reverse prop
   duration = Math.random() * 3 + 4,
   delay = 0,
-  pathColor = 'gray',
+  pathColor = "gray",
   pathWidth = 2,
   pathOpacity = 0.2,
-  gradientStartColor = '#325fbd',
-  gradientStopColor = '#363895',
+  gradientStartColor = "#325fbd",
+  gradientStopColor = "#363895",
   startXOffset = 0,
   startYOffset = 0,
   endXOffset = 0,
@@ -42,22 +42,22 @@ export const AnimatedBeam = ({
   toRef: RefObject<HTMLElement | null>;
 }) => {
   const id = useId();
-  const [pathD, setPathD] = useState('');
+  const [pathD, setPathD] = useState("");
   const [svgDimensions, setSvgDimensions] = useState({ width: 0, height: 0 });
 
   // Calculate the gradient coordinates based on the reverse prop
   const gradientCoordinates = reverse
     ? {
-        x1: ['90%', '-10%'],
-        x2: ['100%', '0%'],
-        y1: ['0%', '0%'],
-        y2: ['0%', '0%'],
+        x1: ["90%", "-10%"],
+        x2: ["100%", "0%"],
+        y1: ["0%", "0%"],
+        y2: ["0%", "0%"],
       }
     : {
-        x1: ['10%', '110%'],
-        x2: ['0%', '100%'],
-        y1: ['0%', '0%'],
-        y2: ['0%', '0%'],
+        x1: ["10%", "110%"],
+        x2: ["0%", "100%"],
+        y1: ["0%", "0%"],
+        y2: ["0%", "0%"],
       };
 
   useEffect(() => {
@@ -69,7 +69,6 @@ export const AnimatedBeam = ({
 
         const svgWidth = containerRect.width;
         const svgHeight = containerRect.height;
-        // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
         setSvgDimensions({ width: svgWidth, height: svgHeight });
 
         const startX =
@@ -85,7 +84,6 @@ export const AnimatedBeam = ({
         const d = `M ${startX},${startY} Q ${
           (startX + endX) / 2
         },${controlY} ${endX},${endY}`;
-        // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
         setPathD(d);
       }
     };
@@ -93,7 +91,6 @@ export const AnimatedBeam = ({
     // Initialize ResizeObserver
     const resizeObserver = new ResizeObserver(entries => {
       // For all entries, recalculate the path
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for (const _entry of entries) {
         updatePath();
       }
@@ -125,7 +122,7 @@ export const AnimatedBeam = ({
   return (
     <svg
       className={cn(
-        'pointer-events-none absolute left-0 top-0 transform-gpu stroke-2',
+        "pointer-events-none absolute left-0 top-0 transform-gpu stroke-2",
         className,
       )}
       fill="none"
@@ -134,6 +131,7 @@ export const AnimatedBeam = ({
       width={svgDimensions.width}
       xmlns="http://www.w3.org/2000/svg"
     >
+      <title>Animated beam</title>
       <path
         d={pathD}
         stroke={pathColor}
@@ -157,13 +155,13 @@ export const AnimatedBeam = ({
             y2: gradientCoordinates.y2,
           }}
           className="transform-gpu"
-          gradientUnits={'userSpaceOnUse'}
+          gradientUnits={"userSpaceOnUse"}
           id={id}
           initial={{
-            x1: '0%',
-            x2: '0%',
-            y1: '0%',
-            y2: '0%',
+            x1: "0%",
+            x2: "0%",
+            y1: "0%",
+            y2: "0%",
           }}
           transition={{
             delay,
@@ -173,14 +171,10 @@ export const AnimatedBeam = ({
             repeatDelay: 0,
           }}
         >
-          <stop stopColor={gradientStartColor} stopOpacity="0"></stop>
-          <stop stopColor={gradientStartColor}></stop>
-          <stop offset="32.5%" stopColor={gradientStopColor}></stop>
-          <stop
-            offset="100%"
-            stopColor={gradientStopColor}
-            stopOpacity="0"
-          ></stop>
+          <stop stopColor={gradientStartColor} stopOpacity="0" />
+          <stop stopColor={gradientStartColor} />
+          <stop offset="32.5%" stopColor={gradientStopColor} />
+          <stop offset="100%" stopColor={gradientStopColor} stopOpacity="0" />
         </motion.linearGradient>
       </defs>
     </svg>

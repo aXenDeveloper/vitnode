@@ -1,22 +1,19 @@
-'use server';
+"use server";
 
-import type { z } from 'zod';
-
-import { fetcher } from '@vitnode/core/lib/fetcher';
-import { revalidatePath } from 'next/cache';
-
-import type { zodCreateCategorySchema } from '../../../../../api/modules/admin/categories/routes/create.route';
-
-import { categoriesAdminModule } from '../../../../../api/modules/admin/categories/categories.admin.module';
+import { fetcher } from "@vitnode/core/lib/fetcher";
+import { revalidatePath } from "next/cache";
+import type { z } from "zod";
+import { categoriesAdminModule } from "../../../../../api/modules/admin/categories/categories.admin.module";
+import type { zodCreateCategorySchema } from "../../../../../api/modules/admin/categories/routes/create.route";
 
 export const createMutationApi = async (
   body: z.infer<typeof zodCreateCategorySchema>,
 ) => {
   const res = await fetcher(categoriesAdminModule, {
-    prefixPath: '/admin',
-    method: 'post',
-    module: 'categories',
-    path: '/',
+    prefixPath: "/admin",
+    method: "post",
+    module: "categories",
+    path: "/",
     args: {
       body,
     },
@@ -27,8 +24,8 @@ export const createMutationApi = async (
   }
 
   revalidatePath(
-    '/[locale]/admin/(auth)/(plugins)/(vitnode-blog)/blog/categories',
-    'page',
+    "/[locale]/admin/(auth)/(plugins)/(vitnode-blog)/blog/categories",
+    "page",
   );
 };
 
@@ -37,10 +34,10 @@ export const editMutationApi = async ({
   ...body
 }: z.infer<typeof zodCreateCategorySchema> & { id: number }) => {
   const res = await fetcher(categoriesAdminModule, {
-    prefixPath: '/admin',
-    method: 'put',
-    module: 'categories',
-    path: '/{id}',
+    prefixPath: "/admin",
+    method: "put",
+    module: "categories",
+    path: "/{id}",
     args: {
       params: {
         id,
@@ -54,7 +51,7 @@ export const editMutationApi = async ({
   }
 
   revalidatePath(
-    '/[locale]/admin/(auth)/(plugins)/(vitnode-blog)/blog/categories',
-    'page',
+    "/[locale]/admin/(auth)/(plugins)/(vitnode-blog)/blog/categories",
+    "page",
   );
 };

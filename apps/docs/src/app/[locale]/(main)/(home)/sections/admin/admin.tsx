@@ -1,7 +1,7 @@
-import { CpuIcon, LockIcon, SparklesIcon } from 'lucide-react';
-import Image from 'next/image';
+import { CpuIcon, LockIcon, SparklesIcon } from "lucide-react";
+import Image from "next/image";
 
-import debugPanelImg from './debug_panel.png';
+import debugPanelImg from "./debug_panel.png";
 
 export const AdminSection = () => {
   return (
@@ -14,7 +14,7 @@ export const AdminSection = () => {
         </div>
         <div className="relative rounded-3xl p-3 md:-mx-8 lg:col-span-3">
           <div className="aspect-88/36 relative">
-            <div className="from-background z-1 bg-linear-to-t absolute inset-0 to-transparent"></div>
+            <div className="from-background z-1 bg-linear-to-t absolute inset-0 to-transparent" />
             <Image
               alt="payments illustration dark"
               className="hidden dark:block"

@@ -1,24 +1,23 @@
-'use client';
+"use client";
 
-import type { MotionProps, Variants } from 'motion/react';
-import type { ElementType } from 'react';
+import { cn } from "@vitnode/core/lib/utils";
+import type { MotionProps, Variants } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
+import type { ElementType } from "react";
+import { memo } from "react";
 
-import { cn } from '@vitnode/core/lib/utils';
-import { AnimatePresence, motion } from 'motion/react';
-import { memo } from 'react';
-
-type AnimationType = 'character' | 'line' | 'text' | 'word';
+type AnimationType = "character" | "line" | "text" | "word";
 type AnimationVariant =
-  | 'blurIn'
-  | 'blurInDown'
-  | 'blurInUp'
-  | 'fadeIn'
-  | 'scaleDown'
-  | 'scaleUp'
-  | 'slideDown'
-  | 'slideLeft'
-  | 'slideRight'
-  | 'slideUp';
+  | "blurIn"
+  | "blurInDown"
+  | "blurInUp"
+  | "fadeIn"
+  | "scaleDown"
+  | "scaleUp"
+  | "slideDown"
+  | "slideLeft"
+  | "slideRight"
+  | "slideUp";
 
 interface TextAnimateProps extends MotionProps {
   /**
@@ -127,17 +126,17 @@ const defaultItemAnimationVariants: Record<
   blurIn: {
     container: defaultContainerVariants,
     item: {
-      hidden: { opacity: 0, filter: 'blur(10px)' },
+      hidden: { opacity: 0, filter: "blur(10px)" },
       show: {
         opacity: 1,
-        filter: 'blur(0px)',
+        filter: "blur(0px)",
         transition: {
           duration: 0.3,
         },
       },
       exit: {
         opacity: 0,
-        filter: 'blur(10px)',
+        filter: "blur(10px)",
         transition: { duration: 0.3 },
       },
     },
@@ -145,10 +144,10 @@ const defaultItemAnimationVariants: Record<
   blurInUp: {
     container: defaultContainerVariants,
     item: {
-      hidden: { opacity: 0, filter: 'blur(10px)', y: 20 },
+      hidden: { opacity: 0, filter: "blur(10px)", y: 20 },
       show: {
         opacity: 1,
-        filter: 'blur(0px)',
+        filter: "blur(0px)",
         y: 0,
         transition: {
           y: { duration: 0.3 },
@@ -158,7 +157,7 @@ const defaultItemAnimationVariants: Record<
       },
       exit: {
         opacity: 0,
-        filter: 'blur(10px)',
+        filter: "blur(10px)",
         y: 20,
         transition: {
           y: { duration: 0.3 },
@@ -171,10 +170,10 @@ const defaultItemAnimationVariants: Record<
   blurInDown: {
     container: defaultContainerVariants,
     item: {
-      hidden: { opacity: 0, filter: 'blur(10px)', y: -20 },
+      hidden: { opacity: 0, filter: "blur(10px)", y: -20 },
       show: {
         opacity: 1,
-        filter: 'blur(0px)',
+        filter: "blur(0px)",
         y: 0,
         transition: {
           y: { duration: 0.3 },
@@ -262,7 +261,7 @@ const defaultItemAnimationVariants: Record<
         transition: {
           duration: 0.3,
           scale: {
-            type: 'spring',
+            type: "spring",
             damping: 15,
             stiffness: 300,
           },
@@ -285,7 +284,7 @@ const defaultItemAnimationVariants: Record<
         transition: {
           duration: 0.3,
           scale: {
-            type: 'spring',
+            type: "spring",
             damping: 15,
             stiffness: 300,
           },
@@ -307,99 +306,109 @@ const TextAnimateBase = ({
   variants,
   className,
   segmentClassName,
-  as: Component = 'p',
+  as: Component = "p",
   startOnView = true,
   once = false,
-  by = 'word',
-  animation = 'fadeIn',
+  by = "word",
+  animation = "fadeIn",
   ...props
 }: TextAnimateProps) => {
   const MotionComponent = motion.create(Component);
 
   let segments: string[] = [];
   switch (by) {
-    case 'character':
-      segments = children.split('');
+    case "character":
+      segments = children.split("");
       break;
-    case 'line':
-      segments = children.split('\n');
+    case "line":
+      segments = children.split("\n");
       break;
-    case 'word':
+    case "word":
       segments = children.split(/(\s+)/);
       break;
-    case 'text':
+    case "text":
+      segments = [children];
+      break;
     default:
       segments = [children];
       break;
   }
 
-  const finalVariants = variants
-    ? {
-        container: {
-          hidden: { opacity: 0 },
-          show: {
-            opacity: 1,
-            transition: {
-              opacity: { duration: 0.01, delay },
-              delayChildren: delay,
-              staggerChildren: duration / segments.length,
-            },
-          },
-          exit: {
-            opacity: 0,
-            transition: {
-              staggerChildren: duration / segments.length,
-              staggerDirection: -1,
-            },
+  let finalVariants: { container: Variants; item: Variants };
+  if (variants) {
+    finalVariants = {
+      container: {
+        hidden: { opacity: 0 },
+        show: {
+          opacity: 1,
+          transition: {
+            opacity: { duration: 0.01, delay },
+            delayChildren: delay,
+            staggerChildren: duration / segments.length,
           },
         },
-        item: variants,
-      }
-    : animation
-      ? {
-          container: {
-            ...defaultItemAnimationVariants[animation].container,
-            show: {
-              ...defaultItemAnimationVariants[animation].container.show,
-              transition: {
-                delayChildren: delay,
-                staggerChildren: duration / segments.length,
-              },
-            },
-            exit: {
-              ...defaultItemAnimationVariants[animation].container.exit,
-              transition: {
-                staggerChildren: duration / segments.length,
-                staggerDirection: -1,
-              },
-            },
+        exit: {
+          opacity: 0,
+          transition: {
+            staggerChildren: duration / segments.length,
+            staggerDirection: -1,
           },
-          item: defaultItemAnimationVariants[animation].item,
-        }
-      : { container: defaultContainerVariants, item: defaultItemVariants };
+        },
+      },
+      item: variants,
+    };
+  } else if (animation) {
+    finalVariants = {
+      container: {
+        ...defaultItemAnimationVariants[animation].container,
+        show: {
+          ...defaultItemAnimationVariants[animation].container.show,
+          transition: {
+            delayChildren: delay,
+            staggerChildren: duration / segments.length,
+          },
+        },
+        exit: {
+          ...defaultItemAnimationVariants[animation].container.exit,
+          transition: {
+            staggerChildren: duration / segments.length,
+            staggerDirection: -1,
+          },
+        },
+      },
+      item: defaultItemAnimationVariants[animation].item,
+    };
+  } else {
+    finalVariants = {
+      container: defaultContainerVariants,
+      item: defaultItemVariants,
+    };
+  }
 
   return (
     <AnimatePresence mode="popLayout">
       <MotionComponent
-        animate={startOnView ? undefined : 'show'}
-        className={cn('whitespace-pre-wrap', className)}
+        animate={startOnView ? undefined : "show"}
+        className={cn("whitespace-pre-wrap", className)}
         exit="exit"
         initial="hidden"
         variants={finalVariants.container as Variants}
         viewport={{ once }}
-        whileInView={startOnView ? 'show' : undefined}
+        whileInView={startOnView ? "show" : undefined}
         {...props}
       >
         {segments.map((segment, i) => (
           <motion.span
             className={cn(
-              by === 'line' ? 'block' : 'inline-block whitespace-pre',
-              by === 'character' && '',
+              by === "line" ? "block" : "inline-block whitespace-pre",
+              by === "character" && "",
               segmentClassName,
             )}
             custom={i * staggerTimings[by]}
-            // eslint-disable-next-line @eslint-react/no-array-index-key
-            key={`${by}-${segment}-${i}`}
+            key={`${by}-${segment}-${
+              // biome-ignore lint/suspicious/noArrayIndexKey: <text animate>
+              i
+            }`}
             variants={finalVariants.item}
           >
             {segment}

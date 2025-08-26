@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from "@playwright/test";
 
 // Generate random user data for test isolation
 function generateTestUser() {
@@ -11,16 +11,16 @@ function generateTestUser() {
   };
 }
 
-test.describe('Authentication', () => {
+test.describe("Authentication", () => {
   const testUser = generateTestUser();
 
-  test('should allow user registration', async ({ page }) => {
+  test("should allow user registration", async ({ page }) => {
     // Navigate to registration page
-    await page.goto('/register');
+    await page.goto("/register");
 
     // Wait for the form to be visible
     await expect(
-      page.getByRole('heading', { name: /register/i }),
+      page.getByRole("heading", { name: /register/i }),
     ).toBeVisible();
 
     // Fill out registration form
@@ -36,12 +36,12 @@ test.describe('Authentication', () => {
     await expect(page).toHaveURL(/\/verify-email|\/dashboard/);
   });
 
-  test('should allow user login', async ({ page }) => {
+  test("should allow user login", async ({ page }) => {
     // Navigate to login page
-    await page.goto('/login');
+    await page.goto("/login");
 
     // Wait for the form to be visible
-    await expect(page.getByRole('heading', { name: /login/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /login/i })).toBeVisible();
 
     // Fill out login form with previously registered credentials
     await page.getByLabel(/email/i).fill(testUser.email);
@@ -50,6 +50,6 @@ test.describe('Authentication', () => {
     // Submit form
     await page.locator('button[type="submit"]').click();
 
-    await expect(page.getByText('Start Your Journey!')).toBeVisible();
+    await expect(page.getByText("Start Your Journey!")).toBeVisible();
   });
 });

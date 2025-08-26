@@ -1,9 +1,8 @@
-import type { ItemAutoFormComponentProps } from '../auto-form';
-
-import { FormControl, FormItem, FormMessage } from '../../ui/form';
-import { Input } from '../../ui/input';
-import { AutoFormDesc } from '../common/desc';
-import { AutoFormLabel } from '../common/label';
+import { FormControl, FormItem, FormMessage } from "../../ui/form";
+import { Input } from "../../ui/input";
+import type { ItemAutoFormComponentProps } from "../auto-form";
+import { AutoFormDesc } from "../common/desc";
+import { AutoFormLabel } from "../common/label";
 
 export const AutoFormInput = ({
   label,
@@ -13,7 +12,7 @@ export const AutoFormInput = ({
   field,
   ...props
 }: ItemAutoFormComponentProps &
-  Omit<React.ComponentProps<typeof Input>, 'value'>) => {
+  Omit<React.ComponentProps<typeof Input>, "value">) => {
   return (
     <FormItem>
       {label && (
@@ -35,8 +34,8 @@ export const AutoFormInput = ({
             props.onChange?.(e);
           }}
           pattern={pattern}
-          type={type ?? 'text'}
-          value={field.value ?? ''}
+          type={type ?? "text"}
+          value={field.value ?? ""}
           {...props}
         />
       </FormControl>

@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { Button } from '@vitnode/core/components/ui/button';
-import { Card } from '@vitnode/core/components/ui/card';
-import { ArrowRight, CheckCircle, Eye, Home, Star, Trash2 } from 'lucide-react';
-import React from 'react';
+import { Button } from "@vitnode/core/components/ui/button";
+import { Card } from "@vitnode/core/components/ui/card";
+import { ArrowRight, CheckCircle, Eye, Home, Star, Trash2 } from "lucide-react";
+import React from "react";
 
 export default function ButtonExample() {
   const [isLoading, setIsLoading] = React.useState(false);

@@ -84,12 +84,8 @@
           "name": "core_admin_permissions_roleId_core_roles_id_fk",
           "tableFrom": "core_admin_permissions",
           "tableTo": "core_roles",
-          "columnsFrom": [
-            "roleId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["roleId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -97,12 +93,8 @@
           "name": "core_admin_permissions_userId_core_users_id_fk",
           "tableFrom": "core_admin_permissions",
           "tableTo": "core_users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -199,12 +191,8 @@
           "name": "core_admin_sessions_userId_core_users_id_fk",
           "tableFrom": "core_admin_sessions",
           "tableTo": "core_users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -212,12 +200,8 @@
           "name": "core_admin_sessions_deviceId_core_sessions_known_devices_id_fk",
           "tableFrom": "core_admin_sessions",
           "tableTo": "core_sessions_known_devices",
-          "columnsFrom": [
-            "deviceId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["deviceId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -227,9 +211,7 @@
         "core_admin_sessions_token_unique": {
           "name": "core_admin_sessions_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -345,9 +327,7 @@
         "core_languages_code_unique": {
           "name": "core_languages_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
+          "columns": ["code"]
         }
       },
       "policies": {},
@@ -423,12 +403,8 @@
           "name": "core_languages_words_languageCode_core_languages_code_fk",
           "tableFrom": "core_languages_words",
           "tableTo": "core_languages",
-          "columnsFrom": [
-            "languageCode"
-          ],
-          "columnsTo": [
-            "code"
-          ],
+          "columnsFrom": ["languageCode"],
+          "columnsTo": ["code"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -527,12 +503,8 @@
           "name": "core_logs_userId_core_users_id_fk",
           "tableFrom": "core_logs",
           "tableTo": "core_users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "cascade"
         }
@@ -623,12 +595,8 @@
           "name": "core_moderators_permissions_roleId_core_roles_id_fk",
           "tableFrom": "core_moderators_permissions",
           "tableTo": "core_roles",
-          "columnsFrom": [
-            "roleId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["roleId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -636,12 +604,8 @@
           "name": "core_moderators_permissions_userId_core_users_id_fk",
           "tableFrom": "core_moderators_permissions",
           "tableTo": "core_users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -782,12 +746,8 @@
           "name": "core_sessions_userId_core_users_id_fk",
           "tableFrom": "core_sessions",
           "tableTo": "core_users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -795,12 +755,8 @@
           "name": "core_sessions_deviceId_core_sessions_known_devices_id_fk",
           "tableFrom": "core_sessions",
           "tableTo": "core_sessions_known_devices",
-          "columnsFrom": [
-            "deviceId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["deviceId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -810,9 +766,7 @@
         "core_sessions_token_unique": {
           "name": "core_sessions_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -878,9 +832,7 @@
         "core_sessions_known_devices_publicId_unique": {
           "name": "core_sessions_known_devices_publicId_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "publicId"
-          ]
+          "columns": ["publicId"]
         }
       },
       "policies": {},
@@ -1026,12 +978,8 @@
           "name": "core_users_roleId_core_roles_id_fk",
           "tableFrom": "core_users",
           "tableTo": "core_roles",
-          "columnsFrom": [
-            "roleId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["roleId"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1039,12 +987,8 @@
           "name": "core_users_language_core_languages_code_fk",
           "tableFrom": "core_users",
           "tableTo": "core_languages",
-          "columnsFrom": [
-            "language"
-          ],
-          "columnsTo": [
-            "code"
-          ],
+          "columnsFrom": ["language"],
+          "columnsTo": ["code"],
           "onDelete": "set default",
           "onUpdate": "no action"
         }
@@ -1054,23 +998,17 @@
         "core_users_nameCode_unique": {
           "name": "core_users_nameCode_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "nameCode"
-          ]
+          "columns": ["nameCode"]
         },
         "core_users_name_unique": {
           "name": "core_users_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         },
         "core_users_email_unique": {
           "name": "core_users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -1119,12 +1057,8 @@
           "name": "core_users_confirm_emails_userId_core_users_id_fk",
           "tableFrom": "core_users_confirm_emails",
           "tableTo": "core_users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1134,9 +1068,7 @@
         "core_users_confirm_emails_token_unique": {
           "name": "core_users_confirm_emails_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -1191,12 +1123,8 @@
           "name": "core_users_forgot_password_userId_core_users_id_fk",
           "tableFrom": "core_users_forgot_password",
           "tableTo": "core_users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1206,16 +1134,12 @@
         "core_users_forgot_password_userId_unique": {
           "name": "core_users_forgot_password_userId_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "userId"
-          ]
+          "columns": ["userId"]
         },
         "core_users_forgot_password_token_unique": {
           "name": "core_users_forgot_password_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -1280,12 +1204,8 @@
           "name": "core_users_sso_userId_core_users_id_fk",
           "tableFrom": "core_users_sso",
           "tableTo": "core_users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1340,9 +1260,7 @@
         "blog_categories_titleSeo_unique": {
           "name": "blog_categories_titleSeo_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "titleSeo"
-          ]
+          "columns": ["titleSeo"]
         }
       },
       "policies": {},
@@ -1403,12 +1321,8 @@
           "name": "blog_posts_categoryId_blog_categories_id_fk",
           "tableFrom": "blog_posts",
           "tableTo": "blog_categories",
-          "columnsFrom": [
-            "categoryId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["categoryId"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1418,9 +1332,7 @@
         "blog_posts_titleSeo_unique": {
           "name": "blog_posts_titleSeo_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "titleSeo"
-          ]
+          "columns": ["titleSeo"]
         }
       },
       "policies": {},

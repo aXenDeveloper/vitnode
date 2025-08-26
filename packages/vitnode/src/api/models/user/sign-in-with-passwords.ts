@@ -1,11 +1,10 @@
-import type { Context } from 'hono';
+import { eq } from "drizzle-orm";
+import type { Context } from "hono";
+import { HTTPException } from "hono/http-exception";
 
-import { eq } from 'drizzle-orm';
-import { HTTPException } from 'hono/http-exception';
+import { core_users } from "@/database/users";
 
-import { core_users } from '@/database/users';
-
-import { PasswordModel } from '../password';
+import { PasswordModel } from "../password";
 
 export const signInWithPassword = async ({
   email,
@@ -17,7 +16,7 @@ export const signInWithPassword = async ({
   password: string;
 }) => {
   const [user] = await c
-    .get('db')
+    .get("db")
     .select({
       id: core_users.id,
       email: core_users.email,

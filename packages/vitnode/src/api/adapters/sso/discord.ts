@@ -1,20 +1,19 @@
-import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { HTTPException } from "hono/http-exception";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { z } from "zod";
 
-import { HTTPException } from 'hono/http-exception';
-import { z } from 'zod';
+import type { SSOApiPlugin } from "@/api/models/sso";
 
-import type { SSOApiPlugin } from '@/api/models/sso';
-
-import { getRedirectUri } from '@/api/models/sso';
+import { getRedirectUri } from "@/api/models/sso";
 
 export const DiscordSSOApiPlugin = ({
-  clientId = '',
-  clientSecret = '',
+  clientId = "",
+  clientSecret = "",
 }: {
   clientId: string | undefined;
   clientSecret: string | undefined;
 }): SSOApiPlugin => {
-  const id = 'discord';
+  const id = "discord";
   const redirectUri = getRedirectUri(id);
   const userSchema = z.object({
     id: z.string(),
@@ -28,20 +27,20 @@ export const DiscordSSOApiPlugin = ({
 
   return {
     fetchToken: async code => {
-      if (!clientId || !clientSecret) {
-        throw new Error('Missing Discord client ID or secret');
+      if (!(clientId && clientSecret)) {
+        throw new Error("Missing Discord client ID or secret");
       }
 
-      const res = await fetch('https://discord.com/api/oauth2/token', {
-        method: 'POST',
+      const res = await fetch("https://discord.com/api/oauth2/token", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Accept: 'application/json',
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
         },
         body: new URLSearchParams({
           code,
           redirect_uri: redirectUri,
-          grant_type: 'authorization_code',
+          grant_type: "authorization_code",
           client_id: clientId,
           client_secret: clientSecret,
         }),
@@ -51,7 +50,7 @@ export const DiscordSSOApiPlugin = ({
         throw new HTTPException(
           +res.status.toString() as ContentfulStatusCode,
           {
-            message: 'Internal error requesting token',
+            message: "Internal error requesting token",
           },
         );
       }
@@ -59,14 +58,14 @@ export const DiscordSSOApiPlugin = ({
       const { data, error } = tokenSchema.safeParse(await res.json());
       if (error || !data) {
         throw new HTTPException(400, {
-          message: 'Invalid token response',
+          message: "Invalid token response",
         });
       }
 
       return data;
     },
     fetchUser: async ({ token_type, access_token }) => {
-      const res = await fetch('https://discord.com/api/users/@me', {
+      const res = await fetch("https://discord.com/api/users/@me", {
         headers: {
           Authorization: `${token_type} ${access_token}`,
         },
@@ -74,7 +73,7 @@ export const DiscordSSOApiPlugin = ({
       const { data, error } = userSchema.safeParse(await res.json());
       if (error || !data) {
         throw new HTTPException(400, {
-          message: 'Invalid user response',
+          message: "Invalid user response",
         });
       }
 
@@ -82,19 +81,19 @@ export const DiscordSSOApiPlugin = ({
     },
     getUrl: ({ state }) => {
       if (!clientId) {
-        throw new Error('Missing Discord client ID');
+        throw new Error("Missing Discord client ID");
       }
 
-      const url = new URL('https://discord.com/oauth2/authorize');
-      url.searchParams.set('client_id', clientId);
-      url.searchParams.set('redirect_uri', redirectUri);
-      url.searchParams.set('response_type', 'code');
-      url.searchParams.set('scope', 'identify email');
-      url.searchParams.set('state', state);
+      const url = new URL("https://discord.com/oauth2/authorize");
+      url.searchParams.set("client_id", clientId);
+      url.searchParams.set("redirect_uri", redirectUri);
+      url.searchParams.set("response_type", "code");
+      url.searchParams.set("scope", "identify email");
+      url.searchParams.set("state", state);
 
       return url.toString();
     },
     id,
-    name: 'Discord',
+    name: "Discord",
   };
 };

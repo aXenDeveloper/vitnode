@@ -1,5 +1,4 @@
 /src
 /node_modules
 /.turbo
-/eslint.config.mjs
 /tsconfig.json

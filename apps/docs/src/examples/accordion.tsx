@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@vitnode/core/components/ui/accordion';
+} from "@vitnode/core/components/ui/accordion";
 
 export default function AccordionExample() {
   return (

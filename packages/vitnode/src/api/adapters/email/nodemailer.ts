@@ -1,14 +1,14 @@
-import { createTransport } from 'nodemailer';
+import { createTransport } from "nodemailer";
 
-import type { EmailApiPlugin } from '@/api/models/email';
+import type { EmailApiPlugin } from "@/api/models/email";
 
 export const NodemailerEmailAdapter = ({
-  host = '',
+  host = "",
   port = 587,
   secure = false,
-  user = '',
-  password = '',
-  from = '',
+  user = "",
+  password = "",
+  from = "",
 }: {
   from: string | undefined;
   host: string | undefined;
@@ -19,8 +19,8 @@ export const NodemailerEmailAdapter = ({
 }): EmailApiPlugin => {
   return {
     sendEmail: async ({ metadata, to, subject, html, replyTo }) => {
-      if (!host || !user || !password || !from) {
-        throw new Error('Missing nodemailer configuration');
+      if (!(host && user && password && from)) {
+        throw new Error("Missing nodemailer configuration");
       }
 
       const transporter = createTransport(

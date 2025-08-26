@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { Button } from '@vitnode/core/components/ui/button';
+import { Button } from "@vitnode/core/components/ui/button";
 import {
   Drawer,
   DrawerClose,
@@ -10,7 +10,7 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-} from '@vitnode/core/components/ui/drawer';
+} from "@vitnode/core/components/ui/drawer";
 
 export default function DrawerExample() {
   return (

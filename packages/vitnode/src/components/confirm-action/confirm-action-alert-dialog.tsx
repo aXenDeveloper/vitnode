@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useTranslations } from 'next-intl';
-import dynamic from 'next/dynamic';
-import React from 'react';
+import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
+import React from "react";
 
 import {
   AlertDialog,
@@ -12,10 +12,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '../ui/alert-dialog';
+} from "../ui/alert-dialog";
 
 const ContentConfirmAction = dynamic(async () =>
-  import('./content').then(module => ({
+  import("./content").then(module => ({
     default: module.ContentConfirmAction,
   })),
 );
@@ -27,13 +27,13 @@ export const ConfirmActionAlertDialog = ({
   textSubmit,
   onSubmit,
   ...props
-}: Omit<React.ComponentProps<typeof AlertDialog>, 'children'> &
+}: Omit<React.ComponentProps<typeof AlertDialog>, "children"> &
   React.ComponentProps<typeof ContentConfirmAction> & {
     children: React.ReactNode;
     description?: React.ReactNode;
     title?: React.ReactNode;
   }) => {
-  const t = useTranslations('core.global.confirm_action');
+  const t = useTranslations("core.global.confirm_action");
 
   return (
     <AlertDialog {...props}>
@@ -41,9 +41,9 @@ export const ConfirmActionAlertDialog = ({
 
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{title ?? t('title')}</AlertDialogTitle>
+          <AlertDialogTitle>{title ?? t("title")}</AlertDialogTitle>
           <AlertDialogDescription>
-            {description ?? t('desc')}
+            {description ?? t("desc")}
           </AlertDialogDescription>
         </AlertDialogHeader>
 

@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
 import {
   ToggleGroup,
   ToggleGroupItem,
-} from '@vitnode/core/components/ui/toggle-group';
-import { Bold, Italic, Underline } from 'lucide-react';
+} from "@vitnode/core/components/ui/toggle-group";
+import { Bold, Italic, Underline } from "lucide-react";
 
 export default function ToggleGroupDemo() {
   return (

@@ -1,6 +1,6 @@
 // Tables
-export * from './categories';
-export * from './posts';
+export * from "./categories";
+export * from "./posts";
 
 // Relations
-export * from './relations';
+export * from "./relations";

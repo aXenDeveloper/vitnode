@@ -1,43 +1,26 @@
-'use client';
+"use client";
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useTranslations } from 'next-intl';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import {
   type ControllerRenderProps,
   type FieldPath,
   type FieldValues,
   type Mode,
-  useForm,
   type UseFormReturn,
-} from 'react-hook-form';
-import * as z from 'zod';
-
-import type { routeMiddlewareSchema } from '../../api/modules/middleware/route';
-
-import { useCaptcha } from '../../hooks/use-captcha';
+  useForm,
+} from "react-hook-form";
+import z from "zod";
+import type { routeMiddlewareSchema } from "../../api/modules/middleware/route";
+import { useCaptcha } from "../../hooks/use-captcha";
 import {
   getDefaults,
   getNestedParam,
   getZodInputParams,
-} from '../../lib/helpers/auto-form';
-import { Button } from '../ui/button';
-import { DialogClose, DialogFooter, useDialog } from '../ui/dialog';
-import { Form, FormField } from '../ui/form';
-
-export interface ItemAutoFormComponentProps {
-  description?: React.ReactNode;
-  field: ControllerRenderProps<FieldValues, string>;
-  label?: React.ReactNode;
-  labelRight?: React.ReactNode;
-  otherProps: {
-    enum?: string[];
-    isOptional?: boolean;
-    maxLength?: number;
-    minLength?: number;
-    pattern?: string;
-    type?: string;
-  };
-}
+} from "../../lib/helpers/auto-form";
+import { Button } from "../ui/button";
+import { DialogClose, DialogFooter, useDialog } from "../ui/dialog";
+import { Form, FormField } from "../ui/form";
 
 type ItemAutoFormProps<
   T extends z.ZodObject<z.ZodRawShape> = z.ZodObject<z.ZodRawShape>,
@@ -53,6 +36,21 @@ type ItemAutoFormProps<
       id: TName;
       label?: React.ReactNode;
     };
+
+export interface ItemAutoFormComponentProps {
+  description?: React.ReactNode;
+  field: ControllerRenderProps<FieldValues, string>;
+  label?: React.ReactNode;
+  labelRight?: React.ReactNode;
+  otherProps: {
+    enum?: string[];
+    isOptional?: boolean;
+    maxLength?: number;
+    minLength?: number;
+    pattern?: string;
+    type?: string;
+  };
+}
 
 export type AutoFormOnSubmit<
   T extends z.ZodObject<z.ZodRawShape>,
@@ -77,15 +75,15 @@ export function AutoForm<
   submitButtonProps,
   children,
   ...props
-}: Omit<React.ComponentProps<'form'>, 'onSubmit'> & {
-  captcha?: z.infer<typeof routeMiddlewareSchema>['captcha'];
+}: Omit<React.ComponentProps<"form">, "onSubmit"> & {
+  captcha?: z.infer<typeof routeMiddlewareSchema>["captcha"];
   fields: ItemAutoFormProps<T>[];
   formSchema: T;
   mode?: Mode;
   onSubmit?: AutoFormOnSubmit<T, TContext>;
   submitButtonProps?: Omit<
     React.ComponentProps<typeof Button>,
-    'isLoading' | 'type'
+    "isLoading" | "type"
   >;
 }) {
   const {
@@ -94,7 +92,7 @@ export function AutoForm<
     onReset: onResetCaptcha,
   } = useCaptcha(captcha);
   const { setIsDirty } = useDialog();
-  const t = useTranslations('core.global');
+  const t = useTranslations("core.global");
   const jsonSchema: z.core.JSONSchema.JSONSchema = z.toJSONSchema(formSchema);
   const inputParams = getZodInputParams(jsonSchema);
   const form = useForm<z.core.input<T>, TContext, z.core.output<T>>({
@@ -107,7 +105,7 @@ export function AutoForm<
     const parsedValues = formSchema.safeParse(values);
     if (parsedValues.success) {
       await onSubmitProp?.(parsedValues.data, form, {
-        captchaToken: captcha ? await getTokenCaptcha() : '',
+        captchaToken: captcha ? await getTokenCaptcha() : "",
       });
 
       if (captcha) {
@@ -125,10 +123,10 @@ export function AutoForm<
       }
       isLoading={form.formState.isSubmitting}
       {...submitButtonProps}
-      aria-label={submitButtonProps?.['aria-label'] ?? t('submit')}
+      aria-label={submitButtonProps?.["aria-label"] ?? t("submit")}
       type="submit"
     >
-      {submitButtonProps?.children ?? t('submit')}
+      {submitButtonProps?.children ?? t("submit")}
     </Button>
   );
 
@@ -161,34 +159,35 @@ export function AutoForm<
           <FormField
             key={item.id}
             name={item.id}
+            // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
             render={({ field }) => {
               return (
                 <>
                   {item.component({
                     field,
                     description:
-                      typeof params.description === 'string'
+                      typeof params.description === "string"
                         ? params.description
-                        : '',
+                        : "",
                     otherProps: {
                       isOptional: !params.required,
                       enum: Array.isArray(params.enum)
                         ? params.enum
                         : undefined,
                       maxLength:
-                        typeof params.maxLength === 'number'
+                        typeof params.maxLength === "number"
                           ? params.maxLength
                           : undefined,
                       minLength:
-                        typeof params.minLength === 'number'
+                        typeof params.minLength === "number"
                           ? params.minLength
                           : undefined,
                       pattern:
-                        typeof params.pattern === 'string'
+                        typeof params.pattern === "string"
                           ? params.pattern
                           : undefined,
                       type:
-                        typeof params.type === 'string'
+                        typeof params.type === "string"
                           ? params.type
                           : undefined,
                     },
@@ -206,7 +205,7 @@ export function AutoForm<
       {setIsDirty ? (
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="ghost">{t('cancel')}</Button>
+            <Button variant="ghost">{t("cancel")}</Button>
           </DialogClose>
           {submitButton}
         </DialogFooter>

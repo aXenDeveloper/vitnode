@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 export const useBeforeUnload = (
   enabled: (() => boolean) | boolean = true,
@@ -6,7 +6,7 @@ export const useBeforeUnload = (
 ) => {
   const handler = React.useCallback(
     (event: BeforeUnloadEvent) => {
-      const finalEnabled = typeof enabled === 'function' ? enabled() : true;
+      const finalEnabled = typeof enabled === "function" ? enabled() : true;
 
       if (!finalEnabled) {
         return;
@@ -30,10 +30,10 @@ export const useBeforeUnload = (
       return;
     }
 
-    window.addEventListener('beforeunload', handler);
+    window.addEventListener("beforeunload", handler);
 
     return () => {
-      window.removeEventListener('beforeunload', handler);
+      window.removeEventListener("beforeunload", handler);
     };
   }, [enabled, handler]);
 };

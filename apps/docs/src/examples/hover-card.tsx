@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
-} from '@vitnode/core/components/ui/hover-card';
+} from "@vitnode/core/components/ui/hover-card";
 
 export default function HoverCardExample() {
   return (

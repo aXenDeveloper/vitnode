@@ -1,13 +1,13 @@
-import { LayoutDashboardIcon, UsersRoundIcon } from 'lucide-react';
-import { getTranslations } from 'next-intl/server';
+import { LayoutDashboardIcon, UsersRoundIcon } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
-} from '@/components/ui/sidebar';
+} from "@/components/ui/sidebar";
 
-import { ItemNavAdmin } from './item';
+import { ItemNavAdmin } from "./item";
 
 export interface NavAdminParent {
   id: string;
@@ -20,29 +20,29 @@ export const NavSidebarAdmin = async ({
 }: {
   pluginNav: NavAdminParent[];
 }) => {
-  const t = await getTranslations('admin.global.nav');
+  const t = await getTranslations("admin.global.nav");
   const rootItems: NavAdminParent[] = [
     {
-      id: 'core',
-      title: t('core'),
+      id: "core",
+      title: t("core"),
       items: [
         {
-          href: '/admin/core/',
+          href: "/admin/core/",
           icon: <LayoutDashboardIcon />,
-          title: t('dashboard'),
+          title: t("dashboard"),
         },
         {
-          href: '/admin/core/users',
-          title: t('users.title'),
+          href: "/admin/core/users",
+          title: t("users.title"),
           icon: <UsersRoundIcon />,
           items: [
             {
-              title: t('users.list'),
-              href: '/admin/core/users',
+              title: t("users.list"),
+              href: "/admin/core/users",
             },
             {
-              title: 'test',
-              href: '/admin/core/test',
+              title: "test",
+              href: "/admin/core/test",
             },
           ],
         },

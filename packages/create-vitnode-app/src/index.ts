@@ -1,17 +1,18 @@
 #!/usr/bin/env node
-import { input } from '@inquirer/prompts';
-import { Command, Option } from 'commander';
-import { basename, resolve } from 'path';
-import color from 'picocolors';
+/** biome-ignore-all lint/suspicious/noConsole: <no need> */
+import { basename, resolve } from "node:path";
+import { input } from "@inquirer/prompts";
+import { Command, Option } from "commander";
+import color from "picocolors";
 
-import { createVitNode } from './create/create-vitnode.js';
-import { packageJson } from './helpers/get-package-json.js';
-import { validateNpmName } from './helpers/validate-pkg.js';
-import { createPlugin } from './plugin/index.js';
-import { createQuestionsCli } from './questions.js';
-import { validationProject } from './validation.js';
+import { createVitNode } from "./create/create-vitnode.js";
+import { packageJson } from "./helpers/get-package-json.js";
+import { validateNpmName } from "./helpers/validate-pkg.js";
+import { createPlugin } from "./plugin/index.js";
+import { createQuestionsCli } from "./questions.js";
+import { validationProject } from "./validation.js";
 
-const [major] = process.versions.node.split('.').map(Number);
+const [major] = process.versions.node.split(".").map(Number);
 if (major < 20) {
   console.error(
     color.red(
@@ -21,48 +22,48 @@ if (major < 20) {
   process.exit(1);
 }
 
-process.on('uncaughtException', (error: Error) => {
-  if (error.name === 'ExitPromptError') {
-    console.log(color.dim('👋 VitNode setup cancelled - see you next time!'));
+process.on("uncaughtException", (error: Error) => {
+  if (error.name === "ExitPromptError") {
+    console.log(color.dim("👋 VitNode setup cancelled - see you next time!"));
     process.exit(0);
   }
 
-  console.error(color.red('An unexpected error occurred:'));
+  console.error(color.red("An unexpected error occurred:"));
   console.error(color.red(error.stack ?? error.message));
   process.exit(1);
 });
 
 const init = async () => {
-  let projectPath = '';
+  let projectPath = "";
 
   const program = new Command()
-    .version(packageJson.version ?? '0.1.0')
-    .argument('[project-directory]')
-    .usage(`${color.green('[project-directory]')} [options]`)
+    .version(packageJson.version ?? "0.1.0")
+    .argument("[project-directory]")
+    .usage(`${color.green("[project-directory]")} [options]`)
     .action(name => {
       projectPath = name;
     });
 
   program.addOption(
     new Option(
-      '--package-manager <package-manager>',
-      'Specify the package manager to use',
-    ).choices(['npm', 'pnpm', 'bun']),
+      "--package-manager <package-manager>",
+      "Specify the package manager to use",
+    ).choices(["npm", "pnpm", "bun"]),
   );
-  program.option('--eslint', 'Initialize with eslint config.');
+  program.option("--biome", "Initialize with Biome config.");
   program.option(
-    '--skip-install',
-    'Skip installing packages after initializing the project.',
+    "--skip-install",
+    "Skip installing packages after initializing the project.",
   );
-  program.option('--plugin', 'Enable plugin mode.');
+  program.option("--plugin", "Enable plugin mode.");
   program.addOption(
     new Option(
-      '--mode <mode>',
-      'What type of app do you want to create?',
-    ).choices(['singleApp', 'apiMonorepo', 'onlyApi']),
+      "--mode <mode>",
+      "What type of app do you want to create?",
+    ).choices(["singleApp", "apiMonorepo", "onlyApi"]),
   );
-  program.option('--monorepo', 'Create project with monorepo structure.');
-  program.option('--docker', 'Initialize with Docker support.');
+  program.option("--monorepo", "Create project with monorepo structure.");
+  program.option("--docker", "Initialize with Docker support.");
 
   program.parse(process.argv);
 
@@ -75,8 +76,8 @@ const init = async () => {
 
   if (!projectPath) {
     projectPath = await input({
-      message: 'What is your project named?',
-      default: 'my-vitnode',
+      message: "What is your project named?",
+      default: "my-vitnode",
       validate: (name: string) => {
         const validation = validateNpmName({ name: basename(resolve(name)) });
         if (validation.valid) return true;

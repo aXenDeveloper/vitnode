@@ -1,15 +1,14 @@
-import type { Context } from 'hono';
+import crypto from "node:crypto";
+import { and, eq } from "drizzle-orm";
+import type { Context } from "hono";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { HTTPException } from "hono/http-exception";
 
-import crypto from 'crypto';
-import { and, eq } from 'drizzle-orm';
-import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { HTTPException } from 'hono/http-exception';
+import { core_users, core_users_sso } from "@/database/users";
+import { CONFIG } from "@/lib/config";
+import { removeSpecialCharacters } from "@/lib/special-characters";
 
-import { core_users, core_users_sso } from '@/database/users';
-import { CONFIG } from '@/lib/config';
-import { removeSpecialCharacters } from '@/lib/special-characters';
-
-import { UserModel } from './user';
+import { UserModel } from "./user";
 
 export interface SSOApiPlugin {
   fetchToken: (
@@ -30,7 +29,7 @@ export const getRedirectUri = (code: string) =>
 export class SSOModel {
   constructor(c: Context) {
     this.c = c;
-    this.plugins = c.get('core').authorization.ssoAdapters;
+    this.plugins = c.get("core").authorization.ssoAdapters;
   }
 
   private readonly c: Context;
@@ -58,7 +57,7 @@ export class SSOModel {
       },
       c,
     );
-    await c.get('db').insert(core_users_sso).values({
+    await c.get("db").insert(core_users_sso).values({
       userId: data.id,
       providerId: providerId,
       providerAccountId: user.id,
@@ -87,7 +86,7 @@ export class SSOModel {
     const ssoToken = await provider.fetchToken(code);
     const userFromSSO = await provider.fetchUser(ssoToken);
 
-    return await this.c.get('db').transaction(async tx => {
+    return await this.c.get("db").transaction(async tx => {
       const [dataSSOFromDb] = await tx
         .select({
           userId: core_users_sso.userId,
@@ -124,17 +123,13 @@ export class SSOModel {
 
         // If email exists, throw an error
         throw new HTTPException(409, {
-          message: 'Email already exists',
+          message: "Email already exists",
         });
         // await tx.insert(core_users_sso).values({
         //   providerId: providerId,
         //   providerAccountId: userFromSSO.id,
         //   userId: userWithEmail.id,
         // });
-
-        return {
-          userId: userWithEmail.id,
-        };
       }
 
       return {
@@ -144,25 +139,25 @@ export class SSOModel {
   }
 
   async encryptState() {
-    const state = crypto.randomBytes(8).toString('hex');
+    const state = crypto.randomBytes(8).toString("hex");
     const encryptedState = await new Promise<string>((resolve, reject) => {
-      const salt = crypto.randomBytes(4).toString('hex');
+      const salt = crypto.randomBytes(4).toString("hex");
 
       crypto.scrypt(state, salt, 16, (err, derivedKey) => {
         if (err) reject(err);
 
-        resolve(salt + ':' + derivedKey.toString('hex'));
+        resolve(`${salt}:${derivedKey.toString("hex")}`);
       });
     });
 
     setCookie(
       this.c,
-      `${this.c.get('core').authorization.cookieName}--state-sso`,
+      `${this.c.get("core").authorization.cookieName}--state-sso`,
       encryptedState,
       {
         httpOnly: true,
-        secure: this.c.get('core').authorization.cookieSecure,
-        path: '/',
+        secure: this.c.get("core").authorization.cookieSecure,
+        path: "/",
         domain: CONFIG.web.hostname,
       },
     );
@@ -182,32 +177,32 @@ export class SSOModel {
   async verifyState(state: string) {
     const storedState = getCookie(
       this.c,
-      `${this.c.get('core').authorization.cookieName}--state-sso`,
+      `${this.c.get("core").authorization.cookieName}--state-sso`,
     );
     if (!storedState) {
       throw new HTTPException(400, {
-        message: 'Invalid state',
+        message: "Invalid state",
       });
     }
 
     const isValid = await new Promise<boolean>((resolve, reject) => {
-      const [salt, storedHash] = storedState.split(':');
+      const [salt, storedHash] = storedState.split(":");
 
       crypto.scrypt(state, salt, 16, (err, derivedKey) => {
         if (err) reject(err);
-        resolve(storedHash === derivedKey.toString('hex'));
+        resolve(storedHash === derivedKey.toString("hex"));
       });
     });
 
     if (!isValid) {
       throw new HTTPException(400, {
-        message: 'Invalid state',
+        message: "Invalid state",
       });
     }
 
     deleteCookie(
       this.c,
-      `${this.c.get('core').authorization.cookieName}--state-sso`,
+      `${this.c.get("core").authorization.cookieName}--state-sso`,
     );
   }
 }

@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { XIcon } from 'lucide-react';
-import { useTranslations } from 'next-intl';
-import { Dialog as DialogPrimitive } from 'radix-ui';
-import * as React from 'react';
+import { XIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Dialog as DialogPrimitive } from "radix-ui";
+import React from "react";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 import {
   AlertDialog,
@@ -16,7 +16,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from './alert-dialog';
+} from "./alert-dialog";
 
 const DialogContext = React.createContext<{
   isDirty?: boolean;
@@ -31,14 +31,14 @@ const DialogContext = React.createContext<{
   setOpenAlertDialogBeforeClose: () => {},
 });
 
-export const useDialog = () => React.use(DialogContext);
+const useDialog = () => React.use(DialogContext);
 
 function Dialog({
   onOpenChange,
   open: openProp,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  const t = useTranslations('core.global');
+  const t = useTranslations("core.global");
   const [open, setOpen] = React.useState(false);
   const [isDirty, setIsDirty] = React.useState(false);
   const [openAlertDialogBeforeClose, setOpenAlertDialogBeforeClose] =
@@ -79,15 +79,15 @@ function Dialog({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {t('are_you_sure_want_to_leave_form.title')}
+              {t("are_you_sure_want_to_leave_form.title")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {t('are_you_sure_want_to_leave_form.desc')}
+              {t("are_you_sure_want_to_leave_form.desc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>
-              {t('are_you_sure_want_to_leave_form.cancel')}
+              {t("are_you_sure_want_to_leave_form.cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
@@ -95,7 +95,7 @@ function Dialog({
                 setTimeout(() => setOpen(false), 100);
               }}
             >
-              {t('are_you_sure_want_to_leave_form.confirm')}
+              {t("are_you_sure_want_to_leave_form.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -146,7 +146,7 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Overlay
       className={cn(
-        'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50',
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
         className,
       )}
       data-slot="dialog-overlay"
@@ -170,15 +170,15 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(
-          'dark:bg-background bg-card data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed left-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg',
-          'max-h-[calc(100vh_-_2rem)] overflow-y-scroll sm:max-h-[calc(100vh_-_5rem)]',
+          "dark:bg-background bg-card data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed left-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
+          "max-h-[calc(100vh_-_2rem)] overflow-y-scroll sm:max-h-[calc(100vh_-_5rem)]",
           className,
         )}
         data-slot="dialog-content"
         onInteractOutside={e => {
           // Prevent dismissing the dialog when clicking on a toast
           const isToastItem = (e.target as Element)?.closest(
-            '[data-sonner-toaster]',
+            "[data-sonner-toaster]",
           );
           if (isToastItem || isDirty) e.preventDefault();
 
@@ -211,21 +211,21 @@ function DialogContent({
   );
 }
 
-function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
+function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn('flex flex-col gap-2 text-center sm:text-left', className)}
+      className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
       data-slot="dialog-header"
       {...props}
     />
   );
 }
 
-function DialogFooter({ className, ...props }: React.ComponentProps<'div'>) {
+function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        'flex flex-col-reverse gap-2 sm:flex-row sm:justify-end',
+        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
         className,
       )}
       data-slot="dialog-footer"
@@ -240,7 +240,7 @@ function DialogTitle({
 }: React.ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
-      className={cn('text-lg font-semibold leading-none', className)}
+      className={cn("text-lg font-semibold leading-none", className)}
       data-slot="dialog-title"
       {...props}
     />
@@ -253,7 +253,7 @@ function DialogDescription({
 }: React.ComponentProps<typeof DialogPrimitive.Description>) {
   return (
     <DialogPrimitive.Description
-      className={cn('text-muted-foreground text-sm', className)}
+      className={cn("text-muted-foreground text-sm", className)}
       data-slot="dialog-description"
       {...props}
     />
@@ -271,4 +271,5 @@ export {
   DialogPortal,
   DialogTitle,
   DialogTrigger,
+  useDialog,
 };

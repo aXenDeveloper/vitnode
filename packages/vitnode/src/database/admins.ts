@@ -1,19 +1,19 @@
-import { relations } from 'drizzle-orm';
-import { index, pgTable } from 'drizzle-orm/pg-core';
+import { relations } from "drizzle-orm";
+import { index, pgTable } from "drizzle-orm/pg-core";
 
-import { core_roles } from './roles';
-import { core_sessions_known_devices } from './sessions';
-import { core_users } from './users';
+import { core_roles } from "./roles";
+import { core_sessions_known_devices } from "./sessions";
+import { core_users } from "./users";
 
 export const core_admin_permissions = pgTable(
-  'core_admin_permissions',
+  "core_admin_permissions",
   t => ({
     id: t.serial().primaryKey(),
     roleId: t.integer().references(() => core_roles.id, {
-      onDelete: 'cascade',
+      onDelete: "cascade",
     }),
     userId: t.integer().references(() => core_users.id, {
-      onDelete: 'cascade',
+      onDelete: "cascade",
     }),
     createdAt: t.timestamp().notNull().defaultNow(),
     updatedAt: t
@@ -26,8 +26,8 @@ export const core_admin_permissions = pgTable(
     // }),
   }),
   t => [
-    index('core_admin_permissions_role_id_idx').on(t.roleId),
-    index('core_admin_permissions_user_id_idx').on(t.userId),
+    index("core_admin_permissions_role_id_idx").on(t.roleId),
+    index("core_admin_permissions_user_id_idx").on(t.userId),
   ],
 ).enableRLS();
 
@@ -46,7 +46,7 @@ export const core_admin_permissions_relations = relations(
 );
 
 export const core_admin_sessions = pgTable(
-  'core_admin_sessions',
+  "core_admin_sessions",
   t => ({
     id: t.serial().primaryKey(),
     token: t.varchar({ length: 255 }).notNull().unique(),
@@ -54,7 +54,7 @@ export const core_admin_sessions = pgTable(
       .integer()
       .notNull()
       .references(() => core_users.id, {
-        onDelete: 'cascade',
+        onDelete: "cascade",
       }),
     createdAt: t.timestamp().notNull().defaultNow(),
     lastSeen: t.timestamp().notNull().defaultNow(),
@@ -62,13 +62,13 @@ export const core_admin_sessions = pgTable(
     deviceId: t
       .integer()
       .references(() => core_sessions_known_devices.id, {
-        onDelete: 'cascade',
+        onDelete: "cascade",
       })
       .notNull(),
   }),
   t => [
-    index('core_admin_sessions_token_idx').on(t.token),
-    index('core_admin_sessions_user_id_idx').on(t.userId),
+    index("core_admin_sessions_token_idx").on(t.token),
+    index("core_admin_sessions_user_id_idx").on(t.userId),
   ],
 ).enableRLS();
 

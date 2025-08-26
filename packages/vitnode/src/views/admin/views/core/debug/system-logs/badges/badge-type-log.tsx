@@ -1,16 +1,16 @@
-import { TriangleAlertIcon, XIcon } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { TriangleAlertIcon, XIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
-import { Badge } from '@/components/ui/badge';
+import { Badge } from "@/components/ui/badge";
 
-import type { ContentMoreActionSystemLogs } from '../actions/more/content';
+import type { ContentMoreActionSystemLogs } from "../actions/more/content";
 
 export const BadgeTypeLog = ({
   type,
-}: Pick<React.ComponentProps<typeof ContentMoreActionSystemLogs>, 'type'>) => {
-  const t = useTranslations('admin.debug.logs.types');
+}: Pick<React.ComponentProps<typeof ContentMoreActionSystemLogs>, "type">) => {
+  const t = useTranslations("admin.debug.logs.types");
 
-  if (type === 'warn') {
+  if (type === "warn") {
     return (
       <Badge className="bg-warn/10 border-warn/50 text-warn">
         <TriangleAlertIcon /> {t(type)}
@@ -18,7 +18,7 @@ export const BadgeTypeLog = ({
     );
   }
 
-  if (type === 'error') {
+  if (type === "error") {
     return (
       <Badge className="bg-destructive/10 border-destructive/50 text-destructive">
         <XIcon /> {t(type)}
