@@ -42,12 +42,6 @@
       "cache": false,
       "outputs": ["dist/**"]
     },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
-    "lint:fix": {
-      "dependsOn": ["^lint:fix"]
-    },
     "dev": {
       "cache": false,
       "persistent": true,

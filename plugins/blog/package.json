@@ -54,7 +54,7 @@
     "@swc/core": "^1.13.3",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
-    "@vitnode/eslint-config": "workspace:*",
+    "@vitnode/config": "workspace:*",
     "concurrently": "^9.2.0",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.9.2"

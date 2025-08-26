@@ -1,43 +1,37 @@
 {
-  "name": "@vitnode/eslint-config",
+  "name": "@vitnode/config",
   "version": "1.2.0-canary.52",
-  "description": "ESLint, TypeScript (TSConfig), Prettier config for VitNode",
+  "description": "Biome, TypeScript (TSConfig) config for VitNode",
   "author": "VitNode Team",
   "license": "MIT",
   "homepage": "https://vitnode.com",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/aXenDeveloper/vitnode.git",
-    "directory": "packages/eslint"
+    "directory": "packages/config"
   },
   "keywords": [
     "vitnode",
     "typescript",
-    "tsconfig"
+    "tsconfig",
+    "biome"
   ],
   "type": "module",
   "exports": {
-    "./eslint": {
-      "import": "./eslint.config.mjs",
-      "default": "./eslint.config.mjs"
-    },
     "./tsconfig": {
       "import": "./tsconfig.json",
       "default": "./tsconfig.json"
     },
-    "./prettierrc": {
-      "import": "./prettierrc.mjs",
-      "default": "./prettierrc.mjs"
+    "./biome": {
+      "import": "./biome.json",
+      "default": "./biome.json"
     }
   },
   "peerDependencies": {
-    "eslint": "^9.0.0",
     "typescript": "5.9.x"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.2.2",
     "typescript": "^5.9.2"
-  },
-  "dependencies": {
-    "typescript-eslint": "^8.40.0"
   }
 }

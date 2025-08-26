@@ -1,14 +1,19 @@
+import nextAnalyzer from "@next/bundle-analyzer";
 import { vitNodeNextConfig } from "@vitnode/core/config/next.config";
 import { createMDX } from "fumadocs-mdx/next";
 import type { NextConfig } from "next";
 
 const withMDX = createMDX();
 
+const withBundleAnalyzer = nextAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
+
 const nextConfig: NextConfig = {
   experimental: {
     inlineCss: true,
-    reactCompiler: true,
+    reactCompiler: process.env.ANALYZE !== "true",
   },
 };
 
-export default withMDX(vitNodeNextConfig(nextConfig));
+export default withBundleAnalyzer(withMDX(vitNodeNextConfig(nextConfig)));

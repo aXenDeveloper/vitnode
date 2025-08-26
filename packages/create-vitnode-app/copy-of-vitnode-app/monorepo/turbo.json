@@ -22,12 +22,6 @@
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
       "env": ["POSTGRES_URL", "NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_WEB_URL"]
     },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
-    "lint:fix": {
-      "dependsOn": ["^lint:fix"]
-    },
     "dev": {
       "cache": false,
       "persistent": true,

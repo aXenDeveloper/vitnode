@@ -37,7 +37,7 @@ The repository is a monorepo for the VitNode framework, which includes a backend
   - Create apps/plugins via `pnpm create vitnode-app@canary` (see `packages/create-vitnode-app`)
   - CLI prompts for package manager, app mode, Biome, Docker, install (see `questions.ts`)
 - **Linting/Formatting:**
-  - Use configs from `packages/eslint/`
+  - Use configs from `packages/config/`
   - File names: snake_case, ESModule only
   - TypeScript 5 strict mode
 - **Testing:**
