@@ -7,14 +7,14 @@
  */
 /** biome-ignore-all lint/suspicious/noConsole: <No need this> */
 
-import { Environment } from "./environment.ts";
+import { validateEnvironment } from "./environment.ts";
 import { FileCopyManager } from "./files/file-copy-manager.ts";
 import { VersionManager } from "./version-manager.ts";
 
 // Main execution
 async function main(): Promise<void> {
   console.log("🚀 Starting VitNode version bump and file copy process...");
-  const env = Environment.validate();
+  const env = validateEnvironment();
 
   const fileCopyManager = new FileCopyManager(env);
   await fileCopyManager.init();
