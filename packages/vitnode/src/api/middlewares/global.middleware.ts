@@ -5,6 +5,7 @@ import { EmailModel, type EmailModelSendArgs } from "@/api/models/email";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
+import type { BuildCronReturn } from "../lib/cron";
 import {
   type LoggerMiddlewareType,
   loggerMiddleware,
@@ -53,6 +54,7 @@ export interface EnvVariablesVitNode {
     };
     pathToMessages: (path: string) => Promise<{ default: object }>;
     plugins: { id: string }[];
+    cron: ({ pluginId: string; module: string } & BuildCronReturn)[];
   };
   db: Pick<VitNodeApiConfig, "dbProvider">["dbProvider"];
   email: {
@@ -165,6 +167,16 @@ export const globalMiddleware = ({
       plugins: plugins.map(plugin => ({
         id: plugin.pluginId,
       })),
+      cron: plugins.flatMap(plugin =>
+        plugin.cronJobs.map(cronJob => ({
+          pluginId: plugin.pluginId,
+          module: cronJob.module,
+          name: cronJob.name,
+          schedule: cronJob.schedule,
+          handler: cronJob.handler,
+          description: cronJob.description,
+        })),
+      ),
     });
 
     const user = await new SessionModel(c).getUser();

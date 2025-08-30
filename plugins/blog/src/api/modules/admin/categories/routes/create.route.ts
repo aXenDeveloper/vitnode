@@ -19,7 +19,7 @@ export const zodCreateCategorySchema = z.object({
 });
 
 export const createCategoryRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/",

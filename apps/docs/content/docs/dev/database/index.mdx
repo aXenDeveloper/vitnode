@@ -10,14 +10,14 @@ VitNode plugins seamlessly integrate with databases using [Drizzle ORM](https://
 Create your database schema in the `database` directory of your plugin. Each table should be defined in its own file for better organization.
 
 ```ts title="plugins/{plugin_name}/src/database/categories.ts"
-import { pgTable, serial, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
-export const blog_categories = pgTable('blog_categories', {
+export const blog_categories = pgTable("blog_categories", {
   id: serial().primaryKey(),
   createdAt: timestamp().notNull().defaultNow(),
   updatedAt: timestamp()
     .notNull()
-    .$onUpdate(() => new Date()),
+    .$onUpdate(() => new Date())
 });
 ```
 
@@ -27,20 +27,20 @@ Access the database in your plugin handlers using `c.get('database')` from the H
 
 ```ts title="plugins/{plugin_name}/src/routes/posts.ts"
 export const postsRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {},
-  handler: async c => {
+  handler: async (c) => {
     // [!code ++:7]
     const data = await c
-      .get('database')
+      .get("database")
       .select({
         id: blog_posts.id,
-        title: blog_posts.title,
+        title: blog_posts.title
       })
       .from(blog_posts);
 
     return c.json(data);
-  },
+  }
 });
 ```
 
@@ -52,7 +52,7 @@ VitNode provides convenient commands for managing your database schema and migra
 
 Generate migration files when you modify your database schema:
 
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
 <Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
 
@@ -91,6 +91,6 @@ npm run db:push
 </Tabs>
 
 <Callout type="info" title="Automatic Updates in Development">
-  VitNode automatically runs migrations and schema updates when you start your
-  application in development mode, keeping your database in sync with your code.
+  VitNode automatically runs migrations and schema updates when you start your application in
+  development mode, keeping your database in sync with your code.
 </Callout>

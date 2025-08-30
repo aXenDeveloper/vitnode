@@ -6,7 +6,7 @@ import { deletePostRoute } from "./routes/delete.route";
 import { editPostRoute } from "./routes/edit.route";
 
 export const postsAdminModule = buildModule({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   name: "posts",
   routes: [editPostRoute, createPostRoute, deletePostRoute],
 });

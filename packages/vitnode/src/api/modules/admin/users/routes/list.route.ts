@@ -10,7 +10,7 @@ import { CONFIG_PLUGIN } from "@/config";
 import { core_users } from "@/database/users";
 
 export const listUsersAdminRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description: "Get list of all users",

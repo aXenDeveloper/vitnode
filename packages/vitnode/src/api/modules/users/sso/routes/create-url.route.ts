@@ -5,7 +5,7 @@ import { SSOModel } from "@/api/models/sso";
 import { CONFIG_PLUGIN } from "@/config";
 
 export const createUrlRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Generate SSO URL",

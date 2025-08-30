@@ -6,7 +6,7 @@ import { CONFIG_PLUGIN } from "@/const";
 import TestTemplateEmail from "@/emails/test-template";
 
 export const testRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Test route",

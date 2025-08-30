@@ -7,7 +7,7 @@ import { CONFIG_PLUGIN } from "@/const";
 import { blog_posts } from "@/database/posts";
 
 export const deletePostRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "delete",
     path: "/{id}",

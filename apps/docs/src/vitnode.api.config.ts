@@ -1,4 +1,5 @@
 import { blogApiPlugin } from "@vitnode/blog/config.api";
+import { NodeCronAdapter } from "@vitnode/core/api/adapters/cron/node-cron.adapter";
 import { NodemailerEmailAdapter } from "@vitnode/core/api/adapters/email/nodemailer";
 import { DiscordSSOApiPlugin } from "@vitnode/core/api/adapters/sso/discord";
 import { FacebookSSOApiPlugin } from "@vitnode/core/api/adapters/sso/facebook";
@@ -25,6 +26,7 @@ export const vitNodeApiConfig = buildApiConfig({
     connection: POSTGRES_URL,
     casing: "camelCase",
   }),
+  cronAdapter: NodeCronAdapter(),
   rateLimiter: {
     points: 20, // 20 requests
     duration: 60, // per 60 seconds

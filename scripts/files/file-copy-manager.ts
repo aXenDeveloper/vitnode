@@ -41,7 +41,6 @@ export class FileCopyManager {
       "src/app/layout.tsx",
       "src/app/not-found.tsx",
       "postcss.config.mjs",
-      ".prettierrc.mjs",
     ]);
 
     const apiSourcePath = join(this.env.WORKSPACE, "apps", "api");

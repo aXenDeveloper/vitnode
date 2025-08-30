@@ -5,7 +5,7 @@ import { CONFIG_PLUGIN } from "@/const";
 
 export const blogPlugin = () => {
   return buildPlugin({
-    ...CONFIG_PLUGIN,
+    pluginId: CONFIG_PLUGIN.pluginId,
     admin: {
       nav: [
         {

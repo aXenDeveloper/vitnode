@@ -21,7 +21,7 @@ const zodPostResponseSchema = z.object({
 });
 
 export const editPostRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "put",
     path: "/{id}",

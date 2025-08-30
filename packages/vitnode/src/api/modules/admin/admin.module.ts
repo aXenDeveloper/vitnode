@@ -6,7 +6,7 @@ import { sessionAdminRoute } from "./routes/session.route";
 import { usersAdminModule } from "./users/users.admin.module";
 
 export const adminModule = buildModule({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   name: "admin",
   routes: [sessionAdminRoute],
   modules: [usersAdminModule, debugAdminModule],

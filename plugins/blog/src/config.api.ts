@@ -8,7 +8,7 @@ import { postsModule } from "./api/modules/posts/posts.module";
 
 export const blogApiPlugin = () => {
   return buildApiPlugin({
-    ...CONFIG_PLUGIN,
+    pluginId: CONFIG_PLUGIN.pluginId,
     modules: [adminModule, categoriesModule, postsModule],
   });
 };

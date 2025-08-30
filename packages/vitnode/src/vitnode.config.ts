@@ -1,7 +1,7 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { ThemeProvider } from "next-themes";
 import type { IRateLimiterOptions } from "rate-limiter-flexible";
-
+import type { CronAdapter } from "./api/lib/cron";
 import type { BuildPluginApiReturn } from "./api/lib/plugin";
 import type { EmailApiPlugin } from "./api/models/email";
 import type { SSOApiPlugin } from "./api/models/sso";
@@ -48,6 +48,7 @@ export interface VitNodeApiConfig {
     type: "cloudflare_turnstile" | "recaptcha_v3";
   };
   dbProvider: PostgresJsDatabase;
+  cronAdapter?: CronAdapter;
   email?: {
     adapter?: EmailApiPlugin;
     logo?: DefaultTemplateEmailProps["templateProps"]["logo"];

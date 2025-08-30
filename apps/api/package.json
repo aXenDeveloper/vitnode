@@ -4,8 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "db:push": "vitnode push",
-    "db:migrate": "vitnode migrate",
     "init": "vitnode init --api",
     "dev": "tsx watch src/index.ts",
     "dev:email": "email dev --dir src/emails",

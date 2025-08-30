@@ -6,7 +6,7 @@ import { deleteCategoryRoute } from "./routes/delete.route";
 import { editCategoryRoute } from "./routes/edit.route";
 
 export const categoriesAdminModule = buildModule({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   name: "categories",
   routes: [createCategoryRoute, editCategoryRoute, deleteCategoryRoute],
 });
