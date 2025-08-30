@@ -150,6 +150,9 @@ importers:
       next-intl:
         specifier: ^4.3.4
         version: 4.3.4(next@15.5.0(@playwright/test@1.55.0)(babel-plugin-react-compiler@19.1.0-rc.2)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1)(typescript@5.9.2)
+      node-cron:
+        specifier: ^4.2.1
+        version: 4.2.1
       react:
         specifier: ^19.1.1
         version: 19.1.1
@@ -296,9 +299,6 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
-      node-cron:
-        specifier: ^4.2.1
-        version: 4.2.1
       nodemailer:
         specifier: ^7.0.5
         version: 7.0.5
@@ -405,6 +405,9 @@ importers:
       next-intl:
         specifier: ^4.3.4
         version: 4.3.4(next@15.5.0(@babel/core@7.28.3)(@playwright/test@1.55.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1)(typescript@5.9.2)
+      node-cron:
+        specifier: ^4.2.1
+        version: 4.2.1
       react:
         specifier: ^19.1.1
         version: 19.1.1

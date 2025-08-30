@@ -1,6 +1,6 @@
 {
-  "id": "d9bb0561-0a87-4b73-9ad4-54843ce1bdac",
-  "prevId": "e4143cd9-39bd-4bd4-8cd9-e620a0a997b4",
+  "id": "c5978a54-5406-4156-af0b-f50b6a6b19bc",
+  "prevId": "d9bb0561-0a87-4b73-9ad4-54843ce1bdac",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -222,10 +222,16 @@
       "name": "core_cron",
       "schema": "",
       "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
         "name": {
           "name": "name",
           "type": "varchar(255)",
-          "primaryKey": true,
+          "primaryKey": false,
           "notNull": true
         },
         "description": {
@@ -239,18 +245,19 @@
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "core_cron_name_unique": {
-          "name": "core_cron_name_unique",
-          "nullsNotDistinct": false,
-          "columns": ["name"]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": true

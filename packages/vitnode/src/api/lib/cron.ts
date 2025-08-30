@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import type { EnvVitNode } from "../middlewares/global.middleware";
 
 export interface CronAdapter {
-  schedule(): void;
+  schedule(cronSecret?: string): void;
 }
 
 export interface BuildCronReturn {

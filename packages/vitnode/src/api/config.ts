@@ -4,10 +4,11 @@ import type { Context, Env, Schema } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
+
 import { newBuildPluginApiCore } from "@/api/plugin";
 import { CONFIG_PLUGIN } from "@/config";
+import { CONFIG } from "@/lib/config";
 import type { VitNodeApiConfig } from "@/vitnode.config";
-
 import {
   globalAdminMiddleware,
   globalMiddleware,
@@ -89,6 +90,10 @@ export function VitNodeAPI({
       },
     );
   });
+
+  if (vitNodeApiConfig.cronAdapter) {
+    vitNodeApiConfig.cronAdapter.schedule(CONFIG.cronJobSecret);
+  }
 
   [newBuildPluginApiCore, ...vitNodeApiConfig.plugins].map(root => {
     app.route(`/${root.pluginId}`, root.hono);

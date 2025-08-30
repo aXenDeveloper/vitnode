@@ -36,6 +36,7 @@
     "motion": "^12.23.12",
     "next": "^15.5.0",
     "next-intl": "^4.3.4",
+    "node-cron": "^4.2.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.62.0",

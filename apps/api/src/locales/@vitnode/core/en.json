@@ -192,6 +192,10 @@
           "home_page": "Home Page",
           "debug": "Debug Panel",
           "log_out": "Log Out"
+        },
+        "advanced": {
+          "title": "Advanced",
+          "cron": "Cron Jobs"
         }
       }
     },

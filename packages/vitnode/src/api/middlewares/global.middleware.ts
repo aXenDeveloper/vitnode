@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import { EmailModel, type EmailModelSendArgs } from "@/api/models/email";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
+import { CONFIG } from "@/lib/config";
 import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
 import type { BuildCronReturn } from "../lib/cron";
 import {
@@ -47,6 +48,7 @@ export interface EnvVariablesVitNode {
       ssoAdapters: SSOApiPlugin[];
     };
     captcha?: Pick<VitNodeApiConfig, "captcha">["captcha"];
+    cronSecret?: string;
     email?: VitNodeApiConfig["email"];
     metadata: {
       shortTitle?: string;
@@ -97,28 +99,42 @@ export const globalMiddleware = ({
   | "plugins"
 > &
   Pick<VitNodeConfig, "metadata">) => {
+  const pluginsMetadata = plugins.map(plugin => ({
+    id: plugin.pluginId,
+  }));
+
+  const cronMetadata = plugins.flatMap(plugin =>
+    plugin.cronJobs.map(cronJob => ({
+      pluginId: plugin.pluginId,
+      module: cronJob.module,
+      name: cronJob.name,
+      schedule: cronJob.schedule,
+      handler: cronJob.handler,
+      description: cronJob.description,
+    })),
+  );
+
+  const ipHeaderKeys = [
+    "x-forwarded-for",
+    "x-real-ip",
+    "cf-connecting-ip",
+    "x-client-ip",
+    "x-forwarded",
+    "x-cluster-client-ip",
+    "forwarded-for",
+    "forwarded",
+    "via",
+    "remote-addr",
+    "client-ip",
+    "ip",
+    "x-ip",
+    "true-client-ip",
+    "fastly-client-ip",
+    "x-fastly-client-ip",
+  ];
+
   // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
   return async (c: Context, next: Next) => {
-    // Collect possible IP header keys in order of trust/preference
-    const ipHeaderKeys = [
-      "x-forwarded-for",
-      "x-real-ip",
-      "cf-connecting-ip",
-      "x-client-ip",
-      "x-forwarded",
-      "x-cluster-client-ip",
-      "forwarded-for",
-      "forwarded",
-      "via",
-      "remote-addr",
-      "client-ip",
-      "ip",
-      "x-ip",
-      "true-client-ip",
-      "fastly-client-ip",
-      "x-fastly-client-ip",
-    ];
-
     let ipAddress: string | undefined;
 
     // Try to get IP from Hono's request header method first
@@ -164,19 +180,9 @@ export const globalMiddleware = ({
         cookieSecure: authorization?.cookieSecure ?? true,
       },
       captcha,
-      plugins: plugins.map(plugin => ({
-        id: plugin.pluginId,
-      })),
-      cron: plugins.flatMap(plugin =>
-        plugin.cronJobs.map(cronJob => ({
-          pluginId: plugin.pluginId,
-          module: cronJob.module,
-          name: cronJob.name,
-          schedule: cronJob.schedule,
-          handler: cronJob.handler,
-          description: cronJob.description,
-        })),
-      ),
+      cronSecret: CONFIG.cronJobSecret,
+      plugins: pluginsMetadata,
+      cron: cronMetadata,
     });
 
     const user = await new SessionModel(c).getUser();

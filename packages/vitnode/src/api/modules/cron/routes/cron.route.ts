@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
+import { cronAuthMiddleware } from "@/api/middlewares/cron-auth.middleware";
 import { CONFIG_PLUGIN } from "@/config";
 
 export const runCronRoute = buildRoute({
@@ -9,6 +10,7 @@ export const runCronRoute = buildRoute({
     method: "post",
     description: "Run cron job",
     path: "/",
+    middleware: [cronAuthMiddleware()],
     responses: {
       200: {
         content: {
