@@ -4,7 +4,6 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "db:push": "vitnode push",
     "db:migrate": "vitnode migrate",
     "docker:dev": "docker compose -f ./docker-compose.yml -p vitnode-dev-dun up -d",
     "init": "vitnode init",

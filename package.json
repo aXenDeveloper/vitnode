@@ -4,7 +4,6 @@
   "scripts": {
     "release": "tsx ./scripts/bump-version.ts",
     "db:migrate": "turbo db:migrate",
-    "db:push": "turbo db:push",
     "docker:dev": "turbo docker:dev",
     "build:scripts": "turbo build:scripts && pnpm i",
     "build:plugins": "turbo build:plugins",

@@ -10,4 +10,5 @@ export const adminModule = buildModule({
   name: "admin",
   routes: [sessionAdminRoute],
   modules: [usersAdminModule, debugAdminModule],
+  cronJobs: [],
 });

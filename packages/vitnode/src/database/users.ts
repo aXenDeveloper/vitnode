@@ -99,7 +99,7 @@ export const core_users_confirm_emails = pgTable(
       .notNull(),
     token: t.varchar({ length: 100 }).notNull().unique(),
     createdAt: t.timestamp().notNull().defaultNow(),
-    expires: t.timestamp().notNull(),
+    expiresAt: t.timestamp().notNull(),
     ipAddress: t.varchar({ length: 40 }).notNull(),
   }),
 ).enableRLS();

@@ -61,7 +61,6 @@
 - `pnpm start` - Start production server
 - `pnpm lint` - Check code quality
 - `pnpm lint:fix` - Fix code quality issues
-- `pnpm db:push` - Push database schema changes
 - `pnpm db:migrate` - Run database migrations
 - `pnpm dev:email` - Start email development server
 

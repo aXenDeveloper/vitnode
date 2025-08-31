@@ -1,7 +1,6 @@
 /** biome-ignore-all lint/suspicious/noConsole: <no need> */
 import { count } from "drizzle-orm";
 
-import { core_admin_permissions } from "@/database/admins.js";
 import { core_languages, core_languages_words } from "@/database/languages.js";
 import { core_moderators_permissions } from "@/database/moderators.js";
 import { core_roles } from "@/database/roles.js";
@@ -23,15 +22,6 @@ export const generateDatabaseMigrations = async () => {
 export const runMigrations = async () => {
   try {
     await runInteractiveShellCommand("npm", ["run", "drizzle-kit", "migrate"]);
-  } catch (err) {
-    console.error("\x1b[31m%s\x1b[0m", err);
-    process.exit(1);
-  }
-};
-
-export const runPush = async () => {
-  try {
-    await runInteractiveShellCommand("npm", ["run", "drizzle-kit", "push"]);
   } catch (err) {
     console.error("\x1b[31m%s\x1b[0m", err);
     process.exit(1);
@@ -134,15 +124,15 @@ export const initialDataForDatabase = async () => {
     ]);
 
     // Insert default permissions
-    await Promise.all([
-      await dbClient.insert(core_moderators_permissions).values({
+    await dbClient.insert(core_moderators_permissions).values([
+      {
         roleId: roles[2].id,
         protected: true,
-      }),
-      await dbClient.insert(core_admin_permissions).values({
+      },
+      {
         roleId: roles[3].id,
         protected: true,
-      }),
+      },
     ]);
   }
 };
@@ -201,18 +191,19 @@ export const prepareDatabase = async ({
     );
   }
 
-  await Promise.all(
-    steps.map((step, i) => {
-      const stepNum = `[${i + 1}/${steps.length}]`;
-      if (step.label === "Insert initial data...") {
-        console.log(`\n${initMessage} ${stepNum} ${step.label}`);
-      } else {
-        console.log(`${initMessage} ${stepNum} ${step.label}`);
-      }
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    const stepNum = `[${i + 1}/${steps.length}]`;
 
-      return step.action();
-    }),
-  );
+    if (step.label === "Insert initial data...") {
+      console.log(`\n${initMessage} ${stepNum} ${step.label}`);
+    } else {
+      console.log(`${initMessage} ${stepNum} ${step.label}`);
+    }
+
+    // biome-ignore lint/performance/noAwaitInLoops: This is necessary here.
+    await step.action();
+  }
 
   console.log(`${initMessage} \x1b[32mInitial setup completed.\x1b[0m`);
   process.exit(0);

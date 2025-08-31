@@ -20,6 +20,17 @@ CREATE TABLE "core_admin_sessions" (
 );
 --> statement-breakpoint
 ALTER TABLE "core_admin_sessions" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+CREATE TABLE "core_cron" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"description" varchar(255),
+	"lastRun" timestamp,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"pluginId" varchar(100) NOT NULL,
+	"module" varchar(100) NOT NULL
+);
+--> statement-breakpoint
+ALTER TABLE "core_cron" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "core_languages" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"code" varchar(32) NOT NULL,
@@ -130,7 +141,8 @@ CREATE TABLE "core_users_confirm_emails" (
 	"userId" integer NOT NULL,
 	"token" varchar(100) NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"expires" timestamp NOT NULL,
+	"expiresAt" timestamp NOT NULL,
+	"ipAddress" varchar(40) NOT NULL,
 	CONSTRAINT "core_users_confirm_emails_token_unique" UNIQUE("token")
 );
 --> statement-breakpoint
@@ -139,7 +151,7 @@ CREATE TABLE "core_users_forgot_password" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"userId" integer NOT NULL,
 	"token" varchar(100) NOT NULL,
-	"ip_address" varchar(40) NOT NULL,
+	"ipAddress" varchar(40) NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"expiresAt" timestamp NOT NULL,
 	CONSTRAINT "core_users_forgot_password_userId_unique" UNIQUE("userId"),

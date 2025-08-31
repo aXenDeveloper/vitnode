@@ -9,7 +9,6 @@ import {
   initialDataForDatabase,
   prepareDatabase,
   runMigrations,
-  runPush,
 } from "./prepare-database.js";
 import { preparePluginsFiles } from "./prepare-plugins-files.js";
 
@@ -55,14 +54,6 @@ switch (command) {
     console.log(`${initMessage} \x1b[32mPlugins prepared successfully.\x1b[0m`);
     process.exit(0);
 
-    break;
-
-  case "push":
-    await runPush();
-    await initialDataForDatabase();
-
-    console.log(`${initMessage} \x1b[32mDatabase pushed successfully.\x1b[0m`);
-    process.exit(0);
     break;
 
   default:

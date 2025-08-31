@@ -7,7 +7,6 @@ import { HTTPException } from "hono/http-exception";
 
 import { newBuildPluginApiCore } from "@/api/plugin";
 import { CONFIG_PLUGIN } from "@/config";
-import { CONFIG } from "@/lib/config";
 import type { VitNodeApiConfig } from "@/vitnode.config";
 import {
   globalAdminMiddleware,
@@ -74,29 +73,36 @@ export function VitNodeAPI({
     return next();
   });
 
+  if (vitNodeApiConfig.cronAdapter) {
+    vitNodeApiConfig.cronAdapter.schedule();
+  }
+
+  [newBuildPluginApiCore, ...vitNodeApiConfig.plugins].map(root => {
+    app.route(`/${root.pluginId}`, root.hono);
+  });
+
   app.onError(async (error, c) => {
     if (error instanceof HTTPException) {
       return error.getResponse();
     }
 
-    await c.get("log").error(`Unhandled error: ${error.message}`);
+    const errorMessage = error?.message ?? "Unknown error";
+
+    try {
+      const logger = c.get("log");
+      if (logger) {
+        await logger.error(`Unhandled error: ${errorMessage}`);
+      }
+    } catch {}
 
     return new Response(
       process.env.NODE_ENV === "development"
-        ? error.message
+        ? errorMessage
         : "Internal Server Error",
       {
         status: 500,
       },
     );
-  });
-
-  if (vitNodeApiConfig.cronAdapter) {
-    vitNodeApiConfig.cronAdapter.schedule(CONFIG.cronJobSecret);
-  }
-
-  [newBuildPluginApiCore, ...vitNodeApiConfig.plugins].map(root => {
-    app.route(`/${root.pluginId}`, root.hono);
   });
 
   return app;

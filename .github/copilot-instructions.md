@@ -32,7 +32,7 @@ The repository is a monorepo for the VitNode framework, which includes a backend
 
 - **Package Manager:** Use `pnpm` for all installs/scripts
 - **Scripts:**
-  - `pnpm dev` (dev server), `pnpm build`, `pnpm lint`, `pnpm db:push`, `pnpm db:migrate`, `pnpm docker:dev`
+  - `pnpm dev` (dev server), `pnpm build`, `pnpm lint`, `pnpm db:migrate`, `pnpm docker:dev`
 - **CLI:**
   - Create apps/plugins via `pnpm create vitnode-app@canary` (see `packages/create-vitnode-app`)
   - CLI prompts for package manager, app mode, Biome, Docker, install (see `questions.ts`)

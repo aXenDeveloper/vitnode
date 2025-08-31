@@ -84,7 +84,6 @@ const rootScripts = (
   appName: string,
 ) => ({
   "db:migrate": "turbo db:migrate",
-  "db:push": "turbo db:push",
   init: "turbo init",
   dev: "turbo dev",
   build: "turbo build",
@@ -100,7 +99,6 @@ const apiScripts = (
   onlyApi: boolean,
   appName: string,
 ) => ({
-  "db:push": "vitnode push",
   "db:migrate": "vitnode migrate",
   init: "vitnode init --api",
   ...(pm === "bun"
@@ -124,7 +122,6 @@ const singleAppScripts = (
   docker: boolean,
   appName: string,
 ) => ({
-  "db:push": "vitnode push",
   "db:migrate": "vitnode migrate",
   init: "vitnode init",
   dev: "vitnode init && next dev --turbopack",

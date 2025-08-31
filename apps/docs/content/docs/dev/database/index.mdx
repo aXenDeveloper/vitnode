@@ -70,26 +70,6 @@ npm run db:migrate
 
 </Tabs>
 
-### Pushing Schema Changes
-
-Apply your schema changes directly to the database:
-
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
-
-```bash tab="bun"
-bun db:push
-```
-
-```bash tab="pnpm"
-pnpm db:push
-```
-
-```bash tab="npm"
-npm run db:push
-```
-
-</Tabs>
-
 <Callout type="info" title="Automatic Updates in Development">
   VitNode automatically runs migrations and schema updates when you start your application in
   development mode, keeping your database in sync with your code.

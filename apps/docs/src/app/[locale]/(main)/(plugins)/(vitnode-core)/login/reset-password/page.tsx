@@ -1,6 +1,8 @@
-import { PasswordResetView } from "@vitnode/core/views/auth/password-reset/password-reset-view";
 import type { Metadata } from "next/dist/types";
+
 import { getTranslations } from "next-intl/server";
+
+import { PasswordResetView } from "@vitnode/core/views/auth/password-reset/password-reset-view";
 
 export const generateMetadata = async ({
   params,

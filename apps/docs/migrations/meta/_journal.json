@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1754424977539,
-      "tag": "0000_serious_nightcrawler",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1754907028203,
-      "tag": "0001_reflective_trish_tilby",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1754907229544,
-      "tag": "0002_first_the_fallen",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1756553347205,
-      "tag": "0003_exotic_mister_sinister",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1756561958214,
-      "tag": "0004_lying_scrambler",
+      "when": 1756667224412,
+      "tag": "0000_puzzling_rictor",
       "breakpoints": true
     }
   ]

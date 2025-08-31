@@ -20,13 +20,6 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "env": ["POSTGRES_URL"]
     },
-    "db:push": {
-      "dependsOn": ["^db:push"],
-      "cache": false,
-      "persistent": true,
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "env": ["POSTGRES_URL"]
-    },
     "build:plugins": {
       "dependsOn": ["^build:plugins"],
       "outputs": ["dist/**"]

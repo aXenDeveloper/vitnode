@@ -1,5 +1,5 @@
 {
-  "id": "53f6fec6-1c5b-4344-8806-8d2cfc773fe0",
+  "id": "b50634b4-ce97-4649-a0e6-49706c351987",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -214,6 +214,62 @@
           "columns": ["token"]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    },
+    "public.core_cron": {
+      "name": "core_cron",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lastRun": {
+          "name": "lastRun",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "pluginId": {
+          "name": "pluginId",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "module": {
+          "name": "module",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": true
@@ -1044,9 +1100,15 @@
           "notNull": true,
           "default": "now()"
         },
-        "expires": {
-          "name": "expires",
+        "expiresAt": {
+          "name": "expiresAt",
           "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ipAddress": {
+          "name": "ipAddress",
+          "type": "varchar(40)",
           "primaryKey": false,
           "notNull": true
         }
@@ -1097,8 +1159,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "ip_address": {
-          "name": "ip_address",
+        "ipAddress": {
+          "name": "ipAddress",
           "type": "varchar(40)",
           "primaryKey": false,
           "notNull": true
