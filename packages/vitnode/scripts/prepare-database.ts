@@ -1,10 +1,9 @@
 /** biome-ignore-all lint/suspicious/noConsole: <no need> */
 import { count } from "drizzle-orm";
-
+import { core_admin_permissions } from "@/database/admins.js";
 import { core_languages, core_languages_words } from "@/database/languages.js";
 import { core_moderators_permissions } from "@/database/moderators.js";
 import { core_roles } from "@/database/roles.js";
-
 import { getConfig } from "./get-config.js";
 import { preparePluginsFiles } from "./prepare-plugins-files.js";
 import { runInteractiveShellCommand } from "./run-interactive-shell-command.js";
@@ -134,6 +133,12 @@ export const initialDataForDatabase = async () => {
         protected: true,
       },
     ]);
+
+    // Insert default admin permissions
+    await dbClient.insert(core_admin_permissions).values({
+      roleId: roles[3].id,
+      protected: true,
+    });
   }
 };
 

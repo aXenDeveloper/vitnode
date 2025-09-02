@@ -199,6 +199,32 @@
         }
       }
     },
+    "advanced": {
+      "cron": {
+        "title": "Cron Jobs",
+        "desc": "Manage and monitor scheduled tasks.",
+        "list": {
+          "name": "Name",
+          "pluginId": "Plugin ID",
+          "module": "Module",
+          "schedule": "Schedule",
+          "lastRun": {
+            "title": "Last Run",
+            "never": "Never"
+          },
+          "nextRun": {
+            "title": "Next Run",
+            "never": "Never"
+          },
+          "actions": {
+            "runNow": {
+              "label": "Run Job Now",
+              "success": "Cron job executed successfully."
+            }
+          }
+        }
+      }
+    },
     "user": {
       "list": {
         "desc": "Manage users of your application.",

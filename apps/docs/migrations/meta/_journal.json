@@ -8,6 +8,20 @@
       "when": 1756667224412,
       "tag": "0000_puzzling_rictor",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1756795000370,
+      "tag": "0001_common_spirit",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1756828546879,
+      "tag": "0002_public_millenium_guard",
+      "breakpoints": true
     }
   ]
 }

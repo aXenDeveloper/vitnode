@@ -12,73 +12,71 @@ VitNode uses cursor-based pagination for optimal performance with large datasets
 ### Basic Usage
 
 ```ts
-import { buildRoute } from '@/api/lib/route';
-import { dbClient } from '@/database/client';
-import { users } from '@/database/schema/users';
-import { z } from 'zod';
-
+import z from "zod";
+import { buildRoute } from "@/api/lib/route";
 import {
   withPagination,
   zodPaginationPageInfo,
-  zodPaginationQuery,
-} from '@/api/lib/with-pagination';
+  zodPaginationQuery
+} from "@/api/lib/with-pagination";
+import { CONFIG_PLUGIN } from "@/config";
+import { core_cron } from "@/database/cron";
 
-export const routeUsersGet = buildRoute({
-  pluginId: 'core',
+export const getCronsRoute = buildRoute({
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
-    path: '/users',
-    method: 'get',
-    description: 'Get users list',
+    method: "get",
+    description: "Get Admin Cron Logs",
+    path: "/",
     request: {
       query: zodPaginationQuery.extend({
-        order: z.enum(['asc', 'desc']).optional(),
-        orderBy: z.enum(['id', 'username', 'createdAt']).optional(),
-      }),
+        order: z.enum(["asc", "desc"]).optional(),
+        orderBy: z.enum(["lastRun"]).optional()
+      })
     },
     responses: {
       200: {
         content: {
-          'application/json': {
+          "application/json": {
             schema: z.object({
               edges: z.array(
                 z.object({
                   id: z.number(),
-                  username: z.string(),
-                  email: z.string(),
                   createdAt: z.date(),
-                }),
+                  name: z.string(),
+                  description: z.string().nullable(),
+                  pluginId: z.string(),
+                  module: z.string(),
+                  lastRun: z.date().nullable()
+                })
               ),
-              pageInfo: zodPaginationPageInfo,
-            }),
-          },
+              pageInfo: zodPaginationPageInfo
+            })
+          }
         },
-        description: 'List of users',
-      },
-    },
+        description: "List of cron jobs"
+      }
+    }
   },
-  handler: async c => {
-    const query = c.req.valid('query');
+  handler: async (c) => {
+    const query = c.req.valid("query");
     const data = await withPagination({
       params: {
-        query,
+        query
       },
-      primaryCursor: users.id, // Primary key used for pagination
+      c,
+      primaryCursor: core_cron.id,
       query: async ({ limit, where, orderBy }) =>
-        await dbClient
-          .select()
-          .from(users)
-          .where(where)
-          .orderBy(orderBy)
-          .limit(limit),
-      table: users,
+        await c.get("db").select().from(core_cron).where(where).orderBy(orderBy).limit(limit),
+      table: core_cron,
       orderBy: {
-        column: query.orderBy ? users[query.orderBy] : users.createdAt,
-        order: query.order ?? 'desc',
-      },
+        column: query.orderBy ? core_cron[query.orderBy] : core_cron.lastRun,
+        order: query.order ?? "desc"
+      }
     });
 
     return c.json(data);
-  },
+  }
 });
 ```
 
@@ -106,7 +104,7 @@ VitNode provides pre-defined Zod schemas for pagination:
 const zodPaginationQuery = z.object({
   cursor: z.string().optional(),
   first: z.string().transform(Number).optional(),
-  last: z.string().transform(Number).optional(),
+  last: z.string().transform(Number).optional()
 });
 
 // Example of zodPaginationPageInfo
@@ -114,7 +112,7 @@ const zodPaginationPageInfo = z.object({
   startCursor: z.string().nullable(),
   endCursor: z.string().nullable(),
   hasNextPage: z.boolean(),
-  hasPreviousPage: z.boolean(),
+  hasPreviousPage: z.boolean()
 });
 ```
 
@@ -129,13 +127,13 @@ When fetching data from the API, include the pagination parameters in your reque
 ```tsx
 const query = await searchParams; // Assume searchParams is a Promise from the Next.js page context
 const res = await fetcher(userModule, {
-  path: '/users',
-  method: 'get',
-  module: 'user',
+  path: "/users",
+  method: "get",
+  module: "user",
   args: {
-    query,
+    query
   },
-  withPagination: true, // Important flag for pagination
+  withPagination: true // Important flag for pagination
 });
 ```
 
@@ -148,7 +146,7 @@ export interface SearchParamsDataTable {
   cursor?: string;
   first?: string;
   last?: string;
-  order?: 'asc' | 'desc';
+  order?: "asc" | "desc";
   orderBy?: keyof DataTableTMin;
 }
 ```
@@ -158,45 +156,42 @@ export interface SearchParamsDataTable {
 Here's a complete example showing how to implement pagination in a Next.js page:
 
 ```tsx
-import { middlewareModule } from '@/api/modules/middleware/middleware.module';
-import {
-  DataTable,
-  SearchParamsDataTable,
-} from '@vitnode/core/components/table/data-table';
-import { fetcher } from '@vitnode/core/lib/fetcher';
+import { middlewareModule } from "@/api/modules/middleware/middleware.module";
+import { DataTable, SearchParamsDataTable } from "@vitnode/core/components/table/data-table";
+import { fetcher } from "@vitnode/core/lib/fetcher";
 
 export const UsersAdminView = async ({
-  searchParams,
+  searchParams
 }: {
   searchParams: Promise<SearchParamsDataTable>;
 }) => {
   const query = await searchParams;
   const res = await fetcher(middlewareModule, {
-    path: '/users',
-    method: 'get',
-    module: 'middleware',
+    path: "/users",
+    method: "get",
+    module: "middleware",
     args: {
-      query,
+      query
     },
-    withPagination: true,
+    withPagination: true
   });
   const data = await res.json();
 
   return (
     <DataTable
       columns={[
-        { id: 'id', label: 'ID' },
-        { id: 'username', label: 'Username' },
-        { id: 'email', label: 'Email' },
-        { id: 'createdAt', label: 'Created at' },
+        { id: "id", label: "ID" },
+        { id: "username", label: "Username" },
+        { id: "email", label: "Email" },
+        { id: "createdAt", label: "Created at" }
       ]}
       edges={data.edges}
       order={{
-        columns: ['id', 'username', 'email', 'createdAt'],
+        columns: ["id", "username", "email", "createdAt"],
         defaultOrder: {
-          column: 'createdAt',
-          order: 'desc',
-        },
+          column: "createdAt",
+          order: "desc"
+        }
       }}
       pageInfo={data.pageInfo}
     />
@@ -229,10 +224,9 @@ The pagination object returned from the API has the following structure:
 ```
 
 <Callout title="Pagination Controls">
-  The DataTable component automatically handles pagination controls when
-  provided with the correct `pageInfo` object, allowing users to navigate
-  through data with next/previous buttons and showing the current page
-  information.
+  The DataTable component automatically handles pagination controls when provided with the correct
+  `pageInfo` object, allowing users to navigate through data with next/previous buttons and showing
+  the current page information.
 </Callout>
 
 ## Advanced Usage
@@ -242,11 +236,11 @@ The pagination object returned from the API has the following structure:
 You can extend the pagination query to include custom filtering:
 
 ```ts
-const query = c.req.valid('query');
+const query = c.req.valid("query");
 const data = await withPagination({
   params: {
     query,
-    additionalWhere: eq(users.isActive, true), // Only active users
+    additionalWhere: eq(users.isActive, true) // Only active users
   },
   primaryCursor: users.id,
   query: async ({ limit, where, orderBy }) =>
@@ -259,8 +253,8 @@ const data = await withPagination({
   table: users,
   orderBy: {
     column: query.orderBy ? users[query.orderBy] : users.createdAt,
-    order: query.order ?? 'desc',
-  },
+    order: query.order ?? "desc"
+  }
 });
 ```
 
@@ -269,10 +263,10 @@ const data = await withPagination({
 To not block the UI while fetching data, you can use React Suspense:
 
 ```tsx title="page.tsx"
-import React from 'react';
-import { DataTableSkeleton } from '@vitnode/core/components/table/data-table';
+import React from "react";
+import { DataTableSkeleton } from "@vitnode/core/components/table/data-table";
 
-import { UsersAdminView } from '@/components/UsersAdminView';
+import { UsersAdminView } from "@/components/UsersAdminView";
 
 export default function UsersPage() {
   return (

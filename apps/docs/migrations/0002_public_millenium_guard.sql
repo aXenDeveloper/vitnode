@@ -1,0 +1,1 @@
+ALTER TABLE "core_cron" ADD COLUMN "schedule" varchar(100) NOT NULL;

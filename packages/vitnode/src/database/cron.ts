@@ -8,4 +8,6 @@ export const core_cron = pgTable("core_cron", t => ({
   createdAt: t.timestamp().notNull().defaultNow(),
   pluginId: t.varchar({ length: 100 }).notNull(),
   module: t.varchar({ length: 100 }).notNull(),
+  nextRun: t.timestamp(),
+  schedule: t.varchar({ length: 100 }).notNull(),
 })).enableRLS();

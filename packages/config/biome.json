@@ -16,7 +16,9 @@
       "!build",
       "!.turbo",
       "!.source",
-      "!docker"
+      "!docker",
+      "!**/(main)/(plugins)",
+      "!**/(auth)/(plugins)"
     ]
   },
   "formatter": {

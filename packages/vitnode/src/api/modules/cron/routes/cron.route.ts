@@ -1,109 +1,15 @@
-import { eq, inArray } from "drizzle-orm";
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { validate } from "node-cron";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
-import type { CronJobConfig } from "@/api/lib/cron";
 import { buildRoute } from "@/api/lib/route";
 import { cronAuthMiddleware } from "@/api/middlewares/cron-auth.middleware";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_cron } from "@/database/cron";
-import { shouldCronJobRun } from "@/lib/api/should-cron-job-run";
-
-interface CronJobFromDb {
-  id: number;
-  name: string;
-  description: string | null;
-  lastRun: Date | null;
-  createdAt: Date;
-  pluginId: string;
-  module: string;
-}
-
-async function cleanupOutdatedCronJobs(
-  db: PostgresJsDatabase<Record<string, never>>,
-  cronFromDb: CronJobFromDb[],
-  currentCronJobs: CronJobConfig[],
-) {
-  if (cronFromDb.length === 0) return;
-
-  const currentCronIdentifiers = currentCronJobs.map(
-    job => `${job.pluginId}:${job.module}:${job.name}`,
-  );
-
-  const cronJobsToDelete = cronFromDb
-    .filter(
-      dbCron =>
-        !currentCronIdentifiers.includes(
-          `${dbCron.pluginId}:${dbCron.module}:${dbCron.name}`,
-        ),
-    )
-    .map(dbCron => dbCron.id);
-
-  if (cronJobsToDelete.length > 0) {
-    await db.delete(core_cron).where(inArray(core_cron.id, cronJobsToDelete));
-  }
-}
-
-function processCronJobs(
-  cronJobs: CronJobConfig[],
-  cronFromDb: CronJobFromDb[],
-) {
-  const newJobs: CronJobConfig[] = [];
-  const jobsToExecute: CronJobConfig[] = [];
-  const jobsToUpdate: { job: CronJobConfig; existingJob: CronJobFromDb }[] = [];
-
-  for (const job of cronJobs) {
-    if (!validate(job.schedule)) {
-      // biome-ignore lint/suspicious/noConsole: needed for cron job monitoring
-      console.warn(
-        `\x1b[34m[VitNode]\x1b[0m \x1b[33mInvalid cron schedule for job "${job.pluginId}:${job.module}:${job.name}"\x1b[0m: ${job.schedule}`,
-      );
-      continue;
-    }
-
-    const existingJob = cronFromDb.find(
-      dbJob =>
-        dbJob.name === job.name &&
-        dbJob.pluginId === job.pluginId &&
-        dbJob.module === job.module,
-    );
-
-    if (existingJob) {
-      if (existingJob.description !== job.description) {
-        jobsToUpdate.push({ job, existingJob });
-      }
-    } else {
-      newJobs.push(job);
-    }
-
-    const shouldRun = shouldCronJobRun(
-      job.schedule,
-      existingJob?.lastRun || null,
-    );
-
-    if (shouldRun) {
-      jobsToExecute.push(job);
-    }
-  }
-
-  return { newJobs, jobsToExecute, jobsToUpdate };
-}
-
-async function updateCronJobDescriptions(
-  db: PostgresJsDatabase<Record<string, never>>,
-  jobsToUpdate: { job: CronJobConfig; existingJob: CronJobFromDb }[],
-) {
-  if (jobsToUpdate.length === 0) return;
-
-  const updatePromises = jobsToUpdate.map(({ job, existingJob }) =>
-    db
-      .update(core_cron)
-      .set({ description: job.description || null })
-      .where(eq(core_cron.id, existingJob.id)),
-  );
-
-  await Promise.all(updatePromises);
-}
+import { getNextCronRunDate } from "@/lib/api/get-next-cron-run-date";
+import {
+  cleanupOutdatedCronJobs,
+  processCronJobs,
+  updateCronJobs,
+} from "../helpers/process-cron-jobs";
 
 export const runCronRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -148,8 +54,10 @@ export const runCronRoute = buildRoute({
             name: job.name,
             description: job.description || null,
             lastRun: null,
+            nextRun: null,
             pluginId: job.pluginId,
             module: job.module,
+            schedule: job.schedule,
           }));
 
           await db.insert(core_cron).values(newJobsValues);
@@ -159,11 +67,9 @@ export const runCronRoute = buildRoute({
       }
 
       try {
-        await updateCronJobDescriptions(db, jobsToUpdate);
+        await updateCronJobs(db, jobsToUpdate);
       } catch (error) {
-        await c
-          .get("log")
-          .error(`Error updating cron job descriptions: ${error}`);
+        await c.get("log").error(`Error updating cron jobs: ${error}`);
       }
 
       if (jobsToExecute.length > 0) {
@@ -181,7 +87,10 @@ export const runCronRoute = buildRoute({
             if (dbJob) {
               await db
                 .update(core_cron)
-                .set({ lastRun: now })
+                .set({
+                  lastRun: now,
+                  nextRun: getNextCronRunDate(job.schedule, now),
+                })
                 .where(eq(core_cron.id, dbJob.id));
             }
 
