@@ -1,6 +1,12 @@
 {
   "core": {
     "global": {
+      "editor": {
+        "undo": "Undo",
+        "redo": "Redo",
+        "paragraph": "Paragraph",
+        "heading": "Heading {level}"
+      },
       "theme_switcher": "Toggle Theme",
       "language_switcher": "Switch Language",
       "toggle_sidebar": "Toggle Sidebar",

@@ -11,6 +11,7 @@ import { AutoFormSelect } from "@/components/form/fields/select";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { AutoFormTextarea } from "@/components/form/fields/textarea";
 import { Card } from "@/components/ui/card";
+import { Editor } from "@/components/ui/editor";
 
 export const TestView = () => {
   const formSchema = z.object({
@@ -41,6 +42,8 @@ export const TestView = () => {
   return (
     <div className="p-4">
       <Card className="p-6">
+        <Editor value="<p>Hello World! 🌎️</p>" />
+
         <AutoForm
           fields={[
             {
