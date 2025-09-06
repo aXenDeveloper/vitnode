@@ -1,8 +1,17 @@
 ---
 title: Node CRON
-description: How to use node-cron in your application.
+description: In-memory tiny task scheduler in pure JavaScript for node.js based on GNU crontab.
 ---
 
+This adapter lets you run scheduled jobs directly inside your Node.js app. It's simple, lightweight, and doesn't require any external services — great for when you just need cron tasks running locally or in memory.
+
+<Callout type="warn" title="Only Self-Hosted supported!">
+  This documentation is for self-hosted VitNode instances only. You cannot use this if you are
+  planning to deploy your application to the cloud.
+</Callout>
+
+<Steps>
+<Step>
 ## Installation
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
@@ -22,3 +31,54 @@ npm i node-cron
 ```
 
 </Tabs>
+</Step>
+<Step>
+
+## Usage
+
+```ts title="src/vitnode.api.config.ts"
+import { NodeCronAdapter } from "@vitnode/core/api/adapters/cron/node-cron.adapter";
+```
+
+```ts title="src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  cronAdapter: NodeCronAdapter()
+});
+```
+
+</Step>
+
+<Step>
+
+## Restart server
+
+After making these changes, stop your server (if it's running) and restart it to apply the new configuration.
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+That's it — your app now has a built-in task scheduler, ready to handle cron jobs with standard cron expressions.
+
+</Step>
+<Step>
+
+## Check Your Cron Jobs
+
+You can check your cron jobs in AdminCP under **Core => Advanced => Cron Jobs**.
+
+</Step>
+
+</Steps>

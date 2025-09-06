@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getSessionAdminApi } from "@/lib/api/get-session-admin-api";
 import { I18nProvider } from "../../../components/i18n-provider";
-import { LanguageSwitcher } from "../../../components/switchers/langs/language-swietcher";
+import { LanguageSwitcher } from "../../../components/switchers/langs/language-switcher";
 import type { VitNodeConfig } from "../../../vitnode.config";
 import type { NavAdminParent } from "./sidebar/nav/nav";
 import { SidebarAdmin } from "./sidebar/sidebar";

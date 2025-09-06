@@ -1,6 +1,100 @@
 ---
 title: CRON Jobs
-description: How to use cron functionality in your application.
+description: Automate and manage recurring tasks in your VitNode app with cron jobs — perfect for cleanups, emails, reports, and more.
 ---
 
-test
+## Adapters
+
+Before you can use cron functionality, you need to provide an adapter to your application.
+
+<Cards>
+  <Card
+    title="REST API"
+    href="/docs/dev/cron/rest-api"
+    description="Run cron jobs by triggering REST API endpoints from an external scheduler."
+  />
+  <Card
+    title="Node CRON"
+    href="/docs/dev/cron/node-cron"
+    description="In-memory tiny task scheduler in pure JavaScript for node.js based on GNU crontab."
+  />
+</Cards>
+
+## Custom adapter
+
+VitNode supports custom cron adapters, allowing you to integrate with various scheduling libraries or services.
+
+<Steps>
+<Step>
+
+### Create your custom adapter
+
+As an example we will create a custom adapter using the popular `node-cron` library.
+
+```ts
+import { schedule } from "node-cron";
+import { type CronAdapter, handleCronJobs } from "@/api/lib/cron";
+
+export const NodeCronAdapter = (): CronAdapter => {
+  return {
+    schedule() {
+      schedule("*/1 * * * *", async () => {
+        await handleCronJobs(); // [!code ++]
+      });
+    }
+  };
+};
+```
+
+</Step>
+
+<Step>
+
+### Integrate the adapter into your application
+
+```ts title="src/vitnode.api.config.ts"
+import { NodeCronAdapter } from "./path/to/your/custom/node-cron.adapter";
+
+export const vitNodeApiConfig = buildApiConfig({
+  cronAdapter: NodeCronAdapter()
+});
+```
+
+</Step>
+
+<Step>
+
+## Restart server
+
+After making these changes, stop your server (if it's running) and restart it to apply the new configuration.
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+That's it — your app now has a built-in task scheduler, ready to handle cron jobs with standard cron expressions.
+
+</Step>
+<Step>
+
+## Check Your Cron Jobs
+
+You can check your cron jobs in AdminCP under **Core => Advanced => Cron Jobs**.
+
+</Step>
+
+</Steps>
