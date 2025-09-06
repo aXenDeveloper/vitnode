@@ -6,7 +6,7 @@ import { categoriesRoute } from "./routes/get.route";
 import { testRoute } from "./test.route";
 
 export const categoriesModule = buildModule({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   name: "categories",
   routes: [categoriesRoute, testRoute],
 });

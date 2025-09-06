@@ -3,7 +3,7 @@ import { buildModule } from "../../../lib/module";
 import { logsDebugAdminRoute } from "./routes/logs.route";
 
 export const debugAdminModule = buildModule({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   name: "debug",
   routes: [logsDebugAdminRoute],
 });

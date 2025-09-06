@@ -6,7 +6,7 @@ import { SSOModel } from "@/api/models/sso";
 import { CONFIG_PLUGIN } from "@/config";
 
 export const callbackRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description: "SSO Callback",

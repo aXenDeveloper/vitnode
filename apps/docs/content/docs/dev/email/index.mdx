@@ -1,5 +1,5 @@
 ---
-title: Overview
+title: Email
 description: How to use email functionality in your application.
 ---
 
@@ -19,49 +19,49 @@ or create your own [custom email adapter](/docs/dev/email/overview#custom-email-
 To send an email, you can use the context `c.get('email').send()` in your route handler.
 
 ```ts
-import { z } from 'zod';
-import { buildRoute } from '@vitnode/core/api/lib/route';
-import { UserModel } from '@vitnode/core/api/models/user';
+import { z } from "zod";
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import { UserModel } from "@vitnode/core/api/models/user";
 
 export const testRoute = buildRoute({
-  handler: async c => {
+  handler: async (c) => {
     const user = await new UserModel().getUserById({
       id: 3,
-      c,
+      c
     });
 
-    if (!user) throw new Error('User not found');
+    if (!user) throw new Error("User not found");
 
     // [!code ++:5]
-    await c.get('email').send({
-      subject: 'Test Email',
-      content: () => 'This is a test email.',
-      user,
+    await c.get("email").send({
+      subject: "Test Email",
+      content: () => "This is a test email.",
+      user
     });
 
-    return c.text('test');
-  },
+    return c.text("test");
+  }
 });
 ```
 
 or if you don't want to use `user` then you can just pass `to` field with `locale`:
 
 ```ts
-import { z } from 'zod';
-import { buildRoute } from '@vitnode/core/api/lib/route';
+import { z } from "zod";
+import { buildRoute } from "@vitnode/core/api/lib/route";
 
 export const testRoute = buildRoute({
-  handler: async c => {
+  handler: async (c) => {
     // [!code ++:6]
-    await c.get('email').send({
-      to: 'test@test.com',
-      subject: 'Test Email',
-      content: () => 'This is a test email.',
-      locale: 'en',
+    await c.get("email").send({
+      to: "test@test.com",
+      subject: "Test Email",
+      content: () => "This is a test email.",
+      locale: "en"
     });
 
-    return c.text('test');
-  },
+    return c.text("test");
+  }
 });
 ```
 
@@ -76,7 +76,7 @@ Want to create your own email adapter? You can do it by implementing the `EmailA
 Here is your template for a custom email adapter.
 
 ```ts title="src/utils/email/mailer.ts"
-import type { EmailApiPlugin } from '@vitnode/core/api/models/email';
+import type { EmailApiPlugin } from "@vitnode/core/api/models/email";
 
 export const MailerEmailAdapter = (): EmailApiPlugin => {};
 ```
@@ -89,16 +89,16 @@ export const MailerEmailAdapter = (): EmailApiPlugin => {};
 If you want to provide config for you adapter, you can do it like this:
 
 ```ts title="src/utils/email/mailer.ts"
-import type { EmailApiPlugin } from '@vitnode/core/api/models/email';
+import type { EmailApiPlugin } from "@vitnode/core/api/models/email";
 
 export const MailerEmailAdapter = ({
   // [!code ++:13]
-  host = '',
+  host = "",
   port = 587,
   secure = false,
-  user = '',
-  password = '',
-  from = '',
+  user = "",
+  password = "",
+  from = ""
 }: {
   from: string | undefined;
   host: string | undefined;
@@ -118,15 +118,15 @@ export const MailerEmailAdapter = ({
 Implement the `sendEmail()` method to send emails using your custom logic. You can use any email sending library or service.
 
 ```ts title="src/utils/email/mailer.ts"
-import type { EmailApiPlugin } from '@vitnode/core/api/models/email';
+import type { EmailApiPlugin } from "@vitnode/core/api/models/email";
 
 export const MailerEmailAdapter = ({
-  host = '',
+  host = "",
   port = 587,
   secure = false,
-  user = '',
-  password = '',
-  from = '',
+  user = "",
+  password = "",
+  from = ""
 }: {
   from: string | undefined;
   host: string | undefined;
@@ -137,7 +137,7 @@ export const MailerEmailAdapter = ({
 }): EmailApiPlugin => {
   // [!code ++:3]
   return {
-    sendEmail: async ({ metadata, to, subject, html, replyTo, text }) => {},
+    sendEmail: async ({ metadata, to, subject, html, replyTo, text }) => {}
   };
 };
 ```

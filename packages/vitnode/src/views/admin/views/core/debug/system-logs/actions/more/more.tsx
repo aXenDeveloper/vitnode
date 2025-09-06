@@ -15,12 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Loader } from "@/components/ui/loader";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipWithContent } from "@/components/ui/tooltip";
 
 const ContentMoreActionSystemLogs = dynamic(async () =>
   import("./content").then(module => ({
@@ -35,18 +30,13 @@ export const MoreActionSystemLogs = (
 
   return (
     <Dialog>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <Button aria-label={t("title")} size="icon" variant="ghost">
-                <SearchIcon />
-              </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent>{t("title")}</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <TooltipWithContent text={t("title")}>
+        <DialogTrigger asChild>
+          <Button aria-label={t("title")} size="icon" variant="ghost">
+            <SearchIcon />
+          </Button>
+        </DialogTrigger>
+      </TooltipWithContent>
 
       <DialogContent className="sm:max-w-4xl">
         <DialogHeader>

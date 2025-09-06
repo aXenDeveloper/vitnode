@@ -10,12 +10,8 @@ description: A tooltip component for displaying additional information on hover 
 ## Usage
 
 ```ts
-import { Button } from '@vitnode/core/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@vitnode/core/components/ui/tooltip';
+import { Button } from "@vitnode/core/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@vitnode/core/components/ui/tooltip";
 ```
 
 ```tsx
@@ -27,6 +23,24 @@ import {
     <p>Add to library</p>
   </TooltipContent>
 </Tooltip>
+```
+
+### Faster Tooltips
+
+If you don't need custom props for components like `TooltipTrigger` or `TooltipContent`, you can use the `TooltipWithContent` component to enable faster tooltips.
+
+```ts
+import { Button } from "@vitnode/core/components/ui/button";
+import { TooltipWithContent } from "@vitnode/core/components/ui/tooltip";
+import { PlayIcon } from "lucide-react";
+```
+
+```tsx
+<TooltipWithContent text="Now">
+  <Button variant="ghost" size="icon" aria-label="Now">
+    <PlayIcon />
+  </Button>
+</TooltipWithContent>
 ```
 
 ## API Reference

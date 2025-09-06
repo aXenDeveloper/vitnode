@@ -16,7 +16,7 @@ export const zodChangePasswordSchema = z.object({
 });
 
 export const changePasswordRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Change user password",

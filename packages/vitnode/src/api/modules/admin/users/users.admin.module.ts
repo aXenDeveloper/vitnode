@@ -4,7 +4,7 @@ import { CONFIG_PLUGIN } from "@/config";
 import { listUsersAdminRoute } from "./routes/list.route";
 
 export const usersAdminModule = buildModule({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   name: "users",
   routes: [listUsersAdminRoute],
 });

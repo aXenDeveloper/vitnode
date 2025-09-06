@@ -10,7 +10,7 @@ import ResetPasswordEmailTemplate from "@/emails/reset-password";
 import { CONFIG } from "@/lib/config";
 
 export const resetPasswordRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Request a password reset",

@@ -1,16 +1,15 @@
-import { DataTableSkeleton } from "@vitnode/core/components/table/data-table";
-import { HeaderContent } from "@vitnode/core/components/ui/header-content";
 import type { Metadata } from "next/dist/types";
 import dynamic from "next/dynamic";
 import { getTranslations } from "next-intl/server";
 import React from "react";
 
+import { DataTableSkeleton } from "@vitnode/core/components/table/data-table";
+import { HeaderContent } from "@vitnode/core/components/ui/header-content";
+
 const UsersAdminView = dynamic(async () =>
-  import("@vitnode/core/views/admin/views/core/users/users-admin-view").then(
-    module => ({
-      default: module.UsersAdminView,
-    }),
-  ),
+  import("@vitnode/core/views/admin/views/core/users/users-admin-view").then(module => ({
+    default: module.UsersAdminView,
+  })),
 );
 
 export const generateMetadata = async (): Promise<Metadata> => {

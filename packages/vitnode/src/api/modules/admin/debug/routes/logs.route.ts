@@ -13,7 +13,7 @@ import {
 } from "../../../../lib/with-pagination";
 
 export const logsDebugAdminRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description: "Get Admin Debug Logs",

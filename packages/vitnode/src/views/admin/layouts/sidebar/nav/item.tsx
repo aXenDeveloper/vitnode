@@ -67,11 +67,6 @@ export const ItemNavAdmin = ({
       <SidebarMenuItem>
         <SidebarMenuButton asChild isActive={isActive} tooltip={title}>
           <Link
-            className={cn(
-              "relative",
-              isActive &&
-                "before:bg-primary before:absolute before:bottom-1 before:left-0 before:top-1 before:h-auto before:w-1 before:rounded-r-sm",
-            )}
             href={href}
             onClick={() => {
               if (isMobile) {
@@ -97,11 +92,6 @@ export const ItemNavAdmin = ({
       <SidebarMenuItem>
         <CollapsibleTrigger asChild>
           <SidebarMenuButton
-            className={cn(
-              "relative",
-              (isActive || hasActiveChild) &&
-                "before:bg-primary before:absolute before:bottom-1 before:left-0 before:top-1 before:h-auto before:w-1 before:rounded-r-sm",
-            )}
             isActive={isActive || hasActiveChild}
             tooltip={title}
           >
@@ -124,11 +114,6 @@ export const ItemNavAdmin = ({
                 <SidebarMenuSubItem key={item.href}>
                   <SidebarMenuSubButton asChild isActive={isChildActive}>
                     <Link
-                      className={cn(
-                        "relative",
-                        isChildActive &&
-                          "before:bg-primary before:absolute before:bottom-1 before:left-0 before:top-1 before:h-auto before:w-1 before:rounded-r-sm",
-                      )}
                       href={item.href}
                       onClick={() => {
                         if (isMobile) {

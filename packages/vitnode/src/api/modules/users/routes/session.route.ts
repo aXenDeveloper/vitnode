@@ -5,7 +5,7 @@ import { SessionAdminModel } from "@/api/models/session-admin";
 import { CONFIG_PLUGIN } from "@/config";
 
 export const sessionRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description: "Verify session",

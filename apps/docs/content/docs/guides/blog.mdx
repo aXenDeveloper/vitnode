@@ -15,7 +15,7 @@ icon: BookText
 
 ### Install package from NPM
 
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
 <Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
 
@@ -38,12 +38,12 @@ npm i @vitnode/blog@canary
 ### Connect plugin to config
 
 ```ts title="src/vitnode.config.ts"
-import { blogPlugin } from '@vitnode/blog/config';
+import { blogPlugin } from "@vitnode/blog/config";
 ```
 
 ```ts title="src/vitnode.config.ts"
 export const vitNodeConfig = buildConfig({
-  plugins: [blogPlugin()], // [!code highlight]
+  plugins: [blogPlugin()] // [!code highlight]
 });
 ```
 
@@ -53,12 +53,12 @@ export const vitNodeConfig = buildConfig({
 ### Connect plugin to API config
 
 ```ts title="src/vitnode.api.config.ts"
-import { blogApiPlugin } from '@vitnode/blog/config.api';
+import { blogApiPlugin } from "@vitnode/blog/config.api";
 ```
 
 ```ts title="src/vitnode.api.config.ts"
 export const vitNodeApiConfig = buildApiConfig({
-  plugins: [blogApiPlugin()], // [!code highlight]
+  plugins: [blogApiPlugin()] // [!code highlight]
 });
 ```
 

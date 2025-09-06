@@ -4,10 +4,10 @@ import type { Context, Env, Schema } from "hono";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
+
 import { newBuildPluginApiCore } from "@/api/plugin";
 import { CONFIG_PLUGIN } from "@/config";
 import type { VitNodeApiConfig } from "@/vitnode.config";
-
 import {
   globalAdminMiddleware,
   globalMiddleware,
@@ -62,7 +62,7 @@ export function VitNodeAPI({
       authorization: vitNodeApiConfig.authorization,
       dbProvider: vitNodeApiConfig.dbProvider,
       captcha: vitNodeApiConfig.captcha,
-      plugins: vitNodeApiConfig.plugins,
+      plugins: [newBuildPluginApiCore, ...vitNodeApiConfig.plugins],
     }),
   );
   app.use(async (c, next) => {
@@ -73,25 +73,36 @@ export function VitNodeAPI({
     return next();
   });
 
+  if (vitNodeApiConfig.cronAdapter) {
+    vitNodeApiConfig.cronAdapter.schedule();
+  }
+
+  [newBuildPluginApiCore, ...vitNodeApiConfig.plugins].map(root => {
+    app.route(`/${root.pluginId}`, root.hono);
+  });
+
   app.onError(async (error, c) => {
     if (error instanceof HTTPException) {
       return error.getResponse();
     }
 
-    await c.get("log").error(`Unhandled error: ${error.message}`);
+    const errorMessage = error?.message ?? "Unknown error";
+
+    try {
+      const logger = c.get("log");
+      if (logger) {
+        await logger.error(`Unhandled error: ${errorMessage}`);
+      }
+    } catch {}
 
     return new Response(
       process.env.NODE_ENV === "development"
-        ? error.message
+        ? errorMessage
         : "Internal Server Error",
       {
         status: 500,
       },
     );
-  });
-
-  [newBuildPluginApiCore, ...vitNodeApiConfig.plugins].map(root => {
-    app.route(`/${root.pluginId}`, root.hono);
   });
 
   return app;

@@ -27,7 +27,7 @@ export const zodSignUpSchema = z.object({
 });
 
 export const signUpRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Create a new user",

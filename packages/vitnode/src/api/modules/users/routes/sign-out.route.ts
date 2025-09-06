@@ -6,7 +6,7 @@ import { SessionAdminModel } from "@/api/models/session-admin";
 import { CONFIG_PLUGIN } from "@/config";
 
 export const signOutRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "delete",
     description: "Sign out the current admin",

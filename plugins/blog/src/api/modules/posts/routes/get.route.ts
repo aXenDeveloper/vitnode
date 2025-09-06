@@ -27,7 +27,7 @@ export const zodPostSchema = z.object({
 });
 
 export const postsRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/",

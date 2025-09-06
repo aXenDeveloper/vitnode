@@ -15,7 +15,7 @@ export const routeMiddlewareSchema = z.object({
 });
 
 export const routeMiddleware = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     path: "/",
     method: "get",

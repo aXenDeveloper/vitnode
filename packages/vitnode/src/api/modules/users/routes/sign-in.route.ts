@@ -19,7 +19,7 @@ export const zodSignInSchema = z.object({
 });
 
 export const signInRoute = buildRoute({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Sign in with email and password",

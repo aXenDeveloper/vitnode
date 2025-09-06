@@ -4,7 +4,7 @@ import { CONFIG_PLUGIN } from "@/config";
 import { routeMiddleware } from "./route";
 
 export const middlewareModule = buildModule({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   name: "middleware",
   routes: [routeMiddleware],
 });

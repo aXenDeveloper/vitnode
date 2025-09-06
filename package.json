@@ -4,7 +4,6 @@
   "scripts": {
     "release": "tsx ./scripts/bump-version.ts",
     "db:migrate": "turbo db:migrate",
-    "db:push": "turbo db:push",
     "docker:dev": "turbo docker:dev",
     "build:scripts": "turbo build:scripts && pnpm i",
     "build:plugins": "turbo build:plugins",
@@ -21,6 +20,7 @@
     "@biomejs/biome": "^2.2.2",
     "@types/node": "^24.3.0",
     "@vitnode/config": "workspace:*",
+    "prettier": "^3.6.2",
     "tsx": "^4.20.4",
     "turbo": "^2.5.6",
     "typescript": "^5.9.2",

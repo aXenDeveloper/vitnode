@@ -1,1 +1,0 @@
-ALTER TABLE "core_users_confirm_emails" ADD COLUMN "ipAddress" varchar(40) NOT NULL;

@@ -5,7 +5,7 @@ import { categoriesAdminModule } from "./categories/categories.admin.module";
 import { postsAdminModule } from "./posts/posts.admin.module";
 
 export const adminModule = buildModule({
-  ...CONFIG_PLUGIN,
+  pluginId: CONFIG_PLUGIN.pluginId,
   name: "admin",
   modules: [categoriesAdminModule, postsAdminModule],
   routes: [],

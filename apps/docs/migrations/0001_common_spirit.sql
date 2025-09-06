@@ -1,0 +1,1 @@
+ALTER TABLE "core_cron" ADD COLUMN "nextRun" timestamp;

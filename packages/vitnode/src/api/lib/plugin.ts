@@ -1,10 +1,12 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { checkPluginId } from "./check-plugin-id";
+import type { CronJobConfig } from "./cron";
 import type { BuildModuleReturn } from "./module";
 
 export interface BuildPluginApiReturn {
   hono: OpenAPIHono;
   pluginId: string;
+  cronJobs: Omit<CronJobConfig, "pluginId">[];
 }
 
 export function buildApiPlugin<P extends string>({
@@ -18,12 +20,18 @@ export function buildApiPlugin<P extends string>({
   checkPluginId(pluginId);
 
   const hono = new OpenAPIHono();
+  const cronJobs: BuildPluginApiReturn["cronJobs"] = [];
   modules.forEach(handler => {
     hono.route(`/${handler.name}`, handler.hono);
+
+    handler.cronJobs?.forEach(cron => {
+      cronJobs.push({ ...cron, module: handler.name });
+    });
   });
 
   return {
     pluginId,
     hono,
+    cronJobs,
   };
 }

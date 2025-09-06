@@ -1,4 +1,4 @@
-import { LayoutDashboardIcon, UsersRoundIcon } from "lucide-react";
+import { LayoutDashboardIcon, UsersRoundIcon, WrenchIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import {
@@ -43,6 +43,17 @@ export const NavSidebarAdmin = async ({
             {
               title: "test",
               href: "/admin/core/test",
+            },
+          ],
+        },
+        {
+          href: "/admin/core/advanced",
+          title: t("advanced.title"),
+          icon: <WrenchIcon />,
+          items: [
+            {
+              title: t("advanced.cron"),
+              href: "/admin/core/advanced/cron",
             },
           ],
         },
