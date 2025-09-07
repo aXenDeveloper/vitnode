@@ -5,6 +5,7 @@
 !/src/app_admin/**
 !/src/locales
 !/src/locales/**
+!/src/tiptap.css
 
 /node_modules
 /.turbo

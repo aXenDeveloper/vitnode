@@ -1,4 +1,5 @@
 import { useEditorState } from "@tiptap/react";
+import { ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +29,7 @@ export const HeadingsAction = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost">
+        <Button className="w-32 justify-between" variant="ghost">
           {isParagraph
             ? t("paragraph")
             : t("heading", {
@@ -37,6 +38,8 @@ export const HeadingsAction = () => {
                     isHeaderActive(level),
                   ) ?? 1,
               })}
+
+          <ChevronDown className="ml-auto" />
         </Button>
       </DropdownMenuTrigger>
 

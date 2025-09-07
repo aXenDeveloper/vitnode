@@ -28,30 +28,34 @@ export function ClientButton({
       disabled={isLoading ?? props.disabled}
       {...props}
     >
-      <div className="relative flex items-center justify-center">
-        <div
-          className={cn(
-            "flex items-center justify-center gap-2 transition-opacity duration-300",
-            isLoading ? "opacity-0" : "opacity-100",
-          )}
-        >
-          {children}
-        </div>
+      {isLoading === undefined ? (
+        children
+      ) : (
+        <div className="relative flex items-center justify-center">
+          <div
+            className={cn(
+              "flex items-center justify-center gap-2 transition-opacity duration-300",
+              isLoading ? "opacity-0" : "opacity-100",
+            )}
+          >
+            {children}
+          </div>
 
-        <AnimatePresence>
-          {isLoading && (
-            <motion.div
-              animate={{ opacity: 1, transform: "translateY(0px)" }}
-              className="absolute inset-0 flex items-center justify-center"
-              exit={{ opacity: 0, transform: "translateY(20px)" }}
-              initial={{ opacity: 0, transform: "translateY(-20px)" }}
-              transition={{ type: "spring", duration: 0.4, bounce: 0 }}
-            >
-              <Loader small />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          <AnimatePresence>
+            {isLoading && (
+              <motion.div
+                animate={{ opacity: 1, transform: "translateY(0px)" }}
+                className="absolute inset-0 flex items-center justify-center"
+                exit={{ opacity: 0, transform: "translateY(20px)" }}
+                initial={{ opacity: 0, transform: "translateY(-20px)" }}
+                transition={{ type: "spring", duration: 0.4, bounce: 0 }}
+              >
+                <Loader small />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
     </Comp>
   );
 }

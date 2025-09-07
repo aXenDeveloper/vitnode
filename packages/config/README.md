@@ -21,7 +21,7 @@ This package provides a default Biome configuration, TypeScript configuration fo
 
 ```json
 {
-  "$schema": "https://biomejs.dev/schemas/2.2.2/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.2.3/schema.json",
   "extends": ["@vitnode/config/biome"],
   "root": true
 }

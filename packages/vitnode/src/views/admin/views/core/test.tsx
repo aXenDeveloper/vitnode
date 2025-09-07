@@ -12,6 +12,7 @@ import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { AutoFormTextarea } from "@/components/form/fields/textarea";
 import { Card } from "@/components/ui/card";
 import { Editor } from "@/components/ui/editor";
+import { EditorContent } from "@/components/ui/editor-content";
 
 export const TestView = () => {
   const formSchema = z.object({
@@ -43,6 +44,7 @@ export const TestView = () => {
     <div className="p-4">
       <Card className="p-6">
         <Editor value="<p>Hello World! 🌎️</p>" />
+        <EditorContent content="<h2>Test header v2</h2><p>Hello World! 🌎️das d alfjnasjf kas djksa fkja sfj AFKJ afj AFJKNAJSKGNSAKFLMSAKLDNASFJNKJnjkdasnfjnas fjknsa fjknsafkjn askjfnkajsgnasjkfnskjanf kjans fjknasjkf naskjf naskjnf kjasn kfjans fjkas kfjnas jknfkasjn fkajsnf jnasfjkangaskjfnajsdnlaskmcdasjfnjskafnsajknfcksajdnasjkfnjkasn cfjksanfjckasnjcnaskjcnaksjcnaksjcnakjcnasjkn</p>" />
 
         <AutoForm
           fields={[

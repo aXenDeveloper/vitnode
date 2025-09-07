@@ -1,8 +1,8 @@
 "use client";
 
 import { EditorContent, useEditor } from "@tiptap/react";
-import { tiptapExtensions } from "@/lib/tiptap/extension";
-import { TipTapToolbar } from "@/lib/tiptap/toolbar/tiptap-toolbar";
+import { tiptapExtensions } from "@/components/tiptap/extension";
+import { TipTapToolbar } from "@/components/tiptap/toolbar/tiptap-toolbar";
 import { cn } from "@/lib/utils";
 import { Loader } from "./loader";
 

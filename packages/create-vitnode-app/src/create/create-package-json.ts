@@ -31,39 +31,39 @@ const versions = {
 
   turbo: "^2.5.6",
   typescript: "^5.9.2",
-  tsx: "^4.20.4",
+  tsx: "^4.20.5",
   tscAlias: "^1.8.16",
-  biome: "^2.2.2",
+  biome: "^2.2.3",
   tailwind: "^4.1.12",
-  tailwindPostcss: "^4.1.12",
+  tailwindPostcss: "^4.1.13",
   postcss: "^8.5.6",
   twAnimateCssWeb: "^1.3.7",
-  twAnimateCssSingle: "^1.3.6",
+  twAnimateCssSingle: "^1.3.8",
 
   react: "^19.1",
   reactDom: "^19.1",
-  nextSingle: "^15.5.0",
+  nextSingle: "^15.5.2",
   nextWebInMonorepo: "^15.4.6",
-  nextIntl: "^4.3.4",
-  useIntl: "^4.3.4",
+  nextIntl: "^4.3.6",
+  useIntl: "^4.3.6",
   rhf: "^7.62.0",
   rhfResolvers: "^5.1.1",
-  lucide: "^0.540.0",
+  lucide: "^0.542.0",
   sonner: "^2.0.7",
-  dotenv: "^17.2.1",
+  dotenv: "^17.2.2",
 
   drizzleKitSingle: "^0.31.4",
   drizzleKitApi: "^0.31.3",
-  drizzleOrm: "^0.44.4",
+  drizzleOrm: "^0.44.5",
 
-  hono: "^4.9.2",
+  hono: "^4.9.6",
   honoZodOpenapi: "^1.1.0",
   honoZodValidator: "^0.7.2",
   reactEmail: "^4.2.8",
-  reactEmailComponents: "^0.5.1",
-  zod: "^4.0.17",
+  reactEmailComponents: "^0.5.2",
+  zod: "^4.1.5",
 
-  babelReactCompiler: "19.1.0-rc.2",
+  babelReactCompiler: "^19.1.0-rc.3",
   cva: "^0.7.1",
 };
 
@@ -175,7 +175,7 @@ const apiDeps = {
 };
 
 const apiDevDeps = (pm: string, biome: boolean) => ({
-  "@hono/node-server": "^1.19.0",
+  "@hono/node-server": "^1.19.1",
   ...(pm === "bun" ? { "@types/bun": versions.typesBun } : {}),
   "@types/node": versions.typesNode,
   "@types/react": versions.typesReact,

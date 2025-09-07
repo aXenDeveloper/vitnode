@@ -1,5 +1,4 @@
 import { buttonVariants } from "@vitnode/core/components/ui/button";
-import { Editor } from "@vitnode/core/components/ui/editor";
 import { cn } from "@vitnode/core/lib/utils";
 import Link from "fumadocs-core/link";
 import { ChevronRight } from "lucide-react";
@@ -78,8 +77,6 @@ export default function HomePage() {
       <PoweringBySection />
       <AdminSection />
       <AnimatedBeamHome />
-
-      <Editor value="<p>Hello World! 🌎️</p>" />
 
       <CallToActionSection />
     </div>

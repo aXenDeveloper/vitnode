@@ -5,7 +5,11 @@
         "undo": "Undo",
         "redo": "Redo",
         "paragraph": "Paragraph",
-        "heading": "Heading {level}"
+        "heading": "Heading {level}",
+        "bold": "Bold",
+        "italic": "Italic",
+        "strike": "Strike",
+        "underline": "Underline"
       },
       "theme_switcher": "Toggle Theme",
       "language_switcher": "Switch Language",
