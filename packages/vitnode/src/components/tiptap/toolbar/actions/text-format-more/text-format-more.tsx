@@ -1,0 +1,63 @@
+import { useEditorState } from "@tiptap/react";
+import { EllipsisVerticalIcon, StrikethroughIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { CtrlOrCommandCharacter } from "@/lib/ctrl-or-command-character";
+import { cn } from "@/lib/utils";
+import { useToolbarEditor } from "../../use-toolbar-editor";
+
+export const TextFormatMore = () => {
+  const t = useTranslations("core.global.editor.text_format_more");
+  const { editor } = useToolbarEditor();
+  const { isStrike } = useEditorState({
+    editor,
+    selector: ctx => {
+      return {
+        isStrike: ctx.editor.isActive("strike"),
+      };
+    },
+  });
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={t("label")}
+          className={cn({
+            "bg-accent": isStrike,
+          })}
+        >
+          <EllipsisVerticalIcon />
+        </Button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent className="min-w-[12rem]">
+        <DropdownMenuItem
+          onClick={() => {
+            editor.chain().focus().toggleStrike().run();
+            editor.view.focus();
+          }}
+          className={cn({
+            "bg-accent": isStrike,
+          })}
+        >
+          <StrikethroughIcon />
+          {t("strike")}
+          <DropdownMenuShortcut>
+            <CtrlOrCommandCharacter />
+            +S
+          </DropdownMenuShortcut>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};

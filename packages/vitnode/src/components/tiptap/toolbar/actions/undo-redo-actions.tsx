@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { useToolbarEditor } from "../use-toolbar-editor";
+import { TooltipShortcut } from "./utils/tooltip-shortcut";
 
 export const UndoRedoActions = () => {
   const t = useTranslations("core.global.editor");
@@ -20,7 +21,13 @@ export const UndoRedoActions = () => {
 
   return (
     <>
-      <TooltipWithContent text={t("undo")}>
+      <TooltipWithContent
+        text={
+          <>
+            {t("undo")} <TooltipShortcut>+Z</TooltipShortcut>
+          </>
+        }
+      >
         <Button
           size="icon"
           aria-label={t("undo")}
@@ -32,7 +39,13 @@ export const UndoRedoActions = () => {
         </Button>
       </TooltipWithContent>
 
-      <TooltipWithContent text={t("redo")}>
+      <TooltipWithContent
+        text={
+          <>
+            {t("redo")} <TooltipShortcut>+Shift+Z</TooltipShortcut>
+          </>
+        }
+      >
         <Button
           size="icon"
           aria-label={t("redo")}

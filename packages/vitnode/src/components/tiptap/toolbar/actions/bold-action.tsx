@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Toggle } from "@/components/ui/toggle";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { useToolbarEditor } from "../use-toolbar-editor";
+import { TooltipShortcut } from "./utils/tooltip-shortcut";
 
 export const BoldAction = () => {
   const t = useTranslations("core.global.editor");
@@ -18,7 +19,13 @@ export const BoldAction = () => {
   });
 
   return (
-    <TooltipWithContent text={t("bold")}>
+    <TooltipWithContent
+      text={
+        <>
+          {t("bold")} <TooltipShortcut>+B</TooltipShortcut>
+        </>
+      }
+    >
       <div>
         <Toggle
           aria-label={t("bold")}

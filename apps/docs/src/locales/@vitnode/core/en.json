@@ -8,8 +8,11 @@
         "heading": "Heading {level}",
         "bold": "Bold",
         "italic": "Italic",
-        "strike": "Strike",
-        "underline": "Underline"
+        "underline": "Underline",
+        "text_format_more": {
+          "label": "More text formats",
+          "strike": "Strike"
+        }
       },
       "theme_switcher": "Toggle Theme",
       "language_switcher": "Switch Language",

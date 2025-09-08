@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Toggle } from "@/components/ui/toggle";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { useToolbarEditor } from "../use-toolbar-editor";
+import { TooltipShortcut } from "./utils/tooltip-shortcut";
 
 export const UnderlineAction = () => {
   const t = useTranslations("core.global.editor");
@@ -18,7 +19,14 @@ export const UnderlineAction = () => {
   });
 
   return (
-    <TooltipWithContent text={t("underline")}>
+    <TooltipWithContent
+      text={
+        <>
+          {t("underline")}
+          <TooltipShortcut>+U</TooltipShortcut>
+        </>
+      }
+    >
       <div>
         <Toggle
           aria-label={t("underline")}
