@@ -28,6 +28,7 @@
     }
   },
   "peerDependencies": {
+    "@biomejs/biome": "2.2.3",
     "typescript": "5.9.x"
   },
   "devDependencies": {
