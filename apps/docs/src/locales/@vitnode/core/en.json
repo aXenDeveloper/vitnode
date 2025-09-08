@@ -9,9 +9,17 @@
         "bold": "Bold",
         "italic": "Italic",
         "underline": "Underline",
+        "ordered_list": "Ordered List",
+        "bullet_list": "Bullet List",
         "text_format_more": {
           "label": "More text formats",
           "strike": "Strike"
+        },
+        "alignments": {
+          "left": "Left align",
+          "center": "Center align",
+          "right": "Right align",
+          "justify": "Justify align"
         }
       },
       "theme_switcher": "Toggle Theme",

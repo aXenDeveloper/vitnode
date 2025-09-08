@@ -60,7 +60,7 @@ export const HeadingsAction = () => {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="min-w-[12rem]" align="start">
+      <DropdownMenuContent className="min-w-[12rem]">
         <DropdownMenuItem
           onClick={() => editor.chain().focus().setParagraph().run()}
           className={cn({

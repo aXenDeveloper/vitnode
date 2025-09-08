@@ -1,3 +1,4 @@
+import TextAlign from "@tiptap/extension-text-align";
 import type { Extensions } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 
@@ -18,5 +19,8 @@ export const tiptapExtensions: Extensions = [
     heading: {
       levels: [...SUPPORTED_HEADINGS_LEVELS],
     },
+  }),
+  TextAlign.configure({
+    types: ["heading", "paragraph"],
   }),
 ];

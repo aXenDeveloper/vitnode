@@ -17,4 +17,13 @@
   h4 {
     @apply text-xl font-semibold tracking-tight;
   }
+
+  ul,
+  ol {
+    @apply my-4 ml-6 space-y-2;
+  }
+
+  p {
+    @apply [&:not(:first-child)]:mt-2;
+  }
 }

@@ -17,7 +17,7 @@
     "test:e2e": "turbo test:e2e"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.2.3",
+    "@biomejs/biome": "2.2.2",
     "@types/node": "^24.3.1",
     "@vitnode/config": "workspace:*",
     "prettier": "^3.6.2",

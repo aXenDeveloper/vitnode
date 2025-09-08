@@ -33,7 +33,7 @@ const versions = {
   typescript: "^5.9.2",
   tsx: "^4.20.5",
   tscAlias: "^1.8.16",
-  biome: "^2.2.3",
+  biome: "2.2.2",
   tailwind: "^4.1.12",
   tailwindPostcss: "^4.1.13",
   postcss: "^8.5.6",

@@ -1,5 +1,5 @@
 import { useEditorState } from "@tiptap/react";
-import { ItalicIcon } from "lucide-react";
+import { ListIcon, ListOrderedIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Toggle } from "@/components/ui/toggle";
 import { TooltipWithContent } from "@/components/ui/tooltip";
@@ -9,11 +9,12 @@ import { TooltipShortcut } from "./utils/tooltip-shortcut";
 export const ListAction = () => {
   const t = useTranslations("core.global.editor");
   const { editor } = useToolbarEditor();
-  const { isItalic } = useEditorState({
+  const { isBulletList, isOrderedList } = useEditorState({
     editor,
     selector: ctx => {
       return {
-        isItalic: ctx.editor.isActive("italic"),
+        isOrderedList: ctx.editor.isActive("orderedList"),
+        isBulletList: ctx.editor.isActive("bulletList"),
       };
     },
   });
@@ -23,18 +24,18 @@ export const ListAction = () => {
       <TooltipWithContent
         text={
           <>
-            {t("italic")}
+            {t("bullet_list")}
             <TooltipShortcut>+I</TooltipShortcut>
           </>
         }
       >
         <div>
           <Toggle
-            aria-label={t("italic")}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            pressed={isItalic}
+            aria-label={t("bullet_list")}
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+            pressed={isBulletList}
           >
-            <ItalicIcon />
+            <ListIcon />
           </Toggle>
         </div>
       </TooltipWithContent>
@@ -42,18 +43,18 @@ export const ListAction = () => {
       <TooltipWithContent
         text={
           <>
-            {t("italic")}
+            {t("ordered_list")}
             <TooltipShortcut>+I</TooltipShortcut>
           </>
         }
       >
         <div>
           <Toggle
-            aria-label={t("italic")}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            pressed={isItalic}
+            aria-label={t("ordered_list")}
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            pressed={isOrderedList}
           >
-            <ItalicIcon />
+            <ListOrderedIcon />
           </Toggle>
         </div>
       </TooltipWithContent>

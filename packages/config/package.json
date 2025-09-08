@@ -28,11 +28,11 @@
     }
   },
   "peerDependencies": {
-    "@biomejs/biome": "2.2.3",
+    "@biomejs/biome": "2.2.2",
     "typescript": "5.9.x"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.2.3",
+    "@biomejs/biome": "2.2.2",
     "typescript": "^5.9.2"
   }
 }
