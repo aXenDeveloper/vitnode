@@ -11,42 +11,27 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CtrlOrCommandCharacter } from "@/lib/ctrl-or-command-character";
-import { cn } from "@/lib/utils";
 import { useToolbarEditor } from "../use-toolbar-editor";
 
 export const AlignmentAction = () => {
   const t = useTranslations("core.global.editor");
   const { editor } = useToolbarEditor();
-  const { isAlignActive } = useEditorState({
+  const activeValue = useEditorState({
     editor,
     selector: ctx => {
-      return {
-        isAlignActive: () => {
-          if (ctx.editor.isActive({ textAlign: "left" })) {
-            return "left";
-          }
-
-          if (ctx.editor.isActive({ textAlign: "center" })) {
-            return "center";
-          }
-          if (ctx.editor.isActive({ textAlign: "right" })) {
-            return "right";
-          }
-          if (ctx.editor.isActive({ textAlign: "justify" })) {
-            return "justify";
-          }
-
-          return "left";
-        },
-      };
+      return (
+        ["left", "center", "right", "justify"].find(align =>
+          ctx.editor.isActive({ textAlign: align }),
+        ) || "left"
+      );
     },
   });
-
   const alignments = [
     {
       label: t("alignments.left"),
@@ -73,38 +58,39 @@ export const AlignmentAction = () => {
       shortcut: "J",
     },
   ];
-  const activeAlignment = alignments.find(a => a.value === isAlignActive());
+  const activeAlignment =
+    alignments.find(a => a.value === activeValue) || alignments[0];
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button className="w-40 justify-between" variant="ghost">
-          {activeAlignment?.icon ?? <AlignLeftIcon />}
-          {t(`alignments.${activeAlignment?.value ?? "left"}`)}
+          {activeAlignment.icon}
+          {t(`alignments.${activeAlignment.value}`)}
 
           <ChevronDown className="ml-auto" />
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="min-w-[14rem]">
-        {alignments.map(item => (
-          <DropdownMenuItem
-            key={item.value}
-            onClick={() =>
-              editor.chain().focus().setTextAlign(item.value).run()
-            }
-            className={cn({
-              "bg-accent": activeAlignment?.value === item.value,
-            })}
-          >
-            {item.icon}
-            {t(`alignments.${item.value}`)}
-            <DropdownMenuShortcut>
-              <CtrlOrCommandCharacter />
-              +Shift+{item.shortcut}
-            </DropdownMenuShortcut>
-          </DropdownMenuItem>
-        ))}
+      <DropdownMenuContent className="min-w-[16rem]">
+        <DropdownMenuRadioGroup value={activeAlignment.value}>
+          {alignments.map(item => (
+            <DropdownMenuRadioItem
+              key={item.value}
+              onClick={() =>
+                editor.chain().focus().setTextAlign(item.value).run()
+              }
+              value={item.value}
+            >
+              {item.icon}
+              {t(`alignments.${item.value}`)}
+              <DropdownMenuShortcut>
+                <CtrlOrCommandCharacter />
+                +Shift+{item.shortcut}
+              </DropdownMenuShortcut>
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

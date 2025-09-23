@@ -1,4 +1,5 @@
 import type { Editor } from "@tiptap/react";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { AlignmentAction } from "./actions/alignment-action";
 import { BoldAction } from "./actions/bold-action";
@@ -13,19 +14,23 @@ import { ToolbarEditorContext } from "./use-toolbar-editor";
 export const TipTapToolbar = ({ editor }: { editor: Editor }) => {
   return (
     <ToolbarEditorContext value={{ editor }}>
-      <div className="border-b p-2 flex items-center flex-wrap h-14 gap-1">
-        <UndoRedoActions />
-        <Separator orientation="vertical" className="mx-2" />
-        <HeadingsAction />
-        <Separator orientation="vertical" className="mx-2" />
-        <BoldAction />
-        <ItalicAction />
-        <UnderlineAction />
-        <TextFormatMore />
-        <AlignmentAction />
-        <Separator orientation="vertical" className="mx-2" />
-        <ListAction />
-      </div>
+      <ScrollArea>
+        <div className="border-b p-2 flex items-center h-14 gap-1">
+          <UndoRedoActions />
+          <Separator orientation="vertical" className="mx-2" />
+          <HeadingsAction />
+          <Separator orientation="vertical" className="mx-2" />
+          <BoldAction />
+          <ItalicAction />
+          <UnderlineAction />
+          <TextFormatMore />
+          <AlignmentAction />
+          <Separator orientation="vertical" className="mx-2" />
+          <ListAction />
+        </div>
+
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
     </ToolbarEditorContext>
   );
 };

@@ -58,7 +58,8 @@
         "noReactPropAssignments": "error",
         "noRenderReturnValue": "error",
         "useJsonImportAttributes": "warn",
-        "useUniqueElementIds": "off"
+        "useUniqueElementIds": "off",
+        "useExhaustiveDependencies": "off"
       },
       "performance": {
         "noAwaitInLoops": "error",

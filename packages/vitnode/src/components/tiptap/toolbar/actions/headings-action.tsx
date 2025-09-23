@@ -12,12 +12,12 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CtrlOrCommandCharacter } from "@/lib/ctrl-or-command-character";
-import { cn } from "@/lib/utils";
 import { SUPPORTED_HEADINGS_LEVELS } from "../../extension";
 import { useToolbarEditor } from "../use-toolbar-editor";
 
@@ -32,67 +32,70 @@ const ICONS = {
 export const HeadingsAction = () => {
   const t = useTranslations("core.global.editor");
   const { editor } = useToolbarEditor();
-  const { isParagraph, isHeaderActive } = useEditorState({
+  const activeValue = useEditorState({
     editor,
     selector: ctx => {
-      return {
-        isParagraph: !ctx.editor.isActive("heading"),
-        isHeaderActive: (level: number) =>
-          ctx.editor.isActive("heading", { level }),
-      };
+      if (!ctx.editor.isActive("heading")) return "paragraph";
+      const level = ctx.editor.getAttributes("heading").level;
+      return `heading-${level}`;
     },
   });
+
+  const options = [
+    {
+      value: "paragraph",
+      label: t("paragraph"),
+      icon: ICONS.paragraph,
+      shortcut: "0",
+    },
+    ...SUPPORTED_HEADINGS_LEVELS.map(level => ({
+      value: `heading-${level}`,
+      label: t("heading", { level }),
+      icon: ICONS[`heading_${level}`],
+      shortcut: level.toString(),
+    })),
+  ];
+  const activeOption = options.find(o => o.value === activeValue) || options[0];
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button className="w-32 justify-between" variant="ghost">
-          {isParagraph
-            ? t("paragraph")
-            : t("heading", {
-                level:
-                  SUPPORTED_HEADINGS_LEVELS.find(level =>
-                    isHeaderActive(level),
-                  ) ?? 1,
-              })}
+          {activeOption.icon}
+          {activeOption.label}
 
           <ChevronDown className="ml-auto" />
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="min-w-[12rem]">
-        <DropdownMenuItem
-          onClick={() => editor.chain().focus().setParagraph().run()}
-          className={cn({
-            "bg-accent": isParagraph,
-          })}
-        >
-          {ICONS.paragraph}
-          {t("paragraph")}
-          <DropdownMenuShortcut>
-            <CtrlOrCommandCharacter />
-            +Alt+0
-          </DropdownMenuShortcut>
-        </DropdownMenuItem>
-
-        {SUPPORTED_HEADINGS_LEVELS.map(level => (
-          <DropdownMenuItem
-            key={level}
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level }).run()
-            }
-            className={cn({
-              "bg-accent": isHeaderActive(level),
-            })}
-          >
-            {ICONS[`heading_${level}`]}
-            {t("heading", { level })}
-            <DropdownMenuShortcut>
-              <CtrlOrCommandCharacter />
-              +Alt+{level}
-            </DropdownMenuShortcut>
-          </DropdownMenuItem>
-        ))}
+      <DropdownMenuContent className="min-w-[14rem]">
+        <DropdownMenuRadioGroup value={activeValue}>
+          {options.map(item => (
+            <DropdownMenuRadioItem
+              key={item.value}
+              onClick={() => {
+                if (item.value === "paragraph") {
+                  editor.chain().focus().setParagraph().run();
+                } else {
+                  const level = parseInt(item.value.split("-")[1]) as
+                    | 1
+                    | 2
+                    | 3
+                    | 4;
+                  editor.chain().focus().toggleHeading({ level }).run();
+                }
+              }}
+              value={item.value}
+            >
+              {item.icon}
+              {item.label}
+              <DropdownMenuShortcut>
+                <CtrlOrCommandCharacter />
+                +Alt+{item.shortcut}
+              </DropdownMenuShortcut>
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
