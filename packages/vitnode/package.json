@@ -57,6 +57,7 @@
     "dotenv": "^17.2.2",
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.5",
+    "eslint": "^9.36.0",
     "hono": "^4.9.6",
     "jsdom": "^26.1.0",
     "lucide-react": "^0.542.0",
@@ -104,7 +105,9 @@
     "dev:email": "email dev --dir src/emails",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "type": "module",
   "dependencies": {

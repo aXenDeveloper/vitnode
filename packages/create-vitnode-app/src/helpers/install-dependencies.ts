@@ -1,6 +1,5 @@
-/** biome-ignore-all lint/suspicious/noConsole: <no need> */
 import { spawn } from "node:child_process";
-import color from "picocolors";
+import consoleColor from "picocolors";
 
 import type { CreateCliReturn } from "../questions.js";
 
@@ -8,7 +7,7 @@ import { getOnline } from "./is-online.js";
 
 function printInstallErrorSuggestions(
   stderr: string,
-  color: typeof import("picocolors"),
+  color: typeof consoleColor,
 ) {
   if (stderr.includes("ENOTFOUND") || stderr.includes("network")) {
     console.error(
@@ -50,7 +49,7 @@ export const installDependencies = async ({
 
   if (!isOnline) {
     console.log(
-      color.yellow(
+      consoleColor.yellow(
         "You appear to be offline.\nFalling back to the local cache.",
       ),
     );
@@ -96,21 +95,21 @@ export const installDependencies = async ({
     child.on("close", code => {
       if (code !== 0) {
         console.error(
-          color.red(`\n❌ Installation failed with exit code: ${code}`),
+          consoleColor.red(`\n❌ Installation failed with exit code: ${code}`),
         );
 
         if (stderr) {
-          console.error(color.red("Error output:"));
+          console.error(consoleColor.red("Error output:"));
           console.error(stderr);
         }
 
         if (stdout) {
-          console.log(color.yellow("Standard output:"));
+          console.log(consoleColor.yellow("Standard output:"));
           console.log(stdout);
         }
 
         // Provide helpful suggestions based on common errors
-        printInstallErrorSuggestions(stderr, color);
+        printInstallErrorSuggestions(stderr, consoleColor);
 
         reject(
           new Error(
@@ -127,7 +126,7 @@ export const installDependencies = async ({
     // Handle process errors
     child.on("error", error => {
       console.error(
-        color.red(`❌ Failed to start ${packageManager}:`),
+        consoleColor.red(`❌ Failed to start ${packageManager}:`),
         error.message,
       );
       reject(new Error(`Failed to start ${packageManager}: ${error.message}`));

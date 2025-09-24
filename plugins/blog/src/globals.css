@@ -1,5 +1,3 @@
-/** biome-ignore-all lint/correctness/noInvalidPositionAtImportRule: <tailwind> */
-/** biome-ignore-all lint/suspicious/noUnknownAtRules: <tailwind> */
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));

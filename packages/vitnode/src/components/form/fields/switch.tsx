@@ -17,7 +17,7 @@ export const AutoFormSwitch = ({
   Omit<React.ComponentProps<typeof Switch>, "checked">) => {
   return (
     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-      {(label || description) && (
+      {(label ?? description) && (
         <div className="space-y-0.5">
           {label && (
             <AutoFormLabel

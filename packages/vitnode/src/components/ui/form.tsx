@@ -1,7 +1,8 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import type { Label as LabelPrimitive } from "radix-ui";
+
+import { useTranslations } from "next-intl";
 import { Slot } from "radix-ui";
 import React from "react";
 import {

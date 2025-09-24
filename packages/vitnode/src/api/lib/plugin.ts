@@ -1,12 +1,14 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { checkPluginId } from "./check-plugin-id";
+
 import type { CronJobConfig } from "./cron";
 import type { BuildModuleReturn } from "./module";
 
+import { checkPluginId } from "./check-plugin-id";
+
 export interface BuildPluginApiReturn {
+  cronJobs: Omit<CronJobConfig, "pluginId">[];
   hono: OpenAPIHono;
   pluginId: string;
-  cronJobs: Omit<CronJobConfig, "pluginId">[];
 }
 
 export function buildApiPlugin<P extends string>({

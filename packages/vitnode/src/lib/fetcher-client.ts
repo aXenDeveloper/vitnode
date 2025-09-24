@@ -3,7 +3,7 @@ import type {
   BuildModuleReturn,
 } from "@/api/lib/module";
 import type { Route } from "@/api/lib/route";
-import { coreFetcher } from "./fetcher/core";
+
 import type {
   FetcherParams,
   GetModulePaths,
@@ -11,6 +11,8 @@ import type {
   GetValidPathsForModule,
   InferResponseType,
 } from "./fetcher/types";
+
+import { coreFetcher } from "./fetcher/core";
 
 export async function fetcherClient<
   M extends string,

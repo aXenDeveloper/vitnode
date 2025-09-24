@@ -1,5 +1,6 @@
-import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
+
+import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
 import type { SSOApiPlugin } from "@/api/models/sso";

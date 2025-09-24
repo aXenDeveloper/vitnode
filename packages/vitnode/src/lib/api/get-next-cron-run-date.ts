@@ -6,17 +6,19 @@ export const getNextCronRunDate = (
 ): Date | null => {
   try {
     const options = {
-      currentDate: lastRun || new Date(0),
+      currentDate: lastRun ?? new Date(0),
     };
 
     const interval = cronParser.parse(schedule, options);
+
     return interval.next().toDate();
   } catch (err) {
-    // biome-ignore lint/suspicious/noConsole: needed for cron job monitoring
+    // eslint-disable-next-line no-console
     console.error(
       `\x1b[34m[VitNode]\x1b[0m \x1b[38;5;208mError parsing schedule for nextRun\x1b[0m: ${schedule}`,
       err,
     );
+
     return null;
   }
 };

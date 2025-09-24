@@ -1,6 +1,7 @@
 import { useEditorState } from "@tiptap/react";
 import { EllipsisVerticalIcon, StrikethroughIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CtrlOrCommandCharacter } from "@/lib/ctrl-or-command-character";
 import { cn } from "@/lib/utils";
+
 import { useToolbarEditor } from "../../use-toolbar-editor";
 
 export const TextFormatMore = () => {
@@ -29,12 +31,12 @@ export const TextFormatMore = () => {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="ghost"
-          size="icon"
           aria-label={t("label")}
           className={cn({
             "bg-accent": isStrike,
           })}
+          size="icon"
+          variant="ghost"
         >
           <EllipsisVerticalIcon />
         </Button>
@@ -42,13 +44,13 @@ export const TextFormatMore = () => {
 
       <DropdownMenuContent className="min-w-[12rem]">
         <DropdownMenuItem
+          className={cn({
+            "bg-accent": isStrike,
+          })}
           onClick={() => {
             editor.chain().focus().toggleStrike().run();
             editor.view.focus();
           }}
-          className={cn({
-            "bg-accent": isStrike,
-          })}
         >
           <StrikethroughIcon />
           {t("strike")}

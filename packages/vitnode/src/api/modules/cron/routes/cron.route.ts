@@ -1,10 +1,12 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+
 import { buildRoute } from "@/api/lib/route";
 import { cronAuthMiddleware } from "@/api/middlewares/cron-auth.middleware";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_cron } from "@/database/cron";
 import { getNextCronRunDate } from "@/lib/api/get-next-cron-run-date";
+
 import {
   cleanupOutdatedCronJobs,
   processCronJobs,
@@ -52,7 +54,7 @@ export const runCronRoute = buildRoute({
         try {
           const newJobsValues = newJobs.map(job => ({
             name: job.name,
-            description: job.description || null,
+            description: job.description ?? null,
             lastRun: null,
             nextRun: null,
             pluginId: job.pluginId,

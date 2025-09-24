@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** biome-ignore-all lint/suspicious/noConsole: <no need> */
+/* eslint-disable no-console */
 
 import { config } from "dotenv";
 

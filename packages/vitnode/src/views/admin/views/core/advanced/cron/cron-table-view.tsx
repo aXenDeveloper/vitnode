@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+
 import { cronAdminModule } from "@/api/modules/admin/advanced/cron/cron.admin.module";
 import { DateFormat } from "@/components/date-format";
 import {
@@ -6,6 +7,7 @@ import {
   type SearchParamsDataTable,
 } from "@/components/table/data-table";
 import { fetcher } from "@/lib/fetcher";
+
 import { RunActionCronTable } from "./run-action/run-action";
 
 export const CronTableView = async ({
@@ -37,9 +39,9 @@ export const CronTableView = async ({
           id: "name",
           label: t("list.name"),
           cell: ({ row }) => (
-            <div className="flex flex-col max-w-sm">
+            <div className="flex max-w-sm flex-col">
               <span>{row.name}</span>
-              <p className="text-sm text-muted-foreground">{row.description}</p>
+              <p className="text-muted-foreground text-sm">{row.description}</p>
             </div>
           ),
         },
@@ -56,7 +58,7 @@ export const CronTableView = async ({
             row.lastRun ? (
               <DateFormat date={row.lastRun} />
             ) : (
-              <span className="italic text-muted-foreground">
+              <span className="text-muted-foreground italic">
                 {t("list.lastRun.never")}
               </span>
             ),
@@ -68,7 +70,7 @@ export const CronTableView = async ({
             row.nextRun ? (
               <DateFormat date={row.nextRun} showFullDate />
             ) : (
-              <span className="italic text-muted-foreground">
+              <span className="text-muted-foreground italic">
                 {t("list.nextRun.never")}
               </span>
             ),

@@ -1,13 +1,16 @@
-import { swaggerUI } from "@hono/swagger-ui";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context, Env, Schema } from "hono";
+
+import { swaggerUI } from "@hono/swagger-ui";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
 
+import type { VitNodeApiConfig } from "@/vitnode.config";
+
 import { newBuildPluginApiCore } from "@/api/plugin";
 import { CONFIG_PLUGIN } from "@/config";
-import type { VitNodeApiConfig } from "@/vitnode.config";
+
 import {
   globalAdminMiddleware,
   globalMiddleware,
@@ -93,7 +96,9 @@ export function VitNodeAPI({
       if (logger) {
         await logger.error(`Unhandled error: ${errorMessage}`);
       }
-    } catch {}
+    } catch {
+      /* empty */
+    }
 
     return new Response(
       process.env.NODE_ENV === "development"

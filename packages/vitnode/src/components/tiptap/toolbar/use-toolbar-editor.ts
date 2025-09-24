@@ -1,4 +1,5 @@
 import type { Editor } from "@tiptap/react";
+
 import React from "react";
 
 export const ToolbarEditorContext = React.createContext<{

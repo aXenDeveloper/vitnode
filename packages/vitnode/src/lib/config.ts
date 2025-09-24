@@ -2,7 +2,7 @@ const ENVS = {
   apiUrl: process.env.NEXT_PUBLIC_API_URL,
   webUrl: process.env.NEXT_PUBLIC_WEB_URL,
   cronConfig:
-    process.env.CRON_SECRET || "default-cron-secret-change-in-production",
+    process.env.CRON_SECRET ?? "default-cron-secret-change-in-production",
 };
 
 const urls = {

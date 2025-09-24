@@ -8,7 +8,7 @@ The repository is a monorepo for the VitNode framework, which includes a backend
 
 - **Monorepo Structure:**
   - `apps/` contains main apps (`api` for backend, `docs` for docs site)
-  - `packages/` holds shared code, core framework, Biome configs, and CLI tools
+  - `packages/` holds shared code, core framework, ESLint and Prettier configs, and CLI tools
   - `plugins/` for extendable features
 - **Frontend:**
   - Next.js 15, App Router, Server Components
@@ -35,7 +35,7 @@ The repository is a monorepo for the VitNode framework, which includes a backend
   - `pnpm dev` (dev server), `pnpm build`, `pnpm lint`, `pnpm db:migrate`, `pnpm docker:dev`
 - **CLI:**
   - Create apps/plugins via `pnpm create vitnode-app@canary` (see `packages/create-vitnode-app`)
-  - CLI prompts for package manager, app mode, Biome, Docker, install (see `questions.ts`)
+  - CLI prompts for package manager, app mode, ESLint, Prettier, Docker, install (see `questions.ts`)
 - **Linting/Formatting:**
   - Use configs from `packages/config/`
   - File names: snake_case, ESModule only

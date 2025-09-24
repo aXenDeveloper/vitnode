@@ -1,5 +1,5 @@
-import { basename, resolve } from "node:path";
 import { input } from "@inquirer/prompts";
+import { basename, resolve } from "node:path";
 
 import { validateNpmName } from "../helpers/validate-pkg.js";
 
@@ -12,6 +12,8 @@ export const createPlugin = async (projectPath: string) => {
       validate: (name: string) => {
         const validation = validateNpmName({ name: basename(resolve(name)) });
         if (validation.valid) return true;
+
+        console.log(validation.problems);
 
         return `Invalid plugin name: ${validation.problems[0]}`;
       },

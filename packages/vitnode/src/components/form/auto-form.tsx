@@ -7,11 +7,13 @@ import {
   type FieldPath,
   type FieldValues,
   type Mode,
-  type UseFormReturn,
   useForm,
+  type UseFormReturn,
 } from "react-hook-form";
 import z from "zod";
+
 import type { routeMiddlewareSchema } from "../../api/modules/middleware/route";
+
 import { useCaptcha } from "../../hooks/use-captcha";
 import {
   getDefaults,
@@ -159,7 +161,6 @@ export function AutoForm<
           <FormField
             key={item.id}
             name={item.id}
-            // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
             render={({ field }) => {
               return (
                 <>

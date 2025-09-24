@@ -1,4 +1,5 @@
 import { schedule } from "node-cron";
+
 import { type CronAdapter, handleCronJobs } from "@/api/lib/cron";
 
 export const NodeCronAdapter = (): CronAdapter => {

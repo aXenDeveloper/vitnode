@@ -11,20 +11,22 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import ora from "ora";
 import color from "picocolors";
+
+import type { CreateCliReturn } from "../questions.js";
+
 import {
   generateMigrationsVitnode,
   initFilesVitnode,
 } from "../helpers/init-vitnode.js";
 import { installDependencies } from "../helpers/install-dependencies.js";
 import { isFolderEmpty } from "../helpers/is-folder-empty.js";
-import type { CreateCliReturn } from "../questions.js";
 import { createPackageJSON } from "./create-package-json.js";
 
 export const createVitNode = async ({
   root,
   appName,
   packageManager,
-  biome,
+  eslint,
   install,
   docker,
   mode,
@@ -32,7 +34,6 @@ export const createVitNode = async ({
 }: CreateCliReturn & {
   appName: string;
   root: string;
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
 }) => {
   const spinner = ora(
     `Creating a new VitNode app in ${color.green(root)}. Using ${color.green(packageManager)}...`,
@@ -130,9 +131,9 @@ export const createVitNode = async ({
     });
   }
 
-  if (biome) {
-    spinner.text = "Copying Biome files...";
-    await cp(join(templatePath, "biome"), root, {
+  if (eslint) {
+    spinner.text = "Copying ESLint & Prettier files...";
+    await cp(join(templatePath, "eslint"), root, {
       recursive: true,
     });
   }
@@ -159,7 +160,7 @@ export const createVitNode = async ({
     root,
     appName,
     packageManager,
-    biome,
+    eslint,
     docker,
     mode,
     monorepo,
@@ -225,22 +226,20 @@ export const createVitNode = async ({
 
     spinner.text = "Initializing VitNode files...";
     if (mode === "apiMonorepo") {
-      await Promise.all([
-        initFilesVitnode({
-          packageManager,
-          cwd: monorepoStructure.web,
-          flag: "web",
-        }),
-        initFilesVitnode({
-          packageManager,
-          cwd: monorepoStructure.api,
-          flag: "api",
-        }),
-        initFilesVitnode({
-          packageManager,
-          cwd: root,
-        }),
-      ]);
+      initFilesVitnode({
+        packageManager,
+        cwd: monorepoStructure.web,
+        flag: "web",
+      });
+      initFilesVitnode({
+        packageManager,
+        cwd: monorepoStructure.api,
+        flag: "api",
+      });
+      initFilesVitnode({
+        packageManager,
+        cwd: root,
+      });
     } else {
       initFilesVitnode({
         packageManager,

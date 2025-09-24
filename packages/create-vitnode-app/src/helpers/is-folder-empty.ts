@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/suspicious/noConsole: <no need> */
 import { lstatSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import colors from "picocolors";

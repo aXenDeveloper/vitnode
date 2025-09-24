@@ -20,6 +20,7 @@ function Slider({
     if (Array.isArray(defaultValue)) {
       return defaultValue;
     }
+
     return [min, max];
   }, [value, defaultValue, min, max]);
 
@@ -53,7 +54,6 @@ function Slider({
         <SliderPrimitive.Thumb
           className="border-primary bg-background ring-ring/50 focus-visible:outline-hidden block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 disabled:pointer-events-none disabled:opacity-50"
           data-slot="slider-thumb"
-          // biome-ignore lint/suspicious/noArrayIndexKey: <needed>
           key={index}
         />
       ))}

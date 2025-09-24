@@ -84,21 +84,21 @@ vitnode/
 │   └── docs/         # Documentation site
 ├── packages/
 │   ├── vitnode/      # Core framework code
-│   ├── config/       # Shared Biome,TypeScript configs
+│   ├── config/       # Shared ESLInt, TypeScript configs
 │   └── create-vitnode-app/ # CLI tool for creating new projects
 └── plugins/          # Official open-source plugins
 ```
 
 <Callout type="info" title="Monorepo Magic!">
-  VitNode uses Turborepo to keep everything organized. Apps, packages, and plugins all live together
-  in harmony!
+  VitNode uses Turborepo to keep everything organized. Apps, packages, and
+  plugins all live together in harmony!
 </Callout>
 
 ## Coding Standards
 
 - We use TypeScript for type safety ([TypeScript Docs](https://www.typescriptlang.org/))
 - Follow ESM (ECMAScript Modules) conventions ([ESM Guide](https://nodejs.org/api/esm.html))
-- Respect the Biome configuration in each workspace ([Biome](https://biomejs.dev/))
+- Respect the ESLint & Prettier configuration in each workspace ([ESLint](https://eslint.org/) & [Prettier](https://prettier.io/))
 - Use React Server Components where appropriate
 - Write meaningful commit messages ([Conventional Commits](https://www.conventionalcommits.org/))
 
@@ -137,7 +137,7 @@ pnpm db:migrate # Run migrations
     - TypeScript for type safety
     - ESM module conventions
     - React Server Components where appropriate
-    - Respect Biome rules in each workspace
+    - Respect ESLint, Prettier rules in each workspace
 
     <Callout type="warn">
       Don't forget to test your changes locally! 🧪
@@ -190,4 +190,6 @@ pnpm db:migrate # Run migrations
 
 Thank you for contributing to VitNode! 🚀
 
-<Callout title="You rock!">Every contribution makes VitNode better. We appreciate you! 💜</Callout>
+<Callout title="You rock!">
+  Every contribution makes VitNode better. We appreciate you! 💜
+</Callout>

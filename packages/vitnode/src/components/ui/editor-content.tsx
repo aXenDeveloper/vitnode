@@ -1,6 +1,6 @@
 export const EditorContent = ({ content }: { content: string }) => {
   return (
-    // biome-ignore lint/security/noDangerouslySetInnerHtml: Necessary for rendering HTML content
+    // eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml
     <div className="tiptap" dangerouslySetInnerHTML={{ __html: content }} />
   );
 };

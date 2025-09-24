@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import {
   Tooltip,
   TooltipContent,
@@ -18,7 +20,6 @@ import {
   Sparkle,
   Users,
 } from "lucide-react";
-import type React from "react";
 import { useRef } from "react";
 
 import { LogoVitNode } from "../logo-vitnode";

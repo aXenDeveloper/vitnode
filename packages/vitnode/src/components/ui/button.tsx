@@ -1,5 +1,6 @@
-import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
+
+import { cva, type VariantProps } from "class-variance-authority";
 
 import { ClientButton } from "./button-client";
 
@@ -49,4 +50,4 @@ function Button(props: ButtonProps) {
   return <ClientButton {...props} />;
 }
 
-export { Button, buttonVariants, type ButtonProps };
+export { Button, type ButtonProps, buttonVariants };

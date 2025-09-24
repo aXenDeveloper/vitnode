@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+
 import type { CronJobConfig } from "@/api/lib/cron";
+
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_cron } from "@/database/cron";
@@ -103,10 +105,12 @@ export const runCronRoute = buildRoute({
         );
       } catch (error) {
         await c.get("log").error(`Error executing cron job: ${error}`);
+
         return c.json({ error: "Failed to execute cron job" }, 500);
       }
     } catch (error) {
       await c.get("log").error(`Error running cron job: ${error}`);
+
       return c.json({ error: "Internal server error" }, 500);
     }
   },

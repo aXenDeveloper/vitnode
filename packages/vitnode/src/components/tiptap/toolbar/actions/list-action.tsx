@@ -1,8 +1,10 @@
 import { useEditorState } from "@tiptap/react";
 import { ListIcon, ListOrderedIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
+
 import { Toggle } from "@/components/ui/toggle";
 import { TooltipWithContent } from "@/components/ui/tooltip";
+
 import { useToolbarEditor } from "../use-toolbar-editor";
 import { TooltipShortcut } from "./utils/tooltip-shortcut";
 

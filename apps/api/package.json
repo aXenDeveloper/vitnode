@@ -9,7 +9,9 @@
     "dev:email": "email dev --dir src/emails",
     "build": "tsc && tsc-alias -p tsconfig.json",
     "start": "node dist/index.js",
-    "drizzle-kit": "drizzle-kit"
+    "drizzle-kit": "drizzle-kit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@hono/zod-openapi": "^1.1.0",
@@ -32,6 +34,7 @@
     "@types/react-dom": "^19.1.9",
     "@vitnode/config": "workspace:*",
     "dotenv": "^17.2.2",
+    "eslint": "^9.36.0",
     "react-email": "^4.2.8",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.20.5",

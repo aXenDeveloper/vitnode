@@ -3,8 +3,7 @@ import type {
   BuildModuleReturn,
 } from "@/api/lib/module";
 import type { Route } from "@/api/lib/route";
-import { CONFIG } from "../config";
-import { buildSearchParams } from "./helpers";
+
 import type {
   FetcherParams,
   GetModulePaths,
@@ -12,6 +11,9 @@ import type {
   GetValidPathsForModule,
   InferResponseType,
 } from "./types";
+
+import { CONFIG } from "../config";
+import { buildSearchParams } from "./helpers";
 
 interface CoreFetcherOptions<
   M extends string,
@@ -44,7 +46,6 @@ interface CoreFetcherOptions<
   withPagination?: boolean;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <it's very complex and needs to be>
 export async function coreFetcher<
   M extends string,
   Routes extends Route[],
@@ -130,7 +131,7 @@ export async function coreFetcher<
 
   if (response.status >= 400) {
     const errorText = await response.text();
-    // biome-ignore lint/suspicious/noConsole: <needed for error logging>
+    // eslint-disable-next-line no-console
     console.error(
       `\x1b[34m[VitNode - API]\x1b[0m \x1b[31m${response.status}\x1b[0m - \x1b[33m${url.toString()}\x1b[0m\n\x1b[36mError: ${errorText}\x1b[0m`,
     );

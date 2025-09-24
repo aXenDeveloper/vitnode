@@ -1,9 +1,11 @@
-import { render } from "@react-email/components";
 import type { Context, ContextVariableMap } from "hono";
-import { HTTPException } from "hono/http-exception";
 import type React from "react";
 
+import { render } from "@react-email/components";
+import { HTTPException } from "hono/http-exception";
+
 import type { DefaultTemplateEmailProps } from "../../emails/default-template";
+
 import { CONFIG } from "../../lib/config";
 
 interface EmailModelSendArgsWithUser {
@@ -46,6 +48,7 @@ export type EmailModelSendArgs = {
   subject:
     | ((props: Pick<DefaultTemplateEmailProps, "i18n">) => string)
     | string;
+  // eslint-disable-next-line perfectionist/sort-intersection-types
 } & (EmailModelSendArgsWithEmail | EmailModelSendArgsWithUser);
 
 export class EmailModel {
@@ -91,7 +94,6 @@ export class EmailModel {
 
     const allMessages = await Promise.all(messagesPromises);
     const messages = allMessages.reduce(
-      // biome-ignore lint/performance/noAccumulatingSpread: <needed>
       (acc, curr) => ({ ...acc, ...curr }),
       {},
     ) as Record<string, string>;

@@ -1,21 +1,23 @@
 import type { Context } from "hono";
+
 import { CONFIG } from "@/lib/config";
+
 import type { EnvVitNode } from "../middlewares/global.middleware";
 
 export interface CronAdapter {
-  schedule(): void;
+  schedule: () => void;
 }
 
 export interface BuildCronReturn {
+  description?: string;
+  handler: (c: Context<EnvVitNode>) => Promise<void> | void;
   name: string;
   schedule: string;
-  description?: string;
-  handler: (c: Context<EnvVitNode>) => void | Promise<void>;
 }
 
 export interface CronJobConfig extends BuildCronReturn {
-  pluginId: string;
   module: string;
+  pluginId: string;
 }
 
 export function buildCron({
