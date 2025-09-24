@@ -22,7 +22,7 @@ export const SignInView = async () => {
         <Card className="bg-muted gap-0 p-0">
           <div className="bg-card rounded-xl p-6">
             <div className="mb-10 space-y-2 text-center">
-              <h1 className="text-2xl leading-none font-semibold tracking-tight">
+              <h1 className="text-2xl font-semibold leading-none tracking-tight">
                 {tGlobal("login")}
               </h1>
               <CardDescription>{t("desc")}</CardDescription>

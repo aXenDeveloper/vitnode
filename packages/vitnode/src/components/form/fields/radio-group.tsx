@@ -51,7 +51,7 @@ export const AutoFormRadioGroup = ({
         >
           {values.map(({ value, label }) => (
             <FormItem
-              className="flex items-center space-y-0 space-x-3"
+              className="flex items-center space-x-3 space-y-0"
               key={value}
             >
               <FormControl>

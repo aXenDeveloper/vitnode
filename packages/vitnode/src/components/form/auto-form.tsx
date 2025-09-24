@@ -142,7 +142,7 @@ export function AutoForm<
           return (
             <div key={item.id}>
               {item.label && (
-                <span className="text-xl leading-none font-semibold tracking-tight">
+                <span className="text-xl font-semibold leading-none tracking-tight">
                   {item.label}
                 </span>
               )}
