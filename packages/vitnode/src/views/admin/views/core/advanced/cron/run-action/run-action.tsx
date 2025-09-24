@@ -4,13 +4,16 @@ import { PlayIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { toast } from "sonner";
+
 import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
+
 import { mutationApi } from "./mutation-api";
 
 export const RunActionCronTable = ({ id }: { id: number }) => {
   const t = useTranslations("admin.advanced.cron.list.actions.runNow");
   const tError = useTranslations("core.global.errors");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, formAction, isPending] = useActionState(async () => {
     const mutation = await mutationApi(id);
     if (mutation?.error) {
@@ -28,11 +31,11 @@ export const RunActionCronTable = ({ id }: { id: number }) => {
     <form action={formAction}>
       <TooltipWithContent text={t("label")}>
         <Button
-          variant="ghost"
-          type="submit"
-          size="icon"
           aria-label={t("label")}
           isLoading={isPending}
+          size="icon"
+          type="submit"
+          variant="ghost"
         >
           <PlayIcon />
         </Button>

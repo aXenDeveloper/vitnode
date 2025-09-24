@@ -1,9 +1,11 @@
 "use client";
 
 import { EditorContent, useEditor } from "@tiptap/react";
+
 import { tiptapExtensions } from "@/components/tiptap/extension";
 import { TipTapToolbar } from "@/components/tiptap/toolbar/tiptap-toolbar";
 import { cn } from "@/lib/utils";
+
 import { Loader } from "./loader";
 
 export const Editor = ({
@@ -30,7 +32,7 @@ export const Editor = ({
 
   return (
     <div
-      className={cn("relative w-full border bg-card shadow-xs rounded-md", {
+      className={cn("bg-card relative w-full rounded-md border shadow-xs", {
         "max-h-[20rem] overflow-hidden overflow-y-scroll": !disableScroll,
         className,
       })}

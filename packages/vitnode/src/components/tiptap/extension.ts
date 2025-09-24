@@ -1,5 +1,6 @@
-import TextAlign from "@tiptap/extension-text-align";
 import type { Extensions } from "@tiptap/react";
+
+import TextAlign from "@tiptap/extension-text-align";
 import StarterKit from "@tiptap/starter-kit";
 
 export const SUPPORTED_HEADINGS_LEVELS = [1, 2, 3, 4] as const;

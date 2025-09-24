@@ -1,8 +1,7 @@
 #!/usr/bin/env node
-/** biome-ignore-all lint/suspicious/noConsole: <no need> */
-import { basename, resolve } from "node:path";
 import { input } from "@inquirer/prompts";
 import { Command, Option } from "commander";
+import { basename, resolve } from "node:path";
 import color from "picocolors";
 
 import { createVitNode } from "./create/create-vitnode.js";
@@ -50,7 +49,7 @@ const init = async () => {
       "Specify the package manager to use",
     ).choices(["npm", "pnpm", "bun"]),
   );
-  program.option("--biome", "Initialize with Biome config.");
+  program.option("--eslint", "Initialize with ESLint & Prettier config.");
   program.option(
     "--skip-install",
     "Skip installing packages after initializing the project.",

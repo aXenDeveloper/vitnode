@@ -2,12 +2,14 @@
 
 import { KeyRoundIcon, LogOutIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
+
+import type { SessionApi } from "@/lib/api/get-session-api";
+
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import type { SessionApi } from "@/lib/api/get-session-api";
 import { Link } from "@/lib/navigation";
 
 import { logOutMutationApi } from "./log-out-mutation-api";

@@ -1,5 +1,6 @@
-import { DocsLayout } from "fumadocs-ui/layouts/notebook";
 import type { ReactNode } from "react";
+
+import { DocsLayout } from "fumadocs-ui/layouts/notebook";
 
 import { baseOptions } from "@/app/[locale]/(main)/layout.config";
 import { source } from "@/lib/source";
@@ -21,7 +22,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               ...option,
               icon: (
                 <div
-                  className="max-md:bg-(--tab-color)/10 size-full rounded-lg max-md:border max-md:p-1.5 [&_svg]:size-full"
+                  className="size-full rounded-lg max-md:border max-md:bg-(--tab-color)/10 max-md:p-1.5 [&_svg]:size-full"
                   style={
                     {
                       color,

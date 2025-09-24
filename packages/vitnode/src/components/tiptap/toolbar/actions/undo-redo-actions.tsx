@@ -1,8 +1,10 @@
 import { useEditorState } from "@tiptap/react";
 import { RedoIcon, UndoIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
+
 import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
+
 import { useToolbarEditor } from "../use-toolbar-editor";
 import { TooltipShortcut } from "./utils/tooltip-shortcut";
 
@@ -29,11 +31,11 @@ export const UndoRedoActions = () => {
         }
       >
         <Button
-          size="icon"
           aria-label={t("undo")}
-          variant="ghost"
-          onClick={() => editor.chain().focus().undo().run()}
           disabled={!canUndo}
+          onClick={() => editor.chain().focus().undo().run()}
+          size="icon"
+          variant="ghost"
         >
           <UndoIcon />
         </Button>
@@ -47,11 +49,11 @@ export const UndoRedoActions = () => {
         }
       >
         <Button
-          size="icon"
           aria-label={t("redo")}
-          variant="ghost"
-          onClick={() => editor.chain().focus().redo().run()}
           disabled={!canRedo}
+          onClick={() => editor.chain().focus().redo().run()}
+          size="icon"
+          variant="ghost"
         >
           <RedoIcon />
         </Button>

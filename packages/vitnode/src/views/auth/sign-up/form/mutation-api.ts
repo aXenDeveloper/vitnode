@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import type { z } from "zod";
+
+import { revalidatePath } from "next/cache";
 
 import type { zodSignUpSchema } from "@/api/modules/users/routes/sign-up.route";
 

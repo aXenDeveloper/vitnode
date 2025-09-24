@@ -1,6 +1,7 @@
+import type { ItemAutoFormComponentProps } from "../auto-form";
+
 import { FormControl, FormItem, FormMessage } from "../../ui/form";
 import { Input } from "../../ui/input";
-import type { ItemAutoFormComponentProps } from "../auto-form";
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
 

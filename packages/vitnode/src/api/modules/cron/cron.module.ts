@@ -1,5 +1,6 @@
 import { buildModule } from "@/api/lib/module";
 import { CONFIG_PLUGIN } from "@/config";
+
 import { cleanCron } from "./cron/clean.cron";
 import { runCronRoute } from "./routes/cron.route";
 

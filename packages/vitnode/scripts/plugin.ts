@@ -1,4 +1,5 @@
-/** biome-ignore-all lint/suspicious/noConsole: <no need> */
+/* eslint-disable no-console */
+import chokidar from "chokidar";
 import {
   existsSync,
   mkdirSync,
@@ -7,7 +8,6 @@ import {
   unlinkSync,
 } from "node:fs";
 import { basename, join, relative } from "node:path";
-import chokidar from "chokidar";
 
 import {
   buildInitialRouteMap,
@@ -31,6 +31,7 @@ const detectAppType = (appPath: string) => {
 
   if (hasApiConfig && !hasWebConfig) return "api";
   if (hasWebConfig) return "web";
+
   return null;
 };
 
@@ -42,7 +43,6 @@ const collectSources = (
   repoRoot: string,
   pluginName: string,
   pluginPathName: string,
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
 ): SourceConfig[] => {
   const sources: SourceConfig[] = [];
   const appsDir = join(repoRoot, "apps");
@@ -235,6 +235,7 @@ const makeGetDestinationPaths = (sources: SourceConfig[]) => {
 
     return candidates.map(sourceConfig => {
       const relativePath = relative(sourceConfig.sourceDir, srcPath);
+
       return join(sourceConfig.destinationDir, relativePath);
     });
   };
@@ -292,6 +293,7 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
     }
   } catch (error) {
     console.error("\x1b[31mError reading package.json:\x1b[0m", error);
+
     return;
   }
 

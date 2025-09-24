@@ -17,7 +17,9 @@
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report",
     "postinstall": "fumadocs-mdx",
-    "drizzle-kit": "drizzle-kit"
+    "drizzle-kit": "drizzle-kit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@hono/zod-openapi": "^1.1.0",
@@ -53,6 +55,7 @@
     "@types/react-dom": "^19.1.9",
     "@vitnode/config": "workspace:*",
     "class-variance-authority": "^0.7.1",
+    "eslint": "^9.36.0",
     "postcss": "^8.5.6",
     "react-email": "^4.2.8",
     "shiki": "^3.12.2",

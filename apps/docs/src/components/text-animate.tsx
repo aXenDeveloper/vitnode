@@ -1,9 +1,10 @@
 "use client";
 
-import { cn } from "@vitnode/core/lib/utils";
 import type { MotionProps, Variants } from "motion/react";
-import { AnimatePresence, motion } from "motion/react";
 import type { ElementType } from "react";
+
+import { cn } from "@vitnode/core/lib/utils";
+import { AnimatePresence, motion } from "motion/react";
 import { memo } from "react";
 
 type AnimationType = "character" | "line" | "text" | "word";
@@ -323,11 +324,11 @@ const TextAnimateBase = ({
     case "line":
       segments = children.split("\n");
       break;
-    case "word":
-      segments = children.split(/(\s+)/);
-      break;
     case "text":
       segments = [children];
+      break;
+    case "word":
+      segments = children.split(/(\s+)/);
       break;
     default:
       segments = [children];
@@ -392,7 +393,7 @@ const TextAnimateBase = ({
         className={cn("whitespace-pre-wrap", className)}
         exit="exit"
         initial="hidden"
-        variants={finalVariants.container as Variants}
+        variants={finalVariants.container}
         viewport={{ once }}
         whileInView={startOnView ? "show" : undefined}
         {...props}
@@ -405,10 +406,7 @@ const TextAnimateBase = ({
               segmentClassName,
             )}
             custom={i * staggerTimings[by]}
-            key={`${by}-${segment}-${
-              // biome-ignore lint/suspicious/noArrayIndexKey: <text animate>
-              i
-            }`}
+            key={`${by}-${segment}`}
             variants={finalVariants.item}
           >
             {segment}

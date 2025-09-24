@@ -7,6 +7,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CtrlOrCommandCharacter } from "@/lib/ctrl-or-command-character";
+
 import { useToolbarEditor } from "../use-toolbar-editor";
 
 export const AlignmentAction = () => {
@@ -28,7 +30,7 @@ export const AlignmentAction = () => {
       return (
         ["left", "center", "right", "justify"].find(align =>
           ctx.editor.isActive({ textAlign: align }),
-        ) || "left"
+        ) ?? "left"
       );
     },
   });
@@ -59,7 +61,7 @@ export const AlignmentAction = () => {
     },
   ];
   const activeAlignment =
-    alignments.find(a => a.value === activeValue) || alignments[0];
+    alignments.find(a => a.value === activeValue) ?? alignments[0];
 
   return (
     <DropdownMenu>

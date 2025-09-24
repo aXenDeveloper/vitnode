@@ -2,8 +2,8 @@
 
 import { cn } from "@vitnode/core/lib/utils";
 import {
-  type AnimationPlaybackControlsWithThen,
   animate,
+  type AnimationPlaybackControlsWithThen,
   motion,
   useMotionValue,
 } from "motion/react";
@@ -35,7 +35,6 @@ export function InfiniteSlider({
   const [isTransitioning, setIsTransitioning] = React.useState(false);
   const [key, setKey] = React.useState(0);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <we need key to reset the animation>
   React.useEffect(() => {
     let controls: AnimationPlaybackControlsWithThen | undefined;
     const size = direction === "horizontal" ? width : height;

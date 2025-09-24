@@ -16,7 +16,9 @@
   },
   "scripts": {
     "build:scripts": "tsc && node dist/src/prepare/prepare.js",
-    "start:scripts": "node dist/src/index.js"
+    "start:scripts": "node dist/src/index.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "keywords": [
     "vitnode",
@@ -37,6 +39,7 @@
     "@types/prompts": "^2.4.9",
     "@types/validate-npm-package-name": "^4.0.2",
     "@vitnode/config": "workspace:*",
+    "eslint": "^9.36.0",
     "typescript": "^5.9.2"
   }
 }

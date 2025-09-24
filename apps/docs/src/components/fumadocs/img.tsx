@@ -1,6 +1,7 @@
+import type React from "react";
+
 import { ImageZoom } from "fumadocs-ui/components/image-zoom";
 import { cn } from "fumadocs-ui/utils/cn";
-import type React from "react";
 
 export const ImgDocs = ({
   className,

@@ -20,8 +20,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "../../ui/skeleton";
+
 import type { ItemAutoFormComponentProps } from "../auto-form";
+
+import { Skeleton } from "../../ui/skeleton";
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
 

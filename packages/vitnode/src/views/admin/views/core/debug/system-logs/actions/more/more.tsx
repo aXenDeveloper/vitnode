@@ -1,8 +1,8 @@
 "use client";
 
 import { SearchIcon } from "lucide-react";
-import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
+import dynamic from "next/dynamic";
 import React from "react";
 
 import { Button } from "@/components/ui/button";

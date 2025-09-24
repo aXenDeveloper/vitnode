@@ -8,6 +8,7 @@ import {
   PilcrowIcon,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CtrlOrCommandCharacter } from "@/lib/ctrl-or-command-character";
+
 import { SUPPORTED_HEADINGS_LEVELS } from "../../extension";
 import { useToolbarEditor } from "../use-toolbar-editor";
 
@@ -37,6 +39,7 @@ export const HeadingsAction = () => {
     selector: ctx => {
       if (!ctx.editor.isActive("heading")) return "paragraph";
       const level = ctx.editor.getAttributes("heading").level;
+
       return `heading-${level}`;
     },
   });
@@ -55,7 +58,7 @@ export const HeadingsAction = () => {
       shortcut: level.toString(),
     })),
   ];
-  const activeOption = options.find(o => o.value === activeValue) || options[0];
+  const activeOption = options.find(o => o.value === activeValue) ?? options[0];
 
   return (
     <DropdownMenu>

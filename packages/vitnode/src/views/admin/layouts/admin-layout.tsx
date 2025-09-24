@@ -1,5 +1,5 @@
-import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
+import { cookies } from "next/headers";
 
 import { ThemeSwitcher } from "@/components/switchers/themes/theme-switcher";
 import {
@@ -8,10 +8,12 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { getSessionAdminApi } from "@/lib/api/get-session-admin-api";
-import { I18nProvider } from "../../../components/i18n-provider";
-import { LanguageSwitcher } from "../../../components/switchers/langs/language-switcher";
+
 import type { VitNodeConfig } from "../../../vitnode.config";
 import type { NavAdminParent } from "./sidebar/nav/nav";
+
+import { I18nProvider } from "../../../components/i18n-provider";
+import { LanguageSwitcher } from "../../../components/switchers/langs/language-switcher";
 import { SidebarAdmin } from "./sidebar/sidebar";
 import { UserBarAdmin } from "./user-bar/user-bar";
 
@@ -37,15 +39,18 @@ export const AdminLayout = async ({
     .filter(plugin => plugin.admin?.nav)
     .map(plugin => ({
       id: plugin.pluginId,
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
       title: t(`${plugin.pluginId}.title`),
       items: (plugin.admin?.nav ?? []).map(item => ({
         ...item,
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-expect-error
         title: t(`${plugin.pluginId}.admin.nav.${item.id}`),
         items:
           item.items?.map(subItem => ({
             ...subItem,
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-expect-error
             title: t(`${plugin.pluginId}.admin.nav.${item.id}.${subItem.id}`),
           })) ?? [],

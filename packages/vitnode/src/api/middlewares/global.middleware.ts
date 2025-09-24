@@ -1,19 +1,24 @@
 import type { Context, Env, Next } from "hono";
 
 import { HTTPException } from "hono/http-exception";
+
+import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
+
 import { EmailModel, type EmailModelSendArgs } from "@/api/models/email";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import { CONFIG } from "@/lib/config";
-import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
+
 import type { BuildCronReturn } from "../lib/cron";
-import {
-  type LoggerMiddlewareType,
-  loggerMiddleware,
-} from "../lib/logger-middleware";
 import type { SSOApiPlugin } from "../models/sso";
 
+import {
+  loggerMiddleware,
+  type LoggerMiddlewareType,
+} from "../lib/logger-middleware";
+
 declare module "hono" {
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface ContextVariableMap extends EnvVariablesVitNode {}
 }
 
@@ -48,6 +53,7 @@ export interface EnvVariablesVitNode {
       ssoAdapters: SSOApiPlugin[];
     };
     captcha?: Pick<VitNodeApiConfig, "captcha">["captcha"];
+    cron: (BuildCronReturn & { module: string; pluginId: string })[];
     cronSecret?: string;
     email?: VitNodeApiConfig["email"];
     metadata: {
@@ -56,7 +62,6 @@ export interface EnvVariablesVitNode {
     };
     pathToMessages: (path: string) => Promise<{ default: object }>;
     plugins: { id: string }[];
-    cron: ({ pluginId: string; module: string } & BuildCronReturn)[];
   };
   db: Pick<VitNodeApiConfig, "dbProvider">["dbProvider"];
   email: {
@@ -133,7 +138,6 @@ export const globalMiddleware = ({
     "x-fastly-client-ip",
   ];
 
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
   return async (c: Context, next: Next) => {
     let ipAddress: string | undefined;
 

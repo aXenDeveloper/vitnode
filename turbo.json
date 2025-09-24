@@ -41,6 +41,12 @@
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "env": ["POSTGRES_URL", "NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_WEB_URL"]
     },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "lint:fix": {
+      "dependsOn": ["^lint:fix"]
+    },
     "start": {
       "dependsOn": ["^start"]
     },

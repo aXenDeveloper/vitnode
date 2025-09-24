@@ -1,4 +1,7 @@
 import React from "react";
+
+import type { PaginationDataTable } from "./pagination";
+
 import { ErrorView } from "../../views/error/error-view";
 import { Skeleton } from "../ui/skeleton";
 import {
@@ -9,7 +12,6 @@ import {
   TableRow,
 } from "../ui/table";
 import { ContentDataTable } from "./content";
-import type { PaginationDataTable } from "./pagination";
 
 export interface DataTableTMin {
   id: number;
@@ -58,6 +60,7 @@ export const DataTableSkeleton = ({ columns }: { columns: number }) => {
               <TableRow key={rid}>
                 {headerIds.map((_, j) => {
                   const cellId = `s-cell-${rid}-${j}`;
+
                   return (
                     <td className="px-4 py-3" key={cellId}>
                       <Skeleton className="h-4 w-full" />

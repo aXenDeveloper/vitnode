@@ -1,4 +1,3 @@
-/** biome-ignore-all lint/suspicious/noConsole: <errors> */
 import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { EnvironmentConfig } from "../environment.ts";

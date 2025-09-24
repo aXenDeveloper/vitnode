@@ -1,6 +1,7 @@
+import type React from "react";
+
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type React from "react";
 
 import { Button } from "@/components/ui/button";
 import {

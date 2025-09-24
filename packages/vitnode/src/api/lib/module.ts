@@ -1,4 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
+
 import type { BuildCronReturn } from "./cron";
 import type { Route } from "./route";
 
@@ -12,12 +13,12 @@ export interface BaseBuildModuleReturn<
   M extends string = string,
   Routes extends Route<P>[] = Route<P>[],
 > {
+  cronJobs: BuildCronReturn[];
   hono: OpenAPIHono;
   modules?: BaseBuildModuleReturn<P>[];
   name: M;
   pluginId: P;
   routes: Routes;
-  cronJobs: BuildCronReturn[];
 }
 
 export interface BuildModuleReturn<
@@ -41,11 +42,11 @@ export function buildModule<
   modules,
   cronJobs = [],
 }: {
+  cronJobs?: BuildCronReturn[];
   modules?: Modules;
   name: M;
   pluginId: P;
   routes: Routes;
-  cronJobs?: BuildCronReturn[];
 }): BuildModuleReturn<P, M, Routes, Modules> {
   const hono = new OpenAPIHono();
 

@@ -1,8 +1,9 @@
+import type { Metadata } from "next";
+
 import { buttonVariants } from "@vitnode/core/components/ui/button";
 import { cn } from "@vitnode/core/lib/utils";
 import Link from "fumadocs-core/link";
 import { ChevronRight } from "lucide-react";
-import type { Metadata } from "next";
 
 import { AnimatedBeamHome } from "../../../../components/animated-beam/animated-beam-home";
 import { AdminSection } from "./sections/admin/admin";
@@ -20,12 +21,12 @@ export default function HomePage() {
     <div className="container">
       <section className="border-border/50 mt-6 flex flex-col justify-between gap-20 border-r bg-[linear-gradient(to_right,color-mix(in_oklab,var(--border)_75%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklab,var(--border)_75%,transparent)_1px,transparent_1px)] bg-[size:63px_63px] px-6 py-10 sm:mt-10 sm:px-10 sm:py-20 lg:flex-row dark:bg-[linear-gradient(to_right,color-mix(in_oklab,var(--border)_50%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklab,var(--border)_50%,transparent)_1px,transparent_1px)]">
         <div className="flex max-w-2xl flex-col">
-          <h1 className="text-balance text-5xl font-semibold tracking-tight sm:text-6xl">
+          <h1 className="text-5xl font-semibold tracking-tight text-balance sm:text-6xl">
             Extendable <span className="text-primary">Framework</span> for
             Building <span className="text-primary">Apps</span>
           </h1>
 
-          <p className="text-muted-foreground mt-6 text-balance leading-relaxed md:text-lg">
+          <p className="text-muted-foreground mt-6 leading-relaxed text-balance md:text-lg">
             Simplifies development with a powerful Plugin System, Admin Control
             Panel and extensible architecture.
           </p>

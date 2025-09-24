@@ -1,6 +1,7 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { ThemeProvider } from "next-themes";
 import type { IRateLimiterOptions } from "rate-limiter-flexible";
+
 import type { CronAdapter } from "./api/lib/cron";
 import type { BuildPluginApiReturn } from "./api/lib/plugin";
 import type { EmailApiPlugin } from "./api/models/email";
@@ -47,8 +48,8 @@ export interface VitNodeApiConfig {
     siteKey: string | undefined;
     type: "cloudflare_turnstile" | "recaptcha_v3";
   };
-  dbProvider: PostgresJsDatabase;
   cronAdapter?: CronAdapter;
+  dbProvider: PostgresJsDatabase;
   email?: {
     adapter?: EmailApiPlugin;
     logo?: DefaultTemplateEmailProps["templateProps"]["logo"];
@@ -113,7 +114,6 @@ export const handleRequestConfig = async ({
   });
 
   const allMessages = await Promise.all(messagesPromises);
-  // biome-ignore lint/performance/noAccumulatingSpread: <needed>
   const messages = allMessages.reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
   return {
