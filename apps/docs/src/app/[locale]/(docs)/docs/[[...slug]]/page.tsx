@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { redirect } from "@vitnode/core/lib/navigation";
 import { getBreadcrumbItems } from "fumadocs-core/breadcrumb";
 import { Step, Steps } from "fumadocs-ui/components/steps";
@@ -57,7 +59,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata(props: {
   params: Promise<{ slug?: string[] }>;
-}) {
+}): Promise<Metadata> {
   const params = await props.params;
   const page = source.getPage(params.slug);
   if (!page) notFound();
@@ -68,8 +70,15 @@ export async function generateMetadata(props: {
     .reverse()
     .map(item => item.name as string);
 
+  const title = `${page.data.title}${lastItemsBreadcrumb.length > 0 ? ` - ${lastItemsBreadcrumb.join(" - ")}` : ""}`;
+
   return {
-    title: `${page.data.title}${lastItemsBreadcrumb.length > 0 ? ` - ${lastItemsBreadcrumb.join(" - ")}` : ""}`,
+    title,
     description: page.data.description,
+    openGraph: {
+      title,
+      description: page.data.description,
+      type: "article",
+    },
   };
 }

@@ -5,30 +5,30 @@ description: Component creates form based on Zod schemas & react-hook-form with 
 
 ## Preview
 
-<Preview name="auto-form" />
+<Preview className="bg-card" name="auto-form" />
 
 ## Usage
 
 ```tsx
-import { AutoForm } from '@vitnode/core/components/form/auto-form';
-import { AutoFormCheckbox } from '@vitnode/core/components/form/fields/checkbox';
-import { AutoFormInput } from '@vitnode/core/components/form/fields/input';
-import { AutoFormSelect } from '@vitnode/core/components/form/fields/select';
-import { AutoFormTextarea } from '@vitnode/core/components/form/fields/textarea';
-import { z } from 'zod';
+import { AutoForm } from "@vitnode/core/components/form/auto-form";
+import { AutoFormCheckbox } from "@vitnode/core/components/form/fields/checkbox";
+import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
+import { AutoFormSelect } from "@vitnode/core/components/form/fields/select";
+import { AutoFormTextarea } from "@vitnode/core/components/form/fields/textarea";
+import { z } from "zod";
 ```
 
 ```ts
 const formSchema = z.object({
-  username: z.string().min(3, 'Username must be at least 3 characters'),
+  username: z.string().min(3, "Username must be at least 3 characters"),
   email: z
-    .email('Please enter a valid email address')
+    .email("Please enter a valid email address")
     .describe("We'll use this email to contact you. (from zod schema)"),
-  user_type: z.enum(['admin', 'editor', 'viewer']),
+  user_type: z.enum(["admin", "editor", "viewer"]),
   accept_terms: z.boolean().refine(val => val, {
-    message: 'You must accept the terms and conditions',
+    message: "You must accept the terms and conditions",
   }),
-  description: z.string().min(10, 'Description must be at least 10 characters'),
+  description: z.string().min(10, "Description must be at least 10 characters"),
 });
 ```
 
@@ -36,7 +36,7 @@ const formSchema = z.object({
 <AutoForm
   fields={[
     {
-      id: 'username',
+      id: "username",
       component: props => (
         <AutoFormInput
           {...props}
@@ -46,26 +46,26 @@ const formSchema = z.object({
       ),
     },
     {
-      id: 'email',
+      id: "email",
       component: props => <AutoFormInput {...props} label="Email Address" />,
     },
     {
-      id: 'user_type',
+      id: "user_type",
       component: props => (
         <AutoFormSelect
           {...props}
           description="Select the type of user."
           label="User Type"
           labels={[
-            { value: 'admin', label: 'Admin' },
-            { value: 'editor', label: 'Editor' },
-            { value: 'viewer', label: 'Viewer' },
+            { value: "admin", label: "Admin" },
+            { value: "editor", label: "Editor" },
+            { value: "viewer", label: "Viewer" },
           ]}
         />
       ),
     },
     {
-      id: 'accept_terms',
+      id: "accept_terms",
       component: props => (
         <AutoFormCheckbox
           {...props}
@@ -74,7 +74,7 @@ const formSchema = z.object({
       ),
     },
     {
-      id: 'description',
+      id: "description",
       component: props => (
         <AutoFormTextarea
           {...props}
@@ -151,7 +151,7 @@ or using the `describe` method in Zod:
 
 ```ts
 const formSchema = z.object({
-  username: z.string().describe('This is the username for your application.'),
+  username: z.string().describe("This is the username for your application."),
 });
 ```
 
@@ -161,8 +161,8 @@ Set default values for fields using the `default` method:
 
 ```ts
 const formSchema = z.object({
-  username: z.string().default('user123'),
-  role: z.enum(['user', 'admin']).default('user'),
+  username: z.string().default("user123"),
+  role: z.enum(["user", "admin"]).default("user"),
 });
 ```
 
@@ -179,7 +179,7 @@ const formSchema = z.object({
     .string()
     .min(8)
     .refine(val => /[A-Z]/.test(val), {
-      message: 'Password must contain at least one uppercase letter',
+      message: "Password must contain at least one uppercase letter",
     }),
 });
 ```
@@ -198,7 +198,7 @@ To activate submit button and handle form submission with the `onSubmit` callbac
 <AutoForm
   fields={[
     {
-      id: 'username',
+      id: "username",
       component: props => (
         <AutoFormInput
           {...props}
@@ -232,9 +232,9 @@ The `onSubmit` callback provides access to the React Hook Form instance as a sec
   formSchema={formSchema}
   onSubmit={(values, form) => {
     // Access form methods
-    form.setError('username', {
-      type: 'manual',
-      message: 'Username already taken',
+    form.setError("username", {
+      type: "manual",
+      message: "Username already taken",
     });
   }}
 />
@@ -243,18 +243,18 @@ The `onSubmit` callback provides access to the React Hook Form instance as a sec
 You can also define the submission handler separately:
 
 ```ts
-import type { AutoFormOnSubmit } from '@vitnode/core/components/form/auto-form';
+import type { AutoFormOnSubmit } from "@vitnode/core/components/form/auto-form";
 ```
 
 ```tsx
 const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (values, form) => {
   try {
     await saveData(values);
-    toast.success('Form submitted successfully');
+    toast.success("Form submitted successfully");
   } catch (error) {
-    form.setError('root', {
-      type: 'manual',
-      message: 'Failed to submit form',
+    form.setError("root", {
+      type: "manual",
+      message: "Failed to submit form",
     });
   }
 };
@@ -286,17 +286,17 @@ Customize the submit button using the `submitButtonProps`:
   // [!code ++]
   submitButtonProps={{
     // [!code ++]
-    variant: 'outline',
+    variant: "outline",
     // [!code ++]
-    size: 'lg',
+    size: "lg",
     // [!code ++]
-    children: 'Save Changes',
+    children: "Save Changes",
     // [!code ++]
-    className: 'w-full mt-4',
+    className: "w-full mt-4",
     // [!code ++]
   }}
   onSubmit={values => {
-    console.log('Form submitted', values);
+    console.log("Form submitted", values);
   }}
 />
 ```
