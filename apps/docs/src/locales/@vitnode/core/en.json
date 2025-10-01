@@ -1,6 +1,27 @@
 {
   "core": {
     "global": {
+      "editor": {
+        "undo": "Undo",
+        "redo": "Redo",
+        "paragraph": "Paragraph",
+        "heading": "Heading {level}",
+        "bold": "Bold",
+        "italic": "Italic",
+        "underline": "Underline",
+        "ordered_list": "Ordered List",
+        "bullet_list": "Bullet List",
+        "text_format_more": {
+          "label": "More text formats",
+          "strike": "Strike"
+        },
+        "alignments": {
+          "left": "Left align",
+          "center": "Center align",
+          "right": "Right align",
+          "justify": "Justify align"
+        }
+      },
       "theme_switcher": "Toggle Theme",
       "language_switcher": "Switch Language",
       "toggle_sidebar": "Toggle Sidebar",

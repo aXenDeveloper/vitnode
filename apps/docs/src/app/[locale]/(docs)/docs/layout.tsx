@@ -1,5 +1,6 @@
-import { DocsLayout } from "fumadocs-ui/layouts/notebook";
 import type { ReactNode } from "react";
+
+import { DocsLayout } from "fumadocs-ui/layouts/notebook";
 
 import { baseOptions } from "@/app/[locale]/(main)/layout.config";
 import { source } from "@/lib/source";

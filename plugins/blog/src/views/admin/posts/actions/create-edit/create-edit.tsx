@@ -11,8 +11,10 @@ import { usePathname, useRouter } from "@vitnode/core/lib/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { z } from "zod";
-import { categoriesModule } from "@/api/modules/categories/categories.module";
+
 import type { zodPostSchema } from "@/api/modules/posts/routes/get.route";
+
+import { categoriesModule } from "@/api/modules/categories/categories.module";
 
 import { createMutationApi, editMutationApi } from "./mutation-api";
 

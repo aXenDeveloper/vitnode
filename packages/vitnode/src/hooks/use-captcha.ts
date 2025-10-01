@@ -1,13 +1,38 @@
-/** biome-ignore-all lint/suspicious/noConsole: <no needed> */
+import type { z } from "zod";
+
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import React from "react";
 import { toast } from "sonner";
-import type { z } from "zod";
 
 import { usePathname } from "@/lib/navigation";
 
 import type { routeMiddlewareSchema } from "../api/modules/middleware/route";
+
+declare global {
+  interface Window {
+    grecaptcha?: {
+      execute: (
+        siteKey: string,
+        options: { action: string },
+      ) => Promise<string>;
+      ready: (callback: () => void) => void;
+    };
+    turnstile?: {
+      render: (
+        container: string,
+        params: {
+          callback: (token: string) => void;
+          "expired-callback": () => void;
+          language: string;
+          sitekey: string;
+          theme: string | undefined;
+        },
+      ) => string;
+      reset: () => void;
+    };
+  }
+}
 
 export const useCaptcha = (
   captcha: z.infer<typeof routeMiddlewareSchema>["captcha"],
@@ -24,8 +49,7 @@ export const useCaptcha = (
 
     const elementId = "vitnode_captcha";
 
-    if (captcha.type === "cloudflare_turnstile") {
-      // @ts-expect-error
+    if (captcha.type === "cloudflare_turnstile" && window.turnstile) {
       window.turnstile.render(`#${elementId}`, {
         sitekey: captcha.siteKey,
         theme: resolvedTheme,
@@ -52,7 +76,6 @@ export const useCaptcha = (
     });
   };
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <needed>
   React.useEffect(() => {
     if (!captcha) {
       // If no captcha is required, consider it "ready"
@@ -100,17 +123,7 @@ export const useCaptcha = (
   const onReset = () => {
     if (!captcha) return;
 
-    if (
-      captcha.type === "cloudflare_turnstile" &&
-      (
-        window as {
-          turnstile?: {
-            reset: () => void;
-          };
-        }
-      ).turnstile
-    ) {
-      // @ts-expect-error
+    if (captcha.type === "cloudflare_turnstile" && window.turnstile) {
       window.turnstile.reset();
     }
 
@@ -123,22 +136,23 @@ export const useCaptcha = (
 
     if (captcha.type === "recaptcha_v3") {
       return await new Promise<string>(resolve => {
-        // @ts-expect-error
-        window.grecaptcha.ready(async () => {
-          try {
-            // @ts-expect-error
-            const token: string = await window.grecaptcha.execute(
-              captcha.siteKey,
-              {
+        const grecaptcha = window.grecaptcha;
+        if (grecaptcha) {
+          grecaptcha.ready(async () => {
+            try {
+              const token: string = await grecaptcha.execute(captcha.siteKey, {
                 action: "submit",
-              },
-            );
-            resolve(token);
-          } catch (error) {
-            console.error("Captcha error", error);
-            resolve("");
-          }
-        });
+              });
+              resolve(token);
+            } catch (error) {
+              // eslint-disable-next-line no-console
+              console.error("Captcha error", error);
+              resolve("");
+            }
+          });
+        } else {
+          resolve("");
+        }
       });
     }
 

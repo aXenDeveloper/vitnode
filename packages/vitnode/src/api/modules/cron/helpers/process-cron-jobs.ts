@@ -1,19 +1,22 @@
-import { eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
+import { eq, inArray } from "drizzle-orm";
 import { validate } from "node-cron";
+
 import type { CronJobConfig } from "@/api/lib/cron";
+
 import { core_cron } from "@/database/cron";
 import { shouldCronJobRun } from "@/lib/api/should-cron-job-run";
 
 interface CronJobFromDb {
-  id: number;
-  name: string;
-  description: string | null;
-  lastRun: Date | null;
-  nextRun: Date | null;
   createdAt: Date;
-  pluginId: string;
+  description: null | string;
+  id: number;
+  lastRun: Date | null;
   module: string;
+  name: string;
+  nextRun: Date | null;
+  pluginId: string;
   schedule: string;
 }
 
@@ -40,11 +43,12 @@ function getJobChanges(
   if (existingJob.schedule !== job.schedule) {
     changes.schedule = true;
   }
+
   return changes;
 }
 
 export async function cleanupOutdatedCronJobs(
-  db: PostgresJsDatabase<Record<string, never>>,
+  db: PostgresJsDatabase,
   cronFromDb: CronJobFromDb[],
   currentCronJobs: CronJobConfig[],
 ) {
@@ -75,14 +79,14 @@ export function processCronJobs(
   const newJobs: CronJobConfig[] = [];
   const jobsToExecute: CronJobConfig[] = [];
   const jobsToUpdate: {
-    job: CronJobConfig;
-    existingJob: CronJobFromDb;
     changes: { description?: boolean; schedule?: boolean };
+    existingJob: CronJobFromDb;
+    job: CronJobConfig;
   }[] = [];
 
   for (const job of cronJobs) {
     if (!validate(job.schedule)) {
-      // biome-ignore lint/suspicious/noConsole: needed for cron job monitoring
+      // eslint-disable-next-line no-console
       console.warn(
         `\x1b[34m[VitNode]\x1b[0m \x1b[33mInvalid cron schedule for job "${job.pluginId}:${job.module}:${job.name}"\x1b[0m: ${job.schedule}`,
       );
@@ -100,7 +104,7 @@ export function processCronJobs(
       newJobs.push(job);
     }
 
-    if (shouldCronJobRun(job.schedule, existingJob?.lastRun || null)) {
+    if (shouldCronJobRun(job.schedule, existingJob?.lastRun ?? null)) {
       jobsToExecute.push(job);
     }
   }
@@ -109,23 +113,23 @@ export function processCronJobs(
 }
 
 export async function updateCronJobs(
-  db: PostgresJsDatabase<Record<string, never>>,
+  db: PostgresJsDatabase,
   jobsToUpdate: {
-    job: CronJobConfig;
-    existingJob: CronJobFromDb;
     changes: { description?: boolean; schedule?: boolean };
+    existingJob: CronJobFromDb;
+    job: CronJobConfig;
   }[],
 ) {
   if (jobsToUpdate.length === 0) return;
 
   const updatePromises = jobsToUpdate.map(({ job, existingJob, changes }) => {
     const updateData: Partial<{
-      description: string | null;
+      description: null | string;
       schedule: string;
     }> = {};
 
     if (changes.description) {
-      updateData.description = job.description || null;
+      updateData.description = job.description ?? null;
     }
 
     if (changes.schedule) {

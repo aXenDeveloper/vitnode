@@ -8,7 +8,7 @@ config({
 });
 
 export const POSTGRES_URL =
-  process.env.POSTGRES_URL || "postgresql://root:root@localhost:5432/vitnode";
+  process.env.POSTGRES_URL ?? "postgresql://root:root@localhost:5432/vitnode";
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [],

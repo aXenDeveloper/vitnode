@@ -38,7 +38,7 @@ export interface DefaultTemplateEmailProps
   extends Pick<EmailModelSendArgs, "user"> {
   i18n: {
     locale: string;
-    // biome-ignore lint/suspicious/noExplicitAny: <any needed>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     messages: Record<string, any>;
   };
   templateProps: {
@@ -57,7 +57,6 @@ export interface DefaultTemplateEmailProps
   };
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
 export default function DefaultTemplateEmail({
   children,
   i18n: { locale },
@@ -75,63 +74,26 @@ export default function DefaultTemplateEmail({
             extend: {
               ...tailwindConfig?.theme?.extend,
               colors: {
+                background: "#edf2f8",
+                foreground: "#0e1216",
+                card: "#ffffff",
+                "card-foreground": "#171b1f",
+                popover: "#ffffff",
+                "popover-foreground": "#171b1f",
+                primary: "#3160c0",
+                "primary-foreground": "#fafafa",
+                secondary: "#f4f9ff",
+                "secondary-foreground": "#1e2226",
+                muted: "#eaeff5",
+                "muted-foreground": "#686c72",
+                accent: "#e0e5eb",
+                "accent-foreground": "#1e2226",
+                destructive: "#de3b3f",
+                warn: "#906600",
+                border: "#d9dfe4",
+                input: "#d9dfe4",
+                ring: "#5aa3ec",
                 ...tailwindConfig?.theme?.extend?.colors,
-                background:
-                  tailwindConfig?.theme?.extend?.colors?.["background"] ??
-                  "#edf2f8",
-                foreground:
-                  tailwindConfig?.theme?.extend?.colors?.["foreground"] ??
-                  "#0e1216",
-                card:
-                  tailwindConfig?.theme?.extend?.colors?.["card"] ?? "#ffffff",
-                "card-foreground":
-                  tailwindConfig?.theme?.extend?.colors?.["card-foreground"] ??
-                  "#171b1f",
-                popover:
-                  tailwindConfig?.theme?.extend?.colors?.["popover"] ??
-                  "#ffffff",
-                "popover-foreground":
-                  tailwindConfig?.theme?.extend?.colors?.[
-                    "popover-foreground"
-                  ] ?? "#171b1f",
-                primary:
-                  tailwindConfig?.theme?.extend?.colors?.["primary"] ??
-                  "#3160c0",
-                "primary-foreground":
-                  tailwindConfig?.theme?.extend?.colors?.[
-                    "primary-foreground"
-                  ] ?? "#fafafa",
-                secondary:
-                  tailwindConfig?.theme?.extend?.colors?.["secondary"] ??
-                  "#f4f9ff",
-                "secondary-foreground":
-                  tailwindConfig?.theme?.extend?.colors?.[
-                    "secondary-foreground"
-                  ] ?? "#1e2226",
-                muted:
-                  tailwindConfig?.theme?.extend?.colors?.["muted"] ?? "#eaeff5",
-                "muted-foreground":
-                  tailwindConfig?.theme?.extend?.colors?.["muted-foreground"] ??
-                  "#686c72",
-                accent:
-                  tailwindConfig?.theme?.extend?.colors?.["accent"] ??
-                  "#e0e5eb",
-                "accent-foreground":
-                  tailwindConfig?.theme?.extend?.colors?.[
-                    "accent-foreground"
-                  ] ?? "#1e2226",
-                destructive:
-                  tailwindConfig?.theme?.extend?.colors?.["destructive"] ??
-                  "#de3b3f",
-                warn:
-                  tailwindConfig?.theme?.extend?.colors?.["warn"] ?? "#906600",
-                border:
-                  tailwindConfig?.theme?.extend?.colors?.["border"] ??
-                  "#d9dfe4",
-                input:
-                  tailwindConfig?.theme?.extend?.colors?.["input"] ?? "#d9dfe4",
-                ring:
-                  tailwindConfig?.theme?.extend?.colors?.["ring"] ?? "#5aa3ec",
               },
             },
           },

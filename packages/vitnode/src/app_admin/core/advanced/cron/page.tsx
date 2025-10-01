@@ -1,6 +1,7 @@
-import dynamic from "next/dynamic";
 import { getTranslations } from "next-intl/server";
+import dynamic from "next/dynamic";
 import React from "react";
+
 import { I18nProvider } from "@/components/i18n-provider";
 import { DataTableSkeleton } from "@/components/table/data-table";
 import { HeaderContent } from "@/components/ui/header-content";
@@ -30,7 +31,7 @@ export default async function Page(
   return (
     <I18nProvider namespaces={["admin.advanced.cron"]}>
       <div className="p-4">
-        <HeaderContent h1={t("title")} desc={t("desc")} />
+        <HeaderContent desc={t("desc")} h1={t("title")} />
 
         <React.Suspense fallback={<DataTableSkeleton columns={6} />}>
           <CronTableView {...props} />

@@ -1,6 +1,6 @@
-# (VitNode) Config
+# (VitNode) ESLint Config
 
-This package provides a default Biome configuration, TypeScript configuration for VitNode projects.
+This package provides a default ESLint configuration, TypeScript configuration, and Prettier configuration for VitNode projects.
 
 <p align="center">
   <br>
@@ -17,14 +17,12 @@ This package provides a default Biome configuration, TypeScript configuration fo
 
 ## Usage
 
-### Biome (biome.json)
+### ESLint (eslint.config.mjs)
 
-```json
-{
-  "$schema": "https://biomejs.dev/schemas/2.2.2/schema.json",
-  "extends": ["@vitnode/config/biome"],
-  "root": true
-}
+```js
+import eslintVitNode from "@vitnode/config/eslint";
+
+export default [...eslintVitNode];
 ```
 
 ### TypeScript (tsconfig.json)
@@ -33,4 +31,20 @@ This package provides a default Biome configuration, TypeScript configuration fo
 {
   "extends": "@vitnode/config/tsconfig"
 }
+```
+
+### Prettier (.prettierrc.mjs)
+
+```js
+import vitnodePrettier from "@vitnode/config/prettierrc";
+
+/**
+ * @see https://prettier.io/docs/en/configuration.html
+ * @type {import("prettier").Config}
+ */
+const config = {
+  ...vitnodePrettier,
+};
+
+export default config;
 ```

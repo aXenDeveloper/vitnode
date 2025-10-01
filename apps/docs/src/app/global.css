@@ -1,7 +1,7 @@
-/** biome-ignore-all lint/suspicious/noUnknownAtRules: <tailwind> */
 @import "tailwindcss";
 @import "fumadocs-ui/css/shadcn.css";
 @import "fumadocs-ui/css/preset.css";
+@import "@vitnode/core/styles/tiptap.css";
 
 @import "tw-animate-css";
 

@@ -1,7 +1,8 @@
+import type { Config } from "drizzle-kit";
+
+import { defineConfig } from "drizzle-kit";
 import { existsSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
-import type { Config } from "drizzle-kit";
-import { defineConfig } from "drizzle-kit";
 
 import type { VitNodeApiConfig } from "./vitnode.config";
 

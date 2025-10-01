@@ -53,7 +53,6 @@ export interface InputParams {
       };
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <it's complex and needs to be>
 export function getZodInputParams(
   jsonSchema?: z.core.JSONSchema.JSONSchema,
   parentRequired: string[] = [],

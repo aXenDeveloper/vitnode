@@ -24,6 +24,12 @@
     "start": {
       "dependsOn": ["^start"]
     },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "lint:fix": {
+      "dependsOn": ["^lint:fix"]
+    },
     "init": {
       "cache": false,
       "persistent": true,

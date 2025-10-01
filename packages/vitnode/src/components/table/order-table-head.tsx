@@ -5,9 +5,11 @@ import { useSearchParams } from "next/navigation";
 import React from "react";
 
 import { usePathname, useRouter } from "@/lib/navigation";
+
+import type { DataTable, DataTableTMin } from "./data-table";
+
 import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
-import type { DataTable, DataTableTMin } from "./data-table";
 
 export function OrderTableHeadDataTable<T extends DataTableTMin>({
   id,
@@ -54,8 +56,10 @@ export function OrderTableHeadDataTable<T extends DataTableTMin>({
           if (currentOrder === "asc") {
             return <ArrowUp />;
           }
+
           return <ArrowDown />;
         }
+
         return <ChevronsUpDown />;
       })()}
     </Button>

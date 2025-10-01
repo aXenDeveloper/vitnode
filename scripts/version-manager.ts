@@ -1,5 +1,3 @@
-/** biome-ignore-all lint/suspicious/noConsole: <No need this> */
-
 import { execSync, spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { EOL } from "node:os";
@@ -180,7 +178,7 @@ export class VersionManager {
 
       child.on("error", reject);
       child.stderr.on("data", (chunk: Buffer) => errorMessages.push(chunk));
-      child.on("exit", code => {
+      child.on("exit", (code) => {
         if (code === 0) {
           resolve(undefined);
         } else {

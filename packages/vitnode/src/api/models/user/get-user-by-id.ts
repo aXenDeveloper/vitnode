@@ -1,5 +1,6 @@
-import { eq } from "drizzle-orm";
 import type { Context } from "hono";
+
+import { eq } from "drizzle-orm";
 
 import { core_users } from "@/database/users";
 

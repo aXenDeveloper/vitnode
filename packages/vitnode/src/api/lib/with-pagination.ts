@@ -1,6 +1,4 @@
-import { z } from "@hono/zod-openapi";
 import type { ColumnBaseConfig, Placeholder, SQL } from "drizzle-orm";
-import { and, asc, count, desc, gt, lt } from "drizzle-orm";
 import type {
   PgColumn,
   PgTable,
@@ -8,6 +6,9 @@ import type {
   TableConfig,
 } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
+
+import { z } from "@hono/zod-openapi";
+import { and, asc, count, desc, gt, lt } from "drizzle-orm";
 
 function parsePaginationParams(params: {
   query: { cursor?: string; first?: string; last?: string };
@@ -42,6 +43,7 @@ function getOrderFn(
   if (isForward) {
     return order === "asc" ? asc : desc;
   }
+
   return order === "asc" ? desc : asc;
 }
 
@@ -63,6 +65,7 @@ function buildWhereWithCursor<
       : lt;
 
   const cursorWhere = cursorFilter(table[primaryCursor.name], cursor);
+
   return baseWhere ? and(baseWhere, cursorWhere) : cursorWhere;
 }
 
@@ -76,6 +79,7 @@ async function fetchTotalCount(
     .select({ count: count() })
     .from(table)
     .where(where);
+
   return totalCount;
 }
 

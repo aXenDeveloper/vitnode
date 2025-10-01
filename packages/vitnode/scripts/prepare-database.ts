@@ -1,9 +1,11 @@
-/** biome-ignore-all lint/suspicious/noConsole: <no need> */
+/* eslint-disable no-console */
 import { count } from "drizzle-orm";
+
 import { core_admin_permissions } from "@/database/admins.js";
 import { core_languages, core_languages_words } from "@/database/languages.js";
 import { core_moderators_permissions } from "@/database/moderators.js";
 import { core_roles } from "@/database/roles.js";
+
 import { getConfig } from "./get-config.js";
 import { preparePluginsFiles } from "./prepare-plugins-files.js";
 import { runInteractiveShellCommand } from "./run-interactive-shell-command.js";
@@ -206,7 +208,6 @@ export const prepareDatabase = async ({
       console.log(`${initMessage} ${stepNum} ${step.label}`);
     }
 
-    // biome-ignore lint/performance/noAwaitInLoops: This is necessary here.
     await step.action();
   }
 

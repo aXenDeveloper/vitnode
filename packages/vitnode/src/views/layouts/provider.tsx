@@ -4,8 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import React from "react";
 import { scan } from "react-scan";
-import { CONFIG } from "@/lib/config";
+
 import type { VitNodeConfig } from "@/vitnode.config";
+
+import { CONFIG } from "@/lib/config";
 
 import { Toaster } from "../../components/ui/sonner";
 

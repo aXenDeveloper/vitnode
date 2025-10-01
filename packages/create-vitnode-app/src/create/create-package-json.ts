@@ -1,9 +1,11 @@
-import { readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { getAvailablePackageManagers } from "../helpers/get-available-package-managers.js";
+import { readFile, writeFile } from "fs/promises";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
+
 import type { PackageJSON } from "../helpers/packages-json.js";
 import type { CreateCliReturn } from "../questions.js";
+
+import { getAvailablePackageManagers } from "../helpers/get-available-package-managers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -31,55 +33,57 @@ const versions = {
 
   turbo: "^2.5.6",
   typescript: "^5.9.2",
-  tsx: "^4.20.4",
+  tsx: "^4.20.5",
   tscAlias: "^1.8.16",
-  biome: "^2.2.2",
+  eslint: "^9.33.0",
+  prettier: "^3.6.2",
+  prettierTailwind: "^0.6.14",
   tailwind: "^4.1.12",
-  tailwindPostcss: "^4.1.12",
+  tailwindPostcss: "^4.1.13",
   postcss: "^8.5.6",
   twAnimateCssWeb: "^1.3.7",
-  twAnimateCssSingle: "^1.3.6",
+  twAnimateCssSingle: "^1.3.8",
 
   react: "^19.1",
   reactDom: "^19.1",
-  nextSingle: "^15.5.0",
+  nextSingle: "^15.5.2",
   nextWebInMonorepo: "^15.4.6",
-  nextIntl: "^4.3.4",
-  useIntl: "^4.3.4",
+  nextIntl: "^4.3.6",
+  useIntl: "^4.3.6",
   rhf: "^7.62.0",
   rhfResolvers: "^5.1.1",
-  lucide: "^0.540.0",
+  lucide: "^0.542.0",
   sonner: "^2.0.7",
-  dotenv: "^17.2.1",
+  dotenv: "^17.2.2",
 
   drizzleKitSingle: "^0.31.4",
   drizzleKitApi: "^0.31.3",
-  drizzleOrm: "^0.44.4",
+  drizzleOrm: "^0.44.5",
 
-  hono: "^4.9.2",
+  hono: "^4.9.6",
   honoZodOpenapi: "^1.1.0",
   honoZodValidator: "^0.7.2",
   reactEmail: "^4.2.8",
-  reactEmailComponents: "^0.5.1",
-  zod: "^4.0.17",
+  reactEmailComponents: "^0.5.2",
+  zod: "^4.1.5",
 
-  babelReactCompiler: "19.1.0-rc.2",
+  babelReactCompiler: "^19.1.0-rc.3",
   cva: "^0.7.1",
 };
 
 /**
  * Shared blocks
  */
-const biomeScripts = {
-  lint: "biome check",
-  "lint:fix": "biome check . --write",
+const eslintScripts = {
+  lint: "eslint .",
+  "lint:fix": "eslint . --fix",
 };
 
 const dockerDevScript = (appName: string) =>
   `docker compose -f ./docker-compose.yml -p ${appName}-vitnode-dev up -d`;
 
 const rootScripts = (
-  enableBiome: boolean,
+  enableEslint: boolean,
   enableDocker: boolean,
   appName: string,
 ) => ({
@@ -88,13 +92,13 @@ const rootScripts = (
   dev: "turbo dev",
   build: "turbo build",
   start: "turbo start",
-  ...withIf(enableBiome, biomeScripts),
+  ...withIf(enableEslint, eslintScripts),
   ...withIf(enableDocker, { "docker:dev": dockerDevScript(appName) }),
 });
 
 const apiScripts = (
   pm: string,
-  biome: boolean,
+  eslint: boolean,
   docker: boolean,
   onlyApi: boolean,
   appName: string,
@@ -112,13 +116,13 @@ const apiScripts = (
         start: "node dist/index.js",
       }),
   "dev:email": "email dev --dir src/emails",
-  ...withIf(biome, biomeScripts),
+  ...withIf(eslint, eslintScripts),
   ...withIf(docker && onlyApi, { "docker:dev": dockerDevScript(appName) }),
   "drizzle-kit": "drizzle-kit",
 });
 
 const singleAppScripts = (
-  biome: boolean,
+  eslint: boolean,
   docker: boolean,
   appName: string,
 ) => ({
@@ -128,32 +132,36 @@ const singleAppScripts = (
   "dev:email": "email dev --dir src/emails",
   build: "next build",
   start: "next start",
-  ...withIf(biome, biomeScripts),
+  ...withIf(eslint, eslintScripts),
   ...withIf(docker, { "docker:dev": dockerDevScript(appName) }),
   "drizzle-kit": "drizzle-kit",
 });
 
-const webScripts = (biome: boolean) => ({
+const webScripts = (eslint: boolean) => ({
   init: "vitnode init --web",
   dev: "vitnode init --web && next dev --turbopack",
   build: "next build",
   start: "next start",
-  ...withIf(biome, biomeScripts),
+  ...withIf(eslint, eslintScripts),
 });
 
 /**
  * Dependency builders
  */
-const baseDevDeps = (biome: boolean) => ({
+const baseDevDeps = (eslint: boolean, includePrettier: boolean) => ({
   "@types/node": versions.typesNode,
   "@vitnode/config": "", // filled with local version dynamically
-  ...withIf(biome, {
-    "@biomejs/biome": versions.biome,
+  ...withIf(eslint, {
+    eslint: versions.eslint,
+    ...withIf(includePrettier, {
+      prettier: versions.prettier,
+      "prettier-plugin-tailwindcss": versions.prettierTailwind,
+    }),
   }),
 });
 
-const rootDevDeps = (biome: boolean) => ({
-  ...baseDevDeps(biome),
+const rootDevDeps = (eslint: boolean) => ({
+  ...baseDevDeps(eslint, true),
   turbo: versions.turbo,
   typescript: versions.typescript,
   zod: versions.zod,
@@ -174,16 +182,17 @@ const apiDeps = {
   zod: versions.zod,
 };
 
-const apiDevDeps = (pm: string, biome: boolean) => ({
-  "@hono/node-server": "^1.19.0",
+const apiDevDeps = (pm: string, eslint: boolean) => ({
+  "@hono/node-server": "^1.19.1",
   ...(pm === "bun" ? { "@types/bun": versions.typesBun } : {}),
   "@types/node": versions.typesNode,
   "@types/react": versions.typesReact,
   "@types/react-dom": versions.typesReactDom,
   "@vitnode/config": "",
   dotenv: versions.dotenv,
-  ...withIf(biome, {
-    "@biomejs/biome": versions.biome,
+  ...withIf(eslint, {
+    eslint: versions.eslint,
+    // Prettier in API only when onlyApi + eslint in original code – we'll preserve by passing include later if needed
   }),
   "react-email": versions.reactEmail,
   "tsc-alias": versions.tscAlias,
@@ -212,14 +221,16 @@ const singleAppDeps = {
   zod: versions.zod,
 };
 
-const singleAppDevDeps = (biome: boolean) => ({
+const singleAppDevDeps = (eslint: boolean) => ({
   "@tailwindcss/postcss": versions.tailwindPostcss,
   "@types/node": versions.typesNode,
   "@types/react": versions.typesReact,
   "@types/react-dom": versions.typesReactDom,
   "@vitnode/config": "",
-  ...withIf(biome, {
-    "@biomejs/biome": versions.biome,
+  ...withIf(eslint, {
+    eslint: versions.eslint,
+    prettier: versions.prettier,
+    "prettier-plugin-tailwindcss": versions.prettierTailwind,
   }),
   "react-email": versions.reactEmail,
   turbo: versions.turbo,
@@ -240,7 +251,7 @@ const webDeps = {
   sonner: versions.sonner,
 };
 
-const webDevDeps = (biome: boolean) => ({
+const webDevDeps = (eslint: boolean) => ({
   "@hookform/resolvers": versions.rhfResolvers,
   "@tailwindcss/postcss": versions.tailwindPostcss,
   "@types/mdx": versions.typesMdx,
@@ -249,7 +260,7 @@ const webDevDeps = (biome: boolean) => ({
   "@types/react-dom": versions.typesReactDom,
   "@vitnode/config": "",
   "class-variance-authority": versions.cva,
-  ...withIf(biome, { "@biomejs/biome": versions.biome }),
+  ...withIf(eslint, { eslint: versions.eslint }),
   postcss: versions.postcss,
   tailwindcss: versions.tailwind,
   "tw-animate-css": versions.twAnimateCssWeb,
@@ -264,14 +275,14 @@ export const createPackageJSON = async ({
   appName,
   packageManager,
   root,
-  biome,
+  eslint,
   docker,
   mode,
   monorepo,
 }: {
   appName: string;
   docker?: boolean;
-  biome: boolean;
+  eslint: boolean;
   mode: Mode;
   monorepo?: boolean;
   packageManager: string;
@@ -296,9 +307,9 @@ export const createPackageJSON = async ({
     const rootPkg: PackageJSON = {
       name: appName,
       private: true,
-      scripts: rootScripts(biome, !!docker, appName),
+      scripts: rootScripts(eslint, !!docker, appName),
       devDependencies: {
-        ...rootDevDeps(biome),
+        ...rootDevDeps(eslint),
         "@vitnode/config": vitnodeVersionRange,
       },
       packageManager: pmSpec,
@@ -316,7 +327,7 @@ export const createPackageJSON = async ({
     type: "module",
     scripts: apiScripts(
       packageManager,
-      biome,
+      eslint,
       !!docker,
       mode === "onlyApi",
       appName,
@@ -326,11 +337,12 @@ export const createPackageJSON = async ({
       "@vitnode/core": vitnodeVersionRange,
     },
     devDependencies: {
-      ...apiDevDeps(packageManager, biome),
+      ...apiDevDeps(packageManager, eslint),
       "@vitnode/config": vitnodeVersionRange,
-      ...(biome && mode === "onlyApi"
+      ...(eslint && mode === "onlyApi"
         ? {
-            "@biomejs/biome": versions.biome,
+            prettier: versions.prettier,
+            "prettier-plugin-tailwindcss": versions.prettierTailwind,
           }
         : {}),
       // TS pipeline pieces when not using Bun for dev
@@ -345,13 +357,13 @@ export const createPackageJSON = async ({
       version: "0.1.0",
       private: true,
       type: "module",
-      scripts: singleAppScripts(biome, !!docker, appName),
+      scripts: singleAppScripts(eslint, !!docker, appName),
       dependencies: {
         ...singleAppDeps,
         "@vitnode/core": vitnodeVersionRange,
       },
       devDependencies: {
-        ...singleAppDevDeps(biome),
+        ...singleAppDevDeps(eslint),
         "@vitnode/config": vitnodeVersionRange,
       },
       packageManager: pmSpec,
@@ -369,13 +381,13 @@ export const createPackageJSON = async ({
       version: "0.1.0",
       private: true,
       type: "module",
-      scripts: webScripts(biome),
+      scripts: webScripts(eslint),
       dependencies: {
         ...webDeps,
         "@vitnode/core": vitnodeVersionRange,
       },
       devDependencies: {
-        ...webDevDeps(biome),
+        ...webDevDeps(eslint),
         "@vitnode/config": vitnodeVersionRange,
       },
     };

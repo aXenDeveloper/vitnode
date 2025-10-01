@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -21,7 +22,6 @@ export const getConfig = async <T extends "api.config" | "config">({
 
     return config as ConfigType<T>;
   } catch (error) {
-    // biome-ignore lint/suspicious/noConsole: <no need>
     console.error("Failed to load config:", error);
     process.exit(1);
   }

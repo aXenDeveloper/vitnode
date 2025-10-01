@@ -1,4 +1,4 @@
-/** biome-ignore-all lint/suspicious/noConsole: <no need> */
+/* eslint-disable no-console */
 import {
   copyFileSync,
   existsSync,
@@ -168,7 +168,6 @@ export function findLocaleRoot(repoRoot: string): string {
     const localeDirectories: string[] = [];
     if (!existsSync(searchDir)) return localeDirectories;
 
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
     const visit = (currentDir: string, depth = 0) => {
       // Limit search depth to avoid infinite recursion and performance issues
       if (depth > 4) return;
@@ -264,7 +263,6 @@ export const copyFile = (
   localeRoot: string,
   repoRoot: string,
   verbose = true,
-  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
 ) => {
   const fileName = basename(srcPath);
   if (pageFileRegex.test(fileName)) {

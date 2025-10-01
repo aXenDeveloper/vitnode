@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+.tiptap {
+  h1 {
+    @apply text-4xl font-extrabold tracking-tight text-balance;
+  }
+
+  h2 {
+    @apply text-3xl font-semibold tracking-tight;
+  }
+
+  h3 {
+    @apply text-2xl font-semibold tracking-tight;
+  }
+
+  h4 {
+    @apply text-xl font-semibold tracking-tight;
+  }
+
+  ul,
+  ol {
+    @apply my-4 ml-6 space-y-2;
+  }
+
+  p {
+    @apply [&:not(:first-child)]:mt-2;
+  }
+}

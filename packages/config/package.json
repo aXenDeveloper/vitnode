@@ -1,7 +1,7 @@
 {
   "name": "@vitnode/config",
-  "version": "1.2.0-canary.53",
-  "description": "Biome, TypeScript (TSConfig) config for VitNode",
+  "version": "1.2.0-canary.55",
+  "description": "ESLint, Prettier, TypeScript (TSConfig) config for VitNode",
   "author": "VitNode Team",
   "license": "MIT",
   "homepage": "https://vitnode.com",
@@ -14,24 +14,43 @@
     "vitnode",
     "typescript",
     "tsconfig",
-    "biome"
+    "eslint",
+    "prettier"
   ],
   "type": "module",
   "exports": {
+    "./eslint": {
+      "import": "./eslint.config.mjs",
+      "default": "./eslint.config.mjs"
+    },
     "./tsconfig": {
       "import": "./tsconfig.json",
       "default": "./tsconfig.json"
     },
-    "./biome": {
-      "import": "./biome.json",
-      "default": "./biome.json"
+    "./prettierrc": {
+      "import": "./prettierrc.mjs",
+      "default": "./prettierrc.mjs"
     }
   },
   "peerDependencies": {
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0",
     "typescript": "5.9.x"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.2.2",
     "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@eslint-react/eslint-plugin": "^1.53.1",
+    "@eslint/js": "^9.36.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-perfectionist": "^4.15.0",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-you-might-not-need-an-effect": "^0.5.3",
+    "prettier-plugin-tailwindcss": "^0.6.14",
+    "typescript-eslint": "^8.44.1"
   }
 }

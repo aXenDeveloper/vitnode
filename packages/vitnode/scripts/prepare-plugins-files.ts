@@ -1,4 +1,4 @@
-/** biome-ignore-all lint/suspicious/noConsole: <no need> */
+/* eslint-disable no-console */
 import { existsSync, readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
@@ -71,7 +71,6 @@ export const preparePluginsFiles = async (flag?: string) => {
   };
 
   await Promise.all(
-    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: <needed>
     plugins.map(async pluginName => {
       const pluginPath = findPluginPath(pluginName);
 

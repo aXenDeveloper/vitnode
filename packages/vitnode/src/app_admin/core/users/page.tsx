@@ -1,6 +1,7 @@
 import type { Metadata } from "next/dist/types";
-import dynamic from "next/dynamic";
+
 import { getTranslations } from "next-intl/server";
+import dynamic from "next/dynamic";
 import React from "react";
 
 import { DataTableSkeleton } from "@/components/table/data-table";
