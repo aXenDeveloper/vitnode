@@ -12,7 +12,7 @@ const withBundleAnalyzer = nextAnalyzer({
 const nextConfig: NextConfig = {
   experimental: {
     inlineCss: true,
-    reactCompiler: process.env.ANALYZE !== "true",
+    ppr: "incremental",
   },
 };
 

@@ -161,6 +161,12 @@ export default [
           ],
           message: "Please import from `vitnode-frontend/navigation` instead.",
         },
+        {
+          name: "next/router",
+          importNames: ["useRouter"],
+          message:
+            "This import is from Page router. Please import from `vitnode-frontend/navigation` instead.",
+        },
       ],
     },
   },

@@ -8,15 +8,6 @@ import {
   pluginMiddleware,
 } from "../middlewares/global.middleware";
 
-type RoutingPath<P extends string> =
-  P extends `${infer Head}/{${infer Param}}${infer Tail}`
-    ? `${Head}/:${Param}${RoutingPath<Tail>}`
-    : P;
-
-type ValidHandler<R extends RouteConfig> = (
-  c: Parameters<RouteHandler<R, EnvVitNode>>[0],
-) => ReturnType<RouteHandler<R>>;
-
 export const buildRoute = <
   Plugin extends string,
   P extends string,
@@ -24,22 +15,15 @@ export const buildRoute = <
     path: P;
     withCaptcha?: boolean;
   },
-  H extends ValidHandler<R & { path: P }>,
 >({
   route,
   handler,
   pluginId,
 }: {
-  handler: H;
+  handler: RouteHandler<R & { path: P }, EnvVitNode>;
   pluginId: Plugin;
   route: R;
-}): {
-  handler: H;
-  pluginId: Plugin;
-  route: R & {
-    getRoutingPath: () => RoutingPath<R["path"]>;
-  };
-} => {
+}): Route<Plugin, R & { path: P }> => {
   const pluginTag = pluginId
     .split(/[-_]/)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -60,10 +44,8 @@ export const buildRoute = <
             : []),
       ],
       ...route,
-    }) as R & {
-      getRoutingPath: () => RoutingPath<R["path"]>;
-    },
-    handler,
+    }) as R & { path: P },
+    handler: handler as Route<Plugin, R & { path: P }>["handler"],
     pluginId,
   };
 };
@@ -71,9 +53,8 @@ export const buildRoute = <
 export interface Route<
   Plugin extends string = string,
   R extends RouteConfig = RouteConfig,
-  H extends RouteHandler<R> = RouteHandler<R>,
 > {
-  handler: H;
+  handler: (...args: unknown[]) => Promise<Response> | Response;
   pluginId: Plugin;
   route: R;
 }

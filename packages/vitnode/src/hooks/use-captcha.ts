@@ -79,13 +79,16 @@ export const useCaptcha = (
   React.useEffect(() => {
     if (!captcha) {
       // If no captcha is required, consider it "ready"
+      // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
       setIsReady(true);
 
       return;
     }
     // Reset state on captcha type change
+    // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
     setIsReady(false);
 
+    // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
     setToken("");
 
     const googleCaptchaDomain = `https://www.google.com/recaptcha/api.js?hl=${locale}`;

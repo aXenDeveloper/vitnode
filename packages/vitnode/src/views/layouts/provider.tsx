@@ -33,6 +33,7 @@ export const RootProvider = ({
     });
   }, [debug]);
 
+  // eslint-disable-next-line @eslint-react/naming-convention/use-state
   const [queryClient] = React.useState(
     () =>
       new QueryClient({
