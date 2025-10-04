@@ -77,7 +77,7 @@ export function ContentDataTable<T extends DataTableTMin>({
             ) : (
               <TableRow>
                 <TableCell
-                  className="mx-auto max-w-sm p-4 text-center whitespace-normal sm:px-10 sm:py-12"
+                  className="mx-auto max-w-sm whitespace-normal p-4 text-center sm:px-10 sm:py-12"
                   colSpan={columns.length}
                 >
                   {customNotFoundComponent ?? (

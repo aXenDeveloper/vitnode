@@ -31,7 +31,7 @@ function ToggleGroup({
   return (
     <ToggleGroupPrimitive.Root
       className={cn(
-        "group/toggle-group flex w-fit items-center rounded-md data-[variant=outline]:shadow-xs",
+        "group/toggle-group data-[variant=outline]:shadow-xs flex w-fit items-center rounded-md",
         className,
       )}
       data-size={size}

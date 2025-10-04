@@ -139,7 +139,7 @@ export default function ResetPasswordEmailTemplate({
           {t("core.auth.reset_password.email.help")}
         </Text>
         <Link
-          className="text-primary text-sm break-all underline"
+          className="text-primary break-all text-sm underline"
           href={resetUrl}
         >
           {resetUrl}

@@ -124,7 +124,7 @@ export const AnimatedBeam = ({
   return (
     <svg
       className={cn(
-        "pointer-events-none absolute top-0 left-0 transform-gpu stroke-2",
+        "pointer-events-none absolute left-0 top-0 transform-gpu stroke-2",
         className,
       )}
       fill="none"
