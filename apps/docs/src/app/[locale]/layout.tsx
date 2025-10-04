@@ -26,8 +26,8 @@ const geistMono = Geist_Mono({
 export const generateMetadata = (): Metadata =>
   generateMetadataRootLayout(vitNodeConfig);
 
-export const generateStaticParams = () =>
-  vitNodeConfig.i18n.locales.map(locale => ({ locale: locale.code }));
+// export const generateStaticParams = () =>
+//   vitNodeConfig.i18n.locales.map(locale => ({ locale: locale.code }));
 
 export default async function LocaleLayout(props: RootLayoutProps) {
   const { locale } = await props.params;

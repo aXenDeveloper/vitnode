@@ -5,19 +5,19 @@ import React from "react";
 import { EmailConfirmationView } from "./email-confirmation-view";
 
 const WrapperSignUpContext = React.createContext<{
-  setShowSendingEmail: React.Dispatch<React.SetStateAction<string>>;
+  setSendingEmail: React.Dispatch<React.SetStateAction<string>>;
 }>({
-  setShowSendingEmail: () => {},
+  setSendingEmail: () => {},
 });
 
 export const useWrapperSignUp = () => React.use(WrapperSignUpContext);
 
 export const WrapperSignUp = ({ children }: { children: React.ReactNode }) => {
-  const [sendingEmail, setShowSendingEmail] = React.useState("");
+  const [sendingEmail, setSendingEmail] = React.useState("");
 
   const contextValue = React.useMemo(
-    () => ({ setShowSendingEmail }),
-    [setShowSendingEmail],
+    () => ({ setSendingEmail }),
+    [setSendingEmail],
   );
 
   return (

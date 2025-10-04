@@ -1,3 +1,4 @@
+/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
 "use client";
 
 import { cn } from "@vitnode/core/lib/utils";
@@ -91,6 +92,7 @@ export const AnimatedBeam = ({
     // Initialize ResizeObserver
     const resizeObserver = new ResizeObserver(entries => {
       // For all entries, recalculate the path
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for (const _entry of entries) {
         updatePath();
       }

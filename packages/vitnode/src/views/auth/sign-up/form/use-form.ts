@@ -50,7 +50,7 @@ export const useFormSignUp = () => {
     newsletter: z.boolean().default(false).optional(),
   });
 
-  const { setShowSendingEmail } = useWrapperSignUp();
+  const { setSendingEmail } = useWrapperSignUp();
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (
     values,
@@ -60,7 +60,7 @@ export const useFormSignUp = () => {
     const mutation = await mutationApi({ ...values, captchaToken });
     if (mutation.data) {
       if (!mutation.data.emailVerified) {
-        setShowSendingEmail(mutation.data.email);
+        setSendingEmail(mutation.data.email);
       }
 
       return;
