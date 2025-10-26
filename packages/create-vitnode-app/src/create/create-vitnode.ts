@@ -143,7 +143,9 @@ export const createVitNode = async ({
 
   if (eslint) {
     spinner.text = "Copying ESLint & Prettier files...";
-    await cp(join(templatePath, "eslint"), root, {
+    const eslintTarget =
+      monorepo && mode === "singleApp" ? monorepoStructure.web : root;
+    await cp(join(templatePath, "eslint"), eslintTarget, {
       recursive: true,
     });
   }

@@ -6,6 +6,7 @@ import { basename, resolve } from "node:path";
 import { validateNpmName } from "../helpers/validate-pkg.js";
 import { createPluginQuestionsCli } from "./questions.js";
 import { validationProjectForPlugin } from "./validation.js";
+import { createPluginVitNode } from "./create/create-plugin-vitnode.js";
 
 export const createPlugin = async ({
   program,
@@ -29,6 +30,11 @@ export const createPlugin = async ({
   }
 
   const { pluginName, pluginPath } = await validationProjectForPlugin(name);
-
   const options = await createPluginQuestionsCli(program);
+  await createPluginVitNode({
+    pluginName,
+    pluginPath,
+    root: projectPath,
+    ...options,
+  });
 };

@@ -89,7 +89,10 @@ const rootScripts = (
   dev: "turbo dev",
   build: "turbo build",
   start: "turbo start",
-  ...withIf(enableEslint, eslintScripts),
+  ...withIf(enableEslint, {
+    lint: "turbo lint",
+    "lint:fix": "turbo lint:fix",
+  }),
   ...withIf(enableDocker, { "docker:dev": dockerDevScript(appName) }),
 });
 
