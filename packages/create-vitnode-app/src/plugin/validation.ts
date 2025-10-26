@@ -1,5 +1,6 @@
 import { program } from "commander";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { mkdir, readFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import color from "picocolors";
 
@@ -54,7 +55,7 @@ export const validationProjectForPlugin = async (projectPath: string) => {
 
   try {
     const packageJson: PackageJSON = JSON.parse(
-      readFileSync(packageJsonPath, "utf-8"),
+      await readFile(packageJsonPath, "utf-8"),
     );
 
     if (!packageJson.packageManager) {
@@ -105,6 +106,11 @@ export const validationProjectForPlugin = async (projectPath: string) => {
       `The directory ${color.cyan(`plugins/${pluginName}`)} is not empty.`,
     );
     process.exit(1);
+  }
+
+  // Check that plugins directory exists
+  if (!existsSync(pluginsDir)) {
+    await mkdir(pluginsDir, { recursive: true });
   }
 
   // Verify the plugins dir is writeable
