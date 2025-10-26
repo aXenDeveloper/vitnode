@@ -24,7 +24,7 @@ async function main(): Promise<void> {
   console.log("✔ Process completed successfully! 🎉");
 }
 
-main().catch((error) => {
+main().catch(error => {
   console.error("❌ Process failed:", error);
   process.exit(1);
 });

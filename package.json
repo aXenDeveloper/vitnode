@@ -2,7 +2,7 @@
   "name": "vitnode",
   "private": true,
   "scripts": {
-    "release": "tsx ./scripts/bump-version.ts",
+    "release": "tsx ./scripts/bump-version/bump-version.ts",
     "db:migrate": "turbo db:migrate",
     "docker:dev": "turbo docker:dev",
     "build:scripts": "turbo build:scripts && pnpm i",
@@ -29,7 +29,7 @@
   "engines": {
     "node": ">=22"
   },
-  "packageManager": "pnpm@10.18.0",
+  "packageManager": "pnpm@10.18.3",
   "workspaces": [
     "apps/*",
     "packages/*",

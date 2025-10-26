@@ -1,5 +1,6 @@
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { drizzle, PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { ThemeProvider } from "next-themes";
+import type postgres from "postgres";
 import type { IRateLimiterOptions } from "rate-limiter-flexible";
 
 import type { CronAdapter } from "./api/lib/cron";
@@ -49,7 +50,7 @@ export interface VitNodeApiConfig {
     type: "cloudflare_turnstile" | "recaptcha_v3";
   };
   cronAdapter?: CronAdapter;
-  dbProvider: PostgresJsDatabase;
+  dbProvider: ReturnType<typeof drizzle>;
   email?: {
     adapter?: EmailApiPlugin;
     logo?: DefaultTemplateEmailProps["templateProps"]["logo"];
