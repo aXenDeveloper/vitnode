@@ -44,9 +44,7 @@ export async function cleanupOutdatedCronJobs(
 
   // Optimize: Use Set for O(1) lookup instead of Array.includes O(n)
   const currentCronIdentifiers = new Set(
-    currentCronJobs.map(
-      job => `${job.pluginId}:${job.module}:${job.name}`,
-    ),
+    currentCronJobs.map(job => `${job.pluginId}:${job.module}:${job.name}`),
   );
 
   const cronJobsToDelete = cronFromDb
