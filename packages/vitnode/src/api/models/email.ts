@@ -93,9 +93,12 @@ export class EmailModel {
     });
 
     const allMessages = await Promise.all(messagesPromises);
-    const messages = allMessages.reduce(
-      (acc, curr) => ({ ...acc, ...curr }),
+
+    // Optimize: Use Object.assign instead of reduce with spread operator
+    // to avoid creating intermediate objects on each iteration
+    const messages = Object.assign(
       {},
+      ...allMessages,
     ) as Record<string, string>;
 
     const htmlContent =

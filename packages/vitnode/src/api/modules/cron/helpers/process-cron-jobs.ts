@@ -42,14 +42,17 @@ export async function cleanupOutdatedCronJobs(
 ) {
   if (cronFromDb.length === 0) return;
 
-  const currentCronIdentifiers = currentCronJobs.map(
-    job => `${job.pluginId}:${job.module}:${job.name}`,
+  // Optimize: Use Set for O(1) lookup instead of Array.includes O(n)
+  const currentCronIdentifiers = new Set(
+    currentCronJobs.map(
+      job => `${job.pluginId}:${job.module}:${job.name}`,
+    ),
   );
 
   const cronJobsToDelete = cronFromDb
     .filter(
       dbCron =>
-        !currentCronIdentifiers.includes(
+        !currentCronIdentifiers.has(
           `${dbCron.pluginId}:${dbCron.module}:${dbCron.name}`,
         ),
     )
