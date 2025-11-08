@@ -20,9 +20,15 @@ export class SessionAdminModel {
     const encoder = new TextEncoder();
     const data = encoder.encode(token);
     const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const bytes = new Uint8Array(hashBuffer);
 
-    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    // Optimize: Use direct iteration instead of Array.from + map
+    let result = "";
+    for (const byte of bytes) {
+      result += byte.toString(16).padStart(2, "0");
+    }
+
+    return result;
   }
 
   async checkIfUserIsAdmin(userId: number) {
@@ -52,9 +58,12 @@ export class SessionAdminModel {
 
     const randomBytes = new Uint8Array(64);
     crypto.getRandomValues(randomBytes);
-    const token = Array.from(randomBytes)
-      .map(b => b.toString(16).padStart(2, "0"))
-      .join("");
+
+    // Optimize: Use direct iteration instead of Array.from + map
+    let token = "";
+    for (const byte of randomBytes) {
+      token += byte.toString(16).padStart(2, "0");
+    }
 
     const hashedToken = await this.hashToken(token);
     const device = await new DeviceModel(this.c).getDeviceId();

@@ -141,24 +141,13 @@ export const globalMiddleware = ({
   return async (c: Context, next: Next) => {
     let ipAddress: string | undefined;
 
-    // Try to get IP from Hono's request header method first
+    // Optimize: Try both header methods in a single loop
     for (const key of ipHeaderKeys) {
-      const value = c.req.header(key);
-      if (value) {
-        ipAddress = value;
-        break;
-      }
-    }
+      ipAddress = c.req.header(key);
+      if (ipAddress) break;
 
-    // If not found, try raw headers (for edge runtimes, etc.)
-    if (!ipAddress) {
-      for (const key of ipHeaderKeys) {
-        const value = c.req.raw.headers.get(key);
-        if (value) {
-          ipAddress = value;
-          break;
-        }
-      }
+      ipAddress = c.req.raw.headers.get(key);
+      if (ipAddress) break;
     }
 
     // Fallback to localhost if nothing found
