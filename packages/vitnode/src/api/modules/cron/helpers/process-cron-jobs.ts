@@ -20,18 +20,6 @@ interface CronJobFromDb {
   schedule: string;
 }
 
-function findExistingJob(
-  job: CronJobConfig,
-  cronFromDb: CronJobFromDb[],
-): CronJobFromDb | undefined {
-  return cronFromDb.find(
-    dbJob =>
-      dbJob.name === job.name &&
-      dbJob.pluginId === job.pluginId &&
-      dbJob.module === job.module,
-  );
-}
-
 function getJobChanges(
   job: CronJobConfig,
   existingJob: CronJobFromDb,
@@ -54,14 +42,15 @@ export async function cleanupOutdatedCronJobs(
 ) {
   if (cronFromDb.length === 0) return;
 
-  const currentCronIdentifiers = currentCronJobs.map(
-    job => `${job.pluginId}:${job.module}:${job.name}`,
+  // Optimize: Use Set for O(1) lookup instead of Array.includes O(n)
+  const currentCronIdentifiers = new Set(
+    currentCronJobs.map(job => `${job.pluginId}:${job.module}:${job.name}`),
   );
 
   const cronJobsToDelete = cronFromDb
     .filter(
       dbCron =>
-        !currentCronIdentifiers.includes(
+        !currentCronIdentifiers.has(
           `${dbCron.pluginId}:${dbCron.module}:${dbCron.name}`,
         ),
     )
@@ -84,6 +73,14 @@ export function processCronJobs(
     job: CronJobConfig;
   }[] = [];
 
+  // Optimize: Create a Map for O(1) lookup instead of O(n) find operations
+  const cronFromDbMap = new Map(
+    cronFromDb.map(dbJob => [
+      `${dbJob.pluginId}:${dbJob.module}:${dbJob.name}`,
+      dbJob,
+    ]),
+  );
+
   for (const job of cronJobs) {
     if (!validate(job.schedule)) {
       // eslint-disable-next-line no-console
@@ -93,7 +90,8 @@ export function processCronJobs(
       continue;
     }
 
-    const existingJob = findExistingJob(job, cronFromDb);
+    const jobKey = `${job.pluginId}:${job.module}:${job.name}`;
+    const existingJob = cronFromDbMap.get(jobKey);
 
     if (existingJob) {
       const changes = getJobChanges(job, existingJob);

@@ -75,16 +75,20 @@ export const runCronRoute = buildRoute({
       }
 
       if (jobsToExecute.length > 0) {
+        // Optimize: Create a Map for O(1) lookup instead of O(n) find operations
+        const cronFromDbMap = new Map(
+          cronFromDb.map(dbJob => [
+            `${dbJob.pluginId}:${dbJob.module}:${dbJob.name}`,
+            dbJob,
+          ]),
+        );
+
         const executionPromises = jobsToExecute.map(async job => {
           try {
             await job.handler(c);
 
-            const dbJob = cronFromDb.find(
-              dbJob =>
-                dbJob.name === job.name &&
-                dbJob.pluginId === job.pluginId &&
-                dbJob.module === job.module,
-            );
+            const jobKey = `${job.pluginId}:${job.module}:${job.name}`;
+            const dbJob = cronFromDbMap.get(jobKey);
 
             if (dbJob) {
               await db
