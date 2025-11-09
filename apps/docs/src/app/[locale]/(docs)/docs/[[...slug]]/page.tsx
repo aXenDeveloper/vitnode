@@ -12,9 +12,9 @@ import { source } from "@/lib/source";
 
 import { ViewOptions } from "./page.client";
 
-export default async function Page(props: {
-  params: Promise<{ slug?: string[] }>;
-}) {
+export default async function Page(
+  props: PageProps<"/[locale]/docs/[[...slug]]">,
+) {
   const params = await props.params;
   if (!params.slug) {
     await redirect("/docs/dev");
@@ -53,9 +53,9 @@ export default async function Page(props: {
   );
 }
 
-export function generateStaticParams() {
-  return source.generateParams();
-}
+// export function generateStaticParams() {
+//   return source.generateParams();
+// }
 
 export async function generateMetadata(props: {
   params: Promise<{ slug?: string[] }>;
