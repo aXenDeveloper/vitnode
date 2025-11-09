@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   database:
@@ -12,7 +12,7 @@ services:
     volumes:
       - ../../docker/dev:/var/lib/postgresql/data
     ports:
-      - '5432:5432'
+      - "5432:5432"
     networks:
       - vitnode_dev
 

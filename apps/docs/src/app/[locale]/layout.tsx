@@ -5,7 +5,7 @@ import {
   generateMetadataRootLayout,
   RootLayout,
 } from "@vitnode/core/views/layouts/root-layout";
-import { RootProvider } from "fumadocs-ui/provider";
+import { RootProvider } from "fumadocs-ui/provider/next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { vitNodeConfig } from "@/vitnode.config";

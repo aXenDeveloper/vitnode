@@ -54,7 +54,6 @@ const init = async () => {
     "--skip-install",
     "Skip installing packages after initializing the project.",
   );
-  program.option("--plugin", "Enable plugin mode.");
   program.addOption(
     new Option(
       "--mode <mode>",
@@ -63,12 +62,13 @@ const init = async () => {
   );
   program.option("--monorepo", "Create project with monorepo structure.");
   program.option("--docker", "Initialize with Docker support.");
+  program.option("--plugin", "Create a plugin.");
 
   program.parse(process.argv);
 
   const opts = program.opts();
   if (opts.plugin) {
-    await createPlugin(projectPath);
+    await createPlugin({ projectPath, program });
 
     return;
   }

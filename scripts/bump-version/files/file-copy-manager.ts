@@ -62,7 +62,7 @@ export class FileCopyManager {
     ]);
   }
 
-  copyFileOrDirectory(
+  async copyFileOrDirectory(
     sourcePath: string,
     destPath: string,
     relativePath: string,
@@ -79,18 +79,18 @@ export class FileCopyManager {
     if (stats.isDirectory()) {
       copyDirectoryExcludingPlugins(from, to);
     } else {
-      copyFile(from, to);
+      await copyFile(from, to);
     }
   }
 
-  copyFiles(sourcePath: string, destPath: string, filesToCopy: string[]) {
+  async copyFiles(sourcePath: string, destPath: string, filesToCopy: string[]) {
     // Handle special files with different names
     const specialFiles = [
       { source: ".gitignore", dest: ".gitignore_template" },
     ];
 
     for (const relativePath of filesToCopy) {
-      this.copyFileOrDirectory(sourcePath, destPath, relativePath);
+      await this.copyFileOrDirectory(sourcePath, destPath, relativePath);
     }
 
     // Handle special files with different destination names
@@ -105,7 +105,7 @@ export class FileCopyManager {
       }
 
       if (stats.isFile()) {
-        copyFile(from, to);
+        await copyFile(from, to);
       }
     }
   }

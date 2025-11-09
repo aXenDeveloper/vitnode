@@ -146,7 +146,7 @@ export const globalMiddleware = ({
       ipAddress = c.req.header(key);
       if (ipAddress) break;
 
-      ipAddress = c.req.raw.headers.get(key);
+      ipAddress = c.req.raw.headers.get(key) ?? undefined;
       if (ipAddress) break;
     }
 

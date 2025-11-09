@@ -125,15 +125,27 @@ export const createVitNode = async ({
     }
   }
 
-  if (mode === "apiMonorepo" || monorepo) {
+  if (mode === "apiMonorepo" || (monorepo && mode !== "singleApp")) {
     await cp(join(templatePath, "monorepo"), root, {
       recursive: true,
     });
+  } else if (monorepo && mode === "singleApp") {
+    // Copy only the necessary monorepo files, excluding the api folder
+    await copyFile(
+      join(templatePath, "monorepo", "turbo.json"),
+      join(root, "turbo.json"),
+    );
+    await copyFile(
+      join(templatePath, "monorepo", ".gitignore_template"),
+      join(root, ".gitignore_template"),
+    );
   }
 
   if (eslint) {
     spinner.text = "Copying ESLint & Prettier files...";
-    await cp(join(templatePath, "eslint"), root, {
+    const eslintTarget =
+      monorepo && mode === "singleApp" ? monorepoStructure.web : root;
+    await cp(join(templatePath, "eslint"), eslintTarget, {
       recursive: true,
     });
   }

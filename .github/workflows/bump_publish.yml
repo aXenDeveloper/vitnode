@@ -9,8 +9,8 @@ on:
         type: choice
         options:
           - canary
-          - stable
           - release-candidate
+          - stable
       type:
         description: "Type of package to publish"
         required: true
@@ -52,7 +52,7 @@ jobs:
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
-          version: 10.18.0
+          version: 10.18.3
 
       - name: Install Node.js
         uses: actions/setup-node@v4

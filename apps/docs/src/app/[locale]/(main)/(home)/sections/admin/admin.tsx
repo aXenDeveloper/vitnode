@@ -13,8 +13,8 @@ export const AdminSection = () => {
           </h2>
         </div>
         <div className="relative rounded-3xl p-3 md:-mx-8 lg:col-span-3">
-          <div className="aspect-88/36 relative">
-            <div className="from-background z-1 bg-linear-to-t absolute inset-0 to-transparent" />
+          <div className="relative aspect-88/36">
+            <div className="from-background absolute inset-0 z-1 bg-linear-to-t to-transparent" />
             <Image
               alt="payments illustration dark"
               className="hidden dark:block"

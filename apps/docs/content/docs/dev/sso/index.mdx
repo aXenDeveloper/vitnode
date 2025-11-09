@@ -40,7 +40,7 @@ import { SSOApiPlugin, getRedirectUri } from "@vitnode/core/api/models/sso";
 
 export const DiscordSSOApiPlugin = ({
   clientId,
-  clientSecret
+  clientSecret,
 }: {
   clientId: string;
   clientSecret: string;
@@ -66,7 +66,7 @@ import { SSOApiPlugin, getRedirectUri } from "@vitnode/core/api/models/sso";
 
 export const DiscordSSOApiPlugin = ({
   clientId,
-  clientSecret
+  clientSecret,
 }: {
   clientId: string;
   clientSecret: string;
@@ -94,14 +94,14 @@ export const DiscordSSOApiPlugin = ({
       // [!code ++]
       return url.toString();
       // [!code ++]
-    }
+    },
   };
 };
 ```
 
 <Callout type="warn">
-  Always include the `state` parameter - it's your security guard against CSRF attacks. Don't worry,
-  VitNode handles this automatically!
+  Always include the `state` parameter - it's your security guard against CSRF
+  attacks. Don't worry, VitNode handles this automatically!
 </Callout>
 
   </Step>
@@ -120,12 +120,12 @@ import { z } from "zod";
 
 const tokenSchema = z.object({
   access_token: z.string(),
-  token_type: z.string()
+  token_type: z.string(),
 });
 
 export const DiscordSSOApiPlugin = ({
   clientId,
-  clientSecret
+  clientSecret,
 }: {
   clientId: string;
   clientSecret: string;
@@ -137,7 +137,7 @@ export const DiscordSSOApiPlugin = ({
     id,
     name: "Discord",
     // [!code ++]
-    fetchToken: async (code) => {
+    fetchToken: async code => {
       // [!code ++]
       const res = await fetch("https://discord.com/api/oauth2/token", {
         // [!code ++]
@@ -147,7 +147,7 @@ export const DiscordSSOApiPlugin = ({
           // [!code ++]
           "Content-Type": "application/x-www-form-urlencoded",
           // [!code ++]
-          Accept: "application/json"
+          Accept: "application/json",
           // [!code ++]
         },
         // [!code ++]
@@ -161,9 +161,9 @@ export const DiscordSSOApiPlugin = ({
           // [!code ++]
           client_id: clientId,
           // [!code ++]
-          client_secret: clientSecret
+          client_secret: clientSecret,
           // [!code ++]
-        })
+        }),
         // [!code ++]
       });
 
@@ -176,9 +176,9 @@ export const DiscordSSOApiPlugin = ({
           // [!code ++]
           {
             // [!code ++]
-            message: "Internal error requesting token"
+            message: "Internal error requesting token",
             // [!code ++]
-          }
+          },
           // [!code ++]
         );
         // [!code ++]
@@ -187,11 +187,11 @@ export const DiscordSSOApiPlugin = ({
       // [!code ++]
       const { data, error } = tokenSchema.safeParse(await res.json());
       // [!code ++]
-      if (error || !data) {
+      if (error ?? !data) {
         // [!code ++]
         throw new HTTPException(400, {
           // [!code ++]
-          message: "Invalid token response"
+          message: "Invalid token response",
           // [!code ++]
         });
         // [!code ++]
@@ -210,7 +210,7 @@ export const DiscordSSOApiPlugin = ({
       url.searchParams.set("state", state);
 
       return url.toString();
-    }
+    },
   };
 };
 ```
@@ -232,12 +232,12 @@ import { z } from "zod";
 const userSchema = z.object({
   id: z.number(),
   email: z.string(),
-  username: z.string()
+  username: z.string(),
 });
 
 export const DiscordSSOApiPlugin = ({
   clientId,
-  clientSecret
+  clientSecret,
 }: {
   clientId: string;
   clientSecret: string;
@@ -255,20 +255,20 @@ export const DiscordSSOApiPlugin = ({
         // [!code ++]
         headers: {
           // [!code ++]
-          Authorization: `${token_type} ${access_token}`
+          Authorization: `${token_type} ${access_token}`,
           // [!code ++]
-        }
+        },
         // [!code ++]
       });
 
       // [!code ++]
       const { data, error } = userSchema.safeParse(await res.json());
       // [!code ++]
-      if (error || !data) {
+      if (error ?? !data) {
         // [!code ++]
         throw new HTTPException(400, {
           // [!code ++]
-          message: "Invalid user response"
+          message: "Invalid user response",
           // [!code ++]
         });
         // [!code ++]
@@ -278,32 +278,35 @@ export const DiscordSSOApiPlugin = ({
       return data;
       // [!code ++]
     },
-    fetchToken: async (code) => {
+    fetchToken: async code => {
       const res = await fetch("https://discord.com/api/oauth2/token", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          Accept: "application/json"
+          Accept: "application/json",
         },
         body: new URLSearchParams({
           code,
           redirect_uri: redirectUri,
           grant_type: "authorization_code",
           client_id: clientId,
-          client_secret: clientSecret
-        })
+          client_secret: clientSecret,
+        }),
       });
 
       if (!res.ok) {
-        throw new HTTPException(+res.status.toString() as ContentfulStatusCode, {
-          message: "Internal error requesting token"
-        });
+        throw new HTTPException(
+          +res.status.toString() as ContentfulStatusCode,
+          {
+            message: "Internal error requesting token",
+          },
+        );
       }
 
       const { data, error } = tokenSchema.safeParse(await res.json());
-      if (error || !data) {
+      if (error ?? !data) {
         throw new HTTPException(400, {
-          message: "Invalid token response"
+          message: "Invalid token response",
         });
       }
 
@@ -318,14 +321,15 @@ export const DiscordSSOApiPlugin = ({
       url.searchParams.set("state", state);
 
       return url.toString();
-    }
+    },
   };
 };
 ```
 
 <Callout type="warn">
-  Pro tip: Some OAuth providers might return unverified email addresses. If your provider gives you
-  an email verification status, add it to your validation to keep things secure!
+  Pro tip: Some OAuth providers might return unverified email addresses. If your
+  provider gives you an email verification status, add it to your validation to
+  keep things secure!
 </Callout>
 
 </Step>
@@ -354,11 +358,11 @@ VitNodeAPI({
         // [!code ++]
         clientId: process.env.DISCORD_CLIENT_ID,
         // [!code ++]
-        clientSecret: process.env.DISCORD_CLIENT_SECRET
+        clientSecret: process.env.DISCORD_CLIENT_SECRET,
         // [!code ++]
-      })
+      }),
       // [!code ++]
-    ]
-  }
+    ],
+  },
 });
 ```

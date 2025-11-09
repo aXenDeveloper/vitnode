@@ -1,4 +1,4 @@
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { drizzle } from "drizzle-orm/postgres-js";
 
 import { eq, inArray } from "drizzle-orm";
 import { validate } from "node-cron";
@@ -36,7 +36,7 @@ function getJobChanges(
 }
 
 export async function cleanupOutdatedCronJobs(
-  db: PostgresJsDatabase,
+  db: ReturnType<typeof drizzle>,
   cronFromDb: CronJobFromDb[],
   currentCronJobs: CronJobConfig[],
 ) {
@@ -111,7 +111,7 @@ export function processCronJobs(
 }
 
 export async function updateCronJobs(
-  db: PostgresJsDatabase,
+  db: ReturnType<typeof drizzle>,
   jobsToUpdate: {
     changes: { description?: boolean; schedule?: boolean };
     existingJob: CronJobFromDb;

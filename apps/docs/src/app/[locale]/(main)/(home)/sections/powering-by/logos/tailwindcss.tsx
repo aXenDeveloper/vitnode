@@ -2,7 +2,7 @@ export const TailwindCSSLogo = () => {
   return (
     <svg
       aria-label="TailwindCSS logotype"
-      className="w-42 h-8"
+      className="h-8 w-42"
       fill="none"
       viewBox="0 0 262 33"
       xmlns="http://www.w3.org/2000/svg"

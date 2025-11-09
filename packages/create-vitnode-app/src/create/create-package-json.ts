@@ -28,42 +28,41 @@ const versions = {
   typesNode: "^24",
   typesReact: "^19.2",
   typesReactDom: "^19.2",
-  typesMdx: "^2.0.13",
   typesBun: "latest",
 
-  turbo: "^2.5.8",
-  typescript: "^5.9.3",
+  turbo: "^2.5",
+  typescript: "^5.9",
   tsx: "^4.20.6",
   tscAlias: "^1.8.16",
-  eslint: "^9.33.0",
+  eslint: "^9.39.1",
   prettier: "^3.6.2",
   prettierTailwind: "^0.6.14",
-  tailwind: "^4.1.14",
-  tailwindPostcss: "^4.1.14",
+  tailwind: "^4.1.17",
+  tailwindPostcss: "^4.1.17",
   postcss: "^8.5.6",
   twAnimateCss: "^1.4.0",
 
   react: "^19.2",
   reactDom: "^19.2",
-  nextSingle: "15.6.0-canary.41",
+  nextSingle: "^16.0.1",
   nextWebInMonorepo: "^15.4.6",
-  nextIntl: "^4.3.9",
-  useIntl: "^4.3.9",
-  rhf: "^7.63.0",
+  nextIntl: "^4.5.0",
+  useIntl: "^4.5.0",
+  rhf: "^7.66.0",
   rhfResolvers: "^5.1.1",
-  lucide: "^0.544.0",
+  lucide: "^0.553.0",
   sonner: "^2.0.7",
   dotenv: "^17.2.2",
 
-  drizzleKit: "^0.31.5",
-  drizzleOrm: "^0.44.6",
+  drizzleKit: "^0.31.6",
+  drizzleOrm: "^0.44.7",
 
-  hono: "^4.9.9",
-  honoZodOpenapi: "^1.1.3",
-  honoZodValidator: "^0.7.3",
-  reactEmail: "^4.2.12",
-  reactEmailComponents: "^0.5.5",
-  zod: "^4.1.11",
+  hono: "^4.10.4",
+  honoZodOpenapi: "^1.1.4",
+  honoZodValidator: "^0.7.4",
+  reactEmail: "^5.0.1",
+  reactEmailComponents: "^1.0.0",
+  zod: "^4.1.12",
 
   cva: "^0.7.1",
 };
@@ -89,7 +88,10 @@ const rootScripts = (
   dev: "turbo dev",
   build: "turbo build",
   start: "turbo start",
-  ...withIf(enableEslint, eslintScripts),
+  ...withIf(enableEslint, {
+    lint: "turbo lint",
+    "lint:fix": "turbo lint:fix",
+  }),
   ...withIf(enableDocker, { "docker:dev": dockerDevScript(appName) }),
 });
 
@@ -125,7 +127,7 @@ const singleAppScripts = (
 ) => ({
   "db:migrate": "vitnode migrate",
   init: "vitnode init",
-  dev: "vitnode init && next dev --turbopack",
+  dev: "vitnode init && next dev",
   "dev:email": "email dev --dir src/emails",
   build: "next build",
   start: "next start",
@@ -136,7 +138,7 @@ const singleAppScripts = (
 
 const webScripts = (eslint: boolean) => ({
   init: "vitnode init --web",
-  dev: "vitnode init --web && next dev --turbopack",
+  dev: "vitnode init --web && next dev",
   build: "next build",
   start: "next start",
   ...withIf(eslint, eslintScripts),
@@ -180,7 +182,7 @@ const apiDeps = {
 };
 
 const apiDevDeps = (pm: string, eslint: boolean) => ({
-  "@hono/node-server": "^1.19.5",
+  "@hono/node-server": "^1.19",
   ...(pm === "bun" ? { "@types/bun": versions.typesBun } : {}),
   "@types/node": versions.typesNode,
   "@types/react": versions.typesReact,
@@ -249,7 +251,6 @@ const webDeps = {
 const webDevDeps = (eslint: boolean) => ({
   "@hookform/resolvers": versions.rhfResolvers,
   "@tailwindcss/postcss": versions.tailwindPostcss,
-  "@types/mdx": versions.typesMdx,
   "@types/node": versions.typesNode,
   "@types/react": versions.typesReact,
   "@types/react-dom": versions.typesReactDom,
