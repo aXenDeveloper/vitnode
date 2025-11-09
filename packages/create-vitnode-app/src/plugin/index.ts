@@ -4,9 +4,9 @@ import { input } from "@inquirer/prompts";
 import { basename, resolve } from "node:path";
 
 import { validateNpmName } from "../helpers/validate-pkg.js";
+import { createPluginVitNode } from "./create/create-plugin-vitnode.js";
 import { createPluginQuestionsCli } from "./questions.js";
 import { validationProjectForPlugin } from "./validation.js";
-import { createPluginVitNode } from "./create/create-plugin-vitnode.js";
 
 export const createPlugin = async ({
   program,

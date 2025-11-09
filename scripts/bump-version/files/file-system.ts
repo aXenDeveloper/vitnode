@@ -5,13 +5,14 @@ import {
   readdirSync,
   statSync,
 } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-export function copyFile(from: string, to: string): void {
+export const copyFile = async (from: string, to: string) => {
   try {
     const destinationDir = dirname(to);
     if (!existsSync(destinationDir)) {
-      mkdirSync(destinationDir, { recursive: true });
+      await mkdir(destinationDir, { recursive: true });
     }
     copyFileSync(from, to);
   } catch (error) {
@@ -19,7 +20,7 @@ export function copyFile(from: string, to: string): void {
       `Failed to copy file: ${from} → ${to}: ${(error as Error).message}`,
     );
   }
-}
+};
 
 export function copyDirectoryExcludingPlugins(from: string, to: string): void {
   try {

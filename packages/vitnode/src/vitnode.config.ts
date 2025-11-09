@@ -1,6 +1,5 @@
-import type { drizzle, PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { drizzle } from "drizzle-orm/postgres-js";
 import type { ThemeProvider } from "next-themes";
-import type postgres from "postgres";
 import type { IRateLimiterOptions } from "rate-limiter-flexible";
 
 import type { CronAdapter } from "./api/lib/cron";

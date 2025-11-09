@@ -1,4 +1,4 @@
-import type { drizzle, PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { drizzle } from "drizzle-orm/postgres-js";
 
 import { eq, inArray } from "drizzle-orm";
 import { validate } from "node-cron";
