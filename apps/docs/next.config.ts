@@ -9,11 +9,6 @@ const withBundleAnalyzer = nextAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
-const nextConfig: NextConfig = {
-  experimental: {
-    inlineCss: true,
-    ppr: "incremental",
-  },
-};
+const nextConfig: NextConfig = {};
 
 export default withBundleAnalyzer(withMDX(vitNodeNextConfig(nextConfig)));

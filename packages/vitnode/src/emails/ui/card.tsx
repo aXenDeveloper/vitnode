@@ -30,7 +30,7 @@ export const EmailCardTitle = ({
 }: React.ComponentProps<typeof Text>) => {
   return (
     <Text
-      className={cn("text-xl font-semibold leading-[0]", className)}
+      className={cn("text-xl leading-[0] font-semibold", className)}
       {...props}
     />
   );
