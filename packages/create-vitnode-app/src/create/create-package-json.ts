@@ -65,6 +65,7 @@ const versions = {
   zod: "^4.1.12",
 
   cva: "^0.7.1",
+  babelPluginReactCompiler: "^1.0.0",
 };
 
 /**
@@ -225,6 +226,7 @@ const singleAppDevDeps = (eslint: boolean) => ({
   "@types/react": versions.typesReact,
   "@types/react-dom": versions.typesReactDom,
   "@vitnode/config": "",
+  "babel-plugin-react-compiler": versions.babelPluginReactCompiler,
   ...withIf(eslint, {
     eslint: versions.eslint,
     prettier: versions.prettier,
@@ -255,6 +257,7 @@ const webDevDeps = (eslint: boolean) => ({
   "@types/react": versions.typesReact,
   "@types/react-dom": versions.typesReactDom,
   "@vitnode/config": "",
+  "babel-plugin-react-compiler": versions.babelPluginReactCompiler,
   "class-variance-authority": versions.cva,
   ...withIf(eslint, { eslint: versions.eslint }),
   postcss: versions.postcss,

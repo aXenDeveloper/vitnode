@@ -53,6 +53,7 @@
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "@vitnode/config": "workspace:*",
+    "babel-plugin-react-compiler": "^1.0.0",
     "class-variance-authority": "^0.7.1",
     "eslint": "^9.39.1",
     "postcss": "^8.5.6",
