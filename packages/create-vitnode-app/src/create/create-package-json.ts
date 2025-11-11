@@ -1,14 +1,13 @@
-import { readFile, writeFile } from "fs/promises";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
+import { writeFile } from "fs/promises";
+import { join } from "path";
 
 import type { PackageJSON } from "../helpers/packages-json.js";
 import type { CreateCliReturn } from "../questions.js";
 
 import { getAvailablePackageManagers } from "../helpers/get-available-package-managers.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { getVitnodePackageVersion } from "../helpers/get-vitnode-package-version.js";
+import { withIf } from "../helpers/with-If.js";
+import { versionsPackageJson } from "./package-versions.js";
 
 type Mode = CreateCliReturn["mode"];
 
@@ -20,53 +19,6 @@ const paths = (root: string) => ({
   api: join(root, "apps", "api"),
   web: join(root, "apps", "web"),
 });
-
-const withIf = <T extends Record<string, string>>(cond: boolean, obj: T) =>
-  (cond ? obj : {}) as Partial<T>;
-
-const versions = {
-  typesNode: "^24",
-  typesReact: "^19.2",
-  typesReactDom: "^19.2",
-  typesBun: "latest",
-
-  turbo: "^2.5",
-  typescript: "^5.9",
-  tsx: "^4.20.6",
-  tscAlias: "^1.8.16",
-  eslint: "^9.39.1",
-  prettier: "^3.6.2",
-  prettierTailwind: "^0.6.14",
-  tailwind: "^4.1.17",
-  tailwindPostcss: "^4.1.17",
-  postcss: "^8.5.6",
-  twAnimateCss: "^1.4.0",
-
-  react: "^19.2",
-  reactDom: "^19.2",
-  nextSingle: "^16.0.1",
-  nextWebInMonorepo: "^15.4.6",
-  nextIntl: "^4.5.0",
-  useIntl: "^4.5.0",
-  rhf: "^7.66.0",
-  rhfResolvers: "^5.1.1",
-  lucide: "^0.553.0",
-  sonner: "^2.0.7",
-  dotenv: "^17.2.2",
-
-  drizzleKit: "^0.31.6",
-  drizzleOrm: "^0.44.7",
-
-  hono: "^4.10.4",
-  honoZodOpenapi: "^1.1.4",
-  honoZodValidator: "^0.7.4",
-  reactEmail: "^5.0.1",
-  reactEmailComponents: "^1.0.0",
-  zod: "^4.1.12",
-
-  cva: "^0.7.1",
-  babelPluginReactCompiler: "^1.0.0",
-};
 
 /**
  * Shared blocks
@@ -149,122 +101,122 @@ const webScripts = (eslint: boolean) => ({
  * Dependency builders
  */
 const baseDevDeps = (eslint: boolean, includePrettier: boolean) => ({
-  "@types/node": versions.typesNode,
+  "@types/node": versionsPackageJson.typesNode,
   "@vitnode/config": "", // filled with local version dynamically
   ...withIf(eslint, {
-    eslint: versions.eslint,
+    eslint: versionsPackageJson.eslint,
     ...withIf(includePrettier, {
-      prettier: versions.prettier,
-      "prettier-plugin-tailwindcss": versions.prettierTailwind,
+      prettier: versionsPackageJson.prettier,
+      "prettier-plugin-tailwindcss": versionsPackageJson.prettierTailwind,
     }),
   }),
 });
 
 const rootDevDeps = (eslint: boolean) => ({
   ...baseDevDeps(eslint, true),
-  turbo: versions.turbo,
-  typescript: versions.typescript,
-  zod: versions.zod,
+  turbo: versionsPackageJson.turbo,
+  typescript: versionsPackageJson.typescript,
+  zod: versionsPackageJson.zod,
 });
 
 const apiDeps = {
-  "@hono/zod-openapi": versions.honoZodOpenapi,
-  "@hono/zod-validator": versions.honoZodValidator,
-  "@react-email/components": versions.reactEmailComponents,
+  "@hono/zod-openapi": versionsPackageJson.honoZodOpenapi,
+  "@hono/zod-validator": versionsPackageJson.honoZodValidator,
+  "@react-email/components": versionsPackageJson.reactEmailComponents,
   "@vitnode/core": "", // filled dynamically
-  "drizzle-kit": versions.drizzleKit,
-  "drizzle-orm": versions.drizzleOrm,
-  hono: versions.hono,
-  "next-intl": versions.nextIntl,
-  react: versions.react,
-  "react-dom": versions.reactDom,
-  "use-intl": versions.useIntl,
-  zod: versions.zod,
+  "drizzle-kit": versionsPackageJson.drizzleKit,
+  "drizzle-orm": versionsPackageJson.drizzleOrm,
+  hono: versionsPackageJson.hono,
+  "next-intl": versionsPackageJson.nextIntl,
+  react: versionsPackageJson.react,
+  "react-dom": versionsPackageJson.reactDom,
+  "use-intl": versionsPackageJson.useIntl,
+  zod: versionsPackageJson.zod,
 };
 
 const apiDevDeps = (pm: string, eslint: boolean) => ({
   "@hono/node-server": "^1.19",
-  ...(pm === "bun" ? { "@types/bun": versions.typesBun } : {}),
-  "@types/node": versions.typesNode,
-  "@types/react": versions.typesReact,
-  "@types/react-dom": versions.typesReactDom,
+  ...(pm === "bun" ? { "@types/bun": versionsPackageJson.typesBun } : {}),
+  "@types/node": versionsPackageJson.typesNode,
+  "@types/react": versionsPackageJson.typesReact,
+  "@types/react-dom": versionsPackageJson.typesReactDom,
   "@vitnode/config": "",
-  dotenv: versions.dotenv,
+  dotenv: versionsPackageJson.dotenv,
   ...withIf(eslint, {
-    eslint: versions.eslint,
+    eslint: versionsPackageJson.eslint,
     // Prettier in API only when onlyApi + eslint in original code – we'll preserve by passing include later if needed
   }),
-  "react-email": versions.reactEmail,
-  "tsc-alias": versions.tscAlias,
-  tsx: versions.tsx,
-  typescript: versions.typescript,
+  "react-email": versionsPackageJson.reactEmail,
+  "tsc-alias": versionsPackageJson.tscAlias,
+  tsx: versionsPackageJson.tsx,
+  typescript: versionsPackageJson.typescript,
 });
 
 const singleAppDeps = {
-  "@hono/zod-openapi": versions.honoZodOpenapi,
-  "@hono/zod-validator": versions.honoZodValidator,
-  "@hookform/resolvers": versions.rhfResolvers,
-  "@react-email/components": versions.reactEmailComponents,
+  "@hono/zod-openapi": versionsPackageJson.honoZodOpenapi,
+  "@hono/zod-validator": versionsPackageJson.honoZodValidator,
+  "@hookform/resolvers": versionsPackageJson.rhfResolvers,
+  "@react-email/components": versionsPackageJson.reactEmailComponents,
   "@vitnode/core": "",
-  "drizzle-kit": versions.drizzleKit,
-  "drizzle-orm": versions.drizzleOrm,
-  hono: versions.hono,
-  "lucide-react": versions.lucide,
-  next: versions.nextSingle,
-  "next-intl": versions.nextIntl,
-  react: versions.react,
-  "react-dom": versions.reactDom,
-  "react-hook-form": versions.rhf,
-  sonner: versions.sonner,
-  "use-intl": versions.useIntl,
-  zod: versions.zod,
+  "drizzle-kit": versionsPackageJson.drizzleKit,
+  "drizzle-orm": versionsPackageJson.drizzleOrm,
+  hono: versionsPackageJson.hono,
+  "lucide-react": versionsPackageJson.lucide,
+  next: versionsPackageJson.nextSingle,
+  "next-intl": versionsPackageJson.nextIntl,
+  react: versionsPackageJson.react,
+  "react-dom": versionsPackageJson.reactDom,
+  "react-hook-form": versionsPackageJson.rhf,
+  sonner: versionsPackageJson.sonner,
+  "use-intl": versionsPackageJson.useIntl,
+  zod: versionsPackageJson.zod,
 };
 
 const singleAppDevDeps = (eslint: boolean) => ({
-  "@tailwindcss/postcss": versions.tailwindPostcss,
-  "@types/node": versions.typesNode,
-  "@types/react": versions.typesReact,
-  "@types/react-dom": versions.typesReactDom,
+  "@tailwindcss/postcss": versionsPackageJson.tailwindPostcss,
+  "@types/node": versionsPackageJson.typesNode,
+  "@types/react": versionsPackageJson.typesReact,
+  "@types/react-dom": versionsPackageJson.typesReactDom,
   "@vitnode/config": "",
-  "babel-plugin-react-compiler": versions.babelPluginReactCompiler,
+  "babel-plugin-react-compiler": versionsPackageJson.babelPluginReactCompiler,
   ...withIf(eslint, {
-    eslint: versions.eslint,
-    prettier: versions.prettier,
-    "prettier-plugin-tailwindcss": versions.prettierTailwind,
+    eslint: versionsPackageJson.eslint,
+    prettier: versionsPackageJson.prettier,
+    "prettier-plugin-tailwindcss": versionsPackageJson.prettierTailwind,
   }),
-  "react-email": versions.reactEmail,
-  turbo: versions.turbo,
-  tailwindcss: versions.tailwind,
-  "tw-animate-css": versions.twAnimateCss,
-  typescript: versions.typescript,
+  "react-email": versionsPackageJson.reactEmail,
+  turbo: versionsPackageJson.turbo,
+  tailwindcss: versionsPackageJson.tailwind,
+  "tw-animate-css": versionsPackageJson.twAnimateCss,
+  typescript: versionsPackageJson.typescript,
 });
 
 const webDeps = {
   "@vitnode/core": "",
-  "lucide-react": versions.lucide,
-  next: versions.nextWebInMonorepo,
-  "next-intl": versions.nextIntl,
-  react: versions.react,
-  "react-dom": versions.reactDom,
-  "react-hook-form": versions.rhf,
-  sonner: versions.sonner,
+  "lucide-react": versionsPackageJson.lucide,
+  next: versionsPackageJson.nextWebInMonorepo,
+  "next-intl": versionsPackageJson.nextIntl,
+  react: versionsPackageJson.react,
+  "react-dom": versionsPackageJson.reactDom,
+  "react-hook-form": versionsPackageJson.rhf,
+  sonner: versionsPackageJson.sonner,
 };
 
 const webDevDeps = (eslint: boolean) => ({
-  "@hookform/resolvers": versions.rhfResolvers,
-  "@tailwindcss/postcss": versions.tailwindPostcss,
-  "@types/node": versions.typesNode,
-  "@types/react": versions.typesReact,
-  "@types/react-dom": versions.typesReactDom,
+  "@hookform/resolvers": versionsPackageJson.rhfResolvers,
+  "@tailwindcss/postcss": versionsPackageJson.tailwindPostcss,
+  "@types/node": versionsPackageJson.typesNode,
+  "@types/react": versionsPackageJson.typesReact,
+  "@types/react-dom": versionsPackageJson.typesReactDom,
   "@vitnode/config": "",
-  "babel-plugin-react-compiler": versions.babelPluginReactCompiler,
-  "class-variance-authority": versions.cva,
-  ...withIf(eslint, { eslint: versions.eslint }),
-  postcss: versions.postcss,
-  tailwindcss: versions.tailwind,
-  "tw-animate-css": versions.twAnimateCss,
-  typescript: versions.typescript,
-  zod: versions.zod,
+  "babel-plugin-react-compiler": versionsPackageJson.babelPluginReactCompiler,
+  "class-variance-authority": versionsPackageJson.cva,
+  ...withIf(eslint, { eslint: versionsPackageJson.eslint }),
+  postcss: versionsPackageJson.postcss,
+  tailwindcss: versionsPackageJson.tailwind,
+  "tw-animate-css": versionsPackageJson.twAnimateCss,
+  typescript: versionsPackageJson.typescript,
+  zod: versionsPackageJson.zod,
 });
 
 /**
@@ -287,12 +239,7 @@ export const createPackageJSON = async ({
   packageManager: string;
   root: string;
 }) => {
-  // Resolve local version of @vitnode/* based on this CLI's package.json
-  const cliPkg: PackageJSON = JSON.parse(
-    await readFile(join(__dirname, "..", "..", "..", "package.json"), "utf-8"),
-  );
-  const vitnodeVersionRange = `^${cliPkg.version}`;
-
+  const vitnodeVersionRange = await getVitnodePackageVersion();
   const pmVersions = await getAvailablePackageManagers();
   const pmSpec = `${packageManager}@${pmVersions[packageManager]}`;
   const p = paths(root);
@@ -340,8 +287,8 @@ export const createPackageJSON = async ({
       "@vitnode/config": vitnodeVersionRange,
       ...(eslint && mode === "onlyApi"
         ? {
-            prettier: versions.prettier,
-            "prettier-plugin-tailwindcss": versions.prettierTailwind,
+            prettier: versionsPackageJson.prettier,
+            "prettier-plugin-tailwindcss": versionsPackageJson.prettierTailwind,
           }
         : {}),
       // TS pipeline pieces when not using Bun for dev

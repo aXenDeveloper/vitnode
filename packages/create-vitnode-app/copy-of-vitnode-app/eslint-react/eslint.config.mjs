@@ -1,4 +1,5 @@
 import eslintVitNode from "@vitnode/config/eslint";
+import eslintVitNodeReact from "@vitnode/config/eslint.react";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 
@@ -6,14 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default [
   ...eslintVitNode,
-  {
-    rules: {
-      "no-console": "off",
-    },
-  },
-  {
-    ignores: ["copy-of-vitnode-app", "copy-of-vitnode-plugin"],
-  },
+  ...eslintVitNodeReact,
   {
     languageOptions: {
       parserOptions: {

@@ -1,5 +1,5 @@
 import { existsSync } from "fs";
-import { mkdir } from "fs/promises";
+import { cp, mkdir } from "fs/promises";
 import ora from "ora";
 import { dirname, join } from "path";
 import color from "picocolors";
@@ -10,13 +10,16 @@ import type { CreatePluginCliReturn } from "../questions.js";
 import { getPackageManagerFromRoot } from "../../helpers/get-package-manager-from-root.js";
 import { installDependencies } from "../../helpers/install-dependencies.js";
 import { isFolderEmpty } from "../../helpers/is-folder-empty.js";
+import { createPluginPackageJSON } from "./create-package-json.js";
 
 export const createPluginVitNode = async ({
   pluginPath,
   pluginName,
   install,
   root,
+  eslint,
 }: CreatePluginCliReturn & {
+  eslint: boolean;
   pluginName: string;
   pluginPath: string;
   root: string;
@@ -35,6 +38,7 @@ export const createPluginVitNode = async ({
     "..",
     "..",
     "copy-of-vitnode-plugin",
+    "root",
   );
   if (!existsSync(templatePath)) {
     spinner.fail(
@@ -50,9 +54,37 @@ export const createPluginVitNode = async ({
   }
 
   spinner.text = "Preparing the plugin structure...";
+  await cp(templatePath, pluginPath, { recursive: true });
 
   spinner.text = "Creating package.json...";
-  // Create package.json for the plugin
+  await createPluginPackageJSON({
+    pluginName,
+    root,
+    eslint,
+  });
+
+  if (eslint) {
+    spinner.text = "Setting up ESLint...";
+    const templateEslintPath = join(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      "copy-of-vitnode-app",
+      "eslint-react",
+    );
+
+    if (!existsSync(templateEslintPath)) {
+      spinner.fail(
+        `\n${color.red("Error!")} ESLint template path ${color.cyan(
+          templateEslintPath,
+        )} does not exist.`,
+      );
+      process.exit(1);
+    }
+
+    await cp(templateEslintPath, pluginPath, { recursive: true });
+  }
 
   if (install) {
     spinner.text = "Installing dependencies...";

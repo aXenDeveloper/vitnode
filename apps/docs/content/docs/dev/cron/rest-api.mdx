@@ -39,11 +39,16 @@ Next, configure a scheduler that will send HTTP requests to your cron endpoint. 
 - [Google Cloud Functions with Cloud Scheduler](https://cloud.google.com/scheduler/docs/tut-pub-sub)
 - [EasyCron](https://www.easycron.com/)
 
-<Callout type="warn" title="Important">
-  You need to set schedule for every minute to ensure that your cron jobs are executed on time.
+<Callout type="warn" title="Run Frequency">
+  You need to set schedule for every minute to ensure that your cron jobs are
+  executed on time. Some schedulers may have limitations on minimum intervals,
+  so choose one that fits your needs.
+</Callout>
 
-Make sure to include the `Authorization` header with the value `Bearer {your_key}` in your requests, where `{your_key}` is the value of the `CRON_SECRET` variable you set in your `.env` file.
-
+<Callout type="error" title="Authentication Required">
+  Make sure to include the `Authorization` header with the value `Bearer{" "}
+  {your_key}` in your requests, where `{your_key}` is the value of the
+  `CRON_SECRET` variable you set in your `.env` file.
 </Callout>
 
 </Step>
