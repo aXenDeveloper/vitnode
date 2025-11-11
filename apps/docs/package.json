@@ -1,6 +1,6 @@
 {
   "name": "docs",
-  "version": "1.2.0-canary.60",
+  "version": "1.2.0-canary.61",
   "type": "module",
   "private": true,
   "scripts": {
