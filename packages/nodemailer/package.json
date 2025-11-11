@@ -1,6 +1,6 @@
 {
   "name": "@vitnode/nodemailer",
-  "version": "1.2.0-canary.61",
+  "version": "1.2.0-canary.62",
   "description": "Nodemailer integration package for VitNode, enabling email functionalities.",
   "author": "VitNode Team",
   "license": "MIT",
