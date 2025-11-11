@@ -3,10 +3,16 @@ import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
 const prepare = async () => {
-  const toRootPath = join(process.cwd(), "copy-of-vitnode-app");
-  if (!existsSync(toRootPath)) {
-    await mkdir(toRootPath);
-  }
+  const toRootPaths = ["copy-of-vitnode-app", "copy-of-vitnode-plugin"];
+  await Promise.all(
+    toRootPaths.map(async path => {
+      const toRootPath = join(process.cwd(), path);
+      if (!existsSync(toRootPath)) {
+        await mkdir(toRootPath);
+      }
+    }),
+  );
+
   const fromRootPath = join(process.cwd(), "..", "..", "apps", "docs");
   if (!existsSync(fromRootPath)) {
     console.error(
