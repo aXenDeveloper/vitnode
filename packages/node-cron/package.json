@@ -1,6 +1,6 @@
 {
   "name": "@vitnode/node-cron",
-  "version": "1.2.0-canary.62",
+  "version": "1.2.0-canary.63",
   "description": "Node-cron adapter for VitNode, enabling cron job scheduling and management.",
   "author": "VitNode Team",
   "license": "MIT",
