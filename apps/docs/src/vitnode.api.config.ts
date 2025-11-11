@@ -1,6 +1,7 @@
 import { blogApiPlugin } from "@vitnode/blog/config.api";
 import { NodeCronAdapter } from "@vitnode/core/api/adapters/cron/node-cron.adapter";
-import { NodemailerEmailAdapter } from "@vitnode/core/api/adapters/email/nodemailer";
+
+import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
 import { DiscordSSOApiPlugin } from "@vitnode/core/api/adapters/sso/discord";
 import { FacebookSSOApiPlugin } from "@vitnode/core/api/adapters/sso/facebook";
 import { GoogleSSOApiPlugin } from "@vitnode/core/api/adapters/sso/google";

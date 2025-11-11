@@ -23,6 +23,10 @@
       "import": "./eslint.config.mjs",
       "default": "./eslint.config.mjs"
     },
+    "./eslint.react": {
+      "import": "./eslint.react.config.mjs",
+      "default": "./eslint.react.config.mjs"
+    },
     "./tsconfig": {
       "import": "./tsconfig.json",
       "default": "./tsconfig.json"

@@ -33,6 +33,7 @@
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "@vitnode/config": "workspace:*",
+    "@vitnode/nodemailer": "workspace:*",
     "dotenv": "^17.2.3",
     "eslint": "^9.39.1",
     "react-email": "^5.0.1",

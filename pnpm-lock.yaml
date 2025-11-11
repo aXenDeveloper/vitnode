@@ -87,6 +87,9 @@ importers:
       '@vitnode/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@vitnode/nodemailer':
+        specifier: workspace:*
+        version: link:../../packages/nodemailer
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
@@ -196,6 +199,9 @@ importers:
       '@vitnode/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@vitnode/nodemailer':
+        specifier: workspace:*
+        version: link:../../packages/nodemailer
       babel-plugin-react-compiler:
         specifier: ^1.0.0
         version: 1.0.0
@@ -309,6 +315,40 @@ importers:
       eslint:
         specifier: ^9.39.1
         version: 9.39.1(jiti@2.6.1)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/nodemailer:
+    dependencies:
+      nodemailer:
+        specifier: ^7.0.10
+        version: 7.0.10
+    devDependencies:
+      '@swc/cli':
+        specifier: ^0.7.9
+        version: 0.7.9(@swc/core@1.15.1)(chokidar@4.0.3)
+      '@swc/core':
+        specifier: ^1.15.1
+        version: 1.15.1
+      '@types/nodemailer':
+        specifier: ^7.0.3
+        version: 7.0.3
+      '@vitnode/config':
+        specifier: workspace:*
+        version: link:../config
+      '@vitnode/core':
+        specifier: workspace:*
+        version: link:../vitnode
+      concurrently:
+        specifier: ^9.2.1
+        version: 9.2.1
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.1(jiti@2.6.1)
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
