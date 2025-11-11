@@ -1,5 +1,5 @@
 import { existsSync } from "fs";
-import { cp, mkdir } from "fs/promises";
+import { cp, mkdir, rename } from "fs/promises";
 import ora from "ora";
 import { dirname, join } from "path";
 import color from "picocolors";
@@ -55,6 +55,13 @@ export const createPluginVitNode = async ({
 
   spinner.text = "Preparing the plugin structure...";
   await cp(templatePath, pluginPath, { recursive: true });
+
+  // Rename template npmignore to .npmignore in the generated plugin
+  const npmIgnoreTemplatePath = join(pluginPath, "npmignore.template");
+  const dotNpmIgnorePath = join(pluginPath, ".npmignore");
+  if (existsSync(npmIgnoreTemplatePath)) {
+    await rename(npmIgnoreTemplatePath, dotNpmIgnorePath);
+  }
 
   spinner.text = "Creating package.json...";
   await createPluginPackageJSON({
