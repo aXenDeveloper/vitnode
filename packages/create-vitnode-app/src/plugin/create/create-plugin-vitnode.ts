@@ -37,6 +37,7 @@ export const createPluginVitNode = async ({
     "..",
     "..",
     "..",
+    "..",
     "copy-of-vitnode-plugin",
     "root",
   );

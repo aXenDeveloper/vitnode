@@ -4,7 +4,7 @@ export const versionsPackageJson = {
   typesReactDom: "^19.2",
   typesBun: "latest",
 
-  turbo: "^2.5",
+  turbo: "^2.6",
   typescript: "^5.9",
   tsx: "^4.20.6",
   tscAlias: "^1.8.16",
@@ -20,8 +20,8 @@ export const versionsPackageJson = {
   reactDom: "^19.2",
   nextSingle: "^16.0.1",
   nextWebInMonorepo: "^15.4.6",
-  nextIntl: "^4.5.0",
-  useIntl: "^4.5.0",
+  nextIntl: "^4.5",
+  useIntl: "^4.5",
   rhf: "^7.66.0",
   rhfResolvers: "^5.1.1",
   lucide: "^0.553.0",
@@ -31,7 +31,7 @@ export const versionsPackageJson = {
   drizzleKit: "^0.31.6",
   drizzleOrm: "^0.44.7",
 
-  hono: "^4.10.4",
+  hono: "^4.10",
   honoZodOpenapi: "^1.1.4",
   honoZodValidator: "^0.7.4",
   reactEmail: "^5.0.1",
