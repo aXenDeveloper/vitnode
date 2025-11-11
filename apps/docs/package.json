@@ -55,6 +55,7 @@
     "@vitnode/config": "workspace:*",
     "@vitnode/nodemailer": "workspace:*",
     "@vitnode/resend": "workspace:*",
+    "@vitnode/node-cron": "workspace:*",
     "babel-plugin-react-compiler": "^1.0.0",
     "class-variance-authority": "^0.7.1",
     "eslint": "^9.39.1",

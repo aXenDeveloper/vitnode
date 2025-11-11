@@ -1,6 +1,5 @@
+import { type CronAdapter, handleCronJobs } from "@vitnode/core/api/lib/cron";
 import { schedule } from "node-cron";
-
-import { type CronAdapter, handleCronJobs } from "@/api/lib/cron";
 
 export const NodeCronAdapter = (): CronAdapter => {
   return {

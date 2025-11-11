@@ -20,80 +20,52 @@ Before you can use cron functionality, you need to provide an adapter to your ap
   />
 </Cards>
 
-## Custom adapter
-
-VitNode supports custom cron adapters, allowing you to integrate with various scheduling libraries or services.
+## Usage
 
 <Steps>
 <Step>
+### Create CRON file
 
-### Create your custom adapter
+```ts title="cron/clean.cron.ts"
+import { buildCron } from "@vitnode/core/api/lib/cron";
 
-As an example we will create a custom adapter using the popular `node-cron` library.
-
-```ts
-import { schedule } from "node-cron";
-import { type CronAdapter, handleCronJobs } from "@/api/lib/cron";
-
-export const NodeCronAdapter = (): CronAdapter => {
-  return {
-    schedule() {
-      schedule("*/1 * * * *", async () => {
-        await handleCronJobs(); // [!code ++]
-      });
-    }
-  };
-};
-```
-
-</Step>
-
-<Step>
-
-### Integrate the adapter into your application
-
-```ts title="src/vitnode.api.config.ts"
-import { NodeCronAdapter } from "./path/to/your/custom/node-cron.adapter";
-
-export const vitNodeApiConfig = buildApiConfig({
-  cronAdapter: NodeCronAdapter()
+export const cleanCron = buildCron({
+  name: "clean",
+  description: "Clean up expired sessions and tokens",
+  // Run every 1 hour
+  schedule: "0 * * * *",
+  handler: async c => {
+    console.log("Running cleanup cron job...");
+  },
 });
 ```
 
 </Step>
-
 <Step>
+### Register CRON in module
 
-## Restart server
+```ts title="modules/clean/clean.module.ts"
+import { buildModule } from "@vitnode/core/api/lib/module";
+import { CONFIG_PLUGIN } from "@/config";
 
-After making these changes, stop your server (if it's running) and restart it to apply the new configuration.
+// [!code ++]
+import { cleanCron } from "./cron/clean.cron";
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
-
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
-
-```bash tab="bun"
-bun dev
+export const cronModule = buildModule({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  name: "clean",
+  routes: [],
+  // [!code ++]
+  cronJobs: [cleanCron],
+});
 ```
-
-```bash tab="pnpm"
-pnpm dev
-```
-
-```bash tab="npm"
-npm run dev
-```
-
-</Tabs>
-
-That's it — your app now has a built-in task scheduler, ready to handle cron jobs with standard cron expressions.
 
 </Step>
 <Step>
 
-## Check Your Cron Jobs
+### Check Your Cron Job
 
-You can check your cron jobs in AdminCP under **Core => Advanced => Cron Jobs**.
+When your CRON job will run first time, you should see your job in AdminCP under `Core` => `Advanced` => `Cron Jobs`.
 
 </Step>
 
