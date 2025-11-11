@@ -82,21 +82,21 @@ jobs:
 
       - name: Publish canary
         if: ${{ (github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish') && github.event.inputs.release == 'canary' }}
-        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/config --filter @vitnode/blog --filter @vitnode/nodemailer --tag canary --no-git-checks --access public
+        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/config --filter @vitnode/blog --filter @vitnode/nodemailer --filter @vitnode/resend --tag canary --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish release candidate
         if: ${{ (github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish') && github.event.inputs.release == 'release-candidate' }}
-        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/config --filter @vitnode/blog --filter @vitnode/nodemailer --tag rc --no-git-checks --access public
+        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/config --filter @vitnode/blog --filter @vitnode/nodemailer --filter @vitnode/resend --tag rc --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish stable
         if: ${{ (github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish') && github.event.inputs.release == 'stable' }}
-        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/config --filter @vitnode/blog --filter @vitnode/nodemailer --tag latest --no-git-checks --access public
+        run: pnpm publish --filter create-vitnode-app --filter @vitnode/core --filter @vitnode/config --filter @vitnode/blog --filter @vitnode/nodemailer --filter @vitnode/resend --tag latest --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true

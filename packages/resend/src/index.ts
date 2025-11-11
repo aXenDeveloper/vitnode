@@ -1,6 +1,6 @@
-import { Resend } from "resend";
+import type { EmailApiPlugin } from "@vitnode/core/api/models/email";
 
-import type { EmailApiPlugin } from "@/api/models/email";
+import { Resend } from "resend";
 
 export const ResendEmailAdapter = ({
   apiKey,
