@@ -459,6 +459,9 @@ importers:
       cron-parser:
         specifier: ^5.4.0
         version: 5.4.0
+      dotenv:
+        specifier: ^17.2.3
+        version: 17.2.3
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -541,9 +544,6 @@ importers:
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
-      dotenv:
-        specifier: ^17.2.3
-        version: 17.2.3
       drizzle-kit:
         specifier: ^0.31.6
         version: 0.31.6

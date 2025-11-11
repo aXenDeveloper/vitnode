@@ -76,6 +76,7 @@ export const createPluginVitNode = async ({
       "..",
       "..",
       "..",
+      "..",
       "copy-of-vitnode-app",
       "eslint-react",
     );

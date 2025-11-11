@@ -2,7 +2,7 @@
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { VitNodeApiConfig, VitNodeConfig } from "../src/vitnode.config";
+import type { VitNodeApiConfig, VitNodeConfig } from "../src/vitnode.config.js";
 
 type ConfigType<T extends "api.config" | "config"> = T extends "config"
   ? VitNodeConfig
