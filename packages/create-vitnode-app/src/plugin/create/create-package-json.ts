@@ -11,12 +11,12 @@ const writeJson = async (path: string, data: unknown) =>
 
 export const createPluginPackageJSON = async ({
   pluginName,
-  root,
+  pluginPath,
   eslint,
 }: {
   eslint: boolean;
   pluginName: string;
-  root: string;
+  pluginPath: string;
 }) => {
   const vitnodeVersionRange = await getVitnodePackageVersion();
 
@@ -75,5 +75,5 @@ export const createPluginPackageJSON = async ({
     },
   };
 
-  await writeJson(`${root}/package.json`, pluginPkg);
+  await writeJson(`${pluginPath}/package.json`, pluginPkg);
 };

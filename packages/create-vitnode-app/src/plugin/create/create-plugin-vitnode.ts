@@ -16,13 +16,11 @@ export const createPluginVitNode = async ({
   pluginPath,
   pluginName,
   install,
-  root,
   eslint,
 }: CreatePluginCliReturn & {
   eslint: boolean;
   pluginName: string;
   pluginPath: string;
-  root: string;
 }) => {
   const packageManager = getPackageManagerFromRoot(process.cwd());
 
@@ -67,7 +65,7 @@ export const createPluginVitNode = async ({
   spinner.text = "Creating package.json...";
   await createPluginPackageJSON({
     pluginName,
-    root,
+    pluginPath,
     eslint,
   });
 
@@ -98,7 +96,7 @@ export const createPluginVitNode = async ({
     spinner.text = "Installing dependencies...";
     await installDependencies({
       packageManager,
-      cwd: root,
+      cwd: pluginPath,
     });
   }
 

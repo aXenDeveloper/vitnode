@@ -36,7 +36,6 @@ export const createPlugin = async ({
     pluginName,
     pluginPath,
     eslint,
-    root: projectPath,
     ...options,
   });
 };
