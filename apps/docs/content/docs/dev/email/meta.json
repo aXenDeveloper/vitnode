@@ -1,4 +1,10 @@
 {
   "title": "Email",
-  "pages": ["templates", "components", "---Adapters---", "..."]
+  "pages": [
+    "templates",
+    "components",
+    "---Adapters---",
+    "...",
+    "custom-adapter"
+  ]
 }

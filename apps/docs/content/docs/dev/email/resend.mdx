@@ -1,8 +1,67 @@
 ---
 title: Resend
-description: How to use Resend for sending emails in your application.
+description: Send emails using Resend with the Resend adapter.
 ---
 
-<Callout type="warn" title="This documentation is under construction! 🚧">
-  We're working hard to bring you the best documentation experience.
-</Callout>
+| Cloud        | Self-Hosted  | Links                                               |
+| ------------ | ------------ | --------------------------------------------------- |
+| ✅ Supported | ✅ Supported | [NPM Package](https://www.npmjs.com/package/resend) |
+
+## Usage
+
+<Steps>
+<Step>
+### Installation
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install resend adapter'>
+
+```bash tab="bun"
+bun i @vitnode/resend -D
+```
+
+```bash tab="pnpm"
+pnpm i @vitnode/resend -D
+```
+
+```bash tab="npm"
+npm i @vitnode/resend -D
+```
+
+</Tabs>
+
+</Step>
+<Step>
+### Import the adapter
+
+```ts title="vitnode.api.config.ts"
+// [!code ++]
+import { ResendEmailAdapter } from "@vitnode/resend";
+import { buildApiConfig } from "@vitnode/core/vitnode.config";
+
+export const vitNodeApiConfig = buildApiConfig({
+  email: {
+    // [!code ++:4]
+    adapter: ResendEmailAdapter({
+      apiKey: process.env.RESEND_API_KEY,
+      from: process.env.RESEND_FROM_EMAIL,
+    }),
+  },
+});
+```
+
+</Step>
+<Step>
+
+### Environment Variables
+
+Add the following environment variables to your `.env` file:
+
+```bash title=".env"
+RESEND_API_KEY=your_resend_api_key
+RESEND_FROM_EMAIL=your_verified_resend_email
+```
+
+</Step>
+</Steps>

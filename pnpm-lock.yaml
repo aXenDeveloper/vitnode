@@ -87,6 +87,9 @@ importers:
       '@vitnode/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@vitnode/nodemailer':
+        specifier: workspace:*
+        version: link:../../packages/nodemailer
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
@@ -196,6 +199,15 @@ importers:
       '@vitnode/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@vitnode/node-cron':
+        specifier: workspace:*
+        version: link:../../packages/node-cron
+      '@vitnode/nodemailer':
+        specifier: workspace:*
+        version: link:../../packages/nodemailer
+      '@vitnode/resend':
+        specifier: workspace:*
+        version: link:../../packages/resend
       babel-plugin-react-compiler:
         specifier: ^1.0.0
         version: 1.0.0
@@ -313,6 +325,102 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/node-cron:
+    dependencies:
+      node-cron:
+        specifier: ^4.2.1
+        version: 4.2.1
+    devDependencies:
+      '@swc/cli':
+        specifier: ^0.7.9
+        version: 0.7.9(@swc/core@1.15.1)(chokidar@4.0.3)
+      '@swc/core':
+        specifier: ^1.15.1
+        version: 1.15.1
+      '@vitnode/config':
+        specifier: workspace:*
+        version: link:../config
+      '@vitnode/core':
+        specifier: workspace:*
+        version: link:../vitnode
+      concurrently:
+        specifier: ^9.2.1
+        version: 9.2.1
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.1(jiti@2.6.1)
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/nodemailer:
+    dependencies:
+      nodemailer:
+        specifier: ^7.0.10
+        version: 7.0.10
+    devDependencies:
+      '@swc/cli':
+        specifier: ^0.7.9
+        version: 0.7.9(@swc/core@1.15.1)(chokidar@4.0.3)
+      '@swc/core':
+        specifier: ^1.15.1
+        version: 1.15.1
+      '@types/nodemailer':
+        specifier: ^7.0.3
+        version: 7.0.3
+      '@vitnode/config':
+        specifier: workspace:*
+        version: link:../config
+      '@vitnode/core':
+        specifier: workspace:*
+        version: link:../vitnode
+      concurrently:
+        specifier: ^9.2.1
+        version: 9.2.1
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.1(jiti@2.6.1)
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/resend:
+    dependencies:
+      resend:
+        specifier: ^6.4.2
+        version: 6.4.2(@react-email/render@2.0.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0))
+    devDependencies:
+      '@swc/cli':
+        specifier: ^0.7.9
+        version: 0.7.9(@swc/core@1.15.1)(chokidar@4.0.3)
+      '@swc/core':
+        specifier: ^1.15.1
+        version: 1.15.1
+      '@vitnode/config':
+        specifier: workspace:*
+        version: link:../config
+      '@vitnode/core':
+        specifier: workspace:*
+        version: link:../vitnode
+      concurrently:
+        specifier: ^9.2.1
+        version: 9.2.1
+      eslint:
+        specifier: ^9.39.1
+        version: 9.39.1(jiti@2.6.1)
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   packages/vitnode:
     dependencies:
       '@dnd-kit/core':
@@ -360,9 +468,6 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      nodemailer:
-        specifier: ^7.0.10
-        version: 7.0.10
       postgres:
         specifier: ^3.4.7
         version: 3.4.7
@@ -375,9 +480,6 @@ importers:
       react-scan:
         specifier: ^0.4.3
         version: 0.4.3(@types/react@19.2.2)(next@16.0.1(@babel/core@7.28.5)(@playwright/test@1.56.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(rollup@4.53.1)
-      resend:
-        specifier: ^6.4.2
-        version: 6.4.2(@react-email/render@2.0.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0))
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0
@@ -418,9 +520,6 @@ importers:
       '@types/node':
         specifier: ^24.10.0
         version: 24.10.0
-      '@types/nodemailer':
-        specifier: ^7.0.3
-        version: 7.0.3
       '@types/react':
         specifier: ^19.2.2
         version: 19.2.2
@@ -469,9 +568,6 @@ importers:
       next-intl:
         specifier: ^4.5.0
         version: 4.5.0(next@16.0.1(@babel/core@7.28.5)(@playwright/test@1.56.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
-      node-cron:
-        specifier: ^4.2.1
-        version: 4.2.1
       react:
         specifier: ^19.2.0
         version: 19.2.0

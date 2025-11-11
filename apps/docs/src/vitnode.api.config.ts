@@ -1,10 +1,11 @@
 import { blogApiPlugin } from "@vitnode/blog/config.api";
-import { NodeCronAdapter } from "@vitnode/core/api/adapters/cron/node-cron.adapter";
-import { NodemailerEmailAdapter } from "@vitnode/core/api/adapters/email/nodemailer";
 import { DiscordSSOApiPlugin } from "@vitnode/core/api/adapters/sso/discord";
+// import { ResendEmailAdapter } from "@vitnode/resend";
 import { FacebookSSOApiPlugin } from "@vitnode/core/api/adapters/sso/facebook";
 import { GoogleSSOApiPlugin } from "@vitnode/core/api/adapters/sso/google";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
+import { NodeCronAdapter } from "@vitnode/node-cron";
+import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
 import { drizzle } from "drizzle-orm/postgres-js";
 
 export const POSTGRES_URL =
@@ -38,6 +39,10 @@ export const vitNodeApiConfig = buildApiConfig({
       password: process.env.NODE_MAILER_PASSWORD,
       user: process.env.NOD_EMAILER_USER,
     }),
+    // adapter: ResendEmailAdapter({
+    //   apiKey: process.env.RESEND_API_KEY,
+    //   from: process.env.RESEND_FROM_EMAIL,
+    // }),
     logo: {
       text: "VitNode Email Test",
       src: "http://localhost:3000/logo_vitnode_dark.png",

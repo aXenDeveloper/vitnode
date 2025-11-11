@@ -32,7 +32,7 @@ export const testRoute = buildRoute({
   },
   handler: async c => {
     const user = await new UserModel().getUserById({
-      id: 3,
+      id: 2,
       c,
     });
 

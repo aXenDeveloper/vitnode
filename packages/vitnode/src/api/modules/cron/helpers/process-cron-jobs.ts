@@ -1,12 +1,12 @@
 import type { drizzle } from "drizzle-orm/postgres-js";
 
 import { eq, inArray } from "drizzle-orm";
-import { validate } from "node-cron";
 
 import type { CronJobConfig } from "@/api/lib/cron";
 
 import { core_cron } from "@/database/cron";
 import { shouldCronJobRun } from "@/lib/api/should-cron-job-run";
+import { validateCronSchedule } from "@/lib/api/validate-cron-schedule";
 
 interface CronJobFromDb {
   createdAt: Date;
@@ -82,7 +82,7 @@ export function processCronJobs(
   );
 
   for (const job of cronJobs) {
-    if (!validate(job.schedule)) {
+    if (!validateCronSchedule(job.schedule)) {
       // eslint-disable-next-line no-console
       console.warn(
         `\x1b[34m[VitNode]\x1b[0m \x1b[33mInvalid cron schedule for job "${job.pluginId}:${job.module}:${job.name}"\x1b[0m: ${job.schedule}`,

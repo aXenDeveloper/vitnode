@@ -7,26 +7,13 @@
     "moduleResolution": "bundler",
     "rootDir": "./",
     "outDir": "./dist",
-    "jsx": "react-jsx",
-    "emitDeclarationOnly": false,
+    "emitDeclarationOnly": true,
     "declaration": true,
     "declarationMap": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
     "paths": {
       "@/*": ["./src/*"]
     }
   },
   "exclude": ["node_modules"],
-  "include": [
-    "src",
-    "scripts",
-    "src/emails",
-    "vitest.config.ts",
-    "tsup.config.ts",
-    "global.d.ts"
-  ]
+  "include": ["src"]
 }
