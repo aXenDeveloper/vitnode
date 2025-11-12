@@ -1,5 +1,5 @@
 import { readdir, readFile, writeFile } from "fs/promises";
-import { join } from "path";
+import { dirname, join } from "path";
 
 import type { PackageJSON } from "../../helpers/packages-json.js";
 
@@ -53,8 +53,9 @@ const findPackageJsonFiles = async (
  * 1. Finds all package.json files in the workspace (excluding node_modules and dist)
  * 2. Identifies packages that have @vitnode/core as a dependency
  * 3. Adds the new plugin as a dependency with the appropriate workspace reference
- * 4. Skips packages in the plugins folder (except the new plugin itself)
- * 5. Respects the package manager's workspace protocol
+ * 4. Skips other packages in the same parent directory as the plugin (e.g., other plugins)
+ * 5. Works with any folder structure (apps/, applications/, sandbox/, etc.)
+ * 6. Respects the package manager's workspace protocol
  *
  * @param packageManager - The package manager being used (pnpm, npm, yarn, bun)
  * @param pluginName - The name of the plugin to add (e.g., "@my-org/my-plugin")
@@ -71,17 +72,19 @@ export const addPluginToWorkspace = async ({
   // Find all package.json files in the workspace
   const packageJsonFiles = await findPackageJsonFiles(rootPath);
 
+  // Get the parent directory of the plugin (e.g., "plugins", "packages", etc.)
+  const pluginParentDir = dirname(pluginPath);
+
   for (const packageJsonPath of packageJsonFiles) {
     // Skip if this is the plugin's own package.json
     if (packageJsonPath === join(pluginPath, "package.json")) {
       continue;
     }
 
-    // Skip if this is in the plugins folder (excluding the new plugin itself)
-    if (
-      packageJsonPath.includes("/plugins/") &&
-      !packageJsonPath.startsWith(pluginPath)
-    ) {
+    // Skip other packages in the same parent directory as the plugin
+    // (e.g., if plugin is in "plugins/my-plugin", skip "plugins/other-plugin")
+    const packageDir = dirname(dirname(packageJsonPath)); // Get parent of package folder
+    if (packageDir === pluginParentDir) {
       continue;
     }
 
