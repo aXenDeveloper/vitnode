@@ -9,10 +9,10 @@ Before you can use email functionality, you need to provide an adapter to your a
 
 <Cards>
   <Card title="Resend" href="/docs/dev/email/resend" />
-  <Card title="SMTP" href="/docs/dev/email/smtp" />
+  <Card title="Nodemailer" href="/docs/dev/email/nodemailer" />
 </Cards>
 
-or create your own [custom email adapter](/docs/dev/email/overview#custom-email-adapter)...
+or create your own [custom email adapter](/docs/dev/email/custom-adapter).
 
 ## Usage
 
@@ -24,10 +24,10 @@ import { buildRoute } from "@vitnode/core/api/lib/route";
 import { UserModel } from "@vitnode/core/api/models/user";
 
 export const testRoute = buildRoute({
-  handler: async (c) => {
+  handler: async c => {
     const user = await new UserModel().getUserById({
       id: 3,
-      c
+      c,
     });
 
     if (!user) throw new Error("User not found");
@@ -36,11 +36,11 @@ export const testRoute = buildRoute({
     await c.get("email").send({
       subject: "Test Email",
       content: () => "This is a test email.",
-      user
+      user,
     });
 
     return c.text("test");
-  }
+  },
 });
 ```
 
@@ -51,96 +51,16 @@ import { z } from "zod";
 import { buildRoute } from "@vitnode/core/api/lib/route";
 
 export const testRoute = buildRoute({
-  handler: async (c) => {
+  handler: async c => {
     // [!code ++:6]
     await c.get("email").send({
       to: "test@test.com",
       subject: "Test Email",
       content: () => "This is a test email.",
-      locale: "en"
+      locale: "en",
     });
 
     return c.text("test");
-  }
+  },
 });
 ```
-
-## Custom Email Adapter
-
-Want to create your own email adapter? You can do it by implementing the `EmailApiPlugin` interface. This allows you to define how emails are sent in your application.
-
-<Steps>
-<Step>
-### Create adapter
-
-Here is your template for a custom email adapter.
-
-```ts title="src/utils/email/mailer.ts"
-import type { EmailApiPlugin } from "@vitnode/core/api/models/email";
-
-export const MailerEmailAdapter = (): EmailApiPlugin => {};
-```
-
-</Step>
-<Step>
-
-### Add config
-
-If you want to provide config for you adapter, you can do it like this:
-
-```ts title="src/utils/email/mailer.ts"
-import type { EmailApiPlugin } from "@vitnode/core/api/models/email";
-
-export const MailerEmailAdapter = ({
-  // [!code ++:13]
-  host = "",
-  port = 587,
-  secure = false,
-  user = "",
-  password = "",
-  from = ""
-}: {
-  from: string | undefined;
-  host: string | undefined;
-  password: string | undefined;
-  port?: number;
-  secure?: boolean;
-  user: string | undefined;
-}): EmailApiPlugin => {};
-```
-
-</Step>
-
-<Step>
-
-### Add `sendEmail()` method
-
-Implement the `sendEmail()` method to send emails using your custom logic. You can use any email sending library or service.
-
-```ts title="src/utils/email/mailer.ts"
-import type { EmailApiPlugin } from "@vitnode/core/api/models/email";
-
-export const MailerEmailAdapter = ({
-  host = "",
-  port = 587,
-  secure = false,
-  user = "",
-  password = "",
-  from = ""
-}: {
-  from: string | undefined;
-  host: string | undefined;
-  password: string | undefined;
-  port?: number;
-  secure?: boolean;
-  user: string | undefined;
-}): EmailApiPlugin => {
-  // [!code ++:3]
-  return {
-    sendEmail: async ({ metadata, to, subject, html, replyTo, text }) => {}
-  };
-};
-```
-
-</Step>
-</Steps>

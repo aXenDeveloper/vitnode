@@ -18,7 +18,7 @@ import {
   isDirectoryEmpty,
   routeKey,
   type SourceConfig,
-} from "./shared/file-utils";
+} from "./shared/file-utils.js";
 
 /**
  * Helper: detect if an app path is web, api, or null

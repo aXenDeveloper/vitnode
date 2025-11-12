@@ -1,5 +1,5 @@
-import { NodemailerEmailAdapter } from "@vitnode/core/api/adapters/email/nodemailer";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
+import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
 import { config } from "dotenv";
 import { drizzle } from "drizzle-orm/postgres-js";
 

@@ -1,4 +1,4 @@
 {
   "title": "CRON Jobs",
-  "pages": ["rest-api", "..."]
+  "pages": ["rest-api", "...", "custom-adapter"]
 }

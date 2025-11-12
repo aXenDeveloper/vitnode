@@ -1,21 +1,11 @@
 // @ts-check
 
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 import eslint from "@eslint/js";
-import eslintReact from "@eslint-react/eslint-plugin";
-import jsxA11y from "eslint-plugin-jsx-a11y";
 import perfectionist from "eslint-plugin-perfectionist";
 import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended";
-import reactPlugin from "eslint-plugin-react";
-import hooksPlugin from "eslint-plugin-react-hooks";
 import tsEslint from "typescript-eslint";
-import reactYouMightNotNeedAnEffect from "eslint-plugin-react-you-might-not-need-an-effect";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default [
-  reactYouMightNotNeedAnEffect.configs.recommended,
   {
     ignores: [
       "next-env.d.ts",
@@ -36,43 +26,13 @@ export default [
     ],
   },
   eslint.configs.recommended,
-  eslintReact.configs.recommended,
   ...tsEslint.configs.stylisticTypeChecked,
   ...tsEslint.configs.strictTypeChecked,
   eslintPluginPrettierRecommended,
-  jsxA11y.flatConfigs.recommended,
-  reactPlugin.configs.flat.recommended,
   perfectionist.configs["recommended-natural"],
-  {
-    files: ["**/*.{js,mjs,cjs,ts,jsx,tsx}"],
-    settings: {
-      react: {
-        version: "detect",
-      },
-    },
-    languageOptions: {
-      parserOptions: {
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-    },
-  },
-  {
-    plugins: {
-      "react-hooks": hooksPlugin,
-    },
-    rules: {
-      "react/react-in-jsx-scope": "off",
-      ...hooksPlugin.configs.recommended.rules,
-    },
-  },
   { files: ["**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}"] },
   {
     rules: {
-      "react-hooks/exhaustive-deps": "off",
-      "@eslint-react/no-context-provider": "off",
-      "@eslint-react/no-unstable-default-props": "off",
       "perfectionist/sort-array-includes": "warn",
       "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/no-confusing-void-expression": "off",
@@ -144,28 +104,8 @@ export default [
       "no-restricted-imports": [
         "error",
         {
-          name: "next/link",
-          message: "Please import from `vitnode-frontend/navigation` instead.",
-        },
-        {
           name: "drizzle-orm/mysql-core",
           message: "Please import from `drizzle-orm/pg-core` instead.",
-        },
-        {
-          name: "next/navigation",
-          importNames: [
-            "redirect",
-            "permanentRedirect",
-            "useRouter",
-            "usePathname",
-          ],
-          message: "Please import from `vitnode-frontend/navigation` instead.",
-        },
-        {
-          name: "next/router",
-          importNames: ["useRouter"],
-          message:
-            "This import is from Page router. Please import from `vitnode-frontend/navigation` instead.",
         },
       ],
     },

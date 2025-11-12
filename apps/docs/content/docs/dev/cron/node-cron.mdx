@@ -5,10 +5,9 @@ description: In-memory tiny task scheduler in pure JavaScript for node.js based 
 
 This adapter lets you run scheduled jobs directly inside your Node.js app. It's simple, lightweight, and doesn't require any external services — great for when you just need cron tasks running locally or in memory.
 
-<Callout type="warn" title="Only Self-Hosted supported!">
-  This documentation is for self-hosted VitNode instances only. You cannot use this if you are
-  planning to deploy your application to the cloud.
-</Callout>
+| Cloud            | Self-Hosted  | Links                                                  |
+| ---------------- | ------------ | ------------------------------------------------------ |
+| ❌ Not Supported | ✅ Supported | [NPM Package](https://www.npmjs.com/package/node-cron) |
 
 <Steps>
 <Step>
@@ -16,18 +15,18 @@ This adapter lets you run scheduled jobs directly inside your Node.js app. It's 
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install node-cron adapter'>
 
 ```bash tab="bun"
-bun i node-cron
+bun i @vitnode/node-cron -D
 ```
 
 ```bash tab="pnpm"
-pnpm i node-cron
+pnpm i @vitnode/node-cron -D
 ```
 
 ```bash tab="npm"
-npm i node-cron
+npm i @vitnode/node-cron -D
 ```
 
 </Tabs>
@@ -37,12 +36,13 @@ npm i node-cron
 ## Usage
 
 ```ts title="src/vitnode.api.config.ts"
-import { NodeCronAdapter } from "@vitnode/core/api/adapters/cron/node-cron.adapter";
-```
+// [!code ++]
+import { NodeCronAdapter } from "@vitnode/node-cron";
+import { buildApiConfig } from "@vitnode/core/vitnode.config";
 
-```ts title="src/vitnode.api.config.ts"
 export const vitNodeApiConfig = buildApiConfig({
-  cronAdapter: NodeCronAdapter()
+  // [!code ++]
+  cronAdapter: NodeCronAdapter(),
 });
 ```
 
@@ -54,7 +54,7 @@ export const vitNodeApiConfig = buildApiConfig({
 
 After making these changes, stop your server (if it's running) and restart it to apply the new configuration.
 
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Restart your dev server'>
 
 ```bash tab="bun"
 bun dev
@@ -77,7 +77,7 @@ That's it — your app now has a built-in task scheduler, ready to handle cron j
 
 ## Check Your Cron Jobs
 
-You can check your cron jobs in AdminCP under **Core => Advanced => Cron Jobs**.
+You can check your cron jobs in AdminCP under `Core` => `Advanced` => `Cron Jobs`.
 
 </Step>
 

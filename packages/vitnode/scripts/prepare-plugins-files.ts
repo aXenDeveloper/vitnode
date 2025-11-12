@@ -3,7 +3,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 
-import { getConfig } from "./get-config";
+import { getConfig } from "./get-config.js";
 import {
   buildInitialRouteMap,
   copyDirectoryRecursive,
@@ -11,7 +11,7 @@ import {
   findRepoRoot,
   isDirectoryEmpty,
   type SourceConfig,
-} from "./shared/file-utils";
+} from "./shared/file-utils.js";
 
 export const preparePluginsFiles = async (flag?: string) => {
   // Detect which config file to load based on flag or auto-detection

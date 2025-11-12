@@ -12,7 +12,7 @@ export default [
     },
   },
   {
-    ignores: ["copy-of-vitnode-app"],
+    ignores: ["copy-of-vitnode-app", "copy-of-vitnode-plugin"],
   },
   {
     languageOptions: {

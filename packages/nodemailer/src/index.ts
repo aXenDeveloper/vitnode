@@ -1,6 +1,6 @@
-import { createTransport } from "nodemailer";
+import type { EmailApiPlugin } from "@vitnode/core/api/models/email";
 
-import type { EmailApiPlugin } from "@/api/models/email";
+import { createTransport } from "nodemailer";
 
 export const NodemailerEmailAdapter = ({
   host = "",

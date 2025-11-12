@@ -1,6 +1,6 @@
 {
   "name": "api",
-  "version": "1.2.0-canary.60",
+  "version": "1.2.0-canary.68",
   "private": true,
   "type": "module",
   "scripts": {
@@ -19,20 +19,21 @@
     "@vitnode/core": "workspace:*",
     "drizzle-kit": "^0.31.6",
     "drizzle-orm": "^0.44.7",
-    "hono": "^4.10.4",
-    "next-intl": "^4.5.0",
+    "hono": "^4.10.5",
+    "next-intl": "^4.5.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "use-intl": "^4.5.0",
+    "use-intl": "^4.5.1",
     "zod": "^4.1.12"
   },
   "devDependencies": {
     "@hono/node-server": "^1.19.6",
     "@react-email/components": "^1.0.0",
     "@types/node": "^24.10.0",
-    "@types/react": "^19.2.2",
+    "@types/react": "^19.2.3",
     "@types/react-dom": "^19.2.2",
     "@vitnode/config": "workspace:*",
+    "@vitnode/nodemailer": "workspace:*",
     "dotenv": "^17.2.3",
     "eslint": "^9.39.1",
     "react-email": "^5.0.1",

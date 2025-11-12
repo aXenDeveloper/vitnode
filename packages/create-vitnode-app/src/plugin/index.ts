@@ -29,12 +29,13 @@ export const createPlugin = async ({
     });
   }
 
-  const { pluginName, pluginPath } = await validationProjectForPlugin(name);
+  const { pluginName, pluginPath, eslint } =
+    await validationProjectForPlugin(name);
   const options = await createPluginQuestionsCli(program);
   await createPluginVitNode({
     pluginName,
     pluginPath,
-    root: projectPath,
+    eslint,
     ...options,
   });
 };

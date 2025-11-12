@@ -9,6 +9,20 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/tests/setup.ts"],
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/build/**",
+      "**/.next/**",
+      "**/.turbo/**",
+      "**/coverage/**",
+      "**/src/tests/**", // Assuming setup files aren't tests
+      "**/src/emails/**",
+      "**/config/**",
+      "**/scripts/**",
+      "**/*.config.*",
+      "**/*.d.ts",
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],

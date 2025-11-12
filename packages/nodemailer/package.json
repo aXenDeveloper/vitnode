@@ -1,0 +1,46 @@
+{
+  "name": "@vitnode/nodemailer",
+  "version": "1.2.0-canary.68",
+  "description": "Nodemailer integration package for VitNode, enabling email functionalities.",
+  "author": "VitNode Team",
+  "license": "MIT",
+  "homepage": "https://vitnode.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aXenDeveloper/vitnode.git",
+    "directory": "packages/nodemailer"
+  },
+  "keywords": [
+    "vitnode",
+    "nodemailer",
+    "smtp"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "scripts": {
+    "build:plugins": "tsc && swc src -d dist --config-file .swcrc && tsc-alias -p tsconfig.json",
+    "dev:plugins": "concurrently \"tsc -w --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\" \"tsc-alias -w\"",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "nodemailer": "^7.0.10"
+  },
+  "devDependencies": {
+    "@swc/cli": "^0.7.9",
+    "@swc/core": "^1.15.1",
+    "@types/nodemailer": "^7.0.3",
+    "@vitnode/config": "workspace:*",
+    "@vitnode/core": "workspace:*",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.39.1",
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.9.3"
+  }
+}

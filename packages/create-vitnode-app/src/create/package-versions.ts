@@ -1,0 +1,47 @@
+export const versionsPackageJson = {
+  typesNode: "^24",
+  typesReact: "^19.2",
+  typesReactDom: "^19.2",
+  typesBun: "latest",
+
+  turbo: "^2.6",
+  typescript: "^5.9",
+  tsx: "^4.20.6",
+  tscAlias: "^1.8.16",
+  eslint: "^9.39.1",
+  prettier: "^3.6.2",
+  prettierTailwind: "^0.6.14",
+  tailwind: "^4.1.17",
+  tailwindPostcss: "^4.1.17",
+  postcss: "^8.5.6",
+  twAnimateCss: "^1.4.0",
+
+  react: "^19.2",
+  reactDom: "^19.2",
+  nextSingle: "^16.0.1",
+  nextWebInMonorepo: "^15.4.6",
+  nextIntl: "^4.5",
+  useIntl: "^4.5",
+  rhf: "^7.66.0",
+  rhfResolvers: "^5.1.1",
+  lucide: "^0.553.0",
+  sonner: "^2.0.7",
+  dotenv: "^17.2.2",
+
+  drizzleKit: "^0.31.6",
+  drizzleOrm: "^0.44.7",
+
+  hono: "^4.10",
+  honoZodOpenapi: "^1.1.4",
+  honoZodValidator: "^0.7.4",
+  reactEmail: "^5.0.1",
+  reactEmailComponents: "^1.0.0",
+  zod: "^4.1.12",
+
+  cva: "^0.7.1",
+  babelPluginReactCompiler: "^1.0.0",
+
+  swcCli: "^0.7.9",
+  swcCore: "^1.15.1",
+  concurrently: "^9.2.1",
+};

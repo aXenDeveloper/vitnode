@@ -53,6 +53,8 @@ export const validationProjectForPlugin = async (projectPath: string) => {
     process.exit(1);
   }
 
+  let eslint = false;
+
   try {
     const packageJson: PackageJSON = JSON.parse(
       await readFile(packageJsonPath, "utf-8"),
@@ -70,6 +72,12 @@ export const validationProjectForPlugin = async (projectPath: string) => {
       );
       process.exit(1);
     }
+
+    eslint = !!(
+      packageJson.dependencies?.eslint ??
+      packageJson.devDependencies?.eslint ??
+      false
+    );
   } catch (error) {
     console.error(
       `${color.red("Error:")} Failed to read or parse ${color.cyan("package.json")}.`,
@@ -124,5 +132,5 @@ export const validationProjectForPlugin = async (projectPath: string) => {
     process.exit(1);
   }
 
-  return { pluginName, pluginPath };
+  return { pluginName, pluginPath, eslint };
 };

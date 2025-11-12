@@ -5,6 +5,10 @@ description: Run cron jobs by triggering REST API endpoints from an external sch
 
 This method lets you use external services to manage and run your cron jobs through simple HTTP requests. It's flexible and works with many providers, so you can pick the scheduling tool that best fits your infrastructure.
 
+| Cloud        | Self-Hosted  |
+| ------------ | ------------ |
+| ✅ Supported | ✅ Supported |
+
 <Steps>
 <Step>
 ## Add a Secret Key
@@ -18,7 +22,8 @@ CRON_SECRET=your_secret_key
 ```
 
 <Callout>
-  We recommend using a random string of at least **16 characters** for better security.
+  We recommend using a random string of at least **16 characters** for better
+  security.
 </Callout>
 
 </Step>
@@ -34,11 +39,16 @@ Next, configure a scheduler that will send HTTP requests to your cron endpoint. 
 - [Google Cloud Functions with Cloud Scheduler](https://cloud.google.com/scheduler/docs/tut-pub-sub)
 - [EasyCron](https://www.easycron.com/)
 
-<Callout type="warn" title="Important">
-  You need to set schedule for every minute to ensure that your cron jobs are executed on time.
+<Callout type="warn" title="Run Frequency">
+  You need to set schedule for every minute to ensure that your cron jobs are
+  executed on time. Some schedulers may have limitations on minimum intervals,
+  so choose one that fits your needs.
+</Callout>
 
-Make sure to include the `Authorization` header with the value `Bearer {your_key}` in your requests, where `{your_key}` is the value of the `CRON_SECRET` variable you set in your `.env` file.
-
+<Callout type="error" title="Authentication Required">
+  Make sure to include the `Authorization` header with the value `Bearer{" "}
+  {your_key}` in your requests, where `{your_key}` is the value of the
+  `CRON_SECRET` variable you set in your `.env` file.
 </Callout>
 
 </Step>
@@ -61,7 +71,7 @@ Replace `https://your-domain.com/api/cron` with your actual domain and `{{your_k
 
 ## Check Your Cron Jobs
 
-You can check your cron jobs in AdminCP under **Core => Advanced => Cron Jobs**.
+You can check your cron jobs in AdminCP under `Core` => `Advanced` => `Cron Jobs`.
 
 </Step>
 

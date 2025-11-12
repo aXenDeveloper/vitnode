@@ -1,6 +1,6 @@
 {
   "name": "create-vitnode-app",
-  "version": "1.2.0-canary.60",
+  "version": "1.2.0-canary.68",
   "description": "Create a new VitNode app in seconds.",
   "author": "VitNode Team",
   "license": "MIT",
@@ -14,6 +14,14 @@
   "bin": {
     "create-vitnode-app": "dist/src/index.js"
   },
+  "files": [
+    "dist",
+    "copy-of-vitnode-app",
+    "copy-of-vitnode-plugin",
+    "README.md",
+    "eslint",
+    "eslint-react"
+  ],
   "scripts": {
     "build:scripts": "tsc && node dist/src/prepare/prepare.js",
     "start:scripts": "node dist/src/index.js",

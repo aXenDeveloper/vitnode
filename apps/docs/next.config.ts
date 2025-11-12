@@ -9,6 +9,8 @@ const withBundleAnalyzer = nextAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
-const nextConfig: NextConfig = {};
+const nextConfig: NextConfig = {
+  reactCompiler: true,
+};
 
 export default withBundleAnalyzer(withMDX(vitNodeNextConfig(nextConfig)));
