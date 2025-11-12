@@ -10,6 +10,7 @@ import type { CreatePluginCliReturn } from "../questions.js";
 import { getPackageManagerFromRoot } from "../../helpers/get-package-manager-from-root.js";
 import { installDependencies } from "../../helpers/install-dependencies.js";
 import { isFolderEmpty } from "../../helpers/is-folder-empty.js";
+import { addPluginToWorkspace } from "./add-plugin-to-workspace.js";
 import { createPluginPackageJSON } from "./create-package-json.js";
 
 export const createPluginVitNode = async ({
@@ -92,6 +93,25 @@ export const createPluginVitNode = async ({
 
     await cp(templateEslintPath, pluginPath, { recursive: true });
   }
+
+  // Find the root of the monorepo (where turbo.json is located)
+  let rootPath = process.cwd();
+  let currentDir = rootPath;
+  while (currentDir !== dirname(currentDir)) {
+    if (existsSync(join(currentDir, "turbo.json"))) {
+      rootPath = currentDir;
+      break;
+    }
+    currentDir = dirname(currentDir);
+  }
+
+  spinner.text = "Adding plugin to workspace packages...";
+  await addPluginToWorkspace({
+    packageManager,
+    pluginName,
+    pluginPath,
+    rootPath,
+  });
 
   if (install) {
     spinner.text = "Installing dependencies...";
