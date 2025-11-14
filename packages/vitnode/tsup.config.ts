@@ -9,10 +9,9 @@ export default defineConfig({
   format: "esm",
   target: "esnext",
   platform: "node",
-  noExternal: ["fs"],
+  external: ["jiti"],
   banner: {
-    js: `import 'tsx/esm';
-import { createRequire } from 'module';
+    js: `import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 `,
   },

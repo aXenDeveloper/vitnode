@@ -556,6 +556,9 @@ importers:
       hono:
         specifier: ^4.10.5
         version: 4.10.5
+      jiti:
+        specifier: ^2.6.1
+        version: 2.6.1
       jsdom:
         specifier: ^27.1.0
         version: 27.1.0
