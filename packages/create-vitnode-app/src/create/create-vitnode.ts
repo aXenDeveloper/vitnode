@@ -61,6 +61,7 @@ export const createVitNode = async ({
 
   spinner.text = "Preparing the project structure...";
   if (monorepo || mode === "apiMonorepo") {
+    monorepo = true;
     const dirsToCreate: string[] = [];
     if (mode === "apiMonorepo" || (monorepo && mode === "onlyApi")) {
       dirsToCreate.push(monorepoStructure.api);
@@ -143,11 +144,25 @@ export const createVitNode = async ({
 
   if (eslint) {
     spinner.text = "Copying ESLint & Prettier files...";
-    const eslintTarget =
-      monorepo && mode === "singleApp" ? monorepoStructure.web : root;
-    await cp(join(templatePath, "eslint"), eslintTarget, {
-      recursive: true,
-    });
+    if (mode === "onlyApi") {
+      await cp(join(templatePath, "eslint"), root, {
+        recursive: true,
+      });
+    } else if (mode === "singleApp") {
+      const target = monorepo ? monorepoStructure.web : root;
+      await cp(join(templatePath, "eslint-react"), target, {
+        recursive: true,
+      });
+    } else if (mode === "apiMonorepo") {
+      await Promise.all([
+        cp(join(templatePath, "eslint"), monorepoStructure.api, {
+          recursive: true,
+        }),
+        cp(join(templatePath, "eslint-react"), monorepoStructure.web, {
+          recursive: true,
+        }),
+      ]);
+    }
   }
 
   spinner.text = "Renaming special files...";

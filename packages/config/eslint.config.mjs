@@ -23,6 +23,7 @@ export default [
       "global.d.ts",
       "tsup.config.ts",
       "*.test.tsx",
+      "drizzle.config.ts",
     ],
   },
   eslint.configs.recommended,
