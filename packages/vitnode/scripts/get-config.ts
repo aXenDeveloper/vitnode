@@ -1,12 +1,16 @@
 /* eslint-disable no-console */
-import { join } from "node:path";
+import { register } from "node:module";
 import { pathToFileURL } from "node:url";
+import { join } from "node:path";
 
 import type { VitNodeApiConfig, VitNodeConfig } from "../src/vitnode.config.js";
 
 type ConfigType<T extends "api.config" | "config"> = T extends "config"
   ? VitNodeConfig
   : VitNodeApiConfig;
+
+// Register tsx loader once
+register("tsx/esm", pathToFileURL("./"));
 
 export const getConfig = async <T extends "api.config" | "config">({
   type = "config" as T,
