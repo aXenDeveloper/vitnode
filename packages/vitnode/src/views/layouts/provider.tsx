@@ -1,5 +1,6 @@
 "use client";
 
+import { ProgressProvider } from "@bprogress/next/app";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import React from "react";
@@ -13,16 +14,11 @@ import { Toaster } from "../../components/ui/sonner";
 
 export const RootProvider = ({
   children,
-  theme,
   toaster,
-  debug,
+  config: { debug, theme, progressBar },
 }: {
   children: React.ReactNode;
-  debug?: VitNodeConfig["debug"];
-  theme?: Omit<
-    React.ComponentProps<typeof ThemeProvider>,
-    "attribute" | "disableTransitionOnChange" | "enableSystem"
-  >;
+  config: VitNodeConfig;
   toaster?: React.ComponentProps<typeof Toaster>;
 }) => {
   React.useEffect(() => {
@@ -59,7 +55,18 @@ export const RootProvider = ({
           position={toaster?.position ?? "top-center"}
           {...toaster}
         />
-        {children}
+        <ProgressProvider
+          color={progressBar?.color ?? "var(--primary)"}
+          height={progressBar?.height ?? "4px"}
+          options={{
+            showSpinner: progressBar?.options?.showSpinner ?? false,
+            ...progressBar,
+          }}
+          shallowRouting={progressBar?.shallowRouting ?? true}
+          {...progressBar}
+        >
+          {children}
+        </ProgressProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

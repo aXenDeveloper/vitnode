@@ -1,6 +1,8 @@
+import type { ProgressProvider } from "@bprogress/next/app";
 import type { drizzle } from "drizzle-orm/postgres-js";
 import type { ThemeProvider } from "next-themes";
 import type { IRateLimiterOptions } from "rate-limiter-flexible";
+import type React from "react";
 
 import type { CronAdapter } from "./api/lib/cron";
 import type { BuildPluginApiReturn } from "./api/lib/plugin";
@@ -26,6 +28,7 @@ export interface VitNodeConfig<
   };
   metadata: VitNodeApiConfig["metadata"];
   plugins: BuildPluginReturn[];
+  progressBar?: React.ComponentProps<typeof ProgressProvider>;
   theme?: Omit<
     React.ComponentProps<typeof ThemeProvider>,
     "attribute" | "disableTransitionOnChange" | "enableSystem"
