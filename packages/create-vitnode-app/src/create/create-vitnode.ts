@@ -284,17 +284,16 @@ export const createVitNode = async ({
     let readmeContent = await readFile(join(root, "README.md"), "utf-8");
     readmeContent = readmeContent.replaceAll("pnpm", packageManager);
 
+    // Update README.md with start URLs
+    let startUrlsText = "[http://localhost:3000](http://localhost:3000)";
     if (mode === "onlyApi") {
-      readmeContent = readmeContent.replaceAll(
-        "http://localhost:3000",
-        "http://localhost:8080",
-      );
+      startUrlsText = "[http://localhost:8080](http://localhost:8080)";
     } else if (mode === "apiMonorepo") {
-      readmeContent = readmeContent.replaceAll(
-        "Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.",
-        "Open [http://localhost:3000](http://localhost:3000) for the Web app and [http://localhost:8080](http://localhost:8080) for the API with your browser to see the result.",
-      );
+      startUrlsText =
+        "[http://localhost:3000](http://localhost:3000) for the Web app and [http://localhost:8080](http://localhost:8080) for the API";
     }
+
+    readmeContent = readmeContent.replace("{{START_URLS}}", startUrlsText);
     await writeFile(join(root, "README.md"), readmeContent);
 
     spinner.text = "Generating migrations...";

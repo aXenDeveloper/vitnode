@@ -23,11 +23,11 @@ To get started, run the following commands:
 pnpm i
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open {{START_URLS}} with your browser to see the result.
 
 ## Development
 
-To start the development server, you need to create a `.env` file in the folder app from the provided `.env.example` file.
+To start the development server, you need to create a `.env` file from the provided `.env.example` file.
 
 In the `development` environment, you can just copy and paste the content of `.env.example` to `.env`.
 
