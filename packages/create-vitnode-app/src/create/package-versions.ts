@@ -18,8 +18,7 @@ export const versionsPackageJson = {
 
   react: "^19.2",
   reactDom: "^19.2",
-  nextSingle: "^16.0.1",
-  nextWebInMonorepo: "^15.4.6",
+  nextSingle: "^16.0",
   nextIntl: "^4.5",
   useIntl: "^4.5",
   rhf: "^7.66.0",
@@ -28,18 +27,18 @@ export const versionsPackageJson = {
   sonner: "^2.0.7",
   dotenv: "^17.2.2",
 
-  drizzleKit: "^0.31.6",
+  drizzleKit: "^0.31.7",
   drizzleOrm: "^0.44.7",
 
   hono: "^4.10",
   honoZodOpenapi: "^1.1.4",
   honoZodValidator: "^0.7.4",
-  reactEmail: "^5.0.1",
-  reactEmailComponents: "^1.0.0",
+  reactEmail: "^5.0",
+  reactEmailComponents: "^1.0",
   zod: "^4.1.12",
 
   cva: "^0.7.1",
-  babelPluginReactCompiler: "^1.0.0",
+  babelPluginReactCompiler: "^1.0",
 
   swcCli: "^0.7.9",
   swcCore: "^1.15.1",
