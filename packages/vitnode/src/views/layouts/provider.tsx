@@ -56,14 +56,14 @@ export const RootProvider = ({
           {...toaster}
         />
         <ProgressProvider
+          {...progressBar}
           color={progressBar?.color ?? "var(--primary)"}
           height={progressBar?.height ?? "4px"}
-          options={{
-            showSpinner: progressBar?.options?.showSpinner ?? false,
-            ...progressBar,
-          }}
           shallowRouting={progressBar?.shallowRouting ?? true}
-          {...progressBar}
+          options={{
+            showSpinner: false,
+            ...progressBar?.options,
+          }}
         >
           {children}
         </ProgressProvider>
