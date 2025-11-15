@@ -35,7 +35,7 @@
   },
   "devDependencies": {
     "@swc/cli": "^0.7.9",
-    "@swc/core": "^1.15.1",
+    "@swc/core": "^1.15.2",
     "@vitnode/config": "workspace:*",
     "@vitnode/core": "workspace:*",
     "concurrently": "^9.2.1",

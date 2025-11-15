@@ -194,7 +194,7 @@ const singleAppDevDeps = (eslint: boolean) => ({
 const webDeps = {
   "@vitnode/core": "",
   "lucide-react": versionsPackageJson.lucide,
-  next: versionsPackageJson.nextWebInMonorepo,
+  next: versionsPackageJson.nextSingle,
   "next-intl": versionsPackageJson.nextIntl,
   react: versionsPackageJson.react,
   "react-dom": versionsPackageJson.reactDom,

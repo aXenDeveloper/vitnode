@@ -144,24 +144,27 @@ export const createVitNode = async ({
 
   if (eslint) {
     spinner.text = "Copying ESLint & Prettier files...";
-    if (mode === "onlyApi") {
-      await cp(join(templatePath, "eslint"), root, {
-        recursive: true,
-      });
-    } else if (mode === "singleApp") {
-      const target = monorepo ? monorepoStructure.web : root;
-      await cp(join(templatePath, "eslint-react"), target, {
-        recursive: true,
-      });
-    } else if (mode === "apiMonorepo") {
-      await Promise.all([
-        cp(join(templatePath, "eslint"), monorepoStructure.api, {
+    if (monorepo) {
+      if (existsSync(monorepoStructure.api)) {
+        await cp(join(templatePath, "eslint"), monorepoStructure.api, {
           recursive: true,
-        }),
-        cp(join(templatePath, "eslint-react"), monorepoStructure.web, {
+        });
+      }
+      if (existsSync(monorepoStructure.web)) {
+        await cp(join(templatePath, "eslint-react"), monorepoStructure.web, {
           recursive: true,
-        }),
-      ]);
+        });
+      }
+    } else {
+      if (mode === "onlyApi") {
+        await cp(join(templatePath, "eslint"), root, {
+          recursive: true,
+        });
+      } else if (mode === "singleApp") {
+        await cp(join(templatePath, "eslint-react"), root, {
+          recursive: true,
+        });
+      }
     }
   }
 
@@ -273,6 +276,26 @@ export const createVitNode = async ({
         cwd: root,
       });
     }
+
+    spinner.text = "Preparing README...";
+    // Copy README.md
+    await copyFile(join(templatePath, "README.md"), join(root, "README.md"));
+    // Update README.md with package manager
+    let readmeContent = await readFile(join(root, "README.md"), "utf-8");
+    readmeContent = readmeContent.replaceAll("pnpm", packageManager);
+
+    if (mode === "onlyApi") {
+      readmeContent = readmeContent.replaceAll(
+        "http://localhost:3000",
+        "http://localhost:8080",
+      );
+    } else if (mode === "apiMonorepo") {
+      readmeContent = readmeContent.replaceAll(
+        "Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.",
+        "Open [http://localhost:3000](http://localhost:3000) for the Web app and [http://localhost:8080](http://localhost:8080) for the API with your browser to see the result.",
+      );
+    }
+    await writeFile(join(root, "README.md"), readmeContent);
 
     spinner.text = "Generating migrations...";
     let migrationsCwd: string;

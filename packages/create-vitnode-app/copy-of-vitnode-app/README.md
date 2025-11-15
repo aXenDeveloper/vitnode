@@ -21,17 +21,13 @@ To get started, run the following commands:
 
 ```bash
 pnpm i
-# or
-bun i
-# or
-npm i
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 ## Development
 
-To start the development server, you need to create a `.env` file in the root of the project from `.env.example`.
+To start the development server, you need to create a `.env` file in the folder app from the provided `.env.example` file.
 
 In the `development` environment, you can just copy and paste the content of `.env.example` to `.env`.
 
@@ -41,8 +37,4 @@ To start the development server, run the following command:
 
 ```bash
 pnpm dev
-# or
-bun dev
-# or
-npm run dev
 ```

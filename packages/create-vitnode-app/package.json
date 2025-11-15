@@ -18,7 +18,6 @@
     "dist",
     "copy-of-vitnode-app",
     "copy-of-vitnode-plugin",
-    "README.md",
     "eslint",
     "eslint-react"
   ],
@@ -36,14 +35,14 @@
     "typescript"
   ],
   "dependencies": {
-    "@inquirer/prompts": "^7.10.0",
+    "@inquirer/prompts": "^7.10.1",
     "commander": "^14.0.2",
     "ora": "^9.0.0",
     "picocolors": "^1.1.1",
     "validate-npm-package-name": "^7.0.0"
   },
   "devDependencies": {
-    "@types/node": "^24.10.0",
+    "@types/node": "^24.10.1",
     "@types/prompts": "^2.4.9",
     "@types/validate-npm-package-name": "^4.0.2",
     "@vitnode/config": "workspace:*",
