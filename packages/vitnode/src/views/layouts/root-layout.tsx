@@ -40,9 +40,7 @@ export const RootLayout = async ({
 
   return (
     <I18nProvider namespaces={[]}>
-      <RootProvider debug={config.debug} theme={config.theme}>
-        {children}
-      </RootProvider>
+      <RootProvider config={config}>{children}</RootProvider>
     </I18nProvider>
   );
 };
