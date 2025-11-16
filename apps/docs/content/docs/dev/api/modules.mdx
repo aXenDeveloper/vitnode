@@ -13,10 +13,11 @@ import { buildModule } from "@vitnode/core/api/lib/module";
 import { CONFIG_PLUGIN } from "@/config";
 
 export const categoriesModule = buildModule({
-  pluginId: CONFIG_PLUGIN.id,
   name: "categories",
   routes: [] // We'll populate this soon!
 });
+
+export const categoriesModuleApi = categoriesModule.build(CONFIG_PLUGIN.pluginId);
 ```
 
 #### Nested Modules
@@ -31,11 +32,12 @@ import { CONFIG_PLUGIN } from "@/config";
 import { postsModule } from "./posts/posts.module"; // [!code ++]
 
 export const categoriesModule = buildModule({
-  pluginId: CONFIG_PLUGIN.id,
   name: "categories",
   routes: [],
   modules: [postsModule] // [!code ++]
 });
+
+export const categoriesModuleApi = categoriesModule.build(CONFIG_PLUGIN.pluginId);
 ```
 
 This creates a structure: `/api/{plugin_id}/categories/posts/*`

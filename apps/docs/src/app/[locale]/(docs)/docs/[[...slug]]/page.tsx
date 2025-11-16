@@ -12,12 +12,16 @@ import { source } from "@/lib/source";
 
 import { ViewOptions } from "./page.client";
 
-export default async function Page(
-  props: PageProps<"/[locale]/docs/[[...slug]]">,
-) {
+interface DocsPageParams {
+  slug?: string[];
+}
+
+export default async function Page(props: { params: Promise<DocsPageParams> }) {
   const params = await props.params;
   if (!params.slug) {
     await redirect("/docs/dev");
+
+    return null;
   }
   const page = source.getPage(params.slug);
   if (!page) notFound();
@@ -58,9 +62,12 @@ export default async function Page(
 // }
 
 export async function generateMetadata(props: {
-  params: Promise<{ slug?: string[] }>;
+  params: Promise<DocsPageParams>;
 }): Promise<Metadata> {
   const params = await props.params;
+  if (!params.slug) {
+    notFound();
+  }
   const page = source.getPage(params.slug);
   if (!page) notFound();
 

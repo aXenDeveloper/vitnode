@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import type { zodSignInSchema } from "@/api/modules/users/routes/sign-in.route";
 
-import { usersModule } from "@/api/modules/users/users.module";
+import { usersModuleApi } from "@/api/modules/users/users.module";
 import { fetcher } from "@/lib/fetcher";
 import { redirect } from "@/lib/navigation";
 
@@ -15,7 +15,7 @@ export const mutationApi = async (
     isAdmin?: boolean;
   },
 ) => {
-  const res = await fetcher(usersModule, {
+  const res = await fetcher(usersModuleApi, {
     path: "/sign_in",
     method: "post",
     module: "users",

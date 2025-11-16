@@ -3,7 +3,7 @@ import { DataTable } from "@vitnode/core/components/table/data-table";
 import { fetcher } from "@vitnode/core/lib/fetcher";
 import { getTranslations } from "next-intl/server";
 
-import { categoriesModule } from "@/api/modules/categories/categories.module";
+import { categoriesModuleApi } from "@/api/modules/categories/categories.module";
 
 import { DeleteAction } from "./actions/delete/delete-action";
 import { EditAction } from "./actions/edit-action";
@@ -15,7 +15,7 @@ export const CategoriesAdminView = async ({
 }) => {
   const t = await getTranslations("@vitnode/blog.admin.categories.table");
   const query = await searchParams;
-  const res = await fetcher(categoriesModule, {
+  const res = await fetcher(categoriesModuleApi, {
     path: "/",
     method: "get",
     module: "categories",

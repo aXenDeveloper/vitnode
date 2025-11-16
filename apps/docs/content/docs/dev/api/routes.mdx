@@ -11,10 +11,7 @@ Now for the fun part - creating actual endpoints! Each route is a small but migh
 import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@vitnode/core/api/lib/route";
 
-import { CONFIG_PLUGIN } from "@/config";
-
 export const getCategoriesRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/",
@@ -58,10 +55,11 @@ import { CONFIG_PLUGIN } from "@/config";
 import { getCategoriesRoute } from "./routes/get.route"; // [!code ++]
 
 export const categoriesModule = buildModule({
-  pluginId: CONFIG_PLUGIN.id,
   name: "categories",
   routes: [getCategoriesRoute] // [!code ++]
 });
+
+export const categoriesModuleApi = categoriesModule.build(CONFIG_PLUGIN.pluginId);
 ```
 
 ## Inputs
@@ -75,10 +73,7 @@ import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@vitnode/core/api/lib/route";
 import { HTTPException } from "hono/http-exception";
 
-import { CONFIG_PLUGIN } from "@/config";
-
 export const getCategoryByIdRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     // [!code highlight]
@@ -136,10 +131,7 @@ Query parameters are your best friends for filtering, searching, and pagination.
 import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@vitnode/core/api/lib/route";
 
-import { CONFIG_PLUGIN } from "@/config";
-
 export const searchCategoriesRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/search",

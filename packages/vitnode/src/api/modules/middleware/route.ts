@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const routeMiddlewareSchema = z.object({
   sso: z.array(z.object({ id: z.string(), name: z.string() })),
@@ -15,7 +14,6 @@ export const routeMiddlewareSchema = z.object({
 });
 
 export const routeMiddleware = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     path: "/",
     method: "get",

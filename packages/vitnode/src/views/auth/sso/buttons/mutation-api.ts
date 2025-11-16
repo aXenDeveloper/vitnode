@@ -1,11 +1,11 @@
 "use server";
 
-import { usersModule } from "@/api/modules/users/users.module";
+import { usersModuleApi } from "@/api/modules/users/users.module";
 import { fetcher } from "@/lib/fetcher";
 import { redirect } from "@/lib/navigation";
 
 export const mutationApi = async (providerId: string) => {
-  const res = await fetcher(usersModule, {
+  const res = await fetcher(usersModuleApi, {
     path: "/{providerId}",
     method: "post",
     module: "users/sso",
@@ -21,6 +21,6 @@ export const mutationApi = async (providerId: string) => {
     return { message: "Something is wrong" };
   }
 
-  const data = await res.json();
+  const data = (await res.json()) as { url: string };
   await redirect(data.url);
 };

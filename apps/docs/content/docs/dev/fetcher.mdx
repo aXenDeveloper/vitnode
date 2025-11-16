@@ -16,13 +16,13 @@ First, import the required dependencies:
 
 ```ts
 import { fetcher } from '@vitnode/core/lib/fetcher';
-import { usersModule } from '@vitnode/core/api/modules/users/users.module';
+import { usersModuleApi } from '@vitnode/core/api/modules/users/users.module';
 ```
 
 Make your first API call:
 
 ```ts
-const response = await fetcher(usersModule, {
+const response = await fetcher(usersModuleApi, {
   path: '/session',
   method: 'get',
   module: 'users',
@@ -66,7 +66,7 @@ const response = await fetcher(categoriesAdminModule, {
 You can leverage Next.js caching by passing cache options:
 
 ```ts
-const response = await fetcher(usersModule, {
+const response = await fetcher(usersModuleApi, {
   path: '/session',
   method: 'get',
   module: 'users',
@@ -88,7 +88,7 @@ When working with authentication or sessions, you might need to handle cookies. 
 Here's how to enable cookie handling for a sign-in request:
 
 ```ts
-const response = await fetcher(usersModule, {
+const response = await fetcher(usersModuleApi, {
   path: '/sign_in',
   method: 'post',
   module: 'users',

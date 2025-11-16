@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
-import { cronAdminModule } from "@/api/modules/admin/advanced/cron/cron.admin.module";
+import { cronAdminModuleApi } from "@/api/modules/admin/advanced/cron/cron.admin.module";
 import { DateFormat } from "@/components/date-format";
 import {
   DataTable,
@@ -16,7 +16,7 @@ export const CronTableView = async ({
   searchParams: Promise<SearchParamsDataTable>;
 }) => {
   const query = await searchParams;
-  const res = await fetcher(cronAdminModule, {
+  const res = await fetcher(cronAdminModuleApi, {
     path: "/",
     method: "get",
     module: "cron",

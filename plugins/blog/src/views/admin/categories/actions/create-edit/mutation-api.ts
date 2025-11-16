@@ -7,12 +7,12 @@ import { revalidatePath } from "next/cache";
 
 import type { zodCreateCategorySchema } from "../../../../../api/modules/admin/categories/routes/create.route";
 
-import { categoriesAdminModule } from "../../../../../api/modules/admin/categories/categories.admin.module";
+import { categoriesAdminModuleApi } from "../../../../../api/modules/admin/categories/categories.admin.module";
 
 export const createMutationApi = async (
   body: z.infer<typeof zodCreateCategorySchema>,
 ) => {
-  const res = await fetcher(categoriesAdminModule, {
+  const res = await fetcher(categoriesAdminModuleApi, {
     prefixPath: "/admin",
     method: "post",
     module: "categories",
@@ -36,7 +36,7 @@ export const editMutationApi = async ({
   id,
   ...body
 }: z.infer<typeof zodCreateCategorySchema> & { id: number }) => {
-  const res = await fetcher(categoriesAdminModule, {
+  const res = await fetcher(categoriesAdminModuleApi, {
     prefixPath: "/admin",
     method: "put",
     module: "categories",

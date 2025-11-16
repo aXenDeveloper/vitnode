@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { usersModule } from "@/api/modules/users/users.module";
+import { usersModuleApi } from "@/api/modules/users/users.module";
 import { fetcher } from "@/lib/fetcher";
 import { redirect } from "@/lib/navigation";
 
@@ -11,7 +11,7 @@ export const logOutMutationApi = async ({
 }: {
   isAdmin?: boolean;
 }) => {
-  const res = await fetcher(usersModule, {
+  const res = await fetcher(usersModuleApi, {
     path: "/sign_out",
     method: "delete",
     allowSaveCookies: true,

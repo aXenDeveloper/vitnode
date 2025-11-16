@@ -3,10 +3,10 @@
 import { fetcher } from "@vitnode/core/lib/fetcher";
 import { revalidatePath } from "next/cache";
 
-import { postsAdminModule } from "@/api/modules/admin/posts/posts.admin.module";
+import { postsAdminModuleApi } from "@/api/modules/admin/posts/posts.admin.module";
 
 export const mutationApi = async (id: number) => {
-  const res = await fetcher(postsAdminModule, {
+  const res = await fetcher(postsAdminModuleApi, {
     prefixPath: "/admin",
     method: "delete",
     path: "/{id}",

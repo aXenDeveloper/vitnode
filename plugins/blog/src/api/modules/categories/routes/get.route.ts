@@ -7,7 +7,6 @@ import {
 } from "@vitnode/core/api/lib/with-pagination";
 import { and, ilike, type SQL } from "drizzle-orm";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
 
 const zodCategorySchema = z.object({
@@ -17,17 +16,18 @@ const zodCategorySchema = z.object({
   updatedAt: z.date(),
 });
 
+const zodCategoriesQuerySchema = zodPaginationQuery.extend({
+  order: z.enum(["asc", "desc"]).optional(),
+  orderBy: z.enum(["updatedAt"]).optional(),
+  search: z.string().optional(),
+});
+
 export const categoriesRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/",
     request: {
-      query: zodPaginationQuery.extend({
-        order: z.enum(["asc", "desc"]).optional(),
-        orderBy: z.enum(["updatedAt"]).optional(),
-        search: z.string().optional(),
-      }),
+      query: zodCategoriesQuerySchema,
     },
     responses: {
       200: {
@@ -44,7 +44,9 @@ export const categoriesRoute = buildRoute({
     },
   },
   handler: async c => {
-    const query = c.req.valid("query");
+    const query = c.req.valid("query") as z.infer<
+      typeof zodCategoriesQuerySchema
+    >;
 
     const data = await withPagination({
       c,
@@ -53,28 +55,25 @@ export const categoriesRoute = buildRoute({
       },
       primaryCursor: blog_categories.id,
       query: async ({ limit, where, orderBy }) => {
+        const paginationWhere = where as SQL | undefined;
         const searchCondition = query.search
           ? ilike(blog_categories.title, `%${query.search}%`)
           : undefined;
 
         let combinedWhere: SQL | undefined;
-        if (searchCondition) {
-          if (where) {
-            combinedWhere = and(where, searchCondition);
-          } else {
-            combinedWhere = searchCondition;
-          }
+        if (searchCondition && paginationWhere) {
+          combinedWhere = and(paginationWhere, searchCondition);
         } else {
-          combinedWhere = where;
+          combinedWhere = searchCondition ?? paginationWhere;
         }
 
-        return await c
-          .get("db")
-          .select()
-          .from(blog_categories)
-          .where(combinedWhere)
-          .orderBy(orderBy)
-          .limit(limit);
+        const baseQuery = c.get("db").select().from(blog_categories);
+
+        const filteredQuery = combinedWhere
+          ? baseQuery.where(combinedWhere)
+          : baseQuery;
+
+        return await filteredQuery.orderBy(orderBy).limit(limit);
       },
       table: blog_categories,
       orderBy: {

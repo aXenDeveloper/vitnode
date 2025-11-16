@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
-import { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
+import { debugAdminModuleApi } from "@/api/modules/admin/debug/debug.admin.module";
 import { DateFormat } from "@/components/date-format";
 import { DataTable } from "@/components/table/data-table";
 import { fetcher } from "@/lib/fetcher";
@@ -12,7 +12,7 @@ import { BadgeTypeLog } from "./badges/badge-type-log";
 export const getSystemLogsData = async (
   query: Record<string, string | string[] | undefined>,
 ) => {
-  const res = await fetcher(debugAdminModule, {
+  const res = await fetcher(debugAdminModuleApi, {
     prefixPath: "/admin",
     path: "/logs",
     method: "get",

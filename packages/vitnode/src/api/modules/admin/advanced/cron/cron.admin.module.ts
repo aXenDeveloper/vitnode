@@ -5,7 +5,8 @@ import { getCronsRoute } from "./routes/get.route";
 import { runCronRoute } from "./routes/run.route";
 
 export const cronAdminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "cron",
   routes: [getCronsRoute, runCronRoute],
 });
+
+export const cronAdminModuleApi = cronAdminModule.build(CONFIG_PLUGIN.pluginId);

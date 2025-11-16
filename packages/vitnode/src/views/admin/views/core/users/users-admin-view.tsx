@@ -1,7 +1,7 @@
 import { MailIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
-import { adminModule } from "@/api/modules/admin/admin.module";
+import { adminModuleApi } from "@/api/modules/admin/admin.module";
 import { Avatar } from "@/components/avatar";
 import { DateFormat } from "@/components/date-format";
 import { DataTable } from "@/components/table/data-table";
@@ -19,7 +19,7 @@ export const UsersAdminView = async ({
 }) => {
   const t = await getTranslations("admin.user.list");
   const query = await searchParams;
-  const res = await fetcher(adminModule, {
+  const res = await fetcher(adminModuleApi, {
     path: "/list",
     method: "get",
     module: "admin/users",

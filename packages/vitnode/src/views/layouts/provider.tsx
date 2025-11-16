@@ -59,11 +59,11 @@ export const RootProvider = ({
           {...progressBar}
           color={progressBar?.color ?? "var(--primary)"}
           height={progressBar?.height ?? "4px"}
-          shallowRouting={progressBar?.shallowRouting ?? true}
           options={{
             showSpinner: false,
             ...progressBar?.options,
           }}
+          shallowRouting={progressBar?.shallowRouting ?? true}
         >
           {children}
         </ProgressProvider>

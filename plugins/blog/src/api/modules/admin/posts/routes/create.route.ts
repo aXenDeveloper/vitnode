@@ -4,7 +4,6 @@ import { removeSpecialCharacters } from "@vitnode/core/lib/special-characters";
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
 import { blog_posts } from "@/database/posts";
 
@@ -28,7 +27,6 @@ export const zodCreatePostSchema = z.object({
 });
 
 export const createPostRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/",
@@ -59,8 +57,10 @@ export const createPostRoute = buildRoute({
     },
   },
   handler: async c => {
-    const { title, content, categoryId } = c.req.valid("json");
-    const titleSeo = removeSpecialCharacters(title);
+    const { title, content, categoryId } = c.req.valid("json") as z.infer<
+      typeof zodCreatePostSchema
+    >;
+    const titleSeo: string = removeSpecialCharacters(title);
 
     // Check if category exists
     const [category] = await c

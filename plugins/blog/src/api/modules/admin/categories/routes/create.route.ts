@@ -4,7 +4,6 @@ import { removeSpecialCharacters } from "@vitnode/core/lib/special-characters";
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
 
 const zodCategoryResponseSchema = z.object({
@@ -19,7 +18,6 @@ export const zodCreateCategorySchema = z.object({
 });
 
 export const createCategoryRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/",
@@ -47,8 +45,11 @@ export const createCategoryRoute = buildRoute({
     },
   },
   handler: async c => {
-    const { title } = c.req.valid("json");
-    const titleSeo = removeSpecialCharacters(title);
+    const { title } = c.req.valid("json") as z.infer<
+      typeof zodCreateCategorySchema
+    >;
+    const titleSeo: string = removeSpecialCharacters(title);
+
     const [titleSEODuplocate] = await c
       .get("db")
       .select({
@@ -69,7 +70,7 @@ export const createCategoryRoute = buildRoute({
       .insert(blog_categories)
       .values({
         title,
-        titleSeo: removeSpecialCharacters(title),
+        titleSeo,
       })
       .returning();
 

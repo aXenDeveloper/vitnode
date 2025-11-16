@@ -4,7 +4,6 @@ import { removeSpecialCharacters } from "@vitnode/core/lib/special-characters";
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
 
 import { zodCreateCategorySchema } from "./create.route";
@@ -17,7 +16,6 @@ const zodCategoryResponseSchema = z.object({
 });
 
 export const editCategoryRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "put",
     path: "/{id}",
@@ -51,9 +49,11 @@ export const editCategoryRoute = buildRoute({
     },
   },
   handler: async c => {
-    const { id } = c.req.valid("param");
-    const { title } = c.req.valid("json");
-    const titleSeo = removeSpecialCharacters(title);
+    const { id } = c.req.valid("param") as { id: number };
+    const { title } = c.req.valid("json") as z.infer<
+      typeof zodCreateCategorySchema
+    >;
+    const titleSeo: string = removeSpecialCharacters(title);
     const [editData] = await c
       .get("db")
       .select({
@@ -90,7 +90,7 @@ export const editCategoryRoute = buildRoute({
       .update(blog_categories)
       .set({
         title,
-        titleSeo: removeSpecialCharacters(title),
+        titleSeo,
       })
       .where(eq(blog_categories.id, id))
       .returning();

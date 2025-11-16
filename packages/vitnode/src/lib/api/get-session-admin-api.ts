@@ -1,10 +1,10 @@
-import { adminModule } from "@/api/modules/admin/admin.module";
+import { adminModuleApi } from "@/api/modules/admin/admin.module";
 import { fetcher } from "@/lib/fetcher";
 
 import { redirect } from "../navigation";
 
 export const getSessionAdminApi = async () => {
-  const res = await fetcher(adminModule, {
+  const res = await fetcher(adminModuleApi, {
     path: "/session",
     method: "get",
     module: "admin",

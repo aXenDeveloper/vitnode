@@ -5,8 +5,9 @@ import { cleanCron } from "./cron/clean.cron";
 import { runCronRoute } from "./routes/cron.route";
 
 export const cronModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "cron",
   routes: [runCronRoute],
   cronJobs: [cleanCron],
 });
+
+export const cronModuleApi = cronModule.build(CONFIG_PLUGIN.pluginId);

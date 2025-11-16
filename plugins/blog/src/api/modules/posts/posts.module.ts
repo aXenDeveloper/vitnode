@@ -5,7 +5,8 @@ import { CONFIG_PLUGIN } from "@/const";
 import { postsRoute } from "./routes/get.route";
 
 export const postsModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "posts",
   routes: [postsRoute],
 });
+
+export const postsModuleApi = postsModule.build(CONFIG_PLUGIN.pluginId);

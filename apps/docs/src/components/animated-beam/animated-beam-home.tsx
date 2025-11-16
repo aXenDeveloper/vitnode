@@ -1,7 +1,5 @@
 "use client";
 
-import type React from "react";
-
 import {
   Tooltip,
   TooltipContent,
@@ -20,32 +18,31 @@ import {
   Sparkle,
   Users,
 } from "lucide-react";
-import { useRef } from "react";
+import { type ComponentProps, type Ref, useRef } from "react";
 
 import { LogoVitNode } from "../logo-vitnode";
 import { AnimatedBeam } from "./animated-beam";
 
-const Circle = ({
-  className,
-  tooltip,
-  ...props
-}: React.ComponentProps<typeof Link> & {
+interface CircleProps extends ComponentProps<typeof Link> {
+  anchorRef?: Ref<HTMLAnchorElement>;
   tooltip?: string;
-}) => {
+}
+
+const Circle = ({ className, tooltip, anchorRef, ...props }: CircleProps) => {
   const classNameLink = cn(
     "bg-card hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-ring/50 z-10 flex size-12 items-center justify-center rounded-md border p-3 transition-all focus-visible:ring-[3px]",
     className,
   );
 
   if (!tooltip) {
-    return <Link className={classNameLink} {...props} />;
+    return <Link className={classNameLink} ref={anchorRef} {...props} />;
   }
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Link className={classNameLink} {...props} />
+          <Link className={classNameLink} ref={anchorRef} {...props} />
         </TooltipTrigger>
 
         <TooltipContent>{tooltip}</TooltipContent>
@@ -75,40 +72,40 @@ export function AnimatedBeamHome() {
     >
       <div className="flex size-full max-w-lg flex-col items-stretch justify-between gap-10">
         <div className="flex flex-row items-center justify-between">
-          <Circle href="/" ref={div1Ref} tooltip="Users">
+          <Circle anchorRef={div1Ref} href="/" tooltip="Users">
             <Users />
           </Circle>
           <Circle
+            anchorRef={div8Ref}
             href="/docs/dev/email/overview"
-            ref={div8Ref}
             tooltip="Emails"
           >
             <AtSign />
           </Circle>
-          <Circle href="/" ref={div5Ref} tooltip="Plugins">
+          <Circle anchorRef={div5Ref} href="/" tooltip="Plugins">
             <Plug />
           </Circle>
         </div>
         <div className="flex flex-row items-center justify-between">
-          <Circle href="/" ref={div2Ref} tooltip="Languages">
+          <Circle anchorRef={div2Ref} href="/" tooltip="Languages">
             <Languages />
           </Circle>
 
-          <Circle className="size-16" href="/docs/dev" ref={div4Ref}>
+          <Circle anchorRef={div4Ref} className="size-16" href="/docs/dev">
             <LogoVitNode small />
           </Circle>
-          <Circle href="/" ref={div6Ref} tooltip="Themes">
+          <Circle anchorRef={div6Ref} href="/" tooltip="Themes">
             <Paintbrush />
           </Circle>
         </div>
         <div className="flex flex-row items-center justify-between">
-          <Circle href="/" ref={div3Ref} tooltip="Authorization">
+          <Circle anchorRef={div3Ref} href="/" tooltip="Authorization">
             <ShieldCheck />
           </Circle>
-          <Circle href="/" ref={div9Ref} tooltip="AI">
+          <Circle anchorRef={div9Ref} href="/" tooltip="AI">
             <Sparkle />
           </Circle>
-          <Circle href="/" ref={div7Ref} tooltip="Database">
+          <Circle anchorRef={div7Ref} href="/" tooltip="Database">
             <Database />
           </Circle>
         </div>

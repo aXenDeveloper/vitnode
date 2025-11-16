@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { usersModule } from "@/api/modules/users/users.module";
+import { usersModuleApi } from "@/api/modules/users/users.module";
 import { fetcher } from "@/lib/fetcher";
 
 export const mutationApi = async ({
@@ -14,7 +14,7 @@ export const mutationApi = async ({
   providerId: string;
   state: string;
 }) => {
-  const res = await fetcher(usersModule, {
+  const res = await fetcher(usersModuleApi, {
     path: "/{providerId}/callback",
     method: "get",
     module: "users/sso",

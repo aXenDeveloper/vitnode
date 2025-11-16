@@ -12,9 +12,10 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import type { zodCreatePostSchema } from "@/api/modules/admin/posts/routes/create.route";
 import type { zodPostSchema } from "@/api/modules/posts/routes/get.route";
 
-import { categoriesModule } from "@/api/modules/categories/categories.module";
+import { categoriesModuleApi } from "@/api/modules/categories/categories.module";
 
 import { createMutationApi, editMutationApi } from "./mutation-api";
 
@@ -55,21 +56,24 @@ export const CreateEditActionPostsAdmin = ({
     form,
   ) => {
     let error = "";
+    const categoryIdValue = values.categoryId.value as string;
+    const payload: z.infer<typeof zodCreatePostSchema> = {
+      title: values.title,
+      content: values.content,
+      categoryId: Number.parseInt(categoryIdValue, 10),
+    };
+
     if (data?.id) {
       const mutation = await editMutationApi({
         id: data.id,
-        ...values,
-        categoryId: parseInt(values.categoryId.value, 10),
+        ...payload,
       });
 
       if (mutation?.error) {
         error = mutation.error;
       }
     } else {
-      const mutation = await createMutationApi({
-        ...values,
-        categoryId: parseInt(values.categoryId.value, 10),
-      });
+      const mutation = await createMutationApi(payload);
 
       if (mutation?.error) {
         error = mutation.error;
@@ -110,7 +114,7 @@ export const CreateEditActionPostsAdmin = ({
           component: props => (
             <AutoFormComboboxAsync
               fetchData={async ({ search }) => {
-                const res = await fetcherClient(categoriesModule, {
+                const res = await fetcherClient(categoriesModuleApi, {
                   path: "/",
                   method: "get",
                   module: "categories",

@@ -11,7 +11,6 @@ import { testRoute } from "./routes/test.route";
 import { ssoUserModule } from "./sso/sso.module";
 
 export const usersModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "users",
   routes: [
     sessionRoute,
@@ -24,3 +23,5 @@ export const usersModule = buildModule({
   ],
   modules: [ssoUserModule],
 });
+
+export const usersModuleApi = usersModule.build(CONFIG_PLUGIN.pluginId);

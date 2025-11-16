@@ -32,17 +32,19 @@ export const CreateEditActionCategoriesAdmin = ({
     form,
   ) => {
     let error = "";
+    const payload = values as z.infer<typeof zodCreateCategorySchema>;
+
     if (data?.id) {
       const mutation = await editMutationApi({
         id: data.id,
-        ...values,
+        ...payload,
       });
 
       if (mutation?.error) {
         error = mutation.error;
       }
     } else {
-      const mutation = await createMutationApi(values);
+      const mutation = await createMutationApi(payload);
 
       if (mutation?.error) {
         error = mutation.error;

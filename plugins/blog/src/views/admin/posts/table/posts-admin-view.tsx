@@ -3,7 +3,7 @@ import { DataTable } from "@vitnode/core/components/table/data-table";
 import { fetcher } from "@vitnode/core/lib/fetcher";
 import { getTranslations } from "next-intl/server";
 
-import { postsModule } from "@/api/modules/posts/posts.module";
+import { postsModuleApi } from "@/api/modules/posts/posts.module";
 
 import { DeleteAction } from "./actions/delete/delete-action";
 import { EditAction } from "./actions/edit-action";
@@ -15,7 +15,7 @@ export const PostsAdminView = async ({
 }) => {
   const t = await getTranslations("@vitnode/blog.admin.posts.table");
   const query = await searchParams;
-  const res = await fetcher(postsModule, {
+  const res = await fetcher(postsModuleApi, {
     path: "/",
     method: "get",
     module: "posts",

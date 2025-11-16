@@ -4,7 +4,6 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
 import { PasswordModel } from "@/api/models/password";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_users, core_users_forgot_password } from "@/database/users";
 
 export const zodChangePasswordSchema = z.object({
@@ -16,7 +15,6 @@ export const zodChangePasswordSchema = z.object({
 });
 
 export const changePasswordRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Change user password",

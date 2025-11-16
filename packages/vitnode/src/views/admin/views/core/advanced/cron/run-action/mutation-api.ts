@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 
-import { cronAdminModule } from "@/api/modules/admin/advanced/cron/cron.admin.module";
+import { cronAdminModuleApi } from "@/api/modules/admin/advanced/cron/cron.admin.module";
 import { fetcher } from "@/lib/fetcher";
 
 export const mutationApi = async (id: number) => {
-  const res = await fetcher(cronAdminModule, {
+  const res = await fetcher(cronAdminModuleApi, {
     path: "/{id}",
     method: "post",
     module: "cron",

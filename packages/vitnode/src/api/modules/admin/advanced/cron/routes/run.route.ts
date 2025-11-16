@@ -4,12 +4,10 @@ import { z } from "zod";
 import type { CronJobConfig } from "@/api/lib/cron";
 
 import { buildRoute } from "@/api/lib/route";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_cron } from "@/database/cron";
 import { getNextCronRunDate } from "@/lib/api/get-next-cron-run-date";
 
 export const runCronRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Run a specific cron job",

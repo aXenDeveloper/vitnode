@@ -4,7 +4,7 @@ import type z from "zod";
 
 import type { zodChangePasswordSchema } from "@/api/modules/users/routes/change-password.route";
 
-import { usersModule } from "@/api/modules/users/users.module";
+import { usersModuleApi } from "@/api/modules/users/users.module";
 import { fetcher } from "@/lib/fetcher";
 
 export const mutationApi = async ({
@@ -12,7 +12,7 @@ export const mutationApi = async ({
   token,
   userId,
 }: z.infer<typeof zodChangePasswordSchema>) => {
-  const res = await fetcher(usersModule, {
+  const res = await fetcher(usersModuleApi, {
     module: "users",
     path: "/change-password",
     method: "post",

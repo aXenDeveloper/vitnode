@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 import type { zodSignUpSchema } from "@/api/modules/users/routes/sign-up.route";
 
-import { usersModule } from "@/api/modules/users/users.module";
+import { usersModuleApi } from "@/api/modules/users/users.module";
 import { fetcher } from "@/lib/fetcher";
 import { redirect } from "@/lib/navigation";
 
@@ -14,7 +14,7 @@ export const mutationApi = async ({
   captchaToken,
   ...input
 }: z.infer<typeof zodSignUpSchema> & { captchaToken: string }) => {
-  const res = await fetcher(usersModule, {
+  const res = await fetcher(usersModuleApi, {
     path: "/sign_up",
     method: "post",
     module: "users",

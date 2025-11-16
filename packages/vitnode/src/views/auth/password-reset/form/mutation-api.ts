@@ -1,6 +1,6 @@
 "use server";
 
-import { usersModule } from "@/api/modules/users/users.module";
+import { usersModuleApi } from "@/api/modules/users/users.module";
 import { fetcher } from "@/lib/fetcher";
 
 export const mutationApi = async ({
@@ -10,7 +10,7 @@ export const mutationApi = async ({
   captchaToken: string;
   email: string;
 }) => {
-  const res = await fetcher(usersModule, {
+  const res = await fetcher(usersModuleApi, {
     module: "users",
     path: "/reset-password",
     method: "post",

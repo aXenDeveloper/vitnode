@@ -7,9 +7,10 @@ import { sessionAdminRoute } from "./routes/session.route";
 import { usersAdminModule } from "./users/users.admin.module";
 
 export const adminModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "admin",
   routes: [sessionAdminRoute],
   modules: [usersAdminModule, debugAdminModule, advancedAdminModule],
   cronJobs: [],
 });
+
+export const adminModuleApi = adminModule.build(CONFIG_PLUGIN.pluginId);

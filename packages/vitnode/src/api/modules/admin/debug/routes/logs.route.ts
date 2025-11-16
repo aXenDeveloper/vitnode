@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { core_logs } from "@/database/logs";
 
 import { core_users } from "../../../../../database/users";
@@ -13,7 +12,6 @@ import {
 } from "../../../../lib/with-pagination";
 
 export const logsDebugAdminRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     description: "Get Admin Debug Logs",

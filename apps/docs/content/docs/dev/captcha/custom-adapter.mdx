@@ -16,7 +16,6 @@ If you want to use captcha in your custom form or somewhere else, follow these s
 import { buildRoute } from "@vitnode/core/api/lib/route";
 
 export const exampleRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Create a new user",
@@ -96,6 +95,7 @@ export const FormSignUp = ({
 import type { z } from "zod";
 
 import { fetcher } from "@vitnode/core/lib/fetcher";
+import { usersModuleApi } from "@vitnode/core/api/modules/users/users.module";
 
 export const mutationApi = async ({
   captchaToken, // [!code ++]
@@ -103,7 +103,7 @@ export const mutationApi = async ({
   // [!code ++]
   captchaToken;
 }) => {
-  await fetcher(usersModule, {
+  await fetcher(usersModuleApi, {
     path: "/test",
     method: "post",
     module: "blog",
