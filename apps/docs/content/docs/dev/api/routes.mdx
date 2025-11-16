@@ -11,10 +11,8 @@ Now for the fun part - creating actual endpoints! Each route is a small but migh
 import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@vitnode/core/api/lib/route";
 
-import { CONFIG_PLUGIN } from "@/config";
 
 export const getCategoriesRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/",
@@ -54,11 +52,9 @@ export const getCategoriesRoute = buildRoute({
 ```ts title="plugins/blog/src/api/modules/categories/categories.module.ts"
 import { buildModule } from "@vitnode/core/api/lib/module";
 
-import { CONFIG_PLUGIN } from "@/config";
 import { getCategoriesRoute } from "./routes/get.route"; // [!code ++]
 
 export const categoriesModule = buildModule({
-  pluginId: CONFIG_PLUGIN.id,
   name: "categories",
   routes: [getCategoriesRoute] // [!code ++]
 });
@@ -75,10 +71,8 @@ import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@vitnode/core/api/lib/route";
 import { HTTPException } from "hono/http-exception";
 
-import { CONFIG_PLUGIN } from "@/config";
 
 export const getCategoryByIdRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     // [!code highlight]
@@ -136,10 +130,8 @@ Query parameters are your best friends for filtering, searching, and pagination.
 import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@vitnode/core/api/lib/route";
 
-import { CONFIG_PLUGIN } from "@/config";
 
 export const searchCategoriesRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/search",
@@ -203,7 +195,6 @@ When you need to send complex data (creating, updating), request bodies are your
 import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@vitnode/core/api/lib/route";
 
-import { CONFIG_PLUGIN } from "@/config";
 
 const createCategorySchema = z.object({
   name: z.string().min(1).max(100).openapi({
@@ -225,7 +216,6 @@ const createCategorySchema = z.object({
 });
 
 export const createCategoryRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/",

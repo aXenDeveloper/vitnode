@@ -15,7 +15,7 @@ export function buildApiPlugin<P extends string>({
   pluginId,
   modules = [],
 }: {
-  modules?: BuildModuleReturn<P, string>[];
+  modules?: BuildModuleReturn<string>[];
   pluginId: P;
 }): BuildPluginApiReturn {
   // Run for checking if the plugin is valid

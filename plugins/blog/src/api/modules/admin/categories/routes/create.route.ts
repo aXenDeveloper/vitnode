@@ -4,7 +4,6 @@ import { removeSpecialCharacters } from "@vitnode/core/lib/special-characters";
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
 
 const zodCategoryResponseSchema = z.object({
@@ -19,7 +18,6 @@ export const zodCreateCategorySchema = z.object({
 });
 
 export const createCategoryRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     path: "/",

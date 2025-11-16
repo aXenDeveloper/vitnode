@@ -7,7 +7,6 @@ import {
 } from "@vitnode/core/api/lib/with-pagination";
 import { eq } from "drizzle-orm";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
 import { blog_posts } from "@/database/posts";
 
@@ -27,7 +26,6 @@ export const zodPostSchema = z.object({
 });
 
 export const postsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/",

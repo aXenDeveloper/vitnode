@@ -46,13 +46,11 @@ export const cleanCron = buildCron({
 
 ```ts title="modules/clean/clean.module.ts"
 import { buildModule } from "@vitnode/core/api/lib/module";
-import { CONFIG_PLUGIN } from "@/config";
 
 // [!code ++]
 import { cleanCron } from "./cron/clean.cron";
 
 export const cronModule = buildModule({
-  pluginId: CONFIG_PLUGIN.pluginId,
   name: "clean",
   routes: [],
   // [!code ++]

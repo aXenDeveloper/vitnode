@@ -4,7 +4,6 @@ import { buildRoute } from "@/api/lib/route";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import { UserModel } from "@/api/models/user";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const zodSignInSchema = z.object({
   email: z.email().toLowerCase().openapi({
@@ -19,7 +18,6 @@ export const zodSignInSchema = z.object({
 });
 
 export const signInRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Sign in with email and password",

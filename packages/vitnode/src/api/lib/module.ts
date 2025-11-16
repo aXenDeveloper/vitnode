@@ -3,41 +3,34 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { BuildCronReturn } from "./cron";
 import type { Route } from "./route";
 
-export interface BuildModuleType<T extends Route, Plugin extends string> {
-  plugin: Plugin;
-  routes: T;
-}
+import { getCurrentPluginId } from "./plugin-context";
 
 export interface BaseBuildModuleReturn<
-  P extends string = string,
   M extends string = string,
-  Routes extends Route<P>[] = Route<P>[],
+  Routes extends Route[] = Route[],
 > {
   cronJobs: BuildCronReturn[];
   hono: OpenAPIHono;
-  modules?: BaseBuildModuleReturn<P>[];
+  modules?: BaseBuildModuleReturn[];
   name: M;
-  pluginId: P;
+  pluginId: string;
   routes: Routes;
 }
 
 export interface BuildModuleReturn<
-  P extends string,
   M extends string,
-  Routes extends Route<P>[] = Route<P>[],
-  Modules extends BaseBuildModuleReturn<P>[] = BaseBuildModuleReturn<P>[],
-> extends BaseBuildModuleReturn<P, M, Routes> {
+  Routes extends Route[] = Route[],
+  Modules extends BaseBuildModuleReturn[] = BaseBuildModuleReturn[],
+> extends BaseBuildModuleReturn<M, Routes> {
   modules?: Modules;
 }
 
 export function buildModule<
-  const P extends string,
   const M extends string,
-  const Routes extends Route<P>[],
-  Modules extends BaseBuildModuleReturn<P>[],
+  const Routes extends Route[],
+  Modules extends BaseBuildModuleReturn[],
 >({
   routes,
-  pluginId,
   name,
   modules,
   cronJobs = [],
@@ -45,9 +38,10 @@ export function buildModule<
   cronJobs?: BuildCronReturn[];
   modules?: Modules;
   name: M;
-  pluginId: P;
   routes: Routes;
-}): BuildModuleReturn<P, M, Routes, Modules> {
+}): BuildModuleReturn<M, Routes, Modules> {
+  const pluginId = getCurrentPluginId();
+
   const hono = new OpenAPIHono();
 
   if (routes) {

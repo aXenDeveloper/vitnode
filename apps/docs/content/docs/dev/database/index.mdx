@@ -27,7 +27,6 @@ Access the database in your plugin handlers using `c.get('database')` from the H
 
 ```ts title="plugins/{plugin_name}/src/routes/posts.ts"
 export const postsRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {},
   handler: async (c) => {
     // [!code ++:7]

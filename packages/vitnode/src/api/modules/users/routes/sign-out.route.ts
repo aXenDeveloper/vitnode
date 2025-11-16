@@ -3,10 +3,8 @@ import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@/api/lib/route";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
-import { CONFIG_PLUGIN } from "@/config";
 
 export const signOutRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "delete",
     description: "Sign out the current admin",

@@ -2,11 +2,9 @@ import { buildRoute } from "@vitnode/core/api/lib/route";
 import { UserModel } from "@vitnode/core/api/models/user";
 import { z } from "zod";
 
-import { CONFIG_PLUGIN } from "@/const";
 import TestTemplateEmail from "@/emails/test-template";
 
 export const testRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Test route",

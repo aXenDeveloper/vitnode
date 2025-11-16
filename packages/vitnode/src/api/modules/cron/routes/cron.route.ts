@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
 import { cronAuthMiddleware } from "@/api/middlewares/cron-auth.middleware";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_cron } from "@/database/cron";
 import { getNextCronRunDate } from "@/lib/api/get-next-cron-run-date";
 
@@ -14,7 +13,6 @@ import {
 } from "../helpers/process-cron-jobs";
 
 export const runCronRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Run cron job",

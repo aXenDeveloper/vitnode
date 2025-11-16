@@ -7,9 +7,9 @@ import {
   type EnvVitNode,
   pluginMiddleware,
 } from "../middlewares/global.middleware";
+import { getCurrentPluginId } from "./plugin-context";
 
 export const buildRoute = <
-  Plugin extends string,
   P extends string,
   R extends Omit<RouteConfig, "path"> & {
     path: P;
@@ -18,12 +18,11 @@ export const buildRoute = <
 >({
   route,
   handler,
-  pluginId,
 }: {
   handler: RouteHandler<R & { path: P }, EnvVitNode>;
-  pluginId: Plugin;
   route: R;
-}): Route<Plugin, R & { path: P }> => {
+}): Route<R & { path: P }> => {
+  const pluginId = getCurrentPluginId();
   const pluginTag = pluginId
     .split(/[-_]/)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -45,16 +44,13 @@ export const buildRoute = <
       ],
       ...route,
     }) as R & { path: P },
-    handler: handler as Route<Plugin, R & { path: P }>["handler"],
+    handler: handler as Route<R & { path: P }>["handler"],
     pluginId,
   };
 };
 
-export interface Route<
-  Plugin extends string = string,
-  R extends RouteConfig = RouteConfig,
-> {
+export interface Route<R extends RouteConfig = RouteConfig> {
   handler: (...args: unknown[]) => Promise<Response> | Response;
-  pluginId: Plugin;
+  pluginId: string;
   route: R;
 }

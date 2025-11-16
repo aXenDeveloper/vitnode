@@ -4,13 +4,11 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
 import { ForgotPasswordTokenModel } from "@/api/models/password";
-import { CONFIG_PLUGIN } from "@/config";
 import { core_users, core_users_forgot_password } from "@/database/users";
 import ResetPasswordEmailTemplate from "@/emails/reset-password";
 import { CONFIG } from "@/lib/config";
 
 export const resetPasswordRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Request a password reset",

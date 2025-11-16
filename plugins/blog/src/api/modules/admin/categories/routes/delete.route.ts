@@ -3,11 +3,9 @@ import { buildRoute } from "@vitnode/core/api/lib/route";
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
 
 export const deleteCategoryRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "delete",
     path: "/{id}",

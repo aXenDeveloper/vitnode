@@ -7,7 +7,6 @@ import {
 } from "@vitnode/core/api/lib/with-pagination";
 import { and, ilike, type SQL } from "drizzle-orm";
 
-import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
 
 const zodCategorySchema = z.object({
@@ -18,7 +17,6 @@ const zodCategorySchema = z.object({
 });
 
 export const categoriesRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
     path: "/",

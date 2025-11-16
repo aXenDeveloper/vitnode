@@ -43,7 +43,6 @@ Add `withCaptcha` to your route config to enable captcha validation for this rou
 import { buildRoute } from "@vitnode/core/api/lib/route";
 
 export const exampleRoute = buildRoute({
-  pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
     description: "Create a new user",
