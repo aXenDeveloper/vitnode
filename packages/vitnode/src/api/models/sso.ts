@@ -11,7 +11,7 @@ import { removeSpecialCharacters } from "@/lib/special-characters";
 
 import { UserModel } from "./user";
 
-export interface SSOApiPlugin {
+export interface SSOApiAdapter {
   fetchToken: (
     code: string,
   ) => Promise<{ access_token: string; token_type: string }>;
@@ -34,7 +34,7 @@ export class SSOModel {
   }
 
   private readonly c: Context;
-  private readonly plugins: SSOApiPlugin[];
+  private readonly plugins: SSOApiAdapter[];
 
   private readonly signUpUser = async ({
     providerId,

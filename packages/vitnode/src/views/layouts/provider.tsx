@@ -11,6 +11,7 @@ import type { VitNodeConfig } from "@/vitnode.config";
 import { CONFIG } from "@/lib/config";
 
 import { Toaster } from "../../components/ui/sonner";
+import { WebsocketContext } from "@/hooks/use-websocket";
 
 export const RootProvider = ({
   children,
@@ -50,23 +51,25 @@ export const RootProvider = ({
         enableSystem
         {...theme}
       >
-        <Toaster
-          closeButton
-          position={toaster?.position ?? "top-center"}
-          {...toaster}
-        />
-        <ProgressProvider
-          {...progressBar}
-          color={progressBar?.color ?? "var(--primary)"}
-          height={progressBar?.height ?? "4px"}
-          shallowRouting={progressBar?.shallowRouting ?? true}
-          options={{
-            showSpinner: false,
-            ...progressBar?.options,
-          }}
-        >
-          {children}
-        </ProgressProvider>
+        <WebsocketContext value={{ isConnected: false }}>
+          <Toaster
+            closeButton
+            position={toaster?.position ?? "top-center"}
+            {...toaster}
+          />
+          <ProgressProvider
+            {...progressBar}
+            color={progressBar?.color ?? "var(--primary)"}
+            height={progressBar?.height ?? "4px"}
+            shallowRouting={progressBar?.shallowRouting ?? true}
+            options={{
+              showSpinner: false,
+              ...progressBar?.options,
+            }}
+          >
+            {children}
+          </ProgressProvider>
+        </WebsocketContext>
       </ThemeProvider>
     </QueryClientProvider>
   );

@@ -10,12 +10,17 @@ import { SessionAdminModel } from "@/api/models/session-admin";
 import { CONFIG } from "@/lib/config";
 
 import type { BuildCronReturn } from "../lib/cron";
-import type { SSOApiPlugin } from "../models/sso";
+import type { SSOApiAdapter } from "../models/sso";
 
 import {
   loggerMiddleware,
   type LoggerMiddlewareType,
 } from "../lib/logger-middleware";
+import { WebsocketModel } from "../models/websocket/model";
+import {
+  WebsocketManager,
+  type WebsocketManagerConfig,
+} from "../models/websocket/manager";
 
 declare module "hono" {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -50,8 +55,9 @@ export interface EnvVariablesVitNode {
       cookieSecure: boolean;
       deviceCookieExpires: number;
       deviceCookieName: string;
-      ssoAdapters: SSOApiPlugin[];
+      ssoAdapters: SSOApiAdapter[];
     };
+    websocketManager: WebsocketManagerConfig;
     captcha?: Pick<VitNodeApiConfig, "captcha">["captcha"];
     cron: (BuildCronReturn & { module: string; pluginId: string })[];
     cronSecret?: string;
@@ -83,6 +89,9 @@ export interface EnvVariablesVitNode {
     nameCode: string;
     newsletter: boolean;
     roleId: number;
+  };
+  websocket: {
+    test: () => void;
   };
 }
 
@@ -153,7 +162,6 @@ export const globalMiddleware = ({
     // Fallback to localhost if nothing found
     c.set("ipAddress", ipAddress ?? "127.0.0.1");
     c.set("db", dbProvider);
-    c.set("email", new EmailModel(c));
 
     c.set("core", {
       pathToMessages,
@@ -176,7 +184,11 @@ export const globalMiddleware = ({
       cronSecret: CONFIG.cronJobSecret,
       plugins: pluginsMetadata,
       cron: cronMetadata,
+      websocketManager: new WebsocketManager(c),
     });
+
+    c.set("email", new EmailModel(c));
+    c.set("websocket", new WebsocketModel(c));
 
     const user = await new SessionModel(c).getUser();
     c.set("user", user);

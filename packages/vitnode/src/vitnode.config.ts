@@ -7,9 +7,10 @@ import type React from "react";
 import type { CronAdapter } from "./api/lib/cron";
 import type { BuildPluginApiReturn } from "./api/lib/plugin";
 import type { EmailApiPlugin } from "./api/models/email";
-import type { SSOApiPlugin } from "./api/models/sso";
+import type { SSOApiAdapter } from "./api/models/sso";
 import type { DefaultTemplateEmailProps } from "./emails/default-template";
 import type { BuildPluginReturn } from "./lib/plugin";
+import type { WebsocketAdapter } from "./api/lib/websocket";
 
 export interface LocaleConfig {
   code: string;
@@ -44,7 +45,7 @@ export interface VitNodeApiConfig {
     cookieSecure?: boolean;
     deviceCookieExpires?: number;
     deviceCookieName?: string;
-    ssoAdapters?: SSOApiPlugin[];
+    ssoAdapters?: SSOApiAdapter[];
   };
   captcha?: {
     secretKey: string | undefined;
@@ -52,6 +53,7 @@ export interface VitNodeApiConfig {
     type: "cloudflare_turnstile" | "recaptcha_v3";
   };
   cronAdapter?: CronAdapter;
+  websocketAdapter?: WebsocketAdapter;
   dbProvider: ReturnType<typeof drizzle>;
   email?: {
     adapter?: EmailApiPlugin;

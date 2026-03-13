@@ -1,8 +1,8 @@
 import { blogApiPlugin } from "@vitnode/blog/config.api";
-import { DiscordSSOApiPlugin } from "@vitnode/core/api/adapters/sso/discord";
+import { DiscordSSOApiAdapter } from "@vitnode/core/api/adapters/sso/discord";
 // import { ResendEmailAdapter } from "@vitnode/resend";
-import { FacebookSSOApiPlugin } from "@vitnode/core/api/adapters/sso/facebook";
-import { GoogleSSOApiPlugin } from "@vitnode/core/api/adapters/sso/google";
+import { FacebookSSOApiAdapter } from "@vitnode/core/api/adapters/sso/facebook";
+import { GoogleSSOApiAdapter } from "@vitnode/core/api/adapters/sso/google";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
 import { NodeCronAdapter } from "@vitnode/node-cron";
 import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
@@ -50,15 +50,15 @@ export const vitNodeApiConfig = buildApiConfig({
   },
   authorization: {
     ssoAdapters: [
-      DiscordSSOApiPlugin({
+      DiscordSSOApiAdapter({
         clientId: process.env.DISCORD_CLIENT_ID,
         clientSecret: process.env.DISCORD_CLIENT_SECRET,
       }),
-      GoogleSSOApiPlugin({
+      GoogleSSOApiAdapter({
         clientId: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       }),
-      FacebookSSOApiPlugin({
+      FacebookSSOApiAdapter({
         clientId: process.env.FACEBOOK_CLIENT_ID,
         clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
       }),

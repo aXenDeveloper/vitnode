@@ -10,7 +10,7 @@ icon: Power
 
 ## Get started
 
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
 <Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Create a Plugin'>
 
@@ -31,3 +31,11 @@ npx create-vitnode-app@canary
 ## Why VitNode?
 
 something here
+
+## Types of Applications
+
+In VitNode, you can create different types of applications to suit your needs:
+
+- **Single App**: A standalone application that includes both frontend and backend components in `Next.js` with `Hono.js` routes,
+- **Monorepo App**: A monorepo structure that allows you to manage multiple packages within a single repository, including frontend and backend components,
+- **Only API**: An application focused solely on backend API development without any frontend components using `Hono.js`.
