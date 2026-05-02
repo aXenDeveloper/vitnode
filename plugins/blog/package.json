@@ -40,7 +40,7 @@
     "drizzle-orm": "^0.44.7",
     "hono": "^4.10.6",
     "lucide-react": "^0.553.0",
-    "next": "^16.0.3",
+    "next": "16.0.10",
     "next-intl": "^4.5.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
