@@ -29,6 +29,7 @@ export const DataTableSkeleton = ({ columns }: { columns: number }) => {
   const headerIds = React.useMemo(
     () =>
       Array.from({ length: columns }).map(
+        // eslint-disable-next-line react-hooks/purity
         () => `s-head-${Math.random().toString(36).slice(2, 9)}`,
       ),
     [columns],
@@ -37,6 +38,7 @@ export const DataTableSkeleton = ({ columns }: { columns: number }) => {
   const rowIds = React.useMemo(
     () =>
       Array.from({ length: 6 }).map(
+        // eslint-disable-next-line react-hooks/purity
         () => `s-row-${Math.random().toString(36).slice(2, 9)}`,
       ),
     [],

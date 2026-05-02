@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-assignment */
 export interface HslColor {
   h: number;
   l: number;

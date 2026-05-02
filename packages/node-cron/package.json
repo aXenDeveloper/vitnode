@@ -34,13 +34,13 @@
     "node-cron": "^4.2.1"
   },
   "devDependencies": {
-    "@swc/cli": "^0.7.9",
-    "@swc/core": "^1.15.2",
+    "@swc/cli": "^0.8.1",
+    "@swc/core": "^1.15.32",
     "@vitnode/config": "workspace:*",
     "@vitnode/core": "workspace:*",
     "concurrently": "^9.2.1",
-    "eslint": "^9.39.1",
+    "eslint": "^10.2.1",
     "tsc-alias": "^1.8.16",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   }
 }

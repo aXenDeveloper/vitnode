@@ -1,5 +1,8 @@
 import type { QueryParams } from "next-intl/navigation";
-import type { RedirectType } from "next/navigation";
+
+// Some Next versions export RedirectType as a value; declare a local type to avoid
+// the "refers to a value, but is being used as a type" TS error.
+type RedirectType = "push" | "replace";
 
 import { createNavigation } from "next-intl/navigation";
 import { getLocale } from "next-intl/server";

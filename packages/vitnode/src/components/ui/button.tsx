@@ -38,13 +38,14 @@ const buttonVariants = cva(
 );
 
 type ButtonProps = React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-    isLoading?: boolean;
-  } & (
+  VariantProps<typeof buttonVariants> &
+  (
     | { "aria-label": string; size: "icon" }
     | { "aria-label"?: string; size?: "default" | "lg" | "sm" }
-  );
+  ) & {
+    asChild?: boolean;
+    isLoading?: boolean;
+  };
 
 function Button(props: ButtonProps) {
   return <ClientButton {...props} />;

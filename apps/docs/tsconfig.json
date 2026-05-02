@@ -6,14 +6,13 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmit": true,
-    "baseUrl": ".",
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/.source": ["./.source/index.ts"],
+      "collections/*": ["./.source/*"],
       "@/*": ["./src/*"]
     }
   },

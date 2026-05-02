@@ -44,7 +44,7 @@ export const buildRoute = <
             : []),
       ],
       ...route,
-    }) as R & { path: P },
+    }),
     handler: handler as Route<Plugin, R & { path: P }>["handler"],
     pluginId,
   };

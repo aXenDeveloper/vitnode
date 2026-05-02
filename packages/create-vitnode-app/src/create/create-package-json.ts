@@ -135,7 +135,7 @@ const apiDeps = {
 };
 
 const apiDevDeps = (pm: string, eslint: boolean) => ({
-  "@hono/node-server": "^1.19",
+  "@hono/node-server": "^2.0",
   ...(pm === "bun" ? { "@types/bun": versionsPackageJson.typesBun } : {}),
   "@types/node": versionsPackageJson.typesNode,
   "@types/react": versionsPackageJson.typesReact,
