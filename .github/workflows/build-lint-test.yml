@@ -36,6 +36,9 @@ jobs:
       - name: Build Scripts
         run: pnpm build:scripts
 
+      - name: Build Plugins
+        run: pnpm build:plugins
+
       - name: Run build
         run: pnpm build
 
