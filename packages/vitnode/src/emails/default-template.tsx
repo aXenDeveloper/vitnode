@@ -34,8 +34,10 @@ DefaultTemplateEmail.PreviewProps = {
   },
 } satisfies DefaultTemplateEmailProps & { children: React.ReactNode };
 
-export interface DefaultTemplateEmailProps
-  extends Pick<EmailModelSendArgs, "user"> {
+export interface DefaultTemplateEmailProps extends Pick<
+  EmailModelSendArgs,
+  "user"
+> {
   i18n: {
     locale: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -100,12 +102,12 @@ export default function DefaultTemplateEmail({
         }}
       >
         <Body className="text-foreground bg-background mx-auto px-2 font-sans">
-          <Container className="mx-auto max-w-[465px]">
+          <Container className="mx-auto max-w-116.25">
             <Section className="my-8">
               {logo?.src ? (
                 <Img
                   alt={logo.text ?? metadata.title}
-                  className="mx-auto my-0 max-w-[150px]"
+                  className="mx-auto my-0 max-w-37.5"
                   src={logo.src}
                 />
               ) : (
@@ -120,6 +122,7 @@ export default function DefaultTemplateEmail({
             <Section className="my-8 text-center text-sm">
               <Link className="text-muted-foreground" href={metadata.url}>
                 {metadata.shortTitle ?? metadata.title} ©{" "}
+                {/* eslint-disable-next-line @eslint-react/purity */}
                 {new Date().getFullYear()}
               </Link>
             </Section>

@@ -1,10 +1,9 @@
 import type { ItemNavAdmin } from "../views/admin/layouts/sidebar/nav/item";
 
-interface AdminNavItem
-  extends Pick<
-    React.ComponentProps<typeof ItemNavAdmin>,
-    "href" | "icon" | "isOpenInNewTab"
-  > {
+interface AdminNavItem extends Pick<
+  React.ComponentProps<typeof ItemNavAdmin>,
+  "href" | "icon" | "isOpenInNewTab"
+> {
   id: string;
 }
 

@@ -1,7 +1,7 @@
 import type React from "react";
 
+import { cn } from "@vitnode/core/lib/utils";
 import { ImageZoom } from "fumadocs-ui/components/image-zoom";
-import { cn } from "fumadocs-ui/utils/cn";
 
 export const ImgDocs = ({
   className,

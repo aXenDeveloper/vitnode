@@ -10,7 +10,8 @@ interface ClientResponse<
   T,
   U extends number = StatusCode,
   F extends ResponseFormat = ResponseFormat,
-> extends globalThis.Response {
+>
+  extends globalThis.Response {
   arrayBuffer: () => Promise<ArrayBuffer>;
   blob: () => Promise<Blob>;
   readonly body: null | ReadableStream;

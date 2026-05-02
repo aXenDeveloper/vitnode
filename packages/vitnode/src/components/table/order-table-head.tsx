@@ -31,6 +31,15 @@ export function OrderTableHeadDataTable<T extends DataTableTMin>({
   const isActive = currentOrderBy === id.toString();
   const nextOrder = isActive && currentOrder === "asc" ? "desc" : "asc";
 
+  let icon: React.ReactNode;
+  if (isPending) {
+    icon = <Loader small />;
+  } else if (isActive) {
+    icon = currentOrder === "asc" ? <ArrowUp /> : <ArrowDown />;
+  } else {
+    icon = <ChevronsUpDown />;
+  }
+
   return (
     <Button
       className="[&_svg]:text-muted-foreground -ml-2 flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 [&_svg]:size-4 [&_svg]:shrink-0"
@@ -48,20 +57,7 @@ export function OrderTableHeadDataTable<T extends DataTableTMin>({
       variant="ghost"
     >
       {children}
-      {(() => {
-        if (isPending) {
-          return <Loader small />;
-        }
-        if (isActive) {
-          if (currentOrder === "asc") {
-            return <ArrowUp />;
-          }
-
-          return <ArrowDown />;
-        }
-
-        return <ChevronsUpDown />;
-      })()}
+      {icon}
     </Button>
   );
 }

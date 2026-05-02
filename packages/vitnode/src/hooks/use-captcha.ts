@@ -1,3 +1,5 @@
+/* eslint-disable @eslint-react/set-state-in-effect */
+/* eslint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
 import type { z } from "zod";
 
 import { useLocale, useTranslations } from "next-intl";
@@ -44,6 +46,17 @@ export const useCaptcha = (
   const [token, setToken] = React.useState("");
   const pathname = usePathname();
 
+  const onReset = () => {
+    if (!captcha) return;
+
+    if (captcha.type === "cloudflare_turnstile" && window.turnstile) {
+      window.turnstile.reset();
+    }
+
+    setToken("");
+    setIsReady(false);
+  };
+
   const handleLoaded = () => {
     if (!captcha) return;
 
@@ -79,16 +92,15 @@ export const useCaptcha = (
   React.useEffect(() => {
     if (!captcha) {
       // If no captcha is required, consider it "ready"
-      // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsReady(true);
 
       return;
     }
     // Reset state on captcha type change
-    // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
+
     setIsReady(false);
 
-    // eslint-disable-next-line @eslint-react/hooks-extra/no-direct-set-state-in-use-effect
     setToken("");
 
     const googleCaptchaDomain = `https://www.google.com/recaptcha/api.js?hl=${locale}`;
@@ -121,18 +133,8 @@ export const useCaptcha = (
         widget.innerHTML = "";
       }
     };
+    // eslint-disable-next-line @eslint-react/exhaustive-deps
   }, [pathname, locale, captcha?.type, captcha?.siteKey]);
-
-  const onReset = () => {
-    if (!captcha) return;
-
-    if (captcha.type === "cloudflare_turnstile" && window.turnstile) {
-      window.turnstile.reset();
-    }
-
-    setToken("");
-    setIsReady(false);
-  };
 
   const getToken = async (): Promise<string> => {
     if (!captcha) return "";

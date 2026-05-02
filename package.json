@@ -17,14 +17,14 @@
     "test:e2e": "turbo test:e2e"
   },
   "devDependencies": {
-    "@types/node": "^24.10.1",
+    "@types/node": "^25.6.0",
     "@vitnode/config": "workspace:*",
-    "prettier": "^3.6.2",
-    "prettier-plugin-tailwindcss": "^0.7.1",
-    "tsx": "^4.20.6",
-    "turbo": "^2.6.1",
-    "typescript": "^5.9.3",
-    "zod": "^4.1.12"
+    "prettier": "^3.8.3",
+    "prettier-plugin-tailwindcss": "^0.8.0",
+    "tsx": "^4.21.0",
+    "turbo": "^2.9.6",
+    "typescript": "^6.0.3",
+    "zod": "^4.4.1"
   },
   "engines": {
     "node": ">=22"

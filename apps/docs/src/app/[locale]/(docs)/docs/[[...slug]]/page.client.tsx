@@ -1,7 +1,7 @@
 "use client";
 
+import { cn } from "@vitnode/core/lib/utils";
 // Source: https://github.com/fuma-nama/fumadocs/blob/dev/apps/docs/app/docs/%5B...slug%5D/page.client.tsx
-
 import { cva } from "class-variance-authority";
 import { buttonVariants } from "fumadocs-ui/components/ui/button";
 import {
@@ -9,9 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "fumadocs-ui/components/ui/popover";
-import { ChevronDown } from "fumadocs-ui/internal/icons";
-import { cn } from "fumadocs-ui/utils/cn";
-import { ExternalLinkIcon, MessageCircleIcon } from "lucide-react";
+import { ChevronDown, ExternalLinkIcon, MessageCircleIcon } from "lucide-react";
 
 const optionVariants = cva(
   "text-sm p-2 rounded-lg inline-flex items-center gap-2 hover:text-fd-accent-foreground hover:bg-fd-accent [&_svg]:size-4",

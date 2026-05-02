@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "fumadocs-ui/utils/cn";
+import { cn } from "@vitnode/core/lib/utils";
 import { useParams } from "next/navigation";
 
 export function useMode(): string | undefined {

@@ -86,7 +86,7 @@ export async function fetcher<
     (response as Response).status < 300 &&
     allowSaveCookies
   ) {
-    await handleSetCookiesFetcher(response as Response);
+    await handleSetCookiesFetcher(response);
   }
 
   return response;

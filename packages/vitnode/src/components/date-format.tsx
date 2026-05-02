@@ -24,6 +24,7 @@ export const DateFormat = ({
     updateInterval:
       updateInterval ??
       // Update it every 1 minute if the date is from today, otherwise don't update
+      // eslint-disable-next-line react-hooks/purity, @eslint-react/purity
       (Date.now() - dateToFormat.getTime() < 86400000 ? 60000 : 0),
   });
 

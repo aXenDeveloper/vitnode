@@ -142,11 +142,7 @@ export async function withPagination<
     primaryCursor,
   );
 
-  const totalCount = await fetchTotalCount(
-    c,
-    table as PgTable,
-    whereFromParams,
-  );
+  const totalCount = await fetchTotalCount(c, table, whereFromParams);
 
   const limit = (first ?? last ?? 50) + 1;
   const edges = await query({ limit, where, orderBy });

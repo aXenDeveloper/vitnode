@@ -1,4 +1,4 @@
-/* eslint-disable @eslint-react/hooks-extra/no-direct-set-state-in-use-effect */
+/* eslint-disable @eslint-react/set-state-in-effect */
 "use client";
 
 import { cn } from "@vitnode/core/lib/utils";
@@ -12,6 +12,7 @@ export const AnimatedBeam = ({
   toRef,
   curvature = 0,
   reverse = false, // Include the reverse prop
+  // eslint-disable-next-line react-hooks/purity, @eslint-react/purity
   duration = Math.random() * 3 + 4,
   delay = 0,
   pathColor = "gray",
@@ -104,7 +105,7 @@ export const AnimatedBeam = ({
     }
 
     // Call the updatePath initially to set the initial path
-    // eslint-disable-next-line react-you-might-not-need-an-effect/no-adjust-state-on-prop-change
+
     updatePath();
 
     // Clean up the observer on component unmount

@@ -314,8 +314,10 @@ const TextAnimateBase = ({
   animation = "fadeIn",
   ...props
 }: TextAnimateProps) => {
+  // eslint-disable-next-line @eslint-react/static-components
   const MotionComponent = motion.create(Component);
 
+  // eslint-disable-next-line no-useless-assignment
   let segments: string[] = [];
   switch (by) {
     case "character":
@@ -388,6 +390,7 @@ const TextAnimateBase = ({
 
   return (
     <AnimatePresence mode="popLayout">
+      {/* eslint-disable-next-line react-hooks/static-components, @eslint-react/static-components */}
       <MotionComponent
         animate={startOnView ? undefined : "show"}
         className={cn("whitespace-pre-wrap", className)}

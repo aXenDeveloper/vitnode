@@ -18,8 +18,6 @@ const createRateLimiter = ({
 
   return new RateLimiterMemory({
     keyPrefix,
-    points: options?.points ?? 80, // 80 in prod
-    duration: options?.duration ?? 60, // per 60 seconds
     ...options,
   });
 };
@@ -37,6 +35,8 @@ export const rateLimiterMiddleware = (
   const rateLimiter = createRateLimiter({
     ...options,
     keyPrefix: "vitnode-api-rate-limiter",
+    duration: options?.duration ?? 60,
+    points: options?.points ?? 80,
   });
 
   return async (c: Context, next: Next) => {

@@ -29,10 +29,13 @@ export function InfiniteSlider({
   reverse = false,
   className,
 }: InfiniteSliderProps) {
+  // eslint-disable-next-line @eslint-react/no-unused-state
   const [currentSpeed, setCurrentSpeed] = React.useState(speed);
   const [ref, { width, height }] = useMeasure<HTMLDivElement>();
   const translation = useMotionValue(0);
+  // eslint-disable-next-line @eslint-react/no-unused-state
   const [isTransitioning, setIsTransitioning] = React.useState(false);
+  // eslint-disable-next-line @eslint-react/no-unused-state
   const [key, setKey] = React.useState(0);
 
   React.useEffect(() => {

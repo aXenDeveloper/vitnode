@@ -1,14 +1,12 @@
 // @ts-check
 
 import eslintReact from "@eslint-react/eslint-plugin";
-import reactPlugin from "eslint-plugin-react";
 import hooksPlugin from "eslint-plugin-react-hooks";
 import reactYouMightNotNeedAnEffect from "eslint-plugin-react-you-might-not-need-an-effect";
 
 export default [
   reactYouMightNotNeedAnEffect.configs.recommended,
   eslintReact.configs.recommended,
-  reactPlugin.configs.flat.recommended,
   {
     files: ["**/*.{js,mjs,cjs,ts,jsx,tsx}"],
     settings: {
