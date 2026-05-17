@@ -46,11 +46,7 @@ export const DeleteAction = ({ title, id }: { id: number; title: string }) => {
           title={t("title")}
         >
           <TooltipTrigger asChild>
-            <Button
-              aria-label={t("title")}
-              size="icon"
-              variant="destructiveGhost"
-            >
+            <Button aria-label={t("title")} size="icon" variant="destructive">
               <Trash2Icon className="size-4" />
             </Button>
           </TooltipTrigger>

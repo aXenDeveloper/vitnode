@@ -5,11 +5,7 @@ import { adminModule } from "@/api/modules/admin/admin.module";
 import { Avatar } from "@/components/avatar";
 import { DateFormat } from "@/components/date-format";
 import { DataTable } from "@/components/table/data-table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipWithContent } from "@/components/ui/tooltip";
 import { fetcher } from "@/lib/fetcher";
 
 export const UsersAdminView = async ({
@@ -44,12 +40,9 @@ export const UsersAdminView = async ({
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{row.name}</span>
                   {!row.emailVerified && (
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <MailIcon className="text-destructive size-4" />
-                      </TooltipTrigger>
-                      <TooltipContent>{t("emailNotVerified")}</TooltipContent>
-                    </Tooltip>
+                    <TooltipWithContent text={t("emailNotVerified")}>
+                      <MailIcon className="text-destructive size-4" />
+                    </TooltipWithContent>
                   )}
                 </div>
                 <span className="text-muted-foreground text-sm">

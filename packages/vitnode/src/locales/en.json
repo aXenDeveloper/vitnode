@@ -1,6 +1,13 @@
 {
   "core": {
     "global": {
+      "close": "Close",
+      "confirm": "Confirm",
+      "previous": "Previous",
+      "next": "Next",
+      "current_page": "Current page",
+      "go_to_page": "Go to page",
+      "remove": "Remove",
       "editor": {
         "undo": "Undo",
         "redo": "Redo",

@@ -59,7 +59,7 @@ export const SystemLogsView = async ({
         {
           id: "createdAt",
           label: t("created_at"),
-          cell: ({ row }) => <DateFormat date={row.createdAt} showFullDate />,
+          cell: ({ row }) => <DateFormat date={row.createdAt} />,
         },
         {
           id: "content",

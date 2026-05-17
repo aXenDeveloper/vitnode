@@ -38,7 +38,7 @@ export default function ButtonExample() {
         aria-label="Delete"
         isLoading={isLoading}
         size="icon"
-        variant="destructiveGhost"
+        variant="destructive"
       >
         <Trash2 />
       </Button>
