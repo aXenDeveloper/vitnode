@@ -39,7 +39,7 @@
     "commander": "^14.0.3",
     "ora": "^9.4.0",
     "picocolors": "^1.1.1",
-    "validate-npm-package-name": "^7.0.2"
+    "validate-npm-package-name": "^8.0.0"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

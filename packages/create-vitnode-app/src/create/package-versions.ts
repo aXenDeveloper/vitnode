@@ -6,7 +6,7 @@ export const versionsPackageJson = {
 
   turbo: "^2.9",
   typescript: "^6.0",
-  tsx: "^4.21",
+  tsx: "^4",
   tscAlias: "^1.8.16",
   eslint: "^10",
   prettier: "^3.8.3",
@@ -32,7 +32,7 @@ export const versionsPackageJson = {
 
   hono: "^4.12",
   honoZodOpenapi: "^1.3",
-  honoZodValidator: "^0.7.6",
+  honoZodValidator: "^0.8",
   reactEmail: "^6.0",
   reactEmailComponents: "^1.0",
   zod: "^4.4",
