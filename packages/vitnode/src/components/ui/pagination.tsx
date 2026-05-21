@@ -74,9 +74,11 @@ function PaginationPrevious({
   text = "Previous",
   ...props
 }: React.ComponentProps<typeof PaginationLink> & { text?: string }) {
+  const t = useTranslations("core.global");
+
   return (
     <PaginationLink
-      aria-label="Go to previous page"
+      aria-label={t("previous_page")}
       className={cn("ps-2!", className)}
       size="default"
       {...props}
@@ -92,9 +94,11 @@ function PaginationNext({
   text = "Next",
   ...props
 }: React.ComponentProps<typeof PaginationLink> & { text?: string }) {
+  const t = useTranslations("core.global");
+
   return (
     <PaginationLink
-      aria-label="Go to next page"
+      aria-label={t("next_page")}
       className={cn("pe-2!", className)}
       size="default"
       {...props}
