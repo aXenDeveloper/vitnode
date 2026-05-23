@@ -1,4 +1,4 @@
-import { FormControl, FormItem } from "@/components/ui/form";
+import { FormControl } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
@@ -16,7 +16,7 @@ export const AutoFormSwitch = ({
 }: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Switch>, "checked">) => {
   return (
-    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+    <div className="flex flex-row items-center justify-between rounded-lg border p-4">
       {(label ?? description) && (
         <div className="space-y-0.5">
           {label && (
@@ -42,6 +42,6 @@ export const AutoFormSwitch = ({
           {...props}
         />
       </FormControl>
-    </FormItem>
+    </div>
   );
 };

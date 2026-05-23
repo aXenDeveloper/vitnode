@@ -1,5 +1,6 @@
 "use client";
 
+import { SearchIcon } from "lucide-react";
 import { z } from "zod";
 
 import { AutoForm } from "@/components/form/auto-form";
@@ -13,6 +14,7 @@ import { AutoFormTextarea } from "@/components/form/fields/textarea";
 import { Card } from "@/components/ui/card";
 import { Editor } from "@/components/ui/editor";
 import { EditorContent } from "@/components/ui/editor-content";
+import { InputGroupAddon, InputGroupText } from "@/components/ui/input-group";
 
 export const TestView = () => {
   const formSchema = z.object({
@@ -22,7 +24,19 @@ export const TestView = () => {
       .describe(
         "This is the provider for your application. It should be a valid provider name.",
       ),
+    provider2: z
+      .string()
+      .describe(
+        "This is the provider for your application. It should be a valid provider name.",
+      )
+      .default("test"),
     client_secret: z
+      .string()
+      .min(1, { message: "Client Secret is required" })
+      .describe(
+        "This is the client secret for your application. It should be kept secret and not shared with anyone.",
+      ),
+    client_secret2: z
       .string()
       .min(1, { message: "Client Secret is required" })
       .describe(
@@ -59,6 +73,16 @@ export const TestView = () => {
               ),
             },
             {
+              id: "provider2",
+              component: props => (
+                <AutoFormInput label="Provider 2" {...props}>
+                  <InputGroupAddon>
+                    <SearchIcon />
+                  </InputGroupAddon>
+                </AutoFormInput>
+              ),
+            },
+            {
               id: "client_secret",
               component: props => (
                 <AutoFormTextarea
@@ -67,6 +91,24 @@ export const TestView = () => {
                   label="Client Secret"
                   {...props}
                 />
+              ),
+            },
+            {
+              id: "client_secret2",
+              component: props => (
+                <AutoFormTextarea
+                  description="This is the client secret for your application. It should be kept
+            secret and not shared with anyone."
+                  label="Client Secret"
+                  {...props}
+                >
+                  <InputGroupAddon align="block-end">
+                    <InputGroupText className="tabular-nums">
+                      {props.field.value?.toString().length ?? 0} of 500
+                      characters
+                    </InputGroupText>
+                  </InputGroupAddon>
+                </AutoFormTextarea>
               ),
             },
             {

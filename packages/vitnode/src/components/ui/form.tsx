@@ -101,7 +101,6 @@ const FormField = <
 
 const useFormField = () => {
   const fieldContext = React.use(FormFieldContext);
-  const itemContext = React.use(FormItemContext);
   const { getFieldState } = useFormContext();
   const formState = useFormState({ name: fieldContext.name });
   const fieldState = getFieldState(fieldContext.name, formState);
@@ -110,7 +109,7 @@ const useFormField = () => {
     throw new Error("useFormField should be used within <FormField>");
   }
 
-  const { id } = itemContext;
+  const id = fieldContext.name;
 
   return {
     id,
@@ -121,29 +120,6 @@ const useFormField = () => {
     ...fieldState,
   };
 };
-
-interface FormItemContextValue {
-  id: string;
-}
-
-const FormItemContext = React.createContext<FormItemContextValue>(
-  {} as FormItemContextValue,
-);
-
-function FormItem({ className, ...props }: React.ComponentProps<"div">) {
-  const id = React.useId();
-  const contextValue = React.useMemo(() => ({ id }), [id]);
-
-  return (
-    <FormItemContext value={contextValue}>
-      <div
-        className={cn("grid gap-2", className)}
-        data-slot="form-item"
-        {...props}
-      />
-    </FormItemContext>
-  );
-}
 
 function FormLabel({
   className,
@@ -173,20 +149,9 @@ function FormLabel({
 }
 
 function FormControl({ ...props }: React.ComponentProps<typeof Slot.Root>) {
-  const { error, formItemId, formDescriptionId, formMessageId } =
-    useFormField();
+  const { formItemId } = useFormField();
 
-  return (
-    <Slot.Root
-      aria-describedby={
-        error ? `${formDescriptionId} ${formMessageId}` : formDescriptionId
-      }
-      aria-invalid={!!error}
-      data-slot="form-control"
-      id={formItemId}
-      {...props}
-    />
-  );
+  return <Slot.Root id={formItemId} {...props} />;
 }
 
 function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
@@ -245,7 +210,6 @@ export {
   FormControl,
   FormDescription,
   FormField,
-  FormItem,
   FormLabel,
   FormMessage,
   useFormField,

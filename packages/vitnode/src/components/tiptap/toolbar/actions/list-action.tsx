@@ -34,8 +34,10 @@ export const ListAction = () => {
         <div>
           <Toggle
             aria-label={t("bullet_list")}
+            className="size-8"
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             pressed={isBulletList}
+            size="sm"
           >
             <ListIcon />
           </Toggle>
@@ -53,8 +55,10 @@ export const ListAction = () => {
         <div>
           <Toggle
             aria-label={t("ordered_list")}
+            className="size-8"
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
             pressed={isOrderedList}
+            size="sm"
           >
             <ListOrderedIcon />
           </Toggle>

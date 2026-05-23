@@ -34,7 +34,7 @@ export const UndoRedoActions = () => {
           aria-label={t("undo")}
           disabled={!canUndo}
           onClick={() => editor.chain().focus().undo().run()}
-          size="icon"
+          size="icon-sm"
           variant="ghost"
         >
           <UndoIcon />

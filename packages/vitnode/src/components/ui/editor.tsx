@@ -33,7 +33,7 @@ export const Editor = ({
   return (
     <div
       className={cn("bg-card relative w-full rounded-md border shadow-xs", {
-        "max-h-[20rem] overflow-hidden overflow-y-scroll": !disableScroll,
+        "max-h-80 overflow-hidden overflow-y-scroll": !disableScroll,
         className,
       })}
     >

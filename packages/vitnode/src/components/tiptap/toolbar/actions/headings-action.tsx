@@ -63,7 +63,7 @@ export const HeadingsAction = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className="w-32 justify-between" variant="ghost">
+        <Button className="w-32 justify-between" size="sm" variant="ghost">
           {activeOption.icon}
           {activeOption.label}
 
@@ -71,7 +71,7 @@ export const HeadingsAction = () => {
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="min-w-[14rem]">
+      <DropdownMenuContent className="min-w-56">
         <DropdownMenuRadioGroup value={activeValue}>
           {options.map(item => (
             <DropdownMenuRadioItem

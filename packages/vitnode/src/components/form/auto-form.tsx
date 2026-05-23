@@ -22,6 +22,7 @@ import {
 } from "../../lib/helpers/auto-form";
 import { Button } from "../ui/button";
 import { DialogClose, DialogFooter, useDialog } from "../ui/dialog";
+import { Field } from "../ui/field";
 import { Form, FormField } from "../ui/form";
 
 type ItemAutoFormProps<
@@ -161,9 +162,9 @@ export function AutoForm<
           <FormField
             key={item.id}
             name={item.id}
-            render={({ field }) => {
+            render={({ field, fieldState }) => {
               return (
-                <>
+                <Field data-invalid={fieldState.invalid}>
                   {item.component({
                     field,
                     description:
@@ -193,7 +194,7 @@ export function AutoForm<
                           : undefined,
                     },
                   })}
-                </>
+                </Field>
               );
             }}
           />

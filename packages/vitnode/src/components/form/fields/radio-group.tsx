@@ -1,11 +1,6 @@
 import type React from "react";
 
-import {
-  FormControl,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { FormControl, FormLabel, FormMessage } from "@/components/ui/form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
@@ -35,7 +30,7 @@ export const AutoFormRadioGroup = ({
   });
 
   return (
-    <FormItem className="space-y-3">
+    <div className="space-y-3">
       {label && (
         <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
           {label}
@@ -50,21 +45,18 @@ export const AutoFormRadioGroup = ({
           {...props}
         >
           {values.map(({ value, label }) => (
-            <FormItem
-              className="flex items-center space-y-0 space-x-3"
-              key={value}
-            >
+            <div className="flex items-center space-y-0 space-x-3" key={value}>
               <FormControl>
                 <RadioGroupItem value={value} />
               </FormControl>
               <FormLabel className="font-normal">{label}</FormLabel>
-            </FormItem>
+            </div>
           ))}
         </RadioGroup>
       </FormControl>
 
       {description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />
-    </FormItem>
+    </div>
   );
 };

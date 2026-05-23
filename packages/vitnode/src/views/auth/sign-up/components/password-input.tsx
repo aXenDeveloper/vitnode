@@ -5,7 +5,7 @@ import React from "react";
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 
 import { AutoFormLabel } from "@/components/form/common/label";
-import { FormControl, FormItem, FormMessage } from "@/components/ui/form";
+import { FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
   Tooltip,
@@ -46,7 +46,7 @@ export const PasswordInput = ({
   ];
 
   return (
-    <FormItem>
+    <>
       <AutoFormLabel>{label}</AutoFormLabel>
 
       <TooltipProvider delayDuration={0}>
@@ -99,6 +99,6 @@ export const PasswordInput = ({
       </TooltipProvider>
 
       <FormMessage />
-    </FormItem>
+    </>
   );
 };

@@ -7,6 +7,8 @@
       "next": "Next",
       "current_page": "Current page",
       "go_to_page": "Go to page",
+      "previous_page": "Previous page",
+      "next_page": "Next page",
       "remove": "Remove",
       "editor": {
         "undo": "Undo",

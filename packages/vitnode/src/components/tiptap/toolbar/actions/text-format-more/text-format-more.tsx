@@ -35,14 +35,14 @@ export const TextFormatMore = () => {
           className={cn({
             "bg-accent": isStrike,
           })}
-          size="icon"
+          size="icon-sm"
           variant="ghost"
         >
           <EllipsisVerticalIcon />
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent className="min-w-[12rem]">
+      <DropdownMenuContent className="min-w-48">
         <DropdownMenuItem
           className={cn({
             "bg-accent": isStrike,

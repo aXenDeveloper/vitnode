@@ -12,7 +12,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { FormControl, FormItem, FormMessage } from "@/components/ui/form";
+import { FormControl, FormMessage } from "@/components/ui/form";
 import {
   Popover,
   PopoverContent,
@@ -54,7 +54,7 @@ export const AutoFormCombobox = ({
   });
 
   return (
-    <FormItem className="flex flex-col">
+    <div className="flex flex-col">
       {label && (
         <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
           {label}
@@ -116,6 +116,6 @@ export const AutoFormCombobox = ({
 
       {description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />
-    </FormItem>
+    </div>
   );
 };
