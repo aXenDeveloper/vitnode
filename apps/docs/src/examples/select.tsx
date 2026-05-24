@@ -16,6 +16,7 @@ export default function SelectExample() {
           id: "options",
           component: props => (
             <AutoFormSelect
+              {...props}
               description="Choose one of the options."
               label="Select an option"
               labels={[
@@ -32,7 +33,6 @@ export default function SelectExample() {
                   label: "Option 3",
                 },
               ]}
-              {...props}
             />
           ),
         },

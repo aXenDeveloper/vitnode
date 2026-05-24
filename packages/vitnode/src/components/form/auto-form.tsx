@@ -164,7 +164,10 @@ export function AutoForm<
             name={item.id}
             render={({ field, fieldState }) => {
               return (
-                <Field data-invalid={fieldState.invalid}>
+                <Field
+                  data-invalid={fieldState.invalid}
+                  orientation="responsive"
+                >
                   {item.component({
                     field,
                     description:

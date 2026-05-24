@@ -48,6 +48,7 @@ export default function AutoFormExample() {
           id: "user_type",
           component: props => (
             <AutoFormSelect
+              {...props}
               description="Select the type of user."
               label="User Type"
               labels={[
@@ -55,7 +56,6 @@ export default function AutoFormExample() {
                 { value: "editor", label: "Editor" },
                 { value: "viewer", label: "Viewer" },
               ]}
-              {...props}
             />
           ),
         },

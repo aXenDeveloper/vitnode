@@ -45,7 +45,7 @@ export const AutoFormSelect = ({
     t("select_option");
 
   return (
-    <div className="space-y-3">
+    <>
       {label && (
         <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
           {label}
@@ -83,6 +83,6 @@ export const AutoFormSelect = ({
 
       {description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />
-    </div>
+    </>
   );
 };

@@ -6,7 +6,8 @@ import { z } from "zod";
 
 export default function RadioGroupExample() {
   const formSchema = z.object({
-    options: z.enum(["option1", "option2", "option3"]),
+    options: z.enum(["option1", "option2", "option3"]).default("option1"),
+    options_block: z.enum(["option1", "option2", "option3"]).default("option1"),
   });
 
   return (
@@ -16,12 +17,14 @@ export default function RadioGroupExample() {
           id: "options",
           component: props => (
             <AutoFormRadioGroup
+              {...props}
               description="By checking this box, you agree to the terms and conditions."
               label="I agree to the terms and conditions"
               labels={[
                 {
                   value: "option1",
                   label: "Option 1",
+                  description: "This is the description for option 1",
                 },
                 {
                   value: "option2",
@@ -30,9 +33,38 @@ export default function RadioGroupExample() {
                 {
                   value: "option3",
                   label: "Option 3",
+                  description: "This is the description for option 3",
+                  disabled: true,
                 },
               ]}
+            />
+          ),
+        },
+        {
+          id: "options_block",
+          component: props => (
+            <AutoFormRadioGroup
               {...props}
+              description="By checking this box, you agree to the terms and conditions."
+              label="I agree to the terms and conditions with blocks variant"
+              labels={[
+                {
+                  value: "option1",
+                  label: "Option 1",
+                  description: "This is the description for option 1",
+                },
+                {
+                  value: "option2",
+                  label: "Option 2",
+                },
+                {
+                  value: "option3",
+                  label: "Option 3",
+                  description: "This is the description for option 3",
+                  disabled: true,
+                },
+              ]}
+              variant="blocks"
             />
           ),
         },

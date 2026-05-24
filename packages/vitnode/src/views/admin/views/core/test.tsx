@@ -125,13 +125,14 @@ export const TestView = () => {
               id: "options",
               component: props => (
                 <AutoFormRadioGroup
+                  {...props}
                   description="By checking this box, you agree to the terms and conditions."
                   label="I agree to the terms and conditions"
                   labels={[
                     {
                       value: "option1",
-                      label:
-                        "Option 1 with a very long label that should be truncated",
+                      label: "Option 1",
+                      description: "This is the description for option 1",
                     },
                     {
                       value: "option2",
@@ -140,9 +141,11 @@ export const TestView = () => {
                     {
                       value: "option3",
                       label: "Option 3",
+                      description: "This is the description for option 3",
+                      disabled: true,
                     },
                   ]}
-                  {...props}
+                  variant="blocks"
                 />
               ),
             },
@@ -150,6 +153,7 @@ export const TestView = () => {
               id: "options_long",
               component: props => (
                 <AutoFormSelect
+                  {...props}
                   description="By checking this box, you agree to the terms and conditions."
                   label="I agree to the terms and conditions"
                   labels={[
@@ -168,7 +172,6 @@ export const TestView = () => {
                     },
                   ]}
                   placeholder="Select an option from the list"
-                  {...props}
                 />
               ),
             },

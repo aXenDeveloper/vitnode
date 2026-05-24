@@ -1,7 +1,5 @@
 "use client";
 
-import type { Label as LabelPrimitive } from "radix-ui";
-
 import { useTranslations } from "next-intl";
 import { Slot } from "radix-ui";
 import React from "react";
@@ -16,12 +14,12 @@ import {
   useFormState,
 } from "react-hook-form";
 
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 import { useBeforeUnload } from "../../hooks/use-before-unload";
 import { Button } from "./button";
 import { useDialog } from "./dialog";
+import { FieldError } from "./field";
 
 function Form<
   TFieldValues extends FieldValues,
@@ -32,6 +30,7 @@ function Form<
   form,
   className,
   onSubmit,
+  disableBeforeUnload,
   ...props
 }: Omit<React.ComponentProps<"form">, "onSubmit"> & {
   disableBeforeUnload?: boolean;
@@ -46,16 +45,17 @@ function Form<
   const t = useTranslations("core.global");
   const formIsDirty = form.formState.isDirty;
   useBeforeUnload(
-    formIsDirty && !props.disableBeforeUnload,
+    formIsDirty && !disableBeforeUnload,
     `${t("are_you_sure_want_to_leave_form.title")} ${t("are_you_sure_want_to_leave_form.desc")}`,
   );
   const { setIsDirty } = useDialog();
 
   React.useEffect(() => {
-    if (props.disableBeforeUnload) return;
+    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
+    if (disableBeforeUnload) return;
 
     setIsDirty?.(formIsDirty);
-  }, [formIsDirty, props.disableBeforeUnload, setIsDirty]);
+  }, [formIsDirty, disableBeforeUnload, setIsDirty]);
 
   return (
     <FormProvider {...form}>
@@ -121,37 +121,20 @@ const useFormField = () => {
   };
 };
 
-function FormLabel({
-  className,
-  children,
-  isOptional,
-  ...props
-}: React.ComponentProps<typeof LabelPrimitive.Root> & {
-  isOptional?: boolean;
-}) {
-  const t = useTranslations("core.global");
-  const { error, formItemId } = useFormField();
+function FormControl({ ...props }: React.ComponentProps<typeof Slot.Root>) {
+  const { error, formItemId, formDescriptionId, formMessageId } =
+    useFormField();
 
   return (
-    <Label
-      className={cn("data-[error=true]:text-destructive", className)}
-      data-error={!!error}
-      data-slot="form-label"
-      htmlFor={formItemId}
+    <Slot.Root
+      aria-describedby={
+        error ? `${formDescriptionId} ${formMessageId}` : formDescriptionId
+      }
+      aria-invalid={!!error}
+      id={formItemId}
       {...props}
-    >
-      {children}
-      {isOptional && (
-        <span className="text-muted-foreground text-xs">{t("optional")}</span>
-      )}
-    </Label>
+    />
   );
-}
-
-function FormControl({ ...props }: React.ComponentProps<typeof Slot.Root>) {
-  const { formItemId } = useFormField();
-
-  return <Slot.Root id={formItemId} {...props} />;
 }
 
 function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
@@ -167,24 +150,14 @@ function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
   );
 }
 
-function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
-  const { error, formMessageId } = useFormField();
-  const body = error ? (error?.message ?? "") : props.children;
+function FormMessage(props: React.ComponentProps<typeof FieldError>) {
+  const { error } = useFormField();
 
-  if (!body) {
+  if (!error) {
     return null;
   }
 
-  return (
-    <p
-      className={cn("text-destructive text-sm", className)}
-      data-slot="form-message"
-      id={formMessageId}
-      {...props}
-    >
-      {body}
-    </p>
-  );
+  return <FieldError errors={[error]} {...props} />;
 }
 
 const FormButtonSubmit = ({
@@ -210,7 +183,6 @@ export {
   FormControl,
   FormDescription,
   FormField,
-  FormLabel,
   FormMessage,
   useFormField,
 };

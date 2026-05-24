@@ -181,8 +181,8 @@ function FieldError({
 }: React.ComponentProps<"div"> & {
   errors?: (undefined | { message?: string })[];
 }) {
-  // eslint-disable-next-line react-hooks/use-memo, @eslint-react/use-memo
-  const content = useMemo(async () => {
+  // eslint-disable-next-line @typescript-eslint/promise-function-async
+  const content = useMemo(() => {
     if (children) {
       return children;
     }
