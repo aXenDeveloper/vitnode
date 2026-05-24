@@ -19,6 +19,7 @@ import {
   getDefaults,
   getNestedParam,
   getZodInputParams,
+  type InputParams,
 } from "../../lib/helpers/auto-form";
 import { Button } from "../ui/button";
 import { DialogClose, DialogFooter, useDialog } from "../ui/dialog";
@@ -43,12 +44,15 @@ type ItemAutoFormProps<
 export interface ItemAutoFormComponentProps {
   description?: React.ReactNode;
   field: ControllerRenderProps<FieldValues, string>;
+  itemParams?: InputParams;
   label?: React.ReactNode;
   labelRight?: React.ReactNode;
   otherProps: {
     enum?: string[];
     isOptional?: boolean;
+    maxItems?: number;
     maxLength?: number;
+    minItems?: number;
     minLength?: number;
     pattern?: string;
     type?: string;
@@ -174,6 +178,10 @@ export function AutoForm<
                       typeof params.description === "string"
                         ? params.description
                         : "",
+                    itemParams:
+                      "itemParams" in params
+                        ? (params.itemParams as InputParams)
+                        : undefined,
                     otherProps: {
                       isOptional: !params.required,
                       enum: Array.isArray(params.enum)
@@ -183,9 +191,17 @@ export function AutoForm<
                         typeof params.maxLength === "number"
                           ? params.maxLength
                           : undefined,
+                      maxItems:
+                        typeof params.maxItems === "number"
+                          ? params.maxItems
+                          : undefined,
                       minLength:
                         typeof params.minLength === "number"
                           ? params.minLength
+                          : undefined,
+                      minItems:
+                        typeof params.minItems === "number"
+                          ? params.minItems
                           : undefined,
                       pattern:
                         typeof params.pattern === "string"

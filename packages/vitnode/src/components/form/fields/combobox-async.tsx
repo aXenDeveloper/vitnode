@@ -30,6 +30,8 @@ import { AutoFormLabel } from "../common/label";
 export const AutoFormComboboxAsync = ({
   label,
   field,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  itemParams,
   description,
   placeholder,
   className,

@@ -13,6 +13,8 @@ export const AutoFormInput = ({
   description,
   otherProps: { isOptional, maxLength, minLength, pattern, type },
   field,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  itemParams,
   children,
   ...props
 }: ItemAutoFormComponentProps &

@@ -17,7 +17,6 @@ import {
 import { cn } from "@/lib/utils";
 
 import { useBeforeUnload } from "../../hooks/use-before-unload";
-import { Button } from "./button";
 import { useDialog } from "./dialog";
 import { FieldError } from "./field";
 
@@ -137,19 +136,6 @@ function FormControl({ ...props }: React.ComponentProps<typeof Slot.Root>) {
   );
 }
 
-function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
-  const { formDescriptionId } = useFormField();
-
-  return (
-    <p
-      className={cn("text-muted-foreground text-sm", className)}
-      data-slot="form-description"
-      id={formDescriptionId}
-      {...props}
-    />
-  );
-}
-
 function FormMessage(props: React.ComponentProps<typeof FieldError>) {
   const { error } = useFormField();
 
@@ -160,29 +146,4 @@ function FormMessage(props: React.ComponentProps<typeof FieldError>) {
   return <FieldError errors={[error]} {...props} />;
 }
 
-const FormButtonSubmit = ({
-  className,
-  ...props
-}: React.ComponentProps<typeof Button>) => {
-  const { formState } = useFormContext();
-
-  return (
-    <Button
-      className={cn("w-full", className)}
-      disabled={!formState.isValid}
-      isLoading={formState.isSubmitting}
-      type="submit"
-      {...props}
-    />
-  );
-};
-
-export {
-  Form,
-  FormButtonSubmit,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormMessage,
-  useFormField,
-};
+export { Form, FormControl, FormField, FormMessage, useFormField };

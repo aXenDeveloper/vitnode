@@ -19,6 +19,8 @@ import { AutoFormLabel } from "../common/label";
 export const AutoFormSelect = ({
   label,
   field,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  itemParams,
   description,
   otherProps: { enum: enumValues = [], isOptional },
   placeholder,

@@ -15,6 +15,8 @@ export const AutoFormTextarea = ({
   labelRight,
   otherProps: { isOptional, maxLength, minLength },
   field,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  itemParams,
   children,
   ...props
 }: ItemAutoFormComponentProps &

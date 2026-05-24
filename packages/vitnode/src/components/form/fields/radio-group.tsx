@@ -26,6 +26,8 @@ export const AutoFormRadioGroup = ({
   label,
   labelRight,
   field,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  itemParams,
   description,
   otherProps: { enum: enumValues = [], isOptional },
   labels = [],
@@ -48,7 +50,7 @@ export const AutoFormRadioGroup = ({
   });
 
   return (
-    <div className="space-y-3">
+    <>
       {label && (
         <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
           {label}
@@ -113,6 +115,6 @@ export const AutoFormRadioGroup = ({
       </FormControl>
 
       <FormMessage />
-    </div>
+    </>
   );
 };

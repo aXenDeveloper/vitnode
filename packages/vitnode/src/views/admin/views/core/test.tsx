@@ -4,6 +4,7 @@ import { SearchIcon } from "lucide-react";
 import { z } from "zod";
 
 import { AutoForm } from "@/components/form/auto-form";
+import { AutoFormArray } from "@/components/form/fields/array";
 import { AutoFormCheckbox } from "@/components/form/fields/checkbox";
 import { AutoFormCombobox } from "@/components/form/fields/combobox";
 import { AutoFormInput } from "@/components/form/fields/input";
@@ -24,6 +25,14 @@ export const TestView = () => {
       .describe(
         "This is the provider for your application. It should be a valid provider name.",
       ),
+    features: z
+      .array(
+        z.object({
+          name: z.string().min(1, { message: "Feature name is required" }),
+          enabled: z.boolean().default(true),
+        }),
+      )
+      .describe("List the features available for this provider."),
     provider2: z
       .string()
       .describe(
@@ -52,6 +61,10 @@ export const TestView = () => {
     options_long: z.enum(["option1", "option2", "option3"]).default("option2"),
     switch: z.boolean().default(false).describe("elo"),
     type: z.enum(["option-one", "option-two"]),
+    custom_color: z
+      .string()
+      .default("#000000")
+      .describe("Pick your favorite color."),
   });
 
   return (
@@ -69,6 +82,30 @@ export const TestView = () => {
                   description="This is the provider for your application. It should be a valid provider name."
                   label="Provider"
                   {...props}
+                />
+              ),
+            },
+            {
+              id: "features",
+              component: props => (
+                <AutoFormArray
+                  {...props}
+                  fields={[
+                    {
+                      id: "name",
+                      className: "flex-1",
+                      component: subProps => (
+                        <AutoFormInput {...subProps} label="Feature Name" />
+                      ),
+                    },
+                    {
+                      id: "enabled",
+                      component: subProps => (
+                        <AutoFormCheckbox {...subProps} label="Enabled" />
+                      ),
+                    },
+                  ]}
+                  label="Features"
                 />
               ),
             },
@@ -203,6 +240,27 @@ export const TestView = () => {
                   ]}
                   {...props}
                 />
+              ),
+            },
+            {
+              id: "custom_color",
+              component: props => (
+                <div className="flex w-full flex-col gap-3">
+                  <div className="text-sm leading-none font-medium">
+                    Custom Color Picker
+                  </div>
+                  <input
+                    {...props.field}
+                    className="h-10 w-24 cursor-pointer rounded-md border p-1"
+                    type="color"
+                    value={(props.field.value as string) ?? "#000000"}
+                  />
+                  {props.description && (
+                    <div className="text-muted-foreground text-sm">
+                      {props.description}
+                    </div>
+                  )}
+                </div>
               ),
             },
           ]}

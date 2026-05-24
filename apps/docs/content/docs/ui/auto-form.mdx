@@ -15,6 +15,7 @@ import { AutoFormCheckbox } from "@vitnode/core/components/form/fields/checkbox"
 import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
 import { AutoFormSelect } from "@vitnode/core/components/form/fields/select";
 import { AutoFormTextarea } from "@vitnode/core/components/form/fields/textarea";
+import { AutoFormArray } from "@vitnode/core/components/form/fields/array";
 import { InputGroupAddon } from "@vitnode/core/components/ui/input-group";
 import { Search } from "lucide-react";
 import { z } from "zod";
@@ -27,6 +28,14 @@ const formSchema = z.object({
     .email("Please enter a valid email address")
     .describe("We'll use this email to contact you. (from zod schema)"),
   user_type: z.enum(["admin", "editor", "viewer"]),
+  links: z
+    .array(
+      z.object({
+        title: z.string().min(1, "Title is required"),
+        url: z.string().url(),
+      }),
+    )
+    .optional(),
   accept_terms: z.boolean().refine(val => val, {
     message: "You must accept the terms and conditions",
   }),
@@ -63,6 +72,29 @@ const formSchema = z.object({
             { value: "admin", label: "Admin" },
             { value: "editor", label: "Editor" },
             { value: "viewer", label: "Viewer" },
+          ]}
+        />
+      ),
+    },
+    {
+      id: "links",
+      component: props => (
+        <AutoFormArray
+          {...props}
+          label="Profile Links"
+          fields={[
+            {
+              id: "title",
+              component: subProps => (
+                <AutoFormInput {...subProps} label="Title" />
+              ),
+            },
+            {
+              id: "url",
+              component: subProps => (
+                <AutoFormInput {...subProps} label="URL" />
+              ),
+            },
           ]}
         />
       ),
@@ -180,6 +212,57 @@ const formSchema = z.object({
 });
 ```
 
+### Arrays
+
+You can create dynamic list of fields using `AutoFormArray` component working with `z.array(z.object(...))` schema:
+
+```ts
+const formSchema = z.object({
+  guests: z
+    .array(
+      z.object({
+        name: z.string(),
+        email: z.string().email(),
+      }),
+    )
+    .min(1),
+});
+```
+
+```tsx
+{
+  id: "guests",
+  component: props => (
+    <AutoFormArray
+      {...props}
+      label="Guests"
+      fields={[
+        { id: "name", component: p => <AutoFormInput {...p} label="Name" /> },
+        { id: "email", component: p => <AutoFormInput {...p} label="Email" /> },
+      ]}
+    />
+  )
+}
+```
+
+You can customize the wrapper, items layout, and Add/Remove buttons logic through `className`, `addButtonLabel` props:
+
+```tsx
+{
+  id: "guests",
+  component: props => (
+    <AutoFormArray
+      {...props}
+      label="Guests"
+      fields={[
+        { id: "name", className: "flex-1", component: p => <AutoFormInput {...p} label="Name" /> },
+        { id: "email", component: p => <AutoFormInput {...p} label="Email" /> },
+      ]}
+    />
+  )
+}
+```
+
 ### Advanced Validation
 
 Auto Form supports all Zod validators:
@@ -200,9 +283,48 @@ const formSchema = z.object({
 
 ## Custom Fields
 
-<Callout type="warn" title="This documentation is under construction! 🚧">
-  We're working hard to bring you the best documentation experience.
-</Callout>
+Because Auto Form fields are controlled entirely by the `component` property function, creating a custom field component is just a matter of rendering your own UI using the provided props. The props passed to the `component` function contain the field properties managed by `react-hook-form` along with Zod validation details.
+
+Here is an example of creating a custom color picker input:
+
+```ts
+const formSchema = z.object({
+  custom_color: z
+    .string()
+    .default("#000000")
+    .describe("Pick your favorite color."),
+});
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: "custom_color",
+      component: props => (
+        <div className="flex w-full flex-col gap-3">
+          <div className="text-sm leading-none font-medium">
+            Custom Color Picker
+          </div>
+          <input
+            {...props.field}
+            value={(props.field.value as string) ?? "#000000"}
+            className="h-10 w-24 cursor-pointer rounded-md border p-1"
+            type="color"
+          />
+          {props.description && (
+            <div className="text-muted-foreground text-sm">
+              {props.description}
+            </div>
+          )}
+        </div>
+      ),
+    },
+  ]}
+  onSubmit={values => console.log(values)}
+/>
+```
 
 ## Form Submission
 

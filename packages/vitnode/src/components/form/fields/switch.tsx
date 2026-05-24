@@ -1,5 +1,6 @@
 import { FormControl } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
 
@@ -9,14 +10,22 @@ import { AutoFormLabel } from "../common/label";
 export const AutoFormSwitch = ({
   label,
   field,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  itemParams,
   labelRight,
   otherProps: { isOptional },
+  className,
   description,
   ...props
 }: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Switch>, "checked">) => {
   return (
-    <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+    <div
+      className={cn(
+        "flex flex-row items-center justify-between rounded-lg border p-4",
+        className,
+      )}
+    >
       {(label ?? description) && (
         <div className="space-y-0.5">
           {label && (

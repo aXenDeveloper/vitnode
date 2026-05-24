@@ -261,14 +261,73 @@ describe("auto-form helpers", () => {
 
     it("should handle array types from Zod schema", () => {
       const zodSchema = z.object({
-        tags: z.array(z.string()),
-        numbers: z.array(z.number()),
+        tags: z.array(z.string()).min(2).max(5),
+        guests: z.array(
+          z.object({
+            name: z.string().min(2),
+            email: z.email(),
+          }),
+        ),
       });
 
       const jsonSchema = z.toJSONSchema(zodSchema);
       const result = getZodInputParams(jsonSchema);
+
+      // Simple array case
       expect(result).toHaveProperty("tags");
-      expect(result).toHaveProperty("numbers");
+      expect(result.tags).toEqual({
+        required: true,
+        minItems: 2,
+        maxItems: 5,
+        itemParams: {
+          "": { type: "text" },
+        },
+      });
+
+      // Object array case
+      expect(result).toHaveProperty("guests");
+      expect(result.guests).toEqual({
+        required: true,
+        itemParams: {
+          name: {
+            type: "text",
+            required: true,
+            minLength: 2,
+          },
+          email: {
+            type: "email",
+            required: true,
+            pattern:
+              "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+          },
+        },
+      });
+    });
+
+    it("should handle nested array types from Zod schema", () => {
+      const zodSchema = z.object({
+        nestedGuests: z
+          .array(z.array(z.string().min(2)))
+          .min(1)
+          .max(3),
+      });
+
+      const jsonSchema = z.toJSONSchema(zodSchema);
+      const result = getZodInputParams(jsonSchema);
+
+      expect(result).toHaveProperty("nestedGuests");
+      expect(result.nestedGuests).toEqual({
+        required: true,
+        minItems: 1,
+        maxItems: 3,
+        itemParams: {
+          "": {
+            itemParams: {
+              "": { type: "text", minLength: 2 },
+            },
+          },
+        },
+      });
     });
   });
 
@@ -283,6 +342,11 @@ describe("auto-form helpers", () => {
         },
       },
       title: { type: "text", default: "Hello" },
+      guests: {
+        itemParams: {
+          name: { type: "text", required: true },
+        },
+      },
     };
 
     it("should get top-level properties", () => {
@@ -299,7 +363,10 @@ describe("auto-form helpers", () => {
       const result = getNestedParam(testObj, "user.settings.theme");
       expect(result).toEqual({ type: "text", enum: ["light", "dark"] });
     });
-
+    it("should return undefined for missing array params", () => {
+      const result = getNestedParam(testObj, "guests.itemParams.unknown");
+      expect(result).toBeUndefined();
+    });
     it("should return undefined for non-existent paths", () => {
       expect(getNestedParam(testObj, "nonexistent")).toBeUndefined();
       expect(getNestedParam(testObj, "user.nonexistent")).toBeUndefined();
