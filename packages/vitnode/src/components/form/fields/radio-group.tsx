@@ -1,11 +1,13 @@
 import type React from "react";
 
 import {
-  FormControl,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldLabel,
+  FieldTitle,
+} from "@/components/ui/field";
+import { FormControl, FormMessage } from "@/components/ui/form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
@@ -13,34 +15,48 @@ import type { ItemAutoFormComponentProps } from "../auto-form";
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
 
+interface ItemAutoFormRadioGroupLabelsProps {
+  description?: string;
+  disabled?: boolean;
+  label: string;
+  value: string;
+}
+
 export const AutoFormRadioGroup = ({
   label,
   labelRight,
   field,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  itemParams,
   description,
   otherProps: { enum: enumValues = [], isOptional },
   labels = [],
+  variant = "default",
   ...props
 }: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof RadioGroup>, "value"> & {
-    labels?: { label: string; value: string }[];
+    labels?: ItemAutoFormRadioGroupLabelsProps[];
+    variant?: "blocks" | "default";
   }) => {
-  const values: { label: string; value: string }[] = enumValues.map(value => {
-    const label = labels.find(l => l.value === value)?.label;
+  const values: ItemAutoFormRadioGroupLabelsProps[] = enumValues.map(value => {
+    const item = labels.find(l => l.value === value);
 
     return {
       value,
-      label: label ?? value,
+      label: item?.label ?? value,
+      description: item?.description,
+      disabled: item?.disabled,
     };
   });
 
   return (
-    <FormItem className="space-y-3">
+    <>
       {label && (
         <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
           {label}
         </AutoFormLabel>
       )}
+      {description && <AutoFormDesc>{description}</AutoFormDesc>}
 
       <FormControl>
         <RadioGroup
@@ -49,22 +65,56 @@ export const AutoFormRadioGroup = ({
           onValueChange={field.onChange}
           {...props}
         >
-          {values.map(({ value, label }) => (
-            <FormItem
-              className="flex items-center space-y-0 space-x-3"
-              key={value}
-            >
-              <FormControl>
-                <RadioGroupItem value={value} />
-              </FormControl>
-              <FormLabel className="font-normal">{label}</FormLabel>
-            </FormItem>
-          ))}
+          {values.map(({ value, label, description, disabled }) =>
+            variant === "default" ? (
+              <Field
+                data-disabled={disabled}
+                key={`${field.name}-${value}`}
+                orientation="horizontal"
+              >
+                <FormControl>
+                  <RadioGroupItem
+                    disabled={disabled}
+                    id={`${field.name}-${value}`}
+                    value={value}
+                  />
+                </FormControl>
+                <FieldContent>
+                  <FieldLabel htmlFor={`${field.name}-${value}`}>
+                    {label}
+                  </FieldLabel>
+                  {description && (
+                    <FieldDescription>{description}</FieldDescription>
+                  )}
+                </FieldContent>
+              </Field>
+            ) : (
+              <FieldLabel
+                htmlFor={`${field.name}-${value}`}
+                key={`${field.name}-${value}`}
+              >
+                <Field data-disabled={disabled} orientation="horizontal">
+                  <FieldContent>
+                    <FieldTitle>{label}</FieldTitle>
+                    {description && (
+                      <FieldDescription>{description}</FieldDescription>
+                    )}
+                  </FieldContent>
+                  <FormControl>
+                    <RadioGroupItem
+                      disabled={disabled}
+                      id={`${field.name}-${value}`}
+                      value={value}
+                    />
+                  </FormControl>
+                </Field>
+              </FieldLabel>
+            ),
+          )}
         </RadioGroup>
       </FormControl>
 
-      {description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />
-    </FormItem>
+    </>
   );
 };

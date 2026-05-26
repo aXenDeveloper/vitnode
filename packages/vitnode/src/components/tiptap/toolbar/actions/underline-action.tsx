@@ -32,8 +32,10 @@ export const UnderlineAction = () => {
       <div>
         <Toggle
           aria-label={t("underline")}
+          className="size-8"
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           pressed={isUnderline}
+          size="sm"
         >
           <UnderlineIcon />
         </Toggle>

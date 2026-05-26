@@ -21,17 +21,17 @@ export const TipTapToolbar = ({ editor }: { editor: Editor }) => {
   return (
     <ToolbarEditorContext value={contextValue}>
       <ScrollArea>
-        <div className="flex h-14 items-center gap-1 border-b p-2">
+        <div className="flex h-14 items-center gap-1 border-b p-2 [&>div[data-slot='separator']]:mx-1">
           <UndoRedoActions />
-          <Separator className="mx-2" orientation="vertical" />
+          <Separator orientation="vertical" />
           <HeadingsAction />
-          <Separator className="mx-2" orientation="vertical" />
+          <Separator orientation="vertical" />
           <BoldAction />
           <ItalicAction />
           <UnderlineAction />
           <TextFormatMore />
           <AlignmentAction />
-          <Separator className="mx-2" orientation="vertical" />
+          <Separator orientation="vertical" />
           <ListAction />
         </div>
 

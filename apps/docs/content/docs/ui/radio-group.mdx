@@ -21,7 +21,7 @@ import { AutoFormRadioGroup } from '@vitnode/core/components/form/fields/radio-g
 
 ```ts
 const formSchema = z.object({
-  options: z.enum(["option1", "option2", "option3"])
+  options: z.enum(["option1", "option2", "option3"]),
 });
 ```
 
@@ -31,7 +31,7 @@ const formSchema = z.object({
   fields={[
     {
       id: "options",
-      component: (props) => (
+      component: props => (
         <AutoFormRadioGroup
           {...props}
           description="By checking this box, you agree to the terms and conditions."
@@ -39,20 +39,23 @@ const formSchema = z.object({
           labels={[
             {
               value: "option1",
-              label: "Option 1"
+              label: "Option 1",
+              description: "This is the description for option 1",
             },
             {
               value: "option2",
-              label: "Option 2"
+              label: "Option 2",
             },
             {
               value: "option3",
-              label: "Option 3"
-            }
+              label: "Option 3",
+              description: "This is the description for option 3",
+              disabled: true,
+            },
           ]}
         />
-      )
-    }
+      ),
+    },
   ]}
 />
 ```
@@ -61,28 +64,89 @@ const formSchema = z.object({
 
   <Tab value="Manual">
 ```ts
-import { Label } from '@vitnode/core-frontend/components/ui/label';
 import {
   RadioGroup,
   RadioGroupItem,
-} from '@vitnode/core-frontend/components/ui/radio-group';
+} from '@vitnode/core/components/ui/radio-group';
+import { Field, FieldLabel } from "@vitnode/core/components/ui/field"
 ```
 
 ```tsx
 <RadioGroup defaultValue="option-one">
-  <div className="flex items-center space-x-2">
+  <Field orientation="horizontal">
     <RadioGroupItem value="option-one" id="option-one" />
-    <Label htmlFor="option-one">Option One</Label>
-  </div>
-  <div className="flex items-center space-x-2">
+    <FieldContent>
+      <FieldLabel htmlFor="option-one">Option One</FieldLabel>
+      <FieldDescription>
+        This is the description for option one. It provides more information
+        about the option.
+      </FieldDescription>
+    </FieldContent>
+  </Field>
+
+  <Field orientation="horizontal">
     <RadioGroupItem value="option-two" id="option-two" />
-    <Label htmlFor="option-two">Option Two</Label>
-  </div>
+    <FieldContent>
+      <FieldLabel htmlFor="option-two">Option Two</FieldLabel>
+    </FieldContent>
+  </Field>
+
+  <Field orientation="horizontal" data-disabled>
+    <RadioGroupItem value="option-three" id="option-three" disabled />
+    <FieldContent>
+      <FieldLabel htmlFor="option-three">Option Three</FieldLabel>
+      <FieldDescription>
+        This is the description for option three. It provides more information
+        about the option.
+      </FieldDescription>
+    </FieldContent>
+  </Field>
 </RadioGroup>
 ```
 
   </Tab>
 </Tabs>
+
+### variant="block"
+
+You can also use the `block` variant to display the radio buttons in a block style.
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: "options",
+      component: props => (
+        <AutoFormRadioGroup
+          {...props}
+          description="By checking this box, you agree to the terms and conditions."
+          label="I agree to the terms and conditions"
+          // [!code ++]
+          variant="block"
+          labels={[
+            {
+              value: "option1",
+              label: "Option 1",
+              description: "This is the description for option 1",
+            },
+            {
+              value: "option2",
+              label: "Option 2",
+            },
+            {
+              value: "option3",
+              label: "Option 3",
+              description: "This is the description for option 3",
+              disabled: true,
+            },
+          ]}
+        />
+      ),
+    },
+  ]}
+/>
+```
 
 ## Props
 
@@ -91,21 +155,29 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
 <TypeTable
   type={{
     label: {
-      description: "The label for the input field. This is displayed above the input.",
+      description:
+        "The label for the input field. This is displayed above the input.",
       type: "string",
-      default: ""
+      default: "",
     },
     description: {
-      description: "A short description of the input field. This is displayed below the input.",
+      description:
+        "A short description of the input field. This is displayed below the input.",
       type: "string",
-      default: ""
+      default: "",
     },
     labels: {
       description:
         "An array of objects representing the radio button options. Each object should have a `value` and a `label` property.",
       type: "{ value: string; label: string }[]",
-      default: "[]"
-    }
+      default: "[]",
+    },
+    variant: {
+      description:
+        "The variant of the radio group. The `default` variant displays the radio buttons in a horizontal layout, while the `block` variant displays them in a block layout.",
+      type: "'default' | 'block'",
+      default: "'default'",
+    },
   }}
 />
 

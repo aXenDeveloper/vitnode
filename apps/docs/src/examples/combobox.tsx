@@ -16,6 +16,7 @@ export default function ComboboxExample() {
           id: "type",
           component: props => (
             <AutoFormCombobox
+              {...props}
               description="Select an option from the list"
               label="Type"
               labels={[
@@ -28,7 +29,6 @@ export default function ComboboxExample() {
                   label: "Option Two",
                 },
               ]}
-              {...props}
             />
           ),
         },

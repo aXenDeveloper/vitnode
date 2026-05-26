@@ -42,8 +42,11 @@ export interface InputParams {
     | {
         description?: string;
         enum?: string[];
-
+        // itemParams?: InputParams;
+        maxItems?: number;
         maxLength?: number;
+
+        minItems?: number;
         minLength?: number;
 
         pattern?: string;
@@ -75,12 +78,18 @@ export function getZodInputParams(
       fieldParams.required = true;
     }
 
-    // 2. Handle standard string constraints
+    // 2. Handle standard string/array constraints
     if (prop.minLength !== undefined) {
       fieldParams.minLength = prop.minLength;
     }
     if (prop.maxLength !== undefined) {
       fieldParams.maxLength = prop.maxLength;
+    }
+    if (prop.minItems !== undefined) {
+      fieldParams.minItems = prop.minItems;
+    }
+    if (prop.maxItems !== undefined) {
+      fieldParams.maxItems = prop.maxItems;
     }
     if (prop.pattern !== undefined) {
       fieldParams.pattern = prop.pattern;
@@ -120,10 +129,21 @@ export function getZodInputParams(
         break;
     }
 
-    // 5. Handle nested objects by making a recursive call
+    // 5. Handle nested objects and arrays by making a recursive call
     if (prop.type === "object") {
       // Pass the 'required' array from the nested object itself.
       extractedParams[key] = getZodInputParams(prop, prop.required);
+    } else if (prop.type === "array" && prop.items) {
+      const items = prop.items as z.core.JSONSchema.JSONSchema;
+      if (items.type === "object") {
+        fieldParams.itemParams = getZodInputParams(items, items.required);
+      } else {
+        // Fallback for simple arrays like array of strings
+        fieldParams.itemParams = {
+          "": getZodInputParams({ properties: { "": items } }, [])[""],
+        };
+      }
+      extractedParams[key] = fieldParams;
     } else {
       extractedParams[key] = fieldParams;
     }

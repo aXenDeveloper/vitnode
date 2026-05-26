@@ -53,7 +53,7 @@
     "eslint-plugin-perfectionist": "^5.9.0",
     "eslint-plugin-prettier": "^5.5.5",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-you-might-not-need-an-effect": "^0.9.3",
+    "eslint-plugin-react-you-might-not-need-an-effect": "^0.10.1",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "typescript-eslint": "^8.59.1"
   }

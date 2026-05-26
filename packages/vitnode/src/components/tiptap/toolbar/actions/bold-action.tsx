@@ -31,8 +31,10 @@ export const BoldAction = () => {
       <div>
         <Toggle
           aria-label={t("bold")}
+          className="size-8"
           onClick={() => editor.chain().focus().toggleBold().run()}
           pressed={isBold}
+          size="sm"
         >
           <BoldIcon />
         </Toggle>

@@ -32,8 +32,10 @@ export const ItalicAction = () => {
       <div>
         <Toggle
           aria-label={t("italic")}
+          className="size-8"
           onClick={() => editor.chain().focus().toggleItalic().run()}
           pressed={isItalic}
+          size="sm"
         >
           <ItalicIcon />
         </Toggle>

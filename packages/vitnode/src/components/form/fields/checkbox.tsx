@@ -1,7 +1,9 @@
+import { cn } from "@/lib/utils";
+
 import type { ItemAutoFormComponentProps } from "../auto-form";
 
 import { Checkbox } from "../../ui/checkbox";
-import { FormControl, FormItem, FormMessage } from "../../ui/form";
+import { FormControl, FormMessage } from "../../ui/form";
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
 
@@ -11,11 +13,19 @@ export const AutoFormCheckbox = ({
   description,
   otherProps: { isOptional },
   field,
+  className,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  itemParams,
   ...props
 }: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Checkbox>, "checked">) => {
   return (
-    <FormItem className="flex flex-row items-start space-y-0 space-x-3 rounded-md border p-4">
+    <div
+      className={cn(
+        "flex flex-row items-start space-y-0 space-x-3 rounded-md border p-4",
+        className,
+      )}
+    >
       <FormControl>
         <Checkbox
           checked={field.value ?? false}
@@ -39,6 +49,6 @@ export const AutoFormCheckbox = ({
           <FormMessage />
         </div>
       )}
-    </FormItem>
+    </div>
   );
 };

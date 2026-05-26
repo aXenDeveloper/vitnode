@@ -2,12 +2,7 @@
 
 import { useFormatter, useNow } from "next-intl";
 
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "./ui/tooltip";
+import { TooltipWithContent } from "./ui/tooltip";
 
 export const DateFormat = ({
   date,
@@ -44,15 +39,9 @@ export const DateFormat = ({
   // When date is < 7 days
   if (now.getTime() - dateToFormat.getTime() < 604800000) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span>{format.relativeTime(dateToFormat, now)}</span>
-          </TooltipTrigger>
-
-          <TooltipContent>{fullDate}</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <TooltipWithContent text={fullDate}>
+        <span>{format.relativeTime(dateToFormat, now)}</span>
+      </TooltipWithContent>
     );
   }
 

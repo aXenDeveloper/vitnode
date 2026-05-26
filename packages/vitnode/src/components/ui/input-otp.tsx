@@ -2,7 +2,7 @@
 
 import { OTPInput, OTPInputContext } from "input-otp";
 import { MinusIcon } from "lucide-react";
-import React from "react";
+import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -17,10 +17,11 @@ function InputOTP({
     <OTPInput
       className={cn("disabled:cursor-not-allowed", className)}
       containerClassName={cn(
-        "flex items-center gap-2 has-disabled:opacity-50",
+        "cn-input-otp flex items-center has-disabled:opacity-50",
         containerClassName,
       )}
       data-slot="input-otp"
+      spellCheck={false}
       {...props}
     />
   );
@@ -29,7 +30,10 @@ function InputOTP({
 function InputOTPGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("flex items-center", className)}
+      className={cn(
+        "has-aria-invalid:border-destructive has-aria-invalid:ring-destructive/20 dark:has-aria-invalid:ring-destructive/40 flex items-center rounded-md has-aria-invalid:ring-3",
+        className,
+      )}
       data-slot="input-otp-group"
       {...props}
     />
@@ -49,7 +53,7 @@ function InputOTPSlot({
   return (
     <div
       className={cn(
-        "data-[active=true]:border-ring data-[active=true]:ring-ring/50 data-[active=true]:aria-invalid:ring-destructive/20 dark:data-[active=true]:aria-invalid:ring-destructive/40 aria-invalid:border-destructive data-[active=true]:aria-invalid:border-destructive dark:bg-input/30 border-input relative flex h-9 w-9 items-center justify-center border-y border-r text-sm shadow-xs transition-all outline-none first:rounded-l-md first:border-l last:rounded-r-md data-[active=true]:z-10 data-[active=true]:ring-[3px]",
+        "border-input aria-invalid:border-destructive data-[active=true]:border-ring data-[active=true]:ring-ring/50 data-[active=true]:aria-invalid:border-destructive data-[active=true]:aria-invalid:ring-destructive/20 dark:bg-input/30 dark:data-[active=true]:aria-invalid:ring-destructive/40 relative flex size-9 items-center justify-center border-y border-e text-sm shadow-xs transition-all outline-none first:rounded-s-md first:border-s last:rounded-e-md data-[active=true]:z-10 data-[active=true]:ring-3",
         className,
       )}
       data-active={isActive}
@@ -68,7 +72,12 @@ function InputOTPSlot({
 
 function InputOTPSeparator({ ...props }: React.ComponentProps<"div">) {
   return (
-    <div data-slot="input-otp-separator" {...props}>
+    <div
+      className="flex items-center [&_svg:not([class*='size-'])]:size-4"
+      data-slot="input-otp-separator"
+      role="separator"
+      {...props}
+    >
       <MinusIcon />
     </div>
   );

@@ -2,7 +2,7 @@ import type React from "react";
 
 import { useTranslations } from "next-intl";
 
-import { FormControl, FormItem, FormMessage } from "@/components/ui/form";
+import { FormControl, FormMessage } from "@/components/ui/form";
 import {
   Select,
   SelectContent,
@@ -19,6 +19,8 @@ import { AutoFormLabel } from "../common/label";
 export const AutoFormSelect = ({
   label,
   field,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  itemParams,
   description,
   otherProps: { enum: enumValues = [], isOptional },
   placeholder,
@@ -45,7 +47,7 @@ export const AutoFormSelect = ({
     t("select_option");
 
   return (
-    <FormItem className="space-y-3">
+    <>
       {label && (
         <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
           {label}
@@ -83,6 +85,6 @@ export const AutoFormSelect = ({
 
       {description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />
-    </FormItem>
+    </>
   );
 };

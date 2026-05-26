@@ -66,7 +66,7 @@ export const AlignmentAction = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className="w-40 justify-between" variant="ghost">
+        <Button className="w-40 justify-between" size="sm" variant="ghost">
           {activeAlignment.icon}
           {t(`alignments.${activeAlignment.value}`)}
 

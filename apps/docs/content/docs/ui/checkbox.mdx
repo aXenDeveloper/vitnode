@@ -9,21 +9,21 @@ description: Toggle between checked and unchecked states.
 
 ## Usage
 
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
 <Tabs items={['Auto Form', 'Manual']}>
   <Tab value="Auto Form">
 
 ```ts
-import { z } from 'zod';
-import { AutoForm } from '@vitnode/core/components/form/auto-form';
-import { AutoFormCheckbox } from '@vitnode/core/components/form/fields/checkbox';
+import { z } from "zod";
+import { AutoForm } from "@vitnode/core/components/form/auto-form";
+import { AutoFormCheckbox } from "@vitnode/core/components/form/fields/checkbox";
 ```
 
 ```ts
 const formSchema = z.object({
   acceptTerms: z.boolean().refine(val => val, {
-    message: 'You must accept the terms and conditions',
+    message: "You must accept the terms and conditions",
   }),
 });
 ```
@@ -33,7 +33,7 @@ const formSchema = z.object({
   formSchema={formSchema}
   fields={[
     {
-      id: 'acceptTerms',
+      id: "acceptTerms",
       component: props => (
         <AutoFormCheckbox
           {...props}
@@ -49,7 +49,7 @@ const formSchema = z.object({
 
   <Tab value="Manual">
 ```ts
-import { Checkbox } from '@vitnode/core-frontend/components/ui/checkbox';
+import { Checkbox } from '@vitnode/core/components/ui/checkbox';
 ```
 
 ```tsx
@@ -61,21 +61,21 @@ import { Checkbox } from '@vitnode/core-frontend/components/ui/checkbox';
 
 ## Props
 
-import { TypeTable } from 'fumadocs-ui/components/type-table';
+import { TypeTable } from "fumadocs-ui/components/type-table";
 
 <TypeTable
   type={{
     label: {
       description:
-        'The label for the checkbox. This is displayed next to the checkbox.',
-      type: 'string',
-      default: '',
+        "The label for the checkbox. This is displayed next to the checkbox.",
+      type: "string",
+      default: "",
     },
     description: {
       description:
-        'A short description of the checkbox. This is displayed below the checkbox.',
-      type: 'string',
-      default: '',
+        "A short description of the checkbox. This is displayed below the checkbox.",
+      type: "string",
+      default: "",
     },
   }}
 />

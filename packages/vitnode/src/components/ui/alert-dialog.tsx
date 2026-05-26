@@ -2,8 +2,9 @@
 
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
 import React from "react";
+import { useTranslations } from "use-intl";
 
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { Skeleton } from "./skeleton";
@@ -101,7 +102,10 @@ function AlertDialogHeader({
 }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
+      className={cn(
+        "grid grid-rows-[auto_1fr] gap-1.5 has-data-[slot=alert-dialog-media]:grid-rows-[auto_auto_1fr] has-data-[slot=alert-dialog-media]:gap-x-6 sm:group-data-[size=default]/alert-dialog-content:has-data-[slot=alert-dialog-media]:grid-rows-[auto_1fr]",
+        className,
+      )}
       data-slot="alert-dialog-header"
       {...props}
     />
@@ -115,7 +119,7 @@ function AlertDialogFooter({
   return (
     <div
       className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        "flex flex-col-reverse gap-2 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
         className,
       )}
       data-slot="alert-dialog-footer"
@@ -142,6 +146,21 @@ function AlertDialogFooterSkeleton({
     </div>
   );
 }
+function AlertDialogMedia({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return (
+    <div
+      className={cn(
+        "bg-muted mb-2 inline-flex size-16 items-center justify-center rounded-md sm:group-data-[size=default]/alert-dialog-content:row-span-2 *:[svg:not([class*='size-'])]:size-8",
+        className,
+      )}
+      data-slot="alert-dialog-media"
+      {...props}
+    />
+  );
+}
 
 function AlertDialogTitle({
   className,
@@ -149,7 +168,10 @@ function AlertDialogTitle({
 }: React.ComponentProps<typeof AlertDialogPrimitive.Title>) {
   return (
     <AlertDialogPrimitive.Title
-      className={cn("text-lg font-semibold", className)}
+      className={cn(
+        "font-heading text-lg font-medium sm:group-data-[size=default]/alert-dialog-content:group-has-data-[slot=alert-dialog-media]/alert-dialog-content:col-start-2",
+        className,
+      )}
       data-slot="alert-dialog-title"
       {...props}
     />
@@ -162,7 +184,10 @@ function AlertDialogDescription({
 }: React.ComponentProps<typeof AlertDialogPrimitive.Description>) {
   return (
     <AlertDialogPrimitive.Description
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn(
+        "text-muted-foreground *:[a]:hover:text-foreground text-sm text-balance md:text-pretty *:[a]:underline *:[a]:underline-offset-3",
+        className,
+      )}
       data-slot="alert-dialog-description"
       {...props}
     />
@@ -171,25 +196,41 @@ function AlertDialogDescription({
 
 function AlertDialogAction({
   className,
+  variant = "default",
+  size = "default",
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Action>) {
+}: Pick<React.ComponentProps<typeof Button>, "size" | "variant"> &
+  React.ComponentProps<typeof AlertDialogPrimitive.Action>) {
+  const t = useTranslations("core.global");
+
   return (
-    <AlertDialogPrimitive.Action
-      className={cn(buttonVariants(), className)}
-      {...props}
-    />
+    <Button aria-label={t("confirm")} asChild size={size} variant={variant}>
+      <AlertDialogPrimitive.Action
+        className={cn(className)}
+        data-slot="alert-dialog-action"
+        {...props}
+      />
+    </Button>
   );
 }
 
 function AlertDialogCancel({
   className,
+  variant = "outline",
+  size = "default",
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Cancel>) {
+}: Pick<React.ComponentProps<typeof Button>, "size" | "variant"> &
+  React.ComponentProps<typeof AlertDialogPrimitive.Cancel>) {
+  const t = useTranslations("core.global");
+
   return (
-    <AlertDialogPrimitive.Cancel
-      className={cn(buttonVariants({ variant: "ghost" }), className)}
-      {...props}
-    />
+    <Button aria-label={t("cancel")} asChild size={size} variant={variant}>
+      <AlertDialogPrimitive.Cancel
+        className={cn(className)}
+        data-slot="alert-dialog-cancel"
+        {...props}
+      />
+    </Button>
   );
 }
 
@@ -202,6 +243,7 @@ export {
   AlertDialogFooter,
   AlertDialogFooterSkeleton,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogOverlay,
   AlertDialogPortal,
   AlertDialogTitle,

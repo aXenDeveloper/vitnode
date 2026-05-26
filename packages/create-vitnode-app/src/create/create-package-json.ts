@@ -131,6 +131,7 @@ const apiDeps = {
   react: versionsPackageJson.react,
   "react-dom": versionsPackageJson.reactDom,
   "use-intl": versionsPackageJson.useIntl,
+  shadcn: versionsPackageJson.shadcnUi,
   zod: versionsPackageJson.zod,
 };
 

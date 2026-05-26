@@ -5,6 +5,8 @@ import { AutoFormCheckbox } from "@vitnode/core/components/form/fields/checkbox"
 import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
 import { AutoFormSelect } from "@vitnode/core/components/form/fields/select";
 import { AutoFormTextarea } from "@vitnode/core/components/form/fields/textarea";
+import { InputGroupAddon } from "@vitnode/core/components/ui/input-group";
+import { Search } from "lucide-react";
 import { z } from "zod";
 
 export default function AutoFormExample() {
@@ -20,6 +22,7 @@ export default function AutoFormExample() {
     description: z
       .string()
       .min(10, "Description must be at least 10 characters"),
+    search: z.string().optional(),
   });
 
   return (
@@ -45,6 +48,7 @@ export default function AutoFormExample() {
           id: "user_type",
           component: props => (
             <AutoFormSelect
+              {...props}
               description="Select the type of user."
               label="User Type"
               labels={[
@@ -52,7 +56,6 @@ export default function AutoFormExample() {
                 { value: "editor", label: "Editor" },
                 { value: "viewer", label: "Viewer" },
               ]}
-              {...props}
             />
           ),
         },
@@ -74,6 +77,17 @@ export default function AutoFormExample() {
               placeholder="My application is..."
               {...props}
             />
+          ),
+        },
+        {
+          id: "search",
+          component: props => (
+            <AutoFormInput {...props} label="Search" placeholder="Search...">
+              <InputGroupAddon>
+                <Search />
+              </InputGroupAddon>
+              <InputGroupAddon align="inline-end">12 results</InputGroupAddon>
+            </AutoFormInput>
           ),
         },
       ]}
