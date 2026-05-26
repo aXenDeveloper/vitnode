@@ -114,6 +114,7 @@ export const AutoFormArray = ({
                             : undefined,
                         otherProps: {
                           isOptional: false,
+                          ["aria-invalid"]: fieldState.invalid,
                           enum:
                             fieldParams &&
                             typeof fieldParams === "object" &&

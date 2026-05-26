@@ -60,7 +60,7 @@ export const TestView = () => {
     options: z.enum(["option1", "option2", "option3"]).default("option1"),
     options_long: z.enum(["option1", "option2", "option3"]).default("option2"),
     switch: z.boolean().default(false).describe("elo"),
-    type: z.enum(["option-one", "option-two"]),
+    type: z.enum(["option-one", "option-two"]).default("option-one"),
     custom_color: z
       .string()
       .default("#000000")
@@ -226,19 +226,20 @@ export const TestView = () => {
               id: "type",
               component: props => (
                 <AutoFormCombobox
-                  description="By checking this box, you agree to the terms and conditions."
-                  label="Type"
-                  labels={[
-                    {
-                      value: "option-one",
-                      label: "Option One",
-                    },
-                    {
-                      value: "option-two",
-                      label: "Option Two",
-                    },
-                  ]}
                   {...props}
+                  description="By checking this box, you agree to the terms and conditions."
+                  fetchData={async ({ search }) => {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    return [
+                      { value: "option-one", label: "Option One" },
+                      { value: "option-two", label: "Option Two" },
+                    ].filter(option =>
+                      option.label.toLowerCase().includes(search.toLowerCase()),
+                    );
+                  }}
+                  id="test-combobox"
+                  label="Type"
                 />
               ),
             },

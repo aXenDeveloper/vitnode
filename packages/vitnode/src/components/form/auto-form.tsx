@@ -48,6 +48,7 @@ export interface ItemAutoFormComponentProps {
   label?: React.ReactNode;
   labelRight?: React.ReactNode;
   otherProps: {
+    ["aria-invalid"]?: boolean;
     enum?: string[];
     isOptional?: boolean;
     maxItems?: number;
@@ -199,6 +200,7 @@ export function AutoForm<
                         typeof params.minLength === "number"
                           ? params.minLength
                           : undefined,
+                      ["aria-invalid"]: fieldState.invalid,
                       minItems:
                         typeof params.minItems === "number"
                           ? params.minItems
