@@ -2,7 +2,7 @@ import {
   AutoForm,
   type AutoFormOnSubmit,
 } from "@vitnode/core/components/form/auto-form";
-import { AutoFormComboboxAsync } from "@vitnode/core/components/form/fields/combobox-async";
+import { AutoFormCombobox } from "@vitnode/core/components/form/fields/combobox";
 import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
 import { AutoFormTextarea } from "@vitnode/core/components/form/fields/textarea";
 import { useDialog } from "@vitnode/core/components/ui/dialog";
@@ -108,7 +108,7 @@ export const CreateEditActionPostsAdmin = ({
         {
           id: "categoryId",
           component: props => (
-            <AutoFormComboboxAsync
+            <AutoFormCombobox
               fetchData={async ({ search }) => {
                 const res = await fetcherClient(categoriesModule, {
                   path: "/",
