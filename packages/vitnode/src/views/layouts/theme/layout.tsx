@@ -14,7 +14,8 @@ export const ThemeLayout = async ({
   children: React.ReactNode;
   vitNodeConfig: VitNodeConfig;
 }) => {
-  const { user } = await getSessionApi();
+  const session = await getSessionApi();
+  const user = session?.user ?? null;
 
   return (
     <>

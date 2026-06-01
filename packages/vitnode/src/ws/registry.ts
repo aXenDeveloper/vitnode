@@ -14,11 +14,11 @@ import type { VitNodeWSChannel, VitNodeWSMessage } from "./types";
  */
 const connections = new Map<WSContext, null | number>();
 
-const WS_OPEN = 1; // WSContext.readyState when the socket is open.
-
 const sendTo = (ws: WSContext, id: string, data: unknown): void => {
-  if (ws.readyState === WS_OPEN) {
+  try {
     ws.send(JSON.stringify({ data, id } satisfies VitNodeWSMessage));
+  } catch (_error) {
+    wsRegistry.remove(ws);
   }
 };
 

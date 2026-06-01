@@ -60,7 +60,7 @@ export function handleVitNodeWebSocket(
 ) {
   return async (c: Context<EnvVitNode>): Promise<WSEvents> => {
     const inline = await createEvents?.(c);
-    const registered = c.get("core").webSockets;
+    const registered = c.get("core")?.webSockets ?? [];
     // Authenticated from the session cookie sent with the upgrade request, so
     // the server can target this connection's user (e.g. for notifications).
     const userId = c.get("user")?.id ?? null;
@@ -94,7 +94,17 @@ export function handleVitNodeWebSocket(
             );
           };
 
-          void target.onMessage({ c, data: message.data, send, ws });
+          try {
+            Promise.resolve(
+              target.onMessage({ c, data: message.data, send, ws }),
+            ).catch((error: unknown) => {
+              // eslint-disable-next-line no-console
+              console.error("WebSocket handler error:", error);
+            });
+          } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error("WebSocket handler error:", error);
+          }
 
           return;
         }

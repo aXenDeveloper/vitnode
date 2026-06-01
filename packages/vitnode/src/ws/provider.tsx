@@ -56,7 +56,7 @@ export const VitNodeWebSocketProvider = ({
   const managerRef = React.useRef<null | WebSocketManager>(null);
   const pendingSendRef = React.useRef<VitNodeWSMessage[]>([]);
   const [readyState, setReadyState] = React.useState<number>(
-    WebSocket.CONNECTING,
+    typeof WebSocket !== "undefined" ? WebSocket.CONNECTING : 0,
   );
 
   const dispatch = React.useCallback((message: VitNodeWSMessage) => {
