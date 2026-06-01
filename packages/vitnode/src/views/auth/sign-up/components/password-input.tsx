@@ -16,10 +16,13 @@ import {
 
 export const PasswordInput = ({
   label,
+  labelRight,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  description: _,
+  description: _description,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  itemParams: _itemParams,
   field,
-  otherProps: { maxLength, minLength, pattern },
+  otherProps: { isOptional, maxLength, minLength, pattern },
   ...props
 }: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Input>, "type">) => {
@@ -47,7 +50,9 @@ export const PasswordInput = ({
 
   return (
     <>
-      <AutoFormLabel>{label}</AutoFormLabel>
+      <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+        {label}
+      </AutoFormLabel>
 
       <TooltipProvider delayDuration={0}>
         <Tooltip open={openTooltip}>

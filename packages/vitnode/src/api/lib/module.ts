@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 
 import type { BuildCronReturn } from "./cron";
 import type { Route } from "./route";
+import type { BuildWebSocketReturn } from "./websocket";
 
 export interface BuildModuleType<T extends Route, Plugin extends string> {
   plugin: Plugin;
@@ -19,6 +20,7 @@ export interface BaseBuildModuleReturn<
   name: M;
   pluginId: P;
   routes: Routes;
+  webSockets: BuildWebSocketReturn[];
 }
 
 export interface BuildModuleReturn<
@@ -41,12 +43,14 @@ export function buildModule<
   name,
   modules,
   cronJobs = [],
+  webSockets = [],
 }: {
   cronJobs?: BuildCronReturn[];
   modules?: Modules;
   name: M;
   pluginId: P;
   routes: Routes;
+  webSockets?: BuildWebSocketReturn[];
 }): BuildModuleReturn<P, M, Routes, Modules> {
   const hono = new OpenAPIHono();
 
@@ -62,5 +66,5 @@ export function buildModule<
     });
   }
 
-  return { routes, pluginId, hono, name, modules, cronJobs };
+  return { routes, pluginId, hono, name, modules, cronJobs, webSockets };
 }

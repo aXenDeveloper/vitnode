@@ -24,6 +24,7 @@
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "use-intl": "^4.11.0",
+    "ws": "^8.21.0",
     "zod": "^4.4.1"
   },
   "devDependencies": {
@@ -32,8 +33,10 @@
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/ws": "^8.18.1",
     "@vitnode/config": "workspace:*",
     "@vitnode/nodemailer": "workspace:*",
+    "@vitnode/blog": "workspace:*",
     "dotenv": "^17.4.2",
     "eslint": "^10.2.1",
     "react-email": "^6.1.5",

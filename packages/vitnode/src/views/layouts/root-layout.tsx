@@ -6,6 +6,7 @@ import { setRequestLocale } from "next-intl/server";
 import type { VitNodeConfig } from "@/vitnode.config";
 
 import { I18nProvider } from "@/components/i18n-provider";
+import { VitNodeWebSocketProvider } from "@/ws/provider";
 
 import { RootProvider } from "./provider";
 
@@ -40,7 +41,9 @@ export const RootLayout = async ({
 
   return (
     <I18nProvider namespaces={[]}>
-      <RootProvider config={config}>{children}</RootProvider>
+      <RootProvider config={config}>
+        <VitNodeWebSocketProvider>{children}</VitNodeWebSocketProvider>
+      </RootProvider>
     </I18nProvider>
   );
 };

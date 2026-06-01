@@ -19,6 +19,7 @@
     "email",
     "sso",
     "cron",
+    "websocket",
     "---Frontend---",
     "layouts-and-pages",
     "admin-page",
