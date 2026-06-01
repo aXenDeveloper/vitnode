@@ -3,13 +3,16 @@ import type { Context, Env, Next } from "hono";
 import { HTTPException } from "hono/http-exception";
 
 import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
+import type { VitNodeRealtime } from "@/ws/registry";
 
 import { EmailModel, type EmailModelSendArgs } from "@/api/models/email";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import { CONFIG } from "@/lib/config";
+import { realtime } from "@/ws/registry";
 
 import type { BuildCronReturn } from "../lib/cron";
+import type { WebSocketConfig } from "../lib/websocket";
 import type { SSOApiPlugin } from "../models/sso";
 
 import {
@@ -62,6 +65,7 @@ export interface EnvVariablesVitNode {
     };
     pathToMessages: (path: string) => Promise<{ default: object }>;
     plugins: { id: string }[];
+    webSockets: WebSocketConfig[];
   };
   db: Pick<VitNodeApiConfig, "dbProvider">["dbProvider"];
   email: {
@@ -72,6 +76,7 @@ export interface EnvVariablesVitNode {
   plugin: {
     id: string;
   };
+  realtime: VitNodeRealtime;
   user: null | {
     avatarColor: string;
     birthday: Date | null;
@@ -119,6 +124,13 @@ export const globalMiddleware = ({
     })),
   );
 
+  const webSocketsMetadata: WebSocketConfig[] = plugins.flatMap(plugin =>
+    plugin.webSockets.map(webSocket => ({
+      ...webSocket,
+      pluginId: plugin.pluginId,
+    })),
+  );
+
   const ipHeaderKeys = [
     "x-forwarded-for",
     "x-real-ip",
@@ -154,6 +166,7 @@ export const globalMiddleware = ({
     c.set("ipAddress", ipAddress ?? "127.0.0.1");
     c.set("db", dbProvider);
     c.set("email", new EmailModel(c));
+    c.set("realtime", realtime);
 
     c.set("core", {
       pathToMessages,
@@ -176,6 +189,7 @@ export const globalMiddleware = ({
       cronSecret: CONFIG.cronJobSecret,
       plugins: pluginsMetadata,
       cron: cronMetadata,
+      webSockets: webSocketsMetadata,
     });
 
     const user = await new SessionModel(c).getUser();

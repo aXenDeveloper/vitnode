@@ -19,7 +19,7 @@ export const SignUpView = async () => {
 
   return (
     <I18nProvider namespaces="core.auth.sign_up">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center px-4 py-16">
+      <div className="mx-auto flex max-w-md flex-col justify-center px-4 py-16 md:min-h-[calc(100vh-4rem)]">
         <WrapperSignUp>
           <Card className="bg-muted gap-0 p-0">
             <div className="bg-card rounded-xl p-6">
