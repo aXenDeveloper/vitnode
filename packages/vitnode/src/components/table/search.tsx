@@ -36,18 +36,15 @@ export function SearchDataTable({
 
   const handleChangeSearch = useDebouncedCallback((value: string) => {
     startTransition(() => {
-      if (value.length < 3 && value.length > 0) {
-        return;
-      }
       const params = new URLSearchParams(searchParams.toString());
 
-      if (value) {
+      if (value.length >= 3) {
         params.set("search", value);
       } else {
         params.delete("search");
       }
 
-      push(`${pathname}?${params.toString()}`);
+      push(`${pathname}?${params.toString()}`, { scroll: false });
     });
   }, 500);
 
@@ -59,6 +56,7 @@ export function SearchDataTable({
           handleChangeSearch(e.target.value);
         }}
         placeholder={searchPlaceholder ?? t("search_placeholder")}
+        type="search"
         value={value}
       />
       <InputGroupAddon>{isPending ? <Spinner /> : <Search />}</InputGroupAddon>
