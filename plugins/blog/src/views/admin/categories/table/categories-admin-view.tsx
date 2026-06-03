@@ -60,6 +60,7 @@ export const CategoriesAdminView = async ({
         },
       ]}
       edges={data.edges.map(edge => ({ ...edge }))}
+      id="categories-table"
       order={{
         columns: ["createdAt", "updatedAt"],
         defaultOrder: {

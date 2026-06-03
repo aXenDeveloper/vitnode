@@ -40,6 +40,7 @@ export default function DataTableExample() {
           status: "Inactive",
         },
       ]}
+      id="users-table"
       order={{
         defaultOrder: {
           column: "name",

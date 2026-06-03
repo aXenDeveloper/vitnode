@@ -8,7 +8,7 @@ import type {
 import type { Context } from "hono";
 
 import { z } from "@hono/zod-openapi";
-import { and, asc, count, desc, gt, lt } from "drizzle-orm";
+import { and, asc, count, desc, gt, ilike, lt, or } from "drizzle-orm";
 
 function parsePaginationParams(params: {
   query: { cursor?: string; first?: string; last?: string };
@@ -69,6 +69,16 @@ function buildWhereWithCursor<
   return baseWhere ? and(baseWhere, cursorWhere) : cursorWhere;
 }
 
+function buildSearchWhere(
+  search: PgColumn[] | undefined,
+  term: string | undefined,
+): SQL | undefined {
+  const trimmed = term?.trim();
+  if (!search?.length || !trimmed) return undefined;
+
+  return or(...search.map(column => ilike(column, `%${trimmed}%`)));
+}
+
 async function fetchTotalCount(
   c: Context,
   table: PgTable,
@@ -91,6 +101,7 @@ export async function withPagination<
   query,
   table,
   params,
+  search,
   where: whereFromParams,
   primaryCursor,
   orderBy: orderByFromParams,
@@ -106,6 +117,7 @@ export async function withPagination<
       cursor?: string;
       first?: string;
       last?: string;
+      search?: string;
     };
   };
   primaryCursor: PgColumn<Primary>;
@@ -114,6 +126,7 @@ export async function withPagination<
     orderBy: SQL;
     where: SQL | undefined;
   }) => Promise<QueryMin[]>;
+  search?: T["columns"][keyof T["columns"]][];
   table: Omit<PgTableWithColumns<T>, "enableRLS">;
   where?: SQL;
 }): Promise<{
@@ -133,8 +146,14 @@ export async function withPagination<
   const orderFn = getOrderFn(isForward, orderByFromParams.order);
   const orderBy: SQL = orderFn(table[orderByFromParams.column.name]);
 
+  const searchWhere = buildSearchWhere(search, params.query.search);
+  const baseWhere =
+    whereFromParams && searchWhere
+      ? and(whereFromParams, searchWhere)
+      : (whereFromParams ?? searchWhere);
+
   const where = buildWhereWithCursor(
-    whereFromParams,
+    baseWhere,
     cursor,
     isForward,
     orderByFromParams.order,
@@ -142,7 +161,7 @@ export async function withPagination<
     primaryCursor,
   );
 
-  const totalCount = await fetchTotalCount(c, table, whereFromParams);
+  const totalCount = await fetchTotalCount(c, table, baseWhere);
 
   const limit = (first ?? last ?? 50) + 1;
   const edges = await query({ limit, where, orderBy });

@@ -14,19 +14,24 @@ import {
 } from "../ui/table";
 import { OrderTableHeadDataTable } from "./order-table-head";
 import { PaginationDataTable } from "./pagination";
+import { SearchDataTable } from "./search";
 
 export function ContentDataTable<T extends DataTableTMin>({
   columns,
   edges,
   pageInfo,
   order,
-  customNotFoundComponent,
+  customNoResults,
+  search,
+  searchPlaceholder,
   ...props
 }: React.ComponentProps<typeof DataTable<T>>) {
   const t = useTranslations("core.global");
 
   return (
     <div className="space-y-4">
+      {search && <SearchDataTable searchPlaceholder={searchPlaceholder} />}
+
       <div className="[&>div]:rounded-md [&>div]:border">
         <Table {...props}>
           <TableHeader className="bg-card">
@@ -80,20 +85,19 @@ export function ContentDataTable<T extends DataTableTMin>({
                   className="mx-auto max-w-sm p-4 text-center whitespace-normal sm:px-10 sm:py-12"
                   colSpan={columns.length}
                 >
-                  {customNotFoundComponent ?? (
-                    <div className="flex flex-col items-center justify-center gap-6">
-                      <SearchXIcon className="text-muted-foreground size-16 sm:size-24" />
+                  <div className="[&>svg]:text-muted-foreground flex flex-col items-center justify-center gap-6 [&>svg]:size-16 [&>svg]:sm:size-24">
+                    {customNoResults?.icon ?? <SearchXIcon />}
 
-                      <div className="space-y-2 text-center">
-                        <h3 className="text-xl font-semibold tracking-tight">
-                          {t("no_results.title")}
-                        </h3>
-                        <p className="text-muted-foreground text-sm">
-                          {t("no_results.desc")}
-                        </p>
-                      </div>
+                    <div className="space-y-2 text-center">
+                      <h3 className="text-xl font-semibold tracking-tight">
+                        {customNoResults?.title ?? t("no_results.title")}
+                      </h3>
+                      <p className="text-muted-foreground text-sm">
+                        {customNoResults?.description ?? t("no_results.desc")}
+                      </p>
+                      {customNoResults?.footer}
                     </div>
-                  )}
+                  </div>
                 </TableCell>
               </TableRow>
             )}

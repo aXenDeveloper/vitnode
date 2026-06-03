@@ -260,7 +260,12 @@
         "desc": "Manage users of your application.",
         "user": "User",
         "createdAt": "Created At",
-        "emailNotVerified": "Email Not Verified"
+        "emailNotVerified": "Email Not Verified",
+        "searchPlaceholder": "Search users by email or username...",
+        "noResults": {
+          "title": "No users found",
+          "description": "Try adjusting your search criteria."
+        }
       }
     },
     "debug": {

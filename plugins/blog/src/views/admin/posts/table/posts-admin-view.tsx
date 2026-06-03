@@ -66,6 +66,7 @@ export const PostsAdminView = async ({
         },
       ]}
       edges={data.edges.map(edge => ({ ...edge }))}
+      id="posts-table"
       order={{
         columns: ["createdAt", "updatedAt"],
         defaultOrder: {

@@ -57,6 +57,22 @@ Install the `ws` package:
 pnpm add ws && pnpm add -D @types/ws
 ```
 
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Terminal'>
+
+```bash tab="bun"
+bun i ws && bun i @types/ws -D
+```
+
+```bash tab="pnpm"
+pnpm i ws && pnpm i @types/ws -D
+```
+
+```bash tab="npm"
+npm i ws && npm i @types/ws -D
+```
+
+</Tabs>
+
 ```ts title="src/index.ts"
 import { serve } from "@hono/node-server";
 import { WebSocketServer } from "ws";
