@@ -10,35 +10,36 @@ description: A table component with sorting, filtering, and pagination compatibl
 ## Usage
 
 ```ts
-import { DataTable } from '@vitnode/core/components/table/data-table';
+import { DataTable } from "@vitnode/core/components/table/data-table";
 ```
 
 ```tsx
 <DataTable
+  id="users-table"
   columns={[
-    { id: 'name', label: 'Name' },
-    { id: 'email', label: 'Email' },
-    { id: 'role', label: 'Role' },
-    { id: 'status', label: 'Status' },
-    { id: 'id', label: 'Actions' },
+    { id: "name", label: "Name" },
+    { id: "email", label: "Email" },
+    { id: "role", label: "Role" },
+    { id: "status", label: "Status" },
+    { id: "id", label: "Actions" },
   ]}
   edges={data.edges}
   pageInfo={data.pageInfo}
   order={{
     defaultOrder: {
-      column: 'name',
-      order: 'asc',
+      column: "name",
+      order: "asc",
     },
   }}
 />
 ```
 
-import { TypeTable } from 'fumadocs-ui/components/type-table';
+import { TypeTable } from "fumadocs-ui/components/type-table";
 
 <TypeTable
   type={{
     columns: {
-      description: 'Array of column definitions',
+      description: "Array of column definitions",
       required: true,
       type: `{
         id: string;
@@ -50,12 +51,12 @@ import { TypeTable } from 'fumadocs-ui/components/type-table';
       }[]`,
     },
     edges: {
-      description: 'Data to be displayed in the table',
+      description: "Data to be displayed in the table",
       required: true,
-      type: 'Array',
+      type: "Array",
     },
     order: {
-      description: 'Column sorting configuration',
+      description: "Column sorting configuration",
       required: true,
       type: `{
         columns?: string[];
@@ -66,7 +67,7 @@ import { TypeTable } from 'fumadocs-ui/components/type-table';
       }`,
     },
     pageInfo: {
-      description: 'Pagination information from the API',
+      description: "Pagination information from the API",
       required: true,
       type: `{
         hasNextPage: boolean;
@@ -74,6 +75,17 @@ import { TypeTable } from 'fumadocs-ui/components/type-table';
         startCursor: string;
         endCursor: string;
       }`,
+    },
+    search: {
+      description:
+        "Renders a search input above the table. Requires the API route to define the searchable columns.",
+      required: false,
+      type: "boolean",
+    },
+    searchPlaceholder: {
+      description: "Custom placeholder text for the search input",
+      required: false,
+      type: "string",
     },
   }}
 />
@@ -84,10 +96,11 @@ You can customize how each cell is rendered using the `cell` property. The rende
 
 ```tsx
 <DataTable
+  id="users-table"
   columns={[
     {
-      id: 'id',
-      label: 'Id',
+      id: "id",
+      label: "Id",
       // [!code ++]
       cell: ({ row, allData }) => (
         // [!code ++]
@@ -99,14 +112,14 @@ You can customize how each cell is rendered using the `cell` property. The rende
         // [!code ++]
       ),
     },
-    { id: 'createdAt', label: 'Created at' },
+    { id: "createdAt", label: "Created at" },
   ]}
   edges={data.edges}
   pageInfo={data.pageInfo}
   order={{
-    columns: ['createdAt', 'id'],
+    columns: ["createdAt", "id"],
     defaultOrder: {
-      order: 'desc',
+      order: "desc",
     },
   }}
 />
@@ -127,6 +140,39 @@ order={{
 }}
 ```
 
+## Search
+
+Set the `search` prop to `true` to render a search input above the table. You can optionally customize the placeholder with `searchPlaceholder`.
+
+```tsx
+<DataTable
+  id="users-table"
+  // [!code ++]
+  search
+  // [!code ++]
+  searchPlaceholder="Search users..."
+  columns={[
+    { id: "name", label: "Name" },
+    { id: "email", label: "Email" },
+  ]}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{
+    defaultOrder: {
+      column: "name",
+      order: "asc",
+    },
+  }}
+/>
+```
+
+The input writes the term to the `?search=` query parameter (debounced) and reloads the page, so it works out of the box with server-side data fetching. The columns that are actually searched are defined on the API route.
+
+<Callout type="info" title="Configure the API route">
+  Enabling `search` only renders the input. You must also tell the backend which
+  columns to search across — see the [Search](/docs/dev/database/search) guide.
+</Callout>
+
 ## Complete Example
 
 Here's a complete example showing how to use the `DataTable` component in a page:
@@ -135,9 +181,9 @@ Here's a complete example showing how to use the `DataTable` component in a page
 import {
   DataTable,
   SearchParamsDataTable,
-} from '@vitnode/core/components/table/data-table';
-import { userModule } from '@/api/modules/user/user.module';
-import { fetcher } from '@vitnode/core/lib/fetcher';
+} from "@vitnode/core/components/table/data-table";
+import { userModule } from "@/api/modules/user/user.module";
+import { fetcher } from "@vitnode/core/lib/fetcher";
 
 export const UsersView = async ({
   searchParams,
@@ -146,9 +192,9 @@ export const UsersView = async ({
 }) => {
   const query = await searchParams;
   const res = await fetcher(userModule, {
-    path: '/users',
-    method: 'get',
-    module: 'user',
+    path: "/users",
+    method: "get",
+    module: "user",
     args: {
       query,
     },
@@ -158,27 +204,28 @@ export const UsersView = async ({
 
   return (
     <DataTable
+      id="users-table"
       columns={[
         {
-          id: 'id',
-          label: 'ID',
+          id: "id",
+          label: "ID",
         },
         {
-          id: 'username',
-          label: 'Username',
+          id: "username",
+          label: "Username",
           cell: ({ row }) => (
             <span className="font-medium">{row.username}</span>
           ),
         },
-        { id: 'email', label: 'Email' },
-        { id: 'createdAt', label: 'Created at' },
+        { id: "email", label: "Email" },
+        { id: "createdAt", label: "Created at" },
       ]}
       edges={data.edges}
       order={{
-        columns: ['id', 'username', 'email', 'createdAt'],
+        columns: ["id", "username", "email", "createdAt"],
         defaultOrder: {
-          column: 'createdAt',
-          order: 'desc',
+          column: "createdAt",
+          order: "desc",
         },
       }}
       pageInfo={data.pageInfo}

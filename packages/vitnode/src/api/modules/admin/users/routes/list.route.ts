@@ -19,6 +19,7 @@ export const listUsersAdminRoute = buildRoute({
       query: zodPaginationQuery.extend({
         order: z.enum(["asc", "desc"]).optional(),
         orderBy: z.enum(["name", "createdAt"]).optional(),
+        search: z.string().optional(),
       }),
     },
     responses: {
@@ -55,6 +56,7 @@ export const listUsersAdminRoute = buildRoute({
       params: {
         query,
       },
+      search: [core_users.name, core_users.email],
       primaryCursor: core_users.id,
       query: async ({ limit, where, orderBy }) =>
         await c

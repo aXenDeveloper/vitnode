@@ -1,4 +1,4 @@
-import { MailIcon } from "lucide-react";
+import { MailIcon, UserSearchIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { adminModule } from "@/api/modules/admin/admin.module";
@@ -58,7 +58,13 @@ export const UsersAdminView = async ({
           cell: ({ row }) => <DateFormat date={row.createdAt} />,
         },
       ]}
+      customNoResults={{
+        title: t("noResults.title"),
+        description: t("noResults.description"),
+        icon: <UserSearchIcon />,
+      }}
       edges={data.edges}
+      id="users-table"
       order={{
         columns: ["createdAt", "name"],
         defaultOrder: {
@@ -67,6 +73,8 @@ export const UsersAdminView = async ({
         },
       }}
       pageInfo={data.pageInfo}
+      search
+      searchPlaceholder={t("searchPlaceholder")}
     />
   );
 };

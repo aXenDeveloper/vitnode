@@ -82,6 +82,7 @@ export const CronTableView = async ({
         },
       ]}
       edges={data.edges}
+      id="cron-table"
       order={{
         columns: ["lastRun", "createdAt", "nextRun"],
         defaultOrder: {

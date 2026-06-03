@@ -1,6 +1,7 @@
 import React from "react";
 
 import type { PaginationDataTable } from "./pagination";
+import type { SearchDataTable } from "./search";
 
 import { ErrorView } from "../../views/error/error-view";
 import { Skeleton } from "../ui/skeleton";
@@ -84,15 +85,22 @@ export const DataTableSkeleton = ({ columns }: { columns: number }) => {
 
 export function DataTable<T extends DataTableTMin>(
   props: Omit<React.ComponentProps<typeof Table>, "columns"> &
-    React.ComponentProps<typeof PaginationDataTable> & {
+    React.ComponentProps<typeof PaginationDataTable> &
+    React.ComponentProps<typeof SearchDataTable> & {
       columns: {
         cell?: (data: { allData: T[]; row: T }) => React.ReactNode;
         className?: string;
         id: "actions" | keyof T;
         label: string;
       }[];
-      customNotFoundComponent?: React.ReactNode;
+      customNoResults?: {
+        description?: string;
+        footer?: React.ReactNode;
+        icon?: React.ReactNode;
+        title?: string;
+      };
       edges: T[];
+      id: string;
       order: {
         columns?: (keyof T)[];
         defaultOrder: {
@@ -100,6 +108,7 @@ export function DataTable<T extends DataTableTMin>(
           order: "asc" | "desc";
         };
       };
+      search?: boolean;
     },
 ) {
   if (!(props.edges && props.pageInfo)) {

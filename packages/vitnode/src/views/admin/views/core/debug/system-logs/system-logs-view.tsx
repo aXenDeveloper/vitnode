@@ -82,6 +82,7 @@ export const SystemLogsView = async ({
         },
       ]}
       edges={data.edges.map(edge => ({ ...edge }))}
+      id="system-logs-table"
       order={{
         columns: ["createdAt", "pluginId", "type"],
         defaultOrder: {
