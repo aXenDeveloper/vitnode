@@ -9,6 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { fetcher } from "@/lib/fetcher";
 
+import { VerifyEmailUserAdmin } from "../actions/verify-email/verify-email";
+
 export const ShowUserAdminView = async ({ nameCode }: { nameCode: string }) => {
   const t = await getTranslations("admin.user.show");
   const res = await fetcher(adminModule, {
@@ -43,7 +45,7 @@ export const ShowUserAdminView = async ({ nameCode }: { nameCode: string }) => {
             user={user}
           />
 
-          <div className="flex flex-col gap-1 pb-1">
+          <div className="flex flex-1 flex-col gap-1 pb-1">
             <div className="flex items-center gap-2">
               <h2 className="text-foreground text-2xl font-bold">
                 {user.name}
@@ -58,6 +60,11 @@ export const ShowUserAdminView = async ({ nameCode }: { nameCode: string }) => {
               @{user.nameCode}
             </span>
           </div>
+
+          <VerifyEmailUserAdmin
+            emailVerified={user.emailVerified}
+            nameCode={user.nameCode}
+          />
         </div>
 
         <div className="text-muted-foreground mt-6 flex flex-col gap-2 text-sm">

@@ -13,6 +13,7 @@
     "plugins",
     "api",
     "database",
+    "working-with-users",
     "advanced",
     "---Adapters---",
     "captcha",

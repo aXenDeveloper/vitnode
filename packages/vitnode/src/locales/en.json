@@ -216,7 +216,8 @@
         "dashboard": "Dashboard",
         "users": {
           "title": "Users",
-          "list": "User List"
+          "list": "User List",
+          "roles": "Roles"
         },
         "user_bar": {
           "home_page": "Home Page",
@@ -274,6 +275,10 @@
         "emailNotVerified": "Email Not Verified",
         "coverPlaceholder": "No cover image"
       },
+      "verify_email": {
+        "label": "Verify Email",
+        "success": "Email has been verified."
+      },
       "create": {
         "title": "Add User",
         "desc": "Create a new account for a user.",
@@ -294,6 +299,18 @@
         },
         "submit": "Create User",
         "success": "User \"{name}\" has been created."
+      }
+    },
+    "role": {
+      "list": {
+        "desc": "Manage the roles of your application.",
+        "role": "Role",
+        "usersCount": "Number of users",
+        "createdAt": "Created At",
+        "noResults": {
+          "title": "No roles found",
+          "description": "Try adjusting your search criteria."
+        }
       }
     },
     "debug": {

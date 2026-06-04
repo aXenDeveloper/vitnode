@@ -1,0 +1,186 @@
+---
+title: Users
+description: Helper functions and components to work with users.
+---
+
+VitNode ships with a small set of helpers for reading the currently authenticated user and for looking users up by their `id` or `nameCode`. Backend helpers run inside your API route handlers (Hono context), while frontend helpers run in your React Server Components.
+
+## Backend
+
+### Current user
+
+The global middleware resolves the session cookie on every request and exposes the authenticated user through the Hono context. Read it with `c.get("user")` inside any route handler — it returns the user object, or `null` for guests.
+
+```ts title="plugins/{plugin_name}/src/api/routes/me.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route";
+
+export const meRoute = buildRoute({
+  handler: async c => {
+    const user = c.get("user");
+
+    if (!user) {
+      return c.json({ message: "Not signed in" }, 401);
+    }
+
+    return c.json({ user });
+  },
+});
+```
+
+The user object has the following shape:
+
+```ts
+{
+  id: number;
+  email: string;
+  name: string;
+  nameCode: string;
+  avatarColor: string;
+  newsletter: boolean;
+  emailVerified: boolean;
+  roleId: number;
+  birthday: Date | null;
+  createdAt: Date;
+}
+```
+
+<Callout type="info" title="Roles">
+  `roleId` points to the role the user belongs to. See [Roles](/docs/dev/working-with-users/roles) for more.
+</Callout>
+
+### Looking up a user
+
+Use the `UserModel` when you need to fetch a user that is **not** the one making the request. It exposes `getUserById` and `getUserByNameCode`, both of which return the user, or `null` when no match is found.
+
+```ts title="plugins/{plugin_name}/src/api/routes/user.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import { UserModel } from "@vitnode/core/api/models/user";
+
+export const userRoute = buildRoute({
+  handler: async c => {
+    const user = await new UserModel().getUserById({ id: 3, c });
+    // or: getUserByNameCode({ nameCode: "john_doe", c })
+
+    if (!user) {
+      return c.json({ message: "User not found" }, 404);
+    }
+
+    return c.json({ user });
+  },
+});
+```
+
+## Frontend
+
+### Current session
+
+On the server (React Server Components) read the current session with `getSessionApi()`. It returns `{ user }`, where `user` is the authenticated user — including an `isAdmin` flag — or `null` for guests.
+
+```tsx title="app/[locale]/profile/page.tsx"
+import { getSessionApi } from "@vitnode/core/lib/api/get-session-api";
+
+export default async function Page() {
+  const { user } = await getSessionApi();
+
+  if (!user) {
+    return <p>You are not signed in.</p>;
+  }
+
+  return <p>Welcome back, {user.name}!</p>;
+}
+```
+
+To type a Client Component that receives the user as a prop, use the exported `SessionApi` type:
+
+```tsx title="profile.tsx"
+"use client";
+
+import type { SessionApi } from "@vitnode/core/lib/api/get-session-api";
+
+export const Profile = ({
+  user,
+}: {
+  user: NonNullable<SessionApi["user"]>;
+}) => {
+  return <span>{user.name}</span>;
+};
+```
+
+<Callout type="warn" title="Server-side only">
+  `getSessionApi()` relies on the [`fetcher`](/docs/dev/fetcher), so it can only run
+  on the server. Fetch the session in a Server Component and pass what you need
+  down to Client Components as props.
+</Callout>
+
+### Current admin session
+
+Admin pages have their own session, separate from the public one. Read it on the server with `getSessionAdminApi()` — it returns the admin `user` and the current `vitnode_version`, and automatically redirects to `/admin` when the visitor is not an authenticated administrator.
+
+```tsx title="app/[locale]/admin/page.tsx"
+import { getSessionAdminApi } from "@vitnode/core/lib/api/get-session-admin-api";
+
+export default async function Page() {
+  const session = await getSessionAdminApi();
+  if (!session) return null;
+
+  return <p>Signed in as {session.user.name}</p>;
+}
+```
+
+### Avatar
+
+Render a user's avatar with the `Avatar` component. It generates a letter avatar from the user's `name` and `avatarColor`.
+
+```tsx title="user-card.tsx"
+import { Avatar } from "@vitnode/core/components/avatar";
+
+<Avatar size={24} user={user} />;
+```
+
+The `user` prop requires `name`, `nameCode`, and `avatarColor`, and `size` sets the avatar's width and height in pixels.
+
+### Formatting a user
+
+Use the `UserFormat` component to render a user's nickname together with their role. Pass the `format` prop to color the nickname with the role's `color`.
+
+```tsx title="user-link.tsx"
+import { UserFormat } from "@vitnode/core/components/user-format";
+
+<UserFormat
+  format
+  user={{
+    id: 1,
+    name: "John Doe",
+    nameCode: "john_doe",
+    role: {
+      id: 2,
+      name: "Administrator",
+      color: "#ef4444",
+    },
+  }}
+/>;
+```
+
+The `user` prop has the following shape:
+
+```ts
+{
+  id: number;
+  name: string;
+  nameCode: string;
+  role: {
+    id: number;
+    name: string;
+    color: string | null;
+  };
+}
+```
+
+| Prop     | Description                                                          |
+| -------- | ------------------------------------------------------------------- |
+| `user`   | The user to render, including their `role`.                         |
+| `format` | When set, colors the nickname using the role's `color`.             |
+
+<Callout type="info" title="Roles">
+  To render a role on its own, use the [`RoleFormat`](/docs/dev/working-with-users/roles#formatting-a-role) component.
+</Callout>
