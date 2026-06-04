@@ -4,8 +4,10 @@ import { getTranslations } from "next-intl/server";
 import dynamic from "next/dynamic";
 import React from "react";
 
+import { I18nProvider } from "@vitnode/core/components/i18n-provider";
 import { DataTableSkeleton } from "@vitnode/core/components/table/data-table";
 import { HeaderContent } from "@vitnode/core/components/ui/header-content";
+import { CreateUserAdmin } from "@vitnode/core/views/admin/views/core/users/actions/create/create";
 
 const UsersAdminView = dynamic(async () =>
   import("@vitnode/core/views/admin/views/core/users/users-admin-view").then(module => ({
@@ -30,12 +32,16 @@ export default async function Page(
   ]);
 
   return (
-    <div className="p-4">
-      <HeaderContent desc={t("desc")} h1={tNav("list")} />
+    <I18nProvider namespaces="admin.user">
+      <div className="p-4">
+        <HeaderContent desc={t("desc")} h1={tNav("list")}>
+          <CreateUserAdmin />
+        </HeaderContent>
 
-      <React.Suspense fallback={<DataTableSkeleton columns={2} />}>
-        <UsersAdminView {...props} />
-      </React.Suspense>
-    </div>
+        <React.Suspense fallback={<DataTableSkeleton columns={2} />}>
+          <UsersAdminView {...props} />
+        </React.Suspense>
+      </div>
+    </I18nProvider>
   );
 }

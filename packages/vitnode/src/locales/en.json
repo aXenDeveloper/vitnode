@@ -266,6 +266,27 @@
           "title": "No users found",
           "description": "Try adjusting your search criteria."
         }
+      },
+      "create": {
+        "title": "Add User",
+        "desc": "Create a new account for a user.",
+        "name": {
+          "label": "Username",
+          "min_length": "Username must be at least 3 characters.",
+          "max_length": "Username must be at most 32 characters.",
+          "exists": "This username is already taken."
+        },
+        "email": {
+          "label": "Email",
+          "invalid": "Please enter a valid email address.",
+          "exists": "This email is already registered."
+        },
+        "password": {
+          "label": "Password",
+          "invalid": "Password must be at least 8 characters."
+        },
+        "submit": "Create User",
+        "success": "User \"{name}\" has been created."
       }
     },
     "debug": {
