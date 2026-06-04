@@ -41,8 +41,8 @@ export const NavSidebarAdmin = async ({
               href: "/admin/core/users",
             },
             {
-              title: "test",
-              href: "/admin/core/test",
+              title: t("users.roles"),
+              href: "/admin/core/users/roles",
             },
           ],
         },

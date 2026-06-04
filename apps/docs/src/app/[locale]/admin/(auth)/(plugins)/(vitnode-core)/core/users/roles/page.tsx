@@ -7,39 +7,38 @@ import React from "react";
 import { I18nProvider } from "@vitnode/core/components/i18n-provider";
 import { DataTableSkeleton } from "@vitnode/core/components/table/data-table";
 import { HeaderContent } from "@vitnode/core/components/ui/header-content";
-import { CreateUserAdmin } from "@vitnode/core/views/admin/views/core/users/actions/create/create";
 
-const UsersAdminView = dynamic(async () =>
-  import("@vitnode/core/views/admin/views/core/users/users-admin-view").then(module => ({
-    default: module.UsersAdminView,
-  })),
+const RolesAdminView = dynamic(async () =>
+  import("@vitnode/core/views/admin/views/core/users/roles/roles-admin-view").then(
+    module => ({
+      default: module.RolesAdminView,
+    }),
+  ),
 );
 
 export const generateMetadata = async (): Promise<Metadata> => {
   const t = await getTranslations("admin.global.nav.users");
 
   return {
-    title: t("list"),
+    title: t("roles"),
   };
 };
 
 export default async function Page(
-  props: React.ComponentProps<typeof UsersAdminView>,
+  props: React.ComponentProps<typeof RolesAdminView>,
 ) {
   const [t, tNav] = await Promise.all([
-    getTranslations("admin.user.list"),
+    getTranslations("admin.role.list"),
     getTranslations("admin.global.nav.users"),
   ]);
 
   return (
-    <I18nProvider namespaces="admin.user">
+    <I18nProvider namespaces="admin.role">
       <div className="p-4">
-        <HeaderContent desc={t("desc")} h1={tNav("list")}>
-          <CreateUserAdmin />
-        </HeaderContent>
+        <HeaderContent desc={t("desc")} h1={tNav("roles")} />
 
         <React.Suspense fallback={<DataTableSkeleton columns={2} />}>
-          <UsersAdminView {...props} />
+          <RolesAdminView {...props} />
         </React.Suspense>
       </div>
     </I18nProvider>

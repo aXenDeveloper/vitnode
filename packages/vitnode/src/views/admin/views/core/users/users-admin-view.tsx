@@ -8,6 +8,8 @@ import { DataTable } from "@/components/table/data-table";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { fetcher } from "@/lib/fetcher";
 
+import { UsersAdminActions } from "./actions";
+
 export const UsersAdminView = async ({
   searchParams,
 }: {
@@ -56,6 +58,12 @@ export const UsersAdminView = async ({
           id: "createdAt",
           label: t("createdAt"),
           cell: ({ row }) => <DateFormat date={row.createdAt} />,
+        },
+        {
+          id: "actions",
+          label: "",
+          className: "w-10",
+          cell: ({ row }) => <UsersAdminActions {...row} />,
         },
       ]}
       customNoResults={{

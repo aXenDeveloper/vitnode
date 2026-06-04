@@ -130,7 +130,8 @@ export async function coreFetcher<
   }
 
   if (response.status >= 400) {
-    const errorText = await response.text();
+    // Clone so the response body stays readable for the caller
+    const errorText = await response.clone().text();
     // eslint-disable-next-line no-console
     console.error(
       `\x1b[34m[VitNode - API]\x1b[0m \x1b[31m${response.status}\x1b[0m - \x1b[33m${url.toString()}\x1b[0m\n\x1b[36mError: ${errorText}\x1b[0m`,
