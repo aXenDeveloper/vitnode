@@ -261,11 +261,18 @@
         "user": "User",
         "createdAt": "Created At",
         "emailNotVerified": "Email Not Verified",
+        "view": "View profile",
         "searchPlaceholder": "Search users by email or username...",
         "noResults": {
           "title": "No users found",
           "description": "Try adjusting your search criteria."
         }
+      },
+      "show": {
+        "title": "User Profile",
+        "joined": "Joined",
+        "emailNotVerified": "Email Not Verified",
+        "coverPlaceholder": "No cover image"
       },
       "create": {
         "title": "Add User",
