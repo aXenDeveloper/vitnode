@@ -87,6 +87,25 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
       required: false,
       type: "string",
     },
+    filters: {
+      description:
+        "Renders one or more faceted multi-select dropdowns above the table. Each filter controls its own URL query parameter.",
+      required: false,
+      type: `{
+        id: string;
+        label: string;
+        options?: {
+          value: string;
+          label: ReactNode;
+          keywords?: string[];
+        }[];
+        onSearch?: (search: string) => Promise<{
+          value: string;
+          label: ReactNode;
+          keywords?: string[];
+        }[]>;
+      }[]`,
+    },
   }}
 />
 
@@ -171,6 +190,150 @@ The input writes the term to the `?search=` query parameter (debounced) and relo
 <Callout type="info" title="Configure the API route">
   Enabling `search` only renders the input. You must also tell the backend which
   columns to search across — see the [Search](/docs/dev/database/search) guide.
+</Callout>
+
+## Filters
+
+Pass the `filters` prop to render one or more faceted, multi-select dropdowns above the table (next to the search input). Each filter controls its own URL query parameter, so it works out of the box with server-side data fetching. Multiple selected values are stored as a comma-separated list, e.g. `?roleId=1,3`, and changing a filter resets the pagination cursor.
+
+<TypeTable
+  type={{
+    id: {
+      description: "The URL query parameter this filter reads and writes.",
+      required: true,
+      type: "string",
+    },
+    label: {
+      description:
+        "Text shown on the filter trigger and as the search placeholder.",
+      required: true,
+      type: "string",
+    },
+    options: {
+      description:
+        "Static options, filtered on the client. `label` can be any node; provide `keywords` so typing can search a node-based label.",
+      required: false,
+      type: `{
+        value: string;
+        label: ReactNode;
+        keywords?: string[];
+      }[]`,
+    },
+    onSearch: {
+      description:
+        "Async source called (debounced) as the user types. The API is expected to return results already filtered and capped (e.g. 20 per request).",
+      required: false,
+      type: "(search: string) => Promise<Option[]>",
+    },
+  }}
+/>
+
+### Static filters
+
+When the set of options is small and known ahead of time, pass them directly via `options`. The dropdown list is filtered on the client.
+
+```tsx
+<DataTable
+  id="users-table"
+  // [!code ++]
+  filters={[
+    // [!code ++]
+    {
+      // [!code ++]
+      id: "status",
+      // [!code ++]
+      label: "Status",
+      // [!code ++]
+      options: [
+        // [!code ++]
+        { value: "active", label: "Active" },
+        // [!code ++]
+        { value: "banned", label: "Banned" },
+        // [!code ++]
+      ],
+      // [!code ++]
+    },
+    // [!code ++]
+  ]}
+  columns={[
+    { id: "name", label: "Name" },
+    { id: "email", label: "Email" },
+  ]}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{
+    defaultOrder: {
+      column: "name",
+      order: "asc",
+    },
+  }}
+/>
+```
+
+### Async filters
+
+When the options come from the API (for example a large or searchable list), provide an `onSearch` callback instead of `options`. It runs — debounced — as the user types and should return results already filtered and capped by the server. Use a [Server Action](https://react.dev/reference/rsc/server-functions) so the lookup runs server-side:
+
+```tsx title="search-roles.action.tsx"
+"use server";
+
+import type { FilterOption } from "@vitnode/core/components/table/filters";
+
+import { adminModule } from "@/api/modules/admin/admin.module";
+import { RoleFormat } from "@vitnode/core/components/role-format";
+import { fetcher } from "@vitnode/core/lib/fetcher";
+
+export const searchRoles = async (search: string): Promise<FilterOption[]> => {
+  const res = await fetcher(adminModule, {
+    path: "/list",
+    method: "get",
+    module: "admin/roles",
+    args: {
+      query: { search, first: "20" },
+    },
+    withPagination: true,
+  });
+
+  if (res.status !== 200) {
+    return [];
+  }
+
+  const data = await res.json();
+
+  return data.edges.map(role => ({
+    value: String(role.id),
+    label: <RoleFormat role={role} />,
+    keywords: role.name.map(item => item.name),
+  }));
+};
+```
+
+```tsx
+filters={[
+  {
+    id: "roleId",
+    label: "Group",
+    // [!code ++]
+    onSearch: searchRoles,
+  },
+]}
+```
+
+<Callout type="info" title="Configure the API route">
+  A filter only writes its values to the URL — the backend must read the query
+  parameter and apply the matching `where` clause. For a comma-separated
+  multi-select, split the value and use `inArray`:
+
+```ts
+const roleIds = (query.roleId?.split(",") ?? [])
+  .filter(Boolean)
+  .map(Number)
+  .filter((id) => !Number.isNaN(id));
+
+// pass to withPagination:
+where: roleIds.length ? inArray(core_users.roleId, roleIds) : undefined,
+```
+
 </Callout>
 
 ## Complete Example

@@ -22,6 +22,7 @@ const roleAdminSchema = z.object({
   root: z.boolean(),
   guest: z.boolean(),
   createdAt: z.date(),
+  updatedAt: z.date(),
 });
 
 export const showRoleAdminRoute = buildRoute({

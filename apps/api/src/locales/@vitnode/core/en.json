@@ -52,6 +52,8 @@
       },
       "search_placeholder": "Search...",
       "results_not_found": "No results found",
+      "selected_count": "{count} selected",
+      "clear_filters": "Clear filters",
       "date": "{date, date}",
       "date_medium": "{date, date, medium}",
       "date_short": "{date, date, short}",
@@ -263,6 +265,7 @@
         "createdAt": "Created At",
         "emailNotVerified": "Email Not Verified",
         "view": "View profile",
+        "roles": "Roles",
         "searchPlaceholder": "Search users by email or username...",
         "noResults": {
           "title": "No users found",
@@ -306,7 +309,9 @@
         "desc": "Manage the roles of your application.",
         "role": "Role",
         "usersCount": "Number of users",
-        "createdAt": "Created At",
+        "updatedAt": "Updated At",
+        "searchPlaceholder": "Search roles by name...",
+        "openUsersTooltip": "View users with this role",
         "noResults": {
           "title": "No roles found",
           "description": "Try adjusting your search criteria."

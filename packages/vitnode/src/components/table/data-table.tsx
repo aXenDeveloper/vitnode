@@ -1,5 +1,6 @@
 import React from "react";
 
+import type { FilterDataTable } from "./filters";
 import type { PaginationDataTable } from "./pagination";
 import type { SearchDataTable } from "./search";
 
@@ -100,6 +101,7 @@ export function DataTable<T extends DataTableTMin>(
         title?: string;
       };
       edges: T[];
+      filters?: FilterDataTable[];
       id: string;
       order: {
         columns?: (keyof T)[];

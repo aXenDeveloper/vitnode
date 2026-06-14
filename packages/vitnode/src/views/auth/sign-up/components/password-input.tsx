@@ -54,31 +54,33 @@ export const PasswordInput = ({
         {label}
       </AutoFormLabel>
 
-      <TooltipProvider delayDuration={0}>
+      <TooltipProvider delay={0}>
         <Tooltip open={openTooltip}>
-          <TooltipTrigger asChild>
-            <FormControl>
-              <Input
-                type="password"
-                {...field}
-                maxLength={maxLength ?? props.maxLength}
-                minLength={minLength ?? props.minLength}
-                onBlur={e => {
-                  setOpenTooltip(false);
-                  field.onBlur();
-                  props.onBlur?.(e);
-                }}
-                onChange={e => {
-                  setOpenTooltip(true);
-                  field.onChange(e);
-                  props.onChange?.(e);
-                }}
-                pattern={pattern ?? props.pattern}
-                value={field.value ?? ""}
-                {...props}
-              />
-            </FormControl>
-          </TooltipTrigger>
+          <TooltipTrigger
+            render={
+              <FormControl>
+                <Input
+                  type="password"
+                  {...field}
+                  maxLength={maxLength ?? props.maxLength}
+                  minLength={minLength ?? props.minLength}
+                  onBlur={e => {
+                    setOpenTooltip(false);
+                    field.onBlur();
+                    props.onBlur?.(e);
+                  }}
+                  onChange={e => {
+                    setOpenTooltip(true);
+                    field.onChange(e);
+                    props.onChange?.(e);
+                  }}
+                  pattern={pattern ?? props.pattern}
+                  value={field.value ?? ""}
+                  {...props}
+                />
+              </FormControl>
+            }
+          />
           <TooltipContent
             className="flex flex-col gap-2 text-sm"
             sideOffset={8}
