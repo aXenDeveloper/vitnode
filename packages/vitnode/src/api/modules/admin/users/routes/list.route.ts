@@ -1,4 +1,5 @@
 import { z } from "@hono/zod-openapi";
+import { inArray } from "drizzle-orm";
 
 import { buildRoute } from "@/api/lib/route";
 import {
@@ -19,6 +20,7 @@ export const listUsersAdminRoute = buildRoute({
       query: zodPaginationQuery.extend({
         order: z.enum(["asc", "desc"]).optional(),
         orderBy: z.enum(["name", "createdAt"]).optional(),
+        roleId: z.string().optional(),
         search: z.string().optional(),
       }),
     },
@@ -52,11 +54,15 @@ export const listUsersAdminRoute = buildRoute({
   },
   handler: async c => {
     const query = c.req.valid("query");
+    const roleIds = (query.roleId?.split(",") ?? [])
+      .map(id => Number(id))
+      .filter(id => !Number.isNaN(id));
     const data = await withPagination({
       params: {
         query,
       },
       search: [core_users.name, core_users.email],
+      where: roleIds.length ? inArray(core_users.roleId, roleIds) : undefined,
       primaryCursor: core_users.id,
       query: async ({ limit, where, orderBy }) =>
         await c

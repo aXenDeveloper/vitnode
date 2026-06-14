@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
+import { FiltersDataTable } from "./filters";
 import { OrderTableHeadDataTable } from "./order-table-head";
 import { PaginationDataTable } from "./pagination";
 import { SearchDataTable } from "./search";
@@ -24,13 +25,26 @@ export function ContentDataTable<T extends DataTableTMin>({
   customNoResults,
   search,
   searchPlaceholder,
+  filters,
   ...props
 }: React.ComponentProps<typeof DataTable<T>>) {
   const t = useTranslations("core.global");
+  const hasToolbar = Boolean(search) || Boolean(filters?.length);
 
   return (
     <div className="space-y-4">
-      {search && <SearchDataTable searchPlaceholder={searchPlaceholder} />}
+      {hasToolbar && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {search && (
+            <div className="flex-1">
+              <SearchDataTable searchPlaceholder={searchPlaceholder} />
+            </div>
+          )}
+          {filters && filters.length > 0 && (
+            <FiltersDataTable filters={filters} />
+          )}
+        </div>
+      )}
 
       <div className="[&>div]:rounded-md [&>div]:border">
         <Table {...props}>

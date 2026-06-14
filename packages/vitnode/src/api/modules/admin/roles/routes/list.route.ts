@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, eq, ilike, inArray } from "drizzle-orm";
 
 import { buildRoute } from "@/api/lib/route";
 import {
@@ -46,6 +46,7 @@ export const listRolesAdminRoute = buildRoute({
       query: zodPaginationQuery.extend({
         order: z.enum(["asc", "desc"]).optional(),
         orderBy: z.enum(["id", "createdAt"]).optional(),
+        search: z.string().optional(),
       }),
     },
     responses: {
@@ -64,11 +65,31 @@ export const listRolesAdminRoute = buildRoute({
   },
   handler: async c => {
     const query = c.req.valid("query");
+    const search = query.search?.trim();
 
     const data = await withPagination({
       params: {
         query,
       },
+      // Role names live in `core_languages_words`, so search resolves matching
+      // role ids from there instead of a column on `core_roles`.
+      where: search
+        ? inArray(
+            core_roles.id,
+            c
+              .get("db")
+              .select({ id: core_languages_words.itemId })
+              .from(core_languages_words)
+              .where(
+                and(
+                  eq(core_languages_words.tableName, "core_roles"),
+                  eq(core_languages_words.variable, "name"),
+                  eq(core_languages_words.pluginCode, "core"),
+                  ilike(core_languages_words.value, `%${search}%`),
+                ),
+              ),
+          )
+        : undefined,
       primaryCursor: core_roles.id,
       query: async ({ limit, where, orderBy }) =>
         await c

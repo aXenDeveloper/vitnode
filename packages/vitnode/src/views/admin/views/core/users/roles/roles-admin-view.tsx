@@ -1,4 +1,4 @@
-import { ShieldIcon } from "lucide-react";
+import { ExternalLink, ShieldIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
@@ -6,7 +6,9 @@ import { adminModule } from "@/api/modules/admin/admin.module";
 import { DateFormat } from "@/components/date-format";
 import { RoleFormat } from "@/components/role-format";
 import { DataTable } from "@/components/table/data-table";
+import { TooltipWithContent } from "@/components/ui/tooltip";
 import { fetcher } from "@/lib/fetcher";
+import { Link } from "@/lib/navigation";
 
 export const RolesAdminView = async ({
   searchParams,
@@ -42,7 +44,22 @@ export const RolesAdminView = async ({
         {
           id: "usersCount",
           label: t("usersCount"),
-          cell: ({ row }) => row.usersCount,
+          cell: ({ row }) => {
+            if (row.usersCount === 0) {
+              return <span className="text-muted-foreground">0</span>;
+            }
+
+            return (
+              <TooltipWithContent text={t("openUsersTooltip")}>
+                <Link
+                  className="text-primary inline-flex items-center gap-2"
+                  href={`/admin/core/users?roleId=${row.id}`}
+                >
+                  {row.usersCount} <ExternalLink className="size-4" />
+                </Link>
+              </TooltipWithContent>
+            );
+          },
         },
         {
           id: "createdAt",
@@ -65,6 +82,8 @@ export const RolesAdminView = async ({
         },
       }}
       pageInfo={data.pageInfo}
+      search
+      searchPlaceholder={t("searchPlaceholder")}
     />
   );
 };

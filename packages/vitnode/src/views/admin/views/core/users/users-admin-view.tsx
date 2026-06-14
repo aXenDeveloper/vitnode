@@ -9,6 +9,7 @@ import { TooltipWithContent } from "@/components/ui/tooltip";
 import { fetcher } from "@/lib/fetcher";
 
 import { UsersAdminActions } from "./actions";
+import { searchRolesAdmin } from "./search-roles.action";
 
 export const UsersAdminView = async ({
   searchParams,
@@ -72,6 +73,13 @@ export const UsersAdminView = async ({
         icon: <UserSearchIcon />,
       }}
       edges={data.edges}
+      filters={[
+        {
+          id: "roleId",
+          label: t("search_role"),
+          onSearch: searchRolesAdmin,
+        },
+      ]}
       id="users-table"
       order={{
         columns: ["createdAt", "name"],
