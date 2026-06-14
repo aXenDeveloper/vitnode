@@ -27,7 +27,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                     {
                       color,
                       "--tab-color": color,
-                    } as object
+                    } as React.CSSProperties
                   }
                 >
                   {node.icon}
