@@ -35,12 +35,12 @@
   },
   "devDependencies": {
     "@swc/cli": "^0.8.1",
-    "@swc/core": "^1.15.32",
+    "@swc/core": "^1.15.41",
     "@vitnode/config": "workspace:*",
     "@vitnode/core": "workspace:*",
-    "concurrently": "^9.2.1",
-    "eslint": "^10.2.1",
-    "tsc-alias": "^1.8.16",
+    "concurrently": "^10.0.3",
+    "eslint": "^10.5.0",
+    "tsc-alias": "^1.8.17",
     "typescript": "^6.0.3"
   }
 }

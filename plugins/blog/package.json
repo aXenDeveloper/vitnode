@@ -34,32 +34,32 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@hono/zod-openapi": "^1.3.0",
+    "@hono/zod-openapi": "^1.4.0",
     "@vitnode/core": "workspace:*",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.12.16",
-    "lucide-react": "^1.14.0",
-    "next": "^16.2.4",
-    "next-intl": "^4.11.0",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "react-email": "^5.2.11",
-    "react-hook-form": "^7.74.0",
+    "hono": "^4.12.25",
+    "lucide-react": "^1.18.0",
+    "next": "^16.2.9",
+    "next-intl": "^4.13.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-email": "^6.6.0",
+    "react-hook-form": "^7.79.0",
     "sonner": "^2.0.7",
-    "use-intl": "^4.11.0",
-    "zod": "^4.4.1"
+    "use-intl": "^4.13.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@react-email/components": "^1.0.12",
     "@swc/cli": "^0.8.1",
-    "@swc/core": "^1.15.32",
-    "@types/react": "^19.2.14",
+    "@swc/core": "^1.15.41",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitnode/config": "workspace:*",
-    "concurrently": "^9.2.1",
-    "eslint": "^10.2.1",
-    "tsc-alias": "^1.8.16",
+    "concurrently": "^10.0.3",
+    "eslint": "^10.5.0",
+    "tsc-alias": "^1.8.17",
     "typescript": "^6.0.3"
   }
 }

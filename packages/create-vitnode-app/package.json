@@ -35,18 +35,18 @@
     "typescript"
   ],
   "dependencies": {
-    "@inquirer/prompts": "^8.4.2",
-    "commander": "^14.0.3",
+    "@inquirer/prompts": "^8.5.2",
+    "commander": "^15.0.0",
     "ora": "^9.4.0",
     "picocolors": "^1.1.1",
     "validate-npm-package-name": "^8.0.0"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
+    "@types/node": "^25.9.3",
     "@types/prompts": "^2.4.9",
     "@types/validate-npm-package-name": "^4.0.2",
     "@vitnode/config": "workspace:*",
-    "eslint": "^10.2.1",
+    "eslint": "^10.5.0",
     "typescript": "^6.0.3"
   }
 }

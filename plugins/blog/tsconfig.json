@@ -5,7 +5,7 @@
     "target": "ESNext",
     "module": "esnext",
     "moduleResolution": "bundler",
-    "rootDir": "./src",
+    "rootDir": "./",
     "outDir": "./dist",
     "incremental": false,
     "jsx": "react-jsx",
