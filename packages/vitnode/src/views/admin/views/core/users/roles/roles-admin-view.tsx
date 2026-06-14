@@ -62,8 +62,8 @@ export const RolesAdminView = async ({
           },
         },
         {
-          id: "createdAt",
-          label: t("createdAt"),
+          id: "updatedAt",
+          label: t("updatedAt"),
           cell: ({ row }) => <DateFormat date={row.createdAt} />,
         },
       ]}
@@ -75,9 +75,9 @@ export const RolesAdminView = async ({
       edges={data.edges}
       id="roles-table"
       order={{
-        columns: ["createdAt"],
+        columns: ["updatedAt"],
         defaultOrder: {
-          column: "createdAt",
+          column: "updatedAt",
           order: "desc",
         },
       }}

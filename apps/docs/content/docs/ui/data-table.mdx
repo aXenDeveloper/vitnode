@@ -204,7 +204,8 @@ Pass the `filters` prop to render one or more faceted, multi-select dropdowns ab
       type: "string",
     },
     label: {
-      description: "Text shown on the filter trigger and as the search placeholder.",
+      description:
+        "Text shown on the filter trigger and as the search placeholder.",
       required: true,
       type: "string",
     },
@@ -282,9 +283,7 @@ import { adminModule } from "@/api/modules/admin/admin.module";
 import { RoleFormat } from "@vitnode/core/components/role-format";
 import { fetcher } from "@vitnode/core/lib/fetcher";
 
-export const searchRoles = async (
-  search: string,
-): Promise<FilterOption[]> => {
+export const searchRoles = async (search: string): Promise<FilterOption[]> => {
   const res = await fetcher(adminModule, {
     path: "/list",
     method: "get",
@@ -301,10 +300,10 @@ export const searchRoles = async (
 
   const data = await res.json();
 
-  return data.edges.map((role) => ({
+  return data.edges.map(role => ({
     value: String(role.id),
     label: <RoleFormat role={role} />,
-    keywords: role.name.map((item) => item.name),
+    keywords: role.name.map(item => item.name),
   }));
 };
 ```
@@ -327,6 +326,7 @@ filters={[
 
 ```ts
 const roleIds = (query.roleId?.split(",") ?? [])
+  .filter(Boolean)
   .map(Number)
   .filter((id) => !Number.isNaN(id));
 

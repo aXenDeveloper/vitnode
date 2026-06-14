@@ -76,7 +76,7 @@ export const UsersAdminView = async ({
       filters={[
         {
           id: "roleId",
-          label: t("search_role"),
+          label: t("roles"),
           onSearch: searchRolesAdmin,
         },
       ]}

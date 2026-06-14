@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckIcon, PlusCircleIcon } from "lucide-react";
+import { CheckIcon, PlusCircleIcon, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import React from "react";
@@ -54,7 +54,6 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
   const isAsync = Boolean(filter.onSearch);
   const [asyncOptions, setAsyncOptions] = React.useState<FilterOption[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
-  const [hasLoaded, setHasLoaded] = React.useState(false);
 
   const selected = (searchParams.get(filter.id)?.split(",") ?? []).filter(
     Boolean,
@@ -77,8 +76,8 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
   const debouncedSearch = useDebouncedCallback(runSearch, 400);
 
   const handleOpenChange = (open: boolean) => {
-    if (open && isAsync && !hasLoaded) {
-      setHasLoaded(true);
+    if (open && isAsync) {
+      setAsyncOptions([]);
       void runSearch("");
     }
   };
@@ -135,14 +134,10 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
             <>
               <Separator className="mx-0.5 h-4" orientation="vertical" />
               {isAsync || selectedStaticOptions.length > 2 ? (
-                <Badge variant="secondary">
-                  {t("selected_count", { count: selected.length })}
-                </Badge>
+                <Badge>{t("selected_count", { count: selected.length })}</Badge>
               ) : (
                 selectedStaticOptions.map(option => (
-                  <Badge key={option.value} variant="secondary">
-                    {option.label}
-                  </Badge>
+                  <Badge key={option.value}>{option.label}</Badge>
                 ))
               )}
             </>
@@ -199,7 +194,7 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
                     className="justify-center text-center"
                     onSelect={() => applySelection([])}
                   >
-                    {t("clear_filters")}
+                    <Trash2 /> {t("clear_filters")}
                   </CommandItem>
                 </CommandGroup>
               </>

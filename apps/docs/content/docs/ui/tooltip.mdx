@@ -16,9 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@vitnode/core/component
 
 ```tsx
 <Tooltip>
-  <TooltipTrigger asChild>
-    <Button variant="outline">Hover</Button>
-  </TooltipTrigger>
+  <TooltipTrigger render={<Button variant="outline">Hover</Button>} />
   <TooltipContent>
     <p>Add to library</p>
   </TooltipContent>
@@ -45,4 +43,4 @@ import { PlayIcon } from "lucide-react";
 
 ## API Reference
 
-[Radix UI - Tooltip](https://www.radix-ui.com/primitives/docs/components/tooltip#api-reference)
+[Base UI - Tooltip](https://base-ui.com/react/components/tooltip)

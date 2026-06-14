@@ -30,6 +30,7 @@ const rolesAdminListSchema = z.object({
       root: z.boolean(),
       guest: z.boolean(),
       createdAt: z.date(),
+      updatedAt: z.date(),
       usersCount: z.number(),
     }),
   ),
@@ -45,7 +46,7 @@ export const listRolesAdminRoute = buildRoute({
     request: {
       query: zodPaginationQuery.extend({
         order: z.enum(["asc", "desc"]).optional(),
-        orderBy: z.enum(["id", "createdAt"]).optional(),
+        orderBy: z.enum(["id", "createdAt", "updatedAt"]).optional(),
         search: z.string().optional(),
       }),
     },
@@ -102,6 +103,7 @@ export const listRolesAdminRoute = buildRoute({
             root: core_roles.root,
             guest: core_roles.guest,
             createdAt: core_roles.createdAt,
+            updatedAt: core_roles.updatedAt,
           })
           .from(core_roles)
           .where(where)
@@ -111,7 +113,7 @@ export const listRolesAdminRoute = buildRoute({
       orderBy: {
         column: query.orderBy
           ? core_roles[query.orderBy]
-          : core_roles.createdAt,
+          : core_roles.updatedAt,
         order: query.order ?? "desc",
       },
       c,

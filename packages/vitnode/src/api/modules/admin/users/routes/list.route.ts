@@ -55,6 +55,7 @@ export const listUsersAdminRoute = buildRoute({
   handler: async c => {
     const query = c.req.valid("query");
     const roleIds = (query.roleId?.split(",") ?? [])
+      .filter(Boolean)
       .map(id => Number(id))
       .filter(id => !Number.isNaN(id));
     const data = await withPagination({

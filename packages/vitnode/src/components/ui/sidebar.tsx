@@ -534,7 +534,7 @@ function SidebarMenuButton({
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipTrigger render={button} />
         <TooltipContent
           align="center"
           hidden={state !== "collapsed" || isMobile}

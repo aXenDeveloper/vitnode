@@ -265,7 +265,7 @@
         "createdAt": "Created At",
         "emailNotVerified": "Email Not Verified",
         "view": "View profile",
-        "search_role": "Search by role",
+        "roles": "Roles",
         "searchPlaceholder": "Search users by email or username...",
         "noResults": {
           "title": "No users found",
@@ -309,7 +309,7 @@
         "desc": "Manage the roles of your application.",
         "role": "Role",
         "usersCount": "Number of users",
-        "createdAt": "Created At",
+        "updatedAt": "Updated At",
         "searchPlaceholder": "Search roles by name...",
         "openUsersTooltip": "View users with this role",
         "noResults": {

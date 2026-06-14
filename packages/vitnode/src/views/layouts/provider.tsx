@@ -11,6 +11,7 @@ import type { VitNodeConfig } from "@/vitnode.config";
 import { CONFIG } from "@/lib/config";
 
 import { Toaster } from "../../components/ui/sonner";
+import { TooltipProvider } from "../../components/ui/tooltip";
 
 export const RootProvider = ({
   children,
@@ -65,7 +66,7 @@ export const RootProvider = ({
           }}
           shallowRouting={progressBar?.shallowRouting ?? true}
         >
-          {children}
+          <TooltipProvider>{children}</TooltipProvider>
         </ProgressProvider>
       </ThemeProvider>
     </QueryClientProvider>
