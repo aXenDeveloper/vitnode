@@ -88,6 +88,31 @@ const collectSources = (
             sourceDir: join(pluginDir, "src", "locales"),
             destinationDir: join(appPath, "src", "locales", pluginName),
           },
+          {
+            sourceDir: join(pluginDir, "src", "routes", "breadcrumb", "admin"),
+            destinationDir: join(
+              appPath,
+              "src",
+              "app",
+              "[locale]",
+              "admin",
+              "(auth)",
+              "@breadcrumb",
+              join("(plugins)", `(${pluginPathName})`),
+            ),
+          },
+          {
+            sourceDir: join(pluginDir, "src", "routes", "breadcrumb", "main"),
+            destinationDir: join(
+              appPath,
+              "src",
+              "app",
+              "[locale]",
+              "(main)",
+              "@breadcrumb",
+              join("(plugins)", `(${pluginPathName})`),
+            ),
+          },
         );
       } else if (appType === "api") {
         sources.push({
@@ -128,6 +153,31 @@ const collectSources = (
         {
           sourceDir: join(pluginDir, "src", "locales"),
           destinationDir: join(cwd, "src", "locales", pluginName),
+        },
+        {
+          sourceDir: join(pluginDir, "src", "routes", "breadcrumb", "admin"),
+          destinationDir: join(
+            cwd,
+            "src",
+            "app",
+            "[locale]",
+            "admin",
+            "(auth)",
+            "@breadcrumb",
+            join("(plugins)", `(${pluginPathName})`),
+          ),
+        },
+        {
+          sourceDir: join(pluginDir, "src", "routes", "breadcrumb", "main"),
+          destinationDir: join(
+            cwd,
+            "src",
+            "app",
+            "[locale]",
+            "(main)",
+            "@breadcrumb",
+            join("(plugins)", `(${pluginPathName})`),
+          ),
         },
       );
     } else if (projectType === "api") {

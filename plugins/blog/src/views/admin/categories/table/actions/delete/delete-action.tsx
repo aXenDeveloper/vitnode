@@ -45,11 +45,13 @@ export const DeleteAction = ({ title, id }: { id: number; title: string }) => {
           textSubmit={t("confirm")}
           title={t("title")}
         >
-          <TooltipTrigger asChild>
-            <Button aria-label={t("title")} size="icon" variant="destructive">
-              <Trash2Icon className="size-4" />
-            </Button>
-          </TooltipTrigger>
+          <TooltipTrigger
+            render={
+              <Button aria-label={t("title")} size="icon" variant="destructive">
+                <Trash2Icon className="size-4" />
+              </Button>
+            }
+          />
         </ConfirmActionAlertDialog>
 
         <TooltipContent>{t("title")}</TooltipContent>

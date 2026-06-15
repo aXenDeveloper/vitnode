@@ -172,6 +172,46 @@ export const preparePluginsFiles = async (flag?: string) => {
                 sourceDir: join(pluginPath, "src", "locales"),
                 destinationDir: langDest,
               },
+              // Breadcrumb parallel-route slots ship as framework routes and copy
+              // into the `@breadcrumb` slot, namespaced per plugin under
+              // `(plugins)/(<plugin>)` like every other copied route.
+              {
+                sourceDir: join(
+                  pluginPath,
+                  "src",
+                  "routes",
+                  "breadcrumb",
+                  "admin",
+                ),
+                destinationDir: join(
+                  appPath,
+                  "src",
+                  "app",
+                  "[locale]",
+                  "admin",
+                  "(auth)",
+                  "@breadcrumb",
+                  join("(plugins)", `(${pluginPathName})`),
+                ),
+              },
+              {
+                sourceDir: join(
+                  pluginPath,
+                  "src",
+                  "routes",
+                  "breadcrumb",
+                  "main",
+                ),
+                destinationDir: join(
+                  appPath,
+                  "src",
+                  "app",
+                  "[locale]",
+                  "(main)",
+                  "@breadcrumb",
+                  join("(plugins)", `(${pluginPathName})`),
+                ),
+              },
             );
           } else if (appType === "api") {
             // API app: copy only locales
@@ -216,6 +256,31 @@ export const preparePluginsFiles = async (flag?: string) => {
           {
             sourceDir: join(pluginPath, "src", "locales"),
             destinationDir: langDest,
+          },
+          {
+            sourceDir: join(pluginPath, "src", "routes", "breadcrumb", "admin"),
+            destinationDir: join(
+              baseDir,
+              "src",
+              "app",
+              "[locale]",
+              "admin",
+              "(auth)",
+              "@breadcrumb",
+              join("(plugins)", `(${pluginPathName})`),
+            ),
+          },
+          {
+            sourceDir: join(pluginPath, "src", "routes", "breadcrumb", "main"),
+            destinationDir: join(
+              baseDir,
+              "src",
+              "app",
+              "[locale]",
+              "(main)",
+              "@breadcrumb",
+              join("(plugins)", `(${pluginPathName})`),
+            ),
           },
         );
       }

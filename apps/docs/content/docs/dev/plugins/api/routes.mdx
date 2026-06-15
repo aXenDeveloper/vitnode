@@ -1,6 +1,6 @@
 ---
 title: Routes
-description: xxx
+description: Learn how to create API routes in your VitNode plugins, including handling path parameters, query parameters, and request bodies.
 ---
 
 ## Usage
@@ -27,25 +27,25 @@ export const getCategoriesRoute = buildRoute({
                 z.object({
                   id: z.string(),
                   name: z.string(),
-                  description: z.string().optional()
-                })
-              )
-            })
-          }
+                  description: z.string().optional(),
+                }),
+              ),
+            }),
+          },
         },
-        description: "Successfully retrieved categories"
-      }
-    }
+        description: "Successfully retrieved categories",
+      },
+    },
   },
-  handler: (c) => {
+  handler: c => {
     // Your business logic goes here
     return c.json({
       categories: [
         { id: "1", name: "Technology", description: "All things tech" },
-        { id: "2", name: "Lifestyle" }
-      ]
+        { id: "2", name: "Lifestyle" },
+      ],
     });
-  }
+  },
 });
 ```
 
@@ -60,7 +60,7 @@ import { getCategoriesRoute } from "./routes/get.route"; // [!code ++]
 export const categoriesModule = buildModule({
   pluginId: CONFIG_PLUGIN.id,
   name: "categories",
-  routes: [getCategoriesRoute] // [!code ++]
+  routes: [getCategoriesRoute], // [!code ++]
 });
 ```
 
@@ -88,9 +88,9 @@ export const getCategoryByIdRoute = buildRoute({
       params: z.object({
         id: z.string().openapi({
           description: "Unique identifier for the category",
-          example: "tech-category-123"
-        })
-      })
+          example: "tech-category-123",
+        }),
+      }),
     },
     responses: {
       200: {
@@ -99,18 +99,18 @@ export const getCategoryByIdRoute = buildRoute({
             schema: z.object({
               id: z.string(),
               name: z.string(),
-              description: z.string().optional()
-            })
-          }
+              description: z.string().optional(),
+            }),
+          },
         },
-        description: "Category details retrieved successfully"
+        description: "Category details retrieved successfully",
       },
       404: {
-        description: "Category not found"
-      }
-    }
+        description: "Category not found",
+      },
+    },
   },
-  handler: (c) => {
+  handler: c => {
     // [!code highlight]
     const { id } = c.req.valid("param"); // Extract the path parameter
 
@@ -122,9 +122,9 @@ export const getCategoryByIdRoute = buildRoute({
     return c.json({
       id,
       name: `Category ${id}`,
-      description: "A fantastic category for amazing content"
+      description: "A fantastic category for amazing content",
     });
-  }
+  },
 });
 ```
 
@@ -148,9 +148,9 @@ export const searchCategoriesRoute = buildRoute({
       query: z.object({
         search: z.string().optional().openapi({
           description: "Search term to filter categories",
-          example: "technology"
-        })
-      })
+          example: "technology",
+        }),
+      }),
     },
     responses: {
       200: {
@@ -161,37 +161,39 @@ export const searchCategoriesRoute = buildRoute({
                 z.object({
                   id: z.string(),
                   name: z.string(),
-                  description: z.string().optional()
-                })
+                  description: z.string().optional(),
+                }),
               ),
-              total: z.number()
-            })
-          }
+              total: z.number(),
+            }),
+          },
         },
-        description: "Search results with pagination info"
-      }
-    }
+        description: "Search results with pagination info",
+      },
+    },
   },
-  handler: (c) => {
+  handler: c => {
     const { search } = c.req.valid("query"); // [!code highlight]
 
     // Your search logic here
     const mockResults = [
       { id: "1", name: "Technology", description: "Tech-related posts" },
-      { id: "2", name: "Lifestyle" }
+      { id: "2", name: "Lifestyle" },
     ];
 
     const filteredResults = search
-      ? mockResults.filter((cat) => cat.name.toLowerCase().includes(search.toLowerCase()))
+      ? mockResults.filter(cat =>
+          cat.name.toLowerCase().includes(search.toLowerCase()),
+        )
       : mockResults;
 
     const paginatedResults = filteredResults.slice(offset, offset + limit);
 
     return c.json({
       categories: paginatedResults,
-      total: filteredResults.length
+      total: filteredResults.length,
     });
-  }
+  },
 });
 ```
 
@@ -208,11 +210,11 @@ import { CONFIG_PLUGIN } from "@/config";
 const createCategorySchema = z.object({
   name: z.string().min(1).max(100).openapi({
     description: "Name of the category",
-    example: "Web Development"
+    example: "Web Development",
   }),
   description: z.string().optional().openapi({
     description: "Optional description for the category",
-    example: "Everything about building websites and web applications"
+    example: "Everything about building websites and web applications",
   }),
   color: z
     .string()
@@ -220,8 +222,8 @@ const createCategorySchema = z.object({
     .optional()
     .openapi({
       description: "Hex color code for the category",
-      example: "#3B82F6"
-    })
+      example: "#3B82F6",
+    }),
 });
 
 export const createCategoryRoute = buildRoute({
@@ -234,12 +236,12 @@ export const createCategoryRoute = buildRoute({
       body: {
         content: {
           "application/json": {
-            schema: createCategorySchema
-          }
+            schema: createCategorySchema,
+          },
         },
         description: "Category data to create",
-        required: true
-      }
+        required: true,
+      },
     },
     responses: {
       201: {
@@ -250,28 +252,28 @@ export const createCategoryRoute = buildRoute({
               name: z.string(),
               description: z.string().optional(),
               color: z.string().optional(),
-              createdAt: z.string()
-            })
-          }
+              createdAt: z.string(),
+            }),
+          },
         },
-        description: "Category created successfully"
+        description: "Category created successfully",
       },
       400: {
-        description: "Invalid input data"
-      }
-    }
+        description: "Invalid input data",
+      },
+    },
   },
-  handler: async (c) => {
+  handler: async c => {
     const data = c.req.valid("json"); // [!code highlight]
 
     // Simulate category creation
     const newCategory = {
       id: `cat_${Date.now()}`,
       ...data,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
 
     return c.json(newCategory, 201);
-  }
+  },
 });
 ```

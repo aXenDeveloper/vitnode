@@ -1,4 +1,6 @@
 {
   "title": "Internationalization (I18n)",
+  "description": "Learn how to make your VitNode plugins multilingual with our I18n guide.",
+  "icon": "Globe",
   "pages": ["expand-langs", "namespaces", "messages", "..."]
 }

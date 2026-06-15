@@ -1,6 +1,6 @@
 ---
 title: Modules
-description: xxx
+description: Learn how to organize your API routes into modules for better structure and maintainability.
 ---
 
 ## Usage
@@ -15,7 +15,7 @@ import { CONFIG_PLUGIN } from "@/config";
 export const categoriesModule = buildModule({
   pluginId: CONFIG_PLUGIN.id,
   name: "categories",
-  routes: [] // We'll populate this soon!
+  routes: [], // We'll populate this soon!
 });
 ```
 
@@ -34,7 +34,7 @@ export const categoriesModule = buildModule({
   pluginId: CONFIG_PLUGIN.id,
   name: "categories",
   routes: [],
-  modules: [postsModule] // [!code ++]
+  modules: [postsModule], // [!code ++]
 });
 ```
 
@@ -52,7 +52,7 @@ import { categoriesModule } from "./api/modules/categories/categories.module"; /
 export const blogApiPlugin = () => {
   return buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
-    modules: [categoriesModule] // [!code ++]
+    modules: [categoriesModule], // [!code ++]
   });
 };
 ```

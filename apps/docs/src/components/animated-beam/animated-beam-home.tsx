@@ -44,9 +44,9 @@ const Circle = ({
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger asChild>
-          <Link className={classNameLink} {...props} />
-        </TooltipTrigger>
+        <TooltipTrigger
+          render={<Link className={classNameLink} {...props} />}
+        />
 
         <TooltipContent>{tooltip}</TooltipContent>
       </Tooltip>

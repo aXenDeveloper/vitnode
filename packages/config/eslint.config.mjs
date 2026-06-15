@@ -12,6 +12,8 @@ export default [
       "dist",
       "**/\\(main\\)/\\(plugins\\)/**",
       "**/\\(auth\\)/\\(plugins\\)/**",
+      "**/\\(main\\)/@breadcrumb/**",
+      "**/\\(auth\\)/@breadcrumb/**",
       ".prettierrc.mjs",
       "node_modules",
       "eslint.config.mjs",
