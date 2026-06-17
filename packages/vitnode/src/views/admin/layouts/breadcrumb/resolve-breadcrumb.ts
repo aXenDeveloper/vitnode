@@ -15,7 +15,9 @@ const normalizeUrl = (url: string): string =>
 // both at /admin/core/users) — better breadcrumb hierarchy.
 const flattenNav = (nav: NavAdminParent[]): Map<string, string> => {
   const labels = new Map<string, string>();
-  const setIfAbsent = (href: string, title: string) => {
+  const setIfAbsent = (href: null | string | undefined, title: string) => {
+    if (href == null) return;
+
     const key = normalizeUrl(href);
     if (!labels.has(key)) labels.set(key, title);
   };
