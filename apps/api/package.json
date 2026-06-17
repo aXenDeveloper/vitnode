@@ -1,6 +1,6 @@
 {
   "name": "api",
-  "version": "1.2.0-canary.72",
+  "version": "1.2.0-canary.73",
   "private": true,
   "type": "module",
   "scripts": {
