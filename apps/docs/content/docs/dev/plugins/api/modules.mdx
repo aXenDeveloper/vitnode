@@ -1,0 +1,58 @@
+---
+title: Modules
+description: Learn how to organize your API routes into modules for better structure and maintainability.
+---
+
+## Usage
+
+Think of modules as containers for related API endpoints. They help organize your routes logically - perfect for keeping your sanity intact!
+
+```ts title="plugins/blog/src/api/modules/categories/categories.module.ts"
+import { buildModule } from "@vitnode/core/api/lib/module";
+
+import { CONFIG_PLUGIN } from "@/config";
+
+export const categoriesModule = buildModule({
+  pluginId: CONFIG_PLUGIN.id,
+  name: "categories",
+  routes: [], // We'll populate this soon!
+});
+```
+
+#### Nested Modules
+
+Want to create a module hierarchy? VitNode's got your back! Nested modules are perfect for complex APIs.
+
+```ts title="plugins/blog/src/api/modules/categories/categories.module.ts"
+import { buildModule } from "@vitnode/core/api/lib/module";
+
+import { CONFIG_PLUGIN } from "@/config";
+
+import { postsModule } from "./posts/posts.module"; // [!code ++]
+
+export const categoriesModule = buildModule({
+  pluginId: CONFIG_PLUGIN.id,
+  name: "categories",
+  routes: [],
+  modules: [postsModule], // [!code ++]
+});
+```
+
+This creates a structure: `/api/{plugin_id}/categories/posts/*`
+
+## Connecting Modules to the API
+
+```ts title="plugins/blog/src/config.api.ts"
+import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
+
+import { CONFIG_PLUGIN } from "@/config";
+
+import { categoriesModule } from "./api/modules/categories/categories.module"; // [!code ++]
+
+export const blogApiPlugin = () => {
+  return buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    modules: [categoriesModule], // [!code ++]
+  });
+};
+```

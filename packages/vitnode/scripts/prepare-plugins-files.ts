@@ -139,7 +139,7 @@ export const preparePluginsFiles = async (flag?: string) => {
           const appType = detectAppType(appPath);
 
           if (appType === "web") {
-            // Web app: copy app, app_admin, and locales
+            // Web app: copy routes (main + admin) and locales
             const mainDest = join(
               appPath,
               "src",
@@ -161,16 +161,67 @@ export const preparePluginsFiles = async (flag?: string) => {
 
             sources.push(
               {
-                sourceDir: join(pluginPath, "src", "app_admin"),
+                sourceDir: join(pluginPath, "src", "routes", "admin"),
                 destinationDir: adminDest,
               },
               {
-                sourceDir: join(pluginPath, "src", "app"),
+                sourceDir: join(pluginPath, "src", "routes", "main"),
                 destinationDir: mainDest,
+              },
+              // Blank routes: pages without the main/admin layout (only the
+              // root `[locale]` layout applies).
+              {
+                sourceDir: join(pluginPath, "src", "routes", "blank"),
+                destinationDir: join(
+                  appPath,
+                  "src",
+                  "app",
+                  "[locale]",
+                  "(blank)",
+                  join("(plugins)", `(${pluginPathName})`),
+                ),
               },
               {
                 sourceDir: join(pluginPath, "src", "locales"),
                 destinationDir: langDest,
+              },
+              // Breadcrumb parallel-route slots ship as framework routes and copy
+              // into the `@breadcrumb` slot, namespaced per plugin under
+              // `(plugins)/(<plugin>)` like every other copied route.
+              {
+                sourceDir: join(
+                  pluginPath,
+                  "src",
+                  "routes",
+                  "breadcrumb",
+                  "admin",
+                ),
+                destinationDir: join(
+                  appPath,
+                  "src",
+                  "app",
+                  "[locale]",
+                  "admin",
+                  "(auth)",
+                  "@breadcrumb",
+                ),
+              },
+              {
+                sourceDir: join(
+                  pluginPath,
+                  "src",
+                  "routes",
+                  "breadcrumb",
+                  "main",
+                ),
+                destinationDir: join(
+                  appPath,
+                  "src",
+                  "app",
+                  "[locale]",
+                  "(main)",
+                  "@breadcrumb",
+                ),
               },
             );
           } else if (appType === "api") {
@@ -206,16 +257,50 @@ export const preparePluginsFiles = async (flag?: string) => {
 
         sources.push(
           {
-            sourceDir: join(pluginPath, "src", "app_admin"),
+            sourceDir: join(pluginPath, "src", "routes", "admin"),
             destinationDir: adminDest,
           },
           {
-            sourceDir: join(pluginPath, "src", "app"),
+            sourceDir: join(pluginPath, "src", "routes", "main"),
             destinationDir: mainDest,
+          },
+          {
+            sourceDir: join(pluginPath, "src", "routes", "blank"),
+            destinationDir: join(
+              baseDir,
+              "src",
+              "app",
+              "[locale]",
+              "(blank)",
+              join("(plugins)", `(${pluginPathName})`),
+            ),
           },
           {
             sourceDir: join(pluginPath, "src", "locales"),
             destinationDir: langDest,
+          },
+          {
+            sourceDir: join(pluginPath, "src", "routes", "breadcrumb", "admin"),
+            destinationDir: join(
+              baseDir,
+              "src",
+              "app",
+              "[locale]",
+              "admin",
+              "(auth)",
+              "@breadcrumb",
+            ),
+          },
+          {
+            sourceDir: join(pluginPath, "src", "routes", "breadcrumb", "main"),
+            destinationDir: join(
+              baseDir,
+              "src",
+              "app",
+              "[locale]",
+              "(main)",
+              "@breadcrumb",
+            ),
           },
         );
       }

@@ -1,0 +1,7 @@
+{
+  "title": "Plugins",
+  "description": "Make plugins and APIs",
+  "icon": "Plug",
+  "defaultOpen": true,
+  "pages": ["create", "layouts-and-pages", "admin-page", "breadcrumbs", "api", "..."]
+}

@@ -67,17 +67,40 @@ export interface VitNodeApiConfig {
   rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix">;
 }
 
+let registeredVitNodeConfig: undefined | VitNodeConfig;
+
 export function buildConfig<AppLocales extends LocaleConfig[]>(
   args: VitNodeConfig<AppLocales>,
 ): VitNodeConfig<AppLocales> {
-  return {
+  const config = {
     ...args,
     i18n: {
       ...args.i18n,
       localePrefix: args.i18n.localePrefix ?? "as-needed",
     },
   };
+
+  // Register the app config so framework-owned route files (e.g. the @breadcrumb
+  // slots copied into apps) can read it without prop-drilling.
+  registeredVitNodeConfig = config;
+
+  return config;
 }
+
+/**
+ * Returns the app's VitNodeConfig registered by {@link buildConfig} (called once
+ * in the app's `vitnode.config.ts`). Used by framework route files that need the
+ * config but aren't passed it as a prop.
+ */
+export const getVitNodeConfig = (): VitNodeConfig => {
+  if (!registeredVitNodeConfig) {
+    throw new Error(
+      "VitNode config not initialized — ensure `buildConfig` runs in your vitnode.config.ts.",
+    );
+  }
+
+  return registeredVitNodeConfig;
+};
 
 export function buildApiConfig(args: VitNodeApiConfig): VitNodeApiConfig {
   return args;

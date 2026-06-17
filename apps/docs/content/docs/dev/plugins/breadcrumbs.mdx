@@ -1,0 +1,171 @@
+---
+title: Breadcrumbs
+description: Learn how to add breadcrumbs to your plugin's admin pages for better navigation and user experience.
+---
+
+VitNode renders dynamic, localized breadcrumbs in two places:
+
+- **AdminCP** — in the header, next to the sidebar trigger.
+- **Main site** — below the header, on the public pages.
+
+They are built on [Next.js Parallel Routes](https://nextjs.org/docs/app/api-reference/file-conventions/parallel-routes) (the `@breadcrumb` slot) and work automatically — in most cases you don't have to do anything.
+
+## AdminCP
+
+AdminCP breadcrumbs are generated from your **sidebar navigation**. As soon as you add [navigation items](/docs/dev/plugins/admin-page#navigation-items) and their translations, the breadcrumb reuses the same translated titles — there is nothing extra to configure.
+
+Using the blog navigation from [AdminCP Pages](/docs/dev/plugins/admin-page#navigation-items), visiting `/admin/blog/settings` renders:
+
+```
+Blog / Settings
+```
+
+<Callout>
+  Labels come from the same translation keys as the sidebar nav. URL segments
+  that aren't part of the nav (for example a dynamic id) fall back to a
+  humanized version of the segment (`reset-password` → `Reset Password`).
+</Callout>
+
+## Main site
+
+On the public site the breadcrumb is derived from the URL. Each segment is humanized and links to its path, and the home page (`/`) shows no breadcrumb.
+
+```
+/login                ->  Login
+/account/settings     ->  Account / Settings
+```
+
+## Custom breadcrumbs
+
+Sometimes the automatic label isn't enough — you want a **translated** label for a public page, or a **real name resolved on the server** for a dynamic route (e.g. `/blog/posts/[id]` showing the post title instead of the id).
+
+For that, a plugin can ship breadcrumb **slots** in `src/routes/breadcrumb`. The folder mirrors the URL and maps to the matching `@breadcrumb` slot:
+
+- `routes/breadcrumb/admin` → AdminCP routes (path after `/admin`)
+- `routes/breadcrumb/main` → public site (path after `/`)
+
+VitNode copies these into the app automatically and keeps them in sync while you develop — exactly like the `src/routes/main` / `src/routes/admin` directories. Your slots are namespaced under your plugin, so they never collide with core or other plugins. Core already provides the generic fallback (and the home page), so you only add a slot for the specific route you want to customize.
+
+<Steps>
+<Step>
+
+### Translated label
+
+Render a translated label for one of your public pages. Pass a `labels` map of `path → label`; everything else still falls back to the humanized default.
+
+```tsx title="plugins/{plugin_name}/src/routes/breadcrumb/main/blog/page.tsx"
+import { BreadcrumbMain } from '@vitnode/core/views/breadcrumb/breadcrumb-main';
+import { getTranslations } from 'next-intl/server';
+
+export default async function BreadcrumbSlot() {
+  const t = await getTranslations('@vitnode/blog');
+
+  return <BreadcrumbMain labels={{ '/blog': t('title') }} segments={['blog']} />;
+}
+```
+
+</Step>
+<Step>
+
+### Server-resolved name
+
+For a dynamic route whose id is the **last** segment, resolve the real name on the server and pass it as `overrideLastLabel` — it replaces the last crumb. The folder mirrors the dynamic segment.
+
+```tsx title="plugins/{plugin_name}/src/routes/breadcrumb/main/blog/posts/[id]/page.tsx"
+import { BreadcrumbMain } from '@vitnode/core/views/breadcrumb/breadcrumb-main';
+
+export default async function BreadcrumbSlot({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const post = await getPost(id); // your data fetching
+
+  return (
+    <BreadcrumbMain
+      overrideLastLabel={post.title}
+      segments={['blog', 'posts', id]}
+    />
+  );
+}
+```
+
+</Step>
+<Step>
+
+### AdminCP dynamic page
+
+In AdminCP, use `BreadcrumbAdmin` instead. `segments` are the path after `/admin`, and the labels for known routes come from your sidebar nav automatically — so you usually only need `overrideLastLabel` for the dynamic part.
+
+```tsx title="plugins/{plugin_name}/src/routes/breadcrumb/admin/blog/posts/[id]/page.tsx"
+import { BreadcrumbAdmin } from '@vitnode/core/views/admin/layouts/breadcrumb/breadcrumb-admin';
+
+export default async function BreadcrumbSlot({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const post = await getPost(id);
+
+  return (
+    <BreadcrumbAdmin
+      overrideLastLabel={post.title}
+      segments={['blog', 'posts', id]}
+    />
+  );
+}
+```
+
+</Step>
+<Step>
+
+### Name in the middle of the path
+
+`overrideLastLabel` only replaces the **last** crumb. When the resolved name sits in the **middle** of the path — for example the post in `/blog/posts/[id]/comments` — use the `labels` prop instead, keyed by that crumb's full path. It works at any position (and the labelled crumb becomes a link). `labels` is available on both `BreadcrumbMain` and `BreadcrumbAdmin`.
+
+```tsx title="plugins/{plugin_name}/src/routes/breadcrumb/main/blog/posts/[id]/comments/page.tsx"
+import { BreadcrumbMain } from '@vitnode/core/views/breadcrumb/breadcrumb-main';
+
+export default async function BreadcrumbSlot({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const post = await getPost(id);
+
+  // Blog / Posts / <post title> / Comments
+  return (
+    <BreadcrumbMain
+      labels={{ [`/blog/posts/${id}`]: post.title }}
+      segments={['blog', 'posts', id, 'comments']}
+    />
+  );
+}
+```
+
+</Step>
+</Steps>
+
+<Callout type="warn">
+  The folder under `routes/breadcrumb` must mirror the real route path. A slot
+  only overrides the matching URL — every other route keeps the automatic
+  breadcrumb.
+</Callout>
+
+## Learn More
+
+<Cards>
+  <Card
+    title="AdminCP Pages"
+    description="Add navigation items that power AdminCP breadcrumbs"
+    href="/docs/dev/plugins/admin-page"
+  />
+  <Card
+    title="Layouts and Pages"
+    description="Create custom layouts and pages"
+    href="/docs/dev/plugins/layouts-and-pages"
+  />
+</Cards>

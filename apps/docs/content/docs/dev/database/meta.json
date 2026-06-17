@@ -1,0 +1,6 @@
+{
+  "title": "Database",
+  "description": "Learn how to work with databases in VitNode plugins using Drizzle ORM and PostgreSQL.",
+  "icon": "Database",
+  "pages": ["..."]
+}

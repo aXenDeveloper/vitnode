@@ -10,7 +10,9 @@ export const ThemeLayout = async ({
   children,
   logo,
   vitNodeConfig,
+  breadcrumb,
 }: React.ComponentProps<typeof HeaderLayout> & {
+  breadcrumb?: React.ReactNode;
   children: React.ReactNode;
   vitNodeConfig: VitNodeConfig;
 }) => {
@@ -21,7 +23,8 @@ export const ThemeLayout = async ({
     <>
       <NotificationListener />
       <WebSocketAuthSync userId={user?.id ?? null} />
-      <HeaderLayout logo={logo} vitNodeConfig={vitNodeConfig} />{" "}
+      <HeaderLayout logo={logo} vitNodeConfig={vitNodeConfig} />
+      {breadcrumb}
       <main>{children}</main>
     </>
   );

@@ -1,5 +1,4 @@
-import { LayoutDashboardIcon, UsersRoundIcon, WrenchIcon } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import type { VitNodeConfig } from "@/vitnode.config";
 
 import {
   SidebarGroup,
@@ -7,60 +6,17 @@ import {
   SidebarMenu,
 } from "@/components/ui/sidebar";
 
+import { getAdminNav } from "./get-admin-nav";
 import { ItemNavAdmin } from "./item";
 
-export interface NavAdminParent {
-  id: string;
-  items: React.ComponentProps<typeof ItemNavAdmin>[];
-  title: string;
-}
+export type { NavAdminParent } from "./get-admin-nav";
 
 export const NavSidebarAdmin = async ({
-  pluginNav,
+  vitNodeConfig,
 }: {
-  pluginNav: NavAdminParent[];
+  vitNodeConfig: VitNodeConfig;
 }) => {
-  const t = await getTranslations("admin.global.nav");
-  const rootItems: NavAdminParent[] = [
-    {
-      id: "core",
-      title: t("core"),
-      items: [
-        {
-          href: "/admin/core/",
-          icon: <LayoutDashboardIcon />,
-          title: t("dashboard"),
-        },
-        {
-          href: "/admin/core/users",
-          title: t("users.title"),
-          icon: <UsersRoundIcon />,
-          items: [
-            {
-              title: t("users.list"),
-              href: "/admin/core/users",
-            },
-            {
-              title: t("users.roles"),
-              href: "/admin/core/users/roles",
-            },
-          ],
-        },
-        {
-          href: "/admin/core/advanced",
-          title: t("advanced.title"),
-          icon: <WrenchIcon />,
-          items: [
-            {
-              title: t("advanced.cron"),
-              href: "/admin/core/advanced/cron",
-            },
-          ],
-        },
-      ],
-    },
-    ...pluginNav,
-  ];
+  const rootItems = await getAdminNav({ vitNodeConfig });
 
   return rootItems.map(parent => (
     <SidebarGroup key={parent.title}>

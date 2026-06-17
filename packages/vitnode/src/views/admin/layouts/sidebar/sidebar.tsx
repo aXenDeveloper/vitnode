@@ -9,7 +9,7 @@ import { Link } from "@/lib/navigation";
 import { NavSidebarAdmin } from "./nav/nav";
 
 export const SidebarAdmin = ({
-  pluginNav,
+  vitNodeConfig,
 }: React.ComponentProps<typeof NavSidebarAdmin>) => {
   return (
     <Sidebar variant="floating">
@@ -19,7 +19,7 @@ export const SidebarAdmin = ({
         </Link>
       </SidebarHeader>
       <SidebarContent>
-        <NavSidebarAdmin pluginNav={pluginNav} />
+        <NavSidebarAdmin vitNodeConfig={vitNodeConfig} />
       </SidebarContent>
     </Sidebar>
   );

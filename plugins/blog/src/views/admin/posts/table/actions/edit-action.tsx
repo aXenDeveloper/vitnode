@@ -36,13 +36,15 @@ export const EditAction = (
     <Dialog>
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <Button aria-label={t("title")} size="icon" variant="ghost">
-                <PencilIcon />
-              </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
+          <TooltipTrigger
+            render={
+              <DialogTrigger asChild>
+                <Button aria-label={t("title")} size="icon" variant="ghost">
+                  <PencilIcon />
+                </Button>
+              </DialogTrigger>
+            }
+          />
           <TooltipContent>{t("title")}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
