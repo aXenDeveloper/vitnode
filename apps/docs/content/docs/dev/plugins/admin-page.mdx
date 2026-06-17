@@ -5,16 +5,20 @@ description: Create powerful admin interfaces for your plugins with protected pa
 
 ## Pages & Layouts
 
-AdminCP follows the same patterns like from [Layouts and Pages](/docs/plugins/layouts-and-pages) but uses the `src/app_admin` directory.
+AdminCP follows the same patterns like from [Layouts and Pages](/docs/dev/plugins/layouts-and-pages) but uses the `src/routes/admin` directory. Like everywhere in VitNode, render text with translations — see [Messages](/docs/dev/i18n/messages).
 
 ### Pages
 
-```tsx title="plugins/{plugin_name}/src/app_admin/blog/settings/page.tsx"
-export default function Page() {
+```tsx title="plugins/{plugin_name}/src/routes/admin/blog/settings/page.tsx"
+import { getTranslations } from 'next-intl/server';
+
+export default async function Page() {
+  const t = await getTranslations('@vitnode/blog.admin.settings'); // [!code highlight]
+
   return (
     <div>
-      <h1>Settings</h1>
-      <p>Hello from Blog plugin in AdminCP</p>
+      <h1>{t('title')}</h1>
+      <p>{t('desc')}</p>
     </div>
   );
 }
@@ -22,16 +26,20 @@ export default function Page() {
 
 ### Layouts
 
-```tsx title="plugins/{plugin_name}/src/app_admin/blog/settings/layout.tsx"
-export default function AdminRootLayout({
+```tsx title="plugins/{plugin_name}/src/routes/admin/blog/settings/layout.tsx"
+import { getTranslations } from 'next-intl/server';
+
+export default async function AdminRootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const t = await getTranslations('@vitnode/blog.admin.settings');
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="border-b bg-white p-4">
-        <h1 className="text-xl font-semibold">Blog Admin</h1>
+        <h1 className="text-xl font-semibold">{t('title')}</h1>
       </header>
       {children}
     </div>
@@ -40,8 +48,8 @@ export default function AdminRootLayout({
 ```
 
 <Callout>
-  All pages & layouts in the `app_admin` directory are automatically protected
-  and require admin authentication.
+  All pages & layouts in the `src/routes/admin` directory are automatically
+  protected and require admin authentication.
 </Callout>
 
 ## Navigation items

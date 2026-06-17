@@ -6,8 +6,15 @@ description: Create beautiful layouts and pages in VitNode plugins using Next.js
 Building layouts and pages in VitNode is just like Next.js - if you know Next.js, you're already a VitNode pro! Think of pages as rooms and layouts as the house structure that holds everything together.
 
 <Callout>
-  VitNode automatically copies files from your plugin's `app` directory to the
-  main application. No extra setup needed!
+  VitNode automatically copies files from your plugin's `src/routes/main`
+  directory to the main application. No extra setup needed!
+</Callout>
+
+<Callout type="info">
+  VitNode is **i18n-first** — render all user-facing text with translations
+  instead of hardcoded strings: `getTranslations` in Server Components and
+  `useTranslations` in Client Components. See [Messages](/docs/dev/i18n/messages)
+  and [Namespaces](/docs/dev/i18n/namespaces).
 </Callout>
 
 ## Creating Pages
@@ -16,14 +23,33 @@ Pages are React components that live in `page.tsx` files. Each page represents a
 
 ### Basic Page
 
-```tsx title="plugins/blog/src/app/page.tsx"
-export default function BlogHomePage() {
+Resolve text from your plugin's namespace with `getTranslations`:
+
+```tsx title="plugins/blog/src/routes/main/page.tsx"
+import { getTranslations } from 'next-intl/server';
+
+export default async function BlogHomePage() {
+  const t = await getTranslations('@vitnode/blog'); // [!code highlight]
+
   return (
     <div className="py-12 text-center">
-      <h1 className="mb-4 text-4xl font-bold">Welcome to Our Blog! 🚀</h1>
-      <p className="text-gray-600">Where awesome content lives</p>
+      <h1 className="mb-4 text-4xl font-bold">{t('home.title')}</h1>
+      <p className="text-gray-600">{t('home.desc')}</p>
     </div>
   );
+}
+```
+
+Add the messages under your plugin's namespace:
+
+```json title="plugins/blog/src/locales/en.json"
+{
+  "@vitnode/blog": {
+    "home": {
+      "title": "Welcome to Our Blog! 🚀",
+      "desc": "Where awesome content lives"
+    }
+  }
 }
 ```
 
@@ -31,12 +57,16 @@ export default function BlogHomePage() {
 
 Create folders to organize your routes:
 
-```tsx title="plugins/blog/src/app/dashboard/page.tsx"
-export default function DashboardPage() {
+```tsx title="plugins/blog/src/routes/main/dashboard/page.tsx"
+import { getTranslations } from 'next-intl/server';
+
+export default async function DashboardPage() {
+  const t = await getTranslations('@vitnode/blog');
+
   return (
     <div>
-      <h1 className="text-3xl font-bold">Dashboard</h1>
-      <p>Manage your blog content here</p>
+      <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
+      <p>{t('dashboard.desc')}</p>
     </div>
   );
 }
@@ -46,20 +76,24 @@ This creates `/dashboard` route.
 
 ### Dynamic Routes
 
-Use `[param]` for dynamic URLs:
+Use `[param]` for dynamic URLs. Pass dynamic values straight into the message:
 
-```tsx title="plugins/blog/src/app/posts/[slug]/page.tsx"
+```tsx title="plugins/blog/src/routes/main/posts/[slug]/page.tsx"
+import { getTranslations } from 'next-intl/server';
+
 interface PostPageProps {
   params: Promise<{ slug: string }>;
 }
 
 export default async function PostPage({ params }: PostPageProps) {
   const { slug } = await params;
+  const t = await getTranslations('@vitnode/blog');
 
+  // en.json: "post": { "title": "Post: {slug}" }
   return (
     <div>
-      <h1>Post: {slug}</h1>
-      <p>Your post content goes here</p>
+      <h1>{t('post.title', { slug })}</h1>
+      <p>{t('post.desc')}</p>
     </div>
   );
 }
@@ -71,24 +105,23 @@ Layouts wrap your pages and provide shared UI elements like headers, navigation,
 
 ### Basic Layout
 
-```tsx title="plugins/blog/src/app/layout.tsx"
-import { Metadata } from 'next';
+```tsx title="plugins/blog/src/routes/main/layout.tsx"
+import { getTranslations } from 'next-intl/server';
 
-export const metadata: Metadata = {
-  title: 'My Blog Plugin',
-  description: 'A fantastic blog plugin for VitNode',
-};
-
-export default function BlogLayout({
+export default async function BlogLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const t = await getTranslations('@vitnode/blog');
+
   return (
     <div className="min-h-screen">
       <header className="border-b bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-indigo-600">✨ My Blog</h1>
+          <h1 className="text-2xl font-bold text-indigo-600">
+            {t('layout.title')}
+          </h1>
         </div>
       </header>
 
@@ -96,7 +129,7 @@ export default function BlogLayout({
 
       <footer className="bg-gray-900 py-8 text-white">
         <div className="container mx-auto px-4 text-center">
-          <p>Made with ❤️ using VitNode</p>
+          <p>{t('layout.footer')}</p>
         </div>
       </footer>
     </div>
@@ -106,25 +139,26 @@ export default function BlogLayout({
 
 ### Nested Layout for Specific Sections
 
-```tsx title="plugins/blog/src/app/dashboard/layout.tsx"
-export default function DashboardLayout({
+```tsx title="plugins/blog/src/routes/main/dashboard/layout.tsx"
+import { getTranslations } from 'next-intl/server';
+
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const t = await getTranslations('@vitnode/blog');
+
   return (
     <div className="flex">
       {/* Sidebar */}
       <aside className="min-h-screen w-64 border-r bg-gray-50">
         <nav className="p-6">
-          <h2 className="mb-4 font-semibold">Dashboard</h2>
+          <h2 className="mb-4 font-semibold">{t('dashboard.nav.title')}</h2>
           <ul className="space-y-2">
             <li>
-              <a
-                href="/dashboard"
-                className="text-gray-700 hover:text-indigo-600"
-              >
-                Overview
+              <a href="/dashboard" className="text-gray-700 hover:text-indigo-600">
+                {t('dashboard.nav.overview')}
               </a>
             </li>
             <li>
@@ -132,15 +166,7 @@ export default function DashboardLayout({
                 href="/dashboard/posts"
                 className="text-gray-700 hover:text-indigo-600"
               >
-                Posts
-              </a>
-            </li>
-            <li>
-              <a
-                href="/dashboard/settings"
-                className="text-gray-700 hover:text-indigo-600"
-              >
-                Settings
+                {t('dashboard.nav.posts')}
               </a>
             </li>
           </ul>
@@ -154,36 +180,65 @@ export default function DashboardLayout({
 }
 ```
 
+<Callout title="Client Components">
+  In a Client Component (`'use client'`) use `useTranslations` instead of
+  `getTranslations`, and wrap it with `I18nProvider` to expose non-`core.global`
+  namespaces. See [Namespaces](/docs/dev/i18n/namespaces).
+</Callout>
+
+## Pages without a layout
+
+Files in `src/routes/main` are wrapped by the main site layout (header, footer). To render a page **without** that chrome — only the root providers — put it in `src/routes/blank` instead. Handy for full-screen views, embeds, or standalone screens.
+
+```tsx title="plugins/{plugin_name}/src/routes/blank/standalone/page.tsx"
+import { getTranslations } from 'next-intl/server';
+
+export default async function StandalonePage() {
+  const t = await getTranslations('@vitnode/blog');
+
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <h1>{t('standalone.title')}</h1>
+    </div>
+  );
+}
+```
+
+This creates a `/standalone` route that renders on its own. Admin pages live in `src/routes/admin` (see [AdminCP Pages](/docs/dev/plugins/admin-page)).
+
 ## Adding Metadata
 
-Improve SEO and social sharing with metadata:
+Improve SEO and social sharing with metadata — resolve the title/description from messages too:
 
-```tsx title="plugins/blog/src/app/posts/[slug]/page.tsx"
-import { Metadata } from 'next'; // [!code highlight]
+```tsx title="plugins/blog/src/routes/main/posts/[slug]/page.tsx"
+import { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server'; // [!code highlight]
 
 interface PostPageProps {
   params: Promise<{ slug: string }>;
 }
 
-// [!code highlight:10]
+// [!code highlight:11]
 export async function generateMetadata({
   params,
 }: PostPageProps): Promise<Metadata> {
   const { slug } = await params;
+  const t = await getTranslations('@vitnode/blog');
 
   return {
-    title: `Post: ${slug}`,
-    description: `Read about ${slug} on our blog`,
+    title: t('post.meta.title', { slug }),
+    description: t('post.meta.desc', { slug }),
   };
 }
 
 export default async function PostPage({ params }: PostPageProps) {
   const { slug } = await params;
+  const t = await getTranslations('@vitnode/blog');
 
   return (
     <article>
-      <h1>Post: {slug}</h1>
-      <p>Your post content here...</p>
+      <h1>{t('post.title', { slug })}</h1>
+      <p>{t('post.desc')}</p>
     </article>
   );
 }
@@ -193,14 +248,19 @@ export default async function PostPage({ params }: PostPageProps) {
 
 <Cards>
   <Card
+    title="Messages"
+    description="Display, format and pluralize i18n text"
+    href="/docs/dev/i18n/messages"
+  />
+  <Card
+    title="Namespaces"
+    description="Use translations in Client Components"
+    href="/docs/dev/i18n/namespaces"
+  />
+  <Card
     title="Next.js Pages"
     description="Complete guide to creating pages"
     href="https://nextjs.org/docs/app/api-reference/file-conventions/page"
-  />
-  <Card
-    title="Next.js Layouts"
-    description="Master shared layouts"
-    href="https://nextjs.org/docs/app/api-reference/file-conventions/layout"
   />
   <Card
     title="Metadata API"

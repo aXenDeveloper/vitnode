@@ -12,6 +12,7 @@ export default [
       "dist",
       "**/\\(main\\)/\\(plugins\\)/**",
       "**/\\(auth\\)/\\(plugins\\)/**",
+      "**/\\(blank\\)/\\(plugins\\)/**",
       "**/\\(main\\)/@breadcrumb/**",
       "**/\\(auth\\)/@breadcrumb/**",
       ".prettierrc.mjs",

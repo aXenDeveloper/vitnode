@@ -1,4 +1,4 @@
-import { BreadcrumbAdmin } from "@vitnode/core/views/admin/layouts/breadcrumb/breadcrumb-admin";
+import { BreadcrumbAdmin } from "@/views/admin/layouts/breadcrumb/breadcrumb-admin";
 
 // Generic catch-all breadcrumb for every authenticated admin route (core +
 // plugins). More specific slot folders (e.g. core/users/[nameCode]) override it.

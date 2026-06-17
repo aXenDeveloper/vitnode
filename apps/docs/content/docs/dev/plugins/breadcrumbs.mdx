@@ -44,7 +44,7 @@ For that, a plugin can ship breadcrumb **slots** in `src/routes/breadcrumb`. The
 - `routes/breadcrumb/admin` → AdminCP routes (path after `/admin`)
 - `routes/breadcrumb/main` → public site (path after `/`)
 
-VitNode copies these into the app automatically and keeps them in sync while you develop — exactly like the `app` / `app_admin` directories. Your slots are namespaced under your plugin, so they never collide with core or other plugins. Core already provides the generic fallback (and the home page), so you only add a slot for the specific route you want to customize.
+VitNode copies these into the app automatically and keeps them in sync while you develop — exactly like the `src/routes/main` / `src/routes/admin` directories. Your slots are namespaced under your plugin, so they never collide with core or other plugins. Core already provides the generic fallback (and the home page), so you only add a slot for the specific route you want to customize.
 
 <Steps>
 <Step>

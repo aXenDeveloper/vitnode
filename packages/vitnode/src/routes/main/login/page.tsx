@@ -2,7 +2,7 @@ import type { Metadata } from "next/dist/types";
 
 import { getTranslations } from "next-intl/server";
 
-import { SignInView } from "../../views/auth/sign-in/sign-in-view";
+import { SignInView } from "@/views/auth/sign-in/sign-in-view";
 
 export const generateMetadata = async ({
   params,

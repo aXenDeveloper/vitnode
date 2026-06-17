@@ -139,7 +139,7 @@ export const preparePluginsFiles = async (flag?: string) => {
           const appType = detectAppType(appPath);
 
           if (appType === "web") {
-            // Web app: copy app, app_admin, and locales
+            // Web app: copy routes (main + admin) and locales
             const mainDest = join(
               appPath,
               "src",
@@ -161,12 +161,25 @@ export const preparePluginsFiles = async (flag?: string) => {
 
             sources.push(
               {
-                sourceDir: join(pluginPath, "src", "app_admin"),
+                sourceDir: join(pluginPath, "src", "routes", "admin"),
                 destinationDir: adminDest,
               },
               {
-                sourceDir: join(pluginPath, "src", "app"),
+                sourceDir: join(pluginPath, "src", "routes", "main"),
                 destinationDir: mainDest,
+              },
+              // Blank routes: pages without the main/admin layout (only the
+              // root `[locale]` layout applies).
+              {
+                sourceDir: join(pluginPath, "src", "routes", "blank"),
+                destinationDir: join(
+                  appPath,
+                  "src",
+                  "app",
+                  "[locale]",
+                  "(blank)",
+                  join("(plugins)", `(${pluginPathName})`),
+                ),
               },
               {
                 sourceDir: join(pluginPath, "src", "locales"),
@@ -191,7 +204,6 @@ export const preparePluginsFiles = async (flag?: string) => {
                   "admin",
                   "(auth)",
                   "@breadcrumb",
-                  join("(plugins)", `(${pluginPathName})`),
                 ),
               },
               {
@@ -209,7 +221,6 @@ export const preparePluginsFiles = async (flag?: string) => {
                   "[locale]",
                   "(main)",
                   "@breadcrumb",
-                  join("(plugins)", `(${pluginPathName})`),
                 ),
               },
             );
@@ -246,12 +257,23 @@ export const preparePluginsFiles = async (flag?: string) => {
 
         sources.push(
           {
-            sourceDir: join(pluginPath, "src", "app_admin"),
+            sourceDir: join(pluginPath, "src", "routes", "admin"),
             destinationDir: adminDest,
           },
           {
-            sourceDir: join(pluginPath, "src", "app"),
+            sourceDir: join(pluginPath, "src", "routes", "main"),
             destinationDir: mainDest,
+          },
+          {
+            sourceDir: join(pluginPath, "src", "routes", "blank"),
+            destinationDir: join(
+              baseDir,
+              "src",
+              "app",
+              "[locale]",
+              "(blank)",
+              join("(plugins)", `(${pluginPathName})`),
+            ),
           },
           {
             sourceDir: join(pluginPath, "src", "locales"),
@@ -267,7 +289,6 @@ export const preparePluginsFiles = async (flag?: string) => {
               "admin",
               "(auth)",
               "@breadcrumb",
-              join("(plugins)", `(${pluginPathName})`),
             ),
           },
           {
@@ -279,7 +300,6 @@ export const preparePluginsFiles = async (flag?: string) => {
               "[locale]",
               "(main)",
               "@breadcrumb",
-              join("(plugins)", `(${pluginPathName})`),
             ),
           },
         );

@@ -62,7 +62,7 @@ const collectSources = (
       if (appType === "web") {
         sources.push(
           {
-            sourceDir: join(pluginDir, "src", "app_admin"),
+            sourceDir: join(pluginDir, "src", "routes", "admin"),
             destinationDir: join(
               appPath,
               "src",
@@ -74,13 +74,24 @@ const collectSources = (
             ),
           },
           {
-            sourceDir: join(pluginDir, "src", "app"),
+            sourceDir: join(pluginDir, "src", "routes", "main"),
             destinationDir: join(
               appPath,
               "src",
               "app",
               "[locale]",
               "(main)",
+              join("(plugins)", `(${pluginPathName})`),
+            ),
+          },
+          {
+            sourceDir: join(pluginDir, "src", "routes", "blank"),
+            destinationDir: join(
+              appPath,
+              "src",
+              "app",
+              "[locale]",
+              "(blank)",
               join("(plugins)", `(${pluginPathName})`),
             ),
           },
@@ -98,7 +109,6 @@ const collectSources = (
               "admin",
               "(auth)",
               "@breadcrumb",
-              join("(plugins)", `(${pluginPathName})`),
             ),
           },
           {
@@ -110,7 +120,6 @@ const collectSources = (
               "[locale]",
               "(main)",
               "@breadcrumb",
-              join("(plugins)", `(${pluginPathName})`),
             ),
           },
         );
@@ -128,7 +137,7 @@ const collectSources = (
     if (projectType === "web") {
       sources.push(
         {
-          sourceDir: join(pluginDir, "src", "app_admin"),
+          sourceDir: join(pluginDir, "src", "routes", "admin"),
           destinationDir: join(
             cwd,
             "src",
@@ -140,13 +149,24 @@ const collectSources = (
           ),
         },
         {
-          sourceDir: join(pluginDir, "src", "app"),
+          sourceDir: join(pluginDir, "src", "routes", "main"),
           destinationDir: join(
             cwd,
             "src",
             "app",
             "[locale]",
             "(main)",
+            join("(plugins)", `(${pluginPathName})`),
+          ),
+        },
+        {
+          sourceDir: join(pluginDir, "src", "routes", "blank"),
+          destinationDir: join(
+            cwd,
+            "src",
+            "app",
+            "[locale]",
+            "(blank)",
             join("(plugins)", `(${pluginPathName})`),
           ),
         },
@@ -164,7 +184,6 @@ const collectSources = (
             "admin",
             "(auth)",
             "@breadcrumb",
-            join("(plugins)", `(${pluginPathName})`),
           ),
         },
         {
@@ -176,7 +195,6 @@ const collectSources = (
             "[locale]",
             "(main)",
             "@breadcrumb",
-            join("(plugins)", `(${pluginPathName})`),
           ),
         },
       );
