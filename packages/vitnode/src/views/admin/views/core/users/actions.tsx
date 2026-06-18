@@ -1,6 +1,6 @@
 "use client";
 
-import { EyeIcon } from "lucide-react";
+import { PenIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -26,12 +26,12 @@ export const UsersAdminActions = ({
         nameCode={nameCode}
       />
 
-      <TooltipWithContent text={t("view")}>
+      <TooltipWithContent text={t("edit")}>
         <Link
           className={buttonVariants({ variant: "ghost" })}
           href={`/admin/core/users/${nameCode}`}
         >
-          <EyeIcon />
+          <PenIcon />
         </Link>
       </TooltipWithContent>
     </>

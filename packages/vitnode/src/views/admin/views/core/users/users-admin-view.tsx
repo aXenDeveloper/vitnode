@@ -4,9 +4,11 @@ import { getTranslations } from "next-intl/server";
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { Avatar } from "@/components/avatar";
 import { DateFormat } from "@/components/date-format";
+import { RoleFormat } from "@/components/role-format";
 import { DataTable } from "@/components/table/data-table";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { fetcher } from "@/lib/fetcher";
+import { cn } from "@/lib/utils";
 
 import { UsersAdminActions } from "./actions";
 import { searchRolesAdmin } from "./search-roles.action";
@@ -40,20 +42,39 @@ export const UsersAdminView = async ({
               <Avatar size={32} user={row} />
 
               <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{row.name}</span>
-                  {!row.emailVerified && (
-                    <TooltipWithContent text={t("emailNotVerified")}>
-                      <MailIcon className="text-destructive size-4" />
-                    </TooltipWithContent>
-                  )}
-                </div>
+                <span className="font-medium">{row.name}</span>
                 <span className="text-muted-foreground text-sm">
-                  {row.email}
+                  @{row.nameCode}
                 </span>
               </div>
             </div>
           ),
+        },
+        {
+          id: "email",
+          label: t("email"),
+          cell: ({ row }) => {
+            if (row.emailVerified) {
+              return <span>{row.email}</span>;
+            }
+
+            return (
+              <div className="flex items-center gap-2">
+                <TooltipWithContent text={t("emailNotVerified")}>
+                  <MailIcon className="text-destructive size-4" />
+                </TooltipWithContent>
+
+                <span className="text-muted-foreground italic">
+                  {row.email}
+                </span>
+              </div>
+            );
+          },
+        },
+        {
+          id: "roleId",
+          label: t("roles"),
+          cell: ({ row }) => <RoleFormat role={row.role} />,
         },
         {
           id: "createdAt",

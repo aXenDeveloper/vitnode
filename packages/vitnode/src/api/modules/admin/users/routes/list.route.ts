@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import { buildRoute } from "@/api/lib/route";
 import {
@@ -8,6 +8,8 @@ import {
   zodPaginationQuery,
 } from "@/api/lib/with-pagination";
 import { CONFIG_PLUGIN } from "@/config";
+import { core_languages_words } from "@/database/languages";
+import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
 
 export const listUsersAdminRoute = buildRoute({
@@ -40,6 +42,16 @@ export const listUsersAdminRoute = buildRoute({
                   avatarColor: z.string(),
                   emailVerified: z.boolean(),
                   roleId: z.number(),
+                  role: z.object({
+                    id: z.number(),
+                    color: z.string().nullable(),
+                    name: z.array(
+                      z.object({
+                        name: z.string(),
+                        languageCode: z.string(),
+                      }),
+                    ),
+                  }),
                   birthday: z.date().nullable(),
                   language: z.string(),
                 }),
@@ -78,10 +90,12 @@ export const listUsersAdminRoute = buildRoute({
             avatarColor: core_users.avatarColor,
             emailVerified: core_users.emailVerified,
             roleId: core_users.roleId,
+            roleColor: core_roles.color,
             birthday: core_users.birthday,
             language: core_users.language,
           })
           .from(core_users)
+          .leftJoin(core_roles, eq(core_roles.id, core_users.roleId))
           .where(where)
           .orderBy(orderBy)
           .limit(limit),
@@ -95,6 +109,43 @@ export const listUsersAdminRoute = buildRoute({
       c,
     });
 
-    return c.json(data);
+    // Role names live in `core_languages_words`, so resolve the translations
+    // for every role referenced by the listed users in a single query.
+    const userRoleIds = [...new Set(data.edges.map(user => user.roleId))];
+    const roleNames = userRoleIds.length
+      ? await c
+          .get("db")
+          .select({
+            itemId: core_languages_words.itemId,
+            languageCode: core_languages_words.languageCode,
+            value: core_languages_words.value,
+          })
+          .from(core_languages_words)
+          .where(
+            and(
+              eq(core_languages_words.tableName, "core_roles"),
+              eq(core_languages_words.variable, "name"),
+              eq(core_languages_words.pluginCode, "core"),
+              inArray(core_languages_words.itemId, userRoleIds),
+            ),
+          )
+      : [];
+
+    return c.json({
+      pageInfo: data.pageInfo,
+      edges: data.edges.map(({ roleColor, ...user }) => ({
+        ...user,
+        role: {
+          id: user.roleId,
+          color: roleColor,
+          name: roleNames
+            .filter(word => word.itemId === user.roleId)
+            .map(word => ({
+              name: word.value,
+              languageCode: word.languageCode,
+            })),
+        },
+      })),
+    });
   },
 });
