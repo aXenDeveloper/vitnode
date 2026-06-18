@@ -114,7 +114,7 @@ export const globalMiddleware = ({
   }));
 
   const cronMetadata = plugins.flatMap(plugin =>
-    plugin.cronJobs.map(cronJob => ({
+    (plugin.cronJobs ?? []).map(cronJob => ({
       pluginId: plugin.pluginId,
       module: cronJob.module,
       name: cronJob.name,
@@ -125,7 +125,7 @@ export const globalMiddleware = ({
   );
 
   const webSocketsMetadata: WebSocketConfig[] = plugins.flatMap(plugin =>
-    plugin.webSockets.map(webSocket => ({
+    (plugin.webSockets ?? []).map(webSocket => ({
       ...webSocket,
       pluginId: plugin.pluginId,
     })),

@@ -1,0 +1,59 @@
+"use client";
+
+import { ArrowLeftIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
+
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { HeaderContent } from "@/components/ui/header-content";
+import { Link, usePathname } from "@/lib/navigation";
+import { cn } from "@/lib/utils";
+
+import { NavSettings } from "./nav";
+
+const normalizeUrl = (url: string) =>
+  url.endsWith("/") && url.length > 1 ? url.slice(0, -1) : url;
+
+export const SettingsShell = ({ children }: { children: React.ReactNode }) => {
+  const t = useTranslations("core.auth.settings");
+  // On the index path the nav acts as the mobile landing menu; any deeper path
+  // is a "detail" page that takes over the full view on mobile.
+  const isRoot = normalizeUrl(usePathname()) === "/settings";
+
+  return (
+    <div className="container mx-auto space-y-6 px-4">
+      <HeaderContent
+        className={cn(!isRoot && "hidden md:flex")}
+        desc={t("desc")}
+        h1={t("title")}
+      />
+
+      <div className="flex flex-col gap-6 md:flex-row">
+        <Card
+          className={cn("md:w-80 md:shrink-0", !isRoot && "hidden md:flex")}
+        >
+          <CardContent>
+            <NavSettings />
+          </CardContent>
+        </Card>
+
+        <Card className={cn("min-w-0 flex-1", isRoot && "hidden md:flex")}>
+          <CardContent>
+            <Link
+              className={cn(
+                buttonVariants({ size: "sm", variant: "ghost" }),
+                "mb-4 w-full justify-start gap-2 p-0 md:hidden",
+              )}
+              href="/settings"
+            >
+              <ArrowLeftIcon />
+              {t("title")}
+            </Link>
+
+            {children}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};

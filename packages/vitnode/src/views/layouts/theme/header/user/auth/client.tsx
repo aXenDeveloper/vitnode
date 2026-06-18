@@ -1,6 +1,12 @@
 "use client";
 
-import { KeyRoundIcon, LogOutIcon } from "lucide-react";
+import {
+  KeyRoundIcon,
+  LogOutIcon,
+  Settings,
+  ShieldIcon,
+  UserIcon,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import type { SessionApi } from "@/lib/api/get-session-api";
@@ -23,15 +29,43 @@ export const ClientAuthUserHeader = ({
 
   return (
     <>
-      {user.isAdmin && (
+      <DropdownMenuGroup>
+        <DropdownMenuItem asChild>
+          <Link href={`/users/${user.nameCode}`}>
+            <UserIcon />
+            <span>{t("my_profile")}</span>
+          </Link>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem asChild>
+          <Link href="/settings/overview">
+            <Settings />
+            <span>{t("settings")}</span>
+          </Link>
+        </DropdownMenuItem>
+      </DropdownMenuGroup>
+
+      <DropdownMenuSeparator />
+
+      {(user.isAdmin || user.isModerator) && (
         <>
           <DropdownMenuGroup>
-            <DropdownMenuItem asChild>
-              <Link href="/admin" target="_blank">
-                <KeyRoundIcon />
-                <span>{t("admin_cp")}</span>
-              </Link>
-            </DropdownMenuItem>
+            {user.isModerator && (
+              <DropdownMenuItem asChild>
+                <Link href="/mod_cp">
+                  <ShieldIcon />
+                  <span>{t("mod_cp")}</span>
+                </Link>
+              </DropdownMenuItem>
+            )}
+            {user.isAdmin && (
+              <DropdownMenuItem asChild>
+                <Link href="/admin" target="_blank">
+                  <KeyRoundIcon />
+                  <span>{t("admin_cp")}</span>
+                </Link>
+              </DropdownMenuItem>
+            )}
           </DropdownMenuGroup>
 
           <DropdownMenuSeparator />

@@ -37,7 +37,6 @@ export class FileCopyManager {
       "src/app/[locale]/admin",
       "src/app/favicon.ico",
       "src/app/global-error.tsx",
-      "src/app/layout.tsx",
       "src/app/not-found.tsx",
       "postcss.config.mjs",
     ]);

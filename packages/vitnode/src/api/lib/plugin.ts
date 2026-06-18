@@ -7,10 +7,10 @@ import type { WebSocketConfig } from "./websocket";
 import { checkPluginId } from "./check-plugin-id";
 
 export interface BuildPluginApiReturn {
-  cronJobs: Omit<CronJobConfig, "pluginId">[];
+  cronJobs?: Omit<CronJobConfig, "pluginId">[];
   hono: OpenAPIHono;
   pluginId: string;
-  webSockets: Omit<WebSocketConfig, "pluginId">[];
+  webSockets?: Omit<WebSocketConfig, "pluginId">[];
 }
 
 export function buildApiPlugin<P extends string>({

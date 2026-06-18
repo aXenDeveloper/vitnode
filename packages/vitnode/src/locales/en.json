@@ -99,8 +99,11 @@
         }
       },
       "user_bar": {
+        "my_profile": "My Profile",
         "log_out": "Log out",
-        "admin_cp": "Admin CP"
+        "mod_cp": "Moderator CP",
+        "admin_cp": "Admin CP",
+        "settings": "Settings"
       }
     },
     "auth": {
@@ -203,6 +206,14 @@
         "success": {
           "title": "Password changed successfully",
           "desc": "You can now log in with your new password."
+        }
+      },
+      "settings": {
+        "title": "Settings",
+        "desc": "Manage your profile, security, and account preferences.",
+        "nav": {
+          "overview": "Overview",
+          "security": "Security"
         }
       }
     }
