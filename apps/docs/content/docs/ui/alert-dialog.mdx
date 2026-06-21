@@ -3,6 +3,50 @@ title: Alert Dialog
 description: Display important messages to users in a modal dialog.
 ---
 
-<Callout type="warn" title="This documentation is under construction! 🚧">
-  We're working hard to bring you the best documentation experience.
-</Callout>
+A modal dialog that interrupts the user with important content and expects a
+response. Unlike a regular [Dialog](/docs/ui/dialog), it can only be dismissed
+through one of its actions.
+
+## Preview
+
+<Preview name="alert-dialog" />
+
+## Usage
+
+```ts
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@vitnode/core/components/ui/alert-dialog';
+import { Button } from '@vitnode/core/components/ui/button';
+```
+
+```tsx
+<AlertDialog>
+  <AlertDialogTrigger render={<Button variant="outline">Show Dialog</Button>} />
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+      <AlertDialogDescription>
+        This action cannot be undone. This will permanently delete your account
+        and remove your data from our servers.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancel</AlertDialogCancel>
+      <AlertDialogAction>Continue</AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+```
+
+## API Reference
+
+[Base UI - Alert Dialog](https://base-ui.com/react/components/alert-dialog#api-reference)

@@ -65,54 +65,58 @@ export const ItemNavAdmin = ({
   if (!items.length) {
     return (
       <SidebarMenuItem>
-        <SidebarMenuButton asChild isActive={isActive} tooltip={title}>
-          <Link
-            href={href}
-            onClick={() => {
-              if (isMobile) {
-                toggleSidebar();
-              }
-            }}
-            rel={isOpenInNewTab ? "noopener noreferrer" : undefined}
-            target={isOpenInNewTab ? "_blank" : undefined}
-          >
-            {content}
-          </Link>
+        <SidebarMenuButton
+          isActive={isActive}
+          render={
+            <Link
+              href={href}
+              onClick={() => {
+                if (isMobile) {
+                  toggleSidebar();
+                }
+              }}
+              rel={isOpenInNewTab ? "noopener noreferrer" : undefined}
+              target={isOpenInNewTab ? "_blank" : undefined}
+            />
+          }
+          tooltip={title}
+        >
+          {content}
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
   }
 
   return (
-    <Collapsible
-      asChild
-      className="group/collapsible"
-      defaultOpen={defaultOpen}
-    >
-      <SidebarMenuItem>
-        <CollapsibleTrigger asChild>
+    <Collapsible defaultOpen={defaultOpen} render={<SidebarMenuItem />}>
+      <CollapsibleTrigger
+        className="group/collapsible"
+        render={
           <SidebarMenuButton
             isActive={isActive || hasActiveChild}
             tooltip={title}
-          >
-            {content}
-            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-          </SidebarMenuButton>
-        </CollapsibleTrigger>
+          />
+        }
+      >
+        {content}
+        <ChevronRight className="ml-auto transition-transform duration-200 group-data-panel-open/collapsible:rotate-90" />
+      </CollapsibleTrigger>
 
-        <CollapsibleContent
-          className={cn(
-            "text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 outline-none",
-          )}
-        >
-          <SidebarMenuSub>
-            {items.map(item => {
-              const isChildActive =
-                normalizeUrl(pathname) === normalizeUrl(item.href);
+      <CollapsibleContent
+        className={cn(
+          "text-popover-foreground h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 ease-out outline-none data-ending-style:h-0 data-starting-style:h-0",
+        )}
+      >
+        <SidebarMenuSub>
+          {items.map(item => {
+            const isChildActive =
+              normalizeUrl(pathname) === normalizeUrl(item.href);
 
-              return (
-                <SidebarMenuSubItem key={item.href}>
-                  <SidebarMenuSubButton asChild isActive={isChildActive}>
+            return (
+              <SidebarMenuSubItem key={item.href}>
+                <SidebarMenuSubButton
+                  isActive={isChildActive}
+                  render={
                     <Link
                       href={item.href}
                       onClick={() => {
@@ -124,16 +128,16 @@ export const ItemNavAdmin = ({
                         item.isOpenInNewTab ? "noopener noreferrer" : undefined
                       }
                       target={item.isOpenInNewTab ? "_blank" : undefined}
-                    >
-                      {item.title}
-                    </Link>
-                  </SidebarMenuSubButton>
-                </SidebarMenuSubItem>
-              );
-            })}
-          </SidebarMenuSub>
-        </CollapsibleContent>
-      </SidebarMenuItem>
+                    />
+                  }
+                >
+                  {item.title}
+                </SidebarMenuSubButton>
+              </SidebarMenuSubItem>
+            );
+          })}
+        </SidebarMenuSub>
+      </CollapsibleContent>
     </Collapsible>
   );
 };

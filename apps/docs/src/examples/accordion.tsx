@@ -9,12 +9,7 @@ import {
 
 export default function AccordionExample() {
   return (
-    <Accordion
-      className="w-full"
-      collapsible
-      defaultValue="item-1"
-      type="single"
-    >
+    <Accordion className="w-full" defaultValue={["item-1"]}>
       <AccordionItem value="item-1">
         <AccordionTrigger>Product Information</AccordionTrigger>
         <AccordionContent className="flex flex-col gap-4 text-balance">

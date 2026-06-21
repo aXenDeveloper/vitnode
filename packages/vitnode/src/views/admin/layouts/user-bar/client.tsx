@@ -32,22 +32,18 @@ export const ClientUserBarAdmin = ({
       </DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
-        <DropdownMenuItem asChild>
-          <Link href="/" target="_blank">
-            <HomeIcon />
-            {t("home_page")}
-          </Link>
+        <DropdownMenuItem render={<Link href="/" target="_blank" />}>
+          <HomeIcon />
+          {t("home_page")}
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/admin/core/debug">
-            <BugIcon />
-            {t("debug")}
-          </Link>
+        <DropdownMenuItem render={<Link href="/admin/core/debug" />}>
+          <BugIcon />
+          {t("debug")}
         </DropdownMenuItem>
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
       <DropdownMenuItem
-        className="text-destructive focus:text-destructive"
+        className="text-destructive data-highlighted:text-destructive"
         onClick={async () => {
           await logOutMutationApi({ isAdmin: true });
         }}

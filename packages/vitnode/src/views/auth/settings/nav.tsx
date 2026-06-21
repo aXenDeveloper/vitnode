@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Link, usePathname } from "@/lib/navigation";
-import { cn } from "@/lib/utils";
+import { cn, normalizeUrl } from "@/lib/utils";
 
 const items = [
   {
@@ -16,9 +16,6 @@ const items = [
   },
   { href: "/settings/security", key: "security", icon: KeyRoundIcon },
 ] as const;
-
-const normalizeUrl = (url: string) =>
-  url.endsWith("/") && url.length > 1 ? url.slice(0, -1) : url;
 
 export const NavSettings = () => {
   const t = useTranslations("core.auth.settings.nav");

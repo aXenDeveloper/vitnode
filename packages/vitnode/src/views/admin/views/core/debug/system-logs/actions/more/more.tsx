@@ -31,10 +31,12 @@ export const MoreActionSystemLogs = (
   return (
     <Dialog>
       <TooltipWithContent text={t("title")}>
-        <DialogTrigger asChild>
-          <Button aria-label={t("title")} size="icon" variant="ghost">
-            <SearchIcon />
-          </Button>
+        <DialogTrigger
+          render={
+            <Button aria-label={t("title")} size="icon" variant="ghost" />
+          }
+        >
+          <SearchIcon />
         </DialogTrigger>
       </TooltipWithContent>
 

@@ -8,7 +8,6 @@ import { RoleFormat } from "@/components/role-format";
 import { DataTable } from "@/components/table/data-table";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { fetcher } from "@/lib/fetcher";
-import { cn } from "@/lib/utils";
 
 import { UsersAdminActions } from "./actions";
 import { searchRolesAdmin } from "./search-roles.action";

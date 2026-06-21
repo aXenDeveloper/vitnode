@@ -21,6 +21,29 @@ import { Button } from "@vitnode/core/components/ui/button";
 </Button>
 ```
 
+## Link
+
+Use the `render` prop to swap the underlying element or compose the button with
+another component, such as a link. Set `nativeButton={false}` when the rendered
+element is not a native `<button>`.
+
+```tsx
+import Link from "next/link";
+
+<Button nativeButton={false} render={<Link href="/home" />}>
+  Home
+</Button>
+```
+
+## Loading
+
+Pass `isLoading` to render a spinner and disable the button while an action is
+in progress.
+
+```tsx
+<Button isLoading>Save changes</Button>
+```
+
 ## Props
 
 import { TypeTable } from "fumadocs-ui/components/type-table";
@@ -34,8 +57,27 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
     },
     size: {
       description: "The size of the button.",
-      type: "default | sm | lg | icon",
+      type: "default | xs | sm | lg | icon | icon-xs | icon-sm | icon-lg",
       default: "default",
+    },
+    isLoading: {
+      description: "Shows a loading spinner and disables the button.",
+      type: "boolean",
+    },
+    render: {
+      description:
+        "A React element to render in place of the default button element.",
+      type: "ReactElement",
+    },
+    nativeButton: {
+      description:
+        "Whether the rendered element is a native button. Set to false when using `render` with a non-button element.",
+      type: "boolean",
+      default: "true",
     },
   }}
 />
+
+## API Reference
+
+[Base UI - Button](https://base-ui.com/react/components/button#api-reference)

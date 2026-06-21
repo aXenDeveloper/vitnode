@@ -25,16 +25,18 @@ export const LanguageSwitcher = ({ locales }: { locales: LocaleConfig[] }) => {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          aria-label={t("language_switcher")}
-          className="relative"
-          isLoading={isPending}
-          size="icon"
-          variant="ghost"
-        >
-          <LanguagesIcon />
-        </Button>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            aria-label={t("language_switcher")}
+            className="relative"
+            isLoading={isPending}
+            size="icon"
+            variant="ghost"
+          />
+        }
+      >
+        <LanguagesIcon />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent>

@@ -29,17 +29,19 @@ export const TextFormatMore = () => {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          aria-label={t("label")}
-          className={cn({
-            "bg-accent": isStrike,
-          })}
-          size="icon-sm"
-          variant="ghost"
-        >
-          <EllipsisVerticalIcon />
-        </Button>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            aria-label={t("label")}
+            className={cn({
+              "bg-accent": isStrike,
+            })}
+            size="icon-sm"
+            variant="ghost"
+          />
+        }
+      >
+        <EllipsisVerticalIcon />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent className="min-w-48">

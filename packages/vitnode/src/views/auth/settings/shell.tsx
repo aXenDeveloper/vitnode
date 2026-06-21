@@ -7,12 +7,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { HeaderContent } from "@/components/ui/header-content";
 import { Link, usePathname } from "@/lib/navigation";
-import { cn } from "@/lib/utils";
+import { cn, normalizeUrl } from "@/lib/utils";
 
 import { NavSettings } from "./nav";
-
-const normalizeUrl = (url: string) =>
-  url.endsWith("/") && url.length > 1 ? url.slice(0, -1) : url;
 
 export const SettingsShell = ({ children }: { children: React.ReactNode }) => {
   const t = useTranslations("core.auth.settings");

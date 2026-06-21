@@ -10,9 +10,7 @@ import {
 export default function PopoverDemo() {
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline">Open</Button>
-      </PopoverTrigger>
+      <PopoverTrigger render={<Button variant="outline">Open</Button>} />
       <PopoverContent>Place content for the popover here.</PopoverContent>
     </Popover>
   );

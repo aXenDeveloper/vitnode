@@ -26,11 +26,9 @@ export const ActionsCategoriesAdmin = () => {
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusIcon />
-          {t("title")}
-        </Button>
+      <DialogTrigger render={<Button />}>
+        <PlusIcon />
+        {t("title")}
       </DialogTrigger>
 
       <DialogContent>

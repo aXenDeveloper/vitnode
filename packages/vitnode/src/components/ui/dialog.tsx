@@ -1,9 +1,9 @@
 "use client";
 
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { XIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Dialog as DialogPrimitive } from "radix-ui";
-import React from "react";
+import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -38,14 +38,20 @@ function Dialog({
   onOpenChange,
   open: openProp,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Root>) {
+}: Omit<DialogPrimitive.Root.Props, "children" | "onOpenChange"> & {
+  children?: React.ReactNode;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const t = useTranslations("core.global");
   const [open, setOpen] = React.useState(false);
   const [isDirty, setIsDirty] = React.useState(false);
   const [openAlertDialogBeforeClose, setOpenAlertDialogBeforeClose] =
     React.useState(false);
 
-  const handleOpenChange = React.useCallback(
+  const isOpen = openProp ?? open;
+
+  // Opens/closes the dialog programmatically, bypassing the unsaved-changes guard.
+  const changeOpen = React.useCallback(
     (newOpen: boolean) => {
       onOpenChange?.(newOpen);
       setOpen(newOpen);
@@ -53,15 +59,44 @@ function Dialog({
     [onOpenChange],
   );
 
+  // Wired to Base UI. Blocks dismissals while there are unsaved changes (asking
+  // the user to confirm first) and ignores presses that land on a toast.
+  const handleOpenChange = (
+    newOpen: boolean,
+    eventDetails: DialogPrimitive.Root.ChangeEventDetails,
+  ) => {
+    if (!newOpen) {
+      // Prevent closing the dialog if there are unsaved changes.
+      if (isDirty) {
+        eventDetails.cancel();
+        setOpenAlertDialogBeforeClose(true);
+
+        return;
+      }
+
+      // Prevent dismissing the dialog when clicking on a toast.
+      if (eventDetails.reason === "outside-press") {
+        const target = eventDetails.event.target as Element | null;
+        if (target?.closest("[data-sonner-toaster]")) {
+          eventDetails.cancel();
+
+          return;
+        }
+      }
+    }
+
+    changeOpen(newOpen);
+  };
+
   const contextValue = React.useMemo(
     () => ({
-      open: openProp ?? open,
-      setOpen: handleOpenChange,
+      open: isOpen,
+      setOpen: changeOpen,
       isDirty,
       setIsDirty,
       setOpenAlertDialogBeforeClose,
     }),
-    [openProp, open, handleOpenChange, isDirty],
+    [isOpen, changeOpen, isDirty],
   );
 
   return (
@@ -69,7 +104,7 @@ function Dialog({
       <DialogPrimitive.Root
         data-slot="dialog"
         onOpenChange={handleOpenChange}
-        open={openProp ?? open}
+        open={isOpen}
         {...props}
       />
 
@@ -93,7 +128,7 @@ function Dialog({
             <AlertDialogAction
               onClick={() => {
                 setIsDirty(false);
-                setTimeout(() => setOpen(false), 100);
+                setTimeout(() => changeOpen(false), 100);
               }}
             >
               {t("are_you_sure_want_to_leave_form.confirm")}
@@ -105,49 +140,26 @@ function Dialog({
   );
 }
 
-function DialogTrigger({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
+function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
   return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
 }
 
-function DialogPortal({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Portal>) {
+function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
 
-function DialogClose({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Close>) {
-  const { setOpenAlertDialogBeforeClose, isDirty } = useDialog();
-
-  return (
-    <DialogPrimitive.Close
-      data-slot="dialog-close"
-      onClick={e => {
-        props?.onClick?.(e);
-        // Prevent closing the dialog if there are unsaved changes
-        if (isDirty) {
-          e.preventDefault();
-          setOpenAlertDialogBeforeClose?.(true);
-
-          return;
-        }
-      }}
-      {...props}
-    />
-  );
+function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
+  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
 function DialogOverlay({
   className,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+}: DialogPrimitive.Backdrop.Props) {
   return (
-    <DialogPrimitive.Overlay
+    <DialogPrimitive.Backdrop
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 isolate z-50 bg-black/50",
+        "data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 fixed inset-0 isolate z-50 bg-black/50",
         className,
       )}
       data-slot="dialog-overlay"
@@ -161,57 +173,36 @@ function DialogContent({
   children,
   showCloseButton = true,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content> & {
+}: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean;
 }) {
-  const { isDirty, setOpenAlertDialogBeforeClose } = useDialog();
   const t = useTranslations("core.global");
 
   return (
-    <DialogPortal data-slot="dialog-portal">
+    <DialogPortal>
       <DialogOverlay />
-      <DialogPrimitive.Content
+      <DialogPrimitive.Popup
         className={cn(
-          "dark:bg-background bg-card data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
+          "dark:bg-background bg-card data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
           "max-h-[calc(100vh-2rem)] overflow-y-scroll sm:max-h-[calc(100vh-5rem)]",
           className,
         )}
         data-slot="dialog-content"
-        onInteractOutside={e => {
-          // Prevent dismissing the dialog when clicking on a toast
-          const isToastItem = (e.target as Element)?.closest(
-            "[data-sonner-toaster]",
-          );
-          if (isToastItem || isDirty) e.preventDefault();
-
-          if (props?.onInteractOutside) {
-            props.onInteractOutside(e);
-          }
-        }}
         {...props}
       >
         {children}
         {showCloseButton && (
-          <DialogPrimitive.Close asChild data-slot="dialog-close">
-            <Button
-              aria-label={t("close")}
-              className="absolute top-4 right-4"
-              onClick={e => {
-                if (isDirty) {
-                  e.preventDefault();
-                  setOpenAlertDialogBeforeClose?.(true);
-
-                  return;
-                }
-              }}
-              size="icon-sm"
-              variant="ghost"
-            >
-              <XIcon />
-            </Button>
+          <DialogPrimitive.Close
+            className="absolute end-4 top-4"
+            data-slot="dialog-close"
+            render={
+              <Button aria-label={t("close")} size="icon-sm" variant="ghost" />
+            }
+          >
+            <XIcon />
           </DialogPrimitive.Close>
         )}
-      </DialogPrimitive.Content>
+      </DialogPrimitive.Popup>
     </DialogPortal>
   );
 }
@@ -247,18 +238,16 @@ function DialogFooter({
     >
       {children}
       {showCloseButton && (
-        <DialogPrimitive.Close asChild>
-          <Button variant="outline">{t("close")}</Button>
-        </DialogPrimitive.Close>
+        <DialogPrimitive.Close
+          data-slot="dialog-close"
+          render={<Button variant="outline">{t("close")}</Button>}
+        />
       )}
     </div>
   );
 }
 
-function DialogTitle({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Title>) {
+function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       className={cn("font-heading leading-none font-medium", className)}
@@ -271,7 +260,7 @@ function DialogTitle({
 function DialogDescription({
   className,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Description>) {
+}: DialogPrimitive.Description.Props) {
   return (
     <DialogPrimitive.Description
       className={cn(

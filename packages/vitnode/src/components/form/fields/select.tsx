@@ -42,10 +42,6 @@ export const AutoFormSelect = ({
     };
   });
 
-  const currentPlaceholder =
-    (values ?? labels).find(l => l.value === field.value)?.label ??
-    t("select_option");
-
   return (
     <>
       {label && (
@@ -57,20 +53,15 @@ export const AutoFormSelect = ({
       <FormControl>
         <Select
           defaultValue={field.value}
-          disabled={props.disabled}
-          onValueChange={e => {
-            field.onChange(e);
-            props?.onValueChange?.(e);
-          }}
+          items={values}
           {...props}
+          onValueChange={(value, eventDetails) => {
+            field.onChange(value);
+            props.onValueChange?.(value, eventDetails);
+          }}
         >
-          <SelectTrigger {...props}>
-            <SelectValue
-              onBlur={field.onBlur}
-              placeholder={placeholder ?? currentPlaceholder}
-            >
-              {currentPlaceholder}
-            </SelectValue>
+          <SelectTrigger onBlur={field.onBlur}>
+            <SelectValue placeholder={placeholder ?? t("select_option")} />
           </SelectTrigger>
 
           <SelectContent>

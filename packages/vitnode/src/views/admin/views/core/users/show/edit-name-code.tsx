@@ -29,10 +29,16 @@ export const EditNameCode = ({ nameCode }: { nameCode: string }) => {
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        <Button aria-label={t("editNameCode")} size="icon-xs" variant="ghost">
-          <PencilIcon />
-        </Button>
+      <DialogTrigger
+        render={
+          <Button
+            aria-label={t("editNameCode")}
+            size="icon-xs"
+            variant="ghost"
+          />
+        }
+      >
+        <PencilIcon />
       </DialogTrigger>
 
       <DialogContent>

@@ -30,18 +30,14 @@ export const ClientAuthUserHeader = ({
   return (
     <>
       <DropdownMenuGroup>
-        <DropdownMenuItem asChild>
-          <Link href={`/users/${user.nameCode}`}>
-            <UserIcon />
-            <span>{t("my_profile")}</span>
-          </Link>
+        <DropdownMenuItem render={<Link href={`/users/${user.nameCode}`} />}>
+          <UserIcon />
+          <span>{t("my_profile")}</span>
         </DropdownMenuItem>
 
-        <DropdownMenuItem asChild>
-          <Link href="/settings/overview">
-            <Settings />
-            <span>{t("settings")}</span>
-          </Link>
+        <DropdownMenuItem render={<Link href="/settings/overview" />}>
+          <Settings />
+          <span>{t("settings")}</span>
         </DropdownMenuItem>
       </DropdownMenuGroup>
 
@@ -51,19 +47,15 @@ export const ClientAuthUserHeader = ({
         <>
           <DropdownMenuGroup>
             {user.isModerator && (
-              <DropdownMenuItem asChild>
-                <Link href="/mod_cp">
-                  <ShieldIcon />
-                  <span>{t("mod_cp")}</span>
-                </Link>
+              <DropdownMenuItem render={<Link href="/mod_cp" />}>
+                <ShieldIcon />
+                <span>{t("mod_cp")}</span>
               </DropdownMenuItem>
             )}
             {user.isAdmin && (
-              <DropdownMenuItem asChild>
-                <Link href="/admin" target="_blank">
-                  <KeyRoundIcon />
-                  <span>{t("admin_cp")}</span>
-                </Link>
+              <DropdownMenuItem render={<Link href="/admin" target="_blank" />}>
+                <KeyRoundIcon />
+                <span>{t("admin_cp")}</span>
               </DropdownMenuItem>
             )}
           </DropdownMenuGroup>

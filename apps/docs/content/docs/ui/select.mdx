@@ -72,16 +72,27 @@ import {
 ```
 
 ```tsx
-<Select>
+const items = [
+  { label: "Option One", value: "option-one" },
+  { label: "Option Two", value: "option-two" },
+];
+
+<Select items={items}>
   <SelectTrigger>
     <SelectValue placeholder="Select example" />
   </SelectTrigger>
   <SelectContent>
-    <SelectItem value="option-one">Option One</SelectItem>
-    <SelectItem value="option-two">Option Two</SelectItem>
+    {items.map((item) => (
+      <SelectItem key={item.value} value={item.value}>
+        {item.label}
+      </SelectItem>
+    ))}
   </SelectContent>
 </Select>
 ```
+
+> Pass an `items` array to `Select` so `SelectValue` can render the selected
+> option's label. Without it, the raw `value` is displayed instead.
 
   </Tab>
 </Tabs>
@@ -121,4 +132,4 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
 
 ## API Reference
 
-[Radix UI - Select](https://www.radix-ui.com/primitives/docs/components/select#api-reference)
+[Base UI - Select](https://base-ui.com/react/components/select#api-reference)

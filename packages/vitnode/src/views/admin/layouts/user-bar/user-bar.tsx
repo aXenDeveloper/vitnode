@@ -20,14 +20,14 @@ export const UserBarAdmin = ({
 >) => {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button aria-label={user.name} size="icon" variant="ghost">
-          <Avatar size={24} user={user} />
-        </Button>
+      <DropdownMenuTrigger
+        render={<Button aria-label={user.name} size="icon" variant="ghost" />}
+      >
+        <Avatar size={24} user={user} />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
-        className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+        className="w-(--anchor-width) min-w-56 rounded-lg"
         side="bottom"
         sideOffset={4}
       >

@@ -1,8 +1,8 @@
 "use client";
 
+import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
-import { Slot } from "radix-ui";
 
 import { cn } from "../../lib/utils";
 import { type ButtonProps, buttonVariants } from "./button";
@@ -12,16 +12,14 @@ export function ClientButton({
   className,
   variant,
   size,
-  asChild = false,
   isLoading,
   children,
   ...props
 }: ButtonProps) {
-  const Comp = asChild ? Slot.Root : "button";
   const t = useTranslations("core.global");
 
   return (
-    <Comp
+    <ButtonPrimitive
       aria-label={isLoading ? t("loading") : props["aria-label"]}
       className={cn(buttonVariants({ variant, size, className }))}
       data-slot="button"
@@ -56,6 +54,6 @@ export function ClientButton({
           </AnimatePresence>
         </div>
       )}
-    </Comp>
+    </ButtonPrimitive>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
+import { mergeProps } from "@base-ui/react/merge-props";
+import { useRender } from "@base-ui/react/use-render";
 import { useTranslations } from "next-intl";
-import { Slot } from "radix-ui";
 import React from "react";
 import {
   Controller,
@@ -120,20 +121,23 @@ const useFormField = () => {
   };
 };
 
-function FormControl({ ...props }: React.ComponentProps<typeof Slot.Root>) {
+function FormControl({ children, ...props }: React.ComponentProps<"div">) {
   const { error, formItemId, formDescriptionId, formMessageId } =
     useFormField();
 
-  return (
-    <Slot.Root
-      aria-describedby={
-        error ? `${formDescriptionId} ${formMessageId}` : formDescriptionId
-      }
-      aria-invalid={!!error}
-      id={formItemId}
-      {...props}
-    />
-  );
+  return useRender({
+    props: mergeProps<"div">(
+      {
+        "aria-describedby": error
+          ? `${formDescriptionId} ${formMessageId}`
+          : formDescriptionId,
+        "aria-invalid": !!error,
+        id: formItemId,
+      },
+      props,
+    ),
+    render: children as React.ReactElement,
+  });
 }
 
 function FormMessage(props: React.ComponentProps<typeof FieldError>) {

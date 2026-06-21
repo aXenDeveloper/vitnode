@@ -27,11 +27,9 @@ export const CreateUserAdmin = () => {
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        <Button>
-          <UserPlusIcon />
-          {t("title")}
-        </Button>
+      <DialogTrigger render={<Button />}>
+        <UserPlusIcon />
+        {t("title")}
       </DialogTrigger>
 
       <DialogContent>

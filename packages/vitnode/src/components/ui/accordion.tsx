@@ -1,7 +1,7 @@
 "use client";
 
+import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
-import { Accordion as AccordionPrimitive } from "radix-ui";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -49,11 +49,11 @@ function AccordionTrigger({
       >
         {children}
         <ChevronDownIcon
-          className="pointer-events-none shrink-0 group-aria-expanded/accordion-trigger:hidden"
+          className="pointer-events-none shrink-0 group-data-[panel-open]/accordion-trigger:hidden"
           data-slot="accordion-trigger-icon"
         />
         <ChevronUpIcon
-          className="pointer-events-none hidden shrink-0 group-aria-expanded/accordion-trigger:inline"
+          className="pointer-events-none hidden shrink-0 group-data-[panel-open]/accordion-trigger:inline"
           data-slot="accordion-trigger-icon"
         />
       </AccordionPrimitive.Trigger>
@@ -65,22 +65,22 @@ function AccordionContent({
   className,
   children,
   ...props
-}: React.ComponentProps<typeof AccordionPrimitive.Content>) {
+}: React.ComponentProps<typeof AccordionPrimitive.Panel>) {
   return (
-    <AccordionPrimitive.Content
-      className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up overflow-hidden text-sm"
+    <AccordionPrimitive.Panel
+      className="h-(--accordion-panel-height) overflow-hidden text-sm transition-[height] duration-200 ease-out data-[ending-style]:h-0 data-[starting-style]:h-0"
       data-slot="accordion-content"
       {...props}
     >
       <div
         className={cn(
-          "[&_a]:hover:text-foreground h-(--radix-accordion-content-height) pt-0 pb-4 [&_a]:underline [&_a]:underline-offset-3 [&_p:not(:last-child)]:mb-4",
+          "[&_a]:hover:text-foreground pt-0 pb-4 [&_a]:underline [&_a]:underline-offset-3 [&_p:not(:last-child)]:mb-4",
           className,
         )}
       >
         {children}
       </div>
-    </AccordionPrimitive.Content>
+    </AccordionPrimitive.Panel>
   );
 }
 

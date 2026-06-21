@@ -65,13 +65,15 @@ export const AlignmentAction = () => {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button className="w-40 justify-between" size="sm" variant="ghost">
-          {activeAlignment.icon}
-          {t(`alignments.${activeAlignment.value}`)}
+      <DropdownMenuTrigger
+        render={
+          <Button className="w-40 justify-between" size="sm" variant="ghost" />
+        }
+      >
+        {activeAlignment.icon}
+        {t(`alignments.${activeAlignment.value}`)}
 
-          <ChevronDown className="ml-auto" />
-        </Button>
+        <ChevronDown className="ml-auto" />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent className="min-w-[16rem]">

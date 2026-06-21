@@ -92,10 +92,13 @@ export const ShowUserAdminView = async ({ nameCode }: { nameCode: string }) => {
 
         {/* Actions */}
         <div className="mt-6">
-          <Button asChild className="w-full" variant="ghost">
-            <Link href={`/profile/${user.nameCode}`} target="_blank">
-              {t("goToProfile")} <ExternalLinkIcon />
-            </Link>
+          <Button
+            className="w-full"
+            nativeButton={false}
+            render={<Link href={`/profile/${user.nameCode}`} target="_blank" />}
+            variant="ghost"
+          >
+            {t("goToProfile")} <ExternalLinkIcon />
           </Button>
         </div>
       </CardContent>

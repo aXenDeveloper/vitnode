@@ -49,9 +49,12 @@ export const PaginationDataTable = ({
         <Select
           disabled={isPending}
           onValueChange={value => {
+            if (value == null) {
+              return;
+            }
             startTransition(() => {
               const params = new URLSearchParams(searchParams.toString());
-              params.set("first", value);
+              params.set("first", value as string);
               params.delete("last");
               params.delete("cursor");
               push(`${pathname}?${params.toString()}`, {

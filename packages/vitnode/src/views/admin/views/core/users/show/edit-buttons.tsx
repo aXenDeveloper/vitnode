@@ -16,10 +16,10 @@ export const EditImageButton = ({ label }: { label: string }) => {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button aria-label={label} size="icon-sm" variant="outline">
-          <ImageIcon />
-        </Button>
+      <DropdownMenuTrigger
+        render={<Button aria-label={label} size="icon-sm" variant="outline" />}
+      >
+        <ImageIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem>
