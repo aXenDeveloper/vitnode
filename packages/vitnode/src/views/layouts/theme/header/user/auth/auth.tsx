@@ -15,10 +15,10 @@ export const AuthUserHeader = async () => {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button aria-label={user.name} size="icon" variant="ghost">
-          <Avatar size={24} user={user} />
-        </Button>
+      <DropdownMenuTrigger
+        render={<Button aria-label={user.name} size="icon" variant="ghost" />}
+      >
+        <Avatar size={24} user={user} />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-64 p-2">

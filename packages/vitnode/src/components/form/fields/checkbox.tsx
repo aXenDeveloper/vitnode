@@ -29,9 +29,9 @@ export const AutoFormCheckbox = ({
       <FormControl>
         <Checkbox
           checked={field.value ?? false}
-          onCheckedChange={e => {
-            field.onChange(e);
-            props.onCheckedChange?.(e);
+          onCheckedChange={(checked, eventDetails) => {
+            field.onChange(checked);
+            props.onCheckedChange?.(checked, eventDetails);
           }}
           {...field}
           {...props}

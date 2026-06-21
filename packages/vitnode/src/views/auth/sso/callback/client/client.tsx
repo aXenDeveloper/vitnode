@@ -45,8 +45,12 @@ export const ClientCallbackSSO = ({
       <ErrorView
         code={409}
         customActions={
-          <Button asChild size="lg">
-            <Link href="/login">{t("email_exists.sign_in")}</Link>
+          <Button
+            nativeButton={false}
+            render={<Link href="/login" />}
+            size="lg"
+          >
+            {t("email_exists.sign_in")}
           </Button>
         }
         customDescription={t.rich("email_exists.desc", {

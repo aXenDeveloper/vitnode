@@ -121,28 +121,30 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
 
   return (
     <Popover onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          className="border-dashed"
-          disabled={isPending}
-          size="sm"
-          variant="outline"
-        >
-          <PlusCircleIcon />
-          {filter.label}
-          {selected.length > 0 && (
-            <>
-              <Separator className="mx-0.5 h-4" orientation="vertical" />
-              {isAsync || selectedStaticOptions.length > 2 ? (
-                <Badge>{t("selected_count", { count: selected.length })}</Badge>
-              ) : (
-                selectedStaticOptions.map(option => (
-                  <Badge key={option.value}>{option.label}</Badge>
-                ))
-              )}
-            </>
-          )}
-        </Button>
+      <PopoverTrigger
+        render={
+          <Button
+            className="border-dashed"
+            disabled={isPending}
+            size="sm"
+            variant="outline"
+          />
+        }
+      >
+        <PlusCircleIcon />
+        {filter.label}
+        {selected.length > 0 && (
+          <>
+            <Separator className="mx-0.5 h-4" orientation="vertical" />
+            {isAsync || selectedStaticOptions.length > 2 ? (
+              <Badge>{t("selected_count", { count: selected.length })}</Badge>
+            ) : (
+              selectedStaticOptions.map(option => (
+                <Badge key={option.value}>{option.label}</Badge>
+              ))
+            )}
+          </>
+        )}
       </PopoverTrigger>
       <PopoverContent align="start" className="w-56 p-0">
         <Command shouldFilter={!isAsync}>

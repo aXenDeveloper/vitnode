@@ -25,9 +25,7 @@ import {
 
 ```tsx
 <Sheet>
-  <SheetTrigger asChild>
-    <Button variant="outline">Open</Button>
-  </SheetTrigger>
+  <SheetTrigger render={<Button variant="outline">Open</Button>} />
   <SheetContent>
     <SheetHeader>
       <SheetTitle>Are you absolutely sure?</SheetTitle>
@@ -38,9 +36,7 @@ import {
     </SheetHeader>
     <SheetFooter>
       <Button variant="destructive">Yes, delete account</Button>
-      <SheetClose asChild>
-        <Button variant="outline">Cancel</Button>
-      </SheetClose>
+      <SheetClose render={<Button variant="outline">Cancel</Button>} />
     </SheetFooter>
   </SheetContent>
 </Sheet>
@@ -48,4 +44,4 @@ import {
 
 ## API Reference
 
-[Radix UI - Dialog](https://www.radix-ui.com/primitives/docs/components/dialog#api-reference)
+[Base UI - Dialog](https://base-ui.com/react/components/dialog#api-reference)

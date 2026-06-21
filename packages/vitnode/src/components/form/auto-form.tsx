@@ -227,9 +227,9 @@ export function AutoForm<
       {captcha && <div id="vitnode_captcha" />}
       {setIsDirty ? (
         <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="ghost">{t("cancel")}</Button>
-          </DialogClose>
+          <DialogClose
+            render={<Button variant="ghost">{t("cancel")}</Button>}
+          />
           {submitButton}
         </DialogFooter>
       ) : (

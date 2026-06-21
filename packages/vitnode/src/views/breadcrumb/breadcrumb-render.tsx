@@ -29,9 +29,9 @@ export const BreadcrumbRender = ({ crumbs }: { crumbs: BreadcrumbCrumb[] }) => {
               {crumb.isCurrent ? (
                 <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
               ) : crumb.isLink ? (
-                <BreadcrumbLink asChild>
-                  <Link href={crumb.href}>{crumb.label}</Link>
-                </BreadcrumbLink>
+                <BreadcrumbLink
+                  render={<Link href={crumb.href}>{crumb.label}</Link>}
+                />
               ) : (
                 <span>{crumb.label}</span>
               )}

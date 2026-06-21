@@ -1,6 +1,12 @@
 "use client";
 
-import { KeyRoundIcon, LogOutIcon } from "lucide-react";
+import {
+  KeyRoundIcon,
+  LogOutIcon,
+  Settings,
+  ShieldIcon,
+  UserIcon,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import type { SessionApi } from "@/lib/api/get-session-api";
@@ -23,15 +29,35 @@ export const ClientAuthUserHeader = ({
 
   return (
     <>
-      {user.isAdmin && (
+      <DropdownMenuGroup>
+        <DropdownMenuItem render={<Link href={`/users/${user.nameCode}`} />}>
+          <UserIcon />
+          <span>{t("my_profile")}</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem render={<Link href="/settings/overview" />}>
+          <Settings />
+          <span>{t("settings")}</span>
+        </DropdownMenuItem>
+      </DropdownMenuGroup>
+
+      <DropdownMenuSeparator />
+
+      {(user.isAdmin || user.isModerator) && (
         <>
           <DropdownMenuGroup>
-            <DropdownMenuItem asChild>
-              <Link href="/admin" target="_blank">
+            {user.isModerator && (
+              <DropdownMenuItem render={<Link href="/mod_cp" />}>
+                <ShieldIcon />
+                <span>{t("mod_cp")}</span>
+              </DropdownMenuItem>
+            )}
+            {user.isAdmin && (
+              <DropdownMenuItem render={<Link href="/admin" target="_blank" />}>
                 <KeyRoundIcon />
                 <span>{t("admin_cp")}</span>
-              </Link>
-            </DropdownMenuItem>
+              </DropdownMenuItem>
+            )}
           </DropdownMenuGroup>
 
           <DropdownMenuSeparator />

@@ -15,9 +15,7 @@ import {
 export default function SheetDemo() {
   return (
     <Sheet>
-      <SheetTrigger asChild>
-        <Button variant="outline">Open</Button>
-      </SheetTrigger>
+      <SheetTrigger render={<Button variant="outline">Open</Button>} />
       <SheetContent>
         <SheetHeader>
           <SheetTitle>Are you absolutely sure?</SheetTitle>
@@ -28,9 +26,7 @@ export default function SheetDemo() {
         </SheetHeader>
         <SheetFooter>
           <Button variant="destructive">Yes, delete account</Button>
-          <SheetClose asChild>
-            <Button variant="outline">Cancel</Button>
-          </SheetClose>
+          <SheetClose render={<Button variant="outline">Cancel</Button>} />
         </SheetFooter>
       </SheetContent>
     </Sheet>

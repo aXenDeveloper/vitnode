@@ -29,7 +29,7 @@ export const ConfirmActionAlertDialog = ({
   ...props
 }: Omit<React.ComponentProps<typeof AlertDialog>, "children"> &
   React.ComponentProps<typeof ContentConfirmAction> & {
-    children: React.ReactNode;
+    children: React.ReactElement;
     description?: React.ReactNode;
     title?: React.ReactNode;
   }) => {
@@ -37,7 +37,7 @@ export const ConfirmActionAlertDialog = ({
 
   return (
     <AlertDialog {...props}>
-      <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>
+      <AlertDialogTrigger render={children} />
 
       <AlertDialogContent>
         <AlertDialogHeader>

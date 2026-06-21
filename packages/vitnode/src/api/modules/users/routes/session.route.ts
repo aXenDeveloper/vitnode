@@ -28,6 +28,7 @@ export const sessionRoute = buildRoute({
                   roleId: z.number(),
                   birthday: z.date().nullable(),
                   isAdmin: z.boolean(),
+                  isModerator: z.boolean(),
                 })
                 .nullable(),
             }),
@@ -46,6 +47,7 @@ export const sessionRoute = buildRoute({
         ? {
             ...user,
             isAdmin: await admin.checkIfUserIsAdmin(user.id),
+            isModerator: false, // TODO: implement moderator role
           }
         : null,
     });

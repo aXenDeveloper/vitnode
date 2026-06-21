@@ -62,13 +62,15 @@ export const HeadingsAction = () => {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button className="w-32 justify-between" size="sm" variant="ghost">
-          {activeOption.icon}
-          {activeOption.label}
+      <DropdownMenuTrigger
+        render={
+          <Button className="w-32 justify-between" size="sm" variant="ghost" />
+        }
+      >
+        {activeOption.icon}
+        {activeOption.label}
 
-          <ChevronDown className="ml-auto" />
-        </Button>
+        <ChevronDown className="ml-auto" />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent className="min-w-56">

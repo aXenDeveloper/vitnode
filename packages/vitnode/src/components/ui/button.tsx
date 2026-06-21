@@ -1,4 +1,4 @@
-import type * as React from "react";
+import type { Button as ButtonPrimitive } from "@base-ui/react/button";
 
 import { cva, type VariantProps } from "class-variance-authority";
 
@@ -41,13 +41,13 @@ const buttonVariants = cva(
   },
 );
 
-type ButtonProps = React.ComponentProps<"button"> &
+type ButtonProps = Omit<ButtonPrimitive.Props, "className"> &
   VariantProps<typeof buttonVariants> &
   (
     | { "aria-label": string; size: "icon" | "icon-lg" | "icon-sm" | "icon-xs" }
     | { "aria-label"?: string; size?: "default" | "lg" | "sm" }
   ) & {
-    asChild?: boolean;
+    className?: string;
     isLoading?: boolean;
   };
 

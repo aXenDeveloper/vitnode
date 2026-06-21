@@ -1,8 +1,8 @@
 "use client";
 
-import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
+import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog";
+import { useTranslations } from "next-intl";
 import React from "react";
-import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -23,11 +23,14 @@ function AlertDialog({
   onOpenChange,
   open: openProp,
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Root>) {
+}: AlertDialogPrimitive.Root.Props) {
   const [open, setOpen] = React.useState(false);
 
-  const handleOpenChange = (newOpen: boolean) => {
-    onOpenChange?.(newOpen);
+  const handleOpenChange: AlertDialogPrimitive.Root.Props["onOpenChange"] = (
+    newOpen,
+    eventDetails,
+  ) => {
+    onOpenChange?.(newOpen, eventDetails);
     setOpen(newOpen);
   };
 
@@ -45,17 +48,13 @@ function AlertDialog({
   );
 }
 
-function AlertDialogTrigger({
-  ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Trigger>) {
+function AlertDialogTrigger({ ...props }: AlertDialogPrimitive.Trigger.Props) {
   return (
     <AlertDialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />
   );
 }
 
-function AlertDialogPortal({
-  ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Portal>) {
+function AlertDialogPortal({ ...props }: AlertDialogPrimitive.Portal.Props) {
   return (
     <AlertDialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />
   );
@@ -64,11 +63,11 @@ function AlertDialogPortal({
 function AlertDialogOverlay({
   className,
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Overlay>) {
+}: AlertDialogPrimitive.Backdrop.Props) {
   return (
-    <AlertDialogPrimitive.Overlay
+    <AlertDialogPrimitive.Backdrop
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
+        "data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 fixed inset-0 z-50 bg-black/50",
         className,
       )}
       data-slot="alert-dialog-overlay"
@@ -80,13 +79,13 @@ function AlertDialogOverlay({
 function AlertDialogContent({
   className,
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Content>) {
+}: AlertDialogPrimitive.Popup.Props) {
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
-      <AlertDialogPrimitive.Content
+      <AlertDialogPrimitive.Popup
         className={cn(
-          "dark:bg-background bg-card data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
+          "dark:bg-background bg-card data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
           className,
         )}
         data-slot="alert-dialog-content"
@@ -165,7 +164,7 @@ function AlertDialogMedia({
 function AlertDialogTitle({
   className,
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Title>) {
+}: AlertDialogPrimitive.Title.Props) {
   return (
     <AlertDialogPrimitive.Title
       className={cn(
@@ -181,7 +180,7 @@ function AlertDialogTitle({
 function AlertDialogDescription({
   className,
   ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Description>) {
+}: AlertDialogPrimitive.Description.Props) {
   return (
     <AlertDialogPrimitive.Description
       className={cn(
@@ -199,18 +198,19 @@ function AlertDialogAction({
   variant = "default",
   size = "default",
   ...props
-}: Pick<React.ComponentProps<typeof Button>, "size" | "variant"> &
-  React.ComponentProps<typeof AlertDialogPrimitive.Action>) {
+}: AlertDialogPrimitive.Close.Props &
+  Pick<React.ComponentProps<typeof Button>, "size" | "variant">) {
   const t = useTranslations("core.global");
 
   return (
-    <Button aria-label={t("confirm")} asChild size={size} variant={variant}>
-      <AlertDialogPrimitive.Action
-        className={cn(className)}
-        data-slot="alert-dialog-action"
-        {...props}
-      />
-    </Button>
+    <AlertDialogPrimitive.Close
+      className={cn(className)}
+      data-slot="alert-dialog-action"
+      render={
+        <Button aria-label={t("confirm")} size={size} variant={variant} />
+      }
+      {...props}
+    />
   );
 }
 
@@ -219,18 +219,17 @@ function AlertDialogCancel({
   variant = "outline",
   size = "default",
   ...props
-}: Pick<React.ComponentProps<typeof Button>, "size" | "variant"> &
-  React.ComponentProps<typeof AlertDialogPrimitive.Cancel>) {
+}: AlertDialogPrimitive.Close.Props &
+  Pick<React.ComponentProps<typeof Button>, "size" | "variant">) {
   const t = useTranslations("core.global");
 
   return (
-    <Button aria-label={t("cancel")} asChild size={size} variant={variant}>
-      <AlertDialogPrimitive.Cancel
-        className={cn(className)}
-        data-slot="alert-dialog-cancel"
-        {...props}
-      />
-    </Button>
+    <AlertDialogPrimitive.Close
+      className={cn(className)}
+      data-slot="alert-dialog-cancel"
+      render={<Button aria-label={t("cancel")} size={size} variant={variant} />}
+      {...props}
+    />
   );
 }
 

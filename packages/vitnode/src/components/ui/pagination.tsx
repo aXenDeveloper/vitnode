@@ -54,18 +54,19 @@ function PaginationLink({
   return (
     <Button
       aria-label={isActive ? t("current_page") : t("go_to_page")}
-      asChild
       className={cn(className)}
+      nativeButton={false}
+      render={
+        <a
+          aria-current={isActive ? "page" : undefined}
+          data-active={isActive}
+          data-slot="pagination-link"
+          {...props}
+        />
+      }
       size={size}
       variant={isActive ? "outline" : "ghost"}
-    >
-      <a
-        aria-current={isActive ? "page" : undefined}
-        data-active={isActive}
-        data-slot="pagination-link"
-        {...props}
-      />
-    </Button>
+    />
   );
 }
 
