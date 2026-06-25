@@ -49,22 +49,18 @@ export const RolesUserAdmin = async ({
           <RoleFormat role={role} />
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <span className="text-muted-foreground text-sm">
-            {t("secondaryRoles")}
-          </span>
-          {secondaryRoles.length > 0 ? (
+        {secondaryRoles.length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-muted-foreground text-sm">
+              {t("secondaryRoles")}
+            </span>
             <div className="flex flex-wrap gap-x-3 gap-y-1">
               {secondaryRoles.map(item => (
                 <RoleFormat key={item.id} role={item} />
               ))}
             </div>
-          ) : (
-            <span className="text-muted-foreground text-sm italic">
-              {t("noSecondaryRoles")}
-            </span>
-          )}
-        </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

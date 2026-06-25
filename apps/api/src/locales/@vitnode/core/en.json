@@ -311,7 +311,6 @@
         "rolesTitle": "Roles",
         "primaryRole": "Primary Role",
         "secondaryRoles": "Secondary Roles",
-        "noSecondaryRoles": "No secondary roles",
         "editRoles": "Edit roles",
         "editRolesDesc": "Set this user's primary role and any secondary roles. The primary role is unique, while secondary roles can be combined.",
         "selectRole": "Select a role",

@@ -39,6 +39,9 @@ const getWebSocketUrl = (): string => {
   return url.toString();
 };
 
+const shouldConnectWebSocket = (): boolean =>
+  CONFIG.api.origin !== CONFIG.web.origin;
+
 /**
  * Opens a single, always-on WebSocket connection to `/api/ws` and multiplexes
  * it across every {@link useVitNodeWebSocket} subscriber by message id.
@@ -55,9 +58,11 @@ export const VitNodeWebSocketProvider = ({
   const listenersRef = React.useRef<Map<string, Set<Listener>>>(new Map());
   const managerRef = React.useRef<null | WebSocketManager>(null);
   const pendingSendRef = React.useRef<VitNodeWSMessage[]>([]);
-  const [readyState, setReadyState] = React.useState<number>(
-    typeof WebSocket !== "undefined" ? WebSocket.CONNECTING : 0,
-  );
+  const [readyState, setReadyState] = React.useState<number>(() => {
+    if (typeof WebSocket === "undefined") return 0;
+
+    return shouldConnectWebSocket() ? WebSocket.CONNECTING : WebSocket.CLOSED;
+  });
 
   const dispatch = React.useCallback((message: VitNodeWSMessage) => {
     listenersRef.current
@@ -66,6 +71,8 @@ export const VitNodeWebSocketProvider = ({
   }, []);
 
   React.useEffect(() => {
+    if (!shouldConnectWebSocket()) return;
+
     const manager = createWebSocketManager({
       url: getWebSocketUrl(),
       onMessage: dispatch,
