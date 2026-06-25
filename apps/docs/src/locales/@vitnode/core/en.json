@@ -307,7 +307,17 @@
         "nameCodeSame": "The new name code must be different from the current one.",
         "nameCodeConfirmMismatch": "This does not match the current name code.",
         "nameCodeExists": "This name code is already taken.",
-        "saveNameCode": "Change name code"
+        "saveNameCode": "Change name code",
+        "rolesTitle": "Roles",
+        "primaryRole": "Primary Role",
+        "secondaryRoles": "Secondary Roles",
+        "noSecondaryRoles": "No secondary roles",
+        "editRoles": "Edit roles",
+        "editRolesDesc": "Set this user's primary role and any secondary roles. The primary role is unique, while secondary roles can be combined.",
+        "selectRole": "Select a role",
+        "addSecondaryRole": "Add role",
+        "removeRole": "Remove role",
+        "saveRoles": "Save roles"
       },
       "verify_email": {
         "label": "Verify Email",

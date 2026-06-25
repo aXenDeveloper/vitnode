@@ -2,7 +2,6 @@
 
 import { ProgressProvider } from "@bprogress/next/app";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ThemeProvider } from "next-themes";
 import React from "react";
 import { scan } from "react-scan";
 
@@ -10,6 +9,7 @@ import type { VitNodeConfig } from "@/vitnode.config";
 
 import { CONFIG } from "@/lib/config";
 
+import { ThemeProvider } from "../../components/theme-provider";
 import { Toaster } from "../../components/ui/sonner";
 import { TooltipProvider } from "../../components/ui/tooltip";
 

@@ -1,10 +1,10 @@
 import type { Metadata } from "next/dist/types";
 
-import { ThemeProvider } from "next-themes";
 // eslint-disable-next-line no-restricted-imports
 import Link from "next/link";
 
 import { LogoVitNode } from "@/components/logo-vitnode";
+import { ThemeProvider } from "@/components/theme-provider";
 import { Card, CardContent } from "@/components/ui/card";
 
 export const metadata: Metadata = {

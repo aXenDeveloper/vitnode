@@ -1,12 +1,13 @@
+/* eslint-disable react-you-might-not-need-an-effect/no-external-store-subscription */
 /* eslint-disable @eslint-react/set-state-in-effect */
 /* eslint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
 import type { z } from "zod";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useTheme } from "next-themes";
 import React from "react";
 import { toast } from "sonner";
 
+import { useTheme } from "@/components/theme-provider";
 import { usePathname } from "@/lib/navigation";
 
 import type { routeMiddlewareSchema } from "../api/modules/middleware/route";

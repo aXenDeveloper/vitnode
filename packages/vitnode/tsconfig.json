@@ -8,7 +8,7 @@
     "rootDir": "./",
     "outDir": "./dist",
     "jsx": "react-jsx",
-    "emitDeclarationOnly": false,
+    "emitDeclarationOnly": true,
     "declaration": true,
     "declarationMap": true,
     "plugins": [

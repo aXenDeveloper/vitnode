@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { index, pgTable } from "drizzle-orm/pg-core";
+import { index, pgTable, primaryKey } from "drizzle-orm/pg-core";
 
 import { core_languages } from "./languages";
 import { core_roles } from "./roles";
@@ -42,6 +42,7 @@ export const core_users_relations = relations(core_users, ({ one, many }) => ({
     fields: [core_users.roleId],
     references: [core_roles.id],
   }),
+  secondary_roles: many(core_users_secondary_roles),
   language: one(core_languages, {
     fields: [core_users.language],
     references: [core_languages.code],
@@ -56,6 +57,44 @@ export const core_users_relations = relations(core_users, ({ one, many }) => ({
     references: [core_users_forgot_password.userId],
   }),
 }));
+
+export const core_users_secondary_roles = pgTable(
+  "core_users_secondary_roles",
+  t => ({
+    userId: t
+      .integer()
+      .references(() => core_users.id, {
+        onDelete: "cascade",
+      })
+      .notNull(),
+    roleId: t
+      .integer()
+      .references(() => core_roles.id, {
+        onDelete: "cascade",
+      })
+      .notNull(),
+    createdAt: t.timestamp().notNull().defaultNow(),
+  }),
+  t => [
+    primaryKey({ columns: [t.userId, t.roleId] }),
+    index("core_users_secondary_roles_user_id_idx").on(t.userId),
+    index("core_users_secondary_roles_role_id_idx").on(t.roleId),
+  ],
+).enableRLS();
+
+export const core_users_secondary_roles_relations = relations(
+  core_users_secondary_roles,
+  ({ one }) => ({
+    user: one(core_users, {
+      fields: [core_users_secondary_roles.userId],
+      references: [core_users.id],
+    }),
+    role: one(core_roles, {
+      fields: [core_users_secondary_roles.roleId],
+      references: [core_roles.id],
+    }),
+  }),
+);
 
 export const core_users_sso = pgTable(
   "core_users_sso",

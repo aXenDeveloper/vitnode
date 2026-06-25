@@ -20,6 +20,7 @@ export default function LocaleLayout(props: RootLayoutProps) {
       search={{
         SearchDialog: SearchDialogFumadocs,
       }}
+      theme={{ enabled: false }}
     >
       <RootLayout config={vitNodeConfig} {...props} />
     </RootProvider>

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { ThemeSwitcher } from "@vitnode/core/components/switchers/themes/theme-switcher";
 import { DocsLayout } from "fumadocs-ui/layouts/notebook";
 
 import { baseOptions } from "@/app/[locale]/(main)/layout.config";
@@ -37,6 +38,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           },
         },
       }}
+      slots={{ themeSwitch: ThemeSwitcher }}
       tree={source.pageTree}
     >
       {children}

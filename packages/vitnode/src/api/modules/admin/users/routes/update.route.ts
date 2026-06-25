@@ -1,9 +1,10 @@
 import { z } from "@hono/zod-openapi";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
-import { core_users } from "@/database/users";
+import { core_roles } from "@/database/roles";
+import { core_users, core_users_secondary_roles } from "@/database/users";
 
 const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 
@@ -25,17 +26,15 @@ export const zodUpdateUserAdminSchema = z
       .max(255)
       .regex(/^[a-zA-Z0-9-]+$/, { message: "Invalid name code" })
       .openapi({ example: "test" }),
+    roleId: z.number().int().positive().openapi({ example: 1 }),
+    secondaryRoleIds: z
+      .array(z.number().int().positive())
+      .openapi({ example: [2, 3] }),
   })
   .partial()
-  .refine(
-    body =>
-      body.email !== undefined ||
-      body.name !== undefined ||
-      body.nameCode !== undefined,
-    {
-      message: "At least one field is required",
-    },
-  );
+  .refine(body => Object.values(body).some(value => value !== undefined), {
+    message: "At least one field is required",
+  });
 
 export const updateUserAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -70,6 +69,14 @@ export const updateUserAdminRoute = buildRoute({
         },
         description: "User updated",
       },
+      400: {
+        content: {
+          "application/json": {
+            schema: z.object({ error: z.string() }),
+          },
+        },
+        description: "Invalid role",
+      },
       403: {
         description: "Access Denied",
       },
@@ -97,7 +104,7 @@ export const updateUserAdminRoute = buildRoute({
     const db = c.get("db");
 
     const [user] = await db
-      .select({ id: core_users.id })
+      .select({ id: core_users.id, roleId: core_users.roleId })
       .from(core_users)
       .where(eq(core_users.nameCode, nameCode))
       .limit(1);
@@ -159,17 +166,78 @@ export const updateUserAdminRoute = buildRoute({
       values.nameCode = body.nameCode;
     }
 
-    const [updated] = await db
-      .update(core_users)
-      .set(values)
-      .where(eq(core_users.id, user.id))
-      .returning({
+    const effectivePrimaryId = body.roleId ?? user.roleId;
+    const secondaryRoleIds =
+      body.secondaryRoleIds !== undefined
+        ? [...new Set(body.secondaryRoleIds)].filter(
+            id => id !== effectivePrimaryId,
+          )
+        : undefined;
+
+    const roleIdsToValidate = [
+      ...(body.roleId !== undefined ? [body.roleId] : []),
+      ...(secondaryRoleIds ?? []),
+    ];
+
+    if (roleIdsToValidate.length > 0) {
+      const existingRoles = await db
+        .select({ id: core_roles.id, guest: core_roles.guest })
+        .from(core_roles)
+        .where(inArray(core_roles.id, roleIdsToValidate));
+      const assignableRoleIds = new Set(
+        existingRoles.filter(role => !role.guest).map(role => role.id),
+      );
+
+      if (roleIdsToValidate.some(id => !assignableRoleIds.has(id))) {
+        return c.json({ error: "Invalid role" }, 400);
+      }
+    }
+
+    if (body.roleId !== undefined) {
+      values.roleId = body.roleId;
+    }
+
+    if (secondaryRoleIds !== undefined) {
+      await db
+        .delete(core_users_secondary_roles)
+        .where(eq(core_users_secondary_roles.userId, user.id));
+
+      if (secondaryRoleIds.length > 0) {
+        await db.insert(core_users_secondary_roles).values(
+          secondaryRoleIds.map(roleId => ({
+            userId: user.id,
+            roleId,
+          })),
+        );
+      }
+    }
+
+    if (Object.keys(values).length > 0) {
+      const [updated] = await db
+        .update(core_users)
+        .set(values)
+        .where(eq(core_users.id, user.id))
+        .returning({
+          id: core_users.id,
+          name: core_users.name,
+          email: core_users.email,
+          nameCode: core_users.nameCode,
+        });
+
+      return c.json(updated, 200);
+    }
+
+    const [current] = await db
+      .select({
         id: core_users.id,
         name: core_users.name,
         email: core_users.email,
         nameCode: core_users.nameCode,
-      });
+      })
+      .from(core_users)
+      .where(eq(core_users.id, user.id))
+      .limit(1);
 
-    return c.json(updated, 200);
+    return c.json(current, 200);
   },
 });

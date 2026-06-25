@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronRight, MenuIcon } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import {
   Collapsible,
@@ -52,8 +53,18 @@ export const ItemNavAdmin = ({
     item => normalizeUrl(pathname) === normalizeUrl(item.href),
   );
 
-  // Open collapsible by default if has active child
-  const defaultOpen = hasActiveChild;
+  // Open collapsible by default if has active child, and keep it open when
+  // navigating into one of its children. Controlled to avoid Base UI warning
+  // about changing the default open state of an uncontrolled Collapsible.
+  const [open, setOpen] = useState(hasActiveChild);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
+    if (hasActiveChild) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect, react-you-might-not-need-an-effect/no-derived-state, @eslint-react/set-state-in-effect
+      setOpen(true);
+    }
+  }, [hasActiveChild]);
 
   const content = (
     <>
@@ -88,7 +99,11 @@ export const ItemNavAdmin = ({
   }
 
   return (
-    <Collapsible defaultOpen={defaultOpen} render={<SidebarMenuItem />}>
+    <Collapsible
+      onOpenChange={setOpen}
+      open={open}
+      render={<SidebarMenuItem />}
+    >
       <CollapsibleTrigger
         className="group/collapsible"
         render={

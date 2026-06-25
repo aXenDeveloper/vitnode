@@ -1,6 +1,7 @@
 import { z } from "@hono/zod-openapi";
-import { and, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
+import { resolveRoleNames } from "@/api/lib/resolve-role-names";
 import { buildRoute } from "@/api/lib/route";
 import {
   withPagination,
@@ -8,9 +9,8 @@ import {
   zodPaginationQuery,
 } from "@/api/lib/with-pagination";
 import { CONFIG_PLUGIN } from "@/config";
-import { core_languages_words } from "@/database/languages";
 import { core_roles } from "@/database/roles";
-import { core_users } from "@/database/users";
+import { core_users, core_users_secondary_roles } from "@/database/users";
 
 export const listUsersAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
@@ -52,6 +52,18 @@ export const listUsersAdminRoute = buildRoute({
                       }),
                     ),
                   }),
+                  secondaryRoles: z.array(
+                    z.object({
+                      id: z.number(),
+                      color: z.string().nullable(),
+                      name: z.array(
+                        z.object({
+                          name: z.string(),
+                          languageCode: z.string(),
+                        }),
+                      ),
+                    }),
+                  ),
                   birthday: z.date().nullable(),
                   language: z.string(),
                 }),
@@ -109,27 +121,31 @@ export const listUsersAdminRoute = buildRoute({
       c,
     });
 
-    // Role names live in `core_languages_words`, so resolve the translations
-    // for every role referenced by the listed users in a single query.
-    const userRoleIds = [...new Set(data.edges.map(user => user.roleId))];
-    const roleNames = userRoleIds.length
+    // Secondary roles are a user<->role join, so collect every assignment for
+    // the listed users in a single query (with the role color alongside).
+    const userIds = data.edges.map(user => user.id);
+    const secondaryRoleRows = userIds.length
       ? await c
           .get("db")
           .select({
-            itemId: core_languages_words.itemId,
-            languageCode: core_languages_words.languageCode,
-            value: core_languages_words.value,
+            userId: core_users_secondary_roles.userId,
+            roleId: core_users_secondary_roles.roleId,
+            roleColor: core_roles.color,
           })
-          .from(core_languages_words)
-          .where(
-            and(
-              eq(core_languages_words.tableName, "core_roles"),
-              eq(core_languages_words.variable, "name"),
-              eq(core_languages_words.pluginCode, "core"),
-              inArray(core_languages_words.itemId, userRoleIds),
-            ),
+          .from(core_users_secondary_roles)
+          .innerJoin(
+            core_roles,
+            eq(core_roles.id, core_users_secondary_roles.roleId),
           )
+          .where(inArray(core_users_secondary_roles.userId, userIds))
       : [];
+
+    // Role names live in `core_languages_words`, so resolve the translations for
+    // every role referenced by the listed users (primary and secondary) at once.
+    const roleNames = await resolveRoleNames(c, [
+      ...data.edges.map(user => user.roleId),
+      ...secondaryRoleRows.map(row => row.roleId),
+    ]);
 
     return c.json({
       pageInfo: data.pageInfo,
@@ -138,13 +154,15 @@ export const listUsersAdminRoute = buildRoute({
         role: {
           id: user.roleId,
           color: roleColor,
-          name: roleNames
-            .filter(word => word.itemId === user.roleId)
-            .map(word => ({
-              name: word.value,
-              languageCode: word.languageCode,
-            })),
+          name: roleNames.get(user.roleId) ?? [],
         },
+        secondaryRoles: secondaryRoleRows
+          .filter(row => row.userId === user.id)
+          .map(row => ({
+            id: row.roleId,
+            color: row.roleColor,
+            name: roleNames.get(row.roleId) ?? [],
+          })),
       })),
     });
   },

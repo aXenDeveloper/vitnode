@@ -73,7 +73,21 @@ export const UsersAdminView = async ({
         {
           id: "roleId",
           label: t("roles"),
-          cell: ({ row }) => <RoleFormat role={row.role} />,
+          cell: ({ row }) => (
+            <div className="flex flex-col items-start gap-1">
+              <RoleFormat role={row.role} />
+              {row.secondaryRoles.length > 0 && (
+                <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
+                  {row.secondaryRoles.slice(0, 3).map(role => (
+                    <RoleFormat key={role.id} role={role} />
+                  ))}
+                  {row.secondaryRoles.length > 3 && (
+                    <span>+{row.secondaryRoles.length - 3}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          ),
         },
         {
           id: "createdAt",

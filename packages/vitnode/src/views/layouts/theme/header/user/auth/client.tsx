@@ -35,7 +35,7 @@ export const ClientAuthUserHeader = ({
           <span>{t("my_profile")}</span>
         </DropdownMenuItem>
 
-        <DropdownMenuItem render={<Link href="/settings/overview" />}>
+        <DropdownMenuItem render={<Link href="/settings" />}>
           <Settings />
           <span>{t("settings")}</span>
         </DropdownMenuItem>
