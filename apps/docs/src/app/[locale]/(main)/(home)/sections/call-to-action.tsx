@@ -1,7 +1,7 @@
 import { Card } from "@vitnode/core/components/ui/card";
-import { cn } from "@vitnode/core/lib/utils";
+// import { cn } from "@vitnode/core/lib/utils";
 
-import { CodeBlock } from "../../../../../components/fumadocs/code-block";
+// import { CodeBlock } from "../../../../../components/fumadocs/code-block";
 
 export const CallToActionSection = () => {
   return (
@@ -15,7 +15,7 @@ export const CallToActionSection = () => {
         </p>
 
         <div className="flex w-full max-w-xl justify-center">
-          <CodeBlock
+          {/* <CodeBlock
             code="npx create-vitnode-app@canary"
             lang="bash"
             wrapper={{
@@ -23,7 +23,7 @@ export const CallToActionSection = () => {
                 "bg-background m-0 w-full sm:w-[calc(100%_-_10rem)]",
               ),
             }}
-          />
+          /> */}
         </div>
       </Card>
     </section>

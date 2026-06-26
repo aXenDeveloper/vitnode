@@ -1,10 +1,10 @@
 export const versionsPackageJson = {
-  typesNode: "^25",
+  typesNode: "^26",
   typesReact: "^19.2",
   typesReactDom: "^19.2",
   typesBun: "latest",
 
-  turbo: "^2.9",
+  turbo: "^2.10",
   typescript: "^6.0",
   tsx: "^4",
   tscAlias: "^1.8.16",
@@ -18,12 +18,12 @@ export const versionsPackageJson = {
 
   react: "^19.2",
   reactDom: "^19.2",
-  nextSingle: "^16.2",
+  nextSingle: "16.3.0-preview.4",
   nextIntl: "^4.13",
   useIntl: "^4.13",
-  rhf: "^7.79",
+  rhf: "^7.80",
   rhfResolvers: "^5.1.1",
-  lucide: "^1.18",
+  lucide: "^1.21",
   sonner: "^2.0.7",
   dotenv: "^17.4",
 

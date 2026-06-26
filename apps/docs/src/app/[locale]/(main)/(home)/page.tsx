@@ -4,6 +4,7 @@ import { buttonVariants } from "@vitnode/core/components/ui/button";
 import { cn } from "@vitnode/core/lib/utils";
 import Link from "fumadocs-core/link";
 import { ChevronRight } from "lucide-react";
+import { Suspense } from "react";
 
 import { AnimatedBeamHome } from "../../../../components/animated-beam/animated-beam-home";
 import { AdminSection } from "./sections/admin/admin";
@@ -77,7 +78,9 @@ export default function HomePage() {
 
       <PoweringBySection />
       <AdminSection />
-      <AnimatedBeamHome />
+      <Suspense fallback={null}>
+        <AnimatedBeamHome />
+      </Suspense>
 
       <CallToActionSection />
     </div>

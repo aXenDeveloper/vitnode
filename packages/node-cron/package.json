@@ -31,11 +31,11 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "node-cron": "^4.2.1"
+    "node-cron": "^4.5.0"
   },
   "devDependencies": {
     "@swc/cli": "^0.8.1",
-    "@swc/core": "^1.15.41",
+    "@swc/core": "^1.15.43",
     "@vitnode/config": "workspace:*",
     "@vitnode/core": "workspace:*",
     "concurrently": "^10.0.3",

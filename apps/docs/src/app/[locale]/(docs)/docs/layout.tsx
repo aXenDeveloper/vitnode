@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { ThemeSwitcher } from "@vitnode/core/components/switchers/themes/theme-switcher";
 import { DocsLayout } from "fumadocs-ui/layouts/notebook";
 
-import { baseOptions } from "@/app/[locale]/(main)/layout.config";
+import { baseOptions } from "@/app/[locale]/layout.config";
 import { source } from "@/lib/source";
 
 export default function Layout({ children }: { children: ReactNode }) {

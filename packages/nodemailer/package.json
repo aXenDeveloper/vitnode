@@ -30,11 +30,11 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "nodemailer": "^8.0.11"
+    "nodemailer": "^9.0.1"
   },
   "devDependencies": {
     "@swc/cli": "^0.8.1",
-    "@swc/core": "^1.15.41",
+    "@swc/core": "^1.15.43",
     "@types/nodemailer": "^8.0.1",
     "@vitnode/config": "workspace:*",
     "@vitnode/core": "workspace:*",

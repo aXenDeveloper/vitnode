@@ -19,7 +19,7 @@
     "@vitnode/core": "workspace:*",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.12.25",
+    "hono": "^4.12.27",
     "next-intl": "^4.13.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -28,9 +28,9 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@hono/node-server": "^2.0.4",
+    "@hono/node-server": "^2.0.6",
     "@react-email/components": "^1.0.12",
-    "@types/node": "^25.9.3",
+    "@types/node": "^26.0.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/ws": "^8.18.1",
@@ -39,7 +39,7 @@
     "@vitnode/nodemailer": "workspace:*",
     "dotenv": "^17.4.2",
     "eslint": "^10.5.0",
-    "react-email": "^6.6.0",
+    "react-email": "^6.6.4",
     "tsc-alias": "^1.8.17",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"

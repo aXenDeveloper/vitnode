@@ -11,6 +11,8 @@ const withBundleAnalyzer = nextAnalyzer({
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  // cacheComponents: true,
+  // partialPrefetching: true,
 };
 
 export default withBundleAnalyzer(withMDX(vitNodeNextConfig(nextConfig)));
