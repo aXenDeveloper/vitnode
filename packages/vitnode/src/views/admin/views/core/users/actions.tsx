@@ -10,26 +10,22 @@ import { Link } from "@/lib/navigation";
 import { VerifyEmailUserAdmin } from "./actions/verify-email/verify-email";
 
 export const UsersAdminActions = ({
-  nameCode,
+  id,
   emailVerified,
 }: {
   emailVerified: boolean;
-  nameCode: string;
+  id: number;
 }) => {
   const t = useTranslations("admin.user.list");
 
   return (
     <>
-      <VerifyEmailUserAdmin
-        emailVerified={emailVerified}
-        iconOnly
-        nameCode={nameCode}
-      />
+      <VerifyEmailUserAdmin emailVerified={emailVerified} iconOnly id={id} />
 
       <TooltipWithContent text={t("edit")}>
         <Link
           className={buttonVariants({ variant: "ghost" })}
-          href={`/admin/core/users/${nameCode}`}
+          href={`/admin/core/users/${id}`}
         >
           <PenIcon />
         </Link>

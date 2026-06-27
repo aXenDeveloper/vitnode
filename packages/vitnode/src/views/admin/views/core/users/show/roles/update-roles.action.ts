@@ -8,15 +8,15 @@ import { fetcher } from "@/lib/fetcher";
 type UpdateRolesResult = { data: true } | { error: { status: number } };
 
 export const updateUserRoles = async (
-  nameCode: string,
+  id: number,
   input: { roleId: number; secondaryRoleIds: number[] },
 ): Promise<UpdateRolesResult> => {
   const res = await fetcher(adminModule, {
-    path: "/{nameCode}",
+    path: "/{id}",
     method: "patch",
     module: "admin/users",
     args: {
-      params: { nameCode },
+      params: { id: String(id) },
       body: input,
     },
   });

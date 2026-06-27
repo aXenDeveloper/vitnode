@@ -23,11 +23,11 @@ export const showUserAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "get",
-    description: "Get a single user by name SEO (Admin only)",
-    path: "/{nameCode}",
+    description: "Get a single user by id (Admin only)",
+    path: "/{id}",
     request: {
       params: z.object({
-        nameCode: z.string().openapi({ example: "test" }),
+        id: z.string().openapi({ example: "1" }),
       }),
     },
     responses: {
@@ -69,9 +69,14 @@ export const showUserAdminRoute = buildRoute({
     },
   },
   handler: async c => {
-    const { nameCode } = c.req.valid("param");
-    const user = await new UserModel().getUserByNameCode({
-      nameCode,
+    const { id } = c.req.valid("param");
+    const userId = Number(id);
+    if (!Number.isInteger(userId)) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    const user = await new UserModel().getUserById({
+      id: userId,
       c,
     });
 

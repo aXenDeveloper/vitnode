@@ -13,15 +13,6 @@ export interface NavAdminParent {
   title: string;
 }
 
-/**
- * Builds the full, already-translated admin navigation tree (core + every
- * plugin). Shared between the sidebar ({@link NavSidebarAdmin}) and the
- * breadcrumb ({@link BreadcrumbAdmin}) so labels stay consistent and
- * plugin-aware without per-route configuration.
- *
- * `vitNodeConfig` defaults to the registered app config, so framework-owned
- * route files (the copied `@breadcrumb` slots) can call it without a prop.
- */
 export const getAdminNav = async ({
   vitNodeConfig = getVitNodeConfig(),
 }: {
@@ -55,6 +46,10 @@ export const getAdminNav = async ({
           {
             title: t("admin.global.nav.users.roles"),
             href: "/admin/core/users/roles",
+          },
+          {
+            title: t("admin.global.nav.users.staff"),
+            href: "/admin/core/users/staff/moderators",
           },
         ],
       },

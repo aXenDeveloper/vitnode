@@ -15,14 +15,14 @@ import { EditUserField } from "./edit-field";
 import { EditNameCode } from "./edit-name-code";
 import { RolesUserAdmin } from "./roles/roles";
 
-export const ShowUserAdminView = async ({ nameCode }: { nameCode: string }) => {
+export const ShowUserAdminView = async ({ id }: { id: string }) => {
   const t = await getTranslations("admin.user.show");
   const res = await fetcher(adminModule, {
-    path: "/{nameCode}",
+    path: "/{id}",
     method: "get",
     module: "admin/users",
     args: {
-      params: { nameCode },
+      params: { id },
     },
   });
 
@@ -62,8 +62,8 @@ export const ShowUserAdminView = async ({ nameCode }: { nameCode: string }) => {
           <EditUserField
             as="h2"
             field="name"
+            id={user.id}
             label={t("editName")}
-            nameCode={user.nameCode}
             showUnverified={!user.emailVerified}
             value={user.name}
             valueClassName="text-foreground truncate text-2xl font-bold"
@@ -73,15 +73,15 @@ export const ShowUserAdminView = async ({ nameCode }: { nameCode: string }) => {
             <span className="text-muted-foreground truncate text-sm">
               @{user.nameCode}
             </span>
-            <EditNameCode nameCode={user.nameCode} />
+            <EditNameCode id={user.id} nameCode={user.nameCode} />
           </div>
 
           {/* Email */}
           <div className="mt-3">
             <EditUserField
               field="email"
+              id={user.id}
               label={t("editEmail")}
-              nameCode={user.nameCode}
               type="email"
               value={user.email}
               valueClassName="text-foreground truncate font-medium"
@@ -109,7 +109,7 @@ export const ShowUserAdminView = async ({ nameCode }: { nameCode: string }) => {
       </Card>
 
       <RolesUserAdmin
-        nameCode={user.nameCode}
+        id={user.id}
         role={user.role}
         secondaryRoles={user.secondaryRoles}
       />

@@ -15,11 +15,11 @@ import type { Role } from "./search-roles.action";
 import { EditRoles } from "./edit-roles";
 
 export const RolesUserAdmin = async ({
-  nameCode,
+  id,
   role,
   secondaryRoles,
 }: {
-  nameCode: string;
+  id: number;
   role: Role;
   secondaryRoles: Role[];
 }) => {
@@ -34,7 +34,7 @@ export const RolesUserAdmin = async ({
         </CardTitle>
         <CardAction>
           <EditRoles
-            nameCode={nameCode}
+            id={id}
             primaryRole={role}
             secondaryRoles={secondaryRoles}
           />

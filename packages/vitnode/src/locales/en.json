@@ -230,7 +230,8 @@
         "users": {
           "title": "Users",
           "list": "User List",
-          "roles": "Roles"
+          "roles": "Roles",
+          "staff": "Staff"
         },
         "user_bar": {
           "home_page": "Home Page",
@@ -355,6 +356,31 @@
         "noResults": {
           "title": "No roles found",
           "description": "Try adjusting your search criteria."
+        }
+      }
+    },
+    "staff": {
+      "title": "Staff",
+      "desc": "Manage the staff of your application.",
+      "tabs": {
+        "moderators": "Moderators",
+        "admins": "Administrators"
+      },
+      "table": {
+        "role": "Role",
+        "user": "User",
+        "updatedAt": "Updated At"
+      },
+      "moderators": {
+        "noResults": {
+          "title": "No moderators found",
+          "description": "Assign a role or user to grant moderator permissions."
+        }
+      },
+      "admins": {
+        "noResults": {
+          "title": "No administrators found",
+          "description": "Assign a role or user to grant administrator permissions."
         }
       }
     },

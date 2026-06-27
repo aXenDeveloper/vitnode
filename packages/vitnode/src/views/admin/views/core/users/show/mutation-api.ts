@@ -10,15 +10,15 @@ type MutationResult =
   | { error: { status: number } };
 
 export const mutationApi = async (
-  nameCode: string,
+  id: number,
   input: { email?: string; name?: string; nameCode?: string },
 ): Promise<MutationResult> => {
   const res = await fetcher(adminModule, {
-    path: "/{nameCode}",
+    path: "/{id}",
     method: "patch",
     module: "admin/users",
     args: {
-      params: { nameCode },
+      params: { id: String(id) },
       body: input,
     },
   });

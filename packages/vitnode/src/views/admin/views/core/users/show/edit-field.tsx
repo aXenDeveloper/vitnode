@@ -8,12 +8,11 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import { useRouter } from "@/lib/navigation";
 
 import { mutationApi } from "./mutation-api";
 
 export const EditUserField = ({
-  nameCode,
+  id,
   field,
   value,
   label,
@@ -24,8 +23,8 @@ export const EditUserField = ({
 }: {
   as?: "h2" | "span";
   field: "email" | "name";
+  id: number;
   label: string;
-  nameCode: string;
   showUnverified?: boolean;
   type?: "email" | "text";
   value: string;
@@ -34,7 +33,6 @@ export const EditUserField = ({
   const t = useTranslations("admin.user");
   const tGlobal = useTranslations("core.global");
   const tError = useTranslations("core.global.errors");
-  const router = useRouter();
   const [isEditing, setIsEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(value);
   const [isPending, startTransition] = React.useTransition();
@@ -54,7 +52,7 @@ export const EditUserField = ({
     }
 
     startTransition(async () => {
-      const mutation = await mutationApi(nameCode, { [field]: next });
+      const mutation = await mutationApi(id, { [field]: next });
 
       if ("error" in mutation) {
         toast.error(tError("title"), {
@@ -73,11 +71,6 @@ export const EditUserField = ({
 
       toast.success(t("show.updateSuccess"));
       setIsEditing(false);
-
-      // Renaming regenerates the nameCode (the URL identifier), so follow it.
-      if (mutation.data.nameCode !== nameCode) {
-        router.replace(`/admin/core/users/${mutation.data.nameCode}`);
-      }
     });
   };
 

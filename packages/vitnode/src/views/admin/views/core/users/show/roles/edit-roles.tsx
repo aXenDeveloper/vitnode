@@ -165,11 +165,11 @@ const RolePicker = ({
 };
 
 const FormEditRoles = ({
-  nameCode,
+  id,
   primaryRole,
   secondaryRoles,
 }: {
-  nameCode: string;
+  id: number;
   primaryRole: Role;
   secondaryRoles: Role[];
 }) => {
@@ -235,7 +235,7 @@ const FormEditRoles = ({
 
   const onSubmit = () => {
     startTransition(async () => {
-      const result = await updateUserRoles(nameCode, {
+      const result = await updateUserRoles(id, {
         roleId: primaryId,
         secondaryRoleIds: secondaryIds,
       });
@@ -343,11 +343,11 @@ const FormEditRoles = ({
 };
 
 export const EditRoles = ({
-  nameCode,
+  id,
   primaryRole,
   secondaryRoles,
 }: {
-  nameCode: string;
+  id: number;
   primaryRole: Role;
   secondaryRoles: Role[];
 }) => {
@@ -373,7 +373,7 @@ export const EditRoles = ({
         </DialogHeader>
 
         <FormEditRoles
-          nameCode={nameCode}
+          id={id}
           primaryRole={primaryRole}
           secondaryRoles={secondaryRoles}
         />

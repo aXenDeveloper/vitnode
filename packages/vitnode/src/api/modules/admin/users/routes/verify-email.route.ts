@@ -9,11 +9,11 @@ export const verifyEmailUserAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "post",
-    description: "Verify a user's email by name SEO (Admin only)",
-    path: "/{nameCode}/verify-email",
+    description: "Verify a user's email by id (Admin only)",
+    path: "/{id}/verify-email",
     request: {
       params: z.object({
-        nameCode: z.string().openapi({ example: "test" }),
+        id: z.string().openapi({ example: "1" }),
       }),
     },
     responses: {
@@ -44,12 +44,17 @@ export const verifyEmailUserAdminRoute = buildRoute({
     },
   },
   handler: async c => {
-    const { nameCode } = c.req.valid("param");
+    const { id } = c.req.valid("param");
+    const userId = Number(id);
+    if (!Number.isInteger(userId)) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
     const [updated] = await c
       .get("db")
       .update(core_users)
       .set({ emailVerified: true })
-      .where(eq(core_users.nameCode, nameCode))
+      .where(eq(core_users.id, userId))
       .returning({
         name: core_users.name,
         emailVerified: core_users.emailVerified,

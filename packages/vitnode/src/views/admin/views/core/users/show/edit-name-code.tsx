@@ -20,11 +20,16 @@ import {
   DialogTrigger,
   useDialog,
 } from "@/components/ui/dialog";
-import { useRouter } from "@/lib/navigation";
 
 import { mutationApi } from "./mutation-api";
 
-export const EditNameCode = ({ nameCode }: { nameCode: string }) => {
+export const EditNameCode = ({
+  id,
+  nameCode,
+}: {
+  id: number;
+  nameCode: string;
+}) => {
   const t = useTranslations("admin.user.show");
 
   return (
@@ -56,18 +61,23 @@ export const EditNameCode = ({ nameCode }: { nameCode: string }) => {
           <AlertDescription>{t("editNameCodeWarning")}</AlertDescription>
         </Alert>
 
-        <FormEditNameCode nameCode={nameCode} />
+        <FormEditNameCode id={id} nameCode={nameCode} />
       </DialogContent>
     </Dialog>
   );
 };
 
 // Rendered as a child of <Dialog> so `useDialog()` can close it on success.
-const FormEditNameCode = ({ nameCode }: { nameCode: string }) => {
+const FormEditNameCode = ({
+  id,
+  nameCode,
+}: {
+  id: number;
+  nameCode: string;
+}) => {
   const t = useTranslations("admin.user.show");
   const tError = useTranslations("core.global.errors");
   const { setOpen, setIsDirty } = useDialog();
-  const router = useRouter();
 
   const formSchema = z.object({
     newNameCode: z
@@ -87,7 +97,7 @@ const FormEditNameCode = ({ nameCode }: { nameCode: string }) => {
     values,
     form,
   ) => {
-    const mutation = await mutationApi(nameCode, {
+    const mutation = await mutationApi(id, {
       nameCode: values.newNameCode,
     });
 
@@ -95,8 +105,6 @@ const FormEditNameCode = ({ nameCode }: { nameCode: string }) => {
       setIsDirty?.(false);
       setOpen?.(false);
       toast.success(t("updateSuccess"));
-      // The name code is the URL identifier, so follow it to the new address.
-      router.replace(`/admin/core/users/${mutation.data.nameCode}`);
 
       return;
     }

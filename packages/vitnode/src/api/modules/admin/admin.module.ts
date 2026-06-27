@@ -6,6 +6,7 @@ import { debugAdminModule } from "./debug/debug.admin.module";
 import { rolesAdminModule } from "./roles/roles.admin.module";
 import { sendNotificationRoute } from "./routes/notifications.route";
 import { sessionAdminRoute } from "./routes/session.route";
+import { staffAdminModule } from "./staff/staff.admin.module";
 import { usersAdminModule } from "./users/users.admin.module";
 
 export const adminModule = buildModule({
@@ -15,6 +16,7 @@ export const adminModule = buildModule({
   modules: [
     usersAdminModule,
     rolesAdminModule,
+    staffAdminModule,
     debugAdminModule,
     advancedAdminModule,
   ],

@@ -40,11 +40,11 @@ export const updateUserAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
   route: {
     method: "patch",
-    description: "Update a user's name or email by name SEO (Admin only)",
-    path: "/{nameCode}",
+    description: "Update a user's name or email by id (Admin only)",
+    path: "/{id}",
     request: {
       params: z.object({
-        nameCode: z.string().openapi({ example: "test" }),
+        id: z.string().openapi({ example: "1" }),
       }),
       body: {
         required: true,
@@ -99,14 +99,19 @@ export const updateUserAdminRoute = buildRoute({
     },
   },
   handler: async c => {
-    const { nameCode } = c.req.valid("param");
+    const { id } = c.req.valid("param");
     const body = c.req.valid("json");
     const db = c.get("db");
+
+    const userId = Number(id);
+    if (!Number.isInteger(userId)) {
+      return c.json({ error: "User not found" }, 404);
+    }
 
     const [user] = await db
       .select({ id: core_users.id, roleId: core_users.roleId })
       .from(core_users)
-      .where(eq(core_users.nameCode, nameCode))
+      .where(eq(core_users.id, userId))
       .limit(1);
 
     if (!user) {

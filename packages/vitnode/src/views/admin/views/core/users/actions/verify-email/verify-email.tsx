@@ -11,19 +11,19 @@ import { TooltipWithContent } from "@/components/ui/tooltip";
 import { mutationApi } from "./mutation-api";
 
 export const VerifyEmailUserAdmin = ({
-  nameCode,
+  id,
   emailVerified,
   iconOnly = false,
 }: {
   emailVerified: boolean;
   iconOnly?: boolean;
-  nameCode: string;
+  id: number;
 }) => {
   const t = useTranslations("admin.user.verify_email");
   const tError = useTranslations("core.global.errors");
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, formAction, isPending] = useActionState(async () => {
-    const mutation = await mutationApi(nameCode);
+    const mutation = await mutationApi(id);
 
     if (mutation?.error) {
       toast.error(tError("title"), {

@@ -8,19 +8,19 @@ import { BreadcrumbAdmin } from "./breadcrumb-admin";
 import { resolveBreadcrumb } from "./resolve-breadcrumb";
 
 /**
- * Breadcrumb for the user detail page (`/admin/core/users/<nameCode>`). Resolves
- * the real user name server-side so the last crumb shows the name instead of the
+ * Breadcrumb for the user detail page (`/admin/core/users/<id>`). Resolves the
+ * real user name server-side so the last crumb shows the name instead of the
  * raw url segment — the data-resolution showcase of the parallel-routes pattern.
  */
 export const BreadcrumbUserAdmin = async ({
-  nameCode,
+  id,
   vitNodeConfig,
 }: {
-  nameCode: string;
+  id: string;
   /** Defaults to the registered app config when omitted. */
   vitNodeConfig?: VitNodeConfig;
 }) => {
-  const segments = ["core", "users", nameCode];
+  const segments = ["core", "users", id];
   const nav = await getAdminNav({ vitNodeConfig });
 
   // Static sibling routes (e.g. `/users/roles`) also match this dynamic slot —
@@ -31,11 +31,11 @@ export const BreadcrumbUserAdmin = async ({
   let overrideLastLabel: string | undefined;
   if (!isKnownRoute) {
     const res = await fetcher(adminModule, {
-      path: "/{nameCode}",
+      path: "/{id}",
       method: "get",
       module: "admin/users",
       args: {
-        params: { nameCode },
+        params: { id },
       },
     });
 
