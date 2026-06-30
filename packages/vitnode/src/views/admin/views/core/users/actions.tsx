@@ -3,8 +3,10 @@
 import { PenIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { useStaffPermission } from "@/components/staff-permission/provider";
 import { buttonVariants } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
+import { CONFIG_PLUGIN } from "@/config";
 import { Link } from "@/lib/navigation";
 
 import { VerifyEmailUserAdmin } from "./actions/verify-email/verify-email";
@@ -17,6 +19,13 @@ export const UsersAdminActions = ({
   id: number;
 }) => {
   const t = useTranslations("admin.user.list");
+  const canEdit = useStaffPermission({
+    plugin: CONFIG_PLUGIN.pluginId,
+    module: "users",
+    permission: "can_edit",
+  });
+
+  if (!canEdit) return null;
 
   return (
     <>

@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 
 import type { CronJobConfig } from "./cron";
 import type { BuildModuleReturn } from "./module";
+import type { PermissionStaffConfig } from "./permission-staff";
 import type { WebSocketConfig } from "./websocket";
 
 import { checkPluginId } from "./check-plugin-id";
@@ -9,6 +10,7 @@ import { checkPluginId } from "./check-plugin-id";
 export interface BuildPluginApiReturn {
   cronJobs?: Omit<CronJobConfig, "pluginId">[];
   hono: OpenAPIHono;
+  permissionStaff?: PermissionStaffConfig;
   pluginId: string;
   webSockets?: Omit<WebSocketConfig, "pluginId">[];
 }
@@ -16,8 +18,10 @@ export interface BuildPluginApiReturn {
 export function buildApiPlugin<P extends string>({
   pluginId,
   modules = [],
+  permissionStaff,
 }: {
   modules?: BuildModuleReturn<P, string>[];
+  permissionStaff?: PermissionStaffConfig;
   pluginId: P;
 }): BuildPluginApiReturn {
   // Run for checking if the plugin is valid
@@ -43,5 +47,6 @@ export function buildApiPlugin<P extends string>({
     hono,
     cronJobs,
     webSockets,
+    permissionStaff,
   };
 }

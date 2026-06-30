@@ -1,0 +1,2 @@
+ALTER TABLE "core_admin_permissions" ADD COLUMN "data" jsonb DEFAULT '{"permissions":[]}'::jsonb NOT NULL;--> statement-breakpoint
+ALTER TABLE "core_moderators_permissions" ADD COLUMN "data" jsonb DEFAULT '{"permissions":[]}'::jsonb NOT NULL;

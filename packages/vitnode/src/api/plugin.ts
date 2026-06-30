@@ -9,4 +9,13 @@ import { usersModule } from "./modules/users/users.module";
 export const newBuildPluginApiCore = buildApiPlugin({
   pluginId: CONFIG_PLUGIN.pluginId,
   modules: [middlewareModule, usersModule, adminModule, cronModule],
+  permissionStaff: {
+    moderator: {
+      users: ["can_edit"],
+    },
+    admin: {
+      users: ["can_view", "can_create", "can_edit", "can_edit_admin"],
+      roles: ["can_manage"],
+    },
+  },
 });

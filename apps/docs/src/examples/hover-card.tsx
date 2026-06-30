@@ -11,7 +11,7 @@ export default function HoverCardExample() {
     <HoverCard>
       <HoverCardTrigger>Hover</HoverCardTrigger>
       <HoverCardContent>
-        Extendable Framework - created and maintained by @axendev.
+        Community Framework - created and maintained by @axendev.
       </HoverCardContent>
     </HoverCard>
   );

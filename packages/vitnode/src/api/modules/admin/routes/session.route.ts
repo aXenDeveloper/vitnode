@@ -1,6 +1,7 @@
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
+import { resolveStaffPermissions } from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 
@@ -27,6 +28,16 @@ export const sessionAdminRoute = buildRoute({
                 roleId: z.number(),
                 birthday: z.date().nullable(),
               }),
+              permissions: z.object({
+                root: z.boolean(),
+                permissions: z.array(
+                  z.object({
+                    plugin: z.string(),
+                    module: z.string(),
+                    permission: z.string(),
+                  }),
+                ),
+              }),
               vitnode_version: z.string(),
             }),
           },
@@ -38,12 +49,18 @@ export const sessionAdminRoute = buildRoute({
       },
     },
   },
-  handler: c => {
+  handler: async c => {
     const user = c.get("admin")?.user;
     if (!user) throw new HTTPException(403);
 
+    const permissions = await resolveStaffPermissions(c, {
+      type: "admin",
+      user,
+    });
+
     return c.json({
       user,
+      permissions,
       vitnode_version: CONFIG_PLUGIN.version,
     });
   },

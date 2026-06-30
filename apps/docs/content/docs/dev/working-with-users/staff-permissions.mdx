@@ -1,0 +1,263 @@
+---
+title: Staff Permissions
+description: Declare plugin-based staff permissions and check them on the backend and frontend.
+---
+
+VitNode has two kinds of staff: **moderators** and **admins**. A staff entry links either a whole role or a single user to a staff group (stored in `core_moderators_permissions` / `core_admin_permissions`). On top of that, plugins can declare **granular permissions** that determine what each staff entry is actually allowed to do.
+
+Permissions are:
+
+- **Plugin-based** — every plugin declares its own catalog in its API config.
+- **Grouped by module** and split into a `moderator` and an `admin` set.
+- **Granted per staff entry** — toggled from the admin panel and stored in the entry's `data` JSON column.
+
+## Declaring permissions
+
+Add a `permissionStaff` object to your plugin's `buildApiPlugin` config. Each side (`moderator`, `admin`) is keyed by **module**, and each module lists permission ids:
+
+```ts title="plugins/{plugin_name}/src/config.api.ts"
+import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
+
+export const blogApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: "@vitnode/blog",
+    modules: [postsModule, categoriesModule],
+    permissionStaff: {
+      moderator: {
+        posts: ["can_edit", "can_delete"],
+      },
+      admin: {
+        posts: ["can_create", "can_edit", "can_delete"],
+        categories: ["can_manage"],
+      },
+    },
+  });
+```
+
+### Permission labels (i18n)
+
+Each permission needs a human-readable label. Add it to your plugin's locale file as a **flat top-level key** following the `{pluginId}:{module}:{permission}` convention. You may also add a `{pluginId}:{module}` key for the module heading:
+
+```json title="plugins/{plugin_name}/src/locales/en.json"
+{
+  "@vitnode/blog": { "title": "Blog" },
+
+  "@vitnode/blog:posts": "Posts",
+  "@vitnode/blog:posts:can_create": "Create posts",
+  "@vitnode/blog:posts:can_edit": "Edit posts",
+  "@vitnode/blog:posts:can_delete": "Delete posts",
+  "@vitnode/blog:categories": "Categories",
+  "@vitnode/blog:categories:can_manage": "Manage categories"
+}
+```
+
+<Callout type="info" title="Where permissions are edited">
+  Staff entries are listed under **Admin → Core → Staff**. Use **Add moderators/admins** to create
+  an entry for a role or a specific user (searchable by name or email); after creating it
+  you land straight on its permission editor. The edit (pencil) action on a row reopens
+  that editor, where you first pick an access level:
+
+- **Unrestricted** — the entry is granted every permission for its staff type,
+  including ones added later. `resolveStaffPermissions` returns `root: true` for it,
+  so all checks pass.
+- **Restricted** — choose exactly which permissions apply, shown as one **tab per
+  plugin** (with "Enable all" / "Disable all" per tab). The admin set is shown for
+  administrator entries, the moderator set for moderator entries.
+
+The staff list also shows an **Unrestricted / Restricted** badge per entry.
+
+</Callout>
+
+## Backend
+
+Use the helpers from `@vitnode/core/api/lib/check-staff-permission` inside a route handler. They read the current user from the request context (`c.get("user")`) and resolve the effective permissions across the user's direct grant and all of their roles (primary + secondary). A user whose role is `root` always passes.
+
+### Guarding a route
+
+The simplest way to gate an admin route is to declare `adminStaffPermission` on `buildRoute`. It guards the route with a 403 **before the handler runs**, so the handler stays focused on its logic. `plugin` defaults to the route's own `pluginId`, so you usually only pass `module` and `permission`:
+
+```ts title="plugins/{plugin_name}/src/api/modules/admin/posts/routes/delete.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route";
+
+export const deletePostRoute = buildRoute({
+  pluginId: "@vitnode/blog",
+  // [!code highlight]
+  adminStaffPermission: { module: "posts", permission: "can_delete" },
+  route: {
+    method: "delete",
+    path: "/{id}",
+    // ...
+  },
+  handler: async c => {
+    // ...delete the post — the permission is already enforced
+  },
+});
+```
+
+<Callout type="info">
+  `adminStaffPermission` always guards the `admin` staff type. For moderator
+  routes, or checks that depend on runtime data, assert manually (below).
+</Callout>
+
+### Asserting manually
+
+For checks that can't be declared statically — for example an extra permission
+required only for some targets — call `assertStaffPermission` inside the
+handler. It throws `HTTPException(403)` when the permission is missing:
+
+```ts
+import { assertStaffPermission } from "@vitnode/core/api/lib/check-staff-permission";
+
+await assertStaffPermission(c, {
+  type: "admin",
+  plugin: "@vitnode/blog",
+  module: "posts",
+  permission: "can_delete",
+});
+```
+
+### Checking without throwing
+
+`checkStaffPermission` returns a boolean instead:
+
+```ts
+import { checkStaffPermission } from "@vitnode/core/api/lib/check-staff-permission";
+
+const canEdit = await checkStaffPermission(c, {
+  type: "moderator",
+  plugin: "@vitnode/blog",
+  module: "posts",
+  permission: "can_edit",
+});
+```
+
+For the full set (e.g. to return it from an endpoint), use `resolveStaffPermissions(c, { type, user })`, which returns `{ root, permissions }`.
+
+## Frontend
+
+### Admin panel (server components)
+
+`getSessionAdminApi()` returns the admin's `permissions` set. Combine it with the pure `hasStaffPermission` helper:
+
+```tsx
+import { getSessionAdminApi } from "@vitnode/core/lib/api/get-session-admin-api";
+import { hasStaffPermission } from "@vitnode/core/api/lib/staff-permission";
+
+export default async function Page() {
+  const session = await getSessionAdminApi();
+  if (!session) return null;
+
+  const canView = hasStaffPermission(session.permissions, {
+    plugin: "@vitnode/blog",
+    module: "categories",
+    permission: "can_view",
+  });
+
+  return canView ? <Categories /> : null;
+}
+```
+
+Or use the `checkAdminPermissionApi` shortcut, which resolves the session and
+checks a single permission in one call (`plugin` defaults to `@vitnode/core`):
+
+```tsx
+import { checkAdminPermissionApi } from "@vitnode/core/lib/api/get-session-admin-api";
+
+const canView = await checkAdminPermissionApi({
+  plugin: "@vitnode/blog",
+  module: "categories",
+  permission: "can_view",
+});
+```
+
+### Admin panel (client components)
+
+The current admin's effective permissions are loaded with the admin session and provided through a context. Gate UI with the `useStaffPermission` hook or the `<StaffPermissionGate>` component from `@vitnode/core/components/staff-permission/provider`:
+
+```tsx
+"use client";
+
+import {
+  StaffPermissionGate,
+  useStaffPermission,
+} from "@vitnode/core/components/staff-permission/provider";
+
+const DeleteButton = () => {
+  const canDelete = useStaffPermission({
+    plugin: "@vitnode/blog",
+    module: "posts",
+    permission: "can_delete",
+  });
+
+  if (!canDelete) return null;
+
+  return <button>Delete</button>;
+};
+
+// or declaratively:
+<StaffPermissionGate
+  plugin="@vitnode/blog"
+  module="posts"
+  permission="can_delete"
+>
+  <button>Delete</button>
+</StaffPermissionGate>;
+```
+
+### Admin sidebar nav
+
+Admin nav items can be gated by a permission so the sidebar entry is hidden from
+admins who lack it. Add a `permission` (`{ module, permission }` — the `plugin`
+is inferred from the declaring plugin) to any nav item in `buildPlugin`:
+
+```tsx title="plugins/{plugin_name}/src/config.tsx"
+import { buildPlugin } from "@vitnode/core/lib/plugin";
+import { ListIcon } from "lucide-react";
+
+export const blogPlugin = () =>
+  buildPlugin({
+    pluginId: "@vitnode/blog",
+    admin: {
+      nav: [
+        {
+          id: "categories",
+          href: "/admin/blog/categories",
+          icon: <ListIcon />,
+          permission: { module: "categories", permission: "can_view" },
+        },
+      ],
+    },
+  });
+```
+
+The same `permission` field works on sub-items. A parent group disappears once
+all of its children are hidden. Items without a `permission` are always shown.
+
+<Callout type="info" title="Gate the page too">
+  Hiding the nav entry does not protect the route. Guard the page itself (e.g.
+  `notFound()` when `checkAdminPermissionApi` is false) and the underlying
+  action on the backend with `assertStaffPermission`.
+</Callout>
+
+### Public site (moderators)
+
+For moderator actions on the public (non-admin) site, use `checkModeratorPermissionApi` (or `getModeratorPermissionsApi` for the whole set) from `@vitnode/core/lib/api/get-moderator-permissions-api` in a Server Component:
+
+```tsx
+import { checkModeratorPermissionApi } from "@vitnode/core/lib/api/get-moderator-permissions-api";
+
+export const PostActions = async () => {
+  const canEdit = await checkModeratorPermissionApi({
+    plugin: "@vitnode/blog",
+    module: "posts",
+    permission: "can_edit",
+  });
+
+  return canEdit ? <EditPostButton /> : null;
+};
+```
+
+<Callout type="warn" title="Never trust the frontend">
+  Frontend checks only hide UI. Always guard the underlying action on the
+  backend with `assertStaffPermission` as well.
+</Callout>

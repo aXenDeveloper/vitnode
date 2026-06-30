@@ -29,3 +29,5 @@ yarn-error.log*
 # Others
 /docker
 .vercel
+# next-agents-md
+.next-docs/

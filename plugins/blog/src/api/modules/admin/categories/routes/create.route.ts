@@ -20,6 +20,7 @@ export const zodCreateCategorySchema = z.object({
 
 export const createCategoryRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "categories", permission: "can_create" },
   route: {
     method: "post",
     path: "/",

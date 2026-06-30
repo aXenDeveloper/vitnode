@@ -46,6 +46,8 @@ export const listModeratorsStaffAdminRoute = buildRoute({
             userId: core_moderators_permissions.userId,
             createdAt: core_moderators_permissions.createdAt,
             updatedAt: core_moderators_permissions.updatedAt,
+            data: core_moderators_permissions.data,
+            protected: core_moderators_permissions.protected,
           })
           .from(core_moderators_permissions)
           .where(where)

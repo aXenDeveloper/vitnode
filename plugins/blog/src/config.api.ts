@@ -10,5 +10,14 @@ export const blogApiPlugin = () => {
   return buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
     modules: [adminModule, categoriesModule, postsModule],
+    permissionStaff: {
+      moderator: {
+        posts: ["can_edit", "can_delete"],
+      },
+      admin: {
+        posts: ["can_create", "can_edit", "can_delete"],
+        categories: ["can_view", "can_create", "can_edit", "can_delete"],
+      },
+    },
   });
 };

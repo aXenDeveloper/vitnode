@@ -1,6 +1,8 @@
 import { relations } from "drizzle-orm";
 import { index, pgTable } from "drizzle-orm/pg-core";
 
+import type { StaffPermissionsData } from "@/api/lib/permission-staff";
+
 import { core_roles } from "./roles";
 import { core_sessions_known_devices } from "./sessions";
 import { core_users } from "./users";
@@ -21,9 +23,11 @@ export const core_admin_permissions = pgTable(
       .notNull()
       .$onUpdate(() => new Date()),
     protected: t.boolean().notNull().default(false),
-    // data: t.jsonb().$type<{ permissions: PermissionsStaffArgs[] }>().default({
-    //   permissions: [],
-    // }),
+    data: t
+      .jsonb()
+      .$type<StaffPermissionsData>()
+      .notNull()
+      .default({ unrestricted: false, permissions: [] }),
   }),
   t => [
     index("core_admin_permissions_role_id_idx").on(t.roleId),

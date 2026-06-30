@@ -18,7 +18,9 @@ export const RolesUserAdmin = async ({
   id,
   role,
   secondaryRoles,
+  canEdit = true,
 }: {
+  canEdit?: boolean;
   id: number;
   role: Role;
   secondaryRoles: Role[];
@@ -32,13 +34,15 @@ export const RolesUserAdmin = async ({
           <UsersIcon className="text-muted-foreground size-5" />
           {t("rolesTitle")}
         </CardTitle>
-        <CardAction>
-          <EditRoles
-            id={id}
-            primaryRole={role}
-            secondaryRoles={secondaryRoles}
-          />
-        </CardAction>
+        {canEdit && (
+          <CardAction>
+            <EditRoles
+              id={id}
+              primaryRole={role}
+              secondaryRoles={secondaryRoles}
+            />
+          </CardAction>
+        )}
       </CardHeader>
 
       <CardContent className="flex flex-col gap-4">

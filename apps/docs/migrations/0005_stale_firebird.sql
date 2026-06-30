@@ -1,0 +1,2 @@
+ALTER TABLE "core_admin_permissions" ALTER COLUMN "data" SET DEFAULT '{"unrestricted":false,"permissions":[]}'::jsonb;--> statement-breakpoint
+ALTER TABLE "core_moderators_permissions" ALTER COLUMN "data" SET DEFAULT '{"unrestricted":false,"permissions":[]}'::jsonb;

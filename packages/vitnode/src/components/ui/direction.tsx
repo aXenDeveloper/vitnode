@@ -4,7 +4,7 @@ import {
   DirectionProvider as DirectionProviderPrimitive,
   useDirection,
 } from "@base-ui/react/direction-provider";
-import * as React from "react";
+import React from "react";
 
 function DirectionProvider({
   dir,

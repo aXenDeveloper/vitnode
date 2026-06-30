@@ -14,6 +14,7 @@ import { core_users, core_users_secondary_roles } from "@/database/users";
 
 export const listUsersAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "users", permission: "can_view" },
   route: {
     method: "get",
     description: "Get list of all users",

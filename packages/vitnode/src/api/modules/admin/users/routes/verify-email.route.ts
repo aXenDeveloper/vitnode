@@ -5,8 +5,11 @@ import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_users } from "@/database/users";
 
+import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
+
 export const verifyEmailUserAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "users", permission: "can_edit" },
   route: {
     method: "post",
     description: "Verify a user's email by id (Admin only)",
@@ -49,6 +52,8 @@ export const verifyEmailUserAdminRoute = buildRoute({
     if (!Number.isInteger(userId)) {
       return c.json({ error: "User not found" }, 404);
     }
+
+    await assertCanEditAdminTarget(c, userId);
 
     const [updated] = await c
       .get("db")

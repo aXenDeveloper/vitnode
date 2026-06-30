@@ -17,6 +17,7 @@ export const blogPlugin = () => {
           id: "categories",
           href: "/admin/blog/categories",
           icon: <ListIcon />,
+          permission: { module: "categories", permission: "can_view" },
         },
       ],
     },

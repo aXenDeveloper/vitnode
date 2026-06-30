@@ -1,4 +1,14 @@
 {
+  "@vitnode/core": {
+    "title": "Core"
+  },
+  "@vitnode/core:users": "Users",
+  "@vitnode/core:users:can_view": "View users list",
+  "@vitnode/core:users:can_create": "Create users",
+  "@vitnode/core:users:can_edit": "Edit users",
+  "@vitnode/core:users:can_edit_admin": "Edit users with administrator permission",
+  "@vitnode/core:roles": "Roles",
+  "@vitnode/core:roles:can_manage": "Manage roles",
   "core": {
     "global": {
       "close": "Close",
@@ -230,8 +240,12 @@
         "users": {
           "title": "Users",
           "list": "User List",
-          "roles": "Roles",
-          "staff": "Staff"
+          "roles": "Roles"
+        },
+        "staff": {
+          "title": "Staff",
+          "moderators": "Moderators",
+          "admins": "Administrators"
         },
         "user_bar": {
           "home_page": "Home Page",
@@ -362,6 +376,14 @@
     "staff": {
       "title": "Staff",
       "desc": "Manage the staff of your application.",
+      "protected": "Protected",
+      "self": "You cannot edit your own permissions",
+      "delete": {
+        "title": "Remove staff member?",
+        "desc": "This revokes the assigned staff access. This action cannot be undone.",
+        "confirm": "Yes, remove",
+        "success": "Staff member removed."
+      },
       "tabs": {
         "moderators": "Moderators",
         "admins": "Administrators"
@@ -369,15 +391,67 @@
       "table": {
         "role": "Role",
         "user": "User",
-        "updatedAt": "Updated At"
+        "permissions": "Permissions",
+        "unrestricted": "Unrestricted",
+        "restricted": "Restricted",
+        "updatedAt": "Updated At",
+        "edit": "Edit permissions"
+      },
+      "edit": {
+        "title": "Edit permissions",
+        "subject": "For",
+        "back": "Back",
+        "save": "Save changes",
+        "success": "Permissions updated successfully.",
+        "error": "Failed to update permissions.",
+        "protected": "This entry is protected and its permissions cannot be edited.",
+        "self": "You cannot edit your own staff permissions, including the entry for your main role.",
+        "no_permissions": "No plugins have declared staff permissions yet.",
+        "select_all": "Enable all",
+        "clear_all": "Disable all",
+        "mode": {
+          "label": "Access level",
+          "unrestricted": {
+            "label": "Unrestricted",
+            "desc": "Grants every permission for this staff type, including ones added later. Use only for people you fully trust."
+          },
+          "restricted": {
+            "label": "Restricted",
+            "desc": "Choose exactly which permissions apply below. New permissions added later are not granted automatically."
+          }
+        }
+      },
+      "create": {
+        "admins": "Add administrator",
+        "moderators": "Add moderator",
+        "desc": "Grant staff access to a role or a specific user.",
+        "button": "Add member",
+        "back": "Back",
+        "assign_to": "Assign to",
+        "tabs": {
+          "role": "Role",
+          "user": "User"
+        },
+        "select_role": "Select a role",
+        "search_user": "Search by name or email",
+        "submit": "Add member",
+        "success": "Staff member added.",
+        "error": "Failed to add staff member.",
+        "already_exists": "This role or user is already a staff member."
       },
       "moderators": {
+        "title": "Moderators",
+        "desc": "Manage the moderators of your application.",
+        "create": "Add Moderator",
         "noResults": {
           "title": "No moderators found",
           "description": "Assign a role or user to grant moderator permissions."
         }
       },
       "admins": {
+        "title": "Administrators",
+        "desc": "Manage the administrators of your application.",
+        "create": "Add Administrator",
         "noResults": {
           "title": "No administrators found",
           "description": "Assign a role or user to grant administrator permissions."

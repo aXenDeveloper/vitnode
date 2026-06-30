@@ -18,6 +18,7 @@ const zodCategoryResponseSchema = z.object({
 
 export const editCategoryRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "categories", permission: "can_edit" },
   route: {
     method: "put",
     path: "/{id}",
