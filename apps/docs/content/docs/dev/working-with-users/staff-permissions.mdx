@@ -172,18 +172,18 @@ const canView = await checkAdminPermissionApi({
 
 ### Admin panel (client components)
 
-The current admin's effective permissions are loaded with the admin session and provided through a context. Gate UI with the `useStaffPermission` hook or the `<StaffPermissionGate>` component from `@vitnode/core/components/staff-permission/provider`:
+The current admin's effective permissions are loaded with the admin session and provided through a context. Gate UI with the `useAdminStaffPermission` hook or the `<AdminStaffPermissionGate>` component from `@vitnode/core/components/staff-permission/provider`:
 
 ```tsx
 "use client";
 
 import {
-  StaffPermissionGate,
-  useStaffPermission,
+  AdminStaffPermissionGate,
+  useAdminStaffPermission,
 } from "@vitnode/core/components/staff-permission/provider";
 
 const DeleteButton = () => {
-  const canDelete = useStaffPermission({
+  const canDelete = useAdminStaffPermission({
     plugin: "@vitnode/blog",
     module: "posts",
     permission: "can_delete",
@@ -195,13 +195,13 @@ const DeleteButton = () => {
 };
 
 // or declaratively:
-<StaffPermissionGate
+<AdminStaffPermissionGate
   plugin="@vitnode/blog"
   module="posts"
   permission="can_delete"
 >
   <button>Delete</button>
-</StaffPermissionGate>;
+</AdminStaffPermissionGate>;
 ```
 
 ### Admin sidebar nav

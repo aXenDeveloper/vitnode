@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-import { StaffPermissionProvider } from "@/components/staff-permission/provider";
+import { AdminStaffPermissionProvider } from "@/components/staff-permission/provider";
 import { ThemeSwitcher } from "@/components/switchers/themes/theme-switcher";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -39,7 +39,7 @@ export const AdminLayout = async ({
 
   return (
     <I18nProvider namespaces={["admin.global"]}>
-      <StaffPermissionProvider value={session.permissions}>
+      <AdminStaffPermissionProvider value={session.permissions}>
         <SidebarProvider defaultOpen={defaultOpen}>
           <SidebarAdmin vitNodeConfig={vitNodeConfig} />
           <SidebarInset>
@@ -63,7 +63,7 @@ export const AdminLayout = async ({
             {children}
           </SidebarInset>
         </SidebarProvider>
-      </StaffPermissionProvider>
+      </AdminStaffPermissionProvider>
     </I18nProvider>
   );
 };

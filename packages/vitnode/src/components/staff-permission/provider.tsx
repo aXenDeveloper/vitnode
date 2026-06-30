@@ -9,33 +9,45 @@ import type {
 
 import { hasStaffPermission } from "@/api/lib/staff-permission";
 
-const StaffPermissionContext = React.createContext<StaffPermissionSet>({
+const AdminStaffPermissionContext = React.createContext<StaffPermissionSet>({
   root: false,
   permissions: [],
 });
 
-export const StaffPermissionProvider = ({
+/**
+ * Makes the current **admin's** effective permissions available to client
+ * components. Rendered once near the top of the admin layout.
+ */
+export const AdminStaffPermissionProvider = ({
   value,
   children,
 }: {
   children: React.ReactNode;
   value: StaffPermissionSet;
 }) => (
-  <StaffPermissionContext.Provider value={value}>
+  <AdminStaffPermissionContext.Provider value={value}>
     {children}
-  </StaffPermissionContext.Provider>
+  </AdminStaffPermissionContext.Provider>
 );
 
-export const useStaffPermissions = (): StaffPermissionSet =>
-  React.use(StaffPermissionContext);
+/** Returns the current admin's raw effective permission set. */
+export const useAdminStaffPermissions = (): StaffPermissionSet =>
+  React.use(AdminStaffPermissionContext);
 
-export const useStaffPermission = (args: PermissionsStaffArgs): boolean => {
-  const set = useStaffPermissions();
+/** Returns whether the current admin holds a given permission. */
+export const useAdminStaffPermission = (
+  args: PermissionsStaffArgs,
+): boolean => {
+  const set = useAdminStaffPermissions();
 
   return hasStaffPermission(set, args);
 };
 
-export const StaffPermissionGate = ({
+/**
+ * Renders `children` only when the current admin holds the given permission,
+ * otherwise `fallback` (defaults to nothing).
+ */
+export const AdminStaffPermissionGate = ({
   plugin,
   module,
   permission,
@@ -45,7 +57,7 @@ export const StaffPermissionGate = ({
   children: React.ReactNode;
   fallback?: React.ReactNode;
 }) => {
-  const allowed = useStaffPermission({ plugin, module, permission });
+  const allowed = useAdminStaffPermission({ plugin, module, permission });
 
   return <>{allowed ? children : fallback}</>;
 };

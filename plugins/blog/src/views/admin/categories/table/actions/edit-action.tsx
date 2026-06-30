@@ -1,6 +1,6 @@
 "use client";
 
-import { useStaffPermission } from "@vitnode/core/components/staff-permission/provider";
+import { useAdminStaffPermission } from "@vitnode/core/components/staff-permission/provider";
 import { Button } from "@vitnode/core/components/ui/button";
 import {
   Dialog,
@@ -34,7 +34,7 @@ export const EditAction = (
   props: Required<React.ComponentProps<typeof CreateEditActionCategoriesAdmin>>,
 ) => {
   const t = useTranslations("@vitnode/blog.admin.categories.edit");
-  const canEdit = useStaffPermission({
+  const canEdit = useAdminStaffPermission({
     plugin: CONFIG_PLUGIN.pluginId,
     module: "categories",
     permission: "can_edit",

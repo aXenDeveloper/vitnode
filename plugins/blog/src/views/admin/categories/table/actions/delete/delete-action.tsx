@@ -1,7 +1,7 @@
 "use client";
 
 import { ConfirmActionAlertDialog } from "@vitnode/core/components/confirm-action/confirm-action-alert-dialog";
-import { useStaffPermission } from "@vitnode/core/components/staff-permission/provider";
+import { useAdminStaffPermission } from "@vitnode/core/components/staff-permission/provider";
 import { Button } from "@vitnode/core/components/ui/button";
 import {
   Tooltip,
@@ -20,7 +20,7 @@ import { mutationApi } from "./mutation-api";
 export const DeleteAction = ({ title, id }: { id: number; title: string }) => {
   const t = useTranslations("@vitnode/blog.admin.categories.delete");
   const tGlobal = useTranslations("core.global");
-  const canDelete = useStaffPermission({
+  const canDelete = useAdminStaffPermission({
     plugin: CONFIG_PLUGIN.pluginId,
     module: "categories",
     permission: "can_delete",
