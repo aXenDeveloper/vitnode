@@ -8,6 +8,7 @@ import { staffListAdminQuery, staffListAdminSchema } from "../lib/schema";
 
 export const listAdminsStaffAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "staff_admins", permission: "can_view" },
   route: {
     method: "get",
     description: "Get list of administrators staff (Admin only)",

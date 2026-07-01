@@ -34,6 +34,34 @@ export const blogApiPlugin = () =>
   });
 ```
 
+### Dependent permissions
+
+A permission can depend on other permissions in the **same module**. Declare it as an object with `dependsOn` instead of a plain string, and the editor keeps it **hidden until every permission it depends on is enabled** — a `can_view` gate that reveals the rest is the typical use:
+
+```ts title="plugins/{plugin_name}/src/config.api.ts"
+permissionStaff: {
+  admin: {
+    posts: [
+      "can_view",
+      // [!code highlight:3]
+      { permission: "can_create", dependsOn: ["can_view"] },
+      { permission: "can_edit", dependsOn: ["can_view"] },
+      { permission: "can_delete", dependsOn: ["can_view"] },
+    ],
+  },
+},
+```
+
+`dependsOn` is generic, not tied to `can_view`: it accepts any permission id from the same module, multiple gates, and dependency chains (a → b → c). Plain strings and `dependsOn` objects can be mixed freely in the same module.
+
+When a gate is switched off in the editor, everything that (transitively) depends on it is hidden **and** un-granted in the same step. The dependency is also enforced on the backend when saving, so a forged or stale request can't persist `can_create` without its `can_view`.
+
+<Callout type="info" title="Visibility only — not a runtime gate">
+  `dependsOn` controls what an admin can **see and grant**; it does not change how
+  individual checks evaluate. `checkStaffPermission` still tests each permission on
+  its own. Keep guarding every action explicitly (see [Backend](#backend)).
+</Callout>
+
 ### Permission labels (i18n)
 
 Each permission needs a human-readable label. Add it to your plugin's locale file as a **flat top-level key** following the `{pluginId}:{module}:{permission}` convention. You may also add a `{pluginId}:{module}` key for the module heading:
@@ -62,7 +90,8 @@ Each permission needs a human-readable label. Add it to your plugin's locale fil
   so all checks pass.
 - **Restricted** — choose exactly which permissions apply, shown as one **tab per
   plugin** (with "Enable all" / "Disable all" per tab). The admin set is shown for
-  administrator entries, the moderator set for moderator entries.
+  administrator entries, the moderator set for moderator entries. Permissions that
+  [depend on another](#dependent-permissions) stay hidden until their gate is enabled.
 
 The staff list also shows an **Unrestricted / Restricted** badge per entry.
 

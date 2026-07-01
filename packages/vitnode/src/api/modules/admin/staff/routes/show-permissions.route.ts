@@ -1,6 +1,7 @@
 import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
+import { assertStaffPermission } from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions } from "@/database/admins";
@@ -10,6 +11,7 @@ import { resolveStaffEdges } from "../lib/resolve-staff-edges";
 import {
   permissionsStaffArgsSchema,
   staffEntrySchema,
+  staffPermissionModuleByType,
   staffTypeSchema,
 } from "../lib/schema";
 
@@ -57,6 +59,13 @@ export const showPermissionsStaffAdminRoute = buildRoute({
   },
   handler: async c => {
     const { type, id } = c.req.valid("param");
+    await assertStaffPermission(c, {
+      type: "admin",
+      plugin: CONFIG_PLUGIN.pluginId,
+      module: staffPermissionModuleByType[type],
+      permission: "can_edit",
+    });
+
     const entryId = Number(id);
     if (!Number.isInteger(entryId)) {
       return c.json({ error: "Staff entry not found" }, 404);

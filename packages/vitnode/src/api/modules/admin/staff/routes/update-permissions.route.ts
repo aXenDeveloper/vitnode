@@ -4,14 +4,21 @@ import { HTTPException } from "hono/http-exception";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 
-import { getUserRoleIds } from "@/api/lib/check-staff-permission";
+import {
+  assertStaffPermission,
+  getUserRoleIds,
+} from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
 import { staffPermissionKey } from "@/api/lib/staff-permission";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
 
-import { permissionsStaffArgsSchema, staffTypeSchema } from "../lib/schema";
+import {
+  permissionsStaffArgsSchema,
+  staffPermissionModuleByType,
+  staffTypeSchema,
+} from "../lib/schema";
 
 const tableByType = {
   admin: core_admin_permissions,
@@ -67,6 +74,13 @@ export const updatePermissionsStaffAdminRoute = buildRoute({
   },
   handler: async c => {
     const { type, id } = c.req.valid("param");
+    await assertStaffPermission(c, {
+      type: "admin",
+      plugin: CONFIG_PLUGIN.pluginId,
+      module: staffPermissionModuleByType[type],
+      permission: "can_edit",
+    });
+
     const { unrestricted, permissions } = c.req.valid("json");
 
     const entryId = Number(id);
@@ -113,29 +127,61 @@ export const updatePermissionsStaffAdminRoute = buildRoute({
     }
 
     // Only persist permissions that actually exist in the catalog for this
-    // staff type — silently drops anything unknown/forged.
+    // staff type — silently drops anything unknown/forged. Also record each
+    // permission's dependencies (the keys of the permissions it `dependsOn`
+    // within the same module) so we can drop grants whose gate is missing.
     const allowed = new Set<string>();
+    const dependencies = new Map<string, string[]>();
     for (const plugin of c.get("core").permissionStaff) {
       for (const [module, modulePermissions] of Object.entries(plugin[type])) {
-        for (const permission of modulePermissions) {
-          allowed.add(
-            staffPermissionKey({ plugin: plugin.pluginId, module, permission }),
+        for (const entry of modulePermissions) {
+          const key = staffPermissionKey({
+            plugin: plugin.pluginId,
+            module,
+            permission: entry.permission,
+          });
+          allowed.add(key);
+          dependencies.set(
+            key,
+            entry.dependsOn.map(dependency =>
+              staffPermissionKey({
+                plugin: plugin.pluginId,
+                module,
+                permission: dependency,
+              }),
+            ),
           );
         }
       }
     }
 
     const seen = new Set<string>();
-    const sanitized: PermissionsStaffArgs[] = [];
+    const granted = new Map<string, PermissionsStaffArgs>();
     // When unrestricted, the explicit list is irrelevant — store none.
     if (!unrestricted) {
       for (const permission of permissions) {
         const key = staffPermissionKey(permission);
         if (!allowed.has(key) || seen.has(key)) continue;
         seen.add(key);
-        sanitized.push(permission);
+        granted.set(key, permission);
+      }
+
+      // Drop any granted permission whose dependencies aren't all granted too,
+      // repeating until stable so a broken chain (a → b → c) collapses fully.
+      let changed = true;
+      while (changed) {
+        changed = false;
+        for (const key of granted.keys()) {
+          const deps = dependencies.get(key) ?? [];
+          if (deps.some(dependency => !granted.has(dependency))) {
+            granted.delete(key);
+            changed = true;
+          }
+        }
       }
     }
+
+    const sanitized: PermissionsStaffArgs[] = [...granted.values()];
 
     const [updated] = await c
       .get("db")

@@ -3,7 +3,15 @@ import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 
-const permissionStaffModulesSchema = z.record(z.string(), z.array(z.string()));
+const permissionStaffModulesSchema = z.record(
+  z.string(),
+  z.array(
+    z.object({
+      permission: z.string(),
+      dependsOn: z.array(z.string()),
+    }),
+  ),
+);
 
 export const permissionCatalogStaffAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,

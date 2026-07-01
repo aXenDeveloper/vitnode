@@ -145,10 +145,20 @@ export const getAdminNav = async ({
           {
             title: t("admin.global.nav.staff.moderators"),
             href: "/admin/core/staff/moderators",
+            permission: {
+              plugin: CONFIG_PLUGIN.pluginId,
+              module: "staff_moderators",
+              permission: "can_view",
+            },
           },
           {
             title: t("admin.global.nav.staff.admins"),
             href: "/admin/core/staff/admins",
+            permission: {
+              plugin: CONFIG_PLUGIN.pluginId,
+              module: "staff_admins",
+              permission: "can_view",
+            },
           },
         ],
       },

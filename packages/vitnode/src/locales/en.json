@@ -9,6 +9,19 @@
   "@vitnode/core:users:can_edit_admin": "Edit users with administrator permission",
   "@vitnode/core:roles": "Roles",
   "@vitnode/core:roles:can_manage": "Manage roles",
+  "@vitnode/core:debug": "Debug Panel",
+  "@vitnode/core:debug:can_view": "View debug panel",
+  "@vitnode/core:debug:can_clear_cache": "Clear cache",
+  "@vitnode/core:staff_moderators": "Staff: Moderators",
+  "@vitnode/core:staff_moderators:can_view": "View moderators list",
+  "@vitnode/core:staff_moderators:can_create": "Create moderators",
+  "@vitnode/core:staff_moderators:can_edit": "Edit moderator permissions",
+  "@vitnode/core:staff_moderators:can_delete": "Remove moderators",
+  "@vitnode/core:staff_admins": "Staff: Administrators",
+  "@vitnode/core:staff_admins:can_view": "View administrators list",
+  "@vitnode/core:staff_admins:can_create": "Create administrators",
+  "@vitnode/core:staff_admins:can_edit": "Edit administrator permissions",
+  "@vitnode/core:staff_admins:can_delete": "Remove administrators",
   "core": {
     "global": {
       "close": "Close",
@@ -409,15 +422,19 @@
         "no_permissions": "No plugins have declared staff permissions yet.",
         "select_all": "Enable all",
         "clear_all": "Disable all",
+        "search_plugins": "Search plugins",
+        "search_empty": "No plugins match your search.",
+        "granted": "{granted}/{total} granted",
+        "requires": "Requires {permission}",
         "mode": {
           "label": "Access level",
           "unrestricted": {
             "label": "Unrestricted",
-            "desc": "Grants every permission for this staff type, including ones added later. Use only for people you fully trust."
+            "desc": "Grant every permission, including ones added later."
           },
           "restricted": {
             "label": "Restricted",
-            "desc": "Choose exactly which permissions apply below. New permissions added later are not granted automatically."
+            "desc": "Choose exactly which permissions apply."
           }
         }
       },
@@ -430,7 +447,9 @@
         "assign_to": "Assign to",
         "tabs": {
           "role": "Role",
-          "user": "User"
+          "role_desc": "Grant staff access to everyone with a role.",
+          "user": "User",
+          "user_desc": "Grant staff access to a single person."
         },
         "select_role": "Select a role",
         "search_user": "Search by name or email",

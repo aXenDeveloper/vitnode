@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronsUpDownIcon } from "lucide-react";
+import { ChevronsUpDownIcon, ShieldIcon, UserIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
@@ -24,13 +24,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Spinner } from "@/components/ui/spinner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRouter } from "@/lib/navigation";
 
 import type { Role } from "../../users/show/roles/search-roles.action";
 import type { StaffUserOption } from "./search.action";
 
 import { searchRolesForUser } from "../../users/show/roles/search-roles.action";
+import { SelectableCard } from "../selectable-card";
 import { createStaffEntry } from "./mutation-api";
 import { searchUsersForStaff } from "./search.action";
 
@@ -64,6 +64,10 @@ function EntityPicker<T>({
       setIsSearching(true);
       try {
         setOptions(await search(value));
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error(error);
+        setOptions([]);
       } finally {
         setIsSearching(false);
       }
@@ -145,14 +149,12 @@ export const CreateStaffPermissionsForm = ({
   const [isLoading, setIsLoading] = React.useState(false);
 
   const onSubmit = async () => {
-    const payload =
-      target === "role"
-        ? role
-          ? { roleId: role.id }
-          : null
-        : user
-          ? { userId: user.id }
-          : null;
+    let payload: null | { roleId: number } | { userId: number } = null;
+    if (target === "role") {
+      if (role) payload = { roleId: role.id };
+    } else {
+      if (user) payload = { userId: user.id };
+    }
     if (!payload) return;
 
     setIsLoading(true);
@@ -178,19 +180,40 @@ export const CreateStaffPermissionsForm = ({
   const canSubmit = target === "role" ? Boolean(role) : Boolean(user);
 
   return (
-    <div className="max-w-lg space-y-4">
-      <span className="text-sm font-medium">{t("assign_to")}</span>
+    <div className="max-w-2xl space-y-6">
+      <div className="space-y-3">
+        <h2 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          {t("assign_to")}
+        </h2>
 
-      <Tabs
-        onValueChange={value => setTarget(value as "role" | "user")}
-        value={target}
-      >
-        <TabsList>
-          <TabsTrigger value="role">{t("tabs.role")}</TabsTrigger>
-          <TabsTrigger value="user">{t("tabs.user")}</TabsTrigger>
-        </TabsList>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <SelectableCard
+            description={t("tabs.role_desc")}
+            icon={
+              <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
+                <ShieldIcon className="size-5" />
+              </span>
+            }
+            onSelect={() => setTarget("role")}
+            selected={target === "role"}
+            title={t("tabs.role")}
+          />
+          <SelectableCard
+            description={t("tabs.user_desc")}
+            icon={
+              <span className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-lg">
+                <UserIcon className="size-5" />
+              </span>
+            }
+            onSelect={() => setTarget("user")}
+            selected={target === "user"}
+            title={t("tabs.user")}
+          />
+        </div>
+      </div>
 
-        <TabsContent value="role">
+      <div className="space-y-2">
+        {target === "role" ? (
           <EntityPicker<Role>
             getKey={item => String(item.id)}
             onSelect={setRole}
@@ -219,9 +242,7 @@ export const CreateStaffPermissionsForm = ({
               )
             }
           />
-        </TabsContent>
-
-        <TabsContent value="user">
+        ) : (
           <EntityPicker<StaffUserOption>
             getKey={item => String(item.id)}
             onSelect={setUser}
@@ -249,8 +270,8 @@ export const CreateStaffPermissionsForm = ({
               )
             }
           />
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
 
       <div className="flex justify-end">
         <Button disabled={!canSubmit} isLoading={isLoading} onClick={onSubmit}>

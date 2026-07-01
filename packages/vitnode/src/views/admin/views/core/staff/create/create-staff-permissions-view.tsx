@@ -1,10 +1,13 @@
 import { ArrowLeftIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { notFound } from "next/navigation";
 
 import type { PermissionStaffType } from "@/api/lib/permission-staff";
 
+import { staffPermissionModuleByType } from "@/api/modules/admin/staff/lib/schema";
 import { Button } from "@/components/ui/button";
 import { HeaderContent } from "@/components/ui/header-content";
+import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
 import { Link } from "@/lib/navigation";
 
 import { CreateStaffPermissionsForm } from "./form";
@@ -14,7 +17,17 @@ export const CreateStaffPermissionsView = async ({
 }: {
   type: PermissionStaffType;
 }) => {
-  const t = await getTranslations("admin.staff.create");
+  const [t, canCreate] = await Promise.all([
+    getTranslations("admin.staff.create"),
+    checkAdminPermissionApi({
+      module: staffPermissionModuleByType[type],
+      permission: "can_create",
+    }),
+  ]);
+
+  if (!canCreate) {
+    notFound();
+  }
 
   const backHref =
     type === "admin"

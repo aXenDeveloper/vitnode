@@ -111,8 +111,6 @@ export const updateUserAdminRoute = buildRoute({
       return c.json({ error: "User not found" }, 404);
     }
 
-    await assertCanEditAdminTarget(c, userId);
-
     const [user] = await db
       .select({ id: core_users.id, roleId: core_users.roleId })
       .from(core_users)
@@ -122,6 +120,8 @@ export const updateUserAdminRoute = buildRoute({
     if (!user) {
       return c.json({ error: "User not found" }, 404);
     }
+
+    await assertCanEditAdminTarget(c, userId);
 
     const values: Partial<typeof core_users.$inferInsert> = {};
 

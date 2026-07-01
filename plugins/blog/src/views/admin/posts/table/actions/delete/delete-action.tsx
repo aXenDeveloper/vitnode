@@ -1,6 +1,7 @@
 "use client";
 
 import { ConfirmActionAlertDialog } from "@vitnode/core/components/confirm-action/confirm-action-alert-dialog";
+import { useAdminStaffPermission } from "@vitnode/core/components/staff-permission/provider";
 import { Button } from "@vitnode/core/components/ui/button";
 import {
   Tooltip,
@@ -12,11 +13,20 @@ import { Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { CONFIG_PLUGIN } from "@/const";
+
 import { mutationApi } from "./mutation-api";
 
 export const DeleteAction = ({ title, id }: { id: number; title: string }) => {
   const t = useTranslations("@vitnode/blog.admin.posts.delete");
   const tGlobal = useTranslations("core.global");
+  const canDelete = useAdminStaffPermission({
+    plugin: CONFIG_PLUGIN.pluginId,
+    module: "posts",
+    permission: "can_delete",
+  });
+
+  if (!canDelete) return null;
 
   return (
     <TooltipProvider>

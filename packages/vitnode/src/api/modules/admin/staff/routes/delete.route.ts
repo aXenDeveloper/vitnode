@@ -2,13 +2,16 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
-import { getUserRoleIds } from "@/api/lib/check-staff-permission";
+import {
+  assertStaffPermission,
+  getUserRoleIds,
+} from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
 
-import { staffTypeSchema } from "../lib/schema";
+import { staffPermissionModuleByType, staffTypeSchema } from "../lib/schema";
 
 const tableByType = {
   admin: core_admin_permissions,
@@ -46,6 +49,13 @@ export const deleteStaffAdminRoute = buildRoute({
   },
   handler: async c => {
     const { type, id } = c.req.valid("param");
+    await assertStaffPermission(c, {
+      type: "admin",
+      plugin: CONFIG_PLUGIN.pluginId,
+      module: staffPermissionModuleByType[type],
+      permission: "can_delete",
+    });
+
     const entryId = Number(id);
     if (!Number.isInteger(entryId)) {
       return c.json({ error: "Staff entry not found" }, 404);

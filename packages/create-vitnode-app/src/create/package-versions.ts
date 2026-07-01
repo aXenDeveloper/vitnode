@@ -18,7 +18,7 @@ export const versionsPackageJson = {
 
   react: "^19.2",
   reactDom: "^19.2",
-  nextSingle: "16.3.0-preview.4",
+  nextSingle: "16.3.0-preview.5",
   nextIntl: "^4.13",
   useIntl: "^4.13",
   rhf: "^7.80",

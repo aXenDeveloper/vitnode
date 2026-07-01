@@ -18,7 +18,11 @@ export const StaffRowActions = ({
   id,
   protected: isProtected,
   self,
+  canEdit,
+  canDelete,
 }: {
+  canDelete: boolean;
+  canEdit: boolean;
   id: number;
   protected: boolean;
   self: boolean;
@@ -41,48 +45,57 @@ export const StaffRowActions = ({
     );
   }
 
+  // No actionable permissions — render an empty cell.
+  if (!canEdit && !canDelete) {
+    return null;
+  }
+
   const editHref = `/admin/core/staff/${
     type === "admin" ? "admins" : "moderators"
   }/edit/${id}`;
 
   return (
     <div className="flex items-center justify-end gap-1">
-      <Button
-        aria-label={t("table.edit")}
-        nativeButton={false}
-        render={<Link href={editHref} />}
-        size="icon-sm"
-        variant="ghost"
-      >
-        <PencilIcon />
-      </Button>
-
-      <ConfirmActionAlertDialog
-        description={t("delete.desc")}
-        onSubmit={async ({ onClose }) => {
-          const result = await deleteStaffEntry({ type, id });
-          if (result.error) {
-            toast.error(tGlobal("errors.title"), {
-              description: tGlobal("errors.internal_server_error"),
-            });
-
-            return;
-          }
-
-          toast.success(t("delete.success"));
-          onClose();
-        }}
-        textSubmit={t("delete.confirm")}
-        title={t("delete.title")}
-      >
+      {canEdit && (
         <Button
-          aria-label={t("delete.title")}
+          aria-label={t("table.edit")}
+          nativeButton={false}
+          render={<Link href={editHref} />}
           size="icon-sm"
-          variant="destructive"
+          variant="ghost"
         >
-          <Trash2Icon />
+          <PencilIcon />
         </Button>
-      </ConfirmActionAlertDialog>
+      )}
+
+      {canDelete && (
+        <ConfirmActionAlertDialog
+          description={t("delete.desc")}
+          onSubmit={async ({ onClose }) => {
+            const result = await deleteStaffEntry({ type, id });
+            if (result.error) {
+              toast.error(tGlobal("errors.title"), {
+                description: tGlobal("errors.internal_server_error"),
+              });
+
+              return;
+            }
+
+            toast.success(t("delete.success"));
+            onClose();
+          }}
+          textSubmit={t("delete.confirm")}
+          title={t("delete.title")}
+        >
+          <Button
+            aria-label={t("delete.title")}
+            size="icon-sm"
+            variant="destructive"
+          >
+            <Trash2Icon />
+          </Button>
+        </ConfirmActionAlertDialog>
+      )}
     </div>
   );
 };

@@ -57,3 +57,10 @@ export const permissionsStaffArgsSchema = z.object({
 });
 
 export const staffTypeSchema = z.enum(["admin", "moderator"]);
+
+// Maps a staff entry type to the admin permission-catalog module that gates
+// managing it, so moderator and administrator staff can be governed separately.
+export const staffPermissionModuleByType = {
+  admin: "staff_admins",
+  moderator: "staff_moderators",
+} as const;

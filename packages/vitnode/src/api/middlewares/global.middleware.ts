@@ -20,6 +20,7 @@ import {
   loggerMiddleware,
   type LoggerMiddlewareType,
 } from "../lib/logger-middleware";
+import { normalizePermissionStaffModules } from "../lib/permission-staff";
 
 declare module "hono" {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -136,8 +137,10 @@ export const globalMiddleware = ({
   const permissionStaffMetadata: PermissionStaffCatalogEntry[] = plugins.map(
     plugin => ({
       pluginId: plugin.pluginId,
-      admin: plugin.permissionStaff?.admin ?? {},
-      moderator: plugin.permissionStaff?.moderator ?? {},
+      admin: normalizePermissionStaffModules(plugin.permissionStaff?.admin),
+      moderator: normalizePermissionStaffModules(
+        plugin.permissionStaff?.moderator,
+      ),
     }),
   );
 

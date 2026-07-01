@@ -6,9 +6,11 @@ import type { PermissionStaffType } from "@/api/lib/permission-staff";
 
 import { staffPermissionKey } from "@/api/lib/staff-permission";
 import { adminModule } from "@/api/modules/admin/admin.module";
+import { staffPermissionModuleByType } from "@/api/modules/admin/staff/lib/schema";
 import { RoleFormat } from "@/components/role-format";
 import { Button } from "@/components/ui/button";
 import { HeaderContent } from "@/components/ui/header-content";
+import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
 import { fetcher } from "@/lib/fetcher";
 import { Link } from "@/lib/navigation";
 
@@ -24,6 +26,15 @@ export const EditStaffPermissionsView = async ({
   type,
   id,
 }: EditStaffPermissionsViewProps) => {
+  const canEdit = await checkAdminPermissionApi({
+    module: staffPermissionModuleByType[type],
+    permission: "can_edit",
+  });
+
+  if (!canEdit) {
+    notFound();
+  }
+
   const t = await getTranslations("admin.staff.edit");
   const tRoot = (await getTranslations()) as unknown as ((
     key: string,
@@ -66,15 +77,28 @@ export const EditStaffPermissionsView = async ({
           label: tRoot.has(`${plugin.pluginId}:${module}`)
             ? tRoot(`${plugin.pluginId}:${module}`)
             : module,
-          permissions: permissions.map(permission => {
-            const args = { plugin: plugin.pluginId, module, permission };
+          permissions: permissions.map(entry => {
+            const args = {
+              plugin: plugin.pluginId,
+              module,
+              permission: entry.permission,
+            };
             const key = staffPermissionKey(args);
 
             return {
               ...args,
               key,
               checked: granted.has(key),
-              label: tRoot.has(key) ? tRoot(key) : permission,
+              label: tRoot.has(key) ? tRoot(key) : entry.permission,
+              // The keys of the permissions this one depends on — the form
+              // keeps it hidden until every one of them is enabled.
+              dependsOn: entry.dependsOn.map(dependency =>
+                staffPermissionKey({
+                  plugin: plugin.pluginId,
+                  module,
+                  permission: dependency,
+                }),
+              ),
             };
           }),
         }))

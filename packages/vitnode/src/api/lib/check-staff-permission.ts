@@ -83,7 +83,7 @@ export const checkStaffPermission = async (
   c: Context,
   { type, ...args }: PermissionsStaffArgs & { type: PermissionStaffType },
 ): Promise<boolean> => {
-  const user = c.get("user");
+  const user = type === "admin" ? c.get("admin")?.user : c.get("user");
   if (!user) return false;
 
   const set = await resolveStaffPermissions(c, { type, user });

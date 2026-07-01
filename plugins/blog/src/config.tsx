@@ -12,6 +12,7 @@ export const blogPlugin = () => {
           id: "posts",
           href: "/admin/blog/posts",
           icon: <NotebookPenIcon />,
+          permission: { module: "posts", permission: "can_view" },
         },
         {
           id: "categories",
