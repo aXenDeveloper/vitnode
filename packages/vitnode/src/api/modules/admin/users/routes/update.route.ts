@@ -6,6 +6,11 @@ import { CONFIG_PLUGIN } from "@/config";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
 
+import {
+  assertCanAssignPrimaryRole,
+  assertCanEditAdminTarget,
+} from "../lib/assert-edit-user-permission";
+
 const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 
 export const zodUpdateUserAdminSchema = z
@@ -38,6 +43,7 @@ export const zodUpdateUserAdminSchema = z
 
 export const updateUserAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "users", permission: "can_edit" },
   route: {
     method: "patch",
     description: "Update a user's name or email by id (Admin only)",
@@ -117,6 +123,8 @@ export const updateUserAdminRoute = buildRoute({
     if (!user) {
       return c.json({ error: "User not found" }, 404);
     }
+
+    await assertCanEditAdminTarget(c, userId);
 
     const values: Partial<typeof core_users.$inferInsert> = {};
 
@@ -199,6 +207,7 @@ export const updateUserAdminRoute = buildRoute({
     }
 
     if (body.roleId !== undefined) {
+      await assertCanAssignPrimaryRole(c, body.roleId);
       values.roleId = body.roleId;
     }
 

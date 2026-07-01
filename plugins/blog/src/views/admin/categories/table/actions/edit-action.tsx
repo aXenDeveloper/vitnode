@@ -1,5 +1,6 @@
 "use client";
 
+import { useAdminStaffPermission } from "@vitnode/core/components/staff-permission/provider";
 import { Button } from "@vitnode/core/components/ui/button";
 import {
   Dialog,
@@ -21,6 +22,8 @@ import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import React from "react";
 
+import { CONFIG_PLUGIN } from "@/const";
+
 const CreateEditActionCategoriesAdmin = dynamic(async () =>
   import("../..//actions/create-edit/create-edit").then(mod => ({
     default: mod.CreateEditActionCategoriesAdmin,
@@ -31,6 +34,13 @@ export const EditAction = (
   props: Required<React.ComponentProps<typeof CreateEditActionCategoriesAdmin>>,
 ) => {
   const t = useTranslations("@vitnode/blog.admin.categories.edit");
+  const canEdit = useAdminStaffPermission({
+    plugin: CONFIG_PLUGIN.pluginId,
+    module: "categories",
+    permission: "can_edit",
+  });
+
+  if (!canEdit) return null;
 
   return (
     <Dialog>

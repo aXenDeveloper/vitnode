@@ -25,6 +25,7 @@ export const zodCreateUserAdminSchema = z.object({
 
 export const createUserAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "users", permission: "can_create" },
   route: {
     method: "post",
     description: "Create a new user (Admin only)",

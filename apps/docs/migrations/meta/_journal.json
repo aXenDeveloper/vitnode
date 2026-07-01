@@ -29,6 +29,20 @@
       "when": 1782410108192,
       "tag": "0003_add_users_secondary_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1782574579285,
+      "tag": "0004_dark_iron_lad",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1782638542375,
+      "tag": "0005_stale_firebird",
+      "breakpoints": true
     }
   ]
 }

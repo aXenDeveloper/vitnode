@@ -8,6 +8,7 @@ import { blog_posts } from "@/database/posts";
 
 export const deletePostRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "posts", permission: "can_delete" },
   route: {
     method: "delete",
     path: "/{id}",

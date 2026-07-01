@@ -130,12 +130,14 @@ type FindRouteConfig<
 >["route"];
 
 type BuildArgsType<RouteCfg extends RouteConfig> = {
-  [K in "body" | "params" | "query" as InferInputType<
-    RouteCfg,
-    K
-  > extends undefined
-    ? never
-    : K]: InferInputType<RouteCfg, K>;
+  [
+    K in "body" | "params" | "query" as InferInputType<
+      RouteCfg,
+      K
+    > extends undefined
+      ? never
+      : K
+  ]: InferInputType<RouteCfg, K>;
 };
 
 type InferStatusCode<K> = K extends `${infer N extends number}`

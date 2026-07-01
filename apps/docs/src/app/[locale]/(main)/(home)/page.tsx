@@ -12,7 +12,7 @@ import { CallToActionSection } from "./sections/call-to-action";
 import { PoweringBySection } from "./sections/powering-by/powering-by";
 
 export const metadata: Metadata = {
-  title: "VitNode: Extendable Framework for Building Apps",
+  title: "VitNode: Community Framework for Building Apps",
   description:
     "Build with Next.js and Hono.js. It provides a structured, plugin-based architecture with Admin Control Panel that makes development faster and less complex.",
 };
@@ -23,7 +23,7 @@ export default function HomePage() {
       <section className="border-border/50 mt-6 flex flex-col justify-between gap-20 border-r bg-[linear-gradient(to_right,color-mix(in_oklab,var(--border)_75%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklab,var(--border)_75%,transparent)_1px,transparent_1px)] bg-[size:63px_63px] px-6 py-10 sm:mt-10 sm:px-10 sm:py-20 lg:flex-row dark:bg-[linear-gradient(to_right,color-mix(in_oklab,var(--border)_50%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_oklab,var(--border)_50%,transparent)_1px,transparent_1px)]">
         <div className="flex max-w-2xl flex-col">
           <h1 className="text-5xl font-semibold tracking-tight text-balance sm:text-6xl">
-            Extendable <span className="text-primary">Framework</span> for
+            Community <span className="text-primary">Framework</span> for
             Building <span className="text-primary">Apps</span>
           </h1>
 

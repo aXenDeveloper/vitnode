@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 
+import { AdminStaffPermissionProvider } from "@/components/staff-permission/provider";
 import { ThemeSwitcher } from "@/components/switchers/themes/theme-switcher";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -38,29 +39,31 @@ export const AdminLayout = async ({
 
   return (
     <I18nProvider namespaces={["admin.global"]}>
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <SidebarAdmin vitNodeConfig={vitNodeConfig} />
-        <SidebarInset>
-          <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-            <SidebarTrigger className="-ml-1" />
-            {breadcrumb != null && (
-              <>
-                <Separator className="mr-1 h-4" orientation="vertical" />
-                {breadcrumb}
-              </>
-            )}
-
-            <div className="ml-auto flex items-center justify-center gap-2 px-2">
-              {vitNodeConfig.i18n.locales.length > 1 && (
-                <LanguageSwitcher locales={vitNodeConfig.i18n.locales} />
+      <AdminStaffPermissionProvider value={session.permissions}>
+        <SidebarProvider defaultOpen={defaultOpen}>
+          <SidebarAdmin vitNodeConfig={vitNodeConfig} />
+          <SidebarInset>
+            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+              <SidebarTrigger className="-ml-1" />
+              {breadcrumb != null && (
+                <>
+                  <Separator className="mr-1 h-4" orientation="vertical" />
+                  {breadcrumb}
+                </>
               )}
-              <ThemeSwitcher />
-              <UserBarAdmin user={session.user} />
-            </div>
-          </header>
-          {children}
-        </SidebarInset>
-      </SidebarProvider>
+
+              <div className="ml-auto flex items-center justify-center gap-2 px-2">
+                {vitNodeConfig.i18n.locales.length > 1 && (
+                  <LanguageSwitcher locales={vitNodeConfig.i18n.locales} />
+                )}
+                <ThemeSwitcher />
+                <UserBarAdmin user={session.user} />
+              </div>
+            </header>
+            {children}
+          </SidebarInset>
+        </SidebarProvider>
+      </AdminStaffPermissionProvider>
     </I18nProvider>
   );
 };

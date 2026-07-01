@@ -66,5 +66,15 @@
         }
       }
     }
-  }
+  },
+  "@vitnode/blog:posts": "Posts",
+  "@vitnode/blog:posts:can_view": "View posts list",
+  "@vitnode/blog:posts:can_create": "Create posts",
+  "@vitnode/blog:posts:can_edit": "Edit posts",
+  "@vitnode/blog:posts:can_delete": "Delete posts",
+  "@vitnode/blog:categories": "Categories",
+  "@vitnode/blog:categories:can_view": "View categories list",
+  "@vitnode/blog:categories:can_create": "Create categories",
+  "@vitnode/blog:categories:can_edit": "Edit categories",
+  "@vitnode/blog:categories:can_delete": "Delete categories"
 }

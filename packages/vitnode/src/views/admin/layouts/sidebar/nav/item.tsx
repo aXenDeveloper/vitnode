@@ -45,13 +45,34 @@ export const ItemNavAdmin = ({
     return url.endsWith("/") && url.length > 1 ? url.slice(0, -1) : url;
   };
 
+  // True when the pathname is the href itself or lives under it as a path
+  // segment (e.g. an edit/create sub-page), matching whole segments only.
+  const isPathnameUnderHref = (candidate: string) => {
+    const normalizedPathname = normalizeUrl(pathname);
+    const normalizedHref = normalizeUrl(candidate);
+
+    return (
+      normalizedPathname === normalizedHref ||
+      normalizedPathname.startsWith(`${normalizedHref}/`)
+    );
+  };
+
   // Check if current path matches href (with normalization)
   const isActive = normalizeUrl(pathname) === normalizeUrl(href);
 
+  // Only the most specific (longest) matching child is active, so nested
+  // siblings like `/users` and `/users/roles` don't both highlight.
+  const activeChildHref = items.reduce<null | string>((best, item) => {
+    if (!isPathnameUnderHref(item.href)) return best;
+    if (best === null) return item.href;
+
+    return normalizeUrl(item.href).length > normalizeUrl(best).length
+      ? item.href
+      : best;
+  }, null);
+
   // Check if any child item is active
-  const hasActiveChild = items.some(
-    item => normalizeUrl(pathname) === normalizeUrl(item.href),
-  );
+  const hasActiveChild = activeChildHref !== null;
 
   // Open collapsible by default if has active child, and keep it open when
   // navigating into one of its children. Controlled to avoid Base UI warning
@@ -124,8 +145,7 @@ export const ItemNavAdmin = ({
       >
         <SidebarMenuSub>
           {items.map(item => {
-            const isChildActive =
-              normalizeUrl(pathname) === normalizeUrl(item.href);
+            const isChildActive = item.href === activeChildHref;
 
             return (
               <SidebarMenuSubItem key={item.href}>

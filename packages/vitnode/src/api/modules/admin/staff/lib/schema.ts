@@ -14,7 +14,7 @@ export const staffListAdminQuery = zodPaginationQuery.extend({
 
 // A role reference resolved for the `RoleFormat` component (it picks the active
 // locale from the translated names on the frontend).
-const staffRoleSchema = z.object({
+export const staffRoleSchema = z.object({
   id: z.number(),
   color: z.string().nullable(),
   name: z.array(
@@ -25,25 +25,42 @@ const staffRoleSchema = z.object({
   ),
 });
 
-export const staffListAdminSchema = z.object({
-  edges: z.array(
-    z.object({
+// A single resolved staff entry — the shape returned by `resolveStaffEdges`.
+export const staffEntrySchema = z.object({
+  id: z.number(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  unrestricted: z.boolean(),
+  protected: z.boolean(),
+  self: z.boolean(),
+  role: staffRoleSchema.nullable(),
+  user: z
+    .object({
       id: z.number(),
-      createdAt: z.date(),
-      updatedAt: z.date(),
-      // A staff entry grants permissions to a whole role...
-      role: staffRoleSchema.nullable(),
-      // ...or to a single user (rendered with their own role formatting).
-      user: z
-        .object({
-          id: z.number(),
-          name: z.string(),
-          nameCode: z.string(),
-          avatarColor: z.string(),
-          role: staffRoleSchema,
-        })
-        .nullable(),
-    }),
-  ),
+      name: z.string(),
+      nameCode: z.string(),
+      avatarColor: z.string(),
+      role: staffRoleSchema,
+    })
+    .nullable(),
+});
+
+export const staffListAdminSchema = z.object({
+  edges: z.array(staffEntrySchema),
   pageInfo: zodPaginationPageInfo,
 });
+
+export const permissionsStaffArgsSchema = z.object({
+  plugin: z.string(),
+  module: z.string(),
+  permission: z.string(),
+});
+
+export const staffTypeSchema = z.enum(["admin", "moderator"]);
+
+// Maps a staff entry type to the admin permission-catalog module that gates
+// managing it, so moderator and administrator staff can be governed separately.
+export const staffPermissionModuleByType = {
+  admin: "staff_admins",
+  moderator: "staff_moderators",
+} as const;

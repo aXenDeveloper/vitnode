@@ -29,6 +29,7 @@ export const zodCreatePostSchema = z.object({
 
 export const createPostRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "posts", permission: "can_create" },
   route: {
     method: "post",
     path: "/",

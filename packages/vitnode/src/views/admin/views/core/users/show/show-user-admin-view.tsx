@@ -2,11 +2,14 @@ import { ExternalLinkIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { hasStaffPermission } from "@/api/lib/staff-permission";
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { Avatar } from "@/components/avatar";
 import { DateFormat } from "@/components/date-format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { CONFIG_PLUGIN } from "@/config";
+import { getSessionAdminApi } from "@/lib/api/get-session-admin-api";
 import { fetcher } from "@/lib/fetcher";
 import { Link } from "@/lib/navigation";
 
@@ -32,15 +35,36 @@ export const ShowUserAdminView = async ({ id }: { id: string }) => {
 
   const user = await res.json();
 
+  // Editing any user needs `can_edit`; editing an administrator additionally
+  // needs the elevated `can_edit_admin` permission. The backend enforces the
+  // same rule — this only hides the edit controls.
+  const session = await getSessionAdminApi();
+  const canEdit =
+    !!session &&
+    hasStaffPermission(session.permissions, {
+      plugin: CONFIG_PLUGIN.pluginId,
+      module: "users",
+      permission: "can_edit",
+    }) &&
+    (user.isAdmin
+      ? hasStaffPermission(session.permissions, {
+          plugin: CONFIG_PLUGIN.pluginId,
+          module: "users",
+          permission: "can_edit_admin",
+        })
+      : true);
+
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
       <Card className="w-full overflow-hidden pt-0">
         {/* Cover placeholder */}
         <div className="from-primary/30 to-primary/5 relative h-44 w-full bg-linear-to-br">
           <span className="sr-only">{t("coverPlaceholder")}</span>
-          <div className="absolute inset-e-3 top-3">
-            <EditImageButton label={t("editCover")} />
-          </div>
+          {canEdit && (
+            <div className="absolute inset-e-3 top-3">
+              <EditImageButton label={t("editCover")} />
+            </div>
+          )}
         </div>
 
         <CardContent className="flex flex-col">
@@ -52,15 +76,18 @@ export const ShowUserAdminView = async ({ id }: { id: string }) => {
                 size={128}
                 user={user}
               />
-              <div className="absolute inset-e-0 bottom-0 translate-y-1/4">
-                <EditImageButton label={t("editAvatar")} />
-              </div>
+              {canEdit && (
+                <div className="absolute inset-e-0 bottom-0 translate-y-1/4">
+                  <EditImageButton label={t("editAvatar")} />
+                </div>
+              )}
             </div>
           </div>
 
           {/* Username */}
           <EditUserField
             as="h2"
+            canEdit={canEdit}
             field="name"
             id={user.id}
             label={t("editName")}
@@ -73,12 +100,13 @@ export const ShowUserAdminView = async ({ id }: { id: string }) => {
             <span className="text-muted-foreground truncate text-sm">
               @{user.nameCode}
             </span>
-            <EditNameCode id={user.id} nameCode={user.nameCode} />
+            {canEdit && <EditNameCode id={user.id} nameCode={user.nameCode} />}
           </div>
 
           {/* Email */}
           <div className="mt-3">
             <EditUserField
+              canEdit={canEdit}
               field="email"
               id={user.id}
               label={t("editEmail")}
@@ -109,6 +137,7 @@ export const ShowUserAdminView = async ({ id }: { id: string }) => {
       </Card>
 
       <RolesUserAdmin
+        canEdit={canEdit}
         id={user.id}
         role={user.role}
         secondaryRoles={user.secondaryRoles}

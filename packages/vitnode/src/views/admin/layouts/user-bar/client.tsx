@@ -3,12 +3,14 @@
 import { BugIcon, HomeIcon, LogOut } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { CONFIG_PLUGIN } from "@/config";
 import { Link } from "@/lib/navigation";
 import { logOutMutationApi } from "@/views/layouts/theme/header/user/auth/log-out-mutation-api";
 
@@ -21,6 +23,11 @@ export const ClientUserBarAdmin = ({
   };
 }) => {
   const t = useTranslations("admin.global.nav.user_bar");
+  const canViewDebug = useAdminStaffPermission({
+    plugin: CONFIG_PLUGIN.pluginId,
+    module: "debug",
+    permission: "can_view",
+  });
 
   return (
     <>
@@ -36,10 +43,12 @@ export const ClientUserBarAdmin = ({
           <HomeIcon />
           {t("home_page")}
         </DropdownMenuItem>
-        <DropdownMenuItem render={<Link href="/admin/core/debug" />}>
-          <BugIcon />
-          {t("debug")}
-        </DropdownMenuItem>
+        {canViewDebug && (
+          <DropdownMenuItem render={<Link href="/admin/core/debug" />}>
+            <BugIcon />
+            {t("debug")}
+          </DropdownMenuItem>
+        )}
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
       <DropdownMenuItem

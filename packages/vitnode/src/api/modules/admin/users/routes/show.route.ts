@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { resolveRoleNames } from "@/api/lib/resolve-role-names";
 import { buildRoute } from "@/api/lib/route";
+import { SessionAdminModel } from "@/api/models/session-admin";
 import { UserModel } from "@/api/models/user";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_roles } from "@/database/roles";
@@ -21,6 +22,7 @@ const roleSchema = z.object({
 
 export const showUserAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "users", permission: "can_view" },
   route: {
     method: "get",
     description: "Get a single user by id (Admin only)",
@@ -48,6 +50,7 @@ export const showUserAdminRoute = buildRoute({
               secondaryRoles: z.array(roleSchema),
               birthday: z.date().nullable(),
               language: z.string(),
+              isAdmin: z.boolean(),
             }),
           },
         },
@@ -108,9 +111,15 @@ export const showUserAdminRoute = buildRoute({
       ...secondaryRoleRows.map(role => role.id),
     ]);
 
+    // Whether the listed user is themselves an administrator. The frontend uses
+    // this to require the elevated `can_edit_admin` permission before showing
+    // edit controls (the backend enforces the same rule on write).
+    const isAdmin = await new SessionAdminModel(c).checkIfUserIsAdmin(user.id);
+
     return c.json(
       {
         ...user,
+        isAdmin,
         role: {
           id: user.roleId,
           color: primaryRole?.color ?? null,

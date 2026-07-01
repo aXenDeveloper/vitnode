@@ -12,11 +12,13 @@ export const blogPlugin = () => {
           id: "posts",
           href: "/admin/blog/posts",
           icon: <NotebookPenIcon />,
+          permission: { module: "posts", permission: "can_view" },
         },
         {
           id: "categories",
           href: "/admin/blog/categories",
           icon: <ListIcon />,
+          permission: { module: "categories", permission: "can_view" },
         },
       ],
     },

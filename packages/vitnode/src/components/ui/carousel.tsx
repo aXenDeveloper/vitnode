@@ -5,7 +5,7 @@ import useEmblaCarousel, {
 } from "embla-carousel-react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import * as React from "react";
+import React from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

@@ -12,6 +12,7 @@ import { CONFIG } from "@/lib/config";
 import { realtime } from "@/ws/registry";
 
 import type { BuildCronReturn } from "../lib/cron";
+import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
 import type { WebSocketConfig } from "../lib/websocket";
 import type { SSOApiPlugin } from "../models/sso";
 
@@ -19,6 +20,7 @@ import {
   loggerMiddleware,
   type LoggerMiddlewareType,
 } from "../lib/logger-middleware";
+import { normalizePermissionStaffModules } from "../lib/permission-staff";
 
 declare module "hono" {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -64,6 +66,7 @@ export interface EnvVariablesVitNode {
       title: string;
     };
     pathToMessages: (path: string) => Promise<{ default: object }>;
+    permissionStaff: PermissionStaffCatalogEntry[];
     plugins: { id: string }[];
     webSockets: WebSocketConfig[];
   };
@@ -131,6 +134,16 @@ export const globalMiddleware = ({
     })),
   );
 
+  const permissionStaffMetadata: PermissionStaffCatalogEntry[] = plugins.map(
+    plugin => ({
+      pluginId: plugin.pluginId,
+      admin: normalizePermissionStaffModules(plugin.permissionStaff?.admin),
+      moderator: normalizePermissionStaffModules(
+        plugin.permissionStaff?.moderator,
+      ),
+    }),
+  );
+
   const ipHeaderKeys = [
     "x-forwarded-for",
     "x-real-ip",
@@ -190,6 +203,7 @@ export const globalMiddleware = ({
       plugins: pluginsMetadata,
       cron: cronMetadata,
       webSockets: webSocketsMetadata,
+      permissionStaff: permissionStaffMetadata,
     });
 
     const user = await new SessionModel(c).getUser();

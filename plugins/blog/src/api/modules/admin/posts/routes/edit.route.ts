@@ -22,6 +22,7 @@ const zodPostResponseSchema = z.object({
 
 export const editPostRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "posts", permission: "can_edit" },
   route: {
     method: "put",
     path: "/{id}",

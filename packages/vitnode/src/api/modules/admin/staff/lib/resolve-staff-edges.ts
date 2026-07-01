@@ -2,19 +2,27 @@ import type { Context } from "hono";
 
 import { eq, inArray } from "drizzle-orm";
 
+import { getUserRoleIds } from "@/api/lib/check-staff-permission";
 import { resolveRoleNames } from "@/api/lib/resolve-role-names";
 import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
 
 interface RawStaffEdge {
   createdAt: Date;
+  data?: null | { unrestricted: boolean };
   id: number;
+  protected: boolean;
   roleId: null | number;
   updatedAt: Date;
   userId: null | number;
 }
 
 export const resolveStaffEdges = async (c: Context, edges: RawStaffEdge[]) => {
+  const currentUser = c.get("admin")?.user;
+  const currentUserRoleIds = currentUser
+    ? new Set(await getUserRoleIds(c, currentUser))
+    : new Set<number>();
+
   const entryRoleIds = edges
     .map(edge => edge.roleId)
     .filter((id): id is number => id != null);
@@ -55,10 +63,18 @@ export const resolveStaffEdges = async (c: Context, edges: RawStaffEdge[]) => {
     const entryRole = entryRoles.find(role => role.id === edge.roleId);
     const user = users.find(item => item.id === edge.userId);
 
+    const self =
+      currentUser != null &&
+      ((edge.userId != null && edge.userId === currentUser.id) ||
+        (edge.roleId != null && currentUserRoleIds.has(edge.roleId)));
+
     return {
       id: edge.id,
       createdAt: edge.createdAt,
       updatedAt: edge.updatedAt,
+      unrestricted: edge.data?.unrestricted ?? false,
+      protected: edge.protected,
+      self,
       role: entryRole
         ? {
             id: entryRole.id,

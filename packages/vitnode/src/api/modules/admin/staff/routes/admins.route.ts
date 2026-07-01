@@ -8,6 +8,7 @@ import { staffListAdminQuery, staffListAdminSchema } from "../lib/schema";
 
 export const listAdminsStaffAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "staff_admins", permission: "can_view" },
   route: {
     method: "get",
     description: "Get list of administrators staff (Admin only)",
@@ -46,6 +47,8 @@ export const listAdminsStaffAdminRoute = buildRoute({
             userId: core_admin_permissions.userId,
             createdAt: core_admin_permissions.createdAt,
             updatedAt: core_admin_permissions.updatedAt,
+            data: core_admin_permissions.data,
+            protected: core_admin_permissions.protected,
           })
           .from(core_admin_permissions)
           .where(where)

@@ -2,7 +2,7 @@
 
 import { CheckIcon, MailIcon, PencilIcon, XIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import * as React from "react";
+import React from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,10 @@ export const EditUserField = ({
   as: Tag = "span",
   valueClassName,
   showUnverified = false,
+  canEdit = true,
 }: {
   as?: "h2" | "span";
+  canEdit?: boolean;
   field: "email" | "name";
   id: number;
   label: string;
@@ -136,14 +138,16 @@ export const EditUserField = ({
           </TooltipWithContent>
         )}
       </div>
-      <Button
-        aria-label={label}
-        onClick={openEditor}
-        size="icon-sm"
-        variant="secondary"
-      >
-        <PencilIcon />
-      </Button>
+      {canEdit && (
+        <Button
+          aria-label={label}
+          onClick={openEditor}
+          size="icon-sm"
+          variant="secondary"
+        >
+          <PencilIcon />
+        </Button>
+      )}
     </div>
   );
 };

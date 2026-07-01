@@ -1,8 +1,20 @@
-import { LayoutDashboardIcon, UsersRoundIcon, WrenchIcon } from "lucide-react";
+import {
+  LayoutDashboardIcon,
+  ShieldUserIcon,
+  UsersRoundIcon,
+  WrenchIcon,
+} from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
+import type {
+  PermissionsStaffArgs,
+  StaffPermissionSet,
+} from "@/api/lib/permission-staff";
 import type { VitNodeConfig } from "@/vitnode.config";
 
+import { hasStaffPermission } from "@/api/lib/staff-permission";
+import { CONFIG_PLUGIN } from "@/config";
+import { getSessionAdminApi } from "@/lib/api/get-session-admin-api";
 import { getVitNodeConfig } from "@/vitnode.config";
 
 import type { ItemNavAdmin } from "./item";
@@ -13,14 +25,85 @@ export interface NavAdminParent {
   title: string;
 }
 
+interface NavSubItemConfig {
+  href: string;
+  isOpenInNewTab?: boolean;
+  permission?: PermissionsStaffArgs;
+  title: string;
+}
+
+interface NavItemConfig {
+  href: string;
+  icon?: React.ReactNode;
+  isOpenInNewTab?: boolean;
+  items?: NavSubItemConfig[];
+  permission?: PermissionsStaffArgs;
+  title: string;
+}
+
+interface NavGroupConfig {
+  id: string;
+  items: NavItemConfig[];
+  title: string;
+}
+
+const isAllowed = (
+  permission: PermissionsStaffArgs | undefined,
+  set: StaffPermissionSet,
+): boolean => !permission || hasStaffPermission(set, permission);
+
+const filterNavItems = (
+  items: NavItemConfig[],
+  set: StaffPermissionSet,
+): React.ComponentProps<typeof ItemNavAdmin>[] => {
+  const result: React.ComponentProps<typeof ItemNavAdmin>[] = [];
+
+  for (const item of items) {
+    if (!isAllowed(item.permission, set)) continue;
+
+    if (item.items && item.items.length > 0) {
+      const visibleSubItems = item.items.filter(subItem =>
+        isAllowed(subItem.permission, set),
+      );
+      if (visibleSubItems.length === 0) continue;
+
+      result.push({
+        href: item.href,
+        icon: item.icon,
+        isOpenInNewTab: item.isOpenInNewTab,
+        title: item.title,
+        items: visibleSubItems.map(subItem => ({
+          href: subItem.href,
+          isOpenInNewTab: subItem.isOpenInNewTab,
+          title: subItem.title,
+        })),
+      });
+    } else {
+      result.push({
+        href: item.href,
+        icon: item.icon,
+        isOpenInNewTab: item.isOpenInNewTab,
+        title: item.title,
+      });
+    }
+  }
+
+  return result;
+};
+
 export const getAdminNav = async ({
   vitNodeConfig = getVitNodeConfig(),
 }: {
   vitNodeConfig?: VitNodeConfig;
 } = {}): Promise<NavAdminParent[]> => {
   const t = await getTranslations();
+  const session = await getSessionAdminApi();
+  const permissions: StaffPermissionSet = session?.permissions ?? {
+    root: false,
+    permissions: [],
+  };
 
-  const core: NavAdminParent = {
+  const core: NavGroupConfig = {
     id: "core",
     title: t("admin.global.nav.core"),
     items: [
@@ -42,14 +125,40 @@ export const getAdminNav = async ({
           {
             title: t("admin.global.nav.users.list"),
             href: "/admin/core/users",
+            permission: {
+              plugin: CONFIG_PLUGIN.pluginId,
+              module: "users",
+              permission: "can_view",
+            },
           },
           {
             title: t("admin.global.nav.users.roles"),
             href: "/admin/core/users/roles",
           },
+        ],
+      },
+      {
+        href: "/admin/core/staff",
+        title: t("admin.global.nav.staff.title"),
+        icon: <ShieldUserIcon />,
+        items: [
           {
-            title: t("admin.global.nav.users.staff"),
-            href: "/admin/core/users/staff/moderators",
+            title: t("admin.global.nav.staff.moderators"),
+            href: "/admin/core/staff/moderators",
+            permission: {
+              plugin: CONFIG_PLUGIN.pluginId,
+              module: "staff_moderators",
+              permission: "can_view",
+            },
+          },
+          {
+            title: t("admin.global.nav.staff.admins"),
+            href: "/admin/core/staff/admins",
+            permission: {
+              plugin: CONFIG_PLUGIN.pluginId,
+              module: "staff_admins",
+              permission: "can_view",
+            },
           },
         ],
       },
@@ -67,7 +176,7 @@ export const getAdminNav = async ({
     ],
   };
 
-  const pluginNav: NavAdminParent[] = vitNodeConfig.plugins
+  const pluginNav: NavGroupConfig[] = vitNodeConfig.plugins
     .filter(plugin => plugin.admin?.nav)
     .map(plugin => ({
       id: plugin.pluginId,
@@ -75,19 +184,34 @@ export const getAdminNav = async ({
       // @ts-expect-error
       title: t(`${plugin.pluginId}.title`),
       items: (plugin.admin?.nav ?? []).map(item => ({
-        ...item,
+        href: item.href,
+        icon: item.icon,
+        isOpenInNewTab: item.isOpenInNewTab,
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-expect-error
         title: t(`${plugin.pluginId}.admin.nav.${item.id}`),
+        permission: item.permission
+          ? { plugin: plugin.pluginId, ...item.permission }
+          : undefined,
         items:
           item.items?.map(subItem => ({
-            ...subItem,
+            href: subItem.href,
+            isOpenInNewTab: subItem.isOpenInNewTab,
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-expect-error
             title: t(`${plugin.pluginId}.admin.nav.${item.id}.${subItem.id}`),
+            permission: subItem.permission
+              ? { plugin: plugin.pluginId, ...subItem.permission }
+              : undefined,
           })) ?? [],
       })),
     }));
 
-  return [core, ...pluginNav];
+  return [core, ...pluginNav]
+    .map(group => ({
+      id: group.id,
+      title: group.title,
+      items: filterNavItems(group.items, permissions),
+    }))
+    .filter(group => group.items.length > 0);
 };

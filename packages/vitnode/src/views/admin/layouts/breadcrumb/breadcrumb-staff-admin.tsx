@@ -16,10 +16,10 @@ export const BreadcrumbStaffAdmin = async ({
   return (
     <BreadcrumbAdmin
       labels={{
-        "/admin/core/users/staff": t("title"),
-        [`/admin/core/users/staff/${tab}`]: t(`tabs.${tab}`),
+        "/admin/core/staff": t("title"),
+        [`/admin/core/staff/${tab}`]: t(`tabs.${tab}`),
       }}
-      segments={["core", "users", "staff", tab]}
+      segments={["core", "staff", tab]}
       vitNodeConfig={vitNodeConfig}
     />
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useServerInsertedHTML } from "next/navigation";
-import * as React from "react";
+import React from "react";
 
 const MEDIA = "(prefers-color-scheme: dark)";
 const colorSchemes = ["light", "dark"];

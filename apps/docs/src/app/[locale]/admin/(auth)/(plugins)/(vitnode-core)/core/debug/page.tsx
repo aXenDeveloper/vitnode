@@ -1,10 +1,12 @@
 import { getTranslations } from "next-intl/server";
 import dynamic from "next/dynamic";
+import { notFound } from "next/navigation";
 import React from "react";
 
 import { I18nProvider } from "@vitnode/core/components/i18n-provider";
 import { DataTableSkeleton } from "@vitnode/core/components/table/data-table";
 import { HeaderContent } from "@vitnode/core/components/ui/header-content";
+import { checkAdminPermissionApi } from "@vitnode/core/lib/api/get-session-admin-api";
 import { ClearCacheAction } from "@vitnode/core/views/admin/views/core/debug/actions/clear-cache/clear-cache";
 
 const SystemLogsView = dynamic(async () =>
@@ -27,13 +29,21 @@ export const generateMetadata = async () => {
 export default async function Page(
   props: React.ComponentProps<typeof SystemLogsView>,
 ) {
-  const t = await getTranslations("admin.debug");
+  const [t, canView, canClearCache] = await Promise.all([
+    getTranslations("admin.debug"),
+    checkAdminPermissionApi({ module: "debug", permission: "can_view" }),
+    checkAdminPermissionApi({ module: "debug", permission: "can_clear_cache" }),
+  ]);
+
+  if (!canView) {
+    notFound();
+  }
 
   return (
     <I18nProvider namespaces="admin.debug">
       <div className="p-4">
         <HeaderContent desc={t("desc")} h1={t("title")}>
-          <ClearCacheAction />
+          {canClearCache && <ClearCacheAction />}
         </HeaderContent>
 
         <HeaderContent h2={t("logs.title")} />

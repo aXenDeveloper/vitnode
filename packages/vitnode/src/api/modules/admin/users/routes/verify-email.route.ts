@@ -5,8 +5,11 @@ import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_users } from "@/database/users";
 
+import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
+
 export const verifyEmailUserAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "users", permission: "can_edit" },
   route: {
     method: "post",
     description: "Verify a user's email by id (Admin only)",
@@ -50,19 +53,28 @@ export const verifyEmailUserAdminRoute = buildRoute({
       return c.json({ error: "User not found" }, 404);
     }
 
-    const [updated] = await c
-      .get("db")
+    const db = c.get("db");
+
+    const [user] = await db
+      .select({ id: core_users.id })
+      .from(core_users)
+      .where(eq(core_users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    await assertCanEditAdminTarget(c, userId);
+
+    const [updated] = await db
       .update(core_users)
       .set({ emailVerified: true })
-      .where(eq(core_users.id, userId))
+      .where(eq(core_users.id, user.id))
       .returning({
         name: core_users.name,
         emailVerified: core_users.emailVerified,
       });
-
-    if (!updated) {
-      return c.json({ error: "User not found" }, 404);
-    }
 
     return c.json(
       { name: updated.name, emailVerified: updated.emailVerified },

@@ -147,6 +147,42 @@ export const blogPlugin = () => {
 };
 ```
 
+#### Gate by permission
+
+To hide a navigation item from admins who lack a [staff permission](/docs/dev/working-with-users/staff-permissions), add a `permission`. It takes `{ module, permission }` — the `plugin` is inferred from your plugin, so you only reference the module and permission id you declared in `permissionStaff`:
+
+```tsx title="plugins/{plugin_name}/src/plugin.tsx"
+import { buildPlugin } from '@vitnode/core/lib/plugin';
+import { ListIcon } from 'lucide-react';
+import { configPlugin } from './config';
+
+export const blogPlugin = () => {
+  return buildPlugin({
+    ...configPlugin,
+    admin: {
+      nav: [
+        {
+          id: 'categories',
+          href: '/admin/blog/categories',
+          icon: <ListIcon />,
+          // [!code ++]
+          permission: { module: 'categories', permission: 'can_view' },
+        },
+      ],
+    },
+  });
+};
+```
+
+The same `permission` field works on nested `items`. A parent item disappears once all of its children are hidden, and items without a `permission` are always shown.
+
+<Callout type="warn">
+  Hiding a nav item only hides the link — it does not protect the route. Guard
+  the page itself and the underlying API too. See [Staff
+  Permissions](/docs/dev/working-with-users/staff-permissions) for the full
+  pattern.
+</Callout>
+
 </Step>
 <Step>
 
