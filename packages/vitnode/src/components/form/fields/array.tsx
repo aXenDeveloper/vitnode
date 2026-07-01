@@ -67,8 +67,7 @@ export const AutoFormArray = ({
   const canAdd = !maxItems || fields.length < maxItems;
 
   const arrayError = formState.errors[id] as
-    | undefined
-    | { message?: string; root?: { message?: string } };
+    undefined | { message?: string; root?: { message?: string } };
 
   return (
     <FieldSet className={cn("gap-4", className)}>

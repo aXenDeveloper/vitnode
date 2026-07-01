@@ -6,7 +6,10 @@ import { CONFIG_PLUGIN } from "@/config";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
 
-import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
+import {
+  assertCanAssignPrimaryRole,
+  assertCanEditAdminTarget,
+} from "../lib/assert-edit-user-permission";
 
 const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 
@@ -204,6 +207,7 @@ export const updateUserAdminRoute = buildRoute({
     }
 
     if (body.roleId !== undefined) {
+      await assertCanAssignPrimaryRole(c, body.roleId);
       values.roleId = body.roleId;
     }
 

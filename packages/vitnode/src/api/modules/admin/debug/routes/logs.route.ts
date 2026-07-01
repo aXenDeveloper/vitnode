@@ -14,6 +14,7 @@ import {
 
 export const logsDebugAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "debug", permission: "can_view" },
   route: {
     method: "get",
     description: "Get Admin Debug Logs",
