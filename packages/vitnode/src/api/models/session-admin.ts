@@ -8,6 +8,12 @@ import { core_admin_permissions, core_admin_sessions } from "@/database/admins";
 import { CONFIG } from "@/lib/config";
 
 import { DeviceModel } from "./device";
+import {
+  adminSessionCacheKey,
+  reviveSessionUser,
+  sessionCacheTtl,
+  type SessionUser,
+} from "./session-cache";
 import { UserModel } from "./user";
 
 export class SessionAdminModel {
@@ -101,11 +107,18 @@ export class SessionAdminModel {
     if (!token) return;
 
     const hashedToken = await this.hashToken(token);
+    const device = await new DeviceModel(this.c).getDeviceId();
 
     await this.c
       .get("db")
       .delete(core_admin_sessions)
       .where(eq(core_admin_sessions.token, hashedToken));
+
+    // Drop the cached resolution so getUser stops returning this admin before
+    // the TTL would naturally expire it.
+    await this.c
+      .get("cache")
+      .deleteSystem(adminSessionCacheKey(hashedToken, device.id));
 
     deleteCookie(this.c, this.c.get("core").authorization.adminCookieName, {
       path: "/",
@@ -122,11 +135,29 @@ export class SessionAdminModel {
     if (!device) return null;
 
     const hashedToken = await this.hashToken(token);
+    const cache = this.c.get("cache");
+    const cacheKey = adminSessionCacheKey(hashedToken, device.id);
+
+    // Fast path: skip the session + user lookups for a session resolved on a
+    // recent request. Admin status is still re-checked live below so a revoked
+    // admin loses access immediately, not when the cache expires.
+    const cached = await cache.getSystem<SessionUser>(cacheKey);
+    if (cached) {
+      const user = reviveSessionUser(cached);
+      if (!(await this.checkIfUserIsAdmin(user.id))) {
+        await this.deleteSession();
+
+        return null;
+      }
+
+      return user;
+    }
 
     const [session] = await this.c
       .get("db")
       .select({
         userId: core_admin_sessions.userId,
+        expiresAt: core_admin_sessions.expiresAt,
       })
       .from(core_admin_sessions)
       .where(
@@ -159,6 +190,11 @@ export class SessionAdminModel {
 
       return null;
     }
+
+    // Cap the TTL to the session's remaining lifetime so an expired session is
+    // never served from cache.
+    const ttl = sessionCacheTtl(session.expiresAt);
+    if (ttl > 0) await cache.setSystem(cacheKey, user, ttl);
 
     return user;
   }

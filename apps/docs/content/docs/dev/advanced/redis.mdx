@@ -4,9 +4,10 @@ description: Add a shared Redis cache to speed up your app and scale it across m
 ---
 
 VitNode can use [Redis](https://redis.io/) as a shared cache. Once configured,
-it is exposed on every request as `c.get("cache")` and is also used as the
-storage backend for the [rate limiter](/docs/dev/advanced/rate-limiter), so
-limits hold up when you run several instances behind a load balancer.
+it is exposed on every request as `c.get("cache")`, speeds up authentication by
+caching session lookups, and backs the
+[rate limiter](/docs/dev/advanced/rate-limiter) so limits hold up when you run
+several instances behind a load balancer.
 
 Redis is **optional**. Without it, the cache safely degrades to no-ops (reads
 return `null`, `remember` just runs its loader) and the rate limiter falls back
@@ -195,6 +196,34 @@ const roleNames = await c.get("cache").remember(
 
   Prefer a short TTL for data you cannot reliably invalidate. `null` results are
   never cached, so a loader that returns `null` runs every time.
+</Callout>
+
+## Session caching
+
+Every authenticated request has to resolve the current user from the session
+cookie — a session lookup plus a user lookup in the database. On a single page
+load that can be many requests, and therefore many repeated queries.
+
+**When `redis` is configured, VitNode caches that resolution for you** — there is
+nothing extra to enable. Subsequent requests read the user straight from Redis
+instead of hitting the database. This applies to both regular and admin
+sessions.
+
+The cached entry:
+
+- is scoped to the session's device, so it is never served to a different
+  device;
+- lives for at most 60 seconds, and never longer than the session's remaining
+  lifetime, so an expired session is never served from cache;
+- is cleared the instant the user signs out.
+
+Admin access is still re-checked against the database on every request, so
+revoking an admin takes effect immediately — not when the cache expires.
+
+<Callout type="info" title="Safe without Redis">
+  Without Redis — or if it becomes unreachable — every request falls back to the
+  database exactly as before. Session caching only ever removes database load; it
+  never changes what a request can see beyond the short TTL above.
 </Callout>
 
 ## Rate limiting with Redis

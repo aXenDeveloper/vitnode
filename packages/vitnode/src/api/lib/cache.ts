@@ -9,6 +9,7 @@ export type CacheConfig = RedisOptions & { url?: string };
  * Keys are further namespaced per plugin — see {@link CacheModel.prefix}.
  */
 const CACHE_PREFIX = "vitnode:cache:";
+const SYSTEM_NAMESPACE = "__system__";
 
 /**
  * A small, safe cache facade exposed on the request context as
@@ -44,16 +45,64 @@ export class CacheModel {
     return pluginId ? `${CACHE_PREFIX}${pluginId}:` : CACHE_PREFIX;
   }
 
-  /** Remove one or more keys. No-op without Redis. */
-  async delete(key: string | string[]): Promise<void> {
+  private async readKey<T>(fullKey: string): Promise<null | T> {
+    if (!this.client) return null;
+
+    try {
+      const raw = await this.client.get(fullKey);
+
+      return raw === null ? null : (JSON.parse(raw) as T);
+    } catch {
+      return null;
+    }
+  }
+
+  private async removeKeys(fullKeys: string[]): Promise<void> {
     if (!this.client) return;
 
     try {
-      const keys = (Array.isArray(key) ? key : [key]).map(k => this.key(k));
-      if (keys.length > 0) await this.client.del(...keys);
+      if (fullKeys.length > 0) await this.client.del(...fullKeys);
     } catch {
       /* swallow */
     }
+  }
+
+  private systemKey(key: string): string {
+    return `${CACHE_PREFIX}${SYSTEM_NAMESPACE}:${key}`;
+  }
+
+  private async writeKey<T>(
+    fullKey: string,
+    value: T,
+    ttlSeconds?: number,
+  ): Promise<void> {
+    if (!this.client) return;
+
+    try {
+      const raw = JSON.stringify(value);
+      if (ttlSeconds && ttlSeconds > 0) {
+        await this.client.set(fullKey, raw, "EX", ttlSeconds);
+      } else {
+        await this.client.set(fullKey, raw);
+      }
+    } catch {
+      /* caching must never break the request */
+    }
+  }
+
+  /** Remove one or more keys. No-op without Redis. */
+  async delete(key: string | string[]): Promise<void> {
+    const keys = (Array.isArray(key) ? key : [key]).map(k => this.key(k));
+    await this.removeKeys(keys);
+  }
+
+  /**
+   * Remove one or more keys from the framework system namespace. No-op without
+   * Redis. See {@link SYSTEM_NAMESPACE}.
+   */
+  async deleteSystem(key: string | string[]): Promise<void> {
+    const keys = (Array.isArray(key) ? key : [key]).map(k => this.systemKey(k));
+    await this.removeKeys(keys);
   }
 
   /**
@@ -81,15 +130,11 @@ export class CacheModel {
 
   /** Read a JSON value. Returns `null` on a miss, without Redis, or on error. */
   async get<T>(key: string): Promise<null | T> {
-    if (!this.client) return null;
+    return this.readKey<T>(this.key(key));
+  }
 
-    try {
-      const raw = await this.client.get(this.key(key));
-
-      return raw === null ? null : (JSON.parse(raw) as T);
-    } catch {
-      return null;
-    }
+  async getSystem<T>(key: string): Promise<null | T> {
+    return this.readKey<T>(this.systemKey(key));
   }
 
   /** Whether a key currently exists. `false` without Redis or on error. */
@@ -103,12 +148,6 @@ export class CacheModel {
     }
   }
 
-  /**
-   * Fetch-through cache: return the cached value for `key`, or run `loader`,
-   * cache its result for `ttlSeconds`, and return it. Without Redis (or on a
-   * cache error) it simply runs `loader` every time. `null` results are not
-   * cached.
-   */
   async remember<T>(
     key: string,
     ttlSeconds: number,
@@ -123,32 +162,18 @@ export class CacheModel {
     return value;
   }
 
-  /**
-   * Write a JSON value. `ttlSeconds` sets an expiry; omit it for a value that
-   * lives until explicitly deleted or flushed. No-op without Redis.
-   */
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
-    if (!this.client) return;
-
-    try {
-      const raw = JSON.stringify(value);
-      if (ttlSeconds && ttlSeconds > 0) {
-        await this.client.set(this.key(key), raw, "EX", ttlSeconds);
-      } else {
-        await this.client.set(this.key(key), raw);
-      }
-    } catch {
-      /* caching must never break the request */
-    }
+    await this.writeKey(this.key(key), value, ttlSeconds);
   }
 
-  /**
-   * Report whether Redis is wired up and reachable. `configured` is `true` when
-   * a client was created from the app's `redis` config; `connected` is `true`
-   * only when a `PING` round-trips. A `configured` but not `connected` result
-   * means Redis is set up yet currently unreachable — the admin integrations
-   * panel surfaces that as a problem.
-   */
+  async setSystem<T>(
+    key: string,
+    value: T,
+    ttlSeconds?: number,
+  ): Promise<void> {
+    await this.writeKey(this.systemKey(key), value, ttlSeconds);
+  }
+
   async status(): Promise<{ configured: boolean; connected: boolean }> {
     if (!this.client) return { configured: false, connected: false };
 

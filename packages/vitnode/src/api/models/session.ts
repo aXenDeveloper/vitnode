@@ -7,6 +7,12 @@ import { core_sessions } from "@/database/sessions";
 import { CONFIG } from "@/lib/config";
 
 import { DeviceModel } from "./device";
+import {
+  reviveSessionUser,
+  sessionCacheKey,
+  sessionCacheTtl,
+  type SessionUser,
+} from "./session-cache";
 import { UserModel } from "./user";
 
 export class SessionModel {
@@ -99,6 +105,10 @@ export class SessionModel {
         ),
       );
 
+    await this.c
+      .get("cache")
+      .deleteSystem(sessionCacheKey(hashedToken, device.id));
+
     deleteCookie(this.c, this.c.get("core").authorization.cookieName);
   }
 
@@ -113,11 +123,19 @@ export class SessionModel {
     if (!device) return null;
 
     const hashedToken = await this.hashToken(token);
+    const cache = this.c.get("cache");
+    const cacheKey = sessionCacheKey(hashedToken, device.id);
+
+    // Fast path: a still-valid session resolved on a recent request. Only
+    // positive hits are cached, so a miss always re-runs the full lookup below.
+    const cached = await cache.getSystem<SessionUser>(cacheKey);
+    if (cached) return reviveSessionUser(cached);
 
     const [session] = await this.c
       .get("db")
       .select({
         userId: core_sessions.userId,
+        expiresAt: core_sessions.expiresAt,
       })
       .from(core_sessions)
       .where(
@@ -141,6 +159,11 @@ export class SessionModel {
     });
 
     if (!user) return null;
+
+    // Cap the TTL to the session's remaining lifetime so an expired session is
+    // never served from cache.
+    const ttl = sessionCacheTtl(session.expiresAt);
+    if (ttl > 0) await cache.setSystem(cacheKey, user, ttl);
 
     return user;
   }
