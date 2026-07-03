@@ -8,7 +8,7 @@ import { HTTPException } from "hono/http-exception";
 
 import type { VitNodeApiConfig } from "@/vitnode.config";
 
-import { createCacheClient } from "@/api/lib/cache";
+import { createCacheClient } from "@/api/lib/cache-client";
 import { newBuildPluginApiCore } from "@/api/plugin";
 import { CONFIG_PLUGIN } from "@/config";
 import { initRealtimePubSub } from "@/ws/registry";
