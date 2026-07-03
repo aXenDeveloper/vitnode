@@ -87,8 +87,6 @@ export const createWebSocketManager = ({
 
   // --- Leader: owns the real socket ---------------------------------------
   const openSocket = () => {
-    if (isDestroyed) return;
-
     const ws = new WebSocket(url);
     socket = ws;
 
@@ -160,12 +158,13 @@ export const createWebSocketManager = ({
 
     void navigator.locks
       .request(LEADER_LOCK, { mode: "exclusive" }, async () => {
-        becomeLeader();
-        // Hold the lock (and leadership) until the manager is destroyed or the
-        // tab is closed, at which point another tab is promoted.
-        await new Promise<void>(resolve => {
+        if (isDestroyed) return;
+
+        const held = new Promise<void>(resolve => {
           releaseLeadership = resolve;
         });
+        becomeLeader();
+        await held;
       })
       .catch(() => {
         becomeLeader();

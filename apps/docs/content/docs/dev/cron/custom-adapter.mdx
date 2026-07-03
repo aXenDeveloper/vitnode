@@ -39,7 +39,7 @@ export const NodeCronAdapter = (): CronAdapter => {
 import { NodeCronAdapter } from "./path/to/your/custom/node-cron.adapter";
 
 export const vitNodeApiConfig = buildApiConfig({
-  cronAdapter: NodeCronAdapter(),
+  cron: NodeCronAdapter(),
 });
 ```
 

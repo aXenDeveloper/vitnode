@@ -13,6 +13,12 @@ export const POSTGRES_URL =
 
 export const vitNodeApiConfig = buildApiConfig({
   pathToMessages: async path => await import(`./locales/${path}`),
+  // Redis is opt-in: only enabled when REDIS_URL is set. Without it the cache
+  // is a no-op, the rate limiter uses in-memory storage, and WebSockets run in
+  // single-instance mode.
+  redis: process.env.REDIS_URL
+    ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
+    : undefined,
   captcha: {
     type: "cloudflare_turnstile",
     siteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY,
@@ -27,7 +33,7 @@ export const vitNodeApiConfig = buildApiConfig({
     connection: POSTGRES_URL,
     casing: "camelCase",
   }),
-  cronAdapter: NodeCronAdapter(),
+  cron: NodeCronAdapter(),
   rateLimiter: {
     points: 20, // 20 requests
     duration: 60, // per 60 seconds

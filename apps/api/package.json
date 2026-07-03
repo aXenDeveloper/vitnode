@@ -17,6 +17,7 @@
     "@hono/zod-openapi": "^1.4.0",
     "@hono/zod-validator": "^0.8.0",
     "@vitnode/core": "workspace:*",
+    "@vitnode/node-cron": "workspace:*",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.27",

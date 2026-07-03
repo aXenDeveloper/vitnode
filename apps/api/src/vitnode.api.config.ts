@@ -1,5 +1,6 @@
 import { blogApiPlugin } from "@vitnode/blog/config.api";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
+import { NodeCronAdapter } from "@vitnode/node-cron";
 import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
 import { config } from "dotenv";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -18,6 +19,10 @@ export const vitNodeApiConfig = buildApiConfig({
     connection: POSTGRES_URL,
     casing: "camelCase",
   }),
+  cron: NodeCronAdapter(),
+  redis: process.env.REDIS_URL
+    ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
+    : undefined,
   email: {
     adapter: NodemailerEmailAdapter({
       from: process.env.NODE_MAILER_FROM,

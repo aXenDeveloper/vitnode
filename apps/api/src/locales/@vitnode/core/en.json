@@ -480,6 +480,44 @@
     "debug": {
       "title": "Debug Panel",
       "desc": "Check logs, errors, and other debug information.",
+      "integrations": {
+        "title": "Integrations",
+        "desc": "Status of the core services that power this instance.",
+        "read_more": "Read more",
+        "status": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "warning": "Unreachable"
+        },
+        "websocket": {
+          "title": "WebSocket",
+          "desc": "Live updates and notifications pushed to connected clients in real time."
+        },
+        "redis": {
+          "title": "Redis",
+          "desc": "Shared cache and rate-limiter storage. Falls back to in-memory when off.",
+          "down": "Configured but unreachable — check your Redis connection."
+        },
+        "email": {
+          "title": "Email",
+          "desc": "Transactional emails such as sign-up confirmations and password resets."
+        },
+        "captcha": {
+          "title": "Captcha",
+          "desc": "Bot protection on public forms like sign-up and password reset.",
+          "type": {
+            "cloudflare_turnstile": "Cloudflare Turnstile",
+            "recaptcha_v3": "reCAPTCHA v3"
+          }
+        },
+        "cron": {
+          "title": "Cron Jobs",
+          "desc": "Scheduled background tasks such as clearing expired sessions and tokens.",
+          "insecure": "Using the default CRON_SECRET — set a secure one in production.",
+          "not_configured": "No cron adapter configured — jobs won't run automatically.",
+          "jobs": "{count, plural, =0 {No jobs scheduled} one {# job scheduled} other {# jobs scheduled}}"
+        }
+      },
       "actions": {
         "clear_cache": {
           "label": "Clear Cache",

@@ -4,7 +4,7 @@ import type { WSEvents } from "hono/ws";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 import type { VitNodeWSMessage } from "@/ws/types";
 
-import { wsRegistry } from "@/ws/registry";
+import { markWebSocketEnabled, wsRegistry } from "@/ws/registry";
 import { getWebSocketId } from "@/ws/types";
 
 /**
@@ -58,6 +58,10 @@ const parseMessage = (raw: unknown): undefined | VitNodeWSMessage => {
 export function handleVitNodeWebSocket(
   createEvents?: (c: Context<EnvVitNode>) => Promise<WSEvents> | WSEvents,
 ) {
+  // Called once at boot when the app mounts `/ws`, so the admin integrations
+  // panel can report the WebSocket endpoint as active.
+  markWebSocketEnabled();
+
   return async (c: Context<EnvVitNode>): Promise<WSEvents> => {
     const inline = await createEvents?.(c);
     const registered = c.get("core")?.webSockets ?? [];

@@ -1,5 +1,6 @@
 import type { ProgressProvider } from "@bprogress/next/app";
 import type { drizzle } from "drizzle-orm/postgres-js";
+import type { RedisOptions } from "ioredis";
 import type { IRateLimiterOptions } from "rate-limiter-flexible";
 import type React from "react";
 
@@ -51,7 +52,7 @@ export interface VitNodeApiConfig {
     siteKey: string | undefined;
     type: "cloudflare_turnstile" | "recaptcha_v3";
   };
-  cronAdapter?: CronAdapter;
+  cron?: CronAdapter;
   dbProvider: ReturnType<typeof drizzle>;
   email?: {
     adapter?: EmailApiPlugin;
@@ -65,6 +66,13 @@ export interface VitNodeApiConfig {
   pathToMessages: (path: string) => Promise<{ default: object }>;
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix">;
+  /**
+   * Redis connection used as a shared cache (via `c.get("cache")`) and, when
+   * set, as the storage backend for the rate limiter. Leave undefined to run
+   * without Redis — the cache degrades to no-ops and the rate limiter falls
+   * back to in-memory storage.
+   */
+  redis?: RedisOptions & { url?: string };
 }
 
 let registeredVitNodeConfig: undefined | VitNodeConfig;

@@ -40,7 +40,8 @@ const getWebSocketUrl = (): string => {
 };
 
 const shouldConnectWebSocket = (): boolean =>
-  CONFIG.api.origin !== CONFIG.web.origin;
+  CONFIG.api.pathname !== CONFIG.web.pathname ||
+  CONFIG.api.port !== CONFIG.web.port;
 
 /**
  * Opens a single, always-on WebSocket connection to `/api/ws` and multiplexes

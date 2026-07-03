@@ -16,5 +16,15 @@ services:
     networks:
       - vitnode_dev
 
+  cache:
+    container_name: vitnode_redis_dev_bun
+    image: redis:8.8-alpine
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD-root}
+    ports:
+      - "6379:6379"
+    networks:
+      - vitnode_dev
+
 networks:
   vitnode_dev:
