@@ -8,8 +8,10 @@ import { HTTPException } from "hono/http-exception";
 
 import type { VitNodeApiConfig } from "@/vitnode.config";
 
+import { createCacheClient } from "@/api/lib/cache";
 import { newBuildPluginApiCore } from "@/api/plugin";
 import { CONFIG_PLUGIN } from "@/config";
+import { initRealtimePubSub } from "@/ws/registry";
 
 import {
   globalAdminMiddleware,
@@ -45,6 +47,16 @@ export function VitNodeAPI({
   csrf?: CSRFOptions;
   vitNodeApiConfig: VitNodeApiConfig;
 }) {
+  // Shared Redis client, created once at boot. Reused by the rate limiter
+  // (which runs before the request context exists), the realtime pub/sub bridge,
+  // and the per-request cache exposed as `c.get("cache")`. Safe no-op when
+  // `redis` is unset.
+  const redisClient = createCacheClient(vitNodeApiConfig.redis);
+
+  // Bridge realtime (WebSocket) messages across instances via Redis pub/sub, so
+  // `broadcast`/`sendToUser` reach clients on every instance. No-op without Redis.
+  initRealtimePubSub(redisClient);
+
   app.doc("/swagger/doc", {
     openapi: "3.0.0",
     info: {
@@ -54,7 +66,10 @@ export function VitNodeAPI({
   });
   app.use(cors(corsOptions));
   app.use(csrf(csrfOptions));
-  app.use("*", rateLimiterMiddleware(vitNodeApiConfig.rateLimiter));
+  app.use(
+    "*",
+    rateLimiterMiddleware(vitNodeApiConfig.rateLimiter, redisClient),
+  );
   app.get("/swagger", swaggerUI({ url: "/api/swagger/doc" }));
   app.use(
     "*",
@@ -65,7 +80,9 @@ export function VitNodeAPI({
       authorization: vitNodeApiConfig.authorization,
       dbProvider: vitNodeApiConfig.dbProvider,
       captcha: vitNodeApiConfig.captcha,
+      cron: vitNodeApiConfig.cron,
       plugins: [newBuildPluginApiCore, ...vitNodeApiConfig.plugins],
+      cacheClient: redisClient,
     }),
   );
   app.use(async (c, next) => {
@@ -76,8 +93,8 @@ export function VitNodeAPI({
     return next();
   });
 
-  if (vitNodeApiConfig.cronAdapter) {
-    vitNodeApiConfig.cronAdapter.schedule();
+  if (vitNodeApiConfig.cron) {
+    vitNodeApiConfig.cron.schedule();
   }
 
   [newBuildPluginApiCore, ...vitNodeApiConfig.plugins].map(root => {

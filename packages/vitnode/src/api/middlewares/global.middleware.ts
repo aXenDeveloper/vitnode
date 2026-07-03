@@ -1,10 +1,12 @@
 import type { Context, Env, Next } from "hono";
+import type { Redis } from "ioredis";
 
 import { HTTPException } from "hono/http-exception";
 
 import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
 import type { VitNodeRealtime } from "@/ws/registry";
 
+import { CacheModel } from "@/api/lib/cache";
 import { EmailModel, type EmailModelSendArgs } from "@/api/models/email";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
@@ -46,6 +48,7 @@ export interface EnvVariablesVitNode {
       roleId: number;
     };
   };
+  cache: CacheModel;
   core: {
     authorization: {
       adminCookieExpires: number;
@@ -61,6 +64,10 @@ export interface EnvVariablesVitNode {
     cron: (BuildCronReturn & { module: string; pluginId: string })[];
     cronSecret?: string;
     email?: VitNodeApiConfig["email"];
+    // Whether a cron adapter is configured (`buildApiConfig({ cron })`), i.e. an
+    // in-process scheduler is running the registered jobs automatically. Without
+    // it, jobs only run when the cron endpoint is triggered externally.
+    hasCronAdapter: boolean;
     metadata: {
       shortTitle?: string;
       title: string;
@@ -100,18 +107,21 @@ export const globalMiddleware = ({
   email,
   dbProvider,
   captcha,
+  cron,
   plugins,
   pathToMessages,
+  cacheClient,
 }: Pick<
   VitNodeApiConfig,
   | "authorization"
   | "captcha"
+  | "cron"
   | "dbProvider"
   | "email"
   | "pathToMessages"
   | "plugins"
 > &
-  Pick<VitNodeConfig, "metadata">) => {
+  Pick<VitNodeConfig, "metadata"> & { cacheClient: null | Redis }) => {
   const pluginsMetadata = plugins.map(plugin => ({
     id: plugin.pluginId,
   }));
@@ -178,6 +188,7 @@ export const globalMiddleware = ({
     // Fallback to localhost if nothing found
     c.set("ipAddress", ipAddress ?? "127.0.0.1");
     c.set("db", dbProvider);
+    c.set("cache", new CacheModel(cacheClient, c));
     c.set("email", new EmailModel(c));
     c.set("realtime", realtime);
 
@@ -200,6 +211,7 @@ export const globalMiddleware = ({
       },
       captcha,
       cronSecret: CONFIG.cronJobSecret,
+      hasCronAdapter: !!cron,
       plugins: pluginsMetadata,
       cron: cronMetadata,
       webSockets: webSocketsMetadata,
