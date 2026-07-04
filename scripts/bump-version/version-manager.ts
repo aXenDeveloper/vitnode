@@ -1,5 +1,5 @@
 import { execSync, spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { EOL } from "node:os";
 import { join } from "node:path";
 import type { EnvironmentConfig } from "./environment.ts";
@@ -102,7 +102,31 @@ export class VersionManager {
   ): Promise<void> {
     console.log(`Bumping version from ${currentVersion} to ${newVersion}`);
     await this.runNpmVersion(newVersion);
+    this.updateConfigVersion(newVersion);
     await this.exposeNewVersion(newVersion);
+  }
+
+  updateConfigVersion(version: string): void {
+    const configPath = join(
+      this.env.WORKSPACE,
+      "packages",
+      "vitnode",
+      "src",
+      "config.ts",
+    );
+    const cleanVersion = version.replace(/^v/, "");
+    const content = readFileSync(configPath, "utf8");
+    const updated = content.replace(
+      /(version:\s*")[^"]*(")/,
+      `$1${cleanVersion}$2`,
+    );
+
+    if (updated === content) {
+      throw new Error(`Failed to update version in ${configPath}`);
+    }
+
+    writeFileSync(configPath, updated);
+    console.log(`Updated config version to ${cleanVersion}`);
   }
 
   runNpmVersion(version: string) {

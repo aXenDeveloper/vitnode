@@ -50,6 +50,13 @@
       "when": 1783191895889,
       "tag": "0006_greedy_apocalypse",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1783194705286,
+      "tag": "0007_huge_madelyne_pryor",
+      "breakpoints": true
     }
   ]
 }
