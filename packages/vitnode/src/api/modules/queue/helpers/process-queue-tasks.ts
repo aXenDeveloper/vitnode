@@ -99,7 +99,7 @@ export const processQueueTasks = async (
             lastError: outcome.lastError,
             availableAt: outcome.availableAt ?? task.availableAt,
             completedAt: outcome.completedAt ?? null,
-            reservedAt: outcome.status === "pending" ? null : task.reservedAt,
+            reservedAt: null,
           })
           .where(eq(core_queue.id, task.id));
       }

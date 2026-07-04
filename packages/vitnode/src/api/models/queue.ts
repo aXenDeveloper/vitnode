@@ -29,10 +29,14 @@ export class QueueModel {
     payload = {},
     queue = "default",
     priority = 0,
-    maxAttempts = 3,
+    maxAttempts,
     availableAt,
   }: QueueDispatchArgs): Promise<{ id: number }> {
     const pluginId = this.c.get("plugin")?.id ?? "@vitnode/core";
+
+    const registeredTask = this.c
+      .get("core")
+      .queue.find(task => task.pluginId === pluginId && task.name === name);
 
     const [row] = await this.c
       .get("db")
@@ -43,7 +47,7 @@ export class QueueModel {
         queue,
         payload,
         priority,
-        maxAttempts,
+        maxAttempts: maxAttempts ?? registeredTask?.maxAttempts ?? 3,
         availableAt: availableAt ?? new Date(),
       })
       .returning({ id: core_queue.id });

@@ -340,7 +340,9 @@ export const cleanupDeletedFiles = (
   if (!existsSync(sourceDir)) return;
   if (!existsSync(destinationDir)) return;
 
-  const isLocaleDir = destinationDir.includes(join("src", "locales"));
+  const isLocaleDir = destinationDir
+    .replace(/\\/g, "/")
+    .includes("src/locales");
   if (isLocaleDir) return;
 
   const destFiles = getAllFiles(destinationDir);

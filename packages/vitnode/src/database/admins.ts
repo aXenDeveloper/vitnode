@@ -21,6 +21,7 @@ export const core_admin_permissions = pgTable(
     updatedAt: t
       .timestamp()
       .notNull()
+      .defaultNow()
       .$onUpdate(() => new Date()),
     protected: t.boolean().notNull().default(false),
     data: t

@@ -25,6 +25,7 @@ export const core_queue = pgTable(
     updatedAt: t
       .timestamp()
       .notNull()
+      .defaultNow()
       .$onUpdate(() => new Date()),
     completedAt: t.timestamp(),
   }),

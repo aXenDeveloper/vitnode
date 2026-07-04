@@ -111,6 +111,7 @@ export const core_users_sso = pgTable(
     updatedAt: t
       .timestamp()
       .notNull()
+      .defaultNow()
       .$onUpdate(() => new Date()),
   }),
   t => [index("core_users_sso_user_id_idx").on(t.userId)],
