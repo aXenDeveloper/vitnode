@@ -18,7 +18,6 @@ export default defineConfig({
       "**/src/tests/**", // Assuming setup files aren't tests
       "**/src/emails/**",
       "**/config/**",
-      "**/scripts/**",
       "**/*.config.*",
       "**/*.d.ts",
     ],

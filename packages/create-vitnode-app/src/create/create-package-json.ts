@@ -122,7 +122,6 @@ const rootDevDeps = (eslint: boolean) => ({
 const apiDeps = {
   "@hono/zod-openapi": versionsPackageJson.honoZodOpenapi,
   "@hono/zod-validator": versionsPackageJson.honoZodValidator,
-  "@react-email/components": versionsPackageJson.reactEmailComponents,
   "@vitnode/core": "", // filled dynamically
   "drizzle-kit": versionsPackageJson.drizzleKit,
   "drizzle-orm": versionsPackageJson.drizzleOrm,
@@ -130,13 +129,14 @@ const apiDeps = {
   "next-intl": versionsPackageJson.nextIntl,
   react: versionsPackageJson.react,
   "react-dom": versionsPackageJson.reactDom,
-  "use-intl": versionsPackageJson.useIntl,
+  "react-email": versionsPackageJson.reactEmail,
   shadcn: versionsPackageJson.shadcnUi,
   zod: versionsPackageJson.zod,
 };
 
 const apiDevDeps = (pm: string, eslint: boolean) => ({
   "@hono/node-server": "^2.0",
+  "@react-email/ui": versionsPackageJson.reactEmailUi,
   ...(pm === "bun" ? { "@types/bun": versionsPackageJson.typesBun } : {}),
   "@types/node": versionsPackageJson.typesNode,
   "@types/react": versionsPackageJson.typesReact,
@@ -147,7 +147,6 @@ const apiDevDeps = (pm: string, eslint: boolean) => ({
     eslint: versionsPackageJson.eslint,
     // Prettier in API only when onlyApi + eslint in original code – we'll preserve by passing include later if needed
   }),
-  "react-email": versionsPackageJson.reactEmail,
   "tsc-alias": versionsPackageJson.tscAlias,
   tsx: versionsPackageJson.tsx,
   typescript: versionsPackageJson.typescript,
@@ -157,7 +156,6 @@ const singleAppDeps = {
   "@hono/zod-openapi": versionsPackageJson.honoZodOpenapi,
   "@hono/zod-validator": versionsPackageJson.honoZodValidator,
   "@hookform/resolvers": versionsPackageJson.rhfResolvers,
-  "@react-email/components": versionsPackageJson.reactEmailComponents,
   "@vitnode/core": "",
   "drizzle-kit": versionsPackageJson.drizzleKit,
   "drizzle-orm": versionsPackageJson.drizzleOrm,
@@ -167,13 +165,14 @@ const singleAppDeps = {
   "next-intl": versionsPackageJson.nextIntl,
   react: versionsPackageJson.react,
   "react-dom": versionsPackageJson.reactDom,
+  "react-email": versionsPackageJson.reactEmail,
   "react-hook-form": versionsPackageJson.rhf,
   sonner: versionsPackageJson.sonner,
-  "use-intl": versionsPackageJson.useIntl,
   zod: versionsPackageJson.zod,
 };
 
 const singleAppDevDeps = (eslint: boolean) => ({
+  "@react-email/ui": versionsPackageJson.reactEmailUi,
   "@tailwindcss/postcss": versionsPackageJson.tailwindPostcss,
   "@types/node": versionsPackageJson.typesNode,
   "@types/react": versionsPackageJson.typesReact,
@@ -185,7 +184,6 @@ const singleAppDevDeps = (eslint: boolean) => ({
     prettier: versionsPackageJson.prettier,
     "prettier-plugin-tailwindcss": versionsPackageJson.prettierTailwind,
   }),
-  "react-email": versionsPackageJson.reactEmail,
   turbo: versionsPackageJson.turbo,
   tailwindcss: versionsPackageJson.tailwind,
   "tw-animate-css": versionsPackageJson.twAnimateCss,

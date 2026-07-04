@@ -332,6 +332,28 @@ export const copyFile = (
   }
 };
 
+export const cleanupDeletedFiles = (
+  sourceDir: string,
+  destinationDir: string,
+  removeFileFn: (p: string) => void,
+) => {
+  if (!existsSync(sourceDir)) return;
+  if (!existsSync(destinationDir)) return;
+
+  const isLocaleDir = destinationDir.includes(join("src", "locales"));
+  if (isLocaleDir) return;
+
+  const destFiles = getAllFiles(destinationDir);
+  for (const destFile of destFiles) {
+    const relativePath = relative(destinationDir, destFile);
+    const sourceFile = join(sourceDir, relativePath);
+
+    if (!existsSync(sourceFile)) {
+      removeFileFn(destFile);
+    }
+  }
+};
+
 export const copyDirectoryRecursive = (
   sourceDir: string,
   destinationDir: string,

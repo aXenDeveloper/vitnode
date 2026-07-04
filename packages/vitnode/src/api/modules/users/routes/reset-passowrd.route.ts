@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { createTranslator } from "use-intl";
+import { createTranslator } from "next-intl";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";

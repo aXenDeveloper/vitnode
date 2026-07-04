@@ -10,7 +10,7 @@ import {
   Tailwind,
   type TailwindConfig,
   Text,
-} from "@react-email/components";
+} from "react-email";
 
 import type { EmailModelSendArgs } from "@/api/models/email";
 

@@ -56,11 +56,10 @@ export const createPluginPackageJSON = async ({
       "react-email": versionsPackageJson.reactEmail,
       "react-hook-form": versionsPackageJson.rhf,
       sonner: versionsPackageJson.sonner,
-      "use-intl": versionsPackageJson.useIntl,
       zod: versionsPackageJson.zod,
     },
     devDependencies: {
-      "@react-email/components": versionsPackageJson.reactEmailComponents,
+      "@react-email/ui": versionsPackageJson.reactEmailUi,
       "@swc/cli": versionsPackageJson.swcCli,
       "@swc/core": versionsPackageJson.swcCore,
       "@types/react": versionsPackageJson.typesReact,

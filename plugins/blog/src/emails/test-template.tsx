@@ -1,7 +1,7 @@
-import { Text } from "@react-email/components";
 import DefaultTemplateEmail, {
   type DefaultTemplateEmailProps,
 } from "@vitnode/core/emails/default-template";
+import { Text } from "react-email";
 
 TestTemplateEmail.PreviewProps =
   DefaultTemplateEmail.PreviewProps satisfies DefaultTemplateEmailProps;

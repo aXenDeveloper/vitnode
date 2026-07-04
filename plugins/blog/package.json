@@ -44,14 +44,13 @@
     "next-intl": "^4.13.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-email": "^6.6.4",
+    "react-email": "^6.6.6",
     "react-hook-form": "^7.80.0",
     "sonner": "^2.0.7",
-    "use-intl": "^4.13.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@react-email/components": "^1.0.12",
+    "@react-email/ui": "^6.6.6",
     "@swc/cli": "^0.8.1",
     "@swc/core": "^1.15.43",
     "@types/react": "^19.2.17",
