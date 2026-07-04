@@ -9,9 +9,11 @@ import { getTranslations } from "next-intl/server";
 
 import { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
 import { Skeleton } from "@/components/ui/skeleton";
+import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
 import { fetcher } from "@/lib/fetcher";
 
 import { IntegrationCard, type IntegrationStatus } from "./integration-card";
+import { SendTestEmailAction } from "./send-test-email/send-test-email";
 
 const DOCS_URLS = {
   captcha: "https://vitnode.com/docs/dev/captcha",
@@ -36,9 +38,13 @@ const toStatus = (active: boolean): IntegrationStatus =>
   active ? "active" : "inactive";
 
 export const IntegrationsView = async () => {
-  const [t, data] = await Promise.all([
-    getTranslations("admin.debug.integrations"),
+  const [t, data, canSendTestEmail] = await Promise.all([
+    getTranslations("admin.system.integrations"),
     getIntegrationsData(),
+    checkAdminPermissionApi({
+      module: "system",
+      permission: "can_send_test_email",
+    }),
   ]);
 
   const statusLabel = (status: IntegrationStatus) => t(`status.${status}`);
@@ -87,6 +93,11 @@ export const IntegrationsView = async () => {
       />
 
       <IntegrationCard
+        action={
+          data.email.active && canSendTestEmail ? (
+            <SendTestEmailAction />
+          ) : undefined
+        }
         description={t("email.desc")}
         href={DOCS_URLS.email}
         Icon={MailIcon}

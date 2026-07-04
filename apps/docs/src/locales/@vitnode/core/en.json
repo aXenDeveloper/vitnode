@@ -12,6 +12,9 @@
   "@vitnode/core:debug": "Debug Panel",
   "@vitnode/core:debug:can_view": "View debug panel",
   "@vitnode/core:debug:can_clear_cache": "Clear cache",
+  "@vitnode/core:system": "System",
+  "@vitnode/core:system:can_view": "View integrations",
+  "@vitnode/core:system:can_send_test_email": "Send test email",
   "@vitnode/core:staff_moderators": "Staff: Moderators",
   "@vitnode/core:staff_moderators:can_view": "View moderators list",
   "@vitnode/core:staff_moderators:can_create": "Create moderators",
@@ -265,6 +268,10 @@
           "debug": "Debug Panel",
           "log_out": "Log Out"
         },
+        "system": {
+          "title": "System",
+          "integrations": "Integrations"
+        },
         "advanced": {
           "title": "Advanced",
           "cron": "Cron Jobs"
@@ -477,9 +484,7 @@
         }
       }
     },
-    "debug": {
-      "title": "Debug Panel",
-      "desc": "Check logs, errors, and other debug information.",
+    "system": {
       "integrations": {
         "title": "Integrations",
         "desc": "Status of the core services that power this instance.",
@@ -500,7 +505,30 @@
         },
         "email": {
           "title": "Email",
-          "desc": "Transactional emails such as sign-up confirmations and password resets."
+          "desc": "Transactional emails such as sign-up confirmations and password resets.",
+          "test": {
+            "label": "Test email",
+            "title": "Send a test email",
+            "desc": "Send an email to any address to confirm your email adapter is working.",
+            "info": {
+              "title": "How to verify your configuration",
+              "desc": "If the message arrives in the inbox, your email adapter is configured correctly. If it doesn't show up, double-check your adapter settings and the system logs."
+            },
+            "to": {
+              "label": "Recipient",
+              "invalid": "Please enter a valid email address."
+            },
+            "subject": {
+              "label": "Subject",
+              "default": "VitNode test email"
+            },
+            "content": {
+              "label": "Content",
+              "default": "This is a test email sent from the VitNode admin panel."
+            },
+            "submit": "Send test email",
+            "success": "Test email sent. Check the recipient's inbox to confirm your configuration."
+          }
         },
         "captcha": {
           "title": "Captcha",
@@ -517,7 +545,11 @@
           "not_configured": "No cron adapter configured — jobs won't run automatically.",
           "jobs": "{count, plural, =0 {No jobs scheduled} one {# job scheduled} other {# jobs scheduled}}"
         }
-      },
+      }
+    },
+    "debug": {
+      "title": "Debug Panel",
+      "desc": "Check logs, errors, and other debug information.",
       "actions": {
         "clear_cache": {
           "label": "Clear Cache",

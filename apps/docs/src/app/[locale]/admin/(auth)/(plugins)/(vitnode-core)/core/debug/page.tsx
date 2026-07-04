@@ -8,10 +8,6 @@ import { DataTableSkeleton } from "@vitnode/core/components/table/data-table";
 import { HeaderContent } from "@vitnode/core/components/ui/header-content";
 import { checkAdminPermissionApi } from "@vitnode/core/lib/api/get-session-admin-api";
 import { ClearCacheAction } from "@vitnode/core/views/admin/views/core/debug/actions/clear-cache/clear-cache";
-import {
-  IntegrationsView,
-  IntegrationsViewSkeleton,
-} from "@vitnode/core/views/admin/views/core/debug/integrations/integrations-view";
 
 const SystemLogsView = dynamic(async () =>
   import("@vitnode/core/views/admin/views/core/debug/system-logs/system-logs-view").then(
@@ -49,14 +45,6 @@ export default async function Page(
         <HeaderContent desc={t("desc")} h1={t("title")}>
           {canClearCache && <ClearCacheAction />}
         </HeaderContent>
-
-        <HeaderContent
-          desc={t("integrations.desc")}
-          h2={t("integrations.title")}
-        />
-        <React.Suspense fallback={<IntegrationsViewSkeleton />}>
-          <IntegrationsView />
-        </React.Suspense>
 
         <HeaderContent className="mt-8" h2={t("logs.title")} />
         <React.Suspense fallback={<DataTableSkeleton columns={4} />}>
