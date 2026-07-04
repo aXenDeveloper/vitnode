@@ -4,11 +4,18 @@ import { buildApiPlugin } from "./lib/plugin";
 import { adminModule } from "./modules/admin/admin.module";
 import { cronModule } from "./modules/cron/cron.module";
 import { middlewareModule } from "./modules/middleware/middleware.module";
+import { queueModule } from "./modules/queue/queue.module";
 import { usersModule } from "./modules/users/users.module";
 
 export const newBuildPluginApiCore = buildApiPlugin({
   pluginId: CONFIG_PLUGIN.pluginId,
-  modules: [middlewareModule, usersModule, adminModule, cronModule],
+  modules: [
+    middlewareModule,
+    usersModule,
+    adminModule,
+    cronModule,
+    queueModule,
+  ],
   permissionStaff: {
     moderator: {
       users: ["can_edit"],
@@ -29,6 +36,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
         "can_view",
         { permission: "can_send_test_email", dependsOn: ["can_view"] },
       ],
+      queue: ["can_view"],
       staff_moderators: [
         "can_view",
         { permission: "can_create", dependsOn: ["can_view"] },

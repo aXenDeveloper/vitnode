@@ -1,6 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 
 import type { BuildCronReturn } from "./cron";
+import type { BuildQueueTaskReturn } from "./queue";
 import type { Route } from "./route";
 import type { BuildWebSocketReturn } from "./websocket";
 
@@ -19,6 +20,7 @@ export interface BaseBuildModuleReturn<
   modules?: BaseBuildModuleReturn<P>[];
   name: M;
   pluginId: P;
+  queueTasks: BuildQueueTaskReturn[];
   routes: Routes;
   webSockets: BuildWebSocketReturn[];
 }
@@ -43,12 +45,14 @@ export function buildModule<
   name,
   modules,
   cronJobs = [],
+  queueTasks = [],
   webSockets = [],
 }: {
   cronJobs?: BuildCronReturn[];
   modules?: Modules;
   name: M;
   pluginId: P;
+  queueTasks?: BuildQueueTaskReturn[];
   routes: Routes;
   webSockets?: BuildWebSocketReturn[];
 }): BuildModuleReturn<P, M, Routes, Modules> {
@@ -66,5 +70,14 @@ export function buildModule<
     });
   }
 
-  return { routes, pluginId, hono, name, modules, cronJobs, webSockets };
+  return {
+    routes,
+    pluginId,
+    hono,
+    name,
+    modules,
+    cronJobs,
+    queueTasks,
+    webSockets,
+  };
 }

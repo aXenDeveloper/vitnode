@@ -7,7 +7,8 @@ import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
 import type { VitNodeRealtime } from "@/ws/registry";
 
 import { CacheModel } from "@/api/lib/cache";
-import { EmailModel, type EmailModelSendArgs } from "@/api/models/email";
+import { EmailModel } from "@/api/models/email";
+import { QueueModel } from "@/api/models/queue";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import { CONFIG } from "@/lib/config";
@@ -15,6 +16,7 @@ import { realtime } from "@/ws/registry";
 
 import type { BuildCronReturn } from "../lib/cron";
 import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
+import type { BuildQueueTaskReturn } from "../lib/queue";
 import type { WebSocketConfig } from "../lib/websocket";
 import type { SSOApiPlugin } from "../models/sso";
 
@@ -75,17 +77,17 @@ export interface EnvVariablesVitNode {
     pathToMessages: (path: string) => Promise<{ default: object }>;
     permissionStaff: PermissionStaffCatalogEntry[];
     plugins: { id: string }[];
+    queue: (BuildQueueTaskReturn & { module: string; pluginId: string })[];
     webSockets: WebSocketConfig[];
   };
   db: Pick<VitNodeApiConfig, "dbProvider">["dbProvider"];
-  email: {
-    send: (args: EmailModelSendArgs) => Promise<void>;
-  };
+  email: EmailModel;
   ipAddress: string;
   log: LoggerMiddlewareType;
   plugin: {
     id: string;
   };
+  queue: QueueModel;
   realtime: VitNodeRealtime;
   user: null | {
     avatarColor: string;
@@ -134,6 +136,17 @@ export const globalMiddleware = ({
       schedule: cronJob.schedule,
       handler: cronJob.handler,
       description: cronJob.description,
+    })),
+  );
+
+  const queueMetadata = plugins.flatMap(plugin =>
+    (plugin.queueTasks ?? []).map(task => ({
+      pluginId: plugin.pluginId,
+      module: task.module,
+      name: task.name,
+      handler: task.handler,
+      description: task.description,
+      maxAttempts: task.maxAttempts,
     })),
   );
 
@@ -190,6 +203,7 @@ export const globalMiddleware = ({
     c.set("db", dbProvider);
     c.set("cache", new CacheModel(cacheClient, c));
     c.set("email", new EmailModel(c));
+    c.set("queue", new QueueModel(c));
     c.set("realtime", realtime);
 
     c.set("core", {
@@ -214,6 +228,7 @@ export const globalMiddleware = ({
       hasCronAdapter: !!cron,
       plugins: pluginsMetadata,
       cron: cronMetadata,
+      queue: queueMetadata,
       webSockets: webSocketsMetadata,
       permissionStaff: permissionStaffMetadata,
     });

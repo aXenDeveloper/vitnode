@@ -1,6 +1,8 @@
+import { inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { CONFIG_PLUGIN } from "@/config";
+import { core_queue } from "@/database/queue";
 import { INSECURE_DEFAULT_CRON_SECRET } from "@/lib/config";
 import { isRealtimePubSubEnabled, isWebSocketEnabled } from "@/ws/registry";
 
@@ -38,6 +40,16 @@ export const integrationsDebugAdminRoute = buildRoute({
               email: z.object({
                 active: z.boolean(),
               }),
+              queue: z.object({
+                // `true` when at least one queue task handler is registered.
+                active: z.boolean(),
+                // Number of pending tasks waiting to be processed.
+                pending: z.number(),
+                // Number of tasks currently being processed.
+                processing: z.number(),
+                // Registered queue task handlers across core + plugins.
+                tasks: z.number(),
+              }),
               redis: z.object({
                 active: z.boolean(),
                 // `true` when Redis is configured but currently unreachable — a
@@ -60,6 +72,20 @@ export const integrationsDebugAdminRoute = buildRoute({
     const captcha = core.captcha;
     const redis = await c.get("cache").status();
 
+    const queueGrouped = await c
+      .get("db")
+      .select({
+        status: core_queue.status,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(core_queue)
+      .where(inArray(core_queue.status, ["pending", "processing"]))
+      .groupBy(core_queue.status);
+    const queuePending =
+      queueGrouped.find(row => row.status === "pending")?.count ?? 0;
+    const queueProcessing =
+      queueGrouped.find(row => row.status === "processing")?.count ?? 0;
+
     return c.json(
       {
         captcha: {
@@ -75,6 +101,12 @@ export const integrationsDebugAdminRoute = buildRoute({
         },
         email: {
           active: !!core.email?.adapter,
+        },
+        queue: {
+          active: core.queue.length > 0,
+          pending: queuePending,
+          processing: queueProcessing,
+          tasks: core.queue.length,
         },
         redis: {
           active: redis.configured && redis.connected,

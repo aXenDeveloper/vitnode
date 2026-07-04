@@ -43,6 +43,13 @@
       "when": 1782638542375,
       "tag": "0005_stale_firebird",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783191895889,
+      "tag": "0006_greedy_apocalypse",
+      "breakpoints": true
     }
   ]
 }

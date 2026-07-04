@@ -17,6 +17,12 @@ const SystemLogsView = dynamic(async () =>
   ),
 );
 
+const QueueView = dynamic(async () =>
+  import("@/views/admin/views/core/debug/queue/queue-view").then(module => ({
+    default: module.QueueView,
+  })),
+);
+
 export const generateMetadata = async () => {
   const t = await getTranslations("admin.debug");
 
@@ -40,11 +46,16 @@ export default async function Page(
   }
 
   return (
-    <I18nProvider namespaces="admin.debug">
+    <I18nProvider namespaces={["admin.debug", "admin.advanced.queue"]}>
       <div className="p-4">
         <HeaderContent desc={t("desc")} h1={t("title")}>
           {canClearCache && <ClearCacheAction />}
         </HeaderContent>
+
+        <HeaderContent className="mt-8" h2={t("queue.title")} />
+        <React.Suspense fallback={<DataTableSkeleton columns={5} />}>
+          <QueueView />
+        </React.Suspense>
 
         <HeaderContent className="mt-8" h2={t("logs.title")} />
         <React.Suspense fallback={<DataTableSkeleton columns={4} />}>

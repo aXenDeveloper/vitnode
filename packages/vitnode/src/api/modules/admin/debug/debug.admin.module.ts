@@ -2,6 +2,7 @@ import { CONFIG_PLUGIN } from "../../../../config";
 import { buildModule } from "../../../lib/module";
 import { integrationsDebugAdminRoute } from "./routes/integrations.route";
 import { logsDebugAdminRoute } from "./routes/logs.route";
+import { queueDebugAdminRoute } from "./routes/queue.route";
 import { sendTestEmailDebugAdminRoute } from "./routes/send-test-email.route";
 
 export const debugAdminModule = buildModule({
@@ -10,6 +11,7 @@ export const debugAdminModule = buildModule({
   routes: [
     logsDebugAdminRoute,
     integrationsDebugAdminRoute,
+    queueDebugAdminRoute,
     sendTestEmailDebugAdminRoute,
   ],
 });

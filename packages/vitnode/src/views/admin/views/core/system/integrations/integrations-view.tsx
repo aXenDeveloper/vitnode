@@ -1,6 +1,7 @@
 import {
   ClockIcon,
   DatabaseIcon,
+  ListTodoIcon,
   MailIcon,
   RadioTowerIcon,
   ShieldCheckIcon,
@@ -19,6 +20,7 @@ const DOCS_URLS = {
   captcha: "https://vitnode.com/docs/dev/captcha",
   cron: "https://vitnode.com/docs/dev/cron",
   email: "https://vitnode.com/docs/dev/email",
+  queue: "https://vitnode.com/docs/dev/advanced/queue",
   redis: "https://vitnode.com/docs/dev/advanced/redis",
   websocket: "https://vitnode.com/docs/dev/websocket",
 };
@@ -129,6 +131,25 @@ export const IntegrationsView = async () => {
       />
 
       <IntegrationCard
+        description={t("queue.desc")}
+        href={DOCS_URLS.queue}
+        Icon={ListTodoIcon}
+        meta={
+          <span>
+            {t("queue.tasks", { count: data.queue.tasks })} ·{" "}
+            {t("queue.queued", {
+              pending: data.queue.pending,
+              processing: data.queue.processing,
+            })}
+          </span>
+        }
+        readMoreLabel={t("read_more")}
+        status={toStatus(data.queue.active)}
+        statusLabel={statusLabel(toStatus(data.queue.active))}
+        title={t("queue.title")}
+      />
+
+      <IntegrationCard
         description={t("captcha.desc")}
         href={DOCS_URLS.captcha}
         Icon={ShieldCheckIcon}
@@ -148,7 +169,7 @@ export const IntegrationsView = async () => {
 
 export const IntegrationsViewSkeleton = () => (
   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-    {["websocket", "redis", "email", "cron", "captcha"].map(id => (
+    {["websocket", "redis", "email", "cron", "queue", "captcha"].map(id => (
       <Skeleton className="h-32 w-full rounded-xl" key={id} />
     ))}
   </div>

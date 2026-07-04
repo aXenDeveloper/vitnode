@@ -188,6 +188,15 @@ export const getAdminNav = async ({
             title: t("admin.global.nav.advanced.cron"),
             href: "/admin/core/advanced/cron",
           },
+          {
+            title: t("admin.global.nav.advanced.queue"),
+            href: "/admin/core/advanced/queue",
+            permission: {
+              plugin: CONFIG_PLUGIN.pluginId,
+              module: "queue",
+              permission: "can_view",
+            },
+          },
         ],
       },
     ],

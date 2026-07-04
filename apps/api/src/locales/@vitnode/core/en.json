@@ -15,6 +15,8 @@
   "@vitnode/core:system": "System",
   "@vitnode/core:system:can_view": "View integrations",
   "@vitnode/core:system:can_send_test_email": "Send test email",
+  "@vitnode/core:queue": "Queue Tasks",
+  "@vitnode/core:queue:can_view": "View queue tasks",
   "@vitnode/core:staff_moderators": "Staff: Moderators",
   "@vitnode/core:staff_moderators:can_view": "View moderators list",
   "@vitnode/core:staff_moderators:can_create": "Create moderators",
@@ -274,7 +276,8 @@
         },
         "advanced": {
           "title": "Advanced",
-          "cron": "Cron Jobs"
+          "cron": "Cron Jobs",
+          "queue": "Queue Tasks"
         }
       }
     },
@@ -301,6 +304,26 @@
               "success": "Cron job executed successfully."
             }
           }
+        }
+      },
+      "queue": {
+        "title": "Queue Tasks",
+        "desc": "Monitor background tasks queued for processing by the cron worker.",
+        "list": {
+          "name": "Task",
+          "queue": "Queue",
+          "status": "Status",
+          "attempts": "Attempts",
+          "availableAt": "Available At",
+          "createdAt": "Created At",
+          "lastError": "Last Error",
+          "statusFilter": "Status"
+        },
+        "status": {
+          "pending": "Pending",
+          "processing": "Processing",
+          "completed": "Completed",
+          "failed": "Failed"
         }
       }
     },
@@ -544,12 +567,35 @@
           "insecure": "Using the default CRON_SECRET — set a secure one in production.",
           "not_configured": "No cron adapter configured — jobs won't run automatically.",
           "jobs": "{count, plural, =0 {No jobs scheduled} one {# job scheduled} other {# jobs scheduled}}"
+        },
+        "queue": {
+          "title": "Queue Tasks",
+          "desc": "Background jobs enqueued in the database and drained by the cron worker.",
+          "tasks": "{count, plural, =0 {No tasks registered} one {# task registered} other {# tasks registered}}",
+          "queued": "{pending} pending · {processing} running"
         }
       }
     },
     "debug": {
       "title": "Debug Panel",
       "desc": "Check logs, errors, and other debug information.",
+      "queue": {
+        "title": "Queue Tasks",
+        "empty": "No active queue tasks.",
+        "counts": {
+          "pending": "Pending",
+          "processing": "Processing",
+          "completed": "Completed",
+          "failed": "Failed"
+        },
+        "list": {
+          "name": "Task",
+          "queue": "Queue",
+          "status": "Status",
+          "attempts": "Attempts",
+          "availableAt": "Available At"
+        }
+      },
       "actions": {
         "clear_cache": {
           "label": "Clear Cache",
