@@ -1,8 +1,8 @@
 import type { Context, ContextVariableMap } from "hono";
 import type React from "react";
 
-import { render } from "@react-email/components";
 import { HTTPException } from "hono/http-exception";
+import { render } from "react-email";
 
 import type { DefaultTemplateEmailProps } from "../../emails/default-template";
 

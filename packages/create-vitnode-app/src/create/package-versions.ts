@@ -20,7 +20,6 @@ export const versionsPackageJson = {
   reactDom: "^19.2",
   nextSingle: "16.3.0-preview.5",
   nextIntl: "^4.13",
-  useIntl: "^4.13",
   rhf: "^7.80",
   rhfResolvers: "^5.1.1",
   lucide: "^1.21",
@@ -34,7 +33,7 @@ export const versionsPackageJson = {
   honoZodOpenapi: "^1.3",
   honoZodValidator: "^0.8",
   reactEmail: "^6.6",
-  reactEmailComponents: "^1.0",
+  reactEmailUi: "^6.6",
   zod: "^4.4",
 
   cva: "^0.7.1",

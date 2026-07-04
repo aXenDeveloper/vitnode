@@ -11,10 +11,10 @@ import { basename, join, relative } from "node:path";
 
 import {
   buildInitialRouteMap,
+  cleanupDeletedFiles,
   copyFile,
   findLocaleRoot,
   findRepoRoot,
-  getAllFiles,
   isDirectoryEmpty,
   routeKey,
   type SourceConfig,
@@ -256,30 +256,6 @@ const createFileOps = (
   };
 
   return { copyFileWrapper, removeFile };
-};
-
-/**
- * Remove files in destination that no longer exist in source (skip locales)
- */
-const cleanupDeletedFiles = (
-  sourceDir: string,
-  destinationDir: string,
-  removeFileFn: (p: string) => void,
-) => {
-  if (!existsSync(destinationDir)) return;
-
-  const isLocaleDir = destinationDir.includes(join("src", "locales"));
-  if (isLocaleDir) return;
-
-  const destFiles = getAllFiles(destinationDir);
-  for (const destFile of destFiles) {
-    const relativePath = relative(destinationDir, destFile);
-    const sourceFile = join(sourceDir, relativePath);
-
-    if (!existsSync(sourceFile)) {
-      removeFileFn(destFile);
-    }
-  }
 };
 
 /**
