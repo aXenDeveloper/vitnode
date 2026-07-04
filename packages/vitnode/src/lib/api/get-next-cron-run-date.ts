@@ -1,4 +1,4 @@
-import cronParser from "cron-parser";
+import { CronExpressionParser } from "cron-parser";
 
 export const getNextCronRunDate = (
   schedule: string,
@@ -9,7 +9,7 @@ export const getNextCronRunDate = (
       currentDate: lastRun ?? new Date(0),
     };
 
-    const interval = cronParser.parse(schedule, options);
+    const interval = CronExpressionParser.parse(schedule, options);
 
     return interval.next().toDate();
   } catch (err) {

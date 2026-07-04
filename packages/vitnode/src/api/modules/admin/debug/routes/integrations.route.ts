@@ -8,7 +8,7 @@ import { buildRoute } from "../../../../lib/route";
 
 export const integrationsDebugAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
-  adminStaffPermission: { module: "debug", permission: "can_view" },
+  adminStaffPermission: { module: "system", permission: "can_view" },
   route: {
     method: "get",
     description:

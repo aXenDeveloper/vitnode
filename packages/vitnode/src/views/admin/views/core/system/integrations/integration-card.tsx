@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 export type IntegrationStatus = "active" | "inactive" | "warning";
 
 export interface IntegrationCardProps {
+  action?: React.ReactNode;
   description: string;
   href: string;
   Icon: LucideIcon;
@@ -27,6 +28,7 @@ export interface IntegrationCardProps {
 }
 
 export const IntegrationCard = ({
+  action,
   description,
   href,
   Icon,
@@ -91,7 +93,13 @@ export const IntegrationCard = ({
           <div className="text-muted-foreground mt-3 text-xs">{meta}</div>
         ) : null}
       </CardContent>
-      <CardFooter className="mt-auto justify-end">
+      <CardFooter
+        className={cn(
+          "mt-auto items-center gap-2",
+          action ? "justify-between" : "justify-end",
+        )}
+      >
+        {action}
         <a
           className={cn(
             buttonVariants({ size: "sm", variant: "link" }),

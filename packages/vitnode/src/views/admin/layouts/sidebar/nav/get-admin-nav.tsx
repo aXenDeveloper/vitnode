@@ -1,5 +1,6 @@
 import {
   LayoutDashboardIcon,
+  ServerIcon,
   ShieldUserIcon,
   UsersRoundIcon,
   WrenchIcon,
@@ -157,6 +158,22 @@ export const getAdminNav = async ({
             permission: {
               plugin: CONFIG_PLUGIN.pluginId,
               module: "staff_admins",
+              permission: "can_view",
+            },
+          },
+        ],
+      },
+      {
+        href: "/admin/core/system",
+        title: t("admin.global.nav.system.title"),
+        icon: <ServerIcon />,
+        items: [
+          {
+            title: t("admin.global.nav.system.integrations"),
+            href: "/admin/core/system/integrations",
+            permission: {
+              plugin: CONFIG_PLUGIN.pluginId,
+              module: "system",
               permission: "can_view",
             },
           },
