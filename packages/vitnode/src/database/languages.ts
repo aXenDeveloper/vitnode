@@ -15,6 +15,7 @@ export const core_languages = pgTable(
     updatedAt: t
       .timestamp()
       .notNull()
+      .defaultNow()
       .$onUpdate(() => new Date()),
     time24: t.boolean().notNull().default(false),
   }),

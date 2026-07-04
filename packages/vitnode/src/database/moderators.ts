@@ -20,6 +20,7 @@ export const core_moderators_permissions = pgTable(
     updatedAt: t
       .timestamp()
       .notNull()
+      .defaultNow()
       .$onUpdate(() => new Date()),
     protected: t.boolean().notNull().default(false),
     data: t

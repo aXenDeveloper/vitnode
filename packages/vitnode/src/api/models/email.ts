@@ -50,6 +50,14 @@ export type EmailModelSendArgs = {
   // eslint-disable-next-line perfectionist/sort-intersection-types
 } & (EmailModelSendArgsWithEmail | EmailModelSendArgsWithUser);
 
+export interface BuiltEmail {
+  html: string;
+  replyTo?: string;
+  subject: string;
+  text: string;
+  to: string;
+}
+
 export class EmailModel {
   constructor(c: Context) {
     this.c = c;
@@ -57,7 +65,18 @@ export class EmailModel {
 
   protected readonly c: Context;
 
-  async send({
+  private requireProvider() {
+    const provider = this.c.get("core").email?.adapter;
+    if (!provider) {
+      throw new HTTPException(500, {
+        message: "Email provider not found",
+      });
+    }
+
+    return provider;
+  }
+
+  async build({
     html,
     replyTo,
     subject,
@@ -65,19 +84,12 @@ export class EmailModel {
     user,
     content,
     locale: localeFromArgs,
-  }: EmailModelSendArgs) {
+  }: EmailModelSendArgs): Promise<BuiltEmail> {
     const core = this.c.get("core");
-    const provider = core.email?.adapter;
-    if (!provider) {
-      throw new HTTPException(500, {
-        message: "Email provider not found",
-      });
-    }
-
     const locale = localeFromArgs ?? user?.language ?? "en";
     const pluginIds: string[] = [
       "@vitnode/core",
-      ...this.c.get("core").plugins.map(plugin => plugin.id),
+      ...core.plugins.map(plugin => plugin.id),
     ];
 
     const messagesPromises = pluginIds.map(async pluginId => {
@@ -124,27 +136,44 @@ export class EmailModel {
       });
     }
 
-    try {
-      await provider.sendEmail({
-        html: await render(htmlContent),
-        to: emailTo,
-        subject:
-          typeof subject === "function"
-            ? subject({ i18n: { locale, messages } })
-            : subject,
-        replyTo,
-        metadata: core.metadata,
-        text: await render(htmlContent, {
-          plainText: true,
-        }),
-      });
-    } catch (err) {
-      const error =
-        err instanceof Error
-          ? err
-          : new Error("Unknown error from email provider");
+    return {
+      to: emailTo,
+      subject:
+        typeof subject === "function"
+          ? subject({ i18n: { locale, messages } })
+          : subject,
+      html: await render(htmlContent),
+      text: await render(htmlContent, { plainText: true }),
+      replyTo,
+    };
+  }
 
-      await this.c.get("log").error(`Failed to send email: ${error.message}`);
-    }
+  async deliver(email: BuiltEmail): Promise<void> {
+    const provider = this.requireProvider();
+
+    await provider.sendEmail({
+      html: email.html,
+      to: email.to,
+      subject: email.subject,
+      replyTo: email.replyTo,
+      metadata: this.c.get("core").metadata,
+      text: email.text,
+    });
+  }
+
+  async send(args: EmailModelSendArgs): Promise<void> {
+    this.requireProvider();
+    const email = await this.build(args);
+
+    await this.c.get("queue").dispatch({
+      name: "send-email",
+      payload: {
+        to: email.to,
+        subject: email.subject,
+        html: email.html,
+        text: email.text,
+        ...(email.replyTo ? { replyTo: email.replyTo } : {}),
+      },
+    });
   }
 }

@@ -90,6 +90,32 @@ export class CacheModel {
     }
   }
 
+  /**
+   * Acquire a short-lived distributed lock (`SET key val NX EX ttl`) in the
+   * system namespace. Returns `true` when the lock is held by this caller.
+   * **Without Redis it returns `true`** so cache-less / single-instance
+   * deployments still make progress — callers must guard correctness some other
+   * way (e.g. Postgres `FOR UPDATE SKIP LOCKED`). Returns `false` on a Redis
+   * error so a flaky connection skips rather than double-runs work.
+   */
+  async acquireLock(key: string, ttlSeconds: number): Promise<boolean> {
+    if (!this.client) return true;
+
+    try {
+      const result = await this.client.set(
+        this.systemKey(`lock:${key}`),
+        "1",
+        "EX",
+        ttlSeconds,
+        "NX",
+      );
+
+      return result === "OK";
+    } catch {
+      return false;
+    }
+  }
+
   /** Remove one or more keys. No-op without Redis. */
   async delete(key: string | string[]): Promise<void> {
     const keys = (Array.isArray(key) ? key : [key]).map(k => this.key(k));
@@ -146,6 +172,11 @@ export class CacheModel {
     } catch {
       return false;
     }
+  }
+
+  /** Release a lock taken with {@link acquireLock}. No-op without Redis. */
+  async releaseLock(key: string): Promise<void> {
+    await this.removeKeys([this.systemKey(`lock:${key}`)]);
   }
 
   async remember<T>(

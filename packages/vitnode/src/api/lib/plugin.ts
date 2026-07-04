@@ -3,6 +3,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { CronJobConfig } from "./cron";
 import type { BuildModuleReturn } from "./module";
 import type { PermissionStaffConfig } from "./permission-staff";
+import type { QueueTaskConfig } from "./queue";
 import type { WebSocketConfig } from "./websocket";
 
 import { checkPluginId } from "./check-plugin-id";
@@ -12,6 +13,7 @@ export interface BuildPluginApiReturn {
   hono: OpenAPIHono;
   permissionStaff?: PermissionStaffConfig;
   pluginId: string;
+  queueTasks?: Omit<QueueTaskConfig, "pluginId">[];
   webSockets?: Omit<WebSocketConfig, "pluginId">[];
 }
 
@@ -29,12 +31,17 @@ export function buildApiPlugin<P extends string>({
 
   const hono = new OpenAPIHono();
   const cronJobs: BuildPluginApiReturn["cronJobs"] = [];
+  const queueTasks: BuildPluginApiReturn["queueTasks"] = [];
   const webSockets: BuildPluginApiReturn["webSockets"] = [];
   modules.forEach(handler => {
     hono.route(`/${handler.name}`, handler.hono);
 
     handler.cronJobs?.forEach(cron => {
       cronJobs.push({ ...cron, module: handler.name });
+    });
+
+    handler.queueTasks?.forEach(task => {
+      queueTasks.push({ ...task, module: handler.name });
     });
 
     handler.webSockets?.forEach(webSocket => {
@@ -46,6 +53,7 @@ export function buildApiPlugin<P extends string>({
     pluginId,
     hono,
     cronJobs,
+    queueTasks,
     webSockets,
     permissionStaff,
   };
