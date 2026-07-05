@@ -15,6 +15,7 @@
   "@vitnode/core:system": "System",
   "@vitnode/core:system:can_view": "View integrations",
   "@vitnode/core:system:can_send_test_email": "Send test email",
+  "@vitnode/core:system:can_test_storage": "Test storage",
   "@vitnode/core:queue": "Queue Tasks",
   "@vitnode/core:queue:can_view": "View queue tasks",
   "@vitnode/core:staff_moderators": "Staff: Moderators",
@@ -553,6 +554,27 @@
             "success": "Test email sent. Check the recipient's inbox to confirm your configuration."
           }
         },
+        "storage": {
+          "title": "Storage",
+          "desc": "File uploads such as avatars and attachments, stored via your storage adapter.",
+          "test": {
+            "label": "Test storage",
+            "title": "Test file storage",
+            "desc": "Upload a file and run a round-trip check to confirm your storage adapter is working.",
+            "info": {
+              "title": "How to verify your configuration",
+              "desc": "Upload a test image. If it succeeds, your storage adapter is configured correctly. If it fails, double-check your adapter settings and the system logs."
+            },
+            "upload": {
+              "label": "Upload a test image",
+              "desc": "Click to choose an image",
+              "pending": "Uploading…",
+              "done": "Uploaded",
+              "error": "Upload failed — try again",
+              "success": "Image uploaded — it's stored in your adapter."
+            }
+          }
+        },
         "captcha": {
           "title": "Captcha",
           "desc": "Bot protection on public forms like sign-up and password reset.",
@@ -566,13 +588,15 @@
           "desc": "Scheduled background tasks such as clearing expired sessions and tokens.",
           "insecure": "Using the default CRON_SECRET — set a secure one in production.",
           "not_configured": "No cron adapter configured — jobs won't run automatically.",
+          "stale": "No job has run in over 6 hours — cron may be misconfigured or stopped. Check your cron setup.",
           "jobs": "{count, plural, =0 {No jobs scheduled} one {# job scheduled} other {# jobs scheduled}}"
         },
         "queue": {
           "title": "Queue Tasks",
           "desc": "Background jobs enqueued in the database and drained by the cron worker.",
           "tasks": "{count, plural, =0 {No tasks registered} one {# task registered} other {# tasks registered}}",
-          "queued": "{pending} pending · {processing} running"
+          "queued": "{pending} pending · {processing} running",
+          "cron_stale": "Offline — the cron worker that drains the queue isn't running. Fix cron jobs to resume processing."
         }
       }
     },

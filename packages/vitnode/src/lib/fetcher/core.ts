@@ -38,6 +38,12 @@ interface CoreFetcherOptions<
     SelectedPath,
     Method
   >["args"];
+  /**
+   * Raw `multipart/form-data` body for file uploads. When set, the JSON
+   * `Content-Type` is omitted so the browser can add the multipart boundary,
+   * and this is sent as the request body instead of `JSON.stringify(args.body)`.
+   */
+  formData?: FormData;
   method: Method;
   module: ModuleName;
   options?: Omit<RequestInit, "body" | "headers">;
@@ -70,6 +76,7 @@ export async function coreFetcher<
     additionalHeaders = {},
     withPagination = false,
     prefixPath = "",
+    formData,
   }: CoreFetcherOptions<M, Routes, Modules, ModuleName, SelectedPath, Method>,
 ): Promise<
   InferResponseType<M, Routes, Modules, ModuleName, SelectedPath, Method>
@@ -109,16 +116,19 @@ export async function coreFetcher<
     url.search = searchParams.toString();
   }
 
-  // Build headers
+  // Build headers. For multipart uploads let the browser set the Content-Type
+  // (with its boundary) — forcing application/json would corrupt the body.
   const headers = new Headers({
-    "Content-Type": "application/json",
+    ...(formData ? {} : { "Content-Type": "application/json" }),
     ...additionalHeaders,
   });
 
   const response = await fetch(url, {
     method: method.toUpperCase(),
     headers,
-    body: args && "body" in args ? JSON.stringify(args.body) : undefined,
+    body:
+      formData ??
+      (args && "body" in args ? JSON.stringify(args.body) : undefined),
     ...options,
   });
 

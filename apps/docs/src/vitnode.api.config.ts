@@ -3,6 +3,7 @@ import { DiscordSSOApiPlugin } from "@vitnode/core/api/adapters/sso/discord";
 // import { ResendEmailAdapter } from "@vitnode/resend";
 import { FacebookSSOApiPlugin } from "@vitnode/core/api/adapters/sso/facebook";
 import { GoogleSSOApiPlugin } from "@vitnode/core/api/adapters/sso/google";
+import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
 import { NodeCronAdapter } from "@vitnode/node-cron";
 import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
@@ -49,6 +50,16 @@ export const vitNodeApiConfig = buildApiConfig({
     logo: {
       text: "VitNode Email Test",
       src: "http://localhost:3000/logo_vitnode_dark.png",
+    },
+  },
+  storage: {
+    // Next.js serves `public/` at the site root, so files land in
+    // `public/uploads` and are reachable at `/uploads/<key>`. Local disk is not
+    // durable on serverless — switch to a cloud adapter when deploying there.
+    adapter: LocalStorageAdapter({ publicPath: "/uploads" }),
+    // Re-encode uploaded images with sharp to shrink them before storing.
+    image: {
+      quality: 85,
     },
   },
   authorization: {

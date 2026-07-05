@@ -11,6 +11,7 @@ import { EmailModel } from "@/api/models/email";
 import { QueueModel } from "@/api/models/queue";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
+import { StorageModel } from "@/api/models/storage";
 import { CONFIG } from "@/lib/config";
 import { realtime } from "@/ws/registry";
 
@@ -78,6 +79,7 @@ export interface EnvVariablesVitNode {
     permissionStaff: PermissionStaffCatalogEntry[];
     plugins: { id: string }[];
     queue: (BuildQueueTaskReturn & { module: string; pluginId: string })[];
+    storage?: VitNodeApiConfig["storage"];
     webSockets: WebSocketConfig[];
   };
   db: Pick<VitNodeApiConfig, "dbProvider">["dbProvider"];
@@ -89,6 +91,7 @@ export interface EnvVariablesVitNode {
   };
   queue: QueueModel;
   realtime: VitNodeRealtime;
+  storage: StorageModel;
   user: null | {
     avatarColor: string;
     birthday: Date | null;
@@ -112,6 +115,7 @@ export const globalMiddleware = ({
   cron,
   plugins,
   pathToMessages,
+  storage,
   cacheClient,
 }: Pick<
   VitNodeApiConfig,
@@ -122,6 +126,7 @@ export const globalMiddleware = ({
   | "email"
   | "pathToMessages"
   | "plugins"
+  | "storage"
 > &
   Pick<VitNodeConfig, "metadata"> & { cacheClient: null | Redis }) => {
   const pluginsMetadata = plugins.map(plugin => ({
@@ -204,12 +209,14 @@ export const globalMiddleware = ({
     c.set("cache", new CacheModel(cacheClient, c));
     c.set("email", new EmailModel(c));
     c.set("queue", new QueueModel(c));
+    c.set("storage", new StorageModel(c));
     c.set("realtime", realtime);
 
     c.set("core", {
       pathToMessages,
       metadata,
       email,
+      storage,
       authorization: {
         cookieName: authorization?.cookieName ?? "vitnode_auth",
         cookie_expires:

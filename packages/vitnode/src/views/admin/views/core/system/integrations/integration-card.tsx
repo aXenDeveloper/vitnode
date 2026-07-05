@@ -44,58 +44,67 @@ export const IntegrationCard = ({
   return (
     <Card
       className={cn(
-        "gap-4 transition-colors",
+        "gap-0 p-0 transition-colors",
         // An inactive integration is a problem worth noticing — give the whole
         // card a destructive tint so it reads as "danger" at a glance.
-        status === "inactive" && "ring-destructive/30 bg-destructive/[0.03]",
-        isWarning && "bg-amber-500/[0.04] ring-amber-500/40",
+        status === "inactive" && "ring-destructive/30",
+        isWarning && "ring-amber-500/40",
       )}
       data-status={status}
     >
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <div
-            className={cn(
-              "flex size-9 shrink-0 items-center justify-center rounded-lg",
-              isActive && "bg-primary/10 text-primary",
-              isWarning && "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-              status === "inactive" && "bg-destructive/10 text-destructive",
-            )}
-          >
-            <Icon className="size-5" />
-          </div>
-          <CardTitle className="flex-1">{title}</CardTitle>
-        </div>
-        <CardAction>
-          <Badge
-            className={cn(
-              isActive &&
-                "bg-green-500/10 text-green-700 dark:bg-green-500/15 dark:text-green-400",
-              isWarning &&
-                "bg-amber-500/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
-            )}
-            variant={status === "inactive" ? "destructive" : "secondary"}
-          >
-            <span
-              aria-hidden
+      <div
+        className={cn(
+          "bg-card flex flex-1 flex-col gap-4 p-6",
+          status === "inactive" && "bg-destructive/3",
+          isWarning && "bg-amber-500/4",
+        )}
+      >
+        <CardHeader className="p-0">
+          <div className="flex items-center gap-3">
+            <div
               className={cn(
-                "size-1.5 rounded-full bg-current",
-                isActive && "animate-pulse",
+                "flex size-9 shrink-0 items-center justify-center rounded-lg",
+                isActive && "bg-primary/10 text-primary",
+                isWarning &&
+                  "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+                status === "inactive" && "bg-destructive/10 text-destructive",
               )}
-            />
-            {statusLabel}
-          </Badge>
-        </CardAction>
-      </CardHeader>
-      <CardContent>
-        <CardDescription>{description}</CardDescription>
-        {meta ? (
-          <div className="text-muted-foreground mt-3 text-xs">{meta}</div>
-        ) : null}
-      </CardContent>
+            >
+              <Icon className="size-5" />
+            </div>
+            <CardTitle className="flex-1">{title}</CardTitle>
+          </div>
+          <CardAction>
+            <Badge
+              className={cn(
+                isActive &&
+                  "bg-green-500/10 text-green-700 dark:bg-green-500/15 dark:text-green-400",
+                isWarning &&
+                  "bg-amber-500/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
+              )}
+              variant={status === "inactive" ? "destructive" : "secondary"}
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  "size-1.5 rounded-full bg-current",
+                  isActive && "animate-pulse",
+                )}
+              />
+              {statusLabel}
+            </Badge>
+          </CardAction>
+        </CardHeader>
+        <CardContent className="p-0">
+          <CardDescription>{description}</CardDescription>
+          {meta ? (
+            <div className="text-muted-foreground mt-3 text-xs">{meta}</div>
+          ) : null}
+        </CardContent>
+      </div>
       <CardFooter
         className={cn(
-          "mt-auto items-center gap-2",
+          "bg-muted items-center gap-2 px-6 py-4",
           action ? "justify-between" : "justify-end",
         )}
       >

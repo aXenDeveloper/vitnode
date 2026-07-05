@@ -1,0 +1,212 @@
+---
+title: Storage
+description: Upload and serve files with pluggable storage adapters.
+---
+
+VitNode gives you a pluggable **storage adapter**, exposed on every request as
+`c.get("storage")`. Files are always stored under `month_{month}_{year}/{folder}/…`
+and every upload returns a public URL.
+
+VitNode does **not** ship a generic upload endpoint — you build your own route
+(in your app or plugin) so you control auth, validation, and where files go. The
+`c.get("storage").upload()` helper does the heavy lifting: it builds the dated
+key, validates the file, and returns the URL.
+
+Storage is **optional**. Without an adapter configured, `c.get("storage")` throws
+and the AdminCP → System → Integrations "Storage" card shows as inactive.
+
+## Adapters
+
+<Cards>
+  <Card title="Local (disk)" href="/docs/dev/storage/local" />
+  <Card title="AWS S3 / Cloudflare R2" href="/docs/dev/storage/s3-r2" />
+  <Card title="Supabase Storage" href="/docs/dev/storage/supabase" />
+</Cards>
+
+or create your own [custom storage adapter](/docs/dev/storage/custom-adapter).
+
+## Image optimization
+
+Enable the `image` option to re-encode uploaded images with
+[`sharp`](https://sharp.pixelplumbing.com/) before they're stored — a simple way
+to cut file size. `quality` defaults to `85` (1–100):
+
+```ts title="vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  storage: {
+    adapter: LocalStorageAdapter(),
+    // [!code ++:3]
+    image: {
+      quality: 85,
+    },
+  },
+});
+```
+
+It runs automatically inside `c.get("storage").upload()`, so every upload route
+benefits. Applies to JPEG, PNG, WebP, AVIF and TIFF; the format is preserved.
+Other files — including SVG and GIF — are stored untouched. Leave `image` out to
+store originals as-is.
+
+## Create your own upload endpoint
+
+Define a route that accepts `multipart/form-data`, then call
+`c.get("storage").upload()`. Pass `maxBytes` / `allowedMimeTypes` to validate the
+file — a violation throws a `400` automatically.
+
+<Steps>
+<Step>
+### Define the route
+
+```ts title="upload-avatar.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
+
+export const uploadAvatarRoute = buildRoute({
+  pluginId: "@my-plugin/core",
+  route: {
+    method: "post",
+    path: "/upload-avatar",
+    request: {
+      body: {
+        required: true,
+        content: {
+          "multipart/form-data": {
+            schema: z.object({
+              file: z
+                .instanceof(File)
+                .openapi({ format: "binary", type: "string" }),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: z.object({ key: z.string(), url: z.string() }),
+          },
+        },
+        description: "File uploaded",
+      },
+    },
+  },
+  handler: async c => {
+    // Guard however you like — here we require a signed-in user.
+    const user = c.get("user");
+    if (!user) throw new HTTPException(401, { message: "Unauthorized" });
+
+    const { file } = c.req.valid("form");
+
+    // [!code ++:6]
+    const { url, key } = await c.get("storage").upload({
+      file,
+      folder: "avatars", // -> month_7_2026/avatars/<uuid>.png
+      maxBytes: 5 * 1024 * 1024, // 5 MB
+      allowedMimeTypes: ["image/png", "image/jpeg", "image/webp"],
+    });
+
+    return c.json({ key, url });
+  },
+});
+```
+
+Register it in a module with `buildModule` and add that module to your plugin —
+see [Plugins](/docs/dev/plugins). You can also `c.get("storage").delete(key)` and
+`c.get("storage").getUrl(key)`.
+
+</Step>
+<Step>
+### Call it from the client
+
+Uploads run through TanStack Query, **not** Next.js server actions (which can't
+stream large bodies). Build a `FormData` and pass it to `fetcherClient` as
+`formData` — it drops the JSON `Content-Type` so the browser sets the multipart
+boundary. Reference your route with `clientModule` and a **type-only** import of
+its module, so the call stays fully typed without bundling any server code:
+
+```tsx title="use-upload-avatar.ts"
+"use client";
+
+import { useMutation } from "@tanstack/react-query";
+import { clientModule, fetcherClient } from "@vitnode/core/lib/fetcher-client";
+import type { myPluginModule } from "@/api/my-plugin.module";
+
+export const useUploadAvatar = () =>
+  useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetcherClient(
+        clientModule<typeof myPluginModule>("@my-plugin/core"),
+        {
+          module: "my-plugin",
+          path: "/upload-avatar",
+          method: "post",
+          formData,
+          options: { credentials: "include" },
+        },
+      );
+      if (!res.ok) throw new Error(await res.text());
+
+      return await res.json(); // { key, url }
+    },
+  });
+```
+
+</Step>
+</Steps>
+
+<Callout type="info" title="Authentication & CORS">
+  Uploads are cross-origin when the API runs on a different origin than the
+  site. Pass a `cors` option with `origin: WEB_URL` + `credentials: true` (and a
+  matching `csrf` option) to `VitNodeAPI`, and send `credentials: "include"`
+  from the client, so the session cookie reaches your route.
+</Callout>
+
+## Uploading multiple files in one endpoint
+
+Read the raw form and loop `upload()` over every file. `formData.getAll("files")`
+returns each entry for the repeated `files` field:
+
+```ts title="upload-gallery.route.ts"
+handler: async c => {
+  const form = await c.req.formData();
+  const files = form.getAll("files").filter((f): f is File => f instanceof File);
+
+  if (files.length === 0) {
+    throw new HTTPException(400, { message: "No files provided" });
+  }
+
+  // [!code ++:9]
+  const uploaded = await Promise.all(
+    files.map(file =>
+      c.get("storage").upload({
+        file,
+        folder: "gallery",
+        maxBytes: 5 * 1024 * 1024,
+        allowedMimeTypes: ["image/png", "image/jpeg", "image/webp"],
+      }),
+    ),
+  );
+
+  return c.json({ files: uploaded }); // [{ key, url }, …]
+},
+```
+
+On the client, append each file under the same key:
+
+```ts
+const formData = new FormData();
+for (const file of fileList) formData.append("files", file);
+```
+
+<Callout type="info" title="Validate before storing">
+  `maxBytes` and `allowedMimeTypes` on `upload()` throw a `400` before anything
+  is written, so a rejected file in a batch never leaves a partial upload behind
+  for that file. Wrap the `Promise.all` in a transaction/cleanup if you need
+  all-or-nothing semantics across the whole batch.
+</Callout>

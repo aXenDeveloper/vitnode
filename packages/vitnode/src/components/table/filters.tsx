@@ -92,8 +92,6 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
         params.delete(filter.id);
       }
 
-      // The result set changes, so drop the pagination cursor to land on the
-      // first page instead of a now-invalid one.
       params.delete("cursor");
       params.delete("first");
       params.delete("last");
@@ -126,7 +124,6 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
           <Button
             className="border-dashed"
             disabled={isPending}
-            size="sm"
             variant="outline"
           />
         }
