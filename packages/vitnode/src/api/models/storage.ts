@@ -1,9 +1,14 @@
 import type { Context } from "hono";
 
+import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { core_files } from "@/database/files";
-import { buildStorageKey, generateStorageFileName } from "@/lib/api/upload";
+import {
+  buildStorageKey,
+  generateStorageFileName,
+  replaceFileExtension,
+} from "@/lib/api/upload";
 
 const DEFAULT_IMAGE_QUALITY = 85;
 
@@ -64,6 +69,14 @@ export interface StorageUploadOptions {
   userId?: null | number;
 }
 
+interface ProcessedImage {
+  body: Buffer;
+  dimensions: null | { height: number; width: number };
+  // New extension (incl. leading dot) when the format changed, else null.
+  extension: null | string;
+  mimeType: string;
+}
+
 export class StorageModel {
   constructor(c: Context) {
     this.c = c;
@@ -71,25 +84,53 @@ export class StorageModel {
 
   protected readonly c: Context;
 
-  // Re-encodes images with sharp at the configured quality when
-  // `storage.image` is set. Keeps the same format, so the key/contentType stay
-  // valid. sharp is imported lazily so it is only loaded when actually used.
-  private async optimizeImage(body: Buffer, mimeType: string): Promise<Buffer> {
-    const image = this.c.get("core").storage?.image;
+  // Re-encodes images with sharp when `storage.image` is set: shrinks them at
+  // the configured quality, converts to WebP unless disabled, and reads their
+  // pixel dimensions. Non-image files (and everything when `image` is off) pass
+  // through untouched. sharp is imported lazily so it only loads when used.
+  private async processImage(
+    body: Buffer,
+    mimeType: string,
+  ): Promise<ProcessedImage> {
+    const image = this.c.get("core")?.storage?.image;
     if (!image || !PROCESSABLE_IMAGE_MIME_TYPES.has(mimeType)) {
-      return body;
+      return { body, mimeType, extension: null, dimensions: null };
     }
 
     const quality = image.quality ?? DEFAULT_IMAGE_QUALITY;
+    const toWebp = image.webp !== false;
+
+    let sharp;
+    try {
+      const { default: s } = await import("sharp");
+      sharp = s;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (err) {
+      throw new HTTPException(500, {
+        message: "Image optimization library (sharp) failed to load",
+      });
+    }
 
     try {
-      const { default: sharp } = await import("sharp");
-      const format = (await sharp(body).metadata()).format;
-      if (!format) {
-        return body;
+      const metadata = await sharp(body).metadata();
+      if (!metadata.format) {
+        return { body, mimeType, extension: null, dimensions: null };
       }
 
-      return await sharp(body).toFormat(format, { quality }).toBuffer();
+      const targetFormat = toWebp ? "webp" : metadata.format;
+      const output = await sharp(body)
+        .toFormat(targetFormat, { quality })
+        .toBuffer();
+
+      return {
+        body: output,
+        mimeType: toWebp ? "image/webp" : mimeType,
+        extension: toWebp ? ".webp" : null,
+        dimensions:
+          metadata.width && metadata.height
+            ? { width: metadata.width, height: metadata.height }
+            : null,
+      };
     } catch {
       throw new HTTPException(400, {
         message: "Invalid or corrupt image file",
@@ -110,6 +151,38 @@ export class StorageModel {
 
   async delete(key: string): Promise<void> {
     await this.requireProvider().delete(key);
+  }
+
+  /**
+   * Removes a stored file by its `core_files` id: deletes the underlying object
+   * from the storage provider (best-effort — a missing object doesn't block the
+   * record removal), then deletes the database row. Throws a 404 when no file
+   * with that id exists. Pass `ownerId` to scope the delete to that user's files
+   * (so a user can only remove their own uploads).
+   */
+  async deleteFile(id: number, ownerId?: number): Promise<void> {
+    const db = this.c.get("db");
+    const where =
+      ownerId === undefined
+        ? eq(core_files.id, id)
+        : and(eq(core_files.id, id), eq(core_files.userId, ownerId));
+
+    const [row] = await db
+      .select({ key: core_files.key })
+      .from(core_files)
+      .where(where)
+      .limit(1);
+
+    if (!row) {
+      throw new HTTPException(404, { message: "File not found" });
+    }
+
+    const provider = this.c.get("core").storage?.adapter;
+    if (provider) {
+      await provider.delete(row.key).catch(() => undefined);
+    }
+
+    await db.delete(core_files).where(where);
   }
 
   getUrl(key: string): string {
@@ -137,19 +210,28 @@ export class StorageModel {
       });
     }
 
-    const key = buildStorageKey({
-      folder,
-      fileName: generateStorageFileName(file.name),
-    });
-    const body = await this.optimizeImage(
+    const processed = await this.processImage(
       Buffer.from(await file.arrayBuffer()),
       file.type,
     );
 
+    // When a conversion changed the format, reflect the new extension in both
+    // the stored key and the display name so downloads and previews are honest.
+    const displayName = processed.extension
+      ? replaceFileExtension(file.name, processed.extension)
+      : file.name;
+    const key = buildStorageKey({
+      folder,
+      fileName: generateStorageFileName(
+        file.name,
+        processed.extension ?? undefined,
+      ),
+    });
+
     const result = await provider.upload({
       key,
-      body,
-      contentType: file.type || undefined,
+      body: processed.body,
+      contentType: processed.mimeType || undefined,
     });
 
     const ownerId =
@@ -162,14 +244,19 @@ export class StorageModel {
         .get("db")
         .insert(core_files)
         .values({
-          name: file.name,
+          name: displayName,
           key: result.key,
           folder,
-          mimeType: file.type || null,
-          size: body.length,
+          mimeType: processed.mimeType || null,
+          size: processed.body.length,
           userId: ownerId,
           pluginId: this.c.get("plugin")?.id ?? null,
-          metadata: metadata ?? {},
+          metadata: {
+            ...(metadata ?? {}),
+            ...(processed.dimensions
+              ? { dimensions: processed.dimensions }
+              : {}),
+          },
         });
     } catch (error) {
       await provider.delete(result.key).catch(() => undefined);

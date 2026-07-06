@@ -26,7 +26,10 @@ if (staticStorage) {
     staticStorage.mountPath,
     serveStatic({
       root: staticStorage.root,
-      rewriteRequestPath: path => path.replace(staticStorage.stripPrefix, ""),
+      rewriteRequestPath: path =>
+        path.startsWith(staticStorage.stripPrefix)
+          ? path.slice(staticStorage.stripPrefix.length)
+          : path,
     }),
   );
 }

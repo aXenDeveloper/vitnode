@@ -15,7 +15,6 @@ export const UserFormat = ({
     role: {
       color: null | string;
       id: number;
-      name: string;
     };
   };
 }) => {

@@ -32,8 +32,12 @@ export const LocalStorageAdapter = ({
   // trace to `public/uploads` instead of the whole project.
   const resolvePath = (key: string): string =>
     join(process.cwd(), "public", "uploads", key);
-  const getUrl = (key: string): string =>
-    `${baseUrl ?? CONFIG.api.origin}${publicPath}/${key}`;
+  const getUrl = (key: string): string => {
+    const base = (baseUrl ?? CONFIG.api.origin).replace(/\/$/, "");
+    const path = publicPath.replace(/^\/|\/$/g, "");
+
+    return `${base}/${path}/${key}`;
+  };
   // Route registered on the API app, which already carries the `/api` basePath.
   const mountPath = `${publicPath.replace(/^\/api/, "")}/*`;
 

@@ -5,6 +5,8 @@ import {
   buildStorageKey,
   generateStorageFileName,
   getFileExtension,
+  parseImageDimensions,
+  replaceFileExtension,
   sanitizeFolder,
 } from "./upload";
 
@@ -57,6 +59,25 @@ describe("generateStorageFileName", () => {
       generateStorageFileName("a.png"),
     );
   });
+
+  it("overrides the extension when one is given", () => {
+    expect(generateStorageFileName("photo.png", ".webp")).toMatch(
+      /^[0-9a-f-]{36}\.webp$/,
+    );
+  });
+});
+
+describe("replaceFileExtension", () => {
+  it("swaps an existing extension", () => {
+    expect(replaceFileExtension("photo.png", ".webp")).toBe("photo.webp");
+    expect(replaceFileExtension("archive.tar.gz", ".webp")).toBe(
+      "archive.tar.webp",
+    );
+  });
+
+  it("adds the extension when the name has none", () => {
+    expect(replaceFileExtension("photo", ".webp")).toBe("photo.webp");
+  });
 });
 
 describe("buildStorageKey", () => {
@@ -74,5 +95,22 @@ describe("buildStorageKey", () => {
     expect(() =>
       buildStorageKey({ folder: "../secrets", fileName: "x.png" }),
     ).toThrow();
+  });
+});
+
+describe("parseImageDimensions", () => {
+  it("reads numeric width and height", () => {
+    expect(
+      parseImageDimensions({ dimensions: { width: 320, height: 180 } }),
+    ).toEqual({ width: 320, height: 180 });
+  });
+
+  it("returns null when dimensions are missing or malformed", () => {
+    expect(parseImageDimensions({})).toBeNull();
+    expect(parseImageDimensions({ dimensions: null })).toBeNull();
+    expect(
+      parseImageDimensions({ dimensions: { width: "320", height: 180 } }),
+    ).toBeNull();
+    expect(parseImageDimensions({ dimensions: { width: 320 } })).toBeNull();
   });
 });

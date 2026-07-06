@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  FileIcon,
   KeyRoundIcon,
   LogOutIcon,
   Settings,
@@ -33,6 +34,11 @@ export const ClientAuthUserHeader = ({
         <DropdownMenuItem render={<Link href={`/users/${user.nameCode}`} />}>
           <UserIcon />
           <span>{t("my_profile")}</span>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem render={<Link href="/files" />}>
+          <FileIcon />
+          <span>{t("files")}</span>
         </DropdownMenuItem>
 
         <DropdownMenuItem render={<Link href="/settings" />}>

@@ -44,9 +44,25 @@ export const vitNodeApiConfig = buildApiConfig({
 ```
 
 It runs automatically inside `c.get("storage").upload()`, so every upload route
-benefits. Applies to JPEG, PNG, WebP, AVIF and TIFF; the format is preserved.
-Other files — including SVG and GIF — are stored untouched. Leave `image` out to
-store originals as-is.
+benefits. Applies to JPEG, PNG, WebP, AVIF and TIFF. Other files — including SVG
+and GIF — are stored untouched. Leave `image` out to store originals as-is.
+
+Processed images are also **converted to WebP** by default — usually much
+smaller than JPEG or PNG at the same quality — and their pixel dimensions are
+recorded in `core_files.metadata.dimensions` (shown in the admin **Files**
+panel). Set `webp: false` to keep each image in its original format:
+
+```ts title="vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  storage: {
+    adapter: LocalStorageAdapter(),
+    image: {
+      quality: 85,
+      webp: false, // [!code ++] keep the original format
+    },
+  },
+});
+```
 
 ## Create your own upload endpoint
 
