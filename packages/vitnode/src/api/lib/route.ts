@@ -3,11 +3,10 @@ import type { MiddlewareHandler } from "hono";
 
 import { createRoute as createRouteHono } from "@hono/zod-openapi";
 
+import type { EnvVitNode } from "../middlewares/global.middleware";
+
 import { captchaMiddleware } from "../middlewares/captcha.middleware";
-import {
-  type EnvVitNode,
-  pluginMiddleware,
-} from "../middlewares/global.middleware";
+import { pluginMiddleware } from "../middlewares/plugin.middleware";
 import { assertStaffPermission } from "./check-staff-permission";
 
 export interface AdminStaffPermission {

@@ -249,15 +249,6 @@ export const globalMiddleware = ({
   };
 };
 
-export const pluginMiddleware = (pluginId: string) => {
-  return async (c: Context, next: Next) => {
-    c.set("plugin", {
-      id: pluginId,
-    });
-    await next();
-  };
-};
-
 export const globalAdminMiddleware = () => {
   return async (c: Context, next: Next) => {
     const user = await new SessionAdminModel(c).getUser();

@@ -10,7 +10,8 @@ import type {
 import { CONFIG } from "@/lib/config";
 
 /**
- * Zero-config storage backend that writes uploads to the local disk.
+ * Zero-config storage backend that writes uploads to the local disk under
+ * `public/uploads`.
  *
  * - On the standalone Node API (`@hono/node-server`) files are served by Hono's
  *   `serveStatic`, wired from the `static` descriptor below. The API is mounted
@@ -23,14 +24,14 @@ import { CONFIG } from "@/lib/config";
 export const LocalStorageAdapter = ({
   baseUrl,
   publicPath = "/api/uploads",
-  uploadsDir = "public/uploads",
 }: {
   baseUrl?: string;
   publicPath?: string;
-  uploadsDir?: string;
 } = {}): StorageApiPlugin => {
+  // Static path segments (not a variable) so Next's file tracer can scope the
+  // trace to `public/uploads` instead of the whole project.
   const resolvePath = (key: string): string =>
-    join(process.cwd(), uploadsDir, key);
+    join(process.cwd(), "public", "uploads", key);
   const getUrl = (key: string): string =>
     `${baseUrl ?? CONFIG.api.origin}${publicPath}/${key}`;
   // Route registered on the API app, which already carries the `/api` basePath.
@@ -43,7 +44,7 @@ export const LocalStorageAdapter = ({
     getUrl,
     static: {
       mountPath,
-      root: `./${uploadsDir}`,
+      root: "./public/uploads",
       stripPrefix: publicPath,
     },
     upload: async ({
