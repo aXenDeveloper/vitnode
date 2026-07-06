@@ -35,6 +35,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
       system: [
         "can_view",
         { permission: "can_send_test_email", dependsOn: ["can_view"] },
+        { permission: "can_test_storage", dependsOn: ["can_view"] },
       ],
       queue: ["can_view"],
       staff_moderators: [

@@ -19,6 +19,7 @@
     "---Adapters---",
     "captcha",
     "email",
+    "storage",
     "sso",
     "cron",
     "websocket",

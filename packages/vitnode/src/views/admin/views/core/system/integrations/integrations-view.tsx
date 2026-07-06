@@ -1,6 +1,7 @@
 import {
   ClockIcon,
   DatabaseIcon,
+  HardDriveIcon,
   ListTodoIcon,
   MailIcon,
   RadioTowerIcon,
@@ -15,6 +16,7 @@ import { fetcher } from "@/lib/fetcher";
 
 import { IntegrationCard, type IntegrationStatus } from "./integration-card";
 import { SendTestEmailAction } from "./send-test-email/send-test-email";
+import { TestStorageAction } from "./test-storage/test-storage";
 
 const DOCS_URLS = {
   captcha: "https://vitnode.com/docs/dev/captcha",
@@ -22,6 +24,7 @@ const DOCS_URLS = {
   email: "https://vitnode.com/docs/dev/email",
   queue: "https://vitnode.com/docs/dev/advanced/queue",
   redis: "https://vitnode.com/docs/dev/advanced/redis",
+  storage: "https://vitnode.com/docs/dev/storage",
   websocket: "https://vitnode.com/docs/dev/websocket",
 };
 
@@ -40,12 +43,16 @@ const toStatus = (active: boolean): IntegrationStatus =>
   active ? "active" : "inactive";
 
 export const IntegrationsView = async () => {
-  const [t, data, canSendTestEmail] = await Promise.all([
+  const [t, data, canSendTestEmail, canTestStorage] = await Promise.all([
     getTranslations("admin.system.integrations"),
     getIntegrationsData(),
     checkAdminPermissionApi({
       module: "system",
       permission: "can_send_test_email",
+    }),
+    checkAdminPermissionApi({
+      module: "system",
+      permission: "can_test_storage",
     }),
   ]);
 
@@ -58,12 +65,13 @@ export const IntegrationsView = async () => {
       : "inactive";
 
   // "Active" means a cron adapter is configured (an in-process scheduler runs
-  // the jobs); a configured-but-insecure secret is a warning, not a failure.
+  // the jobs). A stale scheduler (no job ran in 6h) or an insecure secret are
+  // warnings, not hard failures.
   const cronStatus: IntegrationStatus = !data.cron.active
     ? "inactive"
-    : data.cron.secure
-      ? "active"
-      : "warning";
+    : data.cron.stale || !data.cron.secure
+      ? "warning"
+      : "active";
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -110,12 +118,31 @@ export const IntegrationsView = async () => {
       />
 
       <IntegrationCard
+        action={
+          data.storage.active && canTestStorage ? (
+            <TestStorageAction />
+          ) : undefined
+        }
+        description={t("storage.desc")}
+        href={DOCS_URLS.storage}
+        Icon={HardDriveIcon}
+        readMoreLabel={t("read_more")}
+        status={toStatus(data.storage.active)}
+        statusLabel={statusLabel(toStatus(data.storage.active))}
+        title={t("storage.title")}
+      />
+
+      <IntegrationCard
         description={t("cron.desc")}
         href={DOCS_URLS.cron}
         Icon={ClockIcon}
         meta={
           !data.cron.active ? (
             <span>{t("cron.not_configured")}</span>
+          ) : data.cron.stale ? (
+            <span className="text-amber-600 dark:text-amber-400">
+              {t("cron.stale")}
+            </span>
           ) : !data.cron.secure ? (
             <span className="text-amber-600 dark:text-amber-400">
               {t("cron.insecure")}
@@ -135,13 +162,20 @@ export const IntegrationsView = async () => {
         href={DOCS_URLS.queue}
         Icon={ListTodoIcon}
         meta={
-          <span>
-            {t("queue.tasks", { count: data.queue.tasks })} ·{" "}
-            {t("queue.queued", {
-              pending: data.queue.pending,
-              processing: data.queue.processing,
-            })}
-          </span>
+          <>
+            <span>
+              {t("queue.tasks", { count: data.queue.tasks })} ·{" "}
+              {t("queue.queued", {
+                pending: data.queue.pending,
+                processing: data.queue.processing,
+              })}
+            </span>
+            {data.queue.cronStale ? (
+              <span className="text-destructive mt-1 block">
+                {t("queue.cron_stale")}
+              </span>
+            ) : null}
+          </>
         }
         readMoreLabel={t("read_more")}
         status={toStatus(data.queue.active)}
@@ -169,8 +203,10 @@ export const IntegrationsView = async () => {
 
 export const IntegrationsViewSkeleton = () => (
   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-    {["websocket", "redis", "email", "cron", "queue", "captcha"].map(id => (
-      <Skeleton className="h-32 w-full rounded-xl" key={id} />
-    ))}
+    {["websocket", "redis", "email", "storage", "cron", "queue", "captcha"].map(
+      id => (
+        <Skeleton className="h-32 w-full rounded-xl" key={id} />
+      ),
+    )}
   </div>
 );

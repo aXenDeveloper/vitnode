@@ -57,6 +57,13 @@
       "when": 1783194705286,
       "tag": "0007_huge_madelyne_pryor",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1783283845218,
+      "tag": "0008_silky_forgotten_one",
+      "breakpoints": true
     }
   ]
 }

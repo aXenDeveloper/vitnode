@@ -36,3 +36,6 @@ yarn-error.log*
 .vercel
 next-env.d.ts
 .env*.local
+
+# Local storage adapter uploads
+/public/uploads

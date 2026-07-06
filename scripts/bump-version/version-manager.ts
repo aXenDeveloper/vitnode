@@ -1,5 +1,5 @@
 import { execSync, spawn } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { EOL } from "node:os";
 import { join } from "node:path";
 import type { EnvironmentConfig } from "./environment.ts";
@@ -12,13 +12,7 @@ interface Config {
 }
 
 const CONFIG: Config = {
-  ALLOWED_VERSION_TYPES: [
-    "canary",
-    "release-candidate",
-    "major",
-    "minor",
-    "patch",
-  ],
+  ALLOWED_VERSION_TYPES: ["major", "minor", "patch"],
   TAG_PREFIX: "v",
   TAG_SUFFIX: "",
   COMMIT_MESSAGE: "ci: version bump to {{version}}",
@@ -64,6 +58,7 @@ export class VersionManager {
     const versionType = this.getVersionType(currentVersion);
     const npmOutput = execSync(
       `npm version --git-tag-version=false --commit-hooks=false --workspaces --workspaces-update=false ${versionType}`,
+      { cwd: this.env.WORKSPACE },
     ).toString();
     return `${CONFIG.TAG_PREFIX}${this.parseNpmVersionOutput(npmOutput)}${CONFIG.TAG_SUFFIX}`;
   }
@@ -103,7 +98,7 @@ export class VersionManager {
     console.log(`Bumping version from ${currentVersion} to ${newVersion}`);
     await this.runNpmVersion(newVersion);
     this.updateConfigVersion(newVersion);
-    await this.exposeNewVersion(newVersion);
+    this.exposeNewVersion(newVersion);
   }
 
   updateConfigVersion(version: string): void {
@@ -141,11 +136,14 @@ export class VersionManager {
     ]);
   }
 
-  exposeNewVersion(version: string) {
-    return this.runInWorkspace("sh", [
-      "-c",
-      `echo "newTag=${version}" >> $GITHUB_OUTPUT`,
-    ]);
+  exposeNewVersion(version: string): void {
+    const outputPath = process.env.GITHUB_OUTPUT;
+    if (!outputPath) {
+      console.warn("GITHUB_OUTPUT is not set; skipping newTag output");
+      return;
+    }
+    appendFileSync(outputPath, `newTag=${version}${EOL}`);
+    console.log(`Exposed newTag=${version}`);
   }
 
   async commitAndPush(version: string): Promise<void> {
@@ -172,9 +170,11 @@ export class VersionManager {
   }
 
   async createCommit(version: string): Promise<void> {
+    // Stage everything, including files newly copied into the template
+    // (`git commit -a` would only pick up modifications to already-tracked files).
+    await this.runInWorkspace("git", ["add", "-A"]);
     await this.runInWorkspace("git", [
       "commit",
-      "-a",
       "-m",
       CONFIG.COMMIT_MESSAGE.replace(/{{version}}/g, version),
     ]);

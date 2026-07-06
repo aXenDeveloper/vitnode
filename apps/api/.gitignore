@@ -27,3 +27,6 @@ yarn-error.log*
 
 # Others
 .vercel
+
+# Local storage adapter uploads
+/public/uploads

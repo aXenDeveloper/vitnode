@@ -8,6 +8,7 @@ import type { CronAdapter } from "./api/lib/cron";
 import type { BuildPluginApiReturn } from "./api/lib/plugin";
 import type { EmailApiPlugin } from "./api/models/email";
 import type { SSOApiPlugin } from "./api/models/sso";
+import type { StorageApiPlugin } from "./api/models/storage";
 import type { ThemeProviderProps } from "./components/theme-provider";
 import type { DefaultTemplateEmailProps } from "./emails/default-template";
 import type { BuildPluginReturn } from "./lib/plugin";
@@ -73,6 +74,23 @@ export interface VitNodeApiConfig {
    * back to in-memory storage.
    */
   redis?: RedisOptions & { url?: string };
+  /**
+   * Object storage backend used for file uploads, reached in route handlers via
+   * `c.get("storage").upload(...)`. Ships a zero-config Local (disk) adapter;
+   * cloud adapters are available as `@vitnode/s3` (AWS S3 + Cloudflare R2) and
+   * `@vitnode/supabase-storage`. Leave undefined to disable uploads.
+   */
+  storage?: {
+    adapter?: StorageApiPlugin;
+    /**
+     * Re-encode uploaded images with `sharp` before storing them, to shrink file
+     * size. Set to enable; `quality` defaults to 85 (1–100). Applies to JPEG,
+     * PNG, WebP, AVIF and TIFF — other files (incl. SVG/GIF) are stored as-is.
+     */
+    image?: {
+      quality?: number;
+    };
+  };
 }
 
 let registeredVitNodeConfig: undefined | VitNodeConfig;
