@@ -60,9 +60,9 @@ export const AutoFormRadioGroup = ({
 
       <FormControl>
         <RadioGroup
-          defaultValue={field.value}
           disabled={props.disabled}
           onValueChange={field.onChange}
+          value={field.value ?? null}
           {...props}
         >
           {values.map(({ value, label, description, disabled }) =>

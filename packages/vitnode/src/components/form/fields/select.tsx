@@ -52,8 +52,8 @@ export const AutoFormSelect = ({
 
       <FormControl>
         <Select
-          defaultValue={field.value}
           items={values}
+          value={field.value ?? null}
           {...props}
           onValueChange={(value, eventDetails) => {
             field.onChange(value);

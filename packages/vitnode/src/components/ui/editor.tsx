@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import { EditorContent, useEditor } from "@tiptap/react";
 
 import { tiptapExtensions } from "@/components/tiptap/extension";
@@ -12,9 +14,12 @@ export const Editor = ({
   className,
   disableScroll,
   value = "",
-}: {
-  className?: string;
+  onChange,
+  onBlur,
+  ...props
+}: Omit<React.ComponentProps<"div">, "onChange"> & {
   disableScroll?: boolean;
+  onChange?: (value: string) => void;
   value?: string;
 }) => {
   const editor = useEditor({
@@ -26,16 +31,22 @@ export const Editor = ({
     },
     content: value,
     immediatelyRender: false,
+    onUpdate: ({ editor: currentEditor }) => {
+      onChange?.(currentEditor.getHTML());
+    },
   });
 
   if (!editor) return <Loader />;
 
   return (
     <div
-      className={cn("bg-card relative w-full rounded-md border shadow-xs", {
-        "max-h-80 overflow-hidden overflow-y-scroll": !disableScroll,
+      className={cn(
+        "bg-card relative w-full rounded-md border shadow-xs",
+        { "max-h-80 overflow-hidden overflow-y-scroll": !disableScroll },
         className,
-      })}
+      )}
+      onBlur={onBlur}
+      {...props}
     >
       <TipTapToolbar editor={editor} />
       <EditorContent
