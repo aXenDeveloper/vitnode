@@ -70,8 +70,11 @@ export const buildStorageKey = ({
 };
 
 export const parseImageDimensions = (
-  metadata: Record<string, unknown>,
+  metadata: null | Record<string, unknown> | undefined,
 ): null | { height: number; width: number } => {
+  if (!metadata) {
+    return null;
+  }
   const dimensions = metadata.dimensions;
   if (dimensions && typeof dimensions === "object") {
     const { height, width } = dimensions as {
