@@ -1,6 +1,6 @@
-import type { BaseBuildModuleReturn } from "@/api/lib/module";
-
 import { describe, expect, it } from "vitest";
+
+import type { BaseBuildModuleReturn } from "@/api/lib/module";
 
 import { clientModule } from "./fetcher-client";
 

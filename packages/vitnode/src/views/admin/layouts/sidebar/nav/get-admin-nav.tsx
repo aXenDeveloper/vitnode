@@ -177,6 +177,15 @@ export const getAdminNav = async ({
               permission: "can_view",
             },
           },
+          {
+            title: t("admin.global.nav.system.files"),
+            href: "/admin/core/system/files",
+            permission: {
+              plugin: CONFIG_PLUGIN.pluginId,
+              module: "files",
+              permission: "can_view",
+            },
+          },
         ],
       },
       {

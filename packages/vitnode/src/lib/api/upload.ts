@@ -36,10 +36,25 @@ export const getFileExtension = (fileName: string): string => {
 
 /**
  * Collision-free stored file name: a random UUID keeps the original extension
- * but discards the user-provided name, so no lookups or races are needed.
+ * but discards the user-provided name, so no lookups or races are needed. Pass
+ * `extension` (including the leading dot) to override the extension, e.g. when
+ * an image has been converted to a different format.
  */
-export const generateStorageFileName = (originalName: string): string => {
-  return `${randomUUID()}${getFileExtension(originalName)}`;
+export const generateStorageFileName = (
+  originalName: string,
+  extension?: string,
+): string => {
+  return `${randomUUID()}${extension ?? getFileExtension(originalName)}`;
+};
+
+export const replaceFileExtension = (
+  fileName: string,
+  extension: string,
+): string => {
+  const current = getFileExtension(fileName);
+  const base = current ? fileName.slice(0, -current.length) : fileName;
+
+  return `${base}${extension}`;
 };
 
 export const buildStorageKey = ({
@@ -52,4 +67,24 @@ export const buildStorageKey = ({
   now?: Date;
 }): string => {
   return `${buildMonthFolder(now)}/${sanitizeFolder(folder)}/${fileName}`;
+};
+
+export const parseImageDimensions = (
+  metadata: null | Record<string, unknown> | undefined,
+): null | { height: number; width: number } => {
+  if (!metadata) {
+    return null;
+  }
+  const dimensions = metadata.dimensions;
+  if (dimensions && typeof dimensions === "object") {
+    const { height, width } = dimensions as {
+      height?: unknown;
+      width?: unknown;
+    };
+    if (typeof width === "number" && typeof height === "number") {
+      return { width, height };
+    }
+  }
+
+  return null;
 };

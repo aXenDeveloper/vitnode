@@ -40,6 +40,48 @@ const makeCtx = (
   };
 };
 
+const makeDeleteCtx = (
+  row: undefined | { key: string },
+  overrides: { storage?: unknown } = {},
+): {
+  ctx: Context;
+  del: ReturnType<typeof vi.fn>;
+  deleteWhere: ReturnType<typeof vi.fn>;
+} => {
+  const del = vi.fn().mockResolvedValue(undefined);
+  const deleteWhere = vi.fn().mockResolvedValue(undefined);
+  const store: Record<string, unknown> = {
+    core: {
+      storage:
+        "storage" in overrides
+          ? overrides.storage
+          : {
+              adapter: {
+                delete: del,
+                getUrl: (k: string) => k,
+                upload: vi.fn(),
+              },
+            },
+    },
+    db: {
+      select: vi.fn(() => ({
+        from: vi.fn(() => ({
+          where: vi.fn(() => ({
+            limit: vi.fn().mockResolvedValue(row ? [row] : []),
+          })),
+        })),
+      })),
+      delete: vi.fn(() => ({ where: deleteWhere })),
+    },
+  };
+
+  return {
+    ctx: { get: (k: string) => store[k] } as unknown as Context,
+    del,
+    deleteWhere,
+  };
+};
+
 describe("StorageModel.upload", () => {
   it("uploads under month_x_y/{folder} with a generated file name", async () => {
     const { ctx, insertValues, upload } = makeCtx();
@@ -155,5 +197,76 @@ describe("StorageModel.delete", () => {
     await new StorageModel(ctx).delete("month_7_2026/avatars/x.png");
 
     expect(del).toHaveBeenCalledWith("month_7_2026/avatars/x.png");
+  });
+});
+
+describe("StorageModel.deleteFile", () => {
+  it("deletes the storage object then the database row", async () => {
+    const key = "month_7_2026/avatars/x.png";
+    const { ctx, del, deleteWhere } = makeDeleteCtx({ key });
+
+    await new StorageModel(ctx).deleteFile(1);
+
+    expect(del).toHaveBeenCalledWith(key);
+    expect(deleteWhere).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws 404 when the file does not exist", async () => {
+    const { ctx, del, deleteWhere } = makeDeleteCtx(undefined);
+
+    await expect(new StorageModel(ctx).deleteFile(999)).rejects.toThrow();
+    expect(del).not.toHaveBeenCalled();
+    expect(deleteWhere).not.toHaveBeenCalled();
+  });
+
+  it("still removes the row when no storage adapter is configured", async () => {
+    const { ctx, del, deleteWhere } = makeDeleteCtx(
+      { key: "a/b.png" },
+      { storage: undefined },
+    );
+
+    await new StorageModel(ctx).deleteFile(1);
+
+    expect(del).not.toHaveBeenCalled();
+    expect(deleteWhere).toHaveBeenCalledTimes(1);
+  });
+
+  it("deletes when scoped to the owning user", async () => {
+    const { ctx, del, deleteWhere } = makeDeleteCtx({ key: "a/b.png" });
+
+    await new StorageModel(ctx).deleteFile(1, 7);
+
+    expect(del).toHaveBeenCalledWith("a/b.png");
+    expect(deleteWhere).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws 404 when the file is not owned by the user", async () => {
+    // The scoped lookup returns nothing, mirroring a row owned by someone else.
+    const { ctx, del, deleteWhere } = makeDeleteCtx(undefined);
+
+    await expect(new StorageModel(ctx).deleteFile(1, 7)).rejects.toThrow();
+    expect(del).not.toHaveBeenCalled();
+    expect(deleteWhere).not.toHaveBeenCalled();
+  });
+
+  it("removes the row even when the storage delete fails", async () => {
+    const failing = vi.fn().mockRejectedValue(new Error("gone"));
+    const { ctx, deleteWhere } = makeDeleteCtx(
+      { key: "a/b.png" },
+      {
+        storage: {
+          adapter: {
+            delete: failing,
+            getUrl: (k: string) => k,
+            upload: vi.fn(),
+          },
+        },
+      },
+    );
+
+    await new StorageModel(ctx).deleteFile(1);
+
+    expect(failing).toHaveBeenCalledWith("a/b.png");
+    expect(deleteWhere).toHaveBeenCalledTimes(1);
   });
 });

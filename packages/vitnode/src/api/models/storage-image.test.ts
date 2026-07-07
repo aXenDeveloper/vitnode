@@ -8,13 +8,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import { StorageModel } from "./storage";
 
-const makeCtx = (image?: { quality?: number }) => {
+const makeCtx = (image?: { quality?: number; webp?: boolean }) => {
   const upload = vi.fn(
     ({ key }: { body: Buffer; contentType?: string; key: string }) => ({
       key,
       url: `https://cdn.test/${key}`,
     }),
   );
+  const insertValues = vi.fn().mockResolvedValue(undefined);
   const store: Record<string, unknown> = {
     core: {
       storage: {
@@ -23,7 +24,7 @@ const makeCtx = (image?: { quality?: number }) => {
       },
     },
     db: {
-      insert: vi.fn(() => ({ values: vi.fn().mockResolvedValue(undefined) })),
+      insert: vi.fn(() => ({ values: insertValues })),
     },
     plugin: { id: "@vitnode/core" },
     user: { id: 7 },
@@ -31,6 +32,7 @@ const makeCtx = (image?: { quality?: number }) => {
 
   return {
     ctx: { get: (k: string) => store[k] } as unknown as Context,
+    insertValues,
     upload,
   };
 };
@@ -40,9 +42,9 @@ const makeJpeg = async (quality: number): Promise<Buffer> =>
     create: {
       background: { b: 50, g: 100, r: 200 },
       channels: 3,
-      height: 256,
+      height: 180,
       noise: { mean: 128, sigma: 60, type: "gaussian" },
-      width: 256,
+      width: 320,
     },
   })
     .jpeg({ quality })
@@ -52,24 +54,80 @@ const fileFrom = (buf: Buffer, name: string, type: string): File =>
   new File([new Uint8Array(buf)], name, { type });
 
 describe("StorageModel image optimization", () => {
-  it("re-encodes an image at the configured quality when image config is set", async () => {
+  it("converts a processed image to WebP by default", async () => {
     const original = await makeJpeg(100);
-    const { ctx, upload } = makeCtx({ quality: 40 });
+    const { ctx, upload, insertValues } = makeCtx({ quality: 40 });
 
     await new StorageModel(ctx).upload({
       file: fileFrom(original, "photo.jpg", "image/jpeg"),
       folder: "photos",
     });
 
-    const stored = upload.mock.calls[0][0].body;
-    expect((await sharp(stored).metadata()).format).toBe("jpeg");
-    expect(stored.equals(original)).toBe(false);
-    expect(stored.length).toBeLessThan(original.length);
+    const call = upload.mock.calls[0][0];
+    expect((await sharp(call.body).metadata()).format).toBe("webp");
+    expect(call.contentType).toBe("image/webp");
+    expect(call.key).toMatch(/\.webp$/);
+
+    const row = insertValues.mock.calls[0][0];
+    expect(row.name).toBe("photo.webp");
+    expect(row.mimeType).toBe("image/webp");
+  });
+
+  it("records the pixel dimensions in metadata", async () => {
+    const original = await makeJpeg(90);
+    const { ctx, insertValues } = makeCtx({ quality: 80 });
+
+    await new StorageModel(ctx).upload({
+      file: fileFrom(original, "photo.jpg", "image/jpeg"),
+      folder: "photos",
+    });
+
+    expect(insertValues.mock.calls[0][0].metadata).toMatchObject({
+      dimensions: { width: 320, height: 180 },
+    });
+  });
+
+  it("merges dimensions with caller-provided metadata", async () => {
+    const original = await makeJpeg(90);
+    const { ctx, insertValues } = makeCtx({ quality: 80 });
+
+    await new StorageModel(ctx).upload({
+      file: fileFrom(original, "photo.jpg", "image/jpeg"),
+      folder: "photos",
+      metadata: { alt: "a cat" },
+    });
+
+    expect(insertValues.mock.calls[0][0].metadata).toEqual({
+      alt: "a cat",
+      dimensions: { width: 320, height: 180 },
+    });
+  });
+
+  it("keeps the original format when webp is disabled", async () => {
+    const original = await makeJpeg(100);
+    const { ctx, upload, insertValues } = makeCtx({ quality: 40, webp: false });
+
+    await new StorageModel(ctx).upload({
+      file: fileFrom(original, "photo.jpg", "image/jpeg"),
+      folder: "photos",
+    });
+
+    const call = upload.mock.calls[0][0];
+    expect((await sharp(call.body).metadata()).format).toBe("jpeg");
+    expect(call.contentType).toBe("image/jpeg");
+    expect(call.key).toMatch(/\.jpg$/);
+    // still smaller than the original (re-encoded at lower quality)
+    expect(call.body.length).toBeLessThan(original.length);
+    // dimensions are still recorded regardless of the target format
+    expect(insertValues.mock.calls[0][0].metadata).toMatchObject({
+      dimensions: { width: 320, height: 180 },
+    });
+    expect(insertValues.mock.calls[0][0].name).toBe("photo.jpg");
   });
 
   it("stores the original bytes when image config is absent", async () => {
     const original = await makeJpeg(100);
-    const { ctx, upload } = makeCtx(undefined);
+    const { ctx, upload, insertValues } = makeCtx(undefined);
 
     await new StorageModel(ctx).upload({
       file: fileFrom(original, "photo.jpg", "image/jpeg"),
@@ -77,6 +135,8 @@ describe("StorageModel image optimization", () => {
     });
 
     expect(upload.mock.calls[0][0].body.equals(original)).toBe(true);
+    // no image processing means no recorded dimensions
+    expect(insertValues.mock.calls[0][0].metadata).toEqual({});
   });
 
   it("leaves non-image files untouched even when image config is set", async () => {

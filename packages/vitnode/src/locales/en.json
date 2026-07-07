@@ -16,6 +16,10 @@
   "@vitnode/core:system:can_view": "View integrations",
   "@vitnode/core:system:can_send_test_email": "Send test email",
   "@vitnode/core:system:can_test_storage": "Test storage",
+  "@vitnode/core:files": "Files",
+  "@vitnode/core:files:can_view": "View uploaded files",
+  "@vitnode/core:files:can_download": "Download files",
+  "@vitnode/core:files:can_delete": "Delete files",
   "@vitnode/core:queue": "Queue Tasks",
   "@vitnode/core:queue:can_view": "View queue tasks",
   "@vitnode/core:staff_moderators": "Staff: Moderators",
@@ -132,7 +136,41 @@
         "log_out": "Log out",
         "mod_cp": "Moderator CP",
         "admin_cp": "Admin CP",
-        "settings": "Settings"
+        "settings": "Settings",
+        "files": "My Files"
+      }
+    },
+    "files": {
+      "title": "My Files",
+      "desc": "Files you've uploaded to your account.",
+      "list": {
+        "preview": "Preview",
+        "name": "Name",
+        "size": "Size",
+        "dimensions": "Dimensions",
+        "metadata": "Metadata",
+        "createdAt": "Uploaded"
+      },
+      "metadata": {
+        "title": "Metadata",
+        "empty": "—"
+      },
+      "actions": {
+        "download": "Download",
+        "delete": "Delete"
+      },
+      "download": {
+        "error": "Failed to download the file."
+      },
+      "delete": {
+        "title": "Delete file",
+        "desc": "Are you sure you want to delete this file? This permanently removes it and cannot be undone.",
+        "confirm": "Delete",
+        "success": "File deleted."
+      },
+      "noResults": {
+        "title": "No files yet",
+        "description": "Files you upload will appear here."
       }
     },
     "auth": {
@@ -273,7 +311,8 @@
         },
         "system": {
           "title": "System",
-          "integrations": "Integrations"
+          "integrations": "Integrations",
+          "files": "Files"
         },
         "advanced": {
           "title": "Advanced",
@@ -597,6 +636,42 @@
           "tasks": "{count, plural, =0 {No tasks registered} one {# task registered} other {# tasks registered}}",
           "queued": "{pending} pending · {processing} running",
           "cron_stale": "Offline — the cron worker that drains the queue isn't running. Fix cron jobs to resume processing."
+        }
+      },
+      "files": {
+        "title": "Files",
+        "desc": "Browse, download, and delete files uploaded to this instance.",
+        "list": {
+          "preview": "Preview",
+          "name": "Name",
+          "size": "Size",
+          "dimensions": "Dimensions",
+          "uploadedBy": "Uploaded by",
+          "metadata": "Metadata",
+          "createdAt": "Uploaded",
+          "no_preview": "No preview"
+        },
+        "anonymous": "—",
+        "metadata": {
+          "empty": "—",
+          "title": "Metadata"
+        },
+        "actions": {
+          "download": "Download",
+          "delete": "Delete"
+        },
+        "download": {
+          "error": "Failed to download the file."
+        },
+        "delete": {
+          "title": "Delete file",
+          "desc": "Are you sure you want to delete this file? This permanently removes it from storage and cannot be undone.",
+          "confirm": "Delete",
+          "success": "File deleted."
+        },
+        "noResults": {
+          "title": "No files uploaded",
+          "description": "Files uploaded across the site will appear here."
         }
       }
     },

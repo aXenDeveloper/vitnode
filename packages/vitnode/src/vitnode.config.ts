@@ -86,9 +86,15 @@ export interface VitNodeApiConfig {
      * Re-encode uploaded images with `sharp` before storing them, to shrink file
      * size. Set to enable; `quality` defaults to 85 (1–100). Applies to JPEG,
      * PNG, WebP, AVIF and TIFF — other files (incl. SVG/GIF) are stored as-is.
+     *
+     * Processed images are also converted to WebP by default (smaller than JPEG
+     * or PNG at the same quality); set `webp: false` to keep each image in its
+     * original format. Their pixel dimensions are recorded in
+     * `core_files.metadata.dimensions` for display in the admin panel.
      */
     image?: {
       quality?: number;
+      webp?: boolean;
     };
   };
 }
