@@ -7,6 +7,7 @@ import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormArray } from "@/components/form/fields/array";
 import { AutoFormCheckbox } from "@/components/form/fields/checkbox";
 import { AutoFormCombobox } from "@/components/form/fields/combobox";
+import { AutoFormEditor } from "@/components/form/fields/editor";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { AutoFormRadioGroup } from "@/components/form/fields/radio-group";
 import { AutoFormSelect } from "@/components/form/fields/select";
@@ -19,6 +20,10 @@ import { InputGroupAddon, InputGroupText } from "@/components/ui/input-group";
 
 export const TestView = () => {
   const formSchema = z.object({
+    editor: z
+      .string()
+      .describe("This is the editor for your application.")
+      .default("<p>Hello World! 🌎️</p>"),
     provider: z
       .string()
       .min(1, { message: "Provider is required" })
@@ -75,6 +80,10 @@ export const TestView = () => {
 
         <AutoForm
           fields={[
+            {
+              id: "editor",
+              component: props => <AutoFormEditor {...props} label="Editor" />,
+            },
             {
               id: "provider",
               component: props => (

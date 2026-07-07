@@ -2,6 +2,7 @@
 
 import { AutoForm } from "@vitnode/core/components/form/auto-form";
 import { AutoFormCheckbox } from "@vitnode/core/components/form/fields/checkbox";
+import { AutoFormEditor } from "@vitnode/core/components/form/fields/editor";
 import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
 import { AutoFormSelect } from "@vitnode/core/components/form/fields/select";
 import { AutoFormTextarea } from "@vitnode/core/components/form/fields/textarea";
@@ -22,6 +23,10 @@ export default function AutoFormExample() {
     description: z
       .string()
       .min(10, "Description must be at least 10 characters"),
+    content: z
+      .string()
+      .min(1, "Content is required")
+      .default("<p>Write your content here...</p>"),
     search: z.string().optional(),
   });
 
@@ -75,6 +80,16 @@ export default function AutoFormExample() {
               description="Write a short description of your application."
               label="Description"
               placeholder="My application is..."
+              {...props}
+            />
+          ),
+        },
+        {
+          id: "content",
+          component: props => (
+            <AutoFormEditor
+              description="Rich text content powered by the Editor."
+              label="Content"
               {...props}
             />
           ),
