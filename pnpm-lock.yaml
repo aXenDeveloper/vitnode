@@ -223,6 +223,9 @@ importers:
       '@vitnode/resend':
         specifier: workspace:*
         version: link:../../packages/resend
+      '@vitnode/supabase-storage':
+        specifier: workspace:*
+        version: link:../../packages/supabase-storage
       babel-plugin-react-compiler:
         specifier: ^1.0.0
         version: 1.0.0
