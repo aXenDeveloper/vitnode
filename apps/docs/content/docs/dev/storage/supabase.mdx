@@ -3,7 +3,7 @@ title: Supabase Storage
 description: Store uploads in a Supabase Storage bucket.
 ---
 
-| Cloud        | Self-Hosted  | Links                                                              |
+| Cloud        | Self-Hosted  | Links                                                             |
 | ------------ | ------------ | ----------------------------------------------------------------- |
 | ✅ Supported | ✅ Supported | [NPM Package](https://www.npmjs.com/package/@supabase/storage-js) |
 
@@ -45,7 +45,7 @@ export const vitNodeApiConfig = buildApiConfig({
     // [!code ++:5]
     adapter: SupabaseStorageAdapter({
       url: process.env.SUPABASE_URL,
-      serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+      secretKey: process.env.SUPABASE_SECRET_KEY,
       bucket: process.env.SUPABASE_STORAGE_BUCKET,
     }),
   },
@@ -56,12 +56,13 @@ export const vitNodeApiConfig = buildApiConfig({
 <Step>
 ### Environment variables
 
-The **service role key** is required so the server can write to the bucket. Keep
-it secret — never expose it to the client.
+A **secret key** (`sb_secret_…`) is required so the server can write to the
+bucket. Keep it secret — never expose it to the client. Create one under
+**Project Settings → API Keys**.
 
 ```bash title=".env"
 SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_SECRET_KEY=sb_secret_...
 SUPABASE_STORAGE_BUCKET=your-bucket
 ```
 
@@ -83,8 +84,9 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
       description: "Your Supabase project URL.",
       type: "string",
     },
-    serviceRoleKey: {
-      description: "Supabase service role key (server-side only).",
+    secretKey: {
+      description:
+        "Supabase secret key `sb_secret_…` (server-side only). Replaces the legacy service role key.",
       type: "string",
     },
     bucket: {
