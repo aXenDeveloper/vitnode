@@ -1,6 +1,7 @@
 # VitNode
 
 - Always write and run unit tests in vitest for all new features and bug fixes.
+- Don't write unit tests if app doesn't have configured vitest.
 - Don't use `React.FC` for defining React components. Instead, use the arrow function syntax.
 - Don't use `any` type in TypeScript and use `unknown` as less as possible.
 - Use `AutoForm` for forms instead of manually creating form components.

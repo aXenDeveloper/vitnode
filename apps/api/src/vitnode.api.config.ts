@@ -1,10 +1,10 @@
 import { blogApiPlugin } from "@vitnode/blog/config.api";
-import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";
+// import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
 import { NodeCronAdapter } from "@vitnode/node-cron";
 import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
 // import { S3StorageAdapter } from "@vitnode/s3";
-// import { SupabaseStorageAdapter } from "@vitnode/supabase-storage";
+import { SupabaseStorageAdapter } from "@vitnode/supabase-storage";
 import { config } from "dotenv";
 import { drizzle } from "drizzle-orm/postgres-js";
 
@@ -40,7 +40,7 @@ export const vitNodeApiConfig = buildApiConfig({
   },
   storage: {
     // Zero-config: writes to `public/uploads` and serves via Hono static files.
-    adapter: LocalStorageAdapter(),
+    // adapter: LocalStorageAdapter(),
     // Re-encode uploaded images with sharp to shrink them before storing.
     image: {
       quality: 85,
@@ -53,11 +53,11 @@ export const vitNodeApiConfig = buildApiConfig({
     //   endpoint: process.env.S3_ENDPOINT, // Cloudflare R2 endpoint
     //   publicUrl: process.env.S3_PUBLIC_URL,
     // }),
-    // adapter: SupabaseStorageAdapter({
-    //   url: process.env.SUPABASE_URL,
-    //   serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    //   bucket: process.env.SUPABASE_STORAGE_BUCKET,
-    // }),
+    adapter: SupabaseStorageAdapter({
+      url: process.env.SUPABASE_URL,
+      secretKey: process.env.SUPABASE_SECRET_KEY,
+      bucket: process.env.SUPABASE_STORAGE_BUCKET,
+    }),
   },
   metadata: {
     title: "VitNode API",

@@ -6,25 +6,28 @@ import type {
 
 import { StorageClient } from "@supabase/storage-js";
 
+// Uses a Supabase secret key (`sb_secret_…`), the modern replacement for the
+// legacy `service_role` key. A still-valid legacy key works too — the value is
+// sent verbatim as the `apikey`/`Authorization` header.
 export const SupabaseStorageAdapter = ({
   bucket = "",
-  serviceRoleKey = "",
+  secretKey = "",
   url = "",
 }: {
   bucket: string | undefined;
-  serviceRoleKey: string | undefined;
+  secretKey: string | undefined;
   url: string | undefined;
 }): StorageApiPlugin => {
   let client: StorageClient | undefined;
 
   const getClient = (): StorageClient => {
-    if (!(url && serviceRoleKey && bucket)) {
+    if (!(url && secretKey && bucket)) {
       throw new Error("Missing Supabase Storage configuration");
     }
 
     client ??= new StorageClient(`${url.replace(/\/$/, "")}/storage/v1`, {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
+      apikey: secretKey,
+      Authorization: `Bearer ${secretKey}`,
     });
 
     return client;
