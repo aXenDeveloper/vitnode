@@ -3,10 +3,11 @@ import { DiscordSSOApiPlugin } from "@vitnode/core/api/adapters/sso/discord";
 // import { ResendEmailAdapter } from "@vitnode/resend";
 import { FacebookSSOApiPlugin } from "@vitnode/core/api/adapters/sso/facebook";
 import { GoogleSSOApiPlugin } from "@vitnode/core/api/adapters/sso/google";
-import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
 import { NodeCronAdapter } from "@vitnode/node-cron";
 import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
+// import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";
+import { SupabaseStorageAdapter } from "@vitnode/supabase-storage";
 import { drizzle } from "drizzle-orm/postgres-js";
 
 export const POSTGRES_URL =
@@ -56,8 +57,13 @@ export const vitNodeApiConfig = buildApiConfig({
     // Next.js serves `public/` at the site root, so files land in
     // `public/uploads` and are reachable at `/uploads/<key>`. Local disk is not
     // durable on serverless — switch to a cloud adapter when deploying there.
-    adapter: LocalStorageAdapter({ publicPath: "/uploads" }),
+    // adapter: LocalStorageAdapter({ publicPath: "/uploads" }),
     // Re-encode uploaded images with sharp to shrink them before storing.
+    adapter: SupabaseStorageAdapter({
+      url: process.env.SUPABASE_URL,
+      secretKey: process.env.SUPABASE_SECRET_KEY,
+      bucket: process.env.SUPABASE_STORAGE_BUCKET,
+    }),
     image: {
       quality: 85,
     },
