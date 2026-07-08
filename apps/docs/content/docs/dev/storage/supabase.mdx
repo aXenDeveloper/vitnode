@@ -3,7 +3,7 @@ title: Supabase Storage
 description: Store uploads in a Supabase Storage bucket.
 ---
 
-| Cloud        | Self-Hosted  | Links                                                              |
+| Cloud        | Self-Hosted  | Links                                                             |
 | ------------ | ------------ | ----------------------------------------------------------------- |
 | ✅ Supported | ✅ Supported | [NPM Package](https://www.npmjs.com/package/@supabase/storage-js) |
 
@@ -65,12 +65,6 @@ SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SECRET_KEY=sb_secret_...
 SUPABASE_STORAGE_BUCKET=your-bucket
 ```
-
-<Callout type="info" title="Legacy service_role key">
-  Secret keys replace the legacy `anon`/`service_role` API keys, which Supabase
-  is removing in late 2026. A still-valid `service_role` key works as
-  `secretKey` during migration, but generate a secret key for new projects.
-</Callout>
 
 <Callout type="warn" title="Public bucket for public URLs">
   `getUrl` returns the bucket's public URL. Make the bucket public (or serve
