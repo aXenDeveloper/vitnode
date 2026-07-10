@@ -110,12 +110,12 @@ A few details worth knowing:
 - The term is **trimmed**; an empty or whitespace-only value is ignored and no search filter is applied.
 - Matching is **case-insensitive** (`ILIKE`) and substring-based (`%term%`).
 - The filter is applied to the `totalCount` as well, so the pagination info reflects the filtered result set.
-- If you don't pass `search`, the route behaves exactly like a normal paginated route — the `search` query parameter is simply ignored.
+- If you don't pass `search`, the route behaves exactly like a normal paginated route - the `search` query parameter is simply ignored.
 
 <Callout type="warn" title="Wildcards">
   The term is interpolated into the `ILIKE` pattern, so `%` and `_` entered by
   the user act as SQL wildcards. The value is still parameterized, so this is
-  not an injection risk — but escape those characters yourself if you need
+  not an injection risk - but escape those characters yourself if you need
   literal matching.
 </Callout>
 
@@ -157,7 +157,7 @@ The input is debounced and writes the term to the `?search=` query parameter, th
 
 ### Forwarding the Query
 
-The `search` term lives in the URL, so it arrives as part of the awaited `searchParams`. You **must** forward that `query` object to the fetcher's `args` for the term to reach the API — without it, the search parameter never gets sent.
+The `search` term lives in the URL, so it arrives as part of the awaited `searchParams`. You **must** forward that `query` object to the fetcher's `args` for the term to reach the API - without it, the search parameter never gets sent.
 
 ```tsx
 const query = await searchParams;

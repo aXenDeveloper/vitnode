@@ -20,7 +20,7 @@ export interface ThemeProviderProps {
   enableColorScheme?: boolean;
   /** Whether to switch between dark/light based on system preference. */
   enableSystem?: boolean;
-  /** Forced theme name — disables switching. */
+  /** Forced theme name - disables switching. */
   forcedTheme?: string;
   /** Nonce passed to the injected no-flash script (CSP). */
   nonce?: string;

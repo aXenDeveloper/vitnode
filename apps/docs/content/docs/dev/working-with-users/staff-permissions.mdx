@@ -7,9 +7,9 @@ VitNode has two kinds of staff: **moderators** and **admins**. A staff entry lin
 
 Permissions are:
 
-- **Plugin-based** — every plugin declares its own catalog in its API config.
+- **Plugin-based** - every plugin declares its own catalog in its API config.
 - **Grouped by module** and split into a `moderator` and an `admin` set.
-- **Granted per staff entry** — toggled from the admin panel and stored in the entry's `data` JSON column.
+- **Granted per staff entry** - toggled from the admin panel and stored in the entry's `data` JSON column.
 
 ## Declaring permissions
 
@@ -36,7 +36,7 @@ export const blogApiPlugin = () =>
 
 ### Dependent permissions
 
-A permission can depend on other permissions in the **same module**. Declare it as an object with `dependsOn` instead of a plain string, and the editor keeps it **hidden until every permission it depends on is enabled** — a `can_view` gate that reveals the rest is the typical use:
+A permission can depend on other permissions in the **same module**. Declare it as an object with `dependsOn` instead of a plain string, and the editor keeps it **hidden until every permission it depends on is enabled** - a `can_view` gate that reveals the rest is the typical use:
 
 ```ts title="plugins/{plugin_name}/src/config.api.ts"
 permissionStaff: {
@@ -56,10 +56,11 @@ permissionStaff: {
 
 When a gate is switched off in the editor, everything that (transitively) depends on it is hidden **and** un-granted in the same step. The dependency is also enforced on the backend when saving, so a forged or stale request can't persist `can_create` without its `can_view`.
 
-<Callout type="info" title="Visibility only — not a runtime gate">
-  `dependsOn` controls what an admin can **see and grant**; it does not change how
-  individual checks evaluate. `checkStaffPermission` still tests each permission on
-  its own. Keep guarding every action explicitly (see [Backend](#backend)).
+<Callout type="info" title="Visibility only - not a runtime gate">
+  `dependsOn` controls what an admin can **see and grant**; it does not change
+  how individual checks evaluate. `checkStaffPermission` still tests each
+  permission on its own. Keep guarding every action explicitly (see
+  [Backend](#backend)).
 </Callout>
 
 ### Permission labels (i18n)
@@ -85,10 +86,10 @@ Each permission needs a human-readable label. Add it to your plugin's locale fil
   you land straight on its permission editor. The edit (pencil) action on a row reopens
   that editor, where you first pick an access level:
 
-- **Unrestricted** — the entry is granted every permission for its staff type,
+- **Unrestricted** - the entry is granted every permission for its staff type,
   including ones added later. `resolveStaffPermissions` returns `root: true` for it,
   so all checks pass.
-- **Restricted** — choose exactly which permissions apply, shown as one **tab per
+- **Restricted** - choose exactly which permissions apply, shown as one **tab per
   plugin** (with "Enable all" / "Disable all" per tab). The admin set is shown for
   administrator entries, the moderator set for moderator entries. Permissions that
   [depend on another](#dependent-permissions) stay hidden until their gate is enabled.
@@ -118,7 +119,7 @@ export const deletePostRoute = buildRoute({
     // ...
   },
   handler: async c => {
-    // ...delete the post — the permission is already enforced
+    // ...delete the post - the permission is already enforced
   },
 });
 ```
@@ -130,8 +131,8 @@ export const deletePostRoute = buildRoute({
 
 ### Asserting manually
 
-For checks that can't be declared statically — for example an extra permission
-required only for some targets — call `assertStaffPermission` inside the
+For checks that can't be declared statically - for example an extra permission
+required only for some targets - call `assertStaffPermission` inside the
 handler. It throws `HTTPException(403)` when the permission is missing:
 
 ```ts
@@ -236,7 +237,7 @@ const DeleteButton = () => {
 ### Admin sidebar nav
 
 Admin nav items can be gated by a permission so the sidebar entry is hidden from
-admins who lack it. Add a `permission` (`{ module, permission }` — the `plugin`
+admins who lack it. Add a `permission` (`{ module, permission }` - the `plugin`
 is inferred from the declaring plugin) to any nav item in `buildPlugin`:
 
 ```tsx title="plugins/{plugin_name}/src/config.tsx"

@@ -37,13 +37,13 @@ export const RolesAdminView = async ({
     <DataTable
       columns={[
         {
-          id: "name",
-          label: t("role"),
+          accessorKey: "name",
+          header: t("role"),
           cell: ({ row }) => <RoleFormat role={row} />,
         },
         {
-          id: "usersCount",
-          label: t("usersCount"),
+          accessorKey: "usersCount",
+          header: t("usersCount"),
           cell: ({ row }) => {
             if (row.usersCount === 0) {
               return <span className="text-muted-foreground">0</span>;
@@ -62,8 +62,8 @@ export const RolesAdminView = async ({
           },
         },
         {
-          id: "updatedAt",
-          label: t("updatedAt"),
+          accessorKey: "updatedAt",
+          header: t("updatedAt"),
           cell: ({ row }) => <DateFormat date={row.createdAt} />,
         },
       ]}

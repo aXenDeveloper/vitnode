@@ -56,7 +56,7 @@ export const vitNodeApiConfig = buildApiConfig({
   storage: {
     // Next.js serves `public/` at the site root, so files land in
     // `public/uploads` and are reachable at `/uploads/<key>`. Local disk is not
-    // durable on serverless — switch to a cloud adapter when deploying there.
+    // durable on serverless - switch to a cloud adapter when deploying there.
     // adapter: LocalStorageAdapter({ publicPath: "/uploads" }),
     // Re-encode uploaded images with sharp to shrink them before storing.
     adapter: SupabaseStorageAdapter({

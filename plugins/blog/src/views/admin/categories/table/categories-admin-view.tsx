@@ -33,23 +33,24 @@ export const CategoriesAdminView = async ({
     <DataTable
       columns={[
         {
-          id: "id",
-          label: "ID",
+          accessorKey: "id",
+          header: "ID",
           className: "w-24",
         },
         {
-          id: "title",
-          label: t("title"),
+          accessorKey: "title",
+          header: t("title"),
         },
         {
-          id: "updatedAt",
-          label: t("updated_at"),
+          accessorKey: "updatedAt",
+          header: t("updated_at"),
           className: "w-48",
           cell: ({ row }) => <DateFormat date={row.updatedAt} />,
         },
         {
           id: "actions",
-          label: "",
+          header: "",
+          align: "right",
           className: "w-10",
           cell: ({ row }) => (
             <>

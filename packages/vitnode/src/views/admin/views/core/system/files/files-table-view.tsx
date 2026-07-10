@@ -1,4 +1,4 @@
-import { FileIcon } from "lucide-react";
+import { FileIcon, FolderIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
@@ -47,8 +47,8 @@ export const FilesTableView = async ({
     <DataTable
       columns={[
         {
-          id: "url",
-          label: t("list.preview"),
+          accessorKey: "url",
+          header: t("list.preview"),
           className: "w-16",
           cell: ({ row }) => (
             <FilePreview
@@ -59,8 +59,8 @@ export const FilesTableView = async ({
           ),
         },
         {
-          id: "name",
-          label: t("list.name"),
+          accessorKey: "name",
+          header: t("list.name"),
           cell: ({ row }) => (
             <div className="flex max-w-xs flex-col">
               <span className="truncate">{row.name}</span>
@@ -71,13 +71,23 @@ export const FilesTableView = async ({
           ),
         },
         {
-          id: "size",
-          label: t("list.size"),
+          accessorKey: "folder",
+          header: t("list.folder"),
+          cell: ({ row }) => (
+            <div className="text-muted-foreground flex items-center gap-2">
+              <FolderIcon className="size-4 shrink-0" />
+              <span className="truncate">{row.folder}</span>
+            </div>
+          ),
+        },
+        {
+          accessorKey: "size",
+          header: t("list.size"),
           cell: ({ row }) => formatBytes(row.size),
         },
         {
-          id: "dimensions",
-          label: t("list.dimensions"),
+          accessorKey: "dimensions",
+          header: t("list.dimensions"),
           cell: ({ row }) =>
             row.dimensions ? (
               `${row.dimensions.width}x${row.dimensions.height}`
@@ -86,8 +96,8 @@ export const FilesTableView = async ({
             ),
         },
         {
-          id: "user",
-          label: t("list.uploadedBy"),
+          accessorKey: "user",
+          header: t("list.uploadedBy"),
           cell: ({ row }) =>
             row.user ? (
               <UserFormat format user={row.user} />
@@ -96,8 +106,8 @@ export const FilesTableView = async ({
             ),
         },
         {
-          id: "metadata",
-          label: t("list.metadata"),
+          accessorKey: "metadata",
+          header: t("list.metadata"),
           cell: ({ row }) => (
             <MetadataCell
               emptyLabel={t("metadata.empty")}
@@ -107,13 +117,14 @@ export const FilesTableView = async ({
           ),
         },
         {
-          id: "createdAt",
-          label: t("list.createdAt"),
+          accessorKey: "createdAt",
+          header: t("list.createdAt"),
           cell: ({ row }) => <DateFormat date={row.createdAt} />,
         },
         {
           id: "actions",
-          label: "",
+          header: "",
+          align: "right",
           className: "w-10",
           cell: ({ row }) =>
             canDownload || canDelete ? (

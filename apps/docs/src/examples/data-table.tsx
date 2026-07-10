@@ -1,15 +1,38 @@
-import { DataTable } from "@vitnode/core/components/table/data-table";
+import {
+  type ColumnDef,
+  DataTable,
+} from "@vitnode/core/components/table/data-table";
+import { Button } from "@vitnode/core/components/ui/button";
+
+interface DemoUser {
+  email: string;
+  id: number;
+  name: string;
+  role: string;
+  status: string;
+}
+
+const columns: ColumnDef<DemoUser>[] = [
+  { accessorKey: "name", header: "Name" },
+  { accessorKey: "email", header: "Email" },
+  { accessorKey: "role", header: "Role" },
+  { accessorKey: "status", header: "Status", align: "center" },
+  {
+    id: "actions",
+    header: "",
+    align: "right",
+    cell: () => (
+      <Button size="sm" variant="outline">
+        Edit
+      </Button>
+    ),
+  },
+];
 
 export default function DataTableExample() {
   return (
     <DataTable
-      columns={[
-        { id: "name", label: "Name" },
-        { id: "email", label: "Email" },
-        { id: "role", label: "Role" },
-        { id: "status", label: "Status" },
-        { id: "id", label: "Actions" },
-      ]}
+      columns={columns}
       edges={[
         {
           id: 1,

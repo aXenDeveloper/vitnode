@@ -90,7 +90,7 @@ export const EditStaffPermissionsView = async ({
               key,
               checked: granted.has(key),
               label: tRoot.has(key) ? tRoot(key) : entry.permission,
-              // The keys of the permissions this one depends on — the form
+              // The keys of the permissions this one depends on - the form
               // keeps it hidden until every one of them is enabled.
               dependsOn: entry.dependsOn.map(dependency =>
                 staffPermissionKey({

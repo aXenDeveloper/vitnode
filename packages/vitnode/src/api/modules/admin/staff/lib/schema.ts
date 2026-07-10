@@ -5,7 +5,7 @@ import {
   zodPaginationQuery,
 } from "@/api/lib/with-pagination";
 
-// Shared between the moderators and admins staff lists — both read from a
+// Shared between the moderators and admins staff lists - both read from a
 // permissions table that links either a role or a user to a staff group.
 export const staffListAdminQuery = zodPaginationQuery.extend({
   order: z.enum(["asc", "desc"]).optional(),
@@ -25,7 +25,7 @@ export const staffRoleSchema = z.object({
   ),
 });
 
-// A single resolved staff entry — the shape returned by `resolveStaffEdges`.
+// A single resolved staff entry - the shape returned by `resolveStaffEdges`.
 export const staffEntrySchema = z.object({
   id: z.number(),
   createdAt: z.date(),

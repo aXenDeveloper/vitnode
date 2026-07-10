@@ -146,6 +146,7 @@
       "list": {
         "preview": "Preview",
         "name": "Name",
+        "folder": "Folder",
         "size": "Size",
         "dimensions": "Dimensions",
         "metadata": "Metadata",
@@ -564,7 +565,7 @@
         "redis": {
           "title": "Redis",
           "desc": "Shared cache and rate-limiter storage. Falls back to in-memory when off.",
-          "down": "Configured but unreachable — check your Redis connection."
+          "down": "Configured but unreachable - check your Redis connection."
         },
         "email": {
           "title": "Email",
@@ -609,8 +610,8 @@
               "desc": "Click to choose an image",
               "pending": "Uploading…",
               "done": "Uploaded",
-              "error": "Upload failed — try again",
-              "success": "Image uploaded — it's stored in your adapter."
+              "error": "Upload failed - try again",
+              "success": "Image uploaded - it's stored in your adapter."
             }
           }
         },
@@ -625,9 +626,9 @@
         "cron": {
           "title": "Cron Jobs",
           "desc": "Scheduled background tasks such as clearing expired sessions and tokens.",
-          "insecure": "Using the default CRON_SECRET — set a secure one in production.",
-          "not_configured": "No cron adapter configured — jobs won't run automatically.",
-          "stale": "No job has run in over 6 hours — cron may be misconfigured or stopped. Check your cron setup.",
+          "insecure": "Using the default CRON_SECRET - set a secure one in production.",
+          "not_configured": "No cron adapter configured - jobs won't run automatically.",
+          "stale": "No job has run in over 6 hours - cron may be misconfigured or stopped. Check your cron setup.",
           "jobs": "{count, plural, =0 {No jobs scheduled} one {# job scheduled} other {# jobs scheduled}}"
         },
         "queue": {
@@ -635,7 +636,7 @@
           "desc": "Background jobs enqueued in the database and drained by the cron worker.",
           "tasks": "{count, plural, =0 {No tasks registered} one {# task registered} other {# tasks registered}}",
           "queued": "{pending} pending · {processing} running",
-          "cron_stale": "Offline — the cron worker that drains the queue isn't running. Fix cron jobs to resume processing."
+          "cron_stale": "Offline - the cron worker that drains the queue isn't running. Fix cron jobs to resume processing."
         }
       },
       "files": {
@@ -644,6 +645,7 @@
         "list": {
           "preview": "Preview",
           "name": "Name",
+          "folder": "Folder",
           "size": "Size",
           "dimensions": "Dimensions",
           "uploadedBy": "Uploaded by",

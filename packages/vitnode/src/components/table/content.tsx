@@ -1,7 +1,7 @@
 import { SearchXIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import type { DataTable, DataTableTMin } from "./data-table";
+import type { AlignDataTable, DataTable, DataTableTMin } from "./data-table";
 
 import { cn } from "../../lib/utils";
 import {
@@ -16,6 +16,12 @@ import { FiltersDataTable } from "./filters";
 import { OrderTableHeadDataTable } from "./order-table-head";
 import { PaginationDataTable } from "./pagination";
 import { SearchDataTable } from "./search";
+
+const alignClassName = (align?: AlignDataTable) =>
+  cn({
+    "flex items-center justify-center gap-2": align === "center",
+    "flex items-center justify-end gap-2": align === "right",
+  });
 
 export function ContentDataTable<T extends DataTableTMin>({
   columns,
@@ -50,20 +56,30 @@ export function ContentDataTable<T extends DataTableTMin>({
         <Table {...props}>
           <TableHeader className="bg-card">
             <TableRow>
-              {columns.map(column => (
-                <TableHead
-                  className={cn(column.className)}
-                  key={column.id.toString()}
-                >
-                  {order.columns?.includes(column.id as keyof T) ? (
-                    <OrderTableHeadDataTable id={column.id} order={order}>
-                      {column.label}
-                    </OrderTableHeadDataTable>
-                  ) : (
-                    column.label
-                  )}
-                </TableHead>
-              ))}
+              {columns.map(column => {
+                const columnKey = column.id ?? String(column.accessorKey);
+                const isOrderable =
+                  column.accessorKey != null &&
+                  Boolean(order.columns?.includes(column.accessorKey));
+
+                return (
+                  <TableHead
+                    className={cn(alignClassName(column.align), column.className)}
+                    key={columnKey}
+                  >
+                    {isOrderable ? (
+                      <OrderTableHeadDataTable
+                        id={column.accessorKey as keyof T}
+                        order={order}
+                      >
+                        {column.header}
+                      </OrderTableHeadDataTable>
+                    ) : (
+                      column.header
+                    )}
+                  </TableHead>
+                );
+              })}
             </TableRow>
           </TableHeader>
 
@@ -72,20 +88,17 @@ export function ContentDataTable<T extends DataTableTMin>({
               edges.map(row => (
                 <TableRow key={row.id}>
                   {columns.map(column => {
-                    const content =
-                      column.cell?.({
-                        allData: edges,
-                        row,
-                      }) ??
-                      (column.id === "actions" ? "" : String(row[column.id]));
+                    const columnKey = column.id ?? String(column.accessorKey);
+                    const content = column.cell
+                      ? column.cell({ allData: edges, row })
+                      : column.accessorKey != null
+                        ? String(row[column.accessorKey])
+                        : "";
 
                     return (
                       <TableCell
-                        className={cn({
-                          "flex items-center justify-end gap-2":
-                            column.id === "actions",
-                        })}
-                        key={`${row.id}_${column.id.toString()}`}
+                        className={alignClassName(column.align)}
+                        key={`${row.id}_${columnKey}`}
                       >
                         {content}
                       </TableCell>

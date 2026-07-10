@@ -12,7 +12,7 @@ export const buildMonthFolder = (now: Date = new Date()): string => {
 };
 
 /**
- * Guards the caller-provided folder against path traversal — only a single
+ * Guards the caller-provided folder against path traversal - only a single
  * path segment of letters, numbers, hyphens and underscores is allowed.
  */
 export const sanitizeFolder = (folder: string): string => {

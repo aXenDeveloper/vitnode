@@ -51,7 +51,7 @@ export const integrationsDebugAdminRoute = buildRoute({
               }),
               queue: z.object({
                 // `true` when at least one handler is registered AND the cron
-                // worker is running — the queue is drained by cron, so a stale
+                // worker is running - the queue is drained by cron, so a stale
                 // scheduler means tasks pile up unprocessed.
                 active: z.boolean(),
                 // `true` when handlers are registered but the queue is offline
@@ -66,7 +66,7 @@ export const integrationsDebugAdminRoute = buildRoute({
               }),
               redis: z.object({
                 active: z.boolean(),
-                // `true` when Redis is configured but currently unreachable — a
+                // `true` when Redis is configured but currently unreachable - a
                 // problem worth surfacing distinctly from "not set up at all".
                 configuredButDown: z.boolean(),
               }),

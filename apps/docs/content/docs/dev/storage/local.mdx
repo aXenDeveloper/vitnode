@@ -7,7 +7,7 @@ description: Zero-config storage that writes uploads to the local disk.
 | -------------- | ------------ |
 | ⚠️ Not durable | ✅ Supported |
 
-The Local adapter ships with `@vitnode/core` — no extra package or cloud account
+The Local adapter ships with `@vitnode/core` - no extra package or cloud account
 needed. It writes files to a `public/uploads` directory and serves them as
 static files.
 
@@ -66,7 +66,7 @@ VitNodeAPI({ app, vitNodeApiConfig });
 ```
 
 Inside a **Next.js** app the `public/` directory is already served at the site
-root, so no `serveStatic` is needed — just point the adapter's public path at it:
+root, so no `serveStatic` is needed - just point the adapter's public path at it:
 
 ```ts title="vitnode.api.config.ts"
 adapter: LocalStorageAdapter({ publicPath: "/uploads" }),

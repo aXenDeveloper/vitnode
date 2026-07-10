@@ -37,7 +37,7 @@ export const ShowUserAdminView = async ({ id }: { id: string }) => {
 
   // Editing any user needs `can_edit`; editing an administrator additionally
   // needs the elevated `can_edit_admin` permission. The backend enforces the
-  // same rule — this only hides the edit controls.
+  // same rule - this only hides the edit controls.
   const session = await getSessionAdminApi();
   const canEdit =
     !!session &&

@@ -63,7 +63,7 @@ export interface StorageUploadOptions {
   /**
    * Owner recorded in `core_files.userId`. When omitted it defaults to the
    * request's admin user (on admin routes), then the frontend session user, else
-   * null. Pass it explicitly — including `null` — to override, e.g. when an admin
+   * null. Pass it explicitly - including `null` - to override, e.g. when an admin
    * uploads on behalf of another user.
    */
   userId?: null | number;
@@ -155,7 +155,7 @@ export class StorageModel {
 
   /**
    * Removes a stored file by its `core_files` id: deletes the underlying object
-   * from the storage provider (best-effort — a missing object doesn't block the
+   * from the storage provider (best-effort - a missing object doesn't block the
    * record removal), then deletes the database row. Throws a 404 when no file
    * with that id exists. Pass `ownerId` to scope the delete to that user's files
    * (so a user can only remove their own uploads).

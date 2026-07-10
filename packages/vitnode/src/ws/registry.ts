@@ -116,7 +116,7 @@ const publish = (message: Omit<RealtimePubSubMessage, "origin">): void => {
 /**
  * Enable cross-instance realtime delivery using Redis pub/sub. Call once at
  * boot with the shared cache client (see `VitNodeAPI`). Passing `null` (Redis
- * not configured) keeps realtime in single-process mode — messages then only
+ * not configured) keeps realtime in single-process mode - messages then only
  * reach clients connected to the current instance.
  */
 export const initRealtimePubSub = (client: null | Redis): void => {
@@ -142,7 +142,7 @@ export const initRealtimePubSub = (client: null | Redis): void => {
 
     try {
       const message = JSON.parse(raw) as RealtimePubSubMessage;
-      // Skip our own echo — the publishing instance already delivered locally.
+      // Skip our own echo - the publishing instance already delivered locally.
       if (message.origin === instanceId) return;
       deliverLocally(message);
     } catch {

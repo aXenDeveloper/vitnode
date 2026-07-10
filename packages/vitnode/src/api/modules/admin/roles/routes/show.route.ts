@@ -8,7 +8,7 @@ import { core_roles } from "@/database/roles";
 
 const roleAdminSchema = z.object({
   id: z.number(),
-  // Every translation of the role name — resolved to the active locale on the
+  // Every translation of the role name - resolved to the active locale on the
   // frontend (see the `RoleFormat` component).
   name: z.array(
     z.object({

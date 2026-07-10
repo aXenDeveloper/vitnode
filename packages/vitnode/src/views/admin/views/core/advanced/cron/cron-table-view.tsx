@@ -36,8 +36,8 @@ export const CronTableView = async ({
     <DataTable
       columns={[
         {
-          id: "name",
-          label: t("list.name"),
+          accessorKey: "name",
+          header: t("list.name"),
           cell: ({ row }) => (
             <div className="flex max-w-sm flex-col">
               <span>{row.name}</span>
@@ -45,15 +45,15 @@ export const CronTableView = async ({
             </div>
           ),
         },
-        { id: "pluginId", label: t("list.pluginId") },
-        { id: "module", label: t("list.module") },
+        { accessorKey: "pluginId", header: t("list.pluginId") },
+        { accessorKey: "module", header: t("list.module") },
         {
-          id: "schedule",
-          label: t("list.schedule"),
+          accessorKey: "schedule",
+          header: t("list.schedule"),
         },
         {
-          id: "lastRun",
-          label: t("list.lastRun.title"),
+          accessorKey: "lastRun",
+          header: t("list.lastRun.title"),
           cell: ({ row }) =>
             row.lastRun ? (
               <DateFormat date={row.lastRun} />
@@ -64,8 +64,8 @@ export const CronTableView = async ({
             ),
         },
         {
-          id: "nextRun",
-          label: t("list.nextRun.title"),
+          accessorKey: "nextRun",
+          header: t("list.nextRun.title"),
           cell: ({ row }) =>
             row.nextRun ? (
               <DateFormat date={row.nextRun} showFullDate />
@@ -77,7 +77,8 @@ export const CronTableView = async ({
         },
         {
           id: "actions",
-          label: "",
+          header: "",
+          align: "right",
           cell: ({ row }) => <RunActionCronTable id={row.id} />,
         },
       ]}

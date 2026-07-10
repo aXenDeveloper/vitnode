@@ -7,7 +7,7 @@ import type {
 import { StorageClient } from "@supabase/storage-js";
 
 // Uses a Supabase secret key (`sb_secret_…`), the modern replacement for the
-// legacy `service_role` key. A still-valid legacy key works too — the value is
+// legacy `service_role` key. A still-valid legacy key works too - the value is
 // sent verbatim as the `apikey`/`Authorization` header.
 export const SupabaseStorageAdapter = ({
   bucket = "",

@@ -9,7 +9,7 @@ export interface ResolvedRoleName {
   name: string;
 }
 
-// Role names are not stored on `core_roles` — every translation lives in
+// Role names are not stored on `core_roles` - every translation lives in
 // `core_languages_words`. This resolves the name translations for a set of role
 // ids in a single query and returns them keyed by role id, ready to hand to the
 // `RoleFormat` component (which picks the active locale on the frontend).

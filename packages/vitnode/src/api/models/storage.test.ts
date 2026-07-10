@@ -129,7 +129,7 @@ describe("StorageModel.upload", () => {
     const { ctx, insertValues } = makeCtx({ admin: { user: { id: 42 } } });
     const file = new File(["hi"], "a.png", { type: "image/png" });
 
-    // Admin uploading on behalf of user 123 — explicit owner wins over admin (42).
+    // Admin uploading on behalf of user 123 - explicit owner wins over admin (42).
     await new StorageModel(ctx).upload({
       file,
       folder: "avatars",

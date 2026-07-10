@@ -16,7 +16,7 @@ const rolesAdminListSchema = z.object({
   edges: z.array(
     z.object({
       id: z.number(),
-      // Every translation of the role name — resolved to the active locale on
+      // Every translation of the role name - resolved to the active locale on
       // the frontend (see the `RoleFormat` component).
       name: z.array(
         z.object({

@@ -41,29 +41,29 @@ export const SystemLogsView = async ({
     <DataTable
       columns={[
         {
-          id: "pluginId",
-          label: t("plugin"),
+          accessorKey: "pluginId",
+          header: t("plugin"),
           className: "w-48",
         },
         {
-          id: "type",
-          label: t("type"),
+          accessorKey: "type",
+          header: t("type"),
           cell: ({ row }) => <BadgeTypeLog type={row.type} />,
         },
         {
-          id: "statusCode",
-          label: t("status_code"),
+          accessorKey: "statusCode",
+          header: t("status_code"),
           className: "w-26",
           cell: ({ row }) => <BadgeStatus statusCode={row.statusCode} />,
         },
         {
-          id: "createdAt",
-          label: t("created_at"),
+          accessorKey: "createdAt",
+          header: t("created_at"),
           cell: ({ row }) => <DateFormat date={row.createdAt} />,
         },
         {
-          id: "content",
-          label: t("content"),
+          accessorKey: "content",
+          header: t("content"),
           cell: ({ row }) => {
             const CHARACTERS = 50;
             const content = row.content;
@@ -77,7 +77,8 @@ export const SystemLogsView = async ({
         },
         {
           id: "actions",
-          label: "",
+          header: "",
+          align: "right",
           cell: ({ row }) => <MoreActionSystemLogs {...row} />,
         },
       ]}

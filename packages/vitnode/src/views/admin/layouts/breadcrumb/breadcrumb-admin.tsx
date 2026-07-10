@@ -41,7 +41,7 @@ export const BreadcrumbAdmin = async ({
       const label = labels[crumb.href];
       if (label !== undefined) {
         crumb.label = label;
-        // An explicit label means a real, navigable page — link it.
+        // An explicit label means a real, navigable page - link it.
         crumb.isLink = !crumb.isCurrent;
       }
     }

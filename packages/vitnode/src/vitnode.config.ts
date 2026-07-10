@@ -70,7 +70,7 @@ export interface VitNodeApiConfig {
   /**
    * Redis connection used as a shared cache (via `c.get("cache")`) and, when
    * set, as the storage backend for the rate limiter. Leave undefined to run
-   * without Redis — the cache degrades to no-ops and the rate limiter falls
+   * without Redis - the cache degrades to no-ops and the rate limiter falls
    * back to in-memory storage.
    */
   redis?: RedisOptions & { url?: string };
@@ -85,7 +85,7 @@ export interface VitNodeApiConfig {
     /**
      * Re-encode uploaded images with `sharp` before storing them, to shrink file
      * size. Set to enable; `quality` defaults to 85 (1–100). Applies to JPEG,
-     * PNG, WebP, AVIF and TIFF — other files (incl. SVG/GIF) are stored as-is.
+     * PNG, WebP, AVIF and TIFF - other files (incl. SVG/GIF) are stored as-is.
      *
      * Processed images are also converted to WebP by default (smaller than JPEG
      * or PNG at the same quality); set `webp: false` to keep each image in its
@@ -127,7 +127,7 @@ export function buildConfig<AppLocales extends LocaleConfig[]>(
 export const getVitNodeConfig = (): VitNodeConfig => {
   if (!registeredVitNodeConfig) {
     throw new Error(
-      "VitNode config not initialized — ensure `buildConfig` runs in your vitnode.config.ts.",
+      "VitNode config not initialized - ensure `buildConfig` runs in your vitnode.config.ts.",
     );
   }
 

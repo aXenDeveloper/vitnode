@@ -81,7 +81,7 @@ export const deleteStaffAdminRoute = buildRoute({
       throw new HTTPException(403, { message: "Forbidden" });
     }
 
-    // An admin cannot remove the entry that governs their own access — their own
+    // An admin cannot remove the entry that governs their own access - their own
     // user entry or an entry for any role they belong to (primary or secondary).
     const currentUser = c.get("admin")?.user;
     const currentUserRoleIds = currentUser

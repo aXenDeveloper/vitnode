@@ -45,7 +45,7 @@ export const IntegrationCard = ({
     <Card
       className={cn(
         "gap-0 p-0 transition-colors",
-        // An inactive integration is a problem worth noticing — give the whole
+        // An inactive integration is a problem worth noticing - give the whole
         // card a destructive tint so it reads as "danger" at a glance.
         status === "inactive" && "ring-destructive/30",
         isWarning && "ring-amber-500/40",

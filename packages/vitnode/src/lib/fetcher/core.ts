@@ -117,7 +117,7 @@ export async function coreFetcher<
   }
 
   // Build headers. For multipart uploads let the browser set the Content-Type
-  // (with its boundary) — forcing application/json would corrupt the body.
+  // (with its boundary) - forcing application/json would corrupt the body.
   const headers = new Headers({
     ...(formData ? {} : { "Content-Type": "application/json" }),
     ...additionalHeaders,

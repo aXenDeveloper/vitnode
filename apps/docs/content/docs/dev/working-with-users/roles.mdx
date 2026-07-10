@@ -7,19 +7,19 @@ Roles in VitNode are stored in the `core_roles` table. Every user belongs to exa
 
 A role exposes the following flags:
 
-| Field       | Description                                       |
-| ----------- | ------------------------------------------------- |
-| `protected` | Built-in role that cannot be deleted.             |
-| `default`   | Role assigned to newly registered users.          |
-| `root`      | Super-admin role with full access to everything.  |
-| `guest`     | Role representing non-authenticated visitors.     |
-| `color`     | Color used to style the members of the role (nullable).  |
+| Field       | Description                                             |
+| ----------- | ------------------------------------------------------- |
+| `protected` | Built-in role that cannot be deleted.                   |
+| `default`   | Role assigned to newly registered users.                |
+| `root`      | Super-admin role with full access to everything.        |
+| `guest`     | Role representing non-authenticated visitors.           |
+| `color`     | Color used to style the members of the role (nullable). |
 
 <Callout type="info" title="Role names are translatable">
-  A role has no `name` column. Its display name lives in the `core_languages_words`
-  i18n table (seeded per language during database setup), so it can be translated
-  per locale. Resolve the name for the active language and pass it to the
-  components below.
+  A role has no `name` column. Its display name lives in the
+  `core_languages_words` i18n table (seeded per language during database setup),
+  so it can be translated per locale. Resolve the name for the active language
+  and pass it to the components below.
 </Callout>
 
 ## Backend
@@ -52,7 +52,7 @@ export const roleRoute = buildRoute({
 
 ### Checking admin access
 
-Membership in an admin role is resolved with `checkIfUserIsAdmin` from the `SessionAdminModel`. It returns `true` when the user — by their own id or their `roleId` — has admin permission.
+Membership in an admin role is resolved with `checkIfUserIsAdmin` from the `SessionAdminModel`. It returns `true` when the user - by their own id or their `roleId` - has admin permission.
 
 ```ts title="plugins/{plugin_name}/src/api/routes/admin-only.route.ts"
 import { buildRoute } from "@vitnode/core/api/lib/route";
@@ -106,7 +106,8 @@ The `role` prop has the following shape:
   name: {
     languageCode: string;
     name: string;
-  }[];
+  }
+  [];
   color: string | null;
 }
 ```

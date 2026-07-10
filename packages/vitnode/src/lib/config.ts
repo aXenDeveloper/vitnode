@@ -9,7 +9,7 @@ export const INSECURE_DEFAULT_CRON_SECRET =
 /**
  * Env is read lazily via getters, not captured at module load. The standalone
  * API loads its `.env` (dotenv) only when `vitnode.api.config.ts` runs, which can
- * be after this module is first imported — reading on access ensures values like
+ * be after this module is first imported - reading on access ensures values like
  * `NEXT_PUBLIC_API_URL` are always current instead of frozen to their fallbacks.
  */
 export const CONFIG = {

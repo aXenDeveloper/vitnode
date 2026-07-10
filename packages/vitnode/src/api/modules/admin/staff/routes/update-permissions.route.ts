@@ -109,7 +109,7 @@ export const updatePermissionsStaffAdminRoute = buildRoute({
       throw new HTTPException(403, { message: "Forbidden" });
     }
 
-    // An admin cannot edit the entry that governs their own access — their own
+    // An admin cannot edit the entry that governs their own access - their own
     // user entry or an entry for any role they belong to (primary or
     // secondary). This stops them from escalating their own permissions.
     const currentUser = c.get("admin")?.user;
@@ -127,7 +127,7 @@ export const updatePermissionsStaffAdminRoute = buildRoute({
     }
 
     // Only persist permissions that actually exist in the catalog for this
-    // staff type — silently drops anything unknown/forged. Also record each
+    // staff type - silently drops anything unknown/forged. Also record each
     // permission's dependencies (the keys of the permissions it `dependsOn`
     // within the same module) so we can drop grants whose gate is missing.
     const allowed = new Set<string>();
@@ -157,7 +157,7 @@ export const updatePermissionsStaffAdminRoute = buildRoute({
 
     const seen = new Set<string>();
     const granted = new Map<string, PermissionsStaffArgs>();
-    // When unrestricted, the explicit list is irrelevant — store none.
+    // When unrestricted, the explicit list is irrelevant - store none.
     if (!unrestricted) {
       for (const permission of permissions) {
         const key = staffPermissionKey(permission);

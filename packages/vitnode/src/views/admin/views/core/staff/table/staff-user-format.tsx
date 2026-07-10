@@ -15,7 +15,7 @@ interface StaffUserFormatProps {
   };
 }
 
-// Renders the staff entry's user with their role formatting — the name is
+// Renders the staff entry's user with their role formatting - the name is
 // coloured by the user's role, matching how `RoleFormat` resolves the label.
 export const StaffUserFormat = async ({ user }: StaffUserFormatProps) => {
   const locale = await getLocale();

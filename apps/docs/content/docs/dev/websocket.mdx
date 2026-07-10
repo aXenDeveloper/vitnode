@@ -1,6 +1,6 @@
 ---
 title: WebSocket
-description: Add real-time features — live updates and notifications — with one shared connection.
+description: Add real-time features - live updates and notifications - with one shared connection.
 ---
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
@@ -11,7 +11,7 @@ import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
 A normal request works one way: the browser asks, the server answers, done. A
 **WebSocket** keeps the line open both ways, so the server can push data to the
-browser the moment something happens — no refreshing, no polling.
+browser the moment something happens - no refreshing, no polling.
 
 Use it for things that should feel instant: live lists, presence, chat, and
 notifications.
@@ -33,7 +33,7 @@ VitNode takes care of the tricky parts for you:
 
 <Callout type="info">
   The client provider is already mounted for you in the root layout, so the
-  connection is live on every page — there is nothing to wire up on the
+  connection is live on every page - there is nothing to wire up on the
   frontend.
 </Callout>
 
@@ -110,7 +110,7 @@ export default {
 ### Add the handler
 
 `handleVitNodeWebSocket` wires the connection into VitNode. It is the same on
-every runtime — only the `upgradeWebSocket` import differs.
+every runtime - only the `upgradeWebSocket` import differs.
 
 <Tabs groupId="runtime" persist items={["Node.js", "Bun"]}>
 
@@ -130,7 +130,7 @@ app.get("/ws", upgradeWebSocket(handleVitNodeWebSocket())); // [!code ++]
 
 </Tabs>
 
-That's it — your app now has real-time. Next, let's send a message.
+That's it - your app now has real-time. Next, let's send a message.
 
 </Step>
 </Steps>
@@ -145,7 +145,7 @@ right back. It shows the full round-trip in four small steps.
 ### Describe the messages (the channel)
 
 A **channel** is a shared contract: it holds the id and the two message
-types — what the client **sends** and what it **receives**. Put it in its own
+types - what the client **sends** and what it **receives**. Put it in its own
 file so both the server and the client can import it.
 
 ```ts title="realtime/echo.channel.ts"
@@ -178,7 +178,7 @@ export const echoChannel = createWebSocketChannel<
 
 `buildWebSocket` runs your `onMessage` whenever a client sends to this channel.
 You get `data` (already parsed and typed) and `send` to reply on the same
-channel. You also get `c` — the same context as a route, so you can reach the
+channel. You also get `c` - the same context as a route, so you can reach the
 database, the user, the logger, and more.
 
 ```ts title="api/modules/chat/echo.ws.ts"
@@ -227,7 +227,7 @@ export const chatModule = buildModule({
 ### Use it in a component
 
 `useVitNodeWebSocket` connects the component to the channel. Because it knows
-the channel, `send` and the `onMessage` `data` are fully typed — no casting.
+the channel, `send` and the `onMessage` `data` are fully typed - no casting.
 
 ```tsx title="views/echo.tsx"
 "use client";
@@ -261,7 +261,7 @@ export const Echo = () => {
 
 <Callout type="info">
   The subscription lives with the component: it starts on mount and stops on
-  unmount. So a view only receives messages while it is on screen — leave the
+  unmount. So a view only receives messages while it is on screen - leave the
   page and it goes quiet on its own.
 </Callout>
 
@@ -328,7 +328,7 @@ export const LivePosts = () => {
 
 ## Send to one user
 
-To reach **one person** — on every browser where they are signed in — use
+To reach **one person** - on every browser where they are signed in - use
 `sendToUser`. VitNode knows which user owns each connection (from their sign-in
 cookie), so the message never leaks to anyone else.
 
@@ -344,7 +344,7 @@ c.get("realtime").sendToUser(userId, notificationsChannel, {
 });
 ```
 
-Show it however you like — here as a toast with `sonner`:
+Show it however you like - here as a toast with `sonner`:
 
 ```tsx title="notification-listener.tsx"
 "use client";
@@ -364,6 +364,6 @@ export const NotificationListener = () => {
 
 <Callout type="info">
   The notification channel, this listener, and an admin dashboard button to send
-  one are all built in. A user only receives notifications while signed in — a
+  one are all built in. A user only receives notifications while signed in - a
   guest connection has no one to deliver to.
 </Callout>

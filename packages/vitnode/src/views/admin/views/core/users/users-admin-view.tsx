@@ -34,8 +34,8 @@ export const UsersAdminView = async ({
     <DataTable
       columns={[
         {
-          id: "name",
-          label: t("user"),
+          accessorKey: "name",
+          header: t("user"),
           cell: ({ row }) => (
             <div className="flex items-center gap-3">
               <Avatar size={32} user={row} />
@@ -50,8 +50,8 @@ export const UsersAdminView = async ({
           ),
         },
         {
-          id: "email",
-          label: t("email"),
+          accessorKey: "email",
+          header: t("email"),
           cell: ({ row }) => {
             if (row.emailVerified) {
               return <span>{row.email}</span>;
@@ -71,8 +71,8 @@ export const UsersAdminView = async ({
           },
         },
         {
-          id: "roleId",
-          label: t("roles"),
+          accessorKey: "roleId",
+          header: t("roles"),
           cell: ({ row }) => (
             <div className="flex flex-col items-start gap-1">
               <RoleFormat role={row.role} />
@@ -90,13 +90,14 @@ export const UsersAdminView = async ({
           ),
         },
         {
-          id: "createdAt",
-          label: t("createdAt"),
+          accessorKey: "createdAt",
+          header: t("createdAt"),
           cell: ({ row }) => <DateFormat date={row.createdAt} />,
         },
         {
           id: "actions",
-          label: "",
+          header: "",
+          align: "right",
           className: "w-10",
           cell: ({ row }) => <UsersAdminActions {...row} />,
         },

@@ -11,10 +11,11 @@ Building layouts and pages in VitNode is just like Next.js - if you know Next.js
 </Callout>
 
 <Callout type="info">
-  VitNode is **i18n-first** — render all user-facing text with translations
+  VitNode is **i18n-first** - render all user-facing text with translations
   instead of hardcoded strings: `getTranslations` in Server Components and
-  `useTranslations` in Client Components. See [Messages](/docs/dev/i18n/messages)
-  and [Namespaces](/docs/dev/i18n/namespaces).
+  `useTranslations` in Client Components. See
+  [Messages](/docs/dev/i18n/messages) and
+  [Namespaces](/docs/dev/i18n/namespaces).
 </Callout>
 
 ## Creating Pages
@@ -26,15 +27,15 @@ Pages are React components that live in `page.tsx` files. Each page represents a
 Resolve text from your plugin's namespace with `getTranslations`:
 
 ```tsx title="plugins/blog/src/routes/main/page.tsx"
-import { getTranslations } from 'next-intl/server';
+import { getTranslations } from "next-intl/server";
 
 export default async function BlogHomePage() {
-  const t = await getTranslations('@vitnode/blog'); // [!code highlight]
+  const t = await getTranslations("@vitnode/blog"); // [!code highlight]
 
   return (
     <div className="py-12 text-center">
-      <h1 className="mb-4 text-4xl font-bold">{t('home.title')}</h1>
-      <p className="text-gray-600">{t('home.desc')}</p>
+      <h1 className="mb-4 text-4xl font-bold">{t("home.title")}</h1>
+      <p className="text-gray-600">{t("home.desc")}</p>
     </div>
   );
 }
@@ -58,15 +59,15 @@ Add the messages under your plugin's namespace:
 Create folders to organize your routes:
 
 ```tsx title="plugins/blog/src/routes/main/dashboard/page.tsx"
-import { getTranslations } from 'next-intl/server';
+import { getTranslations } from "next-intl/server";
 
 export default async function DashboardPage() {
-  const t = await getTranslations('@vitnode/blog');
+  const t = await getTranslations("@vitnode/blog");
 
   return (
     <div>
-      <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
-      <p>{t('dashboard.desc')}</p>
+      <h1 className="text-3xl font-bold">{t("dashboard.title")}</h1>
+      <p>{t("dashboard.desc")}</p>
     </div>
   );
 }
@@ -79,7 +80,7 @@ This creates `/dashboard` route.
 Use `[param]` for dynamic URLs. Pass dynamic values straight into the message:
 
 ```tsx title="plugins/blog/src/routes/main/posts/[slug]/page.tsx"
-import { getTranslations } from 'next-intl/server';
+import { getTranslations } from "next-intl/server";
 
 interface PostPageProps {
   params: Promise<{ slug: string }>;
@@ -87,13 +88,13 @@ interface PostPageProps {
 
 export default async function PostPage({ params }: PostPageProps) {
   const { slug } = await params;
-  const t = await getTranslations('@vitnode/blog');
+  const t = await getTranslations("@vitnode/blog");
 
   // en.json: "post": { "title": "Post: {slug}" }
   return (
     <div>
-      <h1>{t('post.title', { slug })}</h1>
-      <p>{t('post.desc')}</p>
+      <h1>{t("post.title", { slug })}</h1>
+      <p>{t("post.desc")}</p>
     </div>
   );
 }
@@ -106,21 +107,21 @@ Layouts wrap your pages and provide shared UI elements like headers, navigation,
 ### Basic Layout
 
 ```tsx title="plugins/blog/src/routes/main/layout.tsx"
-import { getTranslations } from 'next-intl/server';
+import { getTranslations } from "next-intl/server";
 
 export default async function BlogLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const t = await getTranslations('@vitnode/blog');
+  const t = await getTranslations("@vitnode/blog");
 
   return (
     <div className="min-h-screen">
       <header className="border-b bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <h1 className="text-2xl font-bold text-indigo-600">
-            {t('layout.title')}
+            {t("layout.title")}
           </h1>
         </div>
       </header>
@@ -129,7 +130,7 @@ export default async function BlogLayout({
 
       <footer className="bg-gray-900 py-8 text-white">
         <div className="container mx-auto px-4 text-center">
-          <p>{t('layout.footer')}</p>
+          <p>{t("layout.footer")}</p>
         </div>
       </footer>
     </div>
@@ -140,25 +141,28 @@ export default async function BlogLayout({
 ### Nested Layout for Specific Sections
 
 ```tsx title="plugins/blog/src/routes/main/dashboard/layout.tsx"
-import { getTranslations } from 'next-intl/server';
+import { getTranslations } from "next-intl/server";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const t = await getTranslations('@vitnode/blog');
+  const t = await getTranslations("@vitnode/blog");
 
   return (
     <div className="flex">
       {/* Sidebar */}
       <aside className="min-h-screen w-64 border-r bg-gray-50">
         <nav className="p-6">
-          <h2 className="mb-4 font-semibold">{t('dashboard.nav.title')}</h2>
+          <h2 className="mb-4 font-semibold">{t("dashboard.nav.title")}</h2>
           <ul className="space-y-2">
             <li>
-              <a href="/dashboard" className="text-gray-700 hover:text-indigo-600">
-                {t('dashboard.nav.overview')}
+              <a
+                href="/dashboard"
+                className="text-gray-700 hover:text-indigo-600"
+              >
+                {t("dashboard.nav.overview")}
               </a>
             </li>
             <li>
@@ -166,7 +170,7 @@ export default async function DashboardLayout({
                 href="/dashboard/posts"
                 className="text-gray-700 hover:text-indigo-600"
               >
-                {t('dashboard.nav.posts')}
+                {t("dashboard.nav.posts")}
               </a>
             </li>
           </ul>
@@ -188,17 +192,17 @@ export default async function DashboardLayout({
 
 ## Pages without a layout
 
-Files in `src/routes/main` are wrapped by the main site layout (header, footer). To render a page **without** that chrome — only the root providers — put it in `src/routes/blank` instead. Handy for full-screen views, embeds, or standalone screens.
+Files in `src/routes/main` are wrapped by the main site layout (header, footer). To render a page **without** that chrome - only the root providers - put it in `src/routes/blank` instead. Handy for full-screen views, embeds, or standalone screens.
 
 ```tsx title="plugins/{plugin_name}/src/routes/blank/standalone/page.tsx"
-import { getTranslations } from 'next-intl/server';
+import { getTranslations } from "next-intl/server";
 
 export default async function StandalonePage() {
-  const t = await getTranslations('@vitnode/blog');
+  const t = await getTranslations("@vitnode/blog");
 
   return (
     <div className="flex min-h-screen items-center justify-center">
-      <h1>{t('standalone.title')}</h1>
+      <h1>{t("standalone.title")}</h1>
     </div>
   );
 }
@@ -208,11 +212,11 @@ This creates a `/standalone` route that renders on its own. Admin pages live in 
 
 ## Adding Metadata
 
-Improve SEO and social sharing with metadata — resolve the title/description from messages too:
+Improve SEO and social sharing with metadata - resolve the title/description from messages too:
 
 ```tsx title="plugins/blog/src/routes/main/posts/[slug]/page.tsx"
-import { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server'; // [!code highlight]
+import { Metadata } from "next";
+import { getTranslations } from "next-intl/server"; // [!code highlight]
 
 interface PostPageProps {
   params: Promise<{ slug: string }>;
@@ -223,22 +227,22 @@ export async function generateMetadata({
   params,
 }: PostPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const t = await getTranslations('@vitnode/blog');
+  const t = await getTranslations("@vitnode/blog");
 
   return {
-    title: t('post.meta.title', { slug }),
-    description: t('post.meta.desc', { slug }),
+    title: t("post.meta.title", { slug }),
+    description: t("post.meta.desc", { slug }),
   };
 }
 
 export default async function PostPage({ params }: PostPageProps) {
   const { slug } = await params;
-  const t = await getTranslations('@vitnode/blog');
+  const t = await getTranslations("@vitnode/blog");
 
   return (
     <article>
-      <h1>{t('post.title', { slug })}</h1>
-      <p>{t('post.desc')}</p>
+      <h1>{t("post.title", { slug })}</h1>
+      <p>{t("post.desc")}</p>
     </article>
   );
 }

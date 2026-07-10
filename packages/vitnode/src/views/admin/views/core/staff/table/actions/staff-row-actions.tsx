@@ -32,7 +32,7 @@ export const StaffRowActions = ({
   const tGlobal = useTranslations("core.global");
 
   // Protected entries are managed by the system, and an admin cannot manage the
-  // entry that governs their own access — neither can be edited or removed.
+  // entry that governs their own access - neither can be edited or removed.
   if (isProtected || self) {
     return (
       <div className="flex justify-end">
@@ -45,7 +45,7 @@ export const StaffRowActions = ({
     );
   }
 
-  // No actionable permissions — render an empty cell.
+  // No actionable permissions - render an empty cell.
   if (!canEdit && !canDelete) {
     return null;
   }

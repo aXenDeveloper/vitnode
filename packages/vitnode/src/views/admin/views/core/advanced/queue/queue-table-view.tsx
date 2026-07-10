@@ -43,8 +43,8 @@ export const QueueTableView = async ({
     <DataTable
       columns={[
         {
-          id: "name",
-          label: t("list.name"),
+          accessorKey: "name",
+          header: t("list.name"),
           cell: ({ row }) => (
             <div className="flex max-w-sm flex-col">
               <span>{row.name}</span>
@@ -52,30 +52,30 @@ export const QueueTableView = async ({
             </div>
           ),
         },
-        { id: "queue", label: t("list.queue") },
+        { accessorKey: "queue", header: t("list.queue") },
         {
-          id: "status",
-          label: t("list.status"),
+          accessorKey: "status",
+          header: t("list.status"),
           cell: ({ row }) => <QueueStatusBadge status={row.status} />,
         },
         {
-          id: "attempts",
-          label: t("list.attempts"),
+          accessorKey: "attempts",
+          header: t("list.attempts"),
           cell: ({ row }) => `${row.attempts}/${row.maxAttempts}`,
         },
         {
-          id: "availableAt",
-          label: t("list.availableAt"),
+          accessorKey: "availableAt",
+          header: t("list.availableAt"),
           cell: ({ row }) => <DateFormat date={row.availableAt} showFullDate />,
         },
         {
-          id: "createdAt",
-          label: t("list.createdAt"),
+          accessorKey: "createdAt",
+          header: t("list.createdAt"),
           cell: ({ row }) => <DateFormat date={row.createdAt} />,
         },
         {
-          id: "lastError",
-          label: t("list.lastError"),
+          accessorKey: "lastError",
+          header: t("list.lastError"),
           cell: ({ row }) =>
             row.lastError ? (
               <span className="text-destructive line-clamp-2 max-w-xs text-sm">

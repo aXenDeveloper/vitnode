@@ -10,19 +10,35 @@ description: A table component with sorting, filtering, and pagination compatibl
 ## Usage
 
 ```ts
-import { DataTable } from "@vitnode/core/components/table/data-table";
+import {
+  type ColumnDef,
+  DataTable,
+} from "@vitnode/core/components/table/data-table";
 ```
 
+Columns are typed with `ColumnDef<T>`, where `T` is the shape of a single row. An **accessor column** binds to the data through `accessorKey`, which is type-safe - it only accepts a `keyof T`, just like TanStack Table. A **display column** (for actions, selection, etc.) has no `accessorKey` and instead requires a string `id`.
+
 ```tsx
+const columns: ColumnDef<User>[] = [
+  { accessorKey: "name", header: "Name" },
+  { accessorKey: "email", header: "Email" },
+  { accessorKey: "role", header: "Role" },
+  { accessorKey: "status", header: "Status", align: "center" },
+  {
+    id: "actions",
+    header: "",
+    align: "right",
+    cell: () => (
+      <Button size="sm" variant="outline">
+        Edit
+      </Button>
+    ),
+  },
+];
+
 <DataTable
   id="users-table"
-  columns={[
-    { id: "name", label: "Name" },
-    { id: "email", label: "Email" },
-    { id: "role", label: "Role" },
-    { id: "status", label: "Status" },
-    { id: "id", label: "Actions" },
-  ]}
+  columns={columns}
   edges={data.edges}
   pageInfo={data.pageInfo}
   order={{
@@ -31,24 +47,41 @@ import { DataTable } from "@vitnode/core/components/table/data-table";
       order: "asc",
     },
   }}
-/>
+/>;
 ```
+
+<Callout type="info" title="Type-safe columns">
+  `accessorKey` autocompletes and is checked against the row type `T` - passing a
+  key that doesn't exist on `T` is a compile-time error. Use `id` (a plain
+  `string`) for display columns that aren't backed by a data field.
+</Callout>
 
 import { TypeTable } from "fumadocs-ui/components/type-table";
 
 <TypeTable
   type={{
     columns: {
-      description: "Array of column definitions",
+      description:
+        "Array of column definitions. Accessor columns bind to data via a type-safe accessorKey (keyof T); display columns (e.g. actions) use a string id instead.",
       required: true,
-      type: `{
-        id: string;
-        label: string;
-        cell?: (props: {
-          row: any;
-          allData: any[];
-        }) => JSX.Element;
-      }[]`,
+      type: `ColumnDef<T>[] where ColumnDef<T> is:
+        // accessor column
+        {
+          accessorKey: keyof T;
+          header: ReactNode;
+          id?: string;
+          align?: 'left' | 'center' | 'right';
+          className?: string;
+          cell?: (props: { row: T; allData: T[] }) => ReactNode;
+        }
+        // or display column
+        {
+          id: string;
+          header: ReactNode;
+          align?: 'left' | 'center' | 'right';
+          className?: string;
+          cell?: (props: { row: T; allData: T[] }) => ReactNode;
+        }`,
     },
     edges: {
       description: "Data to be displayed in the table",
@@ -118,8 +151,8 @@ You can customize how each cell is rendered using the `cell` property. The rende
   id="users-table"
   columns={[
     {
-      id: "id",
-      label: "Id",
+      accessorKey: "id",
+      header: "Id",
       // [!code ++]
       cell: ({ row, allData }) => (
         // [!code ++]
@@ -131,7 +164,7 @@ You can customize how each cell is rendered using the `cell` property. The rende
         // [!code ++]
       ),
     },
-    { id: "createdAt", label: "Created at" },
+    { accessorKey: "createdAt", header: "Created at" },
   ]}
   edges={data.edges}
   pageInfo={data.pageInfo}
@@ -159,6 +192,25 @@ order={{
 }}
 ```
 
+## Column Alignment
+
+Use the `align` property to control the horizontal alignment of a column's header and cells. It accepts `"left"` (default), `"center"`, or `"right"`. This is handy for numeric values and action buttons.
+
+```tsx
+columns={[
+  { accessorKey: "name", header: "Name" },
+  // [!code ++]
+  { accessorKey: "status", header: "Status", align: "center" },
+  {
+    id: "actions",
+    header: "",
+    // [!code ++]
+    align: "right",
+    cell: ({ row }) => <RowActions id={row.id} />,
+  },
+]}
+```
+
 ## Search
 
 Set the `search` prop to `true` to render a search input above the table. You can optionally customize the placeholder with `searchPlaceholder`.
@@ -171,8 +223,8 @@ Set the `search` prop to `true` to render a search input above the table. You ca
   // [!code ++]
   searchPlaceholder="Search users..."
   columns={[
-    { id: "name", label: "Name" },
-    { id: "email", label: "Email" },
+    { accessorKey: "name", header: "Name" },
+    { accessorKey: "email", header: "Email" },
   ]}
   edges={data.edges}
   pageInfo={data.pageInfo}
@@ -189,7 +241,7 @@ The input writes the term to the `?search=` query parameter (debounced) and relo
 
 <Callout type="info" title="Configure the API route">
   Enabling `search` only renders the input. You must also tell the backend which
-  columns to search across — see the [Search](/docs/dev/database/search) guide.
+  columns to search across - see the [Search](/docs/dev/database/search) guide.
 </Callout>
 
 ## Filters
@@ -256,8 +308,8 @@ When the set of options is small and known ahead of time, pass them directly via
     // [!code ++]
   ]}
   columns={[
-    { id: "name", label: "Name" },
-    { id: "email", label: "Email" },
+    { accessorKey: "name", header: "Name" },
+    { accessorKey: "email", header: "Email" },
   ]}
   edges={data.edges}
   pageInfo={data.pageInfo}
@@ -272,7 +324,7 @@ When the set of options is small and known ahead of time, pass them directly via
 
 ### Async filters
 
-When the options come from the API (for example a large or searchable list), provide an `onSearch` callback instead of `options`. It runs — debounced — as the user types and should return results already filtered and capped by the server. Use a [Server Action](https://react.dev/reference/rsc/server-functions) so the lookup runs server-side:
+When the options come from the API (for example a large or searchable list), provide an `onSearch` callback instead of `options`. It runs - debounced - as the user types and should return results already filtered and capped by the server. Use a [Server Action](https://react.dev/reference/rsc/server-functions) so the lookup runs server-side:
 
 ```tsx title="search-roles.action.tsx"
 "use server";
@@ -320,7 +372,7 @@ filters={[
 ```
 
 <Callout type="info" title="Configure the API route">
-  A filter only writes its values to the URL — the backend must read the query
+  A filter only writes its values to the URL - the backend must read the query
   parameter and apply the matching `where` clause. For a comma-separated
   multi-select, split the value and use `inArray`:
 
@@ -370,18 +422,18 @@ export const UsersView = async ({
       id="users-table"
       columns={[
         {
-          id: "id",
-          label: "ID",
+          accessorKey: "id",
+          header: "ID",
         },
         {
-          id: "username",
-          label: "Username",
+          accessorKey: "username",
+          header: "Username",
           cell: ({ row }) => (
             <span className="font-medium">{row.username}</span>
           ),
         },
-        { id: "email", label: "Email" },
-        { id: "createdAt", label: "Created at" },
+        { accessorKey: "email", header: "Email" },
+        { accessorKey: "createdAt", header: "Created at" },
       ]}
       edges={data.edges}
       order={{

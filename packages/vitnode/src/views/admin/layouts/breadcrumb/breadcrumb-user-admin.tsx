@@ -10,7 +10,7 @@ import { resolveBreadcrumb } from "./resolve-breadcrumb";
 /**
  * Breadcrumb for the user detail page (`/admin/core/users/<id>`). Resolves the
  * real user name server-side so the last crumb shows the name instead of the
- * raw url segment — the data-resolution showcase of the parallel-routes pattern.
+ * raw url segment - the data-resolution showcase of the parallel-routes pattern.
  */
 export const BreadcrumbUserAdmin = async ({
   id,

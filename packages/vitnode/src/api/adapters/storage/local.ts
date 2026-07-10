@@ -19,7 +19,7 @@ import { CONFIG } from "@/lib/config";
  * - Inside a Next.js app the `public/` directory is served at the site root, so
  *   pass `publicPath: "/uploads"` there (the `static` descriptor is unused).
  *
- * Local disk is not durable on serverless platforms — use a cloud adapter there.
+ * Local disk is not durable on serverless platforms - use a cloud adapter there.
  */
 export const LocalStorageAdapter = ({
   baseUrl,

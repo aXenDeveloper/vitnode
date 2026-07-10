@@ -27,6 +27,29 @@ export interface SearchParamsDataTable<T = unknown> {
   orderBy?: keyof T;
 }
 
+export type AlignDataTable = "center" | "left" | "right";
+
+interface ColumnDefBase<T extends DataTableTMin> {
+  align?: AlignDataTable;
+  cell?: (data: { allData: T[]; row: T }) => React.ReactNode;
+  className?: string;
+  header: React.ReactNode;
+}
+
+interface AccessorColumnDef<T extends DataTableTMin> extends ColumnDefBase<T> {
+  accessorKey: keyof T;
+  id?: string;
+}
+
+interface DisplayColumnDef<T extends DataTableTMin> extends ColumnDefBase<T> {
+  accessorKey?: never;
+  id: string;
+}
+
+export type ColumnDef<T extends DataTableTMin> =
+  | AccessorColumnDef<T>
+  | DisplayColumnDef<T>;
+
 export const DataTableSkeleton = ({ columns }: { columns: number }) => {
   const headerIds = React.useMemo(
     () =>
@@ -88,12 +111,7 @@ export function DataTable<T extends DataTableTMin>(
   props: Omit<React.ComponentProps<typeof Table>, "columns"> &
     React.ComponentProps<typeof PaginationDataTable> &
     React.ComponentProps<typeof SearchDataTable> & {
-      columns: {
-        cell?: (data: { allData: T[]; row: T }) => React.ReactNode;
-        className?: string;
-        id: "actions" | keyof T;
-        label: string;
-      }[];
+      columns: ColumnDef<T>[];
       customNoResults?: {
         description?: string;
         footer?: React.ReactNode;

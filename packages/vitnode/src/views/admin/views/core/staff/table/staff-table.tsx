@@ -65,8 +65,8 @@ export const StaffTableAdmin = async ({
     <DataTable
       columns={[
         {
-          id: "role",
-          label: t("role"),
+          accessorKey: "role",
+          header: t("role"),
           cell: ({ row }) =>
             row.role ? (
               <RoleFormat role={row.role} />
@@ -75,8 +75,8 @@ export const StaffTableAdmin = async ({
             ),
         },
         {
-          id: "user",
-          label: t("user"),
+          accessorKey: "user",
+          header: t("user"),
           cell: ({ row }) =>
             row.user ? (
               <StaffUserFormat user={row.user} />
@@ -85,8 +85,8 @@ export const StaffTableAdmin = async ({
             ),
         },
         {
-          id: "unrestricted",
-          label: t("permissions"),
+          accessorKey: "unrestricted",
+          header: t("permissions"),
           cell: ({ row }) =>
             row.unrestricted ? (
               <Badge>{t("unrestricted")}</Badge>
@@ -95,13 +95,14 @@ export const StaffTableAdmin = async ({
             ),
         },
         {
-          id: "updatedAt",
-          label: t("updatedAt"),
+          accessorKey: "updatedAt",
+          header: t("updatedAt"),
           cell: ({ row }) => <DateFormat date={row.updatedAt} />,
         },
         {
           id: "actions",
-          label: "",
+          header: "",
+          align: "right",
           className: "w-10",
           cell: ({ row }) => (
             <StaffRowActions

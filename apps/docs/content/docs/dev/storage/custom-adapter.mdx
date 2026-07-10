@@ -4,8 +4,8 @@ description: Create your own custom storage adapter for VitNode.
 ---
 
 Want to store files somewhere else? Implement the `StorageApiPlugin` interface.
-An adapter is a plain factory returning three methods — `upload`, `delete` and
-`getUrl` — plus an optional `static` descriptor for disk-backed adapters that
+An adapter is a plain factory returning three methods - `upload`, `delete` and
+`getUrl` - plus an optional `static` descriptor for disk-backed adapters that
 serve files through Hono's `serveStatic`.
 
 ## Usage
@@ -28,10 +28,10 @@ export const MyStorageAdapter = ({
 <Step>
 ### Implement the methods
 
-- `upload({ key, body, contentType })` — persist the `Buffer` and return the
+- `upload({ key, body, contentType })` - persist the `Buffer` and return the
   stored `key` and its public `url`.
-- `delete(key)` — remove a stored object.
-- `getUrl(key)` — build the public URL for a key.
+- `delete(key)` - remove a stored object.
+- `getUrl(key)` - build the public URL for a key.
 
 ```ts title="src/utils/storage/my-storage.ts"
 import type {
@@ -66,7 +66,7 @@ export const MyStorageAdapter = ({
 <Callout type="info" title="Keys are pre-built for you">
   The framework builds the `month_{month}_{year}/{folder}/<uuid>.<ext>` key
   before calling `upload`, so an adapter just stores the `body` at the given
-  `key` — no path logic needed.
+  `key` - no path logic needed.
 </Callout>
 
 ## Publish to NPM

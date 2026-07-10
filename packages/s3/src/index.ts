@@ -29,7 +29,7 @@ export const S3StorageAdapter = ({
 }): StorageApiPlugin => {
   let client: S3Client | undefined;
 
-  // A single client serves AWS S3 and Cloudflare R2 — R2 only needs a custom
+  // A single client serves AWS S3 and Cloudflare R2 - R2 only needs a custom
   // `endpoint` (and path-style addressing). Created lazily so a missing config
   // fails on first use with a clear error, like the other adapters.
   const getClient = (): S3Client => {

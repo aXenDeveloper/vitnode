@@ -1,7 +1,7 @@
 # (VitNode) AWS S3 / Cloudflare R2 Storage Adapter
 
 This package provides an S3-compatible storage adapter for VitNode file uploads.
-A single adapter serves both **AWS S3** and **Cloudflare R2** — R2 only needs a
+A single adapter serves both **AWS S3** and **Cloudflare R2** - R2 only needs a
 custom `endpoint`.
 
 <p align="center">
@@ -17,6 +17,6 @@ custom `endpoint`.
   <br>
 </p>
 
-| Cloud        | Self-Hosted  | Links                                                             | Documentation                                        |
-| ------------ | ------------ | ---------------------------------------------------------------- | ---------------------------------------------------- |
+| Cloud        | Self-Hosted  | Links                                                           | Documentation                                      |
+| ------------ | ------------ | --------------------------------------------------------------- | -------------------------------------------------- |
 | ✅ Supported | ✅ Supported | [NPM Package](https://www.npmjs.com/package/@aws-sdk/client-s3) | [Docs](https://vitnode.com/docs/dev/storage/s3-r2) |

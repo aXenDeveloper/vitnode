@@ -7,7 +7,7 @@ VitNode gives you a pluggable **storage adapter**, exposed on every request as
 `c.get("storage")`. Files are always stored under `month_{month}_{year}/{folder}/…`
 and every upload returns a public URL.
 
-VitNode does **not** ship a generic upload endpoint — you build your own route
+VitNode does **not** ship a generic upload endpoint - you build your own route
 (in your app or plugin) so you control auth, validation, and where files go. The
 `c.get("storage").upload()` helper does the heavy lifting: it builds the dated
 key, validates the file, and returns the URL.
@@ -28,7 +28,7 @@ or create your own [custom storage adapter](/docs/dev/storage/custom-adapter).
 ## Image optimization
 
 Enable the `image` option to re-encode uploaded images with
-[`sharp`](https://sharp.pixelplumbing.com/) before they're stored — a simple way
+[`sharp`](https://sharp.pixelplumbing.com/) before they're stored - a simple way
 to cut file size. `quality` defaults to `85` (1–100):
 
 ```ts title="vitnode.api.config.ts"
@@ -44,11 +44,11 @@ export const vitNodeApiConfig = buildApiConfig({
 ```
 
 It runs automatically inside `c.get("storage").upload()`, so every upload route
-benefits. Applies to JPEG, PNG, WebP, AVIF and TIFF. Other files — including SVG
-and GIF — are stored untouched. Leave `image` out to store originals as-is.
+benefits. Applies to JPEG, PNG, WebP, AVIF and TIFF. Other files - including SVG
+and GIF - are stored untouched. Leave `image` out to store originals as-is.
 
-Processed images are also **converted to WebP** by default — usually much
-smaller than JPEG or PNG at the same quality — and their pixel dimensions are
+Processed images are also **converted to WebP** by default - usually much
+smaller than JPEG or PNG at the same quality - and their pixel dimensions are
 recorded in `core_files.metadata.dimensions` (shown in the admin **Files**
 panel). Set `webp: false` to keep each image in its original format:
 
@@ -68,7 +68,7 @@ export const vitNodeApiConfig = buildApiConfig({
 
 Define a route that accepts `multipart/form-data`, then call
 `c.get("storage").upload()`. Pass `maxBytes` / `allowedMimeTypes` to validate the
-file — a violation throws a `400` automatically.
+file - a violation throws a `400` automatically.
 
 <Steps>
 <Step>
@@ -110,7 +110,7 @@ export const uploadAvatarRoute = buildRoute({
     },
   },
   handler: async c => {
-    // Guard however you like — here we require a signed-in user.
+    // Guard however you like - here we require a signed-in user.
     const user = c.get("user");
     if (!user) throw new HTTPException(401, { message: "Unauthorized" });
 
@@ -139,7 +139,7 @@ see [Plugins](/docs/dev/plugins). You can also `c.get("storage").delete(key)` an
 
 Uploads run through TanStack Query, **not** Next.js server actions (which can't
 stream large bodies). Build a `FormData` and pass it to `fetcherClient` as
-`formData` — it drops the JSON `Content-Type` so the browser sets the multipart
+`formData` - it drops the JSON `Content-Type` so the browser sets the multipart
 boundary. Reference your route with `clientModule` and a **type-only** import of
 its module, so the call stays fully typed without bundling any server code:
 

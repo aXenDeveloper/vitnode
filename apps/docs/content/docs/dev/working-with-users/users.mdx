@@ -9,7 +9,7 @@ VitNode ships with a small set of helpers for reading the currently authenticate
 
 ### Current user
 
-The global middleware resolves the session cookie on every request and exposes the authenticated user through the Hono context. Read it with `c.get("user")` inside any route handler — it returns the user object, or `null` for guests.
+The global middleware resolves the session cookie on every request and exposes the authenticated user through the Hono context. Read it with `c.get("user")` inside any route handler - it returns the user object, or `null` for guests.
 
 ```ts title="plugins/{plugin_name}/src/api/routes/me.route.ts"
 import { buildRoute } from "@vitnode/core/api/lib/route";
@@ -45,7 +45,8 @@ The user object has the following shape:
 ```
 
 <Callout type="info" title="Roles">
-  `roleId` points to the role the user belongs to. See [Roles](/docs/dev/working-with-users/roles) for more.
+  `roleId` points to the role the user belongs to. See
+  [Roles](/docs/dev/working-with-users/roles) for more.
 </Callout>
 
 ### Looking up a user
@@ -74,7 +75,7 @@ export const userRoute = buildRoute({
 
 ### Current session
 
-On the server (React Server Components) read the current session with `getSessionApi()`. It returns `{ user }`, where `user` is the authenticated user — including an `isAdmin` flag — or `null` for guests.
+On the server (React Server Components) read the current session with `getSessionApi()`. It returns `{ user }`, where `user` is the authenticated user - including an `isAdmin` flag - or `null` for guests.
 
 ```tsx title="app/[locale]/profile/page.tsx"
 import { getSessionApi } from "@vitnode/core/lib/api/get-session-api";
@@ -107,14 +108,14 @@ export const Profile = ({
 ```
 
 <Callout type="warn" title="Server-side only">
-  `getSessionApi()` relies on the [`fetcher`](/docs/dev/fetcher), so it can only run
-  on the server. Fetch the session in a Server Component and pass what you need
-  down to Client Components as props.
+  `getSessionApi()` relies on the [`fetcher`](/docs/dev/fetcher), so it can only
+  run on the server. Fetch the session in a Server Component and pass what you
+  need down to Client Components as props.
 </Callout>
 
 ### Current admin session
 
-Admin pages have their own session, separate from the public one. Read it on the server with `getSessionAdminApi()` — it returns the admin `user` and the current `vitnode_version`, and automatically redirects to `/admin` when the visitor is not an authenticated administrator.
+Admin pages have their own session, separate from the public one. Read it on the server with `getSessionAdminApi()` - it returns the admin `user` and the current `vitnode_version`, and automatically redirects to `/admin` when the visitor is not an authenticated administrator.
 
 ```tsx title="app/[locale]/admin/page.tsx"
 import { getSessionAdminApi } from "@vitnode/core/lib/api/get-session-admin-api";
@@ -172,15 +173,17 @@ The `user` prop has the following shape:
     id: number;
     name: string;
     color: string | null;
-  };
+  }
 }
 ```
 
-| Prop     | Description                                                          |
-| -------- | ------------------------------------------------------------------- |
-| `user`   | The user to render, including their `role`.                         |
-| `format` | When set, colors the nickname using the role's `color`.             |
+| Prop     | Description                                             |
+| -------- | ------------------------------------------------------- |
+| `user`   | The user to render, including their `role`.             |
+| `format` | When set, colors the nickname using the role's `color`. |
 
 <Callout type="info" title="Roles">
-  To render a role on its own, use the [`RoleFormat`](/docs/dev/working-with-users/roles#formatting-a-role) component.
+  To render a role on its own, use the
+  [`RoleFormat`](/docs/dev/working-with-users/roles#formatting-a-role)
+  component.
 </Callout>

@@ -6,7 +6,7 @@ export type CacheConfig = RedisOptions & { url?: string };
 /**
  * Root prefix applied to every key VitNode writes, so the cache can be flushed
  * without touching unrelated data that may live in the same Redis instance.
- * Keys are further namespaced per plugin — see {@link CacheModel.prefix}.
+ * Keys are further namespaced per plugin - see {@link CacheModel.prefix}.
  */
 const CACHE_PREFIX = "vitnode:cache:";
 const SYSTEM_NAMESPACE = "__system__";
@@ -17,7 +17,7 @@ const SYSTEM_NAMESPACE = "__system__";
  * {@link CacheModel.prefix}), so the `hello` key a plugin writes actually lives
  * at `vitnode:cache:{plugin_code}:hello`. When Redis is not configured (client
  * is `null`) or a command fails, reads return `null`/`false`, writes are
- * no-ops, and {@link CacheModel.remember} simply runs its loader — caching must
+ * no-ops, and {@link CacheModel.remember} simply runs its loader - caching must
  * never break a request.
  */
 export class CacheModel {
@@ -94,7 +94,7 @@ export class CacheModel {
    * Acquire a short-lived distributed lock (`SET key val NX EX ttl`) in the
    * system namespace. Returns `true` when the lock is held by this caller.
    * **Without Redis it returns `true`** so cache-less / single-instance
-   * deployments still make progress — callers must guard correctness some other
+   * deployments still make progress - callers must guard correctness some other
    * way (e.g. Postgres `FOR UPDATE SKIP LOCKED`). Returns `false` on a Redis
    * error so a flaky connection skips rather than double-runs work.
    */

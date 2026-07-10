@@ -17,7 +17,7 @@ export function OrderTableHeadDataTable<T extends DataTableTMin>({
   order: { defaultOrder },
 }: Pick<React.ComponentProps<typeof DataTable<T>>, "order"> & {
   children: React.ReactNode;
-  id: React.ComponentProps<typeof DataTable<T>>["columns"][0]["id"];
+  id: keyof T;
 }) {
   const [isPending, startTransition] = React.useTransition();
   const searchParams = useSearchParams();
