@@ -37,11 +37,9 @@ export const useFormSignUp = () => {
       .max(32, t("username.max_length"))
       .default(""),
     // .refine(value => nameRegex.test(value), t('name.invalid'))
-    email: z
-      .email({
-        message: t("email.invalid"),
-      })
-      .default("test@test.com"),
+    email: z.email({
+      message: t("email.invalid"),
+    }),
     password: passwordSchema,
     terms: z
       .boolean()

@@ -63,12 +63,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build scripts
-        run: pnpm run build:scripts
-
-      - name: Build plugins
-        run: pnpm run build:plugins
-
       - name: Run script to bump version & copy files
         run: pnpm run release
         id: version-bump
@@ -79,6 +73,12 @@ jobs:
           GITHUB_USER: ${{ github.actor }}
           GITHUB_EMAIL: ${{ github.actor }}@users.noreply.github.com
           GITHUB_OPTION_MODE: ${{ github.event.inputs.mode }}
+
+      - name: Build scripts
+        run: pnpm run build:scripts
+
+      - name: Build plugins
+        run: pnpm run build:plugins
 
       - name: Publish canary
         if: ${{ (github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish') && github.event.inputs.release == 'canary' }}

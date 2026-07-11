@@ -8,7 +8,7 @@ import {
   type RootLayoutProps,
 } from "@vitnode/core/views/layouts/root-layout";
 import { RootProvider } from "fumadocs-ui/provider/next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
 
 import { vitNodeConfig } from "@/vitnode.config";
 
@@ -21,13 +21,7 @@ export const generateMetadata = (): Metadata =>
 export const generateStaticParams = () =>
   vitNodeConfig.i18n.locales.map(locale => ({ locale: locale.code }));
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const geist = Geist({
   subsets: ["latin"],
 });
 
@@ -36,9 +30,7 @@ export default async function Layout(props: RootLayoutProps) {
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <Body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <Body className={`${geist.className} antialiased`}>
         <RootProvider
           search={{
             SearchDialog: SearchDialogFumadocs,
