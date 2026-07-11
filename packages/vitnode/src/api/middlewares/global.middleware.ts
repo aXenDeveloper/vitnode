@@ -21,6 +21,7 @@ import type { BuildQueueTaskReturn } from "../lib/queue";
 import type { WebSocketConfig } from "../lib/websocket";
 import type { SSOApiPlugin } from "../models/sso";
 
+import { collectCronJobs } from "../lib/cron";
 import {
   loggerMiddleware,
   type LoggerMiddlewareType,
@@ -133,16 +134,7 @@ export const globalMiddleware = ({
     id: plugin.pluginId,
   }));
 
-  const cronMetadata = plugins.flatMap(plugin =>
-    (plugin.cronJobs ?? []).map(cronJob => ({
-      pluginId: plugin.pluginId,
-      module: cronJob.module,
-      name: cronJob.name,
-      schedule: cronJob.schedule,
-      handler: cronJob.handler,
-      description: cronJob.description,
-    })),
-  );
+  const cronMetadata = collectCronJobs(plugins);
 
   const queueMetadata = plugins.flatMap(plugin =>
     (plugin.queueTasks ?? []).map(task => ({

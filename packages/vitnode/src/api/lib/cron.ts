@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import { CONFIG } from "@/lib/config";
 
 import type { EnvVitNode } from "../middlewares/global.middleware";
+import type { BuildPluginApiReturn } from "./plugin";
 
 export interface CronAdapter {
   schedule: () => void;
@@ -27,6 +28,21 @@ export function buildCron({
   description,
 }: BuildCronReturn): BuildCronReturn {
   return { name, schedule, handler, description };
+}
+
+export function collectCronJobs(
+  plugins: BuildPluginApiReturn[],
+): CronJobConfig[] {
+  return plugins.flatMap(plugin =>
+    (plugin.cronJobs ?? []).map(cronJob => ({
+      pluginId: plugin.pluginId,
+      module: cronJob.module,
+      name: cronJob.name,
+      schedule: cronJob.schedule,
+      handler: cronJob.handler,
+      description: cronJob.description,
+    })),
+  );
 }
 
 export const handleCronJobs = async () => {

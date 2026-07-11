@@ -4,6 +4,7 @@ import { z } from "zod";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_cron } from "@/database/cron";
 import { core_queue } from "@/database/queue";
+import { getQueueStatus } from "@/lib/api/get-queue-status";
 import { isCronStale } from "@/lib/api/is-cron-stale";
 import { INSECURE_DEFAULT_CRON_SECRET } from "@/lib/config";
 import { isRealtimePubSubEnabled, isWebSocketEnabled } from "@/ws/registry";
@@ -50,9 +51,10 @@ export const integrationsDebugAdminRoute = buildRoute({
                 active: z.boolean(),
               }),
               queue: z.object({
-                // `true` when at least one handler is registered AND the cron
-                // worker is running - the queue is drained by cron, so a stale
-                // scheduler means tasks pile up unprocessed.
+                // `true` when at least one handler is registered AND a cron
+                // adapter is configured AND its scheduler is running - the queue
+                // is drained by cron, so with cron off (or stale) tasks pile up
+                // unprocessed and the queue is reported inactive.
                 active: z.boolean(),
                 // `true` when handlers are registered but the queue is offline
                 // because the cron worker that drains it isn't running.
@@ -122,7 +124,12 @@ export const integrationsDebugAdminRoute = buildRoute({
     const cronStale = isCronStale(
       cronActivity?.lastActivity ? new Date(cronActivity.lastActivity) : null,
     );
-    const queueActive = core.queue.length > 0;
+    const cronActive = core.hasCronAdapter;
+    const queueStatus = getQueueStatus({
+      cronActive,
+      cronStale,
+      hasTaskHandlers: core.queue.length > 0,
+    });
 
     return c.json(
       {
@@ -131,7 +138,7 @@ export const integrationsDebugAdminRoute = buildRoute({
           type: captcha?.type ?? null,
         },
         cron: {
-          active: core.hasCronAdapter,
+          active: cronActive,
           jobs: core.cron.length,
           lastRun: cronLastRun ? cronLastRun.toISOString() : null,
           secure:
@@ -143,8 +150,8 @@ export const integrationsDebugAdminRoute = buildRoute({
           active: !!core.email?.adapter,
         },
         queue: {
-          active: queueActive && !cronStale,
-          cronStale: queueActive && cronStale,
+          active: queueStatus.active,
+          cronStale: queueStatus.cronStale,
           pending: queuePending,
           processing: queueProcessing,
           tasks: core.queue.length,
