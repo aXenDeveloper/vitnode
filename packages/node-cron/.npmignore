@@ -2,5 +2,5 @@
 /src
 /node_modules
 /tsconfig.json
-/.swcrc
+/tsdown.config.ts
 /eslint.config.mjs

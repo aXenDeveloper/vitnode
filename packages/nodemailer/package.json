@@ -24,8 +24,8 @@
     }
   },
   "scripts": {
-    "build:plugins": "tsc -p tsconfig.build.json && swc src -d dist --config-file .swcrc && tsc-alias -p tsconfig.build.json",
-    "dev:plugins": "concurrently \"tsc -w -p tsconfig.build.json --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\" \"tsc-alias -w -p tsconfig.build.json\"",
+    "build:plugins": "tsdown",
+    "dev:plugins": "tsdown --watch",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
@@ -33,14 +33,11 @@
     "nodemailer": "^9.0.1"
   },
   "devDependencies": {
-    "@swc/cli": "^0.8.1",
-    "@swc/core": "^1.15.43",
     "@types/nodemailer": "^8.0.1",
     "@vitnode/config": "workspace:*",
     "@vitnode/core": "workspace:*",
-    "concurrently": "^10.0.3",
     "eslint": "^10.5.0",
-    "tsc-alias": "^1.8.17",
+    "tsdown": "^0.22.4",
     "typescript": "^6.0.3"
   }
 }
