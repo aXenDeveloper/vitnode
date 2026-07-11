@@ -1,8 +1,10 @@
+import { isAbsolute } from "node:path";
 import type { UserConfig } from "tsdown";
 
 const isNodeModule = (id: string): boolean =>
   id.includes("/node_modules/") ||
-  (!id.startsWith(".") && !id.startsWith("/") && !id.startsWith("@/"));
+  id.includes("\\node_modules\\") ||
+  (!id.startsWith(".") && !isAbsolute(id) && !id.startsWith("@/"));
 
 export const createTsdownConfig = (overrides: UserConfig = {}): UserConfig => ({
   entry: ["src/**/*.{ts,tsx}", "!**/*.test.{ts,tsx}", "!src/tests/**"],

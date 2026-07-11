@@ -64,12 +64,15 @@ export function ContentDataTable<T extends DataTableTMin>({
 
                 return (
                   <TableHead
-                    className={cn(alignClassName(column.align), column.className)}
+                    className={cn(
+                      alignClassName(column.align),
+                      column.className,
+                    )}
                     key={columnKey}
                   >
-                    {isOrderable ? (
+                    {isOrderable && column.accessorKey ? (
                       <OrderTableHeadDataTable
-                        id={column.accessorKey as keyof T}
+                        id={column.accessorKey}
                         order={order}
                       >
                         {column.header}
