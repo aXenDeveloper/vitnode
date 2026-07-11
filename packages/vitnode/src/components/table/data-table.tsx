@@ -47,8 +47,7 @@ interface DisplayColumnDef<T extends DataTableTMin> extends ColumnDefBase<T> {
 }
 
 export type ColumnDef<T extends DataTableTMin> =
-  | AccessorColumnDef<T>
-  | DisplayColumnDef<T>;
+  AccessorColumnDef<T> | DisplayColumnDef<T>;
 
 export const DataTableSkeleton = ({ columns }: { columns: number }) => {
   const headerIds = React.useMemo(

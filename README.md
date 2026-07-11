@@ -19,9 +19,9 @@
 
 ### Supported Package Managers
 
-- [bun](https://bun.com/) (min: v1.1, recommended: v1.2)
-- [pnpm](https://pnpm.io/) (min: v9, recommended: v10)
-- [node.js](https://nodejs.org/) (min: v20, recommended: v22)
+- [bun](https://bun.com/) (min: v1.1, recommended: v1.3)
+- [pnpm](https://pnpm.io/) (min: v10, recommended: v11)
+- [node.js](https://nodejs.org/) (min: v22, recommended: v24)
 
 ### Quick Setup
 

@@ -8,7 +8,7 @@
 /node_modules
 /.turbo
 /tsconfig.json
-/.swcrc
+/tsdown.config.ts
 /components.json
 /global.d.ts
 /tsup.config.ts
