@@ -7,6 +7,7 @@ import React from "react";
 import { I18nProvider } from "@vitnode/core/components/i18n-provider";
 import { DataTableSkeleton } from "@vitnode/core/components/table/data-table";
 import { HeaderContent } from "@vitnode/core/components/ui/header-content";
+import { ActionsRolesAdmin } from "@vitnode/core/views/admin/views/core/users/roles/actions/actions";
 
 const RolesAdminView = dynamic(async () =>
   import("@vitnode/core/views/admin/views/core/users/roles/roles-admin-view").then(
@@ -35,7 +36,9 @@ export default async function Page(
   return (
     <I18nProvider namespaces="admin.role">
       <div className="p-4">
-        <HeaderContent desc={t("desc")} h1={tNav("roles")} />
+        <HeaderContent desc={t("desc")} h1={tNav("roles")}>
+          <ActionsRolesAdmin />
+        </HeaderContent>
 
         <React.Suspense fallback={<DataTableSkeleton columns={2} />}>
           <RolesAdminView {...props} />

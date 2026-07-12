@@ -7,6 +7,7 @@ import React from "react";
 import { I18nProvider } from "@/components/i18n-provider";
 import { DataTableSkeleton } from "@/components/table/data-table";
 import { HeaderContent } from "@/components/ui/header-content";
+import { ActionsRolesAdmin } from "@/views/admin/views/core/users/roles/actions/actions";
 
 const RolesAdminView = dynamic(async () =>
   import("@/views/admin/views/core/users/roles/roles-admin-view").then(
@@ -35,7 +36,9 @@ export default async function Page(
   return (
     <I18nProvider namespaces="admin.role">
       <div className="p-4">
-        <HeaderContent desc={t("desc")} h1={tNav("roles")} />
+        <HeaderContent desc={t("desc")} h1={tNav("roles")}>
+          <ActionsRolesAdmin />
+        </HeaderContent>
 
         <React.Suspense fallback={<DataTableSkeleton columns={2} />}>
           <RolesAdminView {...props} />

@@ -10,6 +10,8 @@ import { TooltipWithContent } from "@/components/ui/tooltip";
 import { fetcher } from "@/lib/fetcher";
 import { Link } from "@/lib/navigation";
 
+import { EditAction } from "./table/actions/edit-action";
+
 export const RolesAdminView = async ({
   searchParams,
 }: {
@@ -65,6 +67,13 @@ export const RolesAdminView = async ({
           accessorKey: "updatedAt",
           header: t("updatedAt"),
           cell: ({ row }) => <DateFormat date={row.createdAt} />,
+        },
+        {
+          id: "actions",
+          header: "",
+          align: "right",
+          className: "w-10",
+          cell: ({ row }) => <EditAction data={row} />,
         },
       ]}
       customNoResults={{
