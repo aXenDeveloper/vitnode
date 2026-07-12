@@ -15,6 +15,10 @@ export const vitNodeConfig = buildConfig({
         code: "en",
         name: "English",
       },
+      {
+        code: "pl",
+        name: "Polski",
+      },
     ],
     defaultLocale: "en",
   },

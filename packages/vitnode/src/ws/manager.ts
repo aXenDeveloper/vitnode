@@ -69,7 +69,10 @@ export const createWebSocketManager = ({
       ? null
       : new BroadcastChannel(CHANNEL_NAME);
 
-  const post = (message: CrossTabMessage) => channel?.postMessage(message);
+  const post = (message: CrossTabMessage) => {
+    if (isDestroyed) return;
+    channel?.postMessage(message);
+  };
 
   const setReadyState = (state: number) => {
     readyState = state;
@@ -83,6 +86,18 @@ export const createWebSocketManager = ({
       // Buffer until the leader's socket is open.
       outgoingQueue.push(message);
     }
+  };
+
+  // Detach handlers first so the socket's asynchronous close event can't fire
+  // spurious reconnects or cross-tab posts after teardown.
+  const closeSocket = () => {
+    if (!socket) return;
+    socket.onclose = null;
+    socket.onerror = null;
+    socket.onmessage = null;
+    socket.onopen = null;
+    socket.close();
+    socket = null;
   };
 
   // --- Leader: owns the real socket ---------------------------------------
@@ -134,16 +149,7 @@ export const createWebSocketManager = ({
   const reconnectLeader = () => {
     if (!isLeader || isDestroyed) return;
     if (reconnectTimeout) clearTimeout(reconnectTimeout);
-
-    if (socket) {
-      socket.onclose = null;
-      socket.onerror = null;
-      socket.onmessage = null;
-      socket.onopen = null;
-      socket.close();
-      socket = null;
-    }
-
+    closeSocket();
     openSocket();
   };
 
@@ -221,8 +227,7 @@ export const createWebSocketManager = ({
   const destroy = () => {
     isDestroyed = true;
     if (reconnectTimeout) clearTimeout(reconnectTimeout);
-    socket?.close();
-    socket = null;
+    closeSocket();
     releaseLeadership?.();
     channel?.close();
   };

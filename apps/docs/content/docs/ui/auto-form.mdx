@@ -296,6 +296,82 @@ const formSchema = z.object({
 });
 ```
 
+## Multi-language fields
+
+Some values - a category name, a page title - need a translation per language.
+`AutoFormInput` and `AutoFormEditor` accept a `multiLang` prop that collects the
+value in every enabled language. The field renders a language **select** (shown
+only when more than one language is enabled) that switches which language you
+are editing; it does **not** change the app-wide locale, only the value inside
+that field.
+
+The value is stored as an array matching the
+[`core_languages_words`](/docs/dev/working-with-users/roles) table - one
+`{ languageCode, value }` entry per language. Declare the field with the
+`multiLangValueSchema` helper so the Zod schema matches that array shape (its
+`minLength` / `maxLength` apply to each language's value):
+
+```ts
+import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
+
+const formSchema = z.object({
+  name: multiLangValueSchema({ minLength: 1, maxLength: 255 }).min(1),
+});
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: "name",
+      component: props => <AutoFormInput {...props} label="Name" multiLang />,
+    },
+  ]}
+  onSubmit={values => {
+    // values.name => [{ languageCode: "en", value: "News" }, ...]
+  }}
+/>
+```
+
+### Saving to the backend
+
+The form only produces `{ languageCode, value }[]`. On the backend, persist it
+with `saveLanguageWords`, which fills the remaining `core_languages_words`
+columns - the `(pluginCode, tableName, variable, itemId)` tuple that identifies
+the field - and replaces the existing rows in a single transaction:
+
+```ts title="plugins/{plugin_name}/src/api/routes/create-category.route.ts"
+import { buildRoute } from "@vitnode/core/api/lib/route";
+import { saveLanguageWords } from "@vitnode/core/api/lib/save-language-words";
+
+export const createCategoryRoute = buildRoute({
+  handler: async c => {
+    const { name } = c.req.valid("json");
+
+    const [category] = await c
+      .get("db")
+      .insert(blog_categories)
+      .values({})
+      .returning({ id: blog_categories.id });
+
+    await saveLanguageWords(c, {
+      pluginCode: "blog",
+      tableName: "blog_categories",
+      variable: "name",
+      itemId: category.id,
+      values: name, // the { languageCode, value }[] from the form
+    });
+
+    return c.json({ id: category.id }, 201);
+  },
+});
+```
+
+To read the translations back for an edit form, query `core_languages_words` by
+the same tuple and return `{ languageCode, value }[]` - the shape
+[`resolveRoleNames`](/docs/dev/working-with-users/roles) produces for role names.
+
 ## Custom Fields
 
 Because Auto Form fields are controlled entirely by the `component` property function, creating a custom field component is just a matter of rendering your own UI using the provided props. The props passed to the `component` function contain the field properties managed by `react-hook-form` along with Zod validation details.

@@ -68,6 +68,45 @@ import { Input } from '@vitnode/core/components/ui/input';
   </Tab>
 </Tabs>
 
+## Multi-language
+
+Set the `multiLang` prop to collect the value in every enabled language. The
+field renders a language **select** (shown only when more than one language is
+enabled) that switches which language you are editing - it does **not** change
+the app-wide locale, only the value inside this input.
+
+The value becomes an array matching the `core_languages_words` table, one entry
+per language you edited:
+
+```ts
+[
+  { languageCode: "en", value: "Category" },
+  { languageCode: "pl", value: "Kategoria" },
+];
+```
+
+Declare the field with the `multiLangValueSchema` helper so the schema matches
+the array shape (its `minLength` / `maxLength` apply to each language's value):
+
+```ts
+import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
+
+const formSchema = z.object({
+  name: multiLangValueSchema({ minLength: 1, maxLength: 255 }).min(1),
+});
+```
+
+```tsx
+{
+  id: "name",
+  component: props => <AutoFormInput {...props} label="Name" multiLang />,
+}
+```
+
+On the backend, persist the array with `saveLanguageWords` - it fills the
+remaining `core_languages_words` columns. See
+[Auto Form - Multi-language fields](/docs/ui/auto-form#multi-language-fields).
+
 ## Props
 
 import { TypeTable } from "fumadocs-ui/components/type-table";
@@ -96,6 +135,12 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
       description: "Placeholder text to display when the input is empty.",
       type: "string",
       default: "",
+    },
+    multiLang: {
+      description:
+        "Collect the value per language. The value becomes a { languageCode, value }[] array and a language select is shown when more than one language is enabled.",
+      type: "boolean",
+      default: "false",
     },
   }}
 />
