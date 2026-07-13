@@ -129,12 +129,12 @@ export const initialDataForDatabase = async () => {
       {
         roleId: roles[2].id,
         protected: true,
-        data: { unrestricted: true, permissions: [] },
+        unrestricted: true,
       },
       {
         roleId: roles[3].id,
         protected: true,
-        data: { unrestricted: true, permissions: [] },
+        unrestricted: true,
       },
     ]);
 
@@ -142,7 +142,7 @@ export const initialDataForDatabase = async () => {
     await dbClient.insert(core_admin_permissions).values({
       roleId: roles[3].id,
       protected: true,
-      data: { unrestricted: true, permissions: [] },
+      unrestricted: true,
     });
   }
 };

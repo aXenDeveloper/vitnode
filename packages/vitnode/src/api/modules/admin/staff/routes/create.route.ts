@@ -98,7 +98,6 @@ export const createStaffAdminRoute = buildRoute({
       .values({
         roleId: roleId ?? null,
         userId: userId ?? null,
-        data: { unrestricted: false, permissions: [] },
       })
       .returning({ id: table.id });
 

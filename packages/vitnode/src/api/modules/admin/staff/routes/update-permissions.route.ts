@@ -186,7 +186,7 @@ export const updatePermissionsStaffAdminRoute = buildRoute({
     const [updated] = await c
       .get("db")
       .update(table)
-      .set({ data: { unrestricted, permissions: sanitized } })
+      .set({ unrestricted, permissions: sanitized })
       .where(eq(table.id, entryId))
       .returning({ id: table.id });
 

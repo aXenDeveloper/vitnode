@@ -9,10 +9,10 @@ import { core_users } from "@/database/users";
 
 interface RawStaffEdge {
   createdAt: Date;
-  data?: null | { unrestricted: boolean };
   id: number;
   protected: boolean;
   roleId: null | number;
+  unrestricted: boolean;
   updatedAt: Date;
   userId: null | number;
 }
@@ -72,7 +72,7 @@ export const resolveStaffEdges = async (c: Context, edges: RawStaffEdge[]) => {
       id: edge.id,
       createdAt: edge.createdAt,
       updatedAt: edge.updatedAt,
-      unrestricted: edge.data?.unrestricted ?? false,
+      unrestricted: edge.unrestricted,
       protected: edge.protected,
       self,
       role: entryRole
