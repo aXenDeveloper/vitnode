@@ -18,7 +18,7 @@ export const zodRoleNameSchema = z
 
 export const zodCreateRoleAdminSchema = z.object({
   name: zodRoleNameSchema,
-  color: z.string().max(19).optional(),
+  color: z.string().max(50).optional(),
 });
 
 export const createRoleAdminRoute = buildRoute({

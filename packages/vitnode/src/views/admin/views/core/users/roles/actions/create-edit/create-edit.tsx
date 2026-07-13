@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { AutoForm, type AutoFormOnSubmit } from "@/components/form/auto-form";
+import { AutoFormColor } from "@/components/form/fields/color";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { useDialog } from "@/components/ui/dialog";
 import { multiLangValueSchema } from "@/lib/helpers/multi-lang";
@@ -34,7 +35,7 @@ export const CreateEditRoleAdmin = ({ data }: { data?: RoleData }) => {
       ),
     color: z
       .string()
-      .max(19)
+      .max(50)
       .default(data?.color ?? ""),
   });
 
@@ -68,9 +69,9 @@ export const CreateEditRoleAdmin = ({ data }: { data?: RoleData }) => {
         {
           id: "color",
           component: props => (
-            <AutoFormInput
+            <AutoFormColor
+              allowRemoveColor
               label={t("form.color")}
-              placeholder="#000000"
               {...props}
             />
           ),

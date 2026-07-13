@@ -89,10 +89,10 @@ describe("CreateEditRoleAdmin", () => {
       ],
     });
 
-    const [nameInput, colorInput] =
-      screen.getAllByRole<HTMLInputElement>("textbox");
+    // The name is a text input; the color renders on the color-picker trigger.
+    const [nameInput] = screen.getAllByRole<HTMLInputElement>("textbox");
     expect(nameInput.value).toBe("Admin");
-    expect(colorInput.value).toBe("#ef4444");
+    expect(screen.getByText("#ef4444")).toBeDefined();
 
     submitForm(nameInput);
 
