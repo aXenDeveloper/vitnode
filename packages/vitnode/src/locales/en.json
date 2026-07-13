@@ -456,6 +456,21 @@
           "title": "No roles found",
           "description": "Try adjusting your search criteria."
         }
+      },
+      "create": {
+        "title": "Create role",
+        "desc": "Add a new role to your application.",
+        "submit": "Create",
+        "success": "Role created"
+      },
+      "edit": {
+        "title": "Edit role",
+        "submit": "Save changes",
+        "success": "Role updated"
+      },
+      "form": {
+        "name": "Name",
+        "color": "Color"
       }
     },
     "staff": {

@@ -35,12 +35,19 @@ export const multiLangValueSchema = ({
 };
 
 export const getLangValue = (
-  value: MultiLangValue | undefined,
+  value: MultiLangValue | string | undefined,
   languageCode: string,
-): string =>
-  (Array.isArray(value) ? value : []).find(
-    item => item.languageCode === languageCode,
-  )?.value ?? "";
+): string => {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return (
+    (Array.isArray(value) ? value : []).find(
+      item => item.languageCode === languageCode,
+    )?.value ?? ""
+  );
+};
 
 export const upsertLangValue = (
   value: MultiLangValue | undefined,

@@ -36,7 +36,7 @@ export const saveLanguageWords = async (
         ),
       );
 
-    if (values.length === 0) {
+    if (!values || values.length === 0) {
       return;
     }
 
