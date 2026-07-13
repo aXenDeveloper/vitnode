@@ -66,7 +66,7 @@ export const RolesAdminView = async ({
         {
           accessorKey: "updatedAt",
           header: t("updatedAt"),
-          cell: ({ row }) => <DateFormat date={row.createdAt} />,
+          cell: ({ row }) => <DateFormat date={row.updatedAt} />,
         },
         {
           id: "actions",

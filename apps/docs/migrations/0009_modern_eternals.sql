@@ -1,0 +1,1 @@
+ALTER TABLE "core_roles" ALTER COLUMN "color" SET DATA TYPE varchar(50);

@@ -11,7 +11,7 @@ import { zodRoleNameSchema } from "./create.route";
 export const zodUpdateRoleAdminSchema = z
   .object({
     name: zodRoleNameSchema,
-    color: z.string().max(19),
+    color: z.string().max(50),
   })
   .partial()
   .refine(body => Object.values(body).some(value => value !== undefined), {

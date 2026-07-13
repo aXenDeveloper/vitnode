@@ -11,5 +11,5 @@ export const core_roles = pgTable("core_roles", t => ({
   default: t.boolean().notNull().default(false),
   root: t.boolean().notNull().default(false),
   guest: t.boolean().notNull().default(false),
-  color: t.varchar({ length: 19 }),
+  color: t.varchar({ length: 50 }),
 })).enableRLS();
