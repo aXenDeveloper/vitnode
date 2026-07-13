@@ -65,23 +65,15 @@ export const normalizePermissionStaffModules = (
   );
 
 /**
- * A single granted permission stored against a staff entry.
+ * A single granted permission stored against a staff entry. A staff entry's
+ * `unrestricted` column grants every permission for the staff type (and any
+ * added in the future); when `false`, only the entries in its `permissions`
+ * column apply.
  */
 export interface PermissionsStaffArgs {
   module: string;
   permission: string;
   plugin: string;
-}
-
-/**
- * The value persisted in a staff entry's `data` jsonb column.
- *
- * `unrestricted` grants every permission for the staff type (and any added in
- * the future); when `false`, only the explicitly listed `permissions` apply.
- */
-export interface StaffPermissionsData {
-  permissions: PermissionsStaffArgs[];
-  unrestricted: boolean;
 }
 
 /**

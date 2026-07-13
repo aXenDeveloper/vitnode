@@ -71,6 +71,13 @@
       "when": 1783880180694,
       "tag": "0009_modern_eternals",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783967205436,
+      "tag": "0010_open_banshee",
+      "breakpoints": true
     }
   ]
 }

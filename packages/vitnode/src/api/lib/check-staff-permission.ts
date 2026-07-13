@@ -57,18 +57,21 @@ export const resolveStaffPermissions = async (
   const table = tableByType[type];
   const entries = await c
     .get("db")
-    .select({ data: table.data })
+    .select({
+      unrestricted: table.unrestricted,
+      permissions: table.permissions,
+    })
     .from(table)
     .where(or(eq(table.userId, user.id), inArray(table.roleId, roleIds)));
 
-  if (entries.some(entry => entry.data?.unrestricted)) {
+  if (entries.some(entry => entry.unrestricted)) {
     return { root: true, permissions: [] };
   }
 
   const seen = new Set<string>();
   const permissions: PermissionsStaffArgs[] = [];
   for (const entry of entries) {
-    for (const permission of entry.data?.permissions ?? []) {
+    for (const permission of entry.permissions ?? []) {
       const key = staffPermissionKey(permission);
       if (seen.has(key)) continue;
       seen.add(key);

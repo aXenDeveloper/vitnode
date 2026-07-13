@@ -80,7 +80,8 @@ export const showPermissionsStaffAdminRoute = buildRoute({
         userId: table.userId,
         createdAt: table.createdAt,
         updatedAt: table.updatedAt,
-        data: table.data,
+        unrestricted: table.unrestricted,
+        permissions: table.permissions,
         protected: table.protected,
       })
       .from(table)
@@ -96,7 +97,7 @@ export const showPermissionsStaffAdminRoute = buildRoute({
     return c.json(
       {
         ...resolved,
-        permissions: entry.data?.permissions ?? [],
+        permissions: entry.permissions ?? [],
       },
       200,
     );

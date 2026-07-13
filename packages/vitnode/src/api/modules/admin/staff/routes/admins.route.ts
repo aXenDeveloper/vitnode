@@ -47,7 +47,7 @@ export const listAdminsStaffAdminRoute = buildRoute({
             userId: core_admin_permissions.userId,
             createdAt: core_admin_permissions.createdAt,
             updatedAt: core_admin_permissions.updatedAt,
-            data: core_admin_permissions.data,
+            unrestricted: core_admin_permissions.unrestricted,
             protected: core_admin_permissions.protected,
           })
           .from(core_admin_permissions)
