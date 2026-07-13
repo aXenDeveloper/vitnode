@@ -67,6 +67,42 @@ const [content, setContent] = useState("<p>Hello World! 🌎️</p>");
   </Tab>
 </Tabs>
 
+## Multi-language
+
+Set the `multiLang` prop to edit the content in every enabled language. A
+language **select** (shown only when more than one language is enabled) switches
+which language you are editing - it does **not** change the app-wide locale,
+only the content inside this editor.
+
+The value becomes an array matching the `core_languages_words` table:
+
+```ts
+[
+  { languageCode: "en", value: "<p>Hello</p>" },
+  { languageCode: "pl", value: "<p>Cześć</p>" },
+];
+```
+
+Declare the field with the `multiLangValueSchema` helper and enable `multiLang`:
+
+```ts
+import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
+
+const formSchema = z.object({
+  content: multiLangValueSchema({ minLength: 1 }).min(1),
+});
+```
+
+```tsx
+{
+  id: "content",
+  component: props => <AutoFormEditor {...props} label="Content" multiLang />,
+}
+```
+
+Persist the array on the backend with `saveLanguageWords`. See
+[Auto Form - Multi-language fields](/docs/ui/auto-form#multi-language-fields).
+
 ## Rendering Content
 
 Use `EditorContent` to render the stored HTML as read-only content outside of
@@ -107,6 +143,12 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
       description: "Additional classes applied to the editor wrapper.",
       type: "string",
       default: "",
+    },
+    multiLang: {
+      description:
+        "Edit the content per language. The value becomes a { languageCode, value }[] array and a language select is shown when more than one language is enabled.",
+      type: "boolean",
+      default: "false",
     },
   }}
 />

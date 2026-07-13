@@ -102,6 +102,7 @@
       "go_back": "Go back",
       "select_option": "Select an option",
       "select_options": "Select options",
+      "select_language": "Select language",
       "go_to_prev_page": "Go to previous page",
       "go_to_next_page": "Go to next page",
       "errors": {

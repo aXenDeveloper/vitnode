@@ -9,6 +9,7 @@ import type { VitNodeConfig } from "@/vitnode.config";
 
 import { CONFIG } from "@/lib/config";
 
+import { LanguagesProvider } from "../../components/languages-provider";
 import { ThemeProvider } from "../../components/theme-provider";
 import { Toaster } from "../../components/ui/sonner";
 import { TooltipProvider } from "../../components/ui/tooltip";
@@ -16,7 +17,7 @@ import { TooltipProvider } from "../../components/ui/tooltip";
 export const RootProvider = ({
   children,
   toaster,
-  config: { debug, theme, progressBar },
+  config: { debug, theme, progressBar, i18n },
 }: {
   children: React.ReactNode;
   config: VitNodeConfig;
@@ -66,7 +67,11 @@ export const RootProvider = ({
           }}
           shallowRouting={progressBar?.shallowRouting ?? true}
         >
-          <TooltipProvider>{children}</TooltipProvider>
+          <TooltipProvider>
+            <LanguagesProvider languages={i18n.locales}>
+              {children}
+            </LanguagesProvider>
+          </TooltipProvider>
         </ProgressProvider>
       </ThemeProvider>
     </QueryClientProvider>

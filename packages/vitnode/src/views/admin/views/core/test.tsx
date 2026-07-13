@@ -82,7 +82,9 @@ export const TestView = () => {
           fields={[
             {
               id: "editor",
-              component: props => <AutoFormEditor {...props} label="Editor" />,
+              component: props => (
+                <AutoFormEditor {...props} label="Editor" multiLang />
+              ),
             },
             {
               id: "provider",
@@ -90,6 +92,7 @@ export const TestView = () => {
                 <AutoFormInput
                   description="This is the provider for your application. It should be a valid provider name."
                   label="Provider"
+                  multiLang
                   {...props}
                 />
               ),
