@@ -1,7 +1,9 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useAnimate, useReducedMotion } from "motion/react";
 import { useTranslations } from "next-intl";
+import { useEffect } from "react";
 import {
   type ControllerRenderProps,
   type FieldPath,
@@ -21,6 +23,7 @@ import {
   getZodInputParams,
   type InputParams,
 } from "../../lib/helpers/auto-form";
+import { SHAKE_KEYFRAMES, SHAKE_TRANSITION } from "../../lib/motion";
 import { Button } from "../ui/button";
 import { DialogClose, DialogFooter, useDialog } from "../ui/dialog";
 import { Field } from "../ui/field";
@@ -58,6 +61,28 @@ export interface ItemAutoFormComponentProps {
     pattern?: string;
     type?: string;
   };
+}
+
+function AutoFormField({
+  invalid,
+  submitCount,
+  ...props
+}: React.ComponentProps<typeof Field> & {
+  invalid: boolean;
+  submitCount: number;
+}) {
+  const [scope, animate] = useAnimate<HTMLDivElement>();
+  const shouldReduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
+    if (!invalid || shouldReduceMotion || !scope.current) return;
+
+    // Restart the shake on every error, mirroring the macOS shake.
+    animate(scope.current, SHAKE_KEYFRAMES, SHAKE_TRANSITION);
+  }, [invalid, submitCount, shouldReduceMotion, animate, scope]);
+
+  return <Field data-invalid={invalid} ref={scope} {...props} />;
 }
 
 export type AutoFormOnSubmit<
@@ -169,9 +194,10 @@ export function AutoForm<
             name={item.id}
             render={({ field, fieldState }) => {
               return (
-                <Field
-                  data-invalid={fieldState.invalid}
+                <AutoFormField
+                  invalid={fieldState.invalid}
                   orientation="responsive"
+                  submitCount={form.formState.submitCount}
                 >
                   {item.component({
                     field,
@@ -215,7 +241,7 @@ export function AutoForm<
                           : undefined,
                     },
                   })}
-                </Field>
+                </AutoFormField>
               );
             }}
           />
