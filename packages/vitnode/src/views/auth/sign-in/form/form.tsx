@@ -1,11 +1,13 @@
 "use client";
 
 import { AlertCircle } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
 import { useTranslations } from "next-intl";
 
 import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { SHAKE_KEYFRAMES, SHAKE_TRANSITION } from "@/lib/motion";
 import { Link } from "@/lib/navigation";
 
 import { useFormSignIn } from "./use-form";
@@ -18,16 +20,22 @@ export const FormSignIn = ({
   isEmail: boolean;
 }) => {
   const t = useTranslations("core.auth.sign_in");
+  const shouldReduceMotion = useReducedMotion();
   const { onSubmit, error, formSchema } = useFormSignIn({ isAdmin });
 
   return (
     <div className="space-y-4">
       {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="size-4" />
-          <AlertTitle>{t(`errors.${error}.title`)}</AlertTitle>
-          <AlertDescription>{t(`errors.${error}.desc`)}</AlertDescription>
-        </Alert>
+        <motion.div
+          animate={shouldReduceMotion ? undefined : SHAKE_KEYFRAMES}
+          transition={SHAKE_TRANSITION}
+        >
+          <Alert variant="destructive">
+            <AlertCircle className="size-4" />
+            <AlertTitle>{t(`errors.${error}.title`)}</AlertTitle>
+            <AlertDescription>{t(`errors.${error}.desc`)}</AlertDescription>
+          </Alert>
+        </motion.div>
       )}
 
       <AutoForm
