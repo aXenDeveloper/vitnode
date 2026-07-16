@@ -3,6 +3,8 @@
 
 import { config } from "dotenv";
 
+import { buildPlugin } from "./build.js";
+import { devPlugin } from "./dev.js";
 import { processPlugin } from "./plugin.js";
 import {
   generateDatabaseMigrations,
@@ -22,6 +24,22 @@ const command = process.argv[2];
 const flag = process.argv[3];
 
 switch (command) {
+  case "build":
+    try {
+      await buildPlugin();
+      console.log(
+        `${initMessage} \x1b[32mBuild completed successfully.\x1b[0m`,
+      );
+      process.exit(0);
+    } catch {
+      process.exit(1);
+    }
+    break;
+
+  case "dev":
+    devPlugin({ initMessage });
+    break;
+
   case "init":
     void prepareDatabase({ initMessage, flag });
     break;

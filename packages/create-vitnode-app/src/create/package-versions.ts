@@ -39,7 +39,7 @@ export const versionsPackageJson = {
   cva: "^0.7.1",
   babelPluginReactCompiler: "^1.0",
 
-  tsdown: "^0.22.4",
-  concurrently: "^9.2.1",
+  swcCli: "^0.8.1",
+  swcCore: "^1.15",
   shadcnUi: "^4",
 };

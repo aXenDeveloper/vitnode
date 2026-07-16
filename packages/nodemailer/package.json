@@ -24,8 +24,8 @@
     }
   },
   "scripts": {
-    "build:plugins": "tsdown",
-    "dev:plugins": "tsdown --watch",
+    "build:plugins": "vitnode build",
+    "dev:plugins": "vitnode dev",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
@@ -33,11 +33,13 @@
     "nodemailer": "^9.0.1"
   },
   "devDependencies": {
+    "@swc/cli": "^0.8.1",
+    "@swc/core": "^1.15.43",
     "@types/nodemailer": "^8.0.1",
     "@vitnode/config": "workspace:*",
     "@vitnode/core": "workspace:*",
     "eslint": "^10.5.0",
-    "tsdown": "^0.22.4",
+    "tsc-alias": "^1.8.17",
     "typescript": "^6.0.3"
   }
 }
