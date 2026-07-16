@@ -27,6 +27,7 @@ export default [
       "tsup.config.ts",
       "*.test.tsx",
       "drizzle.config.ts",
+      "cli.mjs",
     ],
   },
   eslint.configs.recommended,

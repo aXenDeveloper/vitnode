@@ -78,7 +78,7 @@
     "zod": "^4.4.3"
   },
   "bin": {
-    "vitnode": "./dist/scripts/scripts.js"
+    "vitnode": "./cli.mjs"
   },
   "exports": {
     "./api/config": {
