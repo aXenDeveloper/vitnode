@@ -283,7 +283,25 @@
         "desc": "Manage your profile, security, and account preferences.",
         "nav": {
           "overview": "Overview",
+          "devices": "Devices",
           "security": "Security"
+        },
+        "devices": {
+          "title": "Devices",
+          "desc": "Manage your devices where you are logged in.",
+          "current_device": "Current Device",
+          "last_active": "Last Active",
+          "browser": "Browser",
+          "ip_address": "IP Address",
+          "session_expires": "Session Expires",
+          "empty": "No active devices.",
+          "revoke": {
+            "action": "Sign out device",
+            "title": "Sign out this device?",
+            "desc": "You will be signed out of {os}. That device will need to sign in again.",
+            "confirm": "Sign out",
+            "success": "Device signed out successfully."
+          }
         }
       }
     }

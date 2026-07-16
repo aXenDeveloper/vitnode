@@ -13,8 +13,6 @@ import { NavSettings } from "./nav";
 
 export const SettingsShell = ({ children }: { children: React.ReactNode }) => {
   const t = useTranslations("core.auth.settings");
-  // On the index path the nav acts as the mobile landing menu; any deeper path
-  // is a "detail" page that takes over the full view on mobile.
   const isRoot = normalizeUrl(usePathname()) === "/settings";
 
   return (
@@ -25,7 +23,7 @@ export const SettingsShell = ({ children }: { children: React.ReactNode }) => {
         h1={t("title")}
       />
 
-      <div className="flex flex-col gap-6 md:flex-row">
+      <div className="flex flex-col items-start gap-6 md:flex-row">
         <Card
           className={cn("md:w-80 md:shrink-0", !isRoot && "hidden md:flex")}
         >

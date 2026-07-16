@@ -1,6 +1,11 @@
 "use client";
 
-import { ChevronRightIcon, KeyRoundIcon, UserRoundIcon } from "lucide-react";
+import {
+  ChevronRightIcon,
+  KeyRoundIcon,
+  MonitorSmartphoneIcon,
+  UserRoundIcon,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -13,6 +18,11 @@ const items = [
     key: "overview",
     icon: UserRoundIcon,
     aliases: ["/settings"],
+  },
+  {
+    href: "/settings/devices",
+    key: "devices",
+    icon: MonitorSmartphoneIcon,
   },
   { href: "/settings/security", key: "security", icon: KeyRoundIcon },
 ] as const;
