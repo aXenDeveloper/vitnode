@@ -78,6 +78,7 @@ export class DeviceModel {
           .set({
             ipAddress: this.c.get("ipAddress"),
             userAgent: this.getUserAgent(),
+            lastSeen: new Date(),
           })
           .where(eq(core_sessions_known_devices.publicId, deviceIdFromCookie));
 

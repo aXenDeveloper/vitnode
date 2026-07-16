@@ -3,8 +3,10 @@ import { CONFIG_PLUGIN } from "@/config";
 
 import { userFilesModule } from "./files/files.module";
 import { changePasswordRoute } from "./routes/change-password.route";
+import { listDevicesRoute } from "./routes/devices.route";
 import { permissionsRoute } from "./routes/permissions.route";
 import { resetPasswordRoute } from "./routes/reset-passowrd.route";
+import { revokeDeviceRoute } from "./routes/revoke-device.route";
 import { sessionRoute } from "./routes/session.route";
 import { signInRoute } from "./routes/sign-in.route";
 import { signOutRoute } from "./routes/sign-out.route";
@@ -24,6 +26,8 @@ export const usersModule = buildModule({
     resetPasswordRoute,
     changePasswordRoute,
     permissionsRoute,
+    listDevicesRoute,
+    revokeDeviceRoute,
   ],
   modules: [ssoUserModule, userFilesModule],
 });
