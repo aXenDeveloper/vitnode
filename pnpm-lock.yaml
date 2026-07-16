@@ -355,9 +355,6 @@ importers:
       '@vitnode/core':
         specifier: workspace:*
         version: link:../vitnode
-      concurrently:
-        specifier: ^10.0.3
-        version: 10.0.3
       eslint:
         specifier: ^10.5.0
         version: 10.6.0(jiti@2.7.0)
@@ -389,9 +386,6 @@ importers:
       '@vitnode/core':
         specifier: workspace:*
         version: link:../vitnode
-      concurrently:
-        specifier: ^10.0.3
-        version: 10.0.3
       eslint:
         specifier: ^10.5.0
         version: 10.6.0(jiti@2.7.0)
@@ -420,9 +414,6 @@ importers:
       '@vitnode/core':
         specifier: workspace:*
         version: link:../vitnode
-      concurrently:
-        specifier: ^10.0.3
-        version: 10.0.3
       eslint:
         specifier: ^10.5.0
         version: 10.6.0(jiti@2.7.0)
@@ -451,9 +442,6 @@ importers:
       '@vitnode/core':
         specifier: workspace:*
         version: link:../vitnode
-      concurrently:
-        specifier: ^10.0.3
-        version: 10.0.3
       eslint:
         specifier: ^10.5.0
         version: 10.6.0(jiti@2.7.0)
@@ -485,9 +473,6 @@ importers:
       '@vitnode/core':
         specifier: workspace:*
         version: link:../vitnode
-      concurrently:
-        specifier: ^10.0.3
-        version: 10.0.3
       eslint:
         specifier: ^10.5.0
         version: 10.6.0(jiti@2.7.0)
@@ -784,9 +769,6 @@ importers:
       '@vitnode/config':
         specifier: workspace:*
         version: link:../../packages/config
-      concurrently:
-        specifier: ^10.0.3
-        version: 10.0.3
       eslint:
         specifier: ^10.5.0
         version: 10.6.0(jiti@2.7.0)

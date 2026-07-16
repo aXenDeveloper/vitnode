@@ -26,9 +26,8 @@ export const createPluginPackageJSON = async ({
     private: true,
     type: "module",
     scripts: {
-      "build:plugins":
-        "tsc -p tsconfig.build.json && swc src -d dist --config-file .swcrc && tsc-alias -p tsconfig.build.json",
-      dev: 'concurrently "tsc -w -p tsconfig.build.json --preserveWatchOutput" "swc src -d dist --config-file .swcrc -w" "tsc-alias -w -p tsconfig.build.json" "vitnode plugin --w"',
+      "build:plugins": "vitnode build",
+      dev: "vitnode dev",
       "dev:email": "email dev --dir src/emails",
       ...withIf(eslint, {
         lint: "turbo lint",
@@ -65,7 +64,6 @@ export const createPluginPackageJSON = async ({
       "@types/react": versionsPackageJson.typesReact,
       "@types/react-dom": versionsPackageJson.typesReactDom,
       "@vitnode/config": vitnodeVersionRange,
-      concurrently: versionsPackageJson.concurrently,
       ...withIf(eslint, {
         eslint: versionsPackageJson.eslint,
       }),

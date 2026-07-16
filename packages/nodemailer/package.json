@@ -24,8 +24,8 @@
     }
   },
   "scripts": {
-    "build:plugins": "tsc -p tsconfig.build.json && swc src -d dist --config-file .swcrc && tsc-alias -p tsconfig.build.json",
-    "dev:plugins": "concurrently \"tsc -w -p tsconfig.build.json --preserveWatchOutput\" \"swc src -d dist --config-file .swcrc -w\" \"tsc-alias -w -p tsconfig.build.json\"",
+    "build:plugins": "vitnode build",
+    "dev:plugins": "vitnode dev",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
@@ -38,7 +38,6 @@
     "@types/nodemailer": "^8.0.1",
     "@vitnode/config": "workspace:*",
     "@vitnode/core": "workspace:*",
-    "concurrently": "^10.0.3",
     "eslint": "^10.5.0",
     "tsc-alias": "^1.8.17",
     "typescript": "^6.0.3"

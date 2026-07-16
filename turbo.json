@@ -21,7 +21,7 @@
       "env": ["POSTGRES_URL"]
     },
     "build:plugins": {
-      "dependsOn": ["^build:plugins"],
+      "dependsOn": ["^build:plugins", "@vitnode/core#build:scripts"],
       "outputs": ["dist/**"]
     },
     "build": {

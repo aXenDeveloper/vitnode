@@ -41,6 +41,5 @@ export const versionsPackageJson = {
 
   swcCli: "^0.8.1",
   swcCore: "^1.15",
-  concurrently: "^9.2.1",
   shadcnUi: "^4",
 };

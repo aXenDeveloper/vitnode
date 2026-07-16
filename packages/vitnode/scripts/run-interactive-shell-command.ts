@@ -5,7 +5,7 @@ export const runInteractiveShellCommand = async (
   args: string[] = [],
 ) => {
   return await new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, {
+    const child = spawn([cmd, ...args].join(" "), {
       stdio: "inherit",
       shell: true,
       env: process.env,
