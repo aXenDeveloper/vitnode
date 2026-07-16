@@ -25,14 +25,19 @@ export const SettingsShell = ({ children }: { children: React.ReactNode }) => {
 
       <div className="flex flex-col items-start gap-6 md:flex-row">
         <Card
-          className={cn("md:w-80 md:shrink-0", !isRoot && "hidden md:flex")}
+          className={cn(
+            "w-full md:w-80 md:shrink-0",
+            !isRoot && "hidden md:flex",
+          )}
         >
           <CardContent>
             <NavSettings />
           </CardContent>
         </Card>
 
-        <Card className={cn("min-w-0 flex-1", isRoot && "hidden md:flex")}>
+        <Card
+          className={cn("w-full min-w-0 flex-1", isRoot && "hidden md:flex")}
+        >
           <CardContent>
             <Link
               className={cn(
