@@ -25,7 +25,6 @@ export default [
       ".next",
       "global.d.ts",
       "tsup.config.ts",
-      "tsdown.config.ts",
       "*.test.tsx",
       "drizzle.config.ts",
     ],
