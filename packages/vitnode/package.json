@@ -20,8 +20,8 @@
   ],
   "peerDependencies": {
     "@hono/zod-openapi": "^1.0.x",
-    "@swc/cli": "0.7.x",
-    "@swc/core": "1.x.x",
+    "@swc/cli": "^0.7.0 || ^0.8.0",
+    "@swc/core": "^1.15.0",
     "@types/react": "^19.1.x",
     "@types/react-dom": "^19.1.x",
     "drizzle-kit": "^0.31.x",
