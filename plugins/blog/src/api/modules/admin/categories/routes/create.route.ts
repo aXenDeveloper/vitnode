@@ -16,6 +16,7 @@ const zodCategoryResponseSchema = z.object({
 
 export const zodCreateCategorySchema = z.object({
   title: z.string(),
+  color: z.string().nullish(),
 });
 
 export const createCategoryRoute = buildRoute({
@@ -48,7 +49,7 @@ export const createCategoryRoute = buildRoute({
     },
   },
   handler: async c => {
-    const { title } = c.req.valid("json");
+    const { title, color } = c.req.valid("json");
     const titleSeo = removeSpecialCharacters(title);
     const [titleSEODuplocate] = await c
       .get("db")
@@ -70,6 +71,7 @@ export const createCategoryRoute = buildRoute({
       .insert(blog_categories)
       .values({
         title,
+        color: color || null,
         titleSeo: removeSpecialCharacters(title),
       })
       .returning();

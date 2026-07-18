@@ -1,0 +1,121 @@
+---
+title: Search & Discovery
+description: Full-text content search and activity discovery, with a pluggable search engine.
+icon: Search
+---
+
+VitNode ships a content **search & discovery** system. Every searchable item is
+projected into a single canonical table, `core_search_index`, which powers two
+public pages and the AdminCP:
+
+- **`/search`** — full-text search with relevance ranking and filters.
+- **`/discover`** — the same index sorted newest-first (a community timeline).
+- **AdminCP → user profile → Timeline** — a single member's indexed activity.
+
+The query engine is **pluggable**. The default requires zero setup:
+
+- **Postgres** (default) — Postgres full-text search (`tsvector` + GIN, title
+  weighted above body). Great for small and medium communities.
+- **Elasticsearch** (`@vitnode/elasticsearch`) — offloads querying to an external
+  cluster and unlocks advanced ranking (time-decay, author-boost).
+
+`core_search_index` is always the source of truth, so switching engines is a
+config change followed by a rebuild.
+
+## Indexing content
+
+Any API handler can (re)index or remove an item through `c.get("search")`:
+
+```ts
+// After creating or updating an item
+await c.get("search").index({
+  itemType: "blog_post",
+  itemId: post.id,
+  title: post.title,
+  content: post.content, // HTML is stripped to plain text automatically
+  containerType: "blog_category",
+  containerId: post.categoryId,
+  url: `/blog/${post.categoryId}/${post.titleSeo}`,
+  isPublic: true,
+  createdAt: post.createdAt,
+});
+
+// After deleting an item
+await c.get("search").delete("blog_post", post.id);
+```
+
+`index` upserts the canonical row and mirrors the change into an external engine
+when one is configured. `isPublic: false` hides an item from the public feed
+(admins and the item's author still see it).
+
+## Registering a rebuild indexer
+
+So the whole index can be rebuilt (for example after switching engines), register
+an indexer on your API plugin. It streams existing rows one page at a time:
+
+```ts title="src/config.api.ts"
+import type { SearchIndexer } from "@vitnode/core/api/models/search";
+
+export const blogPostSearchIndexer: SearchIndexer = {
+  itemType: "blog_post",
+  load: async (c, offset, limit) => {
+    const rows = await c
+      .get("db")
+      .select(/* ... */)
+      .from(blog_posts)
+      .limit(limit)
+      .offset(offset);
+
+    return rows.map(buildBlogPostSearchDocument);
+  },
+};
+
+export const blogApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    modules: [/* ... */],
+    searchIndexers: [blogPostSearchIndexer], // [!code highlight]
+  });
+```
+
+Trigger a rebuild from **AdminCP → System → Search → Rebuild index**. It runs as a
+background queue task, so a [cron adapter](/docs/dev/cron) must be configured for
+the queue to drain.
+
+## Giving a type an icon and label
+
+Result cards look up an icon and label by `itemType`. Add an entry to the render
+registry (`@vitnode/core/views/search/registry`); unknown types fall back to a
+generic renderer, so nothing breaks if an entry is missing.
+
+## Choosing the engine
+
+The engine is set in `vitnode.api.config.ts`, exactly like the storage and email
+adapters. Omit it to use the built-in Postgres engine.
+
+<Callout type="info">
+  Elasticsearch is provided by the separate `@vitnode/elasticsearch` package.
+</Callout>
+
+```ts title="src/vitnode.api.config.ts"
+import { ElasticsearchSearchAdapter } from "@vitnode/elasticsearch";
+
+export const vitNodeApiConfig = buildApiConfig({
+  search: {
+    adapter: ElasticsearchSearchAdapter({
+      node: process.env.ELASTICSEARCH_NODE,
+      apiKey: process.env.ELASTICSEARCH_API_KEY,
+      index: "vitnode",
+    }),
+  },
+});
+```
+
+After changing the engine, run a rebuild so the new engine is populated from
+`core_search_index`.
+
+## Admin status
+
+**AdminCP → System → Search** shows the active engine, its health, how many items
+are indexed (broken down by type), when the index was last updated, and a button
+to queue a full rebuild.

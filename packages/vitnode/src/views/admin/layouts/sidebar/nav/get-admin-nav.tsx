@@ -136,6 +136,15 @@ export const getAdminNav = async ({
               permission: "can_view",
             },
           },
+          {
+            title: t("admin.global.nav.system.search"),
+            href: "/admin/core/system/search",
+            permission: {
+              plugin: CONFIG_PLUGIN.pluginId,
+              module: "system",
+              permission: "can_view",
+            },
+          },
         ],
       },
       {

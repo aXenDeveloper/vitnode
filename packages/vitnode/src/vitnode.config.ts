@@ -7,6 +7,7 @@ import type React from "react";
 import type { CronAdapter } from "./api/lib/cron";
 import type { BuildPluginApiReturn } from "./api/lib/plugin";
 import type { EmailApiPlugin } from "./api/models/email";
+import type { SearchProviderApiPlugin } from "./api/models/search";
 import type { SSOApiPlugin } from "./api/models/sso";
 import type { StorageApiPlugin } from "./api/models/storage";
 import type { ThemeProviderProps } from "./components/theme-provider";
@@ -67,6 +68,16 @@ export interface VitNodeApiConfig {
   pathToMessages: (path: string) => Promise<{ default: object }>;
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix">;
+  /**
+   * Search engine backing content discovery (`c.get("search")`). Ships a
+   * zero-config Postgres full-text provider used when `adapter` is omitted; an
+   * external Elasticsearch adapter is available as `@vitnode/elasticsearch`. The
+   * canonical index always lives in `core_search_index`, so switching engines is
+   * a config change followed by a rebuild.
+   */
+  search?: {
+    adapter?: SearchProviderApiPlugin;
+  };
   /**
    * Redis connection used as a shared cache (via `c.get("cache")`) and, when
    * set, as the storage backend for the rate limiter. Leave undefined to run

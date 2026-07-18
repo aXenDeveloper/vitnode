@@ -33,6 +33,50 @@
   "@vitnode/core:staff_admins:can_edit": "Edytowanie uprawnień administratorów",
   "@vitnode/core:staff_admins:can_delete": "Usuwanie administratorów",
   "core": {
+    "search": {
+      "title": "Szukaj",
+      "desc": "Przeszukaj całą społeczność.",
+      "discoverTitle": "Odkrywaj",
+      "discoverDesc": "Zobacz najnowszą aktywność w społeczności.",
+      "nav": {
+        "search": "Szukaj",
+        "discover": "Odkrywaj"
+      },
+      "placeholder": "Szukaj…",
+      "empty": "Nic nie znaleziono.",
+      "loadMore": "Załaduj więcej",
+      "loading": "Ładowanie…",
+      "sort": {
+        "relevance": "Trafność",
+        "newest": "Najnowsze",
+        "oldest": "Najstarsze"
+      },
+      "types": {
+        "blog_post": "Wpis",
+        "unknown": "Treść"
+      },
+      "userTab": {
+        "overview": "Przegląd",
+        "timeline": "Oś czasu"
+      },
+      "admin": {
+        "title": "Szukaj",
+        "desc": "Silnik wyszukiwania treści i status indeksu.",
+        "engine": "Silnik wyszukiwania",
+        "health": "Stan",
+        "healthy": "Działa",
+        "unhealthy": "Niedostępny",
+        "total": "Zindeksowane elementy",
+        "lastIndexed": "Ostatnio zindeksowano",
+        "never": "Nigdy",
+        "byType": "Elementy według typu",
+        "rebuild": "Przebuduj indeks",
+        "rebuilding": "Kolejkowanie…",
+        "rebuildQueued": "Zlecono przebudowę indeksu wyszukiwania.",
+        "rebuildError": "Nie udało się zlecić przebudowy.",
+        "cronWarning": "Zadania w tle wymagają skonfigurowanego adaptera cron. Przebudowa nie zostanie uruchomiona, dopóki cron nie będzie aktywny."
+      }
+    },
     "global": {
       "close": "Zamknij",
       "confirm": "Potwierdź",
@@ -313,7 +357,8 @@
         "system": {
           "title": "System",
           "integrations": "Integracje",
-          "files": "Pliki"
+          "files": "Pliki",
+          "search": "Szukaj"
         },
         "advanced": {
           "title": "Zaawansowane",

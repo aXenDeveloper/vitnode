@@ -3,8 +3,8 @@ import {
   type AutoFormOnSubmit,
 } from "@vitnode/core/components/form/auto-form";
 import { AutoFormCombobox } from "@vitnode/core/components/form/fields/combobox";
+import { AutoFormEditor } from "@vitnode/core/components/form/fields/editor";
 import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
-import { AutoFormTextarea } from "@vitnode/core/components/form/fields/textarea";
 import { useDialog } from "@vitnode/core/components/ui/dialog";
 import { fetcherClient } from "@vitnode/core/lib/fetcher-client";
 import { usePathname, useRouter } from "@vitnode/core/lib/navigation";
@@ -136,11 +136,7 @@ export const CreateEditActionPostsAdmin = ({
         {
           id: "content",
           component: props => (
-            <AutoFormTextarea
-              label={t("create.form.content")}
-              rows={10}
-              {...props}
-            />
+            <AutoFormEditor label={t("create.form.content")} {...props} />
           ),
         },
       ]}

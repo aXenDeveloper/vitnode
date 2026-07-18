@@ -1,0 +1,2 @@
+ALTER TABLE "blog_posts" ADD COLUMN "authorId" integer;--> statement-breakpoint
+ALTER TABLE "blog_posts" ADD CONSTRAINT "blog_posts_authorId_core_users_id_fk" FOREIGN KEY ("authorId") REFERENCES "public"."core_users"("id") ON DELETE set null ON UPDATE cascade;

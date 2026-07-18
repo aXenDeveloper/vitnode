@@ -13,10 +13,13 @@ import { getSessionAdminApi } from "@/lib/api/get-session-admin-api";
 import { fetcher } from "@/lib/fetcher";
 import { Link } from "@/lib/navigation";
 
+import { SearchFeed } from "@/views/search/search-feed";
+
 import { EditImageButton } from "./edit-buttons";
 import { EditUserField } from "./edit-field";
 import { EditNameCode } from "./edit-name-code";
 import { RolesUserAdmin } from "./roles/roles";
+import { UserAdminTabs } from "./tabs";
 
 export const ShowUserAdminView = async ({ id }: { id: string }) => {
   const t = await getTranslations("admin.user.show");
@@ -55,8 +58,10 @@ export const ShowUserAdminView = async ({ id }: { id: string }) => {
       : true);
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-4">
-      <Card className="w-full overflow-hidden pt-0">
+    <UserAdminTabs
+      overview={
+        <div className="flex w-full flex-col gap-4">
+          <Card className="w-full overflow-hidden pt-0">
         {/* Cover placeholder */}
         <div className="from-primary/30 to-primary/5 relative h-44 w-full bg-linear-to-br">
           <span className="sr-only">{t("coverPlaceholder")}</span>
@@ -136,12 +141,20 @@ export const ShowUserAdminView = async ({ id }: { id: string }) => {
         </CardContent>
       </Card>
 
-      <RolesUserAdmin
-        canEdit={canEdit}
-        id={user.id}
-        role={user.role}
-        secondaryRoles={user.secondaryRoles}
-      />
-    </div>
+          <RolesUserAdmin
+            canEdit={canEdit}
+            id={user.id}
+            role={user.role}
+            secondaryRoles={user.secondaryRoles}
+          />
+        </div>
+      }
+      timeline={
+        <SearchFeed
+          params={{ authorId: String(user.id), sort: "newest" }}
+          variant="timeline"
+        />
+      }
+    />
   );
 };

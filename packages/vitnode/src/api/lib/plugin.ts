@@ -5,6 +5,7 @@ import type { BuildModuleReturn } from "./module";
 import type { PermissionStaffConfig } from "./permission-staff";
 import type { QueueTaskConfig } from "./queue";
 import type { WebSocketConfig } from "./websocket";
+import type { SearchIndexer } from "../models/search";
 
 import { checkPluginId } from "./check-plugin-id";
 
@@ -14,6 +15,7 @@ export interface BuildPluginApiReturn {
   permissionStaff?: PermissionStaffConfig;
   pluginId: string;
   queueTasks?: Omit<QueueTaskConfig, "pluginId">[];
+  searchIndexers?: SearchIndexer[];
   webSockets?: Omit<WebSocketConfig, "pluginId">[];
 }
 
@@ -21,10 +23,12 @@ export function buildApiPlugin<P extends string>({
   pluginId,
   modules = [],
   permissionStaff,
+  searchIndexers,
 }: {
   modules?: BuildModuleReturn<P, string>[];
   permissionStaff?: PermissionStaffConfig;
   pluginId: P;
+  searchIndexers?: SearchIndexer[];
 }): BuildPluginApiReturn {
   // Run for checking if the plugin is valid
   checkPluginId(pluginId);
@@ -54,6 +58,7 @@ export function buildApiPlugin<P extends string>({
     hono,
     cronJobs,
     queueTasks,
+    searchIndexers,
     webSockets,
     permissionStaff,
   };

@@ -10,6 +10,7 @@
         "desc": "Manage categories for blog posts.",
         "table": {
           "title": "Title",
+          "color": "Color",
           "updated_at": "Updated At"
         },
         "delete": {
@@ -25,7 +26,8 @@
             "title": {
               "label": "Title",
               "already_exists": "This category title already exists."
-            }
+            },
+            "color": "Color"
           },
           "submit": "Create"
         },
@@ -39,6 +41,7 @@
         "table": {
           "title": "Title",
           "category": "Category",
+          "author": "Author",
           "updated_at": "Updated At"
         },
         "create": {

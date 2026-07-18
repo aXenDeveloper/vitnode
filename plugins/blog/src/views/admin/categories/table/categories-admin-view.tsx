@@ -42,6 +42,25 @@ export const CategoriesAdminView = async ({
           header: t("title"),
         },
         {
+          accessorKey: "color",
+          header: t("color"),
+          className: "w-32",
+          cell: ({ row }) =>
+            row.color ? (
+              <div className="flex items-center gap-2">
+                <span
+                  className="size-4 shrink-0 rounded-full border"
+                  style={{ backgroundColor: row.color }}
+                />
+                <span className="text-muted-foreground truncate text-sm">
+                  {row.color}
+                </span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            ),
+        },
+        {
           accessorKey: "updatedAt",
           header: t("updated_at"),
           className: "w-48",

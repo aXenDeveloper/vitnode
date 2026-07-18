@@ -2,6 +2,7 @@ import {
   AutoForm,
   type AutoFormOnSubmit,
 } from "@vitnode/core/components/form/auto-form";
+import { AutoFormColor } from "@vitnode/core/components/form/fields/color";
 import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
 import { useDialog } from "@vitnode/core/components/ui/dialog";
 import { usePathname, useRouter } from "@vitnode/core/lib/navigation";
@@ -25,6 +26,7 @@ export const CreateEditActionCategoriesAdmin = ({
   const pathname = usePathname();
   const formSchema = z.object({
     title: z.string().default(data?.title ?? ""),
+    color: z.string().default(data?.color ?? ""),
   });
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (
@@ -76,6 +78,16 @@ export const CreateEditActionCategoriesAdmin = ({
           id: "title",
           component: props => (
             <AutoFormInput label={t("create.form.title.label")} {...props} />
+          ),
+        },
+        {
+          id: "color",
+          component: props => (
+            <AutoFormColor
+              allowRemoveColor
+              label={t("create.form.color")}
+              {...props}
+            />
           ),
         },
       ]}

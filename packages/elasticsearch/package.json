@@ -1,0 +1,47 @@
+{
+  "name": "@vitnode/elasticsearch",
+  "version": "1.2.0-canary.76",
+  "description": "Elasticsearch search engine adapter for VitNode content discovery.",
+  "author": "VitNode Team",
+  "license": "MIT",
+  "homepage": "https://vitnode.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aXenDeveloper/vitnode.git",
+    "directory": "packages/elasticsearch"
+  },
+  "keywords": [
+    "vitnode",
+    "elasticsearch",
+    "search"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "scripts": {
+    "build:plugins": "vitnode build",
+    "dev:plugins": "vitnode dev",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@elastic/elasticsearch": "^8.0.0"
+  },
+  "devDependencies": {
+    "@swc/cli": "^0.8.1",
+    "@swc/core": "^1.15.43",
+    "@vitnode/config": "workspace:*",
+    "@vitnode/core": "workspace:*",
+    "eslint": "^10.5.0",
+    "tsc-alias": "^1.8.17",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}

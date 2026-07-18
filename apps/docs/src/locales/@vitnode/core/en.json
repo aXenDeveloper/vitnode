@@ -33,6 +33,50 @@
   "@vitnode/core:staff_admins:can_edit": "Edit administrator permissions",
   "@vitnode/core:staff_admins:can_delete": "Remove administrators",
   "core": {
+    "search": {
+      "title": "Search",
+      "desc": "Search across everything in the community.",
+      "discoverTitle": "Discover",
+      "discoverDesc": "See the latest activity across the community.",
+      "nav": {
+        "search": "Search",
+        "discover": "Discover"
+      },
+      "placeholder": "Search…",
+      "empty": "Nothing found yet.",
+      "loadMore": "Load more",
+      "loading": "Loading…",
+      "sort": {
+        "relevance": "Relevance",
+        "newest": "Newest",
+        "oldest": "Oldest"
+      },
+      "types": {
+        "blog_post": "Post",
+        "unknown": "Content"
+      },
+      "userTab": {
+        "overview": "Overview",
+        "timeline": "Timeline"
+      },
+      "admin": {
+        "title": "Search",
+        "desc": "Content discovery engine and index status.",
+        "engine": "Search engine",
+        "health": "Health",
+        "healthy": "Healthy",
+        "unhealthy": "Unavailable",
+        "total": "Indexed items",
+        "lastIndexed": "Last indexed",
+        "never": "Never",
+        "byType": "Items by type",
+        "rebuild": "Rebuild index",
+        "rebuilding": "Queuing…",
+        "rebuildQueued": "Search index rebuild queued.",
+        "rebuildError": "Could not queue the rebuild.",
+        "cronWarning": "Background jobs require a configured cron adapter. The rebuild will not run until cron is active."
+      }
+    },
     "global": {
       "close": "Close",
       "confirm": "Confirm",
@@ -333,7 +377,8 @@
         "system": {
           "title": "System",
           "integrations": "Integrations",
-          "files": "Files"
+          "files": "Files",
+          "search": "Search"
         },
         "advanced": {
           "title": "Advanced",

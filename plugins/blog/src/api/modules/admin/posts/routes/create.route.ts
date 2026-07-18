@@ -8,6 +8,8 @@ import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
 import { blog_posts } from "@/database/posts";
 
+import { buildBlogPostSearchDocument } from "../../../../lib/search";
+
 const zodPostResponseSchema = z.object({
   id: z.number(),
   title: z.string(),
@@ -99,8 +101,11 @@ export const createPostRoute = buildRoute({
         titleSeo,
         content,
         categoryId,
+        authorId: c.get("admin")?.user.id ?? c.get("user")?.id ?? null,
       })
       .returning();
+
+    await c.get("search").index(buildBlogPostSearchDocument(post));
 
     return c.json(post, 201);
   },

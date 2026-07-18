@@ -13,6 +13,7 @@ import { blog_categories } from "@/database/categories";
 const zodCategorySchema = z.object({
   id: z.number(),
   title: z.string(),
+  color: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

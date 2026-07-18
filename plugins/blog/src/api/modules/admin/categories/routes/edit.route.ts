@@ -53,7 +53,7 @@ export const editCategoryRoute = buildRoute({
   },
   handler: async c => {
     const { id } = c.req.valid("param");
-    const { title } = c.req.valid("json");
+    const { title, color } = c.req.valid("json");
     const titleSeo = removeSpecialCharacters(title);
     const [editData] = await c
       .get("db")
@@ -91,6 +91,7 @@ export const editCategoryRoute = buildRoute({
       .update(blog_categories)
       .set({
         title,
+        color: color || null,
         titleSeo: removeSpecialCharacters(title),
       })
       .where(eq(blog_categories.id, id))

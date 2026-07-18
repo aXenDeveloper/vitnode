@@ -1,5 +1,6 @@
 import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@vitnode/core/api/lib/route";
+import { core_users } from "@vitnode/core/database/users";
 import {
   withPagination,
   zodPaginationPageInfo,
@@ -24,6 +25,14 @@ export const zodPostSchema = z.object({
     title: z.string(),
     titleSeo: z.string(),
   }),
+  author: z
+    .object({
+      id: z.number(),
+      name: z.string(),
+      nameCode: z.string(),
+      avatarColor: z.string(),
+    })
+    .nullable(),
 });
 
 export const postsRoute = buildRoute({
@@ -77,12 +86,19 @@ export const postsRoute = buildRoute({
               title: blog_categories.title,
               titleSeo: blog_categories.titleSeo,
             },
+            author: {
+              id: core_users.id,
+              name: core_users.name,
+              nameCode: core_users.nameCode,
+              avatarColor: core_users.avatarColor,
+            },
           })
           .from(blog_posts)
           .innerJoin(
             blog_categories,
             eq(blog_posts.categoryId, blog_categories.id),
           )
+          .leftJoin(core_users, eq(core_users.id, blog_posts.authorId))
           .where(
             query.categoryId
               ? eq(blog_posts.categoryId, query.categoryId)

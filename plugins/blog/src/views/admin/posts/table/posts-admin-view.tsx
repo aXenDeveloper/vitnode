@@ -1,3 +1,4 @@
+import { Avatar } from "@vitnode/core/components/avatar";
 import { DateFormat } from "@vitnode/core/components/date-format";
 import { DataTable } from "@vitnode/core/components/table/data-table";
 import { fetcher } from "@vitnode/core/lib/fetcher";
@@ -46,6 +47,20 @@ export const PostsAdminView = async ({
           header: t("category"),
           className: "w-48",
           cell: ({ row }) => row.category.title,
+        },
+        {
+          accessorKey: "author",
+          header: t("author"),
+          className: "w-48",
+          cell: ({ row }) =>
+            row.author ? (
+              <div className="flex items-center gap-2">
+                <Avatar size={24} user={row.author} />
+                <span>{row.author.name}</span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            ),
         },
         {
           accessorKey: "updatedAt",
