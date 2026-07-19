@@ -14,10 +14,7 @@ export const UserAdminTabs = ({
   const t = useTranslations("core.search");
 
   return (
-    <Tabs
-      className="mx-auto w-full max-w-lg gap-4"
-      defaultValue="overview"
-    >
+    <Tabs className="mx-auto w-full max-w-lg gap-4" defaultValue="overview">
       <TabsList className="w-full">
         <TabsTrigger value="overview">{t("userTab.overview")}</TabsTrigger>
         <TabsTrigger value="timeline">{t("userTab.timeline")}</TabsTrigger>

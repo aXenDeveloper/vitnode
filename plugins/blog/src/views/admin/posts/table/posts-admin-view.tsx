@@ -2,7 +2,8 @@ import { Avatar } from "@vitnode/core/components/avatar";
 import { DateFormat } from "@vitnode/core/components/date-format";
 import { DataTable } from "@vitnode/core/components/table/data-table";
 import { fetcher } from "@vitnode/core/lib/fetcher";
-import { getTranslations } from "next-intl/server";
+import { getLangValue } from "@vitnode/core/lib/helpers/multi-lang";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { postsModule } from "@/api/modules/posts/posts.module";
 
@@ -15,6 +16,7 @@ export const PostsAdminView = async ({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) => {
   const t = await getTranslations("@vitnode/blog.admin.posts.table");
+  const locale = await getLocale();
   const query = await searchParams;
   const res = await fetcher(postsModule, {
     path: "/",
@@ -34,11 +36,6 @@ export const PostsAdminView = async ({
     <DataTable
       columns={[
         {
-          accessorKey: "id",
-          header: "ID",
-          className: "w-24",
-        },
-        {
           accessorKey: "title",
           header: t("title"),
         },
@@ -46,7 +43,10 @@ export const PostsAdminView = async ({
           accessorKey: "category",
           header: t("category"),
           className: "w-48",
-          cell: ({ row }) => row.category.title,
+          cell: ({ row }) =>
+            getLangValue(row.category.titleTranslations, locale) ||
+            row.category.titleTranslations[0]?.value ||
+            "",
         },
         {
           accessorKey: "author",
@@ -81,7 +81,13 @@ export const PostsAdminView = async ({
           ),
         },
       ]}
-      edges={data.edges.map(edge => ({ ...edge }))}
+      edges={data.edges.map(edge => ({
+        ...edge,
+        title:
+          getLangValue(edge.titleTranslations, locale) ||
+          edge.titleTranslations[0]?.value ||
+          "",
+      }))}
       id="posts-table"
       order={{
         columns: ["createdAt", "updatedAt"],

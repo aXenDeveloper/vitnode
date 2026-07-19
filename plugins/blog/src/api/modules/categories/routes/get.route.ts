@@ -5,14 +5,27 @@ import {
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "@vitnode/core/api/lib/with-pagination";
-import { and, ilike, type SQL } from "drizzle-orm";
+import { core_languages_words } from "@vitnode/core/database/languages";
+import { and, eq, ilike, inArray, type SQL } from "drizzle-orm";
 
 import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
 
-const zodCategorySchema = z.object({
+import {
+  CATEGORY_LANG_TABLE,
+  CATEGORY_LANG_VARIABLE,
+  loadCategoryTranslations,
+} from "../../../lib/categories-language";
+
+const zodMultiLangValue = z.array(
+  z.object({ languageCode: z.string(), value: z.string() }),
+);
+
+export const zodCategorySchema = z.object({
   id: z.number(),
-  title: z.string(),
+  // The title lives in `core_languages_words`; the client resolves this array to
+  // the active locale (see `getLangValue`).
+  titleTranslations: zodMultiLangValue,
   color: z.string().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -54,8 +67,24 @@ export const categoriesRoute = buildRoute({
       },
       primaryCursor: blog_categories.id,
       query: async ({ limit, where, orderBy }) => {
+        // The title lives in `core_languages_words`, so search resolves matching
+        // category ids from there rather than a column on `blog_categories`.
         const searchCondition = query.search
-          ? ilike(blog_categories.title, `%${query.search}%`)
+          ? inArray(
+              blog_categories.id,
+              c
+                .get("db")
+                .select({ id: core_languages_words.itemId })
+                .from(core_languages_words)
+                .where(
+                  and(
+                    eq(core_languages_words.pluginCode, CONFIG_PLUGIN.pluginId),
+                    eq(core_languages_words.tableName, CATEGORY_LANG_TABLE),
+                    eq(core_languages_words.variable, CATEGORY_LANG_VARIABLE),
+                    ilike(core_languages_words.value, `%${query.search}%`),
+                  ),
+                ),
+            )
           : undefined;
 
         let combinedWhere: SQL | undefined;
@@ -86,6 +115,17 @@ export const categoriesRoute = buildRoute({
       },
     });
 
-    return c.json(data);
+    const translations = await loadCategoryTranslations(
+      c,
+      data.edges.map(edge => edge.id),
+    );
+
+    return c.json({
+      ...data,
+      edges: data.edges.map(edge => ({
+        ...edge,
+        titleTranslations: translations.get(edge.id) ?? [],
+      })),
+    });
   },
 });

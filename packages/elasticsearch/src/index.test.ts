@@ -1,41 +1,61 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { Client, index, bulk, del, deleteByQuery, ping, search, exists, create } =
-  vi.hoisted(() => {
-    const index = vi.fn();
-    const bulk = vi.fn();
-    const del = vi.fn();
-    const deleteByQuery = vi.fn();
-    const ping = vi.fn();
-    const search = vi.fn();
-    const exists = vi.fn();
-    const create = vi.fn();
-    const Client = vi.fn(function () {
-      return {
-        index,
-        bulk,
-        delete: del,
-        deleteByQuery,
-        ping,
-        search,
-        indices: { exists, create },
-      };
-    });
-
+const {
+  Client,
+  ResponseError,
+  index,
+  deleteByQuery,
+  ping,
+  search,
+  exists,
+  create,
+} = vi.hoisted(() => {
+  const index = vi.fn();
+  const bulk = vi.fn();
+  const del = vi.fn();
+  const deleteByQuery = vi.fn();
+  const ping = vi.fn();
+  const search = vi.fn();
+  const exists = vi.fn();
+  const create = vi.fn();
+  const Client = vi.fn(function () {
     return {
-      Client,
       index,
       bulk,
-      del,
+      delete: del,
       deleteByQuery,
       ping,
       search,
-      exists,
-      create,
+      indices: { exists, create },
     };
   });
+  class ResponseError extends Error {
+    constructor(body: unknown) {
+      super("elasticsearch response error");
+      this.body = body;
+    }
+    body: unknown;
+  }
 
-vi.mock("@elastic/elasticsearch", () => ({ Client }));
+  return {
+    Client,
+    ResponseError,
+    index,
+    deleteByQuery,
+    ping,
+    search,
+    exists,
+    create,
+  };
+});
+
+vi.mock("@elastic/elasticsearch", () => ({
+  Client,
+  errors: { ResponseError },
+}));
+
+const alreadyExistsError = () =>
+  new ResponseError({ error: { type: "resource_already_exists_exception" } });
 
 import { ElasticsearchSearchAdapter } from "./index";
 
@@ -52,7 +72,8 @@ const doc = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  exists.mockResolvedValue(true);
+  exists.mockReset().mockResolvedValue(true);
+  create.mockReset().mockResolvedValue(undefined);
 });
 
 describe("ElasticsearchSearchAdapter configuration", () => {
@@ -80,7 +101,7 @@ describe("ElasticsearchSearchAdapter.index", () => {
 
     expect(index).toHaveBeenCalledWith({
       index: "test",
-      id: "blog_post:1",
+      id: "blog_post:1:",
       document: expect.objectContaining({
         itemType: "blog_post",
         itemId: 1,
@@ -100,6 +121,117 @@ describe("ElasticsearchSearchAdapter.index", () => {
 
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({ index: "test" }),
+    );
+  });
+
+  it("defaults languageCode to an empty string when omitted", async () => {
+    await ElasticsearchSearchAdapter(config).index(c, doc);
+
+    expect(index).toHaveBeenCalledWith(
+      expect.objectContaining({
+        document: expect.objectContaining({ languageCode: "" }),
+      }),
+    );
+  });
+
+  it("indexes the document languageCode and scopes the id by language", async () => {
+    await ElasticsearchSearchAdapter(config).index(c, {
+      ...doc,
+      languageCode: "pl",
+    });
+
+    expect(index).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "blog_post:1:pl",
+        document: expect.objectContaining({ languageCode: "pl" }),
+      }),
+    );
+  });
+
+  it("keeps language variants of one item as distinct documents", async () => {
+    const adapter = ElasticsearchSearchAdapter(config);
+
+    await adapter.index(c, { ...doc, languageCode: "en" });
+    await adapter.index(c, { ...doc, languageCode: "pl" });
+
+    const ids = index.mock.calls.map(call => call[0].id);
+    expect(ids).toEqual(["blog_post:1:en", "blog_post:1:pl"]);
+  });
+});
+
+describe("ElasticsearchSearchAdapter index initialization", () => {
+  it("creates the index only once under concurrent calls", async () => {
+    exists.mockResolvedValue(false);
+    const adapter = ElasticsearchSearchAdapter(config);
+
+    await Promise.all([
+      adapter.index(c, doc),
+      adapter.index(c, doc),
+      adapter.bulkIndex(c, [doc]),
+    ]);
+
+    expect(exists).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not re-check the index after it is ensured", async () => {
+    exists.mockResolvedValue(true);
+    const adapter = ElasticsearchSearchAdapter(config);
+
+    await adapter.index(c, doc);
+    await adapter.index(c, doc);
+
+    expect(exists).toHaveBeenCalledTimes(1);
+  });
+
+  it("swallows resource_already_exists_exception from a concurrent creator", async () => {
+    exists.mockResolvedValue(false);
+    create.mockRejectedValue(alreadyExistsError());
+
+    await expect(
+      ElasticsearchSearchAdapter(config).index(c, doc),
+    ).resolves.toBeUndefined();
+
+    expect(index).toHaveBeenCalledTimes(1);
+  });
+
+  it("propagates unexpected errors from create", async () => {
+    exists.mockResolvedValue(false);
+    create.mockRejectedValue(new Error("cluster unavailable"));
+
+    await expect(
+      ElasticsearchSearchAdapter(config).index(c, doc),
+    ).rejects.toThrow("cluster unavailable");
+  });
+
+  it("retries initialization after a transient failure", async () => {
+    exists.mockRejectedValueOnce(new Error("network")).mockResolvedValue(true);
+    const adapter = ElasticsearchSearchAdapter(config);
+
+    await expect(adapter.index(c, doc)).rejects.toThrow("network");
+    await expect(adapter.index(c, doc)).resolves.toBeUndefined();
+
+    expect(exists).toHaveBeenCalledTimes(2);
+    expect(index).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ElasticsearchSearchAdapter.delete", () => {
+  it("removes every language variant of an item by query", async () => {
+    await ElasticsearchSearchAdapter(config).delete(c, "blog_post", 1);
+
+    expect(deleteByQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: {
+          bool: {
+            filter: [
+              { term: { itemType: "blog_post" } },
+              { term: { itemId: 1 } },
+            ],
+          },
+        },
+      }),
+      { ignore: [404] },
     );
   });
 });
@@ -137,6 +269,7 @@ describe("ElasticsearchSearchAdapter.search", () => {
               pluginId: "core",
               itemType: "blog_post",
               itemId: 1,
+              languageCode: "en",
               authorId: 5,
               title: "Hi",
               content: "Hello world",
@@ -163,11 +296,39 @@ describe("ElasticsearchSearchAdapter.search", () => {
     expect(result.pageInfo.totalCount).toBe(1);
     expect(result.edges[0]).toMatchObject({
       itemId: 1,
+      languageCode: "en",
       authorId: 5,
       score: 1.23,
       author: null,
       url: "/blog/1/hi",
     });
+  });
+
+  it("filters by languageCode, matching the locale and language-agnostic rows", async () => {
+    await ElasticsearchSearchAdapter(config).search(c, {
+      term: "hello",
+      sort: "relevance",
+      languageCode: "en",
+    });
+
+    const arg = search.mock.calls[0][0];
+    expect(arg.query.bool.filter).toContainEqual({
+      terms: { languageCode: ["en", ""] },
+    });
+  });
+
+  it("omits the languageCode filter when no locale is requested", async () => {
+    await ElasticsearchSearchAdapter(config).search(c, {
+      term: "hello",
+      sort: "relevance",
+    });
+
+    const arg = search.mock.calls[0][0];
+    expect(arg.query.bool.filter).not.toContainEqual(
+      expect.objectContaining({
+        terms: expect.objectContaining({ languageCode: expect.anything() }),
+      }),
+    );
   });
 
   it("builds a multi_match query for a term", async () => {

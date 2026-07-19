@@ -32,7 +32,9 @@ export default async function Page(
       <div className="container mx-auto max-w-3xl space-y-6 p-4">
         <HeaderContent desc={t("desc")} h1={t("title")} />
 
-        <React.Suspense fallback={<Skeleton className="h-64 w-full rounded-xl" />}>
+        <React.Suspense
+          fallback={<Skeleton className="h-64 w-full rounded-xl" />}
+        >
           <SearchView {...props} />
         </React.Suspense>
       </div>

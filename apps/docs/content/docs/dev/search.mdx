@@ -12,6 +12,10 @@ public pages and the AdminCP:
 - **`/discover`** — the same index sorted newest-first (a community timeline).
 - **AdminCP → user profile → Timeline** — a single member's indexed activity.
 
+Search and discovery are **locale-aware**: results follow the active language, so
+a member browsing in Polish sees Polish titles, snippets and links. See
+[Multi-language content](#multi-language-content) below.
+
 The query engine is **pluggable**. The default requires zero setup:
 
 - **Postgres** (default) — Postgres full-text search (`tsvector` + GIN, title
@@ -35,7 +39,7 @@ await c.get("search").index({
   content: post.content, // HTML is stripped to plain text automatically
   containerType: "blog_category",
   containerId: post.categoryId,
-  url: `/blog/${post.categoryId}/${post.titleSeo}`,
+  url: `/blog/${post.categoryId}/${post.slug}`,
   isPublic: true,
   createdAt: post.createdAt,
 });
@@ -47,6 +51,42 @@ await c.get("search").delete("blog_post", post.id);
 `index` upserts the canonical row and mirrors the change into an external engine
 when one is configured. `isPublic: false` hides an item from the public feed
 (admins and the item's author still see it).
+
+## Multi-language content
+
+The index holds **one row per `(itemType, itemId, languageCode)`**, so translated
+content is projected once per language and search/discovery can be scoped to the
+viewer's locale. Emit one document per language, each with that language's title,
+content and URL:
+
+```ts
+for (const languageCode of enabledLanguageCodes) {
+  await c.get("search").index({
+    itemType: "blog_post",
+    itemId: post.id,
+    languageCode, // [!code highlight]
+    title:
+      getLangValue(titleTranslations, languageCode) ||
+      getLangValue(titleTranslations, defaultLanguageCode),
+    content:
+      getLangValue(contentTranslations, languageCode) ||
+      getLangValue(contentTranslations, defaultLanguageCode),
+    url: `/blog/${post.categoryId}/${getLangValue(urlTranslations, languageCode) || getLangValue(urlTranslations, defaultLanguageCode)}`,
+    createdAt: post.createdAt,
+  });
+}
+```
+
+The `/search` and `/discover` requests send the active locale as a `lang` query
+param, and the query keeps only rows for that locale. Content that isn't
+translated can leave `languageCode` empty (`""`) — those rows are **language
+agnostic** and match every locale, so single-language plugins need no changes.
+
+<Callout type="info">
+  Postgres full-text ranking uses the `english` text-search configuration for all
+  languages (there is no bundled dictionary for most locales). Matching still works
+  across languages; only stemming and stop-words are English-tuned.
+</Callout>
 
 ## Registering a rebuild indexer
 
@@ -66,7 +106,9 @@ export const blogPostSearchIndexer: SearchIndexer = {
       .limit(limit)
       .offset(offset);
 
-    return rows.map(buildBlogPostSearchDocument);
+    // An indexer may emit several documents per item (e.g. one per language).
+    // `offset`/`limit` page over items, not documents.
+    return rows.flatMap(buildSearchDocumentsForPost);
   },
 };
 

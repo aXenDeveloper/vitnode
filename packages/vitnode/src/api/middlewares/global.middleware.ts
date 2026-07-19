@@ -165,11 +165,12 @@ export const globalMiddleware = ({
     })),
   );
 
-  const searchIndexersMetadata: SearchIndexerConfig[] = plugins.flatMap(plugin =>
-    (plugin.searchIndexers ?? []).map(indexer => ({
-      ...indexer,
-      pluginId: plugin.pluginId,
-    })),
+  const searchIndexersMetadata: SearchIndexerConfig[] = plugins.flatMap(
+    plugin =>
+      (plugin.searchIndexers ?? []).map(indexer => ({
+        ...indexer,
+        pluginId: plugin.pluginId,
+      })),
   );
 
   const permissionStaffMetadata: PermissionStaffCatalogEntry[] = plugins.map(

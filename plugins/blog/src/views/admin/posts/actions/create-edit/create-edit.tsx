@@ -4,11 +4,15 @@ import {
 } from "@vitnode/core/components/form/auto-form";
 import { AutoFormCombobox } from "@vitnode/core/components/form/fields/combobox";
 import { AutoFormEditor } from "@vitnode/core/components/form/fields/editor";
-import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
 import { useDialog } from "@vitnode/core/components/ui/dialog";
 import { fetcherClient } from "@vitnode/core/lib/fetcher-client";
+import {
+  getLangValue,
+  multiLangValueSchema,
+} from "@vitnode/core/lib/helpers/multi-lang";
 import { usePathname, useRouter } from "@vitnode/core/lib/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import React from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -16,6 +20,7 @@ import type { zodPostSchema } from "@/api/modules/posts/routes/get.route";
 
 import { categoriesModule } from "@/api/modules/categories/categories.module";
 
+import { FriendlyUrlField, TitleField } from "./multi-lang-fields";
 import { createMutationApi, editMutationApi } from "./mutation-api";
 
 export const CreateEditActionPostsAdmin = ({
@@ -25,19 +30,25 @@ export const CreateEditActionPostsAdmin = ({
 }) => {
   const t = useTranslations("@vitnode/blog.admin.posts");
   const tCore = useTranslations("core.global.errors");
+  const locale = useLocale();
   const { setOpen } = useDialog();
   const { push } = useRouter();
   const pathname = usePathname();
+  const resolveCategoryTitle = (
+    translations: { languageCode: string; value: string }[],
+  ) => getLangValue(translations, locale) || translations[0]?.value || "";
+  const friendlyUrlTouchedRef = React.useRef<Set<string>>(
+    new Set(data?.friendlyUrlTranslations?.map(item => item.languageCode)),
+  );
+
   const formSchema = z.object({
-    title: z
-      .string()
-      .min(3, {
-        message: tCore("field_min_length", {
-          min: 3,
-        }),
-      })
-      .default(data?.title ?? ""),
-    content: z.string().default(data?.content ?? ""),
+    title: multiLangValueSchema({ minLength: 3, maxLength: 255 })
+      .min(1)
+      .default(data?.titleTranslations ?? []),
+    friendlyUrl: multiLangValueSchema({ minLength: 1, maxLength: 255 })
+      .min(1)
+      .default(data?.friendlyUrlTranslations ?? []),
+    content: multiLangValueSchema().default(data?.contentTranslations ?? []),
     categoryId: z
       .object({ value: z.string(), label: z.string() })
       .refine(value => value.value !== "", {
@@ -45,7 +56,10 @@ export const CreateEditActionPostsAdmin = ({
       })
       .default(
         data?.category
-          ? { value: data.category.id.toString(), label: data.category.title }
+          ? {
+              value: data.category.id.toString(),
+              label: resolveCategoryTitle(data.category.titleTranslations),
+            }
           : { value: "", label: "" },
       ),
   });
@@ -54,33 +68,21 @@ export const CreateEditActionPostsAdmin = ({
     values,
     form,
   ) => {
-    let error = "";
-    if (data?.id) {
-      const mutation = await editMutationApi({
-        id: data.id,
-        ...values,
-        categoryId: parseInt(values.categoryId.value, 10),
-      });
+    const body = {
+      title: values.title,
+      content: values.content,
+      friendlyUrl: values.friendlyUrl,
+      categoryId: parseInt(values.categoryId.value, 10),
+    };
+    const mutation = data?.id
+      ? await editMutationApi({ id: data.id, ...body })
+      : await createMutationApi(body);
 
-      if (mutation?.error) {
-        error = mutation.error;
-      }
-    } else {
-      const mutation = await createMutationApi({
-        ...values,
-        categoryId: parseInt(values.categoryId.value, 10),
-      });
-
-      if (mutation?.error) {
-        error = mutation.error;
-      }
-    }
-
-    if (error) {
-      if (error.includes("already exists")) {
-        form.setError("title", {
+    if (mutation?.error) {
+      if (mutation.error.includes("already exists")) {
+        form.setError("friendlyUrl", {
           type: "manual",
-          message: t("create.form.title.already_exists"),
+          message: t("create.form.friendly_url.already_exists"),
         });
 
         return;
@@ -92,8 +94,10 @@ export const CreateEditActionPostsAdmin = ({
 
       return;
     }
+
+    toast.success(t(data ? "edit.success" : "create.success"));
     setOpen?.(false);
-    push(pathname);
+    setTimeout(() => push(pathname), 300);
   };
 
   return (
@@ -102,7 +106,23 @@ export const CreateEditActionPostsAdmin = ({
         {
           id: "title",
           component: props => (
-            <AutoFormInput label={t("create.form.title.label")} {...props} />
+            <TitleField
+              friendlyUrlName="friendlyUrl"
+              friendlyUrlTouched={friendlyUrlTouchedRef}
+              label={t("create.form.title.label")}
+              {...props}
+            />
+          ),
+        },
+        {
+          id: "friendlyUrl",
+          component: props => (
+            <FriendlyUrlField
+              description={t("create.form.friendly_url.desc")}
+              friendlyUrlTouched={friendlyUrlTouchedRef}
+              label={t("create.form.friendly_url.label")}
+              {...props}
+            />
           ),
         },
         {
@@ -123,7 +143,7 @@ export const CreateEditActionPostsAdmin = ({
                 const data = await res.json();
 
                 return data.edges.map(category => ({
-                  label: category.title,
+                  label: resolveCategoryTitle(category.titleTranslations),
                   value: category.id.toString(),
                 }));
               }}
@@ -136,7 +156,11 @@ export const CreateEditActionPostsAdmin = ({
         {
           id: "content",
           component: props => (
-            <AutoFormEditor label={t("create.form.content")} {...props} />
+            <AutoFormEditor
+              label={t("create.form.content")}
+              multiLang
+              {...props}
+            />
           ),
         },
       ]}

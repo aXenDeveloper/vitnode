@@ -1,7 +1,7 @@
 "use client";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import React from "react";
 
 import type { searchModule } from "@/api/modules/search/search.module";
@@ -181,33 +181,29 @@ export const SearchFeed = ({
   variant?: SearchFeedVariant;
 }) => {
   const t = useTranslations("core.search");
+  const locale = useLocale();
   const sentinelRef = React.useRef<HTMLDivElement>(null);
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-  } = useInfiniteQuery({
-    queryKey: ["search", params],
-    initialPageParam: "",
-    queryFn: async ({ pageParam }) => {
-      const res = await fetcherClient(searchRef, {
-        module: "search",
-        path: "/",
-        method: "get",
-        args: { query: buildQuery(params, pageParam) },
-      });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ["search", params, locale],
+      initialPageParam: "",
+      queryFn: async ({ pageParam }) => {
+        const res = await fetcherClient(searchRef, {
+          module: "search",
+          path: "/",
+          method: "get",
+          args: { query: { ...buildQuery(params, pageParam), lang: locale } },
+        });
 
-      return (await res.json()) as SearchFeedPage;
-    },
-    getNextPageParam: last =>
-      last.pageInfo.hasNextPage ? String(last.pageInfo.endCursor) : undefined,
-    initialData: initialData
-      ? { pages: [initialData], pageParams: [""] }
-      : undefined,
-  });
+        return await res.json();
+      },
+      getNextPageParam: last =>
+        last.pageInfo.hasNextPage ? String(last.pageInfo.endCursor) : undefined,
+      initialData: initialData
+        ? { pages: [initialData], pageParams: [""] }
+        : undefined,
+    });
 
   React.useEffect(() => {
     const el = sentinelRef.current;

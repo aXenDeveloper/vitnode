@@ -5,19 +5,20 @@ import {
 import { AutoFormColor } from "@vitnode/core/components/form/fields/color";
 import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
 import { useDialog } from "@vitnode/core/components/ui/dialog";
+import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
 import { usePathname, useRouter } from "@vitnode/core/lib/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import type { zodCreateCategorySchema } from "@/api/modules/admin/categories/routes/create.route";
+import type { zodCategorySchema } from "@/api/modules/categories/routes/get.route";
 
 import { createMutationApi, editMutationApi } from "./mutation-api";
 
 export const CreateEditActionCategoriesAdmin = ({
   data,
 }: {
-  data?: z.infer<typeof zodCreateCategorySchema> & { id: number };
+  data?: z.infer<typeof zodCategorySchema> & { id: number };
 }) => {
   const t = useTranslations("@vitnode/blog.admin.categories");
   const tCore = useTranslations("core.global.errors");
@@ -25,48 +26,25 @@ export const CreateEditActionCategoriesAdmin = ({
   const { push } = useRouter();
   const pathname = usePathname();
   const formSchema = z.object({
-    title: z.string().default(data?.title ?? ""),
+    title: multiLangValueSchema({ minLength: 1, maxLength: 100 })
+      .min(1)
+      .default(data?.titleTranslations ?? []),
     color: z.string().default(data?.color ?? ""),
   });
 
-  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (
-    values,
-    form,
-  ) => {
-    let error = "";
-    if (data?.id) {
-      const mutation = await editMutationApi({
-        id: data.id,
-        ...values,
-      });
+  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
+    const mutation = data?.id
+      ? await editMutationApi({ id: data.id, ...values })
+      : await createMutationApi(values);
 
-      if (mutation?.error) {
-        error = mutation.error;
-      }
-    } else {
-      const mutation = await createMutationApi(values);
-
-      if (mutation?.error) {
-        error = mutation.error;
-      }
-    }
-
-    if (error) {
-      if (error.includes("already exists")) {
-        form.setError("title", {
-          type: "manual",
-          message: t("create.form.title.already_exists"),
-        });
-
-        return;
-      }
-
+    if (mutation?.error) {
       toast.error(tCore("title"), {
         description: tCore("internal_server_error"),
       });
 
       return;
     }
+
     setOpen?.(false);
     push(pathname);
   };
@@ -77,7 +55,11 @@ export const CreateEditActionCategoriesAdmin = ({
         {
           id: "title",
           component: props => (
-            <AutoFormInput label={t("create.form.title.label")} {...props} />
+            <AutoFormInput
+              label={t("create.form.title.label")}
+              multiLang
+              {...props}
+            />
           ),
         },
         {

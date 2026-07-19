@@ -94,7 +94,7 @@ const formSchema = z.object({
             const data = await res.json();
 
             return data.edges.map(category => ({
-              label: category.title,
+              label: getLangValue(category.titleTranslations, locale),
               value: category.id.toString(),
             }));
           }}

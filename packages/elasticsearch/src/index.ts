@@ -1,3 +1,4 @@
+import type { estypes } from "@elastic/elasticsearch";
 import type {
   SearchDocument,
   SearchHit,
@@ -6,8 +7,7 @@ import type {
   SearchResult,
 } from "@vitnode/core/api/models/search";
 
-import { Client } from "@elastic/elasticsearch";
-import type { estypes } from "@elastic/elasticsearch";
+import { Client, errors } from "@elastic/elasticsearch";
 
 const DEFAULT_INDEX = "vitnode";
 const DEFAULT_SIZE = 20;
@@ -37,19 +37,33 @@ interface EsSource {
   isPublic: boolean;
   itemId: number;
   itemType: string;
+  languageCode: string;
   metadata: Record<string, unknown>;
   pluginId: string;
   title: string;
   url: null | string;
 }
 
-const docId = (itemType: string, itemId: number): string =>
-  `${itemType}:${itemId}`;
+const docId = (
+  itemType: string,
+  itemId: number,
+  languageCode: string,
+): string => `${itemType}:${itemId}:${languageCode}`;
+
+interface EsErrorBody {
+  error?: { type?: string };
+}
+
+const isIndexAlreadyExistsError = (error: unknown): boolean =>
+  error instanceof errors.ResponseError &&
+  (error.body as EsErrorBody | undefined)?.error?.type ===
+    "resource_already_exists_exception";
 
 const toSource = (doc: SearchDocument): EsSource => ({
   pluginId: "core",
   itemType: doc.itemType,
   itemId: doc.itemId,
+  languageCode: doc.languageCode ?? "",
   authorId: doc.authorId ?? null,
   title: doc.title,
   content: doc.content,
@@ -69,6 +83,10 @@ const buildFilters = (
 ): estypes.QueryDslQueryContainer[] => {
   const filter: estypes.QueryDslQueryContainer[] = [];
 
+  if (params.languageCode) {
+    // Language-agnostic rows (empty `languageCode`) match every locale.
+    filter.push({ terms: { languageCode: [params.languageCode, ""] } });
+  }
   if (params.itemTypes?.length) {
     filter.push({ terms: { itemType: params.itemTypes } });
   }
@@ -142,7 +160,8 @@ const buildQuery = (
     bool: { must, filter: buildFilters(params) },
   };
 
-  const scoresByRelevance = params.sort !== "newest" && params.sort !== "oldest";
+  const scoresByRelevance =
+    params.sort !== "newest" && params.sort !== "oldest";
   const functions = ranking ? buildRankingFunctions(ranking) : [];
 
   if (term && scoresByRelevance && functions.length > 0) {
@@ -166,9 +185,7 @@ const buildSort = (params: SearchQueryParams): estypes.Sort => {
   return ["_score", { createdAt: { order: "desc" } }];
 };
 
-const mapHit = (
-  hit: estypes.SearchHit<EsSource>,
-): SearchHit | null => {
+const mapHit = (hit: estypes.SearchHit<EsSource>): null | SearchHit => {
   const source = hit._source;
   if (!source) return null;
 
@@ -177,6 +194,7 @@ const mapHit = (
     pluginId: source.pluginId,
     itemType: source.itemType,
     itemId: source.itemId,
+    languageCode: source.languageCode,
     authorId: source.authorId,
     title: source.title,
     content: source.content,
@@ -196,6 +214,7 @@ export const ElasticsearchSearchAdapter = (
   const index = options.index ?? DEFAULT_INDEX;
   let client: Client | undefined;
   let ensured = false;
+  let ensuring: Promise<void> | undefined;
 
   const getClient = (): Client => {
     if (!(options.node || options.cloudId)) {
@@ -217,12 +236,11 @@ export const ElasticsearchSearchAdapter = (
     return client;
   };
 
-  const ensureIndex = async (): Promise<void> => {
-    if (ensured) return;
+  const createIndexIfMissing = async (): Promise<void> => {
     const es = getClient();
+    if (await es.indices.exists({ index })) return;
 
-    const exists = await es.indices.exists({ index });
-    if (!exists) {
+    try {
       await es.indices.create({
         index,
         mappings: {
@@ -230,6 +248,7 @@ export const ElasticsearchSearchAdapter = (
             pluginId: { type: "keyword" },
             itemType: { type: "keyword" },
             itemId: { type: "integer" },
+            languageCode: { type: "keyword" },
             authorId: { type: "integer" },
             title: { type: "text" },
             content: { type: "text" },
@@ -242,9 +261,22 @@ export const ElasticsearchSearchAdapter = (
           },
         },
       });
+    } catch (error) {
+      if (!isIndexAlreadyExistsError(error)) throw error;
     }
+  };
 
-    ensured = true;
+  const ensureIndex = async (): Promise<void> => {
+    if (ensured) return;
+    ensuring ??= createIndexIfMissing();
+
+    try {
+      await ensuring;
+      ensured = true;
+    } catch (error) {
+      ensuring = undefined;
+      throw error;
+    }
   };
 
   return {
@@ -255,7 +287,7 @@ export const ElasticsearchSearchAdapter = (
       await ensureIndex();
       await getClient().index({
         index,
-        id: docId(doc.itemType, doc.itemId),
+        id: docId(doc.itemType, doc.itemId, doc.languageCode ?? ""),
         document: toSource(doc),
       });
     },
@@ -265,16 +297,28 @@ export const ElasticsearchSearchAdapter = (
       await ensureIndex();
 
       const operations = docs.flatMap(doc => [
-        { index: { _index: index, _id: docId(doc.itemType, doc.itemId) } },
+        {
+          index: {
+            _index: index,
+            _id: docId(doc.itemType, doc.itemId, doc.languageCode ?? ""),
+          },
+        },
         toSource(doc),
       ]);
 
       await getClient().bulk({ operations, refresh: false });
     },
 
+    // One document per language shares an (itemType, itemId), so remove every
+    // language variant with a query rather than a single id.
     delete: async (_c, itemType, itemId) => {
-      await getClient().delete(
-        { index, id: docId(itemType, itemId) },
+      await getClient().deleteByQuery(
+        {
+          index,
+          query: {
+            bool: { filter: [{ term: { itemType } }, { term: { itemId } }] },
+          },
+        },
         { ignore: [404] },
       );
     },

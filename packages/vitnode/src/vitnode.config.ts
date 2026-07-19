@@ -69,6 +69,13 @@ export interface VitNodeApiConfig {
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix">;
   /**
+   * Redis connection used as a shared cache (via `c.get("cache")`) and, when
+   * set, as the storage backend for the rate limiter. Leave undefined to run
+   * without Redis - the cache degrades to no-ops and the rate limiter falls
+   * back to in-memory storage.
+   */
+  redis?: RedisOptions & { url?: string };
+  /**
    * Search engine backing content discovery (`c.get("search")`). Ships a
    * zero-config Postgres full-text provider used when `adapter` is omitted; an
    * external Elasticsearch adapter is available as `@vitnode/elasticsearch`. The
@@ -78,13 +85,6 @@ export interface VitNodeApiConfig {
   search?: {
     adapter?: SearchProviderApiPlugin;
   };
-  /**
-   * Redis connection used as a shared cache (via `c.get("cache")`) and, when
-   * set, as the storage backend for the rate limiter. Leave undefined to run
-   * without Redis - the cache degrades to no-ops and the rate limiter falls
-   * back to in-memory storage.
-   */
-  redis?: RedisOptions & { url?: string };
   /**
    * Object storage backend used for file uploads, reached in route handlers via
    * `c.get("storage").upload(...)`. Ships a zero-config Local (disk) adapter;

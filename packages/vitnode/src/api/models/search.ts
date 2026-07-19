@@ -15,6 +15,9 @@ export interface SearchDocument {
   isPublic?: boolean;
   itemId: number;
   itemType: string;
+  // Locale of this projection. Multi-language content emits one document per
+  // language; single-language content may leave it empty.
+  languageCode?: string;
   metadata?: Record<string, unknown>;
   title: string;
   updatedAt?: Date;
@@ -30,6 +33,9 @@ export interface SearchQueryParams {
   first?: number;
   includePrivate?: boolean;
   itemTypes?: string[];
+  // Restrict results to one locale (the viewer's). Rows with an empty
+  // `languageCode` (language-agnostic content) always match.
+  languageCode?: string;
   sort?: "newest" | "oldest" | "relevance";
   term?: string;
 }
@@ -51,6 +57,7 @@ export interface SearchHit {
   id: number;
   itemId: number;
   itemType: string;
+  languageCode: string;
   metadata: Record<string, unknown>;
   pluginId: string;
   score: null | number;
@@ -84,8 +91,16 @@ export interface SearchProviderCapabilities {
  * return fewer than `limit` rows to signal the end.
  */
 export interface SearchIndexer {
+  // Total number of source items available to index for this type. Powers the
+  // admin coverage report (indexed vs. total). Omit when the source count is
+  // unknown or expensive; coverage then falls back to the indexed count (100%).
+  count?: (c: Context) => Promise<number>;
   itemType: string;
-  load: (c: Context, offset: number, limit: number) => Promise<SearchDocument[]>;
+  load: (
+    c: Context,
+    offset: number,
+    limit: number,
+  ) => Promise<SearchDocument[]>;
 }
 
 export interface SearchIndexerConfig extends SearchIndexer {
@@ -114,6 +129,7 @@ const toRow = (doc: SearchDocument) => ({
   pluginId: "core",
   itemType: doc.itemType,
   itemId: doc.itemId,
+  languageCode: doc.languageCode ?? "",
   authorId: doc.authorId ?? null,
   title: doc.title,
   content: doc.content,
@@ -134,90 +150,14 @@ export class SearchModel {
 
   protected readonly c: Context;
 
-  private provider(): SearchProviderApiPlugin {
-    return this.c.get("core").search.adapter;
-  }
-
-  private async upsertRow(doc: SearchDocument): Promise<void> {
-    const row = { ...toRow(doc), pluginId: this.c.get("plugin")?.id ?? "core" };
-
-    await this.c
-      .get("db")
-      .insert(core_search_index)
-      .values(row)
-      .onConflictDoUpdate({
-        target: [core_search_index.itemType, core_search_index.itemId],
-        set: {
-          authorId: row.authorId,
-          title: row.title,
-          content: row.content,
-          containerType: row.containerType,
-          containerId: row.containerId,
-          url: row.url,
-          isPublic: row.isPublic,
-          metadata: row.metadata,
-          createdAt: row.createdAt,
-          updatedAt: row.updatedAt,
-          indexedAt: row.indexedAt,
-        },
-      });
-  }
-
-  /** Canonical projection lives in `core_search_index`; the provider mirrors it. */
-  async index(doc: SearchDocument): Promise<void> {
-    const clean = { ...doc, content: stripHtml(doc.content) };
-
-    await this.upsertRow(clean);
-    await this.provider().index(this.c, clean);
-  }
-
-  async bulkIndex(docs: SearchDocument[]): Promise<void> {
-    const clean = docs.map(doc => ({ ...doc, content: stripHtml(doc.content) }));
-
-    for (const doc of clean) {
-      await this.upsertRow(doc);
-    }
-
-    await this.provider().bulkIndex(this.c, clean);
-  }
-
-  async delete(itemType: string, itemId: number): Promise<void> {
-    await this.c
-      .get("db")
-      .delete(core_search_index)
-      .where(
-        and(
-          eq(core_search_index.itemType, itemType),
-          eq(core_search_index.itemId, itemId),
-        ),
-      );
-
-    await this.provider().delete(this.c, itemType, itemId);
-  }
-
-  async clear(itemType?: string): Promise<void> {
-    await this.c
-      .get("db")
-      .delete(core_search_index)
-      .where(itemType ? eq(core_search_index.itemType, itemType) : undefined);
-
-    await this.provider().clear(this.c, itemType);
-  }
-
-  async search(params: SearchQueryParams): Promise<SearchResult> {
-    const result = await this.provider().search(this.c, params);
-
-    return { ...result, edges: await this.hydrateAuthors(result.edges) };
-  }
-
   // Providers that don't join the users table (e.g. Elasticsearch) return hits
   // with `authorId` but `author: null`; fill in the display fields here.
   private async hydrateAuthors(edges: SearchHit[]): Promise<SearchHit[]> {
     const missing = [
       ...new Set(
-        edges
-          .filter(edge => !edge.author && edge.authorId)
-          .map(edge => edge.authorId as number),
+        edges.flatMap(edge =>
+          !edge.author && edge.authorId ? [edge.authorId] : [],
+        ),
       ),
     ];
     if (missing.length === 0) return edges;
@@ -242,13 +182,96 @@ export class SearchModel {
     );
   }
 
+  private provider(): SearchProviderApiPlugin {
+    return this.c.get("core").search.adapter;
+  }
+
+  private async upsertRow(doc: SearchDocument): Promise<void> {
+    const row = { ...toRow(doc), pluginId: this.c.get("plugin")?.id ?? "core" };
+
+    await this.c
+      .get("db")
+      .insert(core_search_index)
+      .values(row)
+      .onConflictDoUpdate({
+        target: [
+          core_search_index.itemType,
+          core_search_index.itemId,
+          core_search_index.languageCode,
+        ],
+        set: {
+          authorId: row.authorId,
+          title: row.title,
+          content: row.content,
+          containerType: row.containerType,
+          containerId: row.containerId,
+          url: row.url,
+          isPublic: row.isPublic,
+          metadata: row.metadata,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+          indexedAt: row.indexedAt,
+        },
+      });
+  }
+
+  async bulkIndex(docs: SearchDocument[]): Promise<void> {
+    const clean = docs.map(doc => ({
+      ...doc,
+      content: stripHtml(doc.content),
+    }));
+
+    for (const doc of clean) {
+      await this.upsertRow(doc);
+    }
+
+    await this.provider().bulkIndex(this.c, clean);
+  }
+
+  async clear(itemType?: string): Promise<void> {
+    await this.c
+      .get("db")
+      .delete(core_search_index)
+      .where(itemType ? eq(core_search_index.itemType, itemType) : undefined);
+
+    await this.provider().clear(this.c, itemType);
+  }
+
+  async delete(itemType: string, itemId: number): Promise<void> {
+    await this.c
+      .get("db")
+      .delete(core_search_index)
+      .where(
+        and(
+          eq(core_search_index.itemType, itemType),
+          eq(core_search_index.itemId, itemId),
+        ),
+      );
+
+    await this.provider().delete(this.c, itemType, itemId);
+  }
+
+  /** Canonical projection lives in `core_search_index`; the provider mirrors it. */
+  async index(doc: SearchDocument): Promise<void> {
+    const clean = { ...doc, content: stripHtml(doc.content) };
+
+    await this.upsertRow(clean);
+    await this.provider().index(this.c, clean);
+  }
+
+  name(): string {
+    return this.provider().name;
+  }
+
   async ping(): Promise<boolean> {
     const provider = this.provider();
 
     return provider.ping ? provider.ping(this.c) : true;
   }
 
-  name(): string {
-    return this.provider().name;
+  async search(params: SearchQueryParams): Promise<SearchResult> {
+    const result = await this.provider().search(this.c, params);
+
+    return { ...result, edges: await this.hydrateAuthors(result.edges) };
   }
 }

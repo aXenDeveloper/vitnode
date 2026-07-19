@@ -1,31 +1,46 @@
 import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@vitnode/core/api/lib/route";
-import { removeSpecialCharacters } from "@vitnode/core/lib/special-characters";
-import { eq } from "drizzle-orm";
+import { core_languages_words } from "@vitnode/core/database/languages";
+import { and, eq, inArray } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
 import { blog_posts } from "@/database/posts";
 
-import { buildBlogPostSearchDocument } from "../../../../lib/search";
+import {
+  POST_LANG_TABLE,
+  savePostTranslations,
+  slugifyMultiLang,
+} from "../../../../lib/posts-language";
+import { reindexBlogPost } from "../../../../lib/search";
 
 const zodPostResponseSchema = z.object({
   id: z.number(),
-  title: z.string(),
-  titleSeo: z.string(),
-  content: z.string(),
   categoryId: z.number(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
 
+const zodMultiLangValue = ({
+  max,
+  min,
+}: { max?: number; min?: number } = {}) => {
+  let value = z.string();
+  if (min !== undefined) {
+    value = value.min(min);
+  }
+  if (max !== undefined) {
+    value = value.max(max);
+  }
+
+  return z.array(z.object({ languageCode: z.string(), value }));
+};
+
 export const zodCreatePostSchema = z.object({
-  title: z
-    .string()
-    .min(3, "Title must be at least 3 characters long")
-    .max(255, "Title must not exceed 255 characters"),
-  content: z.string(),
+  title: zodMultiLangValue({ min: 3, max: 255 }).min(1),
+  content: zodMultiLangValue(),
+  friendlyUrl: zodMultiLangValue({ min: 1, max: 255 }).min(1),
   categoryId: z.number(),
 });
 
@@ -62,10 +77,18 @@ export const createPostRoute = buildRoute({
     },
   },
   handler: async c => {
-    const { title, content, categoryId } = c.req.valid("json");
-    const titleSeo = removeSpecialCharacters(title);
+    const { title, content, friendlyUrl, categoryId } = c.req.valid("json");
+    const slugFriendlyUrl = slugifyMultiLang(friendlyUrl);
+    const friendlyUrlValues = [
+      ...new Set(slugFriendlyUrl.map(item => item.value).filter(Boolean)),
+    ];
 
-    // Check if category exists
+    if (friendlyUrlValues.length === 0) {
+      throw new HTTPException(400, {
+        message: "Friendly URL is required.",
+      });
+    }
+
     const [category] = await c
       .get("db")
       .select({ id: blog_categories.id })
@@ -79,15 +102,24 @@ export const createPostRoute = buildRoute({
       });
     }
 
-    // Check if title SEO already exists
-    const [titleSEODuplicate] = await c
+    // The friendly URL is the post's public slug and lives in
+    // `core_languages_words`; keep it globally unique so two posts can't resolve
+    // to the same URL.
+    const [duplicate] = await c
       .get("db")
-      .select({ titleSeo: blog_posts.titleSeo })
-      .from(blog_posts)
-      .where(eq(blog_posts.titleSeo, titleSeo))
+      .select({ itemId: core_languages_words.itemId })
+      .from(core_languages_words)
+      .where(
+        and(
+          eq(core_languages_words.pluginCode, CONFIG_PLUGIN.pluginId),
+          eq(core_languages_words.tableName, POST_LANG_TABLE),
+          eq(core_languages_words.variable, "friendlyUrl"),
+          inArray(core_languages_words.value, friendlyUrlValues),
+        ),
+      )
       .limit(1);
 
-    if (titleSEODuplicate?.titleSeo === titleSeo) {
+    if (duplicate) {
       throw new HTTPException(400, {
         message: "Post with this title already exists.",
       });
@@ -97,15 +129,13 @@ export const createPostRoute = buildRoute({
       .get("db")
       .insert(blog_posts)
       .values({
-        title,
-        titleSeo,
-        content,
         categoryId,
         authorId: c.get("admin")?.user.id ?? c.get("user")?.id ?? null,
       })
       .returning();
 
-    await c.get("search").index(buildBlogPostSearchDocument(post));
+    await savePostTranslations(c, post.id, { title, content, friendlyUrl });
+    await reindexBlogPost(c, post);
 
     return c.json(post, 201);
   },
