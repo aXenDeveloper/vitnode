@@ -1,9 +1,10 @@
-version: "3.8"
-
 services:
   database:
     container_name: vitnode_postgres_dev_bun
-    image: postgres:17.5-alpine
+    build:
+      context: ../../docker/postgres
+      dockerfile: Dockerfile
+    image: vitnode-postgres-pl:17.5-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER-root}

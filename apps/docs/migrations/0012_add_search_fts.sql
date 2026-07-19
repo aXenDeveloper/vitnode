@@ -1,8 +1,4 @@
--- Full-text search vector for content discovery. Title is weighted above body.
-ALTER TABLE "core_search_index" ADD COLUMN "search_vector" tsvector
-  GENERATED ALWAYS AS (
-    setweight(to_tsvector('english', coalesce("title", '')), 'A') ||
-    setweight(to_tsvector('english', coalesce("content", '')), 'B')
-  ) STORED;
---> statement-breakpoint
-CREATE INDEX "core_search_index_search_vector_idx" ON "core_search_index" USING gin ("search_vector");
+-- Superseded: the `search_vector` tsvector column and its GIN index are now
+-- declared in the Drizzle schema (`core_search_index`) and emitted by
+-- `drizzle-kit generate`. This migration is kept as a no-op so the journal and
+-- snapshot chain stay contiguous.
