@@ -80,7 +80,7 @@ export const SearchAdminView = async ({
 
   return (
     <div className="flex flex-col gap-6">
-      {<CronWarning />}
+      {!data.hasCronAdapter && <CronWarning />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
