@@ -62,19 +62,50 @@
       "admin": {
         "title": "Search",
         "desc": "Content discovery engine and index status.",
-        "engine": "Search engine",
-        "health": "Health",
         "healthy": "Healthy",
         "unhealthy": "Unavailable",
-        "total": "Indexed items",
-        "lastIndexed": "Last indexed",
         "never": "Never",
-        "byType": "Items by type",
         "rebuild": "Rebuild index",
         "rebuilding": "Queuing…",
         "rebuildQueued": "Search index rebuild queued.",
         "rebuildError": "Could not queue the rebuild.",
-        "cronWarning": "Background jobs require a configured cron adapter. The rebuild will not run until cron is active."
+        "reindex": "Reindex",
+        "reindexQueued": "Reindex queued for {collection}.",
+        "cron": {
+          "title": "Background jobs require a configured cron adapter",
+          "desc": "A rebuild won't run until cron is active. Configure an adapter in Integrations to enable scheduled reindexing.",
+          "dismiss": "Dismiss"
+        },
+        "stats": {
+          "status": "Status",
+          "statusHealthy": "All systems operational",
+          "statusUnhealthy": "Search engine unavailable",
+          "engine": "Engine",
+          "engineDesc": "Full-text search adapter",
+          "indexed": "Indexed items",
+          "indexedDesc": "Across {count, plural, =0 {no collections} one {# collection} other {# collections}}",
+          "lastIndexed": "Last indexed",
+          "lastIndexedNever": "No content indexed yet"
+        },
+        "collections": {
+          "title": "Indexed collections",
+          "desc": "Coverage and freshness per content type. Filter to preview what your users find.",
+          "count": "{shown} of {total}",
+          "searchPlaceholder": "Search collections…",
+          "columns": {
+            "collection": "Collection",
+            "items": "Items",
+            "coverage": "Coverage",
+            "lastIndexed": "Last indexed"
+          },
+          "status": {
+            "indexed": "Indexed",
+            "stale": "Stale",
+            "empty": "Not indexed"
+          },
+          "empty": "No collections found",
+          "emptyDesc": "No collection matches your search. Try a different term."
+        }
       }
     },
     "global": {
@@ -175,6 +206,11 @@
         "409": {
           "title": "Conflict",
           "desc": "The request could not be completed due to a conflict with the current state of the resource."
+        },
+        "429": {
+          "title": "Too many requests",
+          "desc": "You're doing that too fast. Please slow down and try again in a moment.",
+          "retry": "You're doing that too fast. Please try again in {seconds} seconds."
         }
       },
       "user_bar": {
@@ -377,13 +413,13 @@
         "system": {
           "title": "System",
           "integrations": "Integrations",
-          "files": "Files",
-          "search": "Search"
+          "files": "Files"
         },
         "advanced": {
           "title": "Advanced",
           "cron": "Cron Jobs",
-          "queue": "Queue Tasks"
+          "queue": "Queue Tasks",
+          "search": "Search"
         }
       }
     },

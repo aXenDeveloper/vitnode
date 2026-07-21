@@ -17,8 +17,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@vitnode/core/components/ui/tooltip";
+import { getLangValue } from "@vitnode/core/lib/helpers/multi-lang";
 import { PencilIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import React from "react";
 
@@ -34,6 +35,7 @@ export const EditAction = (
   props: Required<React.ComponentProps<typeof CreateEditActionCategoriesAdmin>>,
 ) => {
   const t = useTranslations("@vitnode/blog.admin.categories.edit");
+  const locale = useLocale();
   const canEdit = useAdminStaffPermission({
     plugin: CONFIG_PLUGIN.pluginId,
     module: "categories",
@@ -64,7 +66,10 @@ export const EditAction = (
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
-          <DialogDescription>{props.data.title}</DialogDescription>
+          <DialogDescription>
+            {getLangValue(props.data.titleTranslations, locale) ||
+              props.data.titleTranslations[0]?.value}
+          </DialogDescription>
         </DialogHeader>
 
         <React.Suspense fallback={<Loader />}>

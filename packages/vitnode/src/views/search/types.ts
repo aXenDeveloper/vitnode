@@ -1,10 +1,10 @@
 export interface SearchResultItem {
-  author: {
+  author: null | {
     avatarColor: string;
     id: number;
     name: string;
     nameCode: string;
-  } | null;
+  };
   authorId: null | number;
   containerId: null | number;
   containerType: null | string;
@@ -13,6 +13,7 @@ export interface SearchResultItem {
   id: number;
   itemId: number;
   itemType: string;
+  languageCode: string;
   metadata: Record<string, unknown>;
   pluginId: string;
   score: null | number;

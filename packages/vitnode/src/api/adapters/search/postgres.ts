@@ -1,7 +1,20 @@
 import type { SQL } from "drizzle-orm";
 import type { Context } from "hono";
 
-import { and, asc, count, desc, eq, gt, gte, inArray, lt, lte, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  lt,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import type {
   SearchHit,
@@ -10,7 +23,7 @@ import type {
   SearchResult,
 } from "@/api/models/search";
 
-import { core_search_index } from "@/database/search";
+import { core_search_index, resolveSearchTextConfig } from "@/database/search";
 import { core_users } from "@/database/users";
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -21,9 +34,22 @@ const buildFilters = (params: SearchQueryParams): SQL | undefined => {
 
   const term = params.term?.trim();
   if (term) {
+    // Match the config the row's vector was built with (scoped by locale, else
+    // `simple`) so `websearch_to_tsquery` stems the term the same way.
+    const config = resolveSearchTextConfig(params.languageCode);
     conditions.push(
-      sql`"core_search_index"."search_vector" @@ websearch_to_tsquery('english', ${term})`,
+      sql`"core_search_index"."search_vector" @@ websearch_to_tsquery(${config}::regconfig, ${term})`,
     );
+  }
+  if (params.languageCode) {
+    // Language-agnostic rows (empty `languageCode`) match every locale.
+    const languageCondition = or(
+      eq(core_search_index.languageCode, params.languageCode),
+      eq(core_search_index.languageCode, ""),
+    );
+    if (languageCondition) {
+      conditions.push(languageCondition);
+    }
   }
   if (params.itemTypes?.length) {
     conditions.push(inArray(core_search_index.itemType, params.itemTypes));
@@ -53,10 +79,10 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
 
   // The SearchModel owns the canonical `core_search_index` table, which is this
   // provider's store, so the write methods are intentionally no-ops.
-  index: async () => undefined,
-  bulkIndex: async () => undefined,
-  delete: async () => undefined,
-  clear: async () => undefined,
+  index: async () => {},
+  bulkIndex: async () => {},
+  delete: async () => {},
+  clear: async () => {},
 
   ping: async c => {
     try {
@@ -68,7 +94,10 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
     }
   },
 
-  search: async (c: Context, params: SearchQueryParams): Promise<SearchResult> => {
+  search: async (
+    c: Context,
+    params: SearchQueryParams,
+  ): Promise<SearchResult> => {
     const db = c.get("db");
     const term = params.term?.trim();
     const useRelevance = params.sort === "relevance" && !!term;
@@ -80,8 +109,9 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
       .from(core_search_index)
       .where(filters);
 
+    const config = resolveSearchTextConfig(params.languageCode);
     const rankExpr = term
-      ? sql<number>`ts_rank("core_search_index"."search_vector", websearch_to_tsquery('english', ${term}))`
+      ? sql<number>`ts_rank("core_search_index"."search_vector", websearch_to_tsquery(${config}::regconfig, ${term}))`
       : sql<null | number>`NULL`;
 
     const cursorValue = params.cursor ? Number(params.cursor) : undefined;
@@ -100,7 +130,10 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
         where = where ? and(where, cond) : cond;
       }
     } else {
-      orderBy.push(desc(core_search_index.createdAt), desc(core_search_index.id));
+      orderBy.push(
+        desc(core_search_index.createdAt),
+        desc(core_search_index.id),
+      );
       if (cursorValue) {
         const cond = lt(core_search_index.id, cursorValue);
         where = where ? and(where, cond) : cond;
@@ -113,6 +146,7 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
         pluginId: core_search_index.pluginId,
         itemType: core_search_index.itemType,
         itemId: core_search_index.itemId,
+        languageCode: core_search_index.languageCode,
         authorId: core_search_index.authorId,
         title: core_search_index.title,
         content: core_search_index.content,
@@ -144,6 +178,7 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
       pluginId: row.pluginId,
       itemType: row.itemType,
       itemId: row.itemId,
+      languageCode: row.languageCode,
       authorId: row.authorId,
       title: row.title,
       content: row.content,

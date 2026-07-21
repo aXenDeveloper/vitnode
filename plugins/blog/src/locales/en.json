@@ -29,11 +29,13 @@
             },
             "color": "Color"
           },
-          "submit": "Create"
+          "submit": "Create",
+          "success": "Category has been created successfully."
         },
         "edit": {
           "title": "Edit Category",
-          "submit": "Save Changes"
+          "submit": "Save Changes",
+          "success": "Category has been updated successfully."
         }
       },
       "posts": {
@@ -52,14 +54,21 @@
               "label": "Title",
               "already_exists": "This post title already exists."
             },
+            "friendly_url": {
+              "label": "Friendly URL",
+              "desc": "Used in the post address. Auto-filled from the title.",
+              "already_exists": "This friendly URL already exists."
+            },
             "content": "Content",
             "category": "Category"
           },
-          "submit": "Create Post"
+          "submit": "Create Post",
+          "success": "Post has been created successfully."
         },
         "edit": {
           "title": "Edit Post",
-          "submit": "Save Changes"
+          "submit": "Save Changes",
+          "success": "Post has been updated successfully."
         },
         "delete": {
           "title": "Delete Post",

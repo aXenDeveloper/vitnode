@@ -5,5 +5,7 @@ import { BreadcrumbMain } from "@/views/breadcrumb/breadcrumb-main";
 export default async function BreadcrumbSlot() {
   const t = await getTranslations("core.search");
 
-  return <BreadcrumbMain labels={{ "/search": t("title") }} segments={["search"]} />;
+  return (
+    <BreadcrumbMain labels={{ "/search": t("title") }} segments={["search"]} />
+  );
 }

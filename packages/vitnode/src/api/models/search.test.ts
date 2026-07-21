@@ -11,11 +11,11 @@ import { SearchModel } from "./search";
 
 const createProvider = (): SearchProviderApiPlugin => ({
   name: "postgres",
-  index: vi.fn(async () => undefined),
-  bulkIndex: vi.fn(async () => undefined),
-  delete: vi.fn(async () => undefined),
-  clear: vi.fn(async () => undefined),
-  search: vi.fn(async () => ({
+  index: vi.fn().mockResolvedValue(undefined),
+  bulkIndex: vi.fn().mockResolvedValue(undefined),
+  delete: vi.fn().mockResolvedValue(undefined),
+  clear: vi.fn().mockResolvedValue(undefined),
+  search: vi.fn().mockResolvedValue({
     edges: [],
     pageInfo: {
       totalCount: 0,
@@ -25,14 +25,18 @@ const createProvider = (): SearchProviderApiPlugin => ({
       startCursor: null,
       endCursor: null,
     },
-  })),
+  }),
 });
 
 const createContext = (provider: SearchProviderApiPlugin) => {
-  const onConflictDoUpdate = vi.fn(async () => undefined);
-  const values = vi.fn(() => ({ onConflictDoUpdate }));
+  const onConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
+  const values = vi.fn<
+    (row: { content: string; isPublic: boolean; pluginId: string }) => {
+      onConflictDoUpdate: typeof onConflictDoUpdate;
+    }
+  >(() => ({ onConflictDoUpdate }));
   const insert = vi.fn(() => ({ values }));
-  const where = vi.fn(async () => undefined);
+  const where = vi.fn().mockResolvedValue(undefined);
   const deleteFn = vi.fn(() => ({ where }));
   const db = { insert, delete: deleteFn };
 

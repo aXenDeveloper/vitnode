@@ -7,15 +7,16 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { useRouter } from "@/lib/navigation";
+import { cn } from "@/lib/utils";
 
 import { rebuildSearchIndexMutation } from "./mutation-api";
 
-export const RebuildSearchAction = () => {
+export const SearchHeaderActions = () => {
   const t = useTranslations("core.search");
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
 
-  const onClick = () => {
+  const rebuild = () => {
     startTransition(async () => {
       const result = await rebuildSearchIndexMutation();
 
@@ -31,8 +32,8 @@ export const RebuildSearchAction = () => {
   };
 
   return (
-    <Button disabled={isPending} onClick={onClick} variant="outline">
-      <RefreshCwIcon />
+    <Button disabled={isPending} onClick={rebuild}>
+      <RefreshCwIcon className={cn(isPending && "animate-spin")} />
       {isPending ? t("admin.rebuilding") : t("admin.rebuild")}
     </Button>
   );

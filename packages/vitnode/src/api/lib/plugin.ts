@@ -1,11 +1,11 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 
+import type { SearchIndexer } from "../models/search";
 import type { CronJobConfig } from "./cron";
 import type { BuildModuleReturn } from "./module";
 import type { PermissionStaffConfig } from "./permission-staff";
 import type { QueueTaskConfig } from "./queue";
 import type { WebSocketConfig } from "./websocket";
-import type { SearchIndexer } from "../models/search";
 
 import { checkPluginId } from "./check-plugin-id";
 

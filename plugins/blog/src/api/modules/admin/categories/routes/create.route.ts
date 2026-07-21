@@ -1,21 +1,20 @@
 import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@vitnode/core/api/lib/route";
-import { removeSpecialCharacters } from "@vitnode/core/lib/special-characters";
-import { eq } from "drizzle-orm";
-import { HTTPException } from "hono/http-exception";
+import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
 
 import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
 
+import { saveCategoryTranslations } from "../../../../lib/categories-language";
+
 const zodCategoryResponseSchema = z.object({
   id: z.number(),
-  title: z.string(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
 
 export const zodCreateCategorySchema = z.object({
-  title: z.string(),
+  title: multiLangValueSchema({ minLength: 1, maxLength: 100 }).min(1),
   color: z.string().nullish(),
 });
 
@@ -50,31 +49,15 @@ export const createCategoryRoute = buildRoute({
   },
   handler: async c => {
     const { title, color } = c.req.valid("json");
-    const titleSeo = removeSpecialCharacters(title);
-    const [titleSEODuplocate] = await c
-      .get("db")
-      .select({
-        titleSeo: blog_categories.titleSeo,
-      })
-      .from(blog_categories)
-      .where(eq(blog_categories.titleSeo, titleSeo))
-      .limit(1);
-
-    if (titleSEODuplocate?.titleSeo === titleSeo) {
-      throw new HTTPException(400, {
-        message: "Category with this title already exists.",
-      });
-    }
-
     const [category] = await c
       .get("db")
       .insert(blog_categories)
       .values({
-        title,
-        color: color || null,
-        titleSeo: removeSpecialCharacters(title),
+        color: color?.trim() ? color : null,
       })
       .returning();
+
+    await saveCategoryTranslations(c, category.id, { title });
 
     return c.json(category, 201);
   },

@@ -1,3 +1,5 @@
+import { getLocale } from "next-intl/server";
+
 import { searchModule } from "@/api/modules/search/search.module";
 import { fetcher } from "@/lib/fetcher";
 
@@ -12,6 +14,7 @@ export const SearchView = async ({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) => {
   const query = await searchParams;
+  const locale = await getLocale();
   const search = typeof query.search === "string" ? query.search : undefined;
   const sort = search ? "relevance" : "newest";
   const defaultParams: SearchFeedParams = { search, sort };
@@ -21,10 +24,12 @@ export const SearchView = async ({
     path: "/",
     method: "get",
     args: {
-      query: { ...(search ? { search } : {}), sort, first: "20" },
+      query: { ...(search ? { search } : {}), sort, first: "20", lang: locale },
     },
   });
   const initialData = (await res.json()) as SearchFeedPage;
 
-  return <SearchControls defaultParams={defaultParams} initialData={initialData} />;
+  return (
+    <SearchControls defaultParams={defaultParams} initialData={initialData} />
+  );
 };

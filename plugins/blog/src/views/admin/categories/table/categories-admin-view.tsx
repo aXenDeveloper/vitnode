@@ -1,7 +1,8 @@
 import { DateFormat } from "@vitnode/core/components/date-format";
 import { DataTable } from "@vitnode/core/components/table/data-table";
 import { fetcher } from "@vitnode/core/lib/fetcher";
-import { getTranslations } from "next-intl/server";
+import { getLangValue } from "@vitnode/core/lib/helpers/multi-lang";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { categoriesModule } from "@/api/modules/categories/categories.module";
 
@@ -14,6 +15,7 @@ export const CategoriesAdminView = async ({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) => {
   const t = await getTranslations("@vitnode/blog.admin.categories.table");
+  const locale = await getLocale();
   const query = await searchParams;
   const res = await fetcher(categoriesModule, {
     path: "/",
@@ -79,7 +81,13 @@ export const CategoriesAdminView = async ({
           ),
         },
       ]}
-      edges={data.edges.map(edge => ({ ...edge }))}
+      edges={data.edges.map(edge => ({
+        ...edge,
+        title:
+          getLangValue(edge.titleTranslations, locale) ||
+          edge.titleTranslations[0]?.value ||
+          "",
+      }))}
       id="categories-table"
       order={{
         columns: ["createdAt", "updatedAt"],

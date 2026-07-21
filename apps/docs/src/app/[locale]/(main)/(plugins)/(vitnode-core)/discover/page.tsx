@@ -30,7 +30,9 @@ export default async function Page() {
       <div className="container mx-auto max-w-3xl space-y-6 p-4">
         <HeaderContent desc={t("discoverDesc")} h1={t("discoverTitle")} />
 
-        <React.Suspense fallback={<Skeleton className="h-64 w-full rounded-xl" />}>
+        <React.Suspense
+          fallback={<Skeleton className="h-64 w-full rounded-xl" />}
+        >
           <DiscoverView />
         </React.Suspense>
       </div>

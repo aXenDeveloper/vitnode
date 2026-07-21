@@ -3,13 +3,17 @@ import { z } from "@hono/zod-openapi";
 import { CONFIG_PLUGIN } from "@/config";
 
 import { buildRoute } from "../../../lib/route";
-import { zodPaginationPageInfo, zodPaginationQuery } from "../../../lib/with-pagination";
+import {
+  zodPaginationPageInfo,
+  zodPaginationQuery,
+} from "../../../lib/with-pagination";
 
 export const zodSearchHitSchema = z.object({
   id: z.number(),
   pluginId: z.string(),
   itemType: z.string(),
   itemId: z.number(),
+  languageCode: z.string(),
   authorId: z.number().nullable(),
   title: z.string(),
   content: z.string(),
@@ -44,6 +48,7 @@ export const searchRoute = buildRoute({
         sort: z.enum(["newest", "oldest", "relevance"]).optional(),
         from: z.string().optional(),
         to: z.string().optional(),
+        lang: z.string().optional(),
       }),
     },
     responses: {
@@ -75,6 +80,7 @@ export const searchRoute = buildRoute({
       dateTo: query.to ? new Date(query.to) : undefined,
       first: query.first ? Number(query.first) : undefined,
       cursor: query.cursor,
+      languageCode: query.lang,
       includePrivate: false,
     });
 

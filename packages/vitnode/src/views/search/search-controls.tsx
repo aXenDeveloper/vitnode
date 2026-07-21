@@ -110,7 +110,11 @@ export const SearchControls = ({
         </NativeSelect>
       </div>
 
-      <SearchFeed initialData={initialData} params={params} variant="timeline" />
+      <SearchFeed
+        initialData={initialData}
+        params={params}
+        variant="timeline"
+      />
     </div>
   );
 };
