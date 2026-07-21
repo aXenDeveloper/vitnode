@@ -32,6 +32,7 @@ export const runMigrations = async () => {
 export const initialDataForDatabase = async () => {
   const config = await getConfig({ type: "api.config" });
   const dbClient = config.dbProvider;
+  const webConfig = await getConfig({ type: "config", optional: true });
 
   const [roleCount] = await dbClient
     .select({
@@ -40,22 +41,28 @@ export const initialDataForDatabase = async () => {
     .from(core_roles)
     .limit(1);
 
-  const [languageCount] = await dbClient
-    .select({
-      count: count(),
-    })
-    .from(core_languages);
-  if (languageCount.count === 0) {
-    await dbClient.insert(core_languages).values([
-      {
-        code: "en",
-        name: "English (USA)",
-        default: true,
-        protected: true,
-        timezone: "America/New_York",
-      },
-    ]);
-  }
+  const languages = webConfig?.i18n?.locales?.length
+    ? webConfig.i18n.locales.map(locale => ({
+        code: locale.code,
+        name: locale.name,
+        default: locale.code === webConfig.i18n.defaultLocale,
+        protected: locale.code === webConfig.i18n.defaultLocale,
+        timezone: webConfig.i18n.timeZone ?? "UTC",
+      }))
+    : [
+        {
+          code: "en",
+          name: "English (USA)",
+          default: true,
+          protected: true,
+          timezone: "America/New_York",
+        },
+      ];
+
+  await dbClient
+    .insert(core_languages)
+    .values(languages)
+    .onConflictDoNothing({ target: core_languages.code });
 
   if (roleCount.count === 0) {
     const roles = await dbClient

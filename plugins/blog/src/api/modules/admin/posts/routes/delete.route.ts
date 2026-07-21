@@ -39,6 +39,8 @@ export const deletePostRoute = buildRoute({
       throw new HTTPException(404);
     }
 
+    await c.get("search").delete("blog_post", id);
+
     return c.body(null, 204);
   },
 });

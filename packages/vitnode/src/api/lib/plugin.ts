@@ -1,5 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 
+import type { SearchIndexer } from "../models/search";
 import type { CronJobConfig } from "./cron";
 import type { BuildModuleReturn } from "./module";
 import type { PermissionStaffConfig } from "./permission-staff";
@@ -14,6 +15,7 @@ export interface BuildPluginApiReturn {
   permissionStaff?: PermissionStaffConfig;
   pluginId: string;
   queueTasks?: Omit<QueueTaskConfig, "pluginId">[];
+  searchIndexers?: SearchIndexer[];
   webSockets?: Omit<WebSocketConfig, "pluginId">[];
 }
 
@@ -21,10 +23,12 @@ export function buildApiPlugin<P extends string>({
   pluginId,
   modules = [],
   permissionStaff,
+  searchIndexers,
 }: {
   modules?: BuildModuleReturn<P, string>[];
   permissionStaff?: PermissionStaffConfig;
   pluginId: P;
+  searchIndexers?: SearchIndexer[];
 }): BuildPluginApiReturn {
   // Run for checking if the plugin is valid
   checkPluginId(pluginId);
@@ -54,6 +58,7 @@ export function buildApiPlugin<P extends string>({
     hono,
     cronJobs,
     queueTasks,
+    searchIndexers,
     webSockets,
     permissionStaff,
   };

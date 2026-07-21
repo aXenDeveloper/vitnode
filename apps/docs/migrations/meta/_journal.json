@@ -78,6 +78,62 @@
       "when": 1783967205436,
       "tag": "0010_open_banshee",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1784310537540,
+      "tag": "0011_add_search_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1784310555114,
+      "tag": "0012_add_search_fts",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1784314386954,
+      "tag": "0013_add_blog_post_author",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1784381250701,
+      "tag": "0014_add_blog_category_color",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1784407100214,
+      "tag": "0015_search_index_language",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1784484097119,
+      "tag": "0016_unique_madripoor",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1784488275251,
+      "tag": "0017_hot_mikhail_rasputin",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1784657968964,
+      "tag": "0018_first_black_crow",
+      "breakpoints": true
     }
   ]
 }

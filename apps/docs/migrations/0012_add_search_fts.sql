@@ -1,0 +1,4 @@
+-- Superseded: the `search_vector` tsvector column and its GIN index are now
+-- declared in the Drizzle schema (`core_search_index`) and emitted by
+-- `drizzle-kit generate`. This migration is kept as a no-op so the journal and
+-- snapshot chain stay contiguous.

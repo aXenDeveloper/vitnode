@@ -6,9 +6,11 @@ import { HTTPException } from "hono/http-exception";
 import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
 import type { VitNodeRealtime } from "@/ws/registry";
 
+import { PostgresSearchAdapter } from "@/api/adapters/search/postgres";
 import { CacheModel } from "@/api/lib/cache";
 import { EmailModel } from "@/api/models/email";
 import { QueueModel } from "@/api/models/queue";
+import { SearchModel } from "@/api/models/search";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import { StorageModel } from "@/api/models/storage";
@@ -19,6 +21,10 @@ import type { BuildCronReturn } from "../lib/cron";
 import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
 import type { BuildQueueTaskReturn } from "../lib/queue";
 import type { WebSocketConfig } from "../lib/websocket";
+import type {
+  SearchIndexerConfig,
+  SearchProviderApiPlugin,
+} from "../models/search";
 import type { SSOApiPlugin } from "../models/sso";
 
 import { collectCronJobs } from "../lib/cron";
@@ -80,6 +86,8 @@ export interface EnvVariablesVitNode {
     permissionStaff: PermissionStaffCatalogEntry[];
     plugins: { id: string }[];
     queue: (BuildQueueTaskReturn & { module: string; pluginId: string })[];
+    search: { adapter: SearchProviderApiPlugin };
+    searchIndexers: SearchIndexerConfig[];
     storage?: VitNodeApiConfig["storage"];
     webSockets: WebSocketConfig[];
   };
@@ -92,6 +100,7 @@ export interface EnvVariablesVitNode {
   };
   queue: QueueModel;
   realtime: VitNodeRealtime;
+  search: SearchModel;
   storage: StorageModel;
   user: null | {
     avatarColor: string;
@@ -116,6 +125,7 @@ export const globalMiddleware = ({
   cron,
   plugins,
   pathToMessages,
+  search,
   storage,
   cacheClient,
 }: Pick<
@@ -127,6 +137,7 @@ export const globalMiddleware = ({
   | "email"
   | "pathToMessages"
   | "plugins"
+  | "search"
   | "storage"
 > &
   Pick<VitNodeConfig, "metadata"> & { cacheClient: null | Redis }) => {
@@ -152,6 +163,14 @@ export const globalMiddleware = ({
       ...webSocket,
       pluginId: plugin.pluginId,
     })),
+  );
+
+  const searchIndexersMetadata: SearchIndexerConfig[] = plugins.flatMap(
+    plugin =>
+      (plugin.searchIndexers ?? []).map(indexer => ({
+        ...indexer,
+        pluginId: plugin.pluginId,
+      })),
   );
 
   const permissionStaffMetadata: PermissionStaffCatalogEntry[] = plugins.map(
@@ -201,6 +220,7 @@ export const globalMiddleware = ({
     c.set("cache", new CacheModel(cacheClient, c));
     c.set("email", new EmailModel(c));
     c.set("queue", new QueueModel(c));
+    c.set("search", new SearchModel(c));
     c.set("storage", new StorageModel(c));
     c.set("realtime", realtime);
 
@@ -208,6 +228,8 @@ export const globalMiddleware = ({
       pathToMessages,
       metadata,
       email,
+      search: { adapter: search?.adapter ?? PostgresSearchAdapter() },
+      searchIndexers: searchIndexersMetadata,
       storage,
       authorization: {
         cookieName: authorization?.cookieName ?? "vitnode_auth",

@@ -1,20 +1,23 @@
 import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@vitnode/core/api/lib/route";
-import { removeSpecialCharacters } from "@vitnode/core/lib/special-characters";
-import { eq } from "drizzle-orm";
+import { core_languages_words } from "@vitnode/core/database/languages";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
 import { blog_posts } from "@/database/posts";
 
+import {
+  POST_LANG_TABLE,
+  savePostTranslations,
+  slugifyMultiLang,
+} from "../../../../lib/posts-language";
+import { reindexBlogPost } from "../../../../lib/search";
 import { zodCreatePostSchema } from "./create.route";
 
 const zodPostResponseSchema = z.object({
   id: z.number(),
-  title: z.string(),
-  titleSeo: z.string(),
-  content: z.string(),
   categoryId: z.number(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -57,13 +60,21 @@ export const editPostRoute = buildRoute({
   },
   handler: async c => {
     const { id } = c.req.valid("param");
-    const { title, content, categoryId } = c.req.valid("json");
-    const titleSeo = removeSpecialCharacters(title);
+    const { title, content, friendlyUrl, categoryId } = c.req.valid("json");
+    const slugFriendlyUrl = slugifyMultiLang(friendlyUrl);
+    const friendlyUrlValues = [
+      ...new Set(slugFriendlyUrl.map(item => item.value).filter(Boolean)),
+    ];
 
-    // Check if post exists
+    if (friendlyUrlValues.length === 0) {
+      throw new HTTPException(400, {
+        message: "Friendly URL is required.",
+      });
+    }
+
     const [existingPost] = await c
       .get("db")
-      .select({ titleSeo: blog_posts.titleSeo })
+      .select({ id: blog_posts.id })
       .from(blog_posts)
       .where(eq(blog_posts.id, id))
       .limit(1);
@@ -72,7 +83,6 @@ export const editPostRoute = buildRoute({
       throw new HTTPException(404, { message: "Post not found." });
     }
 
-    // Check if category exists
     const [category] = await c
       .get("db")
       .select({ id: blog_categories.id })
@@ -84,18 +94,24 @@ export const editPostRoute = buildRoute({
       throw new HTTPException(404, { message: "Category not found." });
     }
 
-    // Check if title SEO already exists (but not for the current post)
-    const [titleSEODuplicate] = await c
+    // Keep the friendly URL (the public slug, stored in `core_languages_words`)
+    // globally unique, excluding this post's own rows.
+    const [duplicate] = await c
       .get("db")
-      .select({ titleSeo: blog_posts.titleSeo })
-      .from(blog_posts)
-      .where(eq(blog_posts.titleSeo, titleSeo))
+      .select({ itemId: core_languages_words.itemId })
+      .from(core_languages_words)
+      .where(
+        and(
+          eq(core_languages_words.pluginCode, CONFIG_PLUGIN.pluginId),
+          eq(core_languages_words.tableName, POST_LANG_TABLE),
+          eq(core_languages_words.variable, "friendlyUrl"),
+          inArray(core_languages_words.value, friendlyUrlValues),
+          ne(core_languages_words.itemId, id),
+        ),
+      )
       .limit(1);
 
-    if (
-      titleSEODuplicate?.titleSeo === titleSeo &&
-      titleSEODuplicate.titleSeo !== existingPost.titleSeo
-    ) {
+    if (duplicate) {
       throw new HTTPException(400, {
         message: "Post with this title already exists.",
       });
@@ -105,13 +121,13 @@ export const editPostRoute = buildRoute({
       .get("db")
       .update(blog_posts)
       .set({
-        title,
-        titleSeo,
-        content,
         categoryId,
       })
       .where(eq(blog_posts.id, id))
       .returning();
+
+    await savePostTranslations(c, id, { title, content, friendlyUrl });
+    await reindexBlogPost(c, post);
 
     return c.json(post);
   },

@@ -5,25 +5,41 @@ import {
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "@vitnode/core/api/lib/with-pagination";
+import { core_users } from "@vitnode/core/database/users";
+import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
 import { eq } from "drizzle-orm";
 
 import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
 import { blog_posts } from "@/database/posts";
 
+import { loadCategoryTranslations } from "../../../lib/categories-language";
+import { loadPostTranslations } from "../../../lib/posts-language";
+
+const zodMultiLangValue = multiLangValueSchema();
+
 export const zodPostSchema = z.object({
   id: z.number(),
-  title: z.string(),
-  titleSeo: z.string(),
-  content: z.string(),
+  // Every translated field lives in `core_languages_words`; the client resolves
+  // these arrays to the active locale (see `getLangValue` / `resolveLangValue`).
+  titleTranslations: zodMultiLangValue,
+  contentTranslations: zodMultiLangValue,
+  friendlyUrlTranslations: zodMultiLangValue,
   categoryId: z.number(),
   createdAt: z.date(),
   updatedAt: z.date(),
   category: z.object({
     id: z.number(),
-    title: z.string(),
-    titleSeo: z.string(),
+    titleTranslations: zodMultiLangValue,
   }),
+  author: z
+    .object({
+      id: z.number(),
+      name: z.string(),
+      nameCode: z.string(),
+      avatarColor: z.string(),
+    })
+    .nullable(),
 });
 
 export const postsRoute = buildRoute({
@@ -66,16 +82,17 @@ export const postsRoute = buildRoute({
           .get("db")
           .select({
             id: blog_posts.id,
-            title: blog_posts.title,
-            titleSeo: blog_posts.titleSeo,
-            content: blog_posts.content,
             categoryId: blog_posts.categoryId,
             createdAt: blog_posts.createdAt,
             updatedAt: blog_posts.updatedAt,
             category: {
               id: blog_categories.id,
-              title: blog_categories.title,
-              titleSeo: blog_categories.titleSeo,
+            },
+            author: {
+              id: core_users.id,
+              name: core_users.name,
+              nameCode: core_users.nameCode,
+              avatarColor: core_users.avatarColor,
             },
           })
           .from(blog_posts)
@@ -83,6 +100,7 @@ export const postsRoute = buildRoute({
             blog_categories,
             eq(blog_posts.categoryId, blog_categories.id),
           )
+          .leftJoin(core_users, eq(core_users.id, blog_posts.authorId))
           .where(
             query.categoryId
               ? eq(blog_posts.categoryId, query.categoryId)
@@ -99,6 +117,33 @@ export const postsRoute = buildRoute({
       },
     });
 
-    return c.json(data);
+    const [translations, categoryTranslations] = await Promise.all([
+      loadPostTranslations(
+        c,
+        data.edges.map(edge => edge.id),
+      ),
+      loadCategoryTranslations(
+        c,
+        data.edges.map(edge => edge.category.id),
+      ),
+    ]);
+
+    return c.json({
+      ...data,
+      edges: data.edges.map(edge => {
+        const words = translations.get(edge.id);
+
+        return {
+          ...edge,
+          titleTranslations: words?.title ?? [],
+          contentTranslations: words?.content ?? [],
+          friendlyUrlTranslations: words?.friendlyUrl ?? [],
+          category: {
+            ...edge.category,
+            titleTranslations: categoryTranslations.get(edge.category.id) ?? [],
+          },
+        };
+      }),
+    });
   },
 });

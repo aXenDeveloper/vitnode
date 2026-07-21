@@ -35,7 +35,7 @@ export const postsRoute = buildRoute({
       .get("database")
       .select({
         id: blog_posts.id,
-        title: blog_posts.title
+        categoryId: blog_posts.categoryId
       })
       .from(blog_posts);
 

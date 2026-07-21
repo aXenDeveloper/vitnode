@@ -59,16 +59,25 @@ const findConfigFile = (
   return searchRecursively(baseDir, 0);
 };
 
-export const getConfig = async <T extends "api.config" | "config">({
+export async function getConfig<
+  T extends "api.config" | "config" = "config",
+>(args: { optional: true; type?: T }): Promise<ConfigType<T> | null>;
+export async function getConfig<
+  T extends "api.config" | "config" = "config",
+>(args?: { optional?: false; type?: T }): Promise<ConfigType<T>>;
+export async function getConfig<T extends "api.config" | "config" = "config">({
   type = "config" as T,
+  optional = false,
 }: {
+  optional?: boolean;
   type?: T;
-}): Promise<ConfigType<T>> => {
+} = {}): Promise<ConfigType<T> | null> {
   const cwd = process.cwd();
   const filename = `vitnode.${type}.ts`;
   const configPath = findConfigFile(cwd, filename);
 
   if (!configPath) {
+    if (optional) return null;
     console.error(`Config file not found: ${filename}`);
     console.error(
       `Searched recursively in ${cwd} (excluding node_modules, .*, dist, build, out)`,
@@ -90,13 +99,15 @@ export const getConfig = async <T extends "api.config" | "config">({
     const config = loaded[configVarName];
 
     if (!config) {
+      if (optional) return null;
       console.error(`Export "${configVarName}" not found in ${configPath}`);
       process.exit(1);
     }
 
     return config as ConfigType<T>;
   } catch (error) {
+    if (optional) return null;
     console.error("Failed to load config:", error);
     process.exit(1);
   }
-};
+}

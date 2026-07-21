@@ -54,7 +54,7 @@ export default async function Page({
   const { id } = await params;
 
   return (
-    <I18nProvider namespaces="admin.user">
+    <I18nProvider namespaces={["admin.user", "core.search"]}>
       <div className="p-4">
         <React.Suspense fallback={<Loader />}>
           <ShowUserAdminView id={id} />

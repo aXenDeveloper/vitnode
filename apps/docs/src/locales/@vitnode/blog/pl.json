@@ -10,6 +10,7 @@
         "desc": "Zarządzaj kategoriami wpisów na blogu.",
         "table": {
           "title": "Tytuł",
+          "color": "Kolor",
           "updated_at": "Zaktualizowano"
         },
         "delete": {
@@ -25,7 +26,8 @@
             "title": {
               "label": "Tytuł",
               "already_exists": "Kategoria o tym tytule już istnieje."
-            }
+            },
+            "color": "Kolor"
           },
           "submit": "Utwórz"
         },
@@ -39,6 +41,7 @@
         "table": {
           "title": "Tytuł",
           "category": "Kategoria",
+          "author": "Autor",
           "updated_at": "Zaktualizowano"
         },
         "create": {

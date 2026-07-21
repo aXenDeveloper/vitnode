@@ -5,6 +5,7 @@ import { adminModule } from "./modules/admin/admin.module";
 import { cronModule } from "./modules/cron/cron.module";
 import { middlewareModule } from "./modules/middleware/middleware.module";
 import { queueModule } from "./modules/queue/queue.module";
+import { searchModule } from "./modules/search/search.module";
 import { usersModule } from "./modules/users/users.module";
 
 export const newBuildPluginApiCore = buildApiPlugin({
@@ -15,6 +16,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     adminModule,
     cronModule,
     queueModule,
+    searchModule,
   ],
   permissionStaff: {
     moderator: {
