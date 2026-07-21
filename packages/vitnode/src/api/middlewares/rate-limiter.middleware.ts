@@ -6,6 +6,7 @@ import {
   type RateLimiterAbstract,
   RateLimiterMemory,
   RateLimiterRedis,
+  type RateLimiterRes,
 } from "rate-limiter-flexible";
 
 import { CONFIG } from "../../lib/config";
@@ -47,10 +48,12 @@ export const rateLimiterMiddleware = (
     };
   }
 
+  const duration = options?.duration ?? 60;
+
   const rateLimiter = createRateLimiter({
     ...options,
     keyPrefix: "vitnode-api-rate-limiter",
-    duration: options?.duration ?? 60,
+    duration,
     points: options?.points ?? 80,
     storeClient,
   });
@@ -60,8 +63,17 @@ export const rateLimiterMiddleware = (
 
     try {
       await rateLimiter.consume(key);
-    } catch {
-      return c.text("Too Many Requests", 429);
+    } catch (rejection) {
+      // `rate-limiter-flexible` rejects with a `RateLimiterRes` carrying
+      // `msBeforeNext` when the limit is hit. Reply with JSON (not plain text)
+      // so clients that expect a JSON body don't choke while parsing, and
+      // advertise when to retry via the standard `Retry-After` header.
+      const msBeforeNext = (rejection as RateLimiterRes | undefined)
+        ?.msBeforeNext;
+      const retryAfter = Math.ceil((msBeforeNext ?? duration * 1000) / 1000);
+      c.header("Retry-After", `${retryAfter}`);
+
+      return c.json({ error: "Too Many Requests", retryAfter }, 429);
     }
 
     await next();

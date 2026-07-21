@@ -206,6 +206,11 @@
         "409": {
           "title": "Conflict",
           "desc": "The request could not be completed due to a conflict with the current state of the resource."
+        },
+        "429": {
+          "title": "Too many requests",
+          "desc": "You're doing that too fast. Please slow down and try again in a moment.",
+          "retry": "You're doing that too fast. Please try again in {seconds} seconds."
         }
       },
       "user_bar": {

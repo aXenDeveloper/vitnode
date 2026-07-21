@@ -79,10 +79,10 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
 
   // The SearchModel owns the canonical `core_search_index` table, which is this
   // provider's store, so the write methods are intentionally no-ops.
-  index: async () => undefined,
-  bulkIndex: async () => undefined,
-  delete: async () => undefined,
-  clear: async () => undefined,
+  index: async () => {},
+  bulkIndex: async () => {},
+  delete: async () => {},
+  clear: async () => {},
 
   ping: async c => {
     try {

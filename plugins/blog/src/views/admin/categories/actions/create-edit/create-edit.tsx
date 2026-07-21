@@ -5,9 +5,12 @@ import {
 import { AutoFormColor } from "@vitnode/core/components/form/fields/color";
 import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
 import { useDialog } from "@vitnode/core/components/ui/dialog";
-import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
+import {
+  getLangValue,
+  multiLangValueSchema,
+} from "@vitnode/core/lib/helpers/multi-lang";
 import { usePathname, useRouter } from "@vitnode/core/lib/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -25,6 +28,7 @@ export const CreateEditActionCategoriesAdmin = ({
   const { setOpen } = useDialog();
   const { push } = useRouter();
   const pathname = usePathname();
+  const locale = useLocale();
   const formSchema = z.object({
     title: multiLangValueSchema({ minLength: 1, maxLength: 100 })
       .min(1)
@@ -45,6 +49,9 @@ export const CreateEditActionCategoriesAdmin = ({
       return;
     }
 
+    toast.success(t(data ? "edit.success" : "create.success"), {
+      description: getLangValue(values.title, locale) || values.title[0]?.value,
+    });
     setOpen?.(false);
     push(pathname);
   };

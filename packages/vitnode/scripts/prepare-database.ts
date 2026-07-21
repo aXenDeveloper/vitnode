@@ -41,11 +41,7 @@ export const initialDataForDatabase = async () => {
     .from(core_roles)
     .limit(1);
 
-  // Keep `core_languages` in sync with the locales declared in the app config so
-  // multi-language content can reference them (foreign key on `languageCode`).
-  // Existing rows are left untouched; missing locales are added on every run.
-  // Falls back to English-only when no web config is present (API-only apps).
-  const languages = webConfig?.i18n.locales.length
+  const languages = webConfig?.i18n?.locales?.length
     ? webConfig.i18n.locales.map(locale => ({
         code: locale.code,
         name: locale.name,

@@ -88,7 +88,7 @@ export const TitleField = ({
         onChange={value => {
           setValue(value);
 
-          if (friendlyUrlTouched.current.has(selected)) return;
+          if (friendlyUrlTouched.current?.has(selected)) return;
           const current: MultiLangValue | undefined =
             form.getValues(friendlyUrlName);
           form.setValue(
@@ -125,7 +125,7 @@ export const FriendlyUrlField = ({
         languages={languages}
         onBlur={field.onBlur}
         onChange={value => {
-          friendlyUrlTouched.current.add(selected);
+          friendlyUrlTouched.current?.add(selected);
           setValue(value);
         }}
         onSelect={setSelected}
