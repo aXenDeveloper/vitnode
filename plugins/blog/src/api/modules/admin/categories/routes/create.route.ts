@@ -1,5 +1,6 @@
 import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@vitnode/core/api/lib/route";
+import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
 
 import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
@@ -12,23 +13,8 @@ const zodCategoryResponseSchema = z.object({
   updatedAt: z.date(),
 });
 
-const zodMultiLangValue = ({
-  max,
-  min,
-}: { max?: number; min?: number } = {}) => {
-  let value = z.string();
-  if (min !== undefined) {
-    value = value.min(min);
-  }
-  if (max !== undefined) {
-    value = value.max(max);
-  }
-
-  return z.array(z.object({ languageCode: z.string(), value }));
-};
-
 export const zodCreateCategorySchema = z.object({
-  title: zodMultiLangValue({ min: 1, max: 100 }).min(1),
+  title: multiLangValueSchema({ minLength: 1, maxLength: 100 }).min(1),
   color: z.string().nullish(),
 });
 

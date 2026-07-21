@@ -6,6 +6,7 @@ import {
   zodPaginationQuery,
 } from "@vitnode/core/api/lib/with-pagination";
 import { core_languages_words } from "@vitnode/core/database/languages";
+import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
 import { and, eq, ilike, inArray, type SQL } from "drizzle-orm";
 
 import { CONFIG_PLUGIN } from "@/const";
@@ -17,9 +18,7 @@ import {
   loadCategoryTranslations,
 } from "../../../lib/categories-language";
 
-const zodMultiLangValue = z.array(
-  z.object({ languageCode: z.string(), value: z.string() }),
-);
+const zodMultiLangValue = multiLangValueSchema();
 
 export const zodCategorySchema = z.object({
   id: z.number(),

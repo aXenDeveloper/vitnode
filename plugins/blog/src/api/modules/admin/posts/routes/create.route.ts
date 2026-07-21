@@ -1,6 +1,7 @@
 import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@vitnode/core/api/lib/route";
 import { core_languages_words } from "@vitnode/core/database/languages";
+import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
 import { and, eq, inArray } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
@@ -22,25 +23,10 @@ const zodPostResponseSchema = z.object({
   updatedAt: z.date(),
 });
 
-const zodMultiLangValue = ({
-  max,
-  min,
-}: { max?: number; min?: number } = {}) => {
-  let value = z.string();
-  if (min !== undefined) {
-    value = value.min(min);
-  }
-  if (max !== undefined) {
-    value = value.max(max);
-  }
-
-  return z.array(z.object({ languageCode: z.string(), value }));
-};
-
 export const zodCreatePostSchema = z.object({
-  title: zodMultiLangValue({ min: 3, max: 255 }).min(1),
-  content: zodMultiLangValue(),
-  friendlyUrl: zodMultiLangValue({ min: 1, max: 255 }).min(1),
+  title: multiLangValueSchema({ minLength: 3, maxLength: 255 }).min(1),
+  content: multiLangValueSchema(),
+  friendlyUrl: multiLangValueSchema({ minLength: 1, maxLength: 255 }).min(1),
   categoryId: z.number(),
 });
 
