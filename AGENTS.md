@@ -18,6 +18,8 @@ import { Activity } from "react";
 </Activity>;
 ```
 
+- Always add breadcrumbs using `@breadcrumb` in the page component (Parallel Routes).
+
 ### Improved Caching APIs
 
 - revalidateTag() now requires a cacheLife profile as the second argument to enable stale-while-revalidate (SWR) behavior:

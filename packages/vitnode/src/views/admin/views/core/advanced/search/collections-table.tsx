@@ -89,7 +89,7 @@ export const CollectionsTable = async ({
             <span className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
               <Icon aria-hidden className="size-4" />
             </span>
-            <div className="min-w-0 space-y-1">
+            <div className="flex min-w-0 flex-col gap-1">
               <p className="text-foreground truncate font-medium">
                 {row.label}
               </p>

@@ -13,6 +13,7 @@ import { LanguagesProvider } from "../../components/languages-provider";
 import { ThemeProvider } from "../../components/theme-provider";
 import { Toaster } from "../../components/ui/sonner";
 import { TooltipProvider } from "../../components/ui/tooltip";
+import { RateLimitListener } from "./rate-limit-listener";
 
 export const RootProvider = ({
   children,
@@ -57,6 +58,7 @@ export const RootProvider = ({
           position={toaster?.position ?? "top-center"}
           {...toaster}
         />
+        <RateLimitListener />
         <ProgressProvider
           {...progressBar}
           color={progressBar?.color ?? "var(--primary)"}

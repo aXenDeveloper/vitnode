@@ -57,7 +57,7 @@ const StatCard = ({
           {label}
         </span>
       </div>
-      <div className="space-y-1">
+      <div className="flex flex-col gap-1">
         <div className="text-foreground text-2xl font-bold text-balance">
           {value}
         </div>

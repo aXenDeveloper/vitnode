@@ -48,13 +48,14 @@ export const DEFAULT_SEARCH_TEXT_CONFIG = "simple";
 // by the search adapter so `websearch_to_tsquery` matches the stored vector.
 export const resolveSearchTextConfig = (languageCode?: null | string): string =>
   (languageCode &&
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     SEARCH_TEXT_CONFIGS[languageCode.split("-")[0]?.toLowerCase() ?? ""]) ||
   DEFAULT_SEARCH_TEXT_CONFIG;
 
 // SQL `CASE` that picks the text-search config per row from `languageCode`. The
 // branches are constant `regconfig` literals, keeping the generated-column
 // expression IMMUTABLE (a dynamic `column::regconfig` cast is rejected).
-const SEARCH_CONFIG_CASE = `CASE split_part("core_search_index"."languageCode", '-', 1) ${Object.entries(
+const SEARCH_CONFIG_CASE = `CASE lower(split_part("core_search_index"."languageCode", '-', 1)) ${Object.entries(
   SEARCH_TEXT_CONFIGS,
 )
   .map(([code, config]) => `WHEN '${code}' THEN '${config}'::regconfig`)

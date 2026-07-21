@@ -11,6 +11,12 @@ export const getSessionApi = async () => {
     },
   });
 
+  // A non-200 response (e.g. 429 rate limiting) carries a non-session body, so
+  // treat it as "no session" rather than crashing while parsing it as JSON.
+  if (res.status !== 200) {
+    return { user: null };
+  }
+
   const data = await res.json();
 
   return data;

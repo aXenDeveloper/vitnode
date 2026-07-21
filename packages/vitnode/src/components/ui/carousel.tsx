@@ -92,6 +92,7 @@ function Carousel({
   );
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
     if (!api || !setApi) return;
     // eslint-disable-next-line react-you-might-not-need-an-effect/no-pass-data-to-parent
     setApi(api);
@@ -191,8 +192,8 @@ function CarouselPrevious({
       className={cn(
         "absolute touch-manipulation rounded-full",
         orientation === "horizontal"
-          ? "-start-12 top-1/2 -translate-y-1/2"
-          : "start-1/2 -top-12 -translate-x-1/2 rotate-90 rtl:translate-x-1/2",
+          ? "-inset-s-12 top-1/2 -translate-y-1/2"
+          : "inset-s-1/2 -top-12 -translate-x-1/2 rotate-90 rtl:translate-x-1/2",
         className,
       )}
       data-slot="carousel-previous"
@@ -222,8 +223,8 @@ function CarouselNext({
       className={cn(
         "absolute touch-manipulation rounded-full",
         orientation === "horizontal"
-          ? "-end-12 top-1/2 -translate-y-1/2"
-          : "start-1/2 -bottom-12 -translate-x-1/2 rotate-90 rtl:translate-x-1/2",
+          ? "-inset-e-12 top-1/2 -translate-y-1/2"
+          : "inset-s-1/2 -bottom-12 -translate-x-1/2 rotate-90 rtl:translate-x-1/2",
         className,
       )}
       data-slot="carousel-next"
