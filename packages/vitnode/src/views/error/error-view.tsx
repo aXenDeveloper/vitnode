@@ -13,7 +13,7 @@ export const ErrorView = ({
   customTitle,
   customActions,
 }: {
-  code: 400 | 403 | 404 | 409 | 500;
+  code: 400 | 403 | 404 | 409 | 429 | 500;
   customActions?: React.ReactNode;
   customDescription?: React.ReactNode;
   customTitle?: React.ReactNode;

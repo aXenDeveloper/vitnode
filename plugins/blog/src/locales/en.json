@@ -29,11 +29,13 @@
             },
             "color": "Color"
           },
-          "submit": "Create"
+          "submit": "Create",
+          "success": "Category has been created successfully."
         },
         "edit": {
           "title": "Edit Category",
-          "submit": "Save Changes"
+          "submit": "Save Changes",
+          "success": "Category has been updated successfully."
         }
       },
       "posts": {

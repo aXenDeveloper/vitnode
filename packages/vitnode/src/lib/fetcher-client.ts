@@ -13,6 +13,7 @@ import type {
 } from "./fetcher/types";
 
 import { coreFetcher } from "./fetcher/core";
+import { isRateLimited, notifyRateLimited } from "./fetcher/rate-limit";
 
 /**
  * Typed reference to a server module for use with {@link fetcherClient} inside
@@ -69,7 +70,7 @@ export async function fetcherClient<
     additionalHeaders["x-vitnode-captcha-token"] = captchaToken;
   }
 
-  return await coreFetcher(moduleReturn, {
+  const response = await coreFetcher(moduleReturn, {
     path,
     method,
     module,
@@ -80,4 +81,12 @@ export async function fetcherClient<
     additionalHeaders,
     formData,
   });
+
+  // Surface rate limiting to the user via a globally-mounted listener. The raw
+  // response is still returned so callers keep their existing status handling.
+  if (isRateLimited(response)) {
+    notifyRateLimited(response);
+  }
+
+  return response;
 }

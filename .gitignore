@@ -27,7 +27,9 @@ yarn-error.log*
 *.pem
 
 # Others
-/docker
+# Ignore local docker data dirs (e.g. docker/dev) but keep image build context.
+/docker/*
+!/docker/postgres
 .vercel
 # next-agents-md
 .next-docs/
