@@ -238,9 +238,16 @@ export const updateUserAdminRoute = buildRoute({
           nameCode: core_users.nameCode,
         });
 
+      await c.get("events").emit("user.updated", {
+        userId: updated.id,
+        email: updated.email,
+        name: updated.name,
+      });
+
       return c.json(updated, 200);
     }
 
+    // No column change, but roles may still have been reassigned above.
     const [current] = await db
       .select({
         id: core_users.id,
@@ -251,6 +258,12 @@ export const updateUserAdminRoute = buildRoute({
       .from(core_users)
       .where(eq(core_users.id, user.id))
       .limit(1);
+
+    await c.get("events").emit("user.updated", {
+      userId: current.id,
+      email: current.email,
+      name: current.name,
+    });
 
     return c.json(current, 200);
   },

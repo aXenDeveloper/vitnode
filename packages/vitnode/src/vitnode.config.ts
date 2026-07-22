@@ -7,6 +7,7 @@ import type React from "react";
 import type { CronAdapter } from "./api/lib/cron";
 import type { BuildPluginApiReturn } from "./api/lib/plugin";
 import type { EmailApiPlugin } from "./api/models/email";
+import type { EventsApiPlugin } from "./api/models/events";
 import type { SearchProviderApiPlugin } from "./api/models/search";
 import type { SSOApiPlugin } from "./api/models/sso";
 import type { StorageApiPlugin } from "./api/models/storage";
@@ -60,6 +61,16 @@ export interface VitNodeApiConfig {
     adapter?: EmailApiPlugin;
     logo?: DefaultTemplateEmailProps["templateProps"]["logo"];
     tailwindConfig?: DefaultTemplateEmailProps["templateProps"]["tailwindConfig"];
+  };
+  /**
+   * Transport for domain events emitted via `c.get("events").emit(...)`. Ships
+   * a zero-config Local adapter used when `adapter` is omitted: listeners run
+   * sequentially in the emitting request, on the emitting instance only
+   * (single-process delivery). Swap the adapter to publish events to an
+   * external broker (e.g. Redis Streams, NATS) for cross-instance delivery.
+   */
+  events?: {
+    adapter?: EventsApiPlugin;
   };
   metadata: {
     shortTitle?: string;

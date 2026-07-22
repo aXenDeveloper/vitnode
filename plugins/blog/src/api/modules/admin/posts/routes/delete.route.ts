@@ -41,6 +41,11 @@ export const deletePostRoute = buildRoute({
 
     await c.get("search").delete("blog_post", id);
 
+    await c.get("events").emit("blog.post.deleted", {
+      postId: id,
+      categoryId: result[0].categoryId,
+    });
+
     return c.body(null, 204);
   },
 });

@@ -75,6 +75,10 @@ export const editCategoryRoute = buildRoute({
 
     await saveCategoryTranslations(c, id, { title });
 
+    await c.get("events").emit("blog.category.updated", {
+      categoryId: id,
+    });
+
     return c.json(category);
   },
 });
