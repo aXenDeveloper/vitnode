@@ -130,5 +130,16 @@ export const signUp = async (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password: _, ...user } = data;
 
+  // The insert above runs on `c.get("db")` (auto-commit), so the row is
+  // committed here - even when a caller (e.g. the SSO callback) wraps this in
+  // `db.transaction`. If this insert ever moves onto a `tx` handle, the emit
+  // must move after that transaction returns.
+  await c.get("events").emit("user.created", {
+    userId: data.id,
+    email: data.email,
+    name: data.name,
+    emailVerified: data.emailVerified,
+  });
+
   return user;
 };

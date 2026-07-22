@@ -42,6 +42,8 @@ revalidateTag("products", { revalidate: 3600 });
   - Make sure to use the correct ARIA roles and attributes.
   - Remember to use the "sr-only" Tailwind class for screen reader only text.
   - Add alt text for all images, unless they are decorative or it would be repetitive for screen readers.
+  - Add emit an event for important actions like create, update, delete, etc. to allow other components to react to the changes and add to docs (apps/docs/content/docs/dev/events/built-in-events.mdx)
+  - Use events to communicate between components instead of prop drilling or using context.
 
 # Design
 
@@ -67,6 +69,15 @@ revalidateTag("products", { revalidate: 3600 });
 # Documentation
 
 - Don't use big comments. Remember that code is self-documenting.
+- If should be simple. if docs requires image to better understand, add comment:
+
+```markdown
+// Image prompt: {here_prompt_to_generate_image}
+```
+
+- Always write documentation for all new features.
+- Keep docs simple and easy to understand.
+- Use funny and friendly tone in docs, but don't overdo it.
 
 # Testing
 

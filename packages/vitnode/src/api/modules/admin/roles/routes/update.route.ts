@@ -98,6 +98,8 @@ export const updateRoleAdminRoute = buildRoute({
       });
     }
 
+    await c.get("events").emit("role.updated", { roleId });
+
     return c.json({ id: roleId }, 200);
   },
 });

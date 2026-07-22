@@ -6,9 +6,11 @@ import { HTTPException } from "hono/http-exception";
 import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
 import type { VitNodeRealtime } from "@/ws/registry";
 
+import { LocalEventsAdapter } from "@/api/adapters/events/local";
 import { PostgresSearchAdapter } from "@/api/adapters/search/postgres";
 import { CacheModel } from "@/api/lib/cache";
 import { EmailModel } from "@/api/models/email";
+import { EventsModel } from "@/api/models/events";
 import { QueueModel } from "@/api/models/queue";
 import { SearchModel } from "@/api/models/search";
 import { SessionModel } from "@/api/models/session";
@@ -18,9 +20,11 @@ import { CONFIG } from "@/lib/config";
 import { realtime } from "@/ws/registry";
 
 import type { BuildCronReturn } from "../lib/cron";
+import type { EventListenerConfig } from "../lib/events";
 import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
 import type { BuildQueueTaskReturn } from "../lib/queue";
 import type { WebSocketConfig } from "../lib/websocket";
+import type { EventsApiPlugin } from "../models/events";
 import type {
   SearchIndexerConfig,
   SearchProviderApiPlugin,
@@ -74,6 +78,7 @@ export interface EnvVariablesVitNode {
     cron: (BuildCronReturn & { module: string; pluginId: string })[];
     cronSecret?: string;
     email?: VitNodeApiConfig["email"];
+    events: { adapter: EventsApiPlugin; listeners: EventListenerConfig[] };
     // Whether a cron adapter is configured (`buildApiConfig({ cron })`), i.e. an
     // in-process scheduler is running the registered jobs automatically. Without
     // it, jobs only run when the cron endpoint is triggered externally.
@@ -93,6 +98,7 @@ export interface EnvVariablesVitNode {
   };
   db: Pick<VitNodeApiConfig, "dbProvider">["dbProvider"];
   email: EmailModel;
+  events: EventsModel;
   ipAddress: string;
   log: LoggerMiddlewareType;
   plugin: {
@@ -123,6 +129,7 @@ export const globalMiddleware = ({
   dbProvider,
   captcha,
   cron,
+  events,
   plugins,
   pathToMessages,
   search,
@@ -135,6 +142,7 @@ export const globalMiddleware = ({
   | "cron"
   | "dbProvider"
   | "email"
+  | "events"
   | "pathToMessages"
   | "plugins"
   | "search"
@@ -146,6 +154,13 @@ export const globalMiddleware = ({
   }));
 
   const cronMetadata = collectCronJobs(plugins);
+
+  const eventsMetadata: EventListenerConfig[] = plugins.flatMap(plugin =>
+    (plugin.events ?? []).map(listener => ({
+      ...listener,
+      pluginId: plugin.pluginId,
+    })),
+  );
 
   const queueMetadata = plugins.flatMap(plugin =>
     (plugin.queueTasks ?? []).map(task => ({
@@ -219,6 +234,7 @@ export const globalMiddleware = ({
     c.set("db", dbProvider);
     c.set("cache", new CacheModel(cacheClient, c));
     c.set("email", new EmailModel(c));
+    c.set("events", new EventsModel(c));
     c.set("queue", new QueueModel(c));
     c.set("search", new SearchModel(c));
     c.set("storage", new StorageModel(c));
@@ -228,6 +244,10 @@ export const globalMiddleware = ({
       pathToMessages,
       metadata,
       email,
+      events: {
+        adapter: events?.adapter ?? LocalEventsAdapter(),
+        listeners: eventsMetadata,
+      },
       search: { adapter: search?.adapter ?? PostgresSearchAdapter() },
       searchIndexers: searchIndexersMetadata,
       storage,

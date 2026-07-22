@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 
 import type { SearchIndexer } from "../models/search";
 import type { CronJobConfig } from "./cron";
+import type { EventListenerConfig } from "./events";
 import type { BuildModuleReturn } from "./module";
 import type { PermissionStaffConfig } from "./permission-staff";
 import type { QueueTaskConfig } from "./queue";
@@ -11,6 +12,7 @@ import { checkPluginId } from "./check-plugin-id";
 
 export interface BuildPluginApiReturn {
   cronJobs?: Omit<CronJobConfig, "pluginId">[];
+  events?: Omit<EventListenerConfig, "pluginId">[];
   hono: OpenAPIHono;
   permissionStaff?: PermissionStaffConfig;
   pluginId: string;
@@ -35,6 +37,7 @@ export function buildApiPlugin<P extends string>({
 
   const hono = new OpenAPIHono();
   const cronJobs: BuildPluginApiReturn["cronJobs"] = [];
+  const events: BuildPluginApiReturn["events"] = [];
   const queueTasks: BuildPluginApiReturn["queueTasks"] = [];
   const webSockets: BuildPluginApiReturn["webSockets"] = [];
   modules.forEach(handler => {
@@ -42,6 +45,10 @@ export function buildApiPlugin<P extends string>({
 
     handler.cronJobs?.forEach(cron => {
       cronJobs.push({ ...cron, module: handler.name });
+    });
+
+    handler.events?.forEach(listener => {
+      events.push({ ...listener, module: handler.name });
     });
 
     handler.queueTasks?.forEach(task => {
@@ -57,6 +64,7 @@ export function buildApiPlugin<P extends string>({
     pluginId,
     hono,
     cronJobs,
+    events,
     queueTasks,
     searchIndexers,
     webSockets,

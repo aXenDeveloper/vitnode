@@ -67,13 +67,14 @@ describe("cleanupDeletedFiles", () => {
   });
 
   it("removes only orphaned dest files that no longer exist in an owned source", () => {
-    const sourceDir = join(root, "src", "routes", "breadcrumb", "main");
+    const sourceDir = join(root, "src", "routes", "main");
     const destinationDir = join(
       root,
       "app",
       "[locale]",
       "(main)",
-      "@breadcrumb",
+      "(plugins)",
+      "(blog)",
     );
 
     // source ships only `page.tsx`
@@ -90,6 +91,30 @@ describe("cleanupDeletedFiles", () => {
     expect(removed).toEqual([stale]);
     expect(existsSync(kept)).toBe(true);
     expect(existsSync(stale)).toBe(false);
+  });
+
+  it("never prunes a shared @breadcrumb dir even when the source owns files", () => {
+    const sourceDir = join(root, "src", "routes", "breadcrumb", "main");
+    const destinationDir = join(
+      root,
+      "app",
+      "[locale]",
+      "(main)",
+      "@breadcrumb",
+    );
+
+    write(join(sourceDir, "page.tsx"));
+
+    const owned = join(destinationDir, "page.tsx");
+    const foreign = join(destinationDir, "other", "page.tsx");
+    write(owned);
+    write(foreign);
+
+    cleanupDeletedFiles(sourceDir, destinationDir, remove);
+
+    expect(removed).toEqual([]);
+    expect(existsSync(owned)).toBe(true);
+    expect(existsSync(foreign)).toBe(true);
   });
 
   it("never prunes locale directories even with a mismatched source", () => {

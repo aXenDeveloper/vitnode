@@ -83,6 +83,7 @@ export function VitNodeAPI({
       dbProvider: vitNodeApiConfig.dbProvider,
       captcha: vitNodeApiConfig.captcha,
       cron: vitNodeApiConfig.cron,
+      events: vitNodeApiConfig.events,
       search: vitNodeApiConfig.search,
       storage: vitNodeApiConfig.storage,
       plugins: [newBuildPluginApiCore, ...vitNodeApiConfig.plugins],

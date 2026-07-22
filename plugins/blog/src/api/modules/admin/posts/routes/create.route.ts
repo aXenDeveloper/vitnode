@@ -123,6 +123,11 @@ export const createPostRoute = buildRoute({
     await savePostTranslations(c, post.id, { title, content, friendlyUrl });
     await reindexBlogPost(c, post);
 
+    await c.get("events").emit("blog.post.created", {
+      postId: post.id,
+      categoryId: post.categoryId,
+    });
+
     return c.json(post, 201);
   },
 });

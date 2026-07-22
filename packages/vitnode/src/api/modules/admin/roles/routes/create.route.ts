@@ -68,6 +68,8 @@ export const createRoleAdminRoute = buildRoute({
       values: name,
     });
 
+    await c.get("events").emit("role.created", { roleId: role.id });
+
     return c.json({ id: role.id }, 201);
   },
 });
