@@ -113,6 +113,9 @@ export interface EventsAdapter {
   ) => Promise<EventEmitResult>;
 }
 
+/** @deprecated Use `EventsAdapter` instead. */
+export type EventsApiPlugin = EventsAdapter;
+
 export class EventsModel {
   constructor(c: Context) {
     this.c = c;
