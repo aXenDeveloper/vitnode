@@ -44,11 +44,15 @@ export const LocalEventsAdapter = (): EventsApiPlugin => ({
           listener: listener.name,
           error,
         });
-        await c
-          .get("log")
-          .error(
-            `Event listener "${listener.pluginId}:${listener.module}:${listener.name}" for "${envelope.name}" failed: ${error}`,
+        const message = `Event listener "${listener.pluginId}:${listener.module}:${listener.name}" for "${envelope.name}" failed: ${error}`;
+        try {
+          await c.get("log").error(message);
+        } catch {
+          // eslint-disable-next-line no-console
+          console.error(
+            `[VitNode] Failed to log event listener failure: ${message}`,
           );
+        }
       }
     }
 

@@ -186,8 +186,11 @@ export const preparePluginsFiles = async (flag?: string) => {
                 destinationDir: langDest,
               },
               // Breadcrumb parallel-route slots ship as framework routes and copy
-              // into the `@breadcrumb` slot, namespaced per plugin under
-              // `(plugins)/(<plugin>)` like every other copied route.
+              // into the SHARED `@breadcrumb` slot (NOT namespaced under
+              // `(plugins)/(<plugin>)` like other routes): core and every plugin
+              // write their breadcrumb pages side by side into the same dir. Route
+              // sync must never mirror-cleanup this dir (see `cleanupDeletedFiles`)
+              // or one contributor's copy wipes another's.
               {
                 sourceDir: join(
                   pluginPath,

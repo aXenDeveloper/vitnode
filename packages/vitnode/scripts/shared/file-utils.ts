@@ -345,6 +345,11 @@ export const cleanupDeletedFiles = (
     .includes("src/locales");
   if (isLocaleDir) return;
 
+  const isBreadcrumbDir = destinationDir
+    .replace(/\\/g, "/")
+    .includes("/@breadcrumb");
+  if (isBreadcrumbDir) return;
+
   const destFiles = getAllFiles(destinationDir);
   for (const destFile of destFiles) {
     const relativePath = relative(destinationDir, destFile);
