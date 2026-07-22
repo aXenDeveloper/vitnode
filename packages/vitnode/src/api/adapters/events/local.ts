@@ -2,9 +2,9 @@ import type { Context } from "hono";
 
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 import type {
+  AnyEventEnvelope,
   EventEmitResult,
-  EventEnvelope,
-  EventsApiPlugin,
+  EventsAdapter,
 } from "@/api/models/events";
 
 /**
@@ -14,12 +14,12 @@ import type {
  * on the instance that emitted the event - swap the adapter for a broker to
  * fan out across instances.
  */
-export const LocalEventsAdapter = (): EventsApiPlugin => ({
+export const LocalEventsAdapter = (): EventsAdapter => ({
   name: "local",
 
   publish: async (
     c: Context,
-    envelope: EventEnvelope,
+    envelope: AnyEventEnvelope,
   ): Promise<EventEmitResult> => {
     const listeners = c
       .get("core")
