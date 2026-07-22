@@ -71,6 +71,11 @@ export interface EventEnvelope<K extends VitNodeEventName = VitNodeEventName> {
   pluginId: string;
 }
 
+/** A discriminated union of every registered event envelope. */
+export type AnyEventEnvelope = {
+  [K in VitNodeEventName]: EventEnvelope<K>;
+}[VitNodeEventName];
+
 export interface EventEmitFailure {
   error: string;
   /** Listener `name` as declared in `buildEventListener`. */
@@ -88,10 +93,11 @@ export interface EventEmitResult {
   /**
    * `delivered` - listeners ran in-process before `emit()` resolved (the
    * bundled Local adapter). `queued` - the envelope was handed to a broker and
-   * delivery happens out-of-band; `delivered`/`failures` say nothing about the
-   * eventual listener runs.
+   * delivery happens out-of-band. `failed` - the adapter could not publish the
+   * event. For queued and failed events, `delivered`/`failures` do not describe
+   * eventual listener execution.
    */
-  status: "delivered" | "queued";
+  status: "delivered" | "failed" | "queued";
 }
 
 /**
@@ -99,9 +105,12 @@ export interface EventEmitResult {
  * to the listeners registered in `c.get("core").events.listeners`; a broker
  * adapter publishes the envelope and returns `status: "queued"`.
  */
-export interface EventsApiPlugin {
+export interface EventsAdapter {
   name: string;
-  publish: (c: Context, envelope: EventEnvelope) => Promise<EventEmitResult>;
+  publish: (
+    c: Context,
+    envelope: AnyEventEnvelope,
+  ) => Promise<EventEmitResult>;
 }
 
 export class EventsModel {
@@ -111,7 +120,7 @@ export class EventsModel {
 
   protected readonly c: Context;
 
-  private adapter(): EventsApiPlugin {
+  private adapter(): EventsAdapter {
     return this.c.get("core").events.adapter;
   }
 
@@ -143,7 +152,7 @@ export class EventsModel {
     const adapter = this.adapter();
 
     try {
-      return await adapter.publish(this.c, envelope);
+      return await adapter.publish(this.c, envelope as AnyEventEnvelope);
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
       await this.c
@@ -154,7 +163,7 @@ export class EventsModel {
 
       return {
         eventId: envelope.eventId,
-        status: "delivered",
+        status: "failed",
         delivered: 0,
         failures: [
           {
