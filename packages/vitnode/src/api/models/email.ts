@@ -47,7 +47,6 @@ export type EmailModelSendArgs = {
   replyTo?: string;
   subject:
     ((props: Pick<DefaultTemplateEmailProps, "i18n">) => string) | string;
-  // eslint-disable-next-line perfectionist/sort-intersection-types
 } & (EmailModelSendArgsWithEmail | EmailModelSendArgsWithUser);
 
 export interface BuiltEmail {

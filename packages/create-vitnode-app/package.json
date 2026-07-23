@@ -42,11 +42,11 @@
     "validate-npm-package-name": "^8.0.0"
   },
   "devDependencies": {
-    "@types/node": "^26.0.1",
+    "@types/node": "^26.1.1",
     "@types/prompts": "^2.4.9",
     "@types/validate-npm-package-name": "^4.0.2",
     "@vitnode/config": "workspace:*",
-    "eslint": "^10.5.0",
+    "eslint": "^10.7.0",
     "typescript": "^6.0.3"
   }
 }
