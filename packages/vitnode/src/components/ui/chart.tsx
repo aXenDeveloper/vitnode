@@ -284,10 +284,13 @@ function ChartLegendContent({
   payload,
   verticalAlign = "bottom",
   nameKey,
-}: React.ComponentProps<"div"> &
-  RechartsPrimitive.DefaultLegendContentProps & {
+}: Pick<RechartsPrimitive.DefaultLegendContentProps, "payload"> &
+  React.ComponentProps<"div"> & {
     hideIcon?: boolean;
     nameKey?: string;
+    // recharts still injects this at runtime (defaults to "bottom"); declared
+    // locally because DefaultLegendContentProps["verticalAlign"] is deprecated.
+    verticalAlign?: "bottom" | "middle" | "top";
   }) {
   const { config } = useChart();
 

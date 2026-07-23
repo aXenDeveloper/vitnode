@@ -130,7 +130,7 @@ const apiDeps = {
   react: versionsPackageJson.react,
   "react-dom": versionsPackageJson.reactDom,
   "react-email": versionsPackageJson.reactEmail,
-  shadcn: versionsPackageJson.shadcnUi,
+  ws: versionsPackageJson.ws,
   zod: versionsPackageJson.zod,
 };
 
