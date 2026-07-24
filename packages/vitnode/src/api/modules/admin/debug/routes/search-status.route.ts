@@ -45,7 +45,7 @@ export const searchStatusDebugAdminRoute = buildRoute({
     const core = c.get("core");
 
     // One item can emit several index rows (e.g. one per language), so coverage
-    // is measured in distinct items — not documents.
+    // is measured in distinct items - not documents.
     const indexedByType = await db
       .select({
         itemType: core_search_index.itemType,

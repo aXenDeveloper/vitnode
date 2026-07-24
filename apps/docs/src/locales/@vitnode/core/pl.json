@@ -610,7 +610,7 @@
         "redis": {
           "title": "Redis",
           "desc": "Współdzielona pamięć podręczna i magazyn ogranicznika żądań. Przy wyłączeniu przechodzi na pamięć wewnętrzną.",
-          "down": "Skonfigurowany, ale nieosiągalny — sprawdź połączenie z Redis."
+          "down": "Skonfigurowany, ale nieosiągalny - sprawdź połączenie z Redis."
         },
         "email": {
           "title": "E-mail",
@@ -655,8 +655,8 @@
               "desc": "Kliknij, aby wybrać obraz",
               "pending": "Przesyłanie…",
               "done": "Przesłano",
-              "error": "Przesyłanie nie powiodło się — spróbuj ponownie",
-              "success": "Obraz został przesłany — jest przechowywany w Twoim adapterze."
+              "error": "Przesyłanie nie powiodło się - spróbuj ponownie",
+              "success": "Obraz został przesłany - jest przechowywany w Twoim adapterze."
             }
           }
         },
@@ -671,9 +671,9 @@
         "cron": {
           "title": "Zadania cron",
           "desc": "Zaplanowane zadania w tle, takie jak czyszczenie wygasłych sesji i tokenów.",
-          "insecure": "Używany jest domyślny CRON_SECRET — ustaw bezpieczny w środowisku produkcyjnym.",
-          "not_configured": "Nie skonfigurowano adaptera cron — zadania nie będą uruchamiać się automatycznie.",
-          "stale": "Żadne zadanie nie zostało uruchomione od ponad 6 godzin — cron może być źle skonfigurowany lub zatrzymany. Sprawdź konfigurację cron.",
+          "insecure": "Używany jest domyślny CRON_SECRET - ustaw bezpieczny w środowisku produkcyjnym.",
+          "not_configured": "Nie skonfigurowano adaptera cron - zadania nie będą uruchamiać się automatycznie.",
+          "stale": "Żadne zadanie nie zostało uruchomione od ponad 6 godzin - cron może być źle skonfigurowany lub zatrzymany. Sprawdź konfigurację cron.",
           "jobs": "{count, plural, =0 {Brak zaplanowanych zadań} one {# zaplanowane zadanie} few {# zaplanowane zadania} many {# zaplanowanych zadań} other {# zaplanowanych zadań}}"
         },
         "queue": {
@@ -681,7 +681,7 @@
           "desc": "Zadania w tle umieszczone w kolejce w bazie danych i przetwarzane przez proces cron.",
           "tasks": "{count, plural, =0 {Brak zarejestrowanych zadań} one {# zarejestrowane zadanie} few {# zarejestrowane zadania} many {# zarejestrowanych zadań} other {# zarejestrowanych zadań}}",
           "queued": "{pending} oczekujących · {processing} uruchomionych",
-          "cron_stale": "Offline — proces cron przetwarzający kolejkę nie działa. Napraw zadania cron, aby wznowić przetwarzanie."
+          "cron_stale": "Offline - proces cron przetwarzający kolejkę nie działa. Napraw zadania cron, aby wznowić przetwarzanie."
         }
       },
       "files": {

@@ -28,21 +28,34 @@ import { Button } from "../ui/button";
 import { DialogClose, DialogFooter, useDialog } from "../ui/dialog";
 import { Field } from "../ui/field";
 import { Form, FormField } from "../ui/form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+
+interface ItemAutoFormSharedProps<T extends z.ZodObject<z.ZodRawShape>> {
+  hidden?: (values: z.input<T>) => boolean;
+  tab?: string;
+}
 
 type ItemAutoFormProps<
   T extends z.ZodObject<z.ZodRawShape> = z.ZodObject<z.ZodRawShape>,
   TName extends FieldPath<z.infer<T>> = FieldPath<z.infer<T>>,
-> =
-  | {
-      component: (props: ItemAutoFormComponentProps) => React.ReactNode;
-      id: TName;
-    }
-  | {
-      component?: never;
-      description?: React.ReactNode;
-      id: TName;
-      label?: React.ReactNode;
-    };
+> = ItemAutoFormSharedProps<T> &
+  (
+    | {
+        component: (props: ItemAutoFormComponentProps) => React.ReactNode;
+        id: TName;
+      }
+    | {
+        component?: never;
+        description?: React.ReactNode;
+        id: TName;
+        label?: React.ReactNode;
+      }
+  );
+
+export interface AutoFormTab {
+  label: React.ReactNode;
+  value: string;
+}
 
 export interface ItemAutoFormComponentProps {
   description?: React.ReactNode;
@@ -105,6 +118,7 @@ export function AutoForm<
   onSubmit: onSubmitProp,
   captcha,
   fields,
+  tabs,
   submitButtonProps,
   children,
   ...props
@@ -118,6 +132,7 @@ export function AutoForm<
     React.ComponentProps<typeof Button>,
     "isLoading" | "type"
   >;
+  tabs?: AutoFormTab[];
 }) {
   const {
     isReady,
@@ -147,6 +162,100 @@ export function AutoForm<
     }
   };
 
+  const hasConditionalFields = fields.some(
+    item => typeof item.hidden === "function",
+  );
+  // Only subscribe to value changes when a field actually needs them, so forms
+  // without conditional fields keep their previous (non re-rendering) behavior.
+  // The subscription-driven re-render is intentional here.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const watchedValues = hasConditionalFields ? form.watch() : undefined;
+  const isFieldVisible = (item: ItemAutoFormProps<T>) => {
+    if (!item.hidden || !watchedValues) return true;
+
+    return !item.hidden(watchedValues);
+  };
+
+  const renderField = (item: ItemAutoFormProps<T>) => {
+    const params = getNestedParam(inputParams, item.id);
+    if (!params) return null;
+
+    if (!item.component && (item.label || item.description)) {
+      return (
+        <div key={item.id}>
+          {item.label && (
+            <span className="text-xl leading-none font-semibold tracking-tight">
+              {item.label}
+            </span>
+          )}
+          {item.description && (
+            <div className="text-muted-foreground text-sm">
+              {item.description}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (!item.component) return null;
+    const { component } = item;
+
+    return (
+      <FormField
+        key={item.id}
+        name={item.id}
+        render={({ field, fieldState }) => {
+          return (
+            <AutoFormField
+              invalid={fieldState.invalid}
+              orientation="responsive"
+              submitCount={form.formState.submitCount}
+            >
+              {component({
+                field,
+                description:
+                  typeof params.description === "string"
+                    ? params.description
+                    : "",
+                itemParams:
+                  "itemParams" in params
+                    ? (params.itemParams as InputParams)
+                    : undefined,
+                otherProps: {
+                  isOptional: !params.required,
+                  enum: Array.isArray(params.enum) ? params.enum : undefined,
+                  maxLength:
+                    typeof params.maxLength === "number"
+                      ? params.maxLength
+                      : undefined,
+                  maxItems:
+                    typeof params.maxItems === "number"
+                      ? params.maxItems
+                      : undefined,
+                  minLength:
+                    typeof params.minLength === "number"
+                      ? params.minLength
+                      : undefined,
+                  ["aria-invalid"]: fieldState.invalid,
+                  minItems:
+                    typeof params.minItems === "number"
+                      ? params.minItems
+                      : undefined,
+                  pattern:
+                    typeof params.pattern === "string"
+                      ? params.pattern
+                      : undefined,
+                  type:
+                    typeof params.type === "string" ? params.type : undefined,
+                },
+              })}
+            </AutoFormField>
+          );
+        }}
+      />
+    );
+  };
+
   const submitButton = (
     <Button
       disabled={
@@ -165,88 +274,33 @@ export function AutoForm<
 
   return (
     <Form form={form} onSubmit={onSubmit} {...props}>
-      {fields.map(item => {
-        const params = getNestedParam(inputParams, item.id);
-        if (!params) return null;
+      {tabs?.length ? (
+        <Tabs defaultValue={tabs[0].value}>
+          <TabsList>
+            {tabs.map(tab => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        if (!item.component && (item.label || item.description)) {
-          return (
-            <div key={item.id}>
-              {item.label && (
-                <span className="text-xl leading-none font-semibold tracking-tight">
-                  {item.label}
-                </span>
-              )}
-              {item.description && (
-                <div className="text-muted-foreground text-sm">
-                  {item.description}
-                </div>
-              )}
-            </div>
-          );
-        }
-
-        if (!item.component) return null;
-
-        return (
-          <FormField
-            key={item.id}
-            name={item.id}
-            render={({ field, fieldState }) => {
-              return (
-                <AutoFormField
-                  invalid={fieldState.invalid}
-                  orientation="responsive"
-                  submitCount={form.formState.submitCount}
-                >
-                  {item.component({
-                    field,
-                    description:
-                      typeof params.description === "string"
-                        ? params.description
-                        : "",
-                    itemParams:
-                      "itemParams" in params
-                        ? (params.itemParams as InputParams)
-                        : undefined,
-                    otherProps: {
-                      isOptional: !params.required,
-                      enum: Array.isArray(params.enum)
-                        ? params.enum
-                        : undefined,
-                      maxLength:
-                        typeof params.maxLength === "number"
-                          ? params.maxLength
-                          : undefined,
-                      maxItems:
-                        typeof params.maxItems === "number"
-                          ? params.maxItems
-                          : undefined,
-                      minLength:
-                        typeof params.minLength === "number"
-                          ? params.minLength
-                          : undefined,
-                      ["aria-invalid"]: fieldState.invalid,
-                      minItems:
-                        typeof params.minItems === "number"
-                          ? params.minItems
-                          : undefined,
-                      pattern:
-                        typeof params.pattern === "string"
-                          ? params.pattern
-                          : undefined,
-                      type:
-                        typeof params.type === "string"
-                          ? params.type
-                          : undefined,
-                    },
-                  })}
-                </AutoFormField>
-              );
-            }}
-          />
-        );
-      })}
+          {tabs.map(tab => (
+            <TabsContent
+              className="mt-0 space-y-6"
+              keepMounted
+              key={tab.value}
+              value={tab.value}
+            >
+              {fields
+                .filter(item => (item.tab ?? tabs[0].value) === tab.value)
+                .filter(isFieldVisible)
+                .map(renderField)}
+            </TabsContent>
+          ))}
+        </Tabs>
+      ) : (
+        fields.filter(isFieldVisible).map(renderField)
+      )}
 
       {children}
 

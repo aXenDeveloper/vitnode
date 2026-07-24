@@ -568,9 +568,22 @@
         "submit": "Save changes",
         "success": "Role updated"
       },
+      "tabs": {
+        "general": "General",
+        "content": "Content"
+      },
       "form": {
         "name": "Name",
-        "color": "Color"
+        "color": "Color",
+        "upload": {
+          "allow": "Allow upload files",
+          "total_max_storage": "Total Max Storage",
+          "max_storage_for_submit": "Max Storage for Submit",
+          "max_storage_for_submit_desc": "If you set 1000, user can upload only 1 file with size 1000kB or 2 files with size 500kB for each submit.",
+          "in_unit": "in kB",
+          "or": "or",
+          "unlimited": "Unlimited"
+        }
       }
     },
     "staff": {

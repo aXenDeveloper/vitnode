@@ -6,12 +6,15 @@ import { saveLanguageWords } from "@/api/lib/save-language-words";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_roles } from "@/database/roles";
 
-import { zodRoleNameSchema } from "./create.route";
+import { zodRoleNameSchema, zodRoleStorageSchema } from "./create.route";
 
 export const zodUpdateRoleAdminSchema = z
   .object({
     name: zodRoleNameSchema,
     color: z.string().max(50),
+    allowUploadFiles: z.boolean(),
+    totalMaxStorage: zodRoleStorageSchema,
+    maxStorageForSubmit: zodRoleStorageSchema,
   })
   .partial()
   .refine(body => Object.values(body).some(value => value !== undefined), {
@@ -84,6 +87,16 @@ export const updateRoleAdminRoute = buildRoute({
     };
     if (body.color !== undefined) {
       values.color = body.color.trim() ? body.color : null;
+    }
+    if (body.allowUploadFiles !== undefined) {
+      values.allowUploadFiles = body.allowUploadFiles;
+    }
+    // `null` is a meaningful value here (unlimited), so only skip `undefined`.
+    if (body.totalMaxStorage !== undefined) {
+      values.totalMaxStorage = body.totalMaxStorage;
+    }
+    if (body.maxStorageForSubmit !== undefined) {
+      values.maxStorageForSubmit = body.maxStorageForSubmit;
     }
 
     await db.update(core_roles).set(values).where(eq(core_roles.id, roleId));

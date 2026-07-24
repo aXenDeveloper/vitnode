@@ -20,6 +20,7 @@
     "editor",
     "input",
     "input-group",
+    "nullable-number",
     "radio-group",
     "select",
     "switch",
