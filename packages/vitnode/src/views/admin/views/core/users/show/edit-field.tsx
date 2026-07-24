@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 
-import { mutationApi } from "./mutation-api";
+import { mutationApi } from "./mutation-api.server";
 
 export const EditUserField = ({
   id,

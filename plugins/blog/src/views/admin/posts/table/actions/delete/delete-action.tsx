@@ -15,7 +15,7 @@ import { toast } from "sonner";
 
 import { CONFIG_PLUGIN } from "@/const";
 
-import { mutationApi } from "./mutation-api";
+import { mutationApi } from "./mutation-api.server";
 
 export const DeleteAction = ({ title, id }: { id: number; title: string }) => {
   const t = useTranslations("@vitnode/blog.admin.posts.delete");

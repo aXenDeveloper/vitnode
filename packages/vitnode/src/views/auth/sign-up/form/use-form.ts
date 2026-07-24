@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { AutoFormOnSubmit } from "@/components/form/auto-form";
 
 import { useWrapperSignUp } from "../wrapper";
-import { mutationApi } from "./mutation-api";
+import { mutationApi } from "./mutation-api.server";
 
 export const usePasswordZodSchema = () => {
   const t = useTranslations("core.auth.sign_up");

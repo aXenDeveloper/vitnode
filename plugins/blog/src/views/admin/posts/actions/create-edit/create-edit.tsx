@@ -21,7 +21,7 @@ import type { zodPostSchema } from "@/api/modules/posts/routes/get.route";
 import { categoriesModule } from "@/api/modules/categories/categories.module";
 
 import { FriendlyUrlField, TitleField } from "./multi-lang-fields";
-import { createMutationApi, editMutationApi } from "./mutation-api";
+import { createMutationApi, editMutationApi } from "./mutation-api.server";
 
 export const CreateEditActionPostsAdmin = ({
   data,

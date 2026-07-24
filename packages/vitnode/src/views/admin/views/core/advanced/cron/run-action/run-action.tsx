@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 
-import { mutationApi } from "./mutation-api";
+import { mutationApi } from "./mutation-api.server";
 
 export const RunActionCronTable = ({ id }: { id: number }) => {
   const t = useTranslations("admin.advanced.cron.list.actions.runNow");

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 
-import { mutationApi } from "./mutation-api";
+import { mutationApi } from "./mutation-api.server";
 
 export const ButtonSSOButtons = ({
   children,

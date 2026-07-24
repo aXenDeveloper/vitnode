@@ -7,7 +7,7 @@ import { useRouter } from "@/lib/navigation";
 import type { ChangePasswordForm } from "./form";
 
 import { usePasswordZodSchema } from "../../sign-up/form/use-form";
-import { mutationApi } from "./mutation-api";
+import { mutationApi } from "./mutation-api.server";
 
 export const useForm = ({
   token,

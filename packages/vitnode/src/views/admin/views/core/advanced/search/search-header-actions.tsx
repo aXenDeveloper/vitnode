@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
-import { rebuildSearchIndexMutation } from "./mutation-api";
+import { rebuildSearchIndexMutation } from "./mutation-api.server";
 
 export const SearchHeaderActions = () => {
   const t = useTranslations("core.search");

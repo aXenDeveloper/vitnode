@@ -9,7 +9,7 @@ import { useDialog } from "@/components/ui/dialog";
 import { multiLangValueSchema } from "@/lib/helpers/multi-lang";
 import { usePathname, useRouter } from "@/lib/navigation";
 
-import { createRole, editRole } from "./mutation-api";
+import { createRole, editRole } from "./mutation-api.server";
 
 export interface RoleData {
   color: null | string;
