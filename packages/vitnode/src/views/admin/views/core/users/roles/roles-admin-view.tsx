@@ -10,7 +10,7 @@ import { TooltipWithContent } from "@/components/ui/tooltip";
 import { fetcher } from "@/lib/fetcher";
 import { Link } from "@/lib/navigation";
 
-import { EditAction } from "./table/actions/edit-action";
+import { RowActions } from "./table/actions/row-actions";
 
 export const RolesAdminView = async ({
   searchParams,
@@ -72,8 +72,8 @@ export const RolesAdminView = async ({
           id: "actions",
           header: "",
           align: "right",
-          className: "w-10",
-          cell: ({ row }) => <EditAction data={row} />,
+          className: "w-20",
+          cell: ({ row }) => <RowActions data={row} />,
         },
       ]}
       customNoResults={{

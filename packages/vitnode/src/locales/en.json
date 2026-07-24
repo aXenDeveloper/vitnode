@@ -568,6 +568,16 @@
         "submit": "Save changes",
         "success": "Role updated"
       },
+      "delete": {
+        "title": "Delete role",
+        "desc": "Are you sure you want to delete the role \"{name}\"? This action cannot be undone.",
+        "descWithUsers": "The role \"{name}\" is assigned to {count, plural, one {# user} other {# users}}. Choose another role to move them into before deleting. This action cannot be undone.",
+        "moveToLabel": "Move users to",
+        "selectRole": "Select a role...",
+        "confirm": "Delete role",
+        "cancel": "Cancel",
+        "success": "Role deleted"
+      },
       "tabs": {
         "general": "General",
         "content": "Content"
