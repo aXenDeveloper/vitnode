@@ -16,9 +16,15 @@ export const zodRoleNameSchema = z
   )
   .min(1);
 
+// Storage caps are expressed in kB. `null` means unlimited.
+export const zodRoleStorageSchema = z.number().int().min(0).nullable();
+
 export const zodCreateRoleAdminSchema = z.object({
   name: zodRoleNameSchema,
   color: z.string().max(50).optional(),
+  allowUploadFiles: z.boolean().optional(),
+  totalMaxStorage: zodRoleStorageSchema.optional(),
+  maxStorageForSubmit: zodRoleStorageSchema.optional(),
 });
 
 export const createRoleAdminRoute = buildRoute({
@@ -52,12 +58,24 @@ export const createRoleAdminRoute = buildRoute({
     },
   },
   handler: async c => {
-    const { name, color } = c.req.valid("json");
+    const {
+      name,
+      color,
+      allowUploadFiles,
+      totalMaxStorage,
+      maxStorageForSubmit,
+    } = c.req.valid("json");
 
     const [role] = await c
       .get("db")
       .insert(core_roles)
-      .values({ color: color?.trim() ? color : null, updatedAt: new Date() })
+      .values({
+        color: color?.trim() ? color : null,
+        allowUploadFiles: allowUploadFiles ?? false,
+        totalMaxStorage: totalMaxStorage ?? null,
+        maxStorageForSubmit: maxStorageForSubmit ?? null,
+        updatedAt: new Date(),
+      })
       .returning({ id: core_roles.id });
 
     await saveLanguageWords(c, {

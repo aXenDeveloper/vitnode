@@ -1,0 +1,106 @@
+---
+title: Nullable Number
+description: Numeric field paired with a checkbox that toggles the value to null - for "unlimited", "never", "no limit", and similar.
+---
+
+## Preview
+
+<Preview name="nullable-number" />
+
+## Usage
+
+```ts
+import { z } from "zod";
+import { AutoForm } from "@vitnode/core/components/form/auto-form";
+import { AutoFormNullableNumber } from "@vitnode/core/components/form/fields/nullable-number";
+```
+
+```ts
+const formSchema = z.object({
+  max_members: z.number().int().min(1).nullable().default(10),
+});
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: "max_members",
+      component: props => (
+        <AutoFormNullableNumber
+          {...props}
+          label="Maximum members"
+          toggleLabel="Unlimited"
+        />
+      ),
+    },
+  ]}
+/>
+```
+
+<Callout type="info" title="Value shape">
+  The field value is `number | null`. A number is whatever is typed in the
+  input; `null` means the checkbox is checked and the input is disabled. Back it
+  with a `z.number().nullable()` schema, and keep it optional or give it a
+  `default` when the field can be
+  [hidden](/docs/ui/auto-form#conditional-fields) so it never blocks submission.
+  Unchecking the box restores the last number you entered.
+</Callout>
+
+## Adapting the labels
+
+The three label props are plain text, so the same field works for any domain -
+an unlimited storage cap, a session that never expires, an uncapped rate limit,
+and so on:
+
+- `unitLabel` - shown right after the input (e.g. `kB`, `minutes`, `%`).
+- `orLabel` - an optional connector rendered before the checkbox (e.g. `or`).
+- `toggleLabel` - the checkbox label; checking it sets the value to `null`.
+
+```tsx
+<AutoFormNullableNumber
+  {...props}
+  label="Auto-logout"
+  unitLabel="minutes"
+  orLabel="or"
+  toggleLabel="Never"
+/>
+```
+
+Any other props (`min`, `max`, `step`, `placeholder`, …) are forwarded to the
+underlying number input; validation constraints come from the Zod schema.
+
+## Props
+
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+<TypeTable
+  type={{
+    label: {
+      description: "The label displayed above the field.",
+      type: "React.ReactNode",
+      default: "",
+    },
+    description: {
+      description: "A short description displayed below the field.",
+      type: "React.ReactNode",
+      default: "",
+    },
+    toggleLabel: {
+      description:
+        "Label for the checkbox. Checking it sets the value to null and disables the input. Required.",
+      type: "React.ReactNode",
+    },
+    unitLabel: {
+      description: "Optional unit shown right after the input.",
+      type: "React.ReactNode",
+      default: "",
+    },
+    orLabel: {
+      description: "Optional connector text rendered before the checkbox.",
+      type: "React.ReactNode",
+      default: "",
+    },
+  }}
+/>

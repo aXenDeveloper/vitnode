@@ -193,12 +193,14 @@ export const initialDataForDatabase = async () => {
           // Moderator role
           protected: true,
           color: "hsl(122, 80%, 45%)",
+          allowUploadFiles: true,
         },
         {
           // Administrator role
           protected: true,
           root: true,
           color: "hsl(0, 100%, 50%)",
+          allowUploadFiles: true,
         },
       ])
       .returning({ id: core_roles.id });

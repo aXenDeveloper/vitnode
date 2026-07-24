@@ -8,9 +8,9 @@ VitNode ships a content **search & discovery** system. Every searchable item is
 projected into a single canonical table, `core_search_index`, which powers two
 public pages and the AdminCP:
 
-- **`/search`** — full-text search with relevance ranking and filters.
-- **`/discover`** — the same index sorted newest-first (a community timeline).
-- **AdminCP → user profile → Timeline** — a single member's indexed activity.
+- **`/search`** - full-text search with relevance ranking and filters.
+- **`/discover`** - the same index sorted newest-first (a community timeline).
+- **AdminCP → user profile → Timeline** - a single member's indexed activity.
 
 Search and discovery are **locale-aware**: results follow the active language, so
 a member browsing in Polish sees Polish titles, snippets and links. See
@@ -18,9 +18,9 @@ a member browsing in Polish sees Polish titles, snippets and links. See
 
 The query engine is **pluggable**. The default requires zero setup:
 
-- **Postgres** (default) — Postgres full-text search (`tsvector` + GIN, title
+- **Postgres** (default) - Postgres full-text search (`tsvector` + GIN, title
   weighted above body). Great for small and medium communities.
-- **Elasticsearch** (`@vitnode/elasticsearch`) — offloads querying to an external
+- **Elasticsearch** (`@vitnode/elasticsearch`) - offloads querying to an external
   cluster and unlocks advanced ranking (time-decay, author-boost).
 
 `core_search_index` is always the source of truth, so switching engines is a
@@ -79,13 +79,13 @@ for (const languageCode of enabledLanguageCodes) {
 
 The `/search` and `/discover` requests send the active locale as a `lang` query
 param, and the query keeps only rows for that locale. Content that isn't
-translated can leave `languageCode` empty (`""`) — those rows are **language
+translated can leave `languageCode` empty (`""`) - those rows are **language
 agnostic** and match every locale, so single-language plugins need no changes.
 
 <Callout type="info">
-  Postgres full-text ranking uses the `english` text-search configuration for all
-  languages (there is no bundled dictionary for most locales). Matching still works
-  across languages; only stemming and stop-words are English-tuned.
+  Postgres full-text ranking uses the `english` text-search configuration for
+  all languages (there is no bundled dictionary for most locales). Matching
+  still works across languages; only stemming and stop-words are English-tuned.
 </Callout>
 
 ## Registering a rebuild indexer

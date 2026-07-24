@@ -9,7 +9,7 @@ export interface SearchCollection {
 export type CollectionStatus = "empty" | "indexed" | "stale";
 
 // Nothing indexed yet, partially indexed (fewer items than the source has), or
-// fully covered — the three states the coverage report distinguishes.
+// fully covered - the three states the coverage report distinguishes.
 export const getCollectionStatus = ({
   indexed,
   total,

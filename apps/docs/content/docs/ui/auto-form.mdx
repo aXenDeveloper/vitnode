@@ -417,6 +417,80 @@ const formSchema = z.object({
 />
 ```
 
+## Tabs
+
+Group fields into tabs by passing the `tabs` prop and tagging each field with a
+`tab`. Fields without a `tab` fall into the first tab. Every tab panel stays
+mounted, so field values and validation are preserved when switching tabs.
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  // [!code ++]
+  tabs={[
+    // [!code ++]
+    { value: "general", label: "General" },
+    // [!code ++]
+    { value: "content", label: "Content" },
+    // [!code ++]
+  ]}
+  fields={[
+    {
+      id: "username",
+      tab: "general", // [!code ++]
+      component: props => <AutoFormInput {...props} label="Username" />,
+    },
+    {
+      id: "content",
+      tab: "content", // [!code ++]
+      component: props => <AutoFormEditor {...props} label="Content" />,
+    },
+  ]}
+/>
+```
+
+## Conditional Fields
+
+Show or hide a field based on the current form values with the `hidden`
+predicate. It receives the live form values and returns `true` to hide the
+field.
+
+<Callout type="warn">
+  Hidden fields still submit their (default) values, so keep them optional or
+  give them a `default` in the schema. Otherwise a hidden-but-invalid field can
+  keep the submit button disabled with no visible error.
+</Callout>
+
+```ts
+const formSchema = z.object({
+  allow_uploads: z.boolean().default(false),
+  // Optional so it never blocks submission while hidden.
+  max_storage: z.number().int().min(0).nullable().default(null),
+});
+```
+
+```tsx
+import { AutoFormSwitch } from "@vitnode/core/components/form/fields/switch";
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: "allow_uploads",
+      component: props => <AutoFormSwitch {...props} label="Allow uploads" />,
+    },
+    {
+      id: "max_storage",
+      // Only shown once uploads are enabled. // [!code ++]
+      hidden: values => !values.allow_uploads, // [!code ++]
+      component: props => <AutoFormInput {...props} label="Max storage" />,
+    },
+  ]}
+/>
+```
+
 ## Form Submission
 
 To activate submit button and handle form submission with the `onSubmit` callback:

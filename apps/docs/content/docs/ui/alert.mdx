@@ -14,8 +14,8 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
-} from '@vitnode/core/components/ui/alert';
-import { TriangleAlertIcon } from 'lucide-react';
+} from "@vitnode/core/components/ui/alert";
+import { TriangleAlertIcon } from "lucide-react";
 ```
 
 ```tsx
@@ -26,14 +26,14 @@ import { TriangleAlertIcon } from 'lucide-react';
 </Alert>
 ```
 
-An optional leading icon is picked up automatically — render any icon as the
+An optional leading icon is picked up automatically - render any icon as the
 first child and the layout aligns it with the title and description.
 
 ## Variants
 
-- `default` — neutral, informational messages.
-- `warning` — a non-blocking caution the user should act on (amber).
-- `destructive` — an error or a failed action (red).
+- `default` - neutral, informational messages.
+- `warning` - a non-blocking caution the user should act on (amber).
+- `destructive` - an error or a failed action (red).
 
 ## Dismissible
 
@@ -41,9 +41,9 @@ Wrap a control in `AlertAction` to pin it to the top-right corner, e.g. a close
 button. The alert reserves space for it automatically.
 
 ```tsx
-import { AlertAction } from '@vitnode/core/components/ui/alert';
-import { Button } from '@vitnode/core/components/ui/button';
-import { XIcon } from 'lucide-react';
+import { AlertAction } from "@vitnode/core/components/ui/alert";
+import { Button } from "@vitnode/core/components/ui/button";
+import { XIcon } from "lucide-react";
 
 <Alert variant="warning">
   <TriangleAlertIcon />
@@ -59,14 +59,14 @@ import { XIcon } from 'lucide-react';
 
 ## Props
 
-import { TypeTable } from 'fumadocs-ui/components/type-table';
+import { TypeTable } from "fumadocs-ui/components/type-table";
 
 <TypeTable
   type={{
     variant: {
-      description: 'The visual style of the alert.',
-      type: 'default | warning | destructive',
-      default: 'default',
+      description: "The visual style of the alert.",
+      type: "default | warning | destructive",
+      default: "default",
     },
   }}
 />
