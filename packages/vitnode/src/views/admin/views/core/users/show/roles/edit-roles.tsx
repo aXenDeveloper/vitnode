@@ -41,10 +41,10 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
-import type { Role } from "./search-roles.action";
+import type { Role } from "./search-roles.action.server";
 
-import { searchRolesForUser } from "./search-roles.action";
-import { updateUserRoles } from "./update-roles.action";
+import { searchRolesForUser } from "./search-roles.action.server";
+import { updateUserRoles } from "./update-roles.action.server";
 
 const RoleName = ({ role }: { role: Role }) => {
   const locale = useLocale();

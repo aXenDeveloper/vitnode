@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { Button } from "@/components/ui/button";
 
-import { revokeDeviceAction } from "./revoke-action";
+import { revokeDeviceAction } from "./revoke-action.server";
 
 export const RevokeDeviceButton = ({
   os,

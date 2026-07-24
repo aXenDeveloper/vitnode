@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LanguagesProvider } from "@/components/languages-provider";
 
 import { CreateEditRoleAdmin } from "./create-edit";
-import { createRole, editRole } from "./mutation-api";
+import { createRole, editRole } from "./mutation-api.server";
 
 vi.mock("next-intl", () => ({
   useLocale: () => "en",
@@ -16,7 +16,7 @@ vi.mock("@/lib/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-vi.mock("./mutation-api", () => ({
+vi.mock("./mutation-api.server", () => ({
   createRole: vi.fn(),
   editRole: vi.fn(),
 }));

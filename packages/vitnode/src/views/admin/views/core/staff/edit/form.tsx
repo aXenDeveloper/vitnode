@@ -21,7 +21,7 @@ import { useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 import { SelectableCard } from "../selectable-card";
-import { updateStaffPermissions } from "./mutation-api";
+import { updateStaffPermissions } from "./mutation-api.server";
 
 const listHref = (type: PermissionStaffType) =>
   type === "admin"

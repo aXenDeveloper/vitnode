@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link } from "@/lib/navigation";
 
-import { logOutMutationApi } from "./log-out-mutation-api";
+import { logOutMutationApi } from "./log-out-mutation-api.server";
 
 export const ClientAuthUserHeader = ({
   user,

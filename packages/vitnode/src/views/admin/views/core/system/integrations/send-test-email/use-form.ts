@@ -6,7 +6,7 @@ import type { AutoFormOnSubmit } from "@/components/form/auto-form";
 
 import { useDialog } from "@/components/ui/dialog";
 
-import { sendTestEmailMutation } from "./mutation-api";
+import { sendTestEmailMutation } from "./mutation-api.server";
 
 export const useFormSendTestEmail = () => {
   const t = useTranslations("admin.system.integrations.email.test");

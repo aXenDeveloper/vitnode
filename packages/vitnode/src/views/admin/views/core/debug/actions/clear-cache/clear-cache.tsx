@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { Button } from "@/components/ui/button";
 
-import { clearCacheMutation } from "./mutation-api";
+import { clearCacheMutation } from "./mutation-api.server";
 
 export const ClearCacheAction = () => {
   const t = useTranslations("admin.debug.actions.clear_cache");

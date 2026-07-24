@@ -10,7 +10,7 @@ import { ErrorView } from "@/views/error/error-view";
 import type { getMiddlewareApi } from "../../../../../lib/api/get-middleware-api";
 
 import { Button } from "../../../../../components/ui/button";
-import { mutationApi } from "./mutation-api";
+import { mutationApi } from "./mutation-api.server";
 
 export const ClientCallbackSSO = ({
   providerId,

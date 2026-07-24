@@ -21,7 +21,7 @@ import {
   useDialog,
 } from "@/components/ui/dialog";
 
-import { mutationApi } from "./mutation-api";
+import { mutationApi } from "./mutation-api.server";
 
 export const EditNameCode = ({
   id,

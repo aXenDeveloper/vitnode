@@ -16,7 +16,7 @@ import { z } from "zod";
 
 import type { zodCategorySchema } from "@/api/modules/categories/routes/get.route";
 
-import { createMutationApi, editMutationApi } from "./mutation-api";
+import { createMutationApi, editMutationApi } from "./mutation-api.server";
 
 export const CreateEditActionCategoriesAdmin = ({
   data,

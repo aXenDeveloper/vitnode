@@ -26,13 +26,13 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { useRouter } from "@/lib/navigation";
 
-import type { Role } from "../../users/show/roles/search-roles.action";
-import type { StaffUserOption } from "./search.action";
+import type { Role } from "../../users/show/roles/search-roles.action.server";
+import type { StaffUserOption } from "./search.action.server";
 
-import { searchRolesForUser } from "../../users/show/roles/search-roles.action";
+import { searchRolesForUser } from "../../users/show/roles/search-roles.action.server";
 import { SelectableCard } from "../selectable-card";
-import { createStaffEntry } from "./mutation-api";
-import { searchUsersForStaff } from "./search.action";
+import { createStaffEntry } from "./mutation-api.server";
+import { searchUsersForStaff } from "./search.action.server";
 
 const roleName = (role: Role, locale: string) =>
   role.name.find(item => item.languageCode === locale)?.name ??

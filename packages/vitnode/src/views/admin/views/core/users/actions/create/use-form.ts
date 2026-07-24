@@ -6,7 +6,7 @@ import type { AutoFormOnSubmit } from "@/components/form/auto-form";
 
 import { useDialog } from "@/components/ui/dialog";
 
-import { mutationApi } from "./mutation-api";
+import { mutationApi } from "./mutation-api.server";
 
 export const useFormCreateUserAdmin = () => {
   const t = useTranslations("admin.user.create");

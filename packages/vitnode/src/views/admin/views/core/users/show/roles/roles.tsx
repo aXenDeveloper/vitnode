@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import type { Role } from "./search-roles.action";
+import type { Role } from "./search-roles.action.server";
 
 import { EditRoles } from "./edit-roles";
 

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { Link } from "@/lib/navigation";
 
-import { deleteStaffEntry } from "./delete-action";
+import { deleteStaffEntry } from "./delete-action.server";
 
 export const StaffRowActions = ({
   type,

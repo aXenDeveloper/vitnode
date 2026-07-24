@@ -13,7 +13,7 @@ import { TooltipWithContent } from "@/components/ui/tooltip";
 import { CONFIG_PLUGIN } from "@/config";
 import { clientModule, fetcherClient } from "@/lib/fetcher-client";
 
-import { deleteFileAction } from "./delete-action";
+import { deleteFileAction } from "./delete-action.server";
 
 export const FileRowActions = ({
   canDelete,

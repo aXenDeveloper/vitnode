@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { CONFIG_PLUGIN } from "@/config";
 import { Link } from "@/lib/navigation";
-import { logOutMutationApi } from "@/views/layouts/theme/header/user/auth/log-out-mutation-api";
+import { logOutMutationApi } from "@/views/layouts/theme/header/user/auth/log-out-mutation-api.server";
 
 export const ClientUserBarAdmin = ({
   user,

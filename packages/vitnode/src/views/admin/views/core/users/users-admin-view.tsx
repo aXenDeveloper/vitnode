@@ -10,7 +10,7 @@ import { TooltipWithContent } from "@/components/ui/tooltip";
 import { fetcher } from "@/lib/fetcher";
 
 import { UsersAdminActions } from "./actions";
-import { searchRolesAdmin } from "./search-roles.action";
+import { searchRolesAdmin } from "./search-roles.action.server";
 
 export const UsersAdminView = async ({
   searchParams,
