@@ -1,6 +1,6 @@
 {
   "name": "@vitnode/supabase-storage",
-  "version": "1.2.0-canary.76",
+  "version": "1.2.0-canary.77",
   "description": "Supabase Storage adapter for VitNode file uploads.",
   "author": "VitNode Team",
   "license": "MIT",
