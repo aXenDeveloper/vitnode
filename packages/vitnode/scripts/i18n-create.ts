@@ -1,0 +1,363 @@
+/* eslint-disable no-console */
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+
+import { getConfig } from "./get-config.js";
+import {
+  appScope,
+  CORE_PLUGIN_ID,
+  createReadline,
+  cyan,
+  dim,
+  findI18nSourceFile,
+  green,
+  packageDefaultTree,
+  prefix,
+  type Readline,
+  red,
+  resolveField,
+} from "./i18n-shared.js";
+import { findRepoRoot } from "./shared/file-utils.js";
+
+const LOCALE_CODE_PATTERN = /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/;
+
+/** One `import("./locales/<pluginId>/<code>.json")` loader, indented. */
+const messageEntry = (indent: string, pluginId: string, code: string) =>
+  `${indent}"${pluginId}": () => import("./locales/${pluginId}/${code}.json"),`;
+
+/** True when the char right after an opening bracket starts a new line. */
+const opensOnNewLine = (source: string, afterOpen: number): boolean =>
+  /^[^\S\n]*\n/.test(source.slice(afterOpen));
+
+/**
+ * Inserts a `{ code, name }` object as the first element of the `locales`
+ * array. Prepending sidesteps the trailing-comma-before-`]` problem, so the
+ * result stays valid whatever the surrounding formatting looks like. When the
+ * array was written inline (`[{ ... }]`) the existing entry is pushed onto its
+ * own line too, so the result reads cleanly without a formatter.
+ *
+ * Returns `null` when the file has no recognisable `locales: [` array to edit.
+ */
+export const addLocaleToConfig = (
+  source: string,
+  { code, name }: { code: string; name: string },
+): null | string => {
+  const match = /^([^\S\n]*)locales\s*:\s*\[/m.exec(source);
+  if (match?.index === undefined) return null;
+
+  const indent = `${match[1]}  `;
+  const at = match.index + match[0].length;
+  const entry = `{ code: "${code}", name: "${name}" },`;
+  const insertion = opensOnNewLine(source, at)
+    ? `\n${indent}${entry}`
+    : `\n${indent}${entry}\n${indent}`;
+
+  return source.slice(0, at) + insertion + source.slice(at);
+};
+
+/** Index of the `]` that closes the array whose `[` sits at `openIndex`. */
+const matchingBracket = (source: string, openIndex: number): number => {
+  let depth = 0;
+  for (let i = openIndex; i < source.length; i += 1) {
+    if (source[i] === "[") depth += 1;
+    else if (source[i] === "]") {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+  }
+
+  return -1;
+};
+
+/**
+ * Adds a `<code>: { ...loaders }` block to `messages`. Extends the object when
+ * it already exists, otherwise drops a whole `messages` block in right after
+ * the `locales` array. Assumes `addLocaleToConfig` has already run, so a
+ * `locales` array is guaranteed to be present.
+ */
+export const addMessagesToConfig = (
+  source: string,
+  { code, pluginIds }: { code: string; pluginIds: string[] },
+): null | string => {
+  const existing = /^([^\S\n]*)messages\s*:\s*\{/m.exec(source);
+
+  if (existing?.index !== undefined) {
+    const baseIndent = existing[1];
+    const codeIndent = `${baseIndent}  `;
+    const entryIndent = `${codeIndent}  `;
+    const entries = pluginIds
+      .map(id => messageEntry(entryIndent, id, code))
+      .join("\n");
+    const at = existing.index + existing[0].length;
+    const inner = `\n${codeIndent}"${code}": {\n${entries}\n${codeIndent}},`;
+    // Close the object onto its own line when it was written inline (`{}`).
+    const block = opensOnNewLine(source, at)
+      ? inner
+      : `${inner}\n${baseIndent}`;
+
+    return source.slice(0, at) + block + source.slice(at);
+  }
+
+  // No `messages` yet - place one straight after the `locales` array.
+  const locales = /^([^\S\n]*)locales\s*:\s*\[/m.exec(source);
+  if (locales?.index === undefined) return null;
+
+  const open = source.indexOf("[", locales.index);
+  const close = matchingBracket(source, open);
+  if (close === -1) return null;
+
+  const indent = locales[1];
+  const codeIndent = `${indent}  `;
+  const entryIndent = `${codeIndent}  `;
+  const entries = pluginIds
+    .map(id => messageEntry(entryIndent, id, code))
+    .join("\n");
+
+  // The array may or may not carry a trailing comma; normalise either way.
+  let at = close + 1;
+  let lead = ",";
+  if (source[at] === ",") {
+    at += 1;
+    lead = "";
+  }
+  const block = `${lead}\n${indent}messages: {\n${codeIndent}"${code}": {\n${entries}\n${codeIndent}},\n${indent}},`;
+
+  return source.slice(0, at) + block + source.slice(at);
+};
+
+/** A complete `src/i18n.ts` for an app that has no i18n config yet. */
+export const buildI18nFile = ({
+  code,
+  defaultLocale,
+  locales,
+  name,
+  pluginIds,
+}: {
+  code: string;
+  defaultLocale: string;
+  locales: { code: string; name: string }[];
+  name: string;
+  pluginIds: string[];
+}): string => {
+  const localeLines = [...locales, { code, name }]
+    .map(locale => `    { code: "${locale.code}", name: "${locale.name}" },`)
+    .join("\n");
+  const entries = pluginIds
+    .map(id => messageEntry("      ", id, code))
+    .join("\n");
+
+  return `import type { VitNodeI18nConfig } from "@vitnode/core/lib/i18n/types";
+
+/**
+ * Shared by \`vitnode.config.ts\` (web) and \`vitnode.api.config.ts\` (API) so the
+ * site and its emails agree on which languages exist. Packages ship their own
+ * languages - only what this app adds or reworks needs a file here.
+ */
+export const i18n = {
+  defaultLocale: "${defaultLocale}",
+  locales: [
+${localeLines}
+  ],
+  messages: {
+    "${code}": {
+${entries}
+    },
+  },
+} satisfies VitNodeI18nConfig;
+`;
+};
+
+export const i18nCreate = async () => {
+  const appDir = process.cwd();
+
+  // Load both configs: their presence tells us the app's shape (frontend, API,
+  // or both), which decides how much of each package to seed.
+  const webConfig = await getConfig({ optional: true });
+  const apiConfig = await getConfig({ optional: true, type: "api.config" });
+  const config = webConfig ?? apiConfig;
+
+  if (!config) {
+    console.error(red("No vitnode.config.ts or vitnode.api.config.ts found."));
+    process.exit(1);
+  }
+
+  // An API-only app seeds email strings alone; a single app gets both trees.
+  const scope = appScope({ api: apiConfig !== null, web: webConfig !== null });
+  const isApiOnly = webConfig === null;
+  const defaultLocale = config.i18n?.defaultLocale ?? "en";
+  const existingLocales = (config.i18n?.locales ?? []).map(locale => ({
+    code: locale.code,
+    name: locale.name,
+  }));
+  const knownCodes = new Set([
+    defaultLocale,
+    ...existingLocales.map(locale => locale.code),
+  ]);
+  // Union plugin ids across both configs - a plugin might be registered only on
+  // the API side (e.g. it just sends email) yet still needs a seed file.
+  const pluginIds = [
+    ...new Set([
+      CORE_PLUGIN_ID,
+      ...[webConfig, apiConfig].flatMap(loaded =>
+        ((loaded?.plugins ?? []) as { pluginId: string }[]).map(
+          plugin => plugin.pluginId,
+        ),
+      ),
+    ]),
+  ].sort((a, b) => a.localeCompare(b));
+
+  const validateCode = (value: string): null | string => {
+    if (!value) return "A locale code is required.";
+    if (!LOCALE_CODE_PATTERN.test(value)) {
+      return "Use an ISO code like `pl`, `de`, or `pt-BR`.";
+    }
+    if (knownCodes.has(value)) return `"${value}" already exists in this app.`;
+
+    return null;
+  };
+  const validateName = (value: string): null | string =>
+    value ? null : "A language name is required.";
+
+  // `vitnode i18n:create [code] [name...]` - anything supplied on the command
+  // line skips its prompt, so the command is scriptable and never blocks on a
+  // non-interactive stdin.
+  const [argCode, ...argNameParts] = process.argv.slice(3);
+  const argName = argNameParts.join(" ").trim() || undefined;
+  const isInteractive = process.stdin.isTTY ?? false;
+  const needsPrompt = argCode === undefined || argName === undefined;
+  const rl: null | Readline =
+    isInteractive && needsPrompt ? createReadline() : null;
+  const missing = 'Run: vitnode i18n:create <code> "<name>"';
+
+  if (rl) {
+    console.log(`${prefix} Add a language. Press Ctrl+C to abort.\n`);
+  }
+
+  let code: string;
+  let name: string;
+  try {
+    code = await resolveField({
+      missingMessage: `Missing locale code. ${missing}`,
+      provided: argCode,
+      question: cyan("? Locale code (e.g. pl, de, pt-BR): "),
+      rl,
+      validate: validateCode,
+    });
+    name = await resolveField({
+      missingMessage: `Missing language name. ${missing}`,
+      provided: argName,
+      question: cyan("? Language name (e.g. Polski, Deutsch): "),
+      rl,
+      validate: validateName,
+    });
+  } finally {
+    rl?.close();
+  }
+
+  console.log();
+
+  // 1. Seed one override file per package with that package's default-locale
+  //    strings for the trees this app uses, so every key is present to
+  //    translate in place instead of starting from an empty object.
+  let repoRoot = appDir;
+  try {
+    repoRoot = findRepoRoot(appDir);
+  } catch {
+    // Not inside a project root (unusual) - fall back to empty templates.
+  }
+
+  const created: string[] = [];
+  const skipped: string[] = [];
+  const empty: string[] = [];
+  // Only the packages that actually have strings in this scope get a file - and
+  // only those get wired into the config, so no loader points at a file that
+  // was never written (e.g. a plugin with no server strings in an API-only app).
+  const wiredPluginIds: string[] = [];
+
+  for (const pluginId of pluginIds) {
+    const filePath = join(appDir, "src", "locales", pluginId, `${code}.json`);
+    if (existsSync(filePath)) {
+      skipped.push(relative(appDir, filePath));
+      wiredPluginIds.push(pluginId);
+      continue;
+    }
+
+    // Only the trees this app uses, merged - so an API-only app is seeded with
+    // the handful of email keys, not the whole admin UI it never renders.
+    const tree = packageDefaultTree(pluginId, {
+      locale: defaultLocale,
+      repoRoot,
+      scope,
+    });
+    if (Object.keys(tree).length === 0) {
+      empty.push(pluginId);
+      continue;
+    }
+
+    mkdirSync(dirname(filePath), { recursive: true });
+    writeFileSync(filePath, `${JSON.stringify(tree, null, 2)}\n`);
+    created.push(relative(appDir, filePath));
+    wiredPluginIds.push(pluginId);
+  }
+
+  for (const file of created) console.log(green(`  created  ${file}`));
+  for (const file of skipped) console.log(dim(`  exists   ${file}`));
+  for (const pluginId of empty) {
+    console.log(dim(`  skipped  ${pluginId} (no strings for this app)`));
+  }
+
+  // 2. Wire the locale into the i18n config.
+  const sourceFile = findI18nSourceFile(appDir);
+
+  if (!sourceFile) {
+    const target = join(appDir, "src", "i18n.ts");
+    writeFileSync(
+      target,
+      buildI18nFile({
+        code,
+        defaultLocale,
+        locales: existingLocales,
+        name,
+        pluginIds: wiredPluginIds,
+      }),
+    );
+    console.log(green(`  created  ${relative(appDir, target)}`));
+    const builder = isApiOnly ? "buildApiConfig" : "buildConfig";
+    console.log(
+      `\n${prefix} Import it into your config so the app picks it up:\n` +
+        dim('  import { i18n } from "./i18n";\n') +
+        dim(`  ${builder}({ i18n, /* ... */ });`),
+    );
+  } else {
+    const original = readFileSync(sourceFile, "utf-8");
+    const withLocale = addLocaleToConfig(original, { code, name });
+    const wired = withLocale
+      ? addMessagesToConfig(withLocale, { code, pluginIds: wiredPluginIds })
+      : null;
+
+    if (wired) {
+      writeFileSync(sourceFile, wired);
+      console.log(green(`  updated  ${relative(appDir, sourceFile)}`));
+    } else {
+      // The config is shaped in a way we will not edit blindly - show the
+      // exact lines to add instead of risking a broken file.
+      const messages = wiredPluginIds
+        .map(
+          id => `      "${id}": () => import("./locales/${id}/${code}.json"),`,
+        )
+        .join("\n");
+      console.log(
+        `\n${prefix} Couldn't edit ${relative(appDir, sourceFile)} automatically. Add:\n` +
+          dim(
+            `  locales: [{ code: "${code}", name: "${name}" }, /* ... */]\n`,
+          ) +
+          dim(`  messages: {\n    "${code}": {\n${messages}\n    },\n  }`),
+      );
+    }
+  }
+
+  console.log(
+    `\n${prefix} ${green(name)} (${code}) added. Translate the files above, then run ${cyan("vitnode i18n:check")}.`,
+  );
+  process.exit(0);
+};

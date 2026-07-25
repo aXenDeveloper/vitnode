@@ -222,7 +222,7 @@ export const createVitNode = async ({
   spinner.text = "Updating VitNode paths...";
   if (
     (mode === "apiMonorepo" || monorepo) &&
-    packageManager !== "pnpm" &&
+    packageManager === "npm" &&
     mode !== "onlyApi"
   ) {
     const globalCssPath = join(

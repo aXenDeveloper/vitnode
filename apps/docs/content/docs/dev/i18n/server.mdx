@@ -17,6 +17,8 @@ return c.json({ message: t("core.global.save") });
   plugin and its translations are available on the server immediately.
 </Callout>
 
+The server loads a different, smaller set of strings than the frontend. Packages ship two trees - the frontend's UI copy in `src/locales/`, and the server's strings (emails) in `src/locales/api/` - and the API only ever loads the second. An API-only app never pulls in the admin UI's messages.
+
 ## Which locale a request gets
 
 `resolveLocale` walks four options in order and takes the first one your app actually lists in `i18n.locales`:
@@ -144,20 +146,22 @@ export default function WelcomeEmail({ i18n }: DefaultTemplateEmailProps) {
 
 ## Shipping translations with a plugin
 
-A plugin owns its languages. Drop the JSON in `src/locales/`, list it in a barrel, and register the barrel in both configs:
+A plugin owns its languages, and it splits them the same way the framework does: frontend strings in `src/locales/`, server strings (emails) in `src/locales/api/`. Each tree gets a barrel and is registered with the matching config - the frontend tree with `buildPlugin` in `config.tsx`, the server tree with `buildApiPlugin` in `config.api.ts`.
 
-```ts title="plugins/{your_plugin}/src/locales/index.ts"
+Most plugins render nothing server-side, so they ship only the frontend tree and register `messages` in `config.tsx` alone. Add the `api/` tree only when your plugin sends email:
+
+```ts title="plugins/{your_plugin}/src/locales/api/index.ts"
 import type { LocaleMessagesMap } from "@vitnode/core/lib/i18n/types";
 
 const messages: LocaleMessagesMap = {
-  en: () => import("./en.json", { with: { type: "json" } }),
+  en: async () => await import("./en.json", { with: { type: "json" } }),
 };
 
 export default messages;
 ```
 
 ```ts title="plugins/{your_plugin}/src/config.api.ts"
-import messages from "./locales"; // [!code ++]
+import messages from "./locales/api"; // [!code ++]
 
 export const yourApiPlugin = () =>
   buildApiPlugin({
@@ -167,7 +171,24 @@ export const yourApiPlugin = () =>
   });
 ```
 
-Do the same with `buildPlugin` in `config.tsx` for the frontend. Adding a language later is a new file plus one line in the barrel - apps pick it up on their next install, and can translate your plugin without forking it by dropping a file in their own `src/locales/{your_plugin}/`.
+Adding a language later is a new file plus one line in the barrel - apps pick it up on their next install, and can translate your plugin without forking it by dropping a file in their own `src/locales/{your_plugin}/`.
+
+## Typing the keys
+
+`t()` autocompletes from a `global.d.ts` that augments next-intl's `Messages`. Import the tree an app actually uses: an API-only app types against the server tree alone, a frontend-only app against the frontend tree, and a single app - one that serves the frontend and runs the API together - against both.
+
+```ts title="global.d.ts (single app)"
+/// <reference types="next-intl" />
+
+import coreApi from "@vitnode/core/locales/api/en.json" with { type: "json" };
+import core from "@vitnode/core/locales/en.json" with { type: "json" };
+
+declare module "next-intl" {
+  interface AppConfig {
+    Messages: typeof core & typeof coreApi; // [!code highlight]
+  }
+}
+```
 
 <Callout title="Keys must be namespaced" type="warn">
   Everything a plugin ships belongs under its own namespace, or it will collide

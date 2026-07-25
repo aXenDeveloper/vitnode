@@ -41,6 +41,9 @@ const rootScripts = (
   dev: "turbo dev",
   build: "turbo build",
   start: "turbo start",
+  "i18n:create": "turbo i18n:create",
+  "i18n:check": "turbo i18n:check",
+  "i18n:delete": "turbo i18n:delete",
   ...withIf(enableEslint, {
     lint: "turbo lint",
     "lint:fix": "turbo lint:fix",
@@ -68,6 +71,9 @@ const apiScripts = (
         start: "node dist/index.js",
       }),
   "dev:email": "email dev --dir src/emails",
+  "i18n:create": "vitnode i18n:create",
+  "i18n:check": "vitnode i18n:check",
+  "i18n:delete": "vitnode i18n:delete",
   ...withIf(eslint, eslintScripts),
   ...withIf(docker && onlyApi, { "docker:dev": dockerDevScript(appName) }),
   "drizzle-kit": "drizzle-kit",
@@ -84,6 +90,9 @@ const singleAppScripts = (
   "dev:email": "email dev --dir src/emails",
   build: "next build",
   start: "next start",
+  "i18n:create": "vitnode i18n:create",
+  "i18n:check": "vitnode i18n:check",
+  "i18n:delete": "vitnode i18n:delete",
   ...withIf(eslint, eslintScripts),
   ...withIf(docker, { "docker:dev": dockerDevScript(appName) }),
   "drizzle-kit": "drizzle-kit",
@@ -94,6 +103,9 @@ const webScripts = (eslint: boolean) => ({
   dev: "vitnode init --web && next dev",
   build: "next build",
   start: "next start",
+  "i18n:create": "vitnode i18n:create",
+  "i18n:check": "vitnode i18n:check",
+  "i18n:delete": "vitnode i18n:delete",
   ...withIf(eslint, eslintScripts),
 });
 
@@ -169,6 +181,7 @@ const singleAppDeps = {
   "react-hook-form": versionsPackageJson.rhf,
   sonner: versionsPackageJson.sonner,
   zod: versionsPackageJson.zod,
+  shadcn: versionsPackageJson.shadcn,
 };
 
 const singleAppDevDeps = (eslint: boolean) => ({
@@ -199,6 +212,7 @@ const webDeps = {
   "react-dom": versionsPackageJson.reactDom,
   "react-hook-form": versionsPackageJson.rhf,
   sonner: versionsPackageJson.sonner,
+  shadcn: versionsPackageJson.shadcn,
 };
 
 const webDevDeps = (eslint: boolean) => ({

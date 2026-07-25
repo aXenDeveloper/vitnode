@@ -20,7 +20,7 @@ import { SessionAdminModel } from "@/api/models/session-admin";
 import { StorageModel } from "@/api/models/storage";
 import { CONFIG } from "@/lib/config";
 import { collectLocaleCodes } from "@/lib/i18n/load-messages";
-import { buildMessagesSources } from "@/lib/i18n/sources";
+import { buildApiMessagesSources } from "@/lib/i18n/sources";
 import { realtime } from "@/ws/registry";
 
 import type { BuildCronReturn } from "../lib/cron";
@@ -166,8 +166,9 @@ export const globalMiddleware = ({
 
   // Resolved once at boot: the packages installed here can't change per
   // request. With no `i18n` block the locale list is whatever the installed
-  // packages happen to ship.
-  const messagesSources = buildMessagesSources({
+  // packages happen to ship. The server only ever needs the API tree - emails,
+  // not admin UI copy.
+  const messagesSources = buildApiMessagesSources({
     appMessages: i18n?.messages,
     plugins,
   });

@@ -55,6 +55,15 @@
       "persistent": true,
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "env": ["POSTGRES_URL", "NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_WEB_URL"]
+    },
+    "i18n:create": {
+      "dependsOn": ["^i18n:create"]
+    },
+    "i18n:check": {
+      "dependsOn": ["^i18n:check"]
+    },
+    "i18n:delete": {
+      "dependsOn": ["^i18n:delete"]
     }
   }
 }

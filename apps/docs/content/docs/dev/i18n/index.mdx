@@ -22,6 +22,51 @@ On top of that, the default locale is merged _underneath_ the language being ren
 
 ## Adding one
 
+The CLI does the whole thing. It asks for the language's code and name, scaffolds an override file for every installed package, and wires the locale into your `i18n` config:
+
+```bash
+vitnode i18n:create
+```
+
+```text
+[VitNode] Add a language. Press Ctrl+C to abort.
+
+? Locale code (e.g. pl, de, pt-BR): de
+? Language name (e.g. Polski, Deutsch): Deutsch
+
+  created  src/locales/@vitnode/core/de.json
+  created  src/locales/@vitnode/blog/de.json
+  updated  src/i18n.ts
+
+[VitNode] Deutsch (de) added. Translate the files above, then run vitnode i18n:check.
+```
+
+Pass both inline to skip the prompts - handy in scripts and CI: `vitnode i18n:create de Deutsch`.
+
+<Callout title="What it changes" type="info">
+  Two things: one override file per installed package under
+  `src/locales/{pluginId}/{locale}.json`, each seeded with that package's English
+  strings so they are right there to translate in place, and your `i18n` config -
+  the `{ code, name }` entry in `locales` plus a `messages` block pointing at
+  those files. An app with no `i18n` config yet - an API-only app, say - gets a
+  fresh `src/i18n.ts` instead, and the command prints the one line to import it
+  into your config.
+</Callout>
+
+<Callout title="It seeds only what the app renders" type="info">
+  The seed matches the app's shape. An **API-only** app is seeded with each
+  package's server strings alone - the emails, a few keys - not the admin UI it
+  never renders. A **frontend** app gets the UI strings, and a **single app**
+  (frontend and API together) gets both. A package that ships nothing for the
+  app's shape - a plugin with no emails in an API-only app - is skipped rather
+  than seeded with an empty file. See [Server-side](/docs/dev/i18n/server) for
+  the two trees.
+</Callout>
+
+Fill in the files it lists and you are done - the rest of this page is what `create` does under the hood, for when you would rather wire a language up by hand or the command meets an unusual config it will not edit blindly.
+
+### By hand
+
 <Steps>
 
 <Step>
@@ -107,11 +152,27 @@ export const vitNodeApiConfig = buildApiConfig({
 vitnode i18n:check
 ```
 
-It lists every key the new language is still missing, flags keys that no longer exist in the default locale, and - most usefully - catches a locale file you created but forgot to wire into `i18n.messages`. Add `--ci` to make it fail a pipeline.
+It lists every key the new language is still missing and flags keys that no longer exist in the default locale. It **fails outright** - a non-zero exit on its own - when a declared language is missing a package's locale file, or when a file you created was never wired into `i18n.messages`. Those are hard errors, since both leave strings silently untranslated at runtime. Missing individual _keys_ are only warnings; add `--ci` to make those fail a pipeline too.
 
 </Step>
 
 </Steps>
+
+## Removing one
+
+To drop a language, hand `i18n:delete` its code. It deletes that locale's override files, prunes the folders they leave empty, and unwires the `{ code, name }` and `messages` entries from your config:
+
+```bash
+vitnode i18n:delete pl
+```
+
+Run it without a code to be asked for one. When interactive it lists everything it will remove and waits for a `y` before touching anything.
+
+<Callout title="English and the default locale stay put" type="warn">
+  `i18n:delete` refuses to remove `en` - the built-in fallback every translation
+  degrades to - or whatever your `defaultLocale` is. Point `defaultLocale` at
+  another language first if you really mean to retire the current one.
+</Callout>
 
 ## The API side
 
