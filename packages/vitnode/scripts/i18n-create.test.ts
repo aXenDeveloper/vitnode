@@ -91,6 +91,71 @@ describe("addLocaleToConfig (inline array)", () => {
   });
 });
 
+// An inline config where a plugin's options carry their own `locales` array and
+// `messages` object *before* the real i18n block - the case a whole-file search
+// gets wrong by editing the first match it finds.
+const inlineConfigWithDecoyPlugin = `import { buildConfig } from "@vitnode/core";
+import { somePlugin } from "@vitnode/some";
+
+export default buildConfig({
+  plugins: [
+    somePlugin({
+      locales: ["decoy"],
+      messages: { decoy: true },
+    }),
+  ],
+  i18n: {
+    defaultLocale: "en",
+    locales: [
+      { code: "en", name: "English" },
+    ],
+    messages: {
+      pl: {
+        "@vitnode/core": () => import("./locales/@vitnode/core/pl.json"),
+      },
+    },
+  },
+});
+`;
+
+describe("addLocaleToConfig (scoped to the i18n object)", () => {
+  it("edits i18n.locales, not a plugin's earlier locales array", () => {
+    const out = notNull(
+      addLocaleToConfig(inlineConfigWithDecoyPlugin, {
+        code: "de",
+        name: "Deutsch",
+      }),
+    );
+
+    // The unrelated plugin array is left exactly as it was.
+    expect(out).toContain('locales: ["decoy"],');
+    // The new entry lands inside the real i18n block, after `i18n:`.
+    expect(out).toContain('{ code: "de", name: "Deutsch" },');
+    expect(out.indexOf('{ code: "de"')).toBeGreaterThan(out.indexOf("i18n:"));
+  });
+});
+
+describe("addMessagesToConfig (scoped to the i18n object)", () => {
+  it("edits i18n.messages, not a plugin's earlier messages object", () => {
+    const out = notNull(
+      addMessagesToConfig(inlineConfigWithDecoyPlugin, {
+        code: "de",
+        pluginIds: ["@vitnode/core"],
+      }),
+    );
+
+    // The unrelated plugin object is left exactly as it was.
+    expect(out).toContain("messages: { decoy: true },");
+    // The loader is wired into the real i18n block, after `i18n:`.
+    expect(out).toContain(
+      '"@vitnode/core": () => import("./locales/@vitnode/core/de.json"),',
+    );
+    expect(out.indexOf('"de": {')).toBeGreaterThan(out.indexOf("i18n:"));
+    // The existing `pl` block survives.
+    expect(out).toContain("pl: {");
+  });
+});
+
 describe("addMessagesToConfig", () => {
   it("closes an inline empty messages object onto its own line", () => {
     const inline = `export const i18n = {

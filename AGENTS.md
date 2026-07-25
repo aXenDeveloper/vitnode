@@ -70,7 +70,7 @@ revalidateTag("products", { revalidate: 3600 });
 
 # Documentation
 
-- Don't use big comments. Remember that code is self-documenting.
+- Don't write big comments. Remember that code is self-documenting.
 - If should be simple. if docs requires image to better understand, add comment:
 
 ```markdown

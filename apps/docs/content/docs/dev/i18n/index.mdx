@@ -203,7 +203,41 @@ Run it without a code to be asked for one. When interactive it lists everything 
 <Callout title="English and the default locale stay put" type="warn">
   `i18n:delete` refuses to remove `en` - the built-in fallback every translation
   degrades to - or whatever your `defaultLocale` is. Point `defaultLocale` at
-  another language first if you really mean to retire the current one.
+  another language first if you really mean to retire the current one. To take a
+  language out of circulation without deleting it - English included - **disable**
+  it instead (below).
+</Callout>
+
+## Disabling one
+
+Deleting a language throws its files away. When you only want to take a language
+out of circulation - keep the translations on disk, just stop offering it - set
+`enabled: false` on its `locales` entry instead:
+
+```ts title="src/i18n.ts"
+export const i18n = {
+  defaultLocale: "en",
+  locales: [
+    { code: "en", name: "English" },
+    { code: "pl", name: "Polski", enabled: false }, // [!code ++]
+  ],
+  // ...messages unchanged
+} satisfies VitNodeI18nConfig;
+```
+
+A disabled locale is no longer **selectable**: it drops out of the language
+pickers built on it (the multi-language form field) and search stops indexing
+documents for it. Everything else stays put - its `src/locales` files remain on
+disk, its row and translated words in the database are untouched, and it still
+resolves at runtime as a fallback. Flip `enabled` back to `true` (or drop the
+field) and it returns exactly as it was.
+
+<Callout title="You can disable the default locale too" type="info">
+  Unlike deletion, disabling works on any locale, `en` and your `defaultLocale`
+  included - handy for a site that runs in another language but keeps English as
+  the technical fallback. The default locale still merges underneath every other
+  language whether or not it is enabled, so disabling it only hides it from the
+  pickers; it never leaves strings untranslated.
 </Callout>
 
 ## The API side

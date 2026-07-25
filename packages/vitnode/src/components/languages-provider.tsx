@@ -12,10 +12,17 @@ export const LanguagesProvider = ({
 }: {
   children: React.ReactNode;
   languages: LocaleConfig[];
-}) => (
-  <LanguagesContext.Provider value={languages}>
-    {children}
-  </LanguagesContext.Provider>
-);
+}) => {
+  const enabled = React.useMemo(
+    () => languages.filter(language => language.enabled !== false),
+    [languages],
+  );
+
+  return (
+    <LanguagesContext.Provider value={enabled}>
+      {children}
+    </LanguagesContext.Provider>
+  );
+};
 
 export const useLanguages = (): LocaleConfig[] => React.use(LanguagesContext);

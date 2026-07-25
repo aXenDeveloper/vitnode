@@ -141,6 +141,13 @@
       "when": 1784921474193,
       "tag": "0019_add_role_upload_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1785008794334,
+      "tag": "0020_lazy_logan",
+      "breakpoints": true
     }
   ]
 }

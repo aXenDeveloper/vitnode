@@ -38,6 +38,55 @@ const opensOnNewLine = (source: string, afterOpen: number): boolean =>
   /^[^\S\n]*\n/.test(source.slice(afterOpen));
 
 /**
+ * Bounds of the app's `i18n` config object, `{ start, end }` pointing at its
+ * opening and closing braces. Both edits below must land *inside* this object:
+ * an inline config can carry an unrelated `locales` array or `messages` object
+ * in a plugin's options before the i18n block, and a whole-file search would
+ * splice the new language into that first match instead - reporting success
+ * while the runtime config stays untouched.
+ *
+ * The object is always introduced by `i18n = {` (a dedicated `src/i18n.ts`) or
+ * `i18n: {` (inline in a config), which a plugin's option block can't spoof.
+ * Returns `null` when no such object is found, so callers fall back to printing
+ * manual instructions rather than editing blindly.
+ */
+const i18nObjectBounds = (
+  source: string,
+): null | { end: number; start: number } => {
+  const anchor = /\bi18n\s*[:=]\s*\{/.exec(source);
+  if (anchor?.index === undefined) return null;
+
+  const start = anchor.index + anchor[0].length - 1; // the `{` itself
+  let depth = 0;
+  for (let i = start; i < source.length; i += 1) {
+    if (source[i] === "{") depth += 1;
+    else if (source[i] === "}") {
+      depth -= 1;
+      if (depth === 0) return { end: i, start };
+    }
+  }
+
+  return null;
+};
+
+/**
+ * First match of `re` at or after `from` but before `to`, or `null`. `re` must
+ * carry the `g` flag so `lastIndex` positions the search; `^`/`m` still anchor
+ * to line starts at or after `from`.
+ */
+const execInRange = (
+  re: RegExp,
+  source: string,
+  from: number,
+  to: number,
+): null | RegExpExecArray => {
+  re.lastIndex = from;
+  const match = re.exec(source);
+
+  return match && match.index < to ? match : null;
+};
+
+/**
  * Inserts a `{ code, name }` object as the first element of the `locales`
  * array. Prepending sidesteps the trailing-comma-before-`]` problem, so the
  * result stays valid whatever the surrounding formatting looks like. When the
@@ -50,8 +99,16 @@ export const addLocaleToConfig = (
   source: string,
   { code, name }: { code: string; name: string },
 ): null | string => {
-  const match = /^([^\S\n]*)locales\s*:\s*\[/m.exec(source);
-  if (match?.index === undefined) return null;
+  const bounds = i18nObjectBounds(source);
+  if (!bounds) return null;
+
+  const match = execInRange(
+    /^([^\S\n]*)locales\s*:\s*\[/gm,
+    source,
+    bounds.start,
+    bounds.end,
+  );
+  if (!match) return null;
 
   const indent = `${match[1]}  `;
   const at = match.index + match[0].length;
@@ -87,9 +144,17 @@ export const addMessagesToConfig = (
   source: string,
   { code, pluginIds }: { code: string; pluginIds: string[] },
 ): null | string => {
-  const existing = /^([^\S\n]*)messages\s*:\s*\{/m.exec(source);
+  const bounds = i18nObjectBounds(source);
+  if (!bounds) return null;
 
-  if (existing?.index !== undefined) {
+  const existing = execInRange(
+    /^([^\S\n]*)messages\s*:\s*\{/gm,
+    source,
+    bounds.start,
+    bounds.end,
+  );
+
+  if (existing) {
     const baseIndent = existing[1];
     const codeIndent = `${baseIndent}  `;
     const entryIndent = `${codeIndent}  `;
@@ -107,8 +172,13 @@ export const addMessagesToConfig = (
   }
 
   // No `messages` yet - place one straight after the `locales` array.
-  const locales = /^([^\S\n]*)locales\s*:\s*\[/m.exec(source);
-  if (locales?.index === undefined) return null;
+  const locales = execInRange(
+    /^([^\S\n]*)locales\s*:\s*\[/gm,
+    source,
+    bounds.start,
+    bounds.end,
+  );
+  if (!locales) return null;
 
   const open = source.indexOf("[", locales.index);
   const close = matchingBracket(source, open);

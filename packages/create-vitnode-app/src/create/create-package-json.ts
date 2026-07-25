@@ -27,6 +27,12 @@ const eslintScripts = {
   lint: "eslint .",
   "lint:fix": "eslint . --fix",
 };
+const i18nScripts = {
+  "i18n:create": "vitnode i18n:create",
+  "i18n:check": "vitnode i18n:check",
+  "i18n:delete": "vitnode i18n:delete",
+  "i18n:update": "vitnode i18n:update",
+};
 
 const dockerDevScript = (appName: string) =>
   `docker compose -f ./docker-compose.yml -p ${appName}-vitnode-dev up -d`;
@@ -72,10 +78,7 @@ const apiScripts = (
         start: "node dist/index.js",
       }),
   "dev:email": "email dev --dir src/emails",
-  "i18n:create": "vitnode i18n:create",
-  "i18n:check": "vitnode i18n:check",
-  "i18n:delete": "vitnode i18n:delete",
-  "i18n:update": "vitnode i18n:update",
+  ...i18nScripts,
   ...withIf(eslint, eslintScripts),
   ...withIf(docker && onlyApi, { "docker:dev": dockerDevScript(appName) }),
   "drizzle-kit": "drizzle-kit",
@@ -92,10 +95,7 @@ const singleAppScripts = (
   "dev:email": "email dev --dir src/emails",
   build: "next build",
   start: "next start",
-  "i18n:create": "vitnode i18n:create",
-  "i18n:check": "vitnode i18n:check",
-  "i18n:delete": "vitnode i18n:delete",
-  "i18n:update": "vitnode i18n:update",
+  ...i18nScripts,
   ...withIf(eslint, eslintScripts),
   ...withIf(docker, { "docker:dev": dockerDevScript(appName) }),
   "drizzle-kit": "drizzle-kit",
@@ -106,10 +106,7 @@ const webScripts = (eslint: boolean) => ({
   dev: "vitnode init --web && next dev",
   build: "next build",
   start: "next start",
-  "i18n:create": "vitnode i18n:create",
-  "i18n:check": "vitnode i18n:check",
-  "i18n:delete": "vitnode i18n:delete",
-  "i18n:update": "vitnode i18n:update",
+  ...i18nScripts,
   ...withIf(eslint, eslintScripts),
 });
 

@@ -27,7 +27,7 @@ const Harness = ({
 }: {
   defaultValue?: unknown;
   itemParams?: InputParams;
-  languages?: { code: string; name: string }[];
+  languages?: { code: string; enabled?: boolean; name: string }[];
   onSubmit?: (values: FieldValues) => void;
 }) => {
   const form = useForm({
@@ -77,6 +77,21 @@ describe("AutoFormInput multiLang", () => {
 
   it("does not render the language select for a single language", () => {
     render(<Harness languages={[{ code: "en", name: "English" }]} />);
+
+    expect(screen.queryByRole("combobox")).toBeNull();
+  });
+
+  it("filters out a disabled language so it is not selectable", () => {
+    // `pl` is disabled, leaving only `en` selectable - so the select, which
+    // only appears with more than one language, is not rendered.
+    render(
+      <Harness
+        languages={[
+          { code: "en", name: "English" },
+          { code: "pl", enabled: false, name: "Polski" },
+        ]}
+      />,
+    );
 
     expect(screen.queryByRole("combobox")).toBeNull();
   });

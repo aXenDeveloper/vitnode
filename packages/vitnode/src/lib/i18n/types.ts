@@ -41,6 +41,7 @@ export interface MessagesSource {
 
 export interface LocaleConfig {
   code: string;
+  enabled?: boolean;
   name: string;
 }
 
