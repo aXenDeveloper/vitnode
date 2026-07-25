@@ -11,6 +11,7 @@ import { core_cron } from "@/database/cron";
 
 export const getCronsRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "cron", permission: "can_view" },
   route: {
     method: "get",
     description: "Get Admin Cron Logs",

@@ -10,6 +10,7 @@ import { getNextCronRunDate } from "@/lib/api/get-next-cron-run-date";
 
 export const runCronRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "cron", permission: "can_run" },
   route: {
     method: "post",
     description: "Run a specific cron job",

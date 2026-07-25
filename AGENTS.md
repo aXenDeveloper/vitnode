@@ -20,6 +20,7 @@ import { Activity } from "react";
 
 - Always add breadcrumbs using `@breadcrumb` in the page component (Parallel Routes).
 - Name `x.server.ts` files if inside is 'use server' code in Next.js.
+- Always add staff permissions when it's new admin api.
 
 ### Improved Caching APIs
 

@@ -29,7 +29,14 @@ export const newBuildPluginApiCore = buildApiPlugin({
         { permission: "can_edit", dependsOn: ["can_view"] },
         { permission: "can_edit_admin", dependsOn: ["can_view"] },
       ],
-      roles: ["can_manage"],
+      roles: [
+        "can_view",
+        { permission: "can_create", dependsOn: ["can_view"] },
+        { permission: "can_edit", dependsOn: ["can_view"] },
+        { permission: "can_edit_admin", dependsOn: ["can_edit"] },
+        { permission: "can_delete", dependsOn: ["can_view"] },
+        { permission: "can_delete_admin", dependsOn: ["can_delete"] },
+      ],
       debug: [
         "can_view",
         { permission: "can_clear_cache", dependsOn: ["can_view"] },
@@ -45,6 +52,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
         { permission: "can_delete", dependsOn: ["can_view"] },
       ],
       queue: ["can_view"],
+      cron: ["can_view", { permission: "can_run", dependsOn: ["can_view"] }],
       staff_moderators: [
         "can_view",
         { permission: "can_create", dependsOn: ["can_view"] },

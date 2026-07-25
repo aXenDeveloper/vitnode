@@ -23,10 +23,6 @@ export interface VitNodeEvents {
   "role.created": {
     roleId: number;
   };
-  /**
-   * Declared for plugins implementing role deletion - core has no role
-   * deletion flow yet and never emits this itself.
-   */
   "role.deleted": {
     roleId: number;
   };

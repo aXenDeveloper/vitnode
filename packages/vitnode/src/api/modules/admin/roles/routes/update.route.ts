@@ -6,6 +6,7 @@ import { saveLanguageWords } from "@/api/lib/save-language-words";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_roles } from "@/database/roles";
 
+import { assertCanManageAdminRole } from "../lib/assert-manage-admin-role";
 import { zodRoleNameSchema, zodRoleStorageSchema } from "./create.route";
 
 export const zodUpdateRoleAdminSchema = z
@@ -23,6 +24,7 @@ export const zodUpdateRoleAdminSchema = z
 
 export const updateRoleAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "roles", permission: "can_edit" },
   route: {
     method: "patch",
     description: "Update a role by id (Admin only)",
@@ -81,6 +83,9 @@ export const updateRoleAdminRoute = buildRoute({
     if (!role) {
       return c.json({ error: "Role not found" }, 404);
     }
+
+    // Editing a role that grants admin access requires the elevated permission.
+    await assertCanManageAdminRole(c, { roleId, permission: "can_edit_admin" });
 
     const values: Partial<typeof core_roles.$inferInsert> = {
       updatedAt: new Date(),

@@ -160,6 +160,11 @@ export const getAdminNav = async ({
           {
             title: t("admin.global.nav.users.roles"),
             href: "/admin/core/users/roles",
+            permission: {
+              plugin: CONFIG_PLUGIN.pluginId,
+              module: "roles",
+              permission: "can_view",
+            },
           },
         ],
       },
@@ -205,6 +210,11 @@ export const getAdminNav = async ({
           {
             title: t("admin.global.nav.advanced.cron"),
             href: "/admin/core/advanced/cron",
+            permission: {
+              plugin: CONFIG_PLUGIN.pluginId,
+              module: "cron",
+              permission: "can_view",
+            },
           },
           {
             title: t("admin.global.nav.advanced.queue"),

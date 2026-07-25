@@ -1,10 +1,12 @@
 import { getTranslations } from "next-intl/server";
 import dynamic from "next/dynamic";
+import { notFound } from "next/navigation";
 import React from "react";
 
 import { I18nProvider } from "@vitnode/core/components/i18n-provider";
 import { DataTableSkeleton } from "@vitnode/core/components/table/data-table";
 import { HeaderContent } from "@vitnode/core/components/ui/header-content";
+import { checkAdminPermissionApi } from "@vitnode/core/lib/api/get-session-admin-api";
 
 const CronTableView = dynamic(async () =>
   import("@vitnode/core/views/admin/views/core/advanced/cron/cron-table-view").then(
@@ -26,7 +28,14 @@ export const generateMetadata = async () => {
 export default async function Page(
   props: React.ComponentProps<typeof CronTableView>,
 ) {
-  const t = await getTranslations("admin.advanced.cron");
+  const [t, canView] = await Promise.all([
+    getTranslations("admin.advanced.cron"),
+    checkAdminPermissionApi({ module: "cron", permission: "can_view" }),
+  ]);
+
+  if (!canView) {
+    notFound();
+  }
 
   return (
     <I18nProvider namespaces={["admin.advanced.cron"]}>
