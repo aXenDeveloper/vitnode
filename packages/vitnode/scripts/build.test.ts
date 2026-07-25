@@ -39,6 +39,7 @@ describe("buildPlugin", () => {
       "dist",
       "--config-file",
       ".swcrc",
+      "--copy-files",
     ]);
     expect(runInteractiveShellCommand).toHaveBeenNthCalledWith(3, "tsc-alias", [
       "-p",

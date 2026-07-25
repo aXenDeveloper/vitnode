@@ -40,7 +40,16 @@ export const RootLayout = async ({
 
   return (
     <I18nProvider namespaces={[]}>
-      <RootProvider config={config}>
+      <RootProvider
+        // Hand over only the serialisable slice - the rest of the config
+        // (plugins, message loaders) stays on the server.
+        config={{
+          debug: config.debug,
+          locales: config.i18n.locales,
+          progressBar: config.progressBar,
+          theme: config.theme,
+        }}
+      >
         <VitNodeWebSocketProvider>{children}</VitNodeWebSocketProvider>
       </RootProvider>
     </I18nProvider>

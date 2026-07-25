@@ -1,12 +1,131 @@
 ---
-title: Expand Languages
-description: Expand the languages to your application.
+title: Add a Language
+description: Ship your VitNode app in more than one language.
 ---
 
-<Callout type="warn" title="This documentation is under construction! 🚧">
-  We're working hard to bring you the best documentation experience.
+VitNode is English (`en`) out of the box. Every package - `@vitnode/core` and each plugin - carries its own translations inside `node_modules`, and VitNode merges them at request time. Nothing is copied into your app, so adding a language is two files and a config entry.
+
+## How messages are put together
+
+Sources are merged in order, and later ones win:
+
+```
+@vitnode/core  →  plugin A  →  plugin B  →  your app
+```
+
+On top of that, the default locale is merged _underneath_ the language being rendered. A half-finished translation therefore degrades key by key - untranslated strings show up in your default language instead of leaking `core.global.save` into the page.
+
+<Callout title="You only write what you change" type="info">
+  Your app's locale files are overrides. A file with three keys in it is
+  perfectly valid; the other few hundred come from the packages.
 </Callout>
 
-As default VitNode uses the `en` _(English USA)_ language for the application.
+## Adding one
 
-add to support pg_vector and full-text search for multiple languages, you can use the `languageCode` column in the `search_index` table to specify the language for each row.
+<Steps>
+
+<Step>
+
+### Create the locale file
+
+App translations live in `src/locales/{pluginId}/{locale}.json`, one file per package you want to translate. Keys mirror the package's own `en.json`.
+
+```json title="src/locales/@vitnode/core/pl.json"
+{
+  "core": {
+    "global": {
+      "save": "Zapisz",
+      "cancel": "Anuluj"
+    }
+  }
+}
+```
+
+</Step>
+
+<Step>
+
+### Declare the locale and point at the file
+
+Both entries live in your `i18n` config. Keep it in its own file when your app serves the web and the API together, so the two configs cannot drift apart.
+
+```ts title="src/i18n.ts"
+import type { VitNodeI18nConfig } from "@vitnode/core/lib/i18n/types";
+
+export const i18n = {
+  defaultLocale: "en",
+  locales: [
+    { code: "en", name: "English" },
+    { code: "pl", name: "Polski" }, // [!code ++]
+  ],
+  messages: {
+    // [!code ++:5]
+    pl: {
+      "@vitnode/core": () => import("./locales/@vitnode/core/pl.json"),
+      "@vitnode/blog": () => import("./locales/@vitnode/blog/pl.json"),
+    },
+  },
+} satisfies VitNodeI18nConfig;
+```
+
+<Callout title="Write the path out in full" type="warn">
+  It has to be a literal path. A template literal such as ``() =>
+  import(`./locales/${pluginId}/${locale}.json`)`` is invisible to TypeScript
+  and to the bundler, so the JSON never makes it into your production build and
+  every string renders as its raw key.
+</Callout>
+
+Then hand that object to whichever configs your app has:
+
+```ts title="src/vitnode.config.ts"
+import { i18n } from "./i18n"; // [!code ++]
+
+export const vitNodeConfig = buildConfig({
+  i18n, // [!code ++]
+  plugins: [blogPlugin()],
+  metadata: { title: "VitNode" },
+});
+```
+
+```ts title="src/vitnode.api.config.ts"
+import { i18n } from "./i18n"; // [!code ++]
+
+export const vitNodeApiConfig = buildApiConfig({
+  i18n, // [!code ++]
+  plugins: [blogApiPlugin()],
+  dbProvider: drizzle({ connection: POSTGRES_URL, casing: "camelCase" }),
+});
+```
+
+</Step>
+
+<Step>
+
+### Check your work
+
+```bash
+vitnode i18n:check
+```
+
+It lists every key the new language is still missing, flags keys that no longer exist in the default locale, and - most usefully - catches a locale file you created but forgot to wire into `i18n.messages`. Add `--ci` to make it fail a pipeline.
+
+</Step>
+
+</Steps>
+
+## The API side
+
+An API-only app needs no `i18n` block at all. The languages the installed packages ship are picked up on their own, and `defaultLocale` is `en`:
+
+```ts title="src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [blogApiPlugin()],
+  dbProvider: drizzle({ connection: POSTGRES_URL, casing: "camelCase" }),
+});
+```
+
+Add one when you want to restrict the locale list, change the default, or override strings. See [Server-side](/docs/dev/i18n/server) for what the API does with them.
+
+## Searching in several languages
+
+Each row in `core_search_index` carries a `languageCode`, so a post indexed in Polish is only matched by Polish queries. Rows with an empty `languageCode` match every language - see [Search](/docs/dev/search) for indexing multi-language content.

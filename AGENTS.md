@@ -80,6 +80,8 @@ revalidateTag("products", { revalidate: 3600 });
 - Always write documentation for all new features.
 - Keep docs simple and easy to understand.
 - Use funny and friendly tone in docs, but don't overdo it.
+- Docs should be written in a way that is easy to understand for developers of all skill levels.
+- Keep docs to be SEO friendly and optimized for search engines.
 
 # Testing
 

@@ -3,6 +3,7 @@ import type { Redis } from "ioredis";
 
 import { HTTPException } from "hono/http-exception";
 
+import type { LocaleConfig, MessagesSource } from "@/lib/i18n/types";
 import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
 import type { VitNodeRealtime } from "@/ws/registry";
 
@@ -11,12 +12,15 @@ import { PostgresSearchAdapter } from "@/api/adapters/search/postgres";
 import { CacheModel } from "@/api/lib/cache";
 import { EmailModel } from "@/api/models/email";
 import { EventsModel } from "@/api/models/events";
+import { I18nModel } from "@/api/models/i18n";
 import { QueueModel } from "@/api/models/queue";
 import { SearchModel } from "@/api/models/search";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import { StorageModel } from "@/api/models/storage";
 import { CONFIG } from "@/lib/config";
+import { collectLocaleCodes } from "@/lib/i18n/load-messages";
+import { buildMessagesSources } from "@/lib/i18n/sources";
 import { realtime } from "@/ws/registry";
 
 import type { BuildCronReturn } from "../lib/cron";
@@ -56,6 +60,7 @@ export interface EnvVariablesVitNode {
       email: string;
       emailVerified: boolean;
       id: number;
+      language: string;
       name: string;
       nameCode: string;
       newsletter: boolean;
@@ -83,11 +88,15 @@ export interface EnvVariablesVitNode {
     // in-process scheduler is running the registered jobs automatically. Without
     // it, jobs only run when the cron endpoint is triggered externally.
     hasCronAdapter: boolean;
+    i18n: {
+      defaultLocale: string;
+      locales: LocaleConfig[];
+      sources: MessagesSource[];
+    };
     metadata: {
       shortTitle?: string;
       title: string;
     };
-    pathToMessages: (path: string) => Promise<{ default: object }>;
     permissionStaff: PermissionStaffCatalogEntry[];
     plugins: { id: string }[];
     queue: (BuildQueueTaskReturn & { module: string; pluginId: string })[];
@@ -99,6 +108,7 @@ export interface EnvVariablesVitNode {
   db: Pick<VitNodeApiConfig, "dbProvider">["dbProvider"];
   email: EmailModel;
   events: EventsModel;
+  i18n: I18nModel;
   ipAddress: string;
   log: LoggerMiddlewareType;
   plugin: {
@@ -115,6 +125,7 @@ export interface EnvVariablesVitNode {
     email: string;
     emailVerified: boolean;
     id: number;
+    language: string;
     name: string;
     nameCode: string;
     newsletter: boolean;
@@ -131,7 +142,7 @@ export const globalMiddleware = ({
   cron,
   events,
   plugins,
-  pathToMessages,
+  i18n,
   search,
   storage,
   cacheClient,
@@ -143,7 +154,7 @@ export const globalMiddleware = ({
   | "dbProvider"
   | "email"
   | "events"
-  | "pathToMessages"
+  | "i18n"
   | "plugins"
   | "search"
   | "storage"
@@ -152,6 +163,21 @@ export const globalMiddleware = ({
   const pluginsMetadata = plugins.map(plugin => ({
     id: plugin.pluginId,
   }));
+
+  // Resolved once at boot: the packages installed here can't change per
+  // request. With no `i18n` block the locale list is whatever the installed
+  // packages happen to ship.
+  const messagesSources = buildMessagesSources({
+    appMessages: i18n?.messages,
+    plugins,
+  });
+  const i18nMetadata = {
+    defaultLocale: i18n?.defaultLocale ?? "en",
+    locales:
+      i18n?.locales ??
+      collectLocaleCodes(messagesSources).map(code => ({ code, name: code })),
+    sources: messagesSources,
+  };
 
   const cronMetadata = collectCronJobs(plugins);
 
@@ -235,13 +261,14 @@ export const globalMiddleware = ({
     c.set("cache", new CacheModel(cacheClient, c));
     c.set("email", new EmailModel(c));
     c.set("events", new EventsModel(c));
+    c.set("i18n", new I18nModel(c));
     c.set("queue", new QueueModel(c));
     c.set("search", new SearchModel(c));
     c.set("storage", new StorageModel(c));
     c.set("realtime", realtime);
 
     c.set("core", {
-      pathToMessages,
+      i18n: i18nMetadata,
       metadata,
       email,
       events: {

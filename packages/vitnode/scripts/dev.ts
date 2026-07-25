@@ -31,7 +31,16 @@ export const devPlugin = ({ initMessage }: { initMessage: string }) => {
       "tsconfig.build.json",
       "--preserveWatchOutput",
     ]),
-    spawnWatch("swc", ["src", "-d", "dist", "--config-file", ".swcrc", "-w"]),
+    spawnWatch("swc", [
+      "src",
+      "-d",
+      "dist",
+      "--config-file",
+      ".swcrc",
+      // Keeps locale JSON in `dist` alongside the compiled barrel.
+      "--copy-files",
+      "-w",
+    ]),
     spawnWatch("tsc-alias", ["-w", "-p", "tsconfig.build.json"]),
   ];
 

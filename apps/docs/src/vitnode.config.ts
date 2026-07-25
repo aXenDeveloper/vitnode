@@ -2,6 +2,8 @@ import { blogPlugin } from "@vitnode/blog/config";
 import { buildConfig, handleRequestConfig } from "@vitnode/core/vitnode.config";
 import { getRequestConfig } from "next-intl/server";
 
+import { i18n } from "./i18n";
+
 export const vitNodeConfig = buildConfig({
   metadata: {
     title: "VitNode",
@@ -9,19 +11,7 @@ export const vitNodeConfig = buildConfig({
   },
   plugins: [blogPlugin()],
   debug: false,
-  i18n: {
-    locales: [
-      {
-        code: "en",
-        name: "English",
-      },
-      {
-        code: "pl",
-        name: "Polski",
-      },
-    ],
-    defaultLocale: "en",
-  },
+  i18n,
   theme: {
     defaultTheme: "light",
   },
@@ -33,6 +23,5 @@ export default getRequestConfig(
     await handleRequestConfig({
       requestLocale,
       vitNodeConfig,
-      pathToMessages: async path => await import(`./locales/${path}`),
     }),
 );

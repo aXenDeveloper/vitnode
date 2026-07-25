@@ -5,6 +5,7 @@ import { config } from "dotenv";
 
 import { buildPlugin } from "./build.js";
 import { devPlugin } from "./dev.js";
+import { i18nCheck } from "./i18n-check.js";
 import { processPlugin } from "./plugin.js";
 import {
   generateDatabaseMigrations,
@@ -38,6 +39,10 @@ switch (command) {
 
   case "dev":
     devPlugin({ initMessage });
+    break;
+
+  case "i18n:check":
+    await i18nCheck(flag);
     break;
 
   case "init":

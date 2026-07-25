@@ -8,6 +8,7 @@ import {
   buildInitialRouteMap,
   copyDirectoryRecursive,
   findLocaleRoot,
+  findPackagePath,
   findRepoRoot,
   isDirectoryEmpty,
   type SourceConfig,
@@ -50,29 +51,9 @@ export const preparePluginsFiles = async (flag?: string) => {
   // For both monorepo apps and standalone projects: use current directory as base
   const baseDir = process.cwd();
 
-  const findPluginPath = (pluginName: string): null | string => {
-    const cwd = process.cwd();
-
-    // Check in current working directory first
-    const cwdPluginPath = join(cwd, "node_modules", pluginName);
-    if (existsSync(cwdPluginPath)) {
-      return cwdPluginPath;
-    }
-
-    // Check in monorepo root if it exists and is different from cwd
-    if (repoRoot && repoRoot !== cwd) {
-      const rootPluginPath = join(repoRoot, "node_modules", pluginName);
-      if (existsSync(rootPluginPath)) {
-        return rootPluginPath;
-      }
-    }
-
-    return null;
-  };
-
   await Promise.all(
     plugins.map(async pluginName => {
-      const pluginPath = findPluginPath(pluginName);
+      const pluginPath = findPackagePath(pluginName, repoRoot);
 
       if (!pluginPath) {
         console.error(
@@ -139,7 +120,8 @@ export const preparePluginsFiles = async (flag?: string) => {
           const appType = detectAppType(appPath);
 
           if (appType === "web") {
-            // Web app: copy routes (main + admin) and locales
+            // Web app: copy routes (main + admin). Locales are read from
+            // `node_modules` at request time, never copied.
             const mainDest = join(
               appPath,
               "src",
@@ -157,8 +139,6 @@ export const preparePluginsFiles = async (flag?: string) => {
               "(auth)",
               join("(plugins)", `(${pluginPathName})`),
             );
-            const langDest = join(appPath, "src", "locales", pluginName);
-
             sources.push(
               {
                 sourceDir: join(pluginPath, "src", "routes", "admin"),
@@ -180,10 +160,6 @@ export const preparePluginsFiles = async (flag?: string) => {
                   "(blank)",
                   join("(plugins)", `(${pluginPathName})`),
                 ),
-              },
-              {
-                sourceDir: join(pluginPath, "src", "locales"),
-                destinationDir: langDest,
               },
               // Breadcrumb parallel-route slots ship as framework routes and copy
               // into the SHARED `@breadcrumb` slot (NOT namespaced under
@@ -227,14 +203,6 @@ export const preparePluginsFiles = async (flag?: string) => {
                 ),
               },
             );
-          } else if (appType === "api") {
-            // API app: copy only locales
-            const apiLangDest = join(appPath, "src", "locales", pluginName);
-
-            sources.push({
-              sourceDir: join(pluginPath, "src", "locales"),
-              destinationDir: apiLangDest,
-            });
           }
         }
       } else {
@@ -256,8 +224,6 @@ export const preparePluginsFiles = async (flag?: string) => {
           "(auth)",
           join("(plugins)", `(${pluginPathName})`),
         );
-        const langDest = join(baseDir, "src", "locales", pluginName);
-
         sources.push(
           {
             sourceDir: join(pluginPath, "src", "routes", "admin"),
@@ -277,10 +243,6 @@ export const preparePluginsFiles = async (flag?: string) => {
               "(blank)",
               join("(plugins)", `(${pluginPathName})`),
             ),
-          },
-          {
-            sourceDir: join(pluginPath, "src", "locales"),
-            destinationDir: langDest,
           },
           {
             sourceDir: join(pluginPath, "src", "routes", "breadcrumb", "admin"),

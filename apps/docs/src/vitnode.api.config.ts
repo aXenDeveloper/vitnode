@@ -10,11 +10,13 @@ import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
 import { SupabaseStorageAdapter } from "@vitnode/supabase-storage";
 import { drizzle } from "drizzle-orm/postgres-js";
 
+import { i18n } from "./i18n";
+
 export const POSTGRES_URL =
   process.env.POSTGRES_URL ?? "postgresql://root:root@localhost:5432/vitnode";
 
 export const vitNodeApiConfig = buildApiConfig({
-  pathToMessages: async path => await import(`./locales/${path}`),
+  i18n,
   redis: process.env.REDIS_URL
     ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
     : undefined,

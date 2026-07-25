@@ -60,7 +60,7 @@ describe("devPlugin", () => {
     expect(spawn).toHaveBeenNthCalledWith(
       2,
       "swc",
-      ["src", "-d", "dist", "--config-file", ".swcrc", "-w"],
+      ["src", "-d", "dist", "--config-file", ".swcrc", "--copy-files", "-w"],
       expect.any(Object),
     );
     expect(spawn).toHaveBeenNthCalledWith(

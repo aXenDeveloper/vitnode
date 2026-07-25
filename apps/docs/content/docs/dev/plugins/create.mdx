@@ -46,6 +46,32 @@ npx create-vitnode-app@canary --plugin
 
 </Tabs>
 
+## Add Translations
+
+VitNode is i18n-first: render user-facing text through translations rather than hardcoding it. Your plugin owns its languages and hands them to VitNode - apps never copy them.
+
+```json title="plugins/{your_plugin}/src/locales/en.json"
+{
+  "{your_plugin}": {
+    "hello": "Hello World"
+  }
+}
+```
+
+```ts title="plugins/{your_plugin}/src/locales/index.ts"
+import type { LocaleMessagesMap } from "@vitnode/core/lib/i18n/types";
+
+const messages: LocaleMessagesMap = {
+  en: () => import("./en.json", { with: { type: "json" } }),
+};
+
+export default messages;
+```
+
+Register that barrel in `config.tsx` (`buildPlugin`) and `config.api.ts` (`buildApiPlugin`) with `messages`, and you're done - the strings show up on the frontend and in emails.
+
+Keys have to sit under your plugin's namespace, or they collide with core. The details are in [Namespaces](/docs/dev/i18n/namespaces) and [Server-side](/docs/dev/i18n/server).
+
 ## Prerequisites
 
 ### Ignore `(plugins)` Folders

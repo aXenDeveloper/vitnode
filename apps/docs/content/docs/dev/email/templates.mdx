@@ -132,7 +132,9 @@ We implemented [TailwindCSS](https://react.email/docs/components/tailwind) in th
 
 VitNode supports internationalization (I18n) in email templates thanks to [next-intl](https://react.email/docs/guides/internationalization/next-intl).
 
-```json title="src/locales/@vitnode/blog/en.json"
+Strings live with the plugin that owns them, and the locale the email renders in comes from the recipient - see [Server-side i18n](/docs/dev/i18n/server).
+
+```json title="plugins/blog/src/locales/en.json"
 {
   "@vitnode/blog": {
     "title": "Blog"

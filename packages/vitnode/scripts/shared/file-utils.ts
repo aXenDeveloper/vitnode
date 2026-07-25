@@ -156,6 +156,23 @@ export function findRepoRoot(startPath: string): string {
   throw new Error("❌ Could not locate project root");
 }
 
+/**
+ * Locates an installed package, checking the current project before the
+ * monorepo root (where pnpm hoists workspace links).
+ */
+export function findPackagePath(
+  packageName: string,
+  repoRoot: string,
+): null | string {
+  const cwd = process.cwd();
+  const candidates = [
+    join(cwd, "node_modules", packageName),
+    ...(repoRoot === cwd ? [] : [join(repoRoot, "node_modules", packageName)]),
+  ];
+
+  return candidates.find(candidate => existsSync(candidate)) ?? null;
+}
+
 export function findLocaleRoot(repoRoot: string): string {
   // Check for standalone structure (src/app/[locale])
   const standalonePath = join(repoRoot, "src", "app", "[locale]");
@@ -339,11 +356,6 @@ export const cleanupDeletedFiles = (
 ) => {
   if (!existsSync(sourceDir)) return;
   if (!existsSync(destinationDir)) return;
-
-  const isLocaleDir = destinationDir
-    .replace(/\\/g, "/")
-    .includes("src/locales");
-  if (isLocaleDir) return;
 
   const isBreadcrumbDir = destinationDir
     .replace(/\\/g, "/")

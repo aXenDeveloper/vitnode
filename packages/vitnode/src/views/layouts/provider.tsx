@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { scan } from "react-scan";
 
+import type { LocaleConfig } from "@/lib/i18n/types";
 import type { VitNodeConfig } from "@/vitnode.config";
 
 import { CONFIG } from "@/lib/config";
@@ -15,13 +16,25 @@ import { Toaster } from "../../components/ui/sonner";
 import { TooltipProvider } from "../../components/ui/tooltip";
 import { RateLimitListener } from "./rate-limit-listener";
 
+/**
+ * The slice of the config this provider needs. Deliberately not the whole
+ * `VitNodeConfig`: `plugins` and `i18n.messages` hold functions, which React
+ * cannot serialise across the server/client boundary.
+ */
+export interface RootProviderConfig extends Pick<
+  VitNodeConfig,
+  "debug" | "progressBar" | "theme"
+> {
+  locales: LocaleConfig[];
+}
+
 export const RootProvider = ({
   children,
   toaster,
-  config: { debug, theme, progressBar, i18n },
+  config: { debug, theme, progressBar, locales },
 }: {
   children: React.ReactNode;
-  config: VitNodeConfig;
+  config: RootProviderConfig;
   toaster?: React.ComponentProps<typeof Toaster>;
 }) => {
   React.useEffect(() => {
@@ -70,7 +83,7 @@ export const RootProvider = ({
           shallowRouting={progressBar?.shallowRouting ?? true}
         >
           <TooltipProvider>
-            <LanguagesProvider languages={i18n.locales}>
+            <LanguagesProvider languages={locales}>
               {children}
             </LanguagesProvider>
           </TooltipProvider>
