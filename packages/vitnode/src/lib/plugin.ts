@@ -1,5 +1,6 @@
 import type { PermissionsStaffArgs } from "../api/lib/permission-staff";
 import type { ItemNavAdmin } from "../views/admin/layouts/sidebar/nav/item";
+import type { LocaleMessagesMap } from "./i18n/types";
 
 /**
  * A staff permission a nav item is gated by, scoped to the declaring plugin
@@ -22,6 +23,12 @@ export interface BuildPluginReturn<P extends string = string> {
       items?: Omit<AdminNavItem, "icon">[];
     })[];
   };
+  /**
+   * The languages this plugin ships, usually `import messages from
+   * "./locales"`. Merged into the app's message tree at request time - nothing
+   * is copied into the app.
+   */
+  messages?: LocaleMessagesMap;
   pluginId: P;
 }
 

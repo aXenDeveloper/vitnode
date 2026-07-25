@@ -25,7 +25,10 @@ const makeCtx = (
         "email" in overrides ? overrides.email : { adapter: { sendEmail } },
       plugins: [],
       metadata: { title: "Test" },
-      pathToMessages: vi.fn().mockResolvedValue({ default: {} }),
+    },
+    i18n: {
+      getMessages: vi.fn().mockResolvedValue({}),
+      resolveLocale: (locale?: string) => locale ?? "en",
     },
     queue: { dispatch },
     log: { error, warn: vi.fn(), debug: vi.fn() },

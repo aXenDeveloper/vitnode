@@ -20,6 +20,7 @@
   ],
   "type": "module",
   "exports": {
+    "./locales/*.json": "./src/locales/*.json",
     "./*": {
       "import": "./dist/src/*.js",
       "types": "./dist/src/*.d.ts",

@@ -27,6 +27,5 @@ export default getRequestConfig(
     await handleRequestConfig({
       requestLocale,
       vitNodeConfig,
-      pathToMessages: async path => await import(`./locales/${path}`),
     }),
 );

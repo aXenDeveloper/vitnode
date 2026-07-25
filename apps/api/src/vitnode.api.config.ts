@@ -17,7 +17,9 @@ export const POSTGRES_URL =
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [blogApiPlugin()],
-  pathToMessages: async path => await import(`./locales/${path}`),
+  // No `i18n` block: the languages `@vitnode/core` and the installed plugins
+  // ship are picked up on their own. Add one to declare extra locales or to
+  // override strings from `src/locales/<pluginId>/<locale>.json`.
   dbProvider: drizzle({
     connection: POSTGRES_URL,
     casing: "camelCase",

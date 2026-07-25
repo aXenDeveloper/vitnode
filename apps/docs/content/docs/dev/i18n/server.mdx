@@ -1,0 +1,169 @@
+---
+title: Server-side
+description: Translate emails and API responses with the request-scoped translator.
+---
+
+The API gets the same message tree the frontend does, reachable in any route as `c.get("i18n")`.
+
+```ts
+const t = await c.get("i18n").getTranslator();
+
+return c.json({ message: t("core.global.save") });
+```
+
+<Callout title="Nothing is copied" type="info">
+  The API reads locale files straight out of `node_modules`. There is no build
+  step to remember and no `src/locales/` folder to keep in sync - install a
+  plugin and its translations are available on the server immediately.
+</Callout>
+
+## Which locale a request gets
+
+`resolveLocale` walks four options in order and takes the first one your app actually lists in `i18n.locales`:
+
+<Steps>
+
+<Step>
+
+### An explicit choice
+
+`getTranslator("pl")`, or the `locale` you passed to `email.send()`. Use it when the language is a property of the thing you are rendering rather than of the caller.
+
+</Step>
+
+<Step>
+
+### The signed-in user's language
+
+`core_users.language`, already loaded on `c.get("user")`.
+
+</Step>
+
+<Step>
+
+### The `Accept-Language` header
+
+Parsed with its `q` weights, matched exactly first and then on the primary subtag - so `pl-PL` still finds `pl`.
+
+</Step>
+
+<Step>
+
+### `defaultLocale`
+
+`en` unless your `i18n` config says otherwise.
+
+</Step>
+
+</Steps>
+
+Anything not in `i18n.locales` is skipped rather than used, so a stale language code on a user row cannot produce a half-English page.
+
+## The API
+
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+<TypeTable
+  type={{
+    getTranslator: {
+      description:
+        "next-intl translator for the resolved locale. Pass a locale to override the resolution.",
+      type: "(locale?: string) => Promise<Translator>",
+    },
+    getMessages: {
+      description: "The merged message tree, if you need the raw object.",
+      type: "(locale?: string) => Promise<Messages>",
+    },
+    resolveLocale: {
+      description: "Runs the resolution above without loading anything.",
+      type: "(explicit?: string) => string",
+    },
+    locales: {
+      description: "Every locale the app accepts.",
+      type: "LocaleConfig[]",
+    },
+    defaultLocale: {
+      description: "The fallback locale.",
+      type: "string",
+    },
+  }}
+/>
+
+Merged trees are cached per locale for the life of the process, so only the first call per language touches the filesystem.
+
+## Emails
+
+Emails resolve their own locale - the recipient's, not the sender's - so you rarely call the translator yourself:
+
+```ts title="src/api/modules/users/routes/welcome.route.ts"
+await c.get("email").send({
+  user, // `user.language` decides the locale
+  subject: ({ i18n }) => createTranslator(i18n)("welcome.email.subject"),
+  content: props => <WelcomeEmail {...props} />,
+});
+```
+
+Sending to a bare address instead of a user? Pass `locale` explicitly:
+
+```ts
+await c.get("email").send({
+  to: "hello@example.com",
+  locale: "pl", // [!code highlight]
+  subject: "Cześć",
+  content: props => <WelcomeEmail {...props} />,
+});
+```
+
+The template receives `i18n` as a prop and turns it into a translator with `createTranslator` from `next-intl`:
+
+```tsx title="src/emails/welcome.tsx"
+import { createTranslator } from "next-intl";
+
+export default function WelcomeEmail({ i18n }: DefaultTemplateEmailProps) {
+  const t = createTranslator(i18n);
+
+  return <Text>{t("welcome.email.body")}</Text>;
+}
+```
+
+## Shipping translations with a plugin
+
+A plugin owns its languages. Drop the JSON in `src/locales/`, list it in a barrel, and register the barrel in both configs:
+
+```ts title="plugins/{your_plugin}/src/locales/index.ts"
+import type { LocaleMessagesMap } from "@vitnode/core/lib/i18n/types";
+
+const messages: LocaleMessagesMap = {
+  en: () => import("./en.json", { with: { type: "json" } }),
+};
+
+export default messages;
+```
+
+```ts title="plugins/{your_plugin}/src/config.api.ts"
+import messages from "./locales"; // [!code ++]
+
+export const yourApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    messages, // [!code ++]
+    modules: [postsModule],
+  });
+```
+
+Do the same with `buildPlugin` in `config.tsx` for the frontend. Adding a language later is a new file plus one line in the barrel - apps pick it up on their next install, and can translate your plugin without forking it by dropping a file in their own `src/locales/{your_plugin}/`.
+
+<Callout title="Keys must be namespaced" type="warn">
+  Everything a plugin ships belongs under its own namespace, or it will collide
+  with core. See [Namespaces](/docs/dev/i18n/namespaces).
+</Callout>
+
+## When a translation goes missing
+
+VitNode says so, once per package and locale, rather than quietly rendering raw keys:
+
+```
+[VitNode i18n] Could not load "pl" messages for "@vitnode/blog" - its strings will render as raw keys.
+```
+
+Run [`vitnode i18n:check`](/docs/dev/i18n) to find gaps before your users do.

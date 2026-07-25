@@ -3,9 +3,12 @@ import { ListIcon, NotebookPenIcon } from "lucide-react";
 
 import { CONFIG_PLUGIN } from "@/const";
 
+import messages from "./locales";
+
 export const blogPlugin = () => {
   return buildPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
+    messages,
     admin: {
       nav: [
         {

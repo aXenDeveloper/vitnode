@@ -85,31 +85,12 @@ export class EmailModel {
     locale: localeFromArgs,
   }: EmailModelSendArgs): Promise<BuiltEmail> {
     const core = this.c.get("core");
-    const locale = localeFromArgs ?? user?.language ?? "en";
-    const pluginIds: string[] = [
-      "@vitnode/core",
-      ...core.plugins.map(plugin => plugin.id),
-    ];
+    const i18n = this.c.get("i18n");
 
-    const messagesPromises = pluginIds.map(async pluginId => {
-      try {
-        const path = `${pluginId}/${locale}.json`;
-        const messages = await core.pathToMessages(path);
-
-        return messages.default;
-      } catch {
-        return {};
-      }
-    });
-
-    const allMessages = await Promise.all(messagesPromises);
-
-    // Optimize: Use Object.assign instead of reduce with spread operator
-    // to avoid creating intermediate objects on each iteration
-    const messages = Object.assign({}, ...allMessages) as Record<
-      string,
-      string
-    >;
+    // The recipient's own language decides, not the language of whoever
+    // triggered the send. `resolveLocale` drops anything the app doesn't ship.
+    const locale = i18n.resolveLocale(localeFromArgs ?? user?.language);
+    const messages = await i18n.getMessages(locale);
 
     const htmlContent =
       html ??

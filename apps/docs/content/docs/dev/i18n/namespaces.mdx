@@ -14,7 +14,7 @@ For example, you have a component that needs to get access to the translation st
 
 ## Structuring
 
-To translate your content, select the plugin in `frontend` folder, go to `langs` folder and pick the language you want to translate.
+A plugin's strings live in `src/locales/{locale}.json`, and every one of them belongs under the plugin's own namespace. A top-level key outside it collides with core and other plugins, so VitNode ignores it.
 
 ```json title="plugins/{your_plugin}/src/locales/en.json"
 {
@@ -25,9 +25,11 @@ To translate your content, select the plugin in `frontend` folder, go to `langs`
 }
 ```
 
+See [Server-side](/docs/dev/i18n/server) for registering that file with your plugin.
+
 ## Usage
 
-To get access to the translation strings in other namespaces you need to use the `TranslationsProvider` component.
+To get access to the translation strings in other namespaces you need to use the `I18nProvider` component.
 
 ```tsx title="plugins/{your_plugin}/src/app/blog/layout.tsx"
 import { I18nProvider } from '@vitnode/core/components/i18n-provider';

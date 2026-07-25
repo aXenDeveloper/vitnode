@@ -37,6 +37,10 @@ const detectAppType = (appPath: string) => {
 
 /**
  * Helper: collect source/destination mappings for a plugin
+ *
+ * Only web apps need anything copied - Next.js has to see route files inside
+ * `app/`. API apps get nothing: they read a plugin's routes and locales
+ * straight out of `node_modules`.
  */
 const collectSources = (
   pluginDir: string,
@@ -96,10 +100,6 @@ const collectSources = (
             ),
           },
           {
-            sourceDir: join(pluginDir, "src", "locales"),
-            destinationDir: join(appPath, "src", "locales", pluginName),
-          },
-          {
             sourceDir: join(pluginDir, "src", "routes", "breadcrumb", "admin"),
             destinationDir: join(
               appPath,
@@ -123,11 +123,6 @@ const collectSources = (
             ),
           },
         );
-      } else if (appType === "api") {
-        sources.push({
-          sourceDir: join(pluginDir, "src", "locales"),
-          destinationDir: join(appPath, "src", "locales", pluginName),
-        });
       }
     }
   } else {
@@ -171,10 +166,6 @@ const collectSources = (
           ),
         },
         {
-          sourceDir: join(pluginDir, "src", "locales"),
-          destinationDir: join(cwd, "src", "locales", pluginName),
-        },
-        {
           sourceDir: join(pluginDir, "src", "routes", "breadcrumb", "admin"),
           destinationDir: join(
             cwd,
@@ -198,11 +189,6 @@ const collectSources = (
           ),
         },
       );
-    } else if (projectType === "api") {
-      sources.push({
-        sourceDir: join(pluginDir, "src", "locales"),
-        destinationDir: join(cwd, "src", "locales", pluginName),
-      });
     }
   }
 
@@ -349,6 +335,14 @@ export const processPlugin = ({ initMessage }: { initMessage: string }) => {
     pluginName,
     pluginPathName,
   );
+
+  if (sources.length === 0) {
+    console.log(
+      `${initMessage} \x1b[34mNothing to sync - no web app in this project.\x1b[0m`,
+    );
+
+    return;
+  }
 
   ensureDestinationDirs(sources);
 

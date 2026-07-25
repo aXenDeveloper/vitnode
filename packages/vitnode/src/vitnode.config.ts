@@ -13,23 +13,24 @@ import type { SSOApiPlugin } from "./api/models/sso";
 import type { StorageApiPlugin } from "./api/models/storage";
 import type { ThemeProviderProps } from "./components/theme-provider";
 import type { DefaultTemplateEmailProps } from "./emails/default-template";
+import type {
+  LocaleConfig,
+  VitNodeApiI18nConfig,
+  VitNodeI18nConfig,
+} from "./lib/i18n/types";
 import type { BuildPluginReturn } from "./lib/plugin";
 
-export interface LocaleConfig {
-  code: string;
-  name: string;
-}
+import { CONFIG_PLUGIN } from "./config";
+import { loadMessages } from "./lib/i18n/load-messages";
+import { buildMessagesSources } from "./lib/i18n/sources";
+
+export type { LocaleConfig };
 
 export interface VitNodeConfig<
   AppLocales extends LocaleConfig[] = LocaleConfig[],
 > {
   debug?: boolean;
-  i18n: {
-    defaultLocale: AppLocales[number]["code"];
-    localePrefix?: "always" | "as-needed" | "never";
-    locales: AppLocales;
-    timeZone?: string;
-  };
+  i18n: VitNodeI18nConfig<AppLocales>;
   metadata: VitNodeApiConfig["metadata"];
   plugins: BuildPluginReturn[];
   progressBar?: React.ComponentProps<typeof ProgressProvider>;
@@ -72,11 +73,19 @@ export interface VitNodeApiConfig {
   events?: {
     adapter?: EventsApiPlugin;
   };
+  /**
+   * Languages the API renders in - today that means emails, and anything a
+   * route translates through `c.get("i18n")`.
+   *
+   * Optional: with no `i18n` block the locale list is derived from what the
+   * installed packages ship and `defaultLocale` is `en`. When an app serves the
+   * web and the API together, point this and `buildConfig` at the same object.
+   */
+  i18n?: VitNodeApiI18nConfig;
   metadata: {
     shortTitle?: string;
     title: string;
   };
-  pathToMessages: (path: string) => Promise<{ default: object }>;
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix">;
   /**
@@ -163,9 +172,7 @@ export function buildApiConfig(args: VitNodeApiConfig): VitNodeApiConfig {
 export const handleRequestConfig = async ({
   requestLocale,
   vitNodeConfig,
-  pathToMessages,
 }: {
-  pathToMessages: (path: string) => Promise<{ default: object }>;
   requestLocale: Promise<string | undefined>;
   vitNodeConfig: VitNodeConfig;
 }) => {
@@ -176,30 +183,22 @@ export const handleRequestConfig = async ({
       ? reqLocale
       : vitNodeConfig.i18n.defaultLocale;
 
-  const pluginIds: string[] = [
-    "@vitnode/core",
-    ...vitNodeConfig.plugins.map(plugin => plugin.pluginId),
-  ];
-
-  // Import and merge messages from all plugins
-  const messagesPromises = pluginIds.map(async pluginId => {
-    try {
-      const path = `${pluginId}/${locale}.json`;
-      const messages = await pathToMessages(path);
-
-      return messages.default;
-    } catch {
-      return {};
-    }
+  const sources = buildMessagesSources({
+    appMessages: vitNodeConfig.i18n.messages,
+    plugins: vitNodeConfig.plugins,
   });
-
-  const allMessages = await Promise.all(messagesPromises);
-  const messages = allMessages.reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
   return {
     locale,
-    messages,
-    pluginIds,
+    messages: await loadMessages({
+      defaultLocale: vitNodeConfig.i18n.defaultLocale,
+      locale,
+      sources,
+    }),
+    pluginIds: [
+      CONFIG_PLUGIN.pluginId,
+      ...vitNodeConfig.plugins.map(plugin => plugin.pluginId),
+    ],
     timeZone: vitNodeConfig.i18n.timeZone,
   };
 };

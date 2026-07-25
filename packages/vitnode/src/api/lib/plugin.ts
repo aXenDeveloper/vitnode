@@ -1,5 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 
+import type { LocaleMessagesMap } from "@/lib/i18n/types";
+
 import type { SearchIndexer } from "../models/search";
 import type { CronJobConfig } from "./cron";
 import type { EventListenerConfig } from "./events";
@@ -14,6 +16,7 @@ export interface BuildPluginApiReturn {
   cronJobs?: Omit<CronJobConfig, "pluginId">[];
   events?: Omit<EventListenerConfig, "pluginId">[];
   hono: OpenAPIHono;
+  messages?: LocaleMessagesMap;
   permissionStaff?: PermissionStaffConfig;
   pluginId: string;
   queueTasks?: Omit<QueueTaskConfig, "pluginId">[];
@@ -23,10 +26,16 @@ export interface BuildPluginApiReturn {
 
 export function buildApiPlugin<P extends string>({
   pluginId,
+  messages,
   modules = [],
   permissionStaff,
   searchIndexers,
 }: {
+  /**
+   * The languages this plugin ships, usually `import messages from
+   * "./locales"`. Needed on the API side too - emails render server-side.
+   */
+  messages?: LocaleMessagesMap;
   modules?: BuildModuleReturn<P, string>[];
   permissionStaff?: PermissionStaffConfig;
   pluginId: P;
@@ -62,6 +71,7 @@ export function buildApiPlugin<P extends string>({
 
   return {
     pluginId,
+    messages,
     hono,
     cronJobs,
     events,

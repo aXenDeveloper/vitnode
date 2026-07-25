@@ -8,6 +8,9 @@ export const buildPlugin = async () => {
     "dist",
     "--config-file",
     ".swcrc",
+    // Carries locale JSON (and other assets) into `dist`, next to the compiled
+    // `locales/index.js` barrel that imports it.
+    "--copy-files",
   ]);
   await runInteractiveShellCommand("tsc-alias", ["-p", "tsconfig.build.json"]);
 };
