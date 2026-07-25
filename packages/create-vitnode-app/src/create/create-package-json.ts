@@ -44,6 +44,7 @@ const rootScripts = (
   "i18n:create": "turbo i18n:create",
   "i18n:check": "turbo i18n:check",
   "i18n:delete": "turbo i18n:delete",
+  "i18n:update": "turbo i18n:update",
   ...withIf(enableEslint, {
     lint: "turbo lint",
     "lint:fix": "turbo lint:fix",
@@ -74,6 +75,7 @@ const apiScripts = (
   "i18n:create": "vitnode i18n:create",
   "i18n:check": "vitnode i18n:check",
   "i18n:delete": "vitnode i18n:delete",
+  "i18n:update": "vitnode i18n:update",
   ...withIf(eslint, eslintScripts),
   ...withIf(docker && onlyApi, { "docker:dev": dockerDevScript(appName) }),
   "drizzle-kit": "drizzle-kit",
@@ -93,6 +95,7 @@ const singleAppScripts = (
   "i18n:create": "vitnode i18n:create",
   "i18n:check": "vitnode i18n:check",
   "i18n:delete": "vitnode i18n:delete",
+  "i18n:update": "vitnode i18n:update",
   ...withIf(eslint, eslintScripts),
   ...withIf(docker, { "docker:dev": dockerDevScript(appName) }),
   "drizzle-kit": "drizzle-kit",
@@ -106,6 +109,7 @@ const webScripts = (eslint: boolean) => ({
   "i18n:create": "vitnode i18n:create",
   "i18n:check": "vitnode i18n:check",
   "i18n:delete": "vitnode i18n:delete",
+  "i18n:update": "vitnode i18n:update",
   ...withIf(eslint, eslintScripts),
 });
 

@@ -158,6 +158,38 @@ It lists every key the new language is still missing and flags keys that no long
 
 </Steps>
 
+## Keeping them in sync
+
+Packages gain and lose keys as they evolve. `i18n:update` reconciles every translation file you have against the current English source in one pass:
+
+```bash
+vitnode i18n:update
+```
+
+For each of your override files it:
+
+- **adds** keys English has but the file is missing, seeded with the English string so they are ready to translate in place;
+- **removes** keys the file still carries that English no longer defines;
+- **keeps** every existing translation untouched - it never overwrites a string you have already translated.
+
+```text
+[VitNode] Syncing 2 translation file(s) against en.
+  updated  src/locales/@vitnode/core/pl.json  +75 -7
+      + core.search.admin.reindex
+      - core.search.admin.engine
+      ... and 80 more
+
+[VitNode] 2 file(s) updated: +75 added, -7 removed. Translate the added keys, then run vitnode i18n:check.
+```
+
+Like the other commands it is scoped: an API-only app is synced against each package's server strings alone, a single app against both trees. A file whose package ships nothing for the app's shape is left untouched rather than emptied.
+
+<Callout title="Added keys arrive in English" type="info">
+  A freshly added key holds the English text until you translate it, so
+  `i18n:check` will report it as present. Run `i18n:update` to pull in new
+  strings, then work through the ones it added.
+</Callout>
+
 ## Removing one
 
 To drop a language, hand `i18n:delete` its code. It deletes that locale's override files, prunes the folders they leave empty, and unwires the `{ code, name }` and `messages` entries from your config:

@@ -55,7 +55,7 @@ export const packageLocaleFiles = (
   return files;
 };
 
-const readJsonTree = (filePath: string): Record<string, unknown> => {
+export const readJsonTree = (filePath: string): Record<string, unknown> => {
   if (!existsSync(filePath)) return {};
 
   try {
@@ -69,6 +69,16 @@ const readJsonTree = (filePath: string): Record<string, unknown> => {
   } catch {
     return {};
   }
+};
+
+export const flattenKeys = (value: unknown, prefix = ""): string[] => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return prefix ? [prefix] : [];
+  }
+
+  return Object.entries(value).flatMap(([key, nested]) =>
+    flattenKeys(nested, prefix ? `${prefix}.${key}` : key),
+  );
 };
 
 /**

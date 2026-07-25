@@ -14,7 +14,8 @@
     "lint:fix": "eslint . --fix",
     "i18n:create": "vitnode i18n:create",
     "i18n:check": "vitnode i18n:check",
-    "i18n:delete": "vitnode i18n:delete"
+    "i18n:delete": "vitnode i18n:delete",
+    "i18n:update": "vitnode i18n:update"
   },
   "dependencies": {
     "@hono/zod-openapi": "^1.5.1",

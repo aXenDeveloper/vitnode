@@ -64,6 +64,9 @@
     },
     "i18n:delete": {
       "dependsOn": ["^i18n:delete"]
+    },
+    "i18n:update": {
+      "dependsOn": ["^i18n:update"]
     }
   }
 }
