@@ -29,11 +29,13 @@
             },
             "color": "Kolor"
           },
-          "submit": "Utwórz"
+          "submit": "Utwórz",
+          "success": "Category has been created successfully."
         },
         "edit": {
           "title": "Edytuj kategorię",
-          "submit": "Zapisz zmiany"
+          "submit": "Zapisz zmiany",
+          "success": "Category has been updated successfully."
         }
       },
       "posts": {
@@ -52,14 +54,21 @@
               "label": "Tytuł",
               "already_exists": "Wpis o tym tytule już istnieje."
             },
+            "friendly_url": {
+              "label": "Friendly URL",
+              "desc": "Used in the post address. Auto-filled from the title.",
+              "already_exists": "This friendly URL already exists."
+            },
             "content": "Treść",
             "category": "Kategoria"
           },
-          "submit": "Utwórz wpis"
+          "submit": "Utwórz wpis",
+          "success": "Post has been created successfully."
         },
         "edit": {
           "title": "Edytuj wpis",
-          "submit": "Zapisz zmiany"
+          "submit": "Zapisz zmiany",
+          "success": "Post has been updated successfully."
         },
         "delete": {
           "title": "Usuń wpis",

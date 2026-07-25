@@ -19,6 +19,9 @@ const loadSourceMessages = async (
   isDefaultLocale: boolean,
 ): Promise<Messages | null> => {
   const loader = source.messages?.[locale];
+  // A source's id repeats across scopes (web vs api), so warnings key off both,
+  // or one scope's warning would silence the other's.
+  const warnId = `${source.scope ?? ""}:${source.id}`;
 
   if (!loader) {
     // Not translating into every language is normal - the default locale fills
@@ -26,7 +29,7 @@ const loadSourceMessages = async (
     // so that one is worth a word.
     if (isDefaultLocale && !source.optional && source.messages) {
       warnOnce(
-        `${source.id}:${locale}:missing`,
+        `${warnId}:${locale}:missing`,
         `"${source.id}" ships no messages for the default locale "${locale}".`,
       );
     }
@@ -39,7 +42,7 @@ const loadSourceMessages = async (
 
     if (!loaded.default) {
       warnOnce(
-        `${source.id}:${locale}:empty`,
+        `${warnId}:${locale}:empty`,
         `"${source.id}" exports no default from its "${locale}" messages.`,
       );
 
@@ -49,7 +52,7 @@ const loadSourceMessages = async (
     return loaded.default;
   } catch (error) {
     warnOnce(
-      `${source.id}:${locale}:failed`,
+      `${warnId}:${locale}:failed`,
       `Could not load "${locale}" messages for "${source.id}" - its strings will render as raw keys. ${String(error)}`,
     );
 
@@ -122,7 +125,12 @@ export const loadMessages = async ({
   locale: string;
   sources: MessagesSource[];
 }): Promise<Messages> => {
-  const cacheKey = `${defaultLocale}|${locale}|${sources.map(source => source.id).join(",")}`;
+  // Scope is part of the key: web and api source-sets share plugin ids but ship
+  // different trees, so a single app (both in one process) must not serve one
+  // where it asked for the other.
+  const cacheKey = `${defaultLocale}|${locale}|${sources
+    .map(source => `${source.scope ?? ""}#${source.id}`)
+    .join(",")}`;
   const cached = messagesCache.get(cacheKey);
   if (cached) return await cached;
 

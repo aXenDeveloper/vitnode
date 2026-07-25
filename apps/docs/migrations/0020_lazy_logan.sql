@@ -1,0 +1,1 @@
+ALTER TABLE "core_languages" DROP COLUMN "enabled";

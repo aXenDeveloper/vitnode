@@ -6,12 +6,10 @@ import { blogPostSearchIndexer } from "./api/lib/search";
 import { adminModule } from "./api/modules/admin/admin.module";
 import { categoriesModule } from "./api/modules/categories/categories.module";
 import { postsModule } from "./api/modules/posts/posts.module";
-import messages from "./locales";
 
 export const blogApiPlugin = () => {
   return buildApiPlugin({
     pluginId: CONFIG_PLUGIN.pluginId,
-    messages,
     modules: [adminModule, categoriesModule, postsModule],
     searchIndexers: [blogPostSearchIndexer],
     permissionStaff: {

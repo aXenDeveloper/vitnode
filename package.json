@@ -14,7 +14,11 @@
     "lint": "turbo lint",
     "lint:fix": "turbo lint:fix",
     "test": "turbo test",
-    "test:e2e": "turbo test:e2e"
+    "test:e2e": "turbo test:e2e",
+    "i18n:create": "turbo i18n:create",
+    "i18n:check": "turbo i18n:check",
+    "i18n:delete": "turbo i18n:delete",
+    "i18n:update": "turbo i18n:update"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",

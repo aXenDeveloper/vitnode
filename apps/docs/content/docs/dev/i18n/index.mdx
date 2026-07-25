@@ -22,6 +22,51 @@ On top of that, the default locale is merged _underneath_ the language being ren
 
 ## Adding one
 
+The CLI does the whole thing. It asks for the language's code and name, scaffolds an override file for every installed package, and wires the locale into your `i18n` config:
+
+```bash
+vitnode i18n:create
+```
+
+```text
+[VitNode] Add a language. Press Ctrl+C to abort.
+
+? Locale code (e.g. pl, de, pt-BR): de
+? Language name (e.g. Polski, Deutsch): Deutsch
+
+  created  src/locales/@vitnode/core/de.json
+  created  src/locales/@vitnode/blog/de.json
+  updated  src/i18n.ts
+
+[VitNode] Deutsch (de) added. Translate the files above, then run vitnode i18n:check.
+```
+
+Pass both inline to skip the prompts - handy in scripts and CI: `vitnode i18n:create de Deutsch`.
+
+<Callout title="What it changes" type="info">
+  Two things: one override file per installed package under
+  `src/locales/{pluginId}/{locale}.json`, each seeded with that package's English
+  strings so they are right there to translate in place, and your `i18n` config -
+  the `{ code, name }` entry in `locales` plus a `messages` block pointing at
+  those files. An app with no `i18n` config yet - an API-only app, say - gets a
+  fresh `src/i18n.ts` instead, and the command prints the one line to import it
+  into your config.
+</Callout>
+
+<Callout title="It seeds only what the app renders" type="info">
+  The seed matches the app's shape. An **API-only** app is seeded with each
+  package's server strings alone - the emails, a few keys - not the admin UI it
+  never renders. A **frontend** app gets the UI strings, and a **single app**
+  (frontend and API together) gets both. A package that ships nothing for the
+  app's shape - a plugin with no emails in an API-only app - is skipped rather
+  than seeded with an empty file. See [Server-side](/docs/dev/i18n/server) for
+  the two trees.
+</Callout>
+
+Fill in the files it lists and you are done - the rest of this page is what `create` does under the hood, for when you would rather wire a language up by hand or the command meets an unusual config it will not edit blindly.
+
+### By hand
+
 <Steps>
 
 <Step>
@@ -107,11 +152,93 @@ export const vitNodeApiConfig = buildApiConfig({
 vitnode i18n:check
 ```
 
-It lists every key the new language is still missing, flags keys that no longer exist in the default locale, and - most usefully - catches a locale file you created but forgot to wire into `i18n.messages`. Add `--ci` to make it fail a pipeline.
+It lists every key the new language is still missing and flags keys that no longer exist in the default locale. It **fails outright** - a non-zero exit on its own - when a declared language is missing a package's locale file, or when a file you created was never wired into `i18n.messages`. Those are hard errors, since both leave strings silently untranslated at runtime. Missing individual _keys_ are only warnings; add `--ci` to make those fail a pipeline too.
 
 </Step>
 
 </Steps>
+
+## Keeping them in sync
+
+Packages gain and lose keys as they evolve. `i18n:update` reconciles every translation file you have against the current English source in one pass:
+
+```bash
+vitnode i18n:update
+```
+
+For each of your override files it:
+
+- **adds** keys English has but the file is missing, seeded with the English string so they are ready to translate in place;
+- **removes** keys the file still carries that English no longer defines;
+- **keeps** every existing translation untouched - it never overwrites a string you have already translated.
+
+```text
+[VitNode] Syncing 2 translation file(s) against en.
+  updated  src/locales/@vitnode/core/pl.json  +75 -7
+      + core.search.admin.reindex
+      - core.search.admin.engine
+      ... and 80 more
+
+[VitNode] 2 file(s) updated: +75 added, -7 removed. Translate the added keys, then run vitnode i18n:check.
+```
+
+Like the other commands it is scoped: an API-only app is synced against each package's server strings alone, a single app against both trees. A file whose package ships nothing for the app's shape is left untouched rather than emptied.
+
+<Callout title="Added keys arrive in English" type="info">
+  A freshly added key holds the English text until you translate it, so
+  `i18n:check` will report it as present. Run `i18n:update` to pull in new
+  strings, then work through the ones it added.
+</Callout>
+
+## Removing one
+
+To drop a language, hand `i18n:delete` its code. It deletes that locale's override files, prunes the folders they leave empty, and unwires the `{ code, name }` and `messages` entries from your config:
+
+```bash
+vitnode i18n:delete pl
+```
+
+Run it without a code to be asked for one. When interactive it lists everything it will remove and waits for a `y` before touching anything.
+
+<Callout title="English and the default locale stay put" type="warn">
+  `i18n:delete` refuses to remove `en` - the built-in fallback every translation
+  degrades to - or whatever your `defaultLocale` is. Point `defaultLocale` at
+  another language first if you really mean to retire the current one. To take a
+  language out of circulation without deleting it - English included - **disable**
+  it instead (below).
+</Callout>
+
+## Disabling one
+
+Deleting a language throws its files away. When you only want to take a language
+out of circulation - keep the translations on disk, just stop offering it - set
+`enabled: false` on its `locales` entry instead:
+
+```ts title="src/i18n.ts"
+export const i18n = {
+  defaultLocale: "en",
+  locales: [
+    { code: "en", name: "English" },
+    { code: "pl", name: "Polski", enabled: false }, // [!code ++]
+  ],
+  // ...messages unchanged
+} satisfies VitNodeI18nConfig;
+```
+
+A disabled locale is no longer **selectable**: it drops out of the language
+pickers built on it (the multi-language form field) and search stops indexing
+documents for it. Everything else stays put - its `src/locales` files remain on
+disk, its row and translated words in the database are untouched, and it still
+resolves at runtime as a fallback. Flip `enabled` back to `true` (or drop the
+field) and it returns exactly as it was.
+
+<Callout title="You can disable the default locale too" type="info">
+  Unlike deletion, disabling works on any locale, `en` and your `defaultLocale`
+  included - handy for a site that runs in another language but keeps English as
+  the technical fallback. The default locale still merges underneath every other
+  language whether or not it is enabled, so disabling it only hides it from the
+  pickers; it never leaves strings untranslated.
+</Callout>
 
 ## The API side
 

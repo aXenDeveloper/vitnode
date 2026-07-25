@@ -3,7 +3,8 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 import { getConfig } from "./get-config.js";
-import { findPackagePath, findRepoRoot } from "./shared/file-utils.js";
+import { appScope, packageLocaleFiles } from "./i18n-shared.js";
+import { findRepoRoot } from "./shared/file-utils.js";
 
 const CORE_PLUGIN_ID = "@vitnode/core";
 const MAX_LISTED_KEYS = 8;
@@ -71,20 +72,32 @@ export const i18nCheck = async (flag?: string) => {
   const repoRoot = findRepoRoot(appDir);
 
   const webConfig = await getConfig({ optional: true });
-  const config =
-    webConfig ?? (await getConfig({ optional: true, type: "api.config" }));
+  const apiConfig = await getConfig({ optional: true, type: "api.config" });
+  const config = webConfig ?? apiConfig;
 
   if (!config) {
     console.error(red("No vitnode.config.ts or vitnode.api.config.ts found."));
     process.exit(1);
   }
 
+  // Check against the trees the app actually uses: an API-only app is measured
+  // on email strings alone, a single app on both.
+  const scope = appScope({ api: apiConfig !== null, web: webConfig !== null });
   const defaultLocale = config.i18n?.defaultLocale ?? "en";
   const declared = (config.i18n?.locales ?? []).map(locale => locale.code);
   const appMessages = config.i18n?.messages ?? {};
-  // Web and API plugins differ in everything but the id, which is all we need.
-  const plugins = config.plugins as { pluginId: string }[];
-  const pluginIds = [CORE_PLUGIN_ID, ...plugins.map(plugin => plugin.pluginId)];
+  // Web and API plugins differ in everything but the id, which is all we need;
+  // union across both configs so an API-only plugin is still checked.
+  const pluginIds = [
+    ...new Set([
+      CORE_PLUGIN_ID,
+      ...[webConfig, apiConfig].flatMap(loaded =>
+        ((loaded?.plugins ?? []) as { pluginId: string }[]).map(
+          plugin => plugin.pluginId,
+        ),
+      ),
+    ]),
+  ];
 
   const appFiles = readAppLocaleFiles(appDir);
   const locales = [
@@ -97,33 +110,56 @@ export const i18nCheck = async (flag?: string) => {
 
   let missingTotal = 0;
   let problems = 0;
+  // Hard errors (a missing or unloadable file) fail the command on their own;
+  // softer key-level gaps only fail under `--ci`.
+  let errors = 0;
+  const declaredLocales = new Set(declared);
 
   // Keys per (plugin, locale), from the package itself plus the app's overrides.
+  // A package ships up to two trees - `locales/<locale>.json` (frontend) and
+  // `locales/api/<locale>.json` (server); the known set is the union of the
+  // ones this app's scope covers, plus its own override.
   const keysFor = (pluginId: string, locale: string): null | string[] => {
-    const packagePath = findPackagePath(pluginId, repoRoot);
-    const fromPackage = packagePath
-      ? readKeys(join(packagePath, "src", "locales", `${locale}.json`))
-      : null;
+    const fromPackage = packageLocaleFiles(pluginId, locale, {
+      repoRoot,
+      scope,
+    })
+      .map(readKeys)
+      .filter((keys): keys is string[] => keys !== null);
     const override = appFiles.find(
       file => file.pluginId === pluginId && file.locale === locale,
     );
     const fromApp = override ? readKeys(override.path) : null;
 
-    if (!fromPackage && !fromApp) return null;
+    if (fromPackage.length === 0 && !fromApp) return null;
 
-    return [...new Set([...(fromPackage ?? []), ...(fromApp ?? [])])];
+    return [...new Set([...fromPackage.flat(), ...(fromApp ?? [])])];
   };
 
   for (const pluginId of pluginIds) {
     const baseKeys = keysFor(pluginId, defaultLocale);
 
     if (!baseKeys) {
-      console.log(
-        yellow(
-          `  ${pluginId}: no "${defaultLocale}" messages found - is the package installed?`,
-        ),
-      );
-      problems += 1;
+      // `packageLocaleFiles` returns paths only when the package resolves, so an
+      // empty list means it is genuinely absent. A resolved package with no
+      // strings in this scope - e.g. a plugin with no server tree in an
+      // API-only app - simply has nothing to translate.
+      const installed =
+        packageLocaleFiles(pluginId, defaultLocale, { repoRoot, scope })
+          .length > 0;
+
+      if (installed) {
+        console.log(
+          dim(`  ${pluginId}: no strings for this app - nothing to translate`),
+        );
+      } else {
+        console.log(
+          yellow(
+            `  ${pluginId}: no "${defaultLocale}" messages found - is the package installed?`,
+          ),
+        );
+        problems += 1;
+      }
       continue;
     }
 
@@ -131,11 +167,24 @@ export const i18nCheck = async (flag?: string) => {
       const localeKeys = keysFor(pluginId, locale);
 
       if (!localeKeys) {
-        console.log(
-          dim(
-            `  ${pluginId} · ${locale}: not translated, falls back to ${defaultLocale}`,
-          ),
-        );
+        // A declared language with no file for this package is a hard error:
+        // create the override (e.g. via `vitnode i18n:create`). An undeclared
+        // locale just falls back, so leave it as a note.
+        if (declaredLocales.has(locale)) {
+          errors += 1;
+          problems += 1;
+          console.log(
+            red(
+              `  ${pluginId} · ${locale}: no locale file - create src/locales/${pluginId}/${locale}.json`,
+            ),
+          );
+        } else {
+          console.log(
+            dim(
+              `  ${pluginId} · ${locale}: not translated, falls back to ${defaultLocale}`,
+            ),
+          );
+        }
         continue;
       }
 
@@ -193,6 +242,7 @@ export const i18nCheck = async (flag?: string) => {
     const location = relative(appDir, file.path);
 
     if (!wired) {
+      errors += 1;
       problems += 1;
       console.log(
         red(
@@ -200,6 +250,7 @@ export const i18nCheck = async (flag?: string) => {
         ),
       );
     } else if (declared.length > 0 && !declared.includes(file.locale)) {
+      errors += 1;
       problems += 1;
       console.log(
         red(`  ${location} uses a locale that is not in \`i18n.locales\`.`),
@@ -213,8 +264,11 @@ export const i18nCheck = async (flag?: string) => {
   }
 
   console.log(
-    `\x1b[34m[VitNode]\x1b[0m ${problems} issue(s), ${missingTotal} untranslated key(s).`,
+    `\x1b[34m[VitNode]\x1b[0m ${problems} issue(s)` +
+      (errors > 0 ? red(`, ${errors} error(s)`) : "") +
+      `, ${missingTotal} untranslated key(s).`,
   );
 
-  process.exit(isCi ? 1 : 0);
+  // Missing/unloadable files always fail; key-level gaps only fail under --ci.
+  process.exit(errors > 0 || isCi ? 1 : 0);
 };

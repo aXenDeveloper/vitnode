@@ -62,13 +62,20 @@ VitNode is i18n-first: render user-facing text through translations rather than 
 import type { LocaleMessagesMap } from "@vitnode/core/lib/i18n/types";
 
 const messages: LocaleMessagesMap = {
-  en: () => import("./en.json", { with: { type: "json" } }),
+  en: async () => await import("./en.json", { with: { type: "json" } }),
 };
 
 export default messages;
 ```
 
-Register that barrel in `config.tsx` (`buildPlugin`) and `config.api.ts` (`buildApiPlugin`) with `messages`, and you're done - the strings show up on the frontend and in emails.
+Register that barrel in `config.tsx` (`buildPlugin`) with `messages`, and your strings show up on the frontend.
+
+<Callout title="Server strings live apart" type="info">
+  If your plugin sends email, its server strings go in a second tree,
+  `src/locales/api/`, registered with `buildApiPlugin` in `config.api.ts`. The
+  API loads only that tree, so an API-only app never pulls in your UI copy. See
+  [Server-side](/docs/dev/i18n/server).
+</Callout>
 
 Keys have to sit under your plugin's namespace, or they collide with core. The details are in [Namespaces](/docs/dev/i18n/namespaces) and [Server-side](/docs/dev/i18n/server).
 

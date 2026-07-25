@@ -4,8 +4,7 @@ import type {
 } from "@vitnode/core/api/models/search";
 import type { Context } from "hono";
 
-import { core_languages } from "@vitnode/core/database/languages";
-import { asc, count, eq } from "drizzle-orm";
+import { asc, count } from "drizzle-orm";
 
 import { blog_posts } from "@/database/posts";
 
@@ -25,15 +24,11 @@ interface BlogPostForSearch {
   updatedAt?: Date;
 }
 
-const getEnabledLanguageCodes = async (c: Context): Promise<string[]> => {
-  const rows = await c
-    .get("db")
-    .select({ code: core_languages.code })
-    .from(core_languages)
-    .where(eq(core_languages.enabled, true));
-
-  return rows.map(row => row.code);
-};
+const getEnabledLanguageCodes = (c: Context): string[] =>
+  c
+    .get("core")
+    .i18n.locales.filter(locale => locale.enabled !== false)
+    .map(locale => locale.code);
 
 // One search document per enabled language: each language gets its own
 // translation (falling back to the default-language mirror) and its own
@@ -82,8 +77,8 @@ export const reindexBlogPost = async (
   c: Context,
   post: BlogPostForSearch,
 ): Promise<void> => {
-  const [languageCodes, defaultLanguageCode, translations] = await Promise.all([
-    getEnabledLanguageCodes(c),
+  const languageCodes = getEnabledLanguageCodes(c);
+  const [defaultLanguageCode, translations] = await Promise.all([
     getDefaultLanguageCode(c),
     loadPostTranslations(c, [post.id]),
   ]);
@@ -129,15 +124,14 @@ export const blogPostSearchIndexer: SearchIndexer = {
       return [];
     }
 
-    const [languageCodes, defaultLanguageCode, translations] =
-      await Promise.all([
-        getEnabledLanguageCodes(c),
-        getDefaultLanguageCode(c),
-        loadPostTranslations(
-          c,
-          rows.map(row => row.id),
-        ),
-      ]);
+    const languageCodes = getEnabledLanguageCodes(c);
+    const [defaultLanguageCode, translations] = await Promise.all([
+      getDefaultLanguageCode(c),
+      loadPostTranslations(
+        c,
+        rows.map(row => row.id),
+      ),
+    ]);
 
     return rows.flatMap(post =>
       buildDocumentsForPost(

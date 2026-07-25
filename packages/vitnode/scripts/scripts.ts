@@ -6,6 +6,9 @@ import { config } from "dotenv";
 import { buildPlugin } from "./build.js";
 import { devPlugin } from "./dev.js";
 import { i18nCheck } from "./i18n-check.js";
+import { i18nCreate } from "./i18n-create.js";
+import { i18nDelete } from "./i18n-delete.js";
+import { i18nUpdate } from "./i18n-update.js";
 import { processPlugin } from "./plugin.js";
 import {
   generateDatabaseMigrations,
@@ -43,6 +46,18 @@ switch (command) {
 
   case "i18n:check":
     await i18nCheck(flag);
+    break;
+
+  case "i18n:create":
+    await i18nCreate();
+    break;
+
+  case "i18n:delete":
+    await i18nDelete();
+    break;
+
+  case "i18n:update":
+    await i18nUpdate();
     break;
 
   case "init":

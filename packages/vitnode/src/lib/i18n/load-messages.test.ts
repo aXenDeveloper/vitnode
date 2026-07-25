@@ -115,6 +115,33 @@ describe("loadMessages", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
+  it("keeps scopes apart when sources share ids (single-app case)", async () => {
+    // Same id, different tree - exactly a plugin's web vs api barrels in one
+    // process. The cache must not hand the second caller the first's tree.
+    const api: MessagesSource = {
+      ...source("@vitnode/core", { en: { core: { subject: "Reset" } } }),
+      scope: "api",
+    };
+    const web: MessagesSource = {
+      ...source("@vitnode/core", { en: { core: { save: "Save" } } }),
+      scope: "web",
+    };
+
+    const apiTree = await loadMessages({
+      defaultLocale: "en",
+      locale: "en",
+      sources: [api],
+    });
+    const webTree = await loadMessages({
+      defaultLocale: "en",
+      locale: "en",
+      sources: [web],
+    });
+
+    expect(apiTree).toEqual({ core: { subject: "Reset" } });
+    expect(webTree).toEqual({ core: { save: "Save" } });
+  });
+
   it("loads each locale only once", async () => {
     const loader = vi.fn(
       async () =>

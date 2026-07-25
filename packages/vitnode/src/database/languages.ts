@@ -10,7 +10,6 @@ export const core_languages = pgTable(
     timezone: t.varchar({ length: 255 }).notNull().default("UTC"),
     protected: t.boolean().notNull().default(false),
     default: t.boolean().notNull().default(false),
-    enabled: t.boolean().notNull().default(true),
     createdAt: t.timestamp().notNull().defaultNow(),
     updatedAt: t
       .timestamp()

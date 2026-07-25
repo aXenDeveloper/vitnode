@@ -190,19 +190,6 @@
       "go_to_prev_page": "Go to previous page",
       "go_to_next_page": "Go to next page",
       "errors": {
-        "title": "Oops! Something went wrong.",
-        "internal_server_error": "Internal server error.",
-        "field_required": "This field is required.",
-        "field_min_length": "This field must be at least {min} characters.",
-        "captcha_internal_error": "Captcha validation failed. Please try again later.",
-        "404": {
-          "title": "Page Not Found",
-          "desc": "Oops! The page you're looking for doesn't exist."
-        },
-        "500": {
-          "title": "Internal Server Error",
-          "desc": "Sorry, we're experiencing technical difficulties on our server."
-        },
         "400": {
           "title": "Bad Request",
           "desc": "The request couldn't be processed due to invalid parameters."
@@ -210,6 +197,10 @@
         "403": {
           "title": "Forbidden",
           "desc": "You don't have permission to access this resource."
+        },
+        "404": {
+          "title": "Page Not Found",
+          "desc": "Oops! The page you're looking for doesn't exist."
         },
         "409": {
           "title": "Conflict",
@@ -219,7 +210,16 @@
           "title": "Too many requests",
           "desc": "You're doing that too fast. Please slow down and try again in a moment.",
           "retry": "You're doing that too fast. Please try again in {seconds} seconds."
-        }
+        },
+        "500": {
+          "title": "Internal Server Error",
+          "desc": "Sorry, we're experiencing technical difficulties on our server."
+        },
+        "title": "Oops! Something went wrong.",
+        "internal_server_error": "Internal server error.",
+        "field_required": "This field is required.",
+        "field_min_length": "This field must be at least {min} characters.",
+        "captcha_internal_error": "Captcha validation failed. Please try again later."
       },
       "user_bar": {
         "my_profile": "My Profile",
@@ -344,17 +344,6 @@
           "title": "Check your email",
           "desc": "We've sent a password reset link to your email address:",
           "check_spam": "If you don't see the email in your inbox, please check your spam folder."
-        },
-        "email": {
-          "subject": "Reset your password",
-          "greeting": "Hello {name}!",
-          "intro": "We received a request to reset your password for your account.",
-          "button": "Reset Password",
-          "instructions": "Click the button above to reset your password. This link will expire in 30 minutes for security reasons.",
-          "no_action": "If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.",
-          "security_note": "For your security, this request was made from IP address: {ip}",
-          "help": "If you're having trouble with the button above, copy and paste the URL below into your web browser:",
-          "expire_time": "This link will expire on {date}"
         }
       },
       "change_password": {

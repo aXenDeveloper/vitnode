@@ -24,9 +24,10 @@ export interface BuildPluginReturn<P extends string = string> {
     })[];
   };
   /**
-   * The languages this plugin ships, usually `import messages from
+   * The plugin's *frontend* strings, usually `import messages from
    * "./locales"`. Merged into the app's message tree at request time - nothing
-   * is copied into the app.
+   * is copied into the app. Server-only strings (emails) go in the separate
+   * `messages` on `buildApiPlugin` instead.
    */
   messages?: LocaleMessagesMap;
   pluginId: P;

@@ -30,10 +30,18 @@ export interface MessagesSource {
    * so are not expected to cover the default locale.
    */
   optional?: boolean;
+  /**
+   * Which tree this source belongs to - `"web"` or `"api"`. A plugin ships a
+   * different tree to each under the same {@link id}, so scope is folded into
+   * the message cache key: without it a single app (frontend and API in one
+   * process) would serve whichever tree loaded first to both.
+   */
+  scope?: string;
 }
 
 export interface LocaleConfig {
   code: string;
+  enabled?: boolean;
   name: string;
 }
 

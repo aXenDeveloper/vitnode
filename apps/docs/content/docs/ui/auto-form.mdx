@@ -305,6 +305,10 @@ only when more than one language is enabled) that switches which language you
 are editing; it does **not** change the app-wide locale, only the value inside
 that field.
 
+"Enabled" here means every locale in your [`i18n.locales`](/docs/dev/i18n) config
+that is not marked [`enabled: false`](/docs/dev/i18n#disabling-one) - a disabled
+language is not offered in the select.
+
 The value is stored as an array matching the
 [`core_languages_words`](/docs/dev/working-with-users/roles) table - one
 `{ languageCode, value }` entry per language. Declare the field with the
