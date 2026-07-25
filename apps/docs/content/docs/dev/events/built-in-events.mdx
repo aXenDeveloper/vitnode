@@ -139,6 +139,24 @@ the time this fires no user references the removed role.
 per-role settings, externally-cached role lists), or audit-log the removal using
 the envelope's `actor`.
 
+The event fires only after the delete transaction commits, so by the time your
+listener runs the role row is gone - key your cleanup off `payload.roleId`
+rather than re-reading `core_roles`:
+
+```ts title="Example: clean up plugin data on role deletion"
+export const roleCleanupListener = buildEventListener({
+  event: "role.deleted",
+  name: "cleanup-role-settings",
+  handler: async (c, payload) => {
+    // Remove any plugin-owned rows keyed by the deleted role.
+    await c
+      .get("db")
+      .delete(blog_role_settings)
+      .where(eq(blog_role_settings.roleId, payload.roleId));
+  },
+});
+```
+
 ### user.deleted (declared only)
 
 This event exists in the `VitNodeEvents` map so listeners and payloads are

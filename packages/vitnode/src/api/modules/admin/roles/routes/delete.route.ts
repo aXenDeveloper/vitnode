@@ -121,22 +121,15 @@ export const deleteRoleAdminRoute = buildRoute({
         .where(eq(core_roles.id, targetRoleId))
         .limit(1);
 
-      // The guest role can never be a user's primary role, so it is not a valid
-      // move target.
       if (!target || target.guest) {
         return c.json({ error: "Invalid target role" }, 400);
       }
 
-      // Moving members into an admin-granting role would make them admins, so
-      // it needs the same permission as promoting a user to admin - a
-      // `can_edit`-only admin must not be able to escalate members this way.
       await assertCanAssignPrimaryRole(c, targetRoleId);
     }
 
     await db.transaction(async tx => {
       if (targetRoleId != null) {
-        // Grab the members before the move so we can drop any secondary-role
-        // rows that would collide with their new primary role.
         const members = await tx
           .select({ id: core_users.id })
           .from(core_users)
