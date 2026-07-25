@@ -6,10 +6,10 @@ import { getConfig } from "./get-config.js";
 import {
   appScope,
   dim,
+  effectiveDefaultTree,
   flattenKeys,
   green,
   listAppLocaleFiles,
-  packageDefaultTree,
   prefix,
   readJsonTree,
   red,
@@ -75,7 +75,7 @@ export const i18nUpdate = async () => {
   try {
     repoRoot = findRepoRoot(appDir);
   } catch {
-    // Not inside a project root (unusual) - `packageDefaultTree` will find
+    // Not inside a project root (unusual) - `effectiveDefaultTree` will find
     // nothing and every file is left untouched, which is the safe outcome.
   }
 
@@ -96,8 +96,9 @@ export const i18nUpdate = async () => {
     const cached = englishCache.get(pluginId);
     if (cached) return cached;
 
-    const tree = packageDefaultTree(pluginId, {
-      locale: defaultLocale,
+    const tree = effectiveDefaultTree(pluginId, {
+      appDir,
+      defaultLocale,
       repoRoot,
       scope,
     });

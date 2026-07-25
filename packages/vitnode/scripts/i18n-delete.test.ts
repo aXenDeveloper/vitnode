@@ -50,6 +50,29 @@ describe("removeLocaleFromConfig", () => {
   it("returns the source unchanged for an unknown code", () => {
     expect(removeLocaleFromConfig(config, "fr")).toBe(config);
   });
+
+  it("only touches the locales array, not a flat object sharing the code", () => {
+    // An inline config can carry an unrelated `{ code: "de" }` (here a plugin
+    // option) before the locales array; it must survive the removal.
+    const inline = `export const config = buildConfig({
+  plugins: [somePlugin({ code: "de" })],
+  i18n: {
+    defaultLocale: "en",
+    locales: [
+      { code: "de", name: "Deutsch" },
+      { code: "en", name: "English" },
+    ],
+  },
+});
+`;
+    const out = removeLocaleFromConfig(inline, "de");
+
+    // The plugin option is left intact...
+    expect(out).toContain('somePlugin({ code: "de" })');
+    // ...while the actual locale entry is gone.
+    expect(out).not.toContain('{ code: "de", name: "Deutsch" }');
+    expect(out).toContain('{ code: "en", name: "English" },');
+  });
 });
 
 describe("removeMessagesFromConfig", () => {

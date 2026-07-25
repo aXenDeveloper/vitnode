@@ -28,21 +28,52 @@ import {
 const escapeRegExp = (value: string) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+/** Index of the `]` that closes the array whose `[` sits at `openIndex`. */
+const matchingBracket = (source: string, openIndex: number): number => {
+  let depth = 0;
+  for (let i = openIndex; i < source.length; i += 1) {
+    if (source[i] === "[") depth += 1;
+    else if (source[i] === "]") {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+  }
+
+  return -1;
+};
+
 /**
  * Removes the `{ ... code: "<code>" ... }` entry from the `locales` array,
  * along with its indentation and trailing comma. A locale object is flat, so a
  * `[^{}]` run matches its whole body. Returns the source unchanged when no such
  * entry is present.
+ *
+ * The match is scoped to the `locales` array's bounds first: an inline config
+ * can carry unrelated flat objects that share the code (e.g. a plugin option
+ * `{ code: "de" }`) earlier in the file, and an unscoped replace would strip
+ * the first of those instead - silently corrupting the config while reporting
+ * success.
  */
 export const removeLocaleFromConfig = (
   source: string,
   code: string,
 ): string => {
+  const array = /locales\s*:\s*\[/.exec(source);
+  if (array?.index === undefined) return source;
+
+  const open = source.indexOf("[", array.index);
+  const close = matchingBracket(source, open);
+  if (close === -1) return source;
+
   const re = new RegExp(
     `[^\\S\\n]*\\{[^{}]*\\bcode\\s*:\\s*["']${escapeRegExp(code)}["'][^{}]*\\}[^\\S\\n]*,?\\n?`,
   );
 
-  return source.replace(re, "");
+  const body = source.slice(open, close + 1);
+  const cleaned = body.replace(re, "");
+  if (cleaned === body) return source;
+
+  return source.slice(0, open) + cleaned + source.slice(close + 1);
 };
 
 /**

@@ -98,6 +98,54 @@ export const packageDefaultTree = (
     .map(readJsonTree)
     .reduce<Record<string, unknown>>((acc, tree) => deepMerge(acc, tree), {});
 
+/**
+ * The app's own override tree for one package/locale, if it wrote one. Unlike a
+ * package - which ships a frontend and a server tree separately - an app keeps
+ * a single flat `src/locales/<pluginId>/<locale>.json` per package (the two
+ * trees merged into one), so this is a single file, not a scoped pair.
+ */
+export const appOverrideTree = (
+  appDir: string,
+  pluginId: string,
+  locale: string,
+): Record<string, unknown> =>
+  readJsonTree(join(appDir, "src", "locales", pluginId, `${locale}.json`));
+
+/**
+ * The default-locale tree the tools treat as a package's source of truth.
+ *
+ * Usually an app's `defaultLocale` is the one the package itself ships (`en`),
+ * so this is just the package tree. But an app can declare a default the
+ * package does not ship - e.g. `defaultLocale: "pl"` while the package ships
+ * only `en`, the app supplying `src/locales/<pkg>/pl.json` itself. There the
+ * package tree is empty, so the app's own override is merged in on top: it is
+ * what actually renders for the default locale at runtime, and mirrors how
+ * `i18n:check` builds its base key set (`keysFor`). Without this, `create` and
+ * `update` would find nothing for the default locale and skip the package
+ * entirely, even though its effective default tree exists at runtime.
+ *
+ * Returns `{}` only when neither the package nor the app provides the default
+ * locale, so callers can still treat "no source" as a safe skip.
+ */
+export const effectiveDefaultTree = (
+  pluginId: string,
+  {
+    appDir,
+    defaultLocale,
+    repoRoot,
+    scope,
+  }: {
+    appDir: string;
+    defaultLocale: string;
+    repoRoot: string;
+    scope: AppScope;
+  },
+): Record<string, unknown> =>
+  deepMerge(
+    packageDefaultTree(pluginId, { locale: defaultLocale, repoRoot, scope }),
+    appOverrideTree(appDir, pluginId, defaultLocale),
+  );
+
 export const dim = (value: string) => `\x1b[90m${value}\x1b[0m`;
 export const red = (value: string) => `\x1b[31m${value}\x1b[0m`;
 export const green = (value: string) => `\x1b[32m${value}\x1b[0m`;

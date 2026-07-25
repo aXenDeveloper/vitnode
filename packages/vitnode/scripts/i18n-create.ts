@@ -9,9 +9,9 @@ import {
   createReadline,
   cyan,
   dim,
+  effectiveDefaultTree,
   findI18nSourceFile,
   green,
-  packageDefaultTree,
   prefix,
   type Readline,
   red,
@@ -24,6 +24,14 @@ const LOCALE_CODE_PATTERN = /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/;
 /** One `import("./locales/<pluginId>/<code>.json")` loader, indented. */
 const messageEntry = (indent: string, pluginId: string, code: string) =>
   `${indent}"${pluginId}": () => import("./locales/${pluginId}/${code}.json"),`;
+
+/**
+ * A TypeScript string literal for arbitrary text. `JSON.stringify` escapes
+ * quotes, backslashes, and newlines, so a free-form language name like
+ * `Foo "Bar"` can't break out of its quotes and corrupt the generated config.
+ * For simple inputs the result is byte-identical to `"value"`.
+ */
+const stringLiteral = (value: string): string => JSON.stringify(value);
 
 /** True when the char right after an opening bracket starts a new line. */
 const opensOnNewLine = (source: string, afterOpen: number): boolean =>
@@ -47,7 +55,7 @@ export const addLocaleToConfig = (
 
   const indent = `${match[1]}  `;
   const at = match.index + match[0].length;
-  const entry = `{ code: "${code}", name: "${name}" },`;
+  const entry = `{ code: ${stringLiteral(code)}, name: ${stringLiteral(name)} },`;
   const insertion = opensOnNewLine(source, at)
     ? `\n${indent}${entry}`
     : `\n${indent}${entry}\n${indent}`;
@@ -140,7 +148,10 @@ export const buildI18nFile = ({
   pluginIds: string[];
 }): string => {
   const localeLines = [...locales, { code, name }]
-    .map(locale => `    { code: "${locale.code}", name: "${locale.name}" },`)
+    .map(
+      locale =>
+        `    { code: ${stringLiteral(locale.code)}, name: ${stringLiteral(locale.name)} },`,
+    )
     .join("\n");
   const entries = pluginIds
     .map(id => messageEntry("      ", id, code))
@@ -283,9 +294,14 @@ export const i18nCreate = async () => {
     }
 
     // Only the trees this app uses, merged - so an API-only app is seeded with
-    // the handful of email keys, not the whole admin UI it never renders.
-    const tree = packageDefaultTree(pluginId, {
-      locale: defaultLocale,
+    // the handful of email keys, not the whole admin UI it never renders. When
+    // the app declares a default the package doesn't ship, the app's own
+    // default-locale override stands in as the source, so a package is never
+    // skipped just because its default tree lives in the app rather than the
+    // package.
+    const tree = effectiveDefaultTree(pluginId, {
+      appDir,
+      defaultLocale,
       repoRoot,
       scope,
     });
@@ -349,7 +365,7 @@ export const i18nCreate = async () => {
       console.log(
         `\n${prefix} Couldn't edit ${relative(appDir, sourceFile)} automatically. Add:\n` +
           dim(
-            `  locales: [{ code: "${code}", name: "${name}" }, /* ... */]\n`,
+            `  locales: [{ code: ${stringLiteral(code)}, name: ${stringLiteral(name)} }, /* ... */]\n`,
           ) +
           dim(`  messages: {\n    "${code}": {\n${messages}\n    },\n  }`),
       );

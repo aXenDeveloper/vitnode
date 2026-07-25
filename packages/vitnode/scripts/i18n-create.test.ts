@@ -60,6 +60,16 @@ describe("addLocaleToConfig", () => {
       addLocaleToConfig("export const x = {};", { code: "de", name: "x" }),
     ).toBeNull();
   });
+
+  it("escapes quotes in the language name instead of breaking out", () => {
+    const out = notNull(
+      addLocaleToConfig(withMessages, { code: "de", name: 'Foo "Bar"' }),
+    );
+
+    // The embedded quotes are escaped, not left to terminate the literal early.
+    expect(out).toContain('{ code: "de", name: "Foo \\"Bar\\"" },');
+    expect(out).not.toContain('name: "Foo "Bar""');
+  });
 });
 
 describe("addLocaleToConfig (inline array)", () => {
@@ -149,5 +159,18 @@ describe("buildI18nFile", () => {
       '"@vitnode/core": () => import("./locales/@vitnode/core/de.json"),',
     );
     expect(file).toContain("satisfies VitNodeI18nConfig;");
+  });
+
+  it("escapes quotes in a language name", () => {
+    const file = buildI18nFile({
+      code: "de",
+      defaultLocale: "en",
+      locales: [{ code: "en", name: "English" }],
+      name: 'Foo "Bar"',
+      pluginIds: ["@vitnode/core"],
+    });
+
+    expect(file).toContain('{ code: "de", name: "Foo \\"Bar\\"" },');
+    expect(file).not.toContain('name: "Foo "Bar""');
   });
 });
