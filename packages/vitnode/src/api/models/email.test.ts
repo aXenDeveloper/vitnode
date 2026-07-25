@@ -28,7 +28,7 @@ const makeCtx = (
     },
     i18n: {
       getMessages: vi.fn().mockResolvedValue({}),
-      resolveLocale: (locale?: string) => locale ?? "en",
+      resolveSupportedLocale: (locale?: string) => locale ?? "en",
     },
     queue: { dispatch },
     log: { error, warn: vi.fn(), debug: vi.fn() },

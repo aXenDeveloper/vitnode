@@ -67,7 +67,7 @@ export const testRoute = buildRoute({
 
 ## Language
 
-An email renders in the recipient's language, not the sender's. Pass `user` and VitNode uses their `core_users.language`; pass a bare `to` and you supply `locale` yourself. Either way, a language your app doesn't list in `i18n.locales` falls back to `defaultLocale` rather than sending half-translated mail.
+An email renders in the recipient's language, not the sender's. Pass `user` and VitNode uses their `core_users.language`; pass a bare `to` and you supply `locale` yourself. Either way, a language your app doesn't list in `i18n.locales` falls back to `defaultLocale` - the request is never consulted, so mail cannot arrive in the language of whoever triggered the send.
 
 Templates get an `i18n` prop to turn into a translator:
 

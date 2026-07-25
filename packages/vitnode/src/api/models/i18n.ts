@@ -51,6 +51,10 @@ export class I18nModel {
    * Picks the locale for this request: an explicit choice first, then the
    * signed-in user's language, then `Accept-Language`, then the default.
    * Anything the app does not list as a locale is skipped.
+   *
+   * This is the locale of the *caller*. When you are rendering for someone
+   * else - an email recipient, a queued job's target - use
+   * {@link resolveSupportedLocale} instead.
    */
   resolveLocale(explicit?: string): string {
     const supported = this.locales.map(locale => locale.code);
@@ -64,6 +68,23 @@ export class I18nModel {
       negotiateLocale(this.c.req.header("accept-language"), supported) ??
       this.defaultLocale
     );
+  }
+
+  /**
+   * Narrows a locale that belongs to the thing being rendered - a recipient's
+   * `core_users.language`, a subscriber's saved language - down to one the app
+   * ships, falling back to {@link defaultLocale}.
+   *
+   * Unlike {@link resolveLocale} this never reads the request. Dropping a
+   * language from `i18n.locales` must not make that user's mail arrive in
+   * whatever language the admin who triggered the send happens to browse in.
+   */
+  resolveSupportedLocale(preferred?: string): string {
+    const supported = this.locales.map(locale => locale.code);
+
+    return preferred && supported.includes(preferred)
+      ? preferred
+      : this.defaultLocale;
   }
 
   get defaultLocale(): string {

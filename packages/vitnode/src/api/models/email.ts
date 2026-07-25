@@ -87,9 +87,12 @@ export class EmailModel {
     const core = this.c.get("core");
     const i18n = this.c.get("i18n");
 
-    // The recipient's own language decides, not the language of whoever
-    // triggered the send. `resolveLocale` drops anything the app doesn't ship.
-    const locale = i18n.resolveLocale(localeFromArgs ?? user?.language);
+    // The recipient's own language decides, never the language of whoever
+    // triggered the send - so this deliberately does not fall back to the
+    // request. A language the app no longer ships lands on `defaultLocale`.
+    const locale = i18n.resolveSupportedLocale(
+      localeFromArgs ?? user?.language,
+    );
     const messages = await i18n.getMessages(locale);
 
     const htmlContent =

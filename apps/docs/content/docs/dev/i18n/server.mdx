@@ -59,6 +59,16 @@ Parsed with its `q` weights, matched exactly first and then on the primary subta
 
 Anything not in `i18n.locales` is skipped rather than used, so a stale language code on a user row cannot produce a half-English page.
 
+### Rendering for someone else
+
+That chain describes the *caller*. When the language belongs to whoever you are rendering for rather than to whoever made the request - an email recipient, a queued job's target - reach for `resolveSupportedLocale` instead:
+
+```ts
+const locale = c.get("i18n").resolveSupportedLocale(recipient.language);
+```
+
+It takes the language you hand it when the app ships it and `defaultLocale` when it doesn't, and it never touches the request. Dropping a language from `i18n.locales` should send that user English, not the language of the admin who clicked the button.
+
 ## The API
 
 import { TypeTable } from "fumadocs-ui/components/type-table";
@@ -75,8 +85,14 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
       type: "(locale?: string) => Promise<Messages>",
     },
     resolveLocale: {
-      description: "Runs the resolution above without loading anything.",
+      description:
+        "Runs the resolution above for the caller, without loading anything.",
       type: "(explicit?: string) => string",
+    },
+    resolveSupportedLocale: {
+      description:
+        "A locale you already have, or defaultLocale if the app does not ship it. Never reads the request.",
+      type: "(preferred?: string) => string",
     },
     locales: {
       description: "Every locale the app accepts.",
@@ -93,7 +109,7 @@ Merged trees are cached per locale for the life of the process, so only the firs
 
 ## Emails
 
-Emails resolve their own locale - the recipient's, not the sender's - so you rarely call the translator yourself:
+Emails run through `resolveSupportedLocale`, so they render in the recipient's language or `defaultLocale` - never in the sender's. You rarely call the translator yourself:
 
 ```ts title="src/api/modules/users/routes/welcome.route.ts"
 await c.get("email").send({
