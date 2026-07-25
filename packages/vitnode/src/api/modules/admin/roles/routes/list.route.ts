@@ -8,6 +8,7 @@ import {
   zodPaginationQuery,
 } from "@/api/lib/with-pagination";
 import { CONFIG_PLUGIN } from "@/config";
+import { core_admin_permissions } from "@/database/admins";
 import { core_languages_words } from "@/database/languages";
 import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
@@ -35,6 +36,10 @@ const rolesAdminListSchema = z.object({
       createdAt: z.date(),
       updatedAt: z.date(),
       usersCount: z.number(),
+      // A role grants admin access when it has a row in
+      // `core_admin_permissions`. Editing/deleting such roles needs the
+      // elevated `can_edit_admin` / `can_delete_admin` permission.
+      grantsAdmin: z.boolean(),
     }),
   ),
   pageInfo: zodPaginationPageInfo,
@@ -155,6 +160,15 @@ export const listRolesAdminRoute = buildRoute({
           .where(inArray(core_users.roleId, roleIds))
           .groupBy(core_users.roleId)
       : [];
+    // Roles with a `core_admin_permissions` row grant admin access.
+    const adminRoles = roleIds.length
+      ? await c
+          .get("db")
+          .selectDistinct({ roleId: core_admin_permissions.roleId })
+          .from(core_admin_permissions)
+          .where(inArray(core_admin_permissions.roleId, roleIds))
+      : [];
+    const adminRoleIds = new Set(adminRoles.map(row => row.roleId));
 
     return c.json({
       pageInfo: data.pageInfo,
@@ -165,6 +179,7 @@ export const listRolesAdminRoute = buildRoute({
           .map(word => ({ name: word.value, languageCode: word.languageCode })),
         usersCount:
           userCounts.find(item => item.roleId === role.id)?.total ?? 0,
+        grantsAdmin: adminRoleIds.has(role.id),
       })),
     });
   },

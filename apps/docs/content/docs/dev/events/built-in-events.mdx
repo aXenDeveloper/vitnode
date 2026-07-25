@@ -15,7 +15,7 @@ the emitting plugin are needed, the event map is global.
 | `user.deleted`          | `{ userId, email }`                      | _Declared only_ - core has no user deletion flow yet    |
 | `role.created`          | `{ roleId }`                             | A role is created in the AdminCP                        |
 | `role.updated`          | `{ roleId }`                             | A role is edited in the AdminCP                         |
-| `role.deleted`          | `{ roleId }`                             | _Declared only_ - core has no role deletion flow yet    |
+| `role.deleted`          | `{ roleId }`                             | A role is deleted in the AdminCP                        |
 | `blog.post.created`     | `{ postId, categoryId }`                 | A blog post is created                                  |
 | `blog.post.updated`     | `{ postId, categoryId }`                 | A blog post is edited                                   |
 | `blog.post.deleted`     | `{ postId, categoryId }`                 | A blog post is deleted                                  |
@@ -118,12 +118,33 @@ translated names, which live in `core_languages_words`).
 **Use cases:** provision plugin-side permission defaults for a new role, or
 refresh externally-cached permission matrices when a role changes.
 
-### user.deleted / role.deleted (declared only)
+### role.deleted
 
-These events exist in the `VitNodeEvents` map so listeners and payloads are
-already typed, but **core never emits them today** - there is no user or role
-deletion flow yet. They are the agreed-upon names for plugins that implement
-deletion themselves, and core will emit them once deletion lands.
+Emitted after a role is deleted in the AdminCP. Its translated names in
+`core_languages_words` are removed with it, and its secondary-role assignments
+and staff-permission entries are dropped by database cascade. If the role still
+had members, they are reassigned to another role **before** the delete, so by
+the time this fires no user references the removed role.
+
+<TypeTable
+  type={{
+    roleId: {
+      description: "Id of the deleted role.",
+      type: "number",
+    },
+  }}
+/>
+
+**Use cases:** clean up plugin-owned data keyed by role id (permission matrices,
+per-role settings, externally-cached role lists), or audit-log the removal using
+the envelope's `actor`.
+
+### user.deleted (declared only)
+
+This event exists in the `VitNodeEvents` map so listeners and payloads are
+already typed, but **core never emits it today** - there is no user deletion
+flow yet. It is the agreed-upon name for plugins that implement account deletion
+themselves, and core will emit it once deletion lands.
 
 ## Blog (`@vitnode/blog`)
 
@@ -197,5 +218,5 @@ High-frequency or consumer-less events are added only when a listener needs
 them, to keep the catalog meaningful: there is currently no `user.signedIn`,
 `user.passwordResetRequested`, or `file.uploaded`. If you need one of these,
 open an issue or PR - adding an event is a one-line `emit` plus an entry in the
-`VitNodeEvents` map. (`user.deleted` and `role.deleted` are a special case:
-they are declared in the map already, but wait on core growing deletion flows.)
+`VitNodeEvents` map. (`user.deleted` is a special case: it is declared in the
+map already, but waits on core growing a user-deletion flow.)

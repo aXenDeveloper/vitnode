@@ -196,7 +196,15 @@ export const DeleteAction = ({
         return;
       }
 
-      toast.success(t("success"));
+      toast.success(t("success"), {
+        description:
+          hasUsers && target
+            ? t("successDescMoved", {
+                count: data.usersCount,
+                name: resolveName(target),
+              })
+            : t("successDesc"),
+      });
       setOpen(false);
     });
   };

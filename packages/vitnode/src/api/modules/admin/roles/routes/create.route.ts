@@ -29,6 +29,7 @@ export const zodCreateRoleAdminSchema = z.object({
 
 export const createRoleAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "roles", permission: "can_create" },
   route: {
     method: "post",
     description: "Create a new role (Admin only)",

@@ -5,14 +5,21 @@ import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { toast } from "sonner";
 
+import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
+import { CONFIG_PLUGIN } from "@/config";
 
 import { mutationApi } from "./mutation-api.server";
 
 export const RunActionCronTable = ({ id }: { id: number }) => {
   const t = useTranslations("admin.advanced.cron.list.actions.runNow");
   const tError = useTranslations("core.global.errors");
+  const canRun = useAdminStaffPermission({
+    plugin: CONFIG_PLUGIN.pluginId,
+    module: "cron",
+    permission: "can_run",
+  });
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, formAction, isPending] = useActionState(async () => {
     const mutation = await mutationApi(id);
@@ -26,6 +33,10 @@ export const RunActionCronTable = ({ id }: { id: number }) => {
 
     toast.success(t("success"));
   }, null);
+
+  if (!canRun) {
+    return null;
+  }
 
   return (
     <form action={formAction}>

@@ -8,8 +8,11 @@ import { core_languages_words } from "@/database/languages";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
 
+import { assertCanManageAdminRole } from "../lib/assert-manage-admin-role";
+
 export const deleteRoleAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "roles", permission: "can_delete" },
   route: {
     method: "delete",
     description: "Delete a role by id (Admin only)",
@@ -85,6 +88,12 @@ export const deleteRoleAdminRoute = buildRoute({
     if (role.protected || role.default || role.root || role.guest) {
       return c.json({ error: "This role cannot be deleted" }, 403);
     }
+
+    // Deleting a role that grants admin access requires the elevated permission.
+    await assertCanManageAdminRole(c, {
+      roleId,
+      permission: "can_delete_admin",
+    });
 
     // Members point at their primary role through a NOT NULL, RESTRICT foreign
     // key, so anyone in this role has to be moved elsewhere first. Secondary
