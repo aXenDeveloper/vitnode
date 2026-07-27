@@ -6,6 +6,8 @@ import { deepMerge } from "./deep-merge";
 const messagesCache = new Map<string, Promise<Messages>>();
 const warned = new Set<string>();
 
+const cacheEnabled = (): boolean => process.env.NODE_ENV === "production";
+
 const warnOnce = (key: string, message: string) => {
   if (warned.has(key)) return;
   warned.add(key);
@@ -113,8 +115,9 @@ const buildMessages = async ({
  * locale underneath as a per-key fallback.
  *
  * Sources are applied in order - core, then each plugin, then app overrides -
- * so later ones win. The result is memoised per locale: emails and pages hit
- * the cache instead of re-reading and re-merging every locale file.
+ * so later ones win. The result is memoised per locale in production (emails and
+ * pages hit the cache instead of re-reading every locale file); in development
+ * the cache is off so edits to a locale file show up on the next request.
  */
 export const loadMessages = async ({
   defaultLocale,
@@ -125,6 +128,10 @@ export const loadMessages = async ({
   locale: string;
   sources: MessagesSource[];
 }): Promise<Messages> => {
+  if (!cacheEnabled()) {
+    return await buildMessages({ defaultLocale, locale, sources });
+  }
+
   // Scope is part of the key: web and api source-sets share plugin ids but ship
   // different trees, so a single app (both in one process) must not serve one
   // where it asked for the other.

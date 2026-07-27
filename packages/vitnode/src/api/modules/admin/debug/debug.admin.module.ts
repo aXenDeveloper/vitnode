@@ -6,6 +6,7 @@ import { queueDebugAdminRoute } from "./routes/queue.route";
 import { rebuildSearchDebugAdminRoute } from "./routes/rebuild-search.route";
 import { searchStatusDebugAdminRoute } from "./routes/search-status.route";
 import { sendTestEmailDebugAdminRoute } from "./routes/send-test-email.route";
+import { testAiDebugAdminRoute } from "./routes/test-ai.route";
 import { testStorageUploadDebugAdminRoute } from "./routes/test-storage-upload.route";
 
 export const debugAdminModule = buildModule({
@@ -18,6 +19,7 @@ export const debugAdminModule = buildModule({
     searchStatusDebugAdminRoute,
     rebuildSearchDebugAdminRoute,
     sendTestEmailDebugAdminRoute,
+    testAiDebugAdminRoute,
     testStorageUploadDebugAdminRoute,
   ],
 });

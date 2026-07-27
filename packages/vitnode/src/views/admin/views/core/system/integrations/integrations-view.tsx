@@ -6,6 +6,7 @@ import {
   MailIcon,
   RadioTowerIcon,
   ShieldCheckIcon,
+  SparklesIcon,
 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -16,9 +17,11 @@ import { fetcher } from "@/lib/fetcher";
 
 import { IntegrationCard, type IntegrationStatus } from "./integration-card";
 import { SendTestEmailAction } from "./send-test-email/send-test-email";
+import { TestAIAction } from "./test-ai/test-ai";
 import { TestStorageAction } from "./test-storage/test-storage";
 
 const DOCS_URLS = {
+  ai: "https://vitnode.com/docs/dev/ai",
   captcha: "https://vitnode.com/docs/dev/captcha",
   cron: "https://vitnode.com/docs/dev/cron",
   email: "https://vitnode.com/docs/dev/email",
@@ -43,18 +46,23 @@ const toStatus = (active: boolean): IntegrationStatus =>
   active ? "active" : "inactive";
 
 export const IntegrationsView = async () => {
-  const [t, data, canSendTestEmail, canTestStorage] = await Promise.all([
-    getTranslations("admin.system.integrations"),
-    getIntegrationsData(),
-    checkAdminPermissionApi({
-      module: "system",
-      permission: "can_send_test_email",
-    }),
-    checkAdminPermissionApi({
-      module: "system",
-      permission: "can_test_storage",
-    }),
-  ]);
+  const [t, data, canSendTestEmail, canTestStorage, canTestAi] =
+    await Promise.all([
+      getTranslations("admin.system.integrations"),
+      getIntegrationsData(),
+      checkAdminPermissionApi({
+        module: "system",
+        permission: "can_send_test_email",
+      }),
+      checkAdminPermissionApi({
+        module: "system",
+        permission: "can_test_storage",
+      }),
+      checkAdminPermissionApi({
+        module: "system",
+        permission: "can_test_ai",
+      }),
+    ]);
 
   const statusLabel = (status: IntegrationStatus) => t(`status.${status}`);
 
@@ -75,6 +83,26 @@ export const IntegrationsView = async () => {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <IntegrationCard
+        action={
+          data.ai.active && canTestAi ? (
+            <TestAIAction models={data.ai.models} />
+          ) : undefined
+        }
+        description={t("ai.desc")}
+        href={DOCS_URLS.ai}
+        Icon={SparklesIcon}
+        meta={
+          data.ai.active ? (
+            <span>{t("ai.models", { count: data.ai.models.length })}</span>
+          ) : null
+        }
+        readMoreLabel={t("read_more")}
+        status={toStatus(data.ai.active)}
+        statusLabel={statusLabel(toStatus(data.ai.active))}
+        title={t("ai.title")}
+      />
+
       <IntegrationCard
         description={t("websocket.desc")}
         href={DOCS_URLS.websocket}
@@ -203,10 +231,17 @@ export const IntegrationsView = async () => {
 
 export const IntegrationsViewSkeleton = () => (
   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-    {["websocket", "redis", "email", "storage", "cron", "queue", "captcha"].map(
-      id => (
-        <Skeleton className="h-32 w-full rounded-xl" key={id} />
-      ),
-    )}
+    {[
+      "ai",
+      "websocket",
+      "redis",
+      "email",
+      "storage",
+      "cron",
+      "queue",
+      "captcha",
+    ].map(id => (
+      <Skeleton className="h-32 w-full rounded-xl" key={id} />
+    ))}
   </div>
 );

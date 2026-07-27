@@ -17,13 +17,21 @@ export const integrationsDebugAdminRoute = buildRoute({
   route: {
     method: "get",
     description:
-      "Report whether the core integrations (WebSocket, Redis, Email, Captcha, Cron) are active on the server.",
+      "Report whether the core integrations (AI, WebSocket, Redis, Email, Captcha, Cron) are active on the server.",
     path: "/integrations",
     responses: {
       200: {
         content: {
           "application/json": {
             schema: z.object({
+              ai: z.object({
+                // `true` when at least one AI language model is configured
+                // (`buildApiConfig({ ai: { models } })`).
+                active: z.boolean(),
+                // Configured AI language models (id + display name). The first
+                // entry is the default. Used to populate the "Test AI" dialog.
+                models: z.array(z.object({ id: z.string(), name: z.string() })),
+              }),
               captcha: z.object({
                 active: z.boolean(),
                 type: z
@@ -133,6 +141,13 @@ export const integrationsDebugAdminRoute = buildRoute({
 
     return c.json(
       {
+        ai: {
+          active: (core.ai?.models.length ?? 0) > 0,
+          models: c
+            .get("ai")
+            .models()
+            .map(({ id, name }) => ({ id, name })),
+        },
         captcha: {
           active: !!(captcha?.secretKey && captcha.siteKey),
           type: captcha?.type ?? null,

@@ -10,6 +10,7 @@ import type { VitNodeRealtime } from "@/ws/registry";
 import { LocalEventsAdapter } from "@/api/adapters/events/local";
 import { PostgresSearchAdapter } from "@/api/adapters/search/postgres";
 import { CacheModel } from "@/api/lib/cache";
+import { AIModel } from "@/api/models/ai";
 import { EmailModel } from "@/api/models/email";
 import { EventsModel } from "@/api/models/events";
 import { I18nModel } from "@/api/models/i18n";
@@ -67,8 +68,10 @@ export interface EnvVariablesVitNode {
       roleId: number;
     };
   };
+  ai: AIModel;
   cache: CacheModel;
   core: {
+    ai?: VitNodeApiConfig["ai"];
     authorization: {
       adminCookieExpires: number;
       adminCookieName: string;
@@ -134,6 +137,7 @@ export interface EnvVariablesVitNode {
 }
 
 export const globalMiddleware = ({
+  ai,
   authorization,
   metadata,
   email,
@@ -148,6 +152,7 @@ export const globalMiddleware = ({
   cacheClient,
 }: Pick<
   VitNodeApiConfig,
+  | "ai"
   | "authorization"
   | "captcha"
   | "cron"
@@ -259,6 +264,7 @@ export const globalMiddleware = ({
     // Fallback to localhost if nothing found
     c.set("ipAddress", ipAddress ?? "127.0.0.1");
     c.set("db", dbProvider);
+    c.set("ai", new AIModel(c));
     c.set("cache", new CacheModel(cacheClient, c));
     c.set("email", new EmailModel(c));
     c.set("events", new EventsModel(c));
@@ -269,6 +275,7 @@ export const globalMiddleware = ({
     c.set("realtime", realtime);
 
     c.set("core", {
+      ai,
       i18n: i18nMetadata,
       metadata,
       email,

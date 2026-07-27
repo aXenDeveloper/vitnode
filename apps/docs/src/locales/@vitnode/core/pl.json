@@ -21,6 +21,7 @@
   "@vitnode/core:system:can_view": "Wyświetlanie integracji",
   "@vitnode/core:system:can_send_test_email": "Wysyłanie testowej wiadomości e-mail",
   "@vitnode/core:system:can_test_storage": "Testowanie magazynu plików",
+  "@vitnode/core:system:can_test_ai": "Testowanie AI",
   "@vitnode/core:files": "Pliki",
   "@vitnode/core:files:can_view": "Wyświetlanie przesłanych plików",
   "@vitnode/core:files:can_download": "Pobieranie plików",
@@ -706,6 +707,23 @@
           "active": "Aktywna",
           "inactive": "Nieaktywna",
           "warning": "Nieosiągalna"
+        },
+        "ai": {
+          "title": "AI",
+          "desc": "Generowanie tekstu, uporządkowane dane wyjściowe i osadzenia dzięki Vercel AI SDK.",
+          "models": "{count, plural, =0 {Brak modeli} one {# model} few {# modele} many {# modeli} other {# modeli}}",
+          "test": {
+            "label": "Testuj AI",
+            "title": "Testuj AI",
+            "desc": "Wyślij zapytanie do skonfigurowanego modelu i przesyłaj odpowiedź strumieniowo, aby potwierdzić, że konfiguracja AI działa.",
+            "model": "Model",
+            "prompt": "Zapytanie",
+            "prompt_placeholder": "Zapytaj model o cokolwiek…",
+            "submit": "Wyślij zapytanie",
+            "cancel": "Anuluj",
+            "ask_again": "Zapytaj ponownie",
+            "try_again": "Spróbuj ponownie"
+          }
         },
         "websocket": {
           "title": "WebSocket",

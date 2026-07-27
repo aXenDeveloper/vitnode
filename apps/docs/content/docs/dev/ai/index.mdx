@@ -1,0 +1,175 @@
+---
+title: AI
+description: Declare AI models once with the Vercel AI SDK, then resolve them in any route via c.get("ai").
+---
+
+VitNode ships the [Vercel AI SDK](https://ai-sdk.dev/) built into
+`@vitnode/core`. Declare the models you want once in `buildApiConfig`, then in a
+route resolve one with `c.get("ai")` and pass it straight to the **native** AI
+SDK functions (`generateText`, `streamText`, `embed`, `generateImage`, …).
+
+VitNode does **not** wrap the SDK - `c.get("ai")` is only a model registry, so
+you keep the full, current AI SDK API. Because the SDK is already a provider
+abstraction there is **no separate adapter package** - each model is either a
+**Gateway id string** (no provider package) or a **provider instance** from an
+`@ai-sdk/*` package.
+
+AI is **optional**. With no `ai` block, resolving a model throws a clear
+`No AI models configured` error, so nothing connects until you set it up.
+
+## Setup
+
+<Steps>
+<Step>
+### Install the AI SDK
+
+You call the native AI SDK functions in your routes
+(`import { generateText } from "ai"`), so add `ai` to your app or plugin.
+`@vitnode/core` uses it internally, but pnpm still requires your own package to
+declare it as a direct dependency.
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+<Tabs groupId='ai-provider' persist items={['AI Gateway', 'Provider package']}>
+
+```bash tab="AI Gateway"
+# Gateway: models are `provider/model` id strings resolved through Vercel's AI
+# Gateway - one key for Anthropic, OpenAI, Google, and more. No provider package.
+pnpm i ai
+```
+
+```bash tab="Provider package"
+# Also add the provider package to talk to a provider directly with its own key.
+pnpm i ai @ai-sdk/anthropic
+```
+
+</Tabs>
+
+</Step>
+<Step>
+### Set the API key
+
+```bash title=".env"
+# AI Gateway (default): one key for every provider
+AI_GATEWAY_API_KEY=your_ai_gateway_api_key
+
+# Provider package alternative (e.g. @ai-sdk/anthropic)
+# ANTHROPIC_API_KEY=your_anthropic_api_key
+```
+
+<Callout type="info" title="Where to get a Gateway key">
+  Create an AI Gateway key in your Vercel dashboard. On Vercel deployments you
+  can use OIDC instead of a key. See the [AI Gateway
+  docs](https://ai-sdk.dev/providers/ai-sdk-providers/ai-gateway).
+</Callout>
+
+</Step>
+<Step>
+### Configure the models
+
+Pass an `ai` object to `buildApiConfig`. Each entry has an `id` (the name you
+resolve it by), a `name` (a human-readable label, also exposed to the client),
+and a `model`. **The first model is the default.**
+
+<Tabs groupId='ai-provider' persist items={['AI Gateway', 'Provider package']}>
+
+```ts tab="AI Gateway" title="src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:12]
+  ai: {
+    models: [
+      {
+        id: "default",
+        name: "Claude Sonnet 5",
+        model: "anthropic/claude-sonnet-5",
+      },
+      {
+        id: "fast",
+        name: "Claude Haiku 4.5",
+        model: "anthropic/claude-haiku-4.5",
+      },
+    ],
+    embeddingModels: [
+      {
+        id: "default",
+        name: "text-embedding-3-small",
+        model: "openai/text-embedding-3-small",
+      },
+    ],
+    imageModels: [
+      { id: "default", name: "GPT Image 1", model: "openai/gpt-image-1" },
+    ],
+  },
+});
+```
+
+```ts tab="Provider package" title="src/vitnode.api.config.ts"
+// [!code ++]
+import { anthropic } from "@ai-sdk/anthropic";
+import { buildApiConfig } from "@vitnode/core/vitnode.config";
+
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:6]
+  ai: {
+    models: [
+      {
+        id: "default",
+        name: "Claude Sonnet 5",
+        model: anthropic("claude-sonnet-5"),
+      },
+      {
+        id: "fast",
+        name: "Claude Haiku 4.5",
+        model: anthropic("claude-haiku-4.5"),
+      },
+    ],
+  },
+});
+```
+
+</Tabs>
+
+<Callout type="info" title="Mix and match">
+  A single `models` array can mix Gateway strings and provider instances - the
+  `model` field accepts any AI SDK `LanguageModel`.
+</Callout>
+
+</Step>
+</Steps>
+
+## Options
+
+The `ai` object accepts:
+
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+<TypeTable
+  type={{
+    models: {
+      description:
+        'Language models, resolved with c.get("ai").model(id?). Each is { id: string; name: string; model: LanguageModel } where model is a Gateway id string or a provider instance. The first entry is the default. At least one is required.',
+      type: "AIModelDefinition[]",
+    },
+    embeddingModels: {
+      description:
+        'Optional text embedding models, resolved with c.get("ai").embeddingModel(id?), for embed()/embedMany().',
+      type: "AIEmbeddingModelDefinition[]",
+    },
+    imageModels: {
+      description:
+        'Optional image models, resolved with c.get("ai").imageModel(id?), for generateImage().',
+      type: "AIImageModelDefinition[]",
+    },
+  }}
+/>
+
+<Callout type="info" title="Model ids change often">
+  Pick current model ids from [ai-sdk.dev](https://ai-sdk.dev/docs) or your
+  provider - models are released and retired frequently, so don't hard-code an
+  old one.
+</Callout>
+
+## Next step
+
+See [Usage](/docs/dev/ai/usage) for resolving models with `c.get("ai")`, calling
+the native SDK functions, and reading the available models on the client.

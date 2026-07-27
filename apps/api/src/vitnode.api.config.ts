@@ -1,3 +1,4 @@
+import { google } from "@ai-sdk/google";
 import { blogApiPlugin } from "@vitnode/blog/config.api";
 // import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
@@ -17,6 +18,27 @@ export const POSTGRES_URL =
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [blogApiPlugin()],
+  ai: {
+    models: [
+      {
+        id: "default",
+        name: "Claude Sonnet 5",
+        model: "anthropic/claude-sonnet-5",
+      },
+      {
+        id: "fast",
+        name: "Google Gemini 3.5 Flash Lite",
+        model: google("gemini-3.5-flash-lite"),
+      },
+    ],
+    embeddingModels: [
+      {
+        id: "default",
+        name: "OpenAI text-embedding-3-small",
+        model: "openai/text-embedding-3-small",
+      },
+    ],
+  },
   // No `i18n` block: the languages `@vitnode/core` and the installed plugins
   // ship are picked up on their own. Add one to declare extra locales or to
   // override strings from `src/locales/<pluginId>/<locale>.json`.

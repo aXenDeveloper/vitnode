@@ -6,6 +6,7 @@ import type React from "react";
 
 import type { CronAdapter } from "./api/lib/cron";
 import type { BuildPluginApiReturn } from "./api/lib/plugin";
+import type { AIConfig } from "./api/models/ai";
 import type { EmailApiPlugin } from "./api/models/email";
 import type { EventsApiPlugin } from "./api/models/events";
 import type { SearchProviderApiPlugin } from "./api/models/search";
@@ -41,6 +42,17 @@ export interface VitNodeConfig<
 }
 
 export interface VitNodeApiConfig {
+  /**
+   * AI models for the Vercel AI SDK. Declare them inline - each `model` is a
+   * Gateway id string (e.g. `"anthropic/claude-sonnet-5"`, no extra packages,
+   * uses `AI_GATEWAY_API_KEY`) or a provider instance (e.g.
+   * `anthropic("claude-sonnet-5")` from `@ai-sdk/anthropic`). The first entry is
+   * the default. In a route, resolve a model with `c.get("ai").model(id?)` and
+   * pass it to the native SDK functions, e.g.
+   * `generateText({ model: c.get("ai").model(), prompt })`. Leave undefined to
+   * disable AI - resolving a model then throws "No AI models configured".
+   */
+  ai?: AIConfig;
   authorization?: {
     adminCookieExpires?: number;
     adminCookieName?: string;

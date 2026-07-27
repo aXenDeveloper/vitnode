@@ -142,7 +142,30 @@ describe("loadMessages", () => {
     expect(webTree).toEqual({ core: { save: "Save" } });
   });
 
-  it("loads each locale only once", async () => {
+  it("loads each locale only once in production", async () => {
+    const previous = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    try {
+      const loader = vi.fn(
+        async () =>
+          await Promise.resolve({ default: { core: { save: "Save" } } }),
+      );
+      const sources: MessagesSource[] = [
+        { id: "@vitnode/core", messages: { en: loader } },
+      ];
+
+      await loadMessages({ defaultLocale: "en", locale: "en", sources });
+      await loadMessages({ defaultLocale: "en", locale: "en", sources });
+
+      expect(loader).toHaveBeenCalledOnce();
+    } finally {
+      process.env.NODE_ENV = previous;
+    }
+  });
+
+  it("re-reads on every call outside production, so edits show up live", async () => {
+    // vitest runs with NODE_ENV=test, i.e. the cache is off - the same path dev
+    // takes. A second call must hit the loader again rather than a stale tree.
     const loader = vi.fn(
       async () =>
         await Promise.resolve({ default: { core: { save: "Save" } } }),
@@ -154,7 +177,7 @@ describe("loadMessages", () => {
     await loadMessages({ defaultLocale: "en", locale: "en", sources });
     await loadMessages({ defaultLocale: "en", locale: "en", sources });
 
-    expect(loader).toHaveBeenCalledOnce();
+    expect(loader).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -21,6 +21,7 @@
   "@vitnode/core:system:can_view": "View integrations",
   "@vitnode/core:system:can_send_test_email": "Send test email",
   "@vitnode/core:system:can_test_storage": "Test storage",
+  "@vitnode/core:system:can_test_ai": "Test AI",
   "@vitnode/core:files": "Files",
   "@vitnode/core:files:can_view": "View uploaded files",
   "@vitnode/core:files:can_download": "Download files",
@@ -695,6 +696,23 @@
           "active": "Active",
           "inactive": "Inactive",
           "warning": "Unreachable"
+        },
+        "ai": {
+          "title": "AI",
+          "desc": "Text generation, structured output, and embeddings via the Vercel AI SDK.",
+          "models": "{count, plural, =0 {No models} one {# model} other {# models}}",
+          "test": {
+            "label": "Test AI",
+            "title": "Test AI",
+            "desc": "Send a prompt to a configured model and stream the response to confirm your AI setup is working.",
+            "model": "Model",
+            "prompt": "Prompt",
+            "prompt_placeholder": "Ask the model anything…",
+            "submit": "Send prompt",
+            "cancel": "Cancel",
+            "ask_again": "Ask again",
+            "try_again": "Try again"
+          }
         },
         "websocket": {
           "title": "WebSocket",
