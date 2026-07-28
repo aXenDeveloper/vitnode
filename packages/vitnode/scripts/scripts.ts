@@ -8,6 +8,7 @@ import { devPlugin } from "./dev.js";
 import { i18nCheck } from "./i18n-check.js";
 import { i18nCreate } from "./i18n-create.js";
 import { i18nDelete } from "./i18n-delete.js";
+import { i18nUpdateAi } from "./i18n-update-ai.js";
 import { i18nUpdate } from "./i18n-update.js";
 import { processPlugin } from "./plugin.js";
 import {
@@ -58,6 +59,10 @@ switch (command) {
 
   case "i18n:update":
     await i18nUpdate();
+    break;
+
+  case "i18n:update:ai":
+    await i18nUpdateAi();
     break;
 
   case "init":

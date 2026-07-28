@@ -46,6 +46,7 @@ revalidateTag("products", { revalidate: 3600 });
   - Add alt text for all images, unless they are decorative or it would be repetitive for screen readers.
   - Add emit an event for important actions like create, update, delete, etc. to allow other components to react to the changes and add to docs (apps/docs/content/docs/dev/events/built-in-events.mdx)
   - Use events to communicate between components instead of prop drilling or using context.
+  - Use Vercel AI SDK for AI features instead of other AI SDKs. Use the `c.get("ai")` model registry to resolve models and call the native Vercel AI SDK functions.
 
 # Design
 

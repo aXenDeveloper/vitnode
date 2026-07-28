@@ -9,7 +9,7 @@ type ConfigType<T extends "api.config" | "config"> = T extends "config"
   ? VitNodeConfig
   : VitNodeApiConfig;
 
-const findConfigFile = (
+export const findConfigFile = (
   baseDir: string,
   filename: string,
   maxDepth = 4,
@@ -61,18 +61,30 @@ const findConfigFile = (
 
 export async function getConfig<
   T extends "api.config" | "config" = "config",
->(args: { optional: true; type?: T }): Promise<ConfigType<T> | null>;
+>(args: {
+  baseDir?: string;
+  optional: true;
+  type?: T;
+}): Promise<ConfigType<T> | null>;
 export async function getConfig<
   T extends "api.config" | "config" = "config",
->(args?: { optional?: false; type?: T }): Promise<ConfigType<T>>;
+>(args?: {
+  baseDir?: string;
+  optional?: false;
+  type?: T;
+}): Promise<ConfigType<T>>;
 export async function getConfig<T extends "api.config" | "config" = "config">({
+  baseDir,
   type = "config" as T,
   optional = false,
 }: {
+  baseDir?: string;
   optional?: boolean;
   type?: T;
 } = {}): Promise<ConfigType<T> | null> {
-  const cwd = process.cwd();
+  // Defaults to the current app; callers pass `baseDir` to search elsewhere,
+  // e.g. one directory up to reach a sibling app's config in a monorepo.
+  const cwd = baseDir ?? process.cwd();
   const filename = `vitnode.${type}.ts`;
   const configPath = findConfigFile(cwd, filename);
 

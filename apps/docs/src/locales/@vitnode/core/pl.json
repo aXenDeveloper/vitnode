@@ -78,42 +78,42 @@
         "rebuilding": "Kolejkowanie…",
         "rebuildQueued": "Zlecono przebudowę indeksu wyszukiwania.",
         "rebuildError": "Nie udało się zlecić przebudowy.",
-        "reindex": "Reindex",
-        "reindexQueued": "Reindex queued for {collection}.",
+        "reindex": "Przeindeksuj",
+        "reindexQueued": "Przeindeksowanie dla {collection} zostało dodane do kolejki.",
         "cron": {
-          "title": "Background jobs require a configured cron adapter",
-          "desc": "A rebuild won't run until cron is active. Configure an adapter in Integrations to enable scheduled reindexing.",
-          "dismiss": "Dismiss"
+          "title": "Zadania w tle wymagają skonfigurowanego adaptera cron",
+          "desc": "Przebudowa nie zostanie uruchomiona, dopóki cron nie będzie aktywny. Skonfiguruj adapter w Integracjach, aby włączyć zaplanowane ponowne indeksowanie.",
+          "dismiss": "Odrzuć"
         },
         "stats": {
           "status": "Status",
-          "statusHealthy": "All systems operational",
-          "statusUnhealthy": "Search engine unavailable",
-          "engine": "Engine",
-          "engineDesc": "Full-text search adapter",
-          "indexed": "Indexed items",
-          "indexedDesc": "Across {count, plural, =0 {no collections} one {# collection} other {# collections}}",
-          "lastIndexed": "Last indexed",
-          "lastIndexedNever": "No content indexed yet"
+          "statusHealthy": "Wszystkie systemy działają poprawnie",
+          "statusUnhealthy": "Wyszukiwarka niedostępna",
+          "engine": "Silnik",
+          "engineDesc": "Adapter wyszukiwania pełnotekstowego",
+          "indexed": "Zindeksowane elementy",
+          "indexedDesc": "W {count, plural, =0 {brak kolekcji} one {# kolekcji} few {# kolekcjach} many {# kolekcjach} other {# kolekcji}}",
+          "lastIndexed": "Ostatnio zindeksowane",
+          "lastIndexedNever": "Brak zindeksowanych treści"
         },
         "collections": {
-          "title": "Indexed collections",
-          "desc": "Coverage and freshness per content type. Filter to preview what your users find.",
-          "count": "{shown} of {total}",
-          "searchPlaceholder": "Search collections…",
+          "title": "Zindeksowane kolekcje",
+          "desc": "Pokrycie i świeżość dla każdego typu treści. Filtruj, aby podejrzeć, co znajdują użytkownicy.",
+          "count": "{shown} z {total}",
+          "searchPlaceholder": "Przeszukaj kolekcje…",
           "columns": {
-            "collection": "Collection",
-            "items": "Items",
-            "coverage": "Coverage",
-            "lastIndexed": "Last indexed"
+            "collection": "Kolekcja",
+            "items": "Elementy",
+            "coverage": "Pokrycie",
+            "lastIndexed": "Ostatnio zindeksowane"
           },
           "status": {
-            "indexed": "Indexed",
-            "stale": "Stale",
-            "empty": "Not indexed"
+            "indexed": "Zindeksowane",
+            "stale": "Nieaktualne",
+            "empty": "Niezindeksowane"
           },
-          "empty": "No collections found",
-          "emptyDesc": "No collection matches your search. Try a different term."
+          "empty": "Nie znaleziono kolekcji",
+          "emptyDesc": "Żaden element nie pasuje do wyszukiwania. Spróbuj użyć innego terminu."
         }
       }
     },
@@ -186,8 +186,8 @@
       "go_back": "Wróć",
       "select_option": "Wybierz opcję",
       "select_options": "Wybierz opcje",
-      "select_language": "Select language",
-      "pick_color": "Pick a color",
+      "select_language": "Wybierz język",
+      "pick_color": "Wybierz kolor",
       "go_to_prev_page": "Przejdź do poprzedniej strony",
       "go_to_next_page": "Przejdź do następnej strony",
       "errors": {
@@ -208,9 +208,9 @@
           "desc": "Nie można było ukończyć żądania z powodu konfliktu z bieżącym stanem zasobu."
         },
         "429": {
-          "title": "Too many requests",
-          "desc": "You're doing that too fast. Please slow down and try again in a moment.",
-          "retry": "You're doing that too fast. Please try again in {seconds} seconds."
+          "title": "Za dużo żądań",
+          "desc": "Robisz to zbyt szybko. Zwolnij i spróbuj ponownie za chwilę.",
+          "retry": "Robisz to zbyt szybko. Spróbuj ponownie za {seconds} sekund."
         },
         "500": {
           "title": "Wewnętrzny błąd serwera",
@@ -372,24 +372,24 @@
         "desc": "Zarządzaj swoim profilem, zabezpieczeniami i preferencjami konta.",
         "nav": {
           "overview": "Przegląd",
-          "devices": "Devices",
+          "devices": "Urządzenia",
           "security": "Zabezpieczenia"
         },
         "devices": {
-          "title": "Devices",
-          "desc": "Manage your devices where you are logged in.",
-          "current_device": "Current Device",
-          "last_active": "Last Active",
-          "browser": "Browser",
-          "ip_address": "IP Address",
-          "session_expires": "Session Expires",
-          "empty": "No active devices.",
+          "title": "Urządzenia",
+          "desc": "Zarządzaj urządzeniami, na których jesteś zalogowany.",
+          "current_device": "Bieżące urządzenie",
+          "last_active": "Ostatnia aktywność",
+          "browser": "Przeglądarka",
+          "ip_address": "Adres IP",
+          "session_expires": "Wygasa sesja",
+          "empty": "Brak aktywnych urządzeń.",
           "revoke": {
-            "action": "Sign out device",
-            "title": "Sign out this device?",
-            "desc": "You will be signed out of {os}. That device will need to sign in again.",
-            "confirm": "Sign out",
-            "success": "Device signed out successfully."
+            "action": "Wyloguj urządzenie",
+            "title": "Wylogować to urządzenie?",
+            "desc": "Zostaniesz wylogowany z {os}. To urządzenie będzie wymagało ponownego zalogowania.",
+            "confirm": "Wyloguj",
+            "success": "Pomyślnie wylogowano urządzenie."
           }
         }
       }
@@ -428,7 +428,7 @@
           "title": "Zaawansowane",
           "cron": "Zadania cron",
           "queue": "Zadania w kolejce",
-          "search": "Search"
+          "search": "Szukaj"
         }
       }
     },
@@ -567,43 +567,43 @@
         }
       },
       "create": {
-        "title": "Create role",
-        "desc": "Add a new role to your application.",
-        "submit": "Create",
-        "success": "Role created"
+        "title": "Utwórz rolę",
+        "desc": "Dodaj nową rolę do swojej aplikacji.",
+        "submit": "Utwórz",
+        "success": "Utworzono rolę"
       },
       "edit": {
-        "title": "Edit role",
-        "submit": "Save changes",
-        "success": "Role updated"
+        "title": "Edytuj rolę",
+        "submit": "Zapisz zmiany",
+        "success": "Zaktualizowano rolę"
       },
       "delete": {
-        "title": "Delete role",
-        "desc": "Are you sure you want to delete the role \"{name}\"? This action cannot be undone.",
-        "descWithUsers": "The role \"{name}\" is assigned to {count, plural, one {# user} other {# users}}. Choose another role to move them into before deleting. This action cannot be undone.",
-        "moveToLabel": "Move users to",
-        "selectRole": "Select a role...",
-        "confirm": "Delete role",
-        "cancel": "Cancel",
-        "success": "Role deleted",
-        "successDesc": "The role has been permanently deleted.",
-        "successDescMoved": "{count, plural, one {# user was} other {# users were}} moved to \"{name}\" and the role was permanently deleted."
+        "title": "Usuń rolę",
+        "desc": "Czy na pewno chcesz usunąć rolę „{name}”? Tej czynności nie można cofnąć.",
+        "descWithUsers": "Rola „{name}” jest przypisana do {count, plural, one {# użytkownika} few {# użytkowników} many {# użytkowników} other {# użytkowników}}. Wybierz inną rolę, do której chcesz ich przenieść przed usunięciem. Tej czynności nie można cofnąć.",
+        "moveToLabel": "Przenieś użytkowników do",
+        "selectRole": "Wybierz rolę...",
+        "confirm": "Usuń rolę",
+        "cancel": "Anuluj",
+        "success": "Usunięto rolę",
+        "successDesc": "Rola została trwale usunięta.",
+        "successDescMoved": "{count, plural, one {# użytkownik został} few {# użytkowników zostało} many {# użytkowników zostało} other {# użytkowników zostało}} przeniesionych do „{name}”, a rola została trwale usunięta."
       },
       "tabs": {
-        "general": "General",
-        "content": "Content"
+        "general": "Ogólne",
+        "content": "Treść"
       },
       "form": {
-        "name": "Name",
-        "color": "Color",
+        "name": "Nazwa",
+        "color": "Kolor",
         "upload": {
-          "allow": "Allow upload files",
-          "total_max_storage": "Total Max Storage",
-          "max_storage_for_submit": "Max Storage for Submit",
-          "max_storage_for_submit_desc": "If you set 1000, user can upload only 1 file with size 1000kB or 2 files with size 500kB for each submit.",
-          "in_unit": "in kB",
-          "or": "or",
-          "unlimited": "Unlimited"
+          "allow": "Zezwól na przesyłanie plików",
+          "total_max_storage": "Całkowity maks. rozmiar pamięci",
+          "max_storage_for_submit": "Maks. rozmiar pamięci dla przesłania",
+          "max_storage_for_submit_desc": "Jeśli ustawisz 1000, użytkownik może przesłać tylko 1 plik o rozmiarze 1000 kB lub 2 pliki o rozmiarze 500 kB dla każdego przesłania.",
+          "in_unit": "w kB",
+          "or": "lub",
+          "unlimited": "Bez limitu"
         }
       }
     },

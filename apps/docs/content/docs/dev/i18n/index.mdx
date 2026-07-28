@@ -190,6 +190,69 @@ Like the other commands it is scoped: an API-only app is synced against each pac
   strings, then work through the ones it added.
 </Callout>
 
+## Translating with AI
+
+`i18n:update:ai` does everything `i18n:update` does, then hands the keys that are still in English to a configured AI model to fill in. It reconciles each file against the English source first, so newly added keys are translated in the same pass:
+
+```bash
+vitnode i18n:update:ai
+```
+
+It asks two things:
+
+1. **Which languages to translate** - a checklist of every language you have, all ticked by default. `space` toggles one, `a` toggles all, `Enter` confirms.
+2. **Which model to translate with** - the list comes straight from the `ai.models` in your [`vitnode.api.config.ts`](/docs/dev/ai). The first entry is the default.
+
+```text
+? Which languages should be translated from English?
+❯◉ Polski (pl)
+ ◉ Deutsch (de)
+  (space to toggle, a to select all, enter to confirm)
+
+? Which AI model should translate? (from vitnode.api.config.ts)
+❯ Claude Sonnet 5 anthropic/claude-sonnet-5
+  Google Gemini 3.5 Flash Lite gemini-3.5-flash-lite
+
+[VitNode] Translating with Claude Sonnet 5 (anthropic/claude-sonnet-5) into: pl
+  pl  128 string(s) (96 unique)
+  96 unique string(s) in 3 batch(es), up to 3 in parallel
+  translated 3/3 batch(es)
+
+  updated  src/locales/@vitnode/core/pl.json → pl  +112
+  updated  src/locales/@vitnode/blog/pl.json → pl  +16
+
+[VitNode] 2 file(s) updated, 128 string(s) translated.
+```
+
+Translation runs through the [Vercel AI SDK](/docs/dev/ai), so it works with any model you have configured - a Gateway id string or a provider instance. Make sure the matching credentials are set (e.g. `AI_GATEWAY_API_KEY`) before you run it.
+
+### How it stays fast
+
+The work is network-bound - almost all the time is spent waiting on the model - so the command is built to overlap that waiting:
+
+- **Batches run concurrently.** All the strings across every selected language and file are cut into fixed-size batches and pushed through a bounded pool (6 at a time by default). Tune it with `--concurrency <n>` - raise it if your provider's rate limits allow, lower it if you hit `429`s.
+- **Identical strings are translated once.** `Save`, `Cancel`, and friends recur across many keys; each unique English string is sent once per language and the result is fanned back out to every key that used it (see the `(96 unique)` count above).
+- **A failed batch doesn't sink the run.** Each batch retries with backoff; if it still fails, those strings are left in English and reported so a re-run picks them up - the rest are written normally.
+
+<Callout title="Monorepo layouts" type="info">
+  When the app you run this from has no `ai.models` of its own - a web app whose
+  API lives in a sibling package (`apps/web` next to `apps/api`) - it looks one
+  directory up for a `vitnode.api.config.ts` that does. Only the model list is
+  borrowed; which files are translated still comes from the app you are in. That
+  API app's `.env` is loaded too, so the provider keys (`AI_GATEWAY_API_KEY`,
+  `GOOGLE_GENERATIVE_AI_API_KEY`, ...) come from where the models are defined.
+</Callout>
+
+- It **only** translates leaves that still equal the English source, so a string you have already translated is never touched - run it as often as you like.
+- Placeholders (`{name}`, ICU plurals, `<b></b>` tags) and pure-punctuation values are preserved; the latter are skipped rather than sent to the model.
+- Pass the languages, model, and concurrency inline to skip the prompts in CI: `vitnode i18n:update:ai pl,de --model fast --concurrency 8`.
+
+<Callout title="Review machine translations" type="warn">
+  AI translations are a strong first draft, not a final one. Skim what it wrote -
+  especially product terms and tone - before you ship. The files are already
+  reconciled and translated in the same pass, so there is nothing to re-check.
+</Callout>
+
 ## Removing one
 
 To drop a language, hand `i18n:delete` its code. It deletes that locale's override files, prunes the folders they leave empty, and unwires the `{ code, name }` and `messages` entries from your config:

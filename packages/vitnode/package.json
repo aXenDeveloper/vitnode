@@ -113,6 +113,7 @@
     "@bprogress/next": "^3.2.12",
     "@dnd-kit/core": "^6.3.1",
     "@hono/swagger-ui": "^0.6.1",
+    "@inquirer/prompts": "^8.5.2",
     "@tanstack/react-query": "^5.101.4",
     "@tiptap/extension-text-align": "^3.28.0",
     "@tiptap/pm": "^3.28.0",
