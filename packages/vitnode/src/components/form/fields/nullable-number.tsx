@@ -69,7 +69,7 @@ export const AutoFormNullableNumber = ({
 
   return (
     <>
-      {label && (
+      {!!label && (
         <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
           {label}
         </AutoFormLabel>
@@ -103,10 +103,10 @@ export const AutoFormNullableNumber = ({
           />
         </FormControl>
 
-        {unitLabel && (
+        {!!unitLabel && (
           <span className="text-muted-foreground text-sm">{unitLabel}</span>
         )}
-        {orLabel && (
+        {!!orLabel && (
           <span className="text-muted-foreground text-sm">{orLabel}</span>
         )}
 
@@ -128,7 +128,7 @@ export const AutoFormNullableNumber = ({
         </label>
       </div>
 
-      {description && <AutoFormDesc>{description}</AutoFormDesc>}
+      {!!description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />
     </>
   );

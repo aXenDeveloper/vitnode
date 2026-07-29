@@ -1,5 +1,5 @@
 {
-  "$schema": "https://turbo.build/schema.json",
+  "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
   "tasks": {
     "test": {
@@ -67,6 +67,9 @@
     },
     "i18n:update": {
       "dependsOn": ["^i18n:update"]
+    },
+    "i18n:update:ai": {
+      "dependsOn": ["^i18n:update:ai"]
     }
   }
 }

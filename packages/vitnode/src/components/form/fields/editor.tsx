@@ -30,7 +30,7 @@ const MultiLangEditor = ({
   return (
     <>
       <div className="flex items-center justify-between gap-2">
-        {label && (
+        {!!label && (
           <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
             {label}
           </AutoFormLabel>
@@ -54,7 +54,7 @@ const MultiLangEditor = ({
         />
       </FormControl>
 
-      {description && <AutoFormDesc>{description}</AutoFormDesc>}
+      {!!description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />
     </>
   );
@@ -86,7 +86,7 @@ export const AutoFormEditor = ({
 
   return (
     <>
-      {label && (
+      {!!label && (
         <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
           {label}
         </AutoFormLabel>
@@ -101,7 +101,7 @@ export const AutoFormEditor = ({
         />
       </FormControl>
 
-      {description && <AutoFormDesc>{description}</AutoFormDesc>}
+      {!!description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />
     </>
   );

@@ -44,7 +44,7 @@ export const AutoFormSelect = ({
 
   return (
     <>
-      {label && (
+      {!!label && (
         <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
           {label}
         </AutoFormLabel>
@@ -74,7 +74,7 @@ export const AutoFormSelect = ({
         </Select>
       </FormControl>
 
-      {description && <AutoFormDesc>{description}</AutoFormDesc>}
+      {!!description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />
     </>
   );

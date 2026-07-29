@@ -71,8 +71,8 @@ export const AutoFormArray = ({
 
   return (
     <FieldSet className={cn("gap-4", className)}>
-      {label && <FieldLegend variant="label">{label}</FieldLegend>}
-      {description && <FieldDescription>{description}</FieldDescription>}
+      {!!label && <FieldLegend variant="label">{label}</FieldLegend>}
+      {!!description && <FieldDescription>{description}</FieldDescription>}
 
       <FieldGroup className="gap-4">
         {fields.map((field, index) => (

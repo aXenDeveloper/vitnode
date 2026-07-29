@@ -21,7 +21,7 @@ export const AutoFormColor = ({
   Omit<React.ComponentProps<typeof ColorPicker>, "onChange" | "value">) => {
   return (
     <>
-      {label && (
+      {!!label && (
         <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
           {label}
         </AutoFormLabel>
@@ -36,7 +36,7 @@ export const AutoFormColor = ({
         />
       </FormControl>
 
-      {description && <AutoFormDesc>{description}</AutoFormDesc>}
+      {!!description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />
     </>
   );

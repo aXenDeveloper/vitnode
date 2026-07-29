@@ -26,7 +26,7 @@ export const AutoFormTextarea = ({
   }) => {
   return (
     <>
-      {label && (
+      {!!label && (
         <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
           {label}
         </AutoFormLabel>
@@ -71,7 +71,7 @@ export const AutoFormTextarea = ({
         </FormControl>
       )}
 
-      {description && <AutoFormDesc>{description}</AutoFormDesc>}
+      {!!description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />
     </>
   );

@@ -76,6 +76,7 @@ export function VitNodeAPI({
   app.use(
     "*",
     globalMiddleware({
+      ai: vitNodeApiConfig.ai,
       i18n: vitNodeApiConfig.i18n,
       email: vitNodeApiConfig.email,
       metadata: vitNodeApiConfig.metadata,

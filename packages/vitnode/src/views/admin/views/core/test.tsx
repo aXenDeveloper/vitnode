@@ -268,7 +268,7 @@ export const TestView = () => {
                     type="color"
                     value={(props.field.value as string) ?? "#000000"}
                   />
-                  {props.description && (
+                  {!!props.description && (
                     <div className="text-muted-foreground text-sm">
                       {props.description}
                     </div>

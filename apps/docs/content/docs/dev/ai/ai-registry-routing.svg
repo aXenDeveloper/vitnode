@@ -1,0 +1,237 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1200" height="700" viewBox="0 0 1200 700" fill="none" stroke-linecap="round" stroke-linejoin="round" role="img" aria-labelledby="t">
+  <title id="t">A request enters an application core, is routed through a central model registry, and fans out over curved paths to several abstract capability modules.</title>
+
+  <style>
+    /* Palette. oklch is authoritative in modern renderers; the @supports guard
+       lets older rasterizers fall back to the hex presentation attributes. */
+    @supports (color: oklch(0.5 0.1 260)) {
+      .bg      { fill: oklch(0.14 0 0); }
+      .card    { fill: oklch(0.21 0.006 285.885); }
+      .surface { fill: oklch(0.274 0.006 286.033); }
+      .bright  { fill: oklch(0.985 0 0); }
+      .muted   { fill: oklch(0.705 0.015 286.067); }
+      .accent  { fill: oklch(0.6 0.18 262.65); }
+      .cyan    { fill: oklch(0.78 0.11 205); }
+      .amber   { fill: oklch(0.8 0.13 78); }
+      .teal    { fill: oklch(0.75 0.1 178); }
+      .s-accent{ stroke: oklch(0.6 0.18 262.65); }
+      .s-muted { stroke: oklch(0.705 0.015 286.067); }
+      .s-bright{ stroke: oklch(0.985 0 0); }
+      .s-violet{ stroke: oklch(0.62 0.17 300); }
+      .s-teal  { stroke: oklch(0.75 0.1 178); }
+      .s-cyan  { stroke: oklch(0.78 0.11 205); }
+      .s-amber { stroke: oklch(0.8 0.13 78); }
+      .brd     { stroke: oklch(0.985 0 0 / 0.10); }
+      .k-bg    { stop-color: oklch(0.14 0 0); }
+      .k-card  { stop-color: oklch(0.274 0.006 286.033); }
+      .k-card2 { stop-color: oklch(0.21 0.006 285.885); }
+      .k-accent{ stop-color: oklch(0.6 0.18 262.65); }
+      .k-deep  { stop-color: oklch(0.42 0.16 272); }
+      .k-lite  { stop-color: oklch(0.93 0.05 262); }
+      .k-muted { stop-color: oklch(0.705 0.015 286.067); }
+      .k-white { stop-color: oklch(0.985 0 0); }
+    }
+  </style>
+
+  <defs>
+    <!-- Gradients -->
+    <radialGradient id="ambient" cx="50%" cy="50%" r="50%">
+      <stop offset="0"    stop-color="#4d7cf0" class="k-accent" stop-opacity=".26"/>
+      <stop offset=".55"  stop-color="#4d7cf0" class="k-accent" stop-opacity=".07"/>
+      <stop offset="1"    stop-color="#4d7cf0" class="k-accent" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="cardGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#27272a" class="k-card"/>
+      <stop offset="1" stop-color="#18181b" class="k-card2"/>
+    </linearGradient>
+
+    <linearGradient id="coreCardGrad" x1="0" y1="0" x2=".55" y2="1">
+      <stop offset="0" stop-color="#2c2c33" class="k-card"/>
+      <stop offset="1" stop-color="#18181b" class="k-card2"/>
+    </linearGradient>
+
+    <radialGradient id="coreGrad" cx="38%" cy="32%" r="72%">
+      <stop offset="0"   stop-color="#dbe4ff" class="k-lite"/>
+      <stop offset=".42" stop-color="#4d7cf0" class="k-accent"/>
+      <stop offset="1"   stop-color="#2f3aa8" class="k-deep"/>
+    </radialGradient>
+
+    <radialGradient id="pGrad" cx="35%" cy="30%" r="70%">
+      <stop offset="0"   stop-color="#fafafa" class="k-white"/>
+      <stop offset=".55" stop-color="#8fb2ff" class="k-lite"/>
+      <stop offset="1"   stop-color="#4d7cf0" class="k-accent"/>
+    </radialGradient>
+
+    <linearGradient id="linkOut" gradientUnits="userSpaceOnUse" x1="600" y1="350" x2="1010" y2="350">
+      <stop offset="0"   stop-color="#4d7cf0" class="k-accent" stop-opacity=".95"/>
+      <stop offset=".55" stop-color="#4d7cf0" class="k-accent" stop-opacity=".55"/>
+      <stop offset="1"   stop-color="#a1a1aa" class="k-muted"  stop-opacity=".34"/>
+    </linearGradient>
+
+    <linearGradient id="linkIn" gradientUnits="userSpaceOnUse" x1="240" y1="350" x2="470" y2="350">
+      <stop offset="0" stop-color="#a1a1aa" class="k-muted"  stop-opacity=".38"/>
+      <stop offset="1" stop-color="#4d7cf0" class="k-accent" stop-opacity=".95"/>
+    </linearGradient>
+
+    <!-- Filters -->
+    <filter id="glowSoft" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+    <filter id="glowTight" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="4.5"/>
+    </filter>
+
+    <!-- Reusable geometry -->
+    <g id="svcCard">
+      <rect width="132" height="100" rx="24" fill="url(#cardGrad)"/>
+      <rect x="1" y="1" width="130" height="98" rx="23" fill="none" stroke="#ffffff1a" class="brd" stroke-width="2"/>
+    </g>
+
+    <g id="particle">
+      <circle r="17" fill="#4d7cf0" class="accent" opacity=".4" filter="url(#glowSoft)"/>
+      <circle r="7.5" fill="url(#pGrad)"/>
+    </g>
+
+    <!-- Outbound routing paths (stroke supplied by the referencing <use>) -->
+    <g id="fanPaths" fill="none">
+      <path d="M662 338C732 320 750 152 826 122"/>
+      <path d="M664 344C772 340 822 250 921 236"/>
+      <path d="M664 350C782 350 852 350 951 350"/>
+      <path d="M664 356C772 360 822 450 921 464"/>
+      <path d="M662 362C732 380 750 548 826 578"/>
+    </g>
+
+    <g id="trunkPath" fill="none">
+      <path d="M252 350C320 336 392 364 458 350"/>
+    </g>
+  </defs>
+
+  <!-- ============ Background ============ -->
+  <g id="background">
+    <rect width="1200" height="700" fill="#0a0a0a" class="bg"/>
+    <circle cx="580" cy="350" r="330" fill="url(#ambient)"/>
+    <circle cx="560" cy="350" r="246" fill="none" stroke="#4d7cf0" class="s-accent" stroke-width="2" opacity=".07"/>
+  </g>
+
+  <!-- ============ Routing paths ============ -->
+  <g id="links">
+    <use xlink:href="#fanPaths" href="#fanPaths" stroke="url(#linkOut)" stroke-width="9" opacity=".22" filter="url(#glowSoft)"/>
+    <use xlink:href="#fanPaths" href="#fanPaths" stroke="url(#linkOut)" stroke-width="3.5"/>
+    <use xlink:href="#trunkPath" href="#trunkPath" stroke="url(#linkIn)" stroke-width="10" opacity=".22" filter="url(#glowSoft)"/>
+    <use xlink:href="#trunkPath" href="#trunkPath" stroke="url(#linkIn)" stroke-width="4"/>
+  </g>
+
+  <!-- ============ Inbound request ============ -->
+  <g id="inbound">
+    <path d="M62 350H100" stroke="#a1a1aa" class="s-muted" stroke-width="3.5" opacity=".5"/>
+    <circle cx="44" cy="350" r="9" fill="#18181b" class="card"/>
+    <circle cx="44" cy="350" r="9" fill="none" stroke="#4d7cf0" class="s-accent" stroke-width="3" opacity=".8"/>
+  </g>
+
+  <!-- ============ Application / server core ============ -->
+  <g id="server">
+    <rect x="100" y="252" width="152" height="196" rx="28" fill="url(#cardGrad)"/>
+    <rect x="101" y="253" width="150" height="194" rx="27" fill="none" stroke="#ffffff1a" class="brd" stroke-width="2"/>
+    <g>
+      <rect x="126" y="278" width="100" height="34" rx="13" fill="#27272a" class="surface"/>
+      <circle cx="146" cy="295" r="5.5" fill="#4d7cf0" class="accent"/>
+      <rect x="162" y="291" width="48" height="7" rx="3.5" fill="#a1a1aa" class="muted" opacity=".55"/>
+
+      <rect x="126" y="333" width="100" height="34" rx="13" fill="#27272a" class="surface"/>
+      <circle cx="146" cy="350" r="5.5" fill="#fafafa" class="bright" opacity=".9"/>
+      <rect x="162" y="346" width="34" height="7" rx="3.5" fill="#a1a1aa" class="muted" opacity=".55"/>
+
+      <rect x="126" y="388" width="100" height="34" rx="13" fill="#27272a" class="surface"/>
+      <circle cx="146" cy="405" r="5.5" fill="#a1a1aa" class="muted" opacity=".8"/>
+      <rect x="162" y="401" width="42" height="7" rx="3.5" fill="#a1a1aa" class="muted" opacity=".4"/>
+    </g>
+  </g>
+
+  <!-- ============ Capability modules ============ -->
+  <g id="services">
+    <!-- text generation: stacked bars -->
+    <g id="svc-text">
+      <use xlink:href="#svcCard" href="#svcCard" x="824" y="70"/>
+      <rect x="852" y="99"  width="76" height="9" rx="4.5" fill="#fafafa" class="bright" opacity=".92"/>
+      <rect x="852" y="116" width="56" height="9" rx="4.5" fill="#4d7cf0" class="accent"/>
+      <rect x="852" y="133" width="38" height="9" rx="4.5" fill="#a1a1aa" class="muted" opacity=".55"/>
+      <circle cx="824" cy="120" r="5.5" fill="#4d7cf0" class="accent"/>
+    </g>
+
+    <!-- streaming: flowing waves -->
+    <g id="svc-stream">
+      <use xlink:href="#svcCard" href="#svcCard" x="919" y="185"/>
+      <path d="M945 226C958 212 972 240 985 226S1012 212 1025 226" fill="none" stroke="#4d7cf0" class="s-accent" stroke-width="4.5"/>
+      <path d="M945 246C958 232 972 260 985 246S1012 232 1025 246" fill="none" stroke="#38b6cf" class="s-cyan" stroke-width="4.5" opacity=".55"/>
+      <circle cx="919" cy="235" r="5.5" fill="#4d7cf0" class="accent"/>
+    </g>
+
+    <!-- embeddings: vector lattice -->
+    <g id="svc-embed">
+      <use xlink:href="#svcCard" href="#svcCard" x="949" y="300"/>
+      <g fill="#a1a1aa" class="muted" opacity=".5">
+        <circle cx="993" cy="328" r="5"/><circle cx="1015" cy="328" r="5"/><circle cx="1037" cy="328" r="5"/>
+        <circle cx="993" cy="350" r="5"/><circle cx="1037" cy="350" r="5"/>
+        <circle cx="993" cy="372" r="5"/><circle cx="1015" cy="372" r="5"/><circle cx="1037" cy="372" r="5"/>
+      </g>
+      <circle cx="1015" cy="350" r="7.5" fill="#4d7cf0" class="accent"/>
+      <circle cx="1015" cy="350" r="15" fill="none" stroke="#4d7cf0" class="s-accent" stroke-width="2" opacity=".35"/>
+      <circle cx="949" cy="350" r="5.5" fill="#4d7cf0" class="accent"/>
+    </g>
+
+    <!-- image generation: frame -->
+    <g id="svc-image">
+      <use xlink:href="#svcCard" href="#svcCard" x="919" y="415"/>
+      <rect x="951" y="439" width="68" height="52" rx="14" fill="none" stroke="#a1a1aa" class="s-muted" stroke-width="3" opacity=".65"/>
+      <circle cx="968" cy="455" r="5.5" fill="#e0a44a" class="amber"/>
+      <path d="M956 484L977 461L992 477L1002 468L1014 483" fill="none" stroke="#4d7cf0" class="s-accent" stroke-width="3.5"/>
+      <circle cx="919" cy="465" r="5.5" fill="#4d7cf0" class="accent"/>
+    </g>
+
+    <!-- extension slot: node graph -->
+    <g id="svc-graph">
+      <use xlink:href="#svcCard" href="#svcCard" x="824" y="530"/>
+      <path d="M868 562H912M868 562L890 600M912 562L890 600" fill="none" stroke="#a1a1aa" class="s-muted" stroke-width="3" opacity=".5"/>
+      <circle cx="868" cy="562" r="9" fill="#4d7cf0" class="accent"/>
+      <circle cx="912" cy="562" r="9" fill="#27272a" class="surface"/>
+      <circle cx="912" cy="562" r="9" fill="none" stroke="#3fbfa8" class="s-teal" stroke-width="3" opacity=".85"/>
+      <circle cx="890" cy="600" r="9" fill="#27272a" class="surface"/>
+      <circle cx="890" cy="600" r="9" fill="none" stroke="#9b62e8" class="s-violet" stroke-width="3" opacity=".85"/>
+      <circle cx="824" cy="580" r="5.5" fill="#4d7cf0" class="accent"/>
+    </g>
+  </g>
+
+  <!-- ============ Central registry node ============ -->
+  <g id="core">
+    <circle cx="560" cy="350" r="120" fill="#4d7cf0" class="accent" opacity=".16" filter="url(#glowSoft)"/>
+
+    <rect x="460" y="250" width="200" height="200" rx="44" fill="url(#coreCardGrad)"/>
+    <rect x="460" y="250" width="200" height="200" rx="44" fill="#4d7cf0" class="accent" opacity=".07"/>
+    <rect x="461" y="251" width="198" height="198" rx="43" fill="none" stroke="#ffffff1a" class="brd" stroke-width="2"/>
+
+    <!-- resolved model: four-point spark -->
+    <circle cx="560" cy="350" r="52" fill="#4d7cf0" class="accent" opacity=".45" filter="url(#glowTight)"/>
+    <path d="M560 288Q571.5 338.5 622 350Q571.5 361.5 560 412Q548.5 361.5 498 350Q548.5 338.5 560 288Z" fill="url(#coreGrad)"/>
+    <path d="M604 306Q606.6 315.4 616 318Q606.6 320.6 604 330Q601.4 320.6 592 318Q601.4 315.4 604 306Z" fill="#fafafa" class="bright" opacity=".85"/>
+    <path d="M516 382Q518.2 389.8 526 392Q518.2 394.2 516 402Q513.8 394.2 506 392Q513.8 389.8 516 382Z" fill="#4d7cf0" class="accent"/>
+
+    <!-- ports -->
+    <g>
+      <rect x="448" y="334" width="22" height="32" rx="11" fill="#27272a" class="surface"/>
+      <rect x="449" y="335" width="20" height="30" rx="10" fill="none" stroke="#ffffff1a" class="brd" stroke-width="2"/>
+      <rect x="650" y="334" width="22" height="32" rx="11" fill="#27272a" class="surface"/>
+      <rect x="651" y="335" width="20" height="30" rx="10" fill="none" stroke="#ffffff1a" class="brd" stroke-width="2"/>
+      <circle cx="459" cy="350" r="4.5" fill="#4d7cf0" class="accent"/>
+      <circle cx="661" cy="350" r="4.5" fill="#fafafa" class="bright" opacity=".9"/>
+    </g>
+  </g>
+
+  <!-- ============ Data particles ============ -->
+  <g id="particles">
+    <use xlink:href="#particle" href="#particle" transform="translate(356 350)"/>
+    <use xlink:href="#particle" href="#particle" transform="translate(740 234) scale(.88)"/>
+    <use xlink:href="#particle" href="#particle" transform="translate(813 350) scale(.95)"/>
+    <use xlink:href="#particle" href="#particle" transform="translate(740 466) scale(.82)"/>
+  </g>
+</svg>

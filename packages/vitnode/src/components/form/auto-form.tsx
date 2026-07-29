@@ -183,12 +183,12 @@ export function AutoForm<
     if (!item.component && (item.label || item.description)) {
       return (
         <div key={item.id}>
-          {item.label && (
+          {!!item.label && (
             <span className="text-xl leading-none font-semibold tracking-tight">
               {item.label}
             </span>
           )}
-          {item.description && (
+          {!!item.description && (
             <div className="text-muted-foreground text-sm">
               {item.description}
             </div>

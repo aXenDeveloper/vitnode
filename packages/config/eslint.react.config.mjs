@@ -34,6 +34,7 @@ export default [
   { files: ["**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}"] },
   {
     rules: {
+      "@eslint-react/no-leaked-conditional-rendering": "error",
       "react-hooks/exhaustive-deps": "off",
       "@eslint-react/no-context-provider": "off",
       "@eslint-react/no-unstable-default-props": "off",

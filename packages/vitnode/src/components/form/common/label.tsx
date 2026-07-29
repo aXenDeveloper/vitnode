@@ -32,7 +32,7 @@ export const AutoFormLabel = ({
       {isOptional && (
         <span className="text-muted-foreground text-xs">{t("optional")}</span>
       )}
-      {labelRight && <span className="ml-auto">{labelRight}</span>}
+      {!!labelRight && <span className="ml-auto">{labelRight}</span>}
     </FieldLabel>
   );
 };

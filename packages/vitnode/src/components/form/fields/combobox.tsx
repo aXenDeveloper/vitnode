@@ -187,7 +187,7 @@ export const AutoFormCombobox = ({
 
   return (
     <>
-      {label && (
+      {!!label && (
         <AutoFormLabel
           isOptional={otherProps.isOptional}
           labelRight={labelRight}
@@ -241,7 +241,7 @@ export const AutoFormCombobox = ({
         )}
       </Combobox>
 
-      {description && <AutoFormDesc>{description}</AutoFormDesc>}
+      {!!description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />
     </>
   );

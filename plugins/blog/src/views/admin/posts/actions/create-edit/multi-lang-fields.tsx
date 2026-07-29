@@ -80,7 +80,7 @@ export const TitleField = ({
 
   return (
     <>
-      {label && <AutoFormLabel>{label}</AutoFormLabel>}
+      {!!label && <AutoFormLabel>{label}</AutoFormLabel>}
       <MultiLangInputGroup
         currentValue={currentValue}
         languages={languages}
@@ -100,7 +100,7 @@ export const TitleField = ({
         onSelect={setSelected}
         selected={selected}
       />
-      {description && <AutoFormDesc>{description}</AutoFormDesc>}
+      {!!description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />
     </>
   );
@@ -119,7 +119,7 @@ export const FriendlyUrlField = ({
 
   return (
     <>
-      {label && <AutoFormLabel>{label}</AutoFormLabel>}
+      {!!label && <AutoFormLabel>{label}</AutoFormLabel>}
       <MultiLangInputGroup
         currentValue={currentValue}
         languages={languages}
@@ -131,7 +131,7 @@ export const FriendlyUrlField = ({
         onSelect={setSelected}
         selected={selected}
       />
-      {description && <AutoFormDesc>{description}</AutoFormDesc>}
+      {!!description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />
     </>
   );

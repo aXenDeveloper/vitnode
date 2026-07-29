@@ -26,9 +26,9 @@ export const AutoFormSwitch = ({
         className,
       )}
     >
-      {(label ?? description) && (
+      {!!(label ?? description) && (
         <div className="space-y-0.5">
-          {label && (
+          {!!label && (
             <AutoFormLabel
               className="text-base"
               isOptional={isOptional}
@@ -37,7 +37,7 @@ export const AutoFormSwitch = ({
               {label}
             </AutoFormLabel>
           )}
-          {description && <AutoFormDesc>{description}</AutoFormDesc>}
+          {!!description && <AutoFormDesc>{description}</AutoFormDesc>}
         </div>
       )}
 

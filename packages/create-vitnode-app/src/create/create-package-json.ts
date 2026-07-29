@@ -32,6 +32,7 @@ const i18nScripts = {
   "i18n:check": "vitnode i18n:check",
   "i18n:delete": "vitnode i18n:delete",
   "i18n:update": "vitnode i18n:update",
+  "i18n:update:ai": "vitnode i18n:update:ai",
 };
 
 const dockerDevScript = (appName: string) =>
@@ -51,6 +52,7 @@ const rootScripts = (
   "i18n:check": "turbo i18n:check",
   "i18n:delete": "turbo i18n:delete",
   "i18n:update": "turbo i18n:update",
+  "i18n:update:ai": "turbo i18n:update:ai",
   ...withIf(enableEslint, {
     lint: "turbo lint",
     "lint:fix": "turbo lint:fix",
