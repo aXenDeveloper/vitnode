@@ -43,10 +43,10 @@ export const HeaderContent = ({
             {h2}
           </h2>
         )}
-        {desc && <div className="text-muted-foreground">{desc}</div>}
+        {!!desc && <div className="text-muted-foreground">{desc}</div>}
       </div>
 
-      {children && (
+      {!!children && (
         <div className="flex w-full flex-col flex-wrap items-center justify-center gap-2 sm:w-auto sm:flex-row [&>*]:w-full [&>*]:sm:w-auto">
           {children}
         </div>

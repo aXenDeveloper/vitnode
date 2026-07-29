@@ -1,11 +1,31 @@
 ---
-title: Usage
-description: Resolve models with c.get("ai") and call the native Vercel AI SDK functions.
+title: AI Usage
+description: Learn how to resolve models with c.get("ai") and call native Vercel AI SDK functions in VitNode.
 ---
 
-First, install the AI SDK in your app or plugin - your route code imports from
-`ai`, so it needs to be a direct dependency (`@vitnode/core` uses it internally,
-but pnpm still requires your own package to declare it):
+import img from "./ai-registry-routing.svg";
+
+import { ImgDocs } from "@/components/fumadocs/img";
+
+<ImgDocs
+  src={img}
+  alt="Flowchart showing request handling in a VitNode route: c.get('ai') model registry resolving model instance to Vercel AI SDK functions (generateText, streamText, embed, generateImage)."
+  withoutBackground
+/>
+
+Using AI in your backend routes is as simple as getting the model from `c.get("ai")` and passing it to native [Vercel AI SDK](https://ai-sdk.dev/) functions!
+
+## Quick Reference
+
+| Function                          | Method          | Description                                    |
+| --------------------------------- | --------------- | ---------------------------------------------- |
+| `c.get("ai").model(id?)`          | Language Model  | Text generation, streaming, structured outputs |
+| `c.get("ai").embeddingModel(id?)` | Embedding Model | Vector embeddings for search and RAG           |
+| `c.get("ai").imageModel(id?)`     | Image Model     | Image generation                               |
+
+Omit the `id` argument to get the **default model** (first one in config).
+
+---
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
@@ -25,25 +45,11 @@ npm i ai
 
 </Tabs>
 
-`c.get("ai")` is a **model registry**, not a wrapper. You call the native
-[Vercel AI SDK](https://ai-sdk.dev/) functions and pass a resolved model into
-their `model` option:
+## Examples
 
-- `c.get("ai").model(id?)` → a `LanguageModel` for `generateText`, `streamText`, `generateObject`, …
-- `c.get("ai").embeddingModel(id?)` → an `EmbeddingModel` for `embed`, `embedMany`
-- `c.get("ai").imageModel(id?)` → an `ImageModel` for `generateImage`
+### 1. Generate Text
 
-Omit the `id` to get the **default (first) model**; pass an `id` to pick a
-specific one. See [setup](/docs/dev/ai) to declare them.
-
-<Callout type="warn" title="Configure models first">
-  Resolving a model throws `No AI models configured` (HTTP 500) when the `ai`
-  block is missing, or `AI model "<id>" is not configured` for an unknown id.
-</Callout>
-
-## Generate text
-
-```ts title="Generate text"
+```ts title="Generate Text"
 import { buildRoute } from "@vitnode/core/api/lib/route";
 import { generateText } from "ai";
 import { z } from "@hono/zod-openapi";
@@ -73,8 +79,7 @@ export const summarizeRoute = buildRoute({
     const { text } = c.req.valid("json");
 
     const result = await generateText({
-      model: c.get("ai").model(),   // default (first) configured model
-      // Pass a configured id to pick a specific one, e.g. c.get("ai").model(id).
+      model: c.get("ai").model(), // default model
       system: "You are a concise summarizer.",
       prompt: `Summarize:\n\n${text}`,
     });
@@ -84,9 +89,9 @@ export const summarizeRoute = buildRoute({
 });
 ```
 
-## Stream text
+### 2. Stream Text
 
-```ts title="Stream a text response"
+```ts title="Stream Text"
 import { createTextStreamResponse, streamText } from "ai";
 
 handler: c => {
@@ -96,17 +101,12 @@ handler: c => {
   });
 
   return createTextStreamResponse({ stream: result.textStream });
-  // …or a UI-message stream for the AI SDK UI hooks:
-  // return result.toUIMessageStreamResponse();
 };
 ```
 
-## Structured output
+### 3. Structured Output
 
-Use `generateText` with an `Output.object` setting and read `result.output`.
-(`generateObject` still works but is deprecated in the AI SDK.)
-
-```ts title="Generate a typed object"
+```ts title="Generate Structured Object"
 import { generateText, Output } from "ai";
 import { z } from "zod";
 
@@ -118,75 +118,67 @@ const result = await generateText({
       tags: z.array(z.string()),
     }),
   }),
-  prompt: "Suggest a title and tags for a post about Postgres full-text search.",
+  prompt:
+    "Suggest a title and tags for a post about Postgres full-text search.",
 });
 
+// Access typed output safely:
 result.output.title; // string
 result.output.tags; // string[]
 ```
 
-## Embeddings
+### 4. Embeddings
 
-Declare `embeddingModels`, then use `embed` (one value) or `embedMany` (a batch)
-- useful for search and RAG.
-
-```ts title="Embed values"
+```ts title="Generate Embeddings"
 import { embed, embedMany } from "ai";
 
+// Single value
 const { embedding } = await embed({
-  model: c.get("ai").embeddingModel(), // default embedding model
+  model: c.get("ai").embeddingModel(),
   value: "sunny day at the beach",
 });
 
+// Batch values
 const { embeddings } = await embedMany({
   model: c.get("ai").embeddingModel(),
   values: ["first document", "second document"],
 });
 ```
 
-## Images
+### 5. Image Generation
 
-Declare `imageModels`, then use `generateImage`.
-
-```ts title="Generate an image"
+```ts title="Generate Image"
 import { generateImage } from "ai";
 
 const { image } = await generateImage({
-  model: c.get("ai").imageModel(), // default image model
+  model: c.get("ai").imageModel(),
   prompt: "A watercolor fox reading a book",
 });
 ```
 
-## Available models on the client
+---
 
-The [session API](/docs/dev/fetcher) (`GET /api/{core}/session`) returns the
-configured language models so the client can list or let users pick one. Each is
-`{ id, name, model }` (the `model` id string), and the array is empty when AI is
-not configured:
+## Client-Side Integration
 
-```jsonc title="GET …/session response (excerpt)"
+The `GET /api/{core}/session` API automatically includes the configured AI models for the frontend:
+
+```jsonc title="Session Response (excerpt)"
 {
   "ai": {
     "models": [
-      { "id": "default", "name": "Claude Sonnet 5", "model": "anthropic/claude-sonnet-5" },
-      { "id": "fast", "name": "Claude Haiku 4.5", "model": "anthropic/claude-haiku-4.5" }
-    ]
+      {
+        "id": "default",
+        "name": "Claude Sonnet 5",
+        "model": "anthropic/claude-sonnet-5",
+      },
+      {
+        "id": "fast",
+        "name": "Claude Haiku 4.5",
+        "model": "anthropic/claude-haiku-4.5",
+      },
+    ],
   },
-  "user": { /* … */ }
 }
 ```
 
-Send the chosen `id` back to your route and resolve it with
-`c.get("ai").model(id)`. The AI status also appears in
-**AdminCP → System → Integrations**.
-
-## Try it
-
-The demo plugin ships an example route that calls `generateText` with
-`c.get("ai").model()`:
-
-```bash title="Request"
-curl -X POST "http://localhost:8080/api/@vitnode/blog/categories/ai-test" \
-  -H "Content-Type: application/json" \
-  -d '{ "prompt": "Say hello in one sentence." }'
-```
+Use these IDs to build model pickers or select dynamic models on the client side! 🎨

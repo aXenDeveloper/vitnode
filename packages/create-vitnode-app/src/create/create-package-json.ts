@@ -52,6 +52,7 @@ const rootScripts = (
   "i18n:check": "turbo i18n:check",
   "i18n:delete": "turbo i18n:delete",
   "i18n:update": "turbo i18n:update",
+  "i18n:update:ai": "turbo i18n:update:ai",
   ...withIf(enableEslint, {
     lint: "turbo lint",
     "lint:fix": "turbo lint:fix",

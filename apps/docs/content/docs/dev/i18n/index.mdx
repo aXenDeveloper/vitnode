@@ -226,12 +226,14 @@ It asks two things:
 
 Translation runs through the [Vercel AI SDK](/docs/dev/ai), so it works with any model you have configured - a Gateway id string or a provider instance. Make sure the matching credentials are set (e.g. `AI_GATEWAY_API_KEY`) before you run it.
 
-### How it stays fast
+### How it stays fast and cheap
 
-The work is network-bound - almost all the time is spent waiting on the model - so the command is built to overlap that waiting:
+The work is network-bound - almost all the time is spent waiting on the model - and tokens are the cost, so the command is built to overlap the waiting and send as little as possible:
 
 - **Batches run concurrently.** All the strings across every selected language and file are cut into fixed-size batches and pushed through a bounded pool (6 at a time by default). Tune it with `--concurrency <n>` - raise it if your provider's rate limits allow, lower it if you hit `429`s.
 - **Identical strings are translated once.** `Save`, `Cancel`, and friends recur across many keys; each unique English string is sent once per language and the result is fanned back out to every key that used it (see the `(96 unique)` count above).
+- **Only untranslated strings are sent.** Keys you have already translated, and values with nothing to translate (a lone `{count}`, punctuation), never reach the model.
+- **Compact wire format.** Each batch is a bare JSON array of strings in, a JSON array of translations out - no per-item keys - which roughly halves the tokens versus a labelled `{ id, value }` shape. `temperature: 0` keeps it deterministic, so re-runs don't churn.
 - **A failed batch doesn't sink the run.** Each batch retries with backoff; if it still fails, those strings are left in English and reported so a re-run picks them up - the rest are written normally.
 
 <Callout title="Monorepo layouts" type="info">

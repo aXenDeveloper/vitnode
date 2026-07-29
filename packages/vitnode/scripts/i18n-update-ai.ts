@@ -238,9 +238,15 @@ const withRetry = async <T>(fn: () => Promise<T>): Promise<T> => {
 
 /**
  * Translates one batch of unique source strings with a configured AI SDK model.
- * Each source is sent under its array index as an opaque id, so the reply maps
- * back to the exact source regardless of wording or ordering. Returns a
- * source -> translation map; ids the model omits or invents are dropped.
+ *
+ * To keep tokens (and cost) down, input and output are bare positional string
+ * arrays - no `{ id, text }`/`{ id, value }` scaffolding per item, and the
+ * schema is just "array of string". Alignment is by index: the model must
+ * return the translations in the same order. `temperature: 0` makes that
+ * deterministic and re-runs idempotent. If the reply length doesn't match, the
+ * whole batch is rejected (so `withRetry` retries and we never write a
+ * misaligned translation) rather than trusting a partial answer. Returns a
+ * source -> translation map.
  */
 const translateBatch = async ({
   code,
@@ -255,39 +261,28 @@ const translateBatch = async ({
 }): Promise<Map<string, string>> => {
   const { output } = await generateText({
     model,
-    output: Output.object({
-      schema: z.object({
-        translations: z.array(
-          z.object({
-            id: z.string(),
-            value: z.string(),
-          }),
-        ),
-      }),
-    }),
+    output: Output.array({ element: z.string() }),
+    temperature: 0,
     system: [
       "You are a professional software localization translator.",
-      `Translate each UI string from English into ${languageName} (${code}).`,
-      "Return exactly one translation for every id you are given, and no other ids.",
-      "Rules:",
-      "- Preserve every placeholder verbatim: {name}, {count}, ICU plurals such as {count, plural, one {#} other {#}}, and markup tags such as <b></b>. Never rename, translate, or reorder a placeholder.",
-      "- Keep leading and trailing whitespace and the original punctuation style.",
-      "- Do not translate brand names, code, URLs, or technical identifiers.",
-      "- Write natural, concise product UI copy as a native speaker would.",
-      "- Output only the translations, no commentary.",
+      `Translate each string from English into ${languageName} (${code}).`,
+      "Input is a JSON array of strings. Return a JSON array of the same length, in the same order - one translation per input string, and nothing else.",
+      "Preserve placeholders verbatim: {name}, {count}, ICU plurals such as {count, plural, one {#} other {#}}, and tags such as <b></b>. Never rename or reorder them.",
+      "Keep the original whitespace and punctuation. Don't translate brand names, code, URLs, or identifiers. Write natural, concise UI copy.",
     ].join("\n"),
-    prompt: JSON.stringify(
-      sources.map((source, index) => ({ id: String(index), text: source })),
-    ),
+    prompt: JSON.stringify(sources),
   });
 
-  const result = new Map<string, string>();
-  for (const item of output.translations) {
-    const index = Number(item.id);
-    if (Number.isInteger(index) && index >= 0 && index < sources.length) {
-      result.set(sources[index], item.value);
-    }
+  if (output.length !== sources.length) {
+    throw new Error(
+      `expected ${sources.length} translations, got ${output.length}`,
+    );
   }
+
+  const result = new Map<string, string>();
+  sources.forEach((source, index) => {
+    result.set(source, output[index]);
+  });
 
   return result;
 };

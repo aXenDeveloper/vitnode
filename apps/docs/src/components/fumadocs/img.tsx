@@ -6,14 +6,23 @@ import { ImageZoom } from "fumadocs-ui/components/image-zoom";
 export const ImgDocs = ({
   className,
   imgClassName,
+  withoutBackground,
   ...props
 }: React.ComponentProps<typeof ImageZoom> & {
   imgClassName?: string;
+  withoutBackground?: boolean;
 }) => {
   return (
     <div
       className={cn(
-        "from-fd-primary/10 flex items-center justify-center rounded-xl border bg-gradient-to-br *:max-w-[26rem]",
+        "flex items-center justify-center rounded-xl border",
+        {
+          "from-fd-primary/10 bg-gradient-to-br *:max-w-[26rem]":
+            !withoutBackground,
+        },
+        {
+          "*:max-w-[36rem]": withoutBackground,
+        },
         className,
       )}
     >

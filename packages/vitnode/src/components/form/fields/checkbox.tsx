@@ -40,12 +40,12 @@ export const AutoFormCheckbox = ({
 
       {!!(label ?? description) && (
         <div className="space-y-1 leading-none">
-          {label && (
+          {!!label && (
             <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
               {label}
             </AutoFormLabel>
           )}
-          {description && <AutoFormDesc>{description}</AutoFormDesc>}
+          {!!description && <AutoFormDesc>{description}</AutoFormDesc>}
           <FormMessage />
         </div>
       )}

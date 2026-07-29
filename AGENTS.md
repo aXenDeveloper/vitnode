@@ -72,7 +72,7 @@ revalidateTag("products", { revalidate: 3600 });
 # Documentation
 
 - Don't write big comments. Remember that code is self-documenting.
-- If should be simple. if docs requires image to better understand, add comment:
+- Add as needed image via comment:
 
 ```markdown
 // Image prompt: {here_prompt_to_generate_image}
@@ -83,6 +83,28 @@ revalidateTag("products", { revalidate: 3600 });
 - Use funny and friendly tone in docs, but don't overdo it.
 - Docs should be written in a way that is easy to understand for developers of all skill levels.
 - Keep docs to be SEO friendly and optimized for search engines.
+- All example usage commands npm, pnpm, bun etc. should be in code block with the correct syntax highlighting.
+
+````markdown
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install x'>
+
+```bash tab="bun"
+bun i x
+```
+````
+
+```bash tab="pnpm"
+pnpm i x
+```
+
+```bash tab="npm"
+npm i x
+```
+
+</Tabs>
+```
 
 # Testing
 
