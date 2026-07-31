@@ -21,6 +21,7 @@ const buildTranslator = async (locale: string) => {
                   global: {
                     nav: {
                       core: "Rdzeń",
+                      user_bar: { debug: "Panel debugowania" },
                       users: {
                         list: "Lista użytkowników",
                         roles: "Role",
@@ -52,6 +53,32 @@ describe("multi-locale nav titles", () => {
     expect(t("admin.global.nav.users.roles")).toBe("Role");
     // @ts-expect-error - see above.
     expect(t("admin.global.nav.core")).toBe("Rdzeń");
+  });
+
+  it("resolves the debug panel, which sits outside the sidebar nav", async () => {
+    const key = "admin.global.nav.user_bar.debug";
+    const [en, pl] = await Promise.all([
+      buildTranslator("en"),
+      buildTranslator("pl"),
+    ]);
+
+    // @ts-expect-error - the test's inline tree is not the augmented `Messages`.
+    expect(en(key)).toBe("Debug Panel");
+    // @ts-expect-error - see above.
+    expect(pl(key)).toBe("Panel debugowania");
+
+    const item = {
+      groupTitle: "Rdzeń",
+      href: "/admin/core/debug",
+      // @ts-expect-error - see above.
+      searchText: buildSearchText([pl(key), en(key), "Rdzeń", "Core"]),
+      // @ts-expect-error - see above.
+      title: pl(key),
+    };
+
+    expect(matchesAdminNavItem(item, "debug")).toBe(true);
+    expect(matchesAdminNavItem(item, "panel debugowania")).toBe(true);
+    expect(matchesAdminNavItem(item, "debug panel")).toBe(true);
   });
 
   it("falls back to the default locale key by key", async () => {
