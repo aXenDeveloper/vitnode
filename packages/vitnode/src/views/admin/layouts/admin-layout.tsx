@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 
 import { AdminStaffPermissionProvider } from "@/components/staff-permission/provider";
-import { ThemeSwitcher } from "@/components/switchers/themes/theme-switcher";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
@@ -13,7 +12,9 @@ import { getSessionAdminApi } from "@/lib/api/get-session-admin-api";
 import type { VitNodeConfig } from "../../../vitnode.config";
 
 import { I18nProvider } from "../../../components/i18n-provider";
-import { LanguageSwitcher } from "../../../components/switchers/langs/language-switcher";
+import { getSearchNavItems } from "./search/get-search-nav-items";
+import { SearchAdmin } from "./search/search";
+import { getAdminNav } from "./sidebar/nav/get-admin-nav";
 import { SidebarAdmin } from "./sidebar/sidebar";
 import { UserBarAdmin } from "./user-bar/user-bar";
 
@@ -37,11 +38,14 @@ export const AdminLayout = async ({
     cookieStore.get("vitnode_admin_sidebar_state")?.value === "true";
   if (!session) return null;
 
+  const nav = await getAdminNav({ vitNodeConfig });
+  const searchItems = await getSearchNavItems({ nav, vitNodeConfig });
+
   return (
     <I18nProvider namespaces={["admin.global"]}>
       <AdminStaffPermissionProvider value={session.permissions}>
         <SidebarProvider defaultOpen={defaultOpen}>
-          <SidebarAdmin vitNodeConfig={vitNodeConfig} />
+          <SidebarAdmin nav={nav} vitNodeConfig={vitNodeConfig} />
           <SidebarInset>
             <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
               <SidebarTrigger className="-ml-1" />
@@ -53,10 +57,8 @@ export const AdminLayout = async ({
               )}
 
               <div className="ml-auto flex items-center justify-center gap-2 px-2">
-                {vitNodeConfig.i18n.locales.length > 1 && (
-                  <LanguageSwitcher locales={vitNodeConfig.i18n.locales} />
-                )}
-                <ThemeSwitcher />
+                <SearchAdmin items={searchItems} />
+
                 <UserBarAdmin user={session.user} />
               </div>
             </header>

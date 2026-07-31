@@ -2,10 +2,9 @@ import { type BreadcrumbCrumb, humanize } from "@/views/breadcrumb/crumb";
 
 import type { NavAdminParent } from "../sidebar/nav/get-admin-nav";
 
-export type { BreadcrumbCrumb };
+import { normalizeUrl } from "../normalize-url";
 
-const normalizeUrl = (url: string): string =>
-  url.endsWith("/") && url.length > 1 ? url.slice(0, -1) : url;
+export type { BreadcrumbCrumb };
 
 const flattenNav = (nav: NavAdminParent[]): Map<string, string> => {
   const labels = new Map<string, string>();

@@ -419,6 +419,12 @@
           "queue": "Queue Tasks",
           "search": "Search"
         }
+      },
+      "search": {
+        "title": "Admin search",
+        "desc": "Search admin pages and users, or jump straight to a member.",
+        "placeholder": "Search pages and users...",
+        "hint": "Type at least {count} characters to search users."
       }
     },
     "advanced": {
