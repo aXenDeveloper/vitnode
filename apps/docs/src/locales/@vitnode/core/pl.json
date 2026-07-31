@@ -430,6 +430,12 @@
           "queue": "Zadania w kolejce",
           "search": "Szukaj"
         }
+      },
+      "search": {
+        "title": "Wyszukiwanie w panelu",
+        "desc": "Szukaj stron panelu i użytkowników lub przejdź od razu do profilu.",
+        "placeholder": "Szukaj stron i użytkowników...",
+        "hint": "Wpisz co najmniej {count} znaki, aby wyszukać użytkowników."
       }
     },
     "advanced": {

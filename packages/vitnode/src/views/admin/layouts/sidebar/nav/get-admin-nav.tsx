@@ -26,6 +26,8 @@ export interface NavAdminParent {
   title: string;
 }
 
+export type AdminNavTranslator = (key: string) => string;
+
 interface NavSubItemConfig {
   href: string;
   isOpenInNewTab?: boolean;
@@ -93,11 +95,14 @@ const filterNavItems = (
 };
 
 export const getAdminNav = async ({
+  translator,
   vitNodeConfig = getVitNodeConfig(),
 }: {
+  translator?: AdminNavTranslator;
   vitNodeConfig?: VitNodeConfig;
 } = {}): Promise<NavAdminParent[]> => {
-  const t = await getTranslations();
+  const activeTranslator = await getTranslations();
+  const t = (translator ?? activeTranslator) as typeof activeTranslator;
   const session = await getSessionAdminApi();
   const permissions: StaffPermissionSet = session?.permissions ?? {
     root: false,

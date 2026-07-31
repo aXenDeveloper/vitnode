@@ -20,6 +20,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Link, usePathname } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
+import { normalizeUrl } from "../../normalize-url";
+
 interface ItemNavAdminProps {
   href: string;
   icon?: React.ReactNode;
@@ -39,11 +41,6 @@ export const ItemNavAdmin = ({
   const { toggleSidebar } = useSidebar();
   const isMobile = useIsMobile();
   const pathname = usePathname();
-
-  // Helper function to normalize URLs for comparison
-  const normalizeUrl = (url: string) => {
-    return url.endsWith("/") && url.length > 1 ? url.slice(0, -1) : url;
-  };
 
   // True when the pathname is the href itself or lives under it as a path
   // segment (e.g. an edit/create sub-page), matching whole segments only.
