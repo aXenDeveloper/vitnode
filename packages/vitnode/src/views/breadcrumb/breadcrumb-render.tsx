@@ -9,19 +9,33 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Link } from "@/lib/navigation";
+import { cn } from "@/lib/utils";
 
 import type { BreadcrumbCrumb } from "./crumb";
 
-/**
- * Shared presentational renderer for a resolved list of breadcrumb crumbs.
- * Used by both the AdminCP and the main-site breadcrumbs.
- */
-export const BreadcrumbRender = ({ crumbs }: { crumbs: BreadcrumbCrumb[] }) => {
+export const BreadcrumbRender = ({
+  crumbs,
+  scrollable,
+}: {
+  crumbs: BreadcrumbCrumb[];
+  /**
+   * Keeps every crumb on a single line and scrolls them horizontally instead
+   * of wrapping - for fixed-height bars like the AdminCP header.
+   */
+  scrollable?: boolean;
+}) => {
   if (crumbs.length === 0) return null;
 
   return (
-    <Breadcrumb>
-      <BreadcrumbList>
+    <Breadcrumb
+      className={cn(
+        scrollable &&
+          "no-scrollbar scroll-fade-x overflow-x-auto overscroll-x-contain",
+      )}
+    >
+      <BreadcrumbList
+        className={cn(scrollable && "flex-nowrap whitespace-nowrap")}
+      >
         {crumbs.map((crumb, index) => (
           <Fragment key={crumb.href}>
             {index > 0 && <BreadcrumbSeparator />}

@@ -184,9 +184,6 @@ export const SearchAdmin = ({ items }: { items: AdminSearchNavItem[] }) => {
 
   return (
     <>
-      {/* On a narrow screen the field has no room next to the breadcrumb, so it
-          collapses to a bare icon button - same ghost treatment as the sidebar
-          trigger it sits beside. */}
       <Button
         aria-haspopup="dialog"
         aria-label={t("search.title")}

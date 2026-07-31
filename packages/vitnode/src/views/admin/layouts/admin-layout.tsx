@@ -48,15 +48,18 @@ export const AdminLayout = async ({
           <SidebarAdmin nav={nav} vitNodeConfig={vitNodeConfig} />
           <SidebarInset>
             <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-              <SidebarTrigger className="-ml-1" />
+              <SidebarTrigger className="-ml-1 shrink-0" />
               {breadcrumb != null && (
                 <>
-                  <Separator className="mr-1 h-4" orientation="vertical" />
-                  {breadcrumb}
+                  <Separator
+                    className="mr-1 h-4 shrink-0"
+                    orientation="vertical"
+                  />
+                  <div className="min-w-0 flex-1">{breadcrumb}</div>
                 </>
               )}
 
-              <div className="ml-auto flex items-center justify-center gap-2 px-2">
+              <div className="ml-auto flex shrink-0 items-center justify-center gap-2 px-2">
                 <SearchAdmin items={searchItems} />
 
                 <UserBarAdmin user={session.user} />

@@ -51,5 +51,5 @@ export const BreadcrumbAdmin = async ({
     crumbs[crumbs.length - 1].label = overrideLastLabel;
   }
 
-  return <BreadcrumbRender crumbs={crumbs} />;
+  return <BreadcrumbRender crumbs={crumbs} scrollable />;
 };
