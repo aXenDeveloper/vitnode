@@ -398,7 +398,65 @@
   "admin": {
     "dashboard": {
       "dev_mode": "Tryb deweloperski",
-      "version": "Wersja: {version}"
+      "version": "Wersja: {version}",
+      "widgets": {
+        "edit": "Edytuj układ",
+        "drag_handle": "Przenieś {title}",
+        "remove": "Usuń {title}",
+        "drop_here": "Upuść tutaj widżet",
+        "empty_title": "Twój pulpit jest pusty",
+        "empty_desc": "Dodaj widżety, aby mieć ważne dane zawsze pod ręką.",
+        "saved_title": "Pulpit zapisany",
+        "saved_desc": "Ten układ należy tylko do Ciebie - inni administratorzy mają swój własny.",
+        "error_title": "Nie udało się zapisać pulpitu",
+        "error_desc": "Coś poszło nie tak po drodze do serwera. Spróbuj ponownie.",
+        "panel": {
+          "title": "Dostępne widżety",
+          "desc": "Przeciągnij widżet na swój pulpit.",
+          "search": "Szukaj widżetu",
+          "empty_title": "Wszystko jest już na pulpicie",
+          "empty_desc": "Usuń widżet, aby wrócił na tę listę.",
+          "no_results_title": "Brak pasujących widżetów",
+          "no_results_desc": "Nic tutaj nie nazywa się \"{query}\". Spróbuj innego słowa."
+        },
+        "size": {
+          "title": "Szerokość",
+          "small": "Mała",
+          "medium": "Średnia",
+          "large": "Duża"
+        },
+        "settings": {
+          "open": "Skonfiguruj {title}",
+          "title": "Skonfiguruj {title}",
+          "desc": "Te ustawienia dotyczą tylko tej karty - inni administratorzy mają swoje własne.",
+          "saved_title": "Ustawienia zapisane",
+          "saved_desc": "Karta użyje ich, gdy skończysz układać pulpit.",
+          "error_title": "Nie udało się zapisać ustawień",
+          "error_desc": "Coś poszło nie tak po drodze do serwera. Spróbuj ponownie."
+        },
+        "notes": {
+          "title": "Notatki",
+          "desc": "Prywatny notatnik. Widzisz go tylko Ty.",
+          "placeholder": "Wszystko, co warto zapamiętać...",
+          "saving": "Zapisywanie...",
+          "saved": "Zapisano",
+          "error": "Nie zapisano - pisz dalej, aby spróbować ponownie"
+        },
+        "send-notification": {
+          "title": "Wyślij powiadomienie",
+          "desc": "Wysyła powiadomienie do użytkownika w czasie rzeczywistym, na każdej przeglądarce, na której jest zalogowany.",
+          "user_id": "ID użytkownika",
+          "message": "Tytuł",
+          "submit": "Wyślij powiadomienie",
+          "success": "Powiadomienie wysłane",
+          "error": "Nie udało się wysłać powiadomienia",
+          "default_message": "Wiadomość od administratora 👋",
+          "settings": {
+            "message": "Domyślny tytuł",
+            "message_desc": "Treść, od której zaczyna pole Tytuł przy każdym wczytaniu pulpitu. Zostaw puste, aby wrócić do wbudowanego powitania."
+          }
+        }
+      }
     },
     "global": {
       "nav": {

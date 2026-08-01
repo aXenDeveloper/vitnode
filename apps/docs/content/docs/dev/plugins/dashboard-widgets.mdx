@@ -1,0 +1,502 @@
+---
+title: Dashboard Widgets
+description: Add drag-and-drop widgets to the AdminCP dashboard from your plugin - each admin arranges their own layout, and it is responsive out of the box.
+icon: LayoutDashboard
+---
+
+The AdminCP dashboard at `/admin/core` is a grid of widgets. Your plugin can drop its own cards onto it - post counts, a moderation queue, a chart, whatever you want an admin to see the moment they log in.
+
+Every admin arranges their **own** dashboard: drag to reorder, drag new widgets in from the side panel, resize, remove. One admin rearranging their board never touches anyone else's.
+
+```text
+┌─ Edit layout ────────────────────────────────┬─ Available widgets ─┐
+│ ┌───────────────┬──────────┐                 │ Search for a widget │
+│ │ Notes         │ Send a   │                 │                     │
+│ │               │ notifi…  │                 │ CORE                │
+│ ├───────────────┴──────────┤                 │ ⠿ Notes             │
+│ │ ⌐ ‥ drop a widget here ¬ │                 │ ⠿ Send a notificat… │
+│ └──────────────────────────┘                 │ BLOG                │
+│                                              │ ⠿ Blog statistics   │
+│                                              │                     │
+│                                              │  drag one over ───▶ │
+│                                              ├─────────────────────┤
+│                                              │  Cancel  │   Save   │
+└──────────────────────────────────────────────┴─────────────────────┘
+```
+
+**Edit layout** sits in the page header. Once the board is being edited it steps aside, and **Save** and **Cancel** wait at the foot of the widget panel - beside the rest of what edit mode put on screen, rather than back up in the header.
+
+## Register a widget
+
+<Steps>
+<Step>
+
+### Write the component
+
+A widget is an ordinary React component. It renders **on the server**, so it can be `async` and talk to the database directly - no API round-trip needed.
+
+```tsx title="plugins/{plugin_name}/src/views/admin/widgets/stats-widget.tsx"
+import type { AdminDashboardWidgetProps } from "@vitnode/core/lib/plugin";
+
+export const StatsWidget = async ({ settings }: AdminDashboardWidgetProps) => {
+  const posts = await countPosts();
+
+  return (
+    <p className="text-3xl font-bold tabular-nums">{posts}</p>
+  );
+};
+```
+
+<Callout type="warn" title="It runs on the server">
+  VitNode renders your widget on the server and hands the *output* to the client
+  grid - the component function itself never crosses the boundary. Anything
+  interactive (an input, a button with `onClick`) goes in a child component
+  marked `"use client"`, exactly like a normal Server Component.
+</Callout>
+
+<Callout title="Translations in a client child">
+  The dashboard only ships core's own messages to the browser. A `"use client"`
+  child that calls `useTranslations` on your plugin's namespace needs your
+  messages there too - wrap it in core's `I18nProvider` inside your widget:
+
+```tsx
+import { I18nProvider } from "@vitnode/core/components/i18n-provider";
+
+export const StatsWidget = () => (
+  <I18nProvider namespaces={["@vitnode/blog.admin.dashboard"]}>
+    <StatsChart />
+  </I18nProvider>
+);
+```
+
+  A widget that renders all its text on the server needs none of this.
+</Callout>
+
+</Step>
+<Step>
+
+### Add it to your plugin config
+
+Widgets live under `admin.dashboard.widgets`, right next to your [navigation items](/docs/dev/plugins/admin-page#navigation-items).
+
+```tsx title="plugins/{plugin_name}/src/config.tsx"
+import { buildPlugin } from "@vitnode/core/lib/plugin";
+import { ChartBarIcon } from "lucide-react";
+
+import { StatsWidget } from "./views/admin/widgets/stats-widget";
+import { configPlugin } from "./config";
+
+export const blogPlugin = () => {
+  return buildPlugin({
+    ...configPlugin,
+    // [!code ++:12]
+    admin: {
+      dashboard: {
+        widgets: [
+          {
+            id: "stats",
+            component: StatsWidget,
+            icon: <ChartBarIcon />,
+            defaultSpan: 1,
+            defaultRows: 1,
+          },
+        ],
+      },
+    },
+  });
+};
+```
+
+</Step>
+<Step>
+
+### Add translations
+
+Like nav items, the widget's `id` becomes its translation key. `title` is required; `desc` is optional and shows as a subtitle on the card and in the panel.
+
+```json title="plugins/{plugin_name}/src/locales/en.json"
+{
+  "@vitnode/blog": {
+    "title": "Blog",
+    "admin": {
+      // [!code ++:8]
+      "dashboard": {
+        "widgets": {
+          "stats": {
+            "title": "Blog statistics",
+            "desc": "Posts, comments and views at a glance."
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+That's it. Open `/admin/core`, hit **Edit layout**, and your widget is waiting in the panel on the right.
+
+</Step>
+</Steps>
+
+## Widget options
+
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+<TypeTable
+  type={{
+    id: {
+      description:
+        "Unique within your plugin. The public id becomes `${pluginId}:${id}` - that is what gets stored in each admin's layout, so changing it resets the widget's position.",
+      type: "string",
+      required: true,
+    },
+    component: {
+      description:
+        "The component VitNode renders. May be an async Server Component. Receives `settings` and `widgetId`.",
+      type: "React.ComponentType<AdminDashboardWidgetProps>",
+      required: true,
+    },
+    icon: {
+      description:
+        "A lucide icon element shown beside the title. Same as nav items.",
+      type: "React.ReactNode",
+    },
+    category: {
+      description:
+        "Groups the widget under a heading of your own in the panel. Omit it and the widget is filed under your plugin's name.",
+      type: "string",
+      default: "the plugin's own name",
+    },
+    defaultSpan: {
+      description: "How many columns the widget takes when first added.",
+      type: "1 | 2 | 3",
+      default: "minSpan (or 1)",
+    },
+    defaultRows: {
+      description: "How tall the card starts out.",
+      type: "1 | 2 | 3",
+      default: "1",
+    },
+    minSpan: {
+      description:
+        "The narrowest the admin may shrink it. Use it when your widget needs room - a wide form or a chart.",
+      type: "1 | 2 | 3",
+      default: "1",
+    },
+    defaultEnabled: {
+      description:
+        "Put the widget on a fresh dashboard automatically. Leave it off to make the widget opt-in - it still shows up in the panel.",
+      type: "boolean",
+      default: "false",
+    },
+    allowMultiple: {
+      description:
+        "Let an admin place the widget as many times as they like. Each copy is its own entry with its own settings, and stays in the panel so more can be dragged in.",
+      type: "boolean",
+      default: "false",
+    },
+    permission: {
+      description:
+        "Hide the widget from admins who lack a staff permission. Takes `{ module, permission }` - the plugin is inferred from yours.",
+      type: "{ module: string; permission: string }",
+    },
+    settingsComponent: {
+      description:
+        "A form for whatever the widget lets an admin change, shown in a dialog behind a gear on the card. Rendered on the server with the same props as `component`.",
+      type: "React.ComponentType<AdminDashboardWidgetProps>",
+    },
+  }}
+/>
+
+## Grouping widgets in the panel
+
+The panel groups what it offers under headings, and the search box above them matches a widget's title, its description, **and** its heading - so typing your plugin's name lists everything it contributes.
+
+By default a widget is filed under the plugin it came from, using the same `title` your plugin already provides for the sidebar. Register three widgets and they arrive as one **Blog** group, in the order you declared them - nothing to configure.
+
+Give related widgets a `category` when one heading is too coarse:
+
+```tsx title="plugins/{plugin_name}/src/config.tsx"
+widgets: [
+  { id: "stats", component: StatsWidget, category: "reports" }, // [!code ++]
+  { id: "views", component: ViewsWidget, category: "reports" }, // [!code ++]
+  { id: "queue", component: QueueWidget }, // filed under "Blog"
+],
+```
+
+The heading's text is a translation of its own, keyed by the category id:
+
+```json title="plugins/{plugin_name}/src/locales/en.json"
+{
+  "@vitnode/blog": {
+    "admin": {
+      "dashboard": {
+        "widgets": {
+          // [!code ++:3]
+          "categories": {
+            "reports": "Blog reports"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+<Callout>
+  A category belongs to the plugin that declares it - two plugins can both use
+  `category: "reports"` without landing in the same group, and each labels its
+  own heading. Miss the translation and the heading falls back to the raw id
+  (`reports`) rather than breaking the dashboard.
+</Callout>
+
+## Letting a widget be placed more than once
+
+Some widgets earn their keep several times over - one card per thing being watched. Set `allowMultiple` and the widget stays in the panel after it is placed, so an admin can drag in as many copies as they want:
+
+```tsx title="plugins/{plugin_name}/src/config.tsx"
+{
+  id: "queue",
+  component: QueueWidget,
+  allowMultiple: true, // [!code ++]
+}
+```
+
+Every copy is a layout entry of its own, with its own size, position and `settings`. They are told apart by id: the first copy keeps the plain widget id, later ones get a `#n` suffix.
+
+```text
+@vitnode/blog:queue      <- first copy
+@vitnode/blog:queue#2    <- second
+@vitnode/blog:queue#3    <- third
+```
+
+That id arrives as `widgetId` in your props, and it is what [settings](#remembering-things-widget-settings) are stored against. Pass it back verbatim when you save - **never** substitute the id you registered, or every copy will write over the same bag:
+
+```tsx
+export const QueueWidget = ({ settings, widgetId }: AdminDashboardWidgetProps) => (
+  // `widgetId` is this copy - `@vitnode/blog:queue#2`, say.
+  <QueueContent defaultValue={settings.filter} widgetId={widgetId} />
+);
+```
+
+<Callout type="warn" title="A copy dragged in just now">
+  A copy that has not been saved yet has no server-rendered output of its own,
+  so the board shows it with the widget's default state until the admin hits
+  **Save**. Anything it persists before that save lands against the first copy's
+  id. It costs nothing for a widget that stores no settings; if yours does,
+  expect the first save to settle it.
+</Callout>
+
+Turning `allowMultiple` back off is safe: the extra copies are dropped on the next load and the first one is kept.
+
+## Sizing and responsiveness
+
+`span` is a **column count**, not a pixel width, and the grid changes column count with the viewport:
+
+| Viewport             | Columns | What `span` does                 |
+| -------------------- | ------- | -------------------------------- |
+| `< 768px` (mobile)   | 1       | Ignored - every widget is full width |
+| `768px – 1279px`     | 2       | `3` behaves like `2`             |
+| `≥ 1280px` (desktop) | 3       | Exactly as stored                |
+
+Because the span collapses gracefully, one saved layout serves every screen size - there is no separate mobile layout to keep in sync. Design your widget to look right at `span: 1` on a phone and it will look right everywhere.
+
+<Callout>
+  Give the card's own content room to breathe rather than fixing its height.
+  `defaultRows` sets a minimum height so a short widget does not look starved
+  next to a tall one, but the card still grows with its content.
+</Callout>
+
+## Gate a widget by permission
+
+Same shape as nav items - see [Staff Permissions](/docs/dev/working-with-users/staff-permissions):
+
+```tsx title="plugins/{plugin_name}/src/config.tsx"
+{
+  id: "moderation-queue",
+  component: ModerationQueueWidget,
+  permission: { module: "posts", permission: "can_view" }, // [!code ++]
+}
+```
+
+An admin without the permission never sees the widget - not on the board, not in the panel. If they had it placed and the permission is later revoked, it quietly disappears from their layout without disturbing anything else.
+
+<Callout type="warn">
+  Hiding a widget hides the UI, not the data. Guard the queries inside your
+  widget too.
+</Callout>
+
+## Remembering things (widget settings)
+
+Each widget gets a small JSON bag of its own, stored per admin alongside their layout. Core's Notes widget uses it to keep the note body; yours might remember a collapsed section or a chosen date range.
+
+Read it from the `settings` prop:
+
+```tsx
+export const StatsWidget = ({ settings }: AdminDashboardWidgetProps) => {
+  const range = settings.range === "year" ? "year" : "month";
+  // ...
+};
+```
+
+Write it from a client child with the server action core ships:
+
+```tsx title="plugins/{plugin_name}/src/views/admin/widgets/range-picker.tsx"
+"use client";
+
+import { saveWidgetSettingsMutation } from "@vitnode/core/views/admin/views/core/dashboard/widgets/save-widget-settings.server";
+
+export const RangePicker = ({ widgetId }: { widgetId: string }) => (
+  <button
+    onClick={() =>
+      saveWidgetSettingsMutation({ widgetId, settings: { range: "year" } })
+    }
+  >
+    Last year
+  </button>
+);
+```
+
+Settings are **merged**, not replaced, so you only send the keys you changed. Rearranging the dashboard never wipes them. The whole bag is capped at 64 KB of UTF-8 - a dashboard is not a CMS.
+
+## Let admins configure it (the settings dialog)
+
+Saving straight from the card suits things the admin is already typing into. For everything else - a default message, a date range, which forum to watch - there is a gear in the card's top-right corner while the board is being edited, and a dialog behind it. Register a `settingsComponent` and VitNode puts it there, next to the sizing and removal buttons:
+
+```tsx title="plugins/{plugin_name}/src/config.tsx"
+{
+  id: "stats",
+  component: StatsWidget,
+  settingsComponent: StatsSettings, // [!code ++]
+}
+```
+
+<Steps>
+<Step>
+
+### Render the form on the server
+
+It gets the same props as the widget, so it starts from what this copy has already saved:
+
+```tsx title="plugins/{plugin_name}/src/views/admin/widgets/stats-settings.tsx"
+import type { AdminDashboardWidgetProps } from "@vitnode/core/lib/plugin";
+
+import { StatsSettingsForm } from "./stats-settings-form";
+
+export const StatsSettings = ({ settings }: AdminDashboardWidgetProps) => (
+  <StatsSettingsForm
+    defaultRange={settings.range === "year" ? "year" : "month"}
+  />
+);
+```
+
+</Step>
+<Step>
+
+### Save from a client child
+
+`useWidgetSettingsDialog` is available to anything under your settings component. Its `save` writes the settings and closes the dialog - you do not need `saveWidgetSettingsMutation` here, and you never have to pass `widgetId` around:
+
+```tsx title="plugins/{plugin_name}/src/views/admin/widgets/stats-settings-form.tsx"
+"use client";
+
+import { Button } from "@vitnode/core/components/ui/button";
+import { DialogFooter } from "@vitnode/core/components/ui/dialog";
+import { useWidgetSettingsDialog } from "@vitnode/core/views/admin/views/core/dashboard/grid/widget-settings-dialog";
+import React from "react";
+
+export const StatsSettingsForm = ({
+  defaultRange,
+}: {
+  defaultRange: string;
+}) => {
+  const { close, isPending, save } = useWidgetSettingsDialog();
+  const [range, setRange] = React.useState(defaultRange);
+
+  return (
+    <form
+      onSubmit={event => {
+        event.preventDefault();
+        save({ range }); // [!code highlight]
+      }}
+    >
+      {/* your fields */}
+
+      <DialogFooter>
+        <Button
+          disabled={isPending}
+          onClick={close}
+          type="button"
+          variant="outline"
+        >
+          Cancel
+        </Button>
+        <Button disabled={isPending} type="submit">
+          Save
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+};
+```
+
+</Step>
+</Steps>
+
+The dialog's own title and description come from the widget's `title` - you only supply what goes between them and a footer to close it.
+
+<TypeTable
+  type={{
+    save: {
+      description:
+        "Merges these keys into this copy's settings and closes the dialog. Keys you leave out are kept as they were.",
+      type: "(settings: Record<string, unknown>) => void",
+    },
+    close: {
+      description: "Dismisses the dialog without writing anything.",
+      type: "() => void",
+    },
+    isPending: {
+      description: "A save is in flight - disable the form's controls.",
+      type: "boolean",
+    },
+    widgetId: {
+      description:
+        "The copy being configured, e.g. `@vitnode/blog:stats#2`. `save` already uses it; it is here for anything else you need to key on.",
+      type: "string",
+    },
+  }}
+/>
+
+Your widget reads the result back out of its `settings` prop like any other. The write itself lands immediately, but the card around it was rendered on the server before that, so it only shows the new values once the admin leaves edit mode - VitNode reloads the board then, whether they saved their layout or cancelled it, and remounts any card whose settings changed so its own client state starts from them. Reloading any sooner would hand the board a fresh layout and undo whatever they had arranged.
+
+<Callout title="It works before the board has ever been saved">
+  Settings hang off a stored layout entry, and a `defaultEnabled` card is on
+  screen from the very first load - long before the admin has arranged anything.
+  Writing settings creates that entry if it is not there yet, so nothing an
+  admin types is waiting on them finding the **Save** button. The new entry
+  starts at your widget's own `defaultSpan` and `defaultRows`.
+</Callout>
+
+## How it is stored
+
+An admin's layout lives in `core_admin_dashboard`, one row per user, as a `jsonb` array of `{ id, span, rows, settings }` in render order. It is a *preference*, never the source of truth: on every load VitNode reconciles it against what is actually installed, so uninstalling your plugin simply drops its widgets from everyone's board, and installing it adds any `defaultEnabled` widgets to the end without disturbing what the admin already arranged.
+
+Removing a widget does not delete its entry - it is kept as `{ hidden: true }`. That does two useful things: a `defaultEnabled` widget the admin threw away stays away instead of cheerfully reappearing on the next load, and its `settings` sit safely on ice until they put it back.
+
+Only what the admin could actually see counts as removed. An entry they were never shown - your plugin was uninstalled, or a permission behind one of its widgets was revoked - is left untouched by a save rather than quietly marked hidden, so putting the plugin or the permission back brings the card back exactly where it was, settings and all.
+
+## Learn More
+
+<Cards>
+  <Card
+    title="AdminCP Pages"
+    description="Protected pages, layouts and sidebar navigation"
+    href="/docs/dev/plugins/admin-page"
+  />
+  <Card
+    title="Staff Permissions"
+    description="Gate widgets, pages and APIs behind permissions"
+    href="/docs/dev/working-with-users/staff-permissions"
+  />
+</Cards>

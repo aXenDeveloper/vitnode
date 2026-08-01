@@ -1,6 +1,7 @@
 "use client";
 
 import { SendIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
 
@@ -10,12 +11,18 @@ import { Input } from "@/components/ui/input";
 import { sendNotificationMutation } from "./mutation-api.server";
 
 export const SendNotificationAction = ({
+  defaultTitle,
   defaultUserId,
 }: {
+  /** What the admin set behind the gear - empty until they set something. */
+  defaultTitle: string;
   defaultUserId: number;
 }) => {
+  const t = useTranslations("admin.dashboard.widgets.send-notification");
   const [userId, setUserId] = React.useState(String(defaultUserId));
-  const [title, setTitle] = React.useState("Hello from the admin 👋");
+  const [title, setTitle] = React.useState(
+    () => defaultTitle || t("default_message"),
+  );
   const [isPending, startTransition] = React.useTransition();
 
   const onSend = () => {
@@ -27,19 +34,19 @@ export const SendNotificationAction = ({
       });
 
       if (res?.error) {
-        toast.error("Failed to send notification", { description: res.error });
+        toast.error(t("error"), { description: res.error });
 
         return;
       }
 
-      toast.success("Notification sent");
+      toast.success(t("success"), { description: title });
     });
   };
 
   return (
     <div className="flex flex-wrap items-end gap-2">
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-muted-foreground">User ID</span>
+        <span className="text-muted-foreground">{t("user_id")}</span>
         <Input
           className="w-24"
           onChange={event => setUserId(event.target.value)}
@@ -47,13 +54,13 @@ export const SendNotificationAction = ({
           value={userId}
         />
       </label>
-      <label className="flex flex-1 flex-col gap-1 text-sm">
-        <span className="text-muted-foreground">Title</span>
+      <label className="flex min-w-40 flex-1 flex-col gap-1 text-sm">
+        <span className="text-muted-foreground">{t("message")}</span>
         <Input onChange={event => setTitle(event.target.value)} value={title} />
       </label>
       <Button disabled={isPending || !title.trim() || !userId} onClick={onSend}>
         <SendIcon />
-        Send notification
+        {t("submit")}
       </Button>
     </div>
   );
