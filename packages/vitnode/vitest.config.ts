@@ -8,6 +8,12 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/tests/setup.ts"],
+    // `*.test-d.ts` files assert types only. They run under `pnpm test:types`
+    // (`vitest --typecheck`) and are skipped by the normal runtime suite.
+    typecheck: {
+      tsconfig: "./tsconfig.json",
+      include: ["**/*.test-d.ts"],
+    },
     exclude: [
       "**/node_modules/**",
       "**/dist/**",

@@ -1,4 +1,5 @@
 import {
+  FileTextIcon,
   LayoutDashboardIcon,
   ServerIcon,
   ShieldUserIcon,
@@ -15,6 +16,9 @@ import type { VitNodeConfig } from "@/vitnode.config";
 
 import { hasStaffPermission } from "@/api/lib/staff-permission";
 import { CONFIG_PLUGIN } from "@/config";
+import { contentI18nKeys } from "@/content/admin/labels";
+import { CONTENT_PERMISSIONS } from "@/content/const";
+import { contentAdminHref } from "@/content/registry";
 import { getSessionAdminApi } from "@/lib/api/get-session-admin-api";
 import { getVitNodeConfig } from "@/vitnode.config";
 
@@ -235,36 +239,64 @@ export const getAdminNav = async ({
     ],
   };
 
-  const pluginNav: NavGroupConfig[] = vitNodeConfig.plugins
-    .filter(plugin => plugin.admin?.nav)
-    .map(plugin => ({
-      id: plugin.pluginId,
+  // Content types get a nav item for free. `admin.navigation.enabled: false`
+  // opts out, and the usual permission filter hides anything the admin cannot
+  // view.
+  const contentNavItems = (
+    plugin: (typeof vitNodeConfig.plugins)[number],
+  ): NavItemConfig[] =>
+    (plugin.contentTypes ?? [])
+      .filter(({ definition }) => definition.admin.navigation.enabled)
+      .map(({ definition, icon }) => {
+        const titleKey = contentI18nKeys(definition, plugin.pluginId).title;
+
+        return {
+          href: contentAdminHref(definition.id),
+          icon: icon ?? <FileTextIcon />,
+          permission: {
+            module: definition.permissionModule,
+            permission: CONTENT_PERMISSIONS.view,
+            plugin: plugin.pluginId,
+          },
+          title: t.has(titleKey as Parameters<typeof t.has>[0])
+            ? t(titleKey as Parameters<typeof t>[0])
+            : definition.admin.label.plural,
+        };
+      });
+
+  const declaredNavItems = (
+    plugin: (typeof vitNodeConfig.plugins)[number],
+  ): NavItemConfig[] =>
+    (plugin.admin?.nav ?? []).map(item => ({
+      href: item.href,
+      icon: item.icon,
+      isOpenInNewTab: item.isOpenInNewTab,
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error
-      title: t(`${plugin.pluginId}.title`),
-      items: (plugin.admin?.nav ?? []).map(item => ({
-        href: item.href,
-        icon: item.icon,
-        isOpenInNewTab: item.isOpenInNewTab,
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        title: t(`${plugin.pluginId}.admin.nav.${item.id}`),
-        permission: item.permission
-          ? { plugin: plugin.pluginId, ...item.permission }
-          : undefined,
-        items:
-          item.items?.map(subItem => ({
-            href: subItem.href,
-            isOpenInNewTab: subItem.isOpenInNewTab,
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-expect-error
-            title: t(`${plugin.pluginId}.admin.nav.${item.id}.${subItem.id}`),
-            permission: subItem.permission
-              ? { plugin: plugin.pluginId, ...subItem.permission }
-              : undefined,
-          })) ?? [],
-      })),
+      title: t(`${plugin.pluginId}.admin.nav.${item.id}`),
+      permission: item.permission
+        ? { plugin: plugin.pluginId, ...item.permission }
+        : undefined,
+      items:
+        item.items?.map(subItem => ({
+          href: subItem.href,
+          isOpenInNewTab: subItem.isOpenInNewTab,
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-expect-error
+          title: t(`${plugin.pluginId}.admin.nav.${item.id}.${subItem.id}`),
+          permission: subItem.permission
+            ? { plugin: plugin.pluginId, ...subItem.permission }
+            : undefined,
+        })) ?? [],
     }));
+
+  const pluginNav: NavGroupConfig[] = vitNodeConfig.plugins.map(plugin => ({
+    id: plugin.pluginId,
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    title: t(`${plugin.pluginId}.title`),
+    items: [...contentNavItems(plugin), ...declaredNavItems(plugin)],
+  }));
 
   return [core, ...pluginNav]
     .map(group => ({

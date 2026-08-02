@@ -1,0 +1,356 @@
+import type {
+  ContentAdminConfig,
+  ContentFieldDescriptor,
+  ContentFieldMap,
+  ContentFieldsConstraint,
+  ContentIndexConfig,
+  ContentIndexInput,
+  ContentTypeDefinition,
+  ResolvedContentAdminConfig,
+} from "./types";
+
+import {
+  CONTENT_ENUM_DEFAULT_LENGTH,
+  CONTENT_FIELD_NAME_PATTERN,
+  CONTENT_ID_PATTERN,
+  CONTENT_SYSTEM_FIELDS,
+  CONTENT_TABLE_NAME_MAX_LENGTH,
+  CONTENT_TABLE_NAME_PATTERN,
+} from "./const";
+import { ContentEngineError } from "./errors";
+import { buildContentSchemas } from "./schemas";
+
+const SEARCHABLE_KINDS = new Set<ContentFieldDescriptor["kind"]>([
+  "text",
+  "textarea",
+]);
+
+const systemFields: readonly string[] = CONTENT_SYSTEM_FIELDS;
+
+const slugifyModule = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+/** A field with no default that is neither required nor nullable is unwritable. */
+const hasWritableFallback = (fieldValue: ContentFieldDescriptor): boolean => {
+  if (fieldValue.kind === "dateTime") return fieldValue.defaultNow;
+  if (fieldValue.kind === "relation" || fieldValue.kind === "user") {
+    return false;
+  }
+
+  return fieldValue.defaultValue !== undefined;
+};
+
+const assertFieldName = (id: string, name: string): void => {
+  if (systemFields.includes(name)) {
+    throw new ContentEngineError(
+      `"${name}" is a reserved system column and cannot be declared as a field.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (!CONTENT_FIELD_NAME_PATTERN.test(name)) {
+    throw new ContentEngineError(
+      `Field "${name}" must be camelCase and start with a lowercase letter.`,
+      { contentTypeId: id },
+    );
+  }
+};
+
+const FIELD_KINDS = new Set<string>([
+  "boolean",
+  "dateTime",
+  "enum",
+  "number",
+  "relation",
+  "text",
+  "textarea",
+  "user",
+]);
+
+/** Guards the widening of `ContentFieldsConstraint` to `ContentFieldMap`. */
+const assertFieldKind = (
+  id: string,
+  name: string,
+  fieldValue: ContentFieldDescriptor,
+): void => {
+  if (!FIELD_KINDS.has(fieldValue?.kind)) {
+    throw new ContentEngineError(
+      `Field "${name}" is not a field descriptor. Build it with \`field.text()\`, \`field.enum()\`, and so on.`,
+      { contentTypeId: id },
+    );
+  }
+};
+
+const assertField = (
+  id: string,
+  name: string,
+  fieldValue: ContentFieldDescriptor,
+): void => {
+  if (!fieldValue.required && !fieldValue.nullable) {
+    if (!hasWritableFallback(fieldValue)) {
+      throw new ContentEngineError(
+        `Field "${name}" is neither required nor nullable, so it needs a default value - otherwise a row could never be inserted.`,
+        { contentTypeId: id },
+      );
+    }
+  }
+
+  if (fieldValue.kind === "text" || fieldValue.kind === "textarea") {
+    const { maxLength, minLength } = fieldValue;
+    if (maxLength !== undefined && maxLength <= 0) {
+      throw new ContentEngineError(
+        `Field "${name}" has a maxLength of ${maxLength}; it must be positive.`,
+        { contentTypeId: id },
+      );
+    }
+    if (
+      minLength !== undefined &&
+      maxLength !== undefined &&
+      minLength > maxLength
+    ) {
+      throw new ContentEngineError(
+        `Field "${name}" has minLength ${minLength} greater than maxLength ${maxLength}.`,
+        { contentTypeId: id },
+      );
+    }
+  }
+
+  if (fieldValue.kind === "number") {
+    const { max, min } = fieldValue;
+    if (min !== undefined && max !== undefined && min > max) {
+      throw new ContentEngineError(
+        `Field "${name}" has min ${min} greater than max ${max}.`,
+        { contentTypeId: id },
+      );
+    }
+  }
+
+  if (fieldValue.kind === "enum") {
+    const { defaultValue, length = CONTENT_ENUM_DEFAULT_LENGTH } = fieldValue;
+    const values: readonly string[] = fieldValue.values;
+
+    if (values.length === 0) {
+      throw new ContentEngineError(
+        `Field "${name}" needs at least one value.`,
+        {
+          contentTypeId: id,
+        },
+      );
+    }
+    if (new Set(values).size !== values.length) {
+      throw new ContentEngineError(
+        `Field "${name}" has duplicate enum values.`,
+        { contentTypeId: id },
+      );
+    }
+    const tooLong = values.find(value => value.length > length);
+    if (tooLong !== undefined) {
+      throw new ContentEngineError(
+        `Field "${name}" value "${tooLong}" is longer than the column length ${length}. Raise \`length\` on the field.`,
+        { contentTypeId: id },
+      );
+    }
+    if (defaultValue !== undefined && !values.includes(defaultValue)) {
+      throw new ContentEngineError(
+        `Field "${name}" has default "${defaultValue}", which is not one of its values.`,
+        { contentTypeId: id },
+      );
+    }
+  }
+};
+
+const assertKnownColumns = (
+  id: string,
+  label: string,
+  names: readonly string[],
+  known: ReadonlySet<string>,
+): void => {
+  const unknown = names.find(name => !known.has(name));
+  if (unknown !== undefined) {
+    throw new ContentEngineError(
+      `${label} references unknown field "${unknown}".`,
+      { contentTypeId: id },
+    );
+  }
+};
+
+const resolveAdmin = <TFields>(
+  id: string,
+  fields: ContentFieldMap,
+  admin: ContentAdminConfig<TFields>,
+): ResolvedContentAdminConfig => {
+  const fieldNames = Object.keys(fields);
+  const knownColumns = new Set([...fieldNames, ...systemFields]);
+
+  const searchableFields = (
+    admin.list?.searchableFields?.map(String) ??
+    fieldNames.filter(name => SEARCHABLE_KINDS.has(fields[name].kind))
+  ).map(String);
+  assertKnownColumns(
+    id,
+    "admin.list.searchableFields",
+    searchableFields,
+    new Set(fieldNames),
+  );
+  const notSearchable = searchableFields.find(
+    name => !SEARCHABLE_KINDS.has(fields[name].kind),
+  );
+  if (notSearchable !== undefined) {
+    throw new ContentEngineError(
+      `admin.list.searchableFields includes "${notSearchable}", which is not a text or textarea field.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const orderableFields = (admin.list?.orderableFields ?? []).map(String);
+  assertKnownColumns(
+    id,
+    "admin.list.orderableFields",
+    orderableFields,
+    new Set(fieldNames),
+  );
+
+  const columns = (
+    admin.list?.columns?.map(String) ?? [...fieldNames, "updatedAt"]
+  ).map(String);
+  assertKnownColumns(id, "admin.list.columns", columns, knownColumns);
+
+  const formFields = (admin.form?.fields?.map(String) ?? fieldNames).map(
+    String,
+  );
+  assertKnownColumns(id, "admin.form.fields", formFields, new Set(fieldNames));
+
+  const defaultOrderBy = String(admin.list?.defaultOrderBy ?? "updatedAt");
+  if (
+    !systemFields.includes(defaultOrderBy) &&
+    !orderableFields.includes(defaultOrderBy)
+  ) {
+    throw new ContentEngineError(
+      `admin.list.defaultOrderBy is "${defaultOrderBy}", which is not in admin.list.orderableFields.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const titleField =
+    admin.titleField === undefined
+      ? (fieldNames.find(name => SEARCHABLE_KINDS.has(fields[name].kind)) ??
+        null)
+      : String(admin.titleField);
+  if (titleField !== null && !fieldNames.includes(titleField)) {
+    throw new ContentEngineError(
+      `admin.titleField references unknown field "${titleField}".`,
+      { contentTypeId: id },
+    );
+  }
+
+  return {
+    form: { fields: formFields },
+    label: admin.label,
+    list: {
+      columns,
+      defaultOrder: admin.list?.defaultOrder ?? "desc",
+      defaultOrderBy,
+      orderableFields,
+      searchableFields,
+    },
+    navigation: { enabled: admin.navigation?.enabled ?? true },
+    titleField,
+  };
+};
+
+/**
+ * Declares a content type. The result is plain data - zod and objects only -
+ * so the same definition can be imported by `buildPlugin` (client) and by
+ * `createContentModel` in `src/database/*.ts` (server) without dragging Drizzle
+ * into a client bundle.
+ */
+export const defineContentType = <
+  TId extends string,
+  TFields extends ContentFieldsConstraint,
+>({
+  admin,
+  fields,
+  id,
+  indexes = [],
+  tableName,
+}: {
+  admin: ContentAdminConfig<TFields>;
+  fields: TFields;
+  id: TId;
+  indexes?: ContentIndexInput<TFields>[];
+  tableName: string;
+}): ContentTypeDefinition<TId, TFields> => {
+  if (!CONTENT_ID_PATTERN.test(id)) {
+    throw new ContentEngineError(
+      `Content type id "${id}" must look like "plugin.entity" (lowercase, dot separated).`,
+    );
+  }
+
+  if (!CONTENT_TABLE_NAME_PATTERN.test(tableName)) {
+    throw new ContentEngineError(
+      `Table name "${tableName}" must be snake_case and start with a letter.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (tableName.length > CONTENT_TABLE_NAME_MAX_LENGTH) {
+    throw new ContentEngineError(
+      `Table name "${tableName}" is longer than the Postgres identifier limit of ${CONTENT_TABLE_NAME_MAX_LENGTH} characters.`,
+      { contentTypeId: id },
+    );
+  }
+
+  // `ContentFieldsConstraint` only pins `kind` (see its doc comment), so widen
+  // to the real descriptor union here. This is the only unchecked widening in
+  // the engine, and `assertFieldKind` below makes it true at runtime for
+  // anything that skipped the `field.*` builders.
+  const fieldMap = fields as unknown as ContentFieldMap;
+  const fieldNames = Object.keys(fieldMap);
+  if (fieldNames.length === 0) {
+    throw new ContentEngineError("A content type needs at least one field.", {
+      contentTypeId: id,
+    });
+  }
+
+  for (const name of fieldNames) {
+    assertFieldName(id, name);
+    assertFieldKind(id, name, fieldMap[name]);
+    assertField(id, name, fieldMap[name]);
+  }
+
+  const knownColumns = new Set([...fieldNames, ...systemFields]);
+  const resolvedIndexes: ContentIndexConfig[] = indexes.map(index => {
+    const on = index.on.map(String);
+    assertKnownColumns(id, "indexes", on, knownColumns);
+
+    return { ...index, on };
+  });
+
+  const resolvedAdmin = resolveAdmin(id, fieldMap, admin);
+  const permissionModule =
+    admin.permissionModule ?? slugifyModule(admin.label.plural);
+
+  if (!CONTENT_TABLE_NAME_PATTERN.test(permissionModule)) {
+    throw new ContentEngineError(
+      `Could not derive a permission module name from label.plural "${admin.label.plural}". Set \`admin.permissionModule\` explicitly.`,
+      { contentTypeId: id },
+    );
+  }
+
+  return {
+    admin: resolvedAdmin,
+    fields,
+    id,
+    indexes: resolvedIndexes,
+    permissionModule,
+    schemas: buildContentSchemas<ContentTypeDefinition<TId, TFields>>({
+      admin: resolvedAdmin,
+      fields: fieldMap,
+    }),
+    tableName,
+  };
+};

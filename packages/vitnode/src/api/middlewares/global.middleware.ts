@@ -3,6 +3,7 @@ import type { Redis } from "ioredis";
 
 import { HTTPException } from "hono/http-exception";
 
+import type { RegisteredContentType } from "@/content/registry";
 import type { LocaleConfig, MessagesSource } from "@/lib/i18n/types";
 import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
 import type { VitNodeRealtime } from "@/ws/registry";
@@ -19,6 +20,7 @@ import { SearchModel } from "@/api/models/search";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import { StorageModel } from "@/api/models/storage";
+import { validateContentTypes } from "@/content/registry";
 import { CONFIG } from "@/lib/config";
 import { collectLocaleCodes } from "@/lib/i18n/load-messages";
 import { buildApiMessagesSources } from "@/lib/i18n/sources";
@@ -83,6 +85,7 @@ export interface EnvVariablesVitNode {
       ssoAdapters: SSOApiPlugin[];
     };
     captcha?: Pick<VitNodeApiConfig, "captcha">["captcha"];
+    contentTypes: RegisteredContentType[];
     cron: (BuildCronReturn & { module: string; pluginId: string })[];
     cronSecret?: string;
     email?: VitNodeApiConfig["email"];
@@ -220,6 +223,17 @@ export const globalMiddleware = ({
       })),
   );
 
+  // Validated once more across *all* plugins: `buildApiPlugin` can only catch
+  // collisions inside a single plugin.
+  const contentTypesMetadata: RegisteredContentType[] = validateContentTypes(
+    plugins.flatMap(plugin =>
+      (plugin.contentTypes ?? []).map(definition => ({
+        definition,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+  );
+
   const permissionStaffMetadata: PermissionStaffCatalogEntry[] = plugins.map(
     plugin => ({
       pluginId: plugin.pluginId,
@@ -307,6 +321,7 @@ export const globalMiddleware = ({
       queue: queueMetadata,
       webSockets: webSocketsMetadata,
       permissionStaff: permissionStaffMetadata,
+      contentTypes: contentTypesMetadata,
     });
 
     const user = await new SessionModel(c).getUser();

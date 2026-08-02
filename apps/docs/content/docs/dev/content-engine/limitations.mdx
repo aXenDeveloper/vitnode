@@ -1,0 +1,55 @@
+---
+title: Limitations
+description: What the first version of the Content Engine deliberately leaves out, and what to do instead.
+icon: TriangleAlert
+---
+
+The Content Engine covers the boring 80% of a CRUD feature. This page is the
+other 20%, so you find out here rather than halfway through building.
+
+## Not in this version
+
+| Not supported | Do this instead |
+| --- | --- |
+| One-to-one, many-to-many, polymorphic relations | Write the join table and the queries by hand |
+| Localised content fields | Use `core_languages_words` directly, as the blog plugin does |
+| Rich text, media and file fields | Hand-build the field, or store an id and resolve it yourself |
+| Revisions and drafts | An `enum` status field covers simple cases |
+| Record-level ownership ("edit your own") | Check the author in a custom route |
+| Field-level permissions | Split the content type, or write the route |
+| Bulk actions | Add a custom admin route |
+| Public frontend routes | The generated API is AdminCP-only, by design |
+| Search indexing | Register a `SearchIndexer` yourself |
+| Automatic field renames | See below |
+
+None of these are blocked - they are simply not generated. The service, the
+schemas and the table are all public, so a hand-written route sits next to a
+generated one without friction.
+
+## Renaming a field drops the column
+
+<Callout type="warn" title="There is no rename detection">
+  Changing `excerpt` to `summary` generates a `DROP COLUMN` and an `ADD COLUMN`.
+  Add the new field, backfill with a hand-written migration, then remove the old
+  one in a later release.
+</Callout>
+
+## Public API is AdminCP-only
+
+Every generated route sits under `/admin/` and requires a staff permission.
+There is no public read endpoint, and adding one is your call - fetch through
+the service from your own route so you control caching and visibility.
+
+## Content types are code
+
+There is no admin UI for creating a content type, and there never will be one in
+this shape: the definitions are TypeScript and the tables are migrated from
+source control. That is the trade the engine makes - you give up runtime
+flexibility and get real columns, real foreign keys, real indexes and reviewable
+migrations.
+
+## Delivery guarantees
+
+Content events are emitted after a successful write, in-process, with no outbox
+and no retries. If a listener must not be missed, do the work in the same
+request or push it onto the [queue](/docs/dev/advanced/queue).

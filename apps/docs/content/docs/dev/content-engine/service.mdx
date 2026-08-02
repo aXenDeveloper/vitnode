@@ -1,0 +1,116 @@
+---
+title: Service API
+description: The typed repository every content type exposes, bound to the request's database handle.
+icon: Wrench
+---
+
+`model.service(c)` returns a small typed repository for one content type. It is
+deliberately thin: it owns column allowlisting, pagination and relation label
+joins, and hands everything else to Drizzle.
+
+```ts
+const articles = articleContent.service(c);
+```
+
+## findById
+
+```ts
+const article = await articles.findById(7);
+if (!article) throw new HTTPException(404);
+
+article.status; // "draft" | "published" | "archived"
+```
+
+Missing rows are `null`, never a throw - the generated routes turn that into a
+404, and your own code can decide differently.
+
+## findMany
+
+```ts
+const { edges, pageInfo } = await articles.findMany({
+  filters: { status: "published" },
+  orderBy: { column: "updatedAt", order: "desc" },
+  query: c.req.valid("query"), // cursor / first / last / search
+});
+```
+
+Built on the same [`withPagination`](/docs/dev/database/pagination) helper the
+rest of VitNode uses, so cursors, page caps and `pageInfo` behave identically.
+
+Each row carries a `labels` object with the display text for every `user` and
+`relation` field, resolved by one `LEFT JOIN` per reference field:
+
+```ts
+edges[0].labels; // { author: "Ada Lovelace", category: "News" }
+```
+
+Filter and order keys are looked up in the model's column map. An unknown key
+throws a `ContentEngineError` rather than reaching a query - a request string
+never becomes a SQL identifier.
+
+## create
+
+```ts
+const article = await articles.create({
+  title: "Hello world",
+  category: 1,
+  publishedAt: "2026-08-02T10:00:00.000Z", // ISO in, Date in the column
+});
+```
+
+## update
+
+```ts
+const result = await articles.update(7, { title: "Updated" });
+if (!result) throw new HTTPException(404);
+
+result.changedFields; // ("title" | "status" | ...)[]
+```
+
+`update` loads the row, diffs it against your patch, and writes only what
+actually moved. If nothing changed it skips the write entirely, so `updatedAt`
+stays honest and no spurious `content.*.updated` event fires. Dates are compared
+by instant, not identity.
+
+## delete
+
+```ts
+const deleted = await articles.delete(7);
+if (!deleted) throw new HTTPException(404);
+```
+
+Returns the deleted row, or `null` if there was nothing to delete. A row still
+referenced by a `restrict` foreign key raises a Postgres error the generated
+route maps to 409.
+
+## options
+
+Backs the relation and user pickers, capped and search-filtered:
+
+```ts
+await articles.options("category", "ne");
+// → [{ label: "News", value: 3 }]
+```
+
+## Transactions
+
+Every write takes an optional transaction handle, so a content write can join a
+larger unit of work:
+
+```ts
+await c.get("db").transaction(async tx => {
+  const article = await articles.create(values, { tx });
+  await tx.insert(audit_log).values({ articleId: article.id });
+});
+
+// Emit after the transaction returns - never inside it.
+await c.get("events").emit("content.example.article.created", {
+  contentId: article.id,
+});
+```
+
+## Escape hatches
+
+The service is not a wall. `model.table` and `model.columns` are public, and
+`c.get("db")` is right there - drop to Drizzle whenever the generated query is
+not the query you want.

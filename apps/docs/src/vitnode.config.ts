@@ -1,4 +1,5 @@
 import { blogPlugin } from "@vitnode/blog/config";
+import { examplePlugin } from "@vitnode/example/config";
 import { buildConfig, handleRequestConfig } from "@vitnode/core/vitnode.config";
 import { getRequestConfig } from "next-intl/server";
 
@@ -9,7 +10,7 @@ export const vitNodeConfig = buildConfig({
     title: "VitNode",
     shortTitle: "VitNode",
   },
-  plugins: [blogPlugin()],
+  plugins: [blogPlugin(), examplePlugin()],
   debug: false,
   i18n,
   theme: {

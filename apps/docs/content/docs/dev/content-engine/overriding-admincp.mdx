@@ -1,0 +1,104 @@
+---
+title: Overriding the AdminCP
+description: Replace one field input or one table cell without giving up the generated screen.
+icon: Paintbrush
+---
+
+The generated screen is a starting point, not a cage. Two escape hatches cover
+most of what plugins actually want, and both are per-field - you never have to
+take over the whole page to change one column.
+
+## Overriding a table cell
+
+```tsx title="src/views/admin/articles/status-cell.tsx"
+"use client";
+
+import type { ContentCellProps } from "@vitnode/core/lib/plugin";
+
+import { Badge } from "@vitnode/core/components/ui/badge";
+
+import type { articleContentType } from "@/content/article";
+
+export const StatusCell = ({
+  row,
+}: ContentCellProps<typeof articleContentType>) => (
+  <Badge variant={row.status === "published" ? "default" : "secondary"}>
+    {row.status}
+  </Badge>
+);
+```
+
+```tsx title="src/config.tsx"
+contentTypeAdmin({
+  definition: articleContentType,
+  columns: { status: { cell: StatusCell } },
+});
+```
+
+`row` is typed as the content type's own select row, so `row.status` narrows to
+`"draft" | "published" | "archived"`.
+
+## Overriding a form field
+
+```tsx title="src/views/admin/articles/excerpt-field.tsx"
+"use client";
+
+import type { ItemAutoFormComponentProps } from "@vitnode/core/components/form/auto-form";
+
+import { AutoFormTextarea } from "@vitnode/core/components/form/fields/textarea";
+
+export const ExcerptField = (props: ItemAutoFormComponentProps) => (
+  <AutoFormTextarea label="Excerpt" rows={10} {...props} />
+);
+```
+
+```tsx title="src/config.tsx"
+contentTypeAdmin({
+  definition: articleContentType,
+  fields: { excerpt: { component: ExcerptField } },
+});
+```
+
+The override receives the same props the generated input would, so the field
+stays wired into `AutoForm`'s validation and error display.
+
+<Callout type="warn" title="Overrides must be client components">
+  `config.tsx` is a server module, so an inline arrow written there is a server
+  closure and cannot be handed to the client form. Put the component in its own
+  `"use client"` file and reference it, as above - that makes it a client
+  reference, which passes across the boundary fine.
+</Callout>
+
+<Callout type="info" title="Overrides live in buildPlugin, not the definition">
+  Component references cannot go on the definition: `src/database/*.ts` imports
+  it, and Drizzle Kit executes that file during migration generation. Keeping
+  overrides in `config.tsx` keeps React out of the migration path.
+</Callout>
+
+## Narrowing what appears
+
+Before reaching for a component override, check whether the definition already
+says what you mean:
+
+```ts
+admin: {
+  list: {
+    columns: ["title", "status", "updatedAt"],  // hide the rest
+    orderableFields: ["title"],
+  },
+  form: {
+    fields: ["title", "excerpt"],  // views and featured stay API-only
+  },
+  navigation: { enabled: false },  // no sidebar entry
+}
+```
+
+A field left out of `admin.form.fields` is still a real column with a real API -
+it just does not appear in the dialog.
+
+## When you want your own page
+
+Nothing stops you. Build a normal admin page in `src/routes/admin/**`, and use
+the service and schemas directly - they are the same ones the generated screen
+uses. Set `navigation.enabled: false` so the generated nav item does not compete
+with yours.

@@ -1,0 +1,101 @@
+---
+title: Content Engine
+description: Declare a content type once in TypeScript and get a real Postgres table, Zod schemas, a typed service, CRUD routes, staff permissions, an AdminCP screen and typed events.
+icon: Boxes
+---
+
+Every plugin that stores structured data ends up writing the same things: a
+Drizzle table, a handful of Zod schemas, five routes, a permission block, a
+DataTable, an AutoForm dialog, a delete confirmation and a few events. It is a
+lot of typing for not much thinking.
+
+The Content Engine writes all of it from one declaration.
+
+```ts title="src/content/article.ts"
+import { defineContentType, field } from "@vitnode/core/content";
+
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    status: field.enum({ values: ["draft", "published"], defaultValue: "draft" }),
+    publishedAt: field.dateTime({ nullable: true }),
+    author: field.user({ nullable: true, onDelete: "set null" }),
+  },
+  admin: {
+    label: { plural: "Articles", singular: "Article" },
+  },
+});
+```
+
+That gives you:
+
+- a dedicated `example_articles` table with a `serial` primary key, timestamps
+  and RLS, migrated by the normal `drizzle-kit` flow
+- Zod schemas for create, update, select, filters, ordering and the form
+- a typed service (`findById`, `findMany`, `create`, `update`, `delete`)
+- five CRUD routes plus a relation-picker route, each behind a staff permission
+- an AdminCP list with search, pagination, sorting, and create/edit/delete
+  dialogs - with **no Next.js file to write**
+- `can_view` / `can_create` / `can_edit` / `can_delete` in the staff editor
+- `content.example.article.created` / `.updated` / `.deleted` events
+
+## What it is not
+
+<Callout type="info" title="Code-first, not a no-code CMS">
+  Content types live in TypeScript and are migrated from source control. There
+  is no admin UI for creating one, no JSONB blob, and no runtime `CREATE TABLE`.
+  One content type is one real Postgres table, and you can always drop down to
+  Drizzle and write the query yourself.
+</Callout>
+
+## How the pieces fit
+
+```text
+  src/content/article.ts          defineContentType(...)      ← client-safe
+        │                          zod + plain objects
+        ├──────────────┬──────────────────────────────┐
+        ▼              ▼                              ▼
+  src/config.tsx   src/database/articles.ts    src/api/.../admin.module.ts
+  buildPlugin      createContentModel(...)     buildContentAdminModule(...)
+  (AdminCP)          ├─ .table  → migrations     └─ 6 routes + permissions
+                     ├─ .columns
+                     └─ .service(c)
+```
+
+The definition sits in the middle because it is *client-safe by construction*:
+it imports nothing but `zod`. That is what lets the AdminCP and the API share
+one object instead of two that drift apart.
+
+## Getting started
+
+<Cards>
+  <Card
+    href="/docs/dev/content-engine/defining-a-content-type"
+    title="Defining a content type"
+    description="The three files a content type needs, and where each one goes."
+  />
+  <Card
+    href="/docs/dev/content-engine/fields"
+    title="Supported fields"
+    description="Every field kind, and what it becomes in the database, the API and the AdminCP."
+  />
+  <Card
+    href="/docs/dev/content-engine/database-and-migrations"
+    title="Database & migrations"
+    description="How Drizzle Kit finds generated tables - and what happens when you rename a field."
+  />
+  <Card
+    href="/docs/dev/content-engine/limitations"
+    title="Limitations"
+    description="What the first version deliberately leaves out."
+  />
+</Cards>
+
+## A complete example
+
+The `@vitnode/example` plugin in the VitNode repository is a working reference:
+two content types, every field kind, generated routes, generated AdminCP and
+typed events - in about 120 lines of plugin code. Every page in this section
+quotes from it.

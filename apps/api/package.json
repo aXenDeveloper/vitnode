@@ -43,6 +43,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/ws": "^8.18.1",
     "@vitnode/blog": "workspace:*",
+    "@vitnode/example": "workspace:*",
     "@vitnode/config": "workspace:*",
     "@vitnode/nodemailer": "workspace:*",
     "dotenv": "^17.4.2",

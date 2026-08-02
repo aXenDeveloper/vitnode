@@ -1,0 +1,95 @@
+---
+title: Generated AdminCP
+description: The list, form and delete screens you get for free - and the one route that serves all of them.
+icon: LayoutDashboard
+---
+
+Registering a content type in `buildPlugin` is the entire frontend integration.
+There is no page to write.
+
+```tsx title="src/config.tsx"
+contentTypes: [
+  contentTypeAdmin({
+    definition: articleContentType,
+    icon: <NotebookPenIcon />,
+  }),
+],
+```
+
+You get a nav item, a breadcrumb, and a screen at:
+
+```text
+/admin/content/example/article
+```
+
+## What the screen does
+
+- **List** - a `DataTable` with the columns from `admin.list.columns`
+- **Search** - across `admin.list.searchableFields`, wildcards escaped
+- **Sorting** - limited to `admin.list.orderableFields` plus the system columns
+- **Pagination** - the standard cursor pagination, capped at 100 per page
+- **Create / Edit** - `AutoForm` dialogs, lazy-loaded on open
+- **Delete** - a confirmation dialog
+- **Empty, loading and error states** - out of the box
+
+Every mutation closes its dialog, refreshes the list and raises a `sonner` toast
+with a description. Failures raise an error toast instead; a delete blocked by a
+foreign key gets its own message rather than a generic one.
+
+## One route, every content type
+
+Core ships a single catch-all page that is synced into your app like any other
+plugin route:
+
+```text
+packages/vitnode/src/routes/admin/content/[...slug]/page.tsx
+packages/vitnode/src/routes/breadcrumb/admin/content/[...slug]/page.tsx
+```
+
+The slug maps back onto a content type id - `/admin/content/example/article`
+resolves `example.article` from the registered plugins at request time. Add a
+tenth content type and the file count stays at two.
+
+## Field to component
+
+| Kind | Component |
+| --- | --- |
+| `text` | `AutoFormInput` |
+| `textarea` | `AutoFormTextarea` |
+| `number` | number input, or `AutoFormNullableNumber` when nullable |
+| `boolean` | `AutoFormSwitch` |
+| `enum` | `AutoFormSelect`, or `AutoFormRadioGroup` with `display: "radio"` |
+| `dateTime` | `AutoFormDateTime` |
+| `user` | `AutoFormCombobox`, async |
+| `relation` | `AutoFormCombobox`, async |
+
+These are the components every other VitNode admin screen uses. The engine adds
+no second form system - `AutoForm` does the work, exactly as it does in the blog
+plugin.
+
+## The server/client boundary
+
+The page is a server component; the form is a client one. A definition cannot
+cross that boundary - it holds `target` thunks and Zod schemas, neither of which
+serialise.
+
+So the server projects the definition into a plain JSON **spec** - field kinds,
+resolved labels, enum options, validation bounds - and the client rebuilds the
+form schema from it:
+
+```text
+server                                  client
+──────                                  ──────
+definition ──► buildContentFormSpec ──► buildFormSchemaFromSpec ──► AutoForm
+               (plain JSON)
+```
+
+The relation pickers go through a server action rather than a client fetch, so
+the browser never needs the API origin and the request is gated by the content
+type's own `can_view`.
+
+## Permissions
+
+The page checks `can_view` server-side and 404s without it. The create, edit and
+delete controls check their own permissions client-side - and the routes behind
+them check again, which is the check that actually matters.

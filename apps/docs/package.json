@@ -30,6 +30,7 @@
     "@hono/zod-openapi": "^1.5.1",
     "@hono/zod-validator": "^0.9.0",
     "@vitnode/blog": "workspace:*",
+    "@vitnode/example": "workspace:*",
     "@vitnode/core": "workspace:*",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",

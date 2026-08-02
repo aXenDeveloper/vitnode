@@ -81,6 +81,16 @@
     "vitnode": "./cli.mjs"
   },
   "exports": {
+    "./content": {
+      "import": "./dist/src/content/index.js",
+      "types": "./dist/src/content/index.d.ts",
+      "default": "./dist/src/content/index.js"
+    },
+    "./content/server": {
+      "import": "./dist/src/content/server/index.js",
+      "types": "./dist/src/content/server/index.d.ts",
+      "default": "./dist/src/content/server/index.js"
+    },
     "./api/config": {
       "import": "./dist/src/api/config.js",
       "types": "./dist/src/api/config.d.ts",
@@ -104,6 +114,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:types": "vitest run --typecheck.only",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },

@@ -1,11 +1,18 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 
+import type { RegisteredContentType } from "@/content/registry";
+import type { AnyContentTypeDefinition } from "@/content/types";
 import type { LocaleMessagesMap } from "@/lib/i18n/types";
+
+import {
+  validateContentTypes,
+  withContentPermissions,
+} from "@/content/registry";
 
 import type { SearchIndexer } from "../models/search";
 import type { CronJobConfig } from "./cron";
 import type { EventListenerConfig } from "./events";
-import type { BuildModuleReturn } from "./module";
+import type { BaseBuildModuleReturn, BuildModuleReturn } from "./module";
 import type { PermissionStaffConfig } from "./permission-staff";
 import type { QueueTaskConfig } from "./queue";
 import type { WebSocketConfig } from "./websocket";
@@ -13,6 +20,7 @@ import type { WebSocketConfig } from "./websocket";
 import { checkPluginId } from "./check-plugin-id";
 
 export interface BuildPluginApiReturn {
+  contentTypes?: AnyContentTypeDefinition[];
   cronJobs?: Omit<CronJobConfig, "pluginId">[];
   events?: Omit<EventListenerConfig, "pluginId">[];
   hono: OpenAPIHono;
@@ -47,12 +55,15 @@ export function buildApiPlugin<P extends string>({
   checkPluginId(pluginId);
 
   const hono = new OpenAPIHono();
+  const contentTypes: AnyContentTypeDefinition[] = [];
   const cronJobs: BuildPluginApiReturn["cronJobs"] = [];
   const events: BuildPluginApiReturn["events"] = [];
   const queueTasks: BuildPluginApiReturn["queueTasks"] = [];
   const webSockets: BuildPluginApiReturn["webSockets"] = [];
   modules.forEach(handler => {
     hono.route(`/${handler.name}`, handler.hono);
+
+    contentTypes.push(...collectContentTypes(handler));
 
     handler.cronJobs?.forEach(cron => {
       cronJobs.push({ ...cron, module: handler.name });
@@ -71,15 +82,37 @@ export function buildApiPlugin<P extends string>({
     });
   });
 
+  const registered: RegisteredContentType[] = validateContentTypes(
+    contentTypes.map(definition => ({ definition, pluginId })),
+  );
+
   return {
     pluginId,
     messages,
     hono,
+    contentTypes: registered.map(entry => entry.definition),
     cronJobs,
     events,
     queueTasks,
     searchIndexers,
     webSockets,
-    permissionStaff,
+    // Every content type contributes can_view/can_create/can_edit/can_delete
+    // unless the plugin declared that module itself.
+    permissionStaff: withContentPermissions(permissionStaff, registered),
   };
+}
+
+/**
+ * Walks the whole module tree. Content types are collected recursively - unlike
+ * `events`, `cronJobs` and friends, which only come from top-level modules - so
+ * a generated content module can be nested inside the plugin's `admin` module
+ * and still register its permissions.
+ */
+function collectContentTypes(
+  module: BaseBuildModuleReturn,
+): AnyContentTypeDefinition[] {
+  return [
+    ...(module.contentTypes ?? []),
+    ...(module.modules ?? []).flatMap(collectContentTypes),
+  ];
 }

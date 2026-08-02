@@ -1,0 +1,97 @@
+---
+title: Generated schemas
+description: The seven Zod schemas every content type exposes, and the rules they enforce.
+icon: ShieldCheck
+---
+
+Every definition carries `schemas`, generated from the field descriptors. They
+are the same objects the routes and the AdminCP use, so validating against them
+yourself gives identical behaviour.
+
+```ts
+articleContentType.schemas.create;       // request body for create
+articleContentType.schemas.update;       // request body for update
+articleContentType.schemas.select;       // API response
+articleContentType.schemas.selectObject; // the same, as an extendable ZodObject
+articleContentType.schemas.filters;      // query-string filters
+articleContentType.schemas.order;        // orderBy allowlist + direction
+articleContentType.schemas.params;       // { id }
+articleContentType.schemas.form;         // AutoForm-safe variant
+```
+
+## create
+
+Built from the fields, with `strictObject` so an unknown key is an **error**
+rather than something quietly dropped:
+
+```ts
+schemas.create.parse({ title: "Hello", category: 1 });
+// → { title: "Hello", category: 1, status: "draft", views: 0, featured: false }
+
+schemas.create.parse({ title: "Hello", category: 1, slug: "x" });  // throws
+schemas.create.parse({ title: "Hello", category: 1, id: 99 });     // throws
+```
+
+System columns are absent from the shape, so `id`, `createdAt` and `updatedAt`
+can never be set from a request. Declared defaults are applied here, which is
+what keeps Zod and the column default in step.
+
+## update
+
+Every field optional, still strict, and **never** re-applies create defaults:
+
+```ts
+schemas.update.parse({ title: "New" });  // → { title: "New" }  and nothing else
+schemas.update.parse({});                // throws: at least one field required
+```
+
+## select
+
+Describes the response, including `id`, `createdAt` and `updatedAt`. Dates are
+`z.date()` here - Hono serialises them to ISO strings on the wire, and
+`DateFormat` accepts either.
+
+`selectObject` is the same schema left as a `ZodObject`, which is what the list
+route extends with the joined relation labels.
+
+## filters and order
+
+Both are allowlists derived from the definition, and both exist to keep request
+strings away from SQL identifiers.
+
+`filters` only contains equality-filterable fields (everything except
+`textarea` and `dateTime`), parsed from their query-string form. `order` is a
+literal enum:
+
+```ts
+schemas.order.parse({ orderBy: "title" });   // ok, it is in orderableFields
+schemas.order.parse({ orderBy: "views" });   // throws
+schemas.order.parse({ orderBy: "id) --" });  // throws
+```
+
+An out-of-allowlist `orderBy` is a 400 at the route boundary, it shows up in the
+OpenAPI document, and the service checks it again before touching a column.
+
+## form
+
+The AdminCP variant. Identical rules, with one deliberate difference: it never
+contains `z.date()`.
+
+<Callout type="info" title="Why a separate form schema">
+  `AutoForm` derives its defaults and constraints by running `z.toJSONSchema` on
+  whatever schema you hand it, and Zod v4 throws on `z.date()`. The form variant
+  uses ISO strings so date fields work at all.
+</Callout>
+
+The client rebuilds this schema from a serialisable spec rather than importing
+the definition, since a definition holds `target` thunks and cannot cross the
+server/client boundary. `buildFormSchemaFromSpec` also folds an existing row in
+as Zod defaults, which is how the edit dialog prefills.
+
+## Why not drizzle-zod
+
+A Drizzle column cannot tell you whether a `varchar` should render as a
+single-line input or a textarea, cannot carry an enum's literal tuple through
+`varchar({ enum })`, and cannot express `min`/`max` on a number. The field
+descriptors know all three, so they generate both the column *and* the schema
+and the two cannot drift.

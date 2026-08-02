@@ -1,0 +1,92 @@
+---
+title: Generated events
+description: Three typed events per content type, emitted only after a successful write.
+icon: Radio
+---
+
+Every content type emits three events, with literal names derived from its id:
+
+```text
+content.example.article.created
+content.example.article.updated
+content.example.article.deleted
+```
+
+Payloads stay minimal - the [envelope](/docs/dev/events) already carries the
+actor, the emitting plugin and the timestamp:
+
+```ts
+type Created = { contentId: number };
+type Updated = { changedFields: string[]; contentId: number };
+type Deleted = { contentId: number };
+```
+
+## Registering the types
+
+One `declare module` block per plugin adds them to the global event map, using
+the same module augmentation every other VitNode event uses:
+
+```ts title="src/api/lib/events.ts"
+import type { ContentEventsFor } from "@vitnode/core/content";
+
+import type { articleContentType } from "@/content/article";
+import type { categoryContentType } from "@/content/category";
+
+declare module "@vitnode/core/api/models/events" {
+  interface VitNodeEvents
+    extends ContentEventsFor<typeof articleContentType>,
+      ContentEventsFor<typeof categoryContentType> {}
+}
+
+export {};
+```
+
+Import that file once from your `config.api.ts` so the augmentation is loaded.
+
+The types are exact, not approximate:
+
+```ts
+await c.get("events").emit("content.example.article.updated", {
+  contentId: 7,
+  changedFields: ["title"],  // "title" | "status" | "views" | ...
+});
+
+await c.get("events").emit("content.example.article.updated", {
+  contentId: 7,
+  changedFields: ["slug"],   // compile error: not a field on this content type
+});
+```
+
+## Listening
+
+Exactly like any other event listener:
+
+```ts title="src/api/lib/events.ts"
+export const reindexArticleListener = buildEventListener({
+  event: "content.example.article.updated",
+  name: "reindex-article",
+  description: "Refresh the search index when an article changes",
+  handler: async (c, payload) => {
+    if (!payload.changedFields.includes("title")) return;
+    await c.get("search").index(/* ... */);
+  },
+});
+```
+
+Register it on a **top-level** module - listeners are only collected from those,
+unlike content types.
+
+## When they fire
+
+<Callout type="warn" title="After the write, never inside the transaction">
+  Events are emitted once the database write has returned. A create that fails
+  validation, a delete blocked by a foreign key, and an update that changed
+  nothing all emit nothing at all.
+</Callout>
+
+That last one is worth repeating: `PUT` with values identical to what is already
+stored skips both the write and the event. `changedFields` never contains a
+field that did not move.
+
+Delivery semantics are the platform's, not the engine's: in-process by default,
+per-listener error isolation, no outbox. See [Events](/docs/dev/events).

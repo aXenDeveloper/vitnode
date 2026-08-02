@@ -67,9 +67,12 @@ export const buildRoute = <
 
   return {
     route: createRouteHono({
+      // `route` is spread first on purpose: `tags` and `middleware` already
+      // merge the route's own values, so letting the spread win would drop
+      // `pluginMiddleware` and the staff-permission guard.
+      ...route,
       tags,
       middleware,
-      ...route,
     }),
     handler: handler as Route<Plugin, R & { path: P }>["handler"],
     pluginId,

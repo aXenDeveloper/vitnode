@@ -1,0 +1,143 @@
+---
+title: Supported fields
+description: The eight field kinds, and exactly what each one becomes in Postgres, in the API and in the AdminCP.
+icon: ListChecks
+---
+
+Every field is built with `field.*`, and every one of them turns into four
+things: a column, a Zod rule, an AdminCP input and a table cell.
+
+| Field | Column | API value | AdminCP input | Sortable | Filterable | Searchable |
+| --- | --- | --- | --- | :-: | :-: | :-: |
+| `text` | `varchar(maxLength ?? 255)` | `string` | `AutoFormInput` | ✓ | ✓ | ✓ |
+| `textarea` | `text` | `string` | `AutoFormTextarea` | ✓ | ✗ | ✓ |
+| `number` | `integer` or `double precision` | `number` | number input | ✓ | ✓ | ✗ |
+| `boolean` | `boolean` | `boolean` | `AutoFormSwitch` | ✓ | ✓ | ✗ |
+| `enum` | `varchar(length ?? 64)` | literal union | select or radio | ✓ | ✓ | ✗ |
+| `dateTime` | `timestamp` | ISO string | `AutoFormDateTime` | ✓ | ✗ | ✗ |
+| `user` | `integer` → `core_users.id` | `number` | async combobox | ✓ | ✓ | ✗ |
+| `relation` | `integer` → target `id` | `number` | async combobox | ✓ | ✓ | ✗ |
+
+"Sortable" means the column *can* be allowlisted in `admin.list.orderableFields`
+- nothing is orderable until you list it. System columns always are.
+
+## required, nullable and defaults
+
+Three independent switches, and it is worth being precise about them:
+
+- **`required: true`** - must be present in a create payload.
+- **`nullable: true`** - the column accepts `NULL`, and `null` is a legal value.
+- **`defaultValue`** - becomes both the Postgres column default and the Zod
+  default, so the API and the database can never disagree.
+
+A field that is none of the three has no way to be written, so
+`defineContentType` rejects it:
+
+```ts
+// Error: neither required nor nullable, so it needs a default value
+title: field.text();
+
+// All fine
+title: field.text({ required: true });
+excerpt: field.textarea({ nullable: true });
+views: field.number({ integer: true, defaultValue: 0 });
+```
+
+<Callout type="info" title="Updates never re-apply defaults">
+  `PUT { "title": "New" }` changes the title and nothing else. Defaults belong
+  to create; a partial update that silently reset `status` to `"draft"` would be
+  a nasty surprise.
+</Callout>
+
+## text and textarea
+
+Same storage family, different intent. `text` is a bounded `varchar` and gets a
+single-line input; `textarea` is unbounded `text` and gets a multi-line one.
+Only these two may appear in `searchableFields`.
+
+```ts
+title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+excerpt: field.textarea({ maxLength: 500, nullable: true }),
+```
+
+## number
+
+`integer` is required - there is no sensible default, and guessing would decide
+your column type for you.
+
+```ts
+views: field.number({ integer: true, min: 0, defaultValue: 0 }),   // integer
+score: field.number({ integer: false, required: true }),           // double precision
+```
+
+A nullable number renders with a "no value" toggle
+(`AutoFormNullableNumber`) rather than an empty box.
+
+## enum
+
+Values are stored as `varchar`, matching the rest of VitNode - no `pgEnum`, so
+adding a value is a code change and not a migration.
+
+```ts
+status: field.enum({
+  values: ["draft", "published", "archived"],
+  defaultValue: "draft",
+  display: "radio", // default is a select
+}),
+```
+
+The values narrow all the way through: `ContentSelect<typeof articleContentType>["status"]`
+is `"draft" | "published" | "archived"`, not `string`. Values longer than the
+column length (64 by default) are rejected at definition time - raise `length`
+if you need more.
+
+## dateTime
+
+Stored as `timestamp` without a time zone, matching every other VitNode table.
+
+<Callout type="warn" title="ISO strings on the wire, not Dates">
+  A `dateTime` crosses the API and the form as an **ISO 8601 string**, and comes
+  back from `select` as a `Date`. This is not stylistic: `AutoForm` runs
+  `z.toJSONSchema` on every schema and Zod v4 throws on `z.date()`.
+</Callout>
+
+```ts
+publishedAt: field.dateTime({ nullable: true }),
+seenAt: field.dateTime({ defaultNow: true }),
+```
+
+## user
+
+A foreign key to the core users table, with an async picker backed by the
+content type's own `can_view` - so an editor does not need permission on the
+whole user list to attribute an article.
+
+```ts
+author: field.user({ nullable: true, onDelete: "set null" }),
+```
+
+## relation
+
+The owning side of a many-to-one. The target is a thunk so two content types can
+reference each other.
+
+```ts
+category: field.relation({
+  required: true,
+  onDelete: "restrict",
+  target: () => categoryContentType,
+}),
+```
+
+The picker's labels come from the target's `admin.titleField`, resolved with a
+single `LEFT JOIN` on the list query - never one query per row.
+
+`onDelete: "restrict"` means deleting a category that still has articles returns
+**409** with a generic message, not a 500 and not a stack trace.
+
+## Adding a field kind later
+
+The descriptor union plus one case in each of the six mappers - column, select
+schema, input schema, form schema, AdminCP input, table cell. Nothing else in
+the engine needs to change, which is the whole reason the descriptors are plain
+data.

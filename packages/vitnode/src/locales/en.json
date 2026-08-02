@@ -387,6 +387,58 @@
           }
         }
       }
+    },
+    "content": {
+      "empty": {
+        "title": "Nothing here yet",
+        "desc": "Create your first entry to get started."
+      },
+      "table": {
+        "id": "ID",
+        "created_at": "Created",
+        "updated_at": "Updated",
+        "actions": "Actions",
+        "empty_value": "—"
+      },
+      "create": {
+        "title": "Create {name}",
+        "desc": "Add a new {name}.",
+        "submit": "Create",
+        "success": "{name} has been created."
+      },
+      "edit": {
+        "title": "Edit {name}",
+        "desc": "Change the details of this {name}.",
+        "submit": "Save changes",
+        "success": "{name} has been updated."
+      },
+      "delete": {
+        "title": "Delete {name}",
+        "desc": "Are you sure you want to delete <title></title>? This action cannot be undone.",
+        "confirm": "Yes, delete it",
+        "success": "{name} has been deleted."
+      },
+      "form": {
+        "relation": {
+          "placeholder": "Select…",
+          "search_placeholder": "Search…",
+          "empty": "No matches."
+        },
+        "boolean": {
+          "on": "Yes",
+          "off": "No"
+        }
+      },
+      "permissions": {
+        "can_view": "View list",
+        "can_create": "Create",
+        "can_edit": "Edit",
+        "can_delete": "Delete"
+      },
+      "errors": {
+        "not_found": "This content type is not registered.",
+        "conflict": "This record is still referenced by other content."
+      }
     }
   },
   "admin": {

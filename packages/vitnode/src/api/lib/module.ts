@@ -1,5 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 
+import type { AnyContentTypeDefinition } from "@/content/types";
+
 import type { BuildCronReturn } from "./cron";
 import type { BuildEventListenerReturn } from "./events";
 import type { BuildQueueTaskReturn } from "./queue";
@@ -16,6 +18,13 @@ export interface BaseBuildModuleReturn<
   M extends string = string,
   Routes extends Route<P>[] = Route<P>[],
 > {
+  /**
+   * Content types whose CRUD routes this module serves. Unlike `events` and
+   * `cronJobs`, these are collected recursively by `buildApiPlugin`, so a
+   * generated content module can sit wherever it reads best in the tree -
+   * usually nested inside the plugin's own `admin` module.
+   */
+  contentTypes?: AnyContentTypeDefinition[];
   cronJobs: BuildCronReturn[];
   events: BuildEventListenerReturn[];
   hono: OpenAPIHono;
@@ -46,11 +55,13 @@ export function buildModule<
   pluginId,
   name,
   modules,
+  contentTypes,
   cronJobs = [],
   events = [],
   queueTasks = [],
   webSockets = [],
 }: {
+  contentTypes?: AnyContentTypeDefinition[];
   cronJobs?: BuildCronReturn[];
   events?: BuildEventListenerReturn[];
   modules?: Modules;
@@ -80,6 +91,7 @@ export function buildModule<
     hono,
     name,
     modules,
+    contentTypes,
     cronJobs,
     events,
     queueTasks,

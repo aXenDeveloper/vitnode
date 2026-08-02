@@ -1,0 +1,18 @@
+{
+  "title": "Content Engine",
+  "description": "Declare a content type once, get the table, API, AdminCP, permissions and events",
+  "icon": "Boxes",
+  "pages": [
+    "index",
+    "defining-a-content-type",
+    "fields",
+    "database-and-migrations",
+    "schemas",
+    "service",
+    "admincp",
+    "permissions",
+    "events",
+    "overriding-admincp",
+    "limitations"
+  ]
+}

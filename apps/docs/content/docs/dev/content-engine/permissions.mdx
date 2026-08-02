@@ -1,0 +1,86 @@
+---
+title: Generated permissions
+description: The four staff permissions every content type gets, how the module name is derived, and how to override them.
+icon: Lock
+---
+
+Registering a content type registers four admin permissions with it. No
+`permissionStaff` block to write, and no route left ungated.
+
+```text
+can_view     list, detail and the relation pickers
+can_create   POST
+can_edit     PUT
+can_delete   DELETE
+```
+
+The three write permissions depend on `can_view`, so a role cannot be given the
+ability to create rows it is not allowed to see.
+
+## The module name
+
+Derived from `admin.label.plural`, slugified: "Example Articles" becomes
+`example_articles`. The full permission key follows the usual VitNode shape:
+
+```text
+{pluginId}:{module}:{permission}
+@vitnode/example:example_articles:can_edit
+```
+
+Set it explicitly when the derived name is not what you want:
+
+```ts
+admin: {
+  label: { plural: "Knowledge Base Articles", singular: "Article" },
+  permissionModule: "kb_articles",
+}
+```
+
+Two content types in the same plugin that derive the same module name are a boot
+error naming both, so a collision can never quietly merge two permission sets.
+Different plugins are already scoped by `pluginId` and cannot collide.
+
+## Overriding the set
+
+Declare the module yourself and the engine leaves it alone:
+
+```ts
+buildApiPlugin({
+  pluginId: CONFIG_PLUGIN.pluginId,
+  modules: [adminModule],
+  permissionStaff: {
+    admin: {
+      // Read-only: no create, edit or delete permission exists at all
+      example_articles: ["can_view"],
+    },
+  },
+});
+```
+
+## Labels
+
+Permissions show up in the staff editor with whatever labels you provide, under
+the flat key convention:
+
+```json title="src/locales/en.json"
+{
+  "@vitnode/example:example_articles": "Articles",
+  "@vitnode/example:example_articles:can_view": "View articles",
+  "@vitnode/example:example_articles:can_create": "Create articles",
+  "@vitnode/example:example_articles:can_edit": "Edit articles",
+  "@vitnode/example:example_articles:can_delete": "Delete articles"
+}
+```
+
+## Where they are enforced
+
+Three places, and the first one is the one that counts:
+
+1. **Every generated route** carries an explicit `adminStaffPermission`, checked
+   by `assertStaffPermission` before the handler runs. 403 otherwise.
+2. **The AdminCP page** checks `can_view` server-side and calls `notFound()`.
+3. **The buttons** hide when the admin lacks `can_create` / `can_edit` /
+   `can_delete`.
+
+Hiding a button is a courtesy, not a control. Removing `can_delete` from a role
+makes `DELETE` return 403 whether or not the button was rendered.

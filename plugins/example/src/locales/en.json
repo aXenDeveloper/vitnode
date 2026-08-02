@@ -1,0 +1,47 @@
+{
+  "@vitnode/example": {
+    "title": "Example",
+    "content": {
+      "article": {
+        "title": "Articles",
+        "desc": "Everything the Content Engine generates, from one definition.",
+        "fields": {
+          "title": "Title",
+          "excerpt": "Excerpt",
+          "views": "Views",
+          "featured": "Featured",
+          "status": "Status",
+          "publishedAt": "Published at",
+          "author": "Author",
+          "category": "Category",
+          "updatedAt": "Updated"
+        },
+        "enums": {
+          "status": {
+            "draft": "Draft",
+            "published": "Published",
+            "archived": "Archived"
+          }
+        }
+      },
+      "category": {
+        "title": "Categories",
+        "desc": "Group articles together.",
+        "fields": {
+          "name": "Name",
+          "createdAt": "Created"
+        }
+      }
+    }
+  },
+  "@vitnode/example:example_articles": "Articles",
+  "@vitnode/example:example_articles:can_view": "View articles",
+  "@vitnode/example:example_articles:can_create": "Create articles",
+  "@vitnode/example:example_articles:can_edit": "Edit articles",
+  "@vitnode/example:example_articles:can_delete": "Delete articles",
+  "@vitnode/example:example_categories": "Categories",
+  "@vitnode/example:example_categories:can_view": "View categories",
+  "@vitnode/example:example_categories:can_create": "Create categories",
+  "@vitnode/example:example_categories:can_edit": "Edit categories",
+  "@vitnode/example:example_categories:can_delete": "Delete categories"
+}

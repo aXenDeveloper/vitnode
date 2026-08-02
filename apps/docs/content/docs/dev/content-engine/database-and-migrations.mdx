@@ -1,0 +1,124 @@
+---
+title: Database & migrations
+description: How Drizzle Kit discovers generated tables, what the migration looks like, and what happens when you rename a field.
+icon: Database
+---
+
+A content type is one real Postgres table. Nothing about migrations changes -
+the same `drizzle-kit generate`, the same committed SQL, the same journal.
+
+## What gets generated
+
+Every content table gets three system columns, matching the conventions used by
+every hand-written VitNode table:
+
+```ts
+id:        serial primary key
+createdAt: timestamp not null default now()
+updatedAt: timestamp not null default now()   // refreshed via $onUpdate
+```
+
+plus one column per field, an index on both timestamps, an index on every
+foreign key, any index you declared - and `ENABLE ROW LEVEL SECURITY`.
+
+Here is the real migration for the example plugin:
+
+```sql title="apps/docs/migrations/0022_add_example_content.sql"
+CREATE TABLE "example_articles" (
+  "id" serial PRIMARY KEY NOT NULL,
+  "createdAt" timestamp DEFAULT now() NOT NULL,
+  "updatedAt" timestamp DEFAULT now() NOT NULL,
+  "title" varchar(200) NOT NULL,
+  "excerpt" text,
+  "views" integer DEFAULT 0 NOT NULL,
+  "featured" boolean DEFAULT false NOT NULL,
+  "status" varchar(64) DEFAULT 'draft' NOT NULL,
+  "publishedAt" timestamp,
+  "author" integer,
+  "category" integer NOT NULL
+);
+ALTER TABLE "example_articles" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "example_articles" ADD CONSTRAINT "example_articles_author_core_users_id_fk"
+  FOREIGN KEY ("author") REFERENCES "public"."core_users"("id")
+  ON DELETE set null ON UPDATE cascade;
+ALTER TABLE "example_articles" ADD CONSTRAINT "example_articles_category_example_categories_id_fk"
+  FOREIGN KEY ("category") REFERENCES "public"."example_categories"("id")
+  ON DELETE restrict ON UPDATE cascade;
+CREATE INDEX "example_articles_status_createdat_idx"
+  ON "example_articles" USING btree ("status","createdAt");
+```
+
+Ordinary SQL. Nothing about it says "generated", which is the point.
+
+## How Drizzle Kit finds it
+
+`defineVitNodeDrizzleConfig` globs every registered plugin's compiled
+`node_modules/<pluginId>/dist/src/database/*.js` and collects anything that is a
+Drizzle table at runtime. A table produced by `createContentModel` is a real
+`pgTable`, so it is picked up exactly like a hand-written one.
+
+Two rules follow from that:
+
+<Callout type="warn" title="Build before you generate">
+  The glob reads `dist`, not `src`. Run `build:plugins` before `db:migrate`, or
+  your new table simply will not appear.
+</Callout>
+
+- **Keep database files flat.** The glob is `*.js`, not `**/*.js` -
+  `src/database/blog/posts.ts` is invisible.
+- **Keep them cheap to import.** Drizzle Kit *executes* these modules. No Hono
+  context, no React, no `server-only`, no top-level side effects.
+
+## Naming and clean installs
+
+Migrations are named by `drizzle-kit` and then renamed to something descriptive
+when the change is worth recognising - `0022_add_example_content.sql` rather
+than `0022_dry_hercules.sql`. Update the matching `tag` in
+`migrations/meta/_journal.json` when you do.
+
+A clean database just runs the journal in order. Content tables are plain
+`CREATE TABLE` statements; there is no bootstrap step and no ordering subtlety
+beyond the foreign keys Drizzle already sorts out.
+
+## Renaming or removing a field
+
+<Callout type="warn" title="Renaming a field drops the column">
+  The engine has no rename detection. Changing `excerpt` to `summary` generates
+  `DROP COLUMN "excerpt"` and `ADD COLUMN "summary"` - **the data is gone**.
+</Callout>
+
+The safe path is the same one you would use for a hand-written table:
+
+1. Add the new field, keep the old one.
+2. Generate and run that migration.
+3. Backfill with a hand-written migration.
+4. Remove the old field in a later release.
+
+Other destructive changes to watch: lowering a `text` field's `maxLength` can
+fail on existing rows, and flipping `number.integer` changes the column type.
+
+Rollback works the way it does everywhere else in VitNode: there are no down
+migrations, so you restore from a backup or write a forward migration.
+
+## Row level security
+
+Generated tables get `.enableRLS()` with no policies, matching all 22 core
+tables. The application connects as the table owner, which bypasses non-forced
+RLS, so this changes no behaviour today - it just means a content table is never
+the loose one if policies arrive later.
+
+## Dropping down to Drizzle
+
+The model exposes everything the generated code uses, so nothing is a dead end:
+
+```ts
+import { eq } from "drizzle-orm";
+
+import { articleContent, example_articles } from "@/database/articles";
+
+const rows = await c
+  .get("db")
+  .select()
+  .from(example_articles)
+  .where(eq(articleContent.columns.status, "published"));
+```

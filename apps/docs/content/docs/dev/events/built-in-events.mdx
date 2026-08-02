@@ -230,6 +230,45 @@ were removed with it.
 search index - a good template for cleaning up any data your plugin keys by
 post id.
 
+## Content Engine events
+
+Every content type declared with the
+[Content Engine](/docs/dev/content-engine) emits three events, named after its
+id. For `example.article` that means:
+
+```text
+content.example.article.created
+content.example.article.updated
+content.example.article.deleted
+```
+
+They are registered on the global map by the owning plugin with a single
+`declare module` block, so the names and payloads are as strongly typed as any
+core event - `changedFields` narrows to that content type's own field names.
+
+<TypeTable
+  type={{
+    contentId: {
+      description: "Id of the created, updated or deleted row.",
+      type: "number",
+    },
+    changedFields: {
+      description:
+        "Update only - the fields whose value actually changed. An update that changes nothing emits no event at all.",
+      type: "string[]",
+    },
+  }}
+/>
+
+The envelope already carries the actor, the emitting plugin and the timestamp,
+so the payloads stay minimal. Events fire only after the database write has
+returned: a failed validation, a delete blocked by a foreign key, and a no-op
+update all emit nothing.
+
+**Use cases:** reindex the row for search, invalidate a CDN entry, or mirror the
+change into a plugin-owned projection. See
+[Generated events](/docs/dev/content-engine/events).
+
 ## Deliberately not emitted (yet)
 
 High-frequency or consumer-less events are added only when a listener needs

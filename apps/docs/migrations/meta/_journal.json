@@ -155,6 +155,13 @@
       "when": 1785581778726,
       "tag": "0021_add_admin_dashboard",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1785696759125,
+      "tag": "0022_add_example_content",
+      "breakpoints": true
     }
   ]
 }

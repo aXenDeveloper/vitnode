@@ -1,4 +1,5 @@
 import { blogApiPlugin } from "@vitnode/blog/config.api";
+import { exampleApiPlugin } from "@vitnode/example/config.api";
 import { DiscordSSOApiPlugin } from "@vitnode/core/api/adapters/sso/discord";
 // import { ResendEmailAdapter } from "@vitnode/resend";
 import { FacebookSSOApiPlugin } from "@vitnode/core/api/adapters/sso/facebook";
@@ -29,7 +30,7 @@ export const vitNodeApiConfig = buildApiConfig({
     title: "VitNode API",
     shortTitle: "VitNode",
   },
-  plugins: [blogApiPlugin()],
+  plugins: [blogApiPlugin(), exampleApiPlugin()],
   dbProvider: drizzle({
     connection: POSTGRES_URL,
     casing: "camelCase",
