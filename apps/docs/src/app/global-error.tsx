@@ -9,6 +9,18 @@ const geist = Geist({
   subsets: ["latin"],
 });
 
-export default function GlobalError() {
-  return <GlobalErrorView className={`${geist.className} antialiased`} />;
+export default function GlobalError({
+  error,
+  retry,
+}: {
+  error: Error & { digest?: string };
+  retry: () => void;
+}) {
+  return (
+    <GlobalErrorView
+      className={`${geist.className} antialiased`}
+      error={error}
+      retry={retry}
+    />
+  );
 }

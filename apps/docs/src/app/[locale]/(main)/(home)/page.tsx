@@ -7,6 +7,7 @@ import { ChevronRight } from "lucide-react";
 import { Suspense } from "react";
 
 import { AnimatedBeamHome } from "../../../../components/animated-beam/animated-beam-home";
+import { AnimatedBeamHomeSkeleton } from "../../../../components/animated-beam/animated-beam-home-skeleton";
 import { AdminSection } from "./sections/admin/admin";
 import { CallToActionSection } from "./sections/call-to-action";
 import { PoweringBySection } from "./sections/powering-by/powering-by";
@@ -78,7 +79,7 @@ export default function HomePage() {
 
       <PoweringBySection />
       <AdminSection />
-      <Suspense fallback={null}>
+      <Suspense fallback={<AnimatedBeamHomeSkeleton />}>
         <AnimatedBeamHome />
       </Suspense>
 

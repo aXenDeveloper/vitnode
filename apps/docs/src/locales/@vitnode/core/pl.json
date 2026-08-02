@@ -220,6 +220,8 @@
           "desc": "Przepraszamy, występują problemy techniczne po stronie serwera."
         },
         "title": "Ups! Coś poszło nie tak.",
+        "try_again": "Spróbuj ponownie",
+        "reference": "Identyfikator błędu: {digest}",
         "internal_server_error": "Wewnętrzny błąd serwera.",
         "field_required": "To pole jest wymagane.",
         "field_min_length": "To pole musi mieć co najmniej {min} znaków.",
@@ -409,8 +411,6 @@
         "drop_here": "Upuść tutaj widżet",
         "empty_title": "Twój pulpit jest pusty",
         "empty_desc": "Dodaj widżety, aby mieć ważne dane zawsze pod ręką.",
-        "saved_title": "Pulpit zapisany",
-        "saved_desc": "Ten układ należy tylko do Ciebie - inni administratorzy mają swój własny.",
         "error_title": "Nie udało się zapisać pulpitu",
         "error_desc": "Coś poszło nie tak po drodze do serwera. Spróbuj ponownie.",
         "refresh_error": "Nie udało się odświeżyć tego widżetu. Odśwież stronę, aby zobaczyć zmiany.",
@@ -433,8 +433,6 @@
           "open": "Skonfiguruj {title}",
           "title": "Skonfiguruj {title}",
           "desc": "Te ustawienia dotyczą tylko tej karty - inni administratorzy mają swoje własne.",
-          "saved_title": "Ustawienia zapisane",
-          "saved_desc": "Karta użyje ich, gdy skończysz układać pulpit.",
           "error_title": "Nie udało się zapisać ustawień",
           "error_desc": "Coś poszło nie tak po drodze do serwera. Spróbuj ponownie.",
           "load_error": "Nie udało się wczytać tych ustawień. Zamknij i spróbuj ponownie."

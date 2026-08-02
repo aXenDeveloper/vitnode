@@ -220,6 +220,8 @@
           "desc": "Sorry, we're experiencing technical difficulties on our server."
         },
         "title": "Oops! Something went wrong.",
+        "try_again": "Try again",
+        "reference": "Error reference: {digest}",
         "internal_server_error": "Internal server error.",
         "field_required": "This field is required.",
         "field_min_length": "This field must be at least {min} characters.",
@@ -398,8 +400,6 @@
         "drop_here": "Drop a widget here",
         "empty_title": "Your dashboard is empty",
         "empty_desc": "Add widgets to keep the numbers you care about one glance away.",
-        "saved_title": "Dashboard saved",
-        "saved_desc": "Your layout is yours alone - other admins keep theirs.",
         "error_title": "Could not save your dashboard",
         "error_desc": "Something went wrong on the way to the server. Please try again.",
         "refresh_error": "Could not reload this widget. Reload the page to see your changes.",
@@ -422,8 +422,6 @@
           "open": "Configure {title}",
           "title": "Configure {title}",
           "desc": "These settings apply to this card only - other admins keep their own.",
-          "saved_title": "Settings saved",
-          "saved_desc": "The card picks them up once you are done arranging the board.",
           "error_title": "Could not save the settings",
           "error_desc": "Something went wrong on the way to the server. Please try again.",
           "load_error": "Could not load these settings. Close this and try again."
