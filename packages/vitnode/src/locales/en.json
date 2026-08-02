@@ -2,6 +2,9 @@
   "@vitnode/core": {
     "title": "Core"
   },
+  "@vitnode/core:dashboard": "Dashboard",
+  "@vitnode/core:dashboard:can_view": "View own dashboard layout",
+  "@vitnode/core:dashboard:can_edit": "Customize own dashboard layout",
   "@vitnode/core:users": "Users",
   "@vitnode/core:users:can_view": "View users list",
   "@vitnode/core:users:can_create": "Create users",
@@ -387,7 +390,67 @@
   "admin": {
     "dashboard": {
       "dev_mode": "Development Mode",
-      "version": "Version: {version}"
+      "version": "Version: {version}",
+      "widgets": {
+        "edit": "Edit layout",
+        "drag_handle": "Move {title}",
+        "remove": "Remove {title}",
+        "drop_here": "Drop a widget here",
+        "empty_title": "Your dashboard is empty",
+        "empty_desc": "Add widgets to keep the numbers you care about one glance away.",
+        "saved_title": "Dashboard saved",
+        "saved_desc": "Your layout is yours alone - other admins keep theirs.",
+        "error_title": "Could not save your dashboard",
+        "error_desc": "Something went wrong on the way to the server. Please try again.",
+        "refresh_error": "Could not reload this widget. Reload the page to see your changes.",
+        "panel": {
+          "title": "Available widgets",
+          "desc": "Drag a widget onto your dashboard.",
+          "search": "Search for a widget",
+          "empty_title": "Everything is already on the board",
+          "empty_desc": "Remove a widget to put it back here.",
+          "no_results_title": "No widget matches",
+          "no_results_desc": "Nothing here is called \"{query}\". Try another word."
+        },
+        "size": {
+          "title": "Width",
+          "small": "Small",
+          "medium": "Medium",
+          "large": "Large"
+        },
+        "settings": {
+          "open": "Configure {title}",
+          "title": "Configure {title}",
+          "desc": "These settings apply to this card only - other admins keep their own.",
+          "saved_title": "Settings saved",
+          "saved_desc": "The card picks them up once you are done arranging the board.",
+          "error_title": "Could not save the settings",
+          "error_desc": "Something went wrong on the way to the server. Please try again.",
+          "load_error": "Could not load these settings. Close this and try again."
+        },
+        "notes": {
+          "title": "Notes",
+          "desc": "A private scratchpad. Only you can see it.",
+          "placeholder": "Anything worth remembering...",
+          "saving": "Saving...",
+          "saved": "Saved",
+          "error": "Not saved - keep typing to try again"
+        },
+        "send-notification": {
+          "title": "Send a notification",
+          "desc": "Pushes a toast to the user in real time, on every browser where they are signed in.",
+          "user_id": "User ID",
+          "message": "Title",
+          "submit": "Send notification",
+          "success": "Notification sent",
+          "error": "Failed to send notification",
+          "default_message": "Hello from the admin 👋",
+          "settings": {
+            "message": "Default title",
+            "message_desc": "What the Title field starts with each time the dashboard loads. Leave it empty for the built-in greeting."
+          }
+        }
+      }
     },
     "global": {
       "nav": {
