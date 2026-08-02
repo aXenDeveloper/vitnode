@@ -31,6 +31,7 @@ import type {
 import type { DashboardLayoutAction } from "./layout-reducer";
 
 import { widgetIdOf } from "../widgets/instance-id";
+import { loadWidgetContentAction } from "../widgets/load-widget-content.server";
 import { DROP_END_ID } from "./drop-placeholder";
 import { dashboardLayoutReducer, isLayoutDirty } from "./layout-reducer";
 import { panelWidgetId } from "./panel-drag-id";
@@ -46,17 +47,17 @@ interface DashboardBoardContextProps {
   isEditing: boolean;
   /** A save is in flight. */
   isPending: boolean;
-  /**
-   * Says a widget wrote its settings while the board was being edited. Those
-   * go straight to the server, but the cards around them were rendered before
-   * that, so the board has to reload once the admin is done arranging it.
-   */
-  markSettingsSaved: () => void;
   /** Drops the admin's edits and leaves edit mode. */
   onCancel: () => void;
   onSave: () => void;
   /** Widgets on the board, in order, each with its rendered content. */
   placed: DashboardWidgetView[];
+  /**
+   * Sends one card back to the server to be rendered again - what a settings
+   * dialog calls once its write lands. Only that card goes: reloading the whole
+   * board mid-edit would throw away whatever the admin has arranged.
+   */
+  refreshWidget: (instanceId: string) => void;
   setIsEditing: (isEditing: boolean) => void;
 }
 
@@ -74,6 +75,16 @@ export const useDashboardBoard = () => {
   return context;
 };
 
+/**
+ * Unwraps a card the server has re-rendered, so the boundary around it in
+ * `WidgetCardContent` shows its skeleton until the new output arrives.
+ */
+const RefreshedWidgetContent = ({
+  content,
+}: {
+  content: Promise<React.ReactNode>;
+}): React.ReactNode => React.use(content);
+
 interface DashboardBoardProviderProps {
   /** Every widget this admin may see, already rendered on the server. */
   catalog: DashboardWidgetCatalogEntry[];
@@ -83,8 +94,6 @@ interface DashboardBoardProviderProps {
   layout: DashboardLayoutItem[];
   /** Stored ids this board speaks for - see `zodDashboardLayout`. */
   managedIds: string[];
-  /** Same, for the settings form behind each card's gear. */
-  settingsContent: Record<string, React.ReactNode>;
 }
 
 export const DashboardBoardProvider = ({
@@ -93,7 +102,6 @@ export const DashboardBoardProvider = ({
   content,
   layout,
   managedIds,
-  settingsContent,
 }: DashboardBoardProviderProps) => {
   const t = useTranslations("admin.dashboard.widgets");
   const router = useRouter();
@@ -102,12 +110,16 @@ export const DashboardBoardProvider = ({
   const [activeId, setActiveId] = React.useState<null | string>(null);
   const [isPending, startTransition] = React.useTransition();
   const [items, dispatch] = React.useReducer(dashboardLayoutReducer, layout);
+  const [refreshed, setRefreshed] = React.useState<
+    Record<string, { content: Promise<React.ReactNode>; revision: number }>
+  >({});
 
   // The server owns the layout; re-sync whenever it hands us a new one.
   const [syncedLayout, setSyncedLayout] = React.useState(layout);
   if (syncedLayout !== layout) {
     setSyncedLayout(layout);
     dispatch({ type: "reset", state: layout });
+    setRefreshed({});
   }
 
   const catalogById = React.useMemo(
@@ -121,22 +133,29 @@ export const DashboardBoardProvider = ({
         const widget = catalogById.get(widgetIdOf(item.id));
         if (!widget) return [];
 
+        const refresh = refreshed[item.id];
+
         return [
           {
             ...widget,
             instanceId: item.id,
             span: item.span,
             rows: item.rows,
-            contentKey: JSON.stringify(item.settings ?? {}),
+            contentKey: refresh
+              ? `refresh:${refresh.revision}`
+              : JSON.stringify(item.settings ?? {}),
 
-            // A copy dragged in during this edit has no output of its own yet -
-            // the catalog's stand-in carries it until the next save.
-            content: content[item.id] ?? widget.content,
-            settingsContent: settingsContent[item.id] ?? widget.settingsContent,
+            content: refresh ? (
+              <RefreshedWidgetContent content={refresh.content} />
+            ) : (
+              // A copy dragged in during this edit has no output of its own yet
+              // - the catalog's stand-in carries it until the next save.
+              (content[item.id] ?? widget.content)
+            ),
           },
         ];
       }),
-    [items, catalogById, content, settingsContent],
+    [items, catalogById, content, refreshed],
   );
 
   const available = React.useMemo<DashboardWidgetOption[]>(() => {
@@ -214,21 +233,29 @@ export const DashboardBoardProvider = ({
     dispatch({ type: "move", index: from, toIndex: to });
   };
 
-  // Settings are written the moment a widget's dialog saves them, so they
-  // outlive a cancel - only the cards' server-rendered output is behind.
-  const settingsSavedRef = React.useRef(false);
-  const markSettingsSaved = React.useCallback(() => {
-    settingsSavedRef.current = true;
-  }, []);
+  const refreshWidget = React.useCallback(
+    (instanceId: string) => {
+      const content = loadWidgetContentAction({ widgetId: instanceId }).catch(
+        () => <p className="text-destructive text-sm">{t("refresh_error")}</p>,
+      );
+
+      setRefreshed(current => ({
+        ...current,
+        [instanceId]: {
+          content,
+          revision: (current[instanceId]?.revision ?? 0) + 1,
+        },
+      }));
+    },
+    [t],
+  );
 
   const onCancel = () => {
+    // Settings were written the moment their dialog saved them, so the cards
+    // that picked them up keep what they are showing - only the arrangement,
+    // which was never sent anywhere, goes back to what the server has.
     dispatch({ type: "reset", state: layout });
     setIsEditing(false);
-
-    if (settingsSavedRef.current) {
-      settingsSavedRef.current = false;
-      router.refresh();
-    }
   };
 
   const onSave = () => {
@@ -245,7 +272,6 @@ export const DashboardBoardProvider = ({
       }
 
       setIsEditing(false);
-      settingsSavedRef.current = false;
       toast.success(t("saved_title"), { description: t("saved_desc") });
       router.refresh();
     });
@@ -259,10 +285,10 @@ export const DashboardBoardProvider = ({
         isDirty: isLayoutDirty(items, layout),
         isEditing,
         isPending,
-        markSettingsSaved,
         onCancel,
         onSave,
         placed,
+        refreshWidget,
         setIsEditing,
       }}
     >

@@ -8,12 +8,13 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DashboardWidgetView } from "../widgets/types";
 
+import { loadWidgetSettingsAction } from "../widgets/load-widget-settings.server";
 import { WidgetCard } from "./widget-card";
 
 vi.mock("next-intl", () => ({
@@ -27,10 +28,13 @@ vi.mock("next-intl", () => ({
   },
 }));
 
-// The settings dialog reaches for the server action, which drags the whole API
+// The settings dialog reaches for its server actions, which drag the whole API
 // in behind `fetcher`.
 vi.mock("../widgets/save-widget-settings.server", () => ({
   saveWidgetSettingsMutation: vi.fn(),
+}));
+vi.mock("../widgets/load-widget-settings.server", () => ({
+  loadWidgetSettingsAction: vi.fn(),
 }));
 
 let mounts = 0;
@@ -113,6 +117,22 @@ const handle = () =>
   screen.getByRole("button", {
     name: "admin.dashboard.widgets.drag_handle:Notes",
   });
+
+const gear = () =>
+  screen.getByRole("button", {
+    name: "admin.dashboard.widgets.settings.open:Notes",
+  });
+
+const queryGear = () =>
+  screen.queryByRole("button", {
+    name: "admin.dashboard.widgets.settings.open:Notes",
+  });
+
+const closeDialog = async () => {
+  fireEvent.click(screen.getByRole("button", { name: "core.global.close" }));
+
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBe(null));
+};
 
 describe("WidgetCard", () => {
   describe("drag affordance", () => {
@@ -198,6 +218,73 @@ describe("WidgetCard", () => {
       rerender(view({ span: 2 }));
 
       expect(mounts).toBe(1);
+    });
+  });
+
+  describe("settings", () => {
+    beforeEach(() => {
+      vi.mocked(loadWidgetSettingsAction).mockClear().mockResolvedValue(null);
+    });
+
+    it("offers no gear to a widget that registered no settings form", () => {
+      renderCard(view());
+
+      expect(queryGear()).toBe(null);
+    });
+
+    it("asks the server for nothing until the gear is pressed", () => {
+      renderCard(view({ hasSettings: true }));
+
+      expect(queryGear()).not.toBe(null);
+      expect(loadWidgetSettingsAction).not.toHaveBeenCalled();
+    });
+
+    it("fetches the form for this copy when the gear is pressed", async () => {
+      renderCard(
+        view({ hasSettings: true, instanceId: "@vitnode/core:notes#2" }),
+      );
+
+      fireEvent.click(gear());
+
+      await waitFor(() =>
+        expect(loadWidgetSettingsAction).toHaveBeenCalledWith({
+          widgetId: "@vitnode/core:notes#2",
+        }),
+      );
+    });
+
+    it("keeps the form it fetched when the dialog is opened again", async () => {
+      renderCard(view({ hasSettings: true }));
+
+      fireEvent.click(gear());
+      await waitFor(() =>
+        expect(loadWidgetSettingsAction).toHaveBeenCalledTimes(1),
+      );
+      await closeDialog();
+
+      fireEvent.click(gear());
+
+      await waitFor(() => expect(screen.getByRole("dialog")).not.toBe(null));
+      expect(loadWidgetSettingsAction).toHaveBeenCalledTimes(1);
+    });
+
+    it("drops the form once the server sends new settings", async () => {
+      const { rerender } = renderCard(
+        view({ contentKey: '{"range":"month"}', hasSettings: true }),
+      );
+
+      fireEvent.click(gear());
+      await waitFor(() =>
+        expect(loadWidgetSettingsAction).toHaveBeenCalledTimes(1),
+      );
+      await closeDialog();
+
+      rerender(view({ contentKey: '{"range":"year"}', hasSettings: true }));
+      fireEvent.click(gear());
+
+      await waitFor(() =>
+        expect(loadWidgetSettingsAction).toHaveBeenCalledTimes(2),
+      );
     });
   });
 });

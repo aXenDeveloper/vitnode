@@ -1,12 +1,12 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import React from "react";
+import { z } from "zod";
 
-import { Button } from "@/components/ui/button";
-import { DialogFooter } from "@/components/ui/dialog";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import type { AutoFormOnSubmit } from "@/components/form/auto-form";
+
+import { AutoForm } from "@/components/form/auto-form";
+import { AutoFormInput } from "@/components/form/fields/input";
 
 import { useWidgetSettingsDialog } from "../../grid/widget-settings-dialog";
 
@@ -17,46 +17,43 @@ export const SendNotificationSettingsForm = ({
 }) => {
   const t = useTranslations("admin.dashboard.widgets.send-notification");
   const tCore = useTranslations("core.global");
-  const { close, isPending, save } = useWidgetSettingsDialog();
-  const [value, setValue] = React.useState(defaultTitle);
-  const id = React.useId();
+  const { save } = useWidgetSettingsDialog();
+
+  const formSchema = z.object({
+    defaultTitle: z
+      .string()
+      .trim()
+      .max(255)
+      .default(defaultTitle)
+      .describe(t("settings.message_desc")),
+  });
+
+  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
+    await save({ defaultTitle: values.defaultTitle });
+  };
 
   return (
-    <form
-      className="flex flex-col gap-6"
-      onSubmit={event => {
-        event.preventDefault();
-        // Emptied on purpose means "go back to the built-in greeting", so it is
-        // stored as an empty string rather than left out of the merge.
-        save({ defaultTitle: value.trim() });
+    <AutoForm
+      fields={[
+        {
+          id: "defaultTitle",
+          component: props => (
+            <AutoFormInput
+              autoFocus
+              label={t("settings.message")}
+              placeholder={t("default_message")}
+              {...props}
+            />
+          ),
+        },
+      ]}
+      formSchema={formSchema}
+      mode="all"
+      onSubmit={onSubmit}
+      submitButtonProps={{
+        ["aria-label"]: tCore("save"),
+        children: tCore("save"),
       }}
-    >
-      <Field>
-        <FieldLabel htmlFor={id}>{t("settings.message")}</FieldLabel>
-        <Input
-          autoFocus
-          disabled={isPending}
-          id={id}
-          onChange={event => setValue(event.target.value)}
-          placeholder={t("default_message")}
-          value={value}
-        />
-        <FieldDescription>{t("settings.message_desc")}</FieldDescription>
-      </Field>
-
-      <DialogFooter>
-        <Button
-          disabled={isPending}
-          onClick={close}
-          type="button"
-          variant="outline"
-        >
-          {tCore("cancel")}
-        </Button>
-        <Button disabled={isPending} type="submit">
-          {tCore("save")}
-        </Button>
-      </DialogFooter>
-    </form>
+    />
   );
 };

@@ -54,6 +54,13 @@ export const StatsWidget = async ({ settings }: AdminDashboardWidgetProps) => {
   marked `"use client"`, exactly like a normal Server Component.
 </Callout>
 
+<Callout title="Take your time">
+  Every card sits behind its own `Suspense` boundary, with a skeleton as tall as
+  the card the admin sized. A slow query holds up your card and nothing else -
+  the board and every widget beside it are on screen while yours streams in, so
+  there is no need to hand-roll a loading state.
+</Callout>
+
 <Callout title="Translations in a client child">
   The dashboard only ships core's own messages to the browser. A `"use client"`
   child that calls `useTranslations` on your plugin's namespace needs your
@@ -202,7 +209,7 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
     },
     settingsComponent: {
       description:
-        "A form for whatever the widget lets an admin change, shown in a dialog behind a gear on the card. Rendered on the server with the same props as `component`.",
+        "A form for whatever the widget lets an admin change, shown in a dialog behind a gear on the card. Rendered on the server with the same props as `component`, but only once the dialog is opened.",
       type: "React.ComponentType<AdminDashboardWidgetProps>",
     },
   }}
@@ -376,7 +383,7 @@ Saving straight from the card suits things the admin is already typing into. For
 
 ### Render the form on the server
 
-It gets the same props as the widget, so it starts from what this copy has already saved:
+It gets the same props as the widget, so it starts from what this copy has already saved. Unlike the widget itself, it runs only when an admin opens the dialog - a dashboard load never pays for a form nobody asked to see, so it is fine to query the database here:
 
 ```tsx title="plugins/{plugin_name}/src/views/admin/widgets/stats-settings.tsx"
 import type { AdminDashboardWidgetProps } from "@vitnode/core/lib/plugin";
@@ -395,50 +402,58 @@ export const StatsSettings = ({ settings }: AdminDashboardWidgetProps) => (
 
 ### Save from a client child
 
-`useWidgetSettingsDialog` is available to anything under your settings component. Its `save` writes the settings and closes the dialog - you do not need `saveWidgetSettingsMutation` here, and you never have to pass `widgetId` around:
+Build it with [`AutoForm`](/docs/ui/auto-form), like every other form in the AdminCP - it takes the labels, validation and the dialog's own footer off your hands.
+
+`useWidgetSettingsDialog` is available to anything under your settings component. Its `save` writes the settings and closes the dialog - you do not need `saveWidgetSettingsMutation` here, and you never have to pass `widgetId` around. Await it and the submit button stays in its loading state until the write lands:
 
 ```tsx title="plugins/{plugin_name}/src/views/admin/widgets/stats-settings-form.tsx"
 "use client";
 
-import { Button } from "@vitnode/core/components/ui/button";
-import { DialogFooter } from "@vitnode/core/components/ui/dialog";
+import { AutoForm } from "@vitnode/core/components/form/auto-form";
+import { AutoFormSelect } from "@vitnode/core/components/form/fields/select";
 import { useWidgetSettingsDialog } from "@vitnode/core/views/admin/views/core/dashboard/grid/widget-settings-dialog";
-import React from "react";
+import { z } from "zod";
 
 export const StatsSettingsForm = ({
   defaultRange,
 }: {
   defaultRange: string;
 }) => {
-  const { close, isPending, save } = useWidgetSettingsDialog();
-  const [range, setRange] = React.useState(defaultRange);
+  const { save } = useWidgetSettingsDialog();
+
+  // Whatever this copy has already saved becomes the form's starting value.
+  const formSchema = z.object({
+    range: z
+      .enum(["month", "year"])
+      .default(defaultRange === "year" ? "year" : "month"),
+  });
 
   return (
-    <form
-      onSubmit={event => {
-        event.preventDefault();
-        save({ range }); // [!code highlight]
+    <AutoForm
+      fields={[
+        {
+          id: "range",
+          component: props => <AutoFormSelect label="Range" {...props} />,
+        },
+      ]}
+      formSchema={formSchema}
+      mode="all"
+      onSubmit={async values => {
+        await save({ range: values.range }); // [!code highlight]
       }}
-    >
-      {/* your fields */}
-
-      <DialogFooter>
-        <Button
-          disabled={isPending}
-          onClick={close}
-          type="button"
-          variant="outline"
-        >
-          Cancel
-        </Button>
-        <Button disabled={isPending} type="submit">
-          Save
-        </Button>
-      </DialogFooter>
-    </form>
+      submitButtonProps={{ children: "Save" }}
+    />
   );
 };
 ```
+
+<Callout>
+  Rendered inside the dialog, `AutoForm` adds the Cancel button and the footer
+  itself, and warns the admin before they close on unsaved changes. Nothing left
+  to wire up.
+</Callout>
+
+Building something the form fields cannot express? The same hook also hands you `close` to dismiss the dialog, `isPending` while a write is in flight, and `widgetId` for this copy.
 
 </Step>
 </Steps>
@@ -468,7 +483,9 @@ The dialog's own title and description come from the widget's `title` - you only
   }}
 />
 
-Your widget reads the result back out of its `settings` prop like any other. The write itself lands immediately, but the card around it was rendered on the server before that, so it only shows the new values once the admin leaves edit mode - VitNode reloads the board then, whether they saved their layout or cancelled it, and remounts any card whose settings changed so its own client state starts from them. Reloading any sooner would hand the board a fresh layout and undo whatever they had arranged.
+Your widget reads the result back out of its `settings` prop like any other. As soon as the write lands, VitNode renders **that one card** again on the server and swaps it in behind the closing dialog - your component runs a second time with the settings that were just saved, and remounts, so whatever client state it was holding starts from them too. Its skeleton covers the gap.
+
+Only that card goes back to the server. The board around it is left exactly as the admin arranged it, which is why a full reload waits for them to save or cancel their layout.
 
 <Callout title="It works before the board has ever been saved">
   Settings hang off a stored layout entry, and a `defaultEnabled` card is on

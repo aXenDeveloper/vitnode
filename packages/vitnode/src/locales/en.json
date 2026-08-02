@@ -2,6 +2,9 @@
   "@vitnode/core": {
     "title": "Core"
   },
+  "@vitnode/core:dashboard": "Dashboard",
+  "@vitnode/core:dashboard:can_view": "View own dashboard layout",
+  "@vitnode/core:dashboard:can_edit": "Customize own dashboard layout",
   "@vitnode/core:users": "Users",
   "@vitnode/core:users:can_view": "View users list",
   "@vitnode/core:users:can_create": "Create users",
@@ -399,6 +402,7 @@
         "saved_desc": "Your layout is yours alone - other admins keep theirs.",
         "error_title": "Could not save your dashboard",
         "error_desc": "Something went wrong on the way to the server. Please try again.",
+        "refresh_error": "Could not reload this widget. Reload the page to see your changes.",
         "panel": {
           "title": "Available widgets",
           "desc": "Drag a widget onto your dashboard.",
@@ -421,7 +425,8 @@
           "saved_title": "Settings saved",
           "saved_desc": "The card picks them up once you are done arranging the board.",
           "error_title": "Could not save the settings",
-          "error_desc": "Something went wrong on the way to the server. Please try again."
+          "error_desc": "Something went wrong on the way to the server. Please try again.",
+          "load_error": "Could not load these settings. Close this and try again."
         },
         "notes": {
           "title": "Notes",

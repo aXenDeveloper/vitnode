@@ -23,6 +23,10 @@ export const newBuildPluginApiCore = buildApiPlugin({
       users: ["can_edit"],
     },
     admin: {
+      dashboard: [
+        "can_view",
+        { permission: "can_edit", dependsOn: ["can_view"] },
+      ],
       users: [
         "can_view",
         { permission: "can_create", dependsOn: ["can_view"] },

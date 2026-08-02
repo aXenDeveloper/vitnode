@@ -31,6 +31,7 @@ import type {
 
 import { rowsClasses, spanClasses } from "./span-classes";
 import { WidgetSettingsDialog } from "./widget-settings-dialog";
+import { WidgetContentSkeleton } from "./widget-skeleton";
 
 const SIZE_LABELS = {
   1: "size.small",
@@ -46,43 +47,51 @@ export const WidgetCardContent = ({
 }: {
   isEditing?: boolean;
   widget: DashboardWidgetView;
-}) => (
-  <>
-    <CardHeader
-      className={cn(
-        isEditing && "opacity-60",
-        isEditing && (widget.settingsContent ? "pe-30" : "pe-20"),
-      )}
-    >
-      <CardTitle className="flex items-center gap-2 text-balance">
-        {!!widget.icon && (
-          <span className="text-muted-foreground [&_svg]:size-4">
-            {widget.icon}
-          </span>
+}) => {
+  const content = (
+    <React.Suspense fallback={<WidgetContentSkeleton rows={widget.rows} />}>
+      {widget.content}
+    </React.Suspense>
+  );
+
+  return (
+    <>
+      <CardHeader
+        className={cn(
+          isEditing && "opacity-60",
+          isEditing && (widget.hasSettings ? "pe-30" : "pe-20"),
         )}
-        {widget.title}
-      </CardTitle>
-      {!!widget.desc && (
-        <CardDescription className="text-pretty">{widget.desc}</CardDescription>
-      )}
-    </CardHeader>
-    <CardContent className="flex-1">
-      {isEditing ? (
-        <div
-          className="pointer-events-none opacity-60"
-          inert
-          key={widget.contentKey}
-        >
-          {widget.content}
-        </div>
-      ) : (
-        <React.Fragment key={widget.contentKey}>
-          {widget.content}
-        </React.Fragment>
-      )}
-    </CardContent>
-  </>
-);
+      >
+        <CardTitle className="flex items-center gap-2 text-balance">
+          {!!widget.icon && (
+            <span className="text-muted-foreground [&_svg]:size-4">
+              {widget.icon}
+            </span>
+          )}
+          {widget.title}
+        </CardTitle>
+        {!!widget.desc && (
+          <CardDescription className="text-pretty">
+            {widget.desc}
+          </CardDescription>
+        )}
+      </CardHeader>
+      <CardContent className="flex-1">
+        {isEditing ? (
+          <div
+            className="pointer-events-none opacity-60"
+            inert
+            key={widget.contentKey}
+          >
+            {content}
+          </div>
+        ) : (
+          <React.Fragment key={widget.contentKey}>{content}</React.Fragment>
+        )}
+      </CardContent>
+    </>
+  );
+};
 
 export const WidgetCard = ({
   isEditing,
@@ -106,22 +115,14 @@ export const WidgetCard = ({
     setNodeRef,
     transform,
     transition,
-    // Keyed on the copy, not the widget - a widget may be on the board twice.
   } = useSortable({ id: widget.instanceId, disabled: !isEditing });
 
   return (
-    // While editing, a press anywhere on the card starts a drag - no grip to aim
-    // for. Only the `listeners` live here, though: the ARIA that goes with them
-    // belongs on the handle below, because a card announced as a button may not
-    // hold the buttons that configure, resize and remove it.
     <Card
       className={cn(
         "group/widget relative flex flex-col transition-shadow",
         spanClasses[widget.span],
         rowsClasses[widget.rows],
-        // No `touch-none`: the touch sensor's 200ms hold already separates a
-        // drag from a scroll, and blocking touch-action would strand a phone
-        // mid-board with nothing to scroll.
         isEditing &&
           "outline-primary/40 cursor-grab outline-2 outline-offset-2 outline-dashed active:cursor-grabbing",
         isDragging && "opacity-40",
@@ -131,11 +132,6 @@ export const WidgetCard = ({
       {...(isEditing ? listeners : {})}
     >
       {isEditing && (
-        /* Names the widget while you are arranging it, without taking a row of
-           layout - the content underneath is dimmed and inert. It doubles as the
-           card's drag handle: this is what a keyboard tabs to and what a screen
-           reader is told about, while a pointer can still grab the card itself.
-           Its keydown reaches the card's listeners by bubbling. */
         <button
           aria-label={t("drag_handle", { title: widget.title })}
           className="bg-popover text-popover-foreground focus-visible:ring-ring absolute inset-s-3 top-3 z-10 cursor-grab rounded-md border px-2 py-1 text-xs font-medium opacity-0 shadow-sm transition-opacity group-focus-within/widget:opacity-100 group-hover/widget:opacity-100 focus-visible:ring-2 active:cursor-grabbing"
@@ -147,16 +143,13 @@ export const WidgetCard = ({
         </button>
       )}
 
-      {/* Everything an admin does to a card - configure it, resize it, take it
-          off - belongs to edit mode, so the corner is empty until then. */}
       {isEditing && (
-        // Stops a press on these buttons from turning into a card drag.
         <div
           className="absolute inset-e-3 top-3 z-10 flex items-center gap-1"
           onKeyDown={event => event.stopPropagation()}
           onPointerDown={event => event.stopPropagation()}
         >
-          {!!widget.settingsContent && (
+          {!!widget.hasSettings && (
             <WidgetSettingsDialog onSaved={onSettingsSaved} widget={widget} />
           )}
 

@@ -37,14 +37,17 @@ export const DashboardAdminView = async () => {
   const layout = normalizeLayout({ saved, widgets });
 
   const widgetIds = new Set(widgets.map(({ id }) => id));
-  const managedIds = saved
-    .filter(item => widgetIds.has(widgetIdOf(item.id)))
-    .map(item => item.id);
+  const managedIds = [
+    ...new Set([
+      ...saved
+        .filter(item => widgetIds.has(widgetIdOf(item.id)))
+        .map(item => item.id),
+      ...layout.map(item => item.id),
+    ]),
+  ];
 
   const placedWidgetIds = new Set(layout.map(item => widgetIdOf(item.id)));
   const content: Record<string, React.ReactNode> = {};
-
-  const settingsContent: Record<string, React.ReactNode> = {};
 
   for (const item of layout) {
     const widget = widgets.find(({ id }) => id === widgetIdOf(item.id));
@@ -54,18 +57,10 @@ export const DashboardAdminView = async () => {
     content[item.id] = (
       <Widget settings={item.settings ?? {}} widgetId={item.id} />
     );
-
-    const Settings = widget.settingsComponent;
-    if (Settings) {
-      settingsContent[item.id] = (
-        <Settings settings={item.settings ?? {}} widgetId={item.id} />
-      );
-    }
   }
 
   const catalog: DashboardWidgetCatalogEntry[] = widgets.map(widget => {
     const Widget = widget.component;
-    const Settings = widget.settingsComponent;
     const needsStandIn =
       !!widget.allowMultiple || !placedWidgetIds.has(widget.id);
 
@@ -84,10 +79,7 @@ export const DashboardAdminView = async () => {
         <Widget settings={{}} widgetId={widget.id} />
       ) : null,
 
-      settingsContent:
-        Settings && needsStandIn ? (
-          <Settings settings={{}} widgetId={widget.id} />
-        ) : undefined,
+      hasSettings: !!widget.settingsComponent,
     };
   });
 
@@ -99,7 +91,6 @@ export const DashboardAdminView = async () => {
           content={content}
           layout={layout}
           managedIds={managedIds}
-          settingsContent={settingsContent}
         >
           <HeaderContent
             desc={t("version", { version: vitnode_version })}

@@ -67,19 +67,22 @@ export interface DashboardWidgetOption {
 export interface DashboardWidgetCatalogEntry extends DashboardWidgetOption {
   content: React.ReactNode;
   /**
-   * The widget's settings form, rendered on the server the same way. Absent
-   * when the widget registered no `settingsComponent` - which is also what the
-   * card keys "does this widget have a gear?" on.
+   * Whether the widget registered a `settingsComponent` - what the card keys
+   * "does this widget have a gear?" on. The form itself does not ride along:
+   * it is rendered on the server only once a dialog asks for it, so an ordinary
+   * dashboard load pays for no settings form at all.
    */
-  settingsContent?: React.ReactNode;
+  hasSettings?: boolean;
 }
 
 /** One card on the board: a catalog entry sized by the admin's layout. */
 export interface DashboardWidgetView extends DashboardWidgetCatalogEntry {
   /**
-   * Changes whenever the server hands down different settings for this copy.
-   * The card is keyed on it, so its own client state starts again from what was
-   * actually saved instead of holding on to what it first rendered with.
+   * Changes whenever this copy is rendered against different settings - by the
+   * server on load, or by the board after its settings dialog saved. The card's
+   * body is keyed on it, so the widget's own client state starts again from
+   * what was actually saved instead of holding on to what it first rendered
+   * with.
    */
   contentKey: string;
   /**

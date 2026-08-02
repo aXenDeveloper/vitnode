@@ -2,6 +2,9 @@
   "@vitnode/core": {
     "title": "Rdzeń"
   },
+  "@vitnode/core:dashboard": "Pulpit",
+  "@vitnode/core:dashboard:can_view": "Wyświetlanie własnego układu pulpitu",
+  "@vitnode/core:dashboard:can_edit": "Dostosowywanie własnego układu pulpitu",
   "@vitnode/core:users": "Użytkownicy",
   "@vitnode/core:users:can_view": "Wyświetlanie listy użytkowników",
   "@vitnode/core:users:can_create": "Tworzenie użytkowników",
@@ -410,6 +413,7 @@
         "saved_desc": "Ten układ należy tylko do Ciebie - inni administratorzy mają swój własny.",
         "error_title": "Nie udało się zapisać pulpitu",
         "error_desc": "Coś poszło nie tak po drodze do serwera. Spróbuj ponownie.",
+        "refresh_error": "Nie udało się odświeżyć tego widżetu. Odśwież stronę, aby zobaczyć zmiany.",
         "panel": {
           "title": "Dostępne widżety",
           "desc": "Przeciągnij widżet na swój pulpit.",
@@ -432,7 +436,8 @@
           "saved_title": "Ustawienia zapisane",
           "saved_desc": "Karta użyje ich, gdy skończysz układać pulpit.",
           "error_title": "Nie udało się zapisać ustawień",
-          "error_desc": "Coś poszło nie tak po drodze do serwera. Spróbuj ponownie."
+          "error_desc": "Coś poszło nie tak po drodze do serwera. Spróbuj ponownie.",
+          "load_error": "Nie udało się wczytać tych ustawień. Zamknij i spróbuj ponownie."
         },
         "notes": {
           "title": "Notatki",

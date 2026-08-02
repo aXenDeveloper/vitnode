@@ -28,8 +28,8 @@ export const DashboardGrid = () => {
     available,
     dispatch,
     isEditing,
-    markSettingsSaved,
     placed,
+    refreshWidget,
     setIsEditing,
   } = useDashboardBoard();
 
@@ -63,7 +63,7 @@ export const DashboardGrid = () => {
                 onResize={(id, span: AdminDashboardWidgetSpan) =>
                   dispatch({ type: "resize", id, span })
                 }
-                onSettingsSaved={markSettingsSaved}
+                onSettingsSaved={() => refreshWidget(widget.instanceId)}
                 widget={widget}
               />
             ))}

@@ -20,6 +20,7 @@ export const zodSaveWidgetSettingsSchema = z.object({
 
 export const saveDashboardWidgetSettingsAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "dashboard", permission: "can_edit" },
   route: {
     method: "put",
     description:
@@ -51,9 +52,6 @@ export const saveDashboardWidgetSettingsAdminRoute = buildRoute({
     if (!admin) throw new HTTPException(403);
 
     const { widgetId, settings } = c.req.valid("json");
-    if (isSettingsTooLarge(settings)) {
-      throw new HTTPException(413, { message: "Widget settings too large" });
-    }
 
     await mutateDashboardWidgets(c, admin.id, previous => {
       // Only a brand new entry can grow the row, and only so far.
@@ -62,7 +60,13 @@ export const saveDashboardWidgetSettingsAdminRoute = buildRoute({
         throw new HTTPException(409, { message: "Too many widgets" });
       }
 
-      return mergeWidgetSettings({ previous, settings, widgetId });
+      const next = mergeWidgetSettings({ previous, settings, widgetId });
+      const merged = next.find(widget => widget.id === widgetId)?.settings;
+      if (isSettingsTooLarge(merged)) {
+        throw new HTTPException(413, { message: "Widget settings too large" });
+      }
+
+      return next;
     });
 
     return c.json({ success: true }, 200);

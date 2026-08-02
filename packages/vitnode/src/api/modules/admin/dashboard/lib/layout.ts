@@ -88,6 +88,13 @@ export const mergeLayoutForSave = ({
     next.push(managedIds.has(widget.id) ? { ...widget, hidden: true } : widget);
   }
 
+  for (const id of managed) {
+    if (seen.has(id) || previousById.has(id)) continue;
+    seen.add(id);
+
+    next.push({ id, hidden: true });
+  }
+
   return next;
 };
 

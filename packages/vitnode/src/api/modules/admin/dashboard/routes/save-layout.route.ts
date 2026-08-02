@@ -14,6 +14,7 @@ export const zodSaveDashboardLayoutSchema = zodDashboardLayout;
 
 export const saveDashboardLayoutAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "dashboard", permission: "can_edit" },
   route: {
     method: "put",
     description:

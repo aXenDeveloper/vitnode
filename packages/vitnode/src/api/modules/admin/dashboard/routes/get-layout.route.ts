@@ -8,6 +8,7 @@ import { getDashboardWidgets, zodStoredDashboardWidget } from "../lib/layout";
 
 export const getDashboardLayoutAdminRoute = buildRoute({
   pluginId: CONFIG_PLUGIN.pluginId,
+  adminStaffPermission: { module: "dashboard", permission: "can_view" },
   route: {
     method: "get",
     description: "Get the signed-in admin's own dashboard widget layout",

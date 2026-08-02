@@ -75,6 +75,26 @@ describe("mergeLayoutForSave", () => {
     expect(merged).toEqual([item("a"), { ...item("notes"), hidden: true }]);
   });
 
+  it("remembers a removed widget the admin had never saved", () => {
+    const merged = merge({
+      incoming: [item("a")],
+      managed: ["a", "notes"],
+      previous: [],
+    });
+
+    expect(merged).toEqual([item("a"), { id: "notes", hidden: true }]);
+  });
+
+  it("writes one entry for a managed id sent twice", () => {
+    const merged = merge({
+      incoming: [],
+      managed: ["notes", "notes"],
+      previous: [],
+    });
+
+    expect(merged).toEqual([{ id: "notes", hidden: true }]);
+  });
+
   it("keeps a removed widget's settings so they survive re-adding it", () => {
     const merged = merge({
       incoming: [],
@@ -194,6 +214,24 @@ describe("mergeWidgetSettings", () => {
     expect(merged).toEqual([
       item("notes", { span: 3, settings: { content: "b", to: 1 } }),
     ]);
+  });
+
+  // The route caps what it stores, and the patch is spread over the bag that is
+  // already there - so a pair of patches that each pass on their own can still
+  // add up past the cap. It has to be the merged result that is measured.
+  it("grows past the cap on a patch that fits on its own", () => {
+    const half = { a: "x".repeat(40 * 1024) };
+    const patch = { b: "x".repeat(40 * 1024) };
+    expect(isSettingsTooLarge(half)).toBe(false);
+    expect(isSettingsTooLarge(patch)).toBe(false);
+
+    const [merged] = mergeWidgetSettings({
+      previous: [item("notes", { settings: half })],
+      settings: patch,
+      widgetId: "notes",
+    });
+
+    expect(isSettingsTooLarge(merged.settings)).toBe(true);
   });
 
   it("leaves every other copy alone", () => {

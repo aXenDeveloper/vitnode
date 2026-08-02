@@ -14,9 +14,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Loader } from "@/components/ui/loader";
 
 import type { DashboardWidgetView } from "../widgets/types";
 
+import { loadWidgetSettingsAction } from "../widgets/load-widget-settings.server";
 import { saveWidgetSettingsMutation } from "../widgets/save-widget-settings.server";
 
 interface WidgetSettingsDialogContextProps {
@@ -26,11 +28,14 @@ interface WidgetSettingsDialogContextProps {
   isPending: boolean;
   /**
    * Merges these keys into this copy's settings and closes the dialog. Keys you
-   * leave out are kept as they were. The write lands immediately - the card
-   * itself catches up once the admin leaves edit mode, since reloading the
-   * board mid-edit would throw away whatever they have arranged.
+   * leave out are kept as they were. Once the write lands, the card behind the
+   * dialog is re-rendered on its own - the rest of the board is left alone, so
+   * an arrangement in progress survives.
+   *
+   * Resolves once the write is done, so `AutoForm` can hold its submit button
+   * in the loading state for as long as it takes.
    */
-  save: (settings: Record<string, unknown>) => void;
+  save: (settings: Record<string, unknown>) => Promise<void>;
   /** The copy being configured, e.g. `@vitnode/core:notes#2`. */
   widgetId: string;
 }
@@ -53,6 +58,13 @@ export const useWidgetSettingsDialog = () => {
   return context;
 };
 
+/** Unwraps the form the server sent back, so the dialog can suspend on it. */
+const WidgetSettingsForm = ({
+  form,
+}: {
+  form: Promise<React.ReactNode>;
+}): React.ReactNode => React.use(form);
+
 /**
  * The gear on a card, and the dialog behind it. Rendered alongside the sizing
  * and removal buttons for widgets that registered a `settingsComponent` - so
@@ -62,42 +74,67 @@ export const WidgetSettingsDialog = ({
   onSaved,
   widget,
 }: {
-  /** Tells the board its cards are now a render behind. */
+  /** Asks the board to render this card again, against what was just stored. */
   onSaved: () => void;
   widget: DashboardWidgetView;
 }) => {
   const t = useTranslations("admin.dashboard.widgets");
   const [open, setOpen] = React.useState(false);
   const [isPending, startTransition] = React.useTransition();
+  const [form, setForm] = React.useState<null | Promise<React.ReactNode>>(null);
+
+  const [formKey, setFormKey] = React.useState(widget.contentKey);
+  if (formKey !== widget.contentKey) {
+    setFormKey(widget.contentKey);
+    setForm(null);
+  }
+
+  const onOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next || form) return;
+
+    setForm(
+      loadWidgetSettingsAction({ widgetId: widget.instanceId }).catch(() => (
+        <p className="text-destructive text-sm">{t("settings.load_error")}</p>
+      )),
+    );
+  };
 
   const close = React.useCallback(() => setOpen(false), []);
 
   const save = React.useCallback(
-    (settings: Record<string, unknown>) => {
-      startTransition(async () => {
-        const res = await saveWidgetSettingsMutation({
-          settings,
-          // The copy, never the registered id - that is what keeps two cards of
-          // the same widget from writing over each other.
-          widgetId: widget.instanceId,
+    async (settings: Record<string, unknown>) =>
+      new Promise<void>(resolve => {
+        startTransition(async () => {
+          try {
+            const res = await saveWidgetSettingsMutation({
+              settings,
+              widgetId: widget.instanceId,
+            });
+
+            if (res?.error) {
+              toast.error(t("settings.error_title"), {
+                description: t("settings.error_desc"),
+              });
+
+              return;
+            }
+
+            setOpen(false);
+            toast.success(t("settings.saved_title"), {
+              description: t("settings.saved_desc"),
+            });
+
+            // Left until the dialog has finished closing. The card suspends
+            // while it is re-rendered, and a suspended render mid-animation
+            // strands the overlay on screen - batched into this transition it
+            // would also hold the close back until the new card was ready.
+            setTimeout(onSaved, 300);
+          } finally {
+            resolve();
+          }
         });
-
-        if (res?.error) {
-          toast.error(t("settings.error_title"), {
-            description: t("settings.error_desc"),
-          });
-
-          return;
-        }
-
-        setOpen(false);
-        toast.success(t("settings.saved_title"), {
-          description: t("settings.saved_desc"),
-        });
-
-        onSaved();
-      });
-    },
+      }),
     [onSaved, t, widget.instanceId],
   );
 
@@ -107,7 +144,7 @@ export const WidgetSettingsDialog = ({
   );
 
   return (
-    <Dialog onOpenChange={setOpen} open={open}>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogTrigger
         render={
           <Button
@@ -129,7 +166,13 @@ export const WidgetSettingsDialog = ({
         </DialogHeader>
 
         <WidgetSettingsDialogContext value={value}>
-          {widget.settingsContent}
+          {form ? (
+            <React.Suspense fallback={<Loader />}>
+              <WidgetSettingsForm form={form} />
+            </React.Suspense>
+          ) : (
+            <Loader />
+          )}
         </WidgetSettingsDialogContext>
       </DialogContent>
     </Dialog>
