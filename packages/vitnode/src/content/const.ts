@@ -99,6 +99,9 @@ export const CONTENT_INDEX_NAME_PATTERN = CONTENT_TABLE_NAME_PATTERN;
 /** Postgres silently truncates identifiers past this length. */
 export const CONTENT_IDENTIFIER_MAX_LENGTH = 63;
 
+/** Next rejects a cache tag longer than this. A slug alone can be 160. */
+export const CONTENT_CACHE_TAG_MAX_LENGTH = 256;
+
 export const CONTENT_TEXT_DEFAULT_LENGTH = 255;
 export const CONTENT_ENUM_DEFAULT_LENGTH = 64;
 

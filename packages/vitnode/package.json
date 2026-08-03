@@ -91,6 +91,11 @@
       "types": "./dist/src/content/server/index.d.ts",
       "default": "./dist/src/content/server/index.js"
     },
+    "./content/next": {
+      "import": "./dist/src/content/next/index.js",
+      "types": "./dist/src/content/next/index.d.ts",
+      "default": "./dist/src/content/next/index.js"
+    },
     "./api/config": {
       "import": "./dist/src/api/config.js",
       "types": "./dist/src/api/config.d.ts",

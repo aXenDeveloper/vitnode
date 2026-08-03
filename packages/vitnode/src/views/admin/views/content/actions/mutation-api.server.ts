@@ -3,9 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import type { AnyContentTypeDefinition } from "@/content/types";
+
 import { findFrontendContentType } from "@/content/admin/config";
 import { contentApiFetch } from "@/content/admin/fetch.server";
+import { isContentPubliclyVisible } from "@/content/cache";
 import { CONTENT_OPTIONS_LIMIT } from "@/content/const";
+import { revalidateContent } from "@/content/next/revalidate.server";
 
 /**
  * The generic content screen ships from core, so its cached page path is the
@@ -29,6 +33,87 @@ const resolve = (contentTypeId: string) => {
   return entry;
 };
 
+/** Anything the generated routes return: an identifier plus the row's fields. */
+const zodRow = z.object({ id: z.number() }).loose();
+
+const zodPublicationResult = z.object({ changed: z.boolean(), row: zodRow });
+
+type ContentRow = z.infer<typeof zodRow>;
+
+/**
+ * Where a row sits relative to the public API, read off a mutation response.
+ *
+ * `isContentPubliclyVisible` is the JavaScript half of `publishedCondition`, so
+ * "was this reachable?" is answered by the same three clauses the database
+ * enforces rather than by a second, drifting rule.
+ */
+const publicStateOf = (
+  definition: AnyContentTypeDefinition,
+  row?: ContentRow,
+) => {
+  const slug = row?.[definition.publicApi.slugField];
+
+  return {
+    isPublic: isContentPubliclyVisible({
+      publishedAt: row?.publishedAt as Date | null | string | undefined,
+      status: row?.status as string | undefined,
+    }),
+    slug: typeof slug === "string" ? slug : "",
+  };
+};
+
+/**
+ * Reads a row *before* a write, so an update knows the slug it is about to
+ * replace.
+ *
+ * Deliberately a read rather than a guess: the generated `PUT` returns the new
+ * row, and by then the old URL is gone. Widening the route's response to carry
+ * the previous row would change a public contract for a cache concern, and
+ * trusting the slug the browser happens to be holding would invalidate the
+ * wrong tag whenever the table was stale. One extra `GET` on a staff edit of a
+ * *public* content type is the cheapest correct option - it is skipped
+ * entirely for everything else.
+ */
+const readRow = async (
+  definition: AnyContentTypeDefinition,
+  pluginId: string,
+  id: number,
+): Promise<ContentRow | undefined> => {
+  if (!definition.publicApi.enabled) return undefined;
+
+  const result = await contentApiFetch({
+    definition,
+    method: "get",
+    path: `/${id}`,
+    pluginId,
+    schema: zodRow,
+  });
+
+  return result.data;
+};
+
+/** Expires the public cache entries this mutation actually affected. */
+const invalidate = (
+  definition: AnyContentTypeDefinition,
+  id: number,
+  before: ContentRow | undefined,
+  after: ContentRow | undefined,
+): void => {
+  if (!definition.publicApi.enabled) return;
+
+  const previous = publicStateOf(definition, before);
+  const current = publicStateOf(definition, after);
+
+  revalidateContent({
+    contentTypeId: definition.id,
+    id,
+    isPublic: current.isPublic,
+    // Both, so a slug change stops the old URL and starts the new one.
+    slugs: [previous.slug, current.slug],
+    wasPublic: previous.isPublic,
+  });
+};
+
 export const createContentAction = async (
   contentTypeId: string,
   values: Record<string, unknown>,
@@ -40,6 +125,7 @@ export const createContentAction = async (
     definition,
     method: "post",
     pluginId,
+    schema: zodRow,
   });
 
   if (result.status !== 201) {
@@ -47,6 +133,9 @@ export const createContentAction = async (
   }
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
+  // A new row starts as a draft, so this normally invalidates nothing at all -
+  // it is computed rather than assumed, so the rule holds if that changes.
+  invalidate(definition, result.data?.id ?? 0, undefined, result.data);
 
   return {};
 };
@@ -58,12 +147,16 @@ export const editContentAction = async (
 ): Promise<MutationResult> => {
   const { definition, pluginId } = resolve(contentTypeId);
 
+  // Before the write, so a slug change can invalidate the URL it replaced.
+  const before = await readRow(definition, pluginId, id);
+
   const result = await contentApiFetch({
     body: values,
     definition,
     method: "put",
     path: `/${id}`,
     pluginId,
+    schema: zodRow,
   });
 
   if (result.status !== 200) {
@@ -71,6 +164,7 @@ export const editContentAction = async (
   }
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
+  invalidate(definition, id, before, result.data);
 
   return {};
 };
@@ -86,6 +180,7 @@ export const deleteContentAction = async (
     method: "delete",
     path: `/${id}`,
     pluginId,
+    schema: zodRow,
   });
 
   if (result.status !== 200) {
@@ -93,6 +188,19 @@ export const deleteContentAction = async (
   }
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
+
+  if (definition.publicApi.enabled) {
+    // A delete is final, so the question is "was it ever published?" rather
+    // than "was it live a second ago". `publishedAt` survives an unpublish, and
+    // expiring a URL that is now gone forever costs nothing.
+    revalidateContent({
+      contentTypeId: definition.id,
+      id,
+      isPublic: false,
+      slugs: [publicStateOf(definition, result.data).slug],
+      wasPublic: result.data?.publishedAt != null,
+    });
+  }
 
   return {};
 };
@@ -116,6 +224,7 @@ const publicationAction = async (
     method: "post",
     path: `/${id}/${action}`,
     pluginId,
+    schema: zodPublicationResult,
   });
 
   if (result.status !== 200) {
@@ -123,6 +232,21 @@ const publicationAction = async (
   }
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
+
+  // A no-op transitioned nothing, so nothing public went stale. Expiring a tag
+  // on every button press would throw away a warm cache for free.
+  if (result.data?.changed && definition.publicApi.enabled) {
+    const { isPublic, slug } = publicStateOf(definition, result.data.row);
+
+    revalidateContent({
+      contentTypeId: definition.id,
+      id,
+      isPublic,
+      slugs: [slug],
+      // A real transition flips visibility by definition.
+      wasPublic: !isPublic,
+    });
+  }
 
   return {};
 };

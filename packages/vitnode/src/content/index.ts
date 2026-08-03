@@ -1,3 +1,12 @@
+/**
+ * Universal Content Engine - client-safe surface.
+ *
+ * Everything exported here is plain data plus zod: it is safe to import from a
+ * client component, from `buildPlugin`, and from `src/database/*.ts` (which
+ * Drizzle Kit executes). Anything that needs Drizzle or Hono lives in
+ * `@vitnode/core/content/server`, and anything that needs `next/*` in
+ * `@vitnode/core/content/next`.
+ */
 export {
   contentEntityKey,
   contentI18nKeys,
@@ -17,15 +26,16 @@ export type {
   ContentFormFieldSpec,
   ContentFormSpec,
 } from "./admin/spec";
-/**
- * Universal Content Engine - client-safe surface.
- *
- * Everything exported here is plain data plus zod: it is safe to import from a
- * client component, from `buildPlugin`, and from `src/database/*.ts` (which
- * Drizzle Kit executes). Anything that needs Drizzle or Hono lives in
- * `@vitnode/core/content/server`.
- */
 export {
+  contentInvalidationTags,
+  contentPublicItemTag,
+  contentPublicListTag,
+  contentPublicSlugTag,
+  isContentPubliclyVisible,
+} from "./cache";
+export type { ContentInvalidationInput } from "./cache";
+export {
+  CONTENT_CACHE_TAG_MAX_LENGTH,
   CONTENT_DEFAULT_PAGE_SIZE,
   CONTENT_ENUM_DEFAULT_LENGTH,
   CONTENT_FILTERABLE_FIELD_KINDS,
@@ -61,6 +71,7 @@ export type {
   ContentUpdatedPayload,
 } from "./events";
 export { field } from "./fields";
+export { clampWithFingerprint, fingerprint } from "./fingerprint";
 export { contentIndexName, toSnakeCase } from "./indexes";
 export {
   contentAdminHref,

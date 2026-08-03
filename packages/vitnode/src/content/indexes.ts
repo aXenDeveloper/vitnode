@@ -10,40 +10,15 @@ import {
   CONTENT_SYSTEM_FIELDS,
 } from "./const";
 import { ContentEngineError } from "./errors";
+import { clampWithFingerprint } from "./fingerprint";
 
 /** `createdAt` -> `created_at`, matching the SQL identifiers in migrations. */
 export const toSnakeCase = (value: string): string =>
   value.replace(/[A-Z]/g, match => `_${match.toLowerCase()}`);
 
-/**
- * FNV-1a, 32 bits, base36. Deterministic across processes and Node versions,
- * needs no dependency, and is short enough to leave a readable prefix intact.
- */
-const fingerprint = (value: string): string => {
-  let hash = 0x811c9dc5;
-
-  for (let position = 0; position < value.length; position += 1) {
-    hash ^= value.charCodeAt(position);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-
-  return hash.toString(36).padStart(7, "0");
-};
-
-/**
- * Keeps an identifier inside Postgres' 63-character limit.
- *
- * Plain truncation is not enough: two long tables that differ only in their
- * last few characters would collapse onto the same index name. Appending a
- * fingerprint of the *full* name keeps the result readable and still distinct.
- */
-export const shortenIdentifier = (name: string): string => {
-  if (name.length <= CONTENT_IDENTIFIER_MAX_LENGTH) return name;
-
-  const suffix = `_${fingerprint(name)}`;
-
-  return `${name.slice(0, CONTENT_IDENTIFIER_MAX_LENGTH - suffix.length)}${suffix}`;
-};
+/** Keeps an index name inside Postgres' 63-character identifier limit. */
+export const shortenIdentifier = (name: string): string =>
+  clampWithFingerprint(name, CONTENT_IDENTIFIER_MAX_LENGTH);
 
 /**
  * The deterministic name of a generated index: `<table>_<columns>_idx`, or

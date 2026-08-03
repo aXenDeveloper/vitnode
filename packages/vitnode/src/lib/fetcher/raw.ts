@@ -12,7 +12,18 @@ export interface RawApiFetchArgs {
   method: string;
   /** Module path under the plugin, e.g. `admin/content/articles`. */
   module: string;
-  options?: Omit<RequestInit, "body" | "headers">;
+  options?: Omit<RequestInit, "body" | "headers"> & {
+    /**
+     * Next's own `fetch` extension, for cache tags and revalidation.
+     *
+     * Spelled out rather than inherited: Next augments the global `RequestInit`
+     * from its own type declarations, and `@vitnode/core` compiles in contexts
+     * where those are not loaded - `apps/api` is plain Node. Declaring the
+     * shape here keeps every caller on the shared fetcher instead of reaching
+     * for `fetch` directly to get one property.
+     */
+    next?: { revalidate?: false | number; tags?: string[] };
+  };
   params?: Record<string, unknown>;
   /** Route path within the module, e.g. `/` or `/{id}`. */
   path: string;
