@@ -82,9 +82,9 @@ export const buildContentRoutes = <
     schema: z.ZodType<TValue>,
   ): Promise<TValue> => schema.parse(await c.req.json());
 
-  // `orderBy` is an enum rather than a string so an unknown column is a 400 at
-  // validation time and shows up in the OpenAPI document. The service keeps its
-  // own allowlist check as defence in depth.
+  // `orderBy` is an enum rather than a string so a column outside the allowlist
+  // is a 400 at validation time and shows up in the OpenAPI document. The
+  // service keeps its own allowlist check as defence in depth.
   const orderable = orderableColumns(definition) as [string, ...string[]];
   const paginationQuery = zodPaginationQuery.extend({
     order: z.enum(["asc", "desc"]).optional(),
@@ -124,13 +124,23 @@ export const buildContentRoutes = <
       },
     },
     handler: async c => {
+      // The whole query string goes through both schemas, each of which reads
+      // only the keys it owns:
+      //
+      //   paginationQuery   cursor, first, last, order, orderBy, search
+      //   schemas.filters   one entry per declared filterable field
+      //
+      // Neither is strict, so anything else - a stale bookmark, a tracking
+      // parameter - is ignored rather than turned into a 400. `orderBy` is the
+      // exception: it is a literal enum, so a *present* but unknown column is a
+      // 400 at validation time.
       const raw = c.req.query();
       const { cursor, first, last, order, orderBy, search } =
         paginationQuery.parse(raw);
-      // Parsing through `schemas.filters` strips the pagination keys and
-      // coerces each declared filter; anything else never reaches the service.
-      // Query strings carry booleans as "true"/"false", which the service
-      // normalises - so the parsed object is exactly its filter input.
+      // Every value is coerced here (query strings carry numbers and booleans as
+      // text), and an unsupported field cannot survive the parse - so this path
+      // never hands `buildFilterCondition` a kind it rejects. The service checks
+      // kind and nullability again for callers that did not come through here.
       const filters = schemas.filters.parse(raw) as ContentFilterInput<
         typeof definition
       >;

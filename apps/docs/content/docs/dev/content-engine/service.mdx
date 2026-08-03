@@ -117,6 +117,20 @@ articles.findMany({ filters: raw as ContentFilterInput<typeof articleContentType
 
 </Callout>
 
+The two columns behave differently on a bad key, and it is worth knowing which
+you are using. A **direct service call** throws. The **generated list route**
+parses the query string through the filter schema, which is not strict, so a
+parameter it does not recognise is simply ignored:
+
+```text
+GET ?status=published&nope=1&excerpt=prose
+→ filters: { status: "published" }
+```
+
+Which means an unsupported field cannot reach the query builder over HTTP - it
+never survives the parse. See
+[filters and order](/docs/dev/content-engine/schemas#filters-and-order).
+
 ### Filtering for nothing
 
 A nullable field can be filtered by `null`, and that becomes `IS NULL` - not a

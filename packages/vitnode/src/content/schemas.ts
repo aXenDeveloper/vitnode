@@ -15,7 +15,10 @@ import { CONTENT_SYSTEM_FIELDS, isFilterableFieldKind } from "./const";
 export interface ContentSchemas<TDefinition = AnyContentTypeDefinition> {
   /** Request body for create. Rejects unknown keys and system columns. */
   create: z.ZodType<ContentCreateInput<TDefinition>>;
-  /** Query-string filters, restricted to filterable fields. */
+  /**
+   * Query-string filters, restricted to filterable fields. Non-strict: it is
+   * parsed against the whole query string, so unrecognised keys are ignored.
+   */
   filters: z.ZodObject<z.ZodRawShape>;
   /**
    * The create/update shape as `AutoForm` needs it: a plain `ZodObject` with
@@ -162,12 +165,19 @@ const updateShape = (
   );
 
 /**
- * Filters arrive as query-string values, so everything is parsed from a string.
- * Only allowlisted kinds get an entry - an unknown filter key is rejected by
- * the route rather than silently ignored.
+ * The equality filters a generated list route accepts, keyed by field name.
  *
- * The allowlist is `CONTENT_FILTERABLE_FIELD_KINDS`, shared with the query
- * builder and with `FilterableContentFieldKind`.
+ * Filters arrive as query-string values, so every entry parses and coerces from
+ * a string. Only kinds in `CONTENT_FILTERABLE_FIELD_KINDS` get one - the same
+ * list the query builder and `FilterableContentFieldKind` use.
+ *
+ * A plain (non-strict) object on purpose: the list route hands it the *whole*
+ * query string, which also carries `cursor`, `first`, `last`, `order`, `orderBy`
+ * and `search`. Those are parsed separately, so this schema ignores every key it
+ * does not recognise rather than rejecting it. The upshot is that a query string
+ * cannot smuggle an unsupported field into `buildFilterCondition` - it simply
+ * never appears in the parsed result. A direct service call can still pass one,
+ * which is why the query builder re-checks kind and nullability itself.
  */
 const filterShape = (fields: ContentFieldMap): z.ZodRawShape =>
   Object.fromEntries(

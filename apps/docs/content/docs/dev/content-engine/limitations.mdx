@@ -23,12 +23,32 @@ other 20%, so you find out here rather than halfway through building.
 | Automatic field renames | See below |
 | Unique constraints on more than one column | Declare them in `indexes`, not on the field |
 | Uniqueness on non-`text` fields | Declare the index in `indexes` |
-| Range, `IN` or partial-match filters | `filters` is equality only; add a custom route |
+| Range, `IN` or custom partial-match filters | `filters` is equality only; `search` covers `searchableFields`, anything else is a custom route |
 | Partial and expression indexes | Add them in a hand-written migration |
 
 None of these are blocked - they are simply not generated. The service, the
 schemas and the table are all public, so a hand-written route sits next to a
 generated one without friction.
+
+## Filters are equality, and only equality
+
+`filters` compares a column to one value. That is the whole feature.
+
+- **Partial matching** is `search`, which runs `ilike` across
+  `admin.list.searchableFields` - wildcards escaped, so a literal `%` matches a
+  literal `%`.
+- **Ranges, `IN`, and any other operator** need a custom route. The service and
+  the column map are public, so `gte(articles.table.views, 100)` is a one-liner
+  next to a generated route.
+- **`null`** works on a nullable field in a direct service call and becomes
+  `IS NULL`. On a `NOT NULL` field it throws rather than quietly returning
+  nothing.
+- **Over HTTP there is no null.** The generated route defines no textual null
+  syntax, because `author=null` would be ambiguous with a legitimate value.
+- **Unrelated query parameters are ignored, not rejected.** Both query schemas
+  read only the keys they own, so a typo in a filter name is a silent no-op.
+  Nothing unsupported reaches the query builder either way - it just does not
+  survive the parse. A direct service call is the strict path.
 
 ## Ordering is typed one step wider than it runs
 
@@ -37,6 +57,31 @@ the fields in `admin.list.orderableFields` at runtime. The resolved admin config
 stores that array as `string[]`, so the exact configured list is not recoverable
 as a type. The runtime allowlist is the strict one, and it throws a
 `ContentEngineError` naming what *is* allowed.
+
+## 403 is not in the OpenAPI document
+
+Every generated operation is gated by `adminStaffPermission`, and every one of
+them can answer 403 - but none of them declares it. Authorization is the shared
+VitNode staff-permission middleware that `buildRoute` composes, not a branch in
+the handler, and no other VitNode route documents it locally either. A generated
+client will see a 403 it was not told about; that is consistent across the whole
+API, not a Content Engine quirk. Everything a handler *itself* produces
+[is documented](/docs/dev/content-engine/permissions#what-each-route-documents),
+including the unique-conflict 409.
+
+## Index names are checked across Content Types, not across the schema
+
+The registry sees every registered content type at once, so it catches two of
+them resolving to the same index name - across plugins included. It cannot see
+anything else in your database:
+
+- a collision with a **hand-written table's** index is invisible to it,
+- so is a collision with an index created directly in a migration.
+
+Generated names carry the table name, which makes an accidental clash unlikely,
+and a shortened name carries a deterministic fingerprint of the full one rather
+than a bare truncation. Whatever slips through is caught the honest way - by
+Postgres, when the migration runs.
 
 ## Renaming a field drops the column
 

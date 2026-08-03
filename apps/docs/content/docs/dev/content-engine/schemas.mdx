@@ -69,13 +69,34 @@ Both are allowlists derived from the definition, and both exist to keep request
 strings away from SQL identifiers.
 
 `filters` only contains equality-filterable fields (everything except
-`textarea` and `dateTime`), parsed from their query-string form. The list of
-kinds lives in one place, `CONTENT_FILTERABLE_FIELD_KINDS`, which the schema, the
-query builder and the [service filter type](/docs/dev/content-engine/service#filters-are-typed-per-content-type)
+`textarea` and `dateTime`), parsed and coerced from their query-string form. The
+list of kinds lives in one place, `CONTENT_FILTERABLE_FIELD_KINDS`, which the
+schema, the query builder and the [service filter type](/docs/dev/content-engine/service#filters-are-typed-per-content-type)
 all derive from - and which the query builder re-checks at runtime.
 
-There is no query-string syntax for `null`: a filterable value that arrives as
-text is always a value. Filtering for `IS NULL` is a direct service call.
+The list route parses the *whole* query string through both this schema and the
+pagination one, each reading only the keys it owns. Neither is strict, so a key
+that belongs to neither is **ignored** rather than rejected:
+
+```text
+?status=published&nope=1&excerpt=prose
+→ filters: { status: "published" }
+```
+
+`nope` is not a field; `excerpt` is a `textarea` and has no filter entry. Both
+disappear during the parse, which is what keeps an unsupported field from ever
+reaching the query builder over HTTP.
+
+<Callout type="info" title="Stripping, not validating">
+  A typo in a filter name is silently a no-op rather than a 400. That is the
+  Stage 1 trade: the same query string carries pagination, ordering, search and
+  filters, and strict parsing would reject perfectly ordinary requests. A direct
+  service call is the strict path - there, an unknown key throws.
+</Callout>
+
+There is no query-string syntax for `null` either: a filterable value that
+arrives as text is always a value. Filtering for `IS NULL` is a direct service
+call.
 
 `order` is a literal enum:
 

@@ -42,13 +42,16 @@ const filterValue = (
 /**
  * Builds an equality filter from validated query parameters.
  *
- * Filter keys are looked up in the column map, so a request can never reach a
- * SQL identifier: an unknown key is a hard error, not a silently ignored one.
+ * Filter keys are looked up in the column map, so no caller can reach a SQL
+ * identifier. A key that is not a declared field is a hard error here rather
+ * than something quietly dropped - the generated list route has already stripped
+ * the query-string keys that are not filters, so anything arriving with an
+ * unrecognised key came from code, and code should hear about it.
  *
- * The public filter type already excludes the kinds that have no equality
- * filter, and `null` on a `NOT NULL` field. Both are re-checked here because a
- * cast, a plain-JavaScript caller or an object built at runtime can bypass the
- * type - and the type is not what protects the query.
+ * The public filter type also excludes the kinds that have no equality filter,
+ * and `null` on a `NOT NULL` field. Both are re-checked here because a cast, a
+ * plain-JavaScript caller or an object built at runtime can bypass the type -
+ * and the type is not what protects the query.
  */
 export const buildFilterCondition = ({
   columns,

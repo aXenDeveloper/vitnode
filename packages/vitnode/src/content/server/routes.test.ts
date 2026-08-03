@@ -156,12 +156,16 @@ describe("generated content routes", () => {
       );
     });
 
-    it("passes only declared filters through", async () => {
+    // Neither query schema is strict, so an unrelated parameter is dropped
+    // rather than turned into a 400. What matters is that it cannot reach the
+    // service, and that a declared filter still does.
+    it("ignores unrelated query parameters and passes only declared filters", async () => {
       const { app, service } = harness();
       service.findMany.mockResolvedValue({ edges: [], pageInfo: {} });
 
-      await app.request("/?status=published&nope=1");
+      const res = await app.request("/?status=published&nope=1&excerpt=prose");
 
+      expect(res.status).toBe(200);
       expect(service.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ filters: { status: "published" } }),
       );
