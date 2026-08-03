@@ -17,6 +17,8 @@ export { rethrowAsHttpError, withHttpErrors } from "./http-errors";
 export { createContentModel } from "./model";
 export type { ContentModel } from "./model";
 export { buildContentAdminModule } from "./module";
+export { buildContentPublicModule } from "./public-module";
+export { buildContentPublicRoutes } from "./public-routes";
 export { createContentPublicService } from "./public-service";
 export type {
   ContentPublicFindManyArgs,
