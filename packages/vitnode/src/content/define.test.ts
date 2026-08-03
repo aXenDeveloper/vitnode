@@ -266,6 +266,121 @@ describe("defineContentType", () => {
     });
   });
 
+  describe("slug fields", () => {
+    const defineSlug = (slugField: unknown, extra: object = {}) =>
+      define({
+        fields: {
+          title: field.text({ required: true }),
+          views: field.number({ integer: true, defaultValue: 0 }),
+          body: field.textarea({ nullable: true }),
+          ...extra,
+          slug: slugField as ReturnType<typeof field.slug>,
+        },
+      });
+
+    it("accepts a source that names a text field", () => {
+      expect(
+        defineSlug(field.slug({ source: "title" })).fields.slug,
+      ).toMatchObject({ kind: "slug", nullable: false, source: "title" });
+    });
+
+    it("accepts no source at all", () => {
+      expect(defineSlug(field.slug()).fields.slug).toMatchObject({
+        required: true,
+        source: undefined,
+      });
+    });
+
+    it("is optional in the create payload once it has a source", () => {
+      // The engine can always derive it, so demanding it from the caller would
+      // be busywork - which is why `field.slug` has no `required` argument.
+      expect(
+        defineSlug(field.slug({ source: "title" })).fields.slug,
+      ).toMatchObject({ required: false });
+    });
+
+    it("rejects a source that does not exist", () => {
+      expect(() => defineSlug(field.slug({ source: "nope" }))).toThrow(
+        /sourced from "nope", which is not a field/,
+      );
+    });
+
+    it.each([
+      ["views", "number"],
+      ["body", "textarea"],
+    ])("rejects the non-text source %s", source => {
+      expect(() => defineSlug(field.slug({ source }))).toThrow(
+        /can only be derived from a text field/,
+      );
+    });
+
+    it("rejects a source pointing at another slug", () => {
+      expect(() =>
+        defineSlug(field.slug({ source: "permalink" }), {
+          permalink: field.slug(),
+        }),
+      ).toThrow(/can only be derived from a text field/);
+    });
+
+    it("rejects a non-positive maxLength", () => {
+      expect(() =>
+        defineSlug(field.slug({ maxLength: 0, source: "title" })),
+      ).toThrow(/must be positive/);
+    });
+
+    it("gets a unique index automatically", () => {
+      expect(
+        defineSlug(field.slug({ source: "title" })).indexes,
+      ).toContainEqual({
+        name: "test_widgets_slug_key",
+        on: ["slug"],
+        unique: true,
+      });
+    });
+
+    it("is not searchable by default", () => {
+      expect(
+        defineSlug(field.slug({ source: "title" })).admin.list.searchableFields,
+      ).toEqual(["title", "body"]);
+    });
+
+    it("can be searched when asked for explicitly", () => {
+      expect(
+        define({
+          fields: {
+            title: field.text({ required: true }),
+            slug: field.slug({ source: "title" }),
+          },
+          admin: { label, list: { searchableFields: ["title", "slug"] } },
+        }).admin.list.searchableFields,
+      ).toEqual(["title", "slug"]);
+    });
+
+    it("is never picked as the default title field", () => {
+      // A URL segment is a poor thing to show in a toast or a relation picker.
+      expect(
+        define({
+          fields: {
+            slug: field.slug(),
+            title: field.text({ required: true }),
+          },
+        }).admin.titleField,
+      ).toBe("title");
+    });
+
+    it("can be the title field when asked for explicitly", () => {
+      expect(
+        define({
+          fields: {
+            title: field.text({ required: true }),
+            slug: field.slug({ source: "title" }),
+          },
+          admin: { label, titleField: "slug" },
+        }).admin.titleField,
+      ).toBe("slug");
+    });
+  });
+
   describe("indexes", () => {
     it("expands the automatic indexes onto the definition", () => {
       expect(
@@ -351,7 +466,7 @@ describe("defineContentType", () => {
           },
           admin: { label, list: { searchableFields: ["views"] } },
         }),
-      ).toThrow(/not a text or textarea field/);
+      ).toThrow(/not a text, textarea or slug field/);
     });
 
     it.each([

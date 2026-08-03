@@ -318,6 +318,107 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     expect(column.column_default).toContain("draft");
   });
 
+  it("applies the slug column and its unique index", async () => {
+    const [column] = await sql<
+      { character_maximum_length: number; is_nullable: string }[]
+    >`
+      SELECT character_maximum_length, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'example_articles' AND column_name = 'slug'
+    `;
+
+    // The backfill ran before the tightening, or this migration would not have
+    // applied at all.
+    expect(column.is_nullable).toBe("NO");
+    expect(column.character_maximum_length).toBe(160);
+
+    const indexes = await sql`
+      SELECT indexdef FROM pg_indexes
+      WHERE tablename = 'example_articles'
+        AND indexname = 'example_articles_slug_key'
+    `;
+
+    expect(indexes).toHaveLength(1);
+    expect(indexes[0].indexdef).toContain("CREATE UNIQUE INDEX");
+  });
+
+  it("runs the whole slug lifecycle", async () => {
+    const categories = categoryContent.service(context);
+    const articles = articleContent.service(context);
+
+    const category = await categories.create({ name: "Slugs" });
+
+    const article = await articles.create({
+      category: category.id,
+      code: "slug-001",
+      title: "Zażółć gęślą jaźń",
+    });
+
+    // Derived from the title, transliterated, and stored as written.
+    expect(article.slug).toBe("zazolc-gesla-jazn");
+
+    // Filterable by equality - the lookup a public detail route will need.
+    await expect(
+      articles.findMany({ filters: { slug: "zazolc-gesla-jazn" } }),
+    ).resolves.toMatchObject({ pageInfo: { totalCount: 1 } });
+
+    // Renaming does not move the URL. This is the whole reason slugs are a
+    // dedicated kind rather than a text field with a source.
+    const renamed = await articles.update(article.id, {
+      title: "A completely different title",
+    });
+    expect(renamed?.changedFields).toEqual(["title"]);
+    expect(renamed?.row.slug).toBe("zazolc-gesla-jazn");
+
+    // Sending it explicitly is the only way to change it, and it is normalised
+    // on the way in whoever wrote it.
+    const moved = await articles.update(article.id, {
+      slug: "  A Brand   New Slug! ",
+    });
+    expect(moved?.row.slug).toBe("a-brand-new-slug");
+
+    // Re-sending the stored value in another shape is not a change.
+    await expect(
+      articles.update(article.id, { slug: "A Brand New Slug" }),
+    ).resolves.toMatchObject({ changedFields: [] });
+
+    // Two articles cannot share a slug. Nothing auto-suffixes: Postgres
+    // refuses, and the generated route turns 23505 into a 409.
+    await expect(
+      pgErrorCode(async () =>
+        articles.create({
+          category: category.id,
+          code: "slug-002",
+          slug: "a-brand-new-slug",
+          title: "A different article",
+        }),
+      ),
+    ).resolves.toBe("23505");
+
+    // Same collision, reached by deriving rather than by sending.
+    await expect(
+      pgErrorCode(async () =>
+        articles.create({
+          category: category.id,
+          code: "slug-003",
+          title: "A Brand New Slug",
+        }),
+      ),
+    ).resolves.toBe("23505");
+
+    // A title with nothing sluggable in it is refused rather than guessed at.
+    await expect(
+      articles.create({
+        category: category.id,
+        code: "slug-004",
+        title: "日本語のタイトル",
+      }),
+    ).rejects.toThrow(/Could not derive "slug" from "title"/);
+
+    await articles.delete(article.id);
+    await categories.delete(category.id);
+  }, 60_000);
+
   it("rejects invalid input before it reaches Postgres", async () => {
     await expect(
       articleContent

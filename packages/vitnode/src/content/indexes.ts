@@ -124,7 +124,8 @@ const named = (
  * Five sources feed in, in descending precedence:
  *
  * 1. `indexes` declared on the content type,
- * 2. `field.text({ unique: true })`,
+ * 2. `field.text({ unique: true })` and every `field.slug()`, which is always
+ *    unique - a slug is a URL, and two rows cannot share one,
  * 3. every foreign key (`relation` and `user` fields),
  * 4. `createdAt` and `updatedAt`, which back the default ordering,
  * 5. `(status, publishedAt)` when publication is enabled - one composite index
@@ -182,9 +183,12 @@ export const resolveContentIndexes = ({
   const candidates: ResolvedContentIndex[] = [
     ...declared.map(index => named(tableName, index)),
     ...fieldEntries
-      .filter(
-        ([, fieldValue]) => fieldValue.kind === "text" && fieldValue.unique,
-      )
+      .filter(([, fieldValue]) => {
+        // A slug is a URL segment, so it is unique whether or not you ask.
+        if (fieldValue.kind === "slug") return true;
+
+        return fieldValue.kind === "text" && fieldValue.unique === true;
+      })
       .map(([name]) => named(tableName, { on: [name], unique: true })),
     ...fieldEntries
       .filter(

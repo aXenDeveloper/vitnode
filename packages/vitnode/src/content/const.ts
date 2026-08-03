@@ -53,6 +53,7 @@ export const CONTENT_FILTERABLE_FIELD_KINDS = [
   "enum",
   "number",
   "relation",
+  "slug",
   "text",
   "user",
 ] as const;
@@ -100,6 +101,13 @@ export const CONTENT_IDENTIFIER_MAX_LENGTH = 63;
 
 export const CONTENT_TEXT_DEFAULT_LENGTH = 255;
 export const CONTENT_ENUM_DEFAULT_LENGTH = 64;
+
+/**
+ * `varchar` length of a slug column, and the length {@link slugify} truncates
+ * to. Shorter than a text field on purpose: a slug is a URL segment, and 160
+ * characters is already far past what anyone types or shares.
+ */
+export const CONTENT_SLUG_DEFAULT_LENGTH = 160;
 
 export const CONTENT_DEFAULT_PAGE_SIZE = 25;
 export const CONTENT_OPTIONS_LIMIT = 25;

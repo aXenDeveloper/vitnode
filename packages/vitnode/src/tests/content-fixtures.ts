@@ -55,12 +55,16 @@ export const testArticleContentType = defineContentType({
   },
 });
 
-/** The Stage 2 shape: `status` and `publishedAt` come from `publication`. */
+/**
+ * The Stage 2 shape: `status` and `publishedAt` come from `publication`, and
+ * the URL segment from a `slug` field derived from the title.
+ */
 export const testPostContentType = defineContentType({
   id: "test.post",
   tableName: "test_posts",
   fields: {
     title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
     excerpt: field.textarea({ maxLength: 500, nullable: true }),
     views: field.number({ integer: true, min: 0, defaultValue: 0 }),
     author: field.user(),

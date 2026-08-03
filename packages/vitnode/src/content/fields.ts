@@ -6,6 +6,8 @@ import type {
   ContentNumberField,
   ContentOnDelete,
   ContentRelationField,
+  ContentSlugField,
+  ContentSlugRequired,
   ContentTextareaField,
   ContentTextField,
   ContentUserField,
@@ -117,6 +119,38 @@ const enumField = <
   kind: "enum",
 });
 
+/**
+ * A URL segment, normalised on the way in and unique-indexed automatically.
+ *
+ * ```ts
+ * slug: field.slug({ source: "title" })   // derived when the payload omits it
+ * slug: field.slug()                      // always supplied by the caller
+ * ```
+ *
+ * `source` must name a `text` field on the same content type. There is no
+ * `required` argument: a slug with a source is always derivable and therefore
+ * optional in the create payload, and one without a source can only come from
+ * the caller. `nullable` is not an argument either - a row nobody can address
+ * by URL is not a thing worth allowing.
+ *
+ * The slug is never re-derived by an update. Changing the title leaves the URL
+ * alone; sending `slug` explicitly is the only way to move it.
+ */
+const slug = <TSource extends string | undefined = undefined>(
+  args: {
+    description?: string;
+    /** `varchar` length and the truncation point. Defaults to 160. */
+    maxLength?: number;
+    source?: TSource;
+  } = {},
+): ContentSlugField<TSource> => ({
+  ...args,
+  kind: "slug",
+  nullable: false,
+  required: (args.source === undefined) as ContentSlugRequired<TSource>,
+  source: args.source as TSource,
+});
+
 const dateTime = <
   TRequired extends boolean = false,
   TNullable extends boolean = false,
@@ -183,6 +217,7 @@ export const field = {
   enum: enumField,
   number,
   relation,
+  slug,
   text,
   textarea,
   user,

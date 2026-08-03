@@ -16,6 +16,7 @@ import {
   CONTENT_ENUM_DEFAULT_LENGTH,
   CONTENT_PUBLICATION_STATUS_LENGTH,
   CONTENT_PUBLICATION_STATUSES,
+  CONTENT_SLUG_DEFAULT_LENGTH,
   CONTENT_TEXT_DEFAULT_LENGTH,
 } from "../const";
 import { ContentEngineError } from "../errors";
@@ -143,6 +144,12 @@ export const buildContentColumn = ({
 
       return nullable ? column : column.notNull();
     }
+    case "slug":
+      // Always NOT NULL and never defaulted: a row nobody can address by URL
+      // is not worth allowing, and there is no sensible default URL.
+      return varchar({
+        length: fieldValue.maxLength ?? CONTENT_SLUG_DEFAULT_LENGTH,
+      }).notNull();
     case "text":
       return withModifiers(
         varchar({

@@ -183,6 +183,7 @@ describe("publication", () => {
         | "excerpt"
         | "id"
         | "publishedAt"
+        | "slug"
         | "status"
         | "title"
         | "updatedAt"

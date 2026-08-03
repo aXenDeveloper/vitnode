@@ -22,10 +22,24 @@ import { ContentEngineError } from "./errors";
 import { resolveContentIndexes } from "./indexes";
 import { buildContentSchemas } from "./schemas";
 
+/** Kinds the default `searchableFields` picks up, and `titleField` falls back to. */
 const SEARCHABLE_KINDS = new Set<ContentFieldDescriptor["kind"]>([
   "text",
   "textarea",
 ]);
+
+/**
+ * Kinds an explicit `searchableFields` may name. A slug is searchable when you
+ * ask for it, but never by default - matching a URL segment against what
+ * someone typed into a search box is a deliberate choice, not a freebie.
+ */
+const EXPLICIT_SEARCHABLE_KINDS = new Set<ContentFieldDescriptor["kind"]>([
+  ...SEARCHABLE_KINDS,
+  "slug",
+]);
+
+/** A slug can only be derived from a field that holds a single line of text. */
+const SLUG_SOURCE_KINDS = new Set<ContentFieldDescriptor["kind"]>(["text"]);
 
 const systemFields: readonly string[] = CONTENT_SYSTEM_FIELDS;
 const publicationFields: readonly string[] = CONTENT_PUBLICATION_FIELDS;
@@ -43,6 +57,9 @@ const hasWritableFallback = (fieldValue: ContentFieldDescriptor): boolean => {
   if (fieldValue.kind === "relation" || fieldValue.kind === "user") {
     return false;
   }
+  // A sourced slug has no column default and is not required, but it is always
+  // writable: the service derives it from the source field.
+  if (fieldValue.kind === "slug") return fieldValue.source !== undefined;
 
   return fieldValue.defaultValue !== undefined;
 };
@@ -80,6 +97,7 @@ const FIELD_KINDS = new Set<string>([
   "enum",
   "number",
   "relation",
+  "slug",
   "text",
   "textarea",
   "user",
@@ -144,6 +162,16 @@ const assertField = (
     }
   }
 
+  if (fieldValue.kind === "slug") {
+    const { maxLength } = fieldValue;
+    if (maxLength !== undefined && maxLength <= 0) {
+      throw new ContentEngineError(
+        `Field "${name}" has a maxLength of ${maxLength}; it must be positive.`,
+        { contentTypeId: id },
+      );
+    }
+  }
+
   if (fieldValue.kind === "number") {
     const { max, min } = fieldValue;
     if (min !== undefined && max !== undefined && min > max) {
@@ -188,6 +216,33 @@ const assertField = (
   }
 };
 
+/**
+ * Checks every `field.slug({ source })` against the field map.
+ *
+ * Runs after the per-field pass, because a source is a reference to a *sibling*
+ * field and nothing can see the whole map until then.
+ */
+const assertSlugSources = (id: string, fields: ContentFieldMap): void => {
+  for (const [name, fieldValue] of Object.entries(fields)) {
+    if (fieldValue.kind !== "slug" || fieldValue.source === undefined) continue;
+
+    const source = fields[fieldValue.source];
+    if (!source) {
+      throw new ContentEngineError(
+        `Slug field "${name}" is sourced from "${fieldValue.source}", which is not a field on this content type.`,
+        { contentTypeId: id },
+      );
+    }
+
+    if (!SLUG_SOURCE_KINDS.has(source.kind)) {
+      throw new ContentEngineError(
+        `Slug field "${name}" is sourced from "${fieldValue.source}", which is a "${source.kind}" field. A slug can only be derived from a text field.`,
+        { contentTypeId: id },
+      );
+    }
+  }
+};
+
 const assertKnownColumns = (
   id: string,
   label: string,
@@ -226,11 +281,11 @@ const resolveAdmin = <TFields>(
     new Set(fieldNames),
   );
   const notSearchable = searchableFields.find(
-    name => !SEARCHABLE_KINDS.has(fields[name].kind),
+    name => !EXPLICIT_SEARCHABLE_KINDS.has(fields[name].kind),
   );
   if (notSearchable !== undefined) {
     throw new ContentEngineError(
-      `admin.list.searchableFields includes "${notSearchable}", which is not a text or textarea field.`,
+      `admin.list.searchableFields includes "${notSearchable}", which is not a text, textarea or slug field.`,
       { contentTypeId: id },
     );
   }
@@ -361,6 +416,8 @@ export const defineContentType = <
     assertFieldKind(id, name, fieldMap[name]);
     assertField(id, name, fieldMap[name]);
   }
+
+  assertSlugSources(id, fieldMap);
 
   const knownColumns = new Set([
     ...fieldNames,

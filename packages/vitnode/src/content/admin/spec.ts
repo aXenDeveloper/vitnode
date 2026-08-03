@@ -121,6 +121,10 @@ export const buildContentFormSpec = ({
             max: fieldValue.max,
             min: fieldValue.min,
           };
+        case "slug":
+          // No default and no minimum: an empty slug input means "derive it",
+          // and the server is what decides whether that is possible.
+          return { ...base, maxLength: fieldValue.maxLength };
         case "text":
         case "textarea":
           return {
@@ -221,8 +225,14 @@ const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
  * Field kinds whose input renders an empty string when it holds no value. Left
  * as-is, `""` fails ISO-date and identifier validation and the form can never
  * become valid.
+ *
+ * A slug is here for a second reason: an empty box means "derive it from the
+ * source field", and sending `""` would ask the server to store nothing.
  */
-const EMPTY_MEANS_UNSET: ReadonlySet<ContentFieldKind> = new Set(["dateTime"]);
+const EMPTY_MEANS_UNSET: ReadonlySet<ContentFieldKind> = new Set([
+  "dateTime",
+  "slug",
+]);
 
 /**
  * The combobox needs the whole option to show a label, so an existing

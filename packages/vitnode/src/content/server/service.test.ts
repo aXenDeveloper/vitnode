@@ -16,7 +16,9 @@ import type {
   ContentUpdateInput,
 } from "../types";
 
-import { ContentEngineError } from "../errors";
+import { defineContentType } from "../define";
+import { ContentEngineError, ContentInputError } from "../errors";
+import { field } from "../fields";
 import { createContentModel } from "./model";
 
 type ArticleType = typeof testArticleContentType;
@@ -547,6 +549,143 @@ describe("content service", () => {
       expect(Object.keys(opsOf(calls, "select")[0] as object)).toEqual(
         expect.arrayContaining(["status", "publishedAt"]),
       );
+    });
+  });
+
+  describe("slug", () => {
+    const createPost = async (values: Record<string, unknown>) => {
+      const { c, calls } = createDbMock([[{ id: 1 }]]);
+
+      await posts
+        .service(c)
+        .create(values as ContentCreateInput<typeof testPostContentType>);
+
+      return opsOf(calls, "values")[0] as Record<string, unknown>;
+    };
+
+    const updatePost = async (
+      current: Record<string, unknown>,
+      values: Record<string, unknown>,
+    ) => {
+      const { c, calls } = createDbMock([[current], [{ ...current }]]);
+
+      await posts.service(c).update(1, values);
+
+      return opsOf(calls, "set")[0] as Record<string, unknown> | undefined;
+    };
+
+    describe("create", () => {
+      it("derives the slug from the source field", async () => {
+        const values = await createPost({ category: 2, title: "Hello World" });
+
+        expect(values.slug).toBe("hello-world");
+      });
+
+      it("normalises a slug the caller supplied", async () => {
+        const values = await createPost({
+          category: 2,
+          slug: "  Hello   World! ",
+          title: "Something else",
+        });
+
+        // Supplied, so the source is ignored - but it is still normalised,
+        // because the same rules have to hold whoever wrote the value.
+        expect(values.slug).toBe("hello-world");
+      });
+
+      it("transliterates the source", async () => {
+        const values = await createPost({ category: 2, title: "Zażółć gęślą" });
+
+        expect(values.slug).toBe("zazolc-gesla");
+      });
+
+      it("rejects a source that folds to nothing", async () => {
+        // No random suffix and no numeric fallback: an unaddressable row is
+        // refused, and the message says how to fix it.
+        await expect(
+          createPost({ category: 2, title: "日本語のタイトル" }),
+        ).rejects.toThrow(/Could not derive "slug" from "title"/);
+      });
+
+      it("rejects a supplied slug that folds to nothing", async () => {
+        await expect(
+          createPost({ category: 2, slug: "!!!", title: "Fine title" }),
+        ).rejects.toThrow(/normalises to an empty slug/);
+      });
+
+      it("reports the failure as a client error", async () => {
+        // `ContentInputError` is what the generated routes turn into a 400;
+        // every other engine error is a configuration bug and a 500.
+        await expect(
+          createPost({ category: 2, title: "🎉🎉🎉" }),
+        ).rejects.toBeInstanceOf(ContentInputError);
+      });
+
+      it("truncates to the descriptor's maxLength", async () => {
+        const short = createContentModel(
+          defineContentType({
+            id: "test.short-slug",
+            tableName: "test_short_slugs",
+            fields: {
+              title: field.text({ required: true }),
+              slug: field.slug({ maxLength: 8, source: "title" }),
+            },
+            admin: { label: { plural: "Shorts", singular: "Short" } },
+          }),
+        );
+        const { c, calls } = createDbMock([[{ id: 1 }]]);
+
+        await short.service(c).create({ title: "Hello World" });
+
+        expect((opsOf(calls, "values")[0] as { slug: string }).slug).toBe(
+          "hello-wo",
+        );
+      });
+    });
+
+    describe("update", () => {
+      const stored = { id: 1, slug: "hello-world", title: "Hello World" };
+
+      it("leaves the slug alone when the source field changes", async () => {
+        // The whole point of a slug: a published URL does not move because
+        // somebody fixed a typo in the title.
+        const set = await updatePost(stored, { title: "Goodbye World" });
+
+        expect(set).toEqual({ title: "Goodbye World" });
+        expect(set).not.toHaveProperty("slug");
+      });
+
+      it("changes the slug when it is sent explicitly", async () => {
+        const set = await updatePost(stored, { slug: "Brand New Slug" });
+
+        expect(set).toEqual({ slug: "brand-new-slug" });
+      });
+
+      it("treats a re-sent slug as no change", async () => {
+        // Normalised before the diff, so "Hello World" and "hello-world" are
+        // the same stored value and the write is skipped.
+        const set = await updatePost(stored, { slug: "Hello World" });
+
+        expect(set).toBeUndefined();
+      });
+
+      it("rejects a slug that folds to nothing", async () => {
+        await expect(updatePost(stored, { slug: "???" })).rejects.toThrow(
+          ContentInputError,
+        );
+      });
+
+      it("never re-derives from the source", async () => {
+        const set = await updatePost(stored, {
+          slug: "explicit-one",
+          title: "A Totally New Title",
+        });
+
+        expect(set).toEqual({
+          slug: "explicit-one",
+          title: "A Totally New Title",
+        });
+      });
     });
   });
 });

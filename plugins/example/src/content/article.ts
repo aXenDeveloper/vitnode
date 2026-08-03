@@ -21,6 +21,9 @@ export const articleContentType = defineContentType({
 
   fields: {
     title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    // Derived from the title when the payload omits it, and never re-derived
+    // afterwards - renaming an article does not move its URL.
+    slug: field.slug({ source: "title" }),
     // `unique: true` is all it takes to get a unique index in the migration.
     code: field.text({ required: true, maxLength: 100, unique: true }),
     excerpt: field.textarea({ maxLength: 500, nullable: true }),
@@ -47,6 +50,7 @@ export const articleContentType = defineContentType({
       columns: [
         "status",
         "title",
+        "slug",
         "code",
         "category",
         "author",
@@ -54,7 +58,7 @@ export const articleContentType = defineContentType({
         "updatedAt",
       ],
       searchableFields: ["title", "code", "excerpt"],
-      orderableFields: ["title", "code"],
+      orderableFields: ["title", "code", "slug"],
       defaultOrderBy: "updatedAt",
       defaultOrder: "desc",
     },

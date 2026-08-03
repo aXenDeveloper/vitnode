@@ -169,6 +169,13 @@
       "when": 1785758740560,
       "tag": "0023_add_publication_to_example_articles",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1785764469085,
+      "tag": "0024_add_example_article_slug",
+      "breakpoints": true
     }
   ]
 }

@@ -57,6 +57,35 @@ export interface ContentTextField<
   unique?: boolean;
 }
 
+/**
+ * Whether a slug has to be present in the create payload.
+ *
+ * Exactly the inverse of "it has a source": with one the engine can always
+ * derive the value, without one nobody else can. That makes `required` a
+ * consequence of `source` rather than a second knob, so `field.slug` does not
+ * take it - the two could otherwise be set to contradict each other.
+ */
+export type ContentSlugRequired<TSource> = TSource extends string
+  ? false
+  : true;
+
+/**
+ * A URL segment: lowercase, ASCII, dash separated, unique across the table.
+ *
+ * Never nullable and never defaulted - a row without a slug could not be
+ * addressed. `source` names the `text` field the value is derived from when a
+ * create payload leaves it out; an update never re-derives it, so published
+ * URLs stay put.
+ */
+export interface ContentSlugField<
+  TSource extends string | undefined = string | undefined,
+> extends ContentFieldShared<ContentSlugRequired<TSource>, false> {
+  kind: "slug";
+  /** `varchar` length and the truncation point. Defaults to 160. */
+  maxLength?: number;
+  source: TSource;
+}
+
 export interface ContentTextareaField<
   TRequired extends boolean = boolean,
   TNullable extends boolean = boolean,
@@ -141,6 +170,7 @@ export type ContentFieldDescriptor =
   | ContentEnumField
   | ContentNumberField
   | ContentRelationField
+  | ContentSlugField
   | ContentTextareaField
   | ContentTextField
   | ContentUserField;

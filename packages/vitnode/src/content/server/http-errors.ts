@@ -1,6 +1,8 @@
 import { HTTPException } from "hono/http-exception";
 import { ZodError } from "zod";
 
+import { ContentInputError } from "../errors";
+
 /** Postgres error codes the engine translates into a useful HTTP status. */
 const FOREIGN_KEY_VIOLATION = "23503";
 const UNIQUE_VIOLATION = "23505";
@@ -41,6 +43,12 @@ export const rethrowAsHttpError = (
   // contract in OpenAPI.
   if (error instanceof ZodError) {
     throw new HTTPException(400, { message: "Invalid input data." });
+  }
+
+  // Written for the client on purpose - "provide the slug explicitly" is
+  // useless if it never leaves the server.
+  if (error instanceof ContentInputError) {
+    throw new HTTPException(400, { message: error.message });
   }
 
   switch (errorCode(error)) {

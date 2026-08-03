@@ -12,4 +12,5 @@ export const CONFIG_PLUGIN = { pluginId: "@vitnode/example" as const };
 export const EXAMPLE_MIGRATIONS = [
   "0022_add_example_content.sql",
   "0023_add_publication_to_example_articles.sql",
+  "0024_add_example_article_slug.sql",
 ];

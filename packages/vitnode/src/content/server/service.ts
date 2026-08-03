@@ -14,6 +14,7 @@ import type { ContentSchemas } from "../schemas";
 import type {
   AnyContentTypeDefinition,
   ContentCreateInput,
+  ContentFieldMap,
   ContentFieldName,
   ContentFilterInput,
   ContentOrderableFieldName,
@@ -27,9 +28,11 @@ import {
   CONTENT_DEFAULT_PAGE_SIZE,
   CONTENT_OPTIONS_LIMIT,
   CONTENT_PUBLICATION_FIELDS,
+  CONTENT_SLUG_DEFAULT_LENGTH,
 } from "../const";
-import { ContentEngineError } from "../errors";
+import { ContentEngineError, ContentInputError } from "../errors";
 import { orderableColumns } from "../registry";
+import { slugify } from "../slug";
 import {
   buildFilterCondition,
   buildOrderColumn,
@@ -152,6 +155,29 @@ export interface ContentServiceBase<TDefinition> {
     options?: ContentServiceOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
 }
+
+interface SlugFieldConfig {
+  maxLength: number;
+  name: string;
+  /** Field the value is derived from when a create payload omits the slug. */
+  source: string | undefined;
+}
+
+const slugFieldsOf = (fields: ContentFieldMap): SlugFieldConfig[] => {
+  const slugFields: SlugFieldConfig[] = [];
+
+  for (const [name, fieldValue] of Object.entries(fields)) {
+    if (fieldValue.kind !== "slug") continue;
+
+    slugFields.push({
+      maxLength: fieldValue.maxLength ?? CONTENT_SLUG_DEFAULT_LENGTH,
+      name,
+      source: fieldValue.source,
+    });
+  }
+
+  return slugFields;
+};
 
 interface ReferenceTarget {
   /** Aliased, so two relations pointing at the same table can both be joined. */
@@ -280,6 +306,89 @@ export const createContentService = <
   const searchColumns = definition.admin.list.searchableFields.map(
     name => columns[name],
   );
+  const slugFields = slugFieldsOf(fields);
+
+  /**
+   * Normalises a slug and refuses one that folds to nothing.
+   *
+   * Nothing random or numeric is appended - `slugify` is deterministic, and
+   * uniqueness belongs to the unique index, which surfaces a clash as a 409.
+   */
+  const toSlug = (
+    slugField: SlugFieldConfig,
+    value: string,
+    derived: boolean,
+  ): string => {
+    const slug = slugify(value, slugField.maxLength);
+    if (slug !== "") return slug;
+
+    throw new ContentInputError(
+      derived
+        ? `Could not derive "${slugField.name}" from "${slugField.source}". Send "${slugField.name}" explicitly.`
+        : `Field "${slugField.name}" normalises to an empty slug. Use at least one letter or digit.`,
+      { contentTypeId },
+    );
+  };
+
+  /**
+   * Fills in and normalises every slug on the way into a create.
+   *
+   * A supplied value is normalised rather than trusted, so the same rules apply
+   * whether the slug came from the caller or from the source field.
+   */
+  const withCreateSlugs = (
+    values: Record<string, unknown>,
+  ): Record<string, unknown> => {
+    if (slugFields.length === 0) return values;
+
+    const next = { ...values };
+
+    for (const slugField of slugFields) {
+      const supplied = next[slugField.name];
+
+      if (typeof supplied === "string") {
+        next[slugField.name] = toSlug(slugField, supplied, false);
+        continue;
+      }
+
+      // `assertSlugSources` guarantees a source exists whenever the create
+      // schema lets the value be omitted, so this is the derived branch.
+      const source = slugField.source ?? "";
+      const from = next[source];
+
+      next[slugField.name] = toSlug(
+        slugField,
+        typeof from === "string" ? from : "",
+        true,
+      );
+    }
+
+    return next;
+  };
+
+  /**
+   * Normalises the slugs an update actually names, and only those.
+   *
+   * A slug is never re-derived here: editing the title of a published article
+   * must not silently move its URL and 404 every link to it. Sending the slug
+   * is the only way to change it.
+   */
+  const withUpdateSlugs = (
+    patch: Record<string, unknown>,
+  ): Record<string, unknown> => {
+    if (slugFields.length === 0) return patch;
+
+    const next = { ...patch };
+
+    for (const slugField of slugFields) {
+      const supplied = next[slugField.name];
+      if (typeof supplied !== "string") continue;
+
+      next[slugField.name] = toSlug(slugField, supplied, false);
+    }
+
+    return next;
+  };
 
   const db = (options?: ContentServiceOptions): ContentDatabase =>
     options?.tx ?? c.get("db");
@@ -398,7 +507,7 @@ export const createContentService = <
 
       const [row] = await db(options)
         .insert(table)
-        .values(toColumnValues(fields, parsed))
+        .values(toColumnValues(fields, withCreateSlugs(parsed)))
         .returning(ownSelection());
 
       return toRow(row);
@@ -519,7 +628,9 @@ export const createContentService = <
     update: async (id, values, options) => {
       // Parsed before the row is even read, so an invalid payload never costs a
       // query - and never reaches Drizzle.
-      const patch = schemas.update.parse(values) as Record<string, unknown>;
+      // Normalised before the diff, so re-sending the stored slug in a
+      // different case counts as no change rather than as a pointless write.
+      const patch = withUpdateSlugs(schemas.update.parse(values));
 
       const database = db(options);
       const current = await readOne(id, database);

@@ -230,4 +230,79 @@ describe("generated schemas", () => {
       expect(Object.keys(definition.schemas.form.shape)).toEqual(["title"]);
     });
   });
+
+  describe("slug", () => {
+    const withSource = defineContentType({
+      id: "test.slugged",
+      tableName: "test_slugged",
+      fields: {
+        title: field.text({ required: true }),
+        slug: field.slug({ maxLength: 20, source: "title" }),
+      },
+      admin: { label: { plural: "Slugged", singular: "Slug" } },
+    }).schemas;
+
+    const withoutSource = defineContentType({
+      id: "test.manual-slug",
+      tableName: "test_manual_slugs",
+      fields: {
+        title: field.text({ required: true }),
+        slug: field.slug(),
+      },
+      admin: { label: { plural: "Manuals", singular: "Manual" } },
+    }).schemas;
+
+    it("may be omitted from create when it has a source", () => {
+      expect(withSource.create.safeParse({ title: "Hello" }).success).toBe(
+        true,
+      );
+    });
+
+    it("must be present in create when it has no source", () => {
+      expect(withoutSource.create.safeParse({ title: "Hello" }).success).toBe(
+        false,
+      );
+    });
+
+    it("accepts a supplied value that the service will normalise", () => {
+      expect(
+        withSource.create.safeParse({ slug: "Hello World", title: "Hello" })
+          .success,
+      ).toBe(true);
+    });
+
+    it("rejects an empty string", () => {
+      expect(
+        withSource.create.safeParse({ slug: "", title: "Hello" }).success,
+      ).toBe(false);
+    });
+
+    it("rejects a value past the descriptor's maxLength", () => {
+      expect(
+        withSource.create.safeParse({ slug: "a".repeat(21), title: "Hello" })
+          .success,
+      ).toBe(false);
+    });
+
+    it("is optional in update, like every other field", () => {
+      expect(withoutSource.update.safeParse({ slug: "moved" }).success).toBe(
+        true,
+      );
+    });
+
+    it("appears in the response shape", () => {
+      expect(Object.keys(withSource.selectObject.shape)).toContain("slug");
+    });
+
+    it("is equality-filterable", () => {
+      expect(Object.keys(withSource.filters.shape)).toContain("slug");
+      expect(withSource.filters.parse({ slug: "hello-world" })).toMatchObject({
+        slug: "hello-world",
+      });
+    });
+
+    it("survives z.toJSONSchema for AutoForm", () => {
+      expect(() => z.toJSONSchema(withSource.form)).not.toThrow();
+    });
+  });
 });

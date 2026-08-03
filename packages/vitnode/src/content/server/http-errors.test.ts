@@ -2,6 +2,7 @@
 import { HTTPException } from "hono/http-exception";
 import { describe, expect, it } from "vitest";
 
+import { ContentEngineError, ContentInputError } from "../errors";
 import { withHttpErrors } from "./http-errors";
 
 const pgError = (code: string) =>
@@ -84,6 +85,44 @@ describe("withHttpErrors", () => {
     } catch (error) {
       expect((error as HTTPException).message).not.toContain("driver said no");
     }
+  });
+
+  it("maps a rejected slug to 400", async () => {
+    const empty = new ContentInputError(
+      'Could not derive "slug" from "title". Send "slug" explicitly.',
+      { contentTypeId: "test.post" },
+    );
+
+    await expect(statusOf(empty, "create")).resolves.toBe(400);
+  });
+
+  it("keeps the slug message, which is written for the client", async () => {
+    // Unlike a driver error, this one names the fix and contains nothing
+    // internal - swallowing it would leave the caller guessing.
+    try {
+      await withHttpErrors(
+        "create",
+        async () =>
+          await reject(
+            new ContentInputError('Send "slug" explicitly.', {
+              contentTypeId: "test.post",
+            }),
+          ),
+      );
+    } catch (error) {
+      expect((error as HTTPException).message).toContain(
+        'Send "slug" explicitly.',
+      );
+    }
+  });
+
+  it("still sends a plain configuration error to the 500 handler", async () => {
+    // `ContentEngineError` is a misconfigured plugin, not a bad request.
+    const misconfigured = new ContentEngineError('Unknown filter "nope".');
+
+    await expect(
+      withHttpErrors("create", async () => await reject(misconfigured)),
+    ).rejects.toBe(misconfigured);
   });
 
   it("rethrows anything it does not recognise, for the 500 handler", async () => {

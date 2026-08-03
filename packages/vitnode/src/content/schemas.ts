@@ -13,6 +13,7 @@ import type {
 import {
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_PUBLICATION_STATUSES,
+  CONTENT_SLUG_DEFAULT_LENGTH,
   CONTENT_SYSTEM_FIELDS,
   isFilterableFieldKind,
 } from "./const";
@@ -90,6 +91,13 @@ const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
     case "relation":
     case "user":
       return referenceSchema();
+    case "slug":
+      // Never empty: the service normalises before writing, and a value that
+      // folds to nothing is rejected rather than stored.
+      return textSchema({
+        maxLength: fieldValue.maxLength ?? CONTENT_SLUG_DEFAULT_LENGTH,
+        minLength: 1,
+      });
     case "text":
     case "textarea":
       return textSchema(fieldValue);
@@ -122,6 +130,7 @@ const applyPresence = (
   if (
     fieldValue.kind !== "dateTime" &&
     fieldValue.kind !== "relation" &&
+    fieldValue.kind !== "slug" &&
     fieldValue.kind !== "user" &&
     fieldValue.defaultValue !== undefined
   ) {

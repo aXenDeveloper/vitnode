@@ -181,6 +181,53 @@ describe("resolveContentIndexes", () => {
     );
   });
 
+  describe("slug", () => {
+    const slugFields: ContentFieldMap = {
+      ...fields,
+      slug: field.slug({ source: "title" }),
+    };
+
+    it("is always unique, with no `unique: true` to remember", () => {
+      expect(resolve([], slugFields)).toContainEqual({
+        name: "test_things_slug_key",
+        on: ["slug"],
+        unique: true,
+      });
+    });
+
+    it("keeps uniqueness when a declared index renames it", () => {
+      const resolved = resolve(
+        [{ name: "custom_slug_idx", on: ["slug"] }],
+        slugFields,
+      );
+
+      expect(resolved).toContainEqual({
+        name: "custom_slug_idx",
+        on: ["slug"],
+        unique: true,
+      });
+      expect(resolved.map(index => index.name)).not.toContain(
+        "test_things_slug_key",
+      );
+    });
+
+    it("gives each slug field its own index", () => {
+      const resolved = resolve([], {
+        ...slugFields,
+        permalink: field.slug(),
+      });
+
+      expect(
+        resolved.filter(index => index.unique).map(index => index.name),
+      ).toEqual(
+        expect.arrayContaining([
+          "test_things_permalink_key",
+          "test_things_slug_key",
+        ]),
+      );
+    });
+  });
+
   describe("validation", () => {
     it("rejects an empty column list", () => {
       expect(() => resolve([{ on: [] }])).toThrow(/at least one column/);

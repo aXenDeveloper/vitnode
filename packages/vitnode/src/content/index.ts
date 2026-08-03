@@ -34,13 +34,14 @@ export {
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_PUBLICATION_STATUS_LENGTH,
   CONTENT_PUBLICATION_STATUSES,
+  CONTENT_SLUG_DEFAULT_LENGTH,
   CONTENT_SYSTEM_FIELDS,
   CONTENT_TEXT_DEFAULT_LENGTH,
   isContentPublicationStatus,
   RESERVED_FILTER_KEYS,
 } from "./const";
 export { defineContentType } from "./define";
-export { ContentEngineError } from "./errors";
+export { ContentEngineError, ContentInputError } from "./errors";
 export { contentEventName } from "./events";
 export type {
   ContentCreatedPayload,
@@ -66,6 +67,7 @@ export {
 export type { RegisteredContentType } from "./registry";
 export { buildContentSchemas } from "./schemas";
 export type { ContentSchemas } from "./schemas";
+export { slugify } from "./slug";
 export type {
   AnyContentTypeDefinition,
   ContentAdminConfig,
@@ -94,6 +96,8 @@ export type {
   ContentReferenceFieldName,
   ContentRelationField,
   ContentSelect,
+  ContentSlugField,
+  ContentSlugRequired,
   ContentSystemField,
   ContentTextareaField,
   ContentTextField,
