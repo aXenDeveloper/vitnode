@@ -72,8 +72,9 @@ CREATE UNIQUE INDEX "example_articles_code_key"
 ```
 
 Postgres, not the descriptor, enforces it. A duplicate comes back from the
-generated routes as **409** with a generic message; the driver's text never
-reaches the client.
+generated routes as **409** with a generic message, [documented in
+OpenAPI](/docs/dev/content-engine/permissions#what-each-route-documents); the
+driver's text never reaches the client.
 
 Declaring the same column in `indexes` does not produce a second index - see
 [index deduplication](/docs/dev/content-engine/database-and-migrations#indexes).

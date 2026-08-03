@@ -133,6 +133,10 @@ const named = (
  * `{ on: ["category"] }` simply renames the automatic foreign-key index rather
  * than adding a second one, and declaring `{ on: ["code"], unique: true }`
  * beside `field.text({ unique: true })` still yields exactly one index.
+ *
+ * Names are only checked against *this* content type here. Postgres scopes index
+ * names to the schema, so `validateContentTypes` re-checks them across every
+ * installed content type - that is the only place the whole set is visible.
  */
 export const resolveContentIndexes = ({
   contentTypeId,

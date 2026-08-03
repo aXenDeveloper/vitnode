@@ -89,6 +89,61 @@ await articles.findMany({ filters: { status: "sideways" } });
 //                                           ^ not one of the declared values
 ```
 
+Filters are **equality only**. Ranges, `IN` and partial matches are a custom
+route - `search` already covers partial matches across
+`admin.list.searchableFields`.
+
+| Field kind | Typed service filter | Generated HTTP filter |
+| --- | :-: | :-: |
+| `text` | ✓ | ✓ |
+| `textarea` | ✗ | ✗ |
+| `number` | ✓ | ✓ |
+| `boolean` | ✓ | ✓ |
+| `enum` | ✓ | ✓ |
+| `dateTime` | ✗ | ✗ |
+| `relation` | ✓ | ✓ |
+| `user` | ✓ | ✓ |
+
+<Callout type="warn" title="The type is not the guard">
+  The same allowlist is enforced at runtime, so a cast, a plain-JavaScript caller
+  or a filter object assembled at runtime gets a `ContentEngineError` rather than
+  a query:
+
+```ts
+articles.findMany({ filters: raw as ContentFilterInput<typeof articleContentType> });
+// ContentEngineError: Field "excerpt" of kind "textarea" cannot be used as a
+// generated equality filter. Filterable kinds: boolean, enum, number, ...
+```
+
+</Callout>
+
+### Filtering for nothing
+
+A nullable field can be filtered by `null`, and that becomes `IS NULL` - not a
+comparison against a null parameter, which is never true:
+
+```ts
+await articles.findMany({ filters: { author: null } });
+// where "example_articles"."author" is null
+```
+
+The field has to actually be nullable. `null` on a `NOT NULL` column is a
+`ContentEngineError`, because silently generating `IS NULL` there would return an
+empty page and look like missing data:
+
+```ts
+await articles.findMany({ filters: { category: null } });
+// ContentEngineError: Field "category" is not nullable, so it can never hold
+// null. Drop the filter, or declare the field `nullable: true`.
+```
+
+<Callout type="info" title="HTTP filters have no null">
+  This is a direct-service feature. The generated list route keeps its
+  query-string contract exactly as it is - there is no `?author=null`, because
+  inventing a textual null would make `author=null` ambiguous with a legitimate
+  value. Need it over HTTP? Write a route.
+</Callout>
+
 ### Ordering
 
 `orderBy.column` accepts the content type's own field names plus the three system

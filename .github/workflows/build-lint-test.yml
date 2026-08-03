@@ -1,12 +1,15 @@
 name: Build, Lint & Test
 
 on:
+  # No `branches` filter: every pull request runs, whatever it targets. The old
+  # `"*"` glob matched a single path segment, so a PR into `perf/improve_errors`
+  # silently ran nothing at all.
   pull_request:
-    branches: "*"
     types:
       - opened
       - edited
       - synchronize
+      - reopened
 
 jobs:
   build:

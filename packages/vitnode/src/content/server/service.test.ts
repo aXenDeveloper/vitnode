@@ -9,7 +9,11 @@ import {
   testCategoryContentType,
 } from "@/tests/content-fixtures";
 
-import type { ContentCreateInput, ContentUpdateInput } from "../types";
+import type {
+  ContentCreateInput,
+  ContentFilterInput,
+  ContentUpdateInput,
+} from "../types";
 
 import { ContentEngineError } from "../errors";
 import { createContentModel } from "./model";
@@ -369,6 +373,28 @@ describe("content service", () => {
           filters: { nope: 1 },
         }),
       ).rejects.toThrow(ContentEngineError);
+    });
+
+    it.each([
+      ["textarea", { excerpt: "prose" }],
+      ["dateTime", { publishedAt: "2026-08-03T10:00:00.000Z" }],
+    ])("rejects a %s filter forced past the type check", async (_kind, raw) => {
+      const { c, calls } = createDbMock(page([]));
+
+      await expect(
+        articles
+          .service(c)
+          .findMany({ filters: raw as ContentFilterInput<ArticleType> }),
+      ).rejects.toThrow(/cannot be used as a generated equality filter/);
+      expect(calls).toHaveLength(0);
+    });
+
+    it("filters a nullable field by null", async () => {
+      const { c } = createDbMock(page([]));
+
+      await expect(
+        articles.service(c).findMany({ filters: { author: null } }),
+      ).resolves.toMatchObject({ edges: [] });
     });
   });
 

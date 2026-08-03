@@ -1,10 +1,14 @@
 import type { SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 
-import { and, eq, ilike, or } from "drizzle-orm";
+import { and, eq, ilike, isNull, or } from "drizzle-orm";
 
 import type { ContentFieldDescriptor, ContentFieldMap } from "../types";
 
+import {
+  CONTENT_FILTERABLE_FIELD_KINDS,
+  isFilterableFieldKind,
+} from "../const";
 import { ContentEngineError } from "../errors";
 
 /**
@@ -40,6 +44,11 @@ const filterValue = (
  *
  * Filter keys are looked up in the column map, so a request can never reach a
  * SQL identifier: an unknown key is a hard error, not a silently ignored one.
+ *
+ * The public filter type already excludes the kinds that have no equality
+ * filter, and `null` on a `NOT NULL` field. Both are re-checked here because a
+ * cast, a plain-JavaScript caller or an object built at runtime can bypass the
+ * type - and the type is not what protects the query.
  */
 export const buildFilterCondition = ({
   columns,
@@ -63,6 +72,26 @@ export const buildFilterCondition = ({
       throw new ContentEngineError(`Unknown filter "${name}".`, {
         contentTypeId,
       });
+    }
+
+    if (!isFilterableFieldKind(fieldValue.kind)) {
+      throw new ContentEngineError(
+        `Field "${name}" of kind "${fieldValue.kind}" cannot be used as a generated equality filter. Filterable kinds: ${CONTENT_FILTERABLE_FIELD_KINDS.join(", ")}. Write a custom route for anything else.`,
+        { contentTypeId },
+      );
+    }
+
+    // `null` is a value, not a parameter: `column = NULL` is never true.
+    if (raw === null) {
+      if (!fieldValue.nullable) {
+        throw new ContentEngineError(
+          `Field "${name}" is not nullable, so it can never hold null. Drop the filter, or declare the field \`nullable: true\`.`,
+          { contentTypeId },
+        );
+      }
+
+      conditions.push(isNull(column));
+      continue;
     }
 
     conditions.push(eq(column, filterValue(fieldValue, raw)));

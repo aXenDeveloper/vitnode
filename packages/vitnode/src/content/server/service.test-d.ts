@@ -7,7 +7,11 @@ import {
   testCategoryContentType,
 } from "@/tests/content-fixtures";
 
-import type { ContentFieldName } from "../types";
+import type {
+  ContentFieldKind,
+  ContentFieldName,
+  FilterableContentFieldKind,
+} from "../types";
 import type { ContentUpdateResult } from "./service";
 
 import { createContentModel } from "./model";
@@ -66,6 +70,18 @@ describe("findMany filters", () => {
       // @ts-expect-error - a relation filter is an id, not a label
       filters: { category: "News" },
     });
+  });
+
+  it("accepts null for a nullable field only", () => {
+    void service.findMany({ filters: { author: null } });
+    void service.findMany({
+      // @ts-expect-error - `category` is required and NOT NULL
+      filters: { category: null },
+    });
+  });
+
+  it("only names kinds that exist", () => {
+    expectTypeOf<FilterableContentFieldKind>().toExtend<ContentFieldKind>();
   });
 });
 

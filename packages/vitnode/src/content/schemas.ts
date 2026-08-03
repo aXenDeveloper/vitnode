@@ -10,7 +10,7 @@ import type {
   ResolvedContentAdminConfig,
 } from "./types";
 
-import { CONTENT_SYSTEM_FIELDS } from "./const";
+import { CONTENT_SYSTEM_FIELDS, isFilterableFieldKind } from "./const";
 
 export interface ContentSchemas<TDefinition = AnyContentTypeDefinition> {
   /** Request body for create. Rejects unknown keys and system columns. */
@@ -161,24 +161,18 @@ const updateShape = (
     }),
   );
 
-const FILTERABLE_KINDS = new Set<ContentFieldDescriptor["kind"]>([
-  "boolean",
-  "enum",
-  "number",
-  "relation",
-  "text",
-  "user",
-]);
-
 /**
  * Filters arrive as query-string values, so everything is parsed from a string.
  * Only allowlisted kinds get an entry - an unknown filter key is rejected by
  * the route rather than silently ignored.
+ *
+ * The allowlist is `CONTENT_FILTERABLE_FIELD_KINDS`, shared with the query
+ * builder and with `FilterableContentFieldKind`.
  */
 const filterShape = (fields: ContentFieldMap): z.ZodRawShape =>
   Object.fromEntries(
     Object.entries(fields)
-      .filter(([, fieldValue]) => FILTERABLE_KINDS.has(fieldValue.kind))
+      .filter(([, fieldValue]) => isFilterableFieldKind(fieldValue.kind))
       .map(([name, fieldValue]) => {
         switch (fieldValue.kind) {
           case "boolean":

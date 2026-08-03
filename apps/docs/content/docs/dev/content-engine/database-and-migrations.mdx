@@ -94,6 +94,24 @@ a_very_long_content_table_name_wit..._some_column_1x9k4m2 // shortened + hashed
 The result is deterministic: the same definition always produces the same
 migration.
 
+<Callout type="warn" title="Index names are schema-wide, not table-wide">
+  Postgres keeps index names in the schema, so *every* content type installed in
+  one app has to have distinct ones - even across two plugins that know nothing
+  about each other. The registry checks that when it validates the installed set,
+  which means a clash fails at plugin build and at app boot rather than halfway
+  through a migration:
+
+```text
+[Content Engine] blog.post: Index name "shared_code_idx" is used by both
+@vitnode/example -> example.article (table "example_articles", columns [code])
+and @vitnode/blog -> blog.post (table "blog_posts", columns [slug]).
+Postgres index names are unique per schema, so rename one of them.
+```
+
+  Generated names carry the table name, so they cannot collide on their own -
+  this only bites when two content types pick the same explicit `name`.
+</Callout>
+
 ### Deduplication
 
 Two index definitions covering **the same columns in the same order** collapse
@@ -121,6 +139,11 @@ work, rather than letting Postgres find out later:
 - a duplicated explicit `name`,
 - an explicit `name` that is not snake_case, or is over 63 characters,
 - two indexes that resolve to the same name.
+
+The registry adds one more, because it is the only thing that sees every content
+type at once:
+
+- two **different content types** resolving to the same index name.
 
 ## How Drizzle Kit finds it
 

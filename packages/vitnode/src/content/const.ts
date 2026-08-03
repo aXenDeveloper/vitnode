@@ -5,6 +5,37 @@
 export const CONTENT_SYSTEM_FIELDS = ["id", "createdAt", "updatedAt"] as const;
 
 /**
+ * Field kinds a generated equality filter understands.
+ *
+ * `textarea` and `dateTime` are absent on purpose: equality against a body of
+ * prose, or against one exact timestamp, is never what anyone means.
+ *
+ * One list, three consumers - the filter schema, the query builder and the
+ * public service types all derive from it, so they cannot drift apart.
+ */
+export const CONTENT_FILTERABLE_FIELD_KINDS = [
+  "boolean",
+  "enum",
+  "number",
+  "relation",
+  "text",
+  "user",
+] as const;
+
+const filterableFieldKinds: ReadonlySet<string> = new Set(
+  CONTENT_FILTERABLE_FIELD_KINDS,
+);
+
+/**
+ * Whether a field of this kind may back a generated equality filter.
+ *
+ * Takes a plain `string` rather than `ContentFieldKind` so this module stays
+ * free of type imports from `types.ts`, which imports from here.
+ */
+export const isFilterableFieldKind = (kind: string): boolean =>
+  filterableFieldKinds.has(kind);
+
+/**
  * Query-string keys owned by pagination and ordering. A filter may not use one
  * of these names or it would silently shadow the pagination contract.
  */

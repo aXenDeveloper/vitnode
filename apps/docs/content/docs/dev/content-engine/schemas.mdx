@@ -69,8 +69,15 @@ Both are allowlists derived from the definition, and both exist to keep request
 strings away from SQL identifiers.
 
 `filters` only contains equality-filterable fields (everything except
-`textarea` and `dateTime`), parsed from their query-string form. `order` is a
-literal enum:
+`textarea` and `dateTime`), parsed from their query-string form. The list of
+kinds lives in one place, `CONTENT_FILTERABLE_FIELD_KINDS`, which the schema, the
+query builder and the [service filter type](/docs/dev/content-engine/service#filters-are-typed-per-content-type)
+all derive from - and which the query builder re-checks at runtime.
+
+There is no query-string syntax for `null`: a filterable value that arrives as
+text is always a value. Filtering for `IS NULL` is a direct service call.
+
+`order` is a literal enum:
 
 ```ts
 schemas.order.parse({ orderBy: "title" });   // ok, it is in orderableFields

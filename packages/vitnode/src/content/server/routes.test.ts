@@ -409,12 +409,14 @@ describe("generated content routes", () => {
   });
 
   describe("OpenAPI", () => {
-    it("documents every operation", () => {
-      const { app } = harness();
-      const doc = app.getOpenAPIDocument({
+    const document = () =>
+      harness().app.getOpenAPIDocument({
         info: { title: "t", version: "1" },
         openapi: "3.0.0",
       });
+
+    it("documents every operation", () => {
+      const doc = document();
 
       expect(Object.keys(doc.paths).sort()).toEqual([
         "/",
@@ -426,6 +428,20 @@ describe("generated content routes", () => {
         "get",
         "put",
       ]);
+    });
+
+    it.each([
+      ["/", "get", ["200", "400"]],
+      ["/", "post", ["201", "400", "409"]],
+      ["/{id}", "get", ["200", "400", "404"]],
+      ["/{id}", "put", ["200", "400", "404", "409"]],
+      ["/{id}", "delete", ["200", "400", "404", "409"]],
+      ["/options/{field}", "get", ["200", "400"]],
+    ])("documents %s %s as %j", (path, method, statuses) => {
+      const operation =
+        document().paths[path][method as "delete" | "get" | "post" | "put"];
+
+      expect(Object.keys(operation?.responses ?? {}).sort()).toEqual(statuses);
     });
   });
 });

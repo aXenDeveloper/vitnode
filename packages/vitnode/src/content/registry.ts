@@ -21,12 +21,24 @@ export interface RegisteredContentType {
 const describe = (entry: RegisteredContentType): string =>
   `${entry.pluginId} -> ${entry.definition.id}`;
 
+const describeIndexOwner = (owner: IndexOwner): string =>
+  `${describe(owner.entry)} (table "${owner.entry.definition.tableName}", columns [${owner.columns.join(", ")}])`;
+
+interface IndexOwner {
+  columns: string[];
+  entry: RegisteredContentType;
+}
+
 /**
  * Validates a set of content types coming from one or more plugins.
  *
  * Runs at boot (or at plugin build time), never per request, so a
  * misconfiguration fails loudly and immediately. Returns the entries sorted by
  * id so registries stay deterministic across processes.
+ *
+ * This is the only place that sees *every* installed content type at once,
+ * which makes it the only place that can catch a schema-wide clash: a duplicate
+ * table name, or two content types resolving to the same Postgres index name.
  */
 export const validateContentTypes = (
   entries: RegisteredContentType[],
@@ -34,6 +46,7 @@ export const validateContentTypes = (
   const byId = new Map<string, RegisteredContentType>();
   const byTable = new Map<string, RegisteredContentType>();
   const byPermission = new Map<string, RegisteredContentType>();
+  const byIndexName = new Map<string, IndexOwner>();
 
   for (const entry of entries) {
     const { definition, pluginId } = entry;
@@ -69,6 +82,20 @@ export const validateContentTypes = (
     byPermission.set(permissionKey, entry);
 
     assertFilterKeys(definition);
+
+    // `resolveContentIndexes` already rejects a collision inside one content
+    // type. Postgres index names are unique per *schema*, though, so two
+    // content types - from one plugin or from two - cannot share one either.
+    for (const index of definition.indexes) {
+      const owner = byIndexName.get(index.name);
+      if (owner) {
+        throw new ContentEngineError(
+          `Index name "${index.name}" is used by both ${describeIndexOwner(owner)} and ${describeIndexOwner({ columns: index.on, entry })}. Postgres index names are unique per schema, so rename one of them.`,
+          { contentTypeId: definition.id },
+        );
+      }
+      byIndexName.set(index.name, { columns: index.on, entry });
+    }
   }
 
   return [...entries].sort((a, b) =>

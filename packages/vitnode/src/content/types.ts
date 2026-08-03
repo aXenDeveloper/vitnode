@@ -1,4 +1,7 @@
-import type { CONTENT_SYSTEM_FIELDS } from "./const";
+import type {
+  CONTENT_FILTERABLE_FIELD_KINDS,
+  CONTENT_SYSTEM_FIELDS,
+} from "./const";
 import type { ContentSchemas } from "./schemas";
 
 export type ContentSystemField = (typeof CONTENT_SYSTEM_FIELDS)[number];
@@ -385,12 +388,13 @@ type FieldNamesOfKind<TDefinition, TKind extends ContentFieldKind> = string &
   }[keyof ContentFieldsOf<TDefinition>];
 
 /**
- * Kinds the generated filter schema understands. `textarea` and `dateTime` are
- * absent on purpose: equality on a body of prose or on an exact timestamp is
- * never what anyone means.
+ * Kinds the generated filter schema understands, derived from the one runtime
+ * list in `const.ts` so the compile-time contract and the runtime guard are the
+ * same list. `service.test-d.ts` asserts it stays a subset of
+ * {@link ContentFieldKind}.
  */
 export type FilterableContentFieldKind =
-  "boolean" | "enum" | "number" | "relation" | "text" | "user";
+  (typeof CONTENT_FILTERABLE_FIELD_KINDS)[number];
 
 export type FilterableContentFieldName<TDefinition> = FieldNamesOfKind<
   TDefinition,

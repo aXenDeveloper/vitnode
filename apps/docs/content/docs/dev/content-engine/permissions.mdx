@@ -17,6 +17,26 @@ can_delete   DELETE
 The three write permissions depend on `can_view`, so a role cannot be given the
 ability to create rows it is not allowed to see.
 
+## What each route documents
+
+Every status a generated handler can produce is in the OpenAPI document, so a
+client generated from `/api/swagger/doc` knows about all of them - including the
+unique-constraint `409`:
+
+| Route | Statuses |
+| --- | --- |
+| `GET /` | `200`, `400` |
+| `GET /options/{field}` | `200`, `400` |
+| `GET /{id}` | `200`, `400`, `404` |
+| `POST /` | `201`, `400`, `409` |
+| `PUT /{id}` | `200`, `400`, `404`, `409` |
+| `DELETE /{id}` | `200`, `400`, `404`, `409` |
+
+A `409` on create or update is a duplicate value; on delete it is a row something
+else still references. `403` is the one status the routes do not declare
+themselves - it comes from the staff-permission middleware `buildRoute` composes,
+the same way it does for every other VitNode route.
+
 ## The module name
 
 Derived from `admin.label.plural`, slugified: "Example Articles" becomes

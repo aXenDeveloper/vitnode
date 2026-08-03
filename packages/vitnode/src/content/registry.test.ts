@@ -116,6 +116,118 @@ describe("validateContentTypes", () => {
   );
 });
 
+// Postgres index names live in the schema, not in the table, so two content
+// types sharing one is a migration that fails halfway through - long after
+// `defineContentType` has had its say.
+describe("global index names", () => {
+  const other = (
+    overrides: Partial<Parameters<typeof defineContentType>[0]> = {},
+  ) =>
+    widget({
+      id: "test.other",
+      tableName: "test_others",
+      admin: { label: { plural: "Others", singular: "Other" } },
+      ...overrides,
+    });
+
+  /** Every index name a definition resolved to. */
+  const namesOf = (definition: ReturnType<typeof widget>) =>
+    definition.indexes.map(index => index.name);
+
+  it("accepts two content types whose index names differ", () => {
+    expect(() =>
+      validateContentTypes([entry(widget()), entry(other())]),
+    ).not.toThrow();
+  });
+
+  it("does not collide on generated names, because the table name is in them", () => {
+    const [first, second] = [widget(), other()];
+
+    expect(namesOf(first)).toContain("test_widgets_created_at_idx");
+    expect(namesOf(second)).toContain("test_others_created_at_idx");
+    expect(
+      namesOf(first).filter(name => namesOf(second).includes(name)),
+    ).toEqual([]);
+  });
+
+  it("rejects the same explicit index name inside one plugin", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(
+          widget({ indexes: [{ name: "shared_title_idx", on: ["title"] }] }),
+        ),
+        entry(
+          other({ indexes: [{ name: "shared_title_idx", on: ["title"] }] }),
+        ),
+      ]),
+    ).toThrow(/Index name "shared_title_idx" is used by both/);
+  });
+
+  it("rejects the same explicit index name across plugins", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(
+          widget({ indexes: [{ name: "shared_title_idx", on: ["title"] }] }),
+          "@vitnode/a",
+        ),
+        entry(
+          other({ indexes: [{ name: "shared_title_idx", on: ["title"] }] }),
+          "@vitnode/b",
+        ),
+      ]),
+    ).toThrow(/Index name "shared_title_idx" is used by both/);
+  });
+
+  it("names both owners, with their plugin, content type and table", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(
+          widget({ indexes: [{ name: "shared_title_idx", on: ["title"] }] }),
+          "@vitnode/a",
+        ),
+        entry(
+          other({ indexes: [{ name: "shared_title_idx", on: ["title"] }] }),
+          "@vitnode/b",
+        ),
+      ]),
+    ).toThrow(
+      '@vitnode/a -> test.widget (table "test_widgets", columns [title]) and @vitnode/b -> test.other (table "test_others", columns [title])',
+    );
+  });
+
+  it("fails on the duplicate content type first, not on its identical indexes", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(widget(), "@vitnode/a"),
+        entry(widget({ tableName: "test_widgets_two" }), "@vitnode/b"),
+      ]),
+    ).toThrow(/Duplicate content type id/);
+  });
+
+  // Two table names this long share every character a truncated index name can
+  // keep, so only the fingerprint of the full name tells them apart.
+  it("keeps shortened generated names distinct when the long originals differ", () => {
+    const base = `t_${"a".repeat(56)}`;
+    const first = other({ id: "test.long1", tableName: `${base}_x` });
+    const second = other({ id: "test.long2", tableName: `${base}_y` });
+
+    const [firstName, secondName] = [first, second].map(
+      definition =>
+        definition.indexes.find(index => index.on[0] === "createdAt")?.name,
+    );
+
+    expect(firstName).not.toBe(secondName);
+    expect(firstName).toHaveLength(63);
+    expect(secondName).toHaveLength(63);
+    expect(() =>
+      validateContentTypes([
+        entry(first, "@vitnode/a"),
+        entry(second, "@vitnode/b"),
+      ]),
+    ).not.toThrow();
+  });
+});
+
 describe("withContentPermissions", () => {
   it("derives the four permissions per content type", () => {
     const merged = withContentPermissions({}, [entry(testArticleContentType)]);

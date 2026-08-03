@@ -99,6 +99,11 @@ export const buildContentRoutes = <
     description,
   });
 
+  const invalidIdentifier = { description: "Invalid identifier" };
+  const uniqueConflict = {
+    description: "A record with these values already exists",
+  };
+
   const list = buildRoute({
     pluginId,
     adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
@@ -115,6 +120,7 @@ export const buildContentRoutes = <
           }),
           `${label.plural} retrieved successfully`,
         ),
+        400: { description: "Invalid query parameters" },
       },
     },
     handler: async c => {
@@ -181,6 +187,7 @@ export const buildContentRoutes = <
       request: { params: schemas.params },
       responses: {
         200: jsonResponse(schemas.selectObject, `${label.singular} found`),
+        400: invalidIdentifier,
         404: { description: `${label.singular} not found` },
       },
     },
@@ -206,6 +213,7 @@ export const buildContentRoutes = <
           `${label.singular} created successfully`,
         ),
         400: { description: "Invalid input data" },
+        409: uniqueConflict,
       },
     },
     handler: async c => {
@@ -238,6 +246,7 @@ export const buildContentRoutes = <
         ),
         400: { description: "Invalid or empty payload" },
         404: { description: `${label.singular} not found` },
+        409: uniqueConflict,
       },
     },
     handler: async c => {
@@ -272,6 +281,7 @@ export const buildContentRoutes = <
           schemas.selectObject,
           `${label.singular} deleted successfully`,
         ),
+        400: invalidIdentifier,
         404: { description: `${label.singular} not found` },
         409: { description: "Still referenced by other content" },
       },

@@ -212,6 +212,15 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
       author: null,
     });
 
+    // A null filter has to become `IS NULL`; equality against a null parameter
+    // would match nothing and Postgres would not complain about it.
+    await expect(
+      articles.findMany({ filters: { author: null } }),
+    ).resolves.toMatchObject({ pageInfo: { totalCount: 1 } });
+    await expect(
+      articles.findMany({ filters: { author: 999_999 } }),
+    ).resolves.toMatchObject({ pageInfo: { totalCount: 0 } });
+
     await expect(articles.delete(article.id)).resolves.toMatchObject({
       id: article.id,
     });
