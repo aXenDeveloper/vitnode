@@ -1,5 +1,5 @@
 {
-  "id": "9b3e7022-4e17-476d-879c-afdd70659848",
+  "id": "5bd0b1de-db52-41b3-86a7-4f4a9a7ca0b7",
   "prevId": "bce1e602-a192-4c9c-b6d5-8be955f985d9",
   "version": "7",
   "dialect": "postgresql",
@@ -2224,6 +2224,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "code": {
+          "name": "code",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
         "excerpt": {
           "name": "excerpt",
           "type": "text",
@@ -2271,9 +2277,15 @@
         }
       },
       "indexes": {
-        "example_articles_created_at_idx": {
-          "name": "example_articles_created_at_idx",
+        "example_articles_status_created_at_idx": {
+          "name": "example_articles_status_created_at_idx",
           "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
             {
               "expression": "createdAt",
               "isExpression": false,
@@ -2286,17 +2298,17 @@
           "method": "btree",
           "with": {}
         },
-        "example_articles_updated_at_idx": {
-          "name": "example_articles_updated_at_idx",
+        "example_articles_code_key": {
+          "name": "example_articles_code_key",
           "columns": [
             {
-              "expression": "updatedAt",
+              "expression": "code",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
-          "isUnique": false,
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -2331,17 +2343,26 @@
           "method": "btree",
           "with": {}
         },
-        "example_articles_status_createdat_idx": {
-          "name": "example_articles_status_createdat_idx",
+        "example_articles_created_at_idx": {
+          "name": "example_articles_created_at_idx",
           "columns": [
             {
-              "expression": "status",
+              "expression": "createdAt",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            },
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "example_articles_updated_at_idx": {
+          "name": "example_articles_updated_at_idx",
+          "columns": [
             {
-              "expression": "createdAt",
+              "expression": "updatedAt",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

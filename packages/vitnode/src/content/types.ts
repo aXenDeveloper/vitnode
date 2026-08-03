@@ -42,6 +42,7 @@ export interface ContentTextField<
   kind: "text";
   maxLength?: number;
   minLength?: number;
+  /** Adds a unique index on the column. See {@link ContentIndexInput}. */
   unique?: boolean;
 }
 
@@ -275,8 +276,14 @@ export interface ResolvedContentAdminConfig {
   titleField: null | string;
 }
 
-/** Authoring shape - column names are checked against the field map. */
+/**
+ * Authoring shape - column names are checked against the field map.
+ *
+ * A declared index and a generated one covering the same columns collapse into
+ * a single index; see `resolveContentIndexes`.
+ */
 export interface ContentIndexInput<TFields = ContentFieldMap> {
+  /** Defaults to `<table>_<columns>_idx`, or `_key` when unique. */
   name?: string;
   on: [
     ContentSystemField | (keyof TFields & string),
@@ -296,6 +303,17 @@ export interface ContentIndexConfig {
   unique?: boolean;
 }
 
+/**
+ * An index after `defineContentType` has expanded the automatic ones, resolved
+ * every name and dropped the duplicates. This is what the table generator
+ * materialises, one to one.
+ */
+export interface ResolvedContentIndex {
+  name: string;
+  on: string[];
+  unique: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Definition
 // ---------------------------------------------------------------------------
@@ -307,7 +325,8 @@ export interface ContentTypeDefinition<
   admin: ResolvedContentAdminConfig;
   fields: TFields;
   id: TId;
-  indexes: ContentIndexConfig[];
+  /** Declared indexes plus the automatic ones, deduplicated and named. */
+  indexes: ResolvedContentIndex[];
   /** Derived from `admin.permissionModule` or `admin.label.plural`. */
   permissionModule: string;
   /** Zod schemas generated from `fields`. */
@@ -353,3 +372,51 @@ export type ContentUpdateInput<TDefinition> = Prettify<
 
 export type ContentFieldName<TDefinition> = keyof ContentFieldsOf<TDefinition> &
   string;
+
+type FieldNamesOfKind<TDefinition, TKind extends ContentFieldKind> = string &
+  {
+    [
+      K in keyof ContentFieldsOf<TDefinition>
+    ]: ContentFieldsOf<TDefinition>[K] extends {
+      kind: TKind;
+    }
+      ? K
+      : never;
+  }[keyof ContentFieldsOf<TDefinition>];
+
+/**
+ * Kinds the generated filter schema understands. `textarea` and `dateTime` are
+ * absent on purpose: equality on a body of prose or on an exact timestamp is
+ * never what anyone means.
+ */
+export type FilterableContentFieldKind =
+  "boolean" | "enum" | "number" | "relation" | "text" | "user";
+
+export type FilterableContentFieldName<TDefinition> = FieldNamesOfKind<
+  TDefinition,
+  FilterableContentFieldKind
+>;
+
+/** Equality filters accepted by `service.findMany`, one key per filterable field. */
+export type ContentFilterInput<TDefinition> = Partial<{
+  [K in FilterableContentFieldName<TDefinition>]: ContentFieldInput<
+    ContentFieldsOf<TDefinition>[K]
+  >;
+}>;
+
+/**
+ * Columns `service.findMany` may order by.
+ *
+ * A compile-time approximation, and deliberately so: `admin.list.orderableFields`
+ * is stored on the *resolved* (non-generic) admin config, so the configured
+ * array is not recoverable as a type. Every field name is accepted here, and
+ * the narrower runtime allowlist rejects the ones that were not configured.
+ */
+export type ContentOrderableFieldName<TDefinition> =
+  ContentFieldName<TDefinition> | ContentSystemField;
+
+/** Fields with a picker - the only ones `service.options` can enumerate. */
+export type ContentReferenceFieldName<TDefinition> = FieldNamesOfKind<
+  TDefinition,
+  "relation" | "user"
+>;

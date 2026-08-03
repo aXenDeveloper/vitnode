@@ -1,4 +1,5 @@
 import { HTTPException } from "hono/http-exception";
+import { ZodError } from "zod";
 
 /** Postgres error codes the engine translates into a useful HTTP status. */
 const FOREIGN_KEY_VIOLATION = "23503";
@@ -33,6 +34,14 @@ export const rethrowAsHttpError = (
   error: unknown,
   { action }: { action: "create" | "delete" | "update" },
 ): never => {
+  // The service validates its own input, so a payload that slipped past the
+  // route's validator surfaces here. The issue tree stays out of the response:
+  // it names internal field paths, and the route schema already described the
+  // contract in OpenAPI.
+  if (error instanceof ZodError) {
+    throw new HTTPException(400, { message: "Invalid input data." });
+  }
+
   switch (errorCode(error)) {
     case FOREIGN_KEY_VIOLATION:
       throw new HTTPException(action === "delete" ? 409 : 400, {

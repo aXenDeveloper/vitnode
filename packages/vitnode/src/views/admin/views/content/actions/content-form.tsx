@@ -14,10 +14,12 @@ import { useDialog } from "@/components/ui/dialog";
 import {
   buildFormSchemaFromSpec,
   contentFormValuesToPayload,
+  contentTitleFromValues,
 } from "@/content/admin/spec";
 import { usePathname, useRouter } from "@/lib/navigation";
 
 import { ContentField } from "../lib/field-component";
+import { contentErrorKey } from "../lib/mutation-feedback";
 import {
   createContentAction,
   editContentAction,
@@ -48,6 +50,7 @@ export const ContentForm = ({
 }: ContentFormProps) => {
   const t = useTranslations("core.content");
   const tErrors = useTranslations("core.global.errors");
+  const tContentErrors = useTranslations("core.content.errors");
   const { setOpen } = useDialog();
   const { push } = useRouter();
   const pathname = usePathname();
@@ -67,8 +70,14 @@ export const ContentForm = ({
       : await createContentAction(spec.contentTypeId, payload);
 
     if (mutation.error !== undefined) {
+      // A validation failure, a conflicting row and a server fault all need
+      // different words - and none of them may quote the database.
+      const errorKey = contentErrorKey(mutation.status);
+
       toast.error(tErrors("title"), {
-        description: tErrors("internal_server_error"),
+        description: errorKey
+          ? tContentErrors(errorKey)
+          : tErrors("internal_server_error"),
       });
 
       return;
@@ -77,7 +86,11 @@ export const ContentForm = ({
     toast.success(
       t(data ? "edit.success" : "create.success", { name: singular }),
       {
-        description: title,
+        // On create there is no row yet, so the toast names what was typed.
+        description:
+          title ??
+          contentTitleFromValues(spec, values) ??
+          t("create.desc", { name: singular }),
       },
     );
 

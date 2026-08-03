@@ -2,7 +2,6 @@ import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { CONFIG_PLUGIN } from "@/const";
-
 import "@/api/lib/events";
 
 /**

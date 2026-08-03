@@ -177,6 +177,7 @@ describe("buildOrderColumn", () => {
 });
 
 describe("diffChangedFields", () => {
+  const names = ["publishedAt", "status", "title", "views"] as const;
   const current = {
     publishedAt: new Date("2026-01-01T00:00:00.000Z"),
     status: "draft",
@@ -186,25 +187,38 @@ describe("diffChangedFields", () => {
 
   it("reports only the keys that actually moved", () => {
     expect(
-      diffChangedFields(current, { status: "draft", title: "Changed" }),
+      diffChangedFields(names, current, {
+        status: "draft",
+        title: "Changed",
+      }),
     ).toEqual(["title"]);
   });
 
   it("ignores undefined values", () => {
-    expect(diffChangedFields(current, { title: undefined })).toEqual([]);
+    expect(diffChangedFields(names, current, { title: undefined })).toEqual([]);
+  });
+
+  it("never reports a key the content type does not declare", () => {
+    expect(
+      diffChangedFields(names, current, { smuggled: "value", title: "Moved" }),
+    ).toEqual(["title"]);
   });
 
   it("compares dates by instant, not identity", () => {
     expect(
-      diffChangedFields(current, { publishedAt: "2026-01-01T00:00:00.000Z" }),
+      diffChangedFields(names, current, {
+        publishedAt: "2026-01-01T00:00:00.000Z",
+      }),
     ).toEqual([]);
     expect(
-      diffChangedFields(current, { publishedAt: "2026-02-01T00:00:00.000Z" }),
+      diffChangedFields(names, current, {
+        publishedAt: "2026-02-01T00:00:00.000Z",
+      }),
     ).toEqual(["publishedAt"]);
   });
 
   it("treats clearing a date as a change", () => {
-    expect(diffChangedFields(current, { publishedAt: null })).toEqual([
+    expect(diffChangedFields(names, current, { publishedAt: null })).toEqual([
       "publishedAt",
     ]);
   });

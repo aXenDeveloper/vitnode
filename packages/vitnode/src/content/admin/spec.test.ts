@@ -10,6 +10,7 @@ import {
   buildContentFormSpec,
   buildFormSchemaFromSpec,
   contentFormValuesToPayload,
+  contentTitleFromValues,
 } from "./spec";
 
 const labelField = (name: string) => humanizeFieldName(name);
@@ -37,9 +38,33 @@ const specFor = (name: string) => {
   return found;
 };
 
+describe("contentTitleFromValues", () => {
+  it("reads the content type's title field", () => {
+    expect(contentTitleFromValues(formSpec, { title: "Hello" })).toBe("Hello");
+  });
+
+  it("gives up on a blank or missing title", () => {
+    expect(contentTitleFromValues(formSpec, { title: "   " })).toBeUndefined();
+    expect(contentTitleFromValues(formSpec, {})).toBeUndefined();
+  });
+
+  it("gives up when the content type has no title field", () => {
+    expect(
+      contentTitleFromValues(
+        { ...formSpec, titleField: null },
+        { title: "Hello" },
+      ),
+    ).toBeUndefined();
+  });
+});
+
 describe("buildContentFormSpec", () => {
   it("is plain JSON, so it can cross the server/client boundary", () => {
     expect(JSON.parse(JSON.stringify(formSpec))).toEqual(formSpec);
+  });
+
+  it("carries the title field the toasts describe a new row by", () => {
+    expect(formSpec.titleField).toBe("title");
   });
 
   it("covers exactly the declared form fields", () => {

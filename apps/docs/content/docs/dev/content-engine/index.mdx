@@ -19,9 +19,10 @@ export const articleContentType = defineContentType({
   tableName: "example_articles",
   fields: {
     title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    code: field.text({ required: true, maxLength: 100, unique: true }),
     status: field.enum({ values: ["draft", "published"], defaultValue: "draft" }),
     publishedAt: field.dateTime({ nullable: true }),
-    author: field.user({ nullable: true, onDelete: "set null" }),
+    author: field.user(),
   },
   admin: {
     label: { plural: "Articles", singular: "Article" },
@@ -31,10 +32,11 @@ export const articleContentType = defineContentType({
 
 That gives you:
 
-- a dedicated `example_articles` table with a `serial` primary key, timestamps
-  and RLS, migrated by the normal `drizzle-kit` flow
+- a dedicated `example_articles` table with a `serial` primary key, timestamps,
+  indexes and RLS, migrated by the normal `drizzle-kit` flow
 - Zod schemas for create, update, select, filters, ordering and the form
-- a typed service (`findById`, `findMany`, `create`, `update`, `delete`)
+- a typed, self-validating service (`findById`, `findMany`, `create`, `update`,
+  `delete`)
 - five CRUD routes plus a relation-picker route, each behind a staff permission
 - an AdminCP list with search, pagination, sorting, and create/edit/delete
   dialogs - with **no Next.js file to write**

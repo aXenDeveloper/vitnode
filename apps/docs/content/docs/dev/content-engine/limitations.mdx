@@ -21,10 +21,22 @@ other 20%, so you find out here rather than halfway through building.
 | Public frontend routes | The generated API is AdminCP-only, by design |
 | Search indexing | Register a `SearchIndexer` yourself |
 | Automatic field renames | See below |
+| Unique constraints on more than one column | Declare them in `indexes`, not on the field |
+| Uniqueness on non-`text` fields | Declare the index in `indexes` |
+| Range, `IN` or partial-match filters | `filters` is equality only; add a custom route |
+| Partial and expression indexes | Add them in a hand-written migration |
 
 None of these are blocked - they are simply not generated. The service, the
 schemas and the table are all public, so a hand-written route sits next to a
 generated one without friction.
+
+## Ordering is typed one step wider than it runs
+
+`orderBy.column` accepts any field of the content type at compile time, but only
+the fields in `admin.list.orderableFields` at runtime. The resolved admin config
+stores that array as `string[]`, so the exact configured list is not recoverable
+as a type. The runtime allowlist is the strict one, and it throws a
+`ContentEngineError` naming what *is* allowed.
 
 ## Renaming a field drops the column
 

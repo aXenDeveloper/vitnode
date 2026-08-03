@@ -26,8 +26,11 @@ export const CONTENT_TABLE_NAME_PATTERN = /^[a-z][a-z0-9_]*$/;
 /** camelCase, matching `casing: "camelCase"` on the Drizzle client. */
 export const CONTENT_FIELD_NAME_PATTERN = /^[a-z][a-zA-Z0-9]*$/;
 
-/** Postgres truncates identifiers past this length. */
-export const CONTENT_TABLE_NAME_MAX_LENGTH = 63;
+/** Explicit index names follow the same snake_case rule as table names. */
+export const CONTENT_INDEX_NAME_PATTERN = CONTENT_TABLE_NAME_PATTERN;
+
+/** Postgres silently truncates identifiers past this length. */
+export const CONTENT_IDENTIFIER_MAX_LENGTH = 63;
 
 export const CONTENT_TEXT_DEFAULT_LENGTH = 255;
 export const CONTENT_ENUM_DEFAULT_LENGTH = 64;

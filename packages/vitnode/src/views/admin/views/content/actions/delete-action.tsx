@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/tooltip";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 
+import { contentErrorKey } from "../lib/mutation-feedback";
 import { deleteContentAction } from "./mutation-api.server";
 
 export const DeleteContentAction = ({
@@ -34,7 +35,7 @@ export const DeleteContentAction = ({
 }) => {
   const t = useTranslations("core.content.delete");
   const tErrors = useTranslations("core.global.errors");
-  const tConflict = useTranslations("core.content.errors");
+  const tContentErrors = useTranslations("core.content.errors");
   const canDelete = useAdminStaffPermission({
     module: permissionModule,
     permission: CONTENT_PERMISSIONS.delete,
@@ -58,11 +59,14 @@ export const DeleteContentAction = ({
             const mutation = await deleteContentAction(contentTypeId, id);
 
             if (mutation.error !== undefined) {
+              // A restricted delete (409) is a normal, explainable outcome; an
+              // unrecognised status is a server fault and reads as one.
+              const errorKey = contentErrorKey(mutation.status);
+
               toast.error(tErrors("title"), {
-                description:
-                  mutation.status === 409
-                    ? tConflict("conflict")
-                    : tErrors("internal_server_error"),
+                description: errorKey
+                  ? tContentErrors(errorKey)
+                  : tErrors("internal_server_error"),
               });
 
               return;

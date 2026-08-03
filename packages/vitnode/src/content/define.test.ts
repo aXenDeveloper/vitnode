@@ -6,6 +6,8 @@ import {
   testCategoryContentType,
 } from "@/tests/content-fixtures";
 
+import type { ContentUserField } from "./types";
+
 import { defineContentType } from "./define";
 import { ContentEngineError } from "./errors";
 import { field } from "./fields";
@@ -154,6 +156,141 @@ describe("defineContentType", () => {
           },
         }),
       ).toThrow(/longer than the column length 4/);
+    });
+  });
+
+  // `ON DELETE SET NULL` on a NOT NULL column is accepted by Postgres at
+  // CREATE TABLE time and only blows up years later, when someone finally
+  // deletes a referenced row.
+  describe("reference onDelete", () => {
+    const withField = (fieldValue: ContentUserField) =>
+      define({ fields: { owner: fieldValue } });
+
+    it("rejects a non-nullable user field with `set null`", () => {
+      expect(() =>
+        withField(
+          field.user({ nullable: false, onDelete: "set null", required: true }),
+        ),
+      ).toThrow(/not nullable/);
+    });
+
+    it("rejects a non-nullable relation with `set null`", () => {
+      expect(() =>
+        define({
+          fields: {
+            category: field.relation({
+              nullable: false,
+              onDelete: "set null",
+              required: true,
+              target: () => testCategoryContentType,
+            }),
+          },
+        }),
+      ).toThrow(/not nullable/);
+    });
+
+    it("names the field and the content type in the message", () => {
+      expect(() =>
+        withField(
+          field.user({ nullable: false, onDelete: "set null", required: true }),
+        ),
+      ).toThrow(/test\.widget: Field "owner"/);
+    });
+
+    it("accepts a nullable user field with `set null`", () => {
+      expect(() =>
+        withField(field.user({ nullable: true, onDelete: "set null" })),
+      ).not.toThrow();
+    });
+
+    it("accepts a nullable relation with `set null`", () => {
+      expect(() =>
+        define({
+          fields: {
+            category: field.relation({
+              nullable: true,
+              onDelete: "set null",
+              target: () => testCategoryContentType,
+            }),
+          },
+        }),
+      ).not.toThrow();
+    });
+
+    it.each(["cascade", "restrict"] as const)(
+      "accepts a non-nullable relation with %s",
+      onDelete => {
+        expect(() =>
+          define({
+            fields: {
+              category: field.relation({
+                onDelete,
+                required: true,
+                target: () => testCategoryContentType,
+              }),
+            },
+          }),
+        ).not.toThrow();
+      },
+    );
+
+    describe("defaults", () => {
+      it("makes a bare user field nullable with `set null`", () => {
+        const owner = withField(field.user()).fields.owner;
+
+        expect(owner).toMatchObject({ nullable: true, onDelete: "set null" });
+      });
+
+      it("falls back to `restrict` when the user field is not nullable", () => {
+        const owner = withField(field.user({ nullable: false, required: true }))
+          .fields.owner;
+
+        expect(owner).toMatchObject({ nullable: false, onDelete: "restrict" });
+      });
+
+      it("defaults a relation to `restrict`", () => {
+        const definition = define({
+          fields: {
+            category: field.relation({
+              required: true,
+              target: () => testCategoryContentType,
+            }),
+          },
+        });
+
+        expect(definition.fields.category).toMatchObject({
+          nullable: false,
+          onDelete: "restrict",
+        });
+      });
+    });
+  });
+
+  describe("indexes", () => {
+    it("expands the automatic indexes onto the definition", () => {
+      expect(
+        define({
+          fields: { title: field.text({ required: true, unique: true }) },
+        }).indexes,
+      ).toEqual([
+        { name: "test_widgets_title_key", on: ["title"], unique: true },
+        {
+          name: "test_widgets_created_at_idx",
+          on: ["createdAt"],
+          unique: false,
+        },
+        {
+          name: "test_widgets_updated_at_idx",
+          on: ["updatedAt"],
+          unique: false,
+        },
+      ]);
+    });
+
+    it("rejects an index on an unknown column", () => {
+      expect(() => define({ indexes: [{ on: ["nope"] }] })).toThrow(
+        /unknown field "nope"/,
+      );
     });
   });
 

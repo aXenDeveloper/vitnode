@@ -9,7 +9,7 @@ things: a column, a Zod rule, an AdminCP input and a table cell.
 
 | Field | Column | API value | AdminCP input | Sortable | Filterable | Searchable |
 | --- | --- | --- | --- | :-: | :-: | :-: |
-| `text` | `varchar(maxLength ?? 255)` | `string` | `AutoFormInput` | ✓ | ✓ | ✓ |
+| `text` | `varchar(maxLength ?? 255)`, optionally unique | `string` | `AutoFormInput` | ✓ | ✓ | ✓ |
 | `textarea` | `text` | `string` | `AutoFormTextarea` | ✓ | ✗ | ✓ |
 | `number` | `integer` or `double precision` | `number` | number input | ✓ | ✓ | ✗ |
 | `boolean` | `boolean` | `boolean` | `AutoFormSwitch` | ✓ | ✓ | ✗ |
@@ -57,7 +57,30 @@ Only these two may appear in `searchableFields`.
 
 ```ts
 title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+code: field.text({ required: true, maxLength: 100, unique: true }),
 excerpt: field.textarea({ maxLength: 500, nullable: true }),
+```
+
+### unique
+
+`unique: true` on a `text` field adds a real unique index to the table, named
+`<table>_<column>_key` - the suffix Postgres itself uses:
+
+```sql
+CREATE UNIQUE INDEX "example_articles_code_key"
+  ON "example_articles" USING btree ("code");
+```
+
+Postgres, not the descriptor, enforces it. A duplicate comes back from the
+generated routes as **409** with a generic message; the driver's text never
+reaches the client.
+
+Declaring the same column in `indexes` does not produce a second index - see
+[index deduplication](/docs/dev/content-engine/database-and-migrations#indexes).
+For a multi-column unique constraint, declare it there instead:
+
+```ts
+indexes: [{ on: ["category", "code"], unique: true }],
 ```
 
 ## number
@@ -113,8 +136,16 @@ content type's own `can_view` - so an editor does not need permission on the
 whole user list to attribute an article.
 
 ```ts
-author: field.user({ nullable: true, onDelete: "set null" }),
+author: field.user(),
+// same as: field.user({ nullable: true, onDelete: "set null" })
 ```
+
+<Callout type="info" title="The one builder that is nullable by default">
+  Every other `field.*` defaults to `nullable: false`. `field.user()` does not,
+  because accounts get deleted and their content should outlive them - exactly
+  how `blog_posts.authorId` has always been written by hand. Pass
+  `nullable: false` and the `onDelete` default moves to `"restrict"`.
+</Callout>
 
 ## relation
 
@@ -124,7 +155,7 @@ reference each other.
 ```ts
 category: field.relation({
   required: true,
-  onDelete: "restrict",
+  onDelete: "restrict", // the default
   target: () => categoryContentType,
 }),
 ```
@@ -134,6 +165,34 @@ single `LEFT JOIN` on the list query - never one query per row.
 
 `onDelete: "restrict"` means deleting a category that still has articles returns
 **409** with a generic message, not a 500 and not a stack trace.
+
+### The target is checked against the real foreign key
+
+A relation says where it points twice: `target` in the descriptor, and
+`references` in the database module. The engine compares them - reading
+Drizzle's table metadata, not parsing SQL - and refuses to boot if they disagree:
+
+```text
+[Content Engine] example.article: Relation field "category" targets
+"example_categories", but `references.category` points at "example_tags".
+```
+
+The check runs lazily, from inside the foreign-key thunk, so two content types
+that reference each other still load fine.
+
+### onDelete rules
+
+| `onDelete` | Requires | What a delete does |
+| --- | --- | --- |
+| `"restrict"` | – | Refuses; the route answers 409 |
+| `"cascade"` | – | Deletes the referencing rows too |
+| `"set null"` | `nullable: true` | Clears the reference |
+
+<Callout type="warn" title="`set null` needs a nullable column">
+  Postgres accepts `ON DELETE SET NULL` on a `NOT NULL` column at `CREATE TABLE`
+  time and only fails years later, the first time someone deletes a referenced
+  row. `defineContentType` rejects the combination up front instead.
+</Callout>
 
 ## Adding a field kind later
 

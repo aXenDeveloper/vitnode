@@ -18,8 +18,8 @@ createdAt: timestamp not null default now()
 updatedAt: timestamp not null default now()   // refreshed via $onUpdate
 ```
 
-plus one column per field, an index on both timestamps, an index on every
-foreign key, any index you declared - and `ENABLE ROW LEVEL SECURITY`.
+plus one column per field, the indexes described [below](#indexes), and
+`ENABLE ROW LEVEL SECURITY`.
 
 Here is the real migration for the example plugin:
 
@@ -29,6 +29,7 @@ CREATE TABLE "example_articles" (
   "createdAt" timestamp DEFAULT now() NOT NULL,
   "updatedAt" timestamp DEFAULT now() NOT NULL,
   "title" varchar(200) NOT NULL,
+  "code" varchar(100) NOT NULL,
   "excerpt" text,
   "views" integer DEFAULT 0 NOT NULL,
   "featured" boolean DEFAULT false NOT NULL,
@@ -44,11 +45,82 @@ ALTER TABLE "example_articles" ADD CONSTRAINT "example_articles_author_core_user
 ALTER TABLE "example_articles" ADD CONSTRAINT "example_articles_category_example_categories_id_fk"
   FOREIGN KEY ("category") REFERENCES "public"."example_categories"("id")
   ON DELETE restrict ON UPDATE cascade;
-CREATE INDEX "example_articles_status_createdat_idx"
+CREATE INDEX "example_articles_status_created_at_idx"
   ON "example_articles" USING btree ("status","createdAt");
+CREATE UNIQUE INDEX "example_articles_code_key"
+  ON "example_articles" USING btree ("code");
+CREATE INDEX "example_articles_author_idx" ON "example_articles" USING btree ("author");
+CREATE INDEX "example_articles_category_idx" ON "example_articles" USING btree ("category");
+CREATE INDEX "example_articles_created_at_idx" ON "example_articles" USING btree ("createdAt");
+CREATE INDEX "example_articles_updated_at_idx" ON "example_articles" USING btree ("updatedAt");
 ```
 
 Ordinary SQL. Nothing about it says "generated", which is the point.
+
+## Indexes
+
+Four things put an index on a content table, and they are listed here in
+precedence order:
+
+1. anything you declared in `indexes`,
+2. `field.text({ unique: true })`,
+3. every foreign key - `relation` and `user` fields,
+4. `createdAt` and `updatedAt`, which back the default ordering.
+
+```ts
+indexes: [
+  { on: ["status", "createdAt"] },
+  { on: ["category", "code"], unique: true },
+  { name: "example_articles_hot_idx", on: ["featured"] },
+],
+```
+
+### Naming
+
+Generated names are `<table>_<columns>_idx`, or `_key` when the index is
+unique - the suffix Postgres uses for its own unique constraints. Column names
+are converted to snake_case, so `createdAt` becomes `created_at` and the name
+matches the SQL you read in the migration.
+
+Names are capped at Postgres' 63-character limit. When a name would overflow it
+is shortened and a short fingerprint of the *full* name is appended, so two long
+tables that differ only in their last few characters never collide:
+
+```text
+a_very_long_content_table_name_with_a_long_col_idx      // fits, used as is
+a_very_long_content_table_name_wit..._some_column_1x9k4m2 // shortened + hashed
+```
+
+The result is deterministic: the same definition always produces the same
+migration.
+
+### Deduplication
+
+Two index definitions covering **the same columns in the same order** collapse
+into one. The first name wins, and the index is unique if any of them asked for
+uniqueness. In practice:
+
+| You wrote | You get |
+| --- | --- |
+| `field.text({ unique: true })` on `code` | one unique index, `<table>_code_key` |
+| that, plus `{ on: ["code"], unique: true }` | still one index |
+| that, plus `{ name: "my_code_idx", on: ["code"] }` | one index named `my_code_idx`, **and still unique** |
+| `{ on: ["category"] }` on a relation field | one index, yours - not a second copy of the automatic one |
+
+Column order is part of the identity: `(status, createdAt)` and
+`(createdAt, status)` are two different indexes, because they are.
+
+### What is rejected
+
+`defineContentType` throws a `ContentEngineError` for an index that could not
+work, rather than letting Postgres find out later:
+
+- an empty column list, or a column the content type does not declare,
+- the same column listed twice inside one index,
+- two declared indexes on the same columns,
+- a duplicated explicit `name`,
+- an explicit `name` that is not snake_case, or is over 63 characters,
+- two indexes that resolve to the same name.
 
 ## How Drizzle Kit finds it
 
@@ -99,6 +171,38 @@ fail on existing rows, and flipping `number.integer` changes the column type.
 
 Rollback works the way it does everywhere else in VitNode: there are no down
 migrations, so you restore from a backup or write a forward migration.
+
+## Checking it against a real database
+
+The unit tests assert on Drizzle's table metadata, which is fast but cannot prove
+that Postgres accepted the DDL. So the example plugin also carries a smoke test
+that applies the committed migration to a throwaway database and drives the
+service through create, read, list, update and delete - including the unique
+index, the foreign keys and a restricted delete.
+
+It skips itself unless `DATABASE_TEST_URL` is set, and it refuses to run against
+a database whose name does not contain `test`, because it drops the schema first:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+DATABASE_TEST_URL=postgres://root:root@localhost:5432/vitnode_test \
+  bun run --filter @vitnode/example test
+```
+
+```bash tab="pnpm"
+DATABASE_TEST_URL=postgres://root:root@localhost:5432/vitnode_test \
+  pnpm --filter @vitnode/example test
+```
+
+```bash tab="npm"
+DATABASE_TEST_URL=postgres://root:root@localhost:5432/vitnode_test \
+  npm test --workspace @vitnode/example
+```
+
+</Tabs>
+
+CI provides that database as a service container, so every pull request runs it.
 
 ## Row level security
 

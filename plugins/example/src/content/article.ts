@@ -15,6 +15,8 @@ export const articleContentType = defineContentType({
 
   fields: {
     title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    // `unique: true` is all it takes to get a unique index in the migration.
+    code: field.text({ required: true, maxLength: 100, unique: true }),
     excerpt: field.textarea({ maxLength: 500, nullable: true }),
     views: field.number({ integer: true, min: 0, defaultValue: 0 }),
     featured: field.boolean({ defaultValue: false }),
@@ -23,7 +25,7 @@ export const articleContentType = defineContentType({
       defaultValue: "draft",
     }),
     publishedAt: field.dateTime({ nullable: true }),
-    author: field.user({ nullable: true, onDelete: "set null" }),
+    author: field.user(),
     category: field.relation({
       required: true,
       onDelete: "restrict",
@@ -37,9 +39,9 @@ export const articleContentType = defineContentType({
     label: { plural: "Example Articles", singular: "Example Article" },
     titleField: "title",
     list: {
-      columns: ["title", "status", "category", "author", "updatedAt"],
-      searchableFields: ["title", "excerpt"],
-      orderableFields: ["title", "status"],
+      columns: ["title", "code", "status", "category", "author", "updatedAt"],
+      searchableFields: ["title", "code", "excerpt"],
+      orderableFields: ["title", "code", "status"],
       defaultOrderBy: "updatedAt",
       defaultOrder: "desc",
     },

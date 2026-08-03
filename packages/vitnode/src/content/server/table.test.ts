@@ -9,10 +9,12 @@ import {
   testCategoryContentType,
 } from "@/tests/content-fixtures";
 
+import type { AnyContentTypeDefinition } from "../types";
+
 import { defineContentType } from "../define";
 import { ContentEngineError } from "../errors";
 import { field } from "../fields";
-import { createContentTable } from "./table";
+import { assertContentReferences, createContentTable } from "./table";
 
 const categories = createContentTable(testCategoryContentType);
 const articles = createContentTable(testArticleContentType, {
@@ -45,6 +47,12 @@ describe("createContentTable", () => {
 
   it("enables row level security, like every other VitNode table", () => {
     expect(config.enableRLS).toBe(true);
+  });
+
+  it("explains a missing definition instead of throwing a TypeError", () => {
+    expect(() =>
+      createContentTable(undefined as unknown as AnyContentTypeDefinition),
+    ).toThrow(/no definition.*build:plugins.*circular import/s);
   });
 
   describe("system columns", () => {
@@ -141,10 +149,105 @@ describe("createContentTable", () => {
       });
     });
 
+    it("keeps two content types that reference each other safe", () => {
+      // Annotated, not inferred: two definitions that name each other are a
+      // circular inference, and this is the shape a plugin would import anyway.
+      const shelfType: AnyContentTypeDefinition = defineContentType({
+        id: "test.shelf",
+        tableName: "test_shelves",
+        fields: {
+          title: field.text({ required: true }),
+          featured: field.relation({
+            nullable: true,
+            target: () => bookType,
+          }),
+        },
+        admin: { label: { plural: "Shelves", singular: "Shelf" } },
+      });
+      const bookType: AnyContentTypeDefinition = defineContentType({
+        id: "test.book",
+        tableName: "test_books",
+        fields: {
+          title: field.text({ required: true }),
+          shelf: field.relation({ required: true, target: () => shelfType }),
+        },
+        admin: { label: { plural: "Books", singular: "Book" } },
+      });
+
+      const shelves = createContentTable(shelfType, {
+        references: { featured: () => books.id },
+      });
+      const books = createContentTable(bookType, {
+        references: { shelf: () => shelves.id },
+      });
+
+      expect(() => assertContentReferences(shelves)).not.toThrow();
+      expect(() => assertContentReferences(books)).not.toThrow();
+    });
+
+    it("explains a reference thunk that resolved to nothing", () => {
+      // What a half-written `dist` looks like from in here: the target module
+      // has not finished emitting, so the import binding is still empty.
+      const unbuilt = createContentTable(testArticleContentType, {
+        references: { category: () => undefined as never },
+      });
+
+      expect(() => assertContentReferences(unbuilt)).toThrow(
+        /resolved to nothing.*build:plugins/s,
+      );
+    });
+
     it("rejects a relation with no reference thunk", () => {
       expect(() => createContentTable(testArticleContentType)).toThrow(
         ContentEngineError,
       );
+    });
+
+    it("accepts a reference that matches the descriptor's target", () => {
+      expect(() => assertContentReferences(articles)).not.toThrow();
+    });
+
+    it("rejects a reference pointing at a different table", () => {
+      const decoys = createContentTable(
+        defineContentType({
+          id: "test.decoy",
+          tableName: "test_decoys",
+          fields: { title: field.text({ required: true }) },
+          admin: { label: { plural: "Decoys", singular: "Decoy" } },
+        }),
+      );
+
+      // `field.relation({ target })` says `test_categories`; `references` says
+      // `test_decoys`. Nothing but this check stops the two drifting apart.
+      const drifted = createContentTable(testArticleContentType, {
+        references: { category: () => decoys.id },
+      });
+
+      expect(() => assertContentReferences(drifted)).toThrow(
+        /targets "test_categories".*points at "test_decoys"/s,
+      );
+    });
+
+    it("does not resolve any target while the table is being built", () => {
+      const exploding = defineContentType({
+        id: "test.lazy",
+        tableName: "test_lazies",
+        fields: {
+          other: field.relation({
+            required: true,
+            target: () => {
+              throw new Error("evaluated too early");
+            },
+          }),
+        },
+        admin: { label: { plural: "Lazies", singular: "Lazy" } },
+      });
+
+      expect(() =>
+        createContentTable(exploding, {
+          references: { other: () => categories.id },
+        }),
+      ).not.toThrow();
     });
 
     it("rejects a reference for a field that is not a relation", () => {
@@ -172,27 +275,63 @@ describe("createContentTable", () => {
       expect(names).toContain("test_articles_category_idx");
     });
 
-    it("adds declared composite indexes", () => {
-      expect(names).toContain("test_articles_status_createdat_idx");
+    it("adds declared composite indexes, in snake_case", () => {
+      expect(names).toContain("test_articles_status_created_at_idx");
+    });
+
+    it("materialises exactly the resolved index set, nothing more", () => {
+      // Drizzle types an index name as optional; the engine always sets one.
+      const byName = (a: string | undefined, b: string | undefined) =>
+        (a ?? "").localeCompare(b ?? "");
+
+      expect([...names].sort(byName)).toEqual(
+        testArticleContentType.indexes.map(item => item.name).sort(byName),
+      );
     });
 
     it("supports unique declared indexes", () => {
       const table = createContentTable(
         defineContentType({
-          id: "test.slug",
-          tableName: "test_slugs",
-          fields: { slug: field.text({ required: true }) },
+          id: "test.code",
+          tableName: "test_codes",
+          fields: { code: field.text({ required: true }) },
           indexes: [
-            { name: "test_slugs_slug_key", on: ["slug"], unique: true },
+            { name: "test_codes_code_key", on: ["code"], unique: true },
           ],
-          admin: { label: { plural: "Slugs", singular: "Slug" } },
+          admin: { label: { plural: "Codes", singular: "Code" } },
         }),
       );
-      const slugIndex = getTableConfig(table).indexes.find(
-        item => item.config.name === "test_slugs_slug_key",
+      const codeIndex = getTableConfig(table).indexes.find(
+        item => item.config.name === "test_codes_code_key",
       );
 
-      expect(slugIndex?.config.unique).toBe(true);
+      expect(codeIndex?.config.unique).toBe(true);
+    });
+
+    it("turns `field.text({ unique: true })` into a unique index", () => {
+      const table = createContentTable(
+        defineContentType({
+          id: "test.unique",
+          tableName: "test_uniques",
+          fields: {
+            code: field.text({ required: true, unique: true }),
+            label: field.text({ required: true }),
+          },
+          admin: { label: { plural: "Uniques", singular: "Unique" } },
+        }),
+      );
+      const indexes = getTableConfig(table).indexes;
+
+      expect(
+        indexes.find(item => item.config.name === "test_uniques_code_key")
+          ?.config.unique,
+      ).toBe(true);
+      // A plain text field gets nothing at all.
+      expect(indexes.map(item => item.config.name)).toEqual([
+        "test_uniques_code_key",
+        "test_uniques_created_at_idx",
+        "test_uniques_updated_at_idx",
+      ]);
     });
   });
 });

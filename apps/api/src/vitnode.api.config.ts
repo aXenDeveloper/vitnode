@@ -1,8 +1,8 @@
 import { google } from "@ai-sdk/google";
 import { blogApiPlugin } from "@vitnode/blog/config.api";
-import { exampleApiPlugin } from "@vitnode/example/config.api";
 // import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
+import { exampleApiPlugin } from "@vitnode/example/config.api";
 import { NodeCronAdapter } from "@vitnode/node-cron";
 import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
 // import { S3StorageAdapter } from "@vitnode/s3";

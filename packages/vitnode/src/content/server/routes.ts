@@ -3,7 +3,11 @@ import type { Context } from "hono";
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
-import type { AnyContentTypeDefinition } from "../types";
+import type {
+  AnyContentTypeDefinition,
+  ContentFilterInput,
+  ContentReferenceFieldName,
+} from "../types";
 import type { ContentModel } from "./model";
 
 import { buildRoute } from "../../api/lib/route";
@@ -56,6 +60,20 @@ export const buildContentRoutes = <
 
   const listRow = schemas.selectObject.extend({ labels: zodLabels });
 
+  const referenceFieldNames = Object.entries(definition.fields)
+    .filter(
+      ([, fieldValue]) =>
+        fieldValue.kind === "relation" || fieldValue.kind === "user",
+    )
+    .map(([name]) => name);
+
+  // A predicate rather than a cast: the picker route takes its field name from
+  // the URL, so membership has to be proven at runtime anyway.
+  const isReferenceField = (
+    value: string,
+  ): value is ContentReferenceFieldName<TDefinition> =>
+    referenceFieldNames.includes(value);
+
   // `c.req.valid()` cannot infer through a generic route config, so each
   // handler re-reads the validated payload through the very schema that
   // produced it. That keeps the handlers cast-free and correctly typed.
@@ -105,7 +123,11 @@ export const buildContentRoutes = <
         paginationQuery.parse(raw);
       // Parsing through `schemas.filters` strips the pagination keys and
       // coerces each declared filter; anything else never reaches the service.
-      const filters = schemas.filters.parse(raw);
+      // Query strings carry booleans as "true"/"false", which the service
+      // normalises - so the parsed object is exactly its filter input.
+      const filters = schemas.filters.parse(raw) as ContentFilterInput<
+        typeof definition
+      >;
 
       const data = await model.service(c).findMany({
         filters,
@@ -130,13 +152,20 @@ export const buildContentRoutes = <
       },
       responses: {
         200: jsonResponse(zodOptions, `Up to ${CONTENT_OPTIONS_LIMIT} options`),
+        400: { description: "Not a relation or user field" },
       },
     },
     handler: async c => {
       const field = c.req.param("field");
-      const search = c.req.query("search");
+      if (!isReferenceField(field)) {
+        throw new HTTPException(400, {
+          message: "This field has no picker.",
+        });
+      }
 
-      const items = await model.service(c).options(field, search);
+      const items = await model
+        .service(c)
+        .options(field, c.req.query("search"));
 
       return c.json({ items }, 200);
     },

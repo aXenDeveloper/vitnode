@@ -130,17 +130,32 @@ const dateTime = <
   kind: "dateTime",
 });
 
+/**
+ * A reference to a VitNode user.
+ *
+ * The only field builder whose `nullable` defaults to `true`, matching how
+ * every hand-written VitNode table stores an author (`blog_posts.authorId` is
+ * nullable with `ON DELETE SET NULL`): accounts get deleted, and their content
+ * should outlive them rather than disappear or block the deletion. Pass
+ * `nullable: false` and the `onDelete` default moves to `"restrict"`, because
+ * `"set null"` on a `NOT NULL` column is rejected at definition time.
+ */
 const user = <
   TRequired extends boolean = false,
-  TNullable extends boolean = false,
+  TNullable extends boolean = true,
 >(
   args: SharedArgs<TRequired, TNullable> & { onDelete?: ContentOnDelete } = {},
-): ContentUserField<TRequired, TNullable> => ({
-  ...args,
-  ...shared(args),
-  kind: "user",
-  onDelete: args.onDelete ?? "set null",
-});
+): ContentUserField<TRequired, TNullable> => {
+  const nullable = (args.nullable ?? true) as TNullable;
+
+  return {
+    ...args,
+    nullable,
+    required: (args.required ?? false) as TRequired,
+    kind: "user",
+    onDelete: args.onDelete ?? (nullable ? "set null" : "restrict"),
+  };
+};
 
 const relation = <
   TRequired extends boolean = false,

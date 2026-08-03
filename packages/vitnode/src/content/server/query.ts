@@ -122,13 +122,18 @@ const sameValue = (current: unknown, next: unknown): boolean => {
 /**
  * The keys an update actually changes. Values equal to what is already stored
  * are dropped, so `content.*.updated` never reports a field that did not move.
+ *
+ * Driven by the content type's own field names rather than by `Object.keys` on
+ * the patch: that keeps the result typed as the field-name union, and it can
+ * never surface a key the content type does not declare.
  */
-export const diffChangedFields = (
+export const diffChangedFields = <TName extends string>(
+  fieldNames: readonly TName[],
   current: Record<string, unknown>,
   patch: Record<string, unknown>,
-): string[] =>
-  Object.keys(patch).filter(
-    key => patch[key] !== undefined && !sameValue(current[key], patch[key]),
+): TName[] =>
+  fieldNames.filter(
+    name => patch[name] !== undefined && !sameValue(current[name], patch[name]),
   );
 
 /** `dateTime` values arrive as ISO strings and have to become `Date` columns. */

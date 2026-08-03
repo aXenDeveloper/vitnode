@@ -1,9 +1,9 @@
 import { buildModule } from "@vitnode/core/api/lib/module";
 import { buildContentAdminModule } from "@vitnode/core/content/server";
 
+import { CONFIG_PLUGIN } from "@/const";
 import { articleContent } from "@/database/articles";
 import { categoryContent } from "@/database/categories";
-import { CONFIG_PLUGIN } from "@/const";
 
 /**
  * The generated content module is nested here rather than mounted by the

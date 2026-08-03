@@ -3,7 +3,6 @@ import type {
   ContentFieldDescriptor,
   ContentFieldMap,
   ContentFieldsConstraint,
-  ContentIndexConfig,
   ContentIndexInput,
   ContentTypeDefinition,
   ResolvedContentAdminConfig,
@@ -13,11 +12,12 @@ import {
   CONTENT_ENUM_DEFAULT_LENGTH,
   CONTENT_FIELD_NAME_PATTERN,
   CONTENT_ID_PATTERN,
+  CONTENT_IDENTIFIER_MAX_LENGTH,
   CONTENT_SYSTEM_FIELDS,
-  CONTENT_TABLE_NAME_MAX_LENGTH,
   CONTENT_TABLE_NAME_PATTERN,
 } from "./const";
 import { ContentEngineError } from "./errors";
+import { resolveContentIndexes } from "./indexes";
 import { buildContentSchemas } from "./schemas";
 
 const SEARCHABLE_KINDS = new Set<ContentFieldDescriptor["kind"]>([
@@ -94,6 +94,17 @@ const assertField = (
     if (!hasWritableFallback(fieldValue)) {
       throw new ContentEngineError(
         `Field "${name}" is neither required nor nullable, so it needs a default value - otherwise a row could never be inserted.`,
+        { contentTypeId: id },
+      );
+    }
+  }
+
+  if (fieldValue.kind === "relation" || fieldValue.kind === "user") {
+    // Postgres would accept the definition and then fail at delete time, when
+    // it tries to write NULL into a NOT NULL column.
+    if (fieldValue.onDelete === "set null" && !fieldValue.nullable) {
+      throw new ContentEngineError(
+        `Field "${name}" is \`onDelete: "set null"\` but not nullable, so deleting the referenced row would violate NOT NULL. Add \`nullable: true\`, or switch to \`onDelete: "restrict"\` or \`"cascade"\`.`,
         { contentTypeId: id },
       );
     }
@@ -297,9 +308,9 @@ export const defineContentType = <
     );
   }
 
-  if (tableName.length > CONTENT_TABLE_NAME_MAX_LENGTH) {
+  if (tableName.length > CONTENT_IDENTIFIER_MAX_LENGTH) {
     throw new ContentEngineError(
-      `Table name "${tableName}" is longer than the Postgres identifier limit of ${CONTENT_TABLE_NAME_MAX_LENGTH} characters.`,
+      `Table name "${tableName}" is longer than the Postgres identifier limit of ${CONTENT_IDENTIFIER_MAX_LENGTH} characters.`,
       { contentTypeId: id },
     );
   }
@@ -323,11 +334,16 @@ export const defineContentType = <
   }
 
   const knownColumns = new Set([...fieldNames, ...systemFields]);
-  const resolvedIndexes: ContentIndexConfig[] = indexes.map(index => {
-    const on = index.on.map(String);
-    assertKnownColumns(id, "indexes", on, knownColumns);
+  const resolvedIndexes = resolveContentIndexes({
+    contentTypeId: id,
+    declared: indexes.map(index => {
+      const on = index.on.map(String);
+      assertKnownColumns(id, "indexes", on, knownColumns);
 
-    return { ...index, on };
+      return { ...index, on };
+    }),
+    fields: fieldMap,
+    tableName,
   });
 
   const resolvedAdmin = resolveAdmin(id, fieldMap, admin);

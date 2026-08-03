@@ -11,10 +11,8 @@ import type { categoryContentType } from "@/content/category";
  * so `changedFields` narrows to this content type's own field names.
  */
 declare module "@vitnode/core/api/models/events" {
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- members come from the mapped types
   interface VitNodeEvents
-    extends ContentEventsFor<typeof articleContentType>,
+    extends
+      ContentEventsFor<typeof articleContentType>,
       ContentEventsFor<typeof categoryContentType> {}
 }
-
-export {};

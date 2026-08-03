@@ -1,10 +1,10 @@
 import { blogApiPlugin } from "@vitnode/blog/config.api";
-import { exampleApiPlugin } from "@vitnode/example/config.api";
 import { DiscordSSOApiPlugin } from "@vitnode/core/api/adapters/sso/discord";
 // import { ResendEmailAdapter } from "@vitnode/resend";
 import { FacebookSSOApiPlugin } from "@vitnode/core/api/adapters/sso/facebook";
 import { GoogleSSOApiPlugin } from "@vitnode/core/api/adapters/sso/google";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
+import { exampleApiPlugin } from "@vitnode/example/config.api";
 import { NodeCronAdapter } from "@vitnode/node-cron";
 import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
 // import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";

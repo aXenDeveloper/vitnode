@@ -4,6 +4,11 @@
   "tasks": {
     "test": {
       "dependsOn": ["^test"],
+      "cache": false,
+      "env": ["DATABASE_TEST_URL"]
+    },
+    "test:types": {
+      "dependsOn": ["^test:types"],
       "cache": false
     },
     "docker:dev": {

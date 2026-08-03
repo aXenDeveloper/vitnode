@@ -7,6 +7,8 @@ export {
   buildContentColumnSpec,
   buildContentFormSpec,
   buildFormSchemaFromSpec,
+  contentFormValuesToPayload,
+  contentTitleFromValues,
 } from "./admin/spec";
 export type {
   ContentColumnSpec,
@@ -43,6 +45,7 @@ export type {
   ContentUpdatedPayload,
 } from "./events";
 export { field } from "./fields";
+export { contentIndexName, toSnakeCase } from "./indexes";
 export {
   contentAdminHref,
   contentPermissionEntries,
@@ -71,11 +74,14 @@ export type {
   ContentFieldMap,
   ContentFieldName,
   ContentFieldValue,
+  ContentFilterInput,
   ContentIndexConfig,
   ContentIndexInput,
   ContentNumberField,
   ContentOnDelete,
+  ContentOrderableFieldName,
   ContentReferenceField,
+  ContentReferenceFieldName,
   ContentRelationField,
   ContentSelect,
   ContentSystemField,
@@ -84,5 +90,8 @@ export type {
   ContentTypeDefinition,
   ContentUpdateInput,
   ContentUserField,
+  FilterableContentFieldKind,
+  FilterableContentFieldName,
   ResolvedContentAdminConfig,
+  ResolvedContentIndex,
 } from "./types";

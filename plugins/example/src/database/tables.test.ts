@@ -1,0 +1,155 @@
+import { getTableName } from "drizzle-orm";
+import { getTableConfig } from "drizzle-orm/pg-core";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+
+import { example_articles } from "./articles";
+import { example_categories } from "./categories";
+
+const articles = getTableConfig(example_articles);
+const categories = getTableConfig(example_categories);
+
+const indexNames = (config: typeof articles) =>
+  config.indexes.map(item => item.config.name);
+
+// Drizzle types an index name as optional; the engine always sets one.
+const byName = (a: string | undefined, b: string | undefined) =>
+  (a ?? "").localeCompare(b ?? "");
+
+const uniqueIndexNames = (config: typeof articles) =>
+  config.indexes
+    .filter(item => item.config.unique)
+    .map(item => item.config.name);
+
+/**
+ * The committed migration for the docs app, which is the one CI applies. It is
+ * read as text on purpose: this is the artefact a fresh database actually runs,
+ * so asserting on the Drizzle objects alone would not prove the DDL landed.
+ */
+const migration = readFileSync(
+  resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    "../../../../apps/docs/migrations/0022_add_example_content.sql",
+  ),
+  "utf8",
+);
+
+describe("example_articles", () => {
+  it("is a real table with the expected name", () => {
+    expect(getTableName(example_articles)).toBe("example_articles");
+  });
+
+  it("enables row level security", () => {
+    expect(articles.enableRLS).toBe(true);
+  });
+
+  it("exercises every MVP 1 field kind", () => {
+    const types = Object.fromEntries(
+      articles.columns.map(column => [column.name, column.getSQLType()]),
+    );
+
+    expect(types).toMatchObject({
+      author: "integer", // user
+      category: "integer", // relation
+      code: "varchar(100)", // text, unique
+      excerpt: "text", // textarea
+      featured: "boolean",
+      publishedAt: "timestamp", // dateTime
+      status: "varchar(64)", // enum
+      title: "varchar(200)", // text
+      views: "integer", // number
+    });
+  });
+
+  it("gives the unique text field a unique index, and nothing else one", () => {
+    expect(uniqueIndexNames(articles)).toEqual(["example_articles_code_key"]);
+  });
+
+  it("indexes the foreign keys, the timestamps and the declared composite", () => {
+    expect([...indexNames(articles)].sort(byName)).toEqual([
+      "example_articles_author_idx",
+      "example_articles_category_idx",
+      "example_articles_code_key",
+      "example_articles_created_at_idx",
+      "example_articles_status_created_at_idx",
+      "example_articles_updated_at_idx",
+    ]);
+  });
+
+  it("points its references at the right tables", () => {
+    const references = articles.foreignKeys.map(key => {
+      const reference = key.reference();
+
+      return {
+        column: reference.columns[0].name,
+        onDelete: key.onDelete,
+        table: getTableName(reference.foreignTable),
+      };
+    });
+
+    expect(references).toContainEqual({
+      column: "author",
+      onDelete: "set null",
+      table: "core_users",
+    });
+    expect(references).toContainEqual({
+      column: "category",
+      onDelete: "restrict",
+      table: "example_categories",
+    });
+  });
+});
+
+describe("example_categories", () => {
+  it("is a real table with row level security", () => {
+    expect(getTableName(example_categories)).toBe("example_categories");
+    expect(categories.enableRLS).toBe(true);
+  });
+
+  it("has no unique indexes of its own", () => {
+    expect(uniqueIndexNames(categories)).toEqual([]);
+  });
+});
+
+describe("the generated migration", () => {
+  it("creates both tables with row level security", () => {
+    expect(migration).toContain('CREATE TABLE "example_articles"');
+    expect(migration).toContain('CREATE TABLE "example_categories"');
+    expect(migration).toContain(
+      'ALTER TABLE "example_articles" ENABLE ROW LEVEL SECURITY',
+    );
+  });
+
+  it("creates the unique index for `field.text({ unique: true })`", () => {
+    expect(migration).toContain(
+      'CREATE UNIQUE INDEX "example_articles_code_key" ON "example_articles" USING btree ("code")',
+    );
+  });
+
+  it("creates exactly one index per resolved definition entry", () => {
+    const created = [
+      ...migration.matchAll(/CREATE (?:UNIQUE )?INDEX "([^"]+)"/g),
+    ]
+      .map(match => match[1])
+      .filter(name => name.startsWith("example_"));
+
+    expect([...created].sort(byName)).toEqual(
+      [...indexNames(articles), ...indexNames(categories)].sort(byName),
+    );
+  });
+
+  it("names the composite index in snake_case", () => {
+    expect(migration).toContain('"example_articles_status_created_at_idx"');
+  });
+
+  it("wires the foreign keys with the declared onDelete behaviour", () => {
+    expect(migration).toContain(
+      'REFERENCES "public"."core_users"("id") ON DELETE set null',
+    );
+    expect(migration).toContain(
+      'REFERENCES "public"."example_categories"("id") ON DELETE restrict',
+    );
+  });
+});

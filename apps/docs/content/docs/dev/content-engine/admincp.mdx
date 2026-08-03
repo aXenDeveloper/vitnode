@@ -32,9 +32,49 @@ You get a nav item, a breadcrumb, and a screen at:
 - **Delete** - a confirmation dialog
 - **Empty, loading and error states** - out of the box
 
+## What "lazy-loaded on open" actually means
+
+The dialog body is only in the tree while that dialog is open. A 25-row table
+renders 25 edit buttons and, at most, **one** form - Base UI's portal mounts the
+body on open and unmounts it on close, so no other row's form, and none of its
+`react-hook-form` state, exists.
+
+The form itself is one `next/dynamic` boundary shared by the create and the edit
+dialog, because they render the same component. That is worth about 465 KB of
+chunks, so it is downloaded once:
+
+- the **first** dialog you open shows the `<Loader />` while those chunks arrive,
+- every dialog after that opens instantly, with no loader.
+
+<Callout type="info" title="A missing loader is the good outcome">
+  No spinner on the second dialog means the code was already there. Splitting
+  create and edit into separate lazy modules would either download the same form
+  twice or land back on a shared chunk anyway - so the loader would be a few
+  milliseconds of theatre either way.
+</Callout>
+
+## Mutation feedback
+
 Every mutation closes its dialog, refreshes the list and raises a `sonner` toast
-with a description. Failures raise an error toast instead; a delete blocked by a
-foreign key gets its own message rather than a generic one.
+with a description. On create there is no row to name yet, so the description is
+the title that was just typed.
+
+Failures get an error toast, and the description depends on what actually went
+wrong - a delete blocked by a foreign key does not read like a crashed server:
+
+| Status | The person is told |
+| --- | --- |
+| 400 | some of these values are not valid |
+| 403 | you do not have permission to do this |
+| 404 | this record no longer exists |
+| 409 | this record is still referenced by other content |
+| anything else | the generic server error |
+
+<Callout type="info" title="The database never speaks to the user">
+  The generated routes translate Postgres error codes into a status and a generic
+  sentence. Constraint names, column names and values stay on the server; the
+  detail goes to `core_logs`.
+</Callout>
 
 ## One route, every content type
 

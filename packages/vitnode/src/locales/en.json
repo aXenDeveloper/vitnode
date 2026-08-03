@@ -436,8 +436,10 @@
         "can_delete": "Delete"
       },
       "errors": {
-        "not_found": "This content type is not registered.",
-        "conflict": "This record is still referenced by other content."
+        "not_found": "This record no longer exists. Refresh the list and try again.",
+        "validation": "Some of these values are not valid. Check the form and try again.",
+        "conflict": "This record is still referenced by other content.",
+        "forbidden": "You do not have permission to do this."
       }
     }
   },

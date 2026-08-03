@@ -2,14 +2,19 @@
 import type { Context } from "hono";
 
 import { describe, expect, it } from "vitest";
+import { ZodError } from "zod";
 
 import {
   testArticleContentType,
   testCategoryContentType,
 } from "@/tests/content-fixtures";
 
+import type { ContentCreateInput, ContentUpdateInput } from "../types";
+
 import { ContentEngineError } from "../errors";
 import { createContentModel } from "./model";
+
+type ArticleType = typeof testArticleContentType;
 
 const categories = createContentModel(testCategoryContentType);
 const articles = createContentModel(testArticleContentType, {
@@ -88,9 +93,14 @@ describe("content service", () => {
       });
 
       expect(row).toEqual({ id: 1, title: "Hello" });
+      // The declared defaults come from `schemas.create`, and match the column
+      // defaults exactly - both are generated from the same descriptor.
       expect(opsOf(calls, "values")[0]).toEqual({
         category: 2,
+        featured: false,
+        status: "draft",
         title: "Hello",
+        views: 0,
       });
     });
 
@@ -106,6 +116,129 @@ describe("content service", () => {
       const values = opsOf(calls, "values")[0] as { publishedAt: Date };
       expect(values.publishedAt).toBeInstanceOf(Date);
       expect(values.publishedAt.toISOString()).toBe("2026-08-02T10:00:00.000Z");
+    });
+  });
+
+  // The generated routes validate too, but the service is a public API: a
+  // plugin can call it straight from its own route, and the Content Engine's
+  // invariants have to survive that.
+  describe("create validation", () => {
+    const create = (values: Record<string, unknown>) => {
+      const { c, calls } = createDbMock([[{ id: 1 }]]);
+      // Deliberately ill-typed input: these tests exist to prove the *runtime*
+      // guard holds for callers that reached the service some other way.
+      const run = articles
+        .service(c)
+        .create(values as unknown as ContentCreateInput<ArticleType>);
+
+      return { calls, run };
+    };
+
+    const rejects = async (values: Record<string, unknown>) => {
+      const { calls, run } = create(values);
+
+      await expect(run).rejects.toBeInstanceOf(ZodError);
+
+      return calls;
+    };
+
+    it("rejects text shorter than minLength", async () => {
+      await rejects({ category: 1, title: "no" });
+    });
+
+    it("rejects text longer than maxLength", async () => {
+      await rejects({ category: 1, title: "x".repeat(201) });
+    });
+
+    it("rejects a value outside the enum", async () => {
+      await rejects({ category: 1, status: "sideways", title: "Hello" });
+    });
+
+    it("rejects a number below min", async () => {
+      await rejects({ category: 1, title: "Hello", views: -1 });
+    });
+
+    it("rejects an unknown field", async () => {
+      await rejects({ category: 1, smuggled: true, title: "Hello" });
+    });
+
+    it("rejects a system field", async () => {
+      await rejects({ category: 1, id: 99, title: "Hello" });
+    });
+
+    it("rejects a relation id that is not a positive integer", async () => {
+      await rejects({ category: 0, title: "Hello" });
+      await rejects({ category: 1.5, title: "Hello" });
+    });
+
+    it("rejects a malformed ISO date", async () => {
+      await rejects({
+        category: 1,
+        publishedAt: "the day before yesterday",
+        title: "Hello",
+      });
+    });
+
+    it("never touches the database after a validation failure", async () => {
+      const calls = await rejects({ category: 1, title: "no" });
+
+      expect(calls).toHaveLength(0);
+    });
+
+    it("accepts a valid ISO date and stores it as a Date", async () => {
+      const { calls, run } = create({
+        category: 1,
+        publishedAt: "2026-08-02T10:00:00.000Z",
+        title: "Hello",
+      });
+
+      await run;
+
+      const values = opsOf(calls, "values")[0] as { publishedAt: Date };
+      expect(values.publishedAt).toBeInstanceOf(Date);
+    });
+  });
+
+  describe("update validation", () => {
+    const rejects = async (values: Record<string, unknown>) => {
+      const { c, calls } = createDbMock([[{ id: 7, title: "Hello" }]]);
+
+      await expect(
+        articles
+          .service(c)
+          .update(7, values as unknown as ContentUpdateInput<ArticleType>),
+      ).rejects.toBeInstanceOf(ZodError);
+
+      return calls;
+    };
+
+    it("rejects an empty patch", async () => {
+      await rejects({});
+    });
+
+    it("rejects an unknown field", async () => {
+      await rejects({ smuggled: true });
+    });
+
+    it("rejects an invalid value", async () => {
+      await rejects({ status: "sideways" });
+    });
+
+    it("validates before it reads the row", async () => {
+      const calls = await rejects({ title: "no" });
+
+      expect(calls).toHaveLength(0);
+    });
+
+    it("does not re-apply create defaults", async () => {
+      const { c, calls } = createDbMock([
+        [{ id: 7, status: "published", title: "Hello", views: 12 }],
+        [{ id: 7, title: "Changed" }],
+      ]);
+
+      await articles.service(c).update(7, { title: "Changed" });
+
+      expect(opsOf(calls, "set")[0]).toEqual({ title: "Changed" });
     });
   });
 
@@ -230,7 +363,11 @@ describe("content service", () => {
       const { c } = createDbMock(page([]));
 
       await expect(
-        articles.service(c).findMany({ filters: { nope: 1 } }),
+        articles.service(c).findMany({
+          // @ts-expect-error - the typed filter map has no `nope`; the runtime
+          // allowlist is what catches it when the keys come off a query string.
+          filters: { nope: 1 },
+        }),
       ).rejects.toThrow(ContentEngineError);
     });
   });
@@ -255,9 +392,11 @@ describe("content service", () => {
     it("rejects a field that is not a relation or user", async () => {
       const { c } = createDbMock([[]]);
 
-      await expect(articles.service(c).options("title")).rejects.toThrow(
-        /not a relation or user field/,
-      );
+      await expect(
+        // @ts-expect-error - `title` has no picker; the runtime guard backs the
+        // type up for the route, which reads the field name out of the URL.
+        articles.service(c).options("title"),
+      ).rejects.toThrow(/not a relation or user field/);
     });
   });
 

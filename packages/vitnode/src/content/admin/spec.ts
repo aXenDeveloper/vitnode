@@ -37,6 +37,8 @@ export interface ContentFormSpec {
   contentTypeId: string;
   fields: ContentFormFieldSpec[];
   pluginId: string;
+  /** Field the toast describes a newly created row by, if there is one. */
+  titleField: null | string;
 }
 
 export interface ContentColumnSpec {
@@ -77,6 +79,7 @@ export const buildContentFormSpec = ({
   return {
     contentTypeId: definition.id,
     pluginId,
+    titleField: definition.admin.titleField,
     fields: definition.admin.form.fields.map(name => {
       const fieldValue = fields[name];
       const base: ContentFormFieldSpec = {
@@ -208,13 +211,6 @@ const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
 };
 
 /**
- * Rebuilds the AutoForm schema on the client.
- *
- * Mirrors the server's create schema, with one difference: existing values are
- * folded in as Zod defaults so `AutoForm`'s `getDefaults` prefills the edit
- * form without a separate `defaultValues` path.
- */
-/**
  * Field kinds whose input renders an empty string when it holds no value. Left
  * as-is, `""` fails ISO-date and identifier validation and the form can never
  * become valid.
@@ -236,6 +232,21 @@ const toInitialValue = (
   const id = typeof current === "number" ? current.toString() : "";
 
   return { label: labels[fieldSpec.name] ?? id, value: id };
+};
+
+/**
+ * The row's own title, for a toast that says what was just written. Falls back
+ * to nothing when the content type declares no title field.
+ */
+export const contentTitleFromValues = (
+  spec: ContentFormSpec,
+  values: Record<string, unknown>,
+): string | undefined => {
+  if (spec.titleField === null) return undefined;
+
+  const value = values[spec.titleField];
+
+  return typeof value === "string" && value.trim() !== "" ? value : undefined;
 };
 
 /** Turns validated form values into the payload the generated API accepts. */

@@ -36,6 +36,12 @@ System columns are absent from the shape, so `id`, `createdAt` and `updatedAt`
 can never be set from a request. Declared defaults are applied here, which is
 what keeps Zod and the column default in step.
 
+<Callout type="info" title="The service runs this for you">
+  `service.create()` parses against this very schema before it writes, so the
+  same rules hold whether the call came over HTTP or from your own route. See
+  [the service API](/docs/dev/content-engine/service#it-is-safe-to-call-directly).
+</Callout>
+
 ## update
 
 Every field optional, still strict, and **never** re-applies create defaults:
@@ -44,6 +50,9 @@ Every field optional, still strict, and **never** re-applies create defaults:
 schemas.update.parse({ title: "New" });  // → { title: "New" }  and nothing else
 schemas.update.parse({});                // throws: at least one field required
 ```
+
+`service.update()` parses against it before it even reads the row, so an invalid
+patch costs no query at all.
 
 ## select
 

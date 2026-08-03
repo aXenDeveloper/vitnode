@@ -10,9 +10,14 @@ import type { Context } from "hono";
 import { and, eq } from "drizzle-orm";
 import { alias, getTableConfig } from "drizzle-orm/pg-core";
 
+import type { ContentSchemas } from "../schemas";
 import type {
   AnyContentTypeDefinition,
   ContentCreateInput,
+  ContentFieldName,
+  ContentFilterInput,
+  ContentOrderableFieldName,
+  ContentReferenceFieldName,
   ContentSelect,
   ContentUpdateInput,
 } from "../types";
@@ -45,10 +50,13 @@ export interface ContentPageInfo {
   totalCount: number;
 }
 
-export interface ContentFindManyArgs {
-  /** Equality filters, keyed by field name. */
-  filters?: Record<string, unknown>;
-  orderBy?: { column?: string; order?: "asc" | "desc" };
+export interface ContentFindManyArgs<TDefinition> {
+  /** Equality filters, keyed by filterable field name. */
+  filters?: ContentFilterInput<TDefinition>;
+  orderBy?: {
+    column?: ContentOrderableFieldName<TDefinition>;
+    order?: "asc" | "desc";
+  };
   /** Raw pagination query (`cursor`, `first`, `last`, `search`). */
   query?: { cursor?: string; first?: string; last?: string; search?: string };
   where?: SQL;
@@ -63,11 +71,12 @@ export interface ContentServiceOptions {
 }
 
 export interface ContentUpdateResult<TDefinition> {
-  changedFields: string[];
+  changedFields: ContentFieldName<TDefinition>[];
   row: ContentSelect<TDefinition>;
 }
 
 export interface ContentService<TDefinition> {
+  /** Throws a `ZodError` if `values` does not satisfy `schemas.create`. */
   create: (
     values: ContentCreateInput<TDefinition>,
     options?: ContentServiceOptions,
@@ -80,15 +89,16 @@ export interface ContentService<TDefinition> {
     id: number,
     options?: ContentServiceOptions,
   ) => Promise<ContentSelect<TDefinition> | null>;
-  findMany: (args?: ContentFindManyArgs) => Promise<{
+  findMany: (args?: ContentFindManyArgs<TDefinition>) => Promise<{
     edges: ContentListRow<TDefinition>[];
     pageInfo: ContentPageInfo;
   }>;
   /** Options for a `user` or `relation` picker, filtered by a search term. */
   options: (
-    field: string,
+    field: ContentReferenceFieldName<TDefinition>,
     search?: string,
   ) => Promise<{ label: string; value: number }[]>;
+  /** Throws a `ZodError` if `values` does not satisfy `schemas.update`. */
   update: (
     id: number,
     values: ContentUpdateInput<TDefinition>,
@@ -179,9 +189,10 @@ const resolveReferenceTargets = (
 /**
  * A typed repository bound to one request's database handle.
  *
- * Deliberately thin: it owns column allowlisting, pagination and label joins,
- * and leaves everything else to Drizzle. `model.table` stays public so advanced
- * plugin code can drop down to the query builder at any point.
+ * Deliberately thin: it owns validation, column allowlisting, pagination and
+ * label joins, and leaves everything else to Drizzle. `model.table` stays
+ * public so advanced plugin code can drop down to the query builder at any
+ * point.
  */
 export const createContentService = <
   TDefinition extends AnyContentTypeDefinition,
@@ -189,11 +200,13 @@ export const createContentService = <
   c,
   columns,
   definition,
+  schemas,
   table,
 }: {
   c: Context;
   columns: Record<string, PgColumn>;
   definition: TDefinition;
+  schemas: ContentSchemas<TDefinition>;
   table: PgTableWithColumns<TableConfig>;
 }): ContentService<TDefinition> => {
   const fields = definition.fields;
@@ -204,12 +217,11 @@ export const createContentService = <
     ColumnBaseConfig<"number", string>
   >;
   const orderable = orderableColumns(definition);
-  const ownColumnNames = [
-    "id",
-    "createdAt",
-    "updatedAt",
-    ...Object.keys(fields),
-  ];
+  // `Object.keys` erases the key union that `ContentFieldName` recovers. The
+  // object is the very field map that type is derived from, so this restates
+  // what TypeScript already knows rather than asserting anything new.
+  const fieldNames = Object.keys(fields) as ContentFieldName<TDefinition>[];
+  const ownColumnNames = ["id", "createdAt", "updatedAt", ...fieldNames];
   const references = resolveReferenceTargets(definition, table, columns);
   const searchColumns = definition.admin.list.searchableFields.map(
     name => columns[name],
@@ -256,9 +268,14 @@ export const createContentService = <
 
   return {
     create: async (values, options) => {
+      // Generated routes validate too, but a plugin can call the service
+      // directly - and then this is the only thing standing between an
+      // untrusted object and Drizzle. Only the parsed result is written.
+      const parsed = schemas.create.parse(values) as Record<string, unknown>;
+
       const [row] = await db(options)
         .insert(table)
-        .values(toColumnValues(fields, values as Record<string, unknown>))
+        .values(toColumnValues(fields, parsed))
         .returning(ownSelection());
 
       return toRow(row);
@@ -282,7 +299,14 @@ export const createContentService = <
     findMany: async ({ filters = {}, orderBy, query = {}, where } = {}) => {
       const conditions = [
         where,
-        buildFilterCondition({ columns, contentTypeId, fields, filters }),
+        buildFilterCondition({
+          columns,
+          contentTypeId,
+          fields,
+          // Typed per field for callers; the allowlist check inside stays as
+          // defence in depth for anything that arrives from a query string.
+          filters: filters,
+        }),
         buildSearchCondition(searchColumns, query.search),
       ].filter((item): item is SQL => item !== undefined);
 
@@ -369,12 +393,15 @@ export const createContentService = <
     },
 
     update: async (id, values, options) => {
+      // Parsed before the row is even read, so an invalid payload never costs a
+      // query - and never reaches Drizzle.
+      const patch = schemas.update.parse(values) as Record<string, unknown>;
+
       const database = db(options);
       const current = await readOne(id, database);
       if (!current) return null;
 
-      const patch = values as Record<string, unknown>;
-      const changedFields = diffChangedFields(current, patch);
+      const changedFields = diffChangedFields(fieldNames, current, patch);
 
       // Nothing actually moved - skip the write so `updatedAt` and the
       // `content.*.updated` event both stay honest.

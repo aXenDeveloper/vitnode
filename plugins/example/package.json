@@ -17,7 +17,9 @@
     "build:plugins": "vitnode build",
     "dev": "vitnode dev",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@hono/zod-openapi": "^1.5.1",
@@ -41,7 +43,9 @@
     "@types/react-dom": "^19.2.3",
     "@vitnode/config": "workspace:*",
     "eslint": "^10.7.0",
+    "postgres": "^3.4.9",
     "tsc-alias": "^1.9.1",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
   }
 }

@@ -4,6 +4,7 @@ import type { ContentModel } from "./model";
 
 import { buildModule } from "../../api/lib/module";
 import { buildContentRoutes } from "./routes";
+import { assertContentReferences } from "./table";
 
 /**
  * Builds the generated CRUD module for a plugin's content types.
@@ -32,13 +33,18 @@ export const buildContentAdminModule = <P extends string>({
   contentTypes: ContentModel<AnyContentTypeDefinition>[];
   pluginId: P;
 }): BuildModuleReturn<P, "content"> => {
-  const modules = contentTypes.map(model =>
-    buildModule({
+  const modules = contentTypes.map(model => {
+    // Every `src/database/*.ts` has loaded by the time this module is built, so
+    // it is the first safe moment to check that each relation points at the
+    // table its descriptor promised.
+    assertContentReferences(model.table);
+
+    return buildModule({
       pluginId,
       name: model.definition.permissionModule,
       routes: buildContentRoutes(model, { pluginId }),
-    }),
-  );
+    });
+  });
 
   return buildModule({
     pluginId,

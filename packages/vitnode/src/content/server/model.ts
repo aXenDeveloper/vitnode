@@ -51,21 +51,23 @@ export const createContentModel = <
 ): ContentModel<TDefinition> => {
   const table = createContentTable(definition, options);
   const columns = contentTableColumns(definition, table);
+  // `ContentTypeDefinition` declares `schemas` against its own type parameters,
+  // and reading it through the `AnyContentTypeDefinition` constraint widens the
+  // row types back to the base field map. The object was built from this very
+  // definition, so this restores what TypeScript lost rather than asserting
+  // anything new.
+  const schemas: ContentSchemas<TDefinition> = definition.schemas;
 
   return {
     columns,
     definition,
-    // `ContentTypeDefinition` declares `schemas` against its own type
-    // parameters, and reading it through the `AnyContentTypeDefinition`
-    // constraint widens the row types back to the base field map. The object
-    // was built from this very definition, so this restores what TypeScript
-    // lost rather than asserting anything new.
-    schemas: definition.schemas,
+    schemas,
     service: (c: Context) =>
       createContentService({
         c,
         columns,
         definition,
+        schemas,
         table,
       }),
     table,
