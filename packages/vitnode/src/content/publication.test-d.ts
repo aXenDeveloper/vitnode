@@ -1,5 +1,7 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
+import type { testCategoryContentType } from "@/tests/content-fixtures";
+
 import {
   testArticleContentType,
   testPostContentType,
@@ -8,6 +10,8 @@ import {
 import type {
   AnyContentTypeDefinition,
   ContentCreateInput,
+  ContentFilterInput,
+  ContentOrderableFieldName,
   ContentPublicationStatus,
   ContentSelect,
   ContentUpdateInput,
@@ -18,6 +22,7 @@ import { field } from "./fields";
 
 type Post = typeof testPostContentType;
 type Article = typeof testArticleContentType;
+type Category = typeof testCategoryContentType;
 
 describe("publication", () => {
   // The whole Stage 2 type design rests on this: adding type parameters to
@@ -54,6 +59,11 @@ describe("publication", () => {
       expectTypeOf<
         ContentSelect<Post>["status"]
       >().toEqualTypeOf<ContentPublicationStatus>();
+      // Spelled out as well as via the alias: the literal pair is the contract
+      // the filter schema, the badge and the SQL default all depend on.
+      expectTypeOf<ContentSelect<Post>["status"]>().toEqualTypeOf<
+        "draft" | "published"
+      >();
       expectTypeOf<
         ContentSelect<Post>["publishedAt"]
       >().toEqualTypeOf<Date | null>();
@@ -158,6 +168,49 @@ describe("publication", () => {
           list: { columns: ["status", "title"] },
         },
       });
+    });
+  });
+
+  // The call-site versions of these live in `server/service.test-d.ts`; these
+  // pin the type aliases themselves, which is what the generated routes and any
+  // hand-written query build on.
+  describe("derived type aliases", () => {
+    it("adds the generated columns to the orderable union", () => {
+      expectTypeOf<ContentOrderableFieldName<Post>>().toEqualTypeOf<
+        | "author"
+        | "category"
+        | "createdAt"
+        | "excerpt"
+        | "id"
+        | "publishedAt"
+        | "status"
+        | "title"
+        | "updatedAt"
+        | "views"
+      >();
+    });
+
+    it("leaves the union alone without publication", () => {
+      expectTypeOf<ContentOrderableFieldName<Category>>().toEqualTypeOf<
+        "createdAt" | "id" | "title" | "updatedAt"
+      >();
+    });
+
+    it("adds a status filter typed to the generated pair", () => {
+      expectTypeOf<ContentFilterInput<Post>["status"]>().toEqualTypeOf<
+        "draft" | "published" | undefined
+      >();
+    });
+
+    it("adds no status filter without publication", () => {
+      expectTypeOf<ContentFilterInput<Category>>().not.toHaveProperty("status");
+    });
+
+    it("keeps a Stage 1 content type's own status filter literal", () => {
+      // Declared as a three-value enum, and untouched by publication.
+      expectTypeOf<ContentFilterInput<Article>["status"]>().toEqualTypeOf<
+        "archived" | "draft" | "published" | undefined
+      >();
     });
   });
 });

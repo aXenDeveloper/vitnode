@@ -7,6 +7,8 @@ import type { ContentFieldDescriptor, ContentFieldMap } from "../types";
 
 import {
   CONTENT_FILTERABLE_FIELD_KINDS,
+  CONTENT_PUBLICATION_STATUSES,
+  isContentPublicationStatus,
   isFilterableFieldKind,
 } from "../const";
 import { ContentEngineError } from "../errors";
@@ -72,9 +74,19 @@ export const buildFilterCondition = ({
   for (const [name, raw] of Object.entries(filters)) {
     if (raw === undefined) continue;
 
-    // `status` is a generated column, not a declared field, so it has no
-    // descriptor to check - the schema's `z.enum` already narrowed the value.
+    // `status` is a generated column, not a declared field, so there is no
+    // descriptor to drive the checks below. The generated schema's `z.enum`
+    // already narrowed it on the HTTP path; this re-checks the value for the
+    // direct-service path, where a cast or a runtime-built object could put
+    // anything here.
     if (publication && name === "status" && columns.status) {
+      if (!isContentPublicationStatus(raw)) {
+        throw new ContentEngineError(
+          `Invalid publication status ${JSON.stringify(raw)}. Allowed values: ${CONTENT_PUBLICATION_STATUSES.join(", ")}.`,
+          { contentTypeId },
+        );
+      }
+
       conditions.push(eq(columns.status, raw));
       continue;
     }

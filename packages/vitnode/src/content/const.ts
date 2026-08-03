@@ -15,6 +15,27 @@ export const CONTENT_PUBLICATION_FIELDS = ["status", "publishedAt"] as const;
 
 export const CONTENT_PUBLICATION_STATUSES = ["draft", "published"] as const;
 
+const publicationStatuses: ReadonlySet<string> = new Set(
+  CONTENT_PUBLICATION_STATUSES,
+);
+
+/**
+ * Whether a value is one of the two generated publication statuses.
+ *
+ * The generated Zod schemas already narrow this on the HTTP path, so this is
+ * defence in depth for the direct-service path: a cast, a plain-JavaScript
+ * caller or an object built at runtime can put anything in `filters.status`,
+ * and that value must never reach Drizzle.
+ *
+ * Takes `unknown` and returns a predicate derived from the constant rather than
+ * from `ContentPublicationStatus`, so this module stays free of type imports
+ * from `types.ts` - which imports from here.
+ */
+export const isContentPublicationStatus = (
+  value: unknown,
+): value is (typeof CONTENT_PUBLICATION_STATUSES)[number] =>
+  typeof value === "string" && publicationStatuses.has(value);
+
 /** `varchar` length of the generated `status` column. */
 export const CONTENT_PUBLICATION_STATUS_LENGTH = 32;
 

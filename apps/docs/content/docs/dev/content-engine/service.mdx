@@ -230,7 +230,7 @@ not exist, and calling them is a compile error rather than a runtime surprise.
 ```ts
 const result = await articles.publish(7);
 
-result?.changed;     // false if it was already published: no write, no event
+result?.changed;     // false if it was already published: no write happened
 result?.publishedAt; // when it first went live, never rewritten
 result?.row;         // the full row
 ```
@@ -238,6 +238,11 @@ result?.row;         // the full row
 `null` means no such record, exactly like `update` and `delete`. Both methods
 are idempotent, both accept `{ tx }`, and `unpublish` deliberately leaves
 `publishedAt` alone.
+
+Like every other service method, they emit no event - the
+[generated routes do that](/docs/dev/content-engine/events#calling-the-service-directly).
+A service call that runs inside your transaction cannot honestly announce
+anything until you commit, so the follow-up is yours.
 
 ## options
 

@@ -274,12 +274,16 @@ core event - `changedFields` narrows to that content type's own field names.
 />
 
 The envelope already carries the actor, the emitting plugin and the timestamp,
-so the payloads stay minimal. Events fire only after the database write has
-returned: a failed validation, a delete blocked by a foreign key, a no-op update
-and a no-op publish all emit nothing.
+so the payloads stay minimal.
 
-Exactly one event fires per mutation - `published` and `unpublished` never come
-with an `updated` alongside them.
+These are emitted by the **generated routes**, not by the Content Service. A
+route emits exactly one event per successful mutation, after the database write
+has returned - a failed validation, a delete blocked by a foreign key, a no-op
+update and a no-op publish all emit nothing, and `published`/`unpublished` never
+come with an `updated` alongside them. Calling `service.publish()` or any other
+service method directly changes the database and emits nothing; that code owns
+its own follow-up. See
+[Generated events](/docs/dev/content-engine/events#calling-the-service-directly).
 
 **Use cases:** reindex the row for search, invalidate a CDN entry, or mirror the
 change into a plugin-owned projection. See

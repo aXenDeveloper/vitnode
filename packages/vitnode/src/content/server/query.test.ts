@@ -9,6 +9,7 @@ import { field } from "@/content/fields";
 import {
   testArticleContentType,
   testCategoryContentType,
+  testPostContentType,
 } from "@/tests/content-fixtures";
 
 import { ContentEngineError } from "../errors";
@@ -61,6 +62,12 @@ const referenceTable = createContentTable(referenceType, {
   references: { parent: () => categories.id, root: () => categories.id },
 });
 const referenceColumns = contentTableColumns(referenceType, referenceTable);
+
+/** Publication enabled, and deliberately declaring neither generated name. */
+const postTable = createContentTable(testPostContentType, {
+  references: { category: () => categories.id },
+});
+const postColumns = contentTableColumns(testPostContentType, postTable);
 
 const dialect = new PgDialect();
 
@@ -226,6 +233,94 @@ describe("buildFilterCondition", () => {
       expect(compile(referenceFilter({ parent: null, root: 2 })).sql).toBe(
         '("test_references"."parent" is null and "test_references"."root" = $1)',
       );
+    });
+  });
+
+  /**
+   * `status` on a publication content type is a *generated* column: there is no
+   * field descriptor behind it, so none of the checks above apply and it needs
+   * its own guard. The generated Zod schema narrows the value on the HTTP path;
+   * these cover the direct-service path, where a cast or a runtime-built object
+   * can carry anything.
+   */
+  describe("publication status", () => {
+    const publicationFilter = (filters: Record<string, unknown>) =>
+      buildFilterCondition({
+        columns: postColumns,
+        contentTypeId: testPostContentType.id,
+        fields: testPostContentType.fields,
+        filters,
+        publication: true,
+      });
+
+    it.each(["draft", "published"])(
+      "filters by the generated %s status",
+      status => {
+        const { params, sql } = compile(publicationFilter({ status }));
+
+        expect(sql).toBe('"test_posts"."status" = $1');
+        expect(params).toEqual([status]);
+      },
+    );
+
+    it("combines with an ordinary field filter", () => {
+      const { params, sql } = compile(
+        publicationFilter({ category: 3, status: "published" }),
+      );
+
+      expect(sql).toBe(
+        '("test_posts"."category" = $1 and "test_posts"."status" = $2)',
+      );
+      expect(params).toEqual([3, "published"]);
+    });
+
+    it.each([
+      ["a value from a Stage 1 enum", "archived"],
+      ["an unrelated string", "sideways"],
+      ["an empty string", ""],
+      ["a number", 1],
+      ["null", null],
+      ["a boolean", true],
+      ["an object", {}],
+    ])("rejects %s before it reaches SQL", (_case, status) => {
+      expect(() => publicationFilter({ status })).toThrow(ContentEngineError);
+    });
+
+    it("names the value and the allowed set", () => {
+      expect(() => publicationFilter({ status: "archived" })).toThrow(
+        /Invalid publication status "archived"\. Allowed values: draft, published\./,
+      );
+    });
+
+    it("names the content type", () => {
+      expect(() => publicationFilter({ status: "archived" })).toThrow(
+        /test\.post/,
+      );
+    });
+
+    it("still rejects an unknown filter name with the unknown-filter error", () => {
+      expect(() => publicationFilter({ nope: 1 })).toThrow(
+        /Unknown filter "nope"/,
+      );
+    });
+
+    // The guard is keyed on `publication`, not on the column name, so a Stage 1
+    // content type that declares its own `status` enum is untouched by it.
+    it("leaves a declared status enum on its own values", () => {
+      expect(compile(filter({ status: "archived" })).params).toEqual([
+        "archived",
+      ]);
+    });
+
+    it("does not accept a status filter when publication is off", () => {
+      expect(() =>
+        buildFilterCondition({
+          columns: postColumns,
+          contentTypeId: testPostContentType.id,
+          fields: testPostContentType.fields,
+          filters: { status: "published" },
+        }),
+      ).toThrow(/Unknown filter "status"/);
     });
   });
 });

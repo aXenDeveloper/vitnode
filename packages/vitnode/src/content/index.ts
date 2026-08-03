@@ -36,6 +36,7 @@ export {
   CONTENT_PUBLICATION_STATUSES,
   CONTENT_SYSTEM_FIELDS,
   CONTENT_TEXT_DEFAULT_LENGTH,
+  isContentPublicationStatus,
   RESERVED_FILTER_KEYS,
 } from "./const";
 export { defineContentType } from "./define";

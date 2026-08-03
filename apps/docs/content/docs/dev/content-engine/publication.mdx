@@ -74,9 +74,10 @@ result?.row;         // the full row
 `null` means there is no such record. The route turns that into a 404 and
 everything else into a 200.
 
-Both methods are **idempotent**. Publishing something already published changes
-nothing, writes nothing, and emits nothing - it just tells you `changed: false`.
-Double-clicking the button is harmless, and so is a retry.
+Both methods are **idempotent**. Publishing something already published issues
+no write at all - it just tells you `changed: false`. Double-clicking the button
+is harmless, and so is a retry. (Through the generated route, that also means no
+event; see [Events](#events) below.)
 
 They take an optional transaction handle, like the other write methods:
 
@@ -126,12 +127,43 @@ content.example.article.published     { contentId, publishedAt }
 content.example.article.unpublished   { contentId }
 ```
 
-Exactly one event fires per mutation. Publishing does **not** also emit
-`updated`: `changedFields` on that event lists declared fields, and these two
-columns are not declared ones, so an `updated` event would have nothing honest
-to put in it. A listener that cares about any change subscribes to all of them.
+The generated publish and unpublish routes emit exactly one matching event after
+a successful state transition. A no-op - publishing something already published
+- transitions nothing, so it emits nothing.
 
-A no-op publish emits nothing at all. See [Generated events](/docs/dev/content-engine/events).
+Neither route also emits `updated`. `changedFields` on that event lists declared
+fields, and these two columns are not declared ones, so an `updated` alongside
+them would have nothing honest to put in it. A listener that cares about any
+change subscribes to all of them.
+
+<Callout type="warn" title="Direct service calls do not emit">
+  `service.publish()` and `service.unpublish()` change the database and return
+  the transition result. They do **not** emit a framework event.
+
+That is deliberate. The service accepts `{ tx }`, so it may be running inside a
+transaction that has not committed - and an event emitted before the commit
+would announce something that might still roll back. It also has no claim on
+the request's event context, which the route owns.
+
+If your own code calls the service directly and something needs to happen
+afterwards, do it yourself once the transaction has committed:
+
+```ts
+const result = await db.transaction(async tx => {
+  return await service.publish(id, { tx });
+});
+
+if (result?.changed && result.publishedAt) {
+  await c.get("events").emit("content.example.article.published", {
+    contentId: id,
+    publishedAt: result.publishedAt,
+  });
+}
+```
+
+</Callout>
+
+See [Generated events](/docs/dev/content-engine/events).
 
 ## Filtering and ordering
 
@@ -172,9 +204,61 @@ shows the other half of that story: it moved a hand-rolled `draft | published |
 archived` enum onto the generated columns, and had to decide what happened to
 the `archived` rows.
 
+## Serving published content
+
+<Callout type="warn" title="Publication does not make anything public">
+  Enabling `publication` adds the lifecycle. It does not add a public endpoint.
+  Every generated route still sits under `/admin/` and still requires a staff
+  permission, exactly as before.
+</Callout>
+
+Until the generated public read layer lands, serving published content is your
+own route - and the one thing worth not writing by hand is the predicate. The
+server surface exports it:
+
+```ts title="src/api/modules/articles/routes/get.route.ts"
+import { publishedCondition } from "@vitnode/core/content/server";
+
+import { articleContent } from "@/database/articles";
+
+handler: async c => {
+  const rows = await c
+    .get("db")
+    .select({
+      id: articleContent.table.id,
+      title: articleContent.table.title,
+      publishedAt: articleContent.table.publishedAt,
+    })
+    .from(articleContent.table)
+    .where(publishedCondition(articleContent.columns));
+
+  return c.json({ rows }, 200);
+};
+```
+
+`publishedCondition` compiles to:
+
+```sql
+status = 'published' AND published_at IS NOT NULL AND published_at <= NOW()
+```
+
+All three clauses matter. Checking only `status` would serve a row whose
+timestamp was cleared by hand, and the `<= NOW()` is what will make scheduled
+publishing additive rather than a rewrite.
+
+It is a supported escape hatch, not a placeholder: when the generated public
+Content Service arrives it will use this same helper, so the invariant has one
+definition either way. Selecting only the columns you mean to expose - as above
+- is still your responsibility until the public field allowlist exists.
+
 ## What this is not
 
 Scheduled publishing, approval workflows and revisions are not here. The
 published predicate already reads `publishedAt <= now()`, so scheduling can be
 added later without changing what is stored - but today `publish()` means
 *now*.
+
+There is also no generated public API: no public list route, no public detail
+route, no public field projection and no cache invalidation. Those are the next
+PRs, and [Limitations](/docs/dev/content-engine/limitations) tracks what is
+still missing.

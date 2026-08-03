@@ -88,21 +88,59 @@ unlike content types.
 
 ## When they fire
 
+**The generated routes emit these events. The service does not.**
+
+That distinction matters as soon as you call the service from your own code, so
+it is worth being precise:
+
+| | Emits |
+| --- | --- |
+| `POST`, `PUT`, `DELETE`, `POST /{id}/publish`, `POST /{id}/unpublish` | yes, once, after the write returns |
+| `service.create()`, `update()`, `delete()`, `publish()`, `unpublish()` | no |
+
 <Callout type="warn" title="After the write, never inside the transaction">
-  Events are emitted once the database write has returned. A create that fails
-  validation, a delete blocked by a foreign key, and an update that changed
-  nothing all emit nothing at all.
+  A generated route emits once the database write has returned. A create that
+  fails validation, a delete blocked by a foreign key, an update that changed
+  nothing and a publish that transitioned nothing all emit nothing at all.
 </Callout>
 
-That last one is worth repeating: `PUT` with values identical to what is already
-stored skips both the write and the event. `changedFields` never contains a
-field that did not move. Publishing something already published behaves the
-same way: a 200, and no event.
+That last part is worth repeating: `PUT` with values identical to what is
+already stored skips both the write and the event, and `changedFields` never
+contains a field that did not move. Publishing something already published
+behaves the same way - a 200 with `changed: false`, and no event.
 
-Exactly one event fires per mutation. `published` and `unpublished` never come
-with an `updated` alongside them - `status` and `publishedAt` are generated
-columns rather than declared fields, so there would be nothing truthful to put
-in `changedFields`. Subscribe to all five if you want "anything changed".
+A generated route emits exactly one event per successful mutation. `published`
+and `unpublished` never come with an `updated` alongside them - `status` and
+`publishedAt` are generated columns rather than declared fields, so there would
+be nothing truthful to put in `changedFields`. Subscribe to all five if you want
+"anything changed".
+
+### Calling the service directly
+
+The service is a repository, not an application layer. It changes rows and
+returns the result; it emits nothing.
+
+There are two reasons for that. It accepts `{ tx }`, so it may be running inside
+a transaction that has not committed - and an event emitted before the commit
+would announce something that can still roll back. And it does not own the
+request's event context; the route does.
+
+So when your own code drives a mutation, do the follow-up yourself, after the
+transaction has committed:
+
+```ts
+const result = await db.transaction(async tx => {
+  return await articles.service(c).publish(id, { tx });
+});
+
+// Committed by here, so it is safe to tell anyone.
+if (result?.changed && result.publishedAt) {
+  await c.get("events").emit("content.example.article.published", {
+    contentId: id,
+    publishedAt: result.publishedAt,
+  });
+}
+```
 
 Delivery semantics are the platform's, not the engine's: in-process by default,
 per-listener error isolation, no outbox. See [Events](/docs/dev/events).

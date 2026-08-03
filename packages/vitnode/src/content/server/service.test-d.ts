@@ -5,6 +5,7 @@ import { describe, expectTypeOf, it } from "vitest";
 import {
   testArticleContentType,
   testCategoryContentType,
+  testPostContentType,
 } from "@/tests/content-fixtures";
 
 import type {
@@ -20,11 +21,16 @@ const categories = createContentModel(testCategoryContentType);
 const articles = createContentModel(testArticleContentType, {
   references: { category: () => categories.table.id },
 });
+const posts = createContentModel(testPostContentType, {
+  references: { category: () => categories.table.id },
+});
 
 type ArticleType = typeof testArticleContentType;
 
 // Never executed - the type checker is the whole point.
 const service = articles.service({} as Context);
+const postService = posts.service({} as Context);
+const categoryService = categories.service({} as Context);
 
 describe("findMany filters", () => {
   it("accepts every filterable field", () => {
@@ -101,6 +107,71 @@ describe("findMany ordering", () => {
     // content type still fails here, and the runtime allowlist is stricter.
     // @ts-expect-error - not a column of this content type
     void service.findMany({ orderBy: { column: "somethingElse" } });
+  });
+});
+
+describe("publication ordering", () => {
+  it("accepts the generated columns on a publication content type", () => {
+    void postService.findMany({ orderBy: { column: "status" } });
+    void postService.findMany({
+      orderBy: { column: "publishedAt", order: "desc" },
+    });
+  });
+
+  it("still accepts declared fields and system columns", () => {
+    void postService.findMany({ orderBy: { column: "title" } });
+    void postService.findMany({ orderBy: { column: "updatedAt" } });
+  });
+
+  // The category fixture has publication disabled *and* declares neither name,
+  // which is what makes this a real negative. The article fixture would pass
+  // for the wrong reason: it declares its own `status` and `publishedAt`.
+  it("does not invent them for a content type without publication", () => {
+    // @ts-expect-error - `status` is not a column of this content type
+    void categoryService.findMany({ orderBy: { column: "status" } });
+    // @ts-expect-error - `publishedAt` is not a column of this content type
+    void categoryService.findMany({ orderBy: { column: "publishedAt" } });
+  });
+
+  it("leaves a Stage 1 content type ordering by its own fields", () => {
+    // Accepted because they are declared fields, not generated columns.
+    void service.findMany({ orderBy: { column: "status" } });
+    void service.findMany({ orderBy: { column: "publishedAt" } });
+  });
+});
+
+describe("publication filters", () => {
+  it("accepts the two generated statuses", () => {
+    void postService.findMany({ filters: { status: "draft" } });
+    void postService.findMany({ filters: { status: "published" } });
+  });
+
+  it("rejects anything else", () => {
+    void postService.findMany({
+      // @ts-expect-error - "archived" is not a generated publication status
+      filters: { status: "archived" },
+    });
+  });
+
+  it("is absent from a content type without publication", () => {
+    void categoryService.findMany({
+      // @ts-expect-error - no `status` column to filter on
+      filters: { status: "draft" },
+    });
+  });
+});
+
+describe("publication service methods", () => {
+  it("exist on a publication content type", () => {
+    void postService.publish(1);
+    void postService.unpublish(1, {});
+  });
+
+  it("are absent everywhere else", () => {
+    // @ts-expect-error - publication is not enabled on this content type
+    void service.publish(1);
+    // @ts-expect-error - publication is not enabled on this content type
+    void categoryService.unpublish(1);
   });
 });
 

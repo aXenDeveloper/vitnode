@@ -500,9 +500,18 @@ export type ContentFilterInput<TDefinition> = Partial<
  * is stored on the *resolved* (non-generic) admin config, so the configured
  * array is not recoverable as a type. Every field name is accepted here, and
  * the narrower runtime allowlist rejects the ones that were not configured.
+ *
+ * The generated publication columns are part of that allowlist at runtime -
+ * `orderableColumns` appends them, and the generated route's `orderBy` enum
+ * includes them - so they belong here too, but only for a content type that
+ * actually opted in.
  */
 export type ContentOrderableFieldName<TDefinition> =
-  ContentFieldName<TDefinition> | ContentSystemField;
+  | ContentFieldName<TDefinition>
+  | ContentSystemField
+  | (TDefinition extends { publication: { enabled: true } }
+      ? ContentPublicationField
+      : never);
 
 /** Fields with a picker - the only ones `service.options` can enumerate. */
 export type ContentReferenceFieldName<TDefinition> = FieldNamesOfKind<

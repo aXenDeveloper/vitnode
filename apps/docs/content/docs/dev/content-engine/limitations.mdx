@@ -19,7 +19,8 @@ other 20%, so you find out here rather than halfway through building.
 | Record-level ownership ("edit your own") | Check the author in a custom route |
 | Field-level permissions | Split the content type, or write the route |
 | Bulk actions | Add a custom admin route |
-| Public frontend routes | The generated API is AdminCP-only, by design |
+| Public frontend routes | Not generated yet. Write the route and gate it with `publishedCondition` |
+| Public field projection | Select only the columns you mean to expose, by hand |
 | Search indexing | Register a `SearchIndexer` yourself |
 | Automatic field renames | See below |
 | Unique constraints on more than one column | Declare them in `indexes`, not on the field |
@@ -95,8 +96,25 @@ Postgres, when the migration runs.
 ## Public API is AdminCP-only
 
 Every generated route sits under `/admin/` and requires a staff permission.
-There is no public read endpoint, and adding one is your call - fetch through
-the service from your own route so you control caching and visibility.
+That includes the publish and unpublish routes: enabling
+[`publication`](/docs/dev/content-engine/publication) adds a draft/published
+lifecycle, and nothing else. **No content becomes publicly reachable because you
+turned it on.**
+
+There is no generated public read endpoint yet - no list route, no detail route,
+no field allowlist, no cache invalidation. Serving published content is your own
+route today, and the server surface exports the predicate so the one part that
+is easy to get wrong is not written by hand:
+
+```ts
+import { publishedCondition } from "@vitnode/core/content/server";
+
+.where(publishedCondition(articleContent.columns))
+```
+
+Selecting only the columns you intend to expose is still yours to get right.
+[Serving published content](/docs/dev/content-engine/publication#serving-published-content)
+has the full example.
 
 ## Content types are code
 
