@@ -91,7 +91,9 @@ Five things put an index on a content table, and they are listed here in
 precedence order:
 
 1. anything you declared in `indexes`,
-2. `field.text({ unique: true })`,
+2. `field.text({ unique: true })`, and every
+   [`field.slug`](/docs/dev/content-engine/slug-field) - a slug is a URL, so it
+   is unique whether or not you ask,
 3. every foreign key - `relation` and `user` fields,
 4. `createdAt` and `updatedAt`, which back the default ordering,
 5. `(status, publishedAt)` when
@@ -222,6 +224,28 @@ The safe path is the same one you would use for a hand-written table:
 
 Other destructive changes to watch: lowering a `text` field's `maxLength` can
 fail on existing rows, and flipping `number.integer` changes the column type.
+
+## Adding a slug to a populated table
+
+Drizzle Kit generates one statement for a new
+[`field.slug`](/docs/dev/content-engine/slug-field):
+
+```sql
+ALTER TABLE "example_articles" ADD COLUMN "slug" varchar(160) NOT NULL;
+```
+
+That fails outright on a table with rows in it - there is no default to backfill
+them with. Split it by hand into add, backfill, tighten, index. The
+[slug field page](/docs/dev/content-engine/slug-field#migrations) has the exact
+SQL, and the example plugin's
+[`0024` migration](https://github.com/aXenDeveloper/vitnode/blob/canary/apps/docs/migrations/0024_add_example_article_slug.sql)
+is that file, replayed by the Postgres integration test.
+
+Adding `publication` to a populated table is the easier case: `status` carries
+`DEFAULT 'draft' NOT NULL`, so one statement backfills it - and takes everything
+out of circulation. See
+[Migrations](/docs/dev/content-engine/publication#migrations) for the one-line
+remediation.
 
 Rollback works the way it does everywhere else in VitNode: there are no down
 migrations, so you restore from a backup or write a forward migration.

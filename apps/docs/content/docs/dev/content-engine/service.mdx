@@ -1,16 +1,24 @@
 ---
-title: Service API
+title: Admin Content Service
 description: The typed repository every content type exposes, bound to the request's database handle.
 icon: Wrench
 ---
 
-`model.service(c)` returns a small typed repository for one content type. It is
-deliberately thin: it owns validation, column allowlisting, pagination and
-relation label joins, and hands everything else to Drizzle.
+`model.service(c)` returns the **Admin Content Service**: a small typed
+repository for one content type. It is deliberately thin - it owns validation,
+column allowlisting, pagination and relation label joins, and hands everything
+else to Drizzle.
 
 ```ts
 const articles = articleContent.service(c);
 ```
+
+<Callout type="info" title="There are two services">
+  This one reads and writes every column, and backs the generated Admin API. The
+  [Public Content Service](/docs/dev/content-engine/public-service) is a
+  different object: read-only, projected to the public allowlist, and unable to
+  return a draft. Neither is a filtered view of the other.
+</Callout>
 
 ## It is safe to call directly
 
@@ -240,9 +248,10 @@ are idempotent, both accept `{ tx }`, and `unpublish` deliberately leaves
 `publishedAt` alone.
 
 Like every other service method, they emit no event - the
-[generated routes do that](/docs/dev/content-engine/events#calling-the-service-directly).
-A service call that runs inside your transaction cannot honestly announce
-anything until you commit, so the follow-up is yours.
+[generated routes do that](/docs/dev/content-engine/events#calling-the-service-directly) -
+and they expire no [cache tag](/docs/dev/content-engine/caching) either. A
+service call that runs inside your transaction cannot honestly announce anything
+until you commit, so the follow-up is yours.
 
 ## options
 
@@ -275,6 +284,26 @@ await c.get("events").emit("content.example.article.created", {
   contentId: article.id,
 });
 ```
+
+## Slugs
+
+A [`field.slug`](/docs/dev/content-engine/slug-field) is normalised by the
+service, not by the route - so the rules hold whoever wrote the value:
+
+```ts
+await articles.create({ title: "Hello World", category: 1 });
+// slug: "hello-world", derived from the source field
+
+await articles.create({ title: "Hello", slug: "  My   Slug! ", category: 1 });
+// slug: "my-slug", supplied and normalised
+
+await articles.update(7, { title: "A new title" });
+// slug: unchanged. Only an explicit `slug` in the patch moves it.
+```
+
+A value that normalises to nothing throws a `ContentInputError`, which the
+generated routes turn into a **400** carrying the actionable message. A
+collision is the unique index's job and comes back as a **409**.
 
 ## Escape hatches
 

@@ -1,0 +1,150 @@
+---
+title: Public Content Service
+description: The read-only repository behind the generated public routes - three methods, no writes, and no way to return a draft.
+icon: BookOpen
+---
+
+`model.publicService(c)` is the Public Content Service: the read half of a
+content type, projected to the public allowlist.
+
+```ts
+const articles = articleContent.publicService?.(c);
+```
+
+It is `undefined` unless the content type has
+[`publicApi`](/docs/dev/content-engine/public-api). That is the runtime check,
+and it reads naturally in a route builder that does not know which content type
+it was handed.
+
+<Callout type="info" title="Two services, two jobs">
+  The **Admin Content Service** (`model.service(c)`) is the full repository -
+  every column, every write, `{ tx }` support. The **Public Content Service** is
+  a different object with three read methods. It is not a filtered view of the
+  admin one, so there is no write to accidentally reach.
+</Callout>
+
+## The methods
+
+```ts
+await articles.findMany({ filters, orderBy, query });
+await articles.findBySlug("hello-world");
+await articles.findById(12);
+```
+
+That is the entire surface. There is no `create`, `update`, `delete`, `publish`,
+`unpublish` or `options` - and no `{ tx }`, because a read on behalf of an
+anonymous visitor is not part of anybody's transaction.
+
+`findBySlug` is what the generated detail route uses. `findById` costs nothing
+and is what an event listener holding a `contentId` needs.
+
+## The published invariant
+
+Every method applies the same predicate, and it is **not a parameter**:
+
+```sql
+status = 'published' AND published_at IS NOT NULL AND published_at <= NOW()
+```
+
+`ContentPublicFindManyArgs` has no `where`, no `includeDrafts` and no escape
+hatch. There is no argument a caller can forget, so there is no code path that
+reaches an unpublished row.
+
+All three clauses matter:
+
+- checking only `status` would serve a row whose timestamp was cleared by hand,
+- `<= NOW()` is what will make scheduled publishing additive rather than a
+  rewrite.
+
+```ts
+// Every one of these is null for a draft, an unpublished row, a row whose
+// publication date was cleared, and a row dated in the future.
+await articles.findBySlug("some-draft"); // null
+await articles.findById(draftId); // null
+```
+
+## The projection
+
+The `SELECT` is built from `publicApi.fields`, so a private column is never
+fetched - not fetched and then deleted.
+
+```ts
+const article = await articles.findBySlug("hello-world");
+
+article?.title; // string
+article?.category; // { id: number; label: string | null }
+article?.views; // compile error: not exposed
+```
+
+`ContentPublicSelect<typeof articleContentType>` has exactly the allowlisted
+keys, so a private field is absent at compile time as well as at runtime.
+
+<Callout type="info" title="One column is fetched beyond the allowlist">
+  `id`, because `withPagination` reads the cursor off the row. It is removed
+  again before the row is returned, unless `publicApi.fields` names it. That is
+  the whole projection boundary, and it has its own test.
+</Callout>
+
+## Filtering, search and ordering
+
+Each goes through the public allowlist, not the admin one:
+
+```ts
+await articles.findMany({
+  filters: { category: 3 },
+  orderBy: { column: "publishedAt", order: "desc" },
+  query: { search: "hello", first: "10" },
+});
+```
+
+- A filter outside `publicApi.filterableFields` throws, even if the field is
+  public. Readable is not queryable.
+- Search runs `ilike` across `publicApi.searchableFields`, wildcards escaped.
+  Because those must be a subset of `fields`, search cannot be used as an oracle
+  for a hidden column.
+- Ordering outside `publicApi.orderableFields` throws - including columns the
+  AdminCP list can happily sort by.
+- Pages default to 25 and are capped at 50, below the admin limit.
+
+## Using it from your own route
+
+The public service is a public API. If the two generated routes are not the
+shape you want, build your own on top of it and keep the invariant:
+
+```ts title="src/api/modules/feed/routes/rss.route.ts"
+handler: async c => {
+  const articles = articleContent.publicService?.(c);
+  if (!articles) throw new HTTPException(404);
+
+  const { edges } = await articles.findMany({
+    orderBy: { column: "publishedAt", order: "desc" },
+    query: { first: "20" },
+  });
+
+  return c.body(renderRss(edges), 200, { "Content-Type": "application/rss+xml" });
+};
+```
+
+Nothing here can leak a draft, because nothing here can turn the predicate off.
+
+## If you need more than it does
+
+Drop to Drizzle, and bring the predicate with you:
+
+```ts
+import { publicationColumns, publishedCondition } from "@vitnode/core/content/server";
+
+const rows = await c
+  .get("db")
+  .select({ id: articleContent.table.id })
+  .from(articleContent.table)
+  .where(publishedCondition(publicationColumns(articleContentType, articleContent.columns)));
+```
+
+`publishedCondition` takes the two columns it reads, so passing a content type
+without publication is a compile error rather than a query against columns that
+do not exist. `publicationColumns` is the runtime step for generic code, where
+the column map has been widened to `Record<string, PgColumn>`.
+
+Selecting only the columns you mean to expose is yours to get right on that
+path - which is the reason the generated one exists.

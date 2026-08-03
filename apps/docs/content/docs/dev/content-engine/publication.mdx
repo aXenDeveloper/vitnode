@@ -212,13 +212,22 @@ the `archived` rows.
   permission, exactly as before.
 </Callout>
 
-Until the generated public read layer lands, serving published content is your
-own route - and the one thing worth not writing by hand is the predicate. The
-server surface exports it:
+To actually publish content to the internet, add
+[`publicApi`](/docs/dev/content-engine/public-api). That block generates two
+read-only routes and a [Public Content Service](/docs/dev/content-engine/public-service),
+both of which apply the published predicate themselves - there is no argument a
+caller can forget.
+
+If the generated shape is not the one you want, the predicate is exported so the
+part that is easy to get wrong is not written by hand:
 
 ```ts title="src/api/modules/articles/routes/get.route.ts"
-import { publishedCondition } from "@vitnode/core/content/server";
+import {
+  publicationColumns,
+  publishedCondition,
+} from "@vitnode/core/content/server";
 
+import { articleContentType } from "@/content/article";
 import { articleContent } from "@/database/articles";
 
 handler: async c => {
@@ -230,7 +239,11 @@ handler: async c => {
       publishedAt: articleContent.table.publishedAt,
     })
     .from(articleContent.table)
-    .where(publishedCondition(articleContent.columns));
+    .where(
+      publishedCondition(
+        publicationColumns(articleContentType, articleContent.columns),
+      ),
+    );
 
   return c.json({ rows }, 200);
 };
@@ -246,10 +259,15 @@ All three clauses matter. Checking only `status` would serve a row whose
 timestamp was cleared by hand, and the `<= NOW()` is what will make scheduled
 publishing additive rather than a rewrite.
 
-It is a supported escape hatch, not a placeholder: when the generated public
-Content Service arrives it will use this same helper, so the invariant has one
-definition either way. Selecting only the columns you mean to expose - as above
-- is still your responsibility until the public field allowlist exists.
+It takes the two columns it reads, so handing it a content type without
+publication is a compile error rather than a query against columns that do not
+exist. `publicationColumns` is the runtime narrowing for generic code, where the
+column map has been widened to `Record<string, PgColumn>`.
+
+Selecting only the columns you mean to expose is your responsibility on that
+path - which is exactly what the
+[public field allowlist](/docs/dev/content-engine/public-api#the-field-allowlist)
+does for you on the generated one.
 
 ## What this is not
 
@@ -258,7 +276,4 @@ published predicate already reads `publishedAt <= now()`, so scheduling can be
 added later without changing what is stored - but today `publish()` means
 *now*.
 
-There is also no generated public API: no public list route, no public detail
-route, no public field projection and no cache invalidation. Those are the next
-PRs, and [Limitations](/docs/dev/content-engine/limitations) tracks what is
-still missing.
+[Limitations](/docs/dev/content-engine/limitations) tracks the rest.

@@ -44,6 +44,16 @@ That gives you:
   (plus `can_publish` with [publication](/docs/dev/content-engine/publication))
 - `content.example.article.created` / `.updated` / `.deleted` events
 
+Two more declarations, each opt-in and each independent:
+
+- [`publication`](/docs/dev/content-engine/publication) adds a draft/published
+  lifecycle, a `can_publish` permission and a badge in the AdminCP
+- [`publicApi`](/docs/dev/content-engine/public-api) adds two read-only public
+  routes, a strict field allowlist and
+  [cache tags](/docs/dev/content-engine/caching)
+
+Publication alone exposes nothing. Public exposure requires both.
+
 ## What it is not
 
 <Callout type="info" title="Code-first, not a no-code CMS">

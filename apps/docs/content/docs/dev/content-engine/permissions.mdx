@@ -114,7 +114,7 @@ Three places, and the first one is the one that counts:
    by `assertStaffPermission` before the handler runs. 403 otherwise.
 2. **The AdminCP page** checks `can_view` server-side and calls `notFound()`.
 3. **The buttons** hide when the admin lacks `can_create` / `can_edit` /
-   `can_delete`.
+   `can_delete` / `can_publish`.
 
 Hiding a button is a courtesy, not a control. Removing `can_delete` from a role
 makes `DELETE` return 403 whether or not the button was rendered.

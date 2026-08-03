@@ -131,6 +131,29 @@ export const exampleApiPlugin = () =>
   });
 ```
 
+A content type with [`publicApi`](/docs/dev/content-engine/public-api) needs one
+more module, and this one is **top-level** - its paths must stay out of
+`/admin/`, which the global admin gate matches as a substring:
+
+```ts title="src/config.api.ts"
+import { buildContentPublicModule } from "@vitnode/core/content/server";
+
+export const exampleApiPlugin = () =>
+  buildApiPlugin({
+    pluginId: CONFIG_PLUGIN.pluginId,
+    modules: [
+      adminModule,
+      buildContentPublicModule({
+        pluginId: CONFIG_PLUGIN.pluginId,
+        contentTypes: [articleContent],
+      }),
+    ],
+  });
+```
+
+It skips any content type without `publicApi`, and it registers no content types
+of its own - that is the admin module's job, and doing it twice throws.
+
 There is no `contentTypes` on `buildApiPlugin`: it walks the module tree, so
 the content types you listed above already drive the registry **and** the
 derived staff permissions. Declare once.

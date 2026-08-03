@@ -88,11 +88,36 @@ its table with a **status** column, rendered as a badge rather than raw text:
 
 `status` is also a generated filter, so `?status=draft` narrows the list.
 
-<Callout type="info" title="The publish buttons are not here yet">
-  Publishing currently happens through the API - `POST /{id}/publish` - or
-  through `service.publish` from your own code. The row action, its confirmation
-  dialog and the `can_publish` gating land with the AdminCP publication UX.
+### The publish action
+
+Each row gains a third icon button, before Edit and Delete. It flips with the
+row's state rather than showing two buttons with a dead one:
+
+| Row | Icon | Action |
+| --- | --- | --- |
+| draft | paper plane | Publish |
+| published | crossed-out eye | Unpublish |
+
+It opens a confirmation dialog - publishing is outward-facing, and unpublishing
+takes something away from people who can currently see it - then shows a success
+toast with the row's title, or an error toast with the mapped reason. The table
+refreshes either way, and the dialog stays open on failure so the reason is
+still on screen next to the thing that failed.
+
+Both routes are idempotent, so a double click is a 200 that changed nothing
+rather than an error.
+
+<Callout type="warn" title="Gated by can_publish, never by can_edit">
+  The button is absent for a role without `can_publish`, and the route answers
+  403 whether or not it was rendered. That separation is the point of the
+  permission: a role can be trusted to write drafts without being trusted to put
+  them on the internet.
 </Callout>
+
+The **edit dialog** shows the same badge as a read-only line, with the
+publication date. It has no publish control of its own: `status` and
+`publishedAt` are not in the form schema, and two competing mutation paths in
+one dialog is how a form ends up fighting its own state.
 
 ## One route, every content type
 

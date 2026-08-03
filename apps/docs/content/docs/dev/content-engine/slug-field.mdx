@@ -1,0 +1,196 @@
+---
+title: Slug field
+description: A URL segment that is generated from your title, normalised on the way in, unique by construction, and never moves on its own.
+icon: Link2
+---
+
+A slug is the part of a URL a person can read: `/articles/hello-world` rather
+than `/articles/482`. `field.slug` makes one out of an existing text field.
+
+```ts title="src/content/article.ts"
+fields: {
+  title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+  slug: field.slug({ source: "title" }), // [!code highlight]
+}
+```
+
+That is the whole configuration for the common case. Create an article called
+"Hello World" and its slug is `hello-world`.
+
+## What you get
+
+| | |
+| --- | --- |
+| A column | `varchar(160)`, `NOT NULL`, no default |
+| An index | `<table>_<field>_key`, always unique |
+| Derivation | filled in from `source` when the create payload omits it |
+| Normalisation | applied to every value, yours or derived |
+| A filter | equality, so `?slug=hello-world` works |
+
+## Options
+
+```ts
+field.slug({
+  source: "title", // a `text` field on the same content type
+  maxLength: 160, // varchar length and the truncation point
+  description: "Used in the public URL",
+});
+```
+
+There is no `required` argument, and no `nullable` one either.
+
+- **`nullable`** is always `false`. A row nobody can address by URL is not worth
+  allowing, and there is no sensible default URL to fall back on.
+- **`required`** is exactly `source === undefined`. With a source the engine can
+  always derive the value, so the payload may omit it; without one, nobody else
+  can supply it, so it is mandatory. Making it a second knob would let the two
+  settings contradict each other - "always send it" alongside "derive it for
+  me".
+
+`source` must name a `text` field on the same content type. A `textarea`, a
+number or another slug is a definition-time error:
+
+```ts
+slug: field.slug({ source: "body" });
+// Error: sourced from "body", which is a "textarea" field.
+//        A slug can only be derived from a text field.
+```
+
+## Normalisation
+
+Every value is normalised before it is written - the one you sent and the one
+derived from the source field alike, so the same rules hold whoever wrote it.
+
+| Input | Slug |
+| --- | --- |
+| `"Hello World"` | `hello-world` |
+| `"  Hello   World "` | `hello-world` |
+| `"hello---world"` | `hello-world` |
+| `"Hello, World! (2026)"` | `hello-world-2026` |
+| `"Zażółć gęślą"` | `zazolc-gesla` |
+| `"Café Crème"` | `cafe-creme` |
+| `"Straße"` | `strasse` |
+
+Lowercase, Unicode NFD, diacritics stripped, a handful of stroked and ligature
+letters transliterated (`ł`, `ø`, `æ`, `œ`, `ß`, `đ`, `þ`), every run of
+anything else collapsed to a single dash, then trimmed and truncated.
+
+The same function is exported, so you can preview a slug in your own UI:
+
+```ts
+import { slugify } from "@vitnode/core/content";
+
+slugify("Hello World"); // "hello-world"
+slugify("Hello World", 7); // "hello-w"
+```
+
+It is deterministic: the same input always produces the same slug, on every
+machine and in every process. Nothing random and nothing numeric is ever
+appended.
+
+<Callout type="warn" title="Non-Latin titles need an explicit slug">
+  CJK, Cyrillic and emoji fold to nothing, and the engine refuses to invent a
+  replacement:
+
+```text
+POST { "title": "日本語のタイトル" }
+400  Could not derive "slug" from "title". Send "slug" explicitly.
+```
+
+Send the slug yourself and it is accepted, normalised like any other. A random
+or numeric fallback would produce an unmemorable URL nobody asked for, and would
+not be reproducible.
+
+</Callout>
+
+## Stability: the whole point
+
+**Updating the source field never changes an existing slug.**
+
+```ts
+await articles.update(7, { title: "A completely different title" });
+// slug: still "hello-world"
+```
+
+A published URL that moves because somebody fixed a typo is a 404 for every
+link to it, and there is no redirect history to catch it. So the slug changes
+only when the update payload names it:
+
+```ts
+await articles.update(7, { slug: "  A Brand   New Slug! " });
+// slug: "a-brand-new-slug" - normalised, but changed because you asked
+```
+
+Re-sending the stored value in a different shape counts as no change at all:
+normalisation runs before the diff, so `"Hello World"` and `hello-world` are the
+same stored value and no write happens.
+
+<Callout type="warn" title="Moving a slug breaks the old URL">
+  There is no slug history and no automatic redirect. The old URL starts
+  answering 404 the moment the new one takes effect. If that matters, keep a
+  redirect table of your own - and see
+  [Limitations](/docs/dev/content-engine/limitations).
+</Callout>
+
+## Collisions
+
+Two rows cannot share a slug. The unique index is what enforces it, and nothing
+auto-suffixes:
+
+```text
+POST { "title": "Hello World" }   → slug "hello-world", 201
+POST { "title": "Hello World" }   → 409
+POST { "slug": "hello-world" }    → 409
+```
+
+A derived collision and an explicit one are the same 409, because they are the
+same problem: the URL is taken. Silently storing `hello-world-2` would hand back
+a URL the author never chose and cannot predict.
+
+## Migrations
+
+On a **new** table the column and its index arrive in one statement, and Drizzle
+Kit generates it correctly.
+
+On a **populated** table it does not. `ADD COLUMN … NOT NULL` with no default
+fails outright, so the generated one-liner has to be split by hand:
+
+```sql
+ALTER TABLE "example_articles" ADD COLUMN "slug" varchar(160);--> statement-breakpoint
+
+-- The subset of `slugify` SQL can do without an extension.
+UPDATE "example_articles"
+SET "slug" = NULLIF(
+  trim(both '-' from regexp_replace(lower(left("title", 160)), '[^a-z0-9]+', '-', 'g')),
+  ''
+);--> statement-breakpoint
+
+-- Two rows can share a title, and a non-Latin title normalises to nothing.
+-- Both keep their row id as a deterministic tie-breaker; no title is lost.
+UPDATE "example_articles" AS a
+SET "slug" = concat_ws('-', a."slug", a."id")
+WHERE a."slug" IS NULL
+   OR EXISTS (
+     SELECT 1 FROM "example_articles" AS b
+     WHERE b."slug" = a."slug" AND b."id" <> a."id"
+   );--> statement-breakpoint
+
+ALTER TABLE "example_articles" ALTER COLUMN "slug" SET NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "example_articles_slug_key" ON "example_articles" USING btree ("slug");
+```
+
+The [example plugin's migration](https://github.com/aXenDeveloper/vitnode/blob/canary/apps/docs/migrations/0024_add_example_article_slug.sql)
+is exactly that file, and the Postgres integration test replays it - so the
+recipe is checked rather than remembered.
+
+## Where a slug can be used
+
+- **`admin.titleField`** - allowed, but never chosen automatically. A URL
+  segment reads poorly in a toast or a relation picker.
+- **`admin.list.searchableFields`** - allowed when you ask for it, never by
+  default.
+- **`admin.list.orderableFields`** - like any other field: allowlist it or it is
+  not orderable.
+- **`publicApi.fields`** - and a public content type needs
+  [exactly one](/docs/dev/content-engine/public-api), because it is what the
+  public detail route resolves by.

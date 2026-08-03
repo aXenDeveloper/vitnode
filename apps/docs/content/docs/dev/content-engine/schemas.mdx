@@ -1,6 +1,6 @@
 ---
 title: Generated schemas
-description: The eight Zod schemas every content type exposes, and the rules they enforce.
+description: The thirteen Zod schemas every content type exposes, and the rules they enforce.
 icon: ShieldCheck
 ---
 
@@ -17,6 +17,17 @@ articleContentType.schemas.filters;      // query-string filters
 articleContentType.schemas.order;        // orderBy allowlist + direction
 articleContentType.schemas.params;       // { id }
 articleContentType.schemas.form;         // AutoForm-safe variant
+```
+
+A content type with [`publicApi`](/docs/dev/content-engine/public-api) carries
+five more, all empty without it:
+
+```ts
+articleContentType.schemas.publicSelect;       // the public projection
+articleContentType.schemas.publicSelectObject; // the same, extendable
+articleContentType.schemas.publicFilters;      // one key per filterableFields
+articleContentType.schemas.publicOrder;        // the public orderBy allowlist
+articleContentType.schemas.publicParams;       // { slug }
 ```
 
 ## create
@@ -62,6 +73,28 @@ Describes the response, including `id`, `createdAt` and `updatedAt`. Dates are
 
 `selectObject` is the same schema left as a `ZodObject`, which is what the list
 route extends with the joined relation labels.
+
+With [publication](/docs/dev/content-engine/publication) it also carries
+`status` and `publishedAt`. Both are absent from `create` and `update`, which
+are strict - so publishing is only ever reachable through `service.publish` and
+its route, never through a field update.
+
+## publicSelect
+
+The public projection: exactly `publicApi.fields`, and not one key more. An
+exposed relation collapses to `{ id, label }`.
+
+```ts
+Object.keys(articleContentType.schemas.publicSelectObject.shape);
+// ["title", "slug", "excerpt", "category", "publishedAt"]
+```
+
+This is also what the Public Content Service builds its `SELECT` map from, so a
+field missing here is a field that never leaves Postgres - not one that is
+fetched and then deleted. `publicFilters` and `publicOrder` are the matching
+allowlists, each a subset of `fields`, and `publicParams` is `{ slug }`.
+
+See [Public API](/docs/dev/content-engine/public-api).
 
 ## filters and order
 

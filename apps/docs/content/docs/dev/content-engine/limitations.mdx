@@ -19,8 +19,12 @@ other 20%, so you find out here rather than halfway through building.
 | Record-level ownership ("edit your own") | Check the author in a custom route |
 | Field-level permissions | Split the content type, or write the route |
 | Bulk actions | Add a custom admin route |
-| Public frontend routes | Not generated yet. Write the route and gate it with `publishedCondition` |
-| Public field projection | Select only the columns you mean to expose, by hand |
+| Public **write** routes | Never generated. Write the route yourself |
+| Slug history and redirects | Keep your own table. Slugs are stable by default precisely because there is no safety net |
+| Public user fields | Not exposable. Write your own route with the shape you mean |
+| Deep relation nesting in a public response | One level, `{ id, label }`. Anything more is a custom route |
+| Origin `Cache-Control` headers | [Tags](/docs/dev/content-engine/caching) handle Next-side caching; add headers in your own route |
+| Per-route rate limits | The global IP bucket applies; anything finer is yours |
 | Search indexing | Register a `SearchIndexer` yourself |
 | Automatic field renames | See below |
 | Unique constraints on more than one column | Declare them in `indexes`, not on the field |
@@ -93,28 +97,49 @@ Postgres, when the migration runs.
   one in a later release.
 </Callout>
 
-## Public API is AdminCP-only
+## Public exposure is opt-in twice over
 
-Every generated route sits under `/admin/` and requires a staff permission.
-That includes the publish and unpublish routes: enabling
-[`publication`](/docs/dev/content-engine/publication) adds a draft/published
-lifecycle, and nothing else. **No content becomes publicly reachable because you
-turned it on.**
+Enabling [`publication`](/docs/dev/content-engine/publication) adds a
+draft/published lifecycle, and nothing else. **No content becomes publicly
+reachable because you turned it on.** Every generated route still sits under
+`/admin/` behind a staff permission.
 
-There is no generated public read endpoint yet - no list route, no detail route,
-no field allowlist, no cache invalidation. Serving published content is your own
-route today, and the server surface exports the predicate so the one part that
-is easy to get wrong is not written by hand:
+[`publicApi`](/docs/dev/content-engine/public-api) is the block that generates
+public routes, it requires publication and a slug field, and its `fields` list
+is a strict allowlist with no wildcard - so a field added next month is private
+until somebody publishes it deliberately.
 
-```ts
-import { publishedCondition } from "@vitnode/core/content/server";
+Public **writes** are never generated, under any configuration.
 
-.where(publishedCondition(articleContent.columns))
-```
+## Non-Latin titles need an explicit slug
 
-Selecting only the columns you intend to expose is still yours to get right.
-[Serving published content](/docs/dev/content-engine/publication#serving-published-content)
-has the full example.
+`slugify` folds CJK, Cyrillic and emoji to nothing, and the engine refuses to
+invent a replacement rather than producing an unmemorable URL nobody chose. Send
+the slug yourself. See [Slug field](/docs/dev/content-engine/slug-field).
+
+## Moving a slug breaks the old URL
+
+There is no slug history and no automatic redirect, which is exactly why a slug
+never changes on its own. The moment you send a new one, the old URL starts
+answering 404. Keep your own redirect table if that matters.
+
+## Direct service calls invalidate no cache
+
+`service.publish()` and friends change rows and return the result. They emit no
+event and expire no cache tag: they may be inside an uncommitted transaction,
+they may be running in `apps/api` where there is no Next runtime at all, and
+`revalidateTag` needs a request scope a repository does not own.
+
+Every generated write path goes through an AdminCP server action, which does all
+three. A direct caller does its own follow-up, after committing - see
+[Caching](/docs/dev/content-engine/caching#writing-who-expires-what).
+
+## The public cursor is always the row id
+
+`withPagination` paginates on the primary key, so a list sorted by `publishedAt`
+still pages by `id`. That is pre-existing behaviour shared with every admin
+list, not a public-API quirk - but it means two rows with the same
+`publishedAt` can order differently between pages.
 
 ## Content types are code
 

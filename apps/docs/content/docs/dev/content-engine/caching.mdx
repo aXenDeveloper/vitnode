@@ -1,0 +1,186 @@
+---
+title: Caching
+description: Three cache-tag builders, one invalidation matrix, and a clear rule about who is allowed to expire what.
+icon: Zap
+---
+
+Public content is read far more often than it is written, so it should be
+cached - and then expired precisely, when the row it came from actually changed.
+
+## The tags
+
+```ts
+import {
+  contentPublicItemTag,
+  contentPublicListTag,
+  contentPublicSlugTag,
+} from "@vitnode/core/content";
+
+contentPublicListTag("example.article");
+// "content:example.article:list"
+
+contentPublicItemTag("example.article", 12);
+// "content:example.article:item:12"
+
+contentPublicSlugTag("example.article", "hello-world");
+// "content:example.article:slug:hello-world"
+```
+
+Format: `content:{contentTypeId}:{scope}[:{key}]`. No plugin id - a content type
+id is already globally unique (`validateContentTypes` enforces it) and already
+namespaced, as in `example.article`.
+
+These are pure strings and they are **public API**. Tag your own `fetch` calls
+and your own `"use cache"` functions with them and your pages get expired at the
+same moment the generated ones do.
+
+<Callout type="info" title="Long slugs are clamped, not truncated">
+  Next rejects a tag over 256 characters and a slug can be 160. Every builder
+  runs its result through the same FNV-1a fingerprint the index names use, so
+  two long slugs that differ only near the end still produce different tags.
+  Deterministic, and no new dependency.
+</Callout>
+
+## Reading
+
+`contentPublicFetch` attaches the right tags for you:
+
+```ts title="src/app/articles/[slug]/page.tsx"
+import { contentPublicFetch } from "@vitnode/core/content/next";
+
+const { data } = await contentPublicFetch({
+  definition: articleContentType,
+  pluginId: "@vitnode/example",
+  slug,
+});
+```
+
+| Fetch | Tags |
+| --- | --- |
+| list | `contentPublicListTag(id)` |
+| detail by slug | `contentPublicSlugTag(id, slug)` |
+
+A detail fetch is deliberately **not** tagged with the list tag. Publishing one
+article must not throw away every article page.
+
+## Writing: who expires what
+
+<Callout type="warn" title="The service invalidates nothing">
+  `service.create()`, `update()`, `delete()`, `publish()` and `unpublish()`
+  change rows and return the result. They expire no cache tag, for the same
+  three reasons they emit no event:
+
+- they accept `{ tx }`, so they may be inside a transaction that has not
+  committed - and expiring a tag for a write that then rolls back is worse than
+  not expiring it,
+- they may be running in `apps/api`, a plain Node process with no Next runtime
+  at all,
+- `revalidateTag` needs a Next request scope, which a repository does not own.
+
+If your own code drives a mutation, call `revalidateContent` yourself, from a
+server action, after the transaction has committed.
+
+</Callout>
+
+The **generated AdminCP server actions** do own the application lifecycle: they
+perform the write, wait for it, emit the event and expire the tags. That is
+where invalidation lives.
+
+## The matrix
+
+`revalidateContent` decides from four inputs: was the row publicly reachable
+before, is it reachable after, which slugs did it answer to, and which row is
+it.
+
+| Operation | list | item | old slug | new slug |
+| --- | :-: | :-: | :-: | :-: |
+| create draft | — | — | — | — |
+| update draft | — | — | — | — |
+| publish | ✓ | ✓ | — | ✓ |
+| update published, same slug | ✓ | ✓ | — | ✓ |
+| update published, slug changed | ✓ | ✓ | ✓ | ✓ |
+| unpublish | ✓ | ✓ | ✓ | — |
+| delete, ever published | ✓ | ✓ | ✓ | — |
+| delete, never published | — | — | — | — |
+| publish/unpublish no-op | — | — | — | — |
+
+Two things worth stating out loud:
+
+- **A draft touches nothing.** Creating or editing one changes no public
+  response, so expiring a public list for it would throw away a warm cache for
+  free.
+- **A no-op touches nothing.** Publishing something already published
+  transitioned nothing, so a double-clicked button costs one 200 and no cache.
+
+Nothing global is ever expired, and one content type's mutation never touches
+another's tags.
+
+### The slug change
+
+An update needs both slugs: the old URL has to stop resolving and the new one
+has to start. The generated `PUT` returns the new row, and by then the old slug
+is gone - so the server action **reads the row before writing**.
+
+That is a deliberate design rather than a guess after the fact. Widening the
+route's response to carry the previous row would change a public contract for a
+cache concern, and trusting the slug the browser happens to be holding would
+expire the wrong tag whenever the table was stale. One extra `GET` on a staff
+edit of a *public* content type is the cheapest correct option, and it is
+skipped entirely for everything else.
+
+## Doing it yourself
+
+```ts title="src/app/actions.ts"
+"use server";
+
+import { revalidateContent } from "@vitnode/core/content/next";
+
+export const publishArticle = async (id: number) => {
+  const result = await db.transaction(async tx => {
+    return await articleContent.service(c).publish(id, { tx });
+  });
+
+  // Committed by here, so it is safe to expire anything.
+  if (result?.changed) {
+    revalidateContent({
+      contentTypeId: "example.article",
+      id,
+      isPublic: true,
+      slugs: [result.row.slug],
+      wasPublic: false,
+    });
+  }
+};
+```
+
+`contentInvalidationTags` is the same decision, without the Next call - useful
+if you cache somewhere else entirely:
+
+```ts
+import { contentInvalidationTags } from "@vitnode/core/content";
+
+contentInvalidationTags({ contentTypeId, id, isPublic, slugs, wasPublic });
+// → the exact list of tags, and nothing more
+```
+
+And `isContentPubliclyVisible` is the JavaScript half of `publishedCondition`,
+so "was this reachable?" is answered by the same three clauses the database
+enforces rather than by a second, drifting rule:
+
+```ts
+isContentPubliclyVisible({ publishedAt: row.publishedAt, status: row.status });
+```
+
+## Where the Next imports live
+
+Exactly one place: `@vitnode/core/content/next`.
+
+`@vitnode/core/content` and `@vitnode/core/content/server` are loaded by
+`apps/api` - a plain `@hono/node-server` process - and by drizzle-kit, which
+executes `src/database/*.ts` to read the tables. `next/cache` and `server-only`
+both throw there, so an accidental import would not fail in CI; it would fail
+when somebody ran a migration. A test walks the engine's import graph and
+asserts the rule instead of trusting it.
+
+That is why the tag builders are strings in the client-safe layer and only
+`revalidateTag` lives behind the Next entrypoint.

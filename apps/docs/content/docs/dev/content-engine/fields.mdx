@@ -1,6 +1,6 @@
 ---
 title: Supported fields
-description: The eight field kinds, and exactly what each one becomes in Postgres, in the API and in the AdminCP.
+description: The nine field kinds, and exactly what each one becomes in Postgres, in the API and in the AdminCP.
 icon: ListChecks
 ---
 
@@ -10,6 +10,7 @@ things: a column, a Zod rule, an AdminCP input and a table cell.
 | Field | Column | API value | AdminCP input | Sortable | Filterable | Searchable |
 | --- | --- | --- | --- | :-: | :-: | :-: |
 | `text` | `varchar(maxLength ?? 255)`, optionally unique | `string` | `AutoFormInput` | ✓ | ✓ | ✓ |
+| `slug` | `varchar(maxLength ?? 160)`, `NOT NULL`, always unique | `string` | `AutoFormInput` | ✓ | ✓ | opt-in |
 | `textarea` | `text` | `string` | `AutoFormTextarea` | ✓ | ✗ | ✓ |
 | `number` | `integer` or `double precision` | `number` | number input | ✓ | ✓ | ✗ |
 | `boolean` | `boolean` | `boolean` | `AutoFormSwitch` | ✓ | ✓ | ✗ |
@@ -53,7 +54,8 @@ views: field.number({ integer: true, defaultValue: 0 });
 
 Same storage family, different intent. `text` is a bounded `varchar` and gets a
 single-line input; `textarea` is unbounded `text` and gets a multi-line one.
-Only these two may appear in `searchableFields`.
+These two are the default `searchableFields`; a `slug` can join them when you
+ask for it.
 
 ```ts
 title: field.text({ required: true, minLength: 3, maxLength: 200 }),
@@ -83,6 +85,21 @@ For a multi-column unique constraint, declare it there instead:
 ```ts
 indexes: [{ on: ["category", "code"], unique: true }],
 ```
+
+## slug
+
+A URL segment, derived from a `text` field and normalised on the way in:
+
+```ts
+slug: field.slug({ source: "title" }),
+```
+
+Always `NOT NULL`, always unique-indexed, and never re-derived by an update - so
+a published URL does not move because somebody fixed a title. It has no
+`required` or `nullable` argument: both follow from `source`.
+
+[Slug field](/docs/dev/content-engine/slug-field) has the normalisation table,
+the collision behaviour and the two-step migration a populated table needs.
 
 ## number
 
