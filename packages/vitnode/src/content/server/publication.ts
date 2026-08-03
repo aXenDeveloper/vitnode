@@ -9,6 +9,20 @@ import type { ContentPublicationMethods, ContentService } from "./service";
 import { ContentEngineError } from "../errors";
 
 /**
+ * The two columns `publication: { enabled: true }` generates.
+ *
+ * Structural on purpose: a `ContentModel`'s `columns` map satisfies it only when
+ * publication is enabled, because `ContentColumnName` adds those two names under
+ * the same conditional. Passing the columns of a content type without
+ * publication is therefore a compile error rather than a query against columns
+ * that do not exist.
+ */
+interface PublicationColumns {
+  publishedAt: PgColumn;
+  status: PgColumn;
+}
+
+/**
  * The one definition of "published".
  *
  * ```sql
@@ -41,7 +55,7 @@ import { ContentEngineError } from "../errors";
  * the lifecycle; serving it is still your route.
  */
 export const publishedCondition = (
-  columns: Record<string, PgColumn>,
+  columns: PublicationColumns,
 ): SQL | undefined =>
   and(
     eq(columns.status, "published"),
