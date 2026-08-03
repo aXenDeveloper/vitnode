@@ -5,6 +5,7 @@ import { ZodError } from "zod";
 const FOREIGN_KEY_VIOLATION = "23503";
 const UNIQUE_VIOLATION = "23505";
 const NOT_NULL_VIOLATION = "23502";
+const RESTRICT_VIOLATION = "23001";
 
 /**
  * Digs the Postgres error code out of whatever the driver threw.
@@ -49,6 +50,10 @@ export const rethrowAsHttpError = (
           action === "delete"
             ? "This record is still referenced by other content."
             : "A related record does not exist.",
+      });
+    case RESTRICT_VIOLATION:
+      throw new HTTPException(409, {
+        message: "This record is still referenced by other content.",
       });
     case NOT_NULL_VIOLATION:
       throw new HTTPException(400, { message: "A required field is missing." });

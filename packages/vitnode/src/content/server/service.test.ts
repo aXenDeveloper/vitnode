@@ -7,6 +7,7 @@ import { ZodError } from "zod";
 import {
   testArticleContentType,
   testCategoryContentType,
+  testPostContentType,
 } from "@/tests/content-fixtures";
 
 import type {
@@ -22,6 +23,9 @@ type ArticleType = typeof testArticleContentType;
 
 const categories = createContentModel(testCategoryContentType);
 const articles = createContentModel(testArticleContentType, {
+  references: { category: () => categories.table.id },
+});
+const posts = createContentModel(testPostContentType, {
   references: { category: () => categories.table.id },
 });
 
@@ -435,6 +439,114 @@ describe("content service", () => {
       await articles.service(c).create({ category: 1, title: "Hello" }, { tx });
 
       expect(opsOf(outer.calls, "insert")).toHaveLength(1);
+    });
+  });
+
+  describe("publication", () => {
+    const published = {
+      id: 1,
+      publishedAt: new Date("2026-08-01T09:00:00.000Z"),
+      status: "published",
+      title: "Hello",
+    };
+    const draft = { ...published, status: "draft" };
+
+    it("is absent from a content type without publication", () => {
+      const service = articles.service(createDbMock([]).c);
+
+      expect(service.publish).toBeUndefined();
+      expect(service.unpublish).toBeUndefined();
+    });
+
+    describe("publish", () => {
+      it("writes the status and coalesces the publication date", async () => {
+        const { c, calls } = createDbMock([[published]]);
+
+        const result = await posts.service(c).publish?.(1);
+
+        expect(result).toEqual({
+          changed: true,
+          publishedAt: published.publishedAt,
+          row: published,
+        });
+        // COALESCE, so a republish keeps the original date - it is passed as
+        // SQL rather than a JS value on purpose.
+        expect(opsOf(calls, "set")).toHaveLength(1);
+        expect(opsOf(calls, "set")[0]).toMatchObject({ status: "published" });
+        // One statement in the happy path: no read-then-write race.
+        expect(opsOf(calls, "select")).toHaveLength(0);
+      });
+
+      it("is a no-op when the row is already published", async () => {
+        // The conditional UPDATE matches nothing, so the follow-up read is what
+        // tells "already published" apart from "no such row".
+        const { c, calls } = createDbMock([[], [published]]);
+
+        const result = await posts.service(c).publish?.(1);
+
+        expect(result).toEqual({
+          changed: false,
+          publishedAt: published.publishedAt,
+          row: published,
+        });
+        expect(opsOf(calls, "select")).toHaveLength(1);
+      });
+
+      it("returns null when the row does not exist", async () => {
+        const { c } = createDbMock([[], []]);
+
+        await expect(posts.service(c).publish?.(1)).resolves.toBeNull();
+      });
+
+      it("joins a caller's transaction", async () => {
+        const { c } = createDbMock([]);
+        const outer = createDbMock([[published]]);
+
+        await posts.service(c).publish?.(1, { tx: outer.c.get("db") });
+
+        expect(opsOf(outer.calls, "update")).toHaveLength(1);
+      });
+    });
+
+    describe("unpublish", () => {
+      it("flips the status and leaves the publication date alone", async () => {
+        const { c, calls } = createDbMock([[draft]]);
+
+        const result = await posts.service(c).unpublish?.(1);
+
+        expect(result).toEqual({
+          changed: true,
+          publishedAt: draft.publishedAt,
+          row: draft,
+        });
+        // `publishedAt` means "first published at", so unpublishing must not
+        // clear it - a republish would otherwise reorder the public feed.
+        expect(opsOf(calls, "set")).toEqual([{ status: "draft" }]);
+      });
+
+      it("is a no-op when the row is already a draft", async () => {
+        const { c } = createDbMock([[], [draft]]);
+
+        await expect(posts.service(c).unpublish?.(1)).resolves.toMatchObject({
+          changed: false,
+        });
+      });
+
+      it("returns null when the row does not exist", async () => {
+        const { c } = createDbMock([[], []]);
+
+        await expect(posts.service(c).unpublish?.(1)).resolves.toBeNull();
+      });
+    });
+
+    it("selects the generated columns on every read", async () => {
+      const { c, calls } = createDbMock([[published]]);
+
+      await posts.service(c).findById(1);
+
+      expect(Object.keys(opsOf(calls, "select")[0] as object)).toEqual(
+        expect.arrayContaining(["status", "publishedAt"]),
+      );
     });
   });
 });

@@ -62,6 +62,10 @@ export const ContentTableView = async ({
   };
 
   const emptyLabel = t("table.empty_value");
+  const statusLabels = {
+    draft: t("status.draft"),
+    published: t("status.published"),
+  };
   const titleField = definition.admin.titleField;
 
   const columns: ColumnDef<ContentRowData>[] = [
@@ -75,7 +79,12 @@ export const ContentTableView = async ({
         cell: ({ row }) => {
           if (!override) {
             return (
-              <ContentCell emptyLabel={emptyLabel} row={row} spec={spec} />
+              <ContentCell
+                emptyLabel={emptyLabel}
+                row={row}
+                spec={spec}
+                statusLabels={statusLabels}
+              />
             );
           }
 

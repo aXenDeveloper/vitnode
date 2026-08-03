@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   testArticleContentType,
   testCategoryContentType,
+  testPostContentType,
 } from "@/tests/content-fixtures";
 
 import { createContentModel } from "./model";
@@ -28,6 +29,9 @@ vi.mock("../../api/lib/check-staff-permission", () => ({
 
 const categories = createContentModel(testCategoryContentType);
 const articles = createContentModel(testArticleContentType, {
+  references: { category: () => categories.table.id },
+});
+const posts = createContentModel(testPostContentType, {
   references: { category: () => categories.table.id },
 });
 
@@ -88,6 +92,47 @@ const harness = ({ allow = true }: { allow?: boolean } = {}): Harness => {
   app.use("*", context);
 
   for (const { handler, route } of buildContentRoutes(articles, {
+    pluginId: PLUGIN_ID,
+  })) {
+    app.openapi(route, handler);
+  }
+
+  return { app, emitted, service };
+};
+
+/**
+ * The same harness for a content type with publication enabled, which adds two
+ * routes and two service methods.
+ */
+const publicationHarness = ({ allow = true }: { allow?: boolean } = {}) => {
+  const emitted: Harness["emitted"] = [];
+  const service = {
+    create: vi.fn(),
+    delete: vi.fn(),
+    findById: vi.fn(),
+    findMany: vi.fn(),
+    options: vi.fn(),
+    publish: vi.fn(),
+    unpublish: vi.fn(),
+    update: vi.fn(),
+  };
+
+  permissionGranted = allow;
+  vi.spyOn(posts, "service").mockReturnValue(service);
+
+  const app = new OpenAPIHono();
+  app.use("*", async (c, next) => {
+    c.set("events", {
+      emit: async (name: string, payload: unknown) => {
+        await Promise.resolve();
+        emitted.push({ name, payload });
+      },
+    } as unknown as Context["var"]["events"]);
+    c.set("admin", allow ? { user: adminUser } : null);
+    await next();
+  });
+
+  for (const { handler, route } of buildContentRoutes(posts, {
     pluginId: PLUGIN_ID,
   })) {
     app.openapi(route, handler);
@@ -409,6 +454,125 @@ describe("generated content routes", () => {
       });
 
       expect(res.status).toBe(403);
+    });
+  });
+
+  describe("publication", () => {
+    const publishedRow = {
+      ...row,
+      publishedAt: new Date("2026-08-01T09:00:00.000Z"),
+      status: "published" as const,
+    };
+
+    it("generates no publish routes without publication", () => {
+      const paths = buildContentRoutes(articles, { pluginId: PLUGIN_ID }).map(
+        entry => `${entry.route.method} ${entry.route.path}`,
+      );
+
+      expect(paths).not.toContain("post /{id}/publish");
+      expect(paths).not.toContain("post /{id}/unpublish");
+    });
+
+    it.each([
+      ["publish", publishedRow, "published"],
+      ["unpublish", row, "unpublished"],
+    ] as const)(
+      "%ss and emits the matching event",
+      async (action, resultRow, event) => {
+        const { app, emitted, service } = publicationHarness();
+        service[action].mockResolvedValue({
+          changed: true,
+          publishedAt: publishedRow.publishedAt,
+          row: resultRow,
+        });
+
+        const res = await app.request(`/7/${action}`, { method: "POST" });
+
+        expect(res.status).toBe(200);
+        await expect(res.json()).resolves.toMatchObject({ changed: true });
+        expect(service[action]).toHaveBeenCalledWith(7);
+        expect(emitted).toHaveLength(1);
+        expect(emitted[0].name).toBe(`content.test.post.${event}`);
+      },
+    );
+
+    it("carries the publication date on the published event only", async () => {
+      const { app, emitted, service } = publicationHarness();
+      service.publish.mockResolvedValue({
+        changed: true,
+        publishedAt: publishedRow.publishedAt,
+        row: publishedRow,
+      });
+
+      await app.request("/7/publish", { method: "POST" });
+
+      expect(emitted[0].payload).toEqual({
+        contentId: 7,
+        publishedAt: publishedRow.publishedAt,
+      });
+    });
+
+    it("answers 200 but emits nothing when nothing changed", async () => {
+      const { app, emitted, service } = publicationHarness();
+      service.publish.mockResolvedValue({
+        changed: false,
+        publishedAt: publishedRow.publishedAt,
+        row: publishedRow,
+      });
+
+      const res = await app.request("/7/publish", { method: "POST" });
+
+      expect(res.status).toBe(200);
+      await expect(res.json()).resolves.toMatchObject({ changed: false });
+      // No outbox, so a listener firing on every button press would be doing
+      // duplicate work for free.
+      expect(emitted).toEqual([]);
+    });
+
+    it("answers 404 for a missing record", async () => {
+      const { app, service } = publicationHarness();
+      service.publish.mockResolvedValue(null);
+
+      const res = await app.request("/7/publish", { method: "POST" });
+
+      expect(res.status).toBe(404);
+    });
+
+    it("answers 400 for a non-numeric identifier", async () => {
+      const { app } = publicationHarness();
+
+      const res = await app.request("/abc/publish", { method: "POST" });
+
+      expect(res.status).toBe(400);
+    });
+
+    it.each(["publish", "unpublish"])(
+      "requires can_publish for %s",
+      async action => {
+        const { app } = publicationHarness({ allow: false });
+
+        const res = await app.request(`/7/${action}`, { method: "POST" });
+
+        expect(res.status).toBe(403);
+      },
+    );
+
+    it("documents both operations", () => {
+      const doc = publicationHarness().app.getOpenAPIDocument({
+        info: { title: "t", version: "1" },
+        openapi: "3.0.0",
+      });
+
+      expect(Object.keys(doc.paths).sort()).toEqual([
+        "/",
+        "/options/{field}",
+        "/{id}",
+        "/{id}/publish",
+        "/{id}/unpublish",
+      ]);
+      expect(
+        Object.keys(doc.paths["/{id}/publish"].post?.responses ?? {}).sort(),
+      ).toEqual(["200", "400", "404"]);
     });
   });
 

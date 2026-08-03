@@ -7,6 +7,7 @@ import type { AnyContentTypeDefinition } from "./types";
 
 import {
   CONTENT_PERMISSIONS,
+  CONTENT_PUBLICATION_FIELDS,
   CONTENT_SYSTEM_FIELDS,
   RESERVED_FILTER_KEYS,
 } from "./const";
@@ -142,11 +143,17 @@ export const contentAdminHref = (id: string): string =>
   `/admin/content/${contentTypeToPath(id)}`;
 
 /**
- * The four permissions every content type gets. `can_view` gates the list and
- * the nav item; the writes depend on it so a role cannot create rows it cannot
- * see.
+ * The permissions every content type gets. `can_view` gates the list and the
+ * nav item; the writes depend on it so a role cannot create rows it cannot see.
+ *
+ * `can_publish` is added only for a content type with publication enabled -
+ * publishing is the one generated operation that changes what anonymous
+ * visitors can see, so it is worth its own gate. It depends on `can_view` like
+ * the rest, which leaves "may publish but not edit" expressible.
  */
-export const contentPermissionEntries = (): PermissionStaffEntryInput[] => [
+export const contentPermissionEntries = (
+  definition?: AnyContentTypeDefinition,
+): PermissionStaffEntryInput[] => [
   CONTENT_PERMISSIONS.view,
   {
     dependsOn: [CONTENT_PERMISSIONS.view],
@@ -160,6 +167,14 @@ export const contentPermissionEntries = (): PermissionStaffEntryInput[] => [
     dependsOn: [CONTENT_PERMISSIONS.view],
     permission: CONTENT_PERMISSIONS.delete,
   },
+  ...(definition?.publication.enabled
+    ? [
+        {
+          dependsOn: [CONTENT_PERMISSIONS.view],
+          permission: CONTENT_PERMISSIONS.publish,
+        },
+      ]
+    : []),
 ];
 
 /**
@@ -177,16 +192,21 @@ export const withContentPermissions = (
 
   for (const { definition } of entries) {
     if (admin[definition.permissionModule]) continue;
-    admin[definition.permissionModule] = contentPermissionEntries();
+    admin[definition.permissionModule] = contentPermissionEntries(definition);
   }
 
   return { ...permissionStaff, admin };
 };
 
-/** Column names a generated route may order by. */
+/**
+ * Column names a generated route may order by. System columns - and the
+ * publication columns when enabled - are always allowed, so they need no entry
+ * in `admin.list.orderableFields`.
+ */
 export const orderableColumns = (
   definition: AnyContentTypeDefinition,
 ): string[] => [
   ...definition.admin.list.orderableFields,
   ...CONTENT_SYSTEM_FIELDS,
+  ...(definition.publication.enabled ? CONTENT_PUBLICATION_FIELDS : []),
 ];

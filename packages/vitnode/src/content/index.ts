@@ -31,6 +31,9 @@ export {
   CONTENT_FILTERABLE_FIELD_KINDS,
   CONTENT_OPTIONS_LIMIT,
   CONTENT_PERMISSIONS,
+  CONTENT_PUBLICATION_FIELDS,
+  CONTENT_PUBLICATION_STATUS_LENGTH,
+  CONTENT_PUBLICATION_STATUSES,
   CONTENT_SYSTEM_FIELDS,
   CONTENT_TEXT_DEFAULT_LENGTH,
   RESERVED_FILTER_KEYS,
@@ -43,6 +46,8 @@ export type {
   ContentDeletedPayload,
   ContentEventAction,
   ContentEventsFor,
+  ContentPublishedPayload,
+  ContentUnpublishedPayload,
   ContentUpdatedPayload,
 } from "./events";
 export { field } from "./fields";
@@ -81,6 +86,9 @@ export type {
   ContentNumberField,
   ContentOnDelete,
   ContentOrderableFieldName,
+  ContentPublicationConfig,
+  ContentPublicationField,
+  ContentPublicationStatus,
   ContentReferenceField,
   ContentReferenceFieldName,
   ContentRelationField,
@@ -95,4 +103,5 @@ export type {
   FilterableContentFieldName,
   ResolvedContentAdminConfig,
   ResolvedContentIndex,
+  ResolvedContentPublicationConfig,
 } from "./types";

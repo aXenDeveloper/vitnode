@@ -41,6 +41,16 @@ describe("withHttpErrors", () => {
     await expect(statusOf(pgError("23503"), "delete")).resolves.toBe(409);
   });
 
+  it("maps Postgres 18's own RESTRICT code to 409 as well", async () => {
+    // Postgres 18 reports a refused `ON DELETE RESTRICT` as `23001`, not
+    // `23503`. Reading only the older code turned every blocked delete on a
+    // modern server into a 500.
+    await expect(statusOf(pgError("23001"), "delete")).resolves.toBe(409);
+    // `23001` only ever comes from an update or delete of a referenced row, so
+    // it is a conflict whatever the caller was doing - never a 400.
+    await expect(statusOf(pgError("23001"), "update")).resolves.toBe(409);
+  });
+
   it("maps a missing relation on write to 400", async () => {
     await expect(statusOf(pgError("23503"), "create")).resolves.toBe(400);
     await expect(statusOf(pgError("23503"), "update")).resolves.toBe(400);

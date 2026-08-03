@@ -6,13 +6,18 @@
  * throws under plain Node, and both `apps/api` and `drizzle-kit` load these
  * modules in plain Node.
  */
-export { buildContentColumn, buildSystemColumns } from "./column-builders";
+export {
+  buildContentColumn,
+  buildPublicationColumns,
+  buildSystemColumns,
+} from "./column-builders";
 export type { ColumnReferenceThunk } from "./column-builders";
 export { emitContentEvent } from "./emit";
 export { rethrowAsHttpError, withHttpErrors } from "./http-errors";
 export { createContentModel } from "./model";
 export type { ContentModel } from "./model";
 export { buildContentAdminModule } from "./module";
+export { publicationMethods, publishedCondition } from "./publication";
 export {
   buildFilterCondition,
   buildOrderColumn,
@@ -29,7 +34,10 @@ export type {
   ContentLabels,
   ContentListRow,
   ContentPageInfo,
+  ContentPublicationMethods,
+  ContentPublicationResult,
   ContentService,
+  ContentServiceBase,
   ContentServiceOptions,
   ContentUpdateResult,
 } from "./service";
@@ -38,6 +46,7 @@ export type {
   ContentColumnBuilder,
   ContentColumnBuilders,
   ContentColumnName,
+  ContentPublicationColumnBuilders,
   ContentReferences,
   ContentSystemColumnBuilders,
   ContentTable,

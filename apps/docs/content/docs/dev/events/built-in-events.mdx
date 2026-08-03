@@ -242,6 +242,14 @@ content.example.article.updated
 content.example.article.deleted
 ```
 
+A content type that opts into
+[publication](/docs/dev/content-engine/publication) emits two more:
+
+```text
+content.example.article.published
+content.example.article.unpublished
+```
+
 They are registered on the global map by the owning plugin with a single
 `declare module` block, so the names and payloads are as strongly typed as any
 core event - `changedFields` narrows to that content type's own field names.
@@ -257,13 +265,21 @@ core event - `changedFields` narrows to that content type's own field names.
         "Update only - the fields whose value actually changed. An update that changes nothing emits no event at all.",
       type: "string[]",
     },
+    publishedAt: {
+      description:
+        "Published only - when the row first went live. Never rewritten by a later unpublish/republish.",
+      type: "Date",
+    },
   }}
 />
 
 The envelope already carries the actor, the emitting plugin and the timestamp,
 so the payloads stay minimal. Events fire only after the database write has
-returned: a failed validation, a delete blocked by a foreign key, and a no-op
-update all emit nothing.
+returned: a failed validation, a delete blocked by a foreign key, a no-op update
+and a no-op publish all emit nothing.
+
+Exactly one event fires per mutation - `published` and `unpublished` never come
+with an `updated` alongside them.
 
 **Use cases:** reindex the row for search, invalidate a CDN entry, or mirror the
 change into a plugin-owned projection. See

@@ -1,10 +1,18 @@
 import type {
   CONTENT_FILTERABLE_FIELD_KINDS,
+  CONTENT_PUBLICATION_FIELDS,
+  CONTENT_PUBLICATION_STATUSES,
   CONTENT_SYSTEM_FIELDS,
 } from "./const";
 import type { ContentSchemas } from "./schemas";
 
 export type ContentSystemField = (typeof CONTENT_SYSTEM_FIELDS)[number];
+
+export type ContentPublicationField =
+  (typeof CONTENT_PUBLICATION_FIELDS)[number];
+
+export type ContentPublicationStatus =
+  (typeof CONTENT_PUBLICATION_STATUSES)[number];
 
 export type ContentOnDelete = "cascade" | "restrict" | "set null";
 
@@ -150,11 +158,17 @@ export type ContentFieldMap = Record<string, ContentFieldDescriptor>;
  * back to their generic defaults. Mentioning only `kind` still rejects
  * non-descriptors while leaving literal inference intact, and the reserved
  * system columns stay a compile error.
+ *
+ * `TPublication` extends the same trick to `status` and `publishedAt`, but only
+ * when the content type opted into publication - a Stage 1 type is free to keep
+ * declaring its own `status` enum.
  */
-export type ContentFieldsConstraint = Partial<
-  Record<ContentSystemField, never>
-> &
-  Record<string, { kind: ContentFieldKind }>;
+export type ContentFieldsConstraint<TPublication extends boolean = false> =
+  Partial<Record<ContentSystemField, never>> &
+    Record<string, { kind: ContentFieldKind }> &
+    (TPublication extends true
+      ? Partial<Record<ContentPublicationField, never>>
+      : unknown);
 
 /** Fields that hold a foreign key to another row. */
 export type ContentReferenceField = ContentRelationField | ContentUserField;
@@ -231,21 +245,40 @@ export interface ContentAdminLabel {
   singular: string;
 }
 
-export interface ContentAdminListConfig<TFields = ContentFieldMap> {
+/**
+ * `status` and `publishedAt` are addressable in the admin config only once the
+ * content type opted into publication.
+ */
+type ContentPublicationColumn<TPublication extends boolean> =
+  TPublication extends true ? ContentPublicationField : never;
+
+export interface ContentAdminListConfig<
+  TFields = ContentFieldMap,
+  TPublication extends boolean = boolean,
+> {
   /** Columns shown in the DataTable, in order. Defaults to every field. */
-  columns?: (ContentSystemField | keyof TFields)[];
+  columns?: (
+    ContentPublicationColumn<TPublication> | ContentSystemField | keyof TFields
+  )[];
   defaultOrder?: "asc" | "desc";
-  defaultOrderBy?: ContentSystemField | keyof TFields;
-  /** Allowlist for `orderBy`. System columns are always allowed. */
+  defaultOrderBy?:
+    ContentPublicationColumn<TPublication> | ContentSystemField | keyof TFields;
+  /**
+   * Allowlist for `orderBy`. System columns - and the publication columns when
+   * enabled - are always allowed and need no entry here.
+   */
   orderableFields?: (keyof TFields)[];
   /** Only `text` and `textarea` fields may be searched. */
   searchableFields?: (keyof TFields)[];
 }
 
-export interface ContentAdminConfig<TFields = ContentFieldMap> {
+export interface ContentAdminConfig<
+  TFields = ContentFieldMap,
+  TPublication extends boolean = boolean,
+> {
   form?: { fields?: (keyof TFields)[] };
   label: ContentAdminLabel;
-  list?: ContentAdminListConfig<TFields>;
+  list?: ContentAdminListConfig<TFields, TPublication>;
   navigation?: { enabled?: boolean };
   /**
    * Staff permission module name. Defaults to a slug of `label.plural`, e.g.
@@ -285,15 +318,23 @@ export interface ResolvedContentAdminConfig {
  * A declared index and a generated one covering the same columns collapse into
  * a single index; see `resolveContentIndexes`.
  */
-export interface ContentIndexInput<TFields = ContentFieldMap> {
+export interface ContentIndexInput<
+  TFields = ContentFieldMap,
+  TPublication extends boolean = boolean,
+> {
   /** Defaults to `<table>_<columns>_idx`, or `_key` when unique. */
   name?: string;
   on: [
-    ContentSystemField | (keyof TFields & string),
-    ...(ContentSystemField | (keyof TFields & string))[],
+    ContentIndexColumn<TFields, TPublication>,
+    ...ContentIndexColumn<TFields, TPublication>[],
   ];
   unique?: boolean;
 }
+
+type ContentIndexColumn<TFields, TPublication extends boolean> =
+  | ContentPublicationColumn<TPublication>
+  | ContentSystemField
+  | (keyof TFields & string);
 
 /**
  * Stored shape. Non-generic for the same reason as
@@ -318,12 +359,47 @@ export interface ResolvedContentIndex {
 }
 
 // ---------------------------------------------------------------------------
+// Publication
+// ---------------------------------------------------------------------------
+
+/**
+ * Opts a content type into the draft/published lifecycle.
+ *
+ * `enabled` is literal `true` rather than `boolean` so the flag survives
+ * inference: every conditional in this file keys off `{ enabled: true }`, and a
+ * widened `boolean` would silently resolve to the disabled branch.
+ */
+export interface ContentPublicationConfig {
+  enabled: true;
+}
+
+export interface ResolvedContentPublicationConfig<
+  TEnabled extends boolean = boolean,
+> {
+  enabled: TEnabled;
+}
+
+/**
+ * The two generated columns, present only when publication is enabled.
+ *
+ * `AnyContentTypeDefinition` carries `enabled: boolean`, which does not extend
+ * `true`, so the erased definition resolves to the empty branch - generic code
+ * sees a row without them, exactly as it did in Stage 1.
+ */
+type ContentPublicationColumns<TDefinition> = TDefinition extends {
+  publication: { enabled: true };
+}
+  ? { publishedAt: Date | null; status: ContentPublicationStatus }
+  : Record<never, never>;
+
+// ---------------------------------------------------------------------------
 // Definition
 // ---------------------------------------------------------------------------
 
 export interface ContentTypeDefinition<
   TId extends string = string,
   TFields = ContentFieldMap,
+  TPublication extends boolean = boolean,
 > {
   admin: ResolvedContentAdminConfig;
   fields: TFields;
@@ -332,8 +408,9 @@ export interface ContentTypeDefinition<
   indexes: ResolvedContentIndex[];
   /** Derived from `admin.permissionModule` or `admin.label.plural`. */
   permissionModule: string;
+  publication: ResolvedContentPublicationConfig<TPublication>;
   /** Zod schemas generated from `fields`. */
-  schemas: ContentSchemas<ContentTypeDefinition<TId, TFields>>;
+  schemas: ContentSchemas<ContentTypeDefinition<TId, TFields, TPublication>>;
   tableName: string;
 }
 
@@ -347,7 +424,7 @@ export type ContentFieldsOf<TDefinition> = TDefinition extends {
   : never;
 
 export type ContentSelect<TDefinition> = Prettify<
-  {
+  ContentPublicationColumns<TDefinition> & {
     [K in keyof ContentFieldsOf<TDefinition>]: ContentFieldValue<
       ContentFieldsOf<TDefinition>[K]
     >;
@@ -401,12 +478,20 @@ export type FilterableContentFieldName<TDefinition> = FieldNamesOfKind<
   FilterableContentFieldKind
 >;
 
-/** Equality filters accepted by `service.findMany`, one key per filterable field. */
-export type ContentFilterInput<TDefinition> = Partial<{
-  [K in FilterableContentFieldName<TDefinition>]: ContentFieldInput<
-    ContentFieldsOf<TDefinition>[K]
-  >;
-}>;
+/**
+ * Equality filters accepted by `service.findMany`, one key per filterable
+ * field - plus `status` once publication is enabled, which is a generated
+ * column rather than a declared field.
+ */
+export type ContentFilterInput<TDefinition> = Partial<
+  (TDefinition extends { publication: { enabled: true } }
+    ? { status: ContentPublicationStatus }
+    : Record<never, never>) & {
+    [K in FilterableContentFieldName<TDefinition>]: ContentFieldInput<
+      ContentFieldsOf<TDefinition>[K]
+    >;
+  }
+>;
 
 /**
  * Columns `service.findMany` may order by.

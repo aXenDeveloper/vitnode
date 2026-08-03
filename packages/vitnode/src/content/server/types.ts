@@ -17,6 +17,7 @@ import type {
 
 import type {
   ContentFieldsOf,
+  ContentPublicationField,
   ContentSystemField,
   HasColumnDefault,
 } from "../types";
@@ -80,9 +81,28 @@ export interface ContentSystemColumnBuilders {
   updatedAt: NotNull<HasDefault<PgTimestampBuilderInitial<ColumnName>>>;
 }
 
-export type ContentColumnBuilders<TFields> = ContentSystemColumnBuilders & {
-  [K in keyof TFields]: ContentColumnBuilder<TFields[K]>;
-};
+/** `status` and `publishedAt` - added only when publication is enabled. */
+export interface ContentPublicationColumnBuilders {
+  publishedAt: PgTimestampBuilderInitial<ColumnName>;
+  status: NotNull<
+    HasDefault<
+      PgVarcharBuilderInitial<ColumnName, ["draft", "published"], number>
+    >
+  >;
+}
+
+type PublicationColumnBuilders<TPublication extends boolean> =
+  TPublication extends true
+    ? ContentPublicationColumnBuilders
+    : Record<never, never>;
+
+export type ContentColumnBuilders<
+  TFields,
+  TPublication extends boolean = false,
+> = ContentSystemColumnBuilders &
+  PublicationColumnBuilders<TPublication> & {
+    [K in keyof TFields]: ContentColumnBuilder<TFields[K]>;
+  };
 
 /**
  * The `pgTable` a content type compiles to.
@@ -90,22 +110,35 @@ export type ContentColumnBuilders<TFields> = ContentSystemColumnBuilders & {
  * Built with Drizzle's own `BuildColumns`, so `$inferSelect` and `$inferInsert`
  * come out of the same machinery a hand-written `pgTable` uses.
  */
-export type ContentTable<TName extends string, TFields> = PgTableWithColumns<{
-  columns: BuildColumns<TName, ContentColumnBuilders<TFields>, "pg">;
+export type ContentTable<
+  TName extends string,
+  TFields,
+  TPublication extends boolean = false,
+> = PgTableWithColumns<{
+  columns: BuildColumns<
+    TName,
+    ContentColumnBuilders<TFields, TPublication>,
+    "pg"
+  >;
   dialect: "pg";
   name: TName;
   schema: undefined;
 }>;
 
 export type ContentTableFor<TDefinition> = TDefinition extends {
+  publication: { enabled: infer TPublication extends boolean };
   tableName: infer TName extends string;
 }
-  ? ContentTable<TName, ContentFieldsOf<TDefinition>>
+  ? ContentTable<TName, ContentFieldsOf<TDefinition>, TPublication>
   : never;
 
 /** Column name -> Drizzle column, used for allowlisted filters and ordering. */
 export type ContentColumnName<TDefinition> =
-  ContentSystemField | (keyof ContentFieldsOf<TDefinition> & string);
+  | ContentSystemField
+  | (keyof ContentFieldsOf<TDefinition> & string)
+  | (TDefinition extends { publication: { enabled: true } }
+      ? ContentPublicationField
+      : never);
 
 /**
  * One thunk per `relation` field, resolving to the target table's `id`. Missing

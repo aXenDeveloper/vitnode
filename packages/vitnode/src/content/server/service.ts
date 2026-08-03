@@ -7,7 +7,7 @@ import type {
 } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { alias, getTableConfig } from "drizzle-orm/pg-core";
 
 import type { ContentSchemas } from "../schemas";
@@ -23,7 +23,11 @@ import type {
 } from "../types";
 
 import { withPagination } from "../../api/lib/with-pagination";
-import { CONTENT_DEFAULT_PAGE_SIZE, CONTENT_OPTIONS_LIMIT } from "../const";
+import {
+  CONTENT_DEFAULT_PAGE_SIZE,
+  CONTENT_OPTIONS_LIMIT,
+  CONTENT_PUBLICATION_FIELDS,
+} from "../const";
 import { ContentEngineError } from "../errors";
 import { orderableColumns } from "../registry";
 import {
@@ -75,7 +79,50 @@ export interface ContentUpdateResult<TDefinition> {
   row: ContentSelect<TDefinition>;
 }
 
-export interface ContentService<TDefinition> {
+export interface ContentPublicationResult<TDefinition> {
+  /**
+   * `false` when the row was already in that state: no write happened, no event
+   * was emitted, and nothing needs invalidating.
+   */
+  changed: boolean;
+  /**
+   * When the row was first published, or `null` if it never has been. Lifted
+   * out of `row` because the generated columns are conditional on a type
+   * parameter that is still open in generic route code.
+   */
+  publishedAt: Date | null;
+  row: ContentSelect<TDefinition>;
+}
+
+export interface ContentPublicationMethods<TDefinition> {
+  /**
+   * Idempotent. Stamps `publishedAt` on the first `draft -> published`
+   * transition and never rewrites it. `null` when the row does not exist.
+   */
+  publish: (
+    id: number,
+    options?: ContentServiceOptions,
+  ) => Promise<ContentPublicationResult<TDefinition> | null>;
+  /** Idempotent. Flips `status` only - `publishedAt` is left alone. */
+  unpublish: (
+    id: number,
+    options?: ContentServiceOptions,
+  ) => Promise<ContentPublicationResult<TDefinition> | null>;
+}
+
+/**
+ * `publish`/`unpublish` exist only on a content type with publication enabled.
+ *
+ * The `never` branch is the same trick `ContentFieldsConstraint` uses for
+ * reserved system columns: calling `service.publish(...)` on a content type
+ * without publication is a compile error rather than a runtime surprise.
+ */
+export type ContentService<TDefinition> = ContentServiceBase<TDefinition> &
+  (TDefinition extends { publication: { enabled: true } }
+    ? ContentPublicationMethods<TDefinition>
+    : Partial<Record<keyof ContentPublicationMethods<TDefinition>, never>>);
+
+export interface ContentServiceBase<TDefinition> {
   /** Throws a `ZodError` if `values` does not satisfy `schemas.create`. */
   create: (
     values: ContentCreateInput<TDefinition>,
@@ -221,7 +268,14 @@ export const createContentService = <
   // object is the very field map that type is derived from, so this restates
   // what TypeScript already knows rather than asserting anything new.
   const fieldNames = Object.keys(fields) as ContentFieldName<TDefinition>[];
-  const ownColumnNames = ["id", "createdAt", "updatedAt", ...fieldNames];
+  const publication = definition.publication.enabled;
+  const ownColumnNames = [
+    "id",
+    "createdAt",
+    "updatedAt",
+    ...(publication ? CONTENT_PUBLICATION_FIELDS : []),
+    ...fieldNames,
+  ];
   const references = resolveReferenceTargets(definition, table, columns);
   const searchColumns = definition.admin.list.searchableFields.map(
     name => columns[name],
@@ -266,7 +320,76 @@ export const createContentService = <
     return row ?? null;
   };
 
-  return {
+  /** Reads the generated column off a raw row, before it is cast to a select. */
+  const publishedAtOf = (row: Record<string, unknown>): Date | null => {
+    const value = row.publishedAt;
+
+    return value instanceof Date ? value : null;
+  };
+
+  /**
+   * One conditional UPDATE does the whole job: the `WHERE` clause is what makes
+   * the transition atomic, so two concurrent publishes cannot both stamp
+   * `publishedAt`, and no read-then-write race exists. The extra SELECT only
+   * runs when nothing matched, to tell "already in that state" from "no such
+   * row" - a distinction the route turns into 200 vs 404.
+   */
+  const transition = async (
+    id: number,
+    options: ContentServiceOptions | undefined,
+    values: Record<string, unknown>,
+    guard: SQL,
+  ): Promise<ContentPublicationResult<TDefinition> | null> => {
+    const database = db(options);
+
+    const [row] = await database
+      .update(table)
+      .set(values)
+      .where(and(eq(primaryCursor, id), guard))
+      .returning(ownSelection());
+
+    if (row)
+      return {
+        changed: true,
+        publishedAt: publishedAtOf(row),
+        row: toRow(row),
+      };
+
+    const current = await readOne(id, database);
+
+    return current
+      ? {
+          changed: false,
+          publishedAt: publishedAtOf(current),
+          row: toRow(current),
+        }
+      : null;
+  };
+
+  const publicationMethods: ContentPublicationMethods<TDefinition> = {
+    publish: async (id, options) =>
+      await transition(
+        id,
+        options,
+        {
+          // COALESCE, so a republish keeps the original date. `publishedAt` is
+          // the first-published timestamp and is never rewritten.
+          publishedAt: sql`coalesce(${columns.publishedAt}, now())`,
+          status: "published",
+        },
+        ne(columns.status, "published"),
+      ),
+
+    unpublish: async (id, options) =>
+      await transition(
+        id,
+        options,
+        { status: "draft" },
+        eq(columns.status, "published"),
+      ),
+  };
+
+  const service: ContentServiceBase<TDefinition> = {
     create: async (values, options) => {
       // Generated routes validate too, but a plugin can call the service
       // directly - and then this is the only thing standing between an
@@ -306,6 +429,7 @@ export const createContentService = <
           // Typed per field for callers; the allowlist check inside stays as
           // defence in depth for anything that arrives from a query string.
           filters: filters,
+          publication,
         }),
         buildSearchCondition(searchColumns, query.search),
       ].filter((item): item is SQL => item !== undefined);
@@ -423,4 +547,15 @@ export const createContentService = <
       return { changedFields, row: toRow(row) };
     },
   };
+
+  // `ContentService` resolves its publication half from
+  // `TDefinition["publication"]["enabled"]`, which is still a type parameter
+  // here - so TypeScript cannot check the object against a branch it has not
+  // picked yet. The runtime flag and the conditional type read the same
+  // `definition.publication.enabled`, which is what makes the two agree;
+  // `publication.test-d.ts` asserts it from the outside.
+  return {
+    ...service,
+    ...(publication ? publicationMethods : {}),
+  } as ContentService<TDefinition>;
 };

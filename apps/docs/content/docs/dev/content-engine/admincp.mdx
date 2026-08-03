@@ -76,6 +76,24 @@ wrong - a delete blocked by a foreign key does not read like a crashed server:
   detail goes to `core_logs`.
 </Callout>
 
+## Publication
+
+A content type with [`publication`](/docs/dev/content-engine/publication) leads
+its table with a **status** column, rendered as a badge rather than raw text:
+
+| Status | Badge |
+| --- | --- |
+| `draft` | secondary, clock icon |
+| `published` | default, tick icon |
+
+`status` is also a generated filter, so `?status=draft` narrows the list.
+
+<Callout type="info" title="The publish buttons are not here yet">
+  Publishing currently happens through the API - `POST /{id}/publish` - or
+  through `service.publish` from your own code. The row action, its confirmation
+  dialog and the `can_publish` gating land with the AdminCP publication UX.
+</Callout>
+
 ## One route, every content type
 
 Core ships a single catch-all page that is synced into your app like any other

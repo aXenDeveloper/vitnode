@@ -14,7 +14,8 @@ other 20%, so you find out here rather than halfway through building.
 | One-to-one, many-to-many, polymorphic relations | Write the join table and the queries by hand |
 | Localised content fields | Use `core_languages_words` directly, as the blog plugin does |
 | Rich text, media and file fields | Hand-build the field, or store an id and resolve it yourself |
-| Revisions and drafts | An `enum` status field covers simple cases |
+| Revisions | Not generated; the lifecycle stops at draft/published |
+| Scheduled publishing | `publish()` means now. The predicate already reads `publishedAt <= now()`, so this is additive later |
 | Record-level ownership ("edit your own") | Check the author in a custom route |
 | Field-level permissions | Split the content type, or write the route |
 | Bulk actions | Add a custom admin route |

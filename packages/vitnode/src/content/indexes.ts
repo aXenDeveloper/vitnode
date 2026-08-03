@@ -121,12 +121,14 @@ const named = (
  * Expands the declared indexes into the full set the table will carry, then
  * removes the redundant ones.
  *
- * Four sources feed in, in descending precedence:
+ * Five sources feed in, in descending precedence:
  *
  * 1. `indexes` declared on the content type,
  * 2. `field.text({ unique: true })`,
  * 3. every foreign key (`relation` and `user` fields),
- * 4. `createdAt` and `updatedAt`, which back the default ordering.
+ * 4. `createdAt` and `updatedAt`, which back the default ordering,
+ * 5. `(status, publishedAt)` when publication is enabled - one composite index
+ *    serving both the published predicate and the default public ordering.
  *
  * Two entries covering the same columns collapse into one: the first name wins,
  * and the index is unique if *any* of them asked for uniqueness. So declaring
@@ -142,11 +144,13 @@ export const resolveContentIndexes = ({
   contentTypeId,
   declared,
   fields,
+  publication = false,
   tableName,
 }: {
   contentTypeId: string;
   declared: readonly ContentIndexConfig[];
   fields: ContentFieldMap;
+  publication?: boolean;
   tableName: string;
 }): ResolvedContentIndex[] => {
   const seenNames = new Map<string, string[]>();
@@ -191,6 +195,9 @@ export const resolveContentIndexes = ({
     ...CONTENT_SYSTEM_FIELDS.filter(name => name !== "id").map(name =>
       named(tableName, { on: [name] }),
     ),
+    ...(publication
+      ? [named(tableName, { on: ["status", "publishedAt"] })]
+      : []),
   ];
 
   const bySignature = new Map<string, ResolvedContentIndex>();

@@ -10,7 +10,12 @@ import type {
   ResolvedContentAdminConfig,
 } from "./types";
 
-import { CONTENT_SYSTEM_FIELDS, isFilterableFieldKind } from "./const";
+import {
+  CONTENT_PUBLICATION_FIELDS,
+  CONTENT_PUBLICATION_STATUSES,
+  CONTENT_SYSTEM_FIELDS,
+  isFilterableFieldKind,
+} from "./const";
 
 export interface ContentSchemas<TDefinition = AnyContentTypeDefinition> {
   /** Request body for create. Rejects unknown keys and system columns. */
@@ -207,11 +212,22 @@ const filterShape = (fields: ContentFieldMap): z.ZodRawShape =>
 export const buildContentSchemas = <TDefinition>({
   admin,
   fields,
+  publication = false,
 }: {
   admin: ResolvedContentAdminConfig;
   fields: ContentFieldMap;
+  publication?: boolean;
 }): ContentSchemas<TDefinition> => {
   const fieldNames = Object.keys(fields);
+
+  // Read-only on the wire: absent from `create` and `update` (both strict), so
+  // the only way to move them is `service.publish` / `service.unpublish`.
+  const publicationSelectShape: z.ZodRawShape = publication
+    ? {
+        publishedAt: z.date().nullable(),
+        status: z.enum(CONTENT_PUBLICATION_STATUSES),
+      }
+    : {};
 
   const selectShape: z.ZodRawShape = {
     id: z.number(),
@@ -221,6 +237,7 @@ export const buildContentSchemas = <TDefinition>({
         applyNullable(baseSelectSchema(fields[name]), fields[name]),
       ]),
     ),
+    ...publicationSelectShape,
     createdAt: z.date(),
     updatedAt: z.date(),
   };
@@ -235,7 +252,11 @@ export const buildContentSchemas = <TDefinition>({
       message: "Provide at least one field to update.",
     });
 
-  const orderable = [...admin.list.orderableFields, ...CONTENT_SYSTEM_FIELDS];
+  const orderable = [
+    ...admin.list.orderableFields,
+    ...CONTENT_SYSTEM_FIELDS,
+    ...(publication ? CONTENT_PUBLICATION_FIELDS : []),
+  ];
   const selectObject = z.object(selectShape);
 
   return {
@@ -244,7 +265,12 @@ export const buildContentSchemas = <TDefinition>({
     // route handler, service, AdminCP - stays fully typed with no further
     // casts. `buildContentSchemas` is covered by `schemas.test-d.ts`.
     create: create as unknown as z.ZodType<ContentCreateInput<TDefinition>>,
-    filters: z.object(filterShape(fields)),
+    filters: z.object({
+      ...filterShape(fields),
+      ...(publication
+        ? { status: z.enum(CONTENT_PUBLICATION_STATUSES).optional() }
+        : {}),
+    }),
     form: z.object(inputShape(fields, admin.form.fields)),
     order: z.object({
       order: z.enum(["asc", "desc"]).optional(),

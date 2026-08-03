@@ -58,16 +58,26 @@ export const buildFilterCondition = ({
   contentTypeId,
   fields,
   filters,
+  publication = false,
 }: {
   columns: Record<string, PgColumn>;
   contentTypeId: string;
   fields: ContentFieldMap;
   filters: Record<string, unknown>;
+  /** Whether `status` is a generated column and therefore filterable. */
+  publication?: boolean;
 }): SQL | undefined => {
   const conditions: SQL[] = [];
 
   for (const [name, raw] of Object.entries(filters)) {
     if (raw === undefined) continue;
+
+    // `status` is a generated column, not a declared field, so it has no
+    // descriptor to check - the schema's `z.enum` already narrowed the value.
+    if (publication && name === "status" && columns.status) {
+      conditions.push(eq(columns.status, raw));
+      continue;
+    }
 
     const fieldValue = fields[name];
     const column = columns[name];

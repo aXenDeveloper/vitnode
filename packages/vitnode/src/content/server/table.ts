@@ -25,8 +25,13 @@ import type {
 } from "./types";
 
 import { core_users } from "../../database/users";
+import { CONTENT_PUBLICATION_FIELDS } from "../const";
 import { ContentEngineError } from "../errors";
-import { buildContentColumn, buildSystemColumns } from "./column-builders";
+import {
+  buildContentColumn,
+  buildPublicationColumns,
+  buildSystemColumns,
+} from "./column-builders";
 
 /**
  * Wraps a foreign-key thunk so the table it actually points at is checked
@@ -139,7 +144,10 @@ export const createContentTable = <
   const fields = definition.fields;
   const referenceThunks = references as Record<string, ColumnReferenceThunk>;
 
-  const columns: Record<string, PgColumnBuilderBase> = buildSystemColumns();
+  const columns: Record<string, PgColumnBuilderBase> = {
+    ...buildSystemColumns(),
+    ...(definition.publication.enabled ? buildPublicationColumns() : {}),
+  };
 
   for (const name of Object.keys(fields)) {
     columns[name] = buildContentColumn({
@@ -210,6 +218,7 @@ export const contentTableColumns = <
     "id",
     "createdAt",
     "updatedAt",
+    ...(definition.publication.enabled ? CONTENT_PUBLICATION_FIELDS : []),
     ...Object.keys(definition.fields),
   ];
 

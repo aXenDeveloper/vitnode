@@ -9,6 +9,7 @@
     "database-and-migrations",
     "schemas",
     "service",
+    "publication",
     "admincp",
     "permissions",
     "events",

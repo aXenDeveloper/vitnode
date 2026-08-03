@@ -1,0 +1,180 @@
+---
+title: Publication
+description: Opt a content type into the draft and published lifecycle, with two generated columns, two service methods and its own staff permission.
+icon: SendHorizontal
+---
+
+Most content is not ready the moment someone hits Save. `publication` gives a
+content type a draft state, a publish action, and a date that says when it first
+went live - without you writing any of it.
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+    excerpt: field.textarea({ nullable: true }),
+  },
+  publication: { enabled: true }, // [!code highlight]
+  admin: { label: { plural: "Articles", singular: "Article" } },
+});
+```
+
+That is the whole configuration. There is no second option yet, and `enabled`
+has to be the literal `true` - a variable typed `boolean` will not do, because
+every generated type keys off that literal.
+
+## What you get
+
+| | |
+| --- | --- |
+| Two columns | `status` (`draft` \| `published`) and `publishedAt` |
+| Two service methods | `service.publish(id)` and `service.unpublish(id)` |
+| Two routes | `POST /{id}/publish` and `POST /{id}/unpublish` |
+| Two events | `content.<id>.published` and `content.<id>.unpublished` |
+| One permission | `can_publish` |
+| One index | `(status, publishedAt)` |
+| A status column | first in the AdminCP table, and filterable |
+
+Leave `publication` out and none of that is generated. A Stage 1 content type
+carries on exactly as before.
+
+## The two columns are generated, not declared
+
+`status` and `publishedAt` are system columns, like `id` and `updatedAt`. They
+show up in every response and in `filters`, and they are **absent from the
+create and update schemas**:
+
+```ts
+await service.create({ title: "Hello", status: "published" });
+//                                     ^ compile error, and a 400 over HTTP
+```
+
+That is the point. Publishing is a decision, not a field edit, so it happens
+through one operation that can be permissioned, audited and reacted to.
+
+<Callout type="warn" title="They become reserved names">
+  Once `publication` is enabled, declaring a field called `status` or
+  `publishedAt` is an error at definition time. Without it, both names stay
+  yours - which is exactly how content types written before this feature keep
+  working.
+</Callout>
+
+## Publishing
+
+```ts
+const result = await service.publish(article.id);
+
+result?.changed;     // false if it was already published
+result?.publishedAt; // when it first went live
+result?.row;         // the full row
+```
+
+`null` means there is no such record. The route turns that into a 404 and
+everything else into a 200.
+
+Both methods are **idempotent**. Publishing something already published changes
+nothing, writes nothing, and emits nothing - it just tells you `changed: false`.
+Double-clicking the button is harmless, and so is a retry.
+
+They take an optional transaction handle, like the other write methods:
+
+```ts
+await db.transaction(async tx => {
+  await service.update(id, { title }, { tx });
+  await service.publish(id, { tx });
+});
+```
+
+### `publishedAt` is written once
+
+It is stamped on the first `draft → published` transition and **never rewritten**:
+
+```text
+publish()    status=published   publishedAt=2026-08-03   (stamped)
+unpublish()  status=draft       publishedAt=2026-08-03   (kept)
+publish()    status=published   publishedAt=2026-08-03   (still the original)
+```
+
+Unpublishing to fix a typo should not move an article to the top of a
+"newest first" feed three months later, so it does not. Read `publishedAt` as
+*first published at*, not as *is published* - `status` answers that one.
+
+## Permissions
+
+Publication adds a fifth permission to the generated set:
+
+```text
+can_view    can_create    can_edit    can_delete    can_publish
+```
+
+`can_publish` depends on `can_view`, like the others. It is separate from
+`can_edit` on purpose: publishing is the only generated operation that changes
+what people outside the AdminCP can see, so a role can be allowed to write
+drafts without being allowed to make them public.
+
+<Callout type="warn" title="Nobody has it until you grant it">
+  Adding `publication` to an existing content type creates a permission that is
+  unset on every existing role. Tick it in **Staff** before anyone can publish.
+</Callout>
+
+## Events
+
+```text
+content.example.article.published     { contentId, publishedAt }
+content.example.article.unpublished   { contentId }
+```
+
+Exactly one event fires per mutation. Publishing does **not** also emit
+`updated`: `changedFields` on that event lists declared fields, and these two
+columns are not declared ones, so an `updated` event would have nothing honest
+to put in it. A listener that cares about any change subscribes to all of them.
+
+A no-op publish emits nothing at all. See [Generated events](/docs/dev/content-engine/events).
+
+## Filtering and ordering
+
+`status` joins the generated filters, and both columns are always orderable -
+they need no entry in `admin.list.orderableFields`:
+
+```http
+GET /api/@vitnode/example/admin/content/articles/?status=draft&orderBy=publishedAt&order=desc
+```
+
+## Migrations
+
+`status` is `varchar(32) DEFAULT 'draft' NOT NULL`, so Drizzle Kit backfills an
+existing table in one statement:
+
+```sql
+ALTER TABLE "example_articles" ADD COLUMN "status" varchar(32) DEFAULT 'draft' NOT NULL;
+ALTER TABLE "example_articles" ADD COLUMN "published_at" timestamp;
+CREATE INDEX "example_articles_status_published_at_idx"
+  ON "example_articles" ("status","published_at");
+```
+
+<Callout type="warn" title="Every existing row becomes a draft">
+  That default applies to rows you already have, which means adding
+  `publication` to a populated table takes everything out of circulation. If
+  that is not what you want, hand-add one line to the generated migration:
+
+```sql
+UPDATE "example_articles" SET "status" = 'published', "published_at" = "created_at";
+```
+
+</Callout>
+
+If the table already has a `status` column of your own, the definition will
+refuse to load until you rename it - the engine will not silently adopt a column
+it did not create. The [example plugin's migration](https://github.com/aXenDeveloper/vitnode/blob/canary/apps/docs/migrations/0023_add_publication_to_example_articles.sql)
+shows the other half of that story: it moved a hand-rolled `draft | published |
+archived` enum onto the generated columns, and had to decide what happened to
+the `archived` rows.
+
+## What this is not
+
+Scheduled publishing, approval workflows and revisions are not here. The
+published predicate already reads `publishedAt <= now()`, so scheduling can be
+added later without changing what is stored - but today `publish()` means
+*now*.

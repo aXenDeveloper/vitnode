@@ -398,7 +398,8 @@
         "created_at": "Created",
         "updated_at": "Updated",
         "actions": "Actions",
-        "empty_value": "—"
+        "empty_value": "—",
+        "published_at": "Published"
       },
       "create": {
         "title": "Create {name}",
@@ -418,6 +419,27 @@
         "confirm": "Yes, delete it",
         "success": "{name} has been deleted."
       },
+      "publish": {
+        "title": "Publish {name}",
+        "desc": "Publish <title></title>? It becomes visible to everyone.",
+        "confirm": "Yes, publish it",
+        "success": "{name} has been published.",
+        "action": "Publish"
+      },
+      "unpublish": {
+        "title": "Unpublish {name}",
+        "desc": "Unpublish <title></title>? It disappears from public pages but is not deleted.",
+        "confirm": "Yes, unpublish it",
+        "success": "{name} has been unpublished.",
+        "action": "Unpublish"
+      },
+      "status": {
+        "label": "Status",
+        "draft": "Draft",
+        "published": "Published",
+        "published_on": "Published on {date}",
+        "never_published": "Not published yet"
+      },
       "form": {
         "relation": {
           "placeholder": "Select…",
@@ -433,7 +455,8 @@
         "can_view": "View list",
         "can_create": "Create",
         "can_edit": "Edit",
-        "can_delete": "Delete"
+        "can_delete": "Delete",
+        "can_publish": "Publish and unpublish"
       },
       "errors": {
         "not_found": "This record no longer exists. Refresh the list and try again.",

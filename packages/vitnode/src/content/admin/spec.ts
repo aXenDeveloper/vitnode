@@ -42,7 +42,7 @@ export interface ContentFormSpec {
 }
 
 export interface ContentColumnSpec {
-  kind: "system" | ContentFieldKind;
+  kind: "publication" | "system" | ContentFieldKind;
   label: string;
   name: string;
   /** Enum value -> translated label, for badge cells. */
@@ -56,9 +56,16 @@ export type ContentFieldLabeller = (
 
 export type ContentEnumLabeller = (name: string, value: string) => string;
 
-const systemKinds: Record<string, "system"> = {
+/**
+ * Generated columns have no field descriptor to read a kind from, so they are
+ * mapped by name. `status` gets its own kind rather than falling into "system",
+ * which the cell renderer treats as a date.
+ */
+const systemKinds: Record<string, "publication" | "system"> = {
   createdAt: "system",
   id: "system",
+  publishedAt: "system",
+  status: "publication",
   updatedAt: "system",
 };
 

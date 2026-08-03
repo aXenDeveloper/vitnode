@@ -14,6 +14,8 @@ import type { ContentFieldDescriptor } from "../types";
 
 import {
   CONTENT_ENUM_DEFAULT_LENGTH,
+  CONTENT_PUBLICATION_STATUS_LENGTH,
+  CONTENT_PUBLICATION_STATUSES,
   CONTENT_TEXT_DEFAULT_LENGTH,
 } from "../const";
 import { ContentEngineError } from "../errors";
@@ -32,6 +34,30 @@ export const buildSystemColumns = (): Record<string, PgColumnBuilderBase> => ({
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
+});
+
+/**
+ * The two columns `publication: { enabled: true }` adds.
+ *
+ * `status` is `varchar` rather than a Postgres enum, matching how `field.enum`
+ * is already materialised, so adding a status later is not a type migration. It
+ * carries `DEFAULT 'draft' NOT NULL` so drizzle-kit backfills an existing table
+ * in a single statement - every pre-existing row becomes a draft.
+ *
+ * `published_at` is nullable with no default: it means "first published at",
+ * and `unpublish` deliberately leaves it alone.
+ */
+export const buildPublicationColumns = (): Record<
+  string,
+  PgColumnBuilderBase
+> => ({
+  publishedAt: timestamp(),
+  status: varchar({
+    enum: CONTENT_PUBLICATION_STATUSES,
+    length: CONTENT_PUBLICATION_STATUS_LENGTH,
+  })
+    .notNull()
+    .default("draft"),
 });
 
 /**

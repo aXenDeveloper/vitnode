@@ -3,7 +3,13 @@ import { defineContentType, field } from "@vitnode/core/content";
 import { categoryContentType } from "./category";
 
 /**
- * Exercises every field kind the Content Engine supports in MVP 1.
+ * Exercises every field kind the Content Engine supports, plus the draft ->
+ * published lifecycle.
+ *
+ * `status` and `publishedAt` are *not* declared here: `publication` generates
+ * them, and declaring either alongside it is a define-time error. They are
+ * read-only on the wire - `service.publish` / `service.unpublish` and the two
+ * generated routes are the only things that move them.
  *
  * Client-safe by construction - zod and plain objects only - so the same object
  * is imported by `config.tsx` (the AdminCP), by `config.api.ts` (the routes and
@@ -20,11 +26,6 @@ export const articleContentType = defineContentType({
     excerpt: field.textarea({ maxLength: 500, nullable: true }),
     views: field.number({ integer: true, min: 0, defaultValue: 0 }),
     featured: field.boolean({ defaultValue: false }),
-    status: field.enum({
-      values: ["draft", "published", "archived"],
-      defaultValue: "draft",
-    }),
-    publishedAt: field.dateTime({ nullable: true }),
     author: field.user(),
     category: field.relation({
       required: true,
@@ -33,15 +34,27 @@ export const articleContentType = defineContentType({
     }),
   },
 
+  publication: { enabled: true },
+
+  // The generated columns are addressable here too. `(status, publishedAt)` is
+  // generated automatically; this one backs "newest drafts first".
   indexes: [{ on: ["status", "createdAt"] }],
 
   admin: {
     label: { plural: "Example Articles", singular: "Example Article" },
     titleField: "title",
     list: {
-      columns: ["title", "code", "status", "category", "author", "updatedAt"],
+      columns: [
+        "status",
+        "title",
+        "code",
+        "category",
+        "author",
+        "publishedAt",
+        "updatedAt",
+      ],
       searchableFields: ["title", "code", "excerpt"],
-      orderableFields: ["title", "code", "status"],
+      orderableFields: ["title", "code"],
       defaultOrderBy: "updatedAt",
       defaultOrder: "desc",
     },

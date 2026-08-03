@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 import postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { EXAMPLE_MIGRATIONS } from "@/const";
+
 import { articleContent } from "./articles";
 import { categoryContent } from "./categories";
 
@@ -35,14 +37,10 @@ const databaseName = (() => {
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-/** The committed migration - the exact DDL a fresh database would run. */
-const migrationSql = readFileSync(
-  resolve(
-    here,
-    "../../../../apps/docs/migrations/0022_add_example_content.sql",
-  ),
-  "utf8",
-);
+/** The committed migrations - the exact DDL a fresh database would run. */
+const migrationSql = EXAMPLE_MIGRATIONS.map(file =>
+  readFileSync(resolve(here, "../../../../apps/docs/migrations", file), "utf8"),
+).join("\n--> statement-breakpoint\n");
 
 /**
  * Stands in for `core_users`, which the `author` field references.
@@ -62,6 +60,7 @@ const CORE_USERS_STUB = `
 
 let sql: ReturnType<typeof postgres>;
 let context: Context;
+let serverMajor = 0;
 
 const pgErrorCode = async (run: () => Promise<unknown>) => {
   try {
@@ -86,6 +85,11 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     }
 
     sql = postgres(url ?? "", { max: 1, onnotice: () => undefined });
+
+    const [{ version }] = await sql<{ version: number }[]>`
+      SELECT current_setting('server_version_num')::int AS version
+    `;
+    serverMajor = Math.floor(version / 10_000);
 
     await sql.unsafe(`
       DROP SCHEMA IF EXISTS public CASCADE;
@@ -147,17 +151,17 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
       author: user.id,
       category: category.id,
       code: "guide-001",
-      publishedAt: "2026-08-02T10:00:00.000Z",
       title: "Getting started",
     });
 
-    // Declared defaults reach the row exactly once, from the create schema.
+    // Declared defaults reach the row exactly once, from the create schema;
+    // the publication columns come from their own database defaults.
     expect(article).toMatchObject({
       featured: false,
+      publishedAt: null,
       status: "draft",
       views: 0,
     });
-    expect(article.publishedAt).toBeInstanceOf(Date);
 
     await expect(articles.findById(article.id)).resolves.toMatchObject({
       code: "guide-001",
@@ -170,13 +174,9 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     expect(edges[0].labels).toEqual({ author: "Ada", category: "Guides" });
 
     const updated = await articles.update(article.id, {
-      status: "published",
       title: "Getting started, properly",
     });
-    expect([...(updated?.changedFields ?? [])].sort()).toEqual([
-      "status",
-      "title",
-    ]);
+    expect([...(updated?.changedFields ?? [])].sort()).toEqual(["title"]);
     expect(updated?.row.title).toBe("Getting started, properly");
 
     // A unique text field is enforced by Postgres, not just by the descriptor.
@@ -201,10 +201,9 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
       ),
     ).resolves.toBe("23503");
 
-    // `onDelete: "restrict"` is what a 409 upstream is actually made of.
     await expect(
       pgErrorCode(async () => categories.delete(category.id)),
-    ).resolves.toBe("23503");
+    ).resolves.toBe(serverMajor >= 18 ? "23001" : "23503");
 
     // `onDelete: "set null"` on a nullable user field keeps the article.
     await sql`DELETE FROM "core_users" WHERE "id" = ${user.id}`;
@@ -229,6 +228,95 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     });
     await expect(articles.findById(article.id)).resolves.toBeNull();
   }, 60_000);
+
+  it("runs the whole publication lifecycle", async () => {
+    const categories = categoryContent.service(context);
+    const articles = articleContent.service(context);
+
+    const category = await categories.create({ name: "Lifecycle" });
+    const draft = await articles.create({
+      category: category.id,
+      code: "lifecycle-001",
+      title: "A draft",
+    });
+
+    expect(draft.status).toBe("draft");
+    expect(draft.publishedAt).toBeNull();
+
+    const published = await articles.publish(draft.id);
+    expect(published).toMatchObject({ changed: true });
+    expect(published?.row.status).toBe("published");
+    expect(published?.publishedAt).toBeInstanceOf(Date);
+    const firstPublishedAt = published?.publishedAt;
+
+    // Idempotent: a second publish is a successful no-op, and the date it
+    // stamped the first time is not rewritten.
+    const again = await articles.publish(draft.id);
+    expect(again).toMatchObject({ changed: false });
+    expect(again?.publishedAt).toEqual(firstPublishedAt);
+    expect(again?.row.status).toBe("published");
+
+    // `status` is filterable once publication is enabled.
+    await expect(
+      articles.findMany({ filters: { status: "published" } }),
+    ).resolves.toMatchObject({ pageInfo: { totalCount: 1 } });
+    await expect(
+      articles.findMany({ filters: { status: "draft" } }),
+    ).resolves.toMatchObject({ pageInfo: { totalCount: 0 } });
+
+    // Unpublishing flips the status and deliberately leaves `publishedAt` set,
+    // so a temporary unpublish does not rewrite the publication date.
+    const unpublished = await articles.unpublish(draft.id);
+    expect(unpublished).toMatchObject({ changed: true });
+    expect(unpublished?.row.status).toBe("draft");
+    expect(unpublished?.publishedAt).toEqual(firstPublishedAt);
+
+    await expect(articles.unpublish(draft.id)).resolves.toMatchObject({
+      changed: false,
+    });
+
+    // Republishing keeps the original date rather than moving the article to
+    // the top of a `publishedAt desc` feed.
+    const republished = await articles.publish(draft.id);
+    expect(republished).toMatchObject({ changed: true });
+    expect(republished?.publishedAt).toEqual(firstPublishedAt);
+
+    // A field update never touches the publication columns.
+    const edited = await articles.update(draft.id, { title: "Still live" });
+    expect(edited?.changedFields).toEqual(["title"]);
+    expect(edited?.row.status).toBe("published");
+    expect(edited?.row.publishedAt).toEqual(firstPublishedAt);
+
+    await expect(articles.publish(999_999)).resolves.toBeNull();
+    await expect(articles.unpublish(999_999)).resolves.toBeNull();
+
+    await articles.delete(draft.id);
+    await categories.delete(category.id);
+  }, 60_000);
+
+  it("applies the generated publication index", async () => {
+    const indexes = await sql`
+      SELECT indexdef FROM pg_indexes
+      WHERE tablename = 'example_articles'
+        AND indexname = 'example_articles_status_published_at_idx'
+    `;
+
+    expect(indexes).toHaveLength(1);
+    // Postgres only quotes the identifier that needs it.
+    expect(indexes[0].indexdef).toContain(`btree (status, "publishedAt")`);
+  });
+
+  it("defaults new rows to draft at the database level", async () => {
+    const [column] = await sql<
+      { column_default: null | string; is_nullable: string }[]
+    >`
+      SELECT column_default, is_nullable FROM information_schema.columns
+      WHERE table_name = 'example_articles' AND column_name = 'status'
+    `;
+
+    expect(column.is_nullable).toBe("NO");
+    expect(column.column_default).toContain("draft");
+  });
 
   it("rejects invalid input before it reaches Postgres", async () => {
     await expect(

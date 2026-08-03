@@ -221,6 +221,24 @@ Returns the deleted row, or `null` if there was nothing to delete. A row still
 referenced by a `restrict` foreign key raises a Postgres error the generated
 route maps to 409.
 
+## publish and unpublish
+
+Only on a content type with
+[`publication`](/docs/dev/content-engine/publication) - on any other one they do
+not exist, and calling them is a compile error rather than a runtime surprise.
+
+```ts
+const result = await articles.publish(7);
+
+result?.changed;     // false if it was already published: no write, no event
+result?.publishedAt; // when it first went live, never rewritten
+result?.row;         // the full row
+```
+
+`null` means no such record, exactly like `update` and `delete`. Both methods
+are idempotent, both accept `{ tx }`, and `unpublish` deliberately leaves
+`publishedAt` alone.
+
 ## options
 
 Backs the relation and user pickers, capped and search-filtered. It only accepts

@@ -19,6 +19,7 @@ import { CONTENT_OPTIONS_LIMIT, CONTENT_PERMISSIONS } from "../const";
 import { orderableColumns } from "../registry";
 import { emitContentEvent } from "./emit";
 import { withHttpErrors } from "./http-errors";
+import { publicationMethods } from "./publication";
 
 const zodLabels = z.record(z.string(), z.string().nullable());
 
@@ -59,6 +60,11 @@ export const buildContentRoutes = <
   const label = definition.admin.label;
 
   const listRow = schemas.selectObject.extend({ labels: zodLabels });
+  const publicationResponse = z.object({
+    /** `false` when the record was already in the requested state. */
+    changed: z.boolean(),
+    row: schemas.selectObject,
+  });
 
   const referenceFieldNames = Object.entries(definition.fields)
     .filter(
@@ -278,6 +284,55 @@ export const buildContentRoutes = <
     },
   });
 
+  // Publishing is a domain operation, not a field update: `status` and
+  // `publishedAt` are absent from the strict create/update schemas, so these
+  // two routes are the only way to move them over HTTP. Both are idempotent -
+  // publishing an already-published record is a 200 that changed nothing.
+  const publicationRoute = (action: "publish" | "unpublish") =>
+    buildRoute({
+      pluginId,
+      adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.publish },
+      route: {
+        method: "post",
+        path: `/{id}/${action}` as const,
+        description: `${action === "publish" ? "Publish" : "Unpublish"} a ${label.singular}`,
+        request: { params: schemas.params },
+        responses: {
+          200: jsonResponse(
+            publicationResponse,
+            `${label.singular} ${action}ed, or already in that state`,
+          ),
+          400: invalidIdentifier,
+          404: { description: `${label.singular} not found` },
+        },
+      },
+      handler: async c => {
+        const id = identifier(c);
+        const service = publicationMethods(definition, model.service(c));
+
+        const result = await withHttpErrors(
+          "update",
+          async () => await service[action](id),
+        );
+        if (!result) throw notFound(definition);
+
+        // A no-op emits nothing: there is no outbox, so a listener that fires
+        // on every button press would be doing duplicate work for free.
+        if (result.changed) {
+          await emitContentEvent(
+            c,
+            definition,
+            action === "publish" ? "published" : "unpublished",
+            action === "publish" && result.publishedAt
+              ? { contentId: id, publishedAt: result.publishedAt }
+              : { contentId: id },
+          );
+        }
+
+        return c.json({ changed: result.changed, row: result.row }, 200);
+      },
+    });
+
   const remove = buildRoute({
     pluginId,
     adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.delete },
@@ -308,5 +363,15 @@ export const buildContentRoutes = <
     },
   });
 
-  return [list, options, detail, create, update, remove];
+  return [
+    list,
+    options,
+    detail,
+    create,
+    update,
+    remove,
+    ...(definition.publication.enabled
+      ? [publicationRoute("publish"), publicationRoute("unpublish")]
+      : []),
+  ];
 };

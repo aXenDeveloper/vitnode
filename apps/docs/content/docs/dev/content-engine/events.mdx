@@ -1,6 +1,6 @@
 ---
 title: Generated events
-description: Three typed events per content type, emitted only after a successful write.
+description: Typed events per content type, emitted only after a successful write.
 icon: Radio
 ---
 
@@ -12,6 +12,14 @@ content.example.article.updated
 content.example.article.deleted
 ```
 
+A content type with [`publication`](/docs/dev/content-engine/publication) emits
+two more:
+
+```text
+content.example.article.published
+content.example.article.unpublished
+```
+
 Payloads stay minimal - the [envelope](/docs/dev/events) already carries the
 actor, the emitting plugin and the timestamp:
 
@@ -19,6 +27,8 @@ actor, the emitting plugin and the timestamp:
 type Created = { contentId: number };
 type Updated = { changedFields: string[]; contentId: number };
 type Deleted = { contentId: number };
+type Published = { contentId: number; publishedAt: Date };
+type Unpublished = { contentId: number };
 ```
 
 ## Registering the types
@@ -86,7 +96,13 @@ unlike content types.
 
 That last one is worth repeating: `PUT` with values identical to what is already
 stored skips both the write and the event. `changedFields` never contains a
-field that did not move.
+field that did not move. Publishing something already published behaves the
+same way: a 200, and no event.
+
+Exactly one event fires per mutation. `published` and `unpublished` never come
+with an `updated` alongside them - `status` and `publishedAt` are generated
+columns rather than declared fields, so there would be nothing truthful to put
+in `changedFields`. Subscribe to all five if you want "anything changed".
 
 Delivery semantics are the platform's, not the engine's: in-process by default,
 per-listener error isolation, no outbox. See [Events](/docs/dev/events).

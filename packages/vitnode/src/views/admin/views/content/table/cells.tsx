@@ -1,4 +1,9 @@
-import { CheckIcon, MinusIcon } from "lucide-react";
+import {
+  CheckIcon,
+  CircleCheckIcon,
+  FileClockIcon,
+  MinusIcon,
+} from "lucide-react";
 
 import type { ContentColumnSpec } from "@/content/admin/spec";
 import type { ContentLabels } from "@/content/server/service";
@@ -36,10 +41,13 @@ export const ContentCell = ({
   emptyLabel,
   row,
   spec,
+  statusLabels,
 }: {
   emptyLabel: string;
   row: ContentRowData;
   spec: ContentColumnSpec;
+  /** Translated `draft`/`published`, for the generated publication column. */
+  statusLabels: { draft: string; published: string };
 }) => {
   const value = row[spec.name];
 
@@ -76,6 +84,21 @@ export const ContentCell = ({
 
     case "number":
       return <span className="tabular-nums">{asText(value)}</span>;
+
+    case "publication": {
+      const published = value === "published";
+
+      return (
+        <Badge variant={published ? "default" : "secondary"}>
+          {published ? (
+            <CircleCheckIcon aria-hidden />
+          ) : (
+            <FileClockIcon aria-hidden />
+          )}
+          {published ? statusLabels.published : statusLabels.draft}
+        </Badge>
+      );
+    }
 
     case "system":
       return spec.name === "id" ? (

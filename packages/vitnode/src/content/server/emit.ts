@@ -5,6 +5,8 @@ import type {
   ContentCreatedPayload,
   ContentDeletedPayload,
   ContentEventAction,
+  ContentPublishedPayload,
+  ContentUnpublishedPayload,
   ContentUpdatedPayload,
 } from "../events";
 import type { AnyContentTypeDefinition } from "../types";
@@ -14,6 +16,8 @@ import { contentEventName } from "../events";
 type ContentPayload =
   | ContentCreatedPayload
   | ContentDeletedPayload
+  | ContentPublishedPayload
+  | ContentUnpublishedPayload
   | ContentUpdatedPayload<AnyContentTypeDefinition>;
 
 /**

@@ -21,6 +21,14 @@ updatedAt: timestamp not null default now()   // refreshed via $onUpdate
 plus one column per field, the indexes described [below](#indexes), and
 `ENABLE ROW LEVEL SECURITY`.
 
+A content type with [`publication`](/docs/dev/content-engine/publication) gets
+two more generated columns:
+
+```ts
+status:      varchar(32) not null default 'draft'
+publishedAt: timestamp                      // "first published at", nullable
+```
+
 Here is the real migration for the example plugin:
 
 ```sql title="apps/docs/migrations/0022_add_example_content.sql"
@@ -57,15 +65,38 @@ CREATE INDEX "example_articles_updated_at_idx" ON "example_articles" USING btree
 
 Ordinary SQL. Nothing about it says "generated", which is the point.
 
+<Callout type="info" title="That snippet predates publication">
+  `status` and `publishedAt` are declared *fields* in `0022`. The article later
+  moved onto the generated publication columns, which is what `0023` does - and
+  it is worth reading as a worked example of migrating an existing table:
+
+```sql title="apps/docs/migrations/0023_add_publication_to_example_articles.sql"
+UPDATE "example_articles" SET "status" = 'draft'
+  WHERE "status" NOT IN ('draft', 'published');
+ALTER TABLE "example_articles" ALTER COLUMN "status" SET DATA TYPE varchar(32);
+ALTER TABLE "example_articles" ALTER COLUMN "status" SET DEFAULT 'draft';
+CREATE INDEX "example_articles_status_published_at_idx"
+  ON "example_articles" USING btree ("status","publishedAt");
+```
+
+  Drizzle Kit generated everything except the two `UPDATE`s. It cannot know
+  that `archived` has nowhere to go once the generated status only has two
+  values - that judgement is yours, and hand-editing the generated SQL is the
+  normal way to record it.
+</Callout>
+
 ## Indexes
 
-Four things put an index on a content table, and they are listed here in
+Five things put an index on a content table, and they are listed here in
 precedence order:
 
 1. anything you declared in `indexes`,
 2. `field.text({ unique: true })`,
 3. every foreign key - `relation` and `user` fields,
-4. `createdAt` and `updatedAt`, which back the default ordering.
+4. `createdAt` and `updatedAt`, which back the default ordering,
+5. `(status, publishedAt)` when
+   [`publication`](/docs/dev/content-engine/publication) is enabled - one
+   composite index serving both the published predicate and the ordering.
 
 ```ts
 indexes: [

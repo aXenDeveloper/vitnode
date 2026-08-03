@@ -1,6 +1,6 @@
 ---
 title: Generated permissions
-description: The four staff permissions every content type gets, how the module name is derived, and how to override them.
+description: The staff permissions every content type gets, how the module name is derived, and how to override them.
 icon: Lock
 ---
 
@@ -17,6 +17,17 @@ can_delete   DELETE
 The three write permissions depend on `can_view`, so a role cannot be given the
 ability to create rows it is not allowed to see.
 
+A content type with [`publication`](/docs/dev/content-engine/publication) gets a
+fifth, on the same `can_view` dependency:
+
+```text
+can_publish  POST /{id}/publish and /{id}/unpublish
+```
+
+It is deliberately not folded into `can_edit`: publishing is the only generated
+operation that changes what people outside the AdminCP can see, so "may write
+drafts" and "may make them public" stay separate answers.
+
 ## What each route documents
 
 Every status a generated handler can produce is in the OpenAPI document, so a
@@ -30,6 +41,8 @@ unique-constraint `409`:
 | `GET /{id}` | `200`, `400`, `404` |
 | `POST /` | `201`, `400`, `409` |
 | `PUT /{id}` | `200`, `400`, `404`, `409` |
+| `POST /{id}/publish` | `200`, `400`, `404` |
+| `POST /{id}/unpublish` | `200`, `400`, `404` |
 | `DELETE /{id}` | `200`, `400`, `404`, `409` |
 
 A `409` on create or update is a duplicate value; on delete it is a row something
@@ -88,7 +101,8 @@ the flat key convention:
   "@vitnode/example:example_articles:can_view": "View articles",
   "@vitnode/example:example_articles:can_create": "Create articles",
   "@vitnode/example:example_articles:can_edit": "Edit articles",
-  "@vitnode/example:example_articles:can_delete": "Delete articles"
+  "@vitnode/example:example_articles:can_delete": "Delete articles",
+  "@vitnode/example:example_articles:can_publish": "Publish and unpublish articles"
 }
 ```
 
