@@ -39,7 +39,8 @@ interface IndexOwner {
  *
  * This is the only place that sees *every* installed content type at once,
  * which makes it the only place that can catch a schema-wide clash: a duplicate
- * table name, or two content types resolving to the same Postgres index name.
+ * table name, two content types resolving to the same Postgres index name, or
+ * two of them claiming the same public path.
  */
 export const validateContentTypes = (
   entries: RegisteredContentType[],
@@ -47,6 +48,7 @@ export const validateContentTypes = (
   const byId = new Map<string, RegisteredContentType>();
   const byTable = new Map<string, RegisteredContentType>();
   const byPermission = new Map<string, RegisteredContentType>();
+  const byPublicPath = new Map<string, RegisteredContentType>();
   const byIndexName = new Map<string, IndexOwner>();
 
   for (const entry of entries) {
@@ -83,6 +85,23 @@ export const validateContentTypes = (
     byPermission.set(permissionKey, entry);
 
     assertFilterKeys(definition);
+
+    // Public paths are checked across *every* plugin, not per plugin. Routes
+    // are mounted under `/api/{pluginId}/...`, so two plugins claiming
+    // "articles" would not actually collide at the router - but two content
+    // types answering to the same public path is ambiguous for anyone reading
+    // the API, and refusing it keeps the public surface one flat namespace.
+    if (definition.publicApi.enabled) {
+      const path = definition.publicApi.path;
+      const duplicatePath = byPublicPath.get(path);
+      if (duplicatePath) {
+        throw new ContentEngineError(
+          `Public path "${path}" is claimed by both ${describe(duplicatePath)} and ${describe(entry)}. Give one of them a different \`publicApi.path\`.`,
+          { contentTypeId: definition.id },
+        );
+      }
+      byPublicPath.set(path, entry);
+    }
 
     // `resolveContentIndexes` already rejects a collision inside one content
     // type. Postgres index names are unique per *schema*, though, so two
@@ -210,3 +229,15 @@ export const orderableColumns = (
   ...CONTENT_SYSTEM_FIELDS,
   ...(definition.publication.enabled ? CONTENT_PUBLICATION_FIELDS : []),
 ];
+
+/**
+ * Column names the *public* list route may order by.
+ *
+ * Deliberately not `orderableColumns`: the admin allowlist includes system
+ * columns and every field an editor may sort by, and reusing it would let an
+ * anonymous request order by a column the projection does not expose. Already
+ * resolved at definition time, so this only restates where it lives.
+ */
+export const publicOrderableColumns = (
+  definition: AnyContentTypeDefinition,
+): string[] => definition.publicApi.orderableFields;

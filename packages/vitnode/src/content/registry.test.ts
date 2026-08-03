@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   testArticleContentType,
   testCategoryContentType,
+  testPostContentType,
 } from "@/tests/content-fixtures";
 
 import type { RegisteredContentType } from "./registry";
@@ -17,6 +18,7 @@ import {
   findContentTypeById,
   orderableColumns,
   pathToContentTypeId,
+  publicOrderableColumns,
   validateContentTypes,
   withContentPermissions,
 } from "./registry";
@@ -297,5 +299,82 @@ describe("orderableColumns", () => {
       "createdAt",
       "updatedAt",
     ]);
+  });
+});
+
+describe("publicOrderableColumns", () => {
+  it("is the public allowlist, not the admin one", () => {
+    // The admin list can order by `title` *and* the system columns; the public
+    // one must not, or an anonymous request could sort by a hidden column.
+    expect(publicOrderableColumns(testPostContentType)).toEqual([
+      "publishedAt",
+      "title",
+    ]);
+    expect(publicOrderableColumns(testPostContentType)).not.toContain(
+      "createdAt",
+    );
+  });
+
+  it("is empty for a content type with no public API", () => {
+    expect(publicOrderableColumns(testArticleContentType)).toEqual([]);
+  });
+});
+
+describe("public paths", () => {
+  const publicWidget = (id: string, tableName: string, path: string) =>
+    defineContentType({
+      id,
+      tableName,
+      fields: {
+        title: field.text({ required: true }),
+        slug: field.slug({ source: "title" }),
+      },
+      publication: { enabled: true },
+      publicApi: { enabled: true, path, fields: ["title", "slug"] },
+      admin: {
+        label: { plural: "Widgets", singular: "Widget" },
+        // Distinct, so the permission-module check does not fire first and mask
+        // the one this block is about.
+        permissionModule: tableName,
+      },
+    });
+
+  it("accepts distinct paths", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(publicWidget("test.one", "test_ones", "ones")),
+        entry(publicWidget("test.two", "test_twos", "twos")),
+      ]),
+    ).not.toThrow();
+  });
+
+  it("rejects two content types claiming the same path", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(publicWidget("test.one", "test_ones", "things")),
+        entry(publicWidget("test.two", "test_twos", "things")),
+      ]),
+    ).toThrow(/Public path "things" is claimed by both/);
+  });
+
+  it("names both plugins and both content types", () => {
+    // Boot-time errors are only useful if they say where to go and what to fix.
+    expect(() =>
+      validateContentTypes([
+        entry(publicWidget("test.one", "test_ones", "things"), "@acme/first"),
+        entry(publicWidget("test.two", "test_twos", "things"), "@acme/second"),
+      ]),
+    ).toThrow(
+      /@acme\/first -> test\.one.*@acme\/second -> test\.two|@acme\/second -> test\.two.*@acme\/first -> test\.one/,
+    );
+  });
+
+  it("ignores content types with no public API", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(testArticleContentType),
+        entry(testCategoryContentType),
+      ]),
+    ).not.toThrow();
   });
 });

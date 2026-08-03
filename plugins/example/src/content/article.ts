@@ -39,6 +39,21 @@ export const articleContentType = defineContentType({
 
   publication: { enabled: true },
 
+  // Opt-in, and separate from `publication` on purpose: publishing controls
+  // what staff can see in the AdminCP badge, this controls what the internet
+  // can read. `code`, `views` and `author` are absent, so they never leave
+  // Postgres - the author especially, since a user field resolves to a person.
+  publicApi: {
+    enabled: true,
+    path: "articles",
+    fields: ["title", "slug", "excerpt", "featured", "category", "publishedAt"],
+    searchableFields: ["title", "excerpt"],
+    orderableFields: ["publishedAt", "title"],
+    filterableFields: ["category", "featured"],
+    defaultOrderBy: "publishedAt",
+    defaultOrder: "desc",
+  },
+
   // The generated columns are addressable here too. `(status, publishedAt)` is
   // generated automatically; this one backs "newest drafts first".
   indexes: [{ on: ["status", "createdAt"] }],

@@ -1,5 +1,6 @@
 import type {
   CONTENT_FILTERABLE_FIELD_KINDS,
+  CONTENT_PUBLIC_EXPOSABLE_COLUMNS,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_PUBLICATION_STATUSES,
   CONTENT_SYSTEM_FIELDS,
@@ -423,6 +424,67 @@ type ContentPublicationColumns<TDefinition> = TDefinition extends {
   : Record<never, never>;
 
 // ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/** Everything `publicApi.fields` may name: declared fields plus a few columns. */
+export type ContentPublicExposableField<TFields> =
+  (typeof CONTENT_PUBLIC_EXPOSABLE_COLUMNS)[number] | (keyof TFields & string);
+
+/**
+ * Opts a content type into a generated, read-only public API.
+ *
+ * Requires `publication: { enabled: true }` and exactly one exposed slug field,
+ * both checked at definition time. Enabling publication on its own never makes
+ * anything public - this block is the only thing that does.
+ *
+ * `enabled` is literal `true` for the same reason publication's is: every
+ * conditional keys off it, and a widened `boolean` would silently resolve to
+ * "no public API".
+ */
+export interface ContentPublicApiConfig<TField extends string = string> {
+  defaultOrder?: "asc" | "desc";
+  /** Defaults to `publishedAt`. Must be orderable. */
+  defaultOrderBy?: "publishedAt" | TField;
+  enabled: true;
+  /** The allowlist. There is no wildcard - a new field is private until listed. */
+  fields: readonly [TField, ...TField[]];
+  /** Equality filters the list route accepts. Defaults to none. */
+  filterableFields?: readonly TField[];
+  /** Columns `orderBy` accepts, besides `publishedAt`. Defaults to none. */
+  orderableFields?: readonly TField[];
+  /** One lowercase URL segment, e.g. `articles`. Never `admin`. */
+  path: string;
+  /** Columns `search` scans. Defaults to none. */
+  searchableFields?: readonly TField[];
+}
+
+/**
+ * `publicApi` after `defineContentType` has filled in every default.
+ *
+ * Generic over the exposed field-name *union* and nothing else. `keyof TFields`
+ * here would make `ContentTypeDefinition` invariant and break assignability to
+ * `AnyContentTypeDefinition` - the exact trap `ResolvedContentAdminConfig`
+ * documents. A `TField[]` stays covariant, so `("title" | "slug")[]` is still a
+ * `string[]`.
+ */
+export interface ResolvedContentPublicApiConfig<
+  TField extends string = string,
+  TEnabled extends boolean = boolean,
+> {
+  defaultOrder: "asc" | "desc";
+  defaultOrderBy: string;
+  enabled: TEnabled;
+  fields: TField[];
+  filterableFields: string[];
+  orderableFields: string[];
+  path: string;
+  searchableFields: string[];
+  /** The exposed slug field the detail route resolves by. */
+  slugField: string;
+}
+
+// ---------------------------------------------------------------------------
 // Definition
 // ---------------------------------------------------------------------------
 
@@ -430,6 +492,8 @@ export interface ContentTypeDefinition<
   TId extends string = string,
   TFields = ContentFieldMap,
   TPublication extends boolean = boolean,
+  TPublicField extends string = string,
+  TPublicEnabled extends boolean = boolean,
 > {
   admin: ResolvedContentAdminConfig;
   fields: TFields;
@@ -438,9 +502,18 @@ export interface ContentTypeDefinition<
   indexes: ResolvedContentIndex[];
   /** Derived from `admin.permissionModule` or `admin.label.plural`. */
   permissionModule: string;
+  publicApi: ResolvedContentPublicApiConfig<TPublicField, TPublicEnabled>;
   publication: ResolvedContentPublicationConfig<TPublication>;
   /** Zod schemas generated from `fields`. */
-  schemas: ContentSchemas<ContentTypeDefinition<TId, TFields, TPublication>>;
+  schemas: ContentSchemas<
+    ContentTypeDefinition<
+      TId,
+      TFields,
+      TPublication,
+      TPublicField,
+      TPublicEnabled
+    >
+  >;
   tableName: string;
 }
 
@@ -548,3 +621,85 @@ export type ContentReferenceFieldName<TDefinition> = FieldNamesOfKind<
   TDefinition,
   "relation" | "user"
 >;
+
+// ---------------------------------------------------------------------------
+// Public projection
+// ---------------------------------------------------------------------------
+
+/**
+ * How an exposed `relation` comes back: an identifier and the target's own
+ * `admin.titleField`, and nothing else.
+ *
+ * Deliberately not the related row. Deep nesting and arbitrary population are
+ * out of scope - they are the point at which a REST projection turns into
+ * GraphQL, and a hand-written route is the better answer.
+ */
+export interface ContentPublicRelation {
+  id: number;
+  label: null | string;
+}
+
+/** The exposed field names of one content type, read off its resolved config. */
+export type ContentPublicFieldName<TDefinition> = TDefinition extends {
+  publicApi: { fields: (infer TField extends string)[] };
+}
+  ? TField
+  : never;
+
+type ContentPublicValue<TFields, TName extends string> = TName extends "id"
+  ? number
+  : TName extends "createdAt" | "updatedAt"
+    ? Date
+    : TName extends "publishedAt"
+      ? Date | null
+      : TName extends keyof TFields
+        ? TFields[TName] extends { kind: "relation" }
+          ? TFields[TName] extends { nullable: true }
+            ? ContentPublicRelation | null
+            : ContentPublicRelation
+          : ContentFieldValue<TFields[TName]>
+        : never;
+
+/**
+ * One public row: exactly the allowlisted fields, and not one key more.
+ *
+ * A field the content type declares but `publicApi.fields` does not name is
+ * absent from this type *and* absent from the generated `SELECT`, so it never
+ * leaves Postgres. Adding a field to the content type does not add it here.
+ */
+export type ContentPublicSelect<TDefinition> = Prettify<{
+  [K in ContentPublicFieldName<TDefinition>]: ContentPublicValue<
+    ContentFieldsOf<TDefinition>,
+    K
+  >;
+}>;
+
+/**
+ * A row in a public list.
+ *
+ * The same projection as the detail response today - there is no list-only or
+ * detail-only field. Both names exist so a route signature says which one it
+ * means, and so the two can diverge later without a rename.
+ */
+export type ContentPublicListRow<TDefinition> =
+  ContentPublicSelect<TDefinition>;
+
+/**
+ * Equality filters the public service accepts.
+ *
+ * Exposed *and* filterable - a private field can never be filtered on, which is
+ * what stops a filter being used to probe a column the response omits. Like the
+ * admin equivalent this is one step wider than the runtime: the configured
+ * `publicApi.filterableFields` array is not recoverable as a type, so the
+ * narrower check is the runtime allowlist.
+ */
+export type ContentPublicFilterInput<TDefinition> = Partial<{
+  [
+    K in ContentPublicFieldName<TDefinition> &
+      FilterableContentFieldName<TDefinition>
+  ]: ContentFieldInput<ContentFieldsOf<TDefinition>[K]>;
+}>;
+
+/** Columns the public list may be ordered by. */
+export type ContentPublicOrderableFieldName<TDefinition> =
+  "publishedAt" | ContentPublicFieldName<TDefinition>;

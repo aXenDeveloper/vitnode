@@ -75,6 +75,18 @@ export const testPostContentType = defineContentType({
     }),
   },
   publication: { enabled: true },
+  // `views` and `author` are deliberately absent from `fields`: they are the
+  // "a private field never leaves Postgres" assertion in the public tests.
+  publicApi: {
+    enabled: true,
+    path: "posts",
+    fields: ["title", "slug", "excerpt", "category", "publishedAt"],
+    searchableFields: ["title", "excerpt"],
+    orderableFields: ["publishedAt", "title"],
+    filterableFields: ["category"],
+    defaultOrderBy: "publishedAt",
+    defaultOrder: "desc",
+  },
   admin: {
     label: { plural: "Test Posts", singular: "Test Post" },
     titleField: "title",

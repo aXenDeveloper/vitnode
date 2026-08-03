@@ -4,19 +4,30 @@ import type {
   ContentFieldMap,
   ContentFieldsConstraint,
   ContentIndexInput,
+  ContentPublicApiConfig,
   ContentPublicationConfig,
+  ContentPublicExposableField,
   ContentTypeDefinition,
   ResolvedContentAdminConfig,
+  ResolvedContentPublicApiConfig,
 } from "./types";
 
 import {
   CONTENT_ENUM_DEFAULT_LENGTH,
   CONTENT_FIELD_NAME_PATTERN,
+  CONTENT_FILTERABLE_FIELD_KINDS,
   CONTENT_ID_PATTERN,
   CONTENT_IDENTIFIER_MAX_LENGTH,
+  CONTENT_PUBLIC_ALWAYS_ORDERABLE,
+  CONTENT_PUBLIC_EXPOSABLE_COLUMNS,
+  CONTENT_PUBLIC_EXPOSABLE_KINDS,
+  CONTENT_PUBLIC_PATH_MAX_LENGTH,
+  CONTENT_PUBLIC_PATH_PATTERN,
+  CONTENT_PUBLIC_RESERVED_PATHS,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_SYSTEM_FIELDS,
   CONTENT_TABLE_NAME_PATTERN,
+  isFilterableFieldKind,
 } from "./const";
 import { ContentEngineError } from "./errors";
 import { resolveContentIndexes } from "./indexes";
@@ -351,6 +362,197 @@ const resolveAdmin = <TFields>(
   };
 };
 
+const publicExposableKinds: ReadonlySet<string> = new Set(
+  CONTENT_PUBLIC_EXPOSABLE_KINDS,
+);
+const publicExposableColumns: readonly string[] =
+  CONTENT_PUBLIC_EXPOSABLE_COLUMNS;
+const publicReservedPaths: readonly string[] = CONTENT_PUBLIC_RESERVED_PATHS;
+
+const assertPublicPath = (id: string, path: string): void => {
+  if (!CONTENT_PUBLIC_PATH_PATTERN.test(path)) {
+    throw new ContentEngineError(
+      `publicApi.path "${path}" must be one lowercase URL segment: a letter, then letters, digits or dashes. No slashes, no dots, no leading or trailing separator.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (path.length > CONTENT_PUBLIC_PATH_MAX_LENGTH) {
+    throw new ContentEngineError(
+      `publicApi.path "${path}" is longer than ${CONTENT_PUBLIC_PATH_MAX_LENGTH} characters.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (publicReservedPaths.includes(path)) {
+    throw new ContentEngineError(
+      `publicApi.path "${path}" is reserved. The admin gate matches any request path containing "/admin/", so a public route under that name would demand a staff session.`,
+      { contentTypeId: id },
+    );
+  }
+};
+
+/**
+ * Checks and fills in `publicApi`.
+ *
+ * Every rule here exists to make one guarantee cheap: if a field is not in
+ * `fields`, nothing public can read it, order by it, search it or filter on it.
+ * So the subset checks are not tidiness - they are what stops a filter or a
+ * sort being used to probe a column the response leaves out.
+ */
+const resolvePublicApi = <TField extends string>(
+  id: string,
+  fields: ContentFieldMap,
+  publicApi: ContentPublicApiConfig<TField> | undefined,
+  publication: boolean,
+): ResolvedContentPublicApiConfig => {
+  if (!publicApi?.enabled) {
+    return {
+      defaultOrder: "desc",
+      defaultOrderBy: CONTENT_PUBLIC_ALWAYS_ORDERABLE,
+      enabled: false,
+      fields: [],
+      filterableFields: [],
+      orderableFields: [],
+      path: "",
+      searchableFields: [],
+      slugField: "",
+    };
+  }
+
+  if (!publication) {
+    throw new ContentEngineError(
+      "publicApi needs `publication: { enabled: true }`. A public API without a draft state would put every row on the internet the moment it is created.",
+      { contentTypeId: id },
+    );
+  }
+
+  assertPublicPath(id, publicApi.path);
+
+  const exposed = publicApi.fields.map(String);
+  if (exposed.length === 0) {
+    throw new ContentEngineError(
+      "publicApi.fields is empty. There is no wildcard - list the fields you mean to publish.",
+      { contentTypeId: id },
+    );
+  }
+
+  const duplicate = exposed.find(
+    (name, position) => exposed.indexOf(name) !== position,
+  );
+  if (duplicate !== undefined) {
+    throw new ContentEngineError(
+      `publicApi.fields lists "${duplicate}" twice.`,
+      { contentTypeId: id },
+    );
+  }
+
+  for (const name of exposed) {
+    if (publicExposableColumns.includes(name)) continue;
+
+    const fieldValue = fields[name];
+    if (!fieldValue) {
+      if (publicationFields.includes(name)) {
+        throw new ContentEngineError(
+          `publicApi.fields includes "${name}", which cannot be exposed. Every row the public API returns is published, so it would be a constant.`,
+          { contentTypeId: id },
+        );
+      }
+
+      throw new ContentEngineError(
+        `publicApi.fields references unknown field "${name}".`,
+        { contentTypeId: id },
+      );
+    }
+
+    if (fieldValue.kind === "user") {
+      throw new ContentEngineError(
+        `publicApi.fields includes the user field "${name}". User fields are not exposable: publishing a person by listing one word is exactly the accident this rule prevents. Write your own route with the shape you mean.`,
+        { contentTypeId: id },
+      );
+    }
+
+    if (!publicExposableKinds.has(fieldValue.kind)) {
+      throw new ContentEngineError(
+        `publicApi.fields includes "${name}" of kind "${fieldValue.kind}", which cannot be exposed publicly.`,
+        { contentTypeId: id },
+      );
+    }
+  }
+
+  const exposedSet = new Set(exposed);
+  const assertExposed = (label: string, names: readonly string[]): void => {
+    const missing = names.find(name => !exposedSet.has(name));
+    if (missing !== undefined) {
+      throw new ContentEngineError(
+        `${label} includes "${missing}", which is not in publicApi.fields. A private field must not be reachable through a filter, a sort or a search either.`,
+        { contentTypeId: id },
+      );
+    }
+  };
+
+  const searchableFields = (publicApi.searchableFields ?? []).map(String);
+  assertExposed("publicApi.searchableFields", searchableFields);
+  const notSearchable = searchableFields.find(
+    name => !EXPLICIT_SEARCHABLE_KINDS.has(fields[name]?.kind),
+  );
+  if (notSearchable !== undefined) {
+    throw new ContentEngineError(
+      `publicApi.searchableFields includes "${notSearchable}", which is not a text, textarea or slug field.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const filterableFields = (publicApi.filterableFields ?? []).map(String);
+  assertExposed("publicApi.filterableFields", filterableFields);
+  const notFilterable = filterableFields.find(
+    name => !isFilterableFieldKind(fields[name]?.kind ?? ""),
+  );
+  if (notFilterable !== undefined) {
+    throw new ContentEngineError(
+      `publicApi.filterableFields includes "${notFilterable}", which is not an equality-filterable field. Filterable kinds: ${CONTENT_FILTERABLE_FIELD_KINDS.join(", ")}.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const declaredOrderable = (publicApi.orderableFields ?? []).map(String);
+  assertExposed("publicApi.orderableFields", declaredOrderable);
+  const orderableFields = [
+    ...new Set([...declaredOrderable, CONTENT_PUBLIC_ALWAYS_ORDERABLE]),
+  ];
+
+  const defaultOrderBy =
+    publicApi.defaultOrderBy ?? CONTENT_PUBLIC_ALWAYS_ORDERABLE;
+  if (!orderableFields.includes(defaultOrderBy)) {
+    throw new ContentEngineError(
+      `publicApi.defaultOrderBy is "${defaultOrderBy}", which is not in publicApi.orderableFields.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const slugFields = exposed.filter(name => fields[name]?.kind === "slug");
+  if (slugFields.length !== 1) {
+    throw new ContentEngineError(
+      slugFields.length === 0
+        ? "publicApi.fields must expose exactly one slug field - it is what the public detail route resolves by. Add `field.slug({ source: ... })` and list it."
+        : `publicApi.fields exposes ${slugFields.length} slug fields (${slugFields.join(", ")}). Expose exactly one, so the detail route has a single identifier.`,
+      { contentTypeId: id },
+    );
+  }
+
+  return {
+    defaultOrder: publicApi.defaultOrder ?? "desc",
+    defaultOrderBy,
+    enabled: true,
+    fields: exposed,
+    filterableFields,
+    orderableFields,
+    path: publicApi.path,
+    searchableFields,
+    slugField: slugFields[0],
+  };
+};
+
 /**
  * Declares a content type. The result is plain data - zod and objects only -
  * so the same definition can be imported by `buildPlugin` (client) and by
@@ -361,11 +563,14 @@ export const defineContentType = <
   TId extends string,
   TFields extends ContentFieldsConstraint<TPublication>,
   TPublication extends boolean = false,
+  TPublicField extends ContentPublicExposableField<TFields> = never,
+  TPublicEnabled extends boolean = false,
 >({
   admin,
   fields,
   id,
   indexes = [],
+  publicApi,
   publication,
   tableName,
 }: {
@@ -373,10 +578,22 @@ export const defineContentType = <
   fields: TFields;
   id: TId;
   indexes?: ContentIndexInput<TFields, TPublication>[];
+  /**
+   * Opts into a generated read-only public API. Needs `publication` and exactly
+   * one exposed slug field. Omit it and nothing public is generated.
+   */
+  publicApi?:
+    ContentPublicApiConfig<TPublicField> | { enabled: TPublicEnabled };
   /** Opts into the draft/published lifecycle. Omit to stay on Stage 1 behaviour. */
   publication?: ContentPublicationConfig | { enabled: TPublication };
   tableName: string;
-}): ContentTypeDefinition<TId, TFields, TPublication> => {
+}): ContentTypeDefinition<
+  TId,
+  TFields,
+  TPublication,
+  TPublicField,
+  TPublicEnabled
+> => {
   if (!CONTENT_ID_PATTERN.test(id)) {
     throw new ContentEngineError(
       `Content type id "${id}" must look like "plugin.entity" (lowercase, dot separated).`,
@@ -448,6 +665,16 @@ export const defineContentType = <
     );
   }
 
+  const resolvedPublicApi = resolvePublicApi(
+    id,
+    fieldMap,
+    // The `{ enabled: TPublicEnabled }` arm of the parameter exists only so an
+    // `enabled: false` literal still typechecks; `resolvePublicApi` returns the
+    // disabled config for anything that is not `enabled: true`.
+    publicApi as ContentPublicApiConfig<TPublicField> | undefined,
+    publicationEnabled,
+  );
+
   return {
     admin: resolvedAdmin,
     fields,
@@ -457,11 +684,22 @@ export const defineContentType = <
     publication: {
       enabled: publicationEnabled as TPublication,
     },
+    publicApi: resolvedPublicApi as ResolvedContentPublicApiConfig<
+      TPublicField,
+      TPublicEnabled
+    >,
     schemas: buildContentSchemas<
-      ContentTypeDefinition<TId, TFields, TPublication>
+      ContentTypeDefinition<
+        TId,
+        TFields,
+        TPublication,
+        TPublicField,
+        TPublicEnabled
+      >
     >({
       admin: resolvedAdmin,
       fields: fieldMap,
+      publicApi: resolvedPublicApi,
       publication: publicationEnabled,
     }),
     tableName,

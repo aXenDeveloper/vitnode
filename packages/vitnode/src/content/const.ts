@@ -112,6 +112,66 @@ export const CONTENT_SLUG_DEFAULT_LENGTH = 160;
 export const CONTENT_DEFAULT_PAGE_SIZE = 25;
 export const CONTENT_OPTIONS_LIMIT = 25;
 
+export const CONTENT_PUBLIC_DEFAULT_PAGE_SIZE = 25;
+export const CONTENT_PUBLIC_MAX_PAGE_SIZE = 50;
+
+/**
+ * URL segment for a public content type: lowercase, dash separated, one
+ * segment. No slashes, so a leading or trailing one, an empty segment and `..`
+ * are all rejected by construction rather than by three more checks.
+ */
+export const CONTENT_PUBLIC_PATH_PATTERN = /^[a-z][a-z0-9-]*$/;
+
+export const CONTENT_PUBLIC_PATH_MAX_LENGTH = 64;
+
+/**
+ * Path segments a public content type may not claim.
+ *
+ * `admin` is the important one: the global admin gate is a `path.includes(
+ * "/admin/")` substring test, so a public route under that name would demand a
+ * staff session and never be public at all.
+ */
+export const CONTENT_PUBLIC_RESERVED_PATHS = ["admin"] as const;
+
+/**
+ * Field kinds a public response may carry.
+ *
+ * `user` is deliberately absent. A user field resolves to a person, and the
+ * first public layer should not make leaking one a one-word change - expose an
+ * author through your own route, with the shape you actually mean.
+ */
+export const CONTENT_PUBLIC_EXPOSABLE_KINDS = [
+  "boolean",
+  "dateTime",
+  "enum",
+  "number",
+  "relation",
+  "slug",
+  "text",
+  "textarea",
+] as const;
+
+/**
+ * Generated columns `publicApi.fields` may name.
+ *
+ * `status` is missing on purpose: every row the public API returns is
+ * published, so the column would be a constant.
+ */
+export const CONTENT_PUBLIC_EXPOSABLE_COLUMNS = [
+  "id",
+  "createdAt",
+  "updatedAt",
+  "publishedAt",
+] as const;
+
+/**
+ * Always available to `orderBy`, with no entry in `publicApi.orderableFields` -
+ * the same courtesy the admin list extends to its system columns. It is the
+ * natural order of a public feed, and it leaks nothing that is not already
+ * implied by the row being published.
+ */
+export const CONTENT_PUBLIC_ALWAYS_ORDERABLE = "publishedAt";
+
 /**
  * Every content type gets the first four staff permissions. `can_publish` is
  * generated only for content types with `publication: { enabled: true }`.

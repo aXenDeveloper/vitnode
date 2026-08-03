@@ -5,18 +5,34 @@ import type {
   ContentCreateInput,
   ContentFieldDescriptor,
   ContentFieldMap,
+  ContentPublicSelect,
   ContentSelect,
   ContentUpdateInput,
   ResolvedContentAdminConfig,
+  ResolvedContentPublicApiConfig,
 } from "./types";
 
 import {
+  CONTENT_PUBLIC_ALWAYS_ORDERABLE,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_PUBLICATION_STATUSES,
   CONTENT_SLUG_DEFAULT_LENGTH,
   CONTENT_SYSTEM_FIELDS,
   isFilterableFieldKind,
 } from "./const";
+
+/** What a content type without `publicApi` carries: nothing exposed at all. */
+const DISABLED_PUBLIC_API: ResolvedContentPublicApiConfig = {
+  defaultOrder: "desc",
+  defaultOrderBy: CONTENT_PUBLIC_ALWAYS_ORDERABLE,
+  enabled: false,
+  fields: [],
+  filterableFields: [],
+  orderableFields: [],
+  path: "",
+  searchableFields: [],
+  slugField: "",
+};
 
 export interface ContentSchemas<TDefinition = AnyContentTypeDefinition> {
   /** Request body for create. Rejects unknown keys and system columns. */
@@ -36,6 +52,19 @@ export interface ContentSchemas<TDefinition = AnyContentTypeDefinition> {
   order: z.ZodObject<z.ZodRawShape>;
   /** Path parameters for the detail/update/delete routes. */
   params: z.ZodObject<{ id: z.ZodCoercedNumber }>;
+  /**
+   * Equality filters the public list route accepts, one per
+   * `publicApi.filterableFields`. Empty when public exposure is off.
+   */
+  publicFilters: z.ZodObject<z.ZodRawShape>;
+  /** `orderBy` allowlist for the public list route, plus direction. */
+  publicOrder: z.ZodObject<z.ZodRawShape>;
+  /** Path parameters for the public detail route. */
+  publicParams: z.ZodObject<{ slug: z.ZodString }>;
+  /** The public response projection - exactly `publicApi.fields`. */
+  publicSelect: z.ZodType<ContentPublicSelect<TDefinition>>;
+  /** The same shape, left as a `ZodObject` so routes can compose it. */
+  publicSelectObject: z.ZodObject<z.ZodRawShape>;
   /** API response shape. */
   select: z.ZodType<ContentSelect<TDefinition>>;
   /**
@@ -213,18 +242,52 @@ const filterShape = (fields: ContentFieldMap): z.ZodRawShape =>
       }),
   );
 
+/** An exposed relation comes back as an identifier and a display label. */
+const publicRelationSchema = (): z.ZodObject<z.ZodRawShape> =>
+  z.object({ id: z.number(), label: z.string().nullable() });
+
 /**
- * Takes only the two pieces it needs rather than a whole definition, so
+ * The public response shape, built from the allowlist and nothing else.
+ *
+ * This is also what the public service's `SELECT` map is derived from, so a
+ * field missing here is a field that never leaves Postgres - not one that is
+ * fetched and then deleted.
+ */
+const publicSelectShape = (
+  fields: ContentFieldMap,
+  publicApi: ResolvedContentPublicApiConfig,
+): z.ZodRawShape =>
+  Object.fromEntries(
+    publicApi.fields.map(name => {
+      if (name === "id") return [name, z.number()];
+      if (name === "createdAt" || name === "updatedAt") return [name, z.date()];
+      if (name === "publishedAt") return [name, z.date().nullable()];
+
+      const fieldValue = fields[name];
+      if (fieldValue.kind === "relation") {
+        const relation = publicRelationSchema();
+
+        return [name, fieldValue.nullable ? relation.nullable() : relation];
+      }
+
+      return [name, applyNullable(baseSelectSchema(fieldValue), fieldValue)];
+    }),
+  );
+
+/**
+ * Takes only the pieces it needs rather than a whole definition, so
  * `defineContentType` can call it before the definition object exists and
  * without re-widening its field map.
  */
 export const buildContentSchemas = <TDefinition>({
   admin,
   fields,
+  publicApi = DISABLED_PUBLIC_API,
   publication = false,
 }: {
   admin: ResolvedContentAdminConfig;
   fields: ContentFieldMap;
+  publicApi?: ResolvedContentPublicApiConfig;
   publication?: boolean;
 }): ContentSchemas<TDefinition> => {
   const fieldNames = Object.keys(fields);
@@ -268,6 +331,19 @@ export const buildContentSchemas = <TDefinition>({
   ];
   const selectObject = z.object(selectShape);
 
+  const publicSelectObject = z.object(publicSelectShape(fields, publicApi));
+  const publicFilterable = new Set(publicApi.filterableFields);
+  // Derived from the same `filterShape`, then narrowed to the configured
+  // allowlist - so a public filter can never reach a field the admin filter
+  // schema would not have accepted either.
+  const publicFilters = z.object(
+    Object.fromEntries(
+      Object.entries(filterShape(fields)).filter(([name]) =>
+        publicFilterable.has(name),
+      ),
+    ),
+  );
+
   return {
     // The shapes are assembled in a loop, so their Zod types are erased.
     // Re-attaching the descriptor-derived types here means every consumer -
@@ -286,6 +362,25 @@ export const buildContentSchemas = <TDefinition>({
       orderBy: z.enum(orderable as [string, ...string[]]).optional(),
     }),
     params: z.object({ id: z.coerce.number() }),
+    publicFilters,
+    publicOrder: z.object({
+      order: z.enum(["asc", "desc"]).optional(),
+      orderBy: z
+        .enum(
+          (publicApi.orderableFields.length > 0
+            ? publicApi.orderableFields
+            : [CONTENT_PUBLIC_ALWAYS_ORDERABLE]) as [string, ...string[]],
+        )
+        .optional(),
+    }),
+    // Loose on purpose: an unknown slug and a malformed one are both a 404, so
+    // there is nothing for a stricter pattern to buy. The value is a bound
+    // parameter, never an identifier.
+    publicParams: z.object({ slug: z.string().min(1) }),
+    publicSelect: publicSelectObject as unknown as z.ZodType<
+      ContentPublicSelect<TDefinition>
+    >,
+    publicSelectObject,
     select: selectObject as unknown as z.ZodType<ContentSelect<TDefinition>>,
     selectObject,
     update: update as unknown as z.ZodType<ContentUpdateInput<TDefinition>>,
