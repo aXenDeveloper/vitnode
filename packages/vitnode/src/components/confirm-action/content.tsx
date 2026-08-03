@@ -10,9 +10,15 @@ import { Button } from "../ui/button";
 
 export const ContentConfirmAction = ({
   onSubmit,
+  submitVariant = "destructive",
   textSubmit,
 }: {
   onSubmit: (props: { onClose: () => void }) => Promise<void> | void;
+  /**
+   * Defaults to `destructive`, which is right for the deletes this dialog was
+   * built for - and wrong for a confirmation that publishes something.
+   */
+  submitVariant?: React.ComponentProps<typeof Button>["variant"];
   textSubmit?: string;
 }) => {
   const t = useTranslations("core.global.confirm_action");
@@ -27,7 +33,7 @@ export const ContentConfirmAction = ({
     <form action={formAction}>
       <AlertDialogFooter>
         <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-        <Button isLoading={isLoading} type="submit" variant="destructive">
+        <Button isLoading={isLoading} type="submit" variant={submitVariant}>
           {textSubmit ?? t("confirm")}
         </Button>
       </AlertDialogFooter>

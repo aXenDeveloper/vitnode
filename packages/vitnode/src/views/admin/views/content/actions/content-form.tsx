@@ -2,6 +2,7 @@
 // `create-action`/`edit-action`, which are already client entries. Declaring
 // it again would make this a nested client entry, and `next/dynamic` cannot
 // resolve one from inside a published package - the dialog spins forever.
+import { CircleCheckIcon, FileClockIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
@@ -9,7 +10,9 @@ import { toast } from "sonner";
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
 
+import { DateFormat } from "@/components/date-format";
 import { AutoForm, type AutoFormOnSubmit } from "@/components/form/auto-form";
+import { Badge } from "@/components/ui/badge";
 import { useDialog } from "@/components/ui/dialog";
 import {
   buildFormSchemaFromSpec,
@@ -26,6 +29,43 @@ import {
   loadContentOptionsAction,
 } from "./mutation-api.server";
 
+/**
+ * A read-only line saying where the row is in the lifecycle.
+ *
+ * Read-only on purpose: `status` and `publishedAt` are not in the form schema,
+ * and the one place that moves them is the table's publish action. Two
+ * competing mutation paths in one dialog is how a form ends up fighting its own
+ * optimistic state.
+ */
+const PublicationStatus = ({
+  publishedAt,
+  status,
+}: {
+  publishedAt: unknown;
+  status: unknown;
+}) => {
+  const t = useTranslations("core.content.status");
+  const published = status === "published";
+  const date = typeof publishedAt === "string" ? new Date(publishedAt) : null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      <span className="text-muted-foreground">{t("label")}</span>
+      <Badge variant={published ? "default" : "secondary"}>
+        {published ? (
+          <CircleCheckIcon aria-hidden />
+        ) : (
+          <FileClockIcon aria-hidden />
+        )}
+        {published ? t("published") : t("draft")}
+      </Badge>
+      <span className="text-muted-foreground">
+        {date ? <DateFormat date={date} /> : t("never_published")}
+      </span>
+    </div>
+  );
+};
+
 export interface ContentFormProps {
   /** Existing values when editing; absent when creating. */
   data?: Record<string, unknown> & { id: number };
@@ -34,6 +74,8 @@ export interface ContentFormProps {
     string,
     (props: ItemAutoFormComponentProps) => React.ReactNode
   >;
+  /** Whether the content type has the draft/published lifecycle. */
+  publication?: boolean;
   /** The content type's singular label, used in the success toast. */
   singular: string;
   spec: ContentFormSpec;
@@ -44,6 +86,7 @@ export interface ContentFormProps {
 export const ContentForm = ({
   data,
   fieldOverrides = {},
+  publication = false,
   singular,
   spec,
   title,
@@ -101,38 +144,47 @@ export const ContentForm = ({
   };
 
   return (
-    <AutoForm
-      fields={spec.fields.map(fieldSpec => ({
-        id: fieldSpec.name,
+    <>
+      {publication && data ? (
+        <PublicationStatus
+          publishedAt={data.publishedAt}
+          status={data.status}
+        />
+      ) : null}
 
-        // MUST NOT be async: `AutoForm` calls this to get an element, and an
-        // async function hands it a fresh Promise every render - React 19
-        // suspends on promise children, so the dialog spins forever.
-        // eslint-disable-next-line @typescript-eslint/promise-function-async -- see above
-        component: props => {
-          const override = fieldOverrides[fieldSpec.name];
-          if (override) return override(props);
+      <AutoForm
+        fields={spec.fields.map(fieldSpec => ({
+          id: fieldSpec.name,
 
-          return (
-            <ContentField
-              loadOptions={async ({ field, search }) =>
-                await loadContentOptionsAction(
-                  spec.contentTypeId,
-                  field,
-                  search,
-                )
-              }
-              spec={fieldSpec}
-              {...props}
-            />
-          );
-        },
-      }))}
-      formSchema={formSchema}
-      onSubmit={onSubmit}
-      submitButtonProps={{
-        children: t(data ? "edit.submit" : "create.submit"),
-      }}
-    />
+          // MUST NOT be async: `AutoForm` calls this to get an element, and an
+          // async function hands it a fresh Promise every render - React 19
+          // suspends on promise children, so the dialog spins forever.
+          // eslint-disable-next-line @typescript-eslint/promise-function-async -- see above
+          component: props => {
+            const override = fieldOverrides[fieldSpec.name];
+            if (override) return override(props);
+
+            return (
+              <ContentField
+                loadOptions={async ({ field, search }) =>
+                  await loadContentOptionsAction(
+                    spec.contentTypeId,
+                    field,
+                    search,
+                  )
+                }
+                spec={fieldSpec}
+                {...props}
+              />
+            );
+          },
+        }))}
+        formSchema={formSchema}
+        onSubmit={onSubmit}
+        submitButtonProps={{
+          children: t(data ? "edit.submit" : "create.submit"),
+        }}
+      />
+    </>
   );
 };

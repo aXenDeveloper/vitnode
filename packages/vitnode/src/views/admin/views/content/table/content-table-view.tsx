@@ -13,6 +13,7 @@ import type { ContentRowData } from "./cells";
 
 import { DeleteContentAction } from "../actions/delete-action";
 import { EditContentAction } from "../actions/edit-action";
+import { PublishContentAction } from "../actions/publish-action";
 import { ContentCell } from "./cells";
 
 const zodList = z.object({
@@ -101,7 +102,8 @@ export const ContentTableView = async ({
       id: "actions",
       header: "",
       align: "right",
-      className: "w-20",
+      // Room for the third button publication adds.
+      className: definition.publication.enabled ? "w-28" : "w-20",
       cell: ({ row }) => {
         const title =
           titleField && typeof row[titleField] === "string"
@@ -110,6 +112,17 @@ export const ContentTableView = async ({
 
         return (
           <>
+            {definition.publication.enabled ? (
+              <PublishContentAction
+                contentTypeId={definition.id}
+                id={row.id}
+                permissionModule={definition.permissionModule}
+                pluginId={pluginId}
+                singular={definition.admin.label.singular}
+                status={row.status}
+                title={title}
+              />
+            ) : null}
             <EditContentAction
               data={row}
               fieldOverrides={Object.fromEntries(
@@ -119,6 +132,7 @@ export const ContentTableView = async ({
               )}
               permissionModule={definition.permissionModule}
               pluginId={pluginId}
+              publication={definition.publication.enabled}
               singular={definition.admin.label.singular}
               spec={formSpec}
               title={title}

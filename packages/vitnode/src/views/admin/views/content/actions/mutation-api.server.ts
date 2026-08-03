@@ -97,6 +97,48 @@ export const deleteContentAction = async (
   return {};
 };
 
+/**
+ * Publishing and unpublishing share one shape, so they share one call.
+ *
+ * Both routes are idempotent: publishing something already published is a 200
+ * with `changed: false`, not an error. The button therefore never has to guard
+ * against a double click, and a stale row in the table resolves itself.
+ */
+const publicationAction = async (
+  contentTypeId: string,
+  id: number,
+  action: "publish" | "unpublish",
+): Promise<MutationResult> => {
+  const { definition, pluginId } = resolve(contentTypeId);
+
+  const result = await contentApiFetch({
+    definition,
+    method: "post",
+    path: `/${id}/${action}`,
+    pluginId,
+  });
+
+  if (result.status !== 200) {
+    return { error: result.error ?? "", status: result.status };
+  }
+
+  revalidatePath(CONTENT_PAGE_PATH, "page");
+
+  return {};
+};
+
+export const publishContentAction = async (
+  contentTypeId: string,
+  id: number,
+): Promise<MutationResult> =>
+  await publicationAction(contentTypeId, id, "publish");
+
+export const unpublishContentAction = async (
+  contentTypeId: string,
+  id: number,
+): Promise<MutationResult> =>
+  await publicationAction(contentTypeId, id, "unpublish");
+
 const zodOptions = z.object({
   items: z.array(z.object({ label: z.string(), value: z.number() })),
 });

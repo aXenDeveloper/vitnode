@@ -24,6 +24,7 @@ export const ConfirmActionAlertDialog = ({
   children,
   title,
   description,
+  submitVariant,
   textSubmit,
   onSubmit,
   ...props
@@ -48,7 +49,11 @@ export const ConfirmActionAlertDialog = ({
         </AlertDialogHeader>
 
         <React.Suspense fallback={<AlertDialogFooterSkeleton />}>
-          <ContentConfirmAction onSubmit={onSubmit} textSubmit={textSubmit} />
+          <ContentConfirmAction
+            onSubmit={onSubmit}
+            submitVariant={submitVariant}
+            textSubmit={textSubmit}
+          />
         </React.Suspense>
       </AlertDialogContent>
     </AlertDialog>
