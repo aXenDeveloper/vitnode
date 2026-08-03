@@ -11,7 +11,11 @@ import {
 
 import { ContentEngineError } from "../errors";
 import { createContentModel } from "./model";
-import { publicationMethods, publishedCondition } from "./publication";
+import {
+  publicationColumns,
+  publicationMethods,
+  publishedCondition,
+} from "./publication";
 
 const categories = createContentModel(testCategoryContentType);
 const posts = createContentModel(testPostContentType, {
@@ -43,6 +47,31 @@ describe("publishedCondition", () => {
   it("binds the status rather than inlining it", () => {
     expect(compile(publishedCondition(posts.columns)).sql).not.toContain(
       "'published'",
+    );
+  });
+});
+
+describe("publicationColumns", () => {
+  it("picks the two columns out of an erased map", () => {
+    // Generic code holds `Record<string, PgColumn>`, which does not satisfy the
+    // narrowed parameter type. This is the runtime step that makes it true.
+    const narrowed = publicationColumns(testPostContentType, posts.columns);
+
+    expect(Object.keys(narrowed).sort()).toEqual(["publishedAt", "status"]);
+    expect(compile(publishedCondition(narrowed)).params).toEqual(["published"]);
+  });
+
+  it("throws for a content type without publication", () => {
+    expect(() =>
+      publicationColumns(testCategoryContentType, categories.columns),
+    ).toThrow(ContentEngineError);
+  });
+
+  it("throws when the columns are missing, whatever the flag says", () => {
+    // Belt and braces: the presence check is what stops `undefined` reaching
+    // Drizzle if a caller hands over the wrong column map.
+    expect(() => publicationColumns(testPostContentType, {})).toThrow(
+      ContentEngineError,
     );
   });
 });

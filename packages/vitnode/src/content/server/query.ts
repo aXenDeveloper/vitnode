@@ -56,12 +56,19 @@ const filterValue = (
  * and the type is not what protects the query.
  */
 export const buildFilterCondition = ({
+  allowed,
   columns,
   contentTypeId,
   fields,
   filters,
   publication = false,
 }: {
+  /**
+   * Narrows the filterable set further, for a caller with its own allowlist -
+   * the public service, whose `filterableFields` is a deliberate subset of
+   * what the admin list accepts.
+   */
+  allowed?: readonly string[];
   columns: Record<string, PgColumn>;
   contentTypeId: string;
   fields: ContentFieldMap;
@@ -73,6 +80,13 @@ export const buildFilterCondition = ({
 
   for (const [name, raw] of Object.entries(filters)) {
     if (raw === undefined) continue;
+
+    if (allowed && !allowed.includes(name)) {
+      throw new ContentEngineError(
+        `Filter "${name}" is not in the allowlist. Allowed: ${allowed.length > 0 ? allowed.join(", ") : "(none)"}.`,
+        { contentTypeId },
+      );
+    }
 
     // `status` is a generated column, not a declared field, so there is no
     // descriptor to drive the checks below. The generated schema's `z.enum`

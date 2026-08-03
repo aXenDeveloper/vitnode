@@ -17,7 +17,17 @@ export { rethrowAsHttpError, withHttpErrors } from "./http-errors";
 export { createContentModel } from "./model";
 export type { ContentModel } from "./model";
 export { buildContentAdminModule } from "./module";
-export { publicationMethods, publishedCondition } from "./publication";
+export { createContentPublicService } from "./public-service";
+export type {
+  ContentPublicFindManyArgs,
+  ContentPublicService,
+} from "./public-service";
+export {
+  publicationColumns,
+  publicationMethods,
+  publishedCondition,
+} from "./publication";
+export type { PublicationColumns } from "./publication";
 export {
   buildFilterCondition,
   buildOrderColumn,
@@ -26,6 +36,8 @@ export {
   escapeLikePattern,
   toColumnValues,
 } from "./query";
+export { LABEL_PREFIX, resolveReferenceTargets, toLabel } from "./references";
+export type { ReferenceTarget } from "./references";
 export { buildContentRoutes } from "./routes";
 export { createContentService } from "./service";
 export type {

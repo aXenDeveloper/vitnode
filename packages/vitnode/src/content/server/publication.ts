@@ -17,10 +17,36 @@ import { ContentEngineError } from "../errors";
  * publication is therefore a compile error rather than a query against columns
  * that do not exist.
  */
-interface PublicationColumns {
+export interface PublicationColumns {
   publishedAt: PgColumn;
   status: PgColumn;
 }
+
+/**
+ * Picks the two publication columns out of a model's column map.
+ *
+ * Generic code is written against `AnyContentTypeDefinition`, whose
+ * `publication.enabled` is `boolean`, so its `columns` map is a plain
+ * `Record<string, PgColumn>` and does not satisfy {@link PublicationColumns}.
+ * This is the runtime step that makes it true - a real presence check rather
+ * than a cast, since the whole point of narrowing the parameter was to stop
+ * `undefined` reaching Drizzle.
+ */
+export const publicationColumns = (
+  definition: AnyContentTypeDefinition,
+  columns: Record<string, PgColumn>,
+): PublicationColumns => {
+  const { publishedAt, status } = columns;
+
+  if (!definition.publication.enabled || !publishedAt || !status) {
+    throw new ContentEngineError(
+      "The published predicate needs `publication: { enabled: true }` on the content type.",
+      { contentTypeId: definition.id },
+    );
+  }
+
+  return { publishedAt, status };
+};
 
 /**
  * The one definition of "published".

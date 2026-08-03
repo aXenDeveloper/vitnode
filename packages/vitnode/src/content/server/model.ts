@@ -3,6 +3,7 @@ import type { Context } from "hono";
 
 import type { ContentSchemas } from "../schemas";
 import type { AnyContentTypeDefinition } from "../types";
+import type { ContentPublicService } from "./public-service";
 import type { ContentService } from "./service";
 import type {
   ContentColumnName,
@@ -10,6 +11,7 @@ import type {
   ContentTableFor,
 } from "./types";
 
+import { createContentPublicService } from "./public-service";
 import { createContentService } from "./service";
 import { contentTableColumns, createContentTable } from "./table";
 
@@ -17,6 +19,15 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
   /** Column name -> Drizzle column, for filters, ordering and custom queries. */
   columns: Record<ContentColumnName<TDefinition>, PgColumn>;
   definition: TDefinition;
+  /**
+   * The read-only public repository, or `undefined` when the content type has
+   * no `publicApi`.
+   *
+   * `undefined` rather than a throwing stub so the check reads naturally in a
+   * route builder that has no idea which content type it was handed.
+   */
+  publicService:
+    ((c: Context) => ContentPublicService<TDefinition>) | undefined;
   /** The definition's schemas, re-typed for this concrete content type. */
   schemas: ContentSchemas<TDefinition>;
   /** Typed repository bound to the request's database handle. */
@@ -61,6 +72,10 @@ export const createContentModel = <
   return {
     columns,
     definition,
+    publicService: definition.publicApi.enabled
+      ? (c: Context) =>
+          createContentPublicService({ c, columns, definition, table })
+      : undefined,
     schemas,
     service: (c: Context) =>
       createContentService({

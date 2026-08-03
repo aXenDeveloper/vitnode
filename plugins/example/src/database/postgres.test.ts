@@ -419,6 +419,129 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     await categories.delete(category.id);
   }, 60_000);
 
+  it("runs the whole public lifecycle", async () => {
+    const categories = categoryContent.service(context);
+    const articles = articleContent.service(context);
+    const publicArticles = articleContent.publicService?.(context);
+    if (!publicArticles) throw new Error("Expected a public service.");
+
+    const [user] = await sql<{ id: number }[]>`
+      INSERT INTO "core_users" ("name") VALUES ('Ada') RETURNING "id"
+    `;
+    const category = await categories.create({ name: "Public" });
+
+    const article = await articles.create({
+      author: user.id,
+      category: category.id,
+      code: "public-001",
+      excerpt: "A summary",
+      title: "Hello public world",
+    });
+
+    // A draft is invisible: not in the list, and not findable by its slug.
+    await expect(publicArticles.findMany()).resolves.toMatchObject({
+      pageInfo: { totalCount: 0 },
+    });
+    await expect(
+      publicArticles.findBySlug("hello-public-world"),
+    ).resolves.toBeNull();
+    await expect(publicArticles.findById(article.id)).resolves.toBeNull();
+
+    await articles.publish(article.id);
+
+    const listed = await publicArticles.findMany();
+    expect(listed.pageInfo.totalCount).toBe(1);
+
+    const detail = await publicArticles.findBySlug("hello-public-world");
+    expect(detail).not.toBeNull();
+
+    // Exactly the allowlist. `code`, `views` and `author` are absent, and the
+    // author especially: a user field resolves to a person.
+    expect(Object.keys(detail ?? {}).sort()).toEqual([
+      "category",
+      "excerpt",
+      "featured",
+      "publishedAt",
+      "slug",
+      "title",
+    ]);
+    expect(detail).toMatchObject({
+      category: { id: category.id, label: "Public" },
+      excerpt: "A summary",
+      title: "Hello public world",
+    });
+    // Fetched for the cursor, dropped from the projection.
+    expect(detail).not.toHaveProperty("id");
+
+    // Filtering, search and ordering all work through the public allowlists.
+    await expect(
+      publicArticles.findMany({ filters: { category: category.id } }),
+    ).resolves.toMatchObject({ pageInfo: { totalCount: 1 } });
+    await expect(
+      publicArticles.findMany({ query: { search: "summary" } }),
+    ).resolves.toMatchObject({ pageInfo: { totalCount: 1 } });
+    await expect(
+      publicArticles.findMany({ query: { search: "nothing here" } }),
+    ).resolves.toMatchObject({ pageInfo: { totalCount: 0 } });
+    await expect(
+      publicArticles.findMany({ orderBy: { column: "title", order: "asc" } }),
+    ).resolves.toMatchObject({ pageInfo: { totalCount: 1 } });
+
+    // Changing the slug moves the public URL, and the old one stops resolving.
+    await articles.update(article.id, { slug: "moved-somewhere-else" });
+    await expect(
+      publicArticles.findBySlug("hello-public-world"),
+    ).resolves.toBeNull();
+    await expect(
+      publicArticles.findBySlug("moved-somewhere-else"),
+    ).resolves.not.toBeNull();
+
+    // A cleared publication date is exactly the leak `IS NOT NULL` prevents.
+    await sql`UPDATE "example_articles" SET "publishedAt" = NULL WHERE "id" = ${article.id}`;
+    await expect(
+      publicArticles.findBySlug("moved-somewhere-else"),
+    ).resolves.toBeNull();
+
+    // So is a date in the future, which is what makes scheduling additive.
+    await sql`
+      UPDATE "example_articles"
+      SET "publishedAt" = now() + interval '1 day'
+      WHERE "id" = ${article.id}
+    `;
+    await expect(
+      publicArticles.findBySlug("moved-somewhere-else"),
+    ).resolves.toBeNull();
+    await expect(publicArticles.findMany()).resolves.toMatchObject({
+      pageInfo: { totalCount: 0 },
+    });
+
+    await sql`UPDATE "example_articles" SET "publishedAt" = now() WHERE "id" = ${article.id}`;
+    await articles.unpublish(article.id);
+
+    // Unpublished: gone from both endpoints even though `publishedAt` is set.
+    await expect(publicArticles.findMany()).resolves.toMatchObject({
+      pageInfo: { totalCount: 0 },
+    });
+    await expect(
+      publicArticles.findBySlug("moved-somewhere-else"),
+    ).resolves.toBeNull();
+
+    await articles.publish(article.id);
+    await articles.delete(article.id);
+
+    await expect(
+      publicArticles.findBySlug("moved-somewhere-else"),
+    ).resolves.toBeNull();
+
+    await sql`DELETE FROM "core_users" WHERE "id" = ${user.id}`;
+    await categories.delete(category.id);
+  }, 60_000);
+
+  it("has no public service without a public API", () => {
+    // `example.category` opts into neither publication nor `publicApi`.
+    expect(categoryContent.publicService).toBeUndefined();
+  });
+
   it("rejects invalid input before it reaches Postgres", async () => {
     await expect(
       articleContent
