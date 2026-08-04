@@ -23,13 +23,24 @@ const fields = {
   excerpt: field.textarea({ nullable: true }),
   featured: field.boolean({ defaultValue: false }),
   slug: field.slug({ source: "title" }),
+  // Public and textual, but nullable - so it is a legal description and an
+  // illegal title.
+  subtitle: field.text({ nullable: true }),
   title: field.text({ required: true }),
   views: field.number({ integer: true, defaultValue: 0 }),
 };
 
 const publicApi = {
   enabled: true,
-  fields: ["title", "slug", "excerpt", "body", "featured", "publishedAt"],
+  fields: [
+    "title",
+    "slug",
+    "excerpt",
+    "body",
+    "featured",
+    "subtitle",
+    "publishedAt",
+  ],
   path: "articles",
 } as const;
 
@@ -60,19 +71,60 @@ describe("search configuration types", () => {
     expectTypeOf(definition.search.descriptionField).toEqualTypeOf<
       null | string
     >();
-    expectTypeOf(definition.search.enabled).toEqualTypeOf<boolean>();
+    // The literal survives, which is what makes the definition assignable to
+    // `SearchableContentTypeDefinition` without an assertion.
+    expectTypeOf(definition.search.enabled).toEqualTypeOf<true>();
+    expectTypeOf(definition).toExtend<SearchableContentTypeDefinition>();
+
+    const searchable: SearchableContentTypeDefinition = definition;
+    expectTypeOf(searchable.search.enabled).toEqualTypeOf<true>();
   });
 
   it("accepts an explicit `enabled: false`", () => {
+    const definition = defineContentType({
+      admin,
+      fields,
+      id: "test.off",
+      publicApi,
+      publication: { enabled: true },
+      search: { enabled: false },
+      tableName: "test_off",
+    });
+
+    expectTypeOf(definition.search.enabled).toEqualTypeOf<false>();
+    expectTypeOf(definition).not.toExtend<SearchableContentTypeDefinition>();
+  });
+
+  it("resolves an omitted `search` to a literal `false`", () => {
+    const definition = defineContentType({
+      admin,
+      fields,
+      id: "test.absent",
+      publicApi,
+      publication: { enabled: true },
+      tableName: "test_absent",
+    });
+
+    expectTypeOf(definition.search.enabled).toEqualTypeOf<false>();
+    expectTypeOf(definition).not.toExtend<SearchableContentTypeDefinition>();
+  });
+
+  it("rejects a nullable titleField", () => {
     assertType(
       defineContentType({
         admin,
         fields,
-        id: "test.off",
+        id: "test.nullable.title",
         publicApi,
         publication: { enabled: true },
-        search: { enabled: false },
-        tableName: "test_off",
+        search: {
+          contentFields: ["excerpt"],
+          enabled: true,
+          pathTemplate: "/articles/{slug}",
+          // @ts-expect-error - a nullable field can never be a result heading.
+          titleField: "subtitle",
+        },
+        tableName: "test_nullable_title",
       }),
     );
   });
@@ -251,16 +303,31 @@ describe("search backward compatibility", () => {
   });
 
   it("gives every definition a resolved `search`, enabled or not", () => {
-    expectTypeOf(
-      testCategoryContentType.search.enabled,
-    ).toEqualTypeOf<boolean>();
+    // Stage 1 and Stage 2 fixtures declare no `search` at all, and resolve to a
+    // literal `false` rather than a widened `boolean`.
+    expectTypeOf(testCategoryContentType.search.enabled).toEqualTypeOf<false>();
+    expectTypeOf(testArticleContentType.search.enabled).toEqualTypeOf<false>();
+    expectTypeOf(testPostContentType.search.enabled).toEqualTypeOf<false>();
     expectTypeOf(testPostContentType.search.titleField).toEqualTypeOf<string>();
   });
 
-  it("narrows only through SearchableContentTypeDefinition", () => {
+  it("satisfies SearchableContentTypeDefinition with no assertion", () => {
+    // The whole point of the literal: no `as`, anywhere.
     const searchable: SearchableContentTypeDefinition =
-      testSearchablePostContentType as SearchableContentTypeDefinition;
+      testSearchablePostContentType;
 
     expectTypeOf(searchable.search.enabled).toEqualTypeOf<true>();
+    expectTypeOf(
+      testSearchablePostContentType,
+    ).toExtend<SearchableContentTypeDefinition>();
+  });
+
+  it("keeps a search-less definition out of SearchableContentTypeDefinition", () => {
+    expectTypeOf(
+      testPostContentType,
+    ).not.toExtend<SearchableContentTypeDefinition>();
+    expectTypeOf(
+      testCategoryContentType,
+    ).not.toExtend<SearchableContentTypeDefinition>();
   });
 });

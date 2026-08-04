@@ -9,6 +9,7 @@ import type {
   ContentPublicExposableField,
   ContentSearchConfig,
   ContentSearchDescriptionField,
+  ContentSearchEnabled,
   ContentSearchTextField,
   ContentSearchTitleField,
   ContentTypeDefinition,
@@ -715,6 +716,18 @@ const resolveSearch = (
     name: titleField,
   });
 
+  // A `null` title can never be a result heading, and a record whose title is
+  // missing is skipped by the mapper - which shows up as a collection that never
+  // reaches full coverage. Rejecting the nullable field is the cheap half of
+  // that; a blank value written straight into the database is still possible, so
+  // the mapper keeps its own check.
+  if (fields[titleField].nullable) {
+    throw new ContentEngineError(
+      `search.titleField names the nullable field "${titleField}". A search result needs a heading, so the title field must not be nullable.`,
+      { contentTypeId: id },
+    );
+  }
+
   const descriptionField = search.descriptionField ?? null;
   if (descriptionField !== null) {
     assertSearchField({
@@ -787,12 +800,21 @@ export const defineContentType = <
   // Inferred from the `search` literal and checked against the public allowlist.
   // The constraint is verified once every other parameter is resolved, which is
   // what makes "an indexed field is a public field" a compile error.
-  TSearchTitle extends ContentSearchTitleField<TFields, TPublicField> = never,
-  TSearchDescription extends ContentSearchDescriptionField<
-    TFields,
-    TPublicField
-  > = never,
-  TSearchText extends ContentSearchTextField<TFields, TPublicField> = never,
+  // The whole `search` argument, inferred as one type. Its *constraint* is what
+  // enforces the field rules, and a constraint is checked once every other
+  // parameter is resolved - spelling the same unions out inside the parameter
+  // type instead lets `TPublicField` fall back to its own constraint while the
+  // argument is still being checked, and a private field name slips through.
+  //
+  // Inferring the object rather than its parts is also what preserves the
+  // `enabled` literal: an intersection member is not an inference site.
+  TSearch extends
+    | ContentSearchConfig<
+        ContentSearchTitleField<TFields, TPublicField>,
+        ContentSearchDescriptionField<TFields, TPublicField>,
+        ContentSearchTextField<TFields, TPublicField>
+      >
+    | { enabled: false } = { enabled: false },
 >({
   admin,
   fields,
@@ -820,16 +842,15 @@ export const defineContentType = <
    * `publicApi`, and every indexed field must be in `publicApi.fields`. Omit it
    * and nothing is indexed.
    */
-  search?:
-    | ContentSearchConfig<TSearchTitle, TSearchDescription, TSearchText>
-    | { enabled: false };
+  search?: TSearch;
   tableName: string;
 }): ContentTypeDefinition<
   TId,
   TFields,
   TPublication,
   TPublicField,
-  TPublicEnabled
+  TPublicEnabled,
+  ContentSearchEnabled<TSearch>
 > => {
   if (!CONTENT_ID_PATTERN.test(id)) {
     throw new ContentEngineError(
@@ -941,7 +962,8 @@ export const defineContentType = <
         TFields,
         TPublication,
         TPublicField,
-        TPublicEnabled
+        TPublicEnabled,
+        ContentSearchEnabled<TSearch>
       >
     >({
       admin: resolvedAdmin,
@@ -949,7 +971,9 @@ export const defineContentType = <
       publicApi: resolvedPublicApi,
       publication: publicationEnabled,
     }),
-    search: resolvedSearch,
+    search: resolvedSearch as ResolvedContentSearchConfig<
+      ContentSearchEnabled<TSearch>
+    >,
     tableName,
   };
 };

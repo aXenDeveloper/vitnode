@@ -497,20 +497,34 @@ type ContentFieldNamesOfKind<TFields, TKind extends string> = string &
     [K in keyof TFields]: TFields[K] extends { kind: TKind } ? K : never;
   }[keyof TFields];
 
+/** Field names of one or more kinds that also accept no `null`. */
+type ContentNonNullableFieldNamesOfKind<
+  TFields,
+  TKind extends string,
+> = string &
+  {
+    [K in keyof TFields]: TFields[K] extends { kind: TKind; nullable: false }
+      ? K
+      : never;
+  }[keyof TFields];
+
 /**
  * Field names `search.titleField` accepts.
  *
- * An intersection of two rules rather than two separate checks: `TPublicField`
- * is the public allowlist, so a field that is not published cannot be indexed,
- * and the kind union keeps prose out of the title slot. Both are the same
- * `Extract`, which is why a private field is a compile error and not a lint.
+ * Three rules, one `Extract`: `TPublicField` is the public allowlist, so a field
+ * that is not published cannot be indexed; the kind union keeps prose out of the
+ * title slot; and the field cannot be nullable, because a `null` heading is not a
+ * search result. That is why a private field is a compile error and not a lint.
  */
 export type ContentSearchTitleField<
   TFields,
   TPublicField extends string,
 > = Extract<
   TPublicField,
-  ContentFieldNamesOfKind<TFields, (typeof CONTENT_SEARCH_TITLE_KINDS)[number]>
+  ContentNonNullableFieldNamesOfKind<
+    TFields,
+    (typeof CONTENT_SEARCH_TITLE_KINDS)[number]
+  >
 >;
 
 export type ContentSearchDescriptionField<
@@ -570,16 +584,29 @@ export interface ContentSearchConfig<
 }
 
 /**
+ * Whether a `search` argument opted in.
+ *
+ * `defineContentType` infers the whole `search` object as one type parameter -
+ * an intersection member like `{ enabled: TEnabled }` is not an inference site,
+ * so reading the literal back off the argument is the only way to keep it.
+ */
+export type ContentSearchEnabled<TSearch> = TSearch extends { enabled: true }
+  ? true
+  : false;
+
+/**
  * `search` after `defineContentType` has filled in every default.
  *
- * Not generic over `enabled`: search adds no columns, so no row type conditions
- * on it, and {@link SearchableContentTypeDefinition} covers the one place that
- * needs it pinned.
+ * Generic over `enabled` for the same reason `publication` and `publicApi` are:
+ * a widened `boolean` would make every definition equally (un)searchable, so
+ * `SearchableContentTypeDefinition` would only ever match after a cast.
  */
-export interface ResolvedContentSearchConfig {
+export interface ResolvedContentSearchConfig<
+  TEnabled extends boolean = boolean,
+> {
   contentFields: string[];
   descriptionField: null | string;
-  enabled: boolean;
+  enabled: TEnabled;
   pathTemplate: string;
   titleField: string;
 }
@@ -623,6 +650,7 @@ export interface ContentTypeDefinition<
   TPublication extends boolean = boolean,
   TPublicField extends string = string,
   TPublicEnabled extends boolean = boolean,
+  TSearchEnabled extends boolean = boolean,
 > {
   admin: ResolvedContentAdminConfig;
   fields: TFields;
@@ -640,11 +668,12 @@ export interface ContentTypeDefinition<
       TFields,
       TPublication,
       TPublicField,
-      TPublicEnabled
+      TPublicEnabled,
+      TSearchEnabled
     >
   >;
   /** Search synchronization, or the disabled default when `search` is omitted. */
-  search: ResolvedContentSearchConfig;
+  search: ResolvedContentSearchConfig<TSearchEnabled>;
   tableName: string;
 }
 
