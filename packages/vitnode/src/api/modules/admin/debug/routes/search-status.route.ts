@@ -2,6 +2,7 @@ import { and, countDistinct, desc, eq, like, max } from "drizzle-orm";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
+import { searchDocumentOwner } from "@/api/models/search";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_logs } from "@/database/logs";
 import { core_search_index } from "@/database/search";
@@ -59,11 +60,16 @@ export const searchStatusDebugAdminRoute = buildRoute({
 
     // One item can emit several index rows (e.g. one per language), so coverage
     // is measured in distinct items - not documents.
+    //
+    // `pluginId` comes along so a collection whose indexer is gone can still name
+    // its owner. An item type has one owner, so the aggregate is a formality -
+    // `max` picks deterministically if rows ever disagree mid-rebuild.
     const indexedByType = await db
       .select({
         itemType: core_search_index.itemType,
         indexed: countDistinct(core_search_index.itemId),
         lastIndexedAt: max(core_search_index.indexedAt),
+        pluginId: max(core_search_index.pluginId),
       })
       .from(core_search_index)
       .groupBy(core_search_index.itemType);
@@ -108,7 +114,14 @@ export const searchStatusDebugAdminRoute = buildRoute({
 
         return {
           itemType,
-          pluginId: indexer?.pluginId ?? "core",
+          // The registered indexer is canonical - it is what the next rebuild
+          // will stamp on the rows. Falling back to the stored owner is what
+          // stops an orphaned collection being reassigned to core, and
+          // `"unknown"` is honest when neither source knows.
+          pluginId:
+            indexer?.pluginId ??
+            searchDocumentOwner(stats?.pluginId) ??
+            "unknown",
           indexed,
           // Reported as measured, even when it is below `indexed`: more documents
           // than source records is a stale index, and raising the source count to
