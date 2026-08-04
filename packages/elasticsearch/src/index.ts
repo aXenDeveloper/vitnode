@@ -60,7 +60,10 @@ const isIndexAlreadyExistsError = (error: unknown): boolean =>
     "resource_already_exists_exception";
 
 const toSource = (doc: SearchDocument): EsSource => ({
-  pluginId: "core",
+  // `SearchModel` resolves ownership before any provider sees the document, so
+  // this fallback is only for a provider called directly - it must never be the
+  // reason a mirrored document disagrees with the canonical row.
+  pluginId: doc.pluginId ?? "core",
   itemType: doc.itemType,
   itemId: doc.itemId,
   languageCode: doc.languageCode ?? "",

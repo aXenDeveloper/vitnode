@@ -19,6 +19,11 @@ export interface SearchDocument {
   // language; single-language content may leave it empty.
   languageCode?: string;
   metadata?: Record<string, unknown>;
+  // The plugin that owns this item. Omit it and {@link SearchModel} falls back
+  // to the request's plugin - which is only right while the request *is* the
+  // owning plugin's, so a rebuild (it runs in the core cron request) must set it
+  // explicitly.
+  pluginId?: string;
   title: string;
   updatedAt?: Date;
   url?: string;
@@ -86,13 +91,26 @@ export interface SearchProviderCapabilities {
 }
 
 /**
+ * One page of a rebuild.
+ *
+ * The two counts are separate on purpose. An indexer may emit several documents
+ * per item (one per language, say) or none at all (a row whose data cannot be
+ * projected), so a document count can never stand in for a source count - using
+ * it would either skip items or end the rebuild while rows remain.
+ */
+export interface SearchIndexerPage {
+  documents: SearchDocument[];
+  /** Source rows this page read. `0` means the source is exhausted. */
+  itemsRead: number;
+}
+
+/**
  * Streams every existing item of one content type so the whole index can be
  * rebuilt (e.g. after switching engines).
  *
- * `load` returns one page at a time and is called with `offset` advancing by
- * whole pages of *items*. Return an empty array to signal the end - not "fewer
- * rows than `limit`", because an indexer may emit several documents per item
- * (e.g. one per language), so the two counts are not interchangeable.
+ * `load` is called with `offset` advanced by the previous page's `itemsRead`.
+ * Report `itemsRead: 0` to end the rebuild; an empty `documents` array does not,
+ * because a page can legitimately read rows and project none of them.
  */
 export interface SearchIndexer {
   // Total number of source items available to index for this type. Powers the
@@ -104,7 +122,7 @@ export interface SearchIndexer {
     c: Context,
     offset: number,
     limit: number,
-  ) => Promise<SearchDocument[]>;
+  ) => Promise<SearchIndexerPage>;
 }
 
 export interface SearchIndexerConfig extends SearchIndexer {
@@ -161,7 +179,7 @@ export interface SearchProviderApiPlugin {
 }
 
 const toRow = (doc: SearchDocument) => ({
-  pluginId: "core",
+  pluginId: doc.pluginId ?? "core",
   itemType: doc.itemType,
   itemId: doc.itemId,
   languageCode: doc.languageCode ?? "",
@@ -221,8 +239,25 @@ export class SearchModel {
     return this.c.get("core").search.adapter;
   }
 
+  /**
+   * Fills in the document's owner, once, for every write path.
+   *
+   * The request's plugin is only a *fallback*: it is the owner when a mutation
+   * route indexes its own content, and it is `@vitnode/core` during a rebuild,
+   * which runs inside the core cron request. So an explicit `pluginId` always
+   * wins - that is how a rebuild reproduces the same ownership a live write
+   * produced. Resolving it here rather than in each adapter is what keeps the
+   * canonical row and the mirrored document from disagreeing.
+   */
+  private resolveOwner(doc: SearchDocument): SearchDocument {
+    return {
+      ...doc,
+      pluginId: doc.pluginId ?? this.c.get("plugin")?.id ?? "core",
+    };
+  }
+
   private async upsertRow(doc: SearchDocument): Promise<void> {
-    const row = { ...toRow(doc), pluginId: this.c.get("plugin")?.id ?? "core" };
+    const row = toRow(doc);
 
     await this.c
       .get("db")
@@ -235,6 +270,9 @@ export class SearchModel {
           core_search_index.languageCode,
         ],
         set: {
+          // Included so a rebuild corrects the owner of a row written before the
+          // indexer declared one, rather than leaving the first writer's guess.
+          pluginId: row.pluginId,
           authorId: row.authorId,
           title: row.title,
           content: row.content,
@@ -251,10 +289,9 @@ export class SearchModel {
   }
 
   async bulkIndex(docs: SearchDocument[]): Promise<void> {
-    const clean = docs.map(doc => ({
-      ...doc,
-      content: stripHtml(doc.content),
-    }));
+    const clean = docs.map(doc =>
+      this.resolveOwner({ ...doc, content: stripHtml(doc.content) }),
+    );
 
     for (const doc of clean) {
       await this.upsertRow(doc);
@@ -288,7 +325,10 @@ export class SearchModel {
 
   /** Canonical projection lives in `core_search_index`; the provider mirrors it. */
   async index(doc: SearchDocument): Promise<void> {
-    const clean = { ...doc, content: stripHtml(doc.content) };
+    const clean = this.resolveOwner({
+      ...doc,
+      content: stripHtml(doc.content),
+    });
 
     await this.upsertRow(clean);
     await this.provider().index(this.c, clean);

@@ -28,7 +28,10 @@ const createProvider = (): SearchProviderApiPlugin => ({
   }),
 });
 
-const createContext = (provider: SearchProviderApiPlugin) => {
+const createContext = (
+  provider: SearchProviderApiPlugin,
+  requestPluginId?: string,
+) => {
   const onConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
   const values = vi.fn<
     (row: { content: string; isPublic: boolean; pluginId: string }) => {
@@ -44,7 +47,9 @@ const createContext = (provider: SearchProviderApiPlugin) => {
     get: (key: string) => {
       if (key === "db") return db;
       if (key === "core") return { search: { adapter: provider } };
-      if (key === "plugin") return undefined;
+      if (key === "plugin") {
+        return requestPluginId ? { id: requestPluginId } : undefined;
+      }
 
       return undefined;
     },
@@ -75,6 +80,92 @@ describe("SearchModel", () => {
     expect(provider.index).toHaveBeenCalledWith(c, {
       ...doc,
       content: "Hello world",
+      pluginId: "core",
+    });
+  });
+
+  describe("plugin ownership", () => {
+    const doc = {
+      content: "body",
+      createdAt: new Date("2026-01-01"),
+      itemId: 1,
+      itemType: "example.article",
+      title: "Hello",
+    };
+
+    it("prefers an explicit document owner over the request", async () => {
+      // A rebuild runs inside the core cron request, so the request's plugin is
+      // not the owner - the document has to win, or the same record would be
+      // stored differently depending on which path wrote it.
+      const provider = createProvider();
+      const { c, values } = createContext(provider, "@vitnode/core");
+
+      await new SearchModel(c).index({ ...doc, pluginId: "@vitnode/example" });
+
+      expect(values.mock.calls[0][0].pluginId).toBe("@vitnode/example");
+      expect(provider.index).toHaveBeenCalledWith(
+        c,
+        expect.objectContaining({ pluginId: "@vitnode/example" }),
+      );
+    });
+
+    it("falls back to the request's plugin", async () => {
+      const provider = createProvider();
+      const { c, values } = createContext(provider, "@vitnode/example");
+
+      await new SearchModel(c).index(doc);
+
+      expect(values.mock.calls[0][0].pluginId).toBe("@vitnode/example");
+      expect(provider.index).toHaveBeenCalledWith(
+        c,
+        expect.objectContaining({ pluginId: "@vitnode/example" }),
+      );
+    });
+
+    it("falls back to core outside a plugin request", async () => {
+      const provider = createProvider();
+      const { c, values } = createContext(provider);
+
+      await new SearchModel(c).index(doc);
+
+      expect(values.mock.calls[0][0].pluginId).toBe("core");
+    });
+
+    it("resolves every document in a bulk write", async () => {
+      const provider = createProvider();
+      const { c, values } = createContext(provider, "@vitnode/core");
+
+      await new SearchModel(c).bulkIndex([
+        { ...doc, itemId: 1, pluginId: "@vitnode/example" },
+        { ...doc, itemId: 2, pluginId: "@vitnode/blog" },
+        // No owner declared: the request's plugin stands in.
+        { ...doc, itemId: 3 },
+      ]);
+
+      expect(values.mock.calls.map(call => call[0].pluginId)).toEqual([
+        "@vitnode/example",
+        "@vitnode/blog",
+        "@vitnode/core",
+      ]);
+      expect(provider.bulkIndex).toHaveBeenCalledWith(c, [
+        expect.objectContaining({ itemId: 1, pluginId: "@vitnode/example" }),
+        expect.objectContaining({ itemId: 2, pluginId: "@vitnode/blog" }),
+        expect.objectContaining({ itemId: 3, pluginId: "@vitnode/core" }),
+      ]);
+    });
+
+    it("rewrites the owner of an existing row on conflict", async () => {
+      // Otherwise a row written before its indexer declared an owner would keep
+      // the first writer's guess forever, and a rebuild could not repair it.
+      const provider = createProvider();
+      const { c, values } = createContext(provider, "@vitnode/example");
+
+      await new SearchModel(c).index(doc);
+
+      const { onConflictDoUpdate } = values.mock.results[0].value;
+      expect(onConflictDoUpdate.mock.calls[0][0].set).toMatchObject({
+        pluginId: "@vitnode/example",
+      });
     });
   });
 

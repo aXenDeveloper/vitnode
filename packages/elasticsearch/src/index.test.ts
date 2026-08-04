@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const {
   Client,
   ResponseError,
+  bulk,
   index,
   deleteByQuery,
   ping,
@@ -40,6 +41,7 @@ const {
   return {
     Client,
     ResponseError,
+    bulk,
     index,
     deleteByQuery,
     ping,
@@ -156,6 +158,48 @@ describe("ElasticsearchSearchAdapter.index", () => {
 
     const ids = index.mock.calls.map(call => call[0].id);
     expect(ids).toEqual(["blog_post:1:en", "blog_post:1:pl"]);
+  });
+});
+
+describe("ElasticsearchSearchAdapter plugin ownership", () => {
+  it("serializes the document's owning plugin", async () => {
+    await ElasticsearchSearchAdapter(config).index(c, {
+      ...doc,
+      pluginId: "@vitnode/example",
+    });
+
+    expect(index).toHaveBeenCalledWith(
+      expect.objectContaining({
+        document: expect.objectContaining({ pluginId: "@vitnode/example" }),
+      }),
+    );
+  });
+
+  it("serializes each owner in a bulk write", async () => {
+    await ElasticsearchSearchAdapter(config).bulkIndex(c, [
+      { ...doc, itemId: 1, pluginId: "@vitnode/example" },
+      { ...doc, itemId: 2, pluginId: "@vitnode/blog" },
+    ]);
+
+    const { operations } = bulk.mock.calls[0][0] as {
+      operations: { pluginId?: string }[];
+    };
+
+    // Alternating action/document pairs, so the sources are the odd entries.
+    expect(operations[1].pluginId).toBe("@vitnode/example");
+    expect(operations[3].pluginId).toBe("@vitnode/blog");
+  });
+
+  it("falls back to core for a document with no owner", async () => {
+    // `SearchModel` resolves ownership before any provider sees a document, so
+    // this only covers a provider called directly.
+    await ElasticsearchSearchAdapter(config).index(c, doc);
+
+    expect(index).toHaveBeenCalledWith(
+      expect.objectContaining({
+        document: expect.objectContaining({ pluginId: "core" }),
+      }),
+    );
   });
 });
 
