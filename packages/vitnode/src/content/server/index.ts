@@ -43,6 +43,7 @@ export type { ReferenceTarget } from "./references";
 export { buildContentRoutes } from "./routes";
 export { contentSearchDocument } from "./search-document";
 export { createContentSearchIndexer } from "./search-indexer";
+export type { ContentSearchIndexer } from "./search-indexer";
 export { syncContentSearch } from "./search-sync";
 export type {
   ContentSearchOperation,

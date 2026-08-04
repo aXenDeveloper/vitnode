@@ -1,4 +1,8 @@
 import { buildQueueTask } from "@/api/lib/queue";
+import {
+  normalizeSearchIndexerPage,
+  searchDocumentOwner,
+} from "@/api/models/search";
 
 const PAGE_SIZE = 200;
 
@@ -25,8 +29,15 @@ export const rebuildSearchIndexTask = buildQueueTask({
       // indexer may emit several documents per item, or none for a page whose
       // rows it cannot project. Ending on an empty document array would stop the
       // rebuild at the first such page and never reach the rows after it.
+      //
+      // A legacy indexer returning a bare array is normalized to the same shape,
+      // where a non-empty page reports the requested limit - the only cursor the
+      // old contract ever had.
       for (let offset = 0; ;) {
-        const page = await indexer.load(c, offset, PAGE_SIZE);
+        const page = normalizeSearchIndexerPage(
+          await indexer.load(c, offset, PAGE_SIZE),
+          PAGE_SIZE,
+        );
         if (page.itemsRead === 0) break;
 
         if (page.documents.length > 0) {
@@ -36,7 +47,8 @@ export const rebuildSearchIndexTask = buildQueueTask({
           await search.bulkIndex(
             page.documents.map(document => ({
               ...document,
-              pluginId: document.pluginId ?? indexer.pluginId,
+              pluginId:
+                searchDocumentOwner(document.pluginId) ?? indexer.pluginId,
             })),
           );
         }

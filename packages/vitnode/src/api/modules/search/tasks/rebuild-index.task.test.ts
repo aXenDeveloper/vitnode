@@ -7,7 +7,7 @@ import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 import type {
   SearchDocument,
   SearchIndexerConfig,
-  SearchIndexerPage,
+  SearchIndexerLoadResult,
 } from "@/api/models/search";
 
 import { rebuildSearchIndexTask } from "./rebuild-index.task";
@@ -36,17 +36,24 @@ const scriptedIndexer = ({
   pluginId,
 }: {
   itemType: string;
-  pages: SearchIndexerPage[];
+  /**
+   * Either result shape, so the same script drives a modern and a legacy
+   * indexer. Past the end, each keeps returning its own "no more rows" signal.
+   */
+  pages: SearchIndexerLoadResult[];
   pluginId: string;
 }) => {
   const offsets: number[] = [];
+  const exhausted: SearchIndexerLoadResult = Array.isArray(pages[0])
+    ? []
+    : { documents: [], itemsRead: 0 };
   let call = 0;
 
   const config: SearchIndexerConfig = {
     itemType,
     load: async (_c, offset) => {
       offsets.push(offset);
-      const page = pages[call] ?? { documents: [], itemsRead: 0 };
+      const page = pages[call] ?? exhausted;
       call++;
 
       return await Promise.resolve(page);
@@ -268,6 +275,135 @@ describe("rebuild-search-index", () => {
       "@vitnode/a",
       "@vitnode/b",
     ]);
+  });
+
+  describe("the deprecated array result", () => {
+    it("indexes a legacy page and stops on the empty one", async () => {
+      const { config, offsets } = scriptedIndexer({
+        itemType: "legacy.item",
+        pages: [[document("legacy.item", 1)], []],
+        pluginId: "@vitnode/legacy",
+      });
+      const { c, indexed } = harness([config]);
+
+      await rebuildSearchIndexTask.handler(c, {});
+
+      // No source count to advance by, so the cursor moves a whole page - which
+      // is exactly what the old rebuild did.
+      expect(offsets).toEqual([0, 200]);
+      expect(indexed).toHaveLength(1);
+      expect(indexed[0]?.[0]?.itemId).toBe(1);
+    });
+
+    it("stamps the registering plugin on a legacy document", async () => {
+      const { config } = scriptedIndexer({
+        itemType: "legacy.item",
+        pages: [[document("legacy.item", 1)], []],
+        pluginId: "@vitnode/legacy",
+      });
+      const { c, indexed } = harness([config]);
+
+      await rebuildSearchIndexTask.handler(c, {});
+
+      expect(indexed[0]?.[0]?.pluginId).toBe("@vitnode/legacy");
+    });
+
+    it("keeps an owner a legacy document declared itself", async () => {
+      const { config } = scriptedIndexer({
+        itemType: "legacy.item",
+        pages: [
+          [document("legacy.item", 1, { pluginId: "@vitnode/elsewhere" })],
+          [],
+        ],
+        pluginId: "@vitnode/legacy",
+      });
+      const { c, indexed } = harness([config]);
+
+      await rebuildSearchIndexTask.handler(c, {});
+
+      expect(indexed[0]?.[0]?.pluginId).toBe("@vitnode/elsewhere");
+    });
+
+    it("treats a blank declared owner as absent", async () => {
+      const { config } = scriptedIndexer({
+        itemType: "legacy.item",
+        pages: [[document("legacy.item", 1, { pluginId: "   " })], []],
+        pluginId: "@vitnode/legacy",
+      });
+      const { c, indexed } = harness([config]);
+
+      await rebuildSearchIndexTask.handler(c, {});
+
+      expect(indexed[0]?.[0]?.pluginId).toBe("@vitnode/legacy");
+    });
+
+    it("does not mistake a multilingual document count for a source count", async () => {
+      // Four documents, two source items, two languages. Advancing by the array
+      // length would jump to offset 4 and skip most of a 200-row page.
+      const { config, offsets } = scriptedIndexer({
+        itemType: "legacy.multilingual",
+        pages: [
+          [
+            document("legacy.multilingual", 1, { languageCode: "en" }),
+            document("legacy.multilingual", 1, { languageCode: "pl" }),
+            document("legacy.multilingual", 2, { languageCode: "en" }),
+            document("legacy.multilingual", 2, { languageCode: "pl" }),
+          ],
+          [],
+        ],
+        pluginId: "@vitnode/legacy",
+      });
+      const { c, indexed } = harness([config]);
+
+      await rebuildSearchIndexTask.handler(c, {});
+
+      expect(offsets).toEqual([0, 200]);
+      expect(offsets).not.toContain(4);
+      expect(indexed[0]).toHaveLength(4);
+    });
+
+    it("indexes an empty first page as an exhausted source", async () => {
+      // The ambiguity the modern contract exists to remove: an array cannot say
+      // whether rows were read and all filtered out, so this ends the rebuild.
+      const { config, offsets } = scriptedIndexer({
+        itemType: "legacy.item",
+        pages: [[], [document("legacy.item", 1)]],
+        pluginId: "@vitnode/legacy",
+      });
+      const { c, indexed } = harness([config]);
+
+      await rebuildSearchIndexTask.handler(c, {});
+
+      expect(offsets).toEqual([0]);
+      expect(indexed).toEqual([]);
+    });
+
+    it("runs alongside a modern indexer", async () => {
+      const legacy = scriptedIndexer({
+        itemType: "legacy.item",
+        pages: [[document("legacy.item", 1)], []],
+        pluginId: "@vitnode/legacy",
+      });
+      const modern = scriptedIndexer({
+        itemType: "modern.item",
+        pages: [
+          { documents: [], itemsRead: 200 },
+          { documents: [document("modern.item", 2)], itemsRead: 1 },
+          { documents: [], itemsRead: 0 },
+        ],
+        pluginId: "@vitnode/modern",
+      });
+      const { c, indexed } = harness([legacy.config, modern.config]);
+
+      await rebuildSearchIndexTask.handler(c, {});
+
+      expect(legacy.offsets).toEqual([0, 200]);
+      expect(modern.offsets).toEqual([0, 200, 201]);
+      expect(indexed.flat().map(doc => [doc.itemId, doc.pluginId])).toEqual([
+        [1, "@vitnode/legacy"],
+        [2, "@vitnode/modern"],
+      ]);
+    });
   });
 
   it("does not loop forever on a broken indexer", async () => {

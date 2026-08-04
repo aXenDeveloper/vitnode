@@ -105,12 +105,34 @@ export interface SearchIndexerPage {
 }
 
 /**
+ * The pre-{@link SearchIndexerPage} result: documents with no source count.
+ *
+ * @deprecated Return a {@link SearchIndexerPage}. An array cannot say how many
+ * source rows produced it, so the rebuild has to assume a full page was read and
+ * wait for an empty one to stop - which means a page that reads rows and projects
+ * none of them (every row on it malformed, say) ends the rebuild early and the
+ * rows behind it are never indexed. Supported for now; removed in a future major
+ * release.
+ */
+export type LegacySearchIndexerPage = SearchDocument[];
+
+export type SearchIndexerLoadResult =
+  // The one intentional use of the deprecated shape: this union is what keeps
+  // pre-Stage-3 indexers compiling, so the lint rule has nothing to warn about
+  // here. Every *other* reference should be flagged.
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
+  LegacySearchIndexerPage | SearchIndexerPage;
+
+/**
  * Streams every existing item of one content type so the whole index can be
  * rebuilt (e.g. after switching engines).
  *
  * `load` is called with `offset` advanced by the previous page's `itemsRead`.
  * Report `itemsRead: 0` to end the rebuild; an empty `documents` array does not,
  * because a page can legitimately read rows and project none of them.
+ *
+ * Returning a bare `SearchDocument[]` still works - see
+ * {@link LegacySearchIndexerPage} for what it gives up.
  */
 export interface SearchIndexer {
   // Total number of source items available to index for this type. Powers the
@@ -122,8 +144,45 @@ export interface SearchIndexer {
     c: Context,
     offset: number,
     limit: number,
-  ) => Promise<SearchIndexerPage>;
+  ) => Promise<SearchIndexerLoadResult>;
 }
+
+/**
+ * A declared document owner, or `undefined` when there is not really one.
+ *
+ * `pluginId` is public input, so an empty or whitespace-only string is a missing
+ * owner rather than a collection named `""`. Every place that resolves ownership
+ * goes through this, so the fallback chains cannot drift apart.
+ */
+export const searchDocumentOwner = (
+  pluginId: null | string | undefined,
+): string | undefined => {
+  const trimmed = pluginId?.trim();
+
+  return trimmed === "" ? undefined : trimmed;
+};
+
+/**
+ * Turns either `load` result into a page, so the rebuild has one shape to reason
+ * about and the compatibility rule lives in exactly one place.
+ *
+ * A non-empty legacy array reports `requestedLimit` rather than
+ * `documents.length`, because that is what the old rebuild advanced by: an
+ * indexer may emit several documents per source row (one per language), so a
+ * document count would skip rows on every page. An empty array is the only end
+ * signal it has.
+ */
+export const normalizeSearchIndexerPage = (
+  result: SearchIndexerLoadResult,
+  requestedLimit: number,
+): SearchIndexerPage => {
+  if (!Array.isArray(result)) return result;
+
+  return {
+    documents: result,
+    itemsRead: result.length === 0 ? 0 : requestedLimit,
+  };
+};
 
 export interface SearchIndexerConfig extends SearchIndexer {
   pluginId: string;
@@ -252,7 +311,8 @@ export class SearchModel {
   private resolveOwner(doc: SearchDocument): SearchDocument {
     return {
       ...doc,
-      pluginId: doc.pluginId ?? this.c.get("plugin")?.id ?? "core",
+      pluginId:
+        searchDocumentOwner(doc.pluginId) ?? this.c.get("plugin")?.id ?? "core",
     };
   }
 

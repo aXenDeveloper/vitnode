@@ -5,9 +5,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { core_search_index } from "@/database/search";
 
-import type { SearchProviderApiPlugin } from "./search";
+import type { SearchDocument, SearchProviderApiPlugin } from "./search";
 
-import { SearchModel } from "./search";
+import { normalizeSearchIndexerPage, SearchModel } from "./search";
 
 const createProvider = (): SearchProviderApiPlugin => ({
   name: "postgres",
@@ -122,6 +122,26 @@ describe("SearchModel", () => {
       );
     });
 
+    it("treats a blank owner as absent", async () => {
+      // `pluginId` is public input, so an empty or whitespace-only string is a
+      // missing owner - not a collection called "".
+      const provider = createProvider();
+      const { c, values } = createContext(provider, "@vitnode/example");
+
+      await new SearchModel(c).index({ ...doc, pluginId: "   " });
+
+      expect(values.mock.calls[0][0].pluginId).toBe("@vitnode/example");
+    });
+
+    it("falls back to core for a blank owner outside a plugin request", async () => {
+      const provider = createProvider();
+      const { c, values } = createContext(provider);
+
+      await new SearchModel(c).index({ ...doc, pluginId: "" });
+
+      expect(values.mock.calls[0][0].pluginId).toBe("core");
+    });
+
     it("falls back to core outside a plugin request", async () => {
       const provider = createProvider();
       const { c, values } = createContext(provider);
@@ -188,6 +208,52 @@ describe("SearchModel", () => {
     expect(provider.search).toHaveBeenCalledWith(c, {
       term: "hello",
       sort: "relevance",
+    });
+  });
+});
+
+describe("normalizeSearchIndexerPage", () => {
+  const document: SearchDocument = {
+    content: "body",
+    createdAt: new Date("2026-01-01"),
+    itemId: 1,
+    itemType: "legacy.item",
+    title: "Hello",
+  };
+
+  it("passes a modern page through untouched", () => {
+    const page = { documents: [document], itemsRead: 7 };
+
+    expect(normalizeSearchIndexerPage(page, 200)).toBe(page);
+  });
+
+  it("keeps a modern page that read rows but produced nothing", () => {
+    // The whole reason the object form exists: this must not read as exhausted.
+    expect(
+      normalizeSearchIndexerPage({ documents: [], itemsRead: 200 }, 200),
+    ).toEqual({ documents: [], itemsRead: 200 });
+  });
+
+  it("reports the requested limit for a non-empty legacy array", () => {
+    // Not `documents.length`: a legacy indexer may emit several documents per
+    // source row, so the array length would skip rows on every page.
+    expect(normalizeSearchIndexerPage([document], 200)).toEqual({
+      documents: [document],
+      itemsRead: 200,
+    });
+  });
+
+  it("reports the requested limit however many documents a page holds", () => {
+    expect(
+      normalizeSearchIndexerPage([document, document, document, document], 200)
+        .itemsRead,
+    ).toBe(200);
+  });
+
+  it("treats an empty legacy array as an exhausted source", () => {
+    expect(normalizeSearchIndexerPage([], 200)).toEqual({
+      documents: [],
+      itemsRead: 0,
     });
   });
 });

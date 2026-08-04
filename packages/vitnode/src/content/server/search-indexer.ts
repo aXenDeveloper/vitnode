@@ -3,10 +3,15 @@ import type {
   PgTableWithColumns,
   TableConfig,
 } from "drizzle-orm/pg-core";
+import type { Context } from "hono";
 
 import { asc, count } from "drizzle-orm";
 
-import type { SearchDocument, SearchIndexer } from "../../api/models/search";
+import type {
+  SearchDocument,
+  SearchIndexer,
+  SearchIndexerPage,
+} from "../../api/models/search";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentModel } from "./model";
 
@@ -22,6 +27,21 @@ const REQUIRED_COLUMNS = [
   "status",
   "publishedAt",
 ] as const;
+
+/**
+ * A generated indexer, pinned to the modern page contract.
+ *
+ * `SearchIndexer.load` also accepts the deprecated bare-array result, for
+ * hand-written indexers that predate it. A generated one never returns that, and
+ * saying so keeps the guarantee in the type rather than in a comment.
+ */
+export interface ContentSearchIndexer extends SearchIndexer {
+  load: (
+    c: Context,
+    offset: number,
+    limit: number,
+  ) => Promise<SearchIndexerPage>;
+}
 
 /**
  * Adapts one content type to the engine's {@link SearchIndexer} contract, so a
@@ -47,7 +67,7 @@ export const createContentSearchIndexer = <
 >(
   model: ContentModel<TDefinition>,
   { pluginId }: { pluginId: string },
-): SearchIndexer => {
+): ContentSearchIndexer => {
   const { definition } = model;
   // Widened the same way `createContentPublicService` takes it: the query
   // builders are written against the erased table, not this content type's.
