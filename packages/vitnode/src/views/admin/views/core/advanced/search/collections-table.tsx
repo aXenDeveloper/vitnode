@@ -23,6 +23,7 @@ import {
   getCollectionStatus,
 } from "./collection-status";
 import { ReindexCollectionAction } from "./reindex-action";
+import { RemoveCollectionDocumentsAction } from "./remove-documents-action";
 
 interface CollectionRow extends SearchCollection {
   id: number;
@@ -47,6 +48,11 @@ const statusStyles: Record<
     bar: "bg-muted-foreground/30",
     dot: "bg-muted-foreground/50",
     text: "text-muted-foreground",
+  },
+  orphaned: {
+    bar: "bg-destructive",
+    dot: "bg-destructive",
+    text: "text-destructive",
   },
 };
 
@@ -120,7 +126,10 @@ export const CollectionsTable = async ({
       cell: ({ row }) => (
         <span className="tabular-nums">
           <span className="text-foreground font-medium">{row.indexed}</span>
-          <span className="text-muted-foreground"> / {row.total}</span>
+          {/* An em dash, not `indexed`: with no indexer there is no source count
+              to compare against, and repeating the left number would read as
+              full coverage. */}
+          <span className="text-muted-foreground"> / {row.total ?? "—"}</span>
         </span>
       ),
     },
@@ -130,7 +139,16 @@ export const CollectionsTable = async ({
       className: "w-52",
       cell: ({ row }) => {
         const coverage = getCollectionCoverage(row);
+        const bar = getCollectionCoverageBar(row);
         const styles = statusStyles[getCollectionStatus(row)];
+
+        if (coverage === null || bar === null) {
+          return (
+            <span className="text-muted-foreground text-sm">
+              {t("admin.collections.noIndexer")}
+            </span>
+          );
+        }
 
         return (
           <div className="flex items-center gap-3">
@@ -139,7 +157,7 @@ export const CollectionsTable = async ({
                 className={cn("h-full rounded-full", styles.bar)}
                 // Clamped, so an over-indexed collection cannot draw past the
                 // track. The number beside it stays the measured one.
-                style={{ width: `${getCollectionCoverageBar(row)}%` }}
+                style={{ width: `${bar}%` }}
               />
             </div>
             <span className="text-muted-foreground w-12 shrink-0 text-end text-sm tabular-nums">
@@ -166,9 +184,17 @@ export const CollectionsTable = async ({
       id: "actions",
       header: "",
       align: "right",
-      cell: ({ row }) => (
-        <ReindexCollectionAction itemType={row.itemType} label={row.label} />
-      ),
+      cell: ({ row }) =>
+        row.hasIndexer ? (
+          <ReindexCollectionAction itemType={row.itemType} label={row.label} />
+        ) : (
+          // Rebuilding this would clear it and refill nothing, so the only offer
+          // is the honest one: remove the documents.
+          <RemoveCollectionDocumentsAction
+            itemType={row.itemType}
+            label={row.label}
+          />
+        ),
     },
   ];
 

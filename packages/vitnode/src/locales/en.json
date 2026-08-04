@@ -117,8 +117,16 @@
           "status": {
             "indexed": "Indexed",
             "stale": "Stale",
-            "empty": "Not indexed"
+            "empty": "Not indexed",
+            "orphaned": "Orphaned"
           },
+          "noIndexer": "No indexer registered",
+          "removeDocuments": "Remove documents",
+          "removeConfirmTitle": "Remove indexed documents for \u201c{collection}\u201d?",
+          "removeConfirmDescription": "No search indexer is registered for this collection. Its documents will be permanently removed from search, and nothing can rebuild them until the plugin registers an indexer again.",
+          "removeSuccess": "Removed the indexed documents for {collection}.",
+          "removeSuccessDesc": "They will not come back until an indexer is registered again.",
+          "removeError": "Could not remove the indexed documents.",
           "empty": "No collections found",
           "emptyDesc": "No collection matches your search. Try a different term."
         }
