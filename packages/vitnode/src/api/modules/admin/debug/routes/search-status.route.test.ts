@@ -13,10 +13,11 @@ interface IndexedRow {
 }
 
 interface Collection {
+  hasIndexer: boolean;
   indexed: number;
   itemType: string;
   pluginId: string;
-  total: number;
+  total: null | number;
 }
 
 const indexer = (
@@ -120,6 +121,7 @@ describe("search status collection ownership", () => {
 
     await expect(collections()).resolves.toEqual([
       expect.objectContaining({
+        hasIndexer: true,
         indexed: 3,
         itemType: "example.article",
         pluginId: "@vitnode/example",
@@ -138,6 +140,9 @@ describe("search status collection ownership", () => {
     const [collection] = await collections();
 
     expect(collection.pluginId).toBe("@vitnode/example");
+    expect(collection.hasIndexer).toBe(false);
+    // No indexer to ask for a source count, so there is none to report.
+    expect(collection.total).toBeNull();
   });
 
   it("reports `unknown` when neither source names an owner", async () => {
@@ -173,17 +178,19 @@ describe("search status collection ownership", () => {
   });
 
   it("keeps an orphaned over-indexed collection truthful", async () => {
-    // No indexer, so no source count: `total` falls back to the indexed count
-    // and the collection reads as covered - but it must still not be called core.
+    // The regression: `total` used to fall back to `indexed`, so an orphaned
+    // collection reported 11/11 and read as fully indexed. There is no source to
+    // count, so there is no total - and it must still not be called core.
     const { collections } = harness({
       rows: [indexedRow("example.article", "@vitnode/example", 11)],
     });
 
     await expect(collections()).resolves.toEqual([
       expect.objectContaining({
+        hasIndexer: false,
         indexed: 11,
         pluginId: "@vitnode/example",
-        total: 11,
+        total: null,
       }),
     ]);
   });
@@ -199,6 +206,7 @@ describe("search status collection ownership", () => {
     // Neither number is rewritten to hide the extra documents, so the AdminCP
     // still reads this as stale.
     expect(collection).toMatchObject({
+      hasIndexer: true,
       indexed: 11,
       pluginId: "@vitnode/example",
       total: 9,
@@ -212,10 +220,41 @@ describe("search status collection ownership", () => {
 
     await expect(collections()).resolves.toEqual([
       expect.objectContaining({
+        hasIndexer: true,
         indexed: 0,
         pluginId: "@vitnode/example",
         total: 5,
       }),
     ]);
+  });
+
+  it("reports an indexer with no `count` against the indexed total", async () => {
+    // `count` is optional, and leaving it out is documented as "assume covered".
+    // That is a registered collection, so it is not the orphaned case.
+    const { collections } = harness({
+      indexers: [indexer("example.article", "@vitnode/example")],
+      rows: [indexedRow("example.article", "@vitnode/example", 4)],
+    });
+
+    const [collection] = await collections();
+
+    expect(collection).toMatchObject({
+      hasIndexer: true,
+      indexed: 4,
+      total: 4,
+    });
+  });
+
+  it("does not infer an indexer from a stored owner", async () => {
+    // The rule the field exists for: rows knowing who wrote them says nothing
+    // about whether anything can write them again.
+    const { collections } = harness({
+      rows: [indexedRow("example.article", "@vitnode/example", 3)],
+    });
+
+    const [collection] = await collections();
+
+    expect(collection.pluginId).toBe("@vitnode/example");
+    expect(collection.hasIndexer).toBe(false);
   });
 });

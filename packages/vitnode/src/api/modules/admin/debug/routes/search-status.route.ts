@@ -12,11 +12,18 @@ const CONTENT_SEARCH_LOG_PREFIX = "[content-search]";
 const SYNC_ERROR_LIMIT = 10;
 
 const collectionSchema = z.object({
+  /**
+   * Whether an indexer is registered for this item type *right now*. A stored
+   * plugin owner does not imply one: the plugin may be uninstalled, renamed, or
+   * simply not loaded in this process.
+   */
+  hasIndexer: z.boolean(),
   indexed: z.number(),
   itemType: z.string(),
   lastIndexedAt: z.date().nullable(),
   pluginId: z.string(),
-  total: z.number(),
+  /** Source items the indexer reports. `null` when there is no indexer to ask. */
+  total: z.number().nullable(),
 });
 
 const syncErrorSchema = z.object({
@@ -110,9 +117,14 @@ export const searchStatusDebugAdminRoute = buildRoute({
         const indexer = core.searchIndexers.find(i => i.itemType === itemType);
         const stats = statsByType.get(itemType);
         const indexed = stats?.indexed ?? 0;
-        const total = indexer?.count ? await indexer.count(c) : indexed;
+        // No indexer, no source count - and inventing `total = indexed` would
+        // report a collection nothing can rebuild as fully covered. An indexer
+        // without the optional `count` still falls back to the indexed count,
+        // which is the documented behaviour of leaving `count` out.
+        const total = indexer ? ((await indexer.count?.(c)) ?? indexed) : null;
 
         return {
+          hasIndexer: indexer !== undefined,
           itemType,
           // The registered indexer is canonical - it is what the next rebuild
           // will stamp on the rows. Falling back to the stored owner is what
