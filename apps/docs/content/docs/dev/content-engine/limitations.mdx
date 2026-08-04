@@ -157,21 +157,27 @@ alongside the search engine. When it does, the message falls back to the console
 and the mutation still succeeds. Neither failure can turn a committed write into a
 failed request.
 
-## An orphaned collection keeps its own owner, and cannot be rebuilt
+## A collection with no rebuild indexer cannot be rebuilt
 
-A collection whose indexer is no longer registered - the plugin was uninstalled or
-renamed, or a content type dropped its `search` block - still has documents. The
-AdminCP labels it **orphaned**, names the owner stored on those documents rather
-than reassigning them to core, and falls back to `unknown` only when neither a
-live indexer nor the stored rows know.
+A collection with indexed documents but no registered `SearchIndexer` is labelled
+**Unmanaged**. That happens when a content type drops its `search` block or its
+plugin goes away - and also when a plugin simply indexes through `search.index()`
+and never registers an indexer, which is supported and may be perfectly healthy.
+The label therefore says only what is known: there is no way to rebuild it.
 
-It reports no coverage, because there is no source to compare against. A scoped
-rebuild of it is refused - it would clear the documents and refill nothing - so the
-only action offered is an explicit, confirmed **Remove documents**. A full rebuild
-clears them too, as part of clearing everything.
+The AdminCP names the owner stored on those documents rather than reassigning them
+to core, and falls back to `unknown` only when neither a registered indexer nor the
+stored rows know. It reports no coverage, because there is no source to compare
+against.
 
-Re-registering an indexer for the same `itemType` makes the collection ordinary
-again. Nothing recovers it automatically.
+A scoped rebuild of it is refused - it would clear the documents and refill nothing
+- so the only action offered is an explicit, confirmed **Remove documents**. That
+clears the current indexed state and nothing more: a live-writing plugin may
+recreate those documents immediately. A full rebuild clears them too, as part of
+clearing everything, and recreates only collections that have an indexer.
+
+Registering an indexer for the same `itemType` makes the collection ordinary again.
+Nothing recovers it automatically.
 
 ## Malformed published data reads as under-indexed
 
