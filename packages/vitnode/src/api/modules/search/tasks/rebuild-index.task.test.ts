@@ -69,14 +69,14 @@ const harness = (indexers: SearchIndexerConfig[]) => {
   const indexed: SearchDocument[][] = [];
 
   const search = {
-    bulkIndex: async (docs: SearchDocument[]) => {
+    bulkIndex: vi.fn(async (docs: SearchDocument[]) => {
       indexed.push(docs);
       await Promise.resolve();
-    },
-    clear: async (itemType?: string) => {
+    }),
+    clear: vi.fn(async (itemType?: string) => {
       cleared.push(itemType);
       await Promise.resolve();
-    },
+    }),
   };
 
   const c = {
@@ -88,7 +88,7 @@ const harness = (indexers: SearchIndexerConfig[]) => {
     },
   } as unknown as Context<EnvVitNode>;
 
-  return { c, cleared, indexed };
+  return { c, cleared, indexed, search };
 };
 
 describe("rebuild-search-index", () => {
@@ -404,6 +404,96 @@ describe("rebuild-search-index", () => {
         [2, "@vitnode/modern"],
       ]);
     });
+  });
+
+  describe("a collection with no indexer", () => {
+    it("refuses a scoped rebuild before clearing anything", async () => {
+      // The action offering this is called "reindex", so it must not be a delete:
+      // clearing here would remove the documents and refill nothing.
+      const other = scriptedIndexer({
+        itemType: "example.article",
+        pages: [{ documents: [], itemsRead: 0 }],
+        pluginId: "@vitnode/example",
+      });
+      const { c, indexed, search } = harness([other.config]);
+
+      await expect(
+        rebuildSearchIndexTask.handler(c, { itemType: "removed.collection" }),
+      ).rejects.toThrow(/no search indexer is registered/i);
+
+      expect(search.clear).not.toHaveBeenCalled();
+      expect(other.offsets).toEqual([]);
+      expect(indexed).toEqual([]);
+    });
+
+    it("refuses even when no indexer is registered at all", async () => {
+      const { c, search } = harness([]);
+
+      await expect(
+        rebuildSearchIndexTask.handler(c, { itemType: "removed.collection" }),
+      ).rejects.toThrow(/removed.collection/);
+
+      expect(search.clear).not.toHaveBeenCalled();
+    });
+
+    it("names the collection it refused", async () => {
+      const { c } = harness([]);
+
+      await expect(
+        rebuildSearchIndexTask.handler(c, { itemType: "removed.collection" }),
+      ).rejects.toThrow(/Cannot rebuild collection "removed.collection"/);
+    });
+
+    it("still lets a full rebuild clear the whole index", async () => {
+      // Orphaned documents have no source, so a full rebuild removing them is the
+      // documented behaviour - and it must not be blocked by the scoped guard.
+      const registered = scriptedIndexer({
+        itemType: "example.article",
+        pages: [
+          { documents: [document("example.article", 1)], itemsRead: 1 },
+          { documents: [], itemsRead: 0 },
+        ],
+        pluginId: "@vitnode/example",
+      });
+      const { c, cleared, indexed } = harness([registered.config]);
+
+      await rebuildSearchIndexTask.handler(c, {});
+
+      expect(cleared).toEqual([undefined]);
+      expect(indexed.flat().map(doc => doc.itemId)).toEqual([1]);
+    });
+
+    it("still lets a full rebuild run with no indexers registered", async () => {
+      const { c, cleared, indexed } = harness([]);
+
+      await rebuildSearchIndexTask.handler(c, {});
+
+      expect(cleared).toEqual([undefined]);
+      expect(indexed).toEqual([]);
+    });
+  });
+
+  it("clears and rebuilds only the scoped collection when it has an indexer", async () => {
+    const target = scriptedIndexer({
+      itemType: "example.article",
+      pages: [
+        { documents: [document("example.article", 1)], itemsRead: 1 },
+        { documents: [], itemsRead: 0 },
+      ],
+      pluginId: "@vitnode/example",
+    });
+    const other = scriptedIndexer({
+      itemType: "blog_post",
+      pages: [{ documents: [document("blog_post", 9)], itemsRead: 1 }],
+      pluginId: "@vitnode/blog",
+    });
+    const { c, cleared, indexed } = harness([target.config, other.config]);
+
+    await rebuildSearchIndexTask.handler(c, { itemType: "example.article" });
+
+    expect(cleared).toEqual(["example.article"]);
+    expect(other.offsets).toEqual([]);
+    expect(indexed.flat().map(doc => doc.itemId)).toEqual([1]);
   });
 
   it("does not loop forever on a broken indexer", async () => {

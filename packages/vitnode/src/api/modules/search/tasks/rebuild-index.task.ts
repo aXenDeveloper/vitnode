@@ -20,6 +20,16 @@ export const rebuildSearchIndexTask = buildQueueTask({
         indexer => !itemType || indexer.itemType === itemType,
       );
 
+    // Clearing a collection nothing can rebuild is a delete, not a rebuild. The
+    // route rejects this too, but the check has to be here as well: a queue task
+    // can be dispatched directly, and a job queued while an indexer was still
+    // registered can drain after the plugin is gone.
+    if (itemType && indexers.length === 0) {
+      throw new Error(
+        `[Search] Cannot rebuild collection "${itemType}": no search indexer is registered. Its documents were left alone - remove them explicitly if that is what you meant.`,
+      );
+    }
+
     // Scope the clear to the target collection so a single-collection reindex
     // never wipes the rest of the index.
     await search.clear(itemType);
