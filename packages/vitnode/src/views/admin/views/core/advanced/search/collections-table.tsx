@@ -19,6 +19,7 @@ import type { CollectionStatus, SearchCollection } from "./collection-status";
 
 import {
   getCollectionCoverage,
+  getCollectionCoverageBar,
   getCollectionStatus,
 } from "./collection-status";
 import { ReindexCollectionAction } from "./reindex-action";
@@ -136,10 +137,12 @@ export const CollectionsTable = async ({
             <div className="bg-muted h-1.5 w-full max-w-40 overflow-hidden rounded-full">
               <div
                 className={cn("h-full rounded-full", styles.bar)}
-                style={{ width: `${coverage}%` }}
+                // Clamped, so an over-indexed collection cannot draw past the
+                // track. The number beside it stays the measured one.
+                style={{ width: `${getCollectionCoverageBar(row)}%` }}
               />
             </div>
-            <span className="text-muted-foreground w-9 shrink-0 text-end text-sm tabular-nums">
+            <span className="text-muted-foreground w-12 shrink-0 text-end text-sm tabular-nums">
               {coverage}%
             </span>
           </div>

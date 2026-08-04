@@ -110,9 +110,10 @@ export const searchStatusDebugAdminRoute = buildRoute({
           itemType,
           pluginId: indexer?.pluginId ?? "core",
           indexed,
-          // A source count below the indexed count (e.g. items deleted since the
-          // last rebuild) would break the coverage bar; never report less.
-          total: Math.max(total, indexed),
+          // Reported as measured, even when it is below `indexed`: more documents
+          // than source records is a stale index, and raising the source count to
+          // hide it is how that goes unnoticed. The UI clamps the bar instead.
+          total,
           lastIndexedAt: stats?.lastIndexedAt ?? null,
         };
       }),
