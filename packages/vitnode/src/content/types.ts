@@ -3,6 +3,9 @@ import type {
   CONTENT_PUBLIC_EXPOSABLE_COLUMNS,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_PUBLICATION_STATUSES,
+  CONTENT_SEARCH_DESCRIPTION_KINDS,
+  CONTENT_SEARCH_TEXT_KINDS,
+  CONTENT_SEARCH_TITLE_KINDS,
   CONTENT_SYSTEM_FIELDS,
 } from "./const";
 import type { ContentSchemas } from "./schemas";
@@ -485,8 +488,117 @@ export interface ResolvedContentPublicApiConfig<
 }
 
 // ---------------------------------------------------------------------------
+// Search
+// ---------------------------------------------------------------------------
+
+/** Field names of one or more kinds, as a union. */
+type ContentFieldNamesOfKind<TFields, TKind extends string> = string &
+  {
+    [K in keyof TFields]: TFields[K] extends { kind: TKind } ? K : never;
+  }[keyof TFields];
+
+/**
+ * Field names `search.titleField` accepts.
+ *
+ * An intersection of two rules rather than two separate checks: `TPublicField`
+ * is the public allowlist, so a field that is not published cannot be indexed,
+ * and the kind union keeps prose out of the title slot. Both are the same
+ * `Extract`, which is why a private field is a compile error and not a lint.
+ */
+export type ContentSearchTitleField<
+  TFields,
+  TPublicField extends string,
+> = Extract<
+  TPublicField,
+  ContentFieldNamesOfKind<TFields, (typeof CONTENT_SEARCH_TITLE_KINDS)[number]>
+>;
+
+export type ContentSearchDescriptionField<
+  TFields,
+  TPublicField extends string,
+> = Extract<
+  TPublicField,
+  ContentFieldNamesOfKind<
+    TFields,
+    (typeof CONTENT_SEARCH_DESCRIPTION_KINDS)[number]
+  >
+>;
+
+export type ContentSearchTextField<
+  TFields,
+  TPublicField extends string,
+> = Extract<
+  TPublicField,
+  ContentFieldNamesOfKind<TFields, (typeof CONTENT_SEARCH_TEXT_KINDS)[number]>
+>;
+
+/**
+ * Opts a content type into automatic search synchronization.
+ *
+ * Requires `publication` *and* `publicApi`: only published rows are ever
+ * indexed, and every indexed field has to be publicly readable already - a
+ * private value would otherwise leak through a result snippet, a highlighted
+ * match, ranking, or the mere fact that a record matched an exact-match probe.
+ *
+ * `enabled` is literal `true` for the same reason publication's and publicApi's
+ * are: a widened `boolean` would silently resolve to "no search".
+ *
+ * Generic over the three field-name *unions* rather than over the field map, so
+ * `defineContentType` can infer each one from the literal it was given and then
+ * check it against `ContentSearchTitleField` and friends. Spelling those out
+ * inside the property types instead looks equivalent and is not: `TPublicField`
+ * falls back to its constraint while the argument that infers it is still being
+ * checked, and a private field name would slip through.
+ */
+export interface ContentSearchConfig<
+  TTitle extends string = string,
+  TDescription extends string = string,
+  TText extends string = string,
+> {
+  /** Concatenated into the indexed body, in order. At least one. */
+  contentFields: readonly [TText, ...TText[]];
+  /** Prepended to the indexed body so it shows up in result excerpts. */
+  descriptionField?: TDescription;
+  enabled: true;
+  /**
+   * The public URL of one record, e.g. `/articles/{slug}`. Relative, and
+   * `{slug}` - the exposed slug field - is the only placeholder.
+   */
+  pathTemplate: string;
+  /** The result heading. Weighted above the body by the index. */
+  titleField: TTitle;
+}
+
+/**
+ * `search` after `defineContentType` has filled in every default.
+ *
+ * Not generic over `enabled`: search adds no columns, so no row type conditions
+ * on it, and {@link SearchableContentTypeDefinition} covers the one place that
+ * needs it pinned.
+ */
+export interface ResolvedContentSearchConfig {
+  contentFields: string[];
+  descriptionField: null | string;
+  enabled: boolean;
+  pathTemplate: string;
+  titleField: string;
+}
+
+// ---------------------------------------------------------------------------
 // Definition
 // ---------------------------------------------------------------------------
+
+/**
+ * A content type whose records are synchronized with the search index.
+ *
+ * An intersection rather than a sixth type argument, for the same reason
+ * {@link PublicContentTypeDefinition} is one: `enabled` is the only thing a
+ * caller of the search layer needs pinned, and narrowing just that keeps every
+ * concrete definition assignable.
+ */
+export type SearchableContentTypeDefinition = AnyContentTypeDefinition & {
+  search: { enabled: true };
+};
 
 /**
  * A content type that actually has a generated public API.
@@ -531,6 +643,8 @@ export interface ContentTypeDefinition<
       TPublicEnabled
     >
   >;
+  /** Search synchronization, or the disabled default when `search` is omitted. */
+  search: ResolvedContentSearchConfig;
   tableName: string;
 }
 

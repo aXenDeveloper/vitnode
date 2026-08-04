@@ -83,6 +83,10 @@
         "rebuildError": "Could not queue the rebuild.",
         "reindex": "Reindex",
         "reindexQueued": "Reindex queued for {collection}.",
+        "syncErrors": {
+          "title": "Recent sync failures",
+          "desc": "These records were saved, but their search documents weren't updated. Rebuild the index to repair them."
+        },
         "cron": {
           "title": "Background jobs require a configured cron adapter",
           "desc": "A rebuild won't run until cron is active. Configure an adapter in Integrations to enable scheduled reindexing.",

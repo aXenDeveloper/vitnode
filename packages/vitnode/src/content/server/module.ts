@@ -4,6 +4,7 @@ import type { ContentModel } from "./model";
 
 import { buildModule } from "../../api/lib/module";
 import { buildContentRoutes } from "./routes";
+import { createContentSearchIndexer } from "./search-indexer";
 import { assertContentReferences } from "./table";
 
 /**
@@ -24,7 +25,9 @@ import { assertContentReferences } from "./table";
  *
  * That yields `/api/{pluginId}/admin/content/{module}`. `buildApiPlugin` walks
  * the module tree, so the content types registered here also drive the
- * registry and the derived staff permissions - they are declared exactly once.
+ * registry, the derived staff permissions and - for a content type with
+ * `search: { enabled: true }` - the generated search indexer. They are declared
+ * exactly once.
  */
 export const buildContentAdminModule = <P extends string>({
   contentTypes,
@@ -52,5 +55,10 @@ export const buildContentAdminModule = <P extends string>({
     routes: [],
     modules,
     contentTypes: contentTypes.map(model => model.definition),
+    // A content type without `search` contributes nothing, so the two module
+    // builders can keep taking the same array.
+    searchIndexers: contentTypes
+      .filter(model => model.definition.search.enabled)
+      .map(createContentSearchIndexer),
   });
 };

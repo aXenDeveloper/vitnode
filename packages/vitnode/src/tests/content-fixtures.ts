@@ -97,3 +97,44 @@ export const testPostContentType = defineContentType({
     },
   },
 });
+
+/**
+ * The Stage 3 shape: `testPostContentType` plus `search`.
+ *
+ * A separate fixture rather than a flag on the post: keeping the post exactly as
+ * it was is what proves a Stage 2 content type is untouched by search existing.
+ * `code` and `author` stay out of `publicApi.fields` so "an indexed field is a
+ * public field" has something to be wrong about.
+ */
+export const testSearchablePostContentType = defineContentType({
+  id: "test.searchable",
+  tableName: "test_searchable_posts",
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+    body: field.textarea({ nullable: true }),
+    code: field.text({ required: true, maxLength: 100 }),
+    views: field.number({ integer: true, min: 0, defaultValue: 0 }),
+    author: field.user(),
+  },
+  publication: { enabled: true },
+  publicApi: {
+    enabled: true,
+    path: "searchable",
+    fields: ["title", "slug", "excerpt", "body", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  search: {
+    enabled: true,
+    titleField: "title",
+    descriptionField: "excerpt",
+    contentFields: ["excerpt", "body"],
+    pathTemplate: "/searchable/{slug}",
+  },
+  admin: {
+    label: { plural: "Test Searchables", singular: "Test Searchable" },
+    titleField: "title",
+    list: { defaultOrderBy: "publishedAt" },
+  },
+});

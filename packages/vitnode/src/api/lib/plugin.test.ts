@@ -6,6 +6,9 @@ import {
   testCategoryContentType,
 } from "@/tests/content-fixtures";
 
+import type { SearchIndexer } from "../models/search";
+
+import { validateSearchIndexers } from "../models/search";
 import { buildModule } from "./module";
 import { buildApiPlugin } from "./plugin";
 
@@ -87,5 +90,103 @@ describe("buildApiPlugin content types", () => {
     expect(() =>
       buildApiPlugin({ pluginId: "@vitnode/example", modules: [duplicate] }),
     ).toThrow(/Duplicate content type id/);
+  });
+});
+
+const indexer = (itemType: string): SearchIndexer => ({
+  itemType,
+  load: async () => await Promise.resolve([]),
+});
+
+describe("buildApiPlugin search indexers", () => {
+  it("collects indexers from nested modules", () => {
+    const nested = buildModule({
+      pluginId: "@vitnode/example",
+      name: "content",
+      routes: [],
+      searchIndexers: [indexer("test.article")],
+    });
+
+    const plugin = buildApiPlugin({
+      pluginId: "@vitnode/example",
+      modules: [
+        buildModule({
+          pluginId: "@vitnode/example",
+          name: "admin",
+          routes: [],
+          modules: [nested],
+        }),
+      ],
+    });
+
+    expect(plugin.searchIndexers?.map(item => item.itemType)).toEqual([
+      "test.article",
+    ]);
+  });
+
+  it("merges root-level indexers with collected ones", () => {
+    const plugin = buildApiPlugin({
+      pluginId: "@vitnode/example",
+      modules: [
+        buildModule({
+          pluginId: "@vitnode/example",
+          name: "content",
+          routes: [],
+          searchIndexers: [indexer("test.article")],
+        }),
+      ],
+      searchIndexers: [indexer("blog_post")],
+    });
+
+    expect(plugin.searchIndexers?.map(item => item.itemType)).toEqual([
+      "blog_post",
+      "test.article",
+    ]);
+  });
+
+  it("leaves a plugin with no indexers alone", () => {
+    const plugin = buildApiPlugin({
+      pluginId: "@vitnode/example",
+      modules: [adminModule],
+    });
+
+    expect(plugin.searchIndexers).toEqual([]);
+  });
+
+  it("rejects the same item type registered twice", () => {
+    expect(() =>
+      buildApiPlugin({
+        pluginId: "@vitnode/example",
+        modules: [
+          buildModule({
+            pluginId: "@vitnode/example",
+            name: "content",
+            routes: [],
+            searchIndexers: [indexer("test.article")],
+          }),
+        ],
+        searchIndexers: [indexer("test.article")],
+      }),
+    ).toThrow(/Duplicate search indexer for item type "test.article"/);
+  });
+});
+
+describe("validateSearchIndexers", () => {
+  it("names both owners of a collision", () => {
+    expect(() =>
+      validateSearchIndexers([
+        { ...indexer("blog_post"), pluginId: "@vitnode/blog" },
+        { ...indexer("blog_post"), pluginId: "@vitnode/other" },
+      ]),
+    ).toThrow(/both "@vitnode\/blog" and "@vitnode\/other"/);
+  });
+
+  it("passes distinct item types through", () => {
+    expect(
+      validateSearchIndexers([
+        { ...indexer("blog_post"), pluginId: "@vitnode/blog" },
+        { ...indexer("test.article"), pluginId: "@vitnode/example" },
+      ]).map(item => item.itemType),
+    ).toEqual(["blog_post", "test.article"]);
   });
 });

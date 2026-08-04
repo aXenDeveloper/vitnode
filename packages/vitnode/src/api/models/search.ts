@@ -87,8 +87,12 @@ export interface SearchProviderCapabilities {
 
 /**
  * Streams every existing item of one content type so the whole index can be
- * rebuilt (e.g. after switching engines). `load` returns one page at a time;
- * return fewer than `limit` rows to signal the end.
+ * rebuilt (e.g. after switching engines).
+ *
+ * `load` returns one page at a time and is called with `offset` advancing by
+ * whole pages of *items*. Return an empty array to signal the end - not "fewer
+ * rows than `limit`", because an indexer may emit several documents per item
+ * (e.g. one per language), so the two counts are not interchangeable.
  */
 export interface SearchIndexer {
   // Total number of source items available to index for this type. Powers the
@@ -106,6 +110,37 @@ export interface SearchIndexer {
 export interface SearchIndexerConfig extends SearchIndexer {
   pluginId: string;
 }
+
+/**
+ * Rejects two indexers claiming the same `itemType`.
+ *
+ * `itemType` is the index's only namespace, so a collision is not a cosmetic
+ * problem: both indexers would `load` on every rebuild, writing over each
+ * other's documents whenever their item ids overlap, and the admin coverage
+ * report would silently describe only the first one. Failing at boot is the only
+ * place this is cheap to notice.
+ *
+ * Called once per plugin by `buildApiPlugin` and again across every plugin by
+ * the global middleware, which is the only place that sees them all.
+ */
+export const validateSearchIndexers = (
+  indexers: readonly SearchIndexerConfig[],
+): SearchIndexerConfig[] => {
+  const seen = new Map<string, string>();
+
+  for (const indexer of indexers) {
+    const owner = seen.get(indexer.itemType);
+    if (owner !== undefined) {
+      throw new Error(
+        `[Search] Duplicate search indexer for item type "${indexer.itemType}": registered by both "${owner}" and "${indexer.pluginId}". An item type may only be indexed by one indexer.`,
+      );
+    }
+
+    seen.set(indexer.itemType, indexer.pluginId);
+  }
+
+  return [...indexers];
+};
 
 /**
  * A pluggable search engine. The {@link SearchModel} owns the canonical

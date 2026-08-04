@@ -28,7 +28,16 @@ config change followed by a rebuild.
 
 ## Indexing content
 
-Any API handler can (re)index or remove an item through `c.get("search")`:
+<Callout type="info" title="Using the Content Engine?">
+  A content type only needs a
+  [`search` block](/docs/dev/content-engine/search) - publishing, editing,
+  unpublishing and deleting a record then keep its document in step
+  automatically, and it joins the rebuild without any of the wiring below.
+</Callout>
+
+Any API handler can (re)index or remove an item through `c.get("search")`. It is
+an **API-process** model: a Next.js server action or server component cannot
+reach `c.get("search")` at all, so anything Next-side goes over HTTP.
 
 ```ts
 // After creating or updating an item
@@ -83,9 +92,11 @@ translated can leave `languageCode` empty (`""`) - those rows are **language
 agnostic** and match every locale, so single-language plugins need no changes.
 
 <Callout type="info">
-  Postgres full-text ranking uses the `english` text-search configuration for
-  all languages (there is no bundled dictionary for most locales). Matching
-  still works across languages; only stemming and stop-words are English-tuned.
+  Postgres full-text ranking picks a text-search configuration per locale
+  (`polish` for `pl`, `german` for `de`, and so on), falling back to `simple` for
+  a locale with no bundled dictionary - and for a document with no
+  `languageCode`, which matches every locale. Matching works across languages
+  either way; only stemming and stop-words differ.
 </Callout>
 
 ## Registering a rebuild indexer
@@ -106,8 +117,9 @@ export const blogPostSearchIndexer: SearchIndexer = {
       .limit(limit)
       .offset(offset);
 
-    // An indexer may emit several documents per item (e.g. one per language).
-    // `offset`/`limit` page over items, not documents.
+    // An indexer may emit several documents per item (e.g. one per language),
+    // so `offset`/`limit` page over items, not documents - and an empty array,
+    // not "fewer rows than `limit`", is what ends the loop.
     return rows.flatMap(buildSearchDocumentsForPost);
   },
 };
@@ -120,9 +132,20 @@ export const blogApiPlugin = () =>
   });
 ```
 
-Trigger a rebuild from **AdminCP → System → Search → Rebuild index**. It runs as a
-background queue task, so a [cron adapter](/docs/dev/cron) must be configured for
-the queue to drain.
+One item type may only have **one** indexer. Two plugins claiming the same
+`itemType` is a startup error naming both, because they would otherwise overwrite
+each other's documents on every rebuild.
+
+Trigger a rebuild from **AdminCP → Advanced → Search → Rebuild index**. It runs as
+a background queue task, so a [cron adapter](/docs/dev/cron) must be configured
+for the queue to drain.
+
+<Callout type="warn" title="A rebuild clears before it writes">
+  Rebuilding drops the documents it is about to replace first - the whole index
+  for "rebuild everything", or one collection for a single reindex. So search
+  returns less while it runs, and documents belonging to an item type with **no**
+  registered indexer are removed for good rather than rebuilt.
+</Callout>
 
 ## Giving a type an icon and label
 

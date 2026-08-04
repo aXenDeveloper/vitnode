@@ -271,6 +271,17 @@ path - which is exactly what the
 [public field allowlist](/docs/dev/content-engine/public-api#the-field-allowlist)
 does for you on the generated one.
 
+## Publishing can do more than flip a column
+
+Two things hang off the lifecycle, and both are opt-in:
+
+- [`publicApi`](/docs/dev/content-engine/public-api) makes a published record
+  readable over HTTP.
+- [`search`](/docs/dev/content-engine/search) keeps a published record in the
+  site-wide search index - added on publish, removed on unpublish.
+
+Enabling publication on its own still publishes nothing anywhere.
+
 ## What this is not
 
 Scheduled publishing, approval workflows and revisions are not here. The

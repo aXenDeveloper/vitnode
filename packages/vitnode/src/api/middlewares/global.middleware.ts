@@ -16,7 +16,7 @@ import { EmailModel } from "@/api/models/email";
 import { EventsModel } from "@/api/models/events";
 import { I18nModel } from "@/api/models/i18n";
 import { QueueModel } from "@/api/models/queue";
-import { SearchModel } from "@/api/models/search";
+import { SearchModel, validateSearchIndexers } from "@/api/models/search";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import { StorageModel } from "@/api/models/storage";
@@ -215,12 +215,15 @@ export const globalMiddleware = ({
     })),
   );
 
-  const searchIndexersMetadata: SearchIndexerConfig[] = plugins.flatMap(
-    plugin =>
+  // Validated across *all* plugins, for the same reason content types are:
+  // `buildApiPlugin` can only catch collisions inside a single plugin.
+  const searchIndexersMetadata: SearchIndexerConfig[] = validateSearchIndexers(
+    plugins.flatMap(plugin =>
       (plugin.searchIndexers ?? []).map(indexer => ({
         ...indexer,
         pluginId: plugin.pluginId,
       })),
+    ),
   );
 
   // Validated once more across *all* plugins: `buildApiPlugin` can only catch

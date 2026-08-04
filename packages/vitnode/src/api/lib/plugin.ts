@@ -17,6 +17,7 @@ import type { PermissionStaffConfig } from "./permission-staff";
 import type { QueueTaskConfig } from "./queue";
 import type { WebSocketConfig } from "./websocket";
 
+import { validateSearchIndexers } from "../models/search";
 import { checkPluginId } from "./check-plugin-id";
 
 export interface BuildPluginApiReturn {
@@ -58,12 +59,14 @@ export function buildApiPlugin<P extends string>({
   const contentTypes: AnyContentTypeDefinition[] = [];
   const cronJobs: BuildPluginApiReturn["cronJobs"] = [];
   const events: BuildPluginApiReturn["events"] = [];
+  const indexers: SearchIndexer[] = [...(searchIndexers ?? [])];
   const queueTasks: BuildPluginApiReturn["queueTasks"] = [];
   const webSockets: BuildPluginApiReturn["webSockets"] = [];
   modules.forEach(handler => {
     hono.route(`/${handler.name}`, handler.hono);
 
     contentTypes.push(...collectContentTypes(handler));
+    indexers.push(...collectSearchIndexers(handler));
 
     handler.cronJobs?.forEach(cron => {
       cronJobs.push({ ...cron, module: handler.name });
@@ -86,6 +89,8 @@ export function buildApiPlugin<P extends string>({
     contentTypes.map(definition => ({ definition, pluginId })),
   );
 
+  validateSearchIndexers(indexers.map(indexer => ({ ...indexer, pluginId })));
+
   return {
     pluginId,
     messages,
@@ -94,7 +99,7 @@ export function buildApiPlugin<P extends string>({
     cronJobs,
     events,
     queueTasks,
-    searchIndexers,
+    searchIndexers: indexers,
     webSockets,
     // Every content type contributes can_view/can_create/can_edit/can_delete
     // unless the plugin declared that module itself.
@@ -114,5 +119,12 @@ function collectContentTypes(
   return [
     ...(module.contentTypes ?? []),
     ...(module.modules ?? []).flatMap(collectContentTypes),
+  ];
+}
+
+function collectSearchIndexers(module: BaseBuildModuleReturn): SearchIndexer[] {
+  return [
+    ...(module.searchIndexers ?? []),
+    ...(module.modules ?? []).flatMap(collectSearchIndexers),
   ];
 }

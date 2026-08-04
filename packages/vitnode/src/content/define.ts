@@ -7,9 +7,14 @@ import type {
   ContentPublicApiConfig,
   ContentPublicationConfig,
   ContentPublicExposableField,
+  ContentSearchConfig,
+  ContentSearchDescriptionField,
+  ContentSearchTextField,
+  ContentSearchTitleField,
   ContentTypeDefinition,
   ResolvedContentAdminConfig,
   ResolvedContentPublicApiConfig,
+  ResolvedContentSearchConfig,
 } from "./types";
 
 import {
@@ -25,6 +30,12 @@ import {
   CONTENT_PUBLIC_PATH_PATTERN,
   CONTENT_PUBLIC_RESERVED_PATHS,
   CONTENT_PUBLICATION_FIELDS,
+  CONTENT_SEARCH_DESCRIPTION_KINDS,
+  CONTENT_SEARCH_ITEM_TYPE_MAX_LENGTH,
+  CONTENT_SEARCH_PATH_MAX_LENGTH,
+  CONTENT_SEARCH_SLUG_PLACEHOLDER,
+  CONTENT_SEARCH_TEXT_KINDS,
+  CONTENT_SEARCH_TITLE_KINDS,
   CONTENT_SYSTEM_FIELDS,
   CONTENT_TABLE_NAME_PATTERN,
   isFilterableFieldKind,
@@ -553,6 +564,214 @@ const resolvePublicApi = <TField extends string>(
   };
 };
 
+const searchTitleKinds: ReadonlySet<string> = new Set(
+  CONTENT_SEARCH_TITLE_KINDS,
+);
+const searchDescriptionKinds: ReadonlySet<string> = new Set(
+  CONTENT_SEARCH_DESCRIPTION_KINDS,
+);
+const searchTextKinds: ReadonlySet<string> = new Set(CONTENT_SEARCH_TEXT_KINDS);
+
+const disabledSearch: ResolvedContentSearchConfig = {
+  contentFields: [],
+  descriptionField: null,
+  enabled: false,
+  pathTemplate: "",
+  titleField: "",
+};
+
+/**
+ * Checks one indexed field name.
+ *
+ * The public-exposure rule is the important one, and it is checked here as well
+ * as in the types because a JavaScript caller or a widened value can reach this
+ * function with anything at all.
+ */
+const assertSearchField = ({
+  exposed,
+  fields,
+  id,
+  kinds,
+  label,
+  name,
+}: {
+  exposed: ReadonlySet<string>;
+  fields: ContentFieldMap;
+  id: string;
+  kinds: ReadonlySet<string>;
+  label: string;
+  name: string;
+}): void => {
+  const fieldValue = fields[name];
+  if (!fieldValue) {
+    throw new ContentEngineError(
+      `${label} references unknown field "${name}".`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (!kinds.has(fieldValue.kind)) {
+    throw new ContentEngineError(
+      `${label} names "${name}" of kind "${fieldValue.kind}". Expected one of: ${[...kinds].sort().join(", ")}.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (!exposed.has(name)) {
+    throw new ContentEngineError(
+      `${label} names "${name}", which is not in publicApi.fields. Every indexed field must be publicly exposed - otherwise a result snippet, a highlighted match, ranking or an exact-match probe would leak a private value.`,
+      { contentTypeId: id },
+    );
+  }
+};
+
+const assertSearchPathTemplate = (id: string, template: string): void => {
+  if (!template.startsWith("/")) {
+    throw new ContentEngineError(
+      `search.pathTemplate "${template}" must start with "/". Search result URLs are relative to the site root.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (template.length > CONTENT_SEARCH_PATH_MAX_LENGTH) {
+    throw new ContentEngineError(
+      `search.pathTemplate "${template}" is longer than ${CONTENT_SEARCH_PATH_MAX_LENGTH} characters.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const occurrences =
+    template.split(CONTENT_SEARCH_SLUG_PLACEHOLDER).length - 1;
+  if (occurrences !== 1) {
+    throw new ContentEngineError(
+      `search.pathTemplate "${template}" must contain exactly one "${CONTENT_SEARCH_SLUG_PLACEHOLDER}" placeholder, not ${occurrences}.`,
+      { contentTypeId: id },
+    );
+  }
+
+  // Everything else that looks like a placeholder is a typo, and substitution is
+  // a single literal replace - so an unvalidated one would end up in the URL.
+  const rest = template.replace(CONTENT_SEARCH_SLUG_PLACEHOLDER, "");
+  if (rest.includes("{") || rest.includes("}")) {
+    throw new ContentEngineError(
+      `search.pathTemplate "${template}" uses a placeholder other than "${CONTENT_SEARCH_SLUG_PLACEHOLDER}". No other placeholder is supported.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (rest.includes("//") || template.includes("..") || /\s/.test(template)) {
+    throw new ContentEngineError(
+      `search.pathTemplate "${template}" must not contain an empty segment, "..", or whitespace.`,
+      { contentTypeId: id },
+    );
+  }
+};
+
+/**
+ * Checks and fills in `search`.
+ *
+ * Runs after `resolvePublicApi`, because every rule here is stated in terms of
+ * the resolved public allowlist and its single exposed slug field.
+ */
+const resolveSearch = (
+  id: string,
+  fields: ContentFieldMap,
+  search: ContentSearchConfig | undefined,
+  publicApi: ResolvedContentPublicApiConfig,
+  publication: boolean,
+): ResolvedContentSearchConfig => {
+  if (!search?.enabled) return disabledSearch;
+
+  if (!publication) {
+    throw new ContentEngineError(
+      "search needs `publication: { enabled: true }`. Only published records are indexed, and the publication lifecycle is what drives synchronization.",
+      { contentTypeId: id },
+    );
+  }
+
+  if (!publicApi.enabled) {
+    throw new ContentEngineError(
+      "search needs `publicApi: { enabled: true, path, fields }`. A search hit links to a public URL, and every indexed field has to be published already.",
+      { contentTypeId: id },
+    );
+  }
+
+  if (id.length > CONTENT_SEARCH_ITEM_TYPE_MAX_LENGTH) {
+    throw new ContentEngineError(
+      `Content type id "${id}" is longer than ${CONTENT_SEARCH_ITEM_TYPE_MAX_LENGTH} characters, which is the width of the search index's item type column. Shorten the id or turn search off.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const exposed = new Set(publicApi.fields);
+
+  const { titleField } = search;
+  assertSearchField({
+    exposed,
+    fields,
+    id,
+    kinds: searchTitleKinds,
+    label: "search.titleField",
+    name: titleField,
+  });
+
+  const descriptionField = search.descriptionField ?? null;
+  if (descriptionField !== null) {
+    assertSearchField({
+      exposed,
+      fields,
+      id,
+      kinds: searchDescriptionKinds,
+      label: "search.descriptionField",
+      name: descriptionField,
+    });
+  }
+
+  // `Array.isArray` rather than a cast: a JavaScript caller can put anything
+  // here, and a `.map` on a bare string would be a TypeError instead of the
+  // error message below.
+  const contentFields = Array.isArray(search.contentFields)
+    ? [...search.contentFields]
+    : [];
+  if (contentFields.length === 0) {
+    throw new ContentEngineError(
+      "search.contentFields is empty. List at least one field to index - a document with only a title matches almost nothing.",
+      { contentTypeId: id },
+    );
+  }
+
+  const duplicate = contentFields.find(
+    (name, position) => contentFields.indexOf(name) !== position,
+  );
+  if (duplicate !== undefined) {
+    throw new ContentEngineError(
+      `search.contentFields lists "${duplicate}" twice.`,
+      { contentTypeId: id },
+    );
+  }
+
+  for (const name of contentFields) {
+    assertSearchField({
+      exposed,
+      fields,
+      id,
+      kinds: searchTextKinds,
+      label: "search.contentFields",
+      name,
+    });
+  }
+
+  assertSearchPathTemplate(id, search.pathTemplate);
+
+  return {
+    contentFields,
+    descriptionField,
+    enabled: true,
+    pathTemplate: search.pathTemplate,
+    titleField,
+  };
+};
+
 /**
  * Declares a content type. The result is plain data - zod and objects only -
  * so the same definition can be imported by `buildPlugin` (client) and by
@@ -565,6 +784,15 @@ export const defineContentType = <
   TPublication extends boolean = false,
   TPublicField extends ContentPublicExposableField<TFields> = never,
   TPublicEnabled extends boolean = false,
+  // Inferred from the `search` literal and checked against the public allowlist.
+  // The constraint is verified once every other parameter is resolved, which is
+  // what makes "an indexed field is a public field" a compile error.
+  TSearchTitle extends ContentSearchTitleField<TFields, TPublicField> = never,
+  TSearchDescription extends ContentSearchDescriptionField<
+    TFields,
+    TPublicField
+  > = never,
+  TSearchText extends ContentSearchTextField<TFields, TPublicField> = never,
 >({
   admin,
   fields,
@@ -572,6 +800,7 @@ export const defineContentType = <
   indexes = [],
   publicApi,
   publication,
+  search,
   tableName,
 }: {
   admin: ContentAdminConfig<TFields, TPublication>;
@@ -586,6 +815,14 @@ export const defineContentType = <
     ContentPublicApiConfig<TPublicField> | { enabled: TPublicEnabled };
   /** Opts into the draft/published lifecycle. Omit to stay on Stage 1 behaviour. */
   publication?: ContentPublicationConfig | { enabled: TPublication };
+  /**
+   * Opts into automatic search synchronization. Needs `publication` and
+   * `publicApi`, and every indexed field must be in `publicApi.fields`. Omit it
+   * and nothing is indexed.
+   */
+  search?:
+    | ContentSearchConfig<TSearchTitle, TSearchDescription, TSearchText>
+    | { enabled: false };
   tableName: string;
 }): ContentTypeDefinition<
   TId,
@@ -675,6 +912,16 @@ export const defineContentType = <
     publicationEnabled,
   );
 
+  const resolvedSearch = resolveSearch(
+    id,
+    fieldMap,
+    // Same shape of widening as `publicApi` above: the `{ enabled: false }` arm
+    // exists only so an explicit literal typechecks.
+    search as ContentSearchConfig | undefined,
+    resolvedPublicApi,
+    publicationEnabled,
+  );
+
   return {
     admin: resolvedAdmin,
     fields,
@@ -702,6 +949,7 @@ export const defineContentType = <
       publicApi: resolvedPublicApi,
       publication: publicationEnabled,
     }),
+    search: resolvedSearch,
     tableName,
   };
 };

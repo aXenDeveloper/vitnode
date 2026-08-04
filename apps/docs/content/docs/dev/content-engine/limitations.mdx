@@ -26,7 +26,7 @@ other 20%, so you find out here rather than halfway through building.
 | Deep relation nesting in a public response | One level, one key. Anything more is a custom route |
 | Origin `Cache-Control` headers | [Tags](/docs/dev/content-engine/caching) handle Next-side caching; add headers in your own route |
 | Per-route rate limits | The global IP bucket applies; anything finer is yours |
-| Search indexing | Register a `SearchIndexer` yourself |
+| Search: author facet, per-locale documents, relation containers | [`search`](/docs/dev/content-engine/search) indexes public text fields. Anything richer needs your own `SearchIndexer` |
 | Automatic field renames | See below |
 | Unique constraints on more than one column | Declare them in `indexes`, not on the field |
 | Uniqueness on non-`text` fields | Declare the index in `indexes` |
@@ -132,16 +132,25 @@ suffixes in the [slug backfill
 recipe](/docs/dev/content-engine/slug-field#migrations) are a one-off,
 deterministic migration device for rows that predate the column.
 
-## Direct service calls invalidate no cache
+## Direct service calls invalidate no cache and index nothing
 
 `service.publish()` and friends change rows and return the result. They emit no
-event and expire no cache tag: they may be inside an uncommitted transaction,
-they may be running in `apps/api` where there is no Next runtime at all, and the
-Next cache APIs need a request scope a repository does not own.
+event, expire no cache tag and touch no search document: they may be inside an
+uncommitted transaction, they may be running in `apps/api` where there is no Next
+runtime at all, and the Next cache APIs need a request scope a repository does
+not own.
 
 Every generated write path goes through an AdminCP server action, which does all
 three. A direct caller does its own follow-up, after committing - see
-[Caching](/docs/dev/content-engine/caching#writing-who-expires-what).
+[Caching](/docs/dev/content-engine/caching#writing-who-expires-what) and
+[Search](/docs/dev/content-engine/search#direct-service-calls-do-not-synchronize).
+
+## A search engine outage does not undo a write
+
+Search synchronization is best effort. A content mutation succeeds, the failure is
+logged with a `[content-search]` prefix and surfaced in the AdminCP, and a rebuild
+repairs the drift. There is no automatic retry and no outbox, so the index is
+eventually consistent - bounded by the next publish or the next rebuild.
 
 ## The public cursor is always the row id
 

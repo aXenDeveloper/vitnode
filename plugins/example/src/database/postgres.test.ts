@@ -1,5 +1,10 @@
+import type { ContentSearchOperation } from "@vitnode/core/content/server";
 import type { Context } from "hono";
 
+import {
+  createContentSearchIndexer,
+  syncContentSearch,
+} from "@vitnode/core/content/server";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -8,6 +13,7 @@ import postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { EXAMPLE_MIGRATIONS } from "@/const";
+import { articleContentType } from "@/content/article";
 
 import { articleContent } from "./articles";
 import { categoryContent } from "./categories";
@@ -123,6 +129,7 @@ const CORE_USERS_STUB = `
 
 let sql: ReturnType<typeof postgres>;
 let context: Context;
+let db: ReturnType<typeof drizzle>;
 let serverMajor = 0;
 
 const pgErrorCode = async (run: () => Promise<unknown>) => {
@@ -202,9 +209,9 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
       )
     `;
 
+    db = drizzle(sql, { casing: "camelCase" });
     context = {
-      get: (key: string) =>
-        key === "db" ? drizzle(sql, { casing: "camelCase" }) : undefined,
+      get: (key: string) => (key === "db" ? db : undefined),
     } as unknown as Context;
   }, 60_000);
 
@@ -738,6 +745,213 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     await sql`DELETE FROM "core_users" WHERE "id" = ${user.id}`;
     await categories.delete(category.id);
   }, 60_000);
+
+  it("runs the whole search lifecycle", async () => {
+    const categories = categoryContent.service(context);
+    const articles = articleContent.service(context);
+    const indexer = createContentSearchIndexer(articleContent);
+
+    // The search engine is the one thing stubbed here: `core_search_index` is a
+    // core table whose generated column needs text-search configurations a stock
+    // Postgres image does not ship (the same reason `core_users` is a stub). The
+    // publication state every decision below turns on is real.
+    const calls: { args: unknown[]; op: "delete" | "index" }[] = [];
+    const searchContext = {
+      get: (key: string) => {
+        if (key === "search") {
+          return {
+            delete: async (...args: unknown[]) => {
+              calls.push({ args, op: "delete" });
+              await Promise.resolve();
+            },
+            index: async (...args: unknown[]) => {
+              calls.push({ args, op: "index" });
+              await Promise.resolve();
+            },
+          };
+        }
+        if (key === "log") {
+          return {
+            debug: async () => await Promise.resolve(),
+            error: async () => await Promise.resolve(),
+            warn: async () => await Promise.resolve(),
+          };
+        }
+
+        return db;
+      },
+    } as unknown as Context;
+
+    const sync = async (
+      operation: ContentSearchOperation,
+      input: { changed?: boolean; changedFields?: string[]; row: object },
+    ) =>
+      await syncContentSearch(searchContext, articleContentType, {
+        operation,
+        ...input,
+      });
+
+    const category = await categories.create({ name: "Searchable" });
+    const draft = await articles.create({
+      category: category.id,
+      code: "search-001",
+      excerpt: "A findable summary",
+      title: "Findable article",
+    });
+
+    // A draft is never indexed, and the decision is made from the real row.
+    await expect(sync("create", { row: draft })).resolves.toMatchObject({
+      action: "skip",
+    });
+    await expect(indexer.count?.(context)).resolves.toBe(0);
+    await expect(indexer.load(context, 0, 10)).resolves.toEqual([]);
+
+    const published = await articles.publish(draft.id);
+    if (!published) throw new Error("Expected a publish result.");
+
+    const upsert = await sync("publish", {
+      changed: published.changed,
+      row: published.row,
+    });
+    expect(upsert.action).toBe("upsert");
+    expect(upsert.documentId).toBe(`example.article:${draft.id}`);
+    expect(calls.at(-1)?.op).toBe("index");
+    expect(calls.at(-1)?.args[0]).toMatchObject({
+      // `title` is one of the example's `contentFields`, and `excerpt` is both
+      // the description and the second one - so it appears once, not twice.
+      content: "Findable article\n\nA findable summary",
+      isPublic: true,
+      itemId: draft.id,
+      itemType: "example.article",
+      title: "Findable article",
+      url: "/articles/findable-article",
+    });
+
+    // Only published rows reach the rebuild, and only the projected columns.
+    await expect(indexer.count?.(context)).resolves.toBe(1);
+    const [document] = await indexer.load(context, 0, 10);
+    expect(document).toMatchObject({
+      itemId: draft.id,
+      itemType: "example.article",
+      url: "/articles/findable-article",
+    });
+    // The private columns are not in the document, and the author is not in it
+    // either - a user field is never public, so it is never indexed.
+    expect(JSON.stringify(document)).not.toContain("search-001");
+    expect(document).not.toHaveProperty("authorId");
+
+    // Offsets page over the published rows deterministically.
+    await expect(indexer.load(context, 1, 10)).resolves.toEqual([]);
+
+    // An idempotent publish writes nothing.
+    const noop = await articles.publish(draft.id);
+    expect(noop?.changed).toBe(false);
+    const before = calls.length;
+    await expect(
+      sync("publish", { changed: noop?.changed, row: noop?.row ?? {} }),
+    ).resolves.toMatchObject({ action: "skip" });
+    expect(calls).toHaveLength(before);
+
+    // An update that moves no indexed field writes nothing.
+    const bumped = await articles.update(draft.id, { views: 5 });
+    await expect(
+      sync("update", {
+        changedFields: bumped?.changedFields,
+        row: bumped?.row ?? {},
+      }),
+    ).resolves.toMatchObject({ action: "skip" });
+
+    // A slug change rewrites the url in place - there is no stale document,
+    // because the document is keyed by item type and id.
+    const renamed = await articles.update(draft.id, { slug: "moved-article" });
+    await expect(
+      sync("update", {
+        changedFields: renamed?.changedFields,
+        row: renamed?.row ?? {},
+      }),
+    ).resolves.toMatchObject({ action: "upsert" });
+    expect(calls.at(-1)?.args[0]).toMatchObject({
+      url: "/articles/moved-article",
+    });
+    await expect(indexer.load(context, 0, 10)).resolves.toMatchObject([
+      { url: "/articles/moved-article" },
+    ]);
+
+    // Unpublishing removes the document and takes the row out of the rebuild.
+    const unpublished = await articles.unpublish(draft.id);
+    await expect(
+      sync("unpublish", {
+        changed: unpublished?.changed,
+        row: unpublished?.row ?? {},
+      }),
+    ).resolves.toMatchObject({ action: "delete" });
+    expect(calls.at(-1)).toMatchObject({
+      args: ["example.article", draft.id],
+      op: "delete",
+    });
+    await expect(indexer.count?.(context)).resolves.toBe(0);
+    await expect(indexer.load(context, 0, 10)).resolves.toEqual([]);
+
+    // A future publication date is not public, so it is not indexed either -
+    // the same `publishedAt <= now()` rule the public read layer uses.
+    await articles.publish(draft.id);
+    await sql`
+      UPDATE "example_articles"
+      SET "publishedAt" = now() + interval '1 day'
+      WHERE "id" = ${draft.id}
+    `;
+    await expect(indexer.load(context, 0, 10)).resolves.toEqual([]);
+    const scheduled = await articles.findById(draft.id);
+    await expect(
+      sync("update", { changedFields: ["title"], row: scheduled ?? {} }),
+    ).resolves.toMatchObject({ action: "skip" });
+
+    await sql`UPDATE "example_articles" SET "publishedAt" = now() WHERE "id" = ${draft.id}`;
+
+    // Deleting a published record removes its document; `publishedAt` survives
+    // an unpublish, so a record that was ever published is cleaned up too.
+    const deleted = await articles.delete(draft.id);
+    await expect(sync("delete", { row: deleted ?? {} })).resolves.toMatchObject(
+      { action: "delete" },
+    );
+
+    const neverPublished = await articles.create({
+      category: category.id,
+      code: "search-002",
+      title: "Never published",
+    });
+    await expect(
+      sync("delete", { row: neverPublished }),
+    ).resolves.toMatchObject({ action: "skip" });
+
+    await articles.delete(neverPublished.id);
+    await categories.delete(category.id);
+  }, 60_000);
+
+  it("adds no columns or indexes for search", async () => {
+    // Search is a projection of columns that already exist. If it ever needed
+    // one of its own, every content type opting in would need a migration.
+    const columns = await sql<{ column_name: string }[]>`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'example_articles'
+    `;
+
+    expect(columns.map(row => row.column_name).sort()).toEqual([
+      "author",
+      "category",
+      "code",
+      "createdAt",
+      "excerpt",
+      "featured",
+      "id",
+      "publishedAt",
+      "slug",
+      "status",
+      "title",
+      "updatedAt",
+      "views",
+    ]);
+  });
 
   it("has no public service without a public API", () => {
     // `example.category` opts into neither publication nor `publicApi`.

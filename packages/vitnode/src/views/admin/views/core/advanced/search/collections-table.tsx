@@ -51,9 +51,12 @@ const statusStyles: Record<
 
 export const CollectionsTable = async ({
   collections,
+  labels,
   search,
 }: {
   collections: SearchCollection[];
+  /** Content type id -> label, for collections the renderer registry has no entry for. */
+  labels?: Map<string, string>;
   search?: string;
 }) => {
   const t = await getTranslations("core.search");
@@ -62,7 +65,9 @@ export const CollectionsTable = async ({
     .map((collection, index) => ({
       ...collection,
       id: index,
-      label: t(getSearchTypeRenderer(collection.itemType).labelKey),
+      label:
+        labels?.get(collection.itemType) ??
+        t(getSearchTypeRenderer(collection.itemType).labelKey),
     }))
     .sort((a, b) => b.indexed - a.indexed || a.label.localeCompare(b.label));
 
@@ -98,6 +103,10 @@ export const CollectionsTable = async ({
               >
                 <span className={cn("size-1.5 rounded-full", styles.dot)} />
                 {t(`admin.collections.status.${status}`)}
+                <span className="text-muted-foreground truncate">
+                  <span aria-hidden>· </span>
+                  {row.pluginId}
+                </span>
               </span>
             </div>
           </div>

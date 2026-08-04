@@ -20,6 +20,7 @@ import { orderableColumns } from "../registry";
 import { emitContentEvent } from "./emit";
 import { withHttpErrors } from "./http-errors";
 import { publicationMethods } from "./publication";
+import { syncContentSearch } from "./search-sync";
 
 const zodLabels = z.record(z.string(), z.string().nullable());
 
@@ -242,6 +243,11 @@ export const buildContentRoutes = <
       // Emitted only once the write has returned, never inside a transaction.
       await emitContentEvent(c, definition, "created", { contentId: row.id });
 
+      // A new record is a draft, so this normally indexes nothing - but it is
+      // computed from the row rather than assumed, the same way the Server
+      // Action computes its cache tags.
+      await syncContentSearch(c, definition, { operation: "create", row });
+
       return c.json(row, 201);
     },
   });
@@ -279,6 +285,14 @@ export const buildContentRoutes = <
           contentId: result.row.id,
         });
       }
+
+      // A slug change is just a rewritten `url`: the search document is keyed by
+      // item type and id, so there is no stale document to clean up.
+      await syncContentSearch(c, definition, {
+        changedFields: result.changedFields,
+        operation: "update",
+        row: result.row,
+      });
 
       return c.json(result.row, 200);
     },
@@ -329,6 +343,12 @@ export const buildContentRoutes = <
           );
         }
 
+        await syncContentSearch(c, definition, {
+          changed: result.changed,
+          operation: action,
+          row: result.row,
+        });
+
         return c.json({ changed: result.changed, row: result.row }, 200);
       },
     });
@@ -358,6 +378,11 @@ export const buildContentRoutes = <
       if (!row) throw notFound(definition);
 
       await emitContentEvent(c, definition, "deleted", { contentId: row.id });
+
+      // `publishedAt` survives an unpublish, so a record that was ever published
+      // is removed from the index defensively - a delete of a document that is
+      // not there costs one statement and repairs any drift.
+      await syncContentSearch(c, definition, { operation: "delete", row });
 
       return c.json(row, 200);
     },

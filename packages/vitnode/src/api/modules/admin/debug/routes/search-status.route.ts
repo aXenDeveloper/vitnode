@@ -1,9 +1,14 @@
-import { countDistinct, max } from "drizzle-orm";
+import { and, countDistinct, desc, eq, like, max } from "drizzle-orm";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
 import { CONFIG_PLUGIN } from "@/config";
+import { core_logs } from "@/database/logs";
 import { core_search_index } from "@/database/search";
+
+const CONTENT_SEARCH_LOG_PREFIX = "[content-search]";
+
+const SYNC_ERROR_LIMIT = 10;
 
 const collectionSchema = z.object({
   indexed: z.number(),
@@ -11,6 +16,13 @@ const collectionSchema = z.object({
   lastIndexedAt: z.date().nullable(),
   pluginId: z.string(),
   total: z.number(),
+});
+
+const syncErrorSchema = z.object({
+  content: z.string(),
+  createdAt: z.date(),
+  id: z.number(),
+  pluginId: z.string(),
 });
 
 export const searchStatusDebugAdminRoute = buildRoute({
@@ -31,6 +43,7 @@ export const searchStatusDebugAdminRoute = buildRoute({
               hasCronAdapter: z.boolean(),
               healthy: z.boolean(),
               lastIndexedAt: z.date().nullable(),
+              syncErrors: z.array(syncErrorSchema),
               total: z.number(),
             }),
           },
@@ -56,6 +69,26 @@ export const searchStatusDebugAdminRoute = buildRoute({
       .groupBy(core_search_index.itemType);
 
     const statsByType = new Map(indexedByType.map(row => [row.itemType, row]));
+
+    // Newest first, and bounded: this is a "what went wrong lately" panel, not a
+    // log viewer. `LIKE 'prefix%'` needs no escaping - the prefix contains
+    // neither `%` nor `_`.
+    const syncErrors = await db
+      .select({
+        id: core_logs.id,
+        pluginId: core_logs.pluginId,
+        content: core_logs.content,
+        createdAt: core_logs.createdAt,
+      })
+      .from(core_logs)
+      .where(
+        and(
+          eq(core_logs.type, "error"),
+          like(core_logs.content, `${CONTENT_SEARCH_LOG_PREFIX}%`),
+        ),
+      )
+      .orderBy(desc(core_logs.id))
+      .limit(SYNC_ERROR_LIMIT);
 
     // Start from every registered indexer so a collection with nothing indexed
     // yet still appears; then fold in any indexed type without a live indexer.
@@ -97,6 +130,7 @@ export const searchStatusDebugAdminRoute = buildRoute({
       hasCronAdapter: core.hasCronAdapter,
       healthy: await search.ping(),
       lastIndexedAt,
+      syncErrors,
       total: collections.reduce((sum, row) => sum + row.indexed, 0),
     });
   },

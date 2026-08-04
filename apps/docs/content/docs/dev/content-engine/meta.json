@@ -13,6 +13,7 @@
     "slug-field",
     "public-api",
     "public-service",
+    "search",
     "caching",
     "admincp",
     "permissions",

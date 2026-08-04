@@ -54,6 +54,21 @@ export const articleContentType = defineContentType({
     defaultOrder: "desc",
   },
 
+  // Published articles are kept in the site-wide search index automatically:
+  // publishing adds the document, editing an indexed field or the slug rewrites
+  // it, unpublishing and deleting remove it. Drafts are never indexed.
+  //
+  // Every field named here is also in `publicApi.fields` - that is enforced by
+  // the types, not just by review. Naming `code` or `author` would not compile,
+  // which is what stops a private value surfacing in a result snippet.
+  search: {
+    enabled: true,
+    titleField: "title",
+    descriptionField: "excerpt",
+    contentFields: ["title", "excerpt"],
+    pathTemplate: "/articles/{slug}",
+  },
+
   // The generated columns are addressable here too. `(status, publishedAt)` is
   // generated automatically; this one backs "newest drafts first".
   indexes: [{ on: ["status", "createdAt"] }],

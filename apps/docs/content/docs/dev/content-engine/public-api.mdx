@@ -274,6 +274,13 @@ response schema generated from the projection. Only `get` operations are ever
 built - there is no public create, update, delete, publish or unpublish, and no
 flag that would add one.
 
+## The allowlist bounds search too
+
+[`search`](/docs/dev/content-engine/search) can only index fields that are in
+`fields`, and that is a compile error rather than a convention - a private value
+must not surface through a result snippet, a highlighted match or an exact-match
+probe either.
+
 ## What this is not
 
 No public writes, ever. No `Cache-Control` headers - HTTP caching is handled

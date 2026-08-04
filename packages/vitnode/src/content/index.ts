@@ -52,6 +52,12 @@ export {
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_PUBLICATION_STATUS_LENGTH,
   CONTENT_PUBLICATION_STATUSES,
+  CONTENT_SEARCH_DESCRIPTION_KINDS,
+  CONTENT_SEARCH_ITEM_TYPE_MAX_LENGTH,
+  CONTENT_SEARCH_PATH_MAX_LENGTH,
+  CONTENT_SEARCH_SLUG_PLACEHOLDER,
+  CONTENT_SEARCH_TEXT_KINDS,
+  CONTENT_SEARCH_TITLE_KINDS,
   CONTENT_SLUG_DEFAULT_LENGTH,
   CONTENT_SYSTEM_FIELDS,
   CONTENT_TEXT_DEFAULT_LENGTH,
@@ -87,6 +93,11 @@ export {
 export type { RegisteredContentType } from "./registry";
 export { buildContentSchemas } from "./schemas";
 export type { ContentSchemas } from "./schemas";
+export {
+  contentSearchDocumentId,
+  contentSearchIndexedFieldNames,
+  contentSearchUrl,
+} from "./search";
 export { slugify } from "./slug";
 export type {
   AnyContentTypeDefinition,
@@ -123,6 +134,10 @@ export type {
   ContentReferenceField,
   ContentReferenceFieldName,
   ContentRelationField,
+  ContentSearchConfig,
+  ContentSearchDescriptionField,
+  ContentSearchTextField,
+  ContentSearchTitleField,
   ContentSelect,
   ContentSlugField,
   ContentSlugRequired,
@@ -138,4 +153,6 @@ export type {
   ResolvedContentIndex,
   ResolvedContentPublicApiConfig,
   ResolvedContentPublicationConfig,
+  ResolvedContentSearchConfig,
+  SearchableContentTypeDefinition,
 } from "./types";

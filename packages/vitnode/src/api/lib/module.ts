@@ -2,6 +2,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 
 import type { AnyContentTypeDefinition } from "@/content/types";
 
+import type { SearchIndexer } from "../models/search";
 import type { BuildCronReturn } from "./cron";
 import type { BuildEventListenerReturn } from "./events";
 import type { BuildQueueTaskReturn } from "./queue";
@@ -33,6 +34,7 @@ export interface BaseBuildModuleReturn<
   pluginId: P;
   queueTasks: BuildQueueTaskReturn[];
   routes: Routes;
+  searchIndexers?: SearchIndexer[];
   webSockets: BuildWebSocketReturn[];
 }
 
@@ -59,6 +61,7 @@ export function buildModule<
   cronJobs = [],
   events = [],
   queueTasks = [],
+  searchIndexers,
   webSockets = [],
 }: {
   contentTypes?: AnyContentTypeDefinition[];
@@ -69,6 +72,7 @@ export function buildModule<
   pluginId: P;
   queueTasks?: BuildQueueTaskReturn[];
   routes: Routes;
+  searchIndexers?: SearchIndexer[];
   webSockets?: BuildWebSocketReturn[];
 }): BuildModuleReturn<P, M, Routes, Modules> {
   const hono = new OpenAPIHono();
@@ -95,6 +99,7 @@ export function buildModule<
     cronJobs,
     events,
     queueTasks,
+    searchIndexers,
     webSockets,
   };
 }
