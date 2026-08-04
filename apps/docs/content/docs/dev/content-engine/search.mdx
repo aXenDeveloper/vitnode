@@ -37,9 +37,7 @@ export const articleContentType = defineContentType({
     pathTemplate: "/articles/{slug}",
   },
 
-  admin: {
-    /* ... */
-  },
+  admin: {/* ... */},
 });
 ```
 
@@ -48,27 +46,27 @@ linking to `/articles/its-slug`.
 
 ## The options
 
-| Option | Required | What it is |
-| --- | --- | --- |
-| `enabled` | yes | Literal `true`. Omit the block, or pass `{ enabled: false }`, and nothing is indexed |
-| `titleField` | yes | The result heading. A **non-nullable** `text` field, weighted above the body by the index |
-| `contentFields` | yes | Concatenated into the searchable body, in order. At least one |
-| `pathTemplate` | yes | The public URL of one record. Relative, with `{slug}` as the only placeholder |
-| `descriptionField` | no | Leads the body, so it shows up first in a result excerpt |
+| Option             | Required | What it is                                                                                |
+| ------------------ | -------- | ----------------------------------------------------------------------------------------- |
+| `enabled`          | yes      | Literal `true`. Omit the block, or pass `{ enabled: false }`, and nothing is indexed      |
+| `titleField`       | yes      | The result heading. A **non-nullable** `text` field, weighted above the body by the index |
+| `contentFields`    | yes      | Concatenated into the searchable body, in order. At least one                             |
+| `pathTemplate`     | yes      | The public URL of one record. Relative, with `{slug}` as the only placeholder             |
+| `descriptionField` | no       | Leads the body, so it shows up first in a result excerpt                                  |
 
 `search` is **opt-in**. Every existing content type keeps working untouched, and
 so does every hand-written `SearchIndexer`.
 
 ## Supported field kinds
 
-| Kind | `titleField` | `descriptionField` | `contentFields` |
-| --- | :-: | :-: | :-: |
-| `text` | ✅ | ✅ | ✅ |
-| `textarea` | ❌ | ✅ | ✅ |
-| `slug` | ❌ | ❌ | ✅ |
-| `enum`, `number`, `boolean`, `dateTime` | ❌ | ❌ | ❌ |
-| `relation` | ❌ | ❌ | ❌ |
-| `user` | ❌ | ❌ | ❌ |
+| Kind                                    | `titleField` | `descriptionField` | `contentFields` |
+| --------------------------------------- | :----------: | :----------------: | :-------------: |
+| `text`                                  |      ✅      |         ✅         |       ✅        |
+| `textarea`                              |      ❌      |         ✅         |       ✅        |
+| `slug`                                  |      ❌      |         ❌         |       ✅        |
+| `enum`, `number`, `boolean`, `dateTime` |      ❌      |         ❌         |       ❌        |
+| `relation`                              |      ❌      |         ❌         |       ❌        |
+| `user`                                  |      ❌      |         ❌         |       ❌        |
 
 A title is one line, so prose from a `textarea` in that slot would drag down
 ranking for every other document in the index. It also cannot be nullable: a
@@ -81,8 +79,12 @@ is [never public](#every-indexed-field-must-be-public).
 ## Search needs publication and a public API
 
 ```ts
-publication: { enabled: true }   // only published records are indexed
-publicApi:   { enabled: true }   // a hit links to a public URL
+publication: {
+  enabled: true;
+} // only published records are indexed
+publicApi: {
+  enabled: true;
+} // a hit links to a public URL
 ```
 
 Both are checked when the definition is built, so a missing one is a startup
@@ -121,7 +123,7 @@ see [Limitations](#limitations).
 `pathTemplate` is a plain string with one placeholder:
 
 ```ts
-pathTemplate: "/articles/{slug}"   // -> /articles/getting-started
+pathTemplate: "/articles/{slug}"; // -> /articles/getting-started
 ```
 
 - **Relative only.** Search results are rendered into links client-side.
@@ -137,20 +139,20 @@ because a document is identified by its content type and row id, not by its URL.
 
 ## What gets synchronized
 
-| You do this | Search does this |
-| --- | --- |
-| Create a draft | nothing |
-| Update a draft | nothing |
-| **Publish** | add or update the document |
-| Publish something already published | nothing |
-| Update a published record's indexed field | update the document |
-| Change a published slug | update the document's URL |
-| Update a field that is not indexed | nothing |
-| **Unpublish** | remove the document |
-| Unpublish something already a draft | nothing |
-| Delete a published record | remove the document |
-| Delete a record that was published before | remove the document |
-| Delete a draft that was never published | nothing |
+| You do this                               | Search does this           |
+| ----------------------------------------- | -------------------------- |
+| Create a draft                            | nothing                    |
+| Update a draft                            | nothing                    |
+| **Publish**                               | add or update the document |
+| Publish something already published       | nothing                    |
+| Update a published record's indexed field | update the document        |
+| Change a published slug                   | update the document's URL  |
+| Update a field that is not indexed        | nothing                    |
+| **Unpublish**                             | remove the document        |
+| Unpublish something already a draft       | nothing                    |
+| Delete a published record                 | remove the document        |
+| Delete a record that was published before | remove the document        |
+| Delete a draft that was never published   | nothing                    |
 
 "Published" is the same rule the public API uses:
 `status = 'published' AND publishedAt IS NOT NULL AND publishedAt <= now()`.
@@ -190,7 +192,8 @@ Inside a transaction, put the call **after** the commit:
 const result = await db.transaction(async tx =>
   model.service(c).publish(id, { tx }),
 );
-if (result) await syncContentSearch(c, definition, { operation: "publish", ...result });
+if (result)
+  await syncContentSearch(c, definition, { operation: "publish", ...result });
 ```
 
 It needs a Hono `Context` (for `c.get("search")`), so it runs in the API process.
@@ -207,8 +210,8 @@ the document is not      -> logged, and repaired by a rebuild
 
 The failure is written to `core_logs` behind a `[content-search]` prefix with the
 content type, the owning plugin, the record id, the operation and the error, and
-the newest few show up in **AdminCP → Advanced → Search** as *Recent sync
-failures*. There is no automatic retry.
+the newest few show up in **AdminCP → Advanced → Search** as _Recent sync
+failures_. There is no automatic retry.
 
 Logging is best effort too. It writes to the database, so it can be down for the
 same reason the search engine is - and a failed log entry must not fail the
@@ -217,8 +220,8 @@ the console instead, and the returned outcome still carries the **original searc
 error** rather than the logger's.
 
 <Callout type="info" title="Eventually consistent, and bounded">
-  With the bundled Postgres engine the window is tiny: the document is written to
-  the same database as the record, so it fails essentially only when that
+  With the bundled Postgres engine the window is tiny: the document is written
+  to the same database as the record, so it fails essentially only when that
   database is down - in which case the record did not save either. With an
   external engine like [Elasticsearch](/docs/dev/search) the index can genuinely
   drift, and a rebuild is what closes the gap.
@@ -259,16 +262,16 @@ many rows produced it.
 
 Coverage compares **published** records against indexed ones, so a mostly-draft
 collection still reads 100%. Both numbers are reported as measured, and a
-collection is *Indexed* only when they match exactly:
+collection is _Indexed_ only when they match exactly:
 
-| Counts | Status |
-| --- | --- |
-| `0 / 0` | Not indexed |
-| `0 / 10` | Not indexed |
-| `5 / 10` | Stale - documents missing |
-| `10 / 10` | Indexed |
-| `11 / 10` | Stale - documents left over |
-| `11 / —` | Unmanaged - no rebuild indexer |
+| Counts    | Status                         |
+| --------- | ------------------------------ |
+| `0 / 0`   | Not indexed                    |
+| `0 / 10`  | Not indexed                    |
+| `5 / 10`  | Stale - documents missing      |
+| `10 / 10` | Indexed                        |
+| `11 / 10` | Stale - documents left over    |
+| `11 / —`  | Unmanaged - no rebuild indexer |
 
 Over-indexing is a real state: documents that survive for records which no longer
 qualify. The source count is never raised to hide it, and the progress bar is
@@ -306,14 +309,14 @@ A hand-written indexer that names no owner is stamped with the plugin that
 registered it, so it does not need changing. A blank owner counts as naming
 nobody.
 
-The AdminCP shows the registered indexer's plugin. A collection with documents but
-no live indexer - an uninstalled or renamed plugin - shows the owner stored on its
+A collection with documents but no registered rebuild indexer shows the owner
+stored on its documents. - shows the owner stored on its
 documents, and `unknown` only when neither source knows. It is never relabelled as
 core.
 
 Such a collection is **unmanaged by the rebuild system**: it is labelled
-*Unmanaged*, its coverage is left blank because there is no source to measure
-against, and *Reindex* is replaced by *Remove documents*. A scoped rebuild of it is
+_Unmanaged_, its coverage is left blank because there is no source to measure
+against, and _Reindex_ is replaced by _Remove documents_. A scoped rebuild of it is
 refused rather than silently clearing it - see [unmanaged
 collections](/docs/dev/search#unmanaged-collections).
 
@@ -343,17 +346,17 @@ other.
 
 ## Limitations
 
-| Not supported | Why |
-| --- | --- |
-| Author facet | A `user` field is never public, and the public search route resolves `authorId` into a person |
-| One document per locale | Content fields are single-language columns. A document is language-agnostic and matches every locale |
-| Per-locale stemming | Same reason - a language-agnostic document uses the `simple` text-search configuration |
-| Relation expansion | A relation is a foreign key; the index has no place to put one |
-| Locale-prefixed URLs | `pathTemplate` produces one relative path |
-| A custom icon or label in the public feed | Content hits use the generic renderer. The registry in core is not plugin-extensible yet |
-| Automatic retry | Best effort plus a rebuild. There is no durable retry mechanism - an outbox is a later addition |
-| Keyset paging during a rebuild | The indexer contract pages by offset |
-| Blank titles written straight into the database | Rejected by the mapper, and visible as an under-indexed collection |
+| Not supported                                   | Why                                                                                                  |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Author facet                                    | A `user` field is never public, and the public search route resolves `authorId` into a person        |
+| One document per locale                         | Content fields are single-language columns. A document is language-agnostic and matches every locale |
+| Per-locale stemming                             | Same reason - a language-agnostic document uses the `simple` text-search configuration               |
+| Relation expansion                              | A relation is a foreign key; the index has no place to put one                                       |
+| Locale-prefixed URLs                            | `pathTemplate` produces one relative path                                                            |
+| A custom icon or label in the public feed       | Content hits use the generic renderer. The registry in core is not plugin-extensible yet             |
+| Automatic retry                                 | Best effort plus a rebuild. There is no durable retry mechanism - an outbox is a later addition      |
+| Keyset paging during a rebuild                  | The indexer contract pages by offset                                                                 |
+| Blank titles written straight into the database | Rejected by the mapper, and visible as an under-indexed collection                                   |
 
 ## Related
 
