@@ -53,8 +53,8 @@ const slugMigrationAt = EXAMPLE_MIGRATIONS.indexOf(SLUG_MIGRATION);
 
 /**
  * The longest title the column allows, so `left(title, 160)` fills the slug
- * exactly. Two rows sharing it are the case that used to overflow: the base was
- * already 160 characters and the duplicate pass appended `-<id>` on top.
+ * exactly. Two rows sharing it are the overflow case: the base is already 160
+ * characters before anything is appended to it.
  */
 const LONG_TITLE = "Lorem ipsum dolor sit amet ".repeat(7).slice(0, 200);
 
@@ -62,14 +62,31 @@ const LONG_TITLE = "Lorem ipsum dolor sit amet ".repeat(7).slice(0, 200);
  * Rows the slug backfill has to cope with, inserted *between* `0023` and the
  * slug migration so the committed SQL runs against real data rather than an
  * empty table.
+ *
+ * The ids are **explicit**, because two of these scenarios are about a
+ * generated value colliding with a natural one and that only happens at
+ * particular ids. Letting the sequence pick them would make the regression
+ * appear and disappear with the insertion order.
  */
 const BACKFILL_ROWS = [
-  { code: "mig-1", title: "Same Title" },
-  { code: "mig-2", title: "Same Title" },
-  { code: "mig-3", title: LONG_TITLE },
-  { code: "mig-4", title: LONG_TITLE },
-  { code: "mig-5", title: "日本語のタイトル" },
-  { code: "mig-6", title: "Only One Of These" },
+  // A natural slug that a *rescue* value can be built to match. Suffixing only
+  // the ambiguous rows turns the pair below into "foo-2" and "foo-3" - and
+  // "foo-2" is already sitting here, on row 1.
+  { code: "mig-foo-2", id: 1, title: "Foo 2" },
+  { code: "mig-foo-a", id: 2, title: "Foo" },
+  { code: "mig-foo-b", id: 3, title: "Foo" },
+
+  // The same trap, one step shorter: a title that normalises to nothing falls
+  // back to its bare id, and row 6's title genuinely normalises to that number.
+  { code: "mig-empty", id: 5, title: "日本語のタイトル" },
+  { code: "mig-numeric", id: 6, title: "5" },
+
+  // Two identical titles that already fill the column.
+  { code: "mig-long-a", id: 7, title: LONG_TITLE },
+  { code: "mig-long-b", id: 8, title: LONG_TITLE },
+
+  // Unambiguous, and suffixed all the same - that is the trade the fix makes.
+  { code: "mig-unique", id: 9, title: "Only One Of These" },
 ];
 
 interface BackfilledRow {
@@ -162,8 +179,8 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     `;
     for (const row of BACKFILL_ROWS) {
       await sql`
-        INSERT INTO "example_articles" ("category", "code", "title")
-        VALUES (${seedCategory.id}, ${row.code}, ${row.title})
+        INSERT INTO "example_articles" ("id", "category", "code", "title")
+        VALUES (${row.id}, ${seedCategory.id}, ${row.code}, ${row.title})
       `;
     }
 
@@ -176,6 +193,14 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     // Out of the way, so every other test starts against an empty table.
     await sql`DELETE FROM "example_articles"`;
     await sql`DELETE FROM "example_categories"`;
+    // Explicit ids bypass the sequence, so move it past them - otherwise the
+    // first row the service creates would try to reuse id 1.
+    await sql`
+      SELECT setval(
+        pg_get_serial_sequence('example_articles', 'id'),
+        ${Math.max(...BACKFILL_ROWS.map(row => row.id))}
+      )
+    `;
 
     context = {
       get: (key: string) =>
@@ -196,11 +221,9 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
 
     it("kept every slug inside varchar(160)", () => {
       // The column would have rejected anything longer, so this is really a
-      // statement about the two rows whose base slug was already 160 characters
-      // before the duplicate pass appended their id.
-      expect(
-        Math.max(...backfilled.map(row => row.slug.length)),
-      ).toBeLessThanOrEqual(160);
+      // statement about the two rows whose base slug already filled it before
+      // the id was appended.
+      expect(backfilled.every(row => row.slug.length <= 160)).toBe(true);
     });
 
     it("made every slug unique", () => {
@@ -209,17 +232,49 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
       expect(new Set(slugs).size).toBe(slugs.length);
     });
 
-    it("separates two rows with the same ordinary title", () => {
-      const first = backfilledBy("mig-1");
-      const second = backfilledBy("mig-2");
+    it("left no leading or trailing dash", () => {
+      expect(backfilled.every(row => !/^-|-$/.test(row.slug))).toBe(true);
+    });
 
-      expect(first.slug).toBe(`same-title-${first.id}`);
-      expect(second.slug).toBe(`same-title-${second.id}`);
+    it("ends every slug with the row id", () => {
+      // The whole uniqueness argument: a value is `<base>-<id>`, or `<id>` when
+      // the title left nothing behind. Two of them can only match if their ids
+      // do, and ids are the primary key.
+      expect(
+        backfilled.every(
+          row => row.slug === String(row.id) || row.slug.endsWith(`-${row.id}`),
+        ),
+      ).toBe(true);
+    });
+
+    it("separates two rows with the same ordinary title", () => {
+      expect(backfilledBy("mig-foo-a").slug).toBe("foo-2");
+      expect(backfilledBy("mig-foo-b").slug).toBe("foo-3");
+    });
+
+    it("does not let a generated slug land on a natural one", () => {
+      // The regression. "Foo 2" normalises to "foo-2" all by itself, and row 2
+      // is one of a duplicate pair - so suffixing only the ambiguous rows would
+      // rescue it *to* "foo-2" and collide with row 1. Suffixing everything
+      // moves row 1 out of the way instead.
+      expect(backfilledBy("mig-foo-2").slug).toBe("foo-2-1");
+      expect(backfilledBy("mig-foo-a").slug).toBe("foo-2");
+      expect(backfilledBy("mig-foo-2").slug).not.toBe(
+        backfilledBy("mig-foo-a").slug,
+      );
+    });
+
+    it("does not let an id fallback land on a numeric natural slug", () => {
+      // Row 5's title normalises to nothing and falls back to "5". Row 6's
+      // title *is* "5". Leaving unambiguous rows alone would hand both the same
+      // value; the suffix keeps them apart.
+      expect(backfilledBy("mig-empty").slug).toBe("5");
+      expect(backfilledBy("mig-numeric").slug).toBe("5-6");
     });
 
     it("separates two rows whose title fills the whole column", () => {
-      const first = backfilledBy("mig-3");
-      const second = backfilledBy("mig-4");
+      const first = backfilledBy("mig-long-a");
+      const second = backfilledBy("mig-long-b");
 
       // Truncated to make room for the suffix rather than truncated after it:
       // the id survives, and the whole thing still fits the column. Most of the
@@ -235,18 +290,19 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
 
     it("falls back to the row id for a title that normalises to nothing", () => {
       // No transliteration in SQL, so a title in a non-Latin script leaves
-      // nothing behind. The id is deterministic, and the row keeps its title.
-      const row = backfilledBy("mig-5");
+      // nothing behind. The id is deterministic, non-empty, and the row keeps
+      // its title.
+      const row = backfilledBy("mig-empty");
 
       expect(row.slug).toBe(String(row.id));
+      expect(row.slug.length).toBeGreaterThan(0);
     });
 
-    it("leaves an unambiguous title alone", () => {
-      expect(backfilledBy("mig-6").slug).toBe("only-one-of-these");
-    });
-
-    it("never leaves a leading or trailing dash", () => {
-      expect(backfilled.every(row => !/^-|-$/.test(row.slug))).toBe(true);
+    it("suffixes an unambiguous title too", () => {
+      // The cost of the fix, stated plainly: a row that needed no help still
+      // gets an id. Anything cleverer has to reason about what the *other*
+      // rows resolved to, which is where the collision came from.
+      expect(backfilledBy("mig-unique").slug).toBe("only-one-of-these-9");
     });
   });
 

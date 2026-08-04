@@ -241,19 +241,26 @@ SQL, and the example plugin's
 [`0024` migration](https://github.com/aXenDeveloper/vitnode/blob/canary/apps/docs/migrations/0024_add_example_article_slug.sql)
 is that file, replayed by the Postgres integration test.
 
-<Callout type="warn" title="Mind the column width when you disambiguate">
-  Two rows can normalise to the same slug, and the usual fix is to append the
-  row id. Do the truncation **before** the append - a backfilled slug can
-  already be the full `varchar(160)`, and `slug || '-' || id` on top of that
-  overflows the column and fails the migration on exactly the rows the statement
-  was meant to rescue:
+<Callout type="warn" title="Suffix every row, not just the duplicates">
+  Two rows can normalise to the same slug, and the fix is to append the row id.
+  Append it to **all** of them. A rescue value is itself a slug, so suffixing
+  only the ambiguous rows can land one on a natural slug that was left alone -
+  `"Foo 2"`, `"Foo"`, `"Foo"` become `foo-2`, `foo-2`, `foo-3` - and that only
+  surfaces when `CREATE UNIQUE INDEX` fails at the end of the migration.
+
+  With the id on every row, two values can only match if their ids do.
+
+  Truncate **before** appending, too: a backfilled slug can already be the full
+  `varchar(160)`, and `slug || '-' || id` on top of that overflows the column.
 
 ```sql
 left(coalesce(a."slug", ''), 160 - 1 - length(a."id"::text)) -- then '-' || id
 ```
 
-  The suffix is a deterministic, one-off backfill device. Runtime collisions are
-  a 409 instead; the engine never invents a URL an author did not choose.
+  The suffix is a deterministic, one-off backfill device: a migration must give
+  every pre-existing row a unique value with no author to ask. Runtime
+  collisions are a 409 instead, because the engine never rewrites a URL an
+  author did choose.
 </Callout>
 
 Adding `publication` to a populated table is the easier case: `status` carries
