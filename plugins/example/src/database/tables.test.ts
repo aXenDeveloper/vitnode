@@ -205,7 +205,17 @@ describe("the generated migration", () => {
     it("disambiguates with the row id rather than a placeholder", () => {
       // No "untitled-1" and no random suffix: every row keeps whatever its
       // title gave it, and only the collisions gain the id.
-      expect(migration).toContain(`concat_ws('-', a."slug", a."id")`);
+      expect(migration).toContain(`a."id"`);
+      expect(migration).not.toMatch(/random\(|gen_random_uuid\(/);
+    });
+
+    it("truncates the base before appending the id", () => {
+      // A title can already fill `varchar(160)`, so appending `-<id>` to the
+      // whole thing would overflow the column and fail the migration on exactly
+      // the rows the duplicate pass exists to rescue.
+      expect(migration).toContain(
+        `left(coalesce(a."slug", ''), 160 - 1 - length(a."id"::text))`,
+      );
     });
   });
 

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import type { ContentInvalidationMode } from "@/content/next/revalidate.server";
 import type { AnyContentTypeDefinition } from "@/content/types";
 
 import { findFrontendContentType } from "@/content/admin/config";
@@ -92,6 +93,27 @@ const readRow = async (
   return result.data;
 };
 
+type PublicState = ReturnType<typeof publicStateOf>;
+
+/**
+ * Stale-while-revalidate is safe in exactly one case: the row was public
+ * before, is public after, and still answers to the same URL. The response that
+ * may be served one more time is then one a visitor is allowed to see and can
+ * still reach - it is simply a few seconds out of date, and keeping the cache
+ * warm is worth more than that.
+ *
+ * Everything else *removes* public reachability. An unpublish, a delete or a
+ * slug change must not serve the old response even once, so those expire
+ * immediately.
+ */
+const modeFor = (
+  previous: PublicState,
+  current: PublicState,
+): ContentInvalidationMode =>
+  previous.isPublic && current.isPublic && previous.slug === current.slug
+    ? "stale-while-revalidate"
+    : "immediate";
+
 /** Expires the public cache entries this mutation actually affected. */
 const invalidate = (
   definition: AnyContentTypeDefinition,
@@ -104,14 +126,17 @@ const invalidate = (
   const previous = publicStateOf(definition, before);
   const current = publicStateOf(definition, after);
 
-  revalidateContent({
-    contentTypeId: definition.id,
-    id,
-    isPublic: current.isPublic,
-    // Both, so a slug change stops the old URL and starts the new one.
-    slugs: [previous.slug, current.slug],
-    wasPublic: previous.isPublic,
-  });
+  revalidateContent(
+    {
+      contentTypeId: definition.id,
+      id,
+      isPublic: current.isPublic,
+      // Both, so a slug change stops the old URL and starts the new one.
+      slugs: [previous.slug, current.slug],
+      wasPublic: previous.isPublic,
+    },
+    { mode: modeFor(previous, current) },
+  );
 };
 
 export const createContentAction = async (
@@ -193,13 +218,18 @@ export const deleteContentAction = async (
     // A delete is final, so the question is "was it ever published?" rather
     // than "was it live a second ago". `publishedAt` survives an unpublish, and
     // expiring a URL that is now gone forever costs nothing.
-    revalidateContent({
-      contentTypeId: definition.id,
-      id,
-      isPublic: false,
-      slugs: [publicStateOf(definition, result.data).slug],
-      wasPublic: result.data?.publishedAt != null,
-    });
+    revalidateContent(
+      {
+        contentTypeId: definition.id,
+        id,
+        isPublic: false,
+        slugs: [publicStateOf(definition, result.data).slug],
+        wasPublic: result.data?.publishedAt != null,
+      },
+      // The row is gone. Serving its cached response one more time would be a
+      // 200 for something that no longer exists.
+      { mode: "immediate" },
+    );
   }
 
   return {};
@@ -238,14 +268,20 @@ const publicationAction = async (
   if (result.data?.changed && definition.publicApi.enabled) {
     const { isPublic, slug } = publicStateOf(definition, result.data.row);
 
-    revalidateContent({
-      contentTypeId: definition.id,
-      id,
-      isPublic,
-      slugs: [slug],
-      // A real transition flips visibility by definition.
-      wasPublic: !isPublic,
-    });
+    revalidateContent(
+      {
+        contentTypeId: definition.id,
+        id,
+        isPublic,
+        slugs: [slug],
+        // A real transition flips visibility by definition.
+        wasPublic: !isPublic,
+      },
+      // Both directions are immediate. Unpublishing must not leave the post
+      // readable for one more request, and publishing should be visible the
+      // moment the success toast appears rather than on the request after it.
+      { mode: "immediate" },
+    );
   }
 
   return {};

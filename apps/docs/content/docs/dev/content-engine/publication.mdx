@@ -213,10 +213,11 @@ the `archived` rows.
 </Callout>
 
 To actually publish content to the internet, add
-[`publicApi`](/docs/dev/content-engine/public-api). That block generates two
-read-only routes and a [Public Content Service](/docs/dev/content-engine/public-service),
-both of which apply the published predicate themselves - there is no argument a
-caller can forget.
+[`publicApi`](/docs/dev/content-engine/public-api). That block - and only that
+block - generates the two read-only routes and the
+[Public Content Service](/docs/dev/content-engine/public-service) behind them.
+Both apply the published predicate centrally, so there is no argument a caller
+can forget.
 
 If the generated shape is not the one you want, the predicate is exported so the
 part that is easy to get wrong is not written by hand:
@@ -257,7 +258,8 @@ status = 'published' AND published_at IS NOT NULL AND published_at <= NOW()
 
 All three clauses matter. Checking only `status` would serve a row whose
 timestamp was cleared by hand, and the `<= NOW()` is what will make scheduled
-publishing additive rather than a rewrite.
+publishing additive rather than a rewrite. It is one definition, so a custom
+route and a generated one can never disagree about what "published" means.
 
 It takes the two columns it reads, so handing it a content type without
 publication is a compile error rather than a query against columns that do not

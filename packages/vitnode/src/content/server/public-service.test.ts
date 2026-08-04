@@ -90,7 +90,6 @@ const storedRow = {
   category: 3,
   excerpt: "Prose",
   id: 12,
-  label__category: "News",
   publishedAt: new Date("2026-08-01T09:00:00.000Z"),
   slug: "hello-world",
   title: "Hello world",
@@ -188,7 +187,6 @@ describe("projection", () => {
       "category",
       "excerpt",
       "id",
-      "label__category",
       "publishedAt",
       "slug",
       "title",
@@ -231,21 +229,48 @@ describe("projection", () => {
     expect(await service.findBySlug("hello-world")).not.toHaveProperty("id");
   });
 
-  it("projects a relation to an id and a label", async () => {
+  it("projects a relation down to an identifier", async () => {
     const { service } = publicService([[storedRow]]);
 
     expect(await service.findBySlug("hello-world")).toMatchObject({
-      category: { id: 3, label: "News" },
+      category: { id: 3 },
     });
   });
 
-  it("joins once per exposed relation, and not for anything else", async () => {
+  it("puts no label on a relation", async () => {
+    // The only label available is the target's `admin.titleField` - admin
+    // metadata, from a row that may itself be a draft and may never have opted
+    // into a public API at all.
+    const row = await publicService([[storedRow]]).service.findBySlug("x");
+
+    expect(row?.category).toEqual({ id: 3 });
+    expect(row?.category).not.toHaveProperty("label");
+  });
+
+  it("joins nothing at all", async () => {
     const { calls, service } = publicService([[storedRow]]);
 
     await service.findBySlug("hello-world");
 
-    // `author` is a user field and is not exposed, so it costs no join.
-    expect(opsOf(calls, "leftJoin")).toHaveLength(1);
+    // No target table is read, so no target column can be selected by mistake.
+    expect(opsOf(calls, "leftJoin")).toHaveLength(0);
+  });
+
+  it("never selects the target's title column", async () => {
+    const { calls, service } = publicService([[storedRow]]);
+
+    await service.findBySlug("hello-world");
+
+    // `test.category`'s `admin.titleField` is `title`, reached through the
+    // `label__category` alias in the admin service. It is absent here.
+    const selected = Object.keys(opsOf(calls, "select")[0] as object);
+    expect(selected.some(name => name.startsWith("label__"))).toBe(false);
+  });
+
+  it("keeps a nullable relation null", async () => {
+    const { service } = publicService([[{ ...storedRow, category: null }]]);
+
+    expect((await service.findBySlug("hello-world"))?.category).toBeNull();
   });
 
   it("returns null for a missing row", async () => {

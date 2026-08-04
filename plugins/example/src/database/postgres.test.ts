@@ -38,9 +38,55 @@ const databaseName = (() => {
 const here = dirname(fileURLToPath(import.meta.url));
 
 /** The committed migrations - the exact DDL a fresh database would run. */
-const migrationSql = EXAMPLE_MIGRATIONS.map(file =>
-  readFileSync(resolve(here, "../../../../apps/docs/migrations", file), "utf8"),
-).join("\n--> statement-breakpoint\n");
+const migrationSql = (files: readonly string[]): string =>
+  files
+    .map(file =>
+      readFileSync(
+        resolve(here, "../../../../apps/docs/migrations", file),
+        "utf8",
+      ),
+    )
+    .join("\n--> statement-breakpoint\n");
+
+const SLUG_MIGRATION = "0024_add_example_article_slug.sql";
+const slugMigrationAt = EXAMPLE_MIGRATIONS.indexOf(SLUG_MIGRATION);
+
+/**
+ * The longest title the column allows, so `left(title, 160)` fills the slug
+ * exactly. Two rows sharing it are the case that used to overflow: the base was
+ * already 160 characters and the duplicate pass appended `-<id>` on top.
+ */
+const LONG_TITLE = "Lorem ipsum dolor sit amet ".repeat(7).slice(0, 200);
+
+/**
+ * Rows the slug backfill has to cope with, inserted *between* `0023` and the
+ * slug migration so the committed SQL runs against real data rather than an
+ * empty table.
+ */
+const BACKFILL_ROWS = [
+  { code: "mig-1", title: "Same Title" },
+  { code: "mig-2", title: "Same Title" },
+  { code: "mig-3", title: LONG_TITLE },
+  { code: "mig-4", title: LONG_TITLE },
+  { code: "mig-5", title: "日本語のタイトル" },
+  { code: "mig-6", title: "Only One Of These" },
+];
+
+interface BackfilledRow {
+  code: string;
+  id: number;
+  slug: string;
+}
+
+/** What the backfill produced, captured before the fixture rows are removed. */
+let backfilled: BackfilledRow[] = [];
+
+const backfilledBy = (code: string): BackfilledRow => {
+  const row = backfilled.find(item => item.code === code);
+  if (!row) throw new Error(`No migrated row for "${code}".`);
+
+  return row;
+};
 
 /**
  * Stands in for `core_users`, which the `author` field references.
@@ -97,10 +143,39 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     `);
     await sql.unsafe(CORE_USERS_STUB);
 
-    for (const statement of migrationSql.split("--> statement-breakpoint")) {
-      const trimmed = statement.trim();
-      if (trimmed) await sql.unsafe(trimmed);
+    const run = async (files: readonly string[]) => {
+      for (const statement of migrationSql(files).split(
+        "--> statement-breakpoint",
+      )) {
+        const trimmed = statement.trim();
+        if (trimmed) await sql.unsafe(trimmed);
+      }
+    };
+
+    // Everything up to the slug migration, then rows, then the slug migration.
+    // A backfill only means anything against a populated table, and this is the
+    // one statement in the set that can fail on data rather than on schema.
+    await run(EXAMPLE_MIGRATIONS.slice(0, slugMigrationAt));
+
+    const [seedCategory] = await sql<{ id: number }[]>`
+      INSERT INTO "example_categories" ("name") VALUES ('Backfill') RETURNING "id"
+    `;
+    for (const row of BACKFILL_ROWS) {
+      await sql`
+        INSERT INTO "example_articles" ("category", "code", "title")
+        VALUES (${seedCategory.id}, ${row.code}, ${row.title})
+      `;
     }
+
+    await run(EXAMPLE_MIGRATIONS.slice(slugMigrationAt));
+
+    backfilled = await sql<BackfilledRow[]>`
+      SELECT "id", "code", "slug" FROM "example_articles" ORDER BY "id"
+    `;
+
+    // Out of the way, so every other test starts against an empty table.
+    await sql`DELETE FROM "example_articles"`;
+    await sql`DELETE FROM "example_categories"`;
 
     context = {
       get: (key: string) =>
@@ -110,6 +185,69 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
 
   afterAll(async () => {
     await sql?.end();
+  });
+
+  describe("the slug backfill", () => {
+    it("gave every existing row a slug", () => {
+      expect(backfilled).toHaveLength(BACKFILL_ROWS.length);
+      expect(backfilled.every(row => typeof row.slug === "string")).toBe(true);
+      expect(backfilled.every(row => row.slug.length > 0)).toBe(true);
+    });
+
+    it("kept every slug inside varchar(160)", () => {
+      // The column would have rejected anything longer, so this is really a
+      // statement about the two rows whose base slug was already 160 characters
+      // before the duplicate pass appended their id.
+      expect(
+        Math.max(...backfilled.map(row => row.slug.length)),
+      ).toBeLessThanOrEqual(160);
+    });
+
+    it("made every slug unique", () => {
+      const slugs = backfilled.map(row => row.slug);
+
+      expect(new Set(slugs).size).toBe(slugs.length);
+    });
+
+    it("separates two rows with the same ordinary title", () => {
+      const first = backfilledBy("mig-1");
+      const second = backfilledBy("mig-2");
+
+      expect(first.slug).toBe(`same-title-${first.id}`);
+      expect(second.slug).toBe(`same-title-${second.id}`);
+    });
+
+    it("separates two rows whose title fills the whole column", () => {
+      const first = backfilledBy("mig-3");
+      const second = backfilledBy("mig-4");
+
+      // Truncated to make room for the suffix rather than truncated after it:
+      // the id survives, and the whole thing still fits the column. Most of the
+      // title survives too - this is a trim, not a fallback.
+      for (const row of [first, second]) {
+        expect(row.slug.length).toBeLessThanOrEqual(160);
+        expect(row.slug.length).toBeGreaterThan(150);
+        expect(row.slug.endsWith(`-${row.id}`)).toBe(true);
+      }
+
+      expect(first.slug).not.toBe(second.slug);
+    });
+
+    it("falls back to the row id for a title that normalises to nothing", () => {
+      // No transliteration in SQL, so a title in a non-Latin script leaves
+      // nothing behind. The id is deterministic, and the row keeps its title.
+      const row = backfilledBy("mig-5");
+
+      expect(row.slug).toBe(String(row.id));
+    });
+
+    it("leaves an unambiguous title alone", () => {
+      expect(backfilledBy("mig-6").slug).toBe("only-one-of-these");
+    });
+
+    it("never leaves a leading or trailing dash", () => {
+      expect(backfilled.every(row => !/^-|-$/.test(row.slug))).toBe(true);
+    });
   });
 
   it("applies the unique index the descriptor asked for", async () => {
@@ -428,7 +566,9 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     const [user] = await sql<{ id: number }[]>`
       INSERT INTO "core_users" ("name") VALUES ('Ada') RETURNING "id"
     `;
-    const category = await categories.create({ name: "Public" });
+    // Named to be unmistakable in a response body: `example.category` has no
+    // public API of its own, so this string must never leave the AdminCP.
+    const category = await categories.create({ name: "Internal-Only-Label" });
 
     const article = await articles.create({
       author: user.id,
@@ -466,12 +606,18 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
       "title",
     ]);
     expect(detail).toMatchObject({
-      category: { id: category.id, label: "Public" },
+      category: { id: category.id },
       excerpt: "A summary",
       title: "Hello public world",
     });
     // Fetched for the cursor, dropped from the projection.
     expect(detail).not.toHaveProperty("id");
+
+    // The relation is an identifier and nothing else. `example.category` has no
+    // public API, so reading its `admin.titleField` here would publish another
+    // content type's private data through this one's allowlist.
+    expect(detail?.category).toEqual({ id: category.id });
+    expect(JSON.stringify(detail)).not.toContain("Internal-Only-Label");
 
     // Filtering, search and ordering all work through the public allowlists.
     await expect(

@@ -1,12 +1,13 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type {
-  testArticleContentType,
+import type { testArticleContentType } from "@/tests/content-fixtures";
+
+import {
   testCategoryContentType,
+  testPostContentType,
 } from "@/tests/content-fixtures";
 
-import { testPostContentType } from "@/tests/content-fixtures";
-
+import type { ContentPublicService } from "./server/public-service";
 import type {
   AnyContentTypeDefinition,
   ContentPublicFieldName,
@@ -14,10 +15,12 @@ import type {
   ContentPublicListRow,
   ContentPublicRelation,
   ContentPublicSelect,
+  PublicContentTypeDefinition,
 } from "./types";
 
 import { defineContentType } from "./define";
 import { field } from "./fields";
+import { contentPublicFetch } from "./next/fetch.server";
 
 type Post = typeof testPostContentType;
 type Article = typeof testArticleContentType;
@@ -95,16 +98,19 @@ describe("publicApi types", () => {
       >().toEqualTypeOf<Date | null>();
     });
 
-    it("projects a relation down to an id and a label", () => {
+    it("projects a relation down to an identifier", () => {
       // `category` is required, so it is never null - and it is never the
       // related row either.
       expectTypeOf<
         ContentPublicSelect<Post>["category"]
       >().toEqualTypeOf<ContentPublicRelation>();
-      expectTypeOf<ContentPublicRelation>().toEqualTypeOf<{
-        id: number;
-        label: null | string;
-      }>();
+      expectTypeOf<ContentPublicRelation>().toEqualTypeOf<{ id: number }>();
+    });
+
+    it("puts no label on a relation", () => {
+      // `admin.titleField` is administrative metadata. Reading it through
+      // somebody else's allowlist is not a decision this projection makes.
+      expectTypeOf<ContentPublicRelation>().not.toHaveProperty("label");
     });
 
     it("is the same shape for a list row", () => {
@@ -142,6 +148,78 @@ describe("publicApi types", () => {
         // @ts-expect-error - a textarea has no equality filter
         excerpt: "prose",
       });
+    });
+  });
+
+  describe("the public service", () => {
+    type Service = ContentPublicService<Post>;
+
+    it("reads three ways and writes none", () => {
+      expectTypeOf<keyof Service>().toEqualTypeOf<
+        "findById" | "findBySlug" | "findMany"
+      >();
+    });
+
+    it("resolves a single row to the public projection", () => {
+      // `findById` is direct-plugin API - an event listener holding a
+      // `contentId` should not have to look a slug up first. No numeric-id
+      // *route* is generated; the detail URL is the slug.
+      expectTypeOf<
+        Awaited<ReturnType<Service["findById"]>>
+      >().toEqualTypeOf<ContentPublicSelect<Post> | null>();
+      expectTypeOf<
+        Awaited<ReturnType<Service["findBySlug"]>>
+      >().toEqualTypeOf<ContentPublicSelect<Post> | null>();
+    });
+
+    it("takes no predicate argument on either lookup", () => {
+      // The published condition is applied inside every method. There is no
+      // parameter a caller could pass to widen it.
+      expectTypeOf<Service["findById"]>().parameters.toEqualTypeOf<[number]>();
+      expectTypeOf<Service["findBySlug"]>().parameters.toEqualTypeOf<
+        [string]
+      >();
+    });
+
+    it("lists the public projection too", () => {
+      expectTypeOf<
+        Awaited<ReturnType<Service["findMany"]>>["edges"]
+      >().toEqualTypeOf<ContentPublicListRow<Post>[]>();
+    });
+  });
+
+  describe("PublicContentTypeDefinition", () => {
+    it("is satisfied by a content type with a public API", () => {
+      expectTypeOf<Post>().toExtend<PublicContentTypeDefinition>();
+    });
+
+    it("is not satisfied without one", () => {
+      expectTypeOf<Category>().not.toExtend<PublicContentTypeDefinition>();
+      expectTypeOf<Article>().not.toExtend<PublicContentTypeDefinition>();
+    });
+
+    it("is still an AnyContentTypeDefinition", () => {
+      // Narrowing one flag must not cost the erased form everything else takes.
+      expectTypeOf<PublicContentTypeDefinition>().toExtend<AnyContentTypeDefinition>();
+    });
+  });
+});
+
+describe("contentPublicFetch", () => {
+  it("accepts a content type with a public API", () => {
+    void contentPublicFetch({
+      definition: testPostContentType,
+      pluginId: "@vitnode/example",
+    });
+  });
+
+  it("rejects one without", () => {
+    // A disabled `publicApi` has an empty `path`, so this would request
+    // `/api/@vitnode/example/content//` - a compile error, not a runtime one.
+    void contentPublicFetch({
+      // @ts-expect-error - no public API
+      definition: testCategoryContentType,
+      pluginId: "@vitnode/example",
     });
   });
 });

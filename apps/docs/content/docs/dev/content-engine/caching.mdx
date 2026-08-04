@@ -43,7 +43,7 @@ same moment the generated ones do.
 
 ## Reading
 
-`contentPublicFetch` attaches the right tags for you:
+`contentPublicFetch` opts into the cache and attaches the right tags for you:
 
 ```ts title="src/app/articles/[slug]/page.tsx"
 import { contentPublicFetch } from "@vitnode/core/content/next";
@@ -63,6 +63,29 @@ const { data } = await contentPublicFetch({
 A detail fetch is deliberately **not** tagged with the list tag. Publishing one
 article must not throw away every article page.
 
+<Callout type="info" title="The cache opt-in is explicit">
+  The request goes out with `cache: "force-cache"`. Caching in Next 16 is
+  opt-in: the default refetches on every request as soon as the route touches
+  cookies, headers or search params - and tags on a response that was never
+  stored expire nothing at all. Published content is exactly the case that
+  should be served from the cache until a mutation says otherwise, so
+  `contentPublicFetch` says so rather than hoping.
+
+Only `200` responses are stored, so the 404 a draft returns is never cached and
+publishing it is visible straight away.
+
+The opt-in is on this function, **not** on `rawApiFetch`. Admin requests, and
+every other call in the app, keep the behaviour they have.
+
+</Callout>
+
+The definition argument is typed `PublicContentTypeDefinition`, so a content
+type without `publicApi` is a compile error rather than a request to
+`/api/@vitnode/example/content//`.
+
+The slug is URL-encoded into the path. A generated one never needs it, but this
+is public API and the argument may come from anywhere.
+
 ## Writing: who expires what
 
 <Callout type="warn" title="The service invalidates nothing">
@@ -75,7 +98,7 @@ article must not throw away every article page.
   not expiring it,
 - they may be running in `apps/api`, a plain Node process with no Next runtime
   at all,
-- `revalidateTag` needs a Next request scope, which a repository does not own.
+- the Next cache APIs need a request scope, which a repository does not own.
 
 If your own code drives a mutation, call `revalidateContent` yourself, from a
 server action, after the transaction has committed.
@@ -92,17 +115,17 @@ where invalidation lives.
 before, is it reachable after, which slugs did it answer to, and which row is
 it.
 
-| Operation | list | item | old slug | new slug |
-| --- | :-: | :-: | :-: | :-: |
-| create draft | — | — | — | — |
-| update draft | — | — | — | — |
-| publish | ✓ | ✓ | — | ✓ |
-| update published, same slug | ✓ | ✓ | — | ✓ |
-| update published, slug changed | ✓ | ✓ | ✓ | ✓ |
-| unpublish | ✓ | ✓ | ✓ | — |
-| delete, ever published | ✓ | ✓ | ✓ | — |
-| delete, never published | — | — | — | — |
-| publish/unpublish no-op | — | — | — | — |
+| Operation | list | item | old slug | new slug | How |
+| --- | :-: | :-: | :-: | :-: | --- |
+| create draft | — | — | — | — | — |
+| update draft | — | — | — | — | — |
+| publish | ✓ | ✓ | — | ✓ | immediate |
+| update published, same slug | ✓ | ✓ | — | ✓ | stale-while-revalidate |
+| update published, slug changed | ✓ | ✓ | ✓ | ✓ | immediate |
+| unpublish | ✓ | ✓ | ✓ | — | immediate |
+| delete, ever published | ✓ | ✓ | ✓ | — | immediate |
+| delete, never published | — | — | — | — | — |
+| publish/unpublish no-op | — | — | — | — | — |
 
 Two things worth stating out loud:
 
@@ -114,6 +137,44 @@ Two things worth stating out loud:
 
 Nothing global is ever expired, and one content type's mutation never touches
 another's tags.
+
+### Immediate, or stale-while-revalidate
+
+The last column is the difference between two Next APIs, and it matters:
+
+```ts
+type ContentInvalidationMode = "immediate" | "stale-while-revalidate";
+
+revalidateContent(input, { mode: "immediate" });
+```
+
+| Mode | Calls | The next request |
+| --- | --- | --- |
+| `immediate` (default) | `updateTag(tag)` | waits for fresh data |
+| `stale-while-revalidate` | `revalidateTag(tag, "max")` | gets the cached response once more, while the new one is fetched behind it |
+
+Stale-while-revalidate is safe in exactly one case: the row was public before,
+is public after, and still answers to the same URL. The response that may be
+served one more time is then one a visitor is allowed to see and can still
+reach - it is just a few seconds out of date, and a warm cache is worth that.
+
+Every other row of the matrix **removes** public reachability, and there the
+cheaper option is simply wrong:
+
+- an **unpublished** post would stay readable for one more request,
+- a **deleted** one would answer 200 after it stopped existing,
+- an **old slug** would keep resolving after the row moved.
+
+So those expire immediately. Publishing is immediate too, though nothing is at
+risk there: it means the post is live by the time the success toast appears,
+rather than on the request after it.
+
+<Callout type="warn" title="`immediate` is Server-Action-only">
+  `updateTag` throws outside a Server Action - that restriction is what buys
+  read-your-own-writes. Every generated write path is already a server action,
+  so the default is right there. From a Route Handler, a webhook or a cron,
+  pass `{ mode: "stale-while-revalidate" }`.
+</Callout>
 
 ### The slug change
 
@@ -153,6 +214,10 @@ export const publishArticle = async (id: number) => {
 };
 ```
 
+This is a server action, so the default `immediate` mode applies and the article
+is live the moment the call returns. From a Route Handler, add
+`{ mode: "stale-while-revalidate" }` - `updateTag` is not available there.
+
 `contentInvalidationTags` is the same decision, without the Next call - useful
 if you cache somewhere else entirely:
 
@@ -182,5 +247,6 @@ both throw there, so an accidental import would not fail in CI; it would fail
 when somebody ran a migration. A test walks the engine's import graph and
 asserts the rule instead of trusting it.
 
-That is why the tag builders are strings in the client-safe layer and only
-`revalidateTag` lives behind the Next entrypoint.
+That is why the tag builders are strings in the client-safe layer, and only
+`revalidateTag`, `updateTag` and the tagged `fetch` live behind the Next
+entrypoint.

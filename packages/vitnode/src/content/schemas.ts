@@ -242,9 +242,15 @@ const filterShape = (fields: ContentFieldMap): z.ZodRawShape =>
       }),
   );
 
-/** An exposed relation comes back as an identifier and a display label. */
+/**
+ * An exposed relation comes back as an identifier, and nothing else.
+ *
+ * No label: the only one available is the target's `admin.titleField`, which is
+ * administrative metadata and may name a field the target never publishes. See
+ * `ContentPublicRelation` for the reasoning.
+ */
 const publicRelationSchema = (): z.ZodObject<z.ZodRawShape> =>
-  z.object({ id: z.number(), label: z.string().nullable() });
+  z.object({ id: z.number() });
 
 /**
  * The public response shape, built from the allowlist and nothing else.

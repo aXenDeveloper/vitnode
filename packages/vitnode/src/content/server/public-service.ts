@@ -30,7 +30,6 @@ import {
   buildOrderColumn,
   buildSearchCondition,
 } from "./query";
-import { LABEL_PREFIX, resolveReferenceTargets, toLabel } from "./references";
 
 export interface ContentPublicFindManyArgs<TDefinition> {
   /** Equality filters, restricted to `publicApi.filterableFields`. */
@@ -85,6 +84,11 @@ const clampPageSize = (value: string | undefined): string | undefined => {
  *    never fetched, so it cannot be leaked by a mistake further downstream.
  *    The one exception is `id`, which the cursor needs; it is dropped from the
  *    projected row unless the allowlist names it, and that boundary is tested.
+ *
+ * It also joins nothing. An exposed relation is projected from the foreign key
+ * the row already carries, so a target table is never read - which is what
+ * makes it impossible for one content type's allowlist to publish another's
+ * administrative metadata.
  */
 export const createContentPublicService = <
   TDefinition extends AnyContentTypeDefinition,
@@ -117,13 +121,11 @@ export const createContentPublicService = <
   const primaryCursor = columns.id as PgColumn<
     ColumnBaseConfig<"number", string>
   >;
-  const references = resolveReferenceTargets(definition, table, columns);
   const exposed = publicApi.fields;
   const exposesId = exposed.includes("id");
-  // Only the relations the allowlist names: a `user` field is never exposable,
-  // and an unexposed relation should not cost a join either.
-  const exposedRelations = exposed.filter(
-    name => fields[name]?.kind === "relation" && references[name],
+  // A `user` field is never exposable, so this is only ever relations.
+  const exposedRelations = new Set(
+    exposed.filter(name => fields[name]?.kind === "relation"),
   );
   const searchColumns = publicApi.searchableFields.map(name => columns[name]);
   const orderable = publicOrderableColumns(definition);
@@ -132,18 +134,14 @@ export const createContentPublicService = <
   const selection = (): Record<string, PgColumn> => ({
     id: primaryCursor,
     ...Object.fromEntries(exposed.map(name => [name, columns[name]])),
-    ...Object.fromEntries(
-      exposedRelations.map(name => [
-        `${LABEL_PREFIX}${name}`,
-        references[name].labelColumn,
-      ]),
-    ),
   });
 
   /**
    * Turns one raw row into the public projection: relations collapse to
-   * `{ id, label }`, the label columns disappear, and `id` goes with them
-   * unless it was asked for.
+   * `{ id }`, and the cursor `id` disappears unless the allowlist asked for it.
+   *
+   * The relation identifier is the foreign key already on this row, so no
+   * target table is read and no label is invented.
    */
   const project = (
     row: Record<string, unknown>,
@@ -151,16 +149,13 @@ export const createContentPublicService = <
     const projected: Record<string, unknown> = {};
 
     for (const name of exposed) {
-      if (!exposedRelations.includes(name)) {
+      if (!exposedRelations.has(name)) {
         projected[name] = row[name];
         continue;
       }
 
       const id = row[name];
-      projected[name] =
-        typeof id === "number"
-          ? { id, label: toLabel(row[`${LABEL_PREFIX}${name}`]) }
-          : null;
+      projected[name] = typeof id === "number" ? { id } : null;
     }
 
     if (exposesId) projected.id = row.id;
@@ -171,17 +166,10 @@ export const createContentPublicService = <
   const readOne = async (
     condition: SQL,
   ): Promise<ContentPublicSelect<TDefinition> | null> => {
-    let builder = c.get("db").select(selection()).from(table).$dynamic();
-
-    for (const name of exposedRelations) {
-      const target = references[name];
-      builder = builder.leftJoin(
-        target.aliased,
-        eq(target.owner, target.idColumn),
-      );
-    }
-
-    const [row] = await builder
+    const [row] = await c
+      .get("db")
+      .select(selection())
+      .from(table)
       .where(and(publishedCondition(published), condition))
       .limit(1);
 
@@ -234,26 +222,18 @@ export const createContentPublicService = <
         },
         table,
         where: conditions.length > 1 ? and(...conditions) : conditions[0],
-        query: async ({ limit, orderBy: order, where }) => {
-          let builder = c.get("db").select(selection()).from(table).$dynamic();
-
-          for (const name of exposedRelations) {
-            const target = references[name];
-            builder = builder.leftJoin(
-              target.aliased,
-              eq(target.owner, target.idColumn),
-            );
-          }
-
-          return await builder
+        query: async ({ limit, orderBy: order, where }) =>
+          await c
+            .get("db")
+            .select(selection())
+            .from(table)
             .where(where)
             .orderBy(order)
             .limit(
               typeof limit === "number"
                 ? Math.min(limit, CONTENT_PUBLIC_MAX_PAGE_SIZE + 1)
                 : CONTENT_PUBLIC_DEFAULT_PAGE_SIZE,
-            );
-        },
+            ),
       });
 
       return { edges: data.edges.map(project), pageInfo: data.pageInfo };

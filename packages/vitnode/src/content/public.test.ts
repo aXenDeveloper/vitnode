@@ -287,11 +287,11 @@ describe("publicApi", () => {
       expect(keys).not.toContain("id");
     });
 
-    it("projects a relation as an id and a label", () => {
+    it("projects a relation as an identifier and nothing else", () => {
       // Read back through the whole object: `shape[...]` is typed as the base
       // Zod interface, which has no `safeParse`.
       const row = {
-        category: { id: 3, label: "News" },
+        category: { id: 3 },
         excerpt: null,
         publishedAt: new Date(),
         slug: "hello",
@@ -299,10 +299,24 @@ describe("publicApi", () => {
       };
 
       expect(schemas.publicSelectObject.safeParse(row).success).toBe(true);
-      // Not the related row - one level, two keys, no population.
+      // Not the related row - one level, one key, no population.
       expect(
         schemas.publicSelectObject.safeParse({ ...row, category: 3 }).success,
       ).toBe(false);
+    });
+
+    it("strips a label off a relation rather than publishing it", () => {
+      // The target's `admin.titleField` is not the public API's to give away.
+      const parsed = schemas.publicSelectObject.safeParse({
+        category: { id: 3, label: "News" },
+        excerpt: null,
+        publishedAt: new Date(),
+        slug: "hello",
+        title: "Hello",
+      });
+
+      expect(parsed.success).toBe(true);
+      expect(parsed.data?.category).toEqual({ id: 3 });
     });
 
     it("accepts only the configured public filters", () => {

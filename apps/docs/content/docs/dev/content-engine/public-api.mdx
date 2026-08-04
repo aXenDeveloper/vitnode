@@ -111,15 +111,25 @@ construction rather than by three more checks.
 substring test, so a public route under that name would demand a staff session
 and never be public at all.
 
-Paths are unique across **every** registered content type, in every plugin.
-Routes are plugin-prefixed so two plugins claiming `articles` would not actually
-collide at the router - but two content types answering to the same public path
-is ambiguous for anyone reading the API, and refusing it keeps the public
-surface one flat namespace. The error names both:
+Paths are unique **within a plugin**, exactly like permission modules and for
+the same reason: the route is `/api/{pluginId}/content/{path}`, so the plugin id
+already separates two of them.
+
+```text
+/api/@acme/first/content/articles     ← both fine
+/api/@acme/second/content/articles
+```
+
+Two plugins publishing `articles` is normal, and it works. Rejecting it would
+fail an app's boot over a name neither author can see, and force one of them to
+rename a public URL because of a plugin they have never heard of.
+
+Two content types in *one* plugin claiming the same path really would collide,
+so that is an error, and it names both:
 
 ```text
 Public path "articles" is claimed by both @acme/first -> first.article
-and @acme/second -> second.article. Give one of them a different
+and @acme/first -> first.post. Give one of them a different
 `publicApi.path`.
 ```
 
@@ -145,16 +155,37 @@ the pagination cursor is read off the row - and then dropped again.
 
 ### Relations
 
-An exposed relation comes back as an identifier and the target's own
-`admin.titleField`:
+An exposed relation comes back as an identifier, and nothing else:
 
 ```jsonc
-"category": { "id": 3, "label": "News" }
+"category": { "id": 3 }
 ```
 
-One level, two keys. There is no deep nesting and no arbitrary population -
-that is the point at which a REST projection turns into GraphQL, and a
-hand-written route is the better answer.
+A nullable relation is `{ "id": 3 }` or `null`.
+
+<Callout type="warn" title="No label, on purpose">
+  The obvious label would be the target's `admin.titleField` - and that is
+  administrative metadata, not a public field. It may name a column the target
+  does not expose publicly, the target may have no `publicApi` at all, and the
+  row it would be read from may itself be a draft. One content type's allowlist
+  does not get to make that call for another's.
+
+An id is enough to fetch the related row through **its own** public API, which
+is the layer that decides what it is willing to say. Configurable public
+relation labels may arrive in a later stage.
+
+  The AdminCP is unaffected: relation pickers and list rows still show labels,
+  because [the Admin Content Service](/docs/dev/content-engine/service) still
+  resolves them.
+</Callout>
+
+One level, one key. There is no deep nesting and no arbitrary population - that
+is the point at which a REST projection turns into GraphQL, and a hand-written
+route is the better answer.
+
+The public service reads the foreign key already on the row, so it **joins
+nothing**. A target table is never touched, which is what makes the rule above
+structural rather than a filter applied after the fact.
 
 ## Search, filters and ordering
 
@@ -198,7 +229,7 @@ still applies.
       "title": "Hello",
       "slug": "hello",
       "excerpt": null,
-      "category": { "id": 3, "label": "News" },
+      "category": { "id": 3 },
       "publishedAt": "2026-08-03T10:00:00.000Z"
     }
   ],
@@ -220,7 +251,11 @@ rejected.
 
 ### Detail
 
-Resolved by slug. There is no generated numeric-id detail route.
+**Resolved by slug only.** There is no generated numeric-id detail route, and
+adding one is not a flag. Slug URLs are stable and non-enumerable; an id route
+would let anybody walk the table. The
+[Public Content Service](/docs/dev/content-engine/public-service#findbyid) does
+expose `findById` for plugin code that already holds one.
 
 | Status | When |
 | --- | --- |

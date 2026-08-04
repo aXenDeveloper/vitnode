@@ -35,8 +35,32 @@ That is the entire surface. There is no `create`, `update`, `delete`, `publish`,
 `unpublish` or `options` - and no `{ tx }`, because a read on behalf of an
 anonymous visitor is not part of anybody's transaction.
 
-`findBySlug` is what the generated detail route uses. `findById` costs nothing
-and is what an event listener holding a `contentId` needs.
+`findBySlug` is what the generated detail route uses.
+
+### `findById`
+
+Supported, and deliberately kept - but it is **direct-plugin API only**.
+
+```ts
+// A `published` listener gets `{ contentId }` and nothing else.
+const row = await articles.findById(event.contentId);
+```
+
+An event payload carries a `contentId`, not a slug, so without this every
+listener would look the slug up first through the admin service - reading more
+columns than it wanted, to reach a row the public service could have given it.
+
+It is the same three things `findBySlug` is: the published predicate applied
+inside the method, the public projection on the way out, `null` for anything
+that is not currently published.
+
+<Callout type="warn" title="There is no numeric-id public route">
+  `GET /content/articles/{slug}` is the only generated detail endpoint. Slug
+  URLs are stable and non-enumerable; an id route would let anybody walk the
+  table one integer at a time. `findById` is reachable from your own code, not
+  from the internet - and if you build a route on top of it, that decision is
+  yours to make on purpose.
+</Callout>
 
 ## The published invariant
 
@@ -72,7 +96,7 @@ fetched - not fetched and then deleted.
 const article = await articles.findBySlug("hello-world");
 
 article?.title; // string
-article?.category; // { id: number; label: string | null }
+article?.category; // { id: number }
 article?.views; // compile error: not exposed
 ```
 
@@ -84,6 +108,16 @@ keys, so a private field is absent at compile time as well as at runtime.
   again before the row is returned, unless `publicApi.fields` names it. That is
   the whole projection boundary, and it has its own test.
 </Callout>
+
+### It joins nothing
+
+An exposed relation is `{ id }`, read straight off the foreign key the row
+already carries. No target table is queried, so a
+[target's `admin.titleField`](/docs/dev/content-engine/public-api#relations)
+cannot reach a public response even by accident.
+
+The Admin Content Service still resolves labels the way it always has - one
+`LEFT JOIN` per reference, into `labels` - because that is where they belong.
 
 ## Filtering, search and ordering
 
@@ -126,6 +160,15 @@ handler: async c => {
 ```
 
 Nothing here can leak a draft, because nothing here can turn the predicate off.
+
+<Callout type="warn" title="A direct call invalidates nothing">
+  Reads are free of this, but if your own code *writes* through
+  `model.service(c)`, no cache tag is expired: the service may be inside an
+  uncommitted transaction, and it may be running in `apps/api` where the Next
+  cache APIs do not exist. Call
+  [`revalidateContent`](/docs/dev/content-engine/caching#doing-it-yourself)
+  from your server action after the transaction commits.
+</Callout>
 
 ## If you need more than it does
 

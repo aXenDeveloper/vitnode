@@ -82,7 +82,9 @@ its route, never through a field update.
 ## publicSelect
 
 The public projection: exactly `publicApi.fields`, and not one key more. An
-exposed relation collapses to `{ id, label }`.
+exposed relation collapses to `{ id }` - no label, because the only one on offer
+is the target's [administrative
+`titleField`](/docs/dev/content-engine/public-api#relations).
 
 ```ts
 Object.keys(articleContentType.schemas.publicSelectObject.shape);

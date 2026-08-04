@@ -241,6 +241,21 @@ SQL, and the example plugin's
 [`0024` migration](https://github.com/aXenDeveloper/vitnode/blob/canary/apps/docs/migrations/0024_add_example_article_slug.sql)
 is that file, replayed by the Postgres integration test.
 
+<Callout type="warn" title="Mind the column width when you disambiguate">
+  Two rows can normalise to the same slug, and the usual fix is to append the
+  row id. Do the truncation **before** the append - a backfilled slug can
+  already be the full `varchar(160)`, and `slug || '-' || id` on top of that
+  overflows the column and fails the migration on exactly the rows the statement
+  was meant to rescue:
+
+```sql
+left(coalesce(a."slug", ''), 160 - 1 - length(a."id"::text)) -- then '-' || id
+```
+
+  The suffix is a deterministic, one-off backfill device. Runtime collisions are
+  a 409 instead; the engine never invents a URL an author did not choose.
+</Callout>
+
 Adding `publication` to a populated table is the easier case: `status` carries
 `DEFAULT 'draft' NOT NULL`, so one statement backfills it - and takes everything
 out of circulation. See

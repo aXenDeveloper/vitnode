@@ -39,8 +39,9 @@ interface IndexOwner {
  *
  * This is the only place that sees *every* installed content type at once,
  * which makes it the only place that can catch a schema-wide clash: a duplicate
- * table name, two content types resolving to the same Postgres index name, or
- * two of them claiming the same public path.
+ * table name, or two content types resolving to the same Postgres index name.
+ * Permission modules and public paths are checked per plugin, because the
+ * plugin id is part of the key each one is addressed by.
  */
 export const validateContentTypes = (
   entries: RegisteredContentType[],
@@ -86,21 +87,23 @@ export const validateContentTypes = (
 
     assertFilterKeys(definition);
 
-    // Public paths are checked across *every* plugin, not per plugin. Routes
-    // are mounted under `/api/{pluginId}/...`, so two plugins claiming
-    // "articles" would not actually collide at the router - but two content
-    // types answering to the same public path is ambiguous for anyone reading
-    // the API, and refusing it keeps the public surface one flat namespace.
+    // Scoped per plugin, like permission modules and for the same reason: the
+    // route is `/api/{pluginId}/content/{path}`, so the plugin id already
+    // separates two of them. Two plugins both publishing "articles" is normal
+    // and works; forbidding it would make an app fail to boot over a name
+    // neither author can see, and force one of them to rename a public URL.
+    // Inside one plugin the two really would collide, so that is an error.
     if (definition.publicApi.enabled) {
       const path = definition.publicApi.path;
-      const duplicatePath = byPublicPath.get(path);
+      const pathKey = `${pluginId}:${path}`;
+      const duplicatePath = byPublicPath.get(pathKey);
       if (duplicatePath) {
         throw new ContentEngineError(
           `Public path "${path}" is claimed by both ${describe(duplicatePath)} and ${describe(entry)}. Give one of them a different \`publicApi.path\`.`,
           { contentTypeId: definition.id },
         );
       }
-      byPublicPath.set(path, entry);
+      byPublicPath.set(pathKey, entry);
     }
 
     // `resolveContentIndexes` already rejects a collision inside one content

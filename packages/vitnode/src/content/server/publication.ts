@@ -55,30 +55,36 @@ export const publicationColumns = (
  * status = 'published' AND published_at IS NOT NULL AND published_at <= NOW()
  * ```
  *
- * Nothing in the engine generates a public route yet, so today this exists for
- * **hand-written plugin queries** - the supported way to expose published
- * content while the public read layer is still being built:
+ * The generated public read layer applies this centrally: every method on
+ * `model.publicService` `and`s it in itself, so there is no argument a caller
+ * could forget, and the two generated public routes go through that service.
+ *
+ * It is also exported for **hand-written plugin queries**, which is where the
+ * predicate would otherwise be retyped by hand - exactly the thing worth
+ * getting wrong once, because forgetting the `IS NOT NULL` leaks a row whose
+ * timestamp was cleared:
  *
  * ```ts
  * const rows = await c
  *   .get("db")
  *   .select({ id: articles.table.id, title: articles.table.title })
  *   .from(articles.table)
- *   .where(publishedCondition(articles.columns));
+ *   .where(
+ *     publishedCondition(publicationColumns(articleContentType, articles.columns)),
+ *   );
  * ```
  *
- * It is exported rather than kept internal because writing that predicate by
- * hand is exactly the thing worth getting wrong once: forget the `IS NOT NULL`
- * and a row whose timestamp was cleared leaks. The generated public service in
- * a later PR will consume this same helper, so the invariant has one definition
- * either way.
+ * One definition either way, so a custom route and a generated one can never
+ * disagree about what "published" means.
  *
  * `published_at <= now()` is always true today - `publish` only ever stamps
  * `now()` - but stating the invariant costs nothing and makes scheduled
  * publishing a purely additive change later.
  *
- * Enabling `publication` does not expose anything publicly on its own. It adds
- * the lifecycle; serving it is still your route.
+ * Enabling `publication` still exposes nothing on its own: it adds the
+ * lifecycle, and `publicApi.enabled` is what generates the public routes. On a
+ * content type without that block, this predicate is only ever reached by a
+ * route you wrote.
  */
 export const publishedCondition = (
   columns: PublicationColumns,

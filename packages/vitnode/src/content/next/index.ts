@@ -11,3 +11,4 @@
 export { contentPublicFetch, contentPublicItemTags } from "./fetch.server";
 export type { ContentPublicFetchResult } from "./fetch.server";
 export { revalidateContent } from "./revalidate.server";
+export type { ContentInvalidationMode } from "./revalidate.server";

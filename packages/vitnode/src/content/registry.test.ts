@@ -348,7 +348,7 @@ describe("public paths", () => {
     ).not.toThrow();
   });
 
-  it("rejects two content types claiming the same path", () => {
+  it("rejects two content types in one plugin claiming the same path", () => {
     expect(() =>
       validateContentTypes([
         entry(publicWidget("test.one", "test_ones", "things")),
@@ -357,15 +357,30 @@ describe("public paths", () => {
     ).toThrow(/Public path "things" is claimed by both/);
   });
 
-  it("names both plugins and both content types", () => {
+  it("allows two plugins to claim the same path", () => {
+    // The route is `/api/{pluginId}/content/{path}`, so these do not collide.
+    // Refusing them would fail an app's boot over a name neither author can
+    // see, and force one of them to rename a public URL.
+    expect(() =>
+      validateContentTypes([
+        entry(publicWidget("first.one", "first_ones", "articles"), "@acme/one"),
+        entry(
+          publicWidget("second.one", "second_ones", "articles"),
+          "@acme/two",
+        ),
+      ]),
+    ).not.toThrow();
+  });
+
+  it("names both content types", () => {
     // Boot-time errors are only useful if they say where to go and what to fix.
     expect(() =>
       validateContentTypes([
         entry(publicWidget("test.one", "test_ones", "things"), "@acme/first"),
-        entry(publicWidget("test.two", "test_twos", "things"), "@acme/second"),
+        entry(publicWidget("test.two", "test_twos", "things"), "@acme/first"),
       ]),
     ).toThrow(
-      /@acme\/first -> test\.one.*@acme\/second -> test\.two|@acme\/second -> test\.two.*@acme\/first -> test\.one/,
+      /@acme\/first -> test\.one.*@acme\/first -> test\.two|@acme\/first -> test\.two.*@acme\/first -> test\.one/,
     );
   });
 

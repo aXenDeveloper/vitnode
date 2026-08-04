@@ -22,7 +22,8 @@ other 20%, so you find out here rather than halfway through building.
 | Public **write** routes | Never generated. Write the route yourself |
 | Slug history and redirects | Keep your own table. Slugs are stable by default precisely because there is no safety net |
 | Public user fields | Not exposable. Write your own route with the shape you mean |
-| Deep relation nesting in a public response | One level, `{ id, label }`. Anything more is a custom route |
+| Public relation labels | An exposed relation is `{ id }`. `admin.titleField` is administrative metadata, so it is never published on another content type's behalf |
+| Deep relation nesting in a public response | One level, one key. Anything more is a custom route |
 | Origin `Cache-Control` headers | [Tags](/docs/dev/content-engine/caching) handle Next-side caching; add headers in your own route |
 | Per-route rate limits | The global IP bucket applies; anything finer is yours |
 | Search indexing | Register a `SearchIndexer` yourself |
@@ -121,14 +122,22 @@ the slug yourself. See [Slug field](/docs/dev/content-engine/slug-field).
 
 There is no slug history and no automatic redirect, which is exactly why a slug
 never changes on its own. The moment you send a new one, the old URL starts
-answering 404. Keep your own redirect table if that matters.
+answering 404 - immediately, because a slug change expires the old tag with
+`updateTag` rather than letting it go stale. Keep your own redirect table if
+that matters.
+
+A slug that is already taken is a **409** at runtime, on a create or an update
+alike. The engine never appends a suffix to a URL an author chose. The `-42`
+suffixes in the [slug backfill
+recipe](/docs/dev/content-engine/slug-field#migrations) are a one-off,
+deterministic migration device for rows that predate the column.
 
 ## Direct service calls invalidate no cache
 
 `service.publish()` and friends change rows and return the result. They emit no
 event and expire no cache tag: they may be inside an uncommitted transaction,
-they may be running in `apps/api` where there is no Next runtime at all, and
-`revalidateTag` needs a request scope a repository does not own.
+they may be running in `apps/api` where there is no Next runtime at all, and the
+Next cache APIs need a request scope a repository does not own.
 
 Every generated write path goes through an AdminCP server action, which does all
 three. A direct caller does its own follow-up, after committing - see

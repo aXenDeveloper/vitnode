@@ -45,9 +45,11 @@ export const toLabel = (value: unknown): null | string => {
  * so the engine needs no separate table registry - and because the FK thunk is
  * evaluated here, circular content type references stay safe.
  *
- * Shared by the admin service (which joins every reference for its `labels`
- * object) and the public one (which joins only the exposed relations), so both
- * resolve a label exactly the same way.
+ * **Administrative only.** A label is read from the target's
+ * `admin.titleField`, which is metadata for the AdminCP: it may name a field
+ * the target never publishes, and the row it comes from may itself be a draft.
+ * The public projection therefore does not use this at all - an exposed
+ * relation there is `{ id }`, taken straight off the foreign key.
  */
 export const resolveReferenceTargets = (
   definition: AnyContentTypeDefinition,

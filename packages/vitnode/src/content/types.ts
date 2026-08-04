@@ -488,6 +488,23 @@ export interface ResolvedContentPublicApiConfig<
 // Definition
 // ---------------------------------------------------------------------------
 
+/**
+ * A content type that actually has a generated public API.
+ *
+ * The erased `AnyContentTypeDefinition` carries `enabled: boolean`, so it also
+ * describes a content type with no public API at all - one whose `publicApi.path`
+ * is the empty string. Anything that builds a public URL takes this instead, so
+ * passing the wrong content type is a compile error rather than a request to
+ * `/api/{pluginId}/content//`.
+ *
+ * An intersection rather than a fifth type argument: `enabled` is the only
+ * parameter a caller of the public read layer needs pinned, and narrowing just
+ * that one keeps every concrete definition assignable.
+ */
+export type PublicContentTypeDefinition = AnyContentTypeDefinition & {
+  publicApi: { enabled: true };
+};
+
 export interface ContentTypeDefinition<
   TId extends string = string,
   TFields = ContentFieldMap,
@@ -627,16 +644,23 @@ export type ContentReferenceFieldName<TDefinition> = FieldNamesOfKind<
 // ---------------------------------------------------------------------------
 
 /**
- * How an exposed `relation` comes back: an identifier and the target's own
- * `admin.titleField`, and nothing else.
+ * How an exposed `relation` comes back: an identifier, and nothing else.
  *
- * Deliberately not the related row. Deep nesting and arbitrary population are
- * out of scope - they are the point at which a REST projection turns into
- * GraphQL, and a hand-written route is the better answer.
+ * Deliberately not the related row, and deliberately **not a label**. The
+ * obvious label is the target's `admin.titleField`, but that is administrative
+ * metadata: it may name a field the target does not expose publicly, the target
+ * may have no `publicApi` at all, and the row it is read from may itself be a
+ * draft. Publishing an internal name because two content types are related is
+ * not a decision one allowlist should make on behalf of another.
+ *
+ * An identifier is enough to fetch the related row through its own public API,
+ * which is the layer that decides what it is willing to say. Configurable
+ * public relation labels are a later stage; deep nesting and arbitrary
+ * population are the point at which a REST projection turns into GraphQL, and a
+ * hand-written route is the better answer to that.
  */
 export interface ContentPublicRelation {
   id: number;
-  label: null | string;
 }
 
 /** The exposed field names of one content type, read off its resolved config. */

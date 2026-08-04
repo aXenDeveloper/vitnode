@@ -17,10 +17,26 @@ SET "slug" = NULLIF(
 );--> statement-breakpoint
 -- Two rows can share a title, and a title in a non-Latin script normalises to
 -- nothing at all. Both keep their row id as a deterministic tie-breaker - no
--- title is overwritten and no row is dropped. `concat_ws` skips the NULL, so a
--- row with no usable title becomes just its id.
+-- title is overwritten and no row is dropped.
+--
+-- The base is truncated *first*, to leave exactly enough room for "-" and the
+-- id: a 160-character slug plus a suffix would overflow varchar(160) and fail
+-- the migration on precisely the rows this statement exists to rescue. The
+-- second trim runs after truncation, so cutting mid-word cannot leave a
+-- trailing dash. `NULLIF` + `concat_ws` then drop an empty base entirely, so a
+-- row with no usable title becomes just its id rather than "-12".
 UPDATE "example_articles" AS a
-SET "slug" = concat_ws('-', a."slug", a."id")
+SET "slug" = concat_ws(
+  '-',
+  NULLIF(
+    trim(
+      both '-' from
+      left(coalesce(a."slug", ''), 160 - 1 - length(a."id"::text))
+    ),
+    ''
+  ),
+  a."id"
+)
 WHERE a."slug" IS NULL
    OR EXISTS (
      SELECT 1 FROM "example_articles" AS b

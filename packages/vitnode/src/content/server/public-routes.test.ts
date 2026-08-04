@@ -22,7 +22,7 @@ const posts = createContentModel(testPostContentType, {
 const PLUGIN_ID = "@vitnode/example";
 
 const publicRow = {
-  category: { id: 3, label: "News" },
+  category: { id: 3 },
   excerpt: "Prose",
   publishedAt: new Date("2026-08-01T09:00:00.000Z"),
   slug: "hello-world",
@@ -193,7 +193,7 @@ describe("public detail route", () => {
     expect(body).not.toHaveProperty("id");
   });
 
-  it("projects the relation as an id and a label", async () => {
+  it("projects the relation as an identifier and nothing else", async () => {
     const { app, service } = harness();
     service.findBySlug.mockResolvedValue(publicRow);
 
@@ -201,7 +201,18 @@ describe("public detail route", () => {
       category: unknown;
     };
 
-    expect(body.category).toEqual({ id: 3, label: "News" });
+    expect(body.category).toEqual({ id: 3 });
+  });
+
+  it("documents the relation without a label", () => {
+    // The response schema is the contract a generated client is built from, so
+    // it has to say the same thing the handler does.
+    const relation = (
+      testPostContentType.schemas.publicSelectObject.shape
+        .category as unknown as { shape: Record<string, unknown> }
+    ).shape;
+
+    expect(Object.keys(relation)).toEqual(["id"]);
   });
 
   it("is a 404 for a draft, an unpublished row and a typo alike", async () => {

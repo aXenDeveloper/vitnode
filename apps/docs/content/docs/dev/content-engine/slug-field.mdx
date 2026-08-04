@@ -167,8 +167,19 @@ SET "slug" = NULLIF(
 
 -- Two rows can share a title, and a non-Latin title normalises to nothing.
 -- Both keep their row id as a deterministic tie-breaker; no title is lost.
+-- The base is truncated *first*, to leave room for "-" and the id.
 UPDATE "example_articles" AS a
-SET "slug" = concat_ws('-', a."slug", a."id")
+SET "slug" = concat_ws(
+  '-',
+  NULLIF(
+    trim(
+      both '-' from
+      left(coalesce(a."slug", ''), 160 - 1 - length(a."id"::text))
+    ),
+    ''
+  ),
+  a."id"
+)
 WHERE a."slug" IS NULL
    OR EXISTS (
      SELECT 1 FROM "example_articles" AS b
@@ -179,9 +190,32 @@ ALTER TABLE "example_articles" ALTER COLUMN "slug" SET NOT NULL;--> statement-br
 CREATE UNIQUE INDEX "example_articles_slug_key" ON "example_articles" USING btree ("slug");
 ```
 
+<Callout type="warn" title="Truncate before you append, not after">
+  The first statement already fills the column: `left("title", 160)` can produce
+  a slug exactly 160 characters long. Appending `-42` to *that* overflows
+  `varchar(160)` and fails the migration - on precisely the duplicate rows the
+  second statement exists to rescue.
+
+So the base is cut to `160 - 1 - length(id)` first, and the trim runs after the
+cut so a mid-word truncation cannot leave a trailing dash. `NULLIF` plus
+`concat_ws` drop an empty base entirely, which is how a title in a non-Latin
+script becomes just its id rather than `-42`.
+
+</Callout>
+
+Every migrated slug is therefore non-empty, at most 160 characters, unique, and
+the same on every machine that runs it.
+
+<Callout type="info" title="Backfill suffixes are not runtime behaviour">
+  `-42` here is a one-off, deterministic tie-breaker for rows that already
+  existed. It is **not** what the engine does at runtime: a collision on a live
+  create or update is a [409](#collisions), never a silently suffixed URL.
+</Callout>
+
 The [example plugin's migration](https://github.com/aXenDeveloper/vitnode/blob/canary/apps/docs/migrations/0024_add_example_article_slug.sql)
-is exactly that file, and the Postgres integration test replays it - so the
-recipe is checked rather than remembered.
+is exactly that file. The Postgres integration test seeds duplicate titles, a
+title that fills the whole column and a non-Latin one, then replays the
+migration over them - so the recipe is checked rather than remembered.
 
 ## Where a slug can be used
 
