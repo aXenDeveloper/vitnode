@@ -157,6 +157,15 @@ alongside the search engine. When it does, the message falls back to the console
 and the mutation still succeeds. Neither failure can turn a committed write into a
 failed request.
 
+## An orphaned collection keeps its own owner
+
+A collection whose indexer is no longer registered - the plugin was uninstalled or
+renamed - still has documents, and the AdminCP names their stored owner rather
+than reassigning them to core. It falls back to `unknown` only when neither a live
+indexer nor the stored rows know. Its documents are also not rebuilt: a rebuild
+clears what it is about to replace, and an item type with no indexer has nothing
+to replace it with.
+
 ## Malformed published data reads as under-indexed
 
 A published record the search mapper cannot project - a title that is blank in the

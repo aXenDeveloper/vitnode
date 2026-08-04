@@ -139,12 +139,36 @@ One item type may only have **one** indexer. Two plugins claiming the same
 `itemType` is a startup error naming both, because they would otherwise overwrite
 each other's documents on every rebuild.
 
+`itemsRead` is the number of **source items** the page read, not the number of
+search documents it produced. They differ whenever one item emits several
+documents (one per language) or none at all (a row that cannot be projected).
+
 <Callout type="warn" title="Never page by document count">
   Returning `documents.length` as `itemsRead`, or ending the loop on an empty
   `documents` array, silently truncates the index: a page whose rows all fail to
   project would stop the rebuild before the valid rows behind it. Report the rows
   you read.
 </Callout>
+
+### The older array result
+
+`load` may still return a bare `SearchDocument[]`:
+
+```ts
+load: async (c, offset, limit) => await buildDocuments(c, offset, limit),
+```
+
+It keeps working, so an indexer written before the page contract needs no
+changes. It is **deprecated**, though, and it is not equally safe:
+
+- it carries no source count, so the rebuild advances by the **requested page
+  size** and waits for an empty array to stop;
+- it therefore cannot express "rows were read, none could be projected" - such a
+  page looks exactly like the end of the source, and the rows behind it are never
+  indexed.
+
+Return a `SearchIndexerPage` in new code. The array form is removed only in a
+future major release.
 
 ### Ownership
 
@@ -159,8 +183,14 @@ request, so the request's plugin is not the owner - an explicit `pluginId` is wh
 makes a rebuilt document identical to a live-indexed one. An indexer that names
 none has its registering plugin stamped on during the rebuild, so existing
 indexers keep working; the request's plugin, then `"core"`, are the remaining
-fallbacks. Ownership is resolved once, in the search model, so the canonical row
-and the mirrored document can never disagree.
+fallbacks. An empty or whitespace-only value counts as naming nobody. Ownership is
+resolved once, in the search model, so the canonical row and the mirrored document
+can never disagree.
+
+**AdminCP → Advanced → Search** shows the registered indexer's plugin. When a
+collection has documents but no live indexer - the plugin was uninstalled or
+renamed - it shows the owner stored on those documents instead, and `unknown` only
+when neither source knows. An orphaned collection is never relabelled as core.
 
 Trigger a rebuild from **AdminCP → Advanced → Search → Rebuild index**. It runs as
 a background queue task, so a [cron adapter](/docs/dev/cron) must be configured

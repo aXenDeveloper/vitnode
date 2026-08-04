@@ -249,6 +249,12 @@ a page reads no rows at all. An empty document list does not end it: a page of
 records the mapper refused would otherwise stop the rebuild before the valid
 records behind it.
 
+Generated indexers always report both counts. A hand-written indexer may still
+return a bare `SearchDocument[]` - that is [deprecated but
+supported](/docs/dev/search#the-older-array-result), and it is the one case where
+a filtered-empty page does end the rebuild early, because an array cannot say how
+many rows produced it.
+
 ### Coverage, and what "stale" means
 
 Coverage compares **published** records against indexed ones, so a mostly-draft
@@ -296,7 +302,13 @@ preference to the request, and falls back to the request only when a document
 names none. A generated Content Engine document is never owned by `core`.
 
 A hand-written indexer that names no owner is stamped with the plugin that
-registered it, so it does not need changing.
+registered it, so it does not need changing. A blank owner counts as naming
+nobody.
+
+The AdminCP shows the registered indexer's plugin. A collection with documents but
+no live indexer - an uninstalled or renamed plugin - shows the owner stored on its
+documents, and `unknown` only when neither source knows. It is never relabelled as
+core.
 
 ## Migrating a hand-written indexer
 
