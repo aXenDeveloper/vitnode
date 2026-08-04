@@ -121,6 +121,10 @@ export const searchStatusDebugAdminRoute = buildRoute({
         // report a collection nothing can rebuild as fully covered. An indexer
         // without the optional `count` still falls back to the indexed count,
         // which is the documented behaviour of leaving `count` out.
+        //
+        // `hasIndexer` says only whether a rebuild indexer exists. A plugin may
+        // keep its collection current through `search.index()` and register none,
+        // so this is not a statement about the plugin.
         const total = indexer ? ((await indexer.count?.(c)) ?? indexed) : null;
 
         return {
@@ -128,7 +132,7 @@ export const searchStatusDebugAdminRoute = buildRoute({
           itemType,
           // The registered indexer is canonical - it is what the next rebuild
           // will stamp on the rows. Falling back to the stored owner is what
-          // stops an orphaned collection being reassigned to core, and
+          // stops a collection with no indexer being reassigned to core, and
           // `"unknown"` is honest when neither source knows.
           pluginId:
             indexer?.pluginId ??

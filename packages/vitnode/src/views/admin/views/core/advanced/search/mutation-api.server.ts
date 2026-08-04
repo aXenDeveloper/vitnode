@@ -22,8 +22,9 @@ export const rebuildSearchIndexMutation = async (itemType?: string) => {
 };
 
 /**
- * Removes the documents of an orphaned collection. Destructive, and nothing puts
- * them back - the API refuses it for any collection that still has an indexer.
+ * Removes the documents of a collection with no rebuild indexer. Destructive:
+ * nothing *rebuilds* them afterwards, though the owning plugin may write them
+ * again live. The API refuses it for any collection that has an indexer.
  */
 export const clearSearchCollectionMutation = async (itemType: string) => {
   const res = await fetcher(debugAdminModule, {

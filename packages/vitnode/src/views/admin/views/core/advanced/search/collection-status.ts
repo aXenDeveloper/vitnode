@@ -1,5 +1,5 @@
 export interface SearchCollection {
-  /** Whether an indexer is registered for this item type right now. */
+  /** Whether a rebuild indexer is registered for this item type right now. */
   hasIndexer: boolean;
   indexed: number;
   itemType: string;
@@ -9,19 +9,22 @@ export interface SearchCollection {
   total: null | number;
 }
 
-export type CollectionStatus = "empty" | "indexed" | "orphaned" | "stale";
+export type CollectionStatus = "empty" | "indexed" | "stale" | "unmanaged";
 
 /**
- * Nothing indexed, exactly covered, out of step, or abandoned.
+ * Nothing indexed, exactly covered, out of step, or outside the rebuild system.
  *
  * "Out of step" is any mismatch, in **either** direction. Fewer documents than
  * source records means something was missed; more means documents survive for
  * records that no longer qualify - and calling that one healthy is how a stale
  * index stays invisible.
  *
- * "Orphaned" comes first and does not look at the counts at all: documents with
- * no registered indexer have no source to be compared against, so `indexed`
- * matching `total` would only mean the fallback matched itself.
+ * "Unmanaged" comes first and does not look at the counts at all: without an
+ * indexer there is no source to compare against, so `indexed` matching `total`
+ * would only mean the fallback matched itself. It says nothing about the plugin -
+ * registering an indexer is optional, and a plugin that only ever calls
+ * `search.index()` keeps its collection perfectly current without one. All that
+ * is known is that a rebuild cannot reproduce it.
  */
 export const getCollectionStatus = ({
   hasIndexer,
@@ -31,7 +34,7 @@ export const getCollectionStatus = ({
   SearchCollection,
   "hasIndexer" | "indexed" | "total"
 >): CollectionStatus => {
-  if (!hasIndexer && indexed > 0) return "orphaned";
+  if (!hasIndexer && indexed > 0) return "unmanaged";
   if (indexed === 0) return "empty";
   if (indexed === total) return "indexed";
 

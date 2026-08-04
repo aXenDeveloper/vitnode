@@ -118,14 +118,15 @@
             "indexed": "Indexed",
             "stale": "Stale",
             "empty": "Not indexed",
-            "orphaned": "Orphaned"
+            "unmanaged": "Unmanaged"
           },
-          "noIndexer": "No indexer registered",
+          "noIndexer": "No rebuild indexer",
+          "noIndexerDesc": "No rebuild indexer is registered. Documents may still be maintained by live plugin writes.",
           "removeDocuments": "Remove documents",
           "removeConfirmTitle": "Remove indexed documents for \u201c{collection}\u201d?",
-          "removeConfirmDescription": "No search indexer is registered for this collection. Its documents will be permanently removed from search, and nothing can rebuild them until the plugin registers an indexer again.",
+          "removeConfirmDescription": "No rebuild indexer is registered for this collection. Its documents may still be maintained by live plugin writes. This removes their current indexed state, and future writes may add them again.",
           "removeSuccess": "Removed the indexed documents for {collection}.",
-          "removeSuccessDesc": "They will not come back until an indexer is registered again.",
+          "removeSuccessDesc": "Live plugin writes may recreate them.",
           "removeError": "Could not remove the indexed documents.",
           "empty": "No collections found",
           "emptyDesc": "No collection matches your search. Try a different term."

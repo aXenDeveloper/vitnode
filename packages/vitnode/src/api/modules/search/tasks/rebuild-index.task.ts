@@ -26,7 +26,7 @@ export const rebuildSearchIndexTask = buildQueueTask({
     // registered can drain after the plugin is gone.
     if (itemType && indexers.length === 0) {
       throw new Error(
-        `[Search] Cannot rebuild collection "${itemType}": no search indexer is registered. Its documents were left alone - remove them explicitly if that is what you meant.`,
+        `[Search] Cannot rebuild collection "${itemType}": no search indexer is registered. Its documents were left alone - they may still be maintained by live writes, so remove them explicitly if that is what you meant.`,
       );
     }
 

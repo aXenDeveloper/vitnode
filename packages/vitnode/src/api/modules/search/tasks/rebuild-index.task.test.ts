@@ -406,7 +406,7 @@ describe("rebuild-search-index", () => {
     });
   });
 
-  describe("a collection with no indexer", () => {
+  describe("a collection with no rebuild indexer", () => {
     it("refuses a scoped rebuild before clearing anything", async () => {
       // The action offering this is called "reindex", so it must not be a delete:
       // clearing here would remove the documents and refill nothing.
@@ -445,8 +445,9 @@ describe("rebuild-search-index", () => {
     });
 
     it("still lets a full rebuild clear the whole index", async () => {
-      // Orphaned documents have no source, so a full rebuild removing them is the
-      // documented behaviour - and it must not be blocked by the scoped guard.
+      // A full rebuild refills only what has an indexer, so documents without one
+      // are removed by it. That is the documented behaviour, and it must not be
+      // blocked by the scoped guard.
       const registered = scriptedIndexer({
         itemType: "example.article",
         pages: [

@@ -49,7 +49,7 @@ const statusStyles: Record<
     dot: "bg-muted-foreground/50",
     text: "text-muted-foreground",
   },
-  orphaned: {
+  unmanaged: {
     bar: "bg-destructive",
     dot: "bg-destructive",
     text: "text-destructive",
@@ -115,6 +115,14 @@ export const CollectionsTable = async ({
                   {row.pluginId}
                 </span>
               </span>
+              {status === "unmanaged" && (
+                // Says only what is known. A plugin may index live and never
+                // register a rebuild indexer, so "unmanaged" is about the
+                // rebuild system - not about the plugin being gone.
+                <p className="text-muted-foreground text-xs text-pretty">
+                  {t("admin.collections.noIndexerDesc")}
+                </p>
+              )}
             </div>
           </div>
         );
@@ -189,7 +197,7 @@ export const CollectionsTable = async ({
           <ReindexCollectionAction itemType={row.itemType} label={row.label} />
         ) : (
           // Rebuilding this would clear it and refill nothing, so the only offer
-          // is the honest one: remove the documents.
+          // is the honest one: remove what is currently indexed.
           <RemoveCollectionDocumentsAction
             itemType={row.itemType}
             label={row.label}

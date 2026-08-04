@@ -13,8 +13,12 @@ const registered = (indexed: number, total: number) => ({
   total,
 });
 
-/** An orphaned collection: documents, no indexer, and so no source count. */
-const orphaned = (indexed: number) => ({
+/**
+ * A collection with no rebuild indexer, and so no source count. It may still be
+ * kept current by live `search.index()` writes - that is why the status only
+ * claims it is outside the rebuild system.
+ */
+const unmanaged = (indexed: number) => ({
   hasIndexer: false,
   indexed,
   total: null,
@@ -48,25 +52,25 @@ describe("getCollectionStatus", () => {
     expect(getCollectionStatus(registered(11, 10))).not.toBe("indexed");
   });
 
-  describe("orphaned collections", () => {
-    it("reports orphaned when documents have no indexer", () => {
-      expect(getCollectionStatus(orphaned(11))).toBe("orphaned");
+  describe("collections with no rebuild indexer", () => {
+    it("reports unmanaged when documents have no indexer", () => {
+      expect(getCollectionStatus(unmanaged(11))).toBe("unmanaged");
     });
 
-    it("never reports orphaned as indexed, whatever the counts say", () => {
+    it("decides on indexer availability before comparing counts", () => {
       // The trap this exists for: the old `total = indexed` fallback made
       // `indexed === total` true, so an unrebuildable collection read as healthy.
       expect(
         getCollectionStatus({ hasIndexer: false, indexed: 11, total: 11 }),
-      ).toBe("orphaned");
+      ).toBe("unmanaged");
       expect(
         getCollectionStatus({ hasIndexer: false, indexed: 1, total: 1 }),
-      ).toBe("orphaned");
+      ).toBe("unmanaged");
     });
 
-    it("reports empty rather than orphaned when there is nothing indexed", () => {
-      // Nothing to clean up, so there is nothing to warn about.
-      expect(getCollectionStatus(orphaned(0))).toBe("empty");
+    it("reports empty rather than unmanaged when there is nothing indexed", () => {
+      // Nothing indexed, so nothing to say about how it would be rebuilt.
+      expect(getCollectionStatus(unmanaged(0))).toBe("empty");
     });
   });
 });
@@ -93,8 +97,8 @@ describe("getCollectionCoverage", () => {
 
   it("returns null when there is no source count", () => {
     // Not 100: there is nothing to be complete against.
-    expect(getCollectionCoverage(orphaned(11))).toBeNull();
-    expect(getCollectionCoverage(orphaned(0))).toBeNull();
+    expect(getCollectionCoverage(unmanaged(11))).toBeNull();
+    expect(getCollectionCoverage(unmanaged(0))).toBeNull();
   });
 });
 
@@ -110,6 +114,6 @@ describe("getCollectionCoverageBar", () => {
   });
 
   it("draws nothing without a source count", () => {
-    expect(getCollectionCoverageBar(orphaned(11))).toBeNull();
+    expect(getCollectionCoverageBar(unmanaged(11))).toBeNull();
   });
 });

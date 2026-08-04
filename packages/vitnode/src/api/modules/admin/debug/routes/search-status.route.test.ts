@@ -130,9 +130,10 @@ describe("search status collection ownership", () => {
     ]);
   });
 
-  it("falls back to the stored owner for an orphaned collection", async () => {
-    // The indexer is gone - uninstalled, renamed, not yet loaded - but the rows
-    // still say who wrote them. Reassigning them to core would be a lie.
+  it("falls back to the stored owner when no indexer is registered", async () => {
+    // No rebuild indexer, for any reason - never registered, or its plugin is
+    // gone - but the rows still say who wrote them. Reassigning them to core
+    // would be a lie.
     const { collections } = harness({
       rows: [indexedRow("example.article", "@vitnode/example", 3)],
     });
@@ -177,10 +178,11 @@ describe("search status collection ownership", () => {
     expect(collection.pluginId).toBe("@vitnode/example");
   });
 
-  it("keeps an orphaned over-indexed collection truthful", async () => {
-    // The regression: `total` used to fall back to `indexed`, so an orphaned
-    // collection reported 11/11 and read as fully indexed. There is no source to
-    // count, so there is no total - and it must still not be called core.
+  it("keeps an over-indexed collection with no indexer truthful", async () => {
+    // The regression: `total` used to fall back to `indexed`, so a collection
+    // with no indexer reported 11/11 and read as fully indexed. There is no
+    // source to count, so there is no total - and it must still not be called
+    // core.
     const { collections } = harness({
       rows: [indexedRow("example.article", "@vitnode/example", 11)],
     });
@@ -230,7 +232,7 @@ describe("search status collection ownership", () => {
 
   it("reports an indexer with no `count` against the indexed total", async () => {
     // `count` is optional, and leaving it out is documented as "assume covered".
-    // That is a registered collection, so it is not the orphaned case.
+    // That is still a registered collection, so `hasIndexer` stays true.
     const { collections } = harness({
       indexers: [indexer("example.article", "@vitnode/example")],
       rows: [indexedRow("example.article", "@vitnode/example", 4)],
@@ -247,7 +249,8 @@ describe("search status collection ownership", () => {
 
   it("does not infer an indexer from a stored owner", async () => {
     // The rule the field exists for: rows knowing who wrote them says nothing
-    // about whether anything can write them again.
+    // about whether a rebuild indexer is registered. It says nothing the other
+    // way either - a plugin may be installed, active, and writing live.
     const { collections } = harness({
       rows: [indexedRow("example.article", "@vitnode/example", 3)],
     });
