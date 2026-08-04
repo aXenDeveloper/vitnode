@@ -55,6 +55,18 @@ describe("content search document", () => {
     expect(document()).not.toHaveProperty("languageCode");
   });
 
+  it("omits the owner unless one was given", () => {
+    expect(document()).not.toHaveProperty("pluginId");
+  });
+
+  it("carries the owning plugin when one is given", () => {
+    expect(
+      contentSearchDocument(testSearchablePostContentType, row, {
+        pluginId: "@vitnode/example",
+      })?.pluginId,
+    ).toBe("@vitnode/example");
+  });
+
   it("never carries an author, container or metadata", () => {
     const result = document();
 

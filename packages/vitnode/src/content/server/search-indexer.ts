@@ -46,6 +46,7 @@ export const createContentSearchIndexer = <
   TDefinition extends AnyContentTypeDefinition,
 >(
   model: ContentModel<TDefinition>,
+  { pluginId }: { pluginId: string },
 ): SearchIndexer => {
   const { definition } = model;
   // Widened the same way `createContentPublicService` takes it: the query
@@ -84,6 +85,10 @@ export const createContentSearchIndexer = <
     // key keeps pages from overlapping within one rebuild; a row whose
     // publication state changes mid-rebuild can still shift, and that is what
     // the next publish - or the next rebuild - repairs.
+    //
+    // `itemsRead` is the row count, not the document count. A published row with
+    // no usable title projects to nothing, and reporting that as "no items" would
+    // end the rebuild before the valid rows after it.
     load: async (c, offset, limit) => {
       const rows = await c
         .get("db")
@@ -94,11 +99,13 @@ export const createContentSearchIndexer = <
         .limit(limit)
         .offset(offset);
 
-      return rows.flatMap(row => {
-        const document = contentSearchDocument(definition, row);
+      const documents = rows.flatMap(row => {
+        const document = contentSearchDocument(definition, row, { pluginId });
 
         return document ? [document] : [];
       }) satisfies SearchDocument[];
+
+      return { documents, itemsRead: rows.length };
     },
   };
 };

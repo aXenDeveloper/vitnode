@@ -56,9 +56,11 @@ export const buildContentAdminModule = <P extends string>({
     modules,
     contentTypes: contentTypes.map(model => model.definition),
     // A content type without `search` contributes nothing, so the two module
-    // builders can keep taking the same array.
+    // builders can keep taking the same array. The plugin id travels with the
+    // indexer so a rebuild - which runs in the core cron request - still stores
+    // the owning plugin on every document.
     searchIndexers: contentTypes
       .filter(model => model.definition.search.enabled)
-      .map(createContentSearchIndexer),
+      .map(model => createContentSearchIndexer(model, { pluginId })),
   });
 };

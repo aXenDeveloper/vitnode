@@ -246,7 +246,11 @@ export const buildContentRoutes = <
       // A new record is a draft, so this normally indexes nothing - but it is
       // computed from the row rather than assumed, the same way the Server
       // Action computes its cache tags.
-      await syncContentSearch(c, definition, { operation: "create", row });
+      await syncContentSearch(c, definition, {
+        operation: "create",
+        pluginId,
+        row,
+      });
 
       return c.json(row, 201);
     },
@@ -291,6 +295,7 @@ export const buildContentRoutes = <
       await syncContentSearch(c, definition, {
         changedFields: result.changedFields,
         operation: "update",
+        pluginId,
         row: result.row,
       });
 
@@ -346,6 +351,7 @@ export const buildContentRoutes = <
         await syncContentSearch(c, definition, {
           changed: result.changed,
           operation: action,
+          pluginId,
           row: result.row,
         });
 
@@ -382,7 +388,11 @@ export const buildContentRoutes = <
       // `publishedAt` survives an unpublish, so a record that was ever published
       // is removed from the index defensively - a delete of a document that is
       // not there costs one statement and repairs any drift.
-      await syncContentSearch(c, definition, { operation: "delete", row });
+      await syncContentSearch(c, definition, {
+        operation: "delete",
+        pluginId,
+        row,
+      });
 
       return c.json(row, 200);
     },

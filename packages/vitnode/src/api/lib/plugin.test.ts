@@ -95,7 +95,7 @@ describe("buildApiPlugin content types", () => {
 
 const indexer = (itemType: string): SearchIndexer => ({
   itemType,
-  load: async () => await Promise.resolve([]),
+  load: async () => await Promise.resolve({ documents: [], itemsRead: 0 }),
 });
 
 describe("buildApiPlugin search indexers", () => {
@@ -172,6 +172,33 @@ describe("buildApiPlugin search indexers", () => {
 });
 
 describe("validateSearchIndexers", () => {
+  it("retains each plugin's ownership after collection", () => {
+    // What the AdminCP reports a collection's owner from, and what the rebuild
+    // stamps on a legacy document.
+    const collected = [
+      ...(buildApiPlugin({
+        pluginId: "@vitnode/example",
+        searchIndexers: [indexer("test.article")],
+      }).searchIndexers ?? []),
+    ].map(item => ({ ...item, pluginId: "@vitnode/example" }));
+    const other = [
+      ...(buildApiPlugin({
+        pluginId: "@vitnode/blog",
+        searchIndexers: [indexer("blog_post")],
+      }).searchIndexers ?? []),
+    ].map(item => ({ ...item, pluginId: "@vitnode/blog" }));
+
+    expect(
+      validateSearchIndexers([...collected, ...other]).map(item => [
+        item.itemType,
+        item.pluginId,
+      ]),
+    ).toEqual([
+      ["test.article", "@vitnode/example"],
+      ["blog_post", "@vitnode/blog"],
+    ]);
+  });
+
   it("names both owners of a collision", () => {
     expect(() =>
       validateSearchIndexers([

@@ -22,6 +22,12 @@ export interface ContentSearchSyncInput {
   /** `update` only. An update that touched no indexed field changes no document. */
   changedFields?: readonly string[];
   operation: ContentSearchOperation;
+  /**
+   * The plugin that owns the content type. Stamped on the document so a rebuild
+   * reproduces the same ownership; omit it and the request's plugin is used,
+   * which is only correct while the request belongs to the owner.
+   */
+  pluginId?: string;
   /** The full row the mutation returned, including `status` and `publishedAt`. */
   row: object;
 }
@@ -123,7 +129,11 @@ export const syncContentSearch = async (
   // whitespace, say - has its document removed rather than left holding whatever
   // text it was indexed with last time.
   const document =
-    decided === "upsert" ? contentSearchDocument(definition, input.row) : null;
+    decided === "upsert"
+      ? contentSearchDocument(definition, input.row, {
+          pluginId: input.pluginId,
+        })
+      : null;
   const action = decided === "upsert" && !document ? "delete" : decided;
 
   try {
@@ -140,17 +150,29 @@ export const syncContentSearch = async (
     // `c.get("log")` takes a string, so the context goes in as JSON behind a
     // greppable prefix. The logger middleware adds the plugin id, path, method,
     // user and timestamp on its way into `core_logs`.
-    await c.get("log").error(
-      `[content-search] ${JSON.stringify({
-        action,
-        contentTypeId: definition.id,
-        documentId,
-        error: error.message,
-        itemId,
-        itemType: definition.id,
-        operation: input.operation,
-      })}`,
-    );
+    const message = `[content-search] ${JSON.stringify({
+      action,
+      contentTypeId: definition.id,
+      documentId,
+      error: error.message,
+      itemId,
+      itemType: definition.id,
+      operation: input.operation,
+      pluginId: input.pluginId,
+    })}`;
+
+    // The logger writes to the database, so it can fail for the same reason the
+    // search engine just did. Both are best effort *after* a committed write, and
+    // neither may turn it into a failed request - so the fallback is the console,
+    // and the outcome keeps the original search error rather than this one.
+    try {
+      await c.get("log").error(message);
+    } catch {
+      // eslint-disable-next-line no-console
+      console.error(
+        `[VitNode] Failed to log content search failure: ${message}`,
+      );
+    }
 
     return { action, documentId, error };
   }

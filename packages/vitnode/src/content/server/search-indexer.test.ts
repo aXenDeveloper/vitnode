@@ -66,10 +66,18 @@ const plain = createContentModel(testPostContentType, {
   references: { category: () => categories.table.id },
 });
 
+const PLUGIN_ID = "@vitnode/example";
+
+const indexerFor = (model: typeof plain | typeof searchable) =>
+  createContentSearchIndexer(model as typeof searchable, {
+    pluginId: PLUGIN_ID,
+  });
+
 const PUBLISHED_AT = new Date("2026-02-01T10:00:00.000Z");
 
 const dbRow = (id: number, slug: string) => ({
   body: "Body copy.",
+  code: "SECRET",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   excerpt: "Excerpt.",
   id,
@@ -82,16 +90,14 @@ const dbRow = (id: number, slug: string) => ({
 
 describe("generated content search indexer", () => {
   it("uses the content type id as the item type", () => {
-    expect(createContentSearchIndexer(searchable).itemType).toBe(
-      "test.searchable",
-    );
+    expect(indexerFor(searchable).itemType).toBe("test.searchable");
   });
 
   describe("count", () => {
     it("counts only published rows", async () => {
       const { c, calls } = createDbMock([[{ value: 12 }]]);
 
-      const total = await createContentSearchIndexer(searchable).count?.(c);
+      const total = await indexerFor(searchable).count?.(c);
 
       expect(total).toBe(12);
       // The published predicate is not optional, so there is always a `where`.
@@ -101,9 +107,7 @@ describe("generated content search indexer", () => {
     it("reports zero for an empty table", async () => {
       const { c } = createDbMock([[]]);
 
-      await expect(
-        createContentSearchIndexer(searchable).count?.(c),
-      ).resolves.toBe(0);
+      await expect(indexerFor(searchable).count?.(c)).resolves.toBe(0);
     });
   });
 
@@ -111,7 +115,7 @@ describe("generated content search indexer", () => {
     it("projects only the columns the document needs", async () => {
       const { c, calls } = createDbMock([[]]);
 
-      await createContentSearchIndexer(searchable).load(c, 0, 200);
+      await indexerFor(searchable).load(c, 0, 200);
 
       const selection = opOf(calls, "select") as Record<string, unknown>;
 
@@ -135,60 +139,94 @@ describe("generated content search indexer", () => {
     it("orders deterministically and honours the page window", async () => {
       const { c, calls } = createDbMock([[]]);
 
-      await createContentSearchIndexer(searchable).load(c, 400, 200);
+      await indexerFor(searchable).load(c, 400, 200);
 
       expect(opOf(calls, "orderBy")).toBeDefined();
       expect(opOf(calls, "limit")).toBe(200);
       expect(opOf(calls, "offset")).toBe(400);
     });
 
-    it("maps every row into a document", async () => {
+    it("maps every row into a document, and stamps the owning plugin", async () => {
       const { c } = createDbMock([[dbRow(1, "one"), dbRow(2, "two")]]);
 
-      const docs = await createContentSearchIndexer(searchable).load(c, 0, 200);
+      const page = await indexerFor(searchable).load(c, 0, 200);
 
-      expect(docs).toHaveLength(2);
-      expect(docs[0]).toMatchObject({
+      expect(page.itemsRead).toBe(2);
+      expect(page.documents).toHaveLength(2);
+      expect(page.documents[0]).toMatchObject({
         itemId: 1,
         itemType: "test.searchable",
+        pluginId: PLUGIN_ID,
         title: "Post 1",
         url: "/searchable/one",
       });
-      expect(docs[1]?.url).toBe("/searchable/two");
+      expect(page.documents[1]).toMatchObject({
+        pluginId: PLUGIN_ID,
+        url: "/searchable/two",
+      });
     });
 
-    it("returns an empty page past the end", async () => {
+    it("reports zero items read past the end of the source", async () => {
       const { c } = createDbMock([[]]);
 
-      await expect(
-        createContentSearchIndexer(searchable).load(c, 1000, 200),
-      ).resolves.toEqual([]);
+      await expect(indexerFor(searchable).load(c, 1000, 200)).resolves.toEqual({
+        documents: [],
+        itemsRead: 0,
+      });
     });
 
-    it("drops a row the mapper rejects", async () => {
+    it("counts rows the mapper rejected as items read", async () => {
+      // The regression this contract exists for: a page can read rows and
+      // project none of them, and reporting that as "no items" would end the
+      // rebuild before the valid rows behind it.
       const { c } = createDbMock([
-        [dbRow(1, "one"), { ...dbRow(2, "two"), title: "  " }],
+        [
+          { ...dbRow(1, "one"), title: "  " },
+          { ...dbRow(2, "two"), title: null },
+        ],
       ]);
 
-      const docs = await createContentSearchIndexer(searchable).load(c, 0, 200);
+      const page = await indexerFor(searchable).load(c, 0, 200);
 
-      expect(docs).toHaveLength(1);
-      expect(docs[0]?.itemId).toBe(1);
+      expect(page.itemsRead).toBe(2);
+      expect(page.documents).toEqual([]);
+    });
+
+    it("separates valid from invalid rows on a mixed page", async () => {
+      const { c, calls } = createDbMock([
+        [
+          dbRow(1, "one"),
+          { ...dbRow(2, "two"), title: "   " },
+          dbRow(3, "three"),
+        ],
+      ]);
+
+      const page = await indexerFor(searchable).load(c, 0, 200);
+
+      // `itemsRead` is the row count; only the valid rows became documents.
+      expect(page.itemsRead).toBe(3);
+      expect(page.documents.map(document => document.itemId)).toEqual([1, 3]);
+
+      const selection = opOf(calls, "select") as Record<string, unknown>;
+      expect(selection).not.toHaveProperty("code");
+      expect(JSON.stringify(page.documents)).not.toContain("SECRET");
     });
   });
 
   it("refuses a content type without publication", () => {
-    expect(() => createContentSearchIndexer(categories)).toThrow(
-      /publication/i,
-    );
+    expect(() =>
+      indexerFor(categories as unknown as typeof searchable),
+    ).toThrow(/publication/i);
   });
 
   it("builds for a content type with search off, but yields no documents", async () => {
     const { c } = createDbMock([[dbRow(1, "one")]]);
 
     // `buildContentAdminModule` filters these out; the mapper is the backstop.
-    await expect(
-      createContentSearchIndexer(plain).load(c, 0, 200),
-    ).resolves.toEqual([]);
+    // The row is still read, so `itemsRead` reflects it.
+    await expect(indexerFor(plain).load(c, 0, 200)).resolves.toEqual({
+      documents: [],
+      itemsRead: 1,
+    });
   });
 });

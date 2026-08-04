@@ -121,7 +121,7 @@ export const blogPostSearchIndexer: SearchIndexer = {
       .offset(offset);
 
     if (rows.length === 0) {
-      return [];
+      return { documents: [], itemsRead: 0 };
     }
 
     const languageCodes = getEnabledLanguageCodes(c);
@@ -133,13 +133,18 @@ export const blogPostSearchIndexer: SearchIndexer = {
       ),
     ]);
 
-    return rows.flatMap(post =>
-      buildDocumentsForPost(
-        post,
-        languageCodes,
-        translations.get(post.id),
-        defaultLanguageCode,
+    // One post emits one document per enabled language, so the document count is
+    // never the source count - `itemsRead` is what the rebuild pages by.
+    return {
+      documents: rows.flatMap(post =>
+        buildDocumentsForPost(
+          post,
+          languageCodes,
+          translations.get(post.id),
+          defaultLanguageCode,
+        ),
       ),
-    );
+      itemsRead: rows.length,
+    };
   },
 };

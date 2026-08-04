@@ -65,6 +65,7 @@ export const isContentRowPublic = (row: object): boolean => {
 export const contentSearchDocument = (
   definition: AnyContentTypeDefinition,
   row: object,
+  { pluginId }: { pluginId?: string } = {},
 ): null | SearchDocument => {
   const { publicApi, search } = definition;
   if (!search.enabled) return null;
@@ -115,6 +116,9 @@ export const contentSearchDocument = (
     // Content type ids are globally unique and already namespaced as
     // `plugin.entity`, so the id alone is a collision-free item type.
     itemType: definition.id,
+    // The owning plugin, so a rebuild - which runs in the core cron request -
+    // stores the same ownership a live write did.
+    ...(pluginId === undefined ? {} : { pluginId }),
     // Deliberately absent: `authorId` (a `user` field can never be public, and
     // the public search route resolves it into a person), `containerType` /
     // `containerId` (there is no `containerType` query filter to qualify them
