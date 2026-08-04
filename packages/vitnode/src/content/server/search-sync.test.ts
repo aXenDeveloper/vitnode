@@ -57,9 +57,11 @@ const draftRow = {
  * `c.get("search")`.
  */
 const harness = ({
+  logFails = false,
   model = searchable,
   searchFails = false,
 }: {
+  logFails?: boolean;
   model?: typeof plain | typeof searchable;
   searchFails?: boolean;
 } = {}) => {
@@ -102,6 +104,7 @@ const harness = ({
       error: async (content: string) => {
         await Promise.resolve();
         logged.push(content);
+        if (logFails) throw new Error("core_logs unavailable");
       },
       warn: async () => {
         await Promise.resolve();
@@ -263,6 +266,8 @@ describe("content search lifecycle synchronization", () => {
           content: "Excerpt.\n\nBody copy.",
           createdAt: PUBLISHED_AT,
           isPublic: true,
+          // Stamped by the route, so a rebuild reproduces the same ownership.
+          pluginId: PLUGIN_ID,
           url: "/searchable/hello-world",
         }),
       );
@@ -382,7 +387,77 @@ describe("content search lifecycle synchronization", () => {
         itemId: 7,
         itemType: "test.searchable",
         operation: "delete",
+        pluginId: PLUGIN_ID,
       });
+    });
+
+    it("writes no error log when synchronization succeeds", async () => {
+      const { app, logged, search, service } = harness();
+      service.publish.mockResolvedValue({
+        changed: true,
+        publishedAt: PUBLISHED_AT,
+        row: publishedRow,
+      });
+
+      const res = await app.request("/7/publish", { method: "POST" });
+
+      expect(res.status).toBe(200);
+      expect(search.index).toHaveBeenCalledTimes(1);
+      expect(logged).toEqual([]);
+    });
+
+    it("keeps the mutation successful when the logger fails too", async () => {
+      // The logger writes to the database, so it can be down for the same reason
+      // the search engine is. Both are best effort after a committed write.
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+
+      try {
+        const { app, logged, service } = harness({
+          logFails: true,
+          searchFails: true,
+        });
+        service.publish.mockResolvedValue({
+          changed: true,
+          publishedAt: PUBLISHED_AT,
+          row: publishedRow,
+        });
+
+        const res = await app.request("/7/publish", { method: "POST" });
+
+        expect(res.status).toBe(200);
+        await expect(res.json()).resolves.toMatchObject({ changed: true });
+
+        // The structured line was attempted, then the console stood in for it -
+        // still carrying the original search error, not the logger's.
+        expect(logged).toHaveLength(1);
+        expect(consoleError).toHaveBeenCalledTimes(1);
+        const fallback = String(consoleError.mock.calls[0][0]);
+        expect(fallback).toContain("Failed to log content search failure");
+        expect(fallback).toContain("engine unavailable");
+        expect(fallback).not.toContain("core_logs unavailable");
+      } finally {
+        consoleError.mockRestore();
+      }
+    });
+
+    it("does not reach the console when only the engine fails", async () => {
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+
+      try {
+        const { app, service } = harness({ searchFails: true });
+        service.delete.mockResolvedValue(publishedRow);
+
+        const res = await app.request("/7", { method: "DELETE" });
+
+        expect(res.status).toBe(200);
+        expect(consoleError).not.toHaveBeenCalled();
+      } finally {
+        consoleError.mockRestore();
+      }
     });
   });
 

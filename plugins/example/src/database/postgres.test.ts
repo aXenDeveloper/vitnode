@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { EXAMPLE_MIGRATIONS } from "@/const";
+import { CONFIG_PLUGIN, EXAMPLE_MIGRATIONS } from "@/const";
 import { articleContentType } from "@/content/article";
 
 import { articleContent } from "./articles";
@@ -749,7 +749,9 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
   it("runs the whole search lifecycle", async () => {
     const categories = categoryContent.service(context);
     const articles = articleContent.service(context);
-    const indexer = createContentSearchIndexer(articleContent);
+    const indexer = createContentSearchIndexer(articleContent, {
+      pluginId: CONFIG_PLUGIN.pluginId,
+    });
 
     // The search engine is the one thing stubbed here: `core_search_index` is a
     // core table whose generated column needs text-search configurations a stock
@@ -788,6 +790,10 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     ) =>
       await syncContentSearch(searchContext, articleContentType, {
         operation,
+        // A direct caller passes its own plugin id, exactly as the generated
+        // routes do - otherwise the document would be owned by whichever plugin
+        // the request belongs to.
+        pluginId: CONFIG_PLUGIN.pluginId,
         ...input,
       });
 
@@ -804,7 +810,10 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
       action: "skip",
     });
     await expect(indexer.count?.(context)).resolves.toBe(0);
-    await expect(indexer.load(context, 0, 10)).resolves.toEqual([]);
+    await expect(indexer.load(context, 0, 10)).resolves.toEqual({
+      documents: [],
+      itemsRead: 0,
+    });
 
     const published = await articles.publish(draft.id);
     if (!published) throw new Error("Expected a publish result.");
@@ -823,16 +832,22 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
       isPublic: true,
       itemId: draft.id,
       itemType: "example.article",
+      // The owning plugin, not core - the same value a rebuild stamps.
+      pluginId: CONFIG_PLUGIN.pluginId,
       title: "Findable article",
       url: "/articles/findable-article",
     });
 
     // Only published rows reach the rebuild, and only the projected columns.
     await expect(indexer.count?.(context)).resolves.toBe(1);
-    const [document] = await indexer.load(context, 0, 10);
+    const page = await indexer.load(context, 0, 10);
+    expect(page.itemsRead).toBe(1);
+    const [document] = page.documents;
     expect(document).toMatchObject({
       itemId: draft.id,
       itemType: "example.article",
+      // A rebuild reproduces the ownership the live write stored.
+      pluginId: CONFIG_PLUGIN.pluginId,
       url: "/articles/findable-article",
     });
     // The private columns are not in the document, and the author is not in it
@@ -840,8 +855,12 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     expect(JSON.stringify(document)).not.toContain("search-001");
     expect(document).not.toHaveProperty("authorId");
 
-    // Offsets page over the published rows deterministically.
-    await expect(indexer.load(context, 1, 10)).resolves.toEqual([]);
+    // Offsets page over the published rows deterministically, and the cursor
+    // advances by source rows read.
+    await expect(indexer.load(context, 1, 10)).resolves.toEqual({
+      documents: [],
+      itemsRead: 0,
+    });
 
     // An idempotent publish writes nothing.
     const noop = await articles.publish(draft.id);
@@ -873,9 +892,10 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     expect(calls.at(-1)?.args[0]).toMatchObject({
       url: "/articles/moved-article",
     });
-    await expect(indexer.load(context, 0, 10)).resolves.toMatchObject([
-      { url: "/articles/moved-article" },
-    ]);
+    await expect(indexer.load(context, 0, 10)).resolves.toMatchObject({
+      documents: [{ url: "/articles/moved-article" }],
+      itemsRead: 1,
+    });
 
     // Unpublishing removes the document and takes the row out of the rebuild.
     const unpublished = await articles.unpublish(draft.id);
@@ -890,7 +910,10 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
       op: "delete",
     });
     await expect(indexer.count?.(context)).resolves.toBe(0);
-    await expect(indexer.load(context, 0, 10)).resolves.toEqual([]);
+    await expect(indexer.load(context, 0, 10)).resolves.toEqual({
+      documents: [],
+      itemsRead: 0,
+    });
 
     // A future publication date is not public, so it is not indexed either -
     // the same `publishedAt <= now()` rule the public read layer uses.
@@ -900,7 +923,10 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
       SET "publishedAt" = now() + interval '1 day'
       WHERE "id" = ${draft.id}
     `;
-    await expect(indexer.load(context, 0, 10)).resolves.toEqual([]);
+    await expect(indexer.load(context, 0, 10)).resolves.toEqual({
+      documents: [],
+      itemsRead: 0,
+    });
     const scheduled = await articles.findById(draft.id);
     await expect(
       sync("update", { changedFields: ["title"], row: scheduled ?? {} }),
@@ -925,6 +951,55 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     ).resolves.toMatchObject({ action: "skip" });
 
     await articles.delete(neverPublished.id);
+    await categories.delete(category.id);
+  }, 60_000);
+
+  it("keeps paging past published rows it cannot project", async () => {
+    const categories = categoryContent.service(context);
+    const articles = articleContent.service(context);
+    const indexer = createContentSearchIndexer(articleContent, {
+      pluginId: CONFIG_PLUGIN.pluginId,
+    });
+
+    const category = await categories.create({ name: "Paging" });
+    const created: { id: number }[] = [];
+    for (const index of [1, 2, 3]) {
+      const article = await articles.create({
+        category: category.id,
+        code: `paging-00${index}`,
+        title: `Paging article ${index}`,
+      });
+      await articles.publish(article.id);
+      created.push(article);
+    }
+
+    // Only the database can produce this: `title` is required and non-nullable,
+    // so the engine never writes a blank one. It is still what a rebuild has to
+    // survive - the row is published, and the mapper refuses it.
+    await sql`
+      UPDATE "example_articles" SET "title" = '   ' WHERE "id" = ${created[0].id}
+    `;
+
+    // Page one reads a row and projects nothing. `itemsRead` is what says the
+    // source is not finished, which is the whole reason it is reported.
+    const first = await indexer.load(context, 0, 1);
+    expect(first.itemsRead).toBe(1);
+    expect(first.documents).toEqual([]);
+
+    const second = await indexer.load(context, first.itemsRead, 1);
+    expect(second.itemsRead).toBe(1);
+    expect(second.documents.map(document => document.itemId)).toEqual([
+      created[1].id,
+    ]);
+
+    // The source count still counts the malformed row, so the collection reads
+    // as under-indexed in the AdminCP rather than silently complete.
+    await expect(indexer.count?.(context)).resolves.toBe(3);
+    const all = await indexer.load(context, 0, 50);
+    expect(all.itemsRead).toBe(3);
+    expect(all.documents).toHaveLength(2);
+
+    for (const article of created) await articles.delete(article.id);
     await categories.delete(category.id);
   }, 60_000);
 
