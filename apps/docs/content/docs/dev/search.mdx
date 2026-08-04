@@ -117,10 +117,13 @@ export const blogPostSearchIndexer: SearchIndexer = {
       .limit(limit)
       .offset(offset);
 
-    // An indexer may emit several documents per item (e.g. one per language),
-    // so `offset`/`limit` page over items, not documents - and an empty array,
-    // not "fewer rows than `limit`", is what ends the loop.
-    return rows.flatMap(buildSearchDocumentsForPost);
+    // Two counts, and they are not interchangeable: one item can emit several
+    // documents (one per language) or none at all. `itemsRead` is what the
+    // rebuild pages by, and `itemsRead: 0` is what ends it.
+    return {
+      documents: rows.flatMap(buildSearchDocumentsForPost),
+      itemsRead: rows.length,
+    };
   },
 };
 
@@ -135,6 +138,29 @@ export const blogApiPlugin = () =>
 One item type may only have **one** indexer. Two plugins claiming the same
 `itemType` is a startup error naming both, because they would otherwise overwrite
 each other's documents on every rebuild.
+
+<Callout type="warn" title="Never page by document count">
+  Returning `documents.length` as `itemsRead`, or ending the loop on an empty
+  `documents` array, silently truncates the index: a page whose rows all fail to
+  project would stop the rebuild before the valid rows behind it. Report the rows
+  you read.
+</Callout>
+
+### Ownership
+
+A document may name the plugin that owns it:
+
+```ts
+{ itemType: "blog_post", itemId: 1, pluginId: "@vitnode/blog", /* ... */ }
+```
+
+Set it whenever you know the owner. A rebuild runs inside the **core** cron
+request, so the request's plugin is not the owner - an explicit `pluginId` is what
+makes a rebuilt document identical to a live-indexed one. An indexer that names
+none has its registering plugin stamped on during the rebuild, so existing
+indexers keep working; the request's plugin, then `"core"`, are the remaining
+fallbacks. Ownership is resolved once, in the search model, so the canonical row
+and the mirrored document can never disagree.
 
 Trigger a rebuild from **AdminCP → Advanced → Search → Rebuild index**. It runs as
 a background queue task, so a [cron adapter](/docs/dev/cron) must be configured

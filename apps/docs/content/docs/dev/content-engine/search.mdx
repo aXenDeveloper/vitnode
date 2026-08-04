@@ -51,7 +51,7 @@ linking to `/articles/its-slug`.
 | Option | Required | What it is |
 | --- | --- | --- |
 | `enabled` | yes | Literal `true`. Omit the block, or pass `{ enabled: false }`, and nothing is indexed |
-| `titleField` | yes | The result heading. A `text` field, weighted above the body by the index |
+| `titleField` | yes | The result heading. A **non-nullable** `text` field, weighted above the body by the index |
 | `contentFields` | yes | Concatenated into the searchable body, in order. At least one |
 | `pathTemplate` | yes | The public URL of one record. Relative, with `{slug}` as the only placeholder |
 | `descriptionField` | no | Leads the body, so it shows up first in a result excerpt |
@@ -71,7 +71,9 @@ so does every hand-written `SearchIndexer`.
 | `user` | ❌ | ❌ | ❌ |
 
 A title is one line, so prose from a `textarea` in that slot would drag down
-ranking for every other document in the index. The facet kinds are not text:
+ranking for every other document in the index. It also cannot be nullable: a
+`null` heading is not a search result, and a record without one is skipped - which
+shows up as a collection that never reaches full coverage. The facet kinds are not text:
 full-text-indexing `"draft"` or `"42"` is noise, and it would let somebody probe
 values through the search box. A `relation` is a foreign key, and a `user` field
 is [never public](#every-indexed-field-must-be-public).
@@ -204,9 +206,15 @@ the document is not      -> logged, and repaired by a rebuild
 ```
 
 The failure is written to `core_logs` behind a `[content-search]` prefix with the
-content type, the record id, the operation and the error, and the newest few show
-up in **AdminCP → Advanced → Search** as *Recent sync failures*. There is no
-automatic retry.
+content type, the owning plugin, the record id, the operation and the error, and
+the newest few show up in **AdminCP → Advanced → Search** as *Recent sync
+failures*. There is no automatic retry.
+
+Logging is best effort too. It writes to the database, so it can be down for the
+same reason the search engine is - and a failed log entry must not fail the
+request either. When the structured entry cannot be persisted, the message goes to
+the console instead, and the returned outcome still carries the **original search
+error** rather than the logger's.
 
 <Callout type="info" title="Eventually consistent, and bounded">
   With the bundled Postgres engine the window is tiny: the document is written to
@@ -227,14 +235,68 @@ document needs - a private column is not even fetched. It is scoped to one
 collection at a time, so rebuilding one content type can never touch another
 plugin's documents, and rerunning it is harmless.
 
+### Source rows and documents are different counts
+
+A page of a rebuild reports both, and they are not interchangeable:
+
+- one record can produce **several** documents (one per locale, in a plugin that
+  indexes translations), and
+- one record can produce **none** - a published row whose title is blank cannot
+  be a search result.
+
+So the rebuild advances its cursor by **source rows read**, and it stops only when
+a page reads no rows at all. An empty document list does not end it: a page of
+records the mapper refused would otherwise stop the rebuild before the valid
+records behind it.
+
+### Coverage, and what "stale" means
+
 Coverage compares **published** records against indexed ones, so a mostly-draft
-collection still reads 100%.
+collection still reads 100%. Both numbers are reported as measured, and a
+collection is *Indexed* only when they match exactly:
+
+| Counts | Status |
+| --- | --- |
+| `0 / 0` | Not indexed |
+| `0 / 10` | Not indexed |
+| `5 / 10` | Stale - documents missing |
+| `10 / 10` | Indexed |
+| `11 / 10` | Stale - documents left over |
+
+Over-indexing is a real state: documents that survive for records which no longer
+qualify. The source count is never raised to hide it, and the progress bar is
+clamped so it cannot draw past its track while the numbers stay truthful.
+
+A published record the mapper cannot project counts toward the source total but
+produces no document, so **malformed data reads as under-indexed**. That is
+deliberate: the alternative is reproducing every mapper rule in SQL, where the two
+would eventually drift apart and hide the problem instead of showing it.
 
 <Callout type="warn" title="Rebuilding needs cron">
   A rebuild is a queue task, drained by the cron job. Without a cron adapter it
   never runs - the AdminCP warns you when one is missing. A large collection is
   also worth an index on `(status, publishedAt)`; declare it in `indexes`.
 </Callout>
+
+## Plugin ownership
+
+Every search document records the plugin that owns it, and the value is the same
+whichever path wrote it:
+
+```text
+publish through the AdminCP -> pluginId = @vitnode/example
+full rebuild                -> pluginId = @vitnode/example
+one-collection rebuild      -> pluginId = @vitnode/example
+```
+
+That is worth stating because a rebuild runs inside the **core** cron request, so
+the request's plugin is not the owner. Generated indexers carry their plugin id
+and stamp it on every document; the search model uses an explicit owner in
+preference to the request, and falls back to the request only when a document
+names none. A generated Content Engine document is never owned by `core`.
+
+A hand-written indexer that names no owner is stamped with the plugin that
+registered it, so it does not need changing.
 
 ## Migrating a hand-written indexer
 
@@ -264,8 +326,9 @@ other.
 | Relation expansion | A relation is a foreign key; the index has no place to put one |
 | Locale-prefixed URLs | `pathTemplate` produces one relative path |
 | A custom icon or label in the public feed | Content hits use the generic renderer. The registry in core is not plugin-extensible yet |
-| Automatic retry | Best effort plus a rebuild. A durable outbox is a later addition |
+| Automatic retry | Best effort plus a rebuild. There is no durable retry mechanism - an outbox is a later addition |
 | Keyset paging during a rebuild | The indexer contract pages by offset |
+| Blank titles written straight into the database | Rejected by the mapper, and visible as an under-indexed collection |
 
 ## Related
 

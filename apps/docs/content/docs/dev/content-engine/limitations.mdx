@@ -149,8 +149,21 @@ three. A direct caller does its own follow-up, after committing - see
 
 Search synchronization is best effort. A content mutation succeeds, the failure is
 logged with a `[content-search]` prefix and surfaced in the AdminCP, and a rebuild
-repairs the drift. There is no automatic retry and no outbox, so the index is
-eventually consistent - bounded by the next publish or the next rebuild.
+repairs the drift. There is no automatic retry and no durable outbox, so the index
+is eventually consistent - bounded by the next publish or the next rebuild.
+
+Logging is best effort in the same way: it writes to the database, so it can fail
+alongside the search engine. When it does, the message falls back to the console
+and the mutation still succeeds. Neither failure can turn a committed write into a
+failed request.
+
+## Malformed published data reads as under-indexed
+
+A published record the search mapper cannot project - a title that is blank in the
+database, say - counts toward a collection's source total and produces no document.
+The AdminCP shows that as **stale** rather than hiding it. Extra documents, for
+records that no longer qualify, are stale too: the counts have to match exactly for
+a collection to read as indexed.
 
 ## The public cursor is always the row id
 
