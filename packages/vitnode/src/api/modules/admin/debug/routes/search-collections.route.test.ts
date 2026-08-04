@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { HTTPException } from "hono/http-exception";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { SearchIndexerConfig } from "@/api/models/search";
 
@@ -25,14 +25,24 @@ interface Dispatched {
  */
 const harness = ({
   body,
+  clearFails = false,
   indexers = [],
+  logFails = false,
 }: {
   body?: Record<string, unknown>;
+  clearFails?: boolean;
   indexers?: SearchIndexerConfig[];
+  logFails?: boolean;
 } = {}) => {
   const dispatched: Dispatched[] = [];
   const cleared: (string | undefined)[] = [];
   const warnings: string[] = [];
+
+  const clear = vi.fn(async (itemType?: string) => {
+    if (clearFails) throw new Error("engine unavailable");
+    cleared.push(itemType);
+    await Promise.resolve();
+  });
 
   const c = {
     get: (key: string) => {
@@ -47,10 +57,7 @@ const harness = ({
       }
       if (key === "search") {
         return {
-          clear: async (itemType?: string) => {
-            cleared.push(itemType);
-            await Promise.resolve();
-          },
+          clear: clear as unknown,
         };
       }
       if (key === "log") {
@@ -58,6 +65,7 @@ const harness = ({
           warn: async (content: string) => {
             warnings.push(content);
             await Promise.resolve();
+            if (logFails) throw new Error("core_logs unavailable");
           },
         };
       }
@@ -68,7 +76,7 @@ const harness = ({
     req: { valid: () => body },
   };
 
-  return { c, cleared, dispatched, warnings };
+  return { c, clear, cleared, dispatched, warnings };
 };
 
 const statusOf = async (run: () => Promise<unknown>) => {
@@ -125,7 +133,8 @@ describe("POST /search/rebuild", () => {
 
   it("queues a full rebuild even with no indexers at all", async () => {
     // The guard is about *scoped* rebuilds; a full one is allowed to clear an
-    // index it cannot refill, which is how orphaned documents get removed.
+    // index it cannot fully refill, which is how documents with no indexer get
+    // removed.
     const { c, dispatched } = harness({ body: {} });
 
     await rebuildSearchDebugAdminRoute.handler(c);
@@ -135,7 +144,7 @@ describe("POST /search/rebuild", () => {
 });
 
 describe("POST /search/clear", () => {
-  it("clears only the requested orphaned collection", async () => {
+  it("clears only the requested collection", async () => {
     const { c, cleared, warnings } = harness({
       body: { itemType: "removed.collection" },
       indexers: [indexer("example.article")],
@@ -170,6 +179,79 @@ describe("POST /search/clear", () => {
     await clearSearchDebugAdminRoute.handler(c);
 
     expect(cleared).not.toContain(undefined);
+  });
+
+  it("writes a neutral audit warning", async () => {
+    const { c, warnings } = harness({
+      body: { itemType: "live.only" },
+    });
+
+    await clearSearchDebugAdminRoute.handler(c);
+
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("unmanaged collection");
+    expect(warnings[0]).toContain("live.only");
+    // Nothing claims the plugin is gone: registering an indexer is optional.
+    expect(warnings[0]).not.toContain("orphan");
+  });
+
+  it("stays successful when the audit log fails", async () => {
+    // The documents are already gone. Reporting a failure would send an
+    // administrator looking for documents that are not there.
+    const consoleWarn = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
+
+    try {
+      const { c, clear, cleared, warnings } = harness({
+        body: { itemType: "live.only" },
+        logFails: true,
+      });
+
+      const res = await clearSearchDebugAdminRoute.handler(c);
+
+      await expect(new Response(res.body).json()).resolves.toEqual({
+        cleared: true,
+      });
+      expect(cleared).toEqual(["live.only"]);
+      // Attempted once, and not retried because the log failed.
+      expect(clear).toHaveBeenCalledTimes(1);
+      expect(warnings).toHaveLength(1);
+      expect(consoleWarn).toHaveBeenCalledTimes(1);
+      expect(String(consoleWarn.mock.calls[0][0])).toContain(
+        "Failed to persist search cleanup audit",
+      );
+    } finally {
+      consoleWarn.mockRestore();
+    }
+  });
+
+  it("does not reach the console when the audit log succeeds", async () => {
+    const consoleWarn = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
+
+    try {
+      const { c } = harness({ body: { itemType: "live.only" } });
+
+      await clearSearchDebugAdminRoute.handler(c);
+
+      expect(consoleWarn).not.toHaveBeenCalled();
+    } finally {
+      consoleWarn.mockRestore();
+    }
+  });
+
+  it("propagates a failed clear and writes no success audit", async () => {
+    const { c, warnings } = harness({
+      body: { itemType: "live.only" },
+      clearFails: true,
+    });
+
+    await expect(clearSearchDebugAdminRoute.handler(c)).rejects.toThrow(
+      "engine unavailable",
+    );
+    expect(warnings).toEqual([]);
   });
 
   it("rejects an empty item type at the schema", () => {
