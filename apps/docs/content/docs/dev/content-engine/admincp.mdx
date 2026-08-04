@@ -26,7 +26,8 @@ You get a nav item, a breadcrumb, and a screen at:
 
 - **List** - a `DataTable` with the columns from `admin.list.columns`
 - **Search** - across `admin.list.searchableFields`, wildcards escaped
-- **Sorting** - limited to `admin.list.orderableFields` plus the system columns
+- **Sorting** - `admin.list.orderableFields`, plus the system columns and the
+  publication ones ([below](#what-is-sortable))
 - **Pagination** - the standard cursor pagination, capped at 100 per page
 - **Create / Edit** - `AutoForm` dialogs, lazy-loaded on open
 - **Delete** - a confirmation dialog
@@ -52,6 +53,30 @@ chunks, so it is downloaded once:
   twice or land back on a shared chunk anyway - so the loader would be a few
   milliseconds of theatre either way.
 </Callout>
+
+## What is sortable
+
+The table header offers a sort control for every column the generated route
+would accept - the two lists come from one helper, so a header is never dead
+because the frontend forgot something the backend allows:
+
+```ts
+[
+  ...definition.admin.list.orderableFields,
+  "id",
+  "createdAt",
+  "updatedAt",
+  ...(definition.publication.enabled ? ["status", "publishedAt"] : []),
+];
+```
+
+System columns need no entry in `orderableFields`, and neither do `status` and
+`publishedAt` - but the last two appear **only** when
+[`publication`](/docs/dev/content-engine/publication) is enabled. A Stage 1
+content type with a hand-rolled `status` field sorts by it the ordinary way,
+through the allowlist.
+
+A column that is orderable but not displayed simply has no header to click.
 
 ## Mutation feedback
 

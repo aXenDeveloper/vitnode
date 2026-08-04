@@ -8,6 +8,7 @@ import type { ContentColumnSpec, ContentFormSpec } from "@/content/admin/spec";
 import { zodPaginationPageInfo } from "@/api/lib/with-pagination";
 import { DataTable } from "@/components/table/data-table";
 import { contentApiFetch } from "@/content/admin/fetch.server";
+import { orderableColumns } from "@/content/registry";
 
 import type { ContentRowData } from "./cells";
 
@@ -161,7 +162,12 @@ export const ContentTableView = async ({
       edges={data.edges}
       id={`content-${definition.id}`}
       order={{
-        columns: definition.admin.list.orderableFields,
+        // The same allowlist the generated route builds its `orderBy` enum
+        // from, so a header the backend would accept is never left unsortable.
+        // `admin.list.orderableFields` alone would leave out `id`, `createdAt`,
+        // `updatedAt` and - when publication is on - `status` and
+        // `publishedAt`, all of which the API has always allowed.
+        columns: orderableColumns(definition),
         defaultOrder: {
           column: definition.admin.list.defaultOrderBy,
           order: definition.admin.list.defaultOrder,
