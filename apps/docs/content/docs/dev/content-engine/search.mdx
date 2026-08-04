@@ -268,6 +268,7 @@ collection is *Indexed* only when they match exactly:
 | `5 / 10` | Stale - documents missing |
 | `10 / 10` | Indexed |
 | `11 / 10` | Stale - documents left over |
+| `11 / —` | Orphaned - no indexer at all |
 
 Over-indexing is a real state: documents that survive for records which no longer
 qualify. The source count is never raised to hide it, and the progress bar is
@@ -309,6 +310,14 @@ The AdminCP shows the registered indexer's plugin. A collection with documents b
 no live indexer - an uninstalled or renamed plugin - shows the owner stored on its
 documents, and `unknown` only when neither source knows. It is never relabelled as
 core.
+
+Such a collection is **orphaned**: it is labelled as such, its coverage is left
+blank because there is no source to measure against, and *Reindex* is replaced by
+*Remove documents*. A scoped rebuild of it is refused rather than silently
+clearing it - see [orphaned
+collections](/docs/dev/search#orphaned-collections). Removing a content type's
+`search` block, or the plugin itself, is what produces one; a full rebuild also
+clears them.
 
 ## Migrating a hand-written indexer
 

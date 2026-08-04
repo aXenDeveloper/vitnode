@@ -199,9 +199,34 @@ for the queue to drain.
 <Callout type="warn" title="A rebuild clears before it writes">
   Rebuilding drops the documents it is about to replace first - the whole index
   for "rebuild everything", or one collection for a single reindex. So search
-  returns less while it runs, and documents belonging to an item type with **no**
-  registered indexer are removed for good rather than rebuilt.
+  returns less while it runs.
 </Callout>
+
+The two rebuilds differ in what they are allowed to destroy:
+
+- **A scoped rebuild requires a registered `SearchIndexer`.** It never clears an
+  item type it cannot rebuild - the request is rejected with a 404, and the queue
+  task refuses it too, in case it was dispatched directly or queued while the
+  indexer was still there.
+- **A full rebuild clears the whole index and rebuilds only registered
+  indexers.** Documents belonging to an item type with no indexer are therefore
+  removed for good.
+
+## Orphaned collections
+
+A collection is **orphaned** when documents for its `itemType` are still in the
+index but no `SearchIndexer` is registered for it - the plugin was uninstalled or
+renamed, its content type was removed, or its `itemType` changed.
+
+**AdminCP → Advanced → Search** labels those rows *Orphaned* and shows the plugin
+stored on their documents. Coverage is left blank rather than calculated: with no
+indexer there is no source count, and `11 / 11` would claim a collection nothing
+can rebuild is healthy.
+
+Their only action is **Remove documents**, behind a confirmation - it deletes them
+and puts nothing back, which is why it is not called a reindex. Registering an
+indexer for the item type again makes the collection rebuildable, and the row
+returns to normal.
 
 ## Giving a type an icon and label
 
