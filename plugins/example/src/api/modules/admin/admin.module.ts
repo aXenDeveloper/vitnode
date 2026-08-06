@@ -4,6 +4,7 @@ import { buildContentAdminModule } from "@vitnode/core/content/server";
 import { CONFIG_PLUGIN } from "@/const";
 import { articleContent } from "@/database/articles";
 import { categoryContent } from "@/database/categories";
+import { localizedArticleContent } from "@/database/localized-articles";
 
 /**
  * The generated content module is nested here rather than mounted by the
@@ -19,7 +20,13 @@ export const adminModule = buildModule({
   modules: [
     buildContentAdminModule({
       pluginId: CONFIG_PLUGIN.pluginId,
-      contentTypes: [articleContent, categoryContent],
+      // The localized article is registered on the API side only, so its
+      // generated CRUD *and* translation routes exist and its staff permissions
+      // are derived - but it gets no AdminCP screen yet, because a form that
+      // could not edit `title` in any language would be a worse thing to ship
+      // than no form at all. Stage 5B adds the locale tabs and registers it in
+      // `config.tsx` alongside the others.
+      contentTypes: [articleContent, categoryContent, localizedArticleContent],
     }),
   ],
 });

@@ -21,4 +21,7 @@ export const EXAMPLE_MIGRATIONS = [
   // for an article, and the row has to have somewhere to go.
   "0027_add_content_schedules.sql",
   "0028_add_content_schedule_effects_error.sql",
+  // The Stage 5A localized fixture: a base table with only its shared field, and
+  // a translation table holding the localized ones.
+  "0029_add_example_localized_articles.sql",
 ];

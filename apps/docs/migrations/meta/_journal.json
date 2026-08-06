@@ -204,6 +204,13 @@
       "when": 1786024625069,
       "tag": "0028_add_content_schedule_effects_error",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1786034127995,
+      "tag": "0029_add_example_localized_articles",
+      "breakpoints": true
     }
   ]
 }
