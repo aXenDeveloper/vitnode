@@ -38,6 +38,16 @@ export const contentPublicSlugTag = (
   slug: string,
 ): string => tag(contentTypeId, "slug", slug);
 
+/**
+ * How hard a mutation expires the tags it touched.
+ *
+ * Lives here, in the client-safe layer, because the background
+ * [bridge](./server/revalidate-bridge.ts) has to name a mode from a process
+ * where `next/cache` cannot even be imported. `content/next` re-exports it, so
+ * the public name has not moved.
+ */
+export type ContentInvalidationMode = "immediate" | "stale-while-revalidate";
+
 export interface ContentInvalidationInput {
   contentTypeId: string;
   id: number;

@@ -20,6 +20,20 @@ content.example.article.published
 content.example.article.unpublished
 ```
 
+And one with [`editorial`](/docs/dev/content-engine/editorial):
+
+```text
+content.example.article.restored
+```
+
+Plus two more with
+[`editorial.scheduling`](/docs/dev/content-engine/scheduling):
+
+```text
+content.example.article.scheduled
+content.example.article.schedule_cancelled
+```
+
 Payloads stay minimal - the [envelope](/docs/dev/events) already carries the
 actor, the emitting plugin and the timestamp:
 
@@ -29,7 +43,34 @@ type Updated = { changedFields: string[]; contentId: number };
 type Deleted = { contentId: number };
 type Published = { contentId: number; publishedAt: Date };
 type Unpublished = { contentId: number };
+
+type Restored = {
+  changedFields: string[];
+  contentId: number;
+  restoredFromRevisionId: number;
+  revisionId: number;
+  version: number;
+};
+
+type Scheduled = {
+  action: "publish" | "unpublish";
+  actorUserId: null | number;
+  contentId: number;
+  scheduledFor: Date;
+  scheduleId: number;
+};
+type ScheduleCancelled = {
+  action: "publish" | "unpublish";
+  actorUserId: null | number;
+  contentId: number;
+  scheduleId: number;
+};
 ```
+
+`published` and `unpublished` also gained an optional `scheduledBy`, set when a
+schedule fired them. Optional, so no existing listener changes - and it is the
+only way to answer "the system did it, on whose instruction", because the actor
+of a scheduled run genuinely *is* the system.
 
 ## Registering the types
 
@@ -95,8 +136,9 @@ it is worth being precise:
 
 | | Emits |
 | --- | --- |
-| `POST`, `PUT`, `DELETE`, `POST /{id}/publish`, `POST /{id}/unpublish` | yes, once, after the write returns |
+| `POST`, `PUT`, `DELETE`, `POST /{id}/publish`, `POST /{id}/unpublish`, `POST /{id}/revisions/{revisionId}/restore` | yes, once, after the write returns |
 | `service.create()`, `update()`, `delete()`, `publish()`, `unpublish()` | no |
+| `editorialService.create()`, `update()`, `restore()`, … | no - it may be inside your transaction |
 
 <Callout type="warn" title="After the write, never inside the transaction">
   A generated route emits once the database write has returned. A create that
@@ -114,6 +156,34 @@ and `unpublished` never come with an `updated` alongside them - `status` and
 `publishedAt` are generated columns rather than declared fields, so there would
 be nothing truthful to put in `changedFields`. Subscribe to all five if you want
 "anything changed".
+
+`restored` follows the same rule: it arrives alone, never with an `updated`
+beside it. It carries `changedFields` for exactly that reason, so a listener
+written for `updated` ports across in one line.
+
+Scheduling is the exception that proves it. Booking a publication changes no
+field value, consumes no version and writes no revision, so it emits
+`scheduled` - a different thing entirely. When the schedule actually fires, the
+resulting transition emits the ordinary `published` or `unpublished`, once.
+
+### Calling `editorialService` directly
+
+The [editorial service](/docs/dev/content-engine/revisions#calling-the-service-directly)
+emits nothing either, and it owns a transaction, so the timing rule is even more
+literal there: the content write, the version bump and the revision insert are
+one commit, and every announcement happens after it. One helper makes those
+decisions for you, and it is the same one the routes use:
+
+```ts
+import { contentEditorialEffects } from "@vitnode/core/content/server";
+
+const outcome = await editorial.update(id, values, { actor, expectedVersion });
+if (!outcome) throw new HTTPException(404);
+
+// Emits the right event for the operation, and syncs search. A no-op outcome
+// returns immediately, so a pointless save announces nothing.
+await contentEditorialEffects(c, articleContentType, outcome, { pluginId });
+```
 
 ### Calling the service directly
 

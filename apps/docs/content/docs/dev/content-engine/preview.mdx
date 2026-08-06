@@ -1,0 +1,262 @@
+---
+title: Secure preview
+description: Signed, expiring links that let a reviewer read an unpublished record - without an account, and without publishing it first.
+icon: Eye
+---
+
+Before this existed, showing someone a draft meant publishing it, sending the
+link, and unpublishing again. Preview is the honest version of that.
+
+```ts title="src/content/article.ts"
+editorial: {
+  enabled: true,
+  preview: { enabled: true, expiresInMinutes: 30 },
+}
+```
+
+That adds two routes: one behind the AdminCP that mints a link, and one that is
+completely public and reads it.
+
+## The rules it follows
+
+| | |
+| --- | --- |
+| **The link is the credential** | No session, no account, no invitation. A reviewer opens a URL |
+| **It expires** | 15 minutes by default, a day at most |
+| **It shows one revision** | Frozen at the moment the link was made, so it does not shift under the reviewer |
+| **It shows only public fields** | The same allowlist the public detail route uses - the same function, not a copy of it |
+| **Nothing caches it** | `private, no-store`, and `noindex, nofollow` in case the link is pasted somewhere public |
+| **Every failure is a 404** | Forged, expired, wrong record, no such record: indistinguishable |
+
+## Configuration
+
+```ts
+editorial: {
+  enabled: true,
+  preview: {
+    enabled: true,
+    expiresInMinutes: 30,
+    pathTemplate: "/articles/preview/{token}",
+  },
+}
+```
+
+| Key | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `enabled` | `true` | — | Adds both preview routes |
+| `expiresInMinutes` | `number`, 1–1440 | `15` | How long a link stays valid |
+| `pathTemplate` | `string` | `null` | A page in your app. Exactly one `{token}`, leading `/`, no `..` |
+
+Without `pathTemplate` the AdminCP links straight at the JSON endpoint. That is
+the honest default: linking to a page nobody has written yet would just be a
+404 with extra steps.
+
+<Callout type="warn" title="Preview requires a public API">
+  `editorial.preview` needs
+  [`publicApi`](/docs/dev/content-engine/public-api), which itself needs
+  [`publication`](/docs/dev/content-engine/publication). A preview renders the
+  *public projection* of a draft, so with no allowlist there is nothing it could
+  safely show. Turning it on without one is a compile error, and a boot error if
+  you cast past it.
+</Callout>
+
+## `CONTENT_PREVIEW_SECRET`
+
+```bash title=".env"
+CONTENT_PREVIEW_SECRET=a-long-random-string
+```
+
+This one value is the entire authorization story. Leave it unset and it falls
+back to a well-known default, which means anyone who has read the VitNode source
+can mint a link to any draft on your site. **AdminCP → System → Integrations**
+flags that as a warning, next to the same flag for `CRON_SECRET`.
+
+Generate one the usual way:
+
+```bash
+openssl rand -base64 32
+```
+
+<Callout type="info" title="Rotating it is how you revoke">
+  There is no revocation list, and no per-link kill switch. Changing the secret
+  invalidates every outstanding link at once, which is the blunt instrument you
+  want when one leaks. Short expiries are what keep you from needing it.
+</Callout>
+
+## The routes
+
+```text
+POST /api/{pluginId}/admin/content/{module}/{id}/preview        can_view
+GET  /api/{pluginId}/content/{publicApi.path}/preview/{token}   nobody
+```
+
+Creating a link needs `can_view`, and nothing more: a preview shows exactly what
+the public route would, so anyone allowed to open the record in the AdminCP can
+already see it.
+
+Reading one needs no permission at all, deliberately - that is the entire point,
+and it is asserted by a test rather than left to review.
+
+```jsonc
+// POST /{id}/preview
+{
+  "token": "eyJhdWQiOiJjb250ZW50LXByZXZpZXci…",
+  "url": "/articles/preview/eyJhdWQiOiJjb250ZW50LXByZXZpZXci…",
+  "expiresAt": "2026-08-05T10:30:00.000Z",
+  "revisionId": 42,
+  "version": 5
+}
+```
+
+`url` is built on the server, because only the definition knows whether this
+install has a preview page or should link at the JSON endpoint.
+
+<Callout type="info" title="A slug of `preview` still works">
+  `/preview/{token}` is two path segments and `/{slug}` is one, so they can never
+  both match. A record whose slug is literally `preview` resolves the ordinary
+  way, and there is a test that says so.
+</Callout>
+
+## The token
+
+Stateless, HMAC-SHA256, no new dependency and no table:
+
+```text
+base64url(payload) "." base64url(hmacSha256(secret, payload))
+```
+
+```ts
+{
+  aud: "content-preview",  // rejects a token minted for anything else
+  v: 1,                    // the token format
+  p: "@vitnode/example",   // plugin
+  t: "example.article",    // content type
+  i: 7,                    // record
+  r: 42,                   // revision - what makes it frozen
+  ver: 5,                  // the row version when the link was made
+  exp: 1785924600          // epoch seconds
+}
+```
+
+The payload is **readable by anyone holding the link** - base64url is encoding,
+not encryption. The signature only proves nobody edited it. Nothing secret goes
+in there.
+
+`p` and `t` are checked against the route's own definition rather than trusted
+from the payload. Without that, one signed token would work on every preview
+route in the install.
+
+### Expiry has no leeway
+
+`exp <= now` is rejected, full stop. Web and API already need agreeing clocks
+for sessions to work at all, and slack on an expiry only ever weakens it.
+
+### Replay is allowed, on purpose
+
+A link is meant to be forwarded to a reviewer, so it works as many times as it
+is opened until it expires. It is a link, not a nonce.
+
+## Rendering a preview page
+
+The API returns JSON. Turning that into a page is your app's job, and it is
+about fifteen lines:
+
+```tsx title="src/app/articles/preview/[token]/page.tsx"
+import { articleContentType } from "@/content/article";
+import { contentPreviewFetch } from "@vitnode/core/content/next";
+import { notFound } from "next/navigation";
+
+export default async function ArticlePreviewPage({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}) {
+  const { data } = await contentPreviewFetch({
+    definition: articleContentType,
+    pluginId: "@vitnode/example",
+    token: (await params).token,
+  });
+
+  if (!data) notFound();
+
+  return (
+    <main className="flex flex-col gap-4">
+      <p className="text-muted-foreground text-sm">Preview - not published</p>
+      <h1 className="text-3xl font-bold text-balance">{data.title}</h1>
+      <p className="leading-relaxed">{data.excerpt}</p>
+    </main>
+  );
+}
+```
+
+`contentPreviewFetch` is the mirror image of
+[`contentPublicFetch`](/docs/dev/content-engine/caching#reading): it sends
+`cache: "no-store"` and attaches no tags. Storing a preview response would keep
+a draft readable after its token expired, and would hand one reviewer's link to
+the next visitor.
+
+Then point the AdminCP at it:
+
+```ts
+preview: { enabled: true, pathTemplate: "/articles/preview/{token}" }
+```
+
+<Callout type="warn" title="Tell the reviewer it is a preview">
+  Nothing in the response says so - it is the same shape the public route
+  returns. Say it in your own markup, or somebody will forward a screenshot of
+  what they think is the live page.
+</Callout>
+
+## What the AdminCP does
+
+An eye icon on every row, for a content type with preview and for nobody else -
+absent rather than disabled, because there is no way to enable it from the UI.
+
+Clicking it mints the link **then**, not before. A table of 25 rows must not be
+25 live bearer credentials for unpublished records sitting in a browser, most of
+them never used. The popover shows the link, a copy button, an Open link and
+when it expires.
+
+Closing the popover throws the link away, so opening it again mints a fresh one
+rather than showing you one that may already have expired.
+
+## What it does not do
+
+| Not supported | Why |
+| --- | --- |
+| Revoking one link | No table, no state. Rotate the secret, or wait out the expiry |
+| Previewing a **list** of drafts | There is no preview list route, and there will not be one |
+| Seeing who opened a link | It is an anonymous read. Nothing is logged per view |
+| Previewing a record with no public API | There would be nothing safe to render |
+| Comments or annotations on a preview | Read-only. A reviewer replies wherever they already talk to you |
+
+## Why it is safe
+
+The properties worth stating plainly, because each one is a decision rather than
+an accident:
+
+- **Forgery** needs the secret. It is a 256-bit HMAC over the whole payload,
+  compared with `timingSafeEqual`.
+- **Field exposure** goes through `createContentPublicProjector` - the *same*
+  function the public detail route uses. A test adds a private field and asserts
+  it is absent from the body, and that it never reaches the `SELECT` either.
+- **Cross-plugin and cross-content-type access** is closed by checking `p` and
+  `t` against the route's own definition, and by scoping the revision read to
+  `(pluginId, contentTypeId, itemId)` like every other revision query.
+- **Existence probing** is closed by returning one 404 for everything. A 401 or a
+  403 would confirm the record exists, which is the one thing a draft URL must
+  not do.
+- **Leaked links** are bounded by the expiry, kept out of shared caches by
+  `no-store` and out of search results by `noindex`.
+
+## A record with no history yet
+
+Adding `editorial` to a content type that already has rows leaves those rows at
+version 1 with no revisions - there is nothing to freeze. Their preview links
+read the **live row** instead, still scoped to the record in the signed token and
+still projected through the public allowlist. Only the frozen-snapshot guarantee
+is missing, because there is nothing to guarantee. The first edit fixes it.
+
+If retention prunes the revision a link pointed at, the link 404s. Links are
+minted against the newest revision, which is the last one to be pruned, so this
+takes a busy record and a patient reviewer.

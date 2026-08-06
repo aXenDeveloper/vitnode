@@ -3,6 +3,7 @@ import type { z } from "zod";
 
 import type {
   AnyContentTypeDefinition,
+  PreviewableContentTypeDefinition,
   PublicContentTypeDefinition,
 } from "../types";
 
@@ -75,6 +76,64 @@ export const contentPublicFetch = async <TSchema extends z.ZodType>({
     path: slug === undefined ? "/" : `/${encodeURIComponent(slug)}`,
     pluginId,
     query,
+  });
+
+  if (!response.ok) return { status: response.status };
+
+  const payload: unknown = await response.json();
+  if (!schema) {
+    return { data: payload as z.infer<TSchema>, status: response.status };
+  }
+
+  const parsed = schema.safeParse(payload);
+
+  return parsed.success
+    ? { data: parsed.data, status: response.status }
+    : { status: response.status };
+};
+
+/**
+ * Reads a record through a preview link, from a server component.
+ *
+ * The mirror image of {@link contentPublicFetch}, and deliberately so: this one
+ * opts *out* of the cache and carries no tags at all.
+ *
+ * - **`cache: "no-store"`.** A preview is an unpublished record behind a
+ *   short-lived credential. Storing one would keep a draft readable after the
+ *   token expired, and would serve one reviewer's link to the next visitor.
+ * - **No tags.** There is nothing to invalidate: the response was never stored,
+ *   and a preview is a point-in-time read of one frozen revision.
+ *
+ * The route answers 404 for every kind of bad token, so a caller gets one
+ * status to handle rather than a taxonomy - `notFound()` is the whole error
+ * path.
+ *
+ * ```tsx title="src/app/articles/preview/[token]/page.tsx"
+ * const { data } = await contentPreviewFetch({
+ *   definition: articleContentType,
+ *   pluginId: "@vitnode/example",
+ *   token: (await params).token,
+ * });
+ * if (!data) notFound();
+ * ```
+ */
+export const contentPreviewFetch = async <TSchema extends z.ZodType>({
+  definition,
+  pluginId,
+  schema,
+  token,
+}: {
+  definition: PreviewableContentTypeDefinition;
+  pluginId: string;
+  schema?: TSchema;
+  token: string;
+}): Promise<ContentPublicFetchResult<z.infer<TSchema>>> => {
+  const response = await rawApiFetch({
+    method: "get",
+    module: `content/${definition.publicApi.path}`,
+    options: { cache: "no-store" },
+    path: `/preview/${encodeURIComponent(token)}`,
+    pluginId,
   });
 
   if (!response.ok) return { status: response.status };

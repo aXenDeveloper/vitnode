@@ -141,6 +141,55 @@ describe("generated schemas", () => {
     });
   });
 
+  describe("editorial version", () => {
+    const editorial = defineContentType({
+      id: "test.schema-version",
+      tableName: "test_schema_version",
+      fields: { title: field.text({ required: true }) },
+      editorial: { enabled: true },
+      admin: { label: { plural: "Versions", singular: "Version" } },
+    });
+
+    const row = {
+      createdAt: new Date(),
+      id: 1,
+      title: "Hello world",
+      updatedAt: new Date(),
+      version: 1,
+    };
+
+    it("is part of the response once editorial is enabled", () => {
+      expect(editorial.schemas.select.safeParse(row).success).toBe(true);
+      expect(editorial.schemas.selectObject.shape.version).toBeDefined();
+    });
+
+    it("is missing from the response without it", () => {
+      expect(schemas.selectObject.shape.version).toBeUndefined();
+    });
+
+    it("is never writable", () => {
+      // Both schemas are strict, so this is a rejection rather than a strip -
+      // the version moves with the write, never in it.
+      expect(
+        editorial.schemas.create.safeParse({ title: "Hello", version: 2 })
+          .success,
+      ).toBe(false);
+      expect(
+        editorial.schemas.update.safeParse({ title: "Hello", version: 2 })
+          .success,
+      ).toBe(false);
+    });
+
+    it("is orderable once editorial is enabled", () => {
+      expect(
+        editorial.schemas.order.safeParse({ orderBy: "version" }).success,
+      ).toBe(true);
+      expect(schemas.order.safeParse({ orderBy: "version" }).success).toBe(
+        false,
+      );
+    });
+  });
+
   describe("order", () => {
     it("allows the declared orderable fields and the system columns", () => {
       for (const orderBy of [

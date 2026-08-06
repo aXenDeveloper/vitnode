@@ -2,6 +2,7 @@ import { CONFIG_PLUGIN } from "@/config";
 
 import { buildApiPlugin } from "./lib/plugin";
 import { adminModule } from "./modules/admin/admin.module";
+import { contentModule } from "./modules/content/content.module";
 import { cronModule } from "./modules/cron/cron.module";
 import { middlewareModule } from "./modules/middleware/middleware.module";
 import { queueModule } from "./modules/queue/queue.module";
@@ -14,6 +15,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     middlewareModule,
     usersModule,
     adminModule,
+    contentModule,
     cronModule,
     queueModule,
     searchModule,

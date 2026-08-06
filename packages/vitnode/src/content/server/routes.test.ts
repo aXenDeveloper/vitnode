@@ -7,9 +7,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   testArticleContentType,
   testCategoryContentType,
+  testEditorialPostContentType,
   testPostContentType,
 } from "@/tests/content-fixtures";
 
+import {
+  ContentRevisionNotRestorable,
+  ContentScheduleError,
+  ContentVersionConflict,
+} from "../errors";
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
 
@@ -34,6 +40,7 @@ const articles = createContentModel(testArticleContentType, {
 const posts = createContentModel(testPostContentType, {
   references: { category: () => categories.table.id },
 });
+const editorialPosts = createContentModel(testEditorialPostContentType);
 
 const PLUGIN_ID = "@vitnode/example";
 
@@ -573,6 +580,630 @@ describe("generated content routes", () => {
       expect(
         Object.keys(doc.paths["/{id}/publish"].post?.responses ?? {}).sort(),
       ).toEqual(["200", "400", "404"]);
+    });
+  });
+
+  describe("editorial", () => {
+    const editorialRow = {
+      createdAt: new Date("2024-01-01T00:00:00.000Z"),
+      excerpt: null,
+      id: 7,
+      publishedAt: null,
+      slug: "hello",
+      status: "draft" as const,
+      title: "Hello world",
+      updatedAt: new Date("2024-01-02T00:00:00.000Z"),
+      version: 4,
+      views: 0,
+    };
+
+    const outcome = (overrides: Record<string, unknown> = {}) => ({
+      changed: true,
+      changedFields: ["title"],
+      operation: "update" as const,
+      previousSlug: "hello",
+      restoredFromRevisionId: null,
+      revisionId: 20,
+      row: editorialRow,
+      version: 5,
+      ...overrides,
+    });
+
+    const editorialHarness = ({ allow = true }: { allow?: boolean } = {}) => {
+      const emitted: Harness["emitted"] = [];
+      const searched: unknown[] = [];
+      const editorial = {
+        create: vi.fn(),
+        delete: vi.fn(),
+        publish: vi.fn(),
+        restore: vi.fn(),
+        revisions: { findById: vi.fn(), latest: vi.fn(), list: vi.fn() },
+        schedules: {
+          cancel: vi.fn(),
+          listForItem: vi.fn(),
+          pendingForItem: vi.fn(),
+          recordError: vi.fn(),
+          schedule: vi.fn(),
+        },
+        unpublish: vi.fn(),
+        update: vi.fn(),
+      };
+
+      permissionGranted = allow;
+      // `editorialService` is `((c, opts) => Service) | undefined` on
+      // `ContentModel`, and `spyOn` cannot pick an overload through the union -
+      // so the model is viewed as the non-optional shape for the stub.
+      const spied = editorialPosts as unknown as {
+        editorialService: (
+          c: Context,
+          options: { pluginId: string },
+        ) => typeof editorial;
+      };
+      vi.spyOn(spied, "editorialService").mockReturnValue(editorial);
+
+      // The preview route reads the row through the ordinary service, so it
+      // gets a 404 for a record that is not there before it mints anything.
+      const service = {
+        create: vi.fn(),
+        delete: vi.fn(),
+        findById: vi.fn(),
+        findMany: vi.fn(),
+        options: vi.fn(),
+        publish: vi.fn(),
+        unpublish: vi.fn(),
+        update: vi.fn(),
+      };
+      vi.spyOn(editorialPosts, "service").mockReturnValue(service);
+
+      const app = new OpenAPIHono();
+      app.use("*", async (c, next) => {
+        c.set("events", {
+          emit: async (name: string, payload: unknown) => {
+            await Promise.resolve();
+            emitted.push({ name, payload });
+          },
+        } as unknown as Context["var"]["events"]);
+        c.set("search", {
+          delete: async () => {
+            searched.push("delete");
+
+            return Promise.resolve();
+          },
+          index: async (document: unknown) => {
+            searched.push(document);
+
+            return Promise.resolve();
+          },
+        } as unknown as Context["var"]["search"]);
+        c.set("log", {
+          error: async () => Promise.resolve(),
+        } as unknown as Context["var"]["log"]);
+        c.set("admin", allow ? { user: adminUser } : null);
+        c.set("core", { hasCronAdapter: true } as never);
+        c.set("user", null);
+        await next();
+      });
+
+      for (const { handler, route } of buildContentRoutes(editorialPosts, {
+        pluginId: PLUGIN_ID,
+      })) {
+        app.openapi(route, handler);
+      }
+
+      return { app, editorial, emitted, service };
+    };
+
+    describe("update envelope", () => {
+      it("requires an expected version", async () => {
+        const { app, editorial } = editorialHarness();
+
+        const res = await app.request("/7", {
+          method: "PUT",
+          ...json({ values: { title: "Changed" } }),
+        });
+
+        expect(res.status).toBe(400);
+        expect(editorial.update).not.toHaveBeenCalled();
+      });
+
+      it("rejects the bare body a Stage 1-3 route accepts", async () => {
+        const { app } = editorialHarness();
+
+        const res = await app.request("/7", {
+          method: "PUT",
+          ...json({ title: "Changed" }),
+        });
+
+        expect(res.status).toBe(400);
+      });
+
+      it("passes the version and the values through", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.update.mockResolvedValue(outcome());
+
+        const res = await app.request("/7", {
+          method: "PUT",
+          ...json({ expectedVersion: 4, values: { title: "Changed" } }),
+        });
+
+        expect(res.status).toBe(200);
+        expect(editorial.update).toHaveBeenCalledWith(
+          7,
+          { title: "Changed" },
+          expect.objectContaining({ expectedVersion: 4 }),
+        );
+      });
+
+      it("records the signed-in admin as the actor", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.update.mockResolvedValue(outcome());
+
+        await app.request("/7", {
+          method: "PUT",
+          ...json({ expectedVersion: 4, values: { title: "Changed" } }),
+        });
+
+        expect(editorial.update).toHaveBeenCalledWith(
+          7,
+          expect.anything(),
+          expect.objectContaining({ actor: { type: "staff", userId: 1 } }),
+        );
+      });
+
+      it("emits `updated` once and nothing on a no-op", async () => {
+        const { app, editorial, emitted } = editorialHarness();
+        editorial.update.mockResolvedValue(
+          outcome({ changed: false, changedFields: [], revisionId: null }),
+        );
+
+        await app.request("/7", {
+          method: "PUT",
+          ...json({ expectedVersion: 4, values: { title: "Hello world" } }),
+        });
+
+        expect(emitted).toEqual([]);
+      });
+    });
+
+    describe("version conflict", () => {
+      it("answers 409 with a machine-readable body", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.update.mockRejectedValue(
+          new ContentVersionConflict({
+            contentTypeId: "test.editorial",
+            currentVersion: 9,
+            expectedVersion: 4,
+            itemId: 7,
+          }),
+        );
+
+        const res = await app.request("/7", {
+          method: "PUT",
+          ...json({ expectedVersion: 4, values: { title: "Changed" } }),
+        });
+
+        expect(res.status).toBe(409);
+        expect(await res.json()).toEqual({
+          code: "CONTENT_VERSION_CONFLICT",
+          contentTypeId: "test.editorial",
+          currentVersion: 9,
+          expectedVersion: 4,
+          itemId: 7,
+        });
+      });
+
+      it("says nothing about the database on a unique clash", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.update.mockRejectedValue(
+          Object.assign(new Error("duplicate key value violates ..."), {
+            code: "23505",
+          }),
+        );
+
+        const res = await app.request("/7", {
+          method: "PUT",
+          ...json({ expectedVersion: 4, values: { title: "Changed" } }),
+        });
+
+        expect(res.status).toBe(409);
+        const body = (await res.json()) as Record<string, unknown>;
+        expect(body.code).toBe("CONTENT_UNIQUE_CONFLICT");
+        expect(JSON.stringify(body)).not.toMatch(/duplicate key/);
+      });
+    });
+
+    describe("revision history", () => {
+      it("returns metadata only", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.revisions.list.mockResolvedValue([
+          {
+            actorName: "Test",
+            actorType: "staff",
+            actorUserId: 1,
+            changedFields: ["title"],
+            createdAt: new Date("2024-01-02T00:00:00.000Z"),
+            id: 20,
+            operation: "update",
+            restoredFromRevisionId: null,
+            version: 5,
+          },
+        ]);
+
+        const res = await app.request("/7/revisions");
+        const body = (await res.json()) as { edges: unknown[] };
+
+        expect(res.status).toBe(200);
+        expect(body.edges).toHaveLength(1);
+        // No snapshot in the list payload - opening the history must not drag
+        // every historical version of a long article across the wire.
+        expect(body.edges[0]).not.toHaveProperty("snapshot");
+      });
+
+      it("loads one snapshot on demand", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.revisions.findById.mockResolvedValue({
+          actorName: null,
+          actorType: "system",
+          actorUserId: null,
+          changedFields: [],
+          createdAt: new Date(),
+          id: 20,
+          operation: "create",
+          restoredFromRevisionId: null,
+          snapshot: { fields: { title: "Hello" } },
+          version: 1,
+        });
+
+        const res = await app.request("/7/revisions/20");
+
+        expect(res.status).toBe(200);
+        expect(editorial.revisions.findById).toHaveBeenCalledWith(7, 20);
+      });
+
+      it("404s a revision that is not this record's", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.revisions.findById.mockResolvedValue(null);
+
+        expect((await app.request("/7/revisions/20")).status).toBe(404);
+      });
+    });
+
+    describe("restore", () => {
+      it("restores and reports what changed", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.restore.mockResolvedValue(
+          outcome({ operation: "restore", restoredFromRevisionId: 3 }),
+        );
+
+        const res = await app.request("/7/revisions/3/restore", {
+          method: "POST",
+          ...json({ expectedVersion: 4 }),
+        });
+
+        expect(res.status).toBe(200);
+        expect(await res.json()).toMatchObject({ changed: true });
+        expect(editorial.restore).toHaveBeenCalledWith(
+          7,
+          3,
+          expect.objectContaining({ expectedVersion: 4 }),
+        );
+      });
+
+      it("emits `restored` and never also `updated`", async () => {
+        const { app, editorial, emitted } = editorialHarness();
+        editorial.restore.mockResolvedValue(
+          outcome({ operation: "restore", restoredFromRevisionId: 3 }),
+        );
+
+        await app.request("/7/revisions/3/restore", {
+          method: "POST",
+          ...json({ expectedVersion: 4 }),
+        });
+
+        expect(emitted.map(entry => entry.name)).toEqual([
+          "content.test.editorial.restored",
+        ]);
+        expect(emitted[0].payload).toMatchObject({
+          changedFields: ["title"],
+          contentId: 7,
+          restoredFromRevisionId: 3,
+          revisionId: 20,
+        });
+      });
+
+      it("answers 422 naming only field names", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.restore.mockRejectedValue(
+          new ContentRevisionNotRestorable({
+            contentTypeId: "test.editorial",
+            fields: ["title"],
+            revisionId: 3,
+          }),
+        );
+
+        const res = await app.request("/7/revisions/3/restore", {
+          method: "POST",
+          ...json({ expectedVersion: 4 }),
+        });
+
+        expect(res.status).toBe(422);
+        expect(await res.json()).toEqual({
+          code: "CONTENT_REVISION_NOT_RESTORABLE",
+          contentTypeId: "test.editorial",
+          fields: ["title"],
+          revisionId: 3,
+        });
+      });
+
+      it("requires an expected version", async () => {
+        const { app } = editorialHarness();
+
+        const res = await app.request("/7/revisions/3/restore", {
+          method: "POST",
+          ...json({}),
+        });
+
+        expect(res.status).toBe(400);
+      });
+    });
+
+    describe("route generation", () => {
+      it("adds no revision routes without the workflow", () => {
+        const paths = buildContentRoutes(posts, { pluginId: PLUGIN_ID }).map(
+          entry => `${entry.route.method} ${entry.route.path}`,
+        );
+
+        expect(paths).not.toContain("get /{id}/revisions");
+        expect(paths).not.toContain(
+          "post /{id}/revisions/{revisionId}/restore",
+        );
+      });
+
+      it("gates every generated route on a staff permission", async () => {
+        // Asserted over the whole array rather than route by route, so a new
+        // endpoint cannot be added without one: `buildRoute` only appends the
+        // permission middleware when `adminStaffPermission` was supplied, so a
+        // 403 for every path is the observable proof.
+        const { app } = editorialHarness({ allow: false });
+        const paths: [string, string][] = [
+          ["GET", "/"],
+          ["GET", "/7"],
+          ["POST", "/"],
+          ["PUT", "/7"],
+          ["DELETE", "/7"],
+          ["POST", "/7/publish"],
+          ["POST", "/7/unpublish"],
+          ["GET", "/7/revisions"],
+          ["GET", "/7/revisions/3"],
+          ["POST", "/7/revisions/3/restore"],
+        ];
+
+        for (const [method, path] of paths) {
+          const res = await app.request(path, {
+            method,
+            ...(method === "POST" || method === "PUT"
+              ? json({ expectedVersion: 1, title: "Hello world", values: {} })
+              : {}),
+          });
+
+          expect([method, path, res.status]).toEqual([method, path, 403]);
+        }
+      });
+
+      it("gates restore on can_restore, not can_edit", async () => {
+        const { app } = editorialHarness({ allow: false });
+
+        const res = await app.request("/7/revisions/3/restore", {
+          method: "POST",
+          ...json({ expectedVersion: 4 }),
+        });
+
+        expect(res.status).toBe(403);
+      });
+    });
+
+    describe("preview", () => {
+      it("mints a link bound to the newest revision", async () => {
+        const { app, editorial, service } = editorialHarness();
+        service.findById.mockResolvedValue({ ...editorialRow, version: 5 });
+        editorial.revisions.latest.mockResolvedValue({ id: 42, version: 5 });
+
+        const res = await app.request("/7/preview", { method: "POST" });
+        const body = (await res.json()) as {
+          revisionId: number;
+          token: string;
+          url: string;
+          version: number;
+        };
+
+        expect(res.status).toBe(200);
+        expect(body.revisionId).toBe(42);
+        expect(body.version).toBe(5);
+        // The fixture sets a `pathTemplate`, so the link points at the web app
+        // rather than the JSON endpoint.
+        expect(body.url).toBe(
+          `/editorial/preview/${encodeURIComponent(body.token)}`,
+        );
+      });
+
+      it("falls back to the live row when there is no revision", async () => {
+        // A record that predates its content type opting into editorial. It can
+        // still be previewed; only the frozen-snapshot guarantee is unavailable.
+        const { app, editorial, service } = editorialHarness();
+        service.findById.mockResolvedValue({ ...editorialRow, version: 2 });
+        editorial.revisions.latest.mockResolvedValue(null);
+
+        const body = (await (
+          await app.request("/7/preview", { method: "POST" })
+        ).json()) as { revisionId: number; version: number };
+
+        expect(body).toMatchObject({ revisionId: 0, version: 2 });
+      });
+
+      it("404s for a record that is not there, before minting anything", async () => {
+        const { app, editorial, service } = editorialHarness();
+        service.findById.mockResolvedValue(null);
+
+        const res = await app.request("/7/preview", { method: "POST" });
+
+        expect(res.status).toBe(404);
+        expect(editorial.revisions.latest).not.toHaveBeenCalled();
+      });
+
+      it("needs can_view", async () => {
+        const { app } = editorialHarness({ allow: false });
+
+        expect(
+          (await app.request("/7/preview", { method: "POST" })).status,
+        ).toBe(403);
+      });
+
+      it("is absent from a content type without preview", () => {
+        // `testPostContentType` has a public API but no editorial block, so it
+        // gets no preview route at all - not a disabled one.
+        const paths = buildContentRoutes(articles, {
+          pluginId: PLUGIN_ID,
+        }).map(entry => entry.route.path);
+
+        expect(paths).not.toContain("/{id}/preview");
+      });
+    });
+
+    describe("scheduling", () => {
+      const future = new Date(Date.now() + 3_600_000).toISOString();
+
+      it("books a publication and emits one event", async () => {
+        const { app, editorial, emitted, service } = editorialHarness();
+        service.findById.mockResolvedValue(editorialRow);
+        editorial.schedules.schedule.mockResolvedValue({
+          generation: 1,
+          id: 55,
+          scheduledFor: new Date(future),
+        });
+
+        const res = await app.request("/7/schedule", {
+          method: "POST",
+          ...json({ action: "publish", scheduledFor: future }),
+        });
+
+        expect(res.status).toBe(200);
+        expect(editorial.schedules.schedule).toHaveBeenCalledWith(
+          expect.objectContaining({
+            action: "publish",
+            actorUserId: adminUser.id,
+            itemId: 7,
+          }),
+        );
+        expect(emitted.map(entry => entry.name)).toEqual([
+          "content.test.editorial.scheduled",
+        ]);
+      });
+
+      it("404s for a record that is not there", async () => {
+        const { app, editorial, service } = editorialHarness();
+        service.findById.mockResolvedValue(null);
+
+        const res = await app.request("/7/schedule", {
+          method: "POST",
+          ...json({ action: "publish", scheduledFor: future }),
+        });
+
+        expect(res.status).toBe(404);
+        expect(editorial.schedules.schedule).not.toHaveBeenCalled();
+      });
+
+      it("answers a refused time with a machine-readable code", async () => {
+        const { app, editorial, service } = editorialHarness();
+        service.findById.mockResolvedValue(editorialRow);
+        editorial.schedules.schedule.mockRejectedValue(
+          new ContentScheduleError("That time has already passed.", {
+            code: "CONTENT_SCHEDULE_IN_PAST",
+            contentTypeId: testEditorialPostContentType.id,
+          }),
+        );
+
+        const res = await app.request("/7/schedule", {
+          method: "POST",
+          ...json({ action: "publish", scheduledFor: future }),
+        });
+
+        expect(res.status).toBe(400);
+        // A code, not prose: the dialog points at the date field for this one
+        // and shows a general error for anything else.
+        await expect(res.json()).resolves.toMatchObject({
+          code: "CONTENT_SCHEDULE_IN_PAST",
+        });
+      });
+
+      it("cancels a pending schedule and says which action it was", async () => {
+        const { app, editorial, emitted } = editorialHarness();
+        editorial.schedules.cancel.mockResolvedValue({ action: "publish" });
+
+        const res = await app.request("/7/schedule/55/cancel", {
+          method: "POST",
+        });
+
+        expect(res.status).toBe(200);
+        // Scoped by the record as well as the schedule id: the table is shared.
+        expect(editorial.schedules.cancel).toHaveBeenCalledWith(7, 55);
+        expect(emitted[0]).toMatchObject({
+          name: "content.test.editorial.schedule_cancelled",
+          payload: { action: "publish", scheduleId: 55 },
+        });
+      });
+
+      it("404s when there was nothing pending to cancel", async () => {
+        const { app, editorial, emitted } = editorialHarness();
+        editorial.schedules.cancel.mockResolvedValue(null);
+
+        const res = await app.request("/7/schedule/55/cancel", {
+          method: "POST",
+        });
+
+        expect(res.status).toBe(404);
+        expect(emitted).toHaveLength(0);
+      });
+
+      it("lists schedules with whether a scheduler is actually running", async () => {
+        // Carried on this route rather than the debug endpoint, which needs a
+        // permission the editor may not have - and without it the dialog would
+        // accept schedules that never fire.
+        const { app, editorial } = editorialHarness();
+        editorial.schedules.listForItem.mockResolvedValue([]);
+
+        const res = await app.request("/7/schedules");
+
+        expect(res.status).toBe(200);
+        await expect(res.json()).resolves.toEqual({
+          edges: [],
+          hasCronAdapter: true,
+        });
+      });
+
+      it.each([
+        ["POST", "/7/schedule"],
+        ["POST", "/7/schedule/55/cancel"],
+      ])("gates %s %s on can_publish", async (method, path) => {
+        const { app } = editorialHarness({ allow: false });
+
+        const res = await app.request(path, {
+          method,
+          ...(path.endsWith("/schedule")
+            ? json({ action: "publish", scheduledFor: future })
+            : {}),
+        });
+
+        expect(res.status).toBe(403);
+      });
+
+      it("is absent from a content type without scheduling", () => {
+        const paths = buildContentRoutes(posts, { pluginId: PLUGIN_ID }).map(
+          entry => entry.route.path,
+        );
+
+        expect(paths).not.toContain("/{id}/schedule");
+        expect(paths).not.toContain("/{id}/schedules");
+      });
     });
   });
 

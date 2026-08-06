@@ -21,12 +21,16 @@ import {
 } from "@/content/admin/spec";
 import { usePathname, useRouter } from "@/lib/navigation";
 
+import type { ContentConflictState } from "./conflict-notice";
+
 import { ContentField } from "../lib/field-component";
 import { contentErrorKey } from "../lib/mutation-feedback";
+import { ConflictNotice } from "./conflict-notice";
 import {
   createContentAction,
   editContentAction,
   loadContentOptionsAction,
+  reloadContentRowAction,
 } from "./mutation-api.server";
 
 /**
@@ -97,11 +101,37 @@ export const ContentForm = ({
   const { setOpen } = useDialog();
   const { push } = useRouter();
   const pathname = usePathname();
+  const [conflict, setConflict] = React.useState<ContentConflictState | null>(
+    null,
+  );
+
+  // The version this dialog opened with, and the one every save is checked
+  // against - until a conflict is resolved, which replaces it with the version
+  // the editor has now actually seen.
+  const [expectedVersion, setExpectedVersion] = React.useState(() =>
+    typeof data?.version === "number" ? data.version : undefined,
+  );
 
   const formSchema = React.useMemo(
     () => buildFormSchemaFromSpec(spec, data),
     [spec, data],
   );
+
+  const onReload = async () => {
+    const { row } = await reloadContentRowAction(
+      spec.contentTypeId,
+      data?.id ?? 0,
+    );
+    if (!row) return;
+
+    setConflict({
+      currentVersion: typeof row.version === "number" ? row.version : 0,
+      latest: row,
+    });
+    // Saving again now overwrites what the editor has just been shown, which is
+    // a decision they make by pressing the button a second time.
+    if (typeof row.version === "number") setExpectedVersion(row.version);
+  };
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
     // Relation and user fields hold the whole combobox option; the API wants
@@ -109,13 +139,27 @@ export const ContentForm = ({
     const payload = contentFormValuesToPayload(spec, values);
 
     const mutation = data
-      ? await editContentAction(spec.contentTypeId, data.id, payload)
+      ? await editContentAction(
+          spec.contentTypeId,
+          data.id,
+          payload,
+          expectedVersion,
+        )
       : await createContentAction(spec.contentTypeId, payload);
 
     if (mutation.error !== undefined) {
+      // A lost update is the one failure with somewhere to go: the dialog stays
+      // open with everything the editor typed, and the banner offers to show
+      // what changed underneath them.
+      if (mutation.conflict?.code === "CONTENT_VERSION_CONFLICT") {
+        setConflict({ currentVersion: mutation.conflict.currentVersion });
+
+        return;
+      }
+
       // A validation failure, a conflicting row and a server fault all need
       // different words - and none of them may quote the database.
-      const errorKey = contentErrorKey(mutation.status);
+      const errorKey = contentErrorKey(mutation.status, mutation);
 
       toast.error(tErrors("title"), {
         description: errorKey
@@ -149,6 +193,15 @@ export const ContentForm = ({
         <PublicationStatus
           publishedAt={data.publishedAt}
           status={data.status}
+        />
+      ) : null}
+
+      {conflict && data ? (
+        <ConflictNotice
+          conflict={conflict}
+          onReload={onReload}
+          opened={data}
+          spec={spec}
         />
       ) : null}
 

@@ -31,6 +31,7 @@ You get a nav item, a breadcrumb, and a screen at:
 - **Pagination** - the standard cursor pagination, capped at 100 per page
 - **Create / Edit** - `AutoForm` dialogs, lazy-loaded on open
 - **Delete** - a confirmation dialog
+- **History** - with [`editorial`](#editorial): every version, a diff, and restore
 - **Empty, loading and error states** - out of the box
 
 ## What "lazy-loaded on open" actually means
@@ -67,14 +68,14 @@ because the frontend forgot something the backend allows:
   "createdAt",
   "updatedAt",
   ...(definition.publication.enabled ? ["status", "publishedAt"] : []),
+  ...(definition.editorial.enabled ? ["version"] : []),
 ];
 ```
 
-System columns need no entry in `orderableFields`, and neither do `status` and
-`publishedAt` - but the last two appear **only** when
-[`publication`](/docs/dev/content-engine/publication) is enabled. A Stage 1
-content type with a hand-rolled `status` field sorts by it the ordinary way,
-through the allowlist.
+System columns need no entry in `orderableFields`, and neither do `status`,
+`publishedAt` or `version` - but those three appear **only** when their block is
+enabled. A Stage 1 content type with a hand-rolled `status` field sorts by it
+the ordinary way, through the allowlist.
 
 A column that is orderable but not displayed simply has no header to click.
 
@@ -94,6 +95,16 @@ wrong - a delete blocked by a foreign key does not read like a crashed server:
 | 404 | this record no longer exists |
 | 409 | this record is still referenced by other content |
 | anything else | the generic server error |
+
+An [editorial](/docs/dev/content-engine/editorial) content type answers those
+two ambiguous statuses with a JSON `code`, so the wording follows what actually
+happened rather than the number:
+
+| Code | The person is told |
+| --- | --- |
+| `CONTENT_VERSION_CONFLICT` | someone else saved this while you were editing - your changes are still here |
+| `CONTENT_UNIQUE_CONFLICT` | a record with these values already exists |
+| `CONTENT_REVISION_NOT_RESTORABLE` | this version cannot be restored: *fields* no longer fit this content type |
 
 <Callout type="info" title="The database never speaks to the user">
   The generated routes translate Postgres error codes into a status and a generic
@@ -143,6 +154,101 @@ The **edit dialog** shows the same badge as a read-only line, with the
 publication date. It has no publish control of its own: `status` and
 `publishedAt` are not in the form schema, and two competing mutation paths in
 one dialog is how a form ends up fighting its own state.
+
+## Editorial
+
+A content type with [`editorial`](/docs/dev/content-engine/editorial) gains a
+**clock** row action, an **eye** one when preview is on, and changes how the
+edit dialog handles a failed save. The cell reads left to right:
+
+```text
+Preview · Schedule · History · Publish/Unpublish · Edit · Delete
+```
+
+### History
+
+The dialog body is lazy-loaded exactly like the form, and for the same reason.
+It lists one line per version - the operation as a badge, the author or
+**System**, a localised date, and which fields moved - with a **Current** badge
+on the newest.
+
+The list carries metadata only. Expanding a version fetches that one snapshot
+and renders a field-level diff against the version before it:
+
+| Kind | Rendered as |
+| --- | --- |
+| `text`, `slug` | inline, old value struck through |
+| `textarea` | inline, collapsed behind a disclosure past eight lines |
+| `boolean` | a tick or an em-dash |
+| `enum` | a badge with the option's label |
+| `number` | `tabular-nums` |
+| `dateTime` | `<DateFormat>`, in the viewer's locale |
+| `relation`, `user` | the stored id, as `#3` |
+| `null` | the same em-dash the table cells use |
+
+No raw JSON anywhere. Somebody comparing two versions of an article is looking
+for the sentence that changed, and `{"title":"..."}` makes them find it
+themselves.
+
+<Callout type="info" title="A relation diff shows an id, not a name">
+  A [snapshot](/docs/dev/content-engine/revisions#the-snapshot) stores the
+  foreign key, deliberately - the display name belongs to another content type,
+  which may not publish it. Resolving those ids back to names at display time is
+  not wired up yet, so a changed category currently reads `#3 → #7`.
+</Callout>
+
+Restoring asks for confirmation and states all four facts: which version, that
+it creates a **new** one, that nothing in between is deleted, and that the
+publication state does not move. The button is absent without `can_restore`.
+
+### Preview
+
+With [`editorial.preview`](/docs/dev/content-engine/preview), an eye icon leads
+the actions cell - present only for a content type that can be previewed, absent
+rather than disabled for anything else.
+
+The link is minted **when the popover opens**, never with the table payload. A
+page of 25 rows must not be 25 live bearer credentials for unpublished records
+sitting in a browser, most of them never used. Closing the popover throws the
+link away, so opening it again mints a fresh one instead of showing you one that
+may already have expired.
+
+### Scheduling
+
+With [`editorial.scheduling`](/docs/dev/content-engine/scheduling), a calendar
+icon opens a dialog showing what is booked, what already ran and who booked it,
+above a two-field form: what should happen, and when.
+
+- The date field names the timezone it is reading, because "9am" is a question
+  otherwise.
+- An impossible date is refused before the round trip, by the same pure function
+  the server uses - so the two cannot drift into disagreeing.
+- A pending schedule whose time has passed reads **overdue**, with the last error
+  if there was one.
+- Without a cron adapter, a warning sits above everything: schedules will be
+  saved and will never fire.
+
+Gated by `can_publish`, like the publish button - booking a publication is
+publishing, just later.
+
+### The conflict
+
+When another session saved first, the edit dialog **stays open and keeps
+everything you typed.** A banner appears above the fields; nothing is merged,
+overwritten or reloaded until you say so.
+
+1. The banner names the version the record moved to.
+2. **Show what changed** loads it and lists only the fields that actually moved
+   remotely - compared against the values the dialog *opened* with, not against
+   what you have typed since, because the question being answered is "what did I
+   not see".
+3. Saving again is a second, deliberate click, and it posts the new version.
+
+<Callout type="info" title="Why it does not merge for you">
+  Deciding which half of a rewritten paragraph survives is an editorial
+  judgement. A field-level automatic merge would silently pick one, and be wrong
+  often enough that nobody could trust the result.
+</Callout>
 
 ## One route, every content type
 

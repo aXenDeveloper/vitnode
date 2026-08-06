@@ -126,6 +126,10 @@ it.
 | delete, ever published | ✓ | ✓ | ✓ | — | immediate |
 | delete, never published | — | — | — | — | — |
 | publish/unpublish no-op | — | — | — | — | — |
+| restore a draft | — | — | — | — | — |
+| restore published, same slug | ✓ | ✓ | — | ✓ | stale-while-revalidate |
+| restore published, slug changed | ✓ | ✓ | ✓ | ✓ | immediate |
+| restore that changed nothing | — | — | — | — | — |
 
 Two things worth stating out loud:
 
@@ -137,6 +141,11 @@ Two things worth stating out loud:
 
 Nothing global is ever expired, and one content type's mutation never touches
 another's tags.
+
+[Restore](/docs/dev/content-engine/revisions#restore) has no rules of its own -
+it lands on the update rows above, because as far as a visitor is concerned a
+restore *is* an update. It cannot appear on the publish or unpublish rows at
+all: restoring is structurally incapable of moving `status`.
 
 ### Immediate, or stale-while-revalidate
 
@@ -169,12 +178,32 @@ So those expire immediately. Publishing is immediate too, though nothing is at
 risk there: it means the post is live by the time the success toast appears,
 rather than on the request after it.
 
-<Callout type="warn" title="`immediate` is Server-Action-only">
-  `updateTag` throws outside a Server Action - that restriction is what buys
-  read-your-own-writes. Every generated write path is already a server action,
-  so the default is right there. From a Route Handler, a webhook or a cron,
-  pass `{ mode: "stale-while-revalidate" }`.
+<Callout type="warn" title="`updateTag` is Server-Action-only">
+  That restriction is what buys read-your-own-writes, and every generated write
+  path is already a server action - so the default is right there.
+
+From a Route Handler or a webhook, say so and still get an immediate expiry:
+
+```ts
+revalidateContent(input, { context: "route-handler", mode: "immediate" });
+```
+
+`route-handler` swaps `updateTag` for `revalidateTag(tag, { expire: 0 })`, the
+documented webhook equivalent. Same guarantee for the next reader; only the API
+differs.
+
 </Callout>
+
+### Background work goes over a bridge
+
+A [scheduled](/docs/dev/content-engine/scheduling) publish runs in the queue,
+and the queue does not run in Next - in a split deployment it is plain Node,
+where importing `next/cache` throws. So it posts to a small signed Route Handler
+in the web app, which does the expiring.
+
+It is best effort and logged, never fatal. The reasoning, the auth and the
+failure mode are all in
+[Scheduled publishing](/docs/dev/content-engine/scheduling#the-cache-bridge).
 
 ### The slug change
 

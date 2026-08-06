@@ -1,7 +1,16 @@
 import { HTTPException } from "hono/http-exception";
 import { ZodError } from "zod";
 
-import { ContentInputError } from "../errors";
+import type { ContentConflict, ContentUnprocessable } from "../conflicts";
+import type { ContentScheduleCode } from "../schedules";
+
+import { CONTENT_CONFLICT_CODES, CONTENT_UNPROCESSABLE_CODES } from "../const";
+import {
+  ContentInputError,
+  ContentRevisionNotRestorable,
+  ContentScheduleError,
+  ContentVersionConflict,
+} from "../errors";
 
 /** Postgres error codes the engine translates into a useful HTTP status. */
 const FOREIGN_KEY_VIOLATION = "23503";
@@ -27,16 +36,90 @@ const errorCode = (error: unknown, depth = 0): string | undefined => {
 };
 
 /**
+ * A JSON error body, carried on the exception itself.
+ *
+ * `HTTPException` normally renders its `message` as text, but it also accepts a
+ * ready-made `Response` - and `app.onError` returns `error.getResponse()`
+ * verbatim, so the body survives untouched. That is what lets an editorial
+ * route answer a machine-readable 409 without a second error channel.
+ */
+const jsonError = (status: 400 | 409 | 422, body: unknown): HTTPException =>
+  new HTTPException(status, {
+    res: Response.json(body, { status }),
+  });
+
+/** A structured 409. Editorial content types only - see `zodContentConflict`. */
+export const contentConflict = (body: ContentConflict): HTTPException =>
+  jsonError(409, body);
+
+/** A structured 422, for a revision that no longer fits the content type. */
+export const contentUnprocessable = (
+  body: ContentUnprocessable,
+): HTTPException => jsonError(422, body);
+
+/**
+ * A structured 400, for a schedule the rules refuse.
+ *
+ * 400 rather than 409: nothing is in conflict, the request simply asked for a
+ * time that cannot work. The `code` is what lets the dialog point at the date
+ * field instead of raising a general error.
+ */
+export const contentScheduleRejected = (body: {
+  code: ContentScheduleCode;
+  contentTypeId: string;
+}): HTTPException => jsonError(400, body);
+
+/**
  * Turns a Postgres constraint failure into an HTTP response.
  *
  * The driver's message can name columns, constraints and even values, so it
  * never reaches the client - only a generic sentence does. Anything unrecognised
  * is rethrown for `app.onError`, which logs the detail and returns a bare 500.
+ *
+ * `structured` opts an editorial content type into JSON bodies for the two
+ * statuses a client has to branch on. It is off by default, so every Stage 1-3
+ * route answers exactly as it did before.
  */
 export const rethrowAsHttpError = (
   error: unknown,
-  { action }: { action: "create" | "delete" | "update" },
+  {
+    action,
+    contentTypeId,
+    itemId,
+    structured = false,
+  }: {
+    action: "create" | "delete" | "update";
+    contentTypeId?: string;
+    itemId?: number;
+    structured?: boolean;
+  },
 ): never => {
+  if (error instanceof ContentVersionConflict) {
+    throw contentConflict({
+      code: CONTENT_CONFLICT_CODES.version,
+      contentTypeId: error.contentTypeId ?? contentTypeId ?? "",
+      currentVersion: error.currentVersion,
+      expectedVersion: error.expectedVersion,
+      itemId: error.itemId,
+    });
+  }
+
+  if (error instanceof ContentScheduleError) {
+    throw contentScheduleRejected({
+      code: error.code,
+      contentTypeId: error.contentTypeId ?? contentTypeId ?? "",
+    });
+  }
+
+  if (error instanceof ContentRevisionNotRestorable) {
+    throw contentUnprocessable({
+      code: CONTENT_UNPROCESSABLE_CODES.notRestorable,
+      contentTypeId: error.contentTypeId ?? contentTypeId ?? "",
+      fields: error.fields,
+      revisionId: error.revisionId,
+    });
+  }
+
   // The service validates its own input, so a payload that slipped past the
   // route's validator surfaces here. The issue tree stays out of the response:
   // it names internal field paths, and the route schema already described the
@@ -66,24 +149,40 @@ export const rethrowAsHttpError = (
     case NOT_NULL_VIOLATION:
       throw new HTTPException(400, { message: "A required field is missing." });
     case UNIQUE_VIOLATION:
-      throw new HTTPException(409, {
-        message: "A record with these values already exists.",
-      });
+      // Same status either way; an editorial route just says it in a shape a
+      // client can branch on, alongside the version conflict it shares with.
+      throw structured
+        ? contentConflict({
+            code: CONTENT_CONFLICT_CODES.unique,
+            contentTypeId: contentTypeId ?? "",
+            itemId: itemId ?? null,
+          })
+        : new HTTPException(409, {
+            message: "A record with these values already exists.",
+          });
     default:
       throw error;
   }
 };
 
+export interface ContentHttpErrorOptions {
+  contentTypeId?: string;
+  itemId?: number;
+  /** Answer 409 and 422 with a JSON body. Editorial content types only. */
+  structured?: boolean;
+}
+
 /** Runs a write and maps any constraint failure onto an HTTP status. */
 export const withHttpErrors = async <TResult>(
   action: "create" | "delete" | "update",
   run: () => Promise<TResult>,
+  options: ContentHttpErrorOptions = {},
 ): Promise<TResult> => {
   try {
     return await run();
   } catch (error) {
     if (error instanceof HTTPException) throw error;
 
-    return rethrowAsHttpError(error, { action });
+    return rethrowAsHttpError(error, { action, ...options });
   }
 };

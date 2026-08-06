@@ -8,6 +8,12 @@ import {
 
 import type { ContentUserField } from "./types";
 
+import {
+  CONTENT_PREVIEW_DEFAULT_TTL_MINUTES,
+  CONTENT_REVISION_DEFAULT_RETENTION,
+  CONTENT_REVISION_MAX_RETENTION,
+  CONTENT_REVISION_MIN_RETENTION,
+} from "./const";
 import { defineContentType } from "./define";
 import { ContentEngineError } from "./errors";
 import { field } from "./fields";
@@ -508,6 +514,204 @@ describe("defineContentType", () => {
       expect(() =>
         define({ indexes: [{ on: ["title", "createdAt"] }] }),
       ).not.toThrow();
+    });
+  });
+
+  describe("editorial", () => {
+    type Overrides = NonNullable<Parameters<typeof define>[0]>;
+
+    const editorialDefine = (
+      editorial: Overrides["editorial"],
+      overrides: Overrides = {},
+    ) => define({ editorial, ...overrides });
+
+    const publishable = {
+      publication: { enabled: true } as const,
+      publicApi: {
+        enabled: true,
+        path: "widgets",
+        fields: ["title", "slug"],
+      } as const,
+      fields: {
+        title: field.text({ required: true }),
+        slug: field.slug({ source: "title" }),
+      },
+    };
+
+    describe("defaults", () => {
+      it("resolves to disabled when omitted", () => {
+        expect(define().editorial).toEqual({
+          enabled: false,
+          preview: {
+            enabled: false,
+            expiresInMinutes: CONTENT_PREVIEW_DEFAULT_TTL_MINUTES,
+            pathTemplate: null,
+          },
+          revisions: { retention: CONTENT_REVISION_DEFAULT_RETENTION },
+          scheduling: { enabled: false },
+        });
+      });
+
+      it("fills in the defaults when opted in with nothing else", () => {
+        expect(editorialDefine({ enabled: true }).editorial).toEqual({
+          enabled: true,
+          preview: {
+            enabled: false,
+            expiresInMinutes: CONTENT_PREVIEW_DEFAULT_TTL_MINUTES,
+            pathTemplate: null,
+          },
+          revisions: { retention: CONTENT_REVISION_DEFAULT_RETENTION },
+          scheduling: { enabled: false },
+        });
+      });
+
+      it("keeps a declared retention", () => {
+        expect(
+          editorialDefine({ enabled: true, revisions: { retention: 5 } })
+            .editorial.revisions.retention,
+        ).toBe(5);
+      });
+    });
+
+    describe("retention validation", () => {
+      it.each([0, -1, 501, 1.5])("rejects a retention of %s", retention => {
+        expect(() =>
+          editorialDefine({ enabled: true, revisions: { retention } }),
+        ).toThrow(ContentEngineError);
+      });
+
+      it.each([CONTENT_REVISION_MIN_RETENTION, CONTENT_REVISION_MAX_RETENTION])(
+        "accepts the boundary %s",
+        retention => {
+          expect(() =>
+            editorialDefine({ enabled: true, revisions: { retention } }),
+          ).not.toThrow();
+        },
+      );
+    });
+
+    describe("preview", () => {
+      const withPreview = (preview: {
+        enabled: true;
+        expiresInMinutes?: number;
+        pathTemplate?: string;
+      }): ReturnType<typeof define> =>
+        editorialDefine({ enabled: true, preview }, publishable);
+
+      it("needs a public API", () => {
+        expect(() =>
+          editorialDefine(
+            { enabled: true, preview: { enabled: true } },
+            { publication: { enabled: true } },
+          ),
+        ).toThrow(/needs `publicApi/);
+      });
+
+      it("resolves its defaults", () => {
+        expect(withPreview({ enabled: true }).editorial.preview).toEqual({
+          enabled: true,
+          expiresInMinutes: CONTENT_PREVIEW_DEFAULT_TTL_MINUTES,
+          pathTemplate: null,
+        });
+      });
+
+      it.each([0, 1441, 2.5])("rejects a TTL of %s minutes", value => {
+        expect(() =>
+          withPreview({ enabled: true, expiresInMinutes: value }),
+        ).toThrow(ContentEngineError);
+      });
+
+      it.each([
+        ["widgets/preview/{token}", "no leading slash"],
+        ["/widgets/preview", "no placeholder"],
+        ["/widgets/{token}/{token}", "two placeholders"],
+        ["/widgets/{id}/{token}", "an unsupported placeholder"],
+        ["/widgets//preview/{token}", "an empty segment"],
+        ["/widgets/../{token}", "a traversal"],
+        ["/widgets/pre view/{token}", "whitespace"],
+      ])("rejects the pathTemplate %s (%s)", pathTemplate => {
+        expect(() => withPreview({ enabled: true, pathTemplate })).toThrow(
+          ContentEngineError,
+        );
+      });
+
+      it("accepts a well-formed pathTemplate", () => {
+        expect(
+          withPreview({
+            enabled: true,
+            pathTemplate: "/widgets/preview/{token}",
+          }).editorial.preview.pathTemplate,
+        ).toBe("/widgets/preview/{token}");
+      });
+    });
+
+    describe("scheduling", () => {
+      it("needs publication", () => {
+        expect(() =>
+          editorialDefine({ enabled: true, scheduling: { enabled: true } }),
+        ).toThrow(/needs `publication/);
+      });
+
+      it("is enabled alongside publication", () => {
+        expect(
+          editorialDefine(
+            { enabled: true, scheduling: { enabled: true } },
+            { publication: { enabled: true } },
+          ).editorial.scheduling.enabled,
+        ).toBe(true);
+      });
+    });
+
+    describe("reserved field name", () => {
+      const versionField = {
+        title: field.text({ required: true }),
+        version: field.number({ integer: true, defaultValue: 0 }),
+      };
+
+      it("rejects a field called `version` once enabled", () => {
+        expect(() =>
+          editorialDefine({ enabled: true }, { fields: versionField }),
+        ).toThrow(/generated by `editorial`/);
+      });
+
+      it("allows it when editorial is omitted", () => {
+        expect(() => define({ fields: versionField })).not.toThrow();
+      });
+    });
+
+    it("rejects a content type id too long to store on a revision", () => {
+      expect(() =>
+        editorialDefine(
+          { enabled: true },
+          { id: `test.${"a".repeat(100)}`, tableName: "test_long_id" },
+        ),
+      ).toThrow(/limit for a revision/);
+    });
+
+    describe("addressable column", () => {
+      it("accepts `version` in the admin list once enabled", () => {
+        expect(
+          editorialDefine(
+            { enabled: true },
+            { admin: { label, list: { columns: ["title", "version"] } } },
+          ).admin.list.columns,
+        ).toEqual(["title", "version"]);
+      });
+
+      it("rejects it when editorial is off", () => {
+        expect(() =>
+          define({ admin: { label, list: { columns: ["title", "version"] } } }),
+        ).toThrow(/unknown field "version"/);
+      });
+
+      it("accepts an index over it once enabled", () => {
+        expect(() =>
+          editorialDefine(
+            { enabled: true },
+            { indexes: [{ on: ["version"] }] },
+          ),
+        ).not.toThrow();
+      });
     });
   });
 

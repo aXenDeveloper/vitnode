@@ -91,6 +91,18 @@ describe("example_articles", () => {
     expect(columns.publishedAt.default).toBeUndefined();
   });
 
+  it("generates the editorial version column instead of declaring it", () => {
+    const columns = Object.fromEntries(
+      articles.columns.map(column => [column.name, column]),
+    );
+
+    expect(columns.version.getSQLType()).toBe("integer");
+    expect(columns.version.notNull).toBe(true);
+    // Defaulted, so adding `editorial` to a populated table is one statement
+    // and every pre-existing row starts at version 1.
+    expect(columns.version.default).toBe(1);
+  });
+
   it("gives the unique text field and the slug a unique index", () => {
     // The slug needs no `unique: true` - a URL segment is unique by definition.
     expect([...uniqueIndexNames(articles)].sort(byName)).toEqual([
@@ -155,6 +167,24 @@ describe("the generated migration", () => {
     expect(migration).toContain('CREATE TABLE "example_categories"');
     expect(migration).toContain(
       'ALTER TABLE "example_articles" ENABLE ROW LEVEL SECURITY',
+    );
+  });
+
+  it("adds the version column in one backfilling statement", () => {
+    // `DEFAULT 1 NOT NULL` is what lets an existing table adopt the editorial
+    // workflow without a separate backfill pass.
+    expect(migration).toContain(
+      'ALTER TABLE "example_articles" ADD COLUMN "version" integer DEFAULT 1 NOT NULL',
+    );
+  });
+
+  it("creates the shared revision table before anything needs it", () => {
+    expect(migration).toContain('CREATE TABLE "core_content_revisions"');
+    expect(migration).toContain(
+      'CREATE UNIQUE INDEX "core_content_revisions_item_version_unique"',
+    );
+    expect(migration).toContain(
+      'ALTER TABLE "core_content_revisions" ENABLE ROW LEVEL SECURITY',
     );
   });
 

@@ -14,7 +14,10 @@ import type { ContentRowData } from "./cells";
 
 import { DeleteContentAction } from "../actions/delete-action";
 import { EditContentAction } from "../actions/edit-action";
+import { HistoryContentAction } from "../actions/history-action";
+import { PreviewContentAction } from "../actions/preview-action";
 import { PublishContentAction } from "../actions/publish-action";
+import { ScheduleContentAction } from "../actions/schedule-action";
 import { ContentCell } from "./cells";
 
 const zodList = z.object({
@@ -103,8 +106,17 @@ export const ContentTableView = async ({
       id: "actions",
       header: "",
       align: "right",
-      // Room for the third button publication adds.
-      className: definition.publication.enabled ? "w-28" : "w-20",
+      // One column per button: publication adds a third, editorial a fourth,
+      // preview a fifth and scheduling a sixth.
+      className: [
+        "w-20",
+        definition.publication.enabled ? "w-28" : "",
+        definition.editorial.enabled ? "w-36" : "",
+        definition.editorial.preview.enabled ? "w-44" : "",
+        definition.editorial.scheduling.enabled ? "w-52" : "",
+      ]
+        .filter(Boolean)
+        .at(-1),
       cell: ({ row }) => {
         const title =
           titleField && typeof row[titleField] === "string"
@@ -113,6 +125,39 @@ export const ContentTableView = async ({
 
         return (
           <>
+            {definition.editorial.preview.enabled ? (
+              <PreviewContentAction
+                contentTypeId={definition.id}
+                id={row.id}
+                permissionModule={definition.permissionModule}
+                pluginId={pluginId}
+                title={title}
+              />
+            ) : null}
+            {definition.editorial.scheduling.enabled ? (
+              <ScheduleContentAction
+                contentTypeId={definition.id}
+                id={row.id}
+                permissionModule={definition.permissionModule}
+                pluginId={pluginId}
+                singular={definition.admin.label.singular}
+                title={title}
+              />
+            ) : null}
+            {definition.editorial.enabled ? (
+              <HistoryContentAction
+                contentTypeId={definition.id}
+                currentVersion={
+                  typeof row.version === "number" ? row.version : 1
+                }
+                id={row.id}
+                permissionModule={definition.permissionModule}
+                pluginId={pluginId}
+                singular={definition.admin.label.singular}
+                spec={formSpec}
+                title={title}
+              />
+            ) : null}
             {definition.publication.enabled ? (
               <PublishContentAction
                 contentTypeId={definition.id}

@@ -53,6 +53,7 @@ export const articleContentType = defineContentType({
 | | |
 | --- | --- |
 | Two routes | `GET /content/{path}/` and `GET /content/{path}/{slug}` |
+| Optionally a third | `GET /content/{path}/preview/{token}`, with [`editorial.preview`](/docs/dev/content-engine/preview) |
 | A service | [`model.publicService(c)`](/docs/dev/content-engine/public-service) |
 | A projection | `ContentPublicSelect<T>` - exactly the allowlist |
 | OpenAPI | two `get` operations, no others |
@@ -283,8 +284,12 @@ probe either.
 
 ## What this is not
 
-No public writes, ever. No `Cache-Control` headers - HTTP caching is handled
-Next-side by [tags](/docs/dev/content-engine/caching). No per-route rate limits
+No public writes, ever - under any configuration, including
+[preview](/docs/dev/content-engine/preview), which is a `get`. No
+`Cache-Control` headers on the two published routes; HTTP caching is handled
+Next-side by [tags](/docs/dev/content-engine/caching), and a preview response
+is the one exception - it carries `private, no-store` because it can hold an
+unpublished record. No per-route rate limits
 beyond the global IP bucket. And the cursor is always the row id even when you
 sort by something else, which is pre-existing `withPagination` behaviour rather
 than a public-API quirk. See

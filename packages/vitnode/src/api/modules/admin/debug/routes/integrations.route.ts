@@ -6,7 +6,10 @@ import { core_cron } from "@/database/cron";
 import { core_queue } from "@/database/queue";
 import { getQueueStatus } from "@/lib/api/get-queue-status";
 import { isCronStale } from "@/lib/api/is-cron-stale";
-import { INSECURE_DEFAULT_CRON_SECRET } from "@/lib/config";
+import {
+  INSECURE_DEFAULT_CONTENT_PREVIEW_SECRET,
+  INSECURE_DEFAULT_CRON_SECRET,
+} from "@/lib/config";
 import { isRealtimePubSubEnabled, isWebSocketEnabled } from "@/ws/registry";
 
 import { buildRoute } from "../../../../lib/route";
@@ -37,6 +40,17 @@ export const integrationsDebugAdminRoute = buildRoute({
                 type: z
                   .enum(["cloudflare_turnstile", "recaptcha_v3"])
                   .nullable(),
+              }),
+              contentPreview: z.object({
+                // `true` when at least one content type has
+                // `editorial.preview.enabled`, i.e. the preview routes exist.
+                active: z.boolean(),
+                // How many content types can mint preview links.
+                contentTypes: z.number(),
+                // `false` when `CONTENT_PREVIEW_SECRET` is left at its
+                // well-known default, which makes every preview link forgeable
+                // by anyone who has read the source.
+                secure: z.boolean(),
               }),
               cron: z.object({
                 // `true` when a cron adapter is configured, i.e. an in-process
@@ -133,6 +147,9 @@ export const integrationsDebugAdminRoute = buildRoute({
       cronActivity?.lastActivity ? new Date(cronActivity.lastActivity) : null,
     );
     const cronActive = core.hasCronAdapter;
+    const previewContentTypes = core.contentTypes.filter(
+      entry => entry.definition.editorial.preview.enabled,
+    ).length;
     const queueStatus = getQueueStatus({
       cronActive,
       cronStale,
@@ -151,6 +168,14 @@ export const integrationsDebugAdminRoute = buildRoute({
         captcha: {
           active: !!(captcha?.secretKey && captcha.siteKey),
           type: captcha?.type ?? null,
+        },
+        contentPreview: {
+          active: previewContentTypes > 0,
+          contentTypes: previewContentTypes,
+          secure:
+            !!core.contentPreviewSecret &&
+            core.contentPreviewSecret !==
+              INSECURE_DEFAULT_CONTENT_PREVIEW_SECRET,
         },
         cron: {
           active: cronActive,

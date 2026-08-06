@@ -5,6 +5,7 @@ import type { AnyContentTypeDefinition } from "@/content/types";
 
 import {
   testCategoryContentType,
+  testEditorialPostContentType,
   testPostContentType,
 } from "@/tests/content-fixtures";
 
@@ -14,8 +15,8 @@ interface CacheCall {
 }
 
 const cacheCalls: CacheCall[] = [];
-const fetches: { method: string; path?: string }[] = [];
-let responses: { data?: unknown; status: number }[] = [];
+const fetches: { body?: unknown; method: string; path?: string }[] = [];
+let responses: { data?: unknown; error?: string; status: number }[] = [];
 let definition: AnyContentTypeDefinition = testPostContentType;
 
 // The real `revalidate.server` runs: what this suite is about is which Next
@@ -43,14 +44,16 @@ vi.mock("@/content/admin/config", () => ({
 
 vi.mock("@/content/admin/fetch.server", () => ({
   contentApiFetch: async ({
+    body,
     method,
     path,
   }: {
+    body?: unknown;
     method: string;
     path?: string;
   }) => {
     await Promise.resolve();
-    fetches.push({ method, path });
+    fetches.push({ body, method, path });
 
     return responses.shift() ?? { status: 500 };
   },
@@ -60,7 +63,10 @@ const {
   createContentAction,
   deleteContentAction,
   editContentAction,
+  listContentRevisionsAction,
   publishContentAction,
+  reloadContentRowAction,
+  restoreContentRevisionAction,
   unpublishContentAction,
 } = await import("./mutation-api.server");
 
@@ -69,6 +75,9 @@ const past = new Date(Date.now() - 60_000).toISOString();
 const LIST = "content:test.post:list";
 const ITEM = "content:test.post:item:7";
 const slugTag = (slug: string) => `content:test.post:slug:${slug}`;
+/** The editorial fixture is a different content type, so different tags. */
+const editorialSlugTag = (slug: string) =>
+  `content:test.editorial:slug:${slug}`;
 
 const tags = () => cacheCalls.map(call => call.tag);
 /** Which Next cache API was used - `updateTag` is the immediate one. */
@@ -329,5 +338,152 @@ describe("failures", () => {
 
     expect(result.status).toBe(409);
     expect(cacheCalls).toEqual([]);
+  });
+});
+
+describe("editorial", () => {
+  beforeEach(() => {
+    definition = testEditorialPostContentType;
+  });
+
+  const editorialRow = {
+    id: 7,
+    publishedAt: past,
+    slug: "hello",
+    status: "published",
+    title: "Hello",
+    version: 4,
+  };
+
+  it("wraps the values in an envelope with the expected version", async () => {
+    responses = [
+      { data: editorialRow, status: 200 },
+      { data: { ...editorialRow, version: 5 }, status: 200 },
+    ];
+
+    await editContentAction("test.editorial", 7, { title: "Changed" }, 4);
+
+    const put = fetches.find(entry => entry.method === "put");
+    expect(put?.body).toEqual({
+      expectedVersion: 4,
+      values: { title: "Changed" },
+    });
+  });
+
+  it("sends a bare body for a content type without the workflow", async () => {
+    definition = testPostContentType;
+    responses = [
+      { data: editorialRow, status: 200 },
+      { data: editorialRow, status: 200 },
+    ];
+
+    await editContentAction("test.post", 7, { title: "Changed" }, 4);
+
+    const put = fetches.find(entry => entry.method === "put");
+    expect(put?.body).toEqual({ title: "Changed" });
+  });
+
+  it("surfaces a version conflict as structured data", async () => {
+    responses = [
+      { data: editorialRow, status: 200 },
+      {
+        error: JSON.stringify({
+          code: "CONTENT_VERSION_CONFLICT",
+          contentTypeId: "test.editorial",
+          currentVersion: 9,
+          expectedVersion: 4,
+          itemId: 7,
+        }),
+        status: 409,
+      },
+    ];
+
+    const result = await editContentAction(
+      "test.editorial",
+      7,
+      { title: "Changed" },
+      4,
+    );
+
+    expect(result.conflict).toEqual({
+      code: "CONTENT_VERSION_CONFLICT",
+      contentTypeId: "test.editorial",
+      currentVersion: 9,
+      expectedVersion: 4,
+      itemId: 7,
+    });
+    // A refused write changed nothing, so nothing public went stale.
+    expect(cacheCalls).toEqual([]);
+  });
+
+  it("leaves `conflict` unset for a plain-text failure", async () => {
+    responses = [
+      { data: editorialRow, status: 200 },
+      { error: "A record with these values already exists.", status: 409 },
+    ];
+
+    const result = await editContentAction(
+      "test.editorial",
+      7,
+      { title: "Changed" },
+      4,
+    );
+
+    expect(result.conflict).toBeUndefined();
+    expect(result.status).toBe(409);
+  });
+
+  it("reads one record back without touching the cache", async () => {
+    responses = [{ data: { ...editorialRow, version: 9 }, status: 200 }];
+
+    const result = await reloadContentRowAction("test.editorial", 7);
+
+    expect(result.row?.version).toBe(9);
+    // The dialog is still open with unsaved values; a refresh would discard
+    // them, so the reload must not trigger one.
+    expect(cacheCalls).toEqual([]);
+  });
+
+  it("lists revisions", async () => {
+    responses = [{ data: { edges: [{ id: 20, version: 5 }] }, status: 200 }];
+
+    const result = await listContentRevisionsAction("test.editorial", 7);
+
+    expect(result.edges).toHaveLength(1);
+    expect(fetches[0].path).toBe("/7/revisions");
+  });
+
+  it("expires the old and new slug when a restore moves the URL", async () => {
+    responses = [
+      { data: editorialRow, status: 200 },
+      {
+        data: {
+          changed: true,
+          row: { ...editorialRow, slug: "moved", version: 5 },
+        },
+        status: 200,
+      },
+    ];
+
+    await restoreContentRevisionAction("test.editorial", 7, 3, 4);
+
+    expect(tags()).toContain(editorialSlugTag("hello"));
+    expect(tags()).toContain(editorialSlugTag("moved"));
+    // A moved URL must not serve its old response even once.
+    expect(mode()).toEqual(["updateTag"]);
+  });
+
+  it("keeps the cache warm when a restore leaves the URL alone", async () => {
+    responses = [
+      { data: editorialRow, status: 200 },
+      {
+        data: { changed: true, row: { ...editorialRow, version: 5 } },
+        status: 200,
+      },
+    ];
+
+    await restoreContentRevisionAction("test.editorial", 7, 3, 4);
+
+    expect(mode()).toEqual(["revalidateTag"]);
   });
 });

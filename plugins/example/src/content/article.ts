@@ -2,19 +2,6 @@ import { defineContentType, field } from "@vitnode/core/content";
 
 import { categoryContentType } from "./category";
 
-/**
- * Exercises every field kind the Content Engine supports, plus the draft ->
- * published lifecycle.
- *
- * `status` and `publishedAt` are *not* declared here: `publication` generates
- * them, and declaring either alongside it is a define-time error. They are
- * read-only on the wire - `service.publish` / `service.unpublish` and the two
- * generated routes are the only things that move them.
- *
- * Client-safe by construction - zod and plain objects only - so the same object
- * is imported by `config.tsx` (the AdminCP), by `config.api.ts` (the routes and
- * permissions) and by `src/database/articles.ts` (the Drizzle table).
- */
 export const articleContentType = defineContentType({
   id: "example.article",
   tableName: "example_articles",
@@ -39,10 +26,6 @@ export const articleContentType = defineContentType({
 
   publication: { enabled: true },
 
-  // Opt-in, and separate from `publication` on purpose: publishing controls
-  // what staff can see in the AdminCP badge, this controls what the internet
-  // can read. `code`, `views` and `author` are absent, so they never leave
-  // Postgres - the author especially, since a user field resolves to a person.
   publicApi: {
     enabled: true,
     path: "articles",
@@ -54,13 +37,6 @@ export const articleContentType = defineContentType({
     defaultOrder: "desc",
   },
 
-  // Published articles are kept in the site-wide search index automatically:
-  // publishing adds the document, editing an indexed field or the slug rewrites
-  // it, unpublishing and deleting remove it. Drafts are never indexed.
-  //
-  // Every field named here is also in `publicApi.fields` - that is enforced by
-  // the types, not just by review. Naming `code` or `author` would not compile,
-  // which is what stops a private value surfacing in a result snippet.
   search: {
     enabled: true,
     titleField: "title",
@@ -69,8 +45,13 @@ export const articleContentType = defineContentType({
     pathTemplate: "/articles/{slug}",
   },
 
-  // The generated columns are addressable here too. `(status, publishedAt)` is
-  // generated automatically; this one backs "newest drafts first".
+  editorial: {
+    enabled: true,
+    revisions: { retention: 20 },
+    preview: { enabled: true, expiresInMinutes: 30 },
+    scheduling: { enabled: true },
+  },
+
   indexes: [{ on: ["status", "createdAt"] }],
 
   admin: {

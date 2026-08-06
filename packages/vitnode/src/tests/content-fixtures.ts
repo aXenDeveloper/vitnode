@@ -99,6 +99,65 @@ export const testPostContentType = defineContentType({
 });
 
 /**
+ * The Stage 4 shape: `testPostContentType` plus the full editorial workflow.
+ *
+ * A separate fixture rather than a flag on the post, for the same reason the
+ * searchable one is separate: leaving the post exactly as it was is what proves
+ * a Stage 2 content type is untouched by editorial existing.
+ */
+export const testEditorialPostContentType = defineContentType({
+  id: "test.editorial",
+  tableName: "test_editorial_posts",
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+    views: field.number({ integer: true, min: 0, defaultValue: 0 }),
+  },
+  publication: { enabled: true },
+  publicApi: {
+    enabled: true,
+    path: "editorial",
+    fields: ["title", "slug", "excerpt", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  editorial: {
+    enabled: true,
+    revisions: { retention: 10 },
+    preview: {
+      enabled: true,
+      expiresInMinutes: 30,
+      pathTemplate: "/editorial/preview/{token}",
+    },
+    scheduling: { enabled: true },
+  },
+  admin: {
+    label: { plural: "Test Editorials", singular: "Test Editorial" },
+    titleField: "title",
+    list: {
+      columns: ["status", "title", "version"],
+      defaultOrderBy: "version",
+    },
+  },
+});
+
+/**
+ * Editorial without publication or a public API - the "revisions stand alone"
+ * fixture. Neither preview nor scheduling is expressible here, which is the
+ * point.
+ */
+export const testEditorialNoteContentType = defineContentType({
+  id: "test.note",
+  tableName: "test_notes",
+  fields: {
+    title: field.text({ required: true, maxLength: 200 }),
+    body: field.textarea({ nullable: true }),
+  },
+  editorial: { enabled: true },
+  admin: { label: { plural: "Test Notes", singular: "Test Note" } },
+});
+
+/**
  * The Stage 3 shape: `testPostContentType` plus `search`.
  *
  * A separate fixture rather than a flag on the post: keeping the post exactly as

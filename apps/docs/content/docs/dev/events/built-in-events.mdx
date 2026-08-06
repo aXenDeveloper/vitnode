@@ -250,6 +250,16 @@ content.example.article.published
 content.example.article.unpublished
 ```
 
+And one that opts into
+[`editorial`](/docs/dev/content-engine/editorial) emits one more, plus two with
+[`editorial.scheduling`](/docs/dev/content-engine/scheduling):
+
+```text
+content.example.article.restored
+content.example.article.scheduled
+content.example.article.schedule_cancelled
+```
+
 They are registered on the global map by the owning plugin with a single
 `declare module` block, so the names and payloads are as strongly typed as any
 core event - `changedFields` narrows to that content type's own field names.
@@ -270,8 +280,45 @@ core event - `changedFields` narrows to that content type's own field names.
         "Published only - when the row first went live. Never rewritten by a later unpublish/republish.",
       type: "Date",
     },
+    version: {
+      description:
+        "Restored only - the version the record holds after the restore. Always a new number; the restored version is never reinstated.",
+      type: "number",
+    },
+    revisionId: {
+      description: "Restored only - the revision this restore itself created.",
+      type: "number",
+    },
+    restoredFromRevisionId: {
+      description: "Restored only - the revision the values were taken from.",
+      type: "number",
+    },
+    scheduleId: {
+      description:
+        "Scheduled and schedule_cancelled only - the schedule row this is about.",
+      type: "number",
+    },
+    scheduledFor: {
+      description: "Scheduled only - when the transition will happen.",
+      type: "Date",
+    },
+    action: {
+      description:
+        "Scheduled and schedule_cancelled only - which transition was booked.",
+      type: '"publish" | "unpublish"',
+    },
+    scheduledBy: {
+      description:
+        "Published and unpublished only, and only when a schedule fired them - the person who booked it. Absent on an interactive publish.",
+      type: "null | number",
+    },
   }}
 />
+
+Booking a schedule changes no field value, so it consumes no version and writes
+no revision - `scheduled` is a different thing from `published`. When the
+schedule fires, the resulting transition emits the ordinary `published` or
+`unpublished`, once, with `scheduledBy` set.
 
 The envelope already carries the actor, the emitting plugin and the timestamp,
 so the payloads stay minimal.
@@ -279,11 +326,14 @@ so the payloads stay minimal.
 These are emitted by the **generated routes**, not by the Content Service. A
 route emits exactly one event per successful mutation, after the database write
 has returned - a failed validation, a delete blocked by a foreign key, a no-op
-update and a no-op publish all emit nothing, and `published`/`unpublished` never
-come with an `updated` alongside them. Calling `service.publish()` or any other
-service method directly changes the database and emits nothing; that code owns
-its own follow-up. See
+update, a no-op publish and a restore that changes nothing all emit nothing, and
+`published`, `unpublished` and `restored` never come with an `updated` alongside
+them. Calling `service.publish()` or any other service method directly changes
+the database and emits nothing; that code owns its own follow-up. See
 [Generated events](/docs/dev/content-engine/events#calling-the-service-directly).
+
+`restored` carries `changedFields` exactly like `updated`, so a listener written
+for one ports to the other in a line - which is why a restore does not emit both.
 
 **Use cases:** reindex the row for search, invalidate a CDN entry, or mirror the
 change into a plugin-owned projection. See

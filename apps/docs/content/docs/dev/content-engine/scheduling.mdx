@@ -1,0 +1,236 @@
+---
+title: Scheduled publishing
+description: Book a publication for 9am on Monday, and have it happen without anyone being awake for it.
+icon: CalendarClock
+---
+
+`publish()` means now. This is the block that adds "and also, later".
+
+```ts title="src/content/article.ts"
+editorial: {
+  enabled: true,
+  scheduling: { enabled: true },
+}
+```
+
+<Callout type="warn" title="Scheduling requires publication">
+  A schedule moves `status`, so without
+  [`publication`](/docs/dev/content-engine/publication) there is no status to
+  move. Turning it on without one is a compile error, and a boot error if you
+  cast past it.
+</Callout>
+
+## What it does
+
+A calendar action on every row, three routes, and one background task shared by
+every schedulable content type in the install.
+
+```text
+GET  /{id}/schedules                       can_view
+POST /{id}/schedule                        can_publish
+POST /{id}/schedule/{scheduleId}/cancel    can_publish
+```
+
+`can_publish`, not `can_edit`: booking a publication *is* publishing, just
+later. A role trusted to write drafts is not automatically trusted to put one on
+the internet at 9am on Monday.
+
+```jsonc
+// POST /{id}/schedule
+{ "action": "publish", "scheduledFor": "2026-08-10T09:00:00.000Z" }
+```
+
+## The rules
+
+| Rule | Why |
+| --- | --- |
+| One pending schedule per record **and action** | Enforced by a partial unique index, so two requests arriving together cannot both insert |
+| A publish and an unpublish may both be pending | "Live on Monday, gone on Friday" is a normal thing to want |
+| An unpublish must be strictly after a pending publish | Otherwise it fires against a draft, does nothing, and the record goes live afterwards - the opposite of what was asked |
+| A time up to two minutes past is accepted | A browser clock a minute behind the server is ordinary, and "now" is what the editor meant |
+| Anything earlier is a **400** | With a `code`, so the dialog points at the date field rather than raising a general error |
+
+Both the dialog and the route run the same function,
+`contentScheduleTimingError`, so a date is refused where the editor is looking
+*and* the server stays the authority. They cannot drift into disagreeing.
+
+## Precision is ±60 seconds
+
+The queue drains on the per-minute `process-queue` cron, so a schedule fires
+within about a minute of its time. The UI says so and this page says so; nothing
+rounds it away quietly.
+
+<Callout type="warn" title="No cron adapter means it never fires">
+  Schedules are saved and simply never run without an in-process scheduler. The
+  dialog checks and warns - the flag rides on the schedules route rather than
+  the debug endpoint, which needs a permission an editor may not have. See
+  [Cron](/docs/dev/cron).
+</Callout>
+
+## It publishes what the record says *then*
+
+A schedule controls **timing**, not content. Editing an article after booking it
+changes what goes live. That is usually what people want and occasionally a
+surprise, so the dialog says it out loud.
+
+Freezing a reviewed version for release is an approval workflow, which is
+[deliberately out of scope](/docs/dev/content-engine/limitations).
+
+## Rescheduling, cancelling, and stale tasks
+
+This is the interesting part, because a queued task cannot be un-queued.
+
+Booking a schedule inserts a row **and** its queue task in one transaction, so a
+schedule can never exist without the thing that executes it. Rescheduling
+cancels the old row and inserts a new one with `generation + 1`.
+
+The old queue task is left exactly where it is. When it wakes up it re-reads the
+row under a lock and finds four things it needs to be true:
+
+```text
+the row still exists
+status === "pending"
+generation === the one the task was dispatched with
+scheduledFor <= now
+```
+
+Any mismatch and it does nothing at all. That is far more reliable than hunting
+down and deleting a queue row, and it is the same shape as every other no-op in
+the engine.
+
+<Callout type="info" title="The payload is a pointer, not data">
+  A task carries `{ scheduleId, generation }` and nothing else. Every real value
+  is re-read from the row under `FOR UPDATE`. A payload carrying the action
+  would go stale the moment somebody rescheduled, and one carrying the item id
+  would be a way to publish an arbitrary record by inserting a queue row.
+</Callout>
+
+## Idempotency comes for free
+
+Nothing extra guards against a double run, because the existing transition guard
+already does:
+
+- `publish` is `WHERE status <> 'published'`, so a second run changes nothing,
+- **no change** means no version bump, no revision, no event, no search write
+  and no cache invalidation,
+- and the schedule is marked `completed` in the same transaction, so the third
+  run does not get that far.
+
+A retry, a duplicate task and a cancelled plan are all harmless, and each one is
+covered by a test that asserts search and the cache were **not** touched.
+
+## What happens when one fires
+
+Exactly what happens when somebody clicks the button, through the same helper:
+
+| | |
+| --- | --- |
+| Version | `+1`, like any real transition |
+| Revision | one `publish` or `unpublish`, with `actorType: "system"` |
+| Event | the ordinary `published` / `unpublished`, with `scheduledBy` set |
+| Search | one upsert, or one delete |
+| Cache | the right tags, expired over the [bridge](#the-cache-bridge) |
+
+Scheduling itself is **not** a revision and consumes no version - it changes no
+field value. It emits `scheduled` and `schedule_cancelled` instead, which are
+new events on schedulable content types only.
+
+### Nobody is impersonated
+
+A scheduled run's actor is `{ type: "system", userId: null }`, because that is
+the truth. Who *asked* for it is on the schedule row and travels in the event as
+`scheduledBy`, so "the system did it, on Anna's instruction" is fully
+recoverable without inventing a user id anywhere.
+
+## The cache bridge
+
+Here is the awkward part, stated plainly: **the queue does not run in Next.** In
+a split deployment it is a plain `@hono/node-server` process where importing
+`next/cache` throws, and even inside a single Next app it is a Route Handler,
+where `updateTag` is unavailable.
+
+So a scheduled publish cannot expire a cache tag by calling a function. It asks
+the process that can:
+
+```text
+queue handler (API)
+  → POST {webOrigin}/api/vitnode/content/revalidate
+      Authorization: Bearer CRON_SECRET
+      x-vitnode-timestamp: <epoch ms>
+  → Route Handler (web)
+      → revalidateTag(tag, { expire: 0 })
+```
+
+Mount the handler once per web app - it is in the scaffold already:
+
+```ts title="src/app/api/vitnode/content/revalidate/route.ts"
+export { POST } from "@vitnode/core/content/next/revalidate-route";
+```
+
+| Concern | Answer |
+| --- | --- |
+| Auth | `Bearer CRON_SECRET`, compared with `timingSafeEqual`. Already documented as the secret "for internal API calls", already flagged when insecure |
+| Replay | A `±5 minute` timestamp window. Replaying a revalidation only expires a tag again, so a nonce store would be a table guarding nothing |
+| Which origin | `NEXT_PUBLIC_WEB_URL` by default; `buildApiConfig({ content: { revalidateOrigins: [...] } })` for several front ends, each posted independently |
+| Failure | **Best effort.** Two attempts, then logged with a `[content-revalidate]` prefix and dropped |
+
+<Callout type="warn" title="Why a failure is swallowed">
+  Failing the queue task would retry the *publish* - which is idempotent, so the
+  second run finds nothing changed and skips the invalidation **entirely**.
+  Strictly worse than a stale page. The residual risk is bounded by the tag's
+  own `cacheLife`, and it is the same eventual consistency the search index
+  already has.
+</Callout>
+
+### `immediate` from a Route Handler
+
+`updateTag` is Server-Action-only - that restriction is what buys
+read-your-own-writes. `revalidateTag(tag, { expire: 0 })` is the documented
+webhook equivalent, so `revalidateContent` takes a `context` and picks the
+strongest option available where it is called:
+
+```ts
+revalidateContent(input, { context: "route-handler", mode: "immediate" });
+```
+
+| context | mode | Calls |
+| --- | --- | --- |
+| `server-action` (default) | `immediate` | `updateTag(tag)` |
+| `route-handler` | `immediate` | `revalidateTag(tag, { expire: 0 })` |
+| either | `stale-while-revalidate` | `revalidateTag(tag, "max")` |
+
+Nothing about the existing Server Action paths changed.
+
+## The AdminCP
+
+A calendar icon leads the actions cell for a schedulable content type. The
+dialog shows what is booked, what already ran and who booked it, plus a form
+with two fields: what should happen, and when.
+
+- The date field says which timezone it is reading, because "9am" is a question
+  otherwise.
+- A pending schedule can be cancelled from the same list.
+- A pending schedule whose time has passed is marked **overdue**, with the last
+  error if there was one - that is the shape a failed run takes, since there is
+  no `failed` status.
+- Without a cron adapter, a warning sits above everything.
+
+## Retention
+
+Completed and cancelled rows are **kept**. "Who scheduled this, and when did it
+go out" is the audit trail the feature exists to provide; deleting it the moment
+it succeeds would answer that question with silence.
+
+A daily core cron (`content-editorial-cleanup`) removes settled rows past 30
+days, and rows whose content type is no longer registered at all.
+
+## What it does not do
+
+| Not supported | Why |
+| --- | --- |
+| To-the-second precision | The queue drains on a one-minute tick |
+| Scheduling a **field edit** | Only `status` moves. A content change is an edit, and edits are immediate |
+| Freezing what goes live | The schedule publishes the record as it stands at that moment |
+| Recurring schedules | One row, one time, one action |
+| A `failed` status | An overdue `pending` row with `lastError` says the same thing with one fewer state that can be wrong |
+| Firing without a cron adapter | Nothing drains the queue. The UI warns |

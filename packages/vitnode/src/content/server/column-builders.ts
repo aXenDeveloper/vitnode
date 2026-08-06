@@ -62,6 +62,24 @@ export const buildPublicationColumns = (): Record<
 });
 
 /**
+ * The one column `editorial: { enabled: true }` adds.
+ *
+ * `DEFAULT 1 NOT NULL`, so drizzle-kit backfills an existing table in a single
+ * statement and every pre-existing row starts at version 1 - the same property
+ * that makes adding `status DEFAULT 'draft'` safe.
+ *
+ * Never written by `create` or `update`: the editorial service increments it in
+ * the same conditional `UPDATE` that guards on it, which is what makes the
+ * check-and-set atomic.
+ */
+export const buildEditorialColumns = (): Record<
+  string,
+  PgColumnBuilderBase
+> => ({
+  version: integer().notNull().default(1),
+});
+
+/**
  * Applies `NOT NULL` and the column default.
  *
  * Written as a generic over the concrete builder so each `default(...)` call

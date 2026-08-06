@@ -25,10 +25,11 @@ import type {
 } from "./types";
 
 import { core_users } from "../../database/users";
-import { CONTENT_PUBLICATION_FIELDS } from "../const";
+import { CONTENT_EDITORIAL_FIELDS, CONTENT_PUBLICATION_FIELDS } from "../const";
 import { ContentEngineError } from "../errors";
 import {
   buildContentColumn,
+  buildEditorialColumns,
   buildPublicationColumns,
   buildSystemColumns,
 } from "./column-builders";
@@ -147,6 +148,7 @@ export const createContentTable = <
   const columns: Record<string, PgColumnBuilderBase> = {
     ...buildSystemColumns(),
     ...(definition.publication.enabled ? buildPublicationColumns() : {}),
+    ...(definition.editorial.enabled ? buildEditorialColumns() : {}),
   };
 
   for (const name of Object.keys(fields)) {
@@ -219,6 +221,7 @@ export const contentTableColumns = <
     "createdAt",
     "updatedAt",
     ...(definition.publication.enabled ? CONTENT_PUBLICATION_FIELDS : []),
+    ...(definition.editorial.enabled ? CONTENT_EDITORIAL_FIELDS : []),
     ...Object.keys(definition.fields),
   ];
 

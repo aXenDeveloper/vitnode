@@ -1,6 +1,7 @@
 import {
   ClockIcon,
   DatabaseIcon,
+  EyeIcon,
   HardDriveIcon,
   ListTodoIcon,
   MailIcon,
@@ -23,6 +24,7 @@ import { TestStorageAction } from "./test-storage/test-storage";
 const DOCS_URLS = {
   ai: "https://vitnode.com/docs/dev/ai",
   captcha: "https://vitnode.com/docs/dev/captcha",
+  contentPreview: "https://vitnode.com/docs/dev/content-engine/preview",
   cron: "https://vitnode.com/docs/dev/cron",
   email: "https://vitnode.com/docs/dev/email",
   queue: "https://vitnode.com/docs/dev/advanced/queue",
@@ -71,6 +73,15 @@ export const IntegrationsView = async () => {
     : data.redis.configuredButDown
       ? "warning"
       : "inactive";
+
+  // An insecure secret is a warning rather than a failure: the routes work
+  // perfectly, and every link they mint is forgeable by anyone who has read the
+  // source - which is worse than a broken feature, so it must be visible.
+  const contentPreviewStatus: IntegrationStatus = !data.contentPreview.active
+    ? "inactive"
+    : data.contentPreview.secure
+      ? "active"
+      : "warning";
 
   // "Active" means a cron adapter is configured (an in-process scheduler runs
   // the jobs). A stale scheduler (no job ran in 6h) or an insecure secret are
@@ -186,6 +197,31 @@ export const IntegrationsView = async () => {
       />
 
       <IntegrationCard
+        description={t("content_preview.desc")}
+        href={DOCS_URLS.contentPreview}
+        Icon={EyeIcon}
+        meta={
+          !data.contentPreview.active ? (
+            <span>{t("content_preview.not_configured")}</span>
+          ) : !data.contentPreview.secure ? (
+            <span className="text-amber-600 dark:text-amber-400">
+              {t("content_preview.insecure")}
+            </span>
+          ) : (
+            <span>
+              {t("content_preview.content_types", {
+                count: data.contentPreview.contentTypes,
+              })}
+            </span>
+          )
+        }
+        readMoreLabel={t("read_more")}
+        status={contentPreviewStatus}
+        statusLabel={statusLabel(contentPreviewStatus)}
+        title={t("content_preview.title")}
+      />
+
+      <IntegrationCard
         description={t("queue.desc")}
         href={DOCS_URLS.queue}
         Icon={ListTodoIcon}
@@ -238,6 +274,7 @@ export const IntegrationsViewSkeleton = () => (
       "email",
       "storage",
       "cron",
+      "content_preview",
       "queue",
       "captcha",
     ].map(id => (

@@ -68,6 +68,17 @@ export interface VitNodeApiConfig {
     siteKey: string | undefined;
     type: "cloudflare_turnstile" | "recaptcha_v3";
   };
+  /** Content Engine settings that are deployment-shaped rather than per type. */
+  content?: {
+    /**
+     * Web origins to notify when background work changes what is public.
+     *
+     * Defaults to `[NEXT_PUBLIC_WEB_URL]`, which is right for the usual one-web
+     * app install. Set it when one API serves several front ends: each origin
+     * owns its own Next cache, and each is posted independently.
+     */
+    revalidateOrigins?: string[];
+  };
   cron?: CronAdapter;
   dbProvider: ReturnType<typeof drizzle>;
   email?: {

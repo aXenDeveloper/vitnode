@@ -59,14 +59,16 @@ export type ContentEnumLabeller = (name: string, value: string) => string;
 /**
  * Generated columns have no field descriptor to read a kind from, so they are
  * mapped by name. `status` gets its own kind rather than falling into "system",
- * which the cell renderer treats as a date.
+ * which the cell renderer treats as a date - and `version` is mapped to
+ * "number" for the same reason, since it is one.
  */
-const systemKinds: Record<string, "publication" | "system"> = {
+const systemKinds: Record<string, "number" | "publication" | "system"> = {
   createdAt: "system",
   id: "system",
   publishedAt: "system",
   status: "publication",
   updatedAt: "system",
+  version: "number",
 };
 
 /** Projects a definition's form fields into the serialisable spec. */

@@ -75,9 +75,16 @@ Describes the response, including `id`, `createdAt` and `updatedAt`. Dates are
 route extends with the joined relation labels.
 
 With [publication](/docs/dev/content-engine/publication) it also carries
-`status` and `publishedAt`. Both are absent from `create` and `update`, which
-are strict - so publishing is only ever reachable through `service.publish` and
-its route, never through a field update.
+`status` and `publishedAt`, and with
+[editorial](/docs/dev/content-engine/editorial) it also carries `version`. All
+three are absent from `create` and `update`, which are strict - so publishing is
+only ever reachable through `service.publish` and its route, and `version`
+belongs to the engine alone.
+
+That strictness is also what makes the
+[update envelope](/docs/dev/content-engine/revisions#the-envelope) look the way
+it does: `expectedVersion` travels *beside* `values`, never inside it, because
+`update` would reject it.
 
 ## publicSelect
 

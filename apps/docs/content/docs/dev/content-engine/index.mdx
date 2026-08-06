@@ -44,15 +44,19 @@ That gives you:
   (plus `can_publish` with [publication](/docs/dev/content-engine/publication))
 - `content.example.article.created` / `.updated` / `.deleted` events
 
-Two more declarations, each opt-in and each independent:
+Three more declarations, each opt-in:
 
 - [`publication`](/docs/dev/content-engine/publication) adds a draft/published
   lifecycle, a `can_publish` permission and a badge in the AdminCP
 - [`publicApi`](/docs/dev/content-engine/public-api) adds two read-only public
   routes, a strict field allowlist and
   [cache tags](/docs/dev/content-engine/caching)
+- [`editorial`](/docs/dev/content-engine/editorial) adds a `version` column,
+  optimistic locking so two editors cannot silently overwrite each other, and a
+  [revision history](/docs/dev/content-engine/revisions) you can restore from
 
-Publication alone exposes nothing. Public exposure requires both.
+Publication alone exposes nothing. Public exposure requires both of the first
+two; `editorial` works with or without either.
 
 ## What it is not
 

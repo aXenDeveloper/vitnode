@@ -16,6 +16,7 @@ import type {
 } from "drizzle-orm/pg-core";
 
 import type {
+  ContentEditorialField,
   ContentFieldsOf,
   ContentPublicationField,
   ContentSystemField,
@@ -96,10 +97,22 @@ type PublicationColumnBuilders<TPublication extends boolean> =
     ? ContentPublicationColumnBuilders
     : Record<never, never>;
 
+/** `version` - added only when the editorial workflow is enabled. */
+export interface ContentEditorialColumnBuilders {
+  version: NotNull<HasDefault<PgIntegerBuilderInitial<ColumnName>>>;
+}
+
+type EditorialColumnBuilders<TEditorial extends boolean> =
+  TEditorial extends true
+    ? ContentEditorialColumnBuilders
+    : Record<never, never>;
+
 export type ContentColumnBuilders<
   TFields,
   TPublication extends boolean = false,
+  TEditorial extends boolean = false,
 > = ContentSystemColumnBuilders &
+  EditorialColumnBuilders<TEditorial> &
   PublicationColumnBuilders<TPublication> & {
     [K in keyof TFields]: ContentColumnBuilder<TFields[K]>;
   };
@@ -114,10 +127,11 @@ export type ContentTable<
   TName extends string,
   TFields,
   TPublication extends boolean = false,
+  TEditorial extends boolean = false,
 > = PgTableWithColumns<{
   columns: BuildColumns<
     TName,
-    ContentColumnBuilders<TFields, TPublication>,
+    ContentColumnBuilders<TFields, TPublication, TEditorial>,
     "pg"
   >;
   dialect: "pg";
@@ -126,16 +140,20 @@ export type ContentTable<
 }>;
 
 export type ContentTableFor<TDefinition> = TDefinition extends {
+  editorial: { enabled: infer TEditorial extends boolean };
   publication: { enabled: infer TPublication extends boolean };
   tableName: infer TName extends string;
 }
-  ? ContentTable<TName, ContentFieldsOf<TDefinition>, TPublication>
+  ? ContentTable<TName, ContentFieldsOf<TDefinition>, TPublication, TEditorial>
   : never;
 
 /** Column name -> Drizzle column, used for allowlisted filters and ordering. */
 export type ContentColumnName<TDefinition> =
   | ContentSystemField
   | (keyof ContentFieldsOf<TDefinition> & string)
+  | (TDefinition extends { editorial: { enabled: true } }
+      ? ContentEditorialField
+      : never)
   | (TDefinition extends { publication: { enabled: true } }
       ? ContentPublicationField
       : never);

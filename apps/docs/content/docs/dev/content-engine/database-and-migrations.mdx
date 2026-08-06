@@ -29,6 +29,12 @@ status:      varchar(32) not null default 'draft'
 publishedAt: timestamp                      // "first published at", nullable
 ```
 
+and one with [`editorial`](/docs/dev/content-engine/editorial) gets one more:
+
+```ts
+version: integer not null default 1
+```
+
 Here is the real migration for the example plugin:
 
 ```sql title="apps/docs/migrations/0022_add_example_content.sql"
@@ -207,6 +213,112 @@ than `0022_dry_hercules.sql`. Update the matching `tag` in
 A clean database just runs the journal in order. Content tables are plain
 `CREATE TABLE` statements; there is no bootstrap step and no ordering subtlety
 beyond the foreign keys Drizzle already sorts out.
+
+## The shared revisions table
+
+[`editorial`](/docs/dev/content-engine/editorial) does **not** generate a
+revisions table per content type. There is one, in core, shared by every
+editorial content type in the install:
+
+```sql title="apps/docs/migrations/0025_add_content_revisions.sql"
+CREATE TABLE "core_content_revisions" (
+  "id" serial PRIMARY KEY NOT NULL,
+  "pluginId" varchar(255) NOT NULL,
+  "contentTypeId" varchar(100) NOT NULL,
+  "itemId" integer NOT NULL,
+  "version" integer NOT NULL,
+  "operation" varchar(20) NOT NULL,
+  "snapshot" jsonb DEFAULT '{}'::jsonb NOT NULL,
+  "changedFields" jsonb DEFAULT '[]'::jsonb NOT NULL,
+  "actorType" varchar(16) DEFAULT 'system' NOT NULL,
+  "actorUserId" integer,
+  "restoredFromRevisionId" integer,
+  "createdAt" timestamp DEFAULT now() NOT NULL
+);
+ALTER TABLE "core_content_revisions" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "core_content_revisions" ADD CONSTRAINT "core_content_revisions_actorUserId_core_users_id_fk"
+  FOREIGN KEY ("actorUserId") REFERENCES "public"."core_users"("id")
+  ON DELETE set null ON UPDATE cascade;
+CREATE UNIQUE INDEX "core_content_revisions_item_version_unique"
+  ON "core_content_revisions" USING btree ("contentTypeId","itemId","version");
+CREATE INDEX "core_content_revisions_plugin_id_idx"
+  ON "core_content_revisions" USING btree ("pluginId");
+CREATE INDEX "core_content_revisions_actor_user_id_idx"
+  ON "core_content_revisions" USING btree ("actorUserId");
+```
+
+Two things about it are worth knowing before you go looking for them.
+
+**There is no foreign key to the content row.** There cannot be: content tables
+are produced at runtime from a descriptor, and core's static schema has no name
+to point at. `core_search_index` models the same relationship the same way, with
+`itemType` and `itemId` and no constraint. So deleting a record leaves its
+history behind - deliberately, that being what an audit trail is - and every
+query is scoped by `(pluginId, contentTypeId, itemId)` instead of relying on
+the database to police ownership.
+
+**The unique index is the real invariant.** `(contentTypeId, itemId, version)`
+is what makes "one revision per version" true even if two writes race, rather
+than true because the code is careful. It is also the history index: newest-first
+is a backwards scan of it.
+
+`restoredFromRevisionId` is a plain integer with no constraint on purpose. It
+points at a revision that retention will eventually prune, and a foreign key
+would either block that prune or null out the reference - both of which lose the
+one fact the column exists to record.
+
+Adding `editorial` to an existing content type is one statement against the
+content table itself, and no backfill:
+
+```sql title="apps/docs/migrations/0026_add_example_article_editorial.sql"
+ALTER TABLE "example_articles" ADD COLUMN "version" integer DEFAULT 1 NOT NULL;
+```
+
+### The schedules table
+
+[`editorial.scheduling`](/docs/dev/content-engine/scheduling) adds a second
+shared core table, `core_content_schedules`, on the same terms: no foreign key
+to the record, every query scoped by `(pluginId, contentTypeId, itemId)`, and no
+per-plugin migration.
+
+Its one interesting index is partial:
+
+```sql
+CREATE UNIQUE INDEX "core_content_schedules_active_unique"
+  ON "core_content_schedules" USING btree ("contentTypeId","itemId","action")
+  WHERE status = 'pending';
+```
+
+At most one *pending* schedule per record and action, enforced by the database.
+That is what makes "cancel the old row, then insert a new one" safe when two
+requests arrive together - and it still allows any number of settled rows, which
+are the audit trail.
+
+Completed and cancelled rows are kept and swept by a daily cron rather than
+deleted on success. "Who scheduled this, and when did it go out" is the question
+the feature exists to answer.
+
+### When a plugin or content type is renamed
+
+Revisions are keyed by `pluginId` and `contentTypeId` as strings, so renaming
+either one orphans the rows - the same as it does for the
+[search index](/docs/dev/content-engine/search). One statement fixes it, and it
+belongs in the migration that does the rename:
+
+```sql
+UPDATE "core_content_revisions"
+SET "contentTypeId" = 'example.post'
+WHERE "contentTypeId" = 'example.article';
+
+UPDATE "core_content_schedules"
+SET "contentTypeId" = 'example.post'
+WHERE "contentTypeId" = 'example.article';
+```
+
+Removing a content type for good needs no statement at all: the daily
+`content-editorial-cleanup` cron deletes rows whose content type is no longer
+registered, on both tables. A rename looks exactly like a removal to it, which
+is why the `UPDATE` belongs in the same migration rather than the next release.
 
 ## Renaming or removing a field
 

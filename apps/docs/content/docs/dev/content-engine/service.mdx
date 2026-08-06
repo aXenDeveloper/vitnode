@@ -253,6 +253,31 @@ and they expire no [cache tag](/docs/dev/content-engine/caching) either. A
 service call that runs inside your transaction cannot honestly announce anything
 until you commit, so the follow-up is yours.
 
+## The editorial service is a different object
+
+A content type with [`editorial`](/docs/dev/content-engine/editorial) also
+exposes `model.editorialService`, and the generated routes use **that** one for
+every write. It is not a wrapper you can ignore: it opens a transaction, guards
+the write with `expectedVersion`, bumps `version` and captures a revision, all in
+one commit.
+
+```ts
+const editorial = articleContent.editorialService?.(c, { pluginId });
+if (!editorial) throw new HTTPException(404);
+
+const outcome = await editorial.update(
+  7,
+  { title: "Updated" },
+  { actor: { type: "staff", userId: 1 }, expectedVersion: 12 },
+);
+```
+
+`model.service(c)` still works on an editorial content type and still writes
+rows - but it does not lock, does not bump the version and records no history.
+That is the right tool for a migration or a backfill, and the wrong one for
+anything a person did. Full contract in
+[Revisions and locking](/docs/dev/content-engine/revisions#calling-the-service-directly).
+
 ## options
 
 Backs the relation and user pickers, capped and search-filtered. It only accepts

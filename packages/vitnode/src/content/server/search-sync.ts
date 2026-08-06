@@ -10,7 +10,7 @@ import { contentSearchDocument, isContentRowPublic } from "./search-document";
 
 /** Which mutation just returned. Not an event name: nothing is emitted here. */
 export type ContentSearchOperation =
-  "create" | "delete" | "publish" | "unpublish" | "update";
+  "create" | "delete" | "publish" | "restore" | "unpublish" | "update";
 
 export interface ContentSearchSyncInput {
   /**
@@ -19,7 +19,10 @@ export interface ContentSearchSyncInput {
    * to do.
    */
   changed?: boolean;
-  /** `update` only. An update that touched no indexed field changes no document. */
+  /**
+   * `update` and `restore` only. A write that touched no indexed field changes
+   * no document.
+   */
   changedFields?: readonly string[];
   operation: ContentSearchOperation;
   /**
@@ -67,9 +70,12 @@ const decide = (
 
   if (operation === "create") return isPublic ? "upsert" : "skip";
 
-  // `update` cannot change `status`, so a draft stays a draft and a published
-  // record stays published. Nothing to delete, and nothing to write unless a
-  // field the document is built from actually moved.
+  // `update` and `restore` both write field values and neither can change
+  // `status` - a restore projects only declared fields, and the publication
+  // columns are not among them. So a draft stays a draft and a published record
+  // stays published: nothing to delete, and nothing to write unless a field the
+  // document is built from actually moved. A slug change is covered, because
+  // the exposed slug is one of the indexed field names.
   if (!isPublic) return "skip";
 
   const indexed = new Set(contentSearchIndexedFieldNames(definition));

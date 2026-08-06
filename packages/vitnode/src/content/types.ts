@@ -1,4 +1,5 @@
 import type {
+  CONTENT_EDITORIAL_FIELDS,
   CONTENT_FILTERABLE_FIELD_KINDS,
   CONTENT_PUBLIC_EXPOSABLE_COLUMNS,
   CONTENT_PUBLICATION_FIELDS,
@@ -14,6 +15,8 @@ export type ContentSystemField = (typeof CONTENT_SYSTEM_FIELDS)[number];
 
 export type ContentPublicationField =
   (typeof CONTENT_PUBLICATION_FIELDS)[number];
+
+export type ContentEditorialField = (typeof CONTENT_EDITORIAL_FIELDS)[number];
 
 export type ContentPublicationStatus =
   (typeof CONTENT_PUBLICATION_STATUSES)[number];
@@ -195,14 +198,19 @@ export type ContentFieldMap = Record<string, ContentFieldDescriptor>;
  *
  * `TPublication` extends the same trick to `status` and `publishedAt`, but only
  * when the content type opted into publication - a Stage 1 type is free to keep
- * declaring its own `status` enum.
+ * declaring its own `status` enum. `TEditorial` does the same for `version`.
  */
-export type ContentFieldsConstraint<TPublication extends boolean = false> =
-  Partial<Record<ContentSystemField, never>> &
-    Record<string, { kind: ContentFieldKind }> &
-    (TPublication extends true
-      ? Partial<Record<ContentPublicationField, never>>
-      : unknown);
+export type ContentFieldsConstraint<
+  TPublication extends boolean = false,
+  TEditorial extends boolean = false,
+> = Partial<Record<ContentSystemField, never>> &
+  Record<string, { kind: ContentFieldKind }> &
+  (TEditorial extends true
+    ? Partial<Record<ContentEditorialField, never>>
+    : unknown) &
+  (TPublication extends true
+    ? Partial<Record<ContentPublicationField, never>>
+    : unknown);
 
 /** Fields that hold a foreign key to another row. */
 export type ContentReferenceField = ContentRelationField | ContentUserField;
@@ -286,17 +294,34 @@ export interface ContentAdminLabel {
 type ContentPublicationColumn<TPublication extends boolean> =
   TPublication extends true ? ContentPublicationField : never;
 
+/** The same rule for `version`, which only exists with `editorial`. */
+type ContentEditorialColumn<TEditorial extends boolean> =
+  TEditorial extends true ? ContentEditorialField : never;
+
+/**
+ * Every column name the admin config and `indexes` may address: the declared
+ * fields, the system columns, and whichever generated columns the content type
+ * opted into.
+ */
+type ContentAddressableColumn<
+  TFields,
+  TPublication extends boolean,
+  TEditorial extends boolean,
+> =
+  | ContentEditorialColumn<TEditorial>
+  | ContentPublicationColumn<TPublication>
+  | ContentSystemField
+  | keyof TFields;
+
 export interface ContentAdminListConfig<
   TFields = ContentFieldMap,
   TPublication extends boolean = boolean,
+  TEditorial extends boolean = boolean,
 > {
   /** Columns shown in the DataTable, in order. Defaults to every field. */
-  columns?: (
-    ContentPublicationColumn<TPublication> | ContentSystemField | keyof TFields
-  )[];
+  columns?: ContentAddressableColumn<TFields, TPublication, TEditorial>[];
   defaultOrder?: "asc" | "desc";
-  defaultOrderBy?:
-    ContentPublicationColumn<TPublication> | ContentSystemField | keyof TFields;
+  defaultOrderBy?: ContentAddressableColumn<TFields, TPublication, TEditorial>;
   /**
    * Allowlist for `orderBy`. System columns - and the publication columns when
    * enabled - are always allowed and need no entry here.
@@ -309,10 +334,11 @@ export interface ContentAdminListConfig<
 export interface ContentAdminConfig<
   TFields = ContentFieldMap,
   TPublication extends boolean = boolean,
+  TEditorial extends boolean = boolean,
 > {
   form?: { fields?: (keyof TFields)[] };
   label: ContentAdminLabel;
-  list?: ContentAdminListConfig<TFields, TPublication>;
+  list?: ContentAdminListConfig<TFields, TPublication, TEditorial>;
   navigation?: { enabled?: boolean };
   /**
    * Staff permission module name. Defaults to a slug of `label.plural`, e.g.
@@ -355,20 +381,22 @@ export interface ResolvedContentAdminConfig {
 export interface ContentIndexInput<
   TFields = ContentFieldMap,
   TPublication extends boolean = boolean,
+  TEditorial extends boolean = boolean,
 > {
   /** Defaults to `<table>_<columns>_idx`, or `_key` when unique. */
   name?: string;
   on: [
-    ContentIndexColumn<TFields, TPublication>,
-    ...ContentIndexColumn<TFields, TPublication>[],
+    ContentIndexColumn<TFields, TPublication, TEditorial>,
+    ...ContentIndexColumn<TFields, TPublication, TEditorial>[],
   ];
   unique?: boolean;
 }
 
-type ContentIndexColumn<TFields, TPublication extends boolean> =
-  | ContentPublicationColumn<TPublication>
-  | ContentSystemField
-  | (keyof TFields & string);
+type ContentIndexColumn<
+  TFields,
+  TPublication extends boolean,
+  TEditorial extends boolean,
+> = ContentAddressableColumn<TFields, TPublication, TEditorial> & string;
 
 /**
  * Stored shape. Non-generic for the same reason as
@@ -612,6 +640,122 @@ export interface ResolvedContentSearchConfig<
 }
 
 // ---------------------------------------------------------------------------
+// Editorial
+// ---------------------------------------------------------------------------
+
+export interface ContentEditorialRevisionsConfig {
+  /** Newest revisions kept per record. 1-500, defaults to 50. */
+  retention?: number;
+}
+
+/**
+ * Opts into signed, expiring preview links for unpublished records.
+ *
+ * `enabled` is literal `true` for the same reason every other opt-in's is: a
+ * widened `boolean` would silently resolve to "no preview".
+ */
+export interface ContentEditorialPreviewConfig {
+  enabled: true;
+  /** How long a link stays valid. 1-1440 minutes, defaults to 15. */
+  expiresInMinutes?: number;
+  /**
+   * Where the AdminCP sends a reviewer, e.g. `/articles/preview/{token}`.
+   * Relative, and `{token}` is the only placeholder. Omit it and the AdminCP
+   * links to the generated JSON endpoint instead.
+   */
+  pathTemplate?: string;
+}
+
+export interface ContentEditorialSchedulingConfig {
+  enabled: true;
+}
+
+/**
+ * Opts a content type into the editorial workflow: a `version` column,
+ * optimistic locking and revision history.
+ *
+ * The two sub-features are gated on the capabilities they actually need, and
+ * the `{ enabled: false }` branches are what turn a mistake into a compile
+ * error rather than a boot-time one:
+ *
+ * - **preview** projects through `publicApi.fields`. Without a public allowlist
+ *   there is nothing to project, so it needs `publicApi` (which already needs
+ *   `publication`).
+ * - **scheduling** moves `status`, so it needs `publication`. It does *not*
+ *   need a public API - a content type may run the lifecycle for the AdminCP
+ *   badge alone.
+ */
+export interface ContentEditorialConfig<
+  TPublicEnabled extends boolean = boolean,
+  TPublication extends boolean = boolean,
+> {
+  enabled: true;
+  preview?: TPublicEnabled extends true
+    ? ContentEditorialPreviewConfig | { enabled: false }
+    : { enabled: false };
+  revisions?: ContentEditorialRevisionsConfig;
+  scheduling?: TPublication extends true
+    ? ContentEditorialSchedulingConfig | { enabled: false }
+    : { enabled: false };
+}
+
+/**
+ * Whether an `editorial` argument opted in, and into what.
+ *
+ * Read back off the argument for the same reason `ContentSearchEnabled` is: the
+ * whole object is inferred as one type parameter, and an intersection member is
+ * not an inference site, so this is the only way the literals survive.
+ */
+export type ContentEditorialEnabled<TEditorial> = TEditorial extends {
+  enabled: true;
+}
+  ? true
+  : false;
+
+export type ContentPreviewEnabled<TEditorial> = TEditorial extends {
+  enabled: true;
+  preview: { enabled: true };
+}
+  ? true
+  : false;
+
+export type ContentSchedulingEnabled<TEditorial> = TEditorial extends {
+  enabled: true;
+  scheduling: { enabled: true };
+}
+  ? true
+  : false;
+
+/** `editorial` after `defineContentType` has filled in every default. */
+export interface ResolvedContentEditorialConfig<
+  TEnabled extends boolean = boolean,
+  TPreview extends boolean = boolean,
+  TScheduling extends boolean = boolean,
+> {
+  enabled: TEnabled;
+  preview: {
+    enabled: TPreview;
+    expiresInMinutes: number;
+    pathTemplate: null | string;
+  };
+  revisions: { retention: number };
+  scheduling: { enabled: TScheduling };
+}
+
+/**
+ * The one generated column `editorial` adds.
+ *
+ * Read-only on the wire like the publication columns: it appears in a response
+ * so a client knows what to send back as `expectedVersion`, and it is absent
+ * from the create and update schemas so nobody can write it.
+ */
+type ContentEditorialColumns<TDefinition> = TDefinition extends {
+  editorial: { enabled: true };
+}
+  ? { version: number }
+  : Record<never, never>;
+
+// ---------------------------------------------------------------------------
 // Definition
 // ---------------------------------------------------------------------------
 
@@ -644,6 +788,36 @@ export type PublicContentTypeDefinition = AnyContentTypeDefinition & {
   publicApi: { enabled: true };
 };
 
+/**
+ * A content type with the editorial workflow: it has a `version` column, its
+ * writes are guarded by an expected version, and every real mutation leaves a
+ * revision behind.
+ *
+ * An intersection rather than three more type arguments, for the same reason
+ * {@link PublicContentTypeDefinition} is one.
+ */
+export type EditorialContentTypeDefinition = AnyContentTypeDefinition & {
+  editorial: { enabled: true };
+};
+
+/**
+ * A content type whose drafts can be previewed.
+ *
+ * Both halves are pinned: the preview projects through `publicApi.fields`, so a
+ * content type without a public allowlist cannot reach the token signer at all.
+ */
+export type PreviewableContentTypeDefinition = EditorialContentTypeDefinition &
+  PublicContentTypeDefinition & {
+    editorial: { preview: { enabled: true } };
+  };
+
+/** A content type whose publication can be scheduled. */
+export type SchedulableContentTypeDefinition =
+  EditorialContentTypeDefinition & {
+    editorial: { scheduling: { enabled: true } };
+    publication: { enabled: true };
+  };
+
 export interface ContentTypeDefinition<
   TId extends string = string,
   TFields = ContentFieldMap,
@@ -651,8 +825,17 @@ export interface ContentTypeDefinition<
   TPublicField extends string = string,
   TPublicEnabled extends boolean = boolean,
   TSearchEnabled extends boolean = boolean,
+  TEditorialEnabled extends boolean = boolean,
+  TPreviewEnabled extends boolean = boolean,
+  TSchedulingEnabled extends boolean = boolean,
 > {
   admin: ResolvedContentAdminConfig;
+  /** Editorial workflow, or the disabled default when `editorial` is omitted. */
+  editorial: ResolvedContentEditorialConfig<
+    TEditorialEnabled,
+    TPreviewEnabled,
+    TSchedulingEnabled
+  >;
   fields: TFields;
   id: TId;
   /** Declared indexes plus the automatic ones, deduplicated and named. */
@@ -669,7 +852,10 @@ export interface ContentTypeDefinition<
       TPublication,
       TPublicField,
       TPublicEnabled,
-      TSearchEnabled
+      TSearchEnabled,
+      TEditorialEnabled,
+      TPreviewEnabled,
+      TSchedulingEnabled
     >
   >;
   /** Search synchronization, or the disabled default when `search` is omitted. */
@@ -687,11 +873,12 @@ export type ContentFieldsOf<TDefinition> = TDefinition extends {
   : never;
 
 export type ContentSelect<TDefinition> = Prettify<
-  ContentPublicationColumns<TDefinition> & {
-    [K in keyof ContentFieldsOf<TDefinition>]: ContentFieldValue<
-      ContentFieldsOf<TDefinition>[K]
-    >;
-  } & { createdAt: Date; id: number; updatedAt: Date }
+  ContentEditorialColumns<TDefinition> &
+    ContentPublicationColumns<TDefinition> & {
+      [K in keyof ContentFieldsOf<TDefinition>]: ContentFieldValue<
+        ContentFieldsOf<TDefinition>[K]
+      >;
+    } & { createdAt: Date; id: number; updatedAt: Date }
 >;
 
 export type ContentCreateInput<TDefinition> = Prettify<
@@ -772,6 +959,9 @@ export type ContentFilterInput<TDefinition> = Partial<
 export type ContentOrderableFieldName<TDefinition> =
   | ContentFieldName<TDefinition>
   | ContentSystemField
+  | (TDefinition extends { editorial: { enabled: true } }
+      ? ContentEditorialField
+      : never)
   | (TDefinition extends { publication: { enabled: true } }
       ? ContentPublicationField
       : never);

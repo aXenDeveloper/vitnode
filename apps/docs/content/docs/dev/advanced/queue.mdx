@@ -145,8 +145,40 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
       type: "Date",
       default: "now",
     },
+    pluginId: {
+      description:
+        "Who owns the handler, when that is not the plugin handling the request. The worker resolves handlers by `${pluginId}:${name}`, so dispatching a core task from a plugin route needs this - otherwise nothing ever claims the row.",
+      type: "string",
+      default: "the requesting plugin, or @vitnode/core",
+    },
+    tx: {
+      description:
+        "Join an existing transaction instead of using the request handle. Needed whenever the row the task refers to is written in the same unit of work, or the queue row can commit while that row rolls back.",
+      type: "Transaction",
+    },
   }}
 />
+
+<Callout type="info" title="Both exist because of scheduled publishing">
+  The [Content Engine](/docs/dev/content-engine/scheduling) books a schedule row
+  and its queue task in one transaction, from a plugin's route, against a task
+  core registers. That needs `tx` for atomicity and `pluginId` so the worker can
+  find the handler - and it is a shape any plugin can reuse.
+</Callout>
+
+## Tasks core ships
+
+| Task | What it does |
+| --- | --- |
+| `send-email` | Delivers a rendered email through the configured provider |
+| `rebuild-search-index` | Clears and rebuilds the [search](/docs/dev/content-engine/search) index, whole or per collection |
+| `content-schedule` | Runs one [scheduled publication](/docs/dev/content-engine/scheduling). A cancelled, rescheduled or already-executed schedule is a no-op |
+
+`content-schedule` is worth reading as a pattern: its payload is
+`{ scheduleId, generation }` and nothing else. Every real value is re-read from
+the row under `FOR UPDATE`, so a task left over from a plan that has since
+changed finds a mismatch and quietly does nothing - which is far more reliable
+than trying to delete a queued row.
 
 ## Retries and backoff
 

@@ -4,6 +4,7 @@ import type { Redis } from "ioredis";
 import { HTTPException } from "hono/http-exception";
 
 import type { RegisteredContentType } from "@/content/registry";
+import type { RegisteredContentModel } from "@/content/server/model";
 import type { LocaleConfig, MessagesSource } from "@/lib/i18n/types";
 import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
 import type { VitNodeRealtime } from "@/ws/registry";
@@ -85,6 +86,19 @@ export interface EnvVariablesVitNode {
       ssoAdapters: SSOApiPlugin[];
     };
     captcha?: Pick<VitNodeApiConfig, "captcha">["captcha"];
+    /**
+     * Every registered content type's *model*, with the plugin that owns it.
+     *
+     * Background work has only a content type id to go on - a queue handler
+     * runs in a cron request with no plugin context at all - so the lookup from
+     * id to table, service and owner has to live somewhere it can reach.
+     */
+    contentModels: RegisteredContentModel[];
+    /** Signs content preview links. Flagged in the admin integrations panel
+     * while it is still the well-known default. */
+    contentPreviewSecret?: string;
+    /** Web origins the background cache bridge posts to. */
+    contentRevalidateOrigins?: string[];
     contentTypes: RegisteredContentType[];
     cron: (BuildCronReturn & { module: string; pluginId: string })[];
     cronSecret?: string;
@@ -142,6 +156,7 @@ export interface EnvVariablesVitNode {
 export const globalMiddleware = ({
   ai,
   authorization,
+  content,
   metadata,
   email,
   dbProvider,
@@ -158,6 +173,7 @@ export const globalMiddleware = ({
   | "ai"
   | "authorization"
   | "captcha"
+  | "content"
   | "cron"
   | "dbProvider"
   | "email"
@@ -235,6 +251,16 @@ export const globalMiddleware = ({
         pluginId: plugin.pluginId,
       })),
     ),
+  );
+
+  // Not validated: a model carries the definition that `contentTypesMetadata`
+  // already checked, so a second pass would only repeat the same errors.
+  const contentModelsMetadata: RegisteredContentModel[] = plugins.flatMap(
+    plugin =>
+      (plugin.contentModels ?? []).map(model => ({
+        model,
+        pluginId: plugin.pluginId,
+      })),
   );
 
   const permissionStaffMetadata: PermissionStaffCatalogEntry[] = plugins.map(
@@ -317,6 +343,7 @@ export const globalMiddleware = ({
         cookieSecure: authorization?.cookieSecure ?? true,
       },
       captcha,
+      contentPreviewSecret: CONFIG.contentPreviewSecret,
       cronSecret: CONFIG.cronJobSecret,
       hasCronAdapter: !!cron,
       plugins: pluginsMetadata,
@@ -324,6 +351,8 @@ export const globalMiddleware = ({
       queue: queueMetadata,
       webSockets: webSocketsMetadata,
       permissionStaff: permissionStaffMetadata,
+      contentModels: contentModelsMetadata,
+      contentRevalidateOrigins: content?.revalidateOrigins,
       contentTypes: contentTypesMetadata,
     });
 

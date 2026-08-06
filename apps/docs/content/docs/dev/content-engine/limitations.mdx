@@ -14,8 +14,12 @@ other 20%, so you find out here rather than halfway through building.
 | One-to-one, many-to-many, polymorphic relations | Write the join table and the queries by hand |
 | Localised content fields | Use `core_languages_words` directly, as the blog plugin does |
 | Rich text, media and file fields | Hand-build the field, or store an id and resolve it yourself |
-| Revisions | Not generated; the lifecycle stops at draft/published |
-| Scheduled publishing | `publish()` means now. The predicate already reads `publishedAt <= now()`, so this is additive later |
+| To-the-second [scheduling](/docs/dev/content-engine/scheduling) | The queue drains on a one-minute tick, so a schedule fires within about a minute |
+| Scheduling a field edit, or a recurring schedule | Only `status` is scheduled. One row, one time, one action |
+| Revoking a single [preview link](/docs/dev/content-engine/preview) | Tokens are stateless. Rotate `CONTENT_PREVIEW_SECRET`, or wait out the expiry |
+| A preview **list** of drafts | Only one record at a time, by signed link. There is no list route and there will not be one |
+| Approval workflows, reviewer assignment, per-locale revisions | [`editorial`](/docs/dev/content-engine/editorial) records what happened; it does not gate who may do it beyond the staff permissions |
+| Field-level merge of a conflicting edit | The [conflict banner](/docs/dev/content-engine/revisions#the-conflict) shows both sides and lets a person choose |
 | Record-level ownership ("edit your own") | Check the author in a custom route |
 | Field-level permissions | Split the content type, or write the route |
 | Bulk actions | Add a custom admin route |
@@ -186,6 +190,41 @@ database, say - counts toward a collection's source total and produces no docume
 The AdminCP shows that as **stale** rather than hiding it. Extra documents, for
 records that no longer qualify, are stale too: the counts have to match exactly for
 a collection to read as indexed.
+
+## Background cache invalidation is best effort
+
+A [scheduled](/docs/dev/content-engine/scheduling) publish cannot expire a Next
+cache tag itself - the queue does not run in Next - so it asks the web app over
+a signed HTTP hop. Two attempts, then the failure is logged with a
+`[content-revalidate]` prefix and dropped.
+
+Failing the task instead would retry the *publish*, which is idempotent: the
+second run would find nothing changed and skip the invalidation entirely, which
+is strictly worse. So a public page can be stale for up to its own `cacheLife`
+after a background transition. Same kind of eventual consistency the search
+index already has, and bounded the same way.
+
+## History is bounded, and restore is not undelete
+
+[`editorial`](/docs/dev/content-engine/editorial) keeps the newest `retention`
+versions of a record and prunes the rest in the same transaction that writes the
+new one. That bound is the feature - an install with no cron adapter must not
+grow forever - but it means the oldest history is genuinely gone, not archived
+somewhere.
+
+Two more things it deliberately does not do:
+
+- **Restoring a deleted record.** A delete writes a final revision and keeps the
+  earlier ones, so you can still read what was there. Putting the row back would
+  mean reinstating a primary key another row may since have taken.
+- **Branching.** History is a line, not a tree. Restoring an old version creates
+  a new one on top; there is no way to fork a record and merge it later.
+
+Revisions also survive the content type that wrote them. Dropping the
+`editorial` block, renaming the content type id or removing the plugin leaves
+the rows orphaned by `contentTypeId` - the same story as an orphaned search
+collection, and with the same fix: a one-line `UPDATE` when it was a rename, and
+a `DELETE` when it was not.
 
 ## The public cursor is always the row id
 

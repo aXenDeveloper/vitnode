@@ -6,20 +6,54 @@
  * throws under plain Node, and both `apps/api` and `drizzle-kit` load these
  * modules in plain Node.
  */
+export { CONTENT_SYSTEM_ACTOR, resolveContentActor } from "./actor";
 export {
   buildContentColumn,
+  buildEditorialColumns,
   buildPublicationColumns,
   buildSystemColumns,
 } from "./column-builders";
 export type { ColumnReferenceThunk } from "./column-builders";
+export { contentEditorialEffects } from "./editorial-effects";
+export { createContentEditorialService } from "./editorial-service";
+export type {
+  ContentEditorialOptions,
+  ContentEditorialOutcome,
+  ContentEditorialPublicationOptions,
+  ContentEditorialService,
+  ContentEditorialWriteOptions,
+} from "./editorial-service";
 export { emitContentEvent } from "./emit";
-export { rethrowAsHttpError, withHttpErrors } from "./http-errors";
-export { createContentModel } from "./model";
-export type { ContentModel } from "./model";
+export {
+  contentConflict,
+  contentUnprocessable,
+  rethrowAsHttpError,
+  withHttpErrors,
+} from "./http-errors";
+export type { ContentHttpErrorOptions } from "./http-errors";
+export { createContentModel, findContentModel } from "./model";
+export type {
+  AnyContentModel,
+  ContentModel,
+  RegisteredContentModel,
+} from "./model";
 export { buildContentAdminModule } from "./module";
+export {
+  createContentPreviewToken,
+  verifyContentPreviewToken,
+  zodContentPreviewTokenPayload,
+} from "./preview-token";
+export type {
+  ContentPreviewToken,
+  ContentPreviewTokenPayload,
+} from "./preview-token";
 export { buildContentPublicModule } from "./public-module";
 export { buildContentPublicRoutes } from "./public-routes";
-export { createContentPublicService } from "./public-service";
+export {
+  contentPublicSelection,
+  createContentPublicProjector,
+  createContentPublicService,
+} from "./public-service";
 export type {
   ContentPublicFindManyArgs,
   ContentPublicService,
@@ -40,6 +74,16 @@ export {
 } from "./query";
 export { LABEL_PREFIX, resolveReferenceTargets, toLabel } from "./references";
 export type { ReferenceTarget } from "./references";
+export {
+  contentRevisionSnapshot,
+  contentSnapshotRow,
+  projectRevisionSnapshot,
+} from "./revision-snapshot";
+export { createContentRevisionsModel } from "./revisions-model";
+export type {
+  ContentRevisionCaptureInput,
+  ContentRevisionsModel,
+} from "./revisions-model";
 export { buildContentRoutes } from "./routes";
 export { contentSearchDocument } from "./search-document";
 export { createContentSearchIndexer } from "./search-indexer";
@@ -64,11 +108,14 @@ export type {
   ContentServiceOptions,
   ContentUpdateResult,
 } from "./service";
+export { createSlugNormalizer } from "./slugs";
+export type { ContentSlugNormalizer } from "./slugs";
 export { contentTableColumns, createContentTable } from "./table";
 export type {
   ContentColumnBuilder,
   ContentColumnBuilders,
   ContentColumnName,
+  ContentEditorialColumnBuilders,
   ContentPublicationColumnBuilders,
   ContentReferences,
   ContentSystemColumnBuilders,

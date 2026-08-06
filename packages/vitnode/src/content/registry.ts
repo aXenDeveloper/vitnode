@@ -6,6 +6,7 @@ import type {
 import type { AnyContentTypeDefinition } from "./types";
 
 import {
+  CONTENT_EDITORIAL_FIELDS,
   CONTENT_PERMISSIONS,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_SYSTEM_FIELDS,
@@ -197,6 +198,18 @@ export const contentPermissionEntries = (
         },
       ]
     : []),
+  // Restoring is the one generated operation that rewrites many fields at once
+  // from a source the editor did not type, so it gets its own gate. It depends
+  // on `can_edit` rather than `can_view`: somebody who may not edit must not
+  // reach the same outcome through the history.
+  ...(definition?.editorial.enabled
+    ? [
+        {
+          dependsOn: [CONTENT_PERMISSIONS.edit],
+          permission: CONTENT_PERMISSIONS.restore,
+        },
+      ]
+    : []),
 ];
 
 /**
@@ -231,6 +244,7 @@ export const orderableColumns = (
   ...definition.admin.list.orderableFields,
   ...CONTENT_SYSTEM_FIELDS,
   ...(definition.publication.enabled ? CONTENT_PUBLICATION_FIELDS : []),
+  ...(definition.editorial.enabled ? CONTENT_EDITORIAL_FIELDS : []),
 ];
 
 /**

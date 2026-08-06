@@ -13,4 +13,11 @@ export const EXAMPLE_MIGRATIONS = [
   "0022_add_example_content.sql",
   "0023_add_publication_to_example_articles.sql",
   "0024_add_example_article_slug.sql",
+  // Core, not `example_*`, but the editorial suites write revisions for an
+  // article - so the table has to exist before the column that needs it.
+  "0025_add_content_revisions.sql",
+  "0026_add_example_article_editorial.sql",
+  // Core again, for the same reason: the scheduling suites book a publication
+  // for an article, and the row has to have somewhere to go.
+  "0027_add_content_schedules.sql",
 ];

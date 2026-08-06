@@ -75,6 +75,61 @@ describe("createContentTable", () => {
     });
   });
 
+  describe("editorial column", () => {
+    const editorialTable = createContentTable(
+      defineContentType({
+        id: "test.versioned",
+        tableName: "test_versioned",
+        fields: { title: field.text({ required: true }) },
+        editorial: { enabled: true },
+        admin: { label: { plural: "Versioned", singular: "Versioned" } },
+      }),
+    );
+    const versionColumn = getTableConfig(editorialTable).columns.find(
+      item => item.name === "version",
+    );
+
+    it("adds `version` when editorial is enabled", () => {
+      expect(versionColumn?.getSQLType()).toBe("integer");
+      expect(versionColumn?.notNull).toBe(true);
+    });
+
+    it("defaults it to 1, so drizzle-kit backfills in one statement", () => {
+      expect(versionColumn?.hasDefault).toBe(true);
+      expect(versionColumn?.default).toBe(1);
+    });
+
+    it("adds nothing when editorial is omitted", () => {
+      expect(column("version")).toBeUndefined();
+      expect(
+        getTableConfig(categories).columns.find(
+          item => item.name === "version",
+        ),
+      ).toBeUndefined();
+    });
+
+    it("leaves a content type's own `version` field alone", () => {
+      // Not generated, so it is an ordinary declared column with its own type.
+      const own = createContentTable(
+        defineContentType({
+          id: "test.own-version-column",
+          tableName: "test_own_version_column",
+          fields: {
+            title: field.text({ required: true }),
+            version: field.text({ defaultValue: "v1" }),
+          },
+          admin: { label: { plural: "Owns", singular: "Own" } },
+        }),
+      );
+
+      expect(
+        getTableConfig(own)
+          .columns.find(item => item.name === "version")
+          ?.getSQLType(),
+      ).toBe("varchar(255)");
+    });
+  });
+
   describe("field columns", () => {
     it.each([
       ["title", "varchar(200)", true],

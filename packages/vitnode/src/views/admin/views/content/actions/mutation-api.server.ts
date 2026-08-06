@@ -3,12 +3,30 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import type {
+  ContentConflict,
+  ContentScheduleRejection,
+  ContentUnprocessable,
+} from "@/content/conflicts";
 import type { ContentInvalidationMode } from "@/content/next/revalidate.server";
+import type {
+  ContentRevisionDetail,
+  ContentRevisionMeta,
+} from "@/content/revisions";
+import type {
+  ContentSchedule,
+  ContentScheduleAction,
+} from "@/content/schedules";
 import type { AnyContentTypeDefinition } from "@/content/types";
 
 import { findFrontendContentType } from "@/content/admin/config";
 import { contentApiFetch } from "@/content/admin/fetch.server";
 import { isContentPubliclyVisible } from "@/content/cache";
+import {
+  parseContentConflict,
+  parseContentScheduleRejection,
+  parseContentUnprocessable,
+} from "@/content/conflicts";
 import { CONTENT_OPTIONS_LIMIT } from "@/content/const";
 import { revalidateContent } from "@/content/next/revalidate.server";
 
@@ -20,10 +38,33 @@ const CONTENT_PAGE_PATH =
   "/[locale]/admin/(auth)/(plugins)/(vitnode-core)/content/[...slug]";
 
 interface MutationResult {
+  /**
+   * The structured reason an editorial write was refused, when the API sent
+   * one. `CONTENT_VERSION_CONFLICT` is the interesting case: the dialog reloads
+   * the newer record and offers to overwrite it, which it cannot do from a
+   * sentence.
+   */
+  conflict?: ContentConflict;
   error?: string;
+  /** Why a schedule was refused, when the API said. */
+  rejection?: ContentScheduleRejection;
   /** Lets the UI tell a restricted delete (409) from a generic failure. */
   status?: number;
+  /** `CONTENT_REVISION_NOT_RESTORABLE`, naming the fields that no longer fit. */
+  unprocessable?: ContentUnprocessable;
 }
+
+/** Reads whatever structured error the API sent, if any. */
+const failure = (result: {
+  error?: string;
+  status: number;
+}): MutationResult => ({
+  conflict: parseContentConflict(result.error) ?? undefined,
+  error: result.error ?? "",
+  rejection: parseContentScheduleRejection(result.error) ?? undefined,
+  status: result.status,
+  unprocessable: parseContentUnprocessable(result.error) ?? undefined,
+});
 
 const resolve = (contentTypeId: string) => {
   const entry = findFrontendContentType(contentTypeId);
@@ -153,9 +194,7 @@ export const createContentAction = async (
     schema: zodRow,
   });
 
-  if (result.status !== 201) {
-    return { error: result.error ?? "", status: result.status };
-  }
+  if (result.status !== 201) return failure(result);
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
   // A new row starts as a draft, so this normally invalidates nothing at all -
@@ -169,6 +208,11 @@ export const editContentAction = async (
   contentTypeId: string,
   id: number,
   values: Record<string, unknown>,
+  /**
+   * The version the editor started from. Required by an editorial content type
+   * and ignored by every other one, so the form can pass it unconditionally.
+   */
+  expectedVersion?: number,
 ): Promise<MutationResult> => {
   const { definition, pluginId } = resolve(contentTypeId);
 
@@ -176,7 +220,7 @@ export const editContentAction = async (
   const before = await readRow(definition, pluginId, id);
 
   const result = await contentApiFetch({
-    body: values,
+    body: definition.editorial.enabled ? { expectedVersion, values } : values,
     definition,
     method: "put",
     path: `/${id}`,
@@ -184,12 +228,256 @@ export const editContentAction = async (
     schema: zodRow,
   });
 
-  if (result.status !== 200) {
-    return { error: result.error ?? "", status: result.status };
-  }
+  if (result.status !== 200) return failure(result);
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
   invalidate(definition, id, before, result.data);
+
+  return {};
+};
+
+/**
+ * Re-reads one record, for the conflict banner.
+ *
+ * Deliberately not a full page refresh: the dialog is still open with the
+ * editor's unsaved values in it, and `router.refresh()` would remount the form
+ * and throw them away - which is the one thing the conflict flow must not do.
+ */
+export const reloadContentRowAction = async (
+  contentTypeId: string,
+  id: number,
+): Promise<{ error?: string; row?: ContentRow }> => {
+  const { definition, pluginId } = resolve(contentTypeId);
+
+  const result = await contentApiFetch({
+    definition,
+    method: "get",
+    path: `/${id}`,
+    pluginId,
+    schema: zodRow,
+  });
+
+  if (result.status !== 200) return { error: result.error ?? "" };
+
+  return { row: result.data };
+};
+
+const zodRevisionList = z.object({
+  edges: z.array(z.object({ id: z.number() }).loose()),
+});
+
+/** The history list. Metadata only - snapshots load one at a time. */
+export const listContentRevisionsAction = async (
+  contentTypeId: string,
+  id: number,
+  cursor?: number,
+): Promise<{ edges: ContentRevisionMeta[]; error?: string }> => {
+  const { definition, pluginId } = resolve(contentTypeId);
+
+  const result = await contentApiFetch({
+    definition,
+    method: "get",
+    path: `/${id}/revisions`,
+    pluginId,
+    query: cursor === undefined ? undefined : { cursor: String(cursor) },
+    schema: zodRevisionList,
+  });
+
+  if (result.status !== 200) {
+    return { edges: [], error: result.error ?? "" };
+  }
+
+  return {
+    edges: (result.data?.edges ?? []) as unknown as ContentRevisionMeta[],
+  };
+};
+
+export const getContentRevisionAction = async (
+  contentTypeId: string,
+  id: number,
+  revisionId: number,
+): Promise<{ error?: string; revision?: ContentRevisionDetail }> => {
+  const { definition, pluginId } = resolve(contentTypeId);
+
+  const result = await contentApiFetch({
+    definition,
+    method: "get",
+    path: `/${id}/revisions/${revisionId}`,
+    pluginId,
+    schema: z.object({ id: z.number() }).loose(),
+  });
+
+  if (result.status !== 200) return { error: result.error ?? "" };
+
+  return { revision: result.data as unknown as ContentRevisionDetail };
+};
+
+export const restoreContentRevisionAction = async (
+  contentTypeId: string,
+  id: number,
+  revisionId: number,
+  expectedVersion: number,
+): Promise<MutationResult> => {
+  const { definition, pluginId } = resolve(contentTypeId);
+
+  // Same as an edit: the old slug has to be known before the write, or a
+  // restore that moves the URL leaves the previous one resolving.
+  const before = await readRow(definition, pluginId, id);
+
+  const result = await contentApiFetch({
+    body: { expectedVersion },
+    definition,
+    method: "post",
+    path: `/${id}/revisions/${revisionId}/restore`,
+    pluginId,
+    schema: z.object({ changed: z.boolean(), row: zodRow }),
+  });
+
+  if (result.status !== 200) return failure(result);
+
+  revalidatePath(CONTENT_PAGE_PATH, "page");
+  // A restore never moves `status`, so visibility is unchanged - but the slug
+  // may have, and `invalidate` compares both rows to work out which.
+  invalidate(definition, id, before, result.data?.row);
+
+  return {};
+};
+
+export interface ContentPreviewLink {
+  expiresAt: string;
+  revisionId: number;
+  url: string;
+  version: number;
+}
+
+/**
+ * Mints a preview link, on the click and not before.
+ *
+ * Nothing here is cached or revalidated: no row changed, and a token is a
+ * short-lived bearer credential for an unpublished record. Handing one to every
+ * row of the table "just in case" would mean a page of live credentials sitting
+ * in a browser, most of them never used.
+ *
+ * The `url` comes back from the server rather than being assembled here,
+ * because only the definition knows whether the install has a preview page
+ * (`preview.pathTemplate`) or should link at the JSON endpoint.
+ */
+export const createContentPreviewAction = async (
+  contentTypeId: string,
+  id: number,
+): Promise<{
+  error?: string;
+  preview?: ContentPreviewLink;
+  status?: number;
+}> => {
+  const { definition, pluginId } = resolve(contentTypeId);
+
+  const result = await contentApiFetch({
+    definition,
+    method: "post",
+    path: `/${id}/preview`,
+    pluginId,
+    schema: z.object({
+      expiresAt: z.string(),
+      revisionId: z.number(),
+      token: z.string(),
+      url: z.string(),
+      version: z.number(),
+    }),
+  });
+
+  if (result.status !== 200 || !result.data) {
+    return { error: result.error ?? "", status: result.status };
+  }
+
+  const { expiresAt, revisionId, url, version } = result.data;
+
+  // The token itself is deliberately not returned: it is already inside `url`,
+  // and a second copy is a second thing to leak.
+  return { preview: { expiresAt, revisionId, url, version } };
+};
+
+export const listContentSchedulesAction = async (
+  contentTypeId: string,
+  id: number,
+): Promise<{
+  edges: ContentSchedule[];
+  error?: string;
+  hasCronAdapter: boolean;
+}> => {
+  const { definition, pluginId } = resolve(contentTypeId);
+
+  const result = await contentApiFetch({
+    definition,
+    method: "get",
+    path: `/${id}/schedules`,
+    pluginId,
+    schema: z.object({
+      edges: z.array(z.object({ id: z.number() }).loose()),
+      hasCronAdapter: z.boolean(),
+    }),
+  });
+
+  if (result.status !== 200) {
+    return { edges: [], error: result.error ?? "", hasCronAdapter: true };
+  }
+
+  return {
+    edges: (result.data?.edges ?? []) as unknown as ContentSchedule[],
+    hasCronAdapter: result.data?.hasCronAdapter ?? true,
+  };
+};
+
+/**
+ * Books a publication or an unpublication for later.
+ *
+ * Nothing public changes yet, so no cache tag is expired - only the admin table
+ * is refreshed, because it now shows a pending badge. The transition itself
+ * invalidates the cache when it fires, over the
+ * [revalidation bridge](/docs/dev/content-engine/scheduling).
+ */
+export const scheduleContentAction = async (
+  contentTypeId: string,
+  id: number,
+  action: ContentScheduleAction,
+  scheduledFor: string,
+): Promise<MutationResult> => {
+  const { definition, pluginId } = resolve(contentTypeId);
+
+  const result = await contentApiFetch({
+    body: { action, scheduledFor },
+    definition,
+    method: "post",
+    path: `/${id}/schedule`,
+    pluginId,
+    schema: z.object({ id: z.number() }),
+  });
+
+  if (result.status !== 200) return failure(result);
+
+  revalidatePath(CONTENT_PAGE_PATH, "page");
+
+  return {};
+};
+
+export const cancelContentScheduleAction = async (
+  contentTypeId: string,
+  id: number,
+  scheduleId: number,
+): Promise<MutationResult> => {
+  const { definition, pluginId } = resolve(contentTypeId);
+
+  const result = await contentApiFetch({
+    definition,
+    method: "post",
+    path: `/${id}/schedule/${scheduleId}/cancel`,
+    pluginId,
+    schema: z.object({ cancelled: z.boolean() }),
+  });
+
+  if (result.status !== 200) return failure(result);
+
+  revalidatePath(CONTENT_PAGE_PATH, "page");
 
   return {};
 };
@@ -208,9 +496,7 @@ export const deleteContentAction = async (
     schema: zodRow,
   });
 
-  if (result.status !== 200) {
-    return { error: result.error ?? "", status: result.status };
-  }
+  if (result.status !== 200) return failure(result);
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
 
@@ -257,9 +543,7 @@ const publicationAction = async (
     schema: zodPublicationResult,
   });
 
-  if (result.status !== 200) {
-    return { error: result.error ?? "", status: result.status };
-  }
+  if (result.status !== 200) return failure(result);
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
 

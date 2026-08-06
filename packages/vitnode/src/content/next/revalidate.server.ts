@@ -1,21 +1,25 @@
 import "server-only";
 import { revalidateTag, updateTag } from "next/cache";
 
-import type { ContentInvalidationInput } from "../cache";
+import type {
+  ContentInvalidationInput,
+  ContentInvalidationMode,
+} from "../cache";
 
 import { contentInvalidationTags } from "../cache";
 
+export type { ContentInvalidationMode };
+
 /**
- * How hard a mutation expires the tags it touched.
+ * Where the call is coming from, which decides *how* `immediate` is done.
  *
- * - `immediate` - `updateTag`. The next request waits for fresh data; no stale
- *   response is served at all. **Server Actions only**, which is where every
- *   generated write path already lives.
- * - `stale-while-revalidate` - `revalidateTag(tag, "max")`. The cached response
- *   is served once more while the new one is fetched behind it. Cheaper, and
- *   callable from a Route Handler.
+ * `updateTag` buys read-your-own-writes and is Server-Action-only. A Route
+ * Handler cannot call it - but `revalidateTag(tag, { expire: 0 })` expires a
+ * tag immediately there, which is the documented path for a webhook. Same
+ * guarantee for the next reader either way, so the caller names its context and
+ * gets the strongest option available to it.
  */
-export type ContentInvalidationMode = "immediate" | "stale-while-revalidate";
+export type ContentInvalidationContext = "route-handler" | "server-action";
 
 /**
  * Expires the public cache entries one mutation actually affected.
@@ -39,22 +43,35 @@ export type ContentInvalidationMode = "immediate" | "stale-while-revalidate";
  * still-reachable page says; that response is safe to serve once more, and
  * keeping the cache warm is worth more than a few seconds of freshness.
  *
- * @throws if `immediate` is used outside a Server Action - `updateTag` is
- * Server-Action-only. From a Route Handler or a webhook, pass
- * `stale-while-revalidate`.
+ * `context` defaults to `server-action`, which is where every generated write
+ * path already lives. Background work reaches this through the
+ * [revalidation bridge](../server/revalidate-bridge.ts), which lands in a Route
+ * Handler and says so.
  */
 export const revalidateContent = (
   input: ContentInvalidationInput,
-  options?: { mode?: ContentInvalidationMode },
+  options?: {
+    context?: ContentInvalidationContext;
+    mode?: ContentInvalidationMode;
+  },
 ): void => {
   const mode = options?.mode ?? "immediate";
+  const context = options?.context ?? "server-action";
 
   for (const tag of contentInvalidationTags(input)) {
-    if (mode === "immediate") {
+    if (mode !== "immediate") {
+      revalidateTag(tag, "max");
+      continue;
+    }
+
+    if (context === "server-action") {
       updateTag(tag);
       continue;
     }
 
-    revalidateTag(tag, "max");
+    // `updateTag` throws outside a Server Action. `expire: 0` is the documented
+    // equivalent for a webhook: the entry is expired now rather than served
+    // stale once more.
+    revalidateTag(tag, { expire: 0 });
   }
 };

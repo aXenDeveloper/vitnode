@@ -13,6 +13,7 @@ import type {
 } from "./types";
 
 import {
+  CONTENT_EDITORIAL_FIELDS,
   CONTENT_PUBLIC_ALWAYS_ORDERABLE,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_PUBLICATION_STATUSES,
@@ -74,6 +75,18 @@ export interface ContentSchemas<TDefinition = AnyContentTypeDefinition> {
   selectObject: z.ZodObject<z.ZodRawShape>;
   /** Request body for update. Every field optional, but never empty. */
   update: z.ZodType<ContentUpdateInput<TDefinition>>;
+  /**
+   * Request body for an editorial update: the field values, plus the version
+   * the editor started from.
+   *
+   * An envelope rather than a key inside `values`, because `update` is a strict
+   * object of *content fields* and `expectedVersion` is transport. Empty for a
+   * content type without `editorial`, whose update body stays exactly as it was.
+   */
+  updateEnvelope: z.ZodType<{
+    expectedVersion: number;
+    values: ContentUpdateInput<TDefinition>;
+  }>;
 }
 
 const textSchema = (fieldValue: {
@@ -287,11 +300,13 @@ const publicSelectShape = (
  */
 export const buildContentSchemas = <TDefinition>({
   admin,
+  editorial = false,
   fields,
   publicApi = DISABLED_PUBLIC_API,
   publication = false,
 }: {
   admin: ResolvedContentAdminConfig;
+  editorial?: boolean;
   fields: ContentFieldMap;
   publicApi?: ResolvedContentPublicApiConfig;
   publication?: boolean;
@@ -307,6 +322,12 @@ export const buildContentSchemas = <TDefinition>({
       }
     : {};
 
+  // Read-only for the same reason, and returned for one: a client needs it to
+  // send `expectedVersion` back on the next write.
+  const editorialSelectShape: z.ZodRawShape = editorial
+    ? { version: z.number().int().positive() }
+    : {};
+
   const selectShape: z.ZodRawShape = {
     id: z.number(),
     ...Object.fromEntries(
@@ -316,6 +337,7 @@ export const buildContentSchemas = <TDefinition>({
       ]),
     ),
     ...publicationSelectShape,
+    ...editorialSelectShape,
     createdAt: z.date(),
     updatedAt: z.date(),
   };
@@ -334,6 +356,7 @@ export const buildContentSchemas = <TDefinition>({
     ...admin.list.orderableFields,
     ...CONTENT_SYSTEM_FIELDS,
     ...(publication ? CONTENT_PUBLICATION_FIELDS : []),
+    ...(editorial ? CONTENT_EDITORIAL_FIELDS : []),
   ];
   const selectObject = z.object(selectShape);
 
@@ -390,5 +413,14 @@ export const buildContentSchemas = <TDefinition>({
     select: selectObject as unknown as z.ZodType<ContentSelect<TDefinition>>,
     selectObject,
     update: update as unknown as z.ZodType<ContentUpdateInput<TDefinition>>,
+    updateEnvelope: z.strictObject({
+      // Positive, so a client that forgot to send one cannot coerce `0` past
+      // the guard and race the very check it is meant to lose.
+      expectedVersion: z.number().int().positive(),
+      values: update,
+    }) as unknown as z.ZodType<{
+      expectedVersion: number;
+      values: ContentUpdateInput<TDefinition>;
+    }>,
   };
 };

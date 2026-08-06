@@ -8,7 +8,15 @@
  *
  * The cache *tags* live in `@vitnode/core/content`, because they are strings.
  */
-export { contentPublicFetch, contentPublicItemTags } from "./fetch.server";
+export {
+  contentPreviewFetch,
+  contentPublicFetch,
+  contentPublicItemTags,
+} from "./fetch.server";
 export type { ContentPublicFetchResult } from "./fetch.server";
+export { POST as contentRevalidateRoute } from "./revalidate-route.server";
 export { revalidateContent } from "./revalidate.server";
-export type { ContentInvalidationMode } from "./revalidate.server";
+export type {
+  ContentInvalidationContext,
+  ContentInvalidationMode,
+} from "./revalidate.server";

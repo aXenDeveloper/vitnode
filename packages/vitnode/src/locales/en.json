@@ -123,7 +123,7 @@
           "noIndexer": "No rebuild indexer",
           "noIndexerDesc": "No rebuild indexer is registered. Documents may still be maintained by live plugin writes.",
           "removeDocuments": "Remove documents",
-          "removeConfirmTitle": "Remove indexed documents for \u201c{collection}\u201d?",
+          "removeConfirmTitle": "Remove indexed documents for “{collection}”?",
           "removeConfirmDescription": "No rebuild indexer is registered for this collection. Its documents may still be maintained by live plugin writes. This removes their current indexed state, and future writes may add them again.",
           "removeSuccess": "Removed the indexed documents for {collection}.",
           "removeSuccessDesc": "Live plugin writes may recreate them.",
@@ -464,18 +464,100 @@
           "off": "No"
         }
       },
+      "conflict": {
+        "title": "Someone else saved this first",
+        "desc": "This {name, select, other {record}} moved to version {version} while you were editing. Nothing you typed has been lost.",
+        "reload": "Show what changed",
+        "reloaded": "Now at version {version}. Saving replaces the changes below with yours."
+      },
+      "history": {
+        "title": "History of this {name}",
+        "desc": "Every version of this record, newest first.",
+        "empty": "No versions yet. The first edit will show up here.",
+        "current": "Current",
+        "system_actor": "System",
+        "changed_fields": "Changed: {fields}",
+        "show_changes": "Show changes",
+        "hide_changes": "Hide changes",
+        "no_changes": "No field values changed.",
+        "load_failed": "This version could not be loaded.",
+        "operations": {
+          "create": "Created",
+          "update": "Edited",
+          "publish": "Published",
+          "unpublish": "Unpublished",
+          "restore": "Restored",
+          "delete": "Deleted"
+        },
+        "restore": {
+          "action": "Restore",
+          "title": "Restore version {version}?",
+          "desc": "This puts the field values of version {version} back on <title></title> as a new version {nextVersion}. Nothing is deleted - every version in between stays in the history - and the publication state does not change.",
+          "confirm": "Restore this version",
+          "success": "{name} restored",
+          "success_desc": "Restored from version {version}."
+        }
+      },
+      "preview": {
+        "title": "Preview link",
+        "desc": "A signed link to {title} as it is right now, including unpublished changes. Anyone who has the link can open it - no account needed.",
+        "loading": "Creating a link…",
+        "link": "Preview link",
+        "copy": "Copy link",
+        "open": "Open",
+        "expires": "Expires <when></when>",
+        "warning": "Treat it like a password: it works for anyone until it expires, and the only way to revoke one early is to rotate CONTENT_PREVIEW_SECRET."
+      },
+      "schedule": {
+        "title": "Schedule this {name}",
+        "desc": "Publish or unpublish <title></title> at a set time. Scheduling changes nothing now.",
+        "empty": "Nothing scheduled yet.",
+        "submit": "Schedule it",
+        "cancel": "Cancel",
+        "cancelled": "Schedule cancelled",
+        "success": "{name} scheduled",
+        "overdue": "Overdue - it has not run",
+        "precision": "Scheduled work runs on a one-minute tick, so expect up to a minute of delay. It publishes whatever the record says at that time, not what it says now.",
+        "actions": {
+          "publish": "Publish",
+          "unpublish": "Unpublish"
+        },
+        "status": {
+          "pending": "Pending",
+          "completed": "Done",
+          "cancelled": "Cancelled"
+        },
+        "field": {
+          "action": "What should happen",
+          "when": "When",
+          "when_desc": "In your timezone ({zone})."
+        },
+        "no_cron": {
+          "title": "No scheduler is running",
+          "desc": "Schedules will be saved but will never fire, because this install has no cron adapter configured. Set one up, or trigger the cron endpoint from outside."
+        },
+        "errors": {
+          "in_past": "That time has already passed. Pick a moment in the future.",
+          "order": "An unpublish has to come after the publish that is already scheduled.",
+          "unsupported": "This content type cannot be scheduled."
+        }
+      },
       "permissions": {
         "can_view": "View list",
         "can_create": "Create",
         "can_edit": "Edit",
         "can_delete": "Delete",
-        "can_publish": "Publish and unpublish"
+        "can_publish": "Publish and unpublish",
+        "can_restore": "Restore an earlier version"
       },
       "errors": {
         "not_found": "This record no longer exists. Refresh the list and try again.",
         "validation": "Some of these values are not valid. Check the form and try again.",
         "conflict": "This record is still referenced by other content.",
-        "forbidden": "You do not have permission to do this."
+        "forbidden": "You do not have permission to do this.",
+        "version_conflict": "Someone else saved this while you were editing. Your changes are still here.",
+        "unique_conflict": "A record with these values already exists.",
+        "not_restorable": "This version cannot be restored: {fields} no longer fit this content type."
       }
     }
   },
@@ -943,6 +1025,13 @@
           "not_configured": "No cron adapter configured - jobs won't run automatically.",
           "stale": "No job has run in over 6 hours - cron may be misconfigured or stopped. Check your cron setup.",
           "jobs": "{count, plural, =0 {No jobs scheduled} one {# job scheduled} other {# jobs scheduled}}"
+        },
+        "content_preview": {
+          "title": "Content Preview",
+          "desc": "Signed, expiring links that let a reviewer read an unpublished record without an account.",
+          "insecure": "Using the default CONTENT_PREVIEW_SECRET - anyone can forge a preview link. Set a real one.",
+          "not_configured": "No content type has preview enabled.",
+          "content_types": "{count, plural, =0 {No content types} one {# content type} other {# content types}}"
         },
         "queue": {
           "title": "Queue Tasks",

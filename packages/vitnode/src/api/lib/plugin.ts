@@ -1,6 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 
 import type { RegisteredContentType } from "@/content/registry";
+import type { AnyContentModel } from "@/content/server/model";
 import type { AnyContentTypeDefinition } from "@/content/types";
 import type { LocaleMessagesMap } from "@/lib/i18n/types";
 
@@ -21,6 +22,7 @@ import { validateSearchIndexers } from "../models/search";
 import { checkPluginId } from "./check-plugin-id";
 
 export interface BuildPluginApiReturn {
+  contentModels?: AnyContentModel[];
   contentTypes?: AnyContentTypeDefinition[];
   cronJobs?: Omit<CronJobConfig, "pluginId">[];
   events?: Omit<EventListenerConfig, "pluginId">[];
@@ -56,6 +58,7 @@ export function buildApiPlugin<P extends string>({
   checkPluginId(pluginId);
 
   const hono = new OpenAPIHono();
+  const contentModels: AnyContentModel[] = [];
   const contentTypes: AnyContentTypeDefinition[] = [];
   const cronJobs: BuildPluginApiReturn["cronJobs"] = [];
   const events: BuildPluginApiReturn["events"] = [];
@@ -65,6 +68,7 @@ export function buildApiPlugin<P extends string>({
   modules.forEach(handler => {
     hono.route(`/${handler.name}`, handler.hono);
 
+    contentModels.push(...collectContentModels(handler));
     contentTypes.push(...collectContentTypes(handler));
     indexers.push(...collectSearchIndexers(handler));
 
@@ -95,6 +99,7 @@ export function buildApiPlugin<P extends string>({
     pluginId,
     messages,
     hono,
+    contentModels,
     contentTypes: registered.map(entry => entry.definition),
     cronJobs,
     events,
@@ -119,6 +124,16 @@ function collectContentTypes(
   return [
     ...(module.contentTypes ?? []),
     ...(module.modules ?? []).flatMap(collectContentTypes),
+  ];
+}
+
+/** Same walk as {@link collectContentTypes}, and for the same reason. */
+function collectContentModels(
+  module: BaseBuildModuleReturn,
+): AnyContentModel[] {
+  return [
+    ...(module.contentModels ?? []),
+    ...(module.modules ?? []).flatMap(collectContentModels),
   ];
 }
 

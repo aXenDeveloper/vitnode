@@ -28,6 +28,22 @@ It is deliberately not folded into `can_edit`: publishing is the only generated
 operation that changes what people outside the AdminCP can see, so "may write
 drafts" and "may make them public" stay separate answers.
 
+A content type with [`editorial`](/docs/dev/content-engine/editorial) gets a
+sixth, and this one depends on `can_edit`:
+
+```text
+can_restore  POST /{id}/revisions/{revisionId}/restore
+```
+
+Reading history is an ordinary read, so it needs only `can_view`. Restoring
+rewrites many fields at once, and somebody who is not trusted to edit the record
+must not reach the same outcome through its history.
+
+No permission is added for
+[scheduling](/docs/dev/content-engine/scheduling): booking a publication *is*
+publishing, just later, so it reuses `can_publish` rather than inventing a gate
+that could be granted separately.
+
 ## What each route documents
 
 Every status a generated handler can produce is in the OpenAPI document, so a
@@ -45,10 +61,27 @@ unique-constraint `409`:
 | `POST /{id}/unpublish` | `200`, `400`, `404` |
 | `DELETE /{id}` | `200`, `400`, `404`, `409` |
 
+With [`editorial`](/docs/dev/content-engine/editorial), three more:
+
+| Route | Statuses |
+| --- | --- |
+| `GET /{id}/revisions` | `200`, `400` |
+| `GET /{id}/revisions/{revisionId}` | `200`, `400`, `404` |
+| `POST /{id}/revisions/{revisionId}/restore` | `200`, `400`, `404`, `409`, `422` |
+| `POST /{id}/preview` (with `editorial.preview`) | `200`, `400`, `404` |
+| `GET /{id}/schedules` (with `editorial.scheduling`) | `200`, `400` |
+| `POST /{id}/schedule` | `200`, `400`, `404` |
+| `POST /{id}/schedule/{scheduleId}/cancel` | `200`, `400`, `404` |
+
 A `409` on create or update is a duplicate value; on delete it is a row something
-else still references. `403` is the one status the routes do not declare
-themselves - it comes from the staff-permission middleware `buildRoute` composes,
-the same way it does for every other VitNode route.
+else still references. On an editorial content type it also covers a lost
+update, which is why those routes answer with a JSON body carrying a
+[`code`](/docs/dev/content-engine/revisions#the-409) rather than a sentence - one
+status, two situations, and a client has to tell them apart.
+
+`403` is the one status the routes do not declare themselves - it comes from the
+staff-permission middleware `buildRoute` composes, the same way it does for
+every other VitNode route.
 
 ## The module name
 
@@ -102,7 +135,8 @@ the flat key convention:
   "@vitnode/example:example_articles:can_create": "Create articles",
   "@vitnode/example:example_articles:can_edit": "Edit articles",
   "@vitnode/example:example_articles:can_delete": "Delete articles",
-  "@vitnode/example:example_articles:can_publish": "Publish and unpublish articles"
+  "@vitnode/example:example_articles:can_publish": "Publish and unpublish articles",
+  "@vitnode/example:example_articles:can_restore": "Restore an earlier version"
 }
 ```
 
@@ -114,7 +148,7 @@ Three places, and the first one is the one that counts:
    by `assertStaffPermission` before the handler runs. 403 otherwise.
 2. **The AdminCP page** checks `can_view` server-side and calls `notFound()`.
 3. **The buttons** hide when the admin lacks `can_create` / `can_edit` /
-   `can_delete` / `can_publish`.
+   `can_delete` / `can_publish` / `can_restore`.
 
 Hiding a button is a courtesy, not a control. Removing `can_delete` from a role
 makes `DELETE` return 403 whether or not the button was rendered.

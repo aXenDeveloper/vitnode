@@ -96,6 +96,11 @@
       "types": "./dist/src/content/next/index.d.ts",
       "default": "./dist/src/content/next/index.js"
     },
+    "./content/next/revalidate-route": {
+      "import": "./dist/src/content/next/revalidate-route.server.js",
+      "types": "./dist/src/content/next/revalidate-route.server.d.ts",
+      "default": "./dist/src/content/next/revalidate-route.server.js"
+    },
     "./api/config": {
       "import": "./dist/src/api/config.js",
       "types": "./dist/src/api/config.d.ts",

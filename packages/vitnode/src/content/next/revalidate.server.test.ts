@@ -88,3 +88,48 @@ describe("what it touches", () => {
     expect(calls.map(call => call.tag)).toContain("content:test.post:slug:new");
   });
 });
+
+describe("context", () => {
+  it("uses updateTag from a Server Action, for read-your-own-writes", () => {
+    revalidateContent(published, {
+      context: "server-action",
+      mode: "immediate",
+    });
+
+    expect(functionsCalled()).toEqual(["updateTag"]);
+  });
+
+  it("expires with `expire: 0` from a Route Handler", () => {
+    // `updateTag` throws outside a Server Action, so the background cache
+    // bridge - which lands in a Route Handler - would turn every scheduled
+    // publish into a 500 if it used the default.
+    revalidateContent(published, {
+      context: "route-handler",
+      mode: "immediate",
+    });
+
+    expect(functionsCalled()).toEqual(["revalidateTag"]);
+    expect(calls.every(call => call.profile !== undefined)).toBe(true);
+    expect(calls[0].profile).toEqual({ expire: 0 });
+  });
+
+  it("leaves stale-while-revalidate alone in either context", () => {
+    // SWR already works everywhere, so the context changes nothing.
+    for (const context of ["route-handler", "server-action"] as const) {
+      calls.length = 0;
+      revalidateContent(published, {
+        context,
+        mode: "stale-while-revalidate",
+      });
+
+      expect(functionsCalled()).toEqual(["revalidateTag"]);
+      expect(calls[0].profile).toBe("max");
+    }
+  });
+
+  it("defaults to server-action, so nothing existing changed", () => {
+    revalidateContent(published, { mode: "immediate" });
+
+    expect(functionsCalled()).toEqual(["updateTag"]);
+  });
+});

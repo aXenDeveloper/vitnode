@@ -62,6 +62,77 @@ export interface ContentPublicService<TDefinition> {
   }>;
 }
 
+/**
+ * The public projection, as a standalone function.
+ *
+ * Extracted so the preview route can use **this** rather than a second
+ * implementation that looks the same on the day it is written. The allowlist,
+ * the relation-to-`{ id }` collapse and the "drop the cursor `id` unless it was
+ * exposed" rule are one piece of code, so a field cannot become public on one
+ * route and stay private on the other.
+ *
+ * It reads nothing but the definition: no database handle, no columns, no
+ * joins. An exposed relation is projected from the foreign key the row already
+ * carries, which is what makes it impossible for one content type's allowlist
+ * to publish another's administrative metadata.
+ */
+export const createContentPublicProjector = <
+  TDefinition extends AnyContentTypeDefinition,
+>(
+  definition: TDefinition,
+): ((row: Record<string, unknown>) => ContentPublicSelect<TDefinition>) => {
+  const publicApi = definition.publicApi;
+
+  if (!publicApi.enabled) {
+    throw new ContentEngineError(
+      "This content type has no public API, so there is no public projection to build.",
+      { contentTypeId: definition.id },
+    );
+  }
+
+  const exposed = publicApi.fields;
+  const exposesId = exposed.includes("id");
+  // A `user` field is never exposable, so this is only ever relations.
+  const exposedRelations = new Set(
+    exposed.filter(name => definition.fields[name]?.kind === "relation"),
+  );
+
+  return row => {
+    const projected: Record<string, unknown> = {};
+
+    for (const name of exposed) {
+      if (!exposedRelations.has(name)) {
+        projected[name] = row[name];
+        continue;
+      }
+
+      const id = row[name];
+      projected[name] = typeof id === "number" ? { id } : null;
+    }
+
+    if (exposesId) projected.id = row.id;
+
+    return projected as ContentPublicSelect<TDefinition>;
+  };
+};
+
+/**
+ * The columns a public read selects: the allowlist, plus `id` for the cursor.
+ *
+ * `id` is fetched whether or not it is exposed, because pagination needs it -
+ * and then dropped again by the projector. A private column is never in this
+ * map at all, so it cannot leak through a mistake further downstream.
+ */
+export const contentPublicSelection = (
+  definition: AnyContentTypeDefinition,
+  columns: Record<string, PgColumn>,
+): Record<string, PgColumn> => ({
+  id: columns.id,
+  ...Object.fromEntries(
+    definition.publicApi.fields.map(name => [name, columns[name]]),
+  ),
+});
+
 /** Public pages are smaller than admin ones, and the cap is lower too. */
 const clampPageSize = (value: string | undefined): string | undefined => {
   if (value === undefined) return undefined;
@@ -121,47 +192,13 @@ export const createContentPublicService = <
   const primaryCursor = columns.id as PgColumn<
     ColumnBaseConfig<"number", string>
   >;
-  const exposed = publicApi.fields;
-  const exposesId = exposed.includes("id");
-  // A `user` field is never exposable, so this is only ever relations.
-  const exposedRelations = new Set(
-    exposed.filter(name => fields[name]?.kind === "relation"),
-  );
   const searchColumns = publicApi.searchableFields.map(name => columns[name]);
   const orderable = publicOrderableColumns(definition);
 
-  /** Own columns, plus `id` for the cursor whether or not it is exposed. */
-  const selection = (): Record<string, PgColumn> => ({
-    id: primaryCursor,
-    ...Object.fromEntries(exposed.map(name => [name, columns[name]])),
-  });
+  const selection = (): Record<string, PgColumn> =>
+    contentPublicSelection(definition, columns);
 
-  /**
-   * Turns one raw row into the public projection: relations collapse to
-   * `{ id }`, and the cursor `id` disappears unless the allowlist asked for it.
-   *
-   * The relation identifier is the foreign key already on this row, so no
-   * target table is read and no label is invented.
-   */
-  const project = (
-    row: Record<string, unknown>,
-  ): ContentPublicSelect<TDefinition> => {
-    const projected: Record<string, unknown> = {};
-
-    for (const name of exposed) {
-      if (!exposedRelations.has(name)) {
-        projected[name] = row[name];
-        continue;
-      }
-
-      const id = row[name];
-      projected[name] = typeof id === "number" ? { id } : null;
-    }
-
-    if (exposesId) projected.id = row.id;
-
-    return projected as ContentPublicSelect<TDefinition>;
-  };
+  const project = createContentPublicProjector(definition);
 
   const readOne = async (
     condition: SQL,

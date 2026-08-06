@@ -102,6 +102,19 @@ Unpublishing to fix a typo should not move an article to the top of a
 "newest first" feed three months later, so it does not. Read `publishedAt` as
 *first published at*, not as *is published* - `status` answers that one.
 
+### Restoring an old version never moves either column
+
+With [`editorial`](/docs/dev/content-engine/editorial), an article can be rolled
+back to how it read last month. It stays exactly as published as it is right
+now.
+
+That is structural rather than a rule somebody remembered to enforce: `status`
+and `publishedAt` are generated columns, and
+[`restore`](/docs/dev/content-engine/revisions#it-cannot-change-publication-state)
+writes through `schemas.update`, which is a strict object of declared fields.
+There is no path through it that can name them. These two routes stay the only
+things that move the lifecycle.
+
 ## Permissions
 
 Publication adds a fifth permission to the generated set:
