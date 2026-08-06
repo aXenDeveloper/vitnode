@@ -22,6 +22,7 @@ import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import { StorageModel } from "@/api/models/storage";
 import { validateContentTypes } from "@/content/registry";
+import { ensureContentLocalizationLanguages } from "@/content/server/language-resolver";
 import { assertContentPreviewConfig } from "@/content/server/preview-config";
 import { CONFIG } from "@/lib/config";
 import { collectLocaleCodes } from "@/lib/i18n/load-messages";
@@ -272,6 +273,12 @@ export const globalMiddleware = ({
       })),
   );
 
+  // Computed at boot, outside the request: "does anything need the languages
+  // table" is a property of the installed plugins, not of a request.
+  const hasLocalizedContentTypes = contentTypesMetadata.some(
+    entry => entry.definition.localization.enabled,
+  );
+
   const permissionStaffMetadata: PermissionStaffCatalogEntry[] = plugins.map(
     plugin => ({
       pluginId: plugin.pluginId,
@@ -364,6 +371,16 @@ export const globalMiddleware = ({
       contentRevalidateOrigins: content?.revalidateOrigins,
       contentTypes: contentTypesMetadata,
     });
+
+    // Whether a localized content type's `defaultLocale` names a row in
+    // `core_languages` is a fact about the *installation*, so it cannot be
+    // checked when the definition is built - there is no connection yet. This is
+    // that check, run at most once per process and skipped entirely when nothing
+    // is localized, so an install with no localized content types never touches
+    // the languages table because of this.
+    if (hasLocalizedContentTypes) {
+      await ensureContentLocalizationLanguages(c, contentTypesMetadata);
+    }
 
     const user = await new SessionModel(c).getUser();
     c.set("user", user);
