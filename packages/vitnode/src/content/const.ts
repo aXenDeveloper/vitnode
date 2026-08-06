@@ -12,6 +12,22 @@ export const CONTENT_PUBLICATION_FIELDS = ["status", "publishedAt"] as const;
  */
 export const CONTENT_EDITORIAL_FIELDS = ["version"] as const;
 
+/**
+ * The columns a generated translation table always carries.
+ *
+ * Its own list rather than an entry in {@link CONTENT_SYSTEM_FIELDS}: these live
+ * on the *translation* table, so a content type stays free to declare a shared
+ * field called `itemId` - it would land on the base table, where nothing
+ * generated claims that name.
+ */
+export const CONTENT_TRANSLATION_SYSTEM_FIELDS = [
+  "itemId",
+  "languageId",
+  "version",
+  "createdAt",
+  "updatedAt",
+] as const;
+
 export const CONTENT_PUBLICATION_STATUSES = ["draft", "published"] as const;
 
 const publicationStatuses: ReadonlySet<string> = new Set(
@@ -73,6 +89,52 @@ export const CONTENT_TEXT_DEFAULT_LENGTH = 255;
 export const CONTENT_ENUM_DEFAULT_LENGTH = 64;
 
 export const CONTENT_SLUG_DEFAULT_LENGTH = 160;
+
+/**
+ * Field kinds that may carry `localized: true`.
+ *
+ * Text only, and deliberately so. `boolean`, `number`, `date`, `dateTime` and
+ * `enum` hold values, not prose - a per-locale `true` is not a translation, and
+ * an enum's *labels* are already handled by the ordinary i18n system while its
+ * *identifiers* have to stay the same in every language or nothing can filter on
+ * them. `relation` and `user` are foreign keys, and per-locale references are
+ * explicitly out of scope.
+ */
+export const CONTENT_LOCALIZED_FIELD_KINDS = [
+  "slug",
+  "text",
+  "textarea",
+] as const;
+
+const localizedFieldKinds: ReadonlySet<string> = new Set(
+  CONTENT_LOCALIZED_FIELD_KINDS,
+);
+
+export const isLocalizableFieldKind = (kind: string): boolean =>
+  localizedFieldKinds.has(kind);
+
+/** Appended to the base table name to get the generated translation table. */
+export const CONTENT_TRANSLATION_TABLE_SUFFIX = "_translations";
+
+/**
+ * What a public read does when a locale has no translation.
+ *
+ * Resolved in Stage 5A and *acted on* in Stage 5C: the configuration has to be
+ * stable before anything reads through it, or every localized content type would
+ * change public behaviour the moment fallback landed.
+ */
+export const CONTENT_LOCALIZATION_FALLBACKS = ["none", "default"] as const;
+
+/**
+ * A locale as `core_languages.code` stores one: `en`, `pl`, `pt-BR`, `zh-Hans`.
+ *
+ * Matched case-insensitively - the resolver returns the canonical stored code,
+ * so `PL` in a URL resolves to the `pl` row rather than to a 404.
+ */
+export const CONTENT_LOCALE_PATTERN = /^[a-z]{2,8}(?:[-_][a-z0-9]{2,8})*$/i;
+
+/** `core_languages.code` is `varchar(32)`. */
+export const CONTENT_LOCALE_MAX_LENGTH = 32;
 
 export const CONTENT_DEFAULT_PAGE_SIZE = 25;
 export const CONTENT_OPTIONS_LIMIT = 25;
@@ -286,6 +348,22 @@ export const CONTENT_PERMISSIONS = {
 export const CONTENT_CONFLICT_CODES = {
   unique: "CONTENT_UNIQUE_CONFLICT",
   version: "CONTENT_VERSION_CONFLICT",
+} as const;
+
+/**
+ * Machine-readable reasons a *translation* write was refused.
+ *
+ * A separate list from {@link CONTENT_CONFLICT_CODES} rather than three more
+ * members of it: the base 409 union is the contract Stage 4 editorial routes
+ * already publish, and widening it would change a response schema every existing
+ * client is generated from. A translation route answers its own union.
+ */
+export const CONTENT_TRANSLATION_CONFLICT_CODES = {
+  defaultRequired: "CONTENT_DEFAULT_TRANSLATION_REQUIRED",
+  exists: "CONTENT_TRANSLATION_EXISTS",
+  languageDisabled: "CONTENT_LANGUAGE_DISABLED",
+  unique: "CONTENT_TRANSLATION_UNIQUE_CONFLICT",
+  version: "CONTENT_TRANSLATION_VERSION_CONFLICT",
 } as const;
 
 export const CONTENT_UNPROCESSABLE_CODES = {

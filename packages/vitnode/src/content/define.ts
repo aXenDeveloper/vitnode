@@ -6,6 +6,8 @@ import type {
   ContentFieldMap,
   ContentFieldsConstraint,
   ContentIndexInput,
+  ContentLocalizationConfig,
+  ContentLocalizationEnabled,
   ContentPreviewEnabled,
   ContentPublicApiConfig,
   ContentPublicationConfig,
@@ -19,6 +21,7 @@ import type {
   ContentTypeDefinition,
   ResolvedContentAdminConfig,
   ResolvedContentEditorialConfig,
+  ResolvedContentLocalizationConfig,
   ResolvedContentPublicApiConfig,
   ResolvedContentSearchConfig,
 } from "./types";
@@ -57,6 +60,10 @@ import {
 } from "./const";
 import { ContentEngineError } from "./errors";
 import { resolveContentIndexes } from "./indexes";
+import {
+  partitionContentFields,
+  resolveContentLocalization,
+} from "./localization";
 import { buildContentSchemas } from "./schemas";
 
 /** Kinds the default `searchableFields` picks up, and `titleField` falls back to. */
@@ -304,14 +311,56 @@ const assertKnownColumns = (
   }
 };
 
+/**
+ * Every admin surface addresses a column on the base table, so it is stated in
+ * terms of the *shared* fields only. A localized field named here would be a
+ * DataTable column, a sort or a search over something the base table does not
+ * have - see `ContentAddressableColumn`, which rejects it at compile time too.
+ */
+const assertNotLocalized = (
+  id: string,
+  label: string,
+  names: readonly string[],
+  localizedFields: ContentFieldMap,
+): void => {
+  const localized = names.find(name => localizedFields[name] !== undefined);
+  if (localized !== undefined) {
+    throw new ContentEngineError(
+      `${label} names the localized field "${localized}", which is not a column on the base table. Localized values get their own AdminCP surface in Stage 5B.`,
+      { contentTypeId: id },
+    );
+  }
+};
+
 const resolveAdmin = <TFields>(
   id: string,
   fields: ContentFieldMap,
+  localizedFields: ContentFieldMap,
   admin: ContentAdminConfig<TFields>,
   publication: boolean,
   editorial: boolean,
 ): ResolvedContentAdminConfig => {
   const fieldNames = Object.keys(fields);
+  for (const [label, names] of [
+    ["admin.form.fields", admin.form?.fields],
+    ["admin.list.columns", admin.list?.columns],
+    ["admin.list.orderableFields", admin.list?.orderableFields],
+    ["admin.list.searchableFields", admin.list?.searchableFields],
+    [
+      "admin.titleField",
+      admin.titleField === undefined ? undefined : [admin.titleField],
+    ],
+    [
+      "admin.list.defaultOrderBy",
+      admin.list?.defaultOrderBy === undefined
+        ? undefined
+        : [admin.list.defaultOrderBy],
+    ],
+  ] as const) {
+    if (!names) continue;
+    assertNotLocalized(id, label, names.map(String), localizedFields);
+  }
+
   const generatedColumns = [
     ...systemFields,
     ...(publication ? publicationFields : []),
@@ -1014,12 +1063,21 @@ export const defineContentType = <
   TEditorial extends
     ContentEditorialConfig<TPublicEnabled, TPublication> | { enabled: false } =
     { enabled: false },
+  // The whole `localization` argument, inferred as one type, for the same reason
+  // `TSearch` and `TEditorial` are: an intersection member is not an inference
+  // site, so this is the only way the `enabled` literal survives - and every
+  // conditional that decides whether a translation table, translation schemas
+  // and a translation service exist reads that literal.
+  TLocalization extends ContentLocalizationConfig | { enabled: false } = {
+    enabled: false;
+  },
 >({
   admin,
   editorial,
   fields,
   id,
   indexes = [],
+  localization,
   publicApi,
   publication,
   search,
@@ -1044,6 +1102,12 @@ export const defineContentType = <
     ContentEditorialEnabled<TEditorial>
   >[];
   /**
+   * Opts into per-language content: every field marked `localized: true` moves
+   * into a generated `<tableName>_translations` table, one row per language.
+   * Omit it and nothing changes.
+   */
+  localization?: TLocalization;
+  /**
    * Opts into a generated read-only public API. Needs `publication` and exactly
    * one exposed slug field. Omit it and nothing public is generated.
    */
@@ -1067,7 +1131,8 @@ export const defineContentType = <
   ContentSearchEnabled<TSearch>,
   ContentEditorialEnabled<TEditorial>,
   ContentPreviewEnabled<TEditorial>,
-  ContentSchedulingEnabled<TEditorial>
+  ContentSchedulingEnabled<TEditorial>,
+  ContentLocalizationEnabled<TLocalization>
 > => {
   if (!CONTENT_ID_PATTERN.test(id)) {
     throw new ContentEngineError(
@@ -1112,8 +1177,14 @@ export const defineContentType = <
 
   assertSlugSources(id, fieldMap);
 
+  // The one partition every subsystem downstream of here reads. A localized
+  // field is not a column on the base table, so it takes no part in the base
+  // indexes, the admin surfaces or the base schemas.
+  const { localizedFields, sharedFields } = partitionContentFields(fieldMap);
+  const sharedFieldNames = Object.keys(sharedFields);
+
   const knownColumns = new Set([
-    ...fieldNames,
+    ...sharedFieldNames,
     ...systemFields,
     ...(publicationEnabled ? publicationFields : []),
     ...(editorialEnabled ? editorialFields : []),
@@ -1122,18 +1193,23 @@ export const defineContentType = <
     contentTypeId: id,
     declared: indexes.map(index => {
       const on = index.on.map(String);
+      assertNotLocalized(id, "indexes", on, localizedFields);
       assertKnownColumns(id, "indexes", on, knownColumns);
 
       return { ...index, on };
     }),
-    fields: fieldMap,
+    // Shared only: a localized slug's unique index is scoped to a language and
+    // belongs to the translation table, which `resolveContentTranslationIndexes`
+    // builds.
+    fields: sharedFields,
     publication: publicationEnabled,
     tableName,
   });
 
   const resolvedAdmin = resolveAdmin(
     id,
-    fieldMap,
+    sharedFields,
+    localizedFields,
     admin,
     publicationEnabled,
     editorialEnabled,
@@ -1177,6 +1253,21 @@ export const defineContentType = <
     publicationEnabled,
   );
 
+  // Last, because the Stage 5A boundaries it enforces are stated in terms of
+  // everything the other resolvers have already settled.
+  const resolvedLocalization = resolveContentLocalization({
+    editorial: editorialEnabled,
+    fields: fieldMap,
+    id,
+    // The `{ enabled: false }` arm exists only so an explicit literal
+    // typechecks - the same widening `publicApi`, `search` and `editorial` do.
+    localization: localization as ContentLocalizationConfig | undefined,
+    publicApi: resolvedPublicApi,
+    publication: publicationEnabled,
+    search: resolvedSearch.enabled,
+    tableName,
+  });
+
   return {
     admin: resolvedAdmin,
     editorial: resolvedEditorial as ResolvedContentEditorialConfig<
@@ -1187,6 +1278,9 @@ export const defineContentType = <
     fields,
     id,
     indexes: resolvedIndexes,
+    localization: resolvedLocalization as ResolvedContentLocalizationConfig<
+      ContentLocalizationEnabled<TLocalization>
+    >,
     permissionModule,
     publication: {
       enabled: publicationEnabled as TPublication,
@@ -1205,12 +1299,14 @@ export const defineContentType = <
         ContentSearchEnabled<TSearch>,
         ContentEditorialEnabled<TEditorial>,
         ContentPreviewEnabled<TEditorial>,
-        ContentSchedulingEnabled<TEditorial>
+        ContentSchedulingEnabled<TEditorial>,
+        ContentLocalizationEnabled<TLocalization>
       >
     >({
       admin: resolvedAdmin,
       editorial: editorialEnabled,
       fields: fieldMap,
+      localization: resolvedLocalization,
       publicApi: resolvedPublicApi,
       publication: publicationEnabled,
     }),

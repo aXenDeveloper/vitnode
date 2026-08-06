@@ -39,6 +39,68 @@ export const contentIndexName = ({
   );
 
 /**
+ * The deterministic name of the generated translation table's primary key.
+ *
+ * Named explicitly rather than left to Drizzle's default so it survives the
+ * identifier-length clamp: a long base table name plus `_translations` plus
+ * `_itemId_languageId_pk` passes 63 characters easily, and Postgres truncates
+ * silently.
+ */
+export const contentTranslationPrimaryKeyName = (
+  translationTableName: string,
+): string =>
+  shortenIdentifier(`${translationTableName}_item_id_language_id_pk`);
+
+/**
+ * Every index the generated translation table carries.
+ *
+ * The composite primary key already serves lookups by `(itemId, languageId)` and
+ * by `itemId` alone (a B-tree can use any prefix of its key), so neither is
+ * repeated here. What it cannot serve:
+ *
+ * 1. `languageId` on its own - "every row in Polish", and the lookup a language
+ *    delete has to make before it is allowed to proceed,
+ * 2. one unique index per localized slug, scoped to the language - which is what
+ *    lets `/en/about` and `/pl/about` coexist while a second English `about` is
+ *    a 409.
+ */
+export const resolveContentTranslationIndexes = ({
+  contentTypeId,
+  localizedFields,
+  translationTableName,
+}: {
+  contentTypeId: string;
+  localizedFields: ContentFieldMap;
+  translationTableName: string;
+}): ResolvedContentIndex[] => {
+  const indexes: ResolvedContentIndex[] = [
+    named(translationTableName, { on: ["languageId"] }),
+    ...Object.entries(localizedFields)
+      .filter(([, fieldValue]) => fieldValue.kind === "slug")
+      .map(([name]) =>
+        named(translationTableName, {
+          on: ["languageId", name],
+          unique: true,
+        }),
+      ),
+  ];
+
+  const byName = new Map<string, ResolvedContentIndex>();
+  for (const index of indexes) {
+    const collision = byName.get(index.name);
+    if (collision) {
+      throw new ContentEngineError(
+        `Translation indexes on [${collision.on.join(", ")}] and [${index.on.join(", ")}] both resolve to the name "${index.name}".`,
+        { contentTypeId },
+      );
+    }
+    byName.set(index.name, index);
+  }
+
+  return indexes;
+};
+
+/**
  * Identity of an index for deduplication. Column order matters: an index on
  * `(status, createdAt)` cannot serve a lookup on `(createdAt, status)`.
  */

@@ -34,39 +34,64 @@ const shared = <TRequired extends boolean, TNullable extends boolean>(
   required: (args.required ?? false) as TRequired,
 });
 
+/**
+ * `localized` defaults to `false`, and the assertion keeps the literal the
+ * caller inferred - `?? false` alone would widen it back to `boolean`, and every
+ * `localized extends true` partition would resolve to the shared branch.
+ */
+const localizedOf = <TLocalized extends boolean>(
+  args: LocalizableArgs<TLocalized>,
+): TLocalized => (args.localized ?? false) as TLocalized;
+
+interface LocalizableArgs<TLocalized extends boolean = false> {
+  /**
+   * Store the value per language, in the generated translation table.
+   *
+   * Needs `localization: { enabled: true, defaultLocale }` on the content type.
+   * Only `text`, `textarea` and `slug` accept this.
+   */
+  localized?: TLocalized;
+}
+
 const text = <
   TRequired extends boolean = false,
   TNullable extends boolean = false,
   TDefault extends string | undefined = undefined,
+  TLocalized extends boolean = false,
 >(
-  args: SharedArgs<TRequired, TNullable> & {
-    defaultValue?: TDefault;
-    maxLength?: number;
-    minLength?: number;
-    unique?: boolean;
-  } = {},
-): ContentTextField<TRequired, TNullable, TDefault> => ({
+  args: LocalizableArgs<TLocalized> &
+    SharedArgs<TRequired, TNullable> & {
+      defaultValue?: TDefault;
+      maxLength?: number;
+      minLength?: number;
+      unique?: boolean;
+    } = {},
+): ContentTextField<TRequired, TNullable, TDefault, TLocalized> => ({
   ...args,
   ...shared(args),
   defaultValue: args.defaultValue as TDefault,
   kind: "text",
+  localized: localizedOf(args),
 });
 
 const textarea = <
   TRequired extends boolean = false,
   TNullable extends boolean = false,
   TDefault extends string | undefined = undefined,
+  TLocalized extends boolean = false,
 >(
-  args: SharedArgs<TRequired, TNullable> & {
-    defaultValue?: TDefault;
-    maxLength?: number;
-    minLength?: number;
-  } = {},
-): ContentTextareaField<TRequired, TNullable, TDefault> => ({
+  args: LocalizableArgs<TLocalized> &
+    SharedArgs<TRequired, TNullable> & {
+      defaultValue?: TDefault;
+      maxLength?: number;
+      minLength?: number;
+    } = {},
+): ContentTextareaField<TRequired, TNullable, TDefault, TLocalized> => ({
   ...args,
   ...shared(args),
   defaultValue: args.defaultValue as TDefault,
   kind: "textarea",
+  localized: localizedOf(args),
 });
 
 const number = <
@@ -136,16 +161,20 @@ const enumField = <
  * The slug is never re-derived by an update. Changing the title leaves the URL
  * alone; sending `slug` explicitly is the only way to move it.
  */
-const slug = <TSource extends string | undefined = undefined>(
-  args: {
+const slug = <
+  TSource extends string | undefined = undefined,
+  TLocalized extends boolean = false,
+>(
+  args: LocalizableArgs<TLocalized> & {
     description?: string;
     /** `varchar` length and the truncation point. Defaults to 160. */
     maxLength?: number;
     source?: TSource;
   } = {},
-): ContentSlugField<TSource> => ({
+): ContentSlugField<TSource, TLocalized> => ({
   ...args,
   kind: "slug",
+  localized: localizedOf(args),
   nullable: false,
   required: (args.source === undefined) as ContentSlugRequired<TSource>,
   source: args.source as TSource,

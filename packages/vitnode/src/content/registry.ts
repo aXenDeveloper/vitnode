@@ -74,6 +74,23 @@ export const validateContentTypes = (
     }
     byTable.set(definition.tableName, entry);
 
+    // The generated translation table shares one namespace with every base
+    // table, so a content type called `example_articles_translations` and a
+    // localized `example_articles` would collide - and the shortening clamp
+    // makes that reachable with two long names that differ only past character
+    // 63. Both directions are caught by holding one map.
+    if (definition.localization.enabled) {
+      const translationTable = definition.localization.translationTableName;
+      const duplicateTranslationTable = byTable.get(translationTable);
+      if (duplicateTranslationTable) {
+        throw new ContentEngineError(
+          `Translation table "${translationTable}" is claimed by both ${describe(duplicateTranslationTable)} and ${describe(entry)}. Rename one of the base tables.`,
+          { contentTypeId: definition.id },
+        );
+      }
+      byTable.set(translationTable, entry);
+    }
+
     // Permission modules are scoped per plugin, so only a collision inside one
     // plugin is ambiguous.
     const permissionKey = `${pluginId}:${definition.permissionModule}`;
@@ -110,7 +127,10 @@ export const validateContentTypes = (
     // `resolveContentIndexes` already rejects a collision inside one content
     // type. Postgres index names are unique per *schema*, though, so two
     // content types - from one plugin or from two - cannot share one either.
-    for (const index of definition.indexes) {
+    for (const index of [
+      ...definition.indexes,
+      ...definition.localization.translationIndexes,
+    ]) {
       const owner = byIndexName.get(index.name);
       if (owner) {
         throw new ContentEngineError(

@@ -1,6 +1,7 @@
 import type {
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_FILTERABLE_FIELD_KINDS,
+  CONTENT_LOCALIZATION_FALLBACKS,
   CONTENT_PUBLIC_EXPOSABLE_COLUMNS,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_PUBLICATION_STATUSES,
@@ -8,6 +9,7 @@ import type {
   CONTENT_SEARCH_TEXT_KINDS,
   CONTENT_SEARCH_TITLE_KINDS,
   CONTENT_SYSTEM_FIELDS,
+  CONTENT_TRANSLATION_SYSTEM_FIELDS,
 } from "./const";
 import type { ContentSchemas } from "./schemas";
 
@@ -17,6 +19,9 @@ export type ContentPublicationField =
   (typeof CONTENT_PUBLICATION_FIELDS)[number];
 
 export type ContentEditorialField = (typeof CONTENT_EDITORIAL_FIELDS)[number];
+
+export type ContentTranslationSystemField =
+  (typeof CONTENT_TRANSLATION_SYSTEM_FIELDS)[number];
 
 export type ContentPublicationStatus =
   (typeof CONTENT_PUBLICATION_STATUSES)[number];
@@ -42,6 +47,17 @@ export interface ContentFieldShared<
 > {
   /** Free text or an i18n key surfaced in AdminCP and OpenAPI. */
   description?: string;
+  /**
+   * The value is stored per language, in the generated translation table rather
+   * than on the base table.
+   *
+   * Declared here - on every kind - so `fieldValue.localized` reads off the
+   * descriptor union without a narrowing dance. Only the three kinds in
+   * {@link CONTENT_LOCALIZED_FIELD_KINDS} accept it: the other builders do not
+   * take the argument at all, so `field.boolean({ localized: true })` is a
+   * compile error, and `defineContentType` refuses it again at runtime.
+   */
+  localized?: boolean;
   /** Column accepts NULL, and `null` is a legal value. */
   nullable: TNullable;
   /** Must be present in the create payload. */
@@ -52,12 +68,17 @@ export interface ContentTextField<
   TRequired extends boolean = boolean,
   TNullable extends boolean = boolean,
   TDefault extends string | undefined = string | undefined,
+  TLocalized extends boolean = boolean,
 > extends ContentFieldShared<TRequired, TNullable> {
   // Declared non-optional (but possibly `undefined`) so `HasColumnDefault` can
   // tell "no default" from "defaulted": an optional property would always
   // include `undefined` in its type and the distinction would be lost.
   defaultValue: TDefault;
   kind: "text";
+  // Non-optional and literal, for the same reason `required` and `nullable` are:
+  // every partition in this file keys off `{ localized: true }`, and an optional
+  // `boolean | undefined` would resolve every field to the shared branch.
+  localized: TLocalized;
   maxLength?: number;
   minLength?: number;
   /** Adds a unique index on the column. See {@link ContentIndexInput}. */
@@ -86,8 +107,10 @@ export type ContentSlugRequired<TSource> = TSource extends string
  */
 export interface ContentSlugField<
   TSource extends string | undefined = string | undefined,
+  TLocalized extends boolean = boolean,
 > extends ContentFieldShared<ContentSlugRequired<TSource>, false> {
   kind: "slug";
+  localized: TLocalized;
   /** `varchar` length and the truncation point. Defaults to 160. */
   maxLength?: number;
   source: TSource;
@@ -97,9 +120,11 @@ export interface ContentTextareaField<
   TRequired extends boolean = boolean,
   TNullable extends boolean = boolean,
   TDefault extends string | undefined = string | undefined,
+  TLocalized extends boolean = boolean,
 > extends ContentFieldShared<TRequired, TNullable> {
   defaultValue: TDefault;
   kind: "textarea";
+  localized: TLocalized;
   maxLength?: number;
   minLength?: number;
 }
@@ -279,6 +304,43 @@ type RequiredFieldKeys<TFields> = {
 }[keyof TFields];
 
 // ---------------------------------------------------------------------------
+// Shared / localized partition
+//
+// One rule, stated once as a type and once (in `partitionContentFields`) as
+// runtime data: a field is localized when its descriptor carries the literal
+// `localized: true`, and shared otherwise. The erased
+// `AnyContentTypeDefinition` carries `localized?: boolean`, which does not
+// extend `true`, so every field of an erased definition is shared - which is
+// exactly how a Stage 1-4 content type behaved before localization existed.
+// ---------------------------------------------------------------------------
+
+type LocalizedFieldKeys<TFields> = {
+  [K in keyof TFields]: TFields[K] extends { localized: true } ? K : never;
+}[keyof TFields];
+
+type SharedFieldKeys<TFields> = Exclude<
+  keyof TFields,
+  LocalizedFieldKeys<TFields>
+>;
+
+/**
+ * A create-shaped object over a subset of the field map: required fields stay
+ * required, everything else is optional, and each value is inferred from its own
+ * descriptor.
+ */
+type CreateValuesOf<TFields, TKeys extends keyof TFields> = Prettify<
+  {
+    [K in Exclude<TKeys, RequiredFieldKeys<TFields>>]?: ContentFieldInput<
+      TFields[K]
+    >;
+  } & {
+    [K in Extract<TKeys, RequiredFieldKeys<TFields>>]: ContentFieldInput<
+      TFields[K]
+    >;
+  }
+>;
+
+// ---------------------------------------------------------------------------
 // Admin metadata
 // ---------------------------------------------------------------------------
 
@@ -300,8 +362,13 @@ type ContentEditorialColumn<TEditorial extends boolean> =
 
 /**
  * Every column name the admin config and `indexes` may address: the declared
- * fields, the system columns, and whichever generated columns the content type
- * opted into.
+ * *shared* fields, the system columns, and whichever generated columns the
+ * content type opted into.
+ *
+ * A localized field is absent on purpose. It is not a column on the base table,
+ * so an index on it, a sort by it or a DataTable column showing it would all
+ * address something that does not exist. Stage 5B adds the AdminCP locale tabs
+ * that give localized values a place to appear.
  */
 type ContentAddressableColumn<
   TFields,
@@ -311,7 +378,7 @@ type ContentAddressableColumn<
   | ContentEditorialColumn<TEditorial>
   | ContentPublicationColumn<TPublication>
   | ContentSystemField
-  | keyof TFields;
+  | SharedFieldKeys<TFields>;
 
 export interface ContentAdminListConfig<
   TFields = ContentFieldMap,
@@ -326,9 +393,9 @@ export interface ContentAdminListConfig<
    * Allowlist for `orderBy`. System columns - and the publication columns when
    * enabled - are always allowed and need no entry here.
    */
-  orderableFields?: (keyof TFields)[];
-  /** Only `text` and `textarea` fields may be searched. */
-  searchableFields?: (keyof TFields)[];
+  orderableFields?: SharedFieldKeys<TFields>[];
+  /** Only shared `text` and `textarea` fields may be searched. */
+  searchableFields?: SharedFieldKeys<TFields>[];
 }
 
 export interface ContentAdminConfig<
@@ -336,7 +403,7 @@ export interface ContentAdminConfig<
   TPublication extends boolean = boolean,
   TEditorial extends boolean = boolean,
 > {
-  form?: { fields?: (keyof TFields)[] };
+  form?: { fields?: SharedFieldKeys<TFields>[] };
   label: ContentAdminLabel;
   list?: ContentAdminListConfig<TFields, TPublication, TEditorial>;
   navigation?: { enabled?: boolean };
@@ -345,8 +412,14 @@ export interface ContentAdminConfig<
    * "Articles" -> `articles`.
    */
   permissionModule?: string;
-  /** Field used as the human-readable title in toasts and relation pickers. */
-  titleField?: keyof TFields;
+  /**
+   * Field used as the human-readable title in toasts and relation pickers.
+   *
+   * Shared fields only. A localized title has a different value per language, so
+   * naming one here would make a toast depend on whose locale the reader is in;
+   * Stage 5B gives the AdminCP a locale-aware title of its own.
+   */
+  titleField?: SharedFieldKeys<TFields>;
 }
 
 /**
@@ -756,6 +829,139 @@ type ContentEditorialColumns<TDefinition> = TDefinition extends {
   : Record<never, never>;
 
 // ---------------------------------------------------------------------------
+// Localization
+// ---------------------------------------------------------------------------
+
+export type ContentLocalizationFallback =
+  (typeof CONTENT_LOCALIZATION_FALLBACKS)[number];
+
+/**
+ * Opts a content type into per-language content: the fields marked
+ * `localized: true` move off the base table into a generated translation table,
+ * one row per language.
+ *
+ * Nothing about the *UI* language changes - that is `core_languages_words` and
+ * the ordinary i18n system. This is about the records themselves: an article
+ * that exists in English and in Polish, with its own title, slug and body in
+ * each.
+ *
+ * `enabled` is literal `true` for the same reason every other opt-in's is: every
+ * conditional keys off `{ enabled: true }`, and a widened `boolean` would
+ * silently resolve to "not localized".
+ */
+export interface ContentLocalizationConfig {
+  /**
+   * The locale every record is created in, and the one translation a record can
+   * never be without. Must name a row in `core_languages`, which is checked
+   * against the database once, at boot - see `assertContentLocalizationLanguages`.
+   */
+  defaultLocale: string;
+  enabled: true;
+  /**
+   * What a public read should do for a locale with no translation. Resolved now
+   * and acted on in Stage 5C; `"none"` is the default because it is the only
+   * answer that cannot silently publish the wrong language.
+   */
+  fallback?: ContentLocalizationFallback;
+}
+
+/**
+ * `localization` after `defineContentType` has filled in every default.
+ *
+ * Generic over `enabled` for the same reason `publication` and `editorial` are:
+ * a widened `boolean` would make every definition equally (un)localized, so
+ * `LocalizedContentTypeDefinition` would only ever match after a cast.
+ */
+export interface ResolvedContentLocalizationConfig<
+  TEnabled extends boolean = boolean,
+> {
+  defaultLocale: string;
+  enabled: TEnabled;
+  fallback: ContentLocalizationFallback;
+  /** The generated translation table's indexes, named and deduplicated. */
+  translationIndexes: ResolvedContentIndex[];
+  /** `<tableName>_translations`, shortened to fit Postgres' identifier limit. */
+  translationTableName: string;
+}
+
+/**
+ * Whether a `localization` argument opted in.
+ *
+ * Read back off the argument for the same reason `ContentSearchEnabled` is: the
+ * whole object is inferred as one type parameter, and an intersection member is
+ * not an inference site, so this is the only way the literal survives.
+ */
+export type ContentLocalizationEnabled<TLocalization> = TLocalization extends {
+  enabled: true;
+}
+  ? true
+  : false;
+
+/** Field names whose value lives in the translation table. */
+export type ContentLocalizedFieldName<TDefinition> = LocalizedFieldKeys<
+  ContentFieldsOf<TDefinition>
+> &
+  string;
+
+/** Field names whose value lives on the base table. */
+export type ContentSharedFieldName<TDefinition> = SharedFieldKeys<
+  ContentFieldsOf<TDefinition>
+> &
+  string;
+
+/**
+ * The localized half of a create payload - one locale's worth of values.
+ *
+ * Empty (`{}`) for a content type with no localized fields, which is what makes
+ * `translation:` impossible to fill in by accident on a Stage 1-4 definition.
+ */
+export type ContentLocalizedValues<TDefinition> = CreateValuesOf<
+  ContentFieldsOf<TDefinition>,
+  keyof ContentFieldsOf<TDefinition> &
+    LocalizedFieldKeys<ContentFieldsOf<TDefinition>>
+>;
+
+/** The shared half of a create payload - everything on the base table. */
+export type ContentSharedValues<TDefinition> = CreateValuesOf<
+  ContentFieldsOf<TDefinition>,
+  keyof ContentFieldsOf<TDefinition> &
+    SharedFieldKeys<ContentFieldsOf<TDefinition>>
+>;
+
+/** Every localized field optional, and never empty - see `schemas.translation`. */
+export type ContentLocalizedUpdateValues<TDefinition> = Prettify<
+  Partial<ContentLocalizedValues<TDefinition>>
+>;
+
+/** One translation row, as the service and the generated routes return it. */
+export interface ContentTranslationRow<TDefinition> {
+  createdAt: Date;
+  itemId: number;
+  languageId: number;
+  /** The canonical `core_languages.code`, never the caller's casing. */
+  locale: string;
+  updatedAt: Date;
+  values: ContentLocalizedValues<TDefinition>;
+  version: number;
+}
+
+/**
+ * One translation without its values.
+ *
+ * What the list route returns, and deliberately so: a locale tab strip needs to
+ * know which languages exist and how stale each one is, not to drag every
+ * article body in every language across the wire to find out.
+ */
+export interface ContentTranslationMeta {
+  createdAt: Date;
+  itemId: number;
+  languageId: number;
+  locale: string;
+  updatedAt: Date;
+  version: number;
+}
+
+// ---------------------------------------------------------------------------
 // Definition
 // ---------------------------------------------------------------------------
 
@@ -818,6 +1024,18 @@ export type SchedulableContentTypeDefinition =
     publication: { enabled: true };
   };
 
+/**
+ * A content type whose records exist in more than one language.
+ *
+ * An intersection rather than a tenth type argument, for the same reason
+ * {@link PublicContentTypeDefinition} is one: `enabled` is the only thing the
+ * translation layer needs pinned, and narrowing just that keeps every concrete
+ * definition assignable to `AnyContentTypeDefinition`.
+ */
+export type LocalizedContentTypeDefinition = AnyContentTypeDefinition & {
+  localization: { enabled: true };
+};
+
 export interface ContentTypeDefinition<
   TId extends string = string,
   TFields = ContentFieldMap,
@@ -828,6 +1046,7 @@ export interface ContentTypeDefinition<
   TEditorialEnabled extends boolean = boolean,
   TPreviewEnabled extends boolean = boolean,
   TSchedulingEnabled extends boolean = boolean,
+  TLocalizationEnabled extends boolean = boolean,
 > {
   admin: ResolvedContentAdminConfig;
   /** Editorial workflow, or the disabled default when `editorial` is omitted. */
@@ -840,6 +1059,11 @@ export interface ContentTypeDefinition<
   id: TId;
   /** Declared indexes plus the automatic ones, deduplicated and named. */
   indexes: ResolvedContentIndex[];
+  /**
+   * Per-language content, or the disabled default when `localization` is
+   * omitted.
+   */
+  localization: ResolvedContentLocalizationConfig<TLocalizationEnabled>;
   /** Derived from `admin.permissionModule` or `admin.label.plural`. */
   permissionModule: string;
   publicApi: ResolvedContentPublicApiConfig<TPublicField, TPublicEnabled>;
@@ -855,7 +1079,8 @@ export interface ContentTypeDefinition<
       TSearchEnabled,
       TEditorialEnabled,
       TPreviewEnabled,
-      TSchedulingEnabled
+      TSchedulingEnabled,
+      TLocalizationEnabled
     >
   >;
   /** Search synchronization, or the disabled default when `search` is omitted. */
@@ -872,47 +1097,56 @@ export type ContentFieldsOf<TDefinition> = TDefinition extends {
   ? TFields
   : never;
 
+/**
+ * One base row.
+ *
+ * Shared fields only: a localized field's value lives on the translation table,
+ * so it is not a column here and never comes back from a base read. For a
+ * content type without localization every field is shared, so this is exactly
+ * the type it always was.
+ */
 export type ContentSelect<TDefinition> = Prettify<
   ContentEditorialColumns<TDefinition> &
     ContentPublicationColumns<TDefinition> & {
-      [K in keyof ContentFieldsOf<TDefinition>]: ContentFieldValue<
+      [K in SharedFieldKeys<ContentFieldsOf<TDefinition>>]: ContentFieldValue<
         ContentFieldsOf<TDefinition>[K]
       >;
     } & { createdAt: Date; id: number; updatedAt: Date }
 >;
 
-export type ContentCreateInput<TDefinition> = Prettify<
-  {
-    [
-      K in Exclude<
-        keyof ContentFieldsOf<TDefinition>,
-        RequiredFieldKeys<ContentFieldsOf<TDefinition>>
-      >
-    ]?: ContentFieldInput<ContentFieldsOf<TDefinition>[K]>;
-  } & {
-    [K in RequiredFieldKeys<ContentFieldsOf<TDefinition>>]: ContentFieldInput<
-      ContentFieldsOf<TDefinition>[K]
-    >;
-  }
->;
+/** The base-table half of a create payload. See {@link ContentSharedValues}. */
+export type ContentCreateInput<TDefinition> = ContentSharedValues<TDefinition>;
 
 export type ContentUpdateInput<TDefinition> = Prettify<
   Partial<ContentCreateInput<TDefinition>>
 >;
 
+/**
+ * Every field name the content type declares, localized ones included.
+ *
+ * Use {@link ContentSharedFieldName} where a *column on the base table* is
+ * meant - which is most places.
+ */
 export type ContentFieldName<TDefinition> = keyof ContentFieldsOf<TDefinition> &
   string;
 
+/**
+ * Shared field names of one or more kinds.
+ *
+ * Deliberately shared-only: everything derived from this - filters, ordering,
+ * relation pickers - addresses a column on the *base* table, and a localized
+ * field does not have one.
+ */
 type FieldNamesOfKind<TDefinition, TKind extends ContentFieldKind> = string &
   {
     [
-      K in keyof ContentFieldsOf<TDefinition>
+      K in SharedFieldKeys<ContentFieldsOf<TDefinition>>
     ]: ContentFieldsOf<TDefinition>[K] extends {
       kind: TKind;
     }
       ? K
       : never;
-  }[keyof ContentFieldsOf<TDefinition>];
+  }[SharedFieldKeys<ContentFieldsOf<TDefinition>>];
 
 /**
  * Kinds the generated filter schema understands, derived from the one runtime
@@ -957,7 +1191,7 @@ export type ContentFilterInput<TDefinition> = Partial<
  * actually opted in.
  */
 export type ContentOrderableFieldName<TDefinition> =
-  | ContentFieldName<TDefinition>
+  | ContentSharedFieldName<TDefinition>
   | ContentSystemField
   | (TDefinition extends { editorial: { enabled: true } }
       ? ContentEditorialField
