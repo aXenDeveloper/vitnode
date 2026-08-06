@@ -107,14 +107,14 @@ export const core_content_revisions = pgTable(
     // nothing at all for the non-localized case it exists to protect.
     uniqueIndex("core_content_revisions_item_version_unique")
       .on(t.contentTypeId, t.itemId, t.version)
-      .where(sql`language_id IS NULL`),
+      .where(sql`"languageId" IS NULL`),
     uniqueIndex("core_content_revisions_translation_version_unique")
       .on(t.contentTypeId, t.itemId, t.languageId, t.version)
-      .where(sql`language_id IS NOT NULL`),
+      .where(sql`"languageId" IS NOT NULL`),
     // The locale history read: one record's revisions in one language, newest
     // first. The partial unique index above cannot serve it - a partial index is
     // only usable for queries the planner can prove match its predicate, and the
-    // history list does not filter on `language_id IS NOT NULL` in those terms.
+    // history list does not filter on `"languageId" IS NOT NULL` in those terms.
     index("core_content_revisions_language_idx").on(
       t.contentTypeId,
       t.itemId,

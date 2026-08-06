@@ -24,4 +24,9 @@ export const EXAMPLE_MIGRATIONS = [
   // The Stage 5A localized fixture: a base table with only its shared field, and
   // a translation table holding the localized ones.
   "0029_add_example_localized_articles.sql",
+  // Stage 5B. Additive only: `languageId` arrives nullable, so every existing
+  // revision is a shared one, and the translation lifecycle columns arrive with
+  // `DEFAULT 'draft'`, so every translation written while Stage 5A was current
+  // becomes a draft rather than being silently published.
+  "0030_add_translation_editorial.sql",
 ];

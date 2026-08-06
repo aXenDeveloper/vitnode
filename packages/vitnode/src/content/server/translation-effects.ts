@@ -27,7 +27,10 @@ const payloadFor = (
     contentId: outcome.row.itemId,
     languageId: outcome.languageId,
     locale: outcome.locale,
-    revisionId: outcome.revisionId ?? undefined,
+    // Absent rather than `undefined` when the content type keeps no history: a
+    // listener that acts on a revision must not be handed one that is not there,
+    // and `"revisionId" in payload` is how it checks.
+    ...(outcome.revisionId === null ? {} : { revisionId: outcome.revisionId }),
     version: outcome.version,
   };
 

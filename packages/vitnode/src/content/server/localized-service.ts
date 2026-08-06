@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 
+import type { ContentActor } from "../revisions";
 import type {
   AnyContentTypeDefinition,
   ContentLocalizedValues,
@@ -8,6 +9,7 @@ import type {
   ContentTranslationRow,
 } from "../types";
 import type { ContentDatabase, ContentService } from "./service";
+import type { ContentTranslationEditorialService } from "./translation-editorial-service";
 import type { ContentTranslationModel } from "./translation-model";
 
 import { ContentEngineError } from "../errors";
@@ -20,6 +22,16 @@ export interface ContentLocalizedCreateInput<TDefinition> {
 }
 
 export interface ContentLocalizedCreateOptions {
+  /**
+   * Who is creating the record.
+   *
+   * Supply it on an editorial content type and the default translation gets its
+   * own `create` revision, in the same transaction as the row - which is what
+   * makes the earliest restorable English state the one the record was created
+   * with. Without it (or without `editorial`) the translation is written through
+   * the plain repository and leaves no history, exactly as in Stage 5A.
+   */
+  actor?: ContentActor;
   /**
    * The locale the first translation is written in. Defaults to - and, today,
    * may only be - the content type's configured default locale.
@@ -62,11 +74,20 @@ export const createContentLocalizedService = <
 >({
   c,
   definition,
+  editorial,
   service,
   translations,
 }: {
   c: Context;
   definition: TDefinition;
+  /**
+   * The translation editorial layer, when the content type has one.
+   *
+   * Optional so a localized content type without `editorial` keeps exactly the
+   * Stage 5A behaviour: the default translation is written through the repository
+   * and leaves no history, because there is no history to leave.
+   */
+  editorial?: ContentTranslationEditorialService<TDefinition>;
   service: ContentService<TDefinition>;
   translations: ContentTranslationModel<TDefinition>;
 }): ContentLocalizedService<TDefinition> => {
@@ -105,6 +126,23 @@ export const createContentLocalizedService = <
         const language = await translations.resolveDefaultLanguage({ tx });
 
         const row = await service.create(shared, { tx });
+
+        // Through the editorial layer when there is one and an actor to attribute
+        // it to, so the default translation's first values are restorable rather
+        // than being the one state no revision ever recorded. Same transaction
+        // either way: the base row and its default translation still commit or
+        // roll back together.
+        if (editorial && options.actor) {
+          const outcome = await editorial.create(
+            row.id,
+            language.locale,
+            translation,
+            { actor: options.actor, tx },
+          );
+
+          return { row, translation: outcome.row };
+        }
+
         const created = await translations.create(
           row.id,
           language.locale,

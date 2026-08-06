@@ -63,13 +63,17 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
    * Creates a base row and its default translation in one transaction, or
    * `undefined` when the content type is not localized.
    *
-   * `undefined` rather than a throwing stub, matching `publicService` and
-   * `editorialService`: the check reads naturally in code that does not know
-   * which content type it was handed, and TypeScript refuses the call until it
-   * has been made.
+   * `options.pluginId` is optional and additive: supply it on an editorial content
+   * type and the default translation gets its own `create` revision, stamped with
+   * the right owner. Omit it - as every Stage 5A caller does - and the translation
+   * is written through the plain repository exactly as before.
    */
   localizedService:
-    ((c: Context) => ContentLocalizedService<TDefinition>) | undefined;
+    | ((
+        c: Context,
+        options?: { pluginId?: string },
+      ) => ContentLocalizedService<TDefinition>)
+    | undefined;
   /**
    * The read-only public repository, or `undefined` when the content type has
    * no `publicApi`.
@@ -247,10 +251,32 @@ export const createContentModel = <
       : undefined,
     localization: definition.localization,
     localizedService: localized
-      ? (c: Context) =>
-          createContentLocalizedService({
+      ? (c: Context, options?: { pluginId?: string }) => {
+          const translations = buildTranslations(c);
+          const owner = options?.pluginId;
+
+          return createContentLocalizedService({
             c,
             definition,
+            // Shares the request's translation model with the editorial layer, so
+            // both halves of an atomic create resolve the same language through
+            // the same per-request cache.
+            //
+            // Built only when the caller named the owning plugin: a revision is
+            // stamped with its owner, and inventing one would put a wrong value in
+            // the column the cleanup job keys off.
+            editorial:
+              definition.editorial.enabled &&
+              translationSchemas &&
+              owner !== undefined
+                ? createContentTranslationEditorialService({
+                    c,
+                    definition,
+                    pluginId: owner,
+                    schemas: translationSchemas,
+                    translations,
+                  })
+                : undefined,
             service: createContentService({
               c,
               columns,
@@ -258,8 +284,9 @@ export const createContentModel = <
               schemas,
               table,
             }),
-            translations: buildTranslations(c),
-          })
+            translations,
+          });
+        }
       : undefined,
     publicService: definition.publicApi.enabled
       ? (c: Context) =>
