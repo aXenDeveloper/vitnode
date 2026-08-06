@@ -15,6 +15,10 @@ export {
 } from "./column-builders";
 export type { ColumnReferenceThunk } from "./column-builders";
 export { contentEditorialEffects } from "./editorial-effects";
+export type {
+  ContentEditorialEffectsOptions,
+  ContentEditorialEffectsResult,
+} from "./editorial-effects";
 export { createContentEditorialService } from "./editorial-service";
 export type {
   ContentEditorialOptions,

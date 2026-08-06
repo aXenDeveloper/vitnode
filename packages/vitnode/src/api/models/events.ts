@@ -100,6 +100,26 @@ export interface EventsApiPlugin {
   publish: (c: Context, envelope: EventEnvelope) => Promise<EventEmitResult>;
 }
 
+export interface EventEmitOptions {
+  /**
+   * Who owns the *domain event*, when that is not the plugin handling the
+   * request.
+   *
+   * Ownership normally comes from `c.get("plugin")`, which is right for a route:
+   * whoever handled the request emitted the event. It is wrong for anything that
+   * runs on someone else's behalf. A queue handler is the clear case - core owns
+   * the handler, so the context says `@vitnode/core`, but a scheduled
+   * `content.example.article.published` is the example plugin's event and always
+   * was.
+   *
+   * Pass it explicitly rather than swapping `c.get("plugin")` for the duration.
+   * The context is shared with the logger, the permission checks and every other
+   * model on the request; impersonating a plugin inside it would change all of
+   * them to fix one field.
+   */
+  pluginId?: string;
+}
+
 export class EventsModel {
   constructor(c: Context) {
     this.c = c;
@@ -117,10 +137,17 @@ export class EventsModel {
    * AFTER the writes the event describes have committed - after your awaited
    * inserts/updates, and after any enclosing `db.transaction` callback has
    * returned.
+   *
+   * **Not throwing is the contract, not an oversight.** An interactive mutation
+   * has already committed by the time this runs, and a listener that fell over
+   * is not a reason to tell the person their save failed. A caller that *does*
+   * need delivery to be retried - the scheduled-effects task is the one in
+   * core - reads `failures` and decides for itself.
    */
   async emit<K extends VitNodeEventName>(
     name: K,
     payload: VitNodeEvents[K],
+    options?: EventEmitOptions,
   ): Promise<EventEmitResult> {
     const admin = this.c.get("admin");
     const user = this.c.get("user");
@@ -129,7 +156,8 @@ export class EventsModel {
       name,
       payload,
       emittedAt: new Date(),
-      pluginId: this.c.get("plugin")?.id ?? "@vitnode/core",
+      pluginId:
+        options?.pluginId ?? this.c.get("plugin")?.id ?? "@vitnode/core",
       actor: admin
         ? { type: "admin", id: admin.user.id }
         : user

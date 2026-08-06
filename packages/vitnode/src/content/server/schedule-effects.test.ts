@@ -78,9 +78,34 @@ const harness = ({ registered = true }: { registered?: boolean } = {}) => {
   return { c };
 };
 
+/** What `EventsModel.emit` reports when every listener ran. */
+const eventDelivered = {
+  delivered: 2,
+  eventId: "event-1",
+  failures: [],
+  status: "delivered",
+};
+
+const eventFailed = {
+  delivered: 0,
+  eventId: "event-1",
+  failures: [
+    {
+      error: "Service unavailable",
+      listener: "send-notification",
+      module: "notifications",
+      pluginId: PLUGIN_ID,
+    },
+  ],
+  status: "delivered",
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
-  contentEditorialEffects.mockResolvedValue({ search: null });
+  contentEditorialEffects.mockResolvedValue({
+    event: eventDelivered,
+    search: null,
+  });
   dispatchContentRevalidation.mockResolvedValue({ attempted: 1, delivered: 1 });
   recordContentScheduleEffectsError.mockResolvedValue(undefined);
 });
@@ -104,6 +129,30 @@ describe("runContentScheduleEffects", () => {
     expect(contentEditorialEffects.mock.calls[0][3]).toEqual({
       pluginId: PLUGIN_ID,
       scheduledBy: 3,
+      scheduleId: 55,
+    });
+  });
+
+  it("credits the content type's plugin, not the core queue handler", async () => {
+    // Core owns `content-schedule-effects`, so `c.get("plugin")` says
+    // `@vitnode/core` while this runs. The event still belongs to whoever owns
+    // the content type, and the owner has to be passed explicitly to say so.
+    const { c } = harness();
+
+    await runContentScheduleEffects(c, payload());
+
+    expect(contentEditorialEffects.mock.calls[0][3]).toMatchObject({
+      pluginId: PLUGIN_ID,
+    });
+  });
+
+  it("carries the schedule id, so a listener can be idempotent about retries", async () => {
+    const { c } = harness();
+
+    await runContentScheduleEffects(c, payload());
+
+    expect(contentEditorialEffects.mock.calls[0][3]).toMatchObject({
+      scheduleId: 55,
     });
   });
 
@@ -177,6 +226,7 @@ describe("runContentScheduleEffects", () => {
     it("throws when the search engine refused the document", async () => {
       const { c } = harness();
       contentEditorialEffects.mockResolvedValue({
+        event: eventDelivered,
         search: { action: "upsert", documentId: "x", error: new Error("down") },
       });
 
@@ -190,6 +240,7 @@ describe("runContentScheduleEffects", () => {
       // other, and both are retried together afterwards.
       const { c } = harness();
       contentEditorialEffects.mockResolvedValue({
+        event: eventDelivered,
         search: { action: "upsert", documentId: "x", error: new Error("down") },
       });
 
@@ -209,6 +260,155 @@ describe("runContentScheduleEffects", () => {
       await expect(
         runContentScheduleEffects(c, payload()),
       ).resolves.toMatchObject({ status: "delivered" });
+    });
+  });
+
+  describe("multi-origin cache delivery", () => {
+    it("retries when one of two origins refused it", async () => {
+      // The dangerous case, and the one that used to pass. Two web apps behind
+      // one API: if only one expired its cache after a scheduled unpublish, the
+      // other keeps serving the withdrawn page - and calling that "delivered"
+      // means it never gets another chance to.
+      const { c } = harness();
+      dispatchContentRevalidation.mockResolvedValue({
+        attempted: 2,
+        delivered: 1,
+      });
+
+      await expect(runContentScheduleEffects(c, payload())).rejects.toThrow(
+        /1\/2 web origins/,
+      );
+    });
+
+    it("records which origins are still stale", async () => {
+      const { c } = harness();
+      dispatchContentRevalidation.mockResolvedValue({
+        attempted: 3,
+        delivered: 2,
+      });
+
+      await expect(runContentScheduleEffects(c, payload())).rejects.toThrow();
+
+      expect(recordContentScheduleEffectsError).toHaveBeenCalledWith(
+        expect.anything(),
+        55,
+        expect.stringContaining("cache: 2/3 web origins"),
+      );
+    });
+
+    it("succeeds when every origin accepted it", async () => {
+      const { c } = harness();
+      dispatchContentRevalidation.mockResolvedValue({
+        attempted: 2,
+        delivered: 2,
+      });
+
+      await expect(
+        runContentScheduleEffects(c, payload()),
+      ).resolves.toMatchObject({ status: "delivered" });
+    });
+  });
+
+  describe("event delivery", () => {
+    it("retries when a listener failed", async () => {
+      // `EventsModel.emit` reports rather than throws, so a failure is only
+      // visible in the result. Discarding it made a dead notification listener
+      // indistinguishable from a delivered one.
+      const { c } = harness();
+      contentEditorialEffects.mockResolvedValue({
+        event: eventFailed,
+        search: null,
+      });
+
+      await expect(runContentScheduleEffects(c, payload())).rejects.toThrow(
+        /event/,
+      );
+    });
+
+    it("keeps enough detail to find the listener that broke", async () => {
+      const { c } = harness();
+      contentEditorialEffects.mockResolvedValue({
+        event: eventFailed,
+        search: null,
+      });
+
+      await expect(runContentScheduleEffects(c, payload())).rejects.toThrow();
+
+      const [, , message] = recordContentScheduleEffectsError.mock.calls[0] as [
+        unknown,
+        number,
+        string,
+      ];
+      expect(message).toContain("notifications");
+      expect(message).toContain("send-notification");
+      expect(message).toContain("Service unavailable");
+    });
+
+    it("still expires the cache when the event failed", async () => {
+      const { c } = harness();
+      contentEditorialEffects.mockResolvedValue({
+        event: eventFailed,
+        search: null,
+      });
+
+      await expect(runContentScheduleEffects(c, payload())).rejects.toThrow();
+
+      expect(dispatchContentRevalidation).toHaveBeenCalledTimes(1);
+    });
+
+    it("treats an event with no listeners as delivered", async () => {
+      // Nobody subscribed is not a failure. `delivered: 0` with no failures is
+      // the ordinary shape for an event nothing listens to.
+      const { c } = harness();
+      contentEditorialEffects.mockResolvedValue({
+        event: { ...eventDelivered, delivered: 0 },
+        search: null,
+      });
+
+      await expect(
+        runContentScheduleEffects(c, payload()),
+      ).resolves.toMatchObject({ status: "delivered" });
+    });
+
+    it("combines every outstanding failure into one message", async () => {
+      const { c } = harness();
+      contentEditorialEffects.mockResolvedValue({
+        event: eventFailed,
+        search: {
+          action: "upsert",
+          documentId: "x",
+          error: new Error("Elasticsearch unavailable"),
+        },
+      });
+      dispatchContentRevalidation.mockResolvedValue({
+        attempted: 2,
+        delivered: 1,
+      });
+
+      await expect(runContentScheduleEffects(c, payload())).rejects.toThrow();
+
+      const [, , message] = recordContentScheduleEffectsError.mock.calls[0] as [
+        unknown,
+        number,
+        string,
+      ];
+      expect(message).toContain("event:");
+      expect(message).toContain("search: Elasticsearch unavailable");
+      expect(message).toContain("cache: 1/2 web origins");
+    });
+
+    it("clears everything once one run gets all three through", async () => {
+      const { c } = harness();
+
+      await expect(
+        runContentScheduleEffects(c, payload()),
+      ).resolves.toMatchObject({ status: "delivered" });
+
+      expect(recordContentScheduleEffectsError).toHaveBeenCalledWith(
+        expect.anything(),
+        55,
+        null,
+      );
     });
   });
 

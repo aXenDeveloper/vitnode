@@ -295,7 +295,7 @@ core event - `changedFields` narrows to that content type's own field names.
     },
     scheduleId: {
       description:
-        "Scheduled and schedule_cancelled only - the schedule row this is about.",
+        "The schedule row this is about. Always present on scheduled and schedule_cancelled; present on published and unpublished only when a schedule fired them, where it doubles as the idempotency key for at-least-once retries.",
       type: "number",
     },
     scheduledFor: {
@@ -318,10 +318,78 @@ core event - `changedFields` narrows to that content type's own field names.
 Booking a schedule changes no field value, so it consumes no version and writes
 no revision - `scheduled` is a different thing from `published`. When the
 schedule fires, the resulting transition emits the ordinary `published` or
-`unpublished`, once, with `scheduledBy` set.
+`unpublished` with `scheduledBy` and `scheduleId` set.
 
-The envelope already carries the actor, the emitting plugin and the timestamp,
-so the payloads stay minimal.
+### A scheduled event may arrive twice
+
+Announcements for a scheduled transition run in a
+[durable queue task](/docs/dev/content-engine/scheduling#all-three-have-to-land)
+that retries whenever the event, the search write or a cache origin failed - and
+a retry re-emits an event that some listeners already received. Delivery is
+**at-least-once**, deliberately: the alternative is a transactional outbox,
+which Stage 4 does not have.
+
+A listener whose work must happen exactly once keys off `scheduleId`, which is
+stable across every attempt at the same booking:
+
+```ts
+handler: async (c, payload) => {
+  if (payload.scheduleId && (await alreadyDone(payload.scheduleId))) return;
+
+  await sendTheAnnouncement(payload.contentId);
+};
+```
+
+An interactive publish is emitted once, by the route that performed it, and
+carries no `scheduleId`.
+
+### The envelope's owner is the content type's plugin
+
+`pluginId` on the envelope answers "whose event is this", not "who was running
+at the time". Those come apart the moment something happens on a schedule: core
+owns the queue handler, so `c.get("plugin")` says `@vitnode/core`, while
+`content.example.article.published` belongs to the example plugin as much as it
+ever did.
+
+```text
+queue task owner    @vitnode/core        ← who runs the handler
+event envelope      @vitnode/example     ← who owns the content type
+```
+
+The Content Engine passes the owner explicitly on every emit, so ownership does
+not depend on which route module or queue handler invoked it. Your own code can
+do the same when it emits on someone else's behalf:
+
+```ts
+await c.get("events").emit("blog.post.created", payload, {
+  pluginId: "@vitnode/blog",
+});
+```
+
+Omit the option and nothing changes: the envelope falls back to
+`c.get("plugin")` and then to `@vitnode/core`, exactly as before. Pass it
+rather than swapping `c.get("plugin")` - that context is shared with the
+logger, the permission checks and every other model on the request.
+
+The envelope also carries the actor and the timestamp, so the payloads stay
+minimal.
+
+### Failures are reported, not thrown
+
+`emit()` never throws. Listeners run after the write it describes has
+committed, and a broken listener is not a reason to tell somebody their save
+failed - so a failure comes back in the result instead:
+
+```ts
+const result = await c.get("events").emit("blog.post.created", payload);
+
+result.delivered; // listeners that ran
+result.failures; // [{ pluginId, module, listener, error }]
+```
+
+Interactive routes ignore that result on purpose, because the mutation
+succeeded either way. Background work usually should not: the scheduled-effects
+task inspects `failures` and retries the whole delivery when it is non-empty.
 
 These are emitted by the **generated routes**, not by the Content Service. A
 route emits exactly one event per successful mutation, after the database write

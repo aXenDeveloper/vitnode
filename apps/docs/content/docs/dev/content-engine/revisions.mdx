@@ -472,10 +472,19 @@ decisions:
 ```ts
 import { contentEditorialEffects } from "@vitnode/core/content/server";
 
-await contentEditorialEffects(c, articleContentType, outcome, { pluginId });
-// emits the right event and syncs search - or returns immediately when
-// `outcome.changed` is false
+const { event, search } = await contentEditorialEffects(
+  c,
+  articleContentType,
+  outcome,
+  { pluginId },
+);
+// emits the right event and syncs search - or returns `{ event: null,
+// search: null }` when `outcome.changed` is false
 ```
+
+Neither throws: `event.failures` and `search.error` report what went wrong so
+the caller can decide whether it is worth retrying. `pluginId` owns both the
+search document and the event envelope.
 
 Cache invalidation stays where it has to: in a server action, after the commit.
 See [Caching](/docs/dev/content-engine/caching#writing-who-expires-what).

@@ -188,6 +188,39 @@ its own shape.
 The full contract - what a 409 looks like, when a version moves, what restore
 does - is in [Revisions and locking](/docs/dev/content-engine/revisions).
 
+## What it announces
+
+Every real editorial mutation goes through one helper once its transaction has
+committed - `contentEditorialEffects` - which emits the operation's event and
+syncs the [search](/docs/dev/content-engine/search) document. The routes call
+it, and so does the scheduled-publication task, so "which event, and which
+search operation" is decided in one place rather than three that can drift.
+
+Two properties are worth knowing about, because they are easy to assume the
+other way round:
+
+- **The event envelope is owned by the plugin that owns the content type**, not
+  by whichever module emitted it. That matters as soon as something runs on your
+  behalf: core owns the scheduled-publication queue handler, and
+  `content.example.article.published` is still the example plugin's event.
+- **Nothing throws.** `emit()` reports listener failures in its result rather
+  than raising them, because the mutation has already committed and a broken
+  listener is not a reason to fail somebody's save. `contentEditorialEffects`
+  hands both outcomes back:
+
+```ts
+const { event, search } = await contentEditorialEffects(c, def, outcome, {
+  pluginId,
+});
+
+event?.failures; // listeners that fell over, [] when all of them ran
+search?.error; // set when the index refused the write
+```
+
+Interactive routes ignore both. Background work should not: the
+[scheduled-effects task](/docs/dev/content-engine/scheduling#all-three-have-to-land)
+reads them and retries when either is unhappy.
+
 ## Permissions
 
 One new permission, generated only for editorial content types:

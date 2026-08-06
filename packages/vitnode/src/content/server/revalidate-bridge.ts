@@ -62,16 +62,27 @@ const originsFor = (c: Context): string[] => {
  * leave an unpublished record readable for as long as that lasts. That is not a
  * cache miss; it is the feature not working.
  *
- * **Best effort, deliberately.** A failure is logged and swallowed, exactly
- * like `syncContentSearch`. Throwing would fail the queue task, and the retry
- * would re-run the *publish* - which is idempotent, so the second run would
- * find nothing changed and skip the invalidation entirely. Strictly worse than
- * a stale page.
+ * **It reports rather than throws.** Every origin is tried, a failure is logged,
+ * and the counts come back for the caller to judge. That split matters: one
+ * origin being unreachable must not stop the others, but it must also not be
+ * hidden - so the decision about whether the delivery was good enough belongs
+ * to whoever can retry it, not here.
+ *
+ * `content-schedule-effects` is that caller, and it requires
+ * `delivered === attempted`: with several web apps behind one API, a scheduled
+ * unpublish that expired one cache and not the other has left a withdrawn page
+ * readable. `attempted: 0` means there was nothing to tell - no tag needed
+ * expiring, or no origin is configured - which is not a failure.
  */
 export const dispatchContentRevalidation = async (
   c: Context,
   input: ContentRevalidationRequest,
-): Promise<{ attempted: number; delivered: number }> => {
+): Promise<{
+  /** How many origins were posted to. `0` means there was nothing to tell. */
+  attempted: number;
+  /** How many accepted it. Anything less than `attempted` is a partial. */
+  delivered: number;
+}> => {
   if (contentInvalidationTags(input).length === 0) {
     return { attempted: 0, delivered: 0 };
   }

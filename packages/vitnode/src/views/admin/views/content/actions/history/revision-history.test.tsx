@@ -34,14 +34,30 @@ vi.mock("@/components/staff-permission/provider", () => ({
   useAdminStaffPermission: () => canRestore,
 }));
 
+const getContentRevisionAction = vi.fn();
 const listContentRevisionsAction = vi.fn();
 const restoreContentRevisionAction = vi.fn();
 vi.mock("../mutation-api.server", () => ({
-  getContentRevisionAction: vi.fn().mockResolvedValue({ revision: undefined }),
+  getContentRevisionAction: (...args: unknown[]) =>
+    getContentRevisionAction(...args),
   listContentRevisionsAction: (...args: unknown[]) =>
     listContentRevisionsAction(...args),
   restoreContentRevisionAction: (...args: unknown[]) =>
     restoreContentRevisionAction(...args),
+}));
+
+// The diff renderer has its own suite. Here the question is only *which*
+// snapshots reach it, so it reports them and nothing else.
+vi.mock("./revision-diff", () => ({
+  RevisionDiff: ({
+    after,
+    before,
+  }: {
+    after: { version: number };
+    before: null | { version: number };
+  }) => (
+    <span>{`diff ${before ? `v${before.version}` : "none"} → v${after.version}`}</span>
+  ),
 }));
 
 vi.mock("sonner", () => ({
@@ -85,6 +101,18 @@ const page = (
   pageInfo: { endCursor: versions.at(-1) ?? null, hasNextPage },
 });
 
+/** The detail route, answering for whichever revision id it was asked about. */
+const detailFor = (
+  _contentTypeId: string,
+  _id: number,
+  revisionId: number,
+) => ({
+  revision: {
+    ...revision(revisionId - 1000),
+    snapshot: { version: revisionId - 1000 },
+  },
+});
+
 const view = () =>
   render(
     <RevisionHistory
@@ -102,6 +130,10 @@ const view = () =>
 beforeEach(() => {
   vi.clearAllMocks();
   canRestore = true;
+  getContentRevisionAction.mockImplementation(
+    async (...args: unknown[]) =>
+      await Promise.resolve(detailFor(...(args as [string, number, number]))),
+  );
 });
 
 describe("RevisionHistory", () => {
@@ -185,6 +217,119 @@ describe("RevisionHistory", () => {
       expect(screen.getByText("v48")).not.toBeNull();
     });
     expect(screen.getAllByText("v49")).toHaveLength(1);
+  });
+
+  describe("the snapshot a row compares against", () => {
+    const expand = async (version: number) => {
+      const rows = await screen.findAllByText(
+        "core.content.history.show_changes",
+      );
+      // Rows render newest first, so v50 is index 0.
+      fireEvent.click(rows[50 - version]);
+    };
+
+    it("loads the snapshot only when the row is expanded", async () => {
+      // A long article's every historical body, downloaded to render a list of
+      // dates, is the thing this avoids.
+      listContentRevisionsAction.mockResolvedValue(page([50, 49]));
+
+      view();
+      await screen.findByText("v50");
+
+      expect(getContentRevisionAction).not.toHaveBeenCalled();
+    });
+
+    it("compares against the revision below it", async () => {
+      listContentRevisionsAction.mockResolvedValue(page([50, 49]));
+
+      view();
+      await expand(50);
+
+      expect(await screen.findByText("diff v49 → v50")).not.toBeNull();
+    });
+
+    it("has nothing to compare against at the end of a page", async () => {
+      listContentRevisionsAction.mockResolvedValue(
+        page([50, 49], { hasNextPage: true }),
+      );
+
+      view();
+      await expand(49);
+
+      expect(await screen.findByText("diff none → v49")).not.toBeNull();
+    });
+
+    it("fills that diff in once the next page arrives", async () => {
+      // The boundary case. `previousId` goes from null to a real id while the
+      // row is open, and the reader should not have to close and reopen it to
+      // find out what actually changed.
+      listContentRevisionsAction
+        .mockResolvedValueOnce(page([50, 49], { hasNextPage: true }))
+        .mockResolvedValueOnce(page([48, 47]));
+
+      view();
+      await expand(49);
+      await screen.findByText("diff none → v49");
+
+      fireEvent.click(screen.getByText("core.content.history.load_more"));
+
+      expect(await screen.findByText("diff v48 → v49")).not.toBeNull();
+    });
+
+    it("keeps the row open while it does", async () => {
+      listContentRevisionsAction
+        .mockResolvedValueOnce(page([50, 49], { hasNextPage: true }))
+        .mockResolvedValueOnce(page([48, 47]));
+
+      view();
+      await expand(49);
+      await screen.findByText("diff none → v49");
+
+      fireEvent.click(screen.getByText("core.content.history.load_more"));
+
+      // Never replaced by a spinner: the snapshot it already has stays on
+      // screen while the missing one is fetched behind it.
+      await waitFor(() => {
+        expect(screen.getByText("diff v48 → v49")).not.toBeNull();
+      });
+      expect(screen.queryByText("core.content.history.load_failed")).toBeNull();
+    });
+
+    it("does not re-fetch the snapshot it already has", async () => {
+      listContentRevisionsAction
+        .mockResolvedValueOnce(page([50, 49], { hasNextPage: true }))
+        .mockResolvedValueOnce(page([48, 47]));
+
+      view();
+      await expand(49);
+      await screen.findByText("diff none → v49");
+      expect(getContentRevisionAction).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(screen.getByText("core.content.history.load_more"));
+      await screen.findByText("diff v48 → v49");
+
+      // One more call, for the newly-available previous - not two.
+      expect(getContentRevisionAction).toHaveBeenCalledTimes(2);
+      expect(getContentRevisionAction).toHaveBeenLastCalledWith(
+        "test.editorial",
+        7,
+        1048,
+      );
+    });
+
+    it("does not fetch anything for a row that was never opened", async () => {
+      listContentRevisionsAction
+        .mockResolvedValueOnce(page([50, 49], { hasNextPage: true }))
+        .mockResolvedValueOnce(page([48, 47]));
+
+      view();
+      fireEvent.click(
+        await screen.findByText("core.content.history.load_more"),
+      );
+      await screen.findByText("v47");
+
+      expect(getContentRevisionAction).not.toHaveBeenCalled();
+    });
   });
 
   it("shows an error rather than an empty list", async () => {

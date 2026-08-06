@@ -36,12 +36,28 @@ export interface ContentPublishedPayload {
    * id there would be a lie in the audit trail.
    */
   scheduledBy?: null | number;
+  /**
+   * The booking that fired this, when one did - and the idempotency key for a
+   * listener that must act exactly once.
+   *
+   * Scheduled announcements are delivered **at least** once: they run in a
+   * queue task that retries whenever the event, the search write or a cache
+   * origin failed, and a retry re-emits an event that may already have been
+   * received. The id does not change between those attempts, so a listener that
+   * records "I have handled schedule 55" can safely ignore the second copy.
+   *
+   * Absent on an interactive publish, which is emitted once by the route that
+   * performed it and has no booking to point at.
+   */
+  scheduleId?: number;
 }
 
 export interface ContentUnpublishedPayload {
   contentId: number;
   /** As on `published`: who scheduled it, when a schedule fired it. */
   scheduledBy?: null | number;
+  /** As on `published`: the booking, and the idempotency key for retries. */
+  scheduleId?: number;
 }
 
 /**

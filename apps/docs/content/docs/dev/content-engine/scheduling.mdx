@@ -190,6 +190,35 @@ the transition returned it, the revision id, the operation, and who booked the
 schedule. It never re-reads the record, and it never publishes anything - so a
 record edited in the meantime cannot turn one announcement into a different one.
 
+### All three have to land
+
+The task succeeds only when every effect was accepted. Each of the three has a
+way of failing quietly, and the whole point of a durable task is that none of
+them gets to:
+
+| Effect | Counts as delivered when | Retried when |
+| --- | --- | --- |
+| Event | Every listener ran | `EventEmitResult.failures` is non-empty - a listener threw, or the broker was unreachable |
+| Search | The engine accepted the write | It threw |
+| Cache | **Every** configured web origin accepted the invalidation | Any one of them did not |
+
+<Callout type="warn" title="One origin is not proof of the rest">
+  With two web apps behind one API, `1/2` origins accepting a scheduled
+  unpublish means one of them is still serving a page that was withdrawn. Older
+  behaviour treated any delivery as success and never tried the other again;
+  now `delivered < attempted` retries the task. `attempted: 0` is different -
+  it means there was no tag to expire or no origin configured, which is a
+  decision rather than an outage.
+</Callout>
+
+`EventsModel.emit()` is the subtle one. It deliberately **never throws**: an
+interactive mutation has already committed by the time listeners run, and a
+broken notification listener is not a reason to tell somebody their save
+failed. So it reports instead, in `EventEmitResult.failures` - and a caller
+that only awaits it has quietly agreed the event may go missing. The
+scheduled-effects task reads that result and treats a failure as retryable.
+Nothing about interactive routes changes.
+
 ### Delivery is at-least-once
 
 | Effect | On a retry |
@@ -197,6 +226,27 @@ record edited in the meantime cannot turn one announcement into a different one.
 | Search | An upsert or a delete, idempotent by construction |
 | Cache | Expiring a tag again is the same operation |
 | Event | **Delivered again.** A listener that must act once needs its own idempotency key - `scheduleId` and `revisionId` are both in the payload and both stable |
+
+A retry re-runs all three, including the ones that already worked - there is no
+per-effect bookkeeping, and adding one would be an outbox by another name. So a
+listener whose work must happen exactly once keys off `scheduleId`:
+
+```ts
+buildEventListener({
+  event: "content.example.article.published",
+  name: "announce-once",
+  handler: async (c, payload) => {
+    if (payload.scheduleId && (await alreadyAnnounced(payload.scheduleId))) {
+      return;
+    }
+
+    await announce(payload.contentId);
+  },
+});
+```
+
+`scheduleId` is present only on a scheduled transition; an interactive publish
+is emitted once by the route that performed it and has no booking to point at.
 
 There is no outbox and no exactly-once claim. Five attempts with the queue's
 ordinary backoff, then the row is `failed` and visible in
@@ -210,12 +260,37 @@ the AdminCP shows it as *"Published, but the announcements did not go out yet"*
 rather than as a failed publish. A schedule is never moved back to `pending`
 because an announcement bounced.
 
+When more than one effect failed, `effectsError` holds all of them, because
+fixing the first is not much use if the second is still down:
+
+```text
+event: @vitnode/example:notifications:send-notification (Service unavailable); search: Elasticsearch unavailable; cache: 1/2 web origins accepted the invalidation
+```
+
+The run that finally gets all three through clears it.
+
 ### Nobody is impersonated
 
 A scheduled run's actor is `{ type: "system", userId: null }`, because that is
 the truth. Who *asked* for it is on the schedule row and travels in the event as
 `scheduledBy`, so "the system did it, on Anna's instruction" is fully
 recoverable without inventing a user id anywhere.
+
+The envelope's **`pluginId` is a separate question**, and it has a separate
+answer. Core owns the queue handler, so `c.get("plugin")` says `@vitnode/core`
+while the task runs - but `content.example.article.published` is the example
+plugin's event however it was triggered. The Content Engine passes the owner
+explicitly on every emit, interactive and scheduled alike, so the envelope
+reads:
+
+```text
+queue task owner    @vitnode/core        ← who runs the handler
+event envelope      @vitnode/example     ← who owns the content type
+```
+
+Nothing swaps `c.get("plugin")` for the duration. That context is shared with
+the logger, the permission checks and every other model on the request;
+impersonating a plugin inside it would change all of them to fix one field.
 
 ## The cache bridge
 
@@ -251,10 +326,15 @@ export { POST } from "@vitnode/core/content/next/revalidate-route";
 
 <Callout type="info" title="A temporary outage no longer costs an invalidation">
   The bridge itself is best effort and never throws - but the task that calls it
-  fails if no origin accepted the request, so the queue retries it. Because that
-  task never republishes, a web app that was redeploying for two minutes gets
-  its tags expired on the next attempt instead of never. That is the whole
-  reason the effects are a task of their own.
+  fails unless **every** origin accepted the request, so the queue retries it.
+  Because that task never republishes, a web app that was redeploying for two
+  minutes gets its tags expired on the next attempt instead of never. That is
+  the whole reason the effects are a task of their own.
+
+A retry re-posts to every origin, including the ones that already succeeded.
+Expiring an already-expired tag is a no-op, so that is cheaper than tracking
+which of them worked.
+
 </Callout>
 
 ### `immediate` from a Route Handler

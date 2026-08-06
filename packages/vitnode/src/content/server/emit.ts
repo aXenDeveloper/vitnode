@@ -1,6 +1,10 @@
 import type { Context } from "hono";
 
-import type { VitNodeEventName } from "../../api/models/events";
+import type {
+  EventEmitOptions,
+  EventEmitResult,
+  VitNodeEventName,
+} from "../../api/models/events";
 import type {
   ContentCreatedPayload,
   ContentDeletedPayload,
@@ -31,7 +35,11 @@ type ContentPayload =
  * autofixer and the build take turns breaking each other. This does not move.
  */
 interface ContentEventEmitter {
-  emit: (name: VitNodeEventName, payload: ContentPayload) => Promise<unknown>;
+  emit: (
+    name: VitNodeEventName,
+    payload: ContentPayload,
+    options?: EventEmitOptions,
+  ) => Promise<EventEmitResult>;
 }
 
 /**
@@ -47,15 +55,30 @@ interface ContentEventEmitter {
  *
  * Call it only once the database write has returned - never inside a
  * transaction callback.
+ *
+ * The result is **returned, not swallowed**. `EventsModel.emit` never throws, so
+ * a listener that fell over is reported rather than raised - and a caller that
+ * only awaits this call has silently accepted whatever happened. Interactive
+ * routes are right to: the mutation committed and the person is owed a 200
+ * either way. The scheduled-effects task is not, and it reads `failures`.
  */
 export const emitContentEvent = async (
   c: Context,
   definition: AnyContentTypeDefinition,
   action: ContentEventAction,
   payload: ContentPayload,
-): Promise<void> => {
+  options?: {
+    /**
+     * The plugin that owns the content type - which is not always the plugin
+     * handling the request. A scheduled transition runs inside core's queue
+     * handler, and `content.example.article.published` belongs to the example
+     * plugin however it was triggered.
+     */
+    pluginId?: string;
+  },
+): Promise<EventEmitResult> => {
   const name = contentEventName(definition.id, action) as VitNodeEventName;
   const events = c.get("events") as unknown as ContentEventEmitter;
 
-  await events.emit(name, payload);
+  return await events.emit(name, payload, { pluginId: options?.pluginId });
 };

@@ -95,24 +95,52 @@ const RevisionRow = ({
   const [previous, setPrevious] = React.useState<ContentRevisionDetail | null>(
     null,
   );
-  const [loading, setLoading] = React.useState(false);
+  // Whether a fetch has come back at all, which is the only way to tell "still
+  // loading" from "loaded, and there was nothing there". Derived rather than a
+  // `loading` flag so nothing sets state synchronously inside the effect.
+  const [settled, setSettled] = React.useState(false);
   const [open, setOpen] = React.useState(false);
 
-  const load = async () => {
-    if (detail) return;
-    setLoading(true);
+  // Fetches whichever snapshots are missing, and only those.
+  //
+  // An effect rather than a click handler because the pair this row needs can
+  // change while it is open: the last row of a page has nothing below it, so
+  // its diff opens with no "before" - and **Load older versions** then puts one
+  // there. Loading on click alone would leave that row comparing against
+  // nothing until it was closed and reopened.
+  React.useEffect(() => {
+    if (!open) return;
 
-    const [current, earlier] = await Promise.all([
-      getContentRevisionAction(contentTypeId, id, revision.id),
-      previousId === null
-        ? Promise.resolve({ revision: undefined })
-        : getContentRevisionAction(contentTypeId, id, previousId),
-    ]);
+    const needsDetail = detail === null;
+    // Not "is it null" but "is it the right one": the boundary row's previous
+    // arrives one page late, and re-fetching a snapshot already on screen is
+    // wasted work.
+    const needsPrevious = previousId !== null && previous?.id !== previousId;
+    if (!needsDetail && !needsPrevious) return;
 
-    setDetail(current.revision ?? null);
-    setPrevious(earlier.revision ?? null);
-    setLoading(false);
-  };
+    let active = true;
+
+    void Promise.all([
+      needsDetail
+        ? getContentRevisionAction(contentTypeId, id, revision.id)
+        : null,
+      needsPrevious
+        ? getContentRevisionAction(contentTypeId, id, previousId)
+        : null,
+    ]).then(([current, earlier]) => {
+      if (!active) return;
+
+      // Both in one batch, so the diff never renders for a frame with its
+      // "before" still missing and every field looking newly added.
+      if (current) setDetail(current.revision ?? null);
+      if (earlier) setPrevious(earlier.revision ?? null);
+      setSettled(true);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [contentTypeId, detail, id, open, previous?.id, previousId, revision.id]);
 
   return (
     <li className="flex flex-col gap-2 border-b py-3 last:border-b-0">
@@ -133,7 +161,6 @@ const RevisionRow = ({
             aria-expanded={open}
             onClick={() => {
               setOpen(!open);
-              if (!open) void load();
             }}
             size="sm"
             type="button"
@@ -209,16 +236,19 @@ const RevisionRow = ({
       ) : null}
 
       {open ? (
-        loading ? (
-          <Loader />
-        ) : detail ? (
+        // Keyed on the snapshot rather than on a loading flag, so a later fetch
+        // of the missing "before" refines the diff in place instead of
+        // replacing it with a spinner somebody has to wait out again.
+        detail ? (
           <RevisionDiff
             after={detail.snapshot}
             before={previous?.snapshot ?? null}
             spec={spec}
           />
-        ) : (
+        ) : settled ? (
           <p className="text-muted-foreground text-sm">{t("load_failed")}</p>
+        ) : (
+          <Loader />
         )
       ) : null}
     </li>

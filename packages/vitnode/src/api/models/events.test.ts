@@ -210,6 +210,42 @@ describe("EventsModel.emit envelope", () => {
     expect(publish.mock.calls[0][1].pluginId).toBe("@vitnode/blog");
   });
 
+  it("an explicit owner wins over the context plugin", async () => {
+    // The queue case: core owns the handler, so the context says core, but the
+    // domain event belongs to whoever owns the thing it happened to.
+    const { adapter, publish } = captureEnvelope();
+    const { ctx } = makeCtx({ adapter, plugin: { id: "@vitnode/core" } });
+
+    await new EventsModel(ctx).emit("user.created", PAYLOAD, {
+      pluginId: "@vitnode/example",
+    });
+
+    expect(publish.mock.calls[0][1].pluginId).toBe("@vitnode/example");
+  });
+
+  it("an omitted override changes nothing for existing callers", async () => {
+    const { adapter, publish } = captureEnvelope();
+    const { ctx } = makeCtx({ adapter, plugin: { id: "@vitnode/blog" } });
+
+    await new EventsModel(ctx).emit("user.created", PAYLOAD, {});
+
+    expect(publish.mock.calls[0][1].pluginId).toBe("@vitnode/blog");
+  });
+
+  it("does not impersonate the plugin on the shared context", async () => {
+    // Overriding by swapping `c.get("plugin")` would change the logger, the
+    // permission checks and every other model on the request to fix one field.
+    const { adapter, publish } = captureEnvelope();
+    const { ctx } = makeCtx({ adapter, plugin: { id: "@vitnode/core" } });
+
+    await new EventsModel(ctx).emit("user.created", PAYLOAD, {
+      pluginId: "@vitnode/example",
+    });
+
+    expect(publish.mock.calls[0][1].pluginId).toBe("@vitnode/example");
+    expect(ctx.get("plugin").id).toBe("@vitnode/core");
+  });
+
   it("derives the actor: admin wins over user, then user, then system", async () => {
     const { adapter, publish } = captureEnvelope();
 

@@ -364,7 +364,16 @@ export const buildContentRoutes = <
       );
 
       // Emitted only once the write has returned, never inside a transaction.
-      await emitContentEvent(c, definition, "created", { contentId: row.id });
+      // `pluginId` is passed on every content event, interactive or scheduled,
+      // so the envelope's owner is the content type's plugin rather than
+      // whichever module happened to invoke the helper.
+      await emitContentEvent(
+        c,
+        definition,
+        "created",
+        { contentId: row.id },
+        { pluginId },
+      );
 
       // A new record is a draft, so this normally indexes nothing - but it is
       // computed from the row rather than assumed, the same way the Server
@@ -464,10 +473,16 @@ export const buildContentRoutes = <
       if (!result) throw notFound(definition);
 
       if (result.changedFields.length > 0) {
-        await emitContentEvent(c, definition, "updated", {
-          changedFields: result.changedFields,
-          contentId: result.row.id,
-        });
+        await emitContentEvent(
+          c,
+          definition,
+          "updated",
+          {
+            changedFields: result.changedFields,
+            contentId: result.row.id,
+          },
+          { pluginId },
+        );
       }
 
       // A slug change is just a rewritten `url`: the search document is keyed by
@@ -544,6 +559,7 @@ export const buildContentRoutes = <
             action === "publish" && result.publishedAt
               ? { contentId: id, publishedAt: result.publishedAt }
               : { contentId: id },
+            { pluginId },
           );
         }
 
@@ -939,13 +955,19 @@ export const buildContentRoutes = <
       // Scheduling changes no field value, so it writes no revision and burns
       // no version - but it is still something other plugins may want to react
       // to, so it gets an event of its own.
-      await emitContentEvent(c, definition, "scheduled", {
-        action,
-        actorUserId: actor.userId,
-        contentId: id,
-        scheduledFor: result.scheduledFor,
-        scheduleId: result.id,
-      } as never);
+      await emitContentEvent(
+        c,
+        definition,
+        "scheduled",
+        {
+          action,
+          actorUserId: actor.userId,
+          contentId: id,
+          scheduledFor: result.scheduledFor,
+          scheduleId: result.id,
+        } as never,
+        { pluginId },
+      );
 
       return c.json(result, 200);
     },
@@ -987,12 +1009,18 @@ export const buildContentRoutes = <
       }
 
       const actor = resolveContentActor(c);
-      await emitContentEvent(c, definition, "schedule_cancelled", {
-        action: cancelled.action,
-        actorUserId: actor.userId,
-        contentId: id,
-        scheduleId,
-      } as never);
+      await emitContentEvent(
+        c,
+        definition,
+        "schedule_cancelled",
+        {
+          action: cancelled.action,
+          actorUserId: actor.userId,
+          contentId: id,
+          scheduleId,
+        } as never,
+        { pluginId },
+      );
 
       // The queued task is deliberately left alone. It will wake up, find the
       // row cancelled, and do nothing - which is far more reliable than trying
@@ -1088,7 +1116,13 @@ export const buildContentRoutes = <
       );
       if (!row) throw notFound(definition);
 
-      await emitContentEvent(c, definition, "deleted", { contentId: row.id });
+      await emitContentEvent(
+        c,
+        definition,
+        "deleted",
+        { contentId: row.id },
+        { pluginId },
+      );
 
       // `publishedAt` survives an unpublish, so a record that was ever published
       // is removed from the index defensively - a delete of a document that is

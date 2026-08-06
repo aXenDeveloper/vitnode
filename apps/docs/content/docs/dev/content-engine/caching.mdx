@@ -207,10 +207,42 @@ costing an invalidation permanently: the task exists if and only if the
 transition committed, it retries on the queue's own backoff, and it never
 republishes - so retrying it is only ever another attempt at expiring a tag.
 
-The bridge itself never throws; the task around it fails when no origin accepted
-the request, which is what triggers the retry. Delivery is at-least-once, and
-expiring an already-expired tag is a no-op. The reasoning, the auth and the
-payload are all in
+The bridge itself never throws. The task around it fails unless **every**
+configured origin accepted the request, and that is what triggers the retry.
+
+### Every origin, not the first one
+
+An install can serve several web apps from one API:
+
+```ts
+content: {
+  revalidateOrigins: [
+    "https://app.example.com",
+    "https://docs.example.com",
+  ],
+}
+```
+
+Each is posted independently, so one being down does not stop the others - they
+are separate deployments with separate caches, and a stale page on one is not a
+reason for a stale page on all of them. But partial delivery is **not** success:
+
+| Attempted | Delivered | Result |
+| --- | --- | --- |
+| 0 | 0 | Nothing to expire, or no origin configured. Not an outage |
+| 1 | 1 | Delivered |
+| 1 | 0 | Retried |
+| 2 | 1 | **Retried** |
+| 2 | 2 | Delivered |
+
+The dangerous row is `2 / 1`. After a scheduled unpublish it means one web app
+expired its cache and the other is still serving a page that was withdrawn -
+and calling that a success would mean the second one never gets another chance.
+The retry re-posts to every origin, including the one that already worked;
+expiring an already-expired tag is a no-op, so that is cheaper than tracking
+which of them succeeded.
+
+Delivery is at-least-once. The reasoning, the auth and the payload are all in
 [Scheduled publishing](/docs/dev/content-engine/scheduling#the-cache-bridge).
 
 ### The slug change

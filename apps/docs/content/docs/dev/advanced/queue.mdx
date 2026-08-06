@@ -202,9 +202,22 @@ ends up permanently serving a page it should have expired.
 
 The effects row is written inside the transition's transaction, so it exists if
 and only if the transition committed, and it carries everything frozen rather
-than re-reading a record that may have moved on. Delivery is at-least-once: the
-search write and the cache expiry are idempotent, but a listener can see one
-`published` twice.
+than re-reading a record that may have moved on.
+
+All three have to land for the task to succeed - a listener that threw, a search
+engine that refused the write, or any configured web origin that did not accept
+its invalidation each fail the run, and the reasons are combined into one
+`effectsError`. `EventsModel.emit()` never throws, so the task reads
+`EventEmitResult.failures` rather than waiting for an exception that is not
+coming.
+
+Delivery is at-least-once: the search write and the cache expiry are idempotent,
+but a listener can see one `published` twice, so a listener that must act once
+keys off the `scheduleId` in the payload.
+
+The event's envelope is stamped with the plugin that owns the **content type**,
+not with core. Core owns the handler; `content.example.article.published`
+belongs to the example plugin however it was triggered.
 
 <Callout type="info" title="An announcement failure is not a publication failure">
   The schedule stays `completed` and the reason lands in `effectsError` on the

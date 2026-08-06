@@ -91,12 +91,18 @@ export interface ContentScheduleEffectsOutcome {
  * exactly how a scheduled unpublish ends up permanently serving a cached page it
  * should have expired, and it is the failure this task exists to remove.
  *
+ * **All three have to land.** A failed event, a refused search write and a web
+ * origin that did not accept its invalidation are each enough to fail the run,
+ * and the reasons are combined into one `effectsError` so the AdminCP shows
+ * everything outstanding rather than whichever failed first.
+ *
  * **Delivery is at-least-once.** A retry after a partial failure re-emits the
  * event and re-writes the search document. Both of the latter are idempotent by
  * construction - a search upsert and a cache expiry are the same operation
  * however many times they run - but an event listener may see the same
- * `published` twice, so a listener that must act once needs its own
- * idempotency key. There is no outbox and no exactly-once claim.
+ * `published` twice, so a listener that must act once keys off the
+ * `scheduleId` the payload carries. There is no outbox and no exactly-once
+ * claim.
  */
 export const runContentScheduleEffects = async (
   c: Context,
@@ -137,10 +143,20 @@ export const runContentScheduleEffects = async (
 
   // The same helper the interactive routes use, so a scheduled publish and a
   // clicked one are indistinguishable to every listener and to the index.
-  const { search } = await contentEditorialEffects(c, definition, outcome, {
-    pluginId: payload.pluginId,
-    scheduledBy: payload.scheduledBy,
-  });
+  const { event, search } = await contentEditorialEffects(
+    c,
+    definition,
+    outcome,
+    {
+      // The content type's owner, not core - core only owns the queue handler
+      // that happens to be running. `entry.pluginId` is the same value the
+      // executor froze into the payload, and both are read back rather than
+      // taken from `c.get("plugin")`, which says `@vitnode/core` here.
+      pluginId: payload.pluginId,
+      scheduledBy: payload.scheduledBy,
+      scheduleId: payload.scheduleId,
+    },
+  );
 
   const currentSlug = definition.publicApi.enabled
     ? row[definition.publicApi.slugField]
@@ -164,12 +180,38 @@ export const runContentScheduleEffects = async (
   });
 
   const failures: string[] = [];
-  if (search?.error) failures.push(`search: ${search.error.message}`);
-  // `attempted: 0` is "there was nothing to tell" - no tags, or no web origin
-  // configured - which is a decision, not an outage.
-  if (revalidation.attempted > 0 && revalidation.delivered === 0) {
+
+  // `EventsModel.emit` never throws, so this is the only place a dead listener
+  // or a broker outage is visible. Ignoring it would mean an announcement that
+  // nobody received counts as delivered and is never retried.
+  if (event && event.failures.length > 0) {
     failures.push(
-      `cache: none of the ${revalidation.attempted} configured web origin(s) accepted the invalidation`,
+      `event: ${event.failures
+        .map(
+          failure =>
+            `${failure.pluginId}:${failure.module}:${failure.listener} (${failure.error})`,
+        )
+        .join(", ")}`,
+    );
+  }
+
+  if (search?.error) failures.push(`search: ${search.error.message}`);
+
+  // Every configured origin has to accept it. A partial delivery is the
+  // dangerous case, not the acceptable one: with two web apps behind one API,
+  // one of them accepting an unpublish while the other does not leaves the
+  // withdrawn page cached and readable, and "at least one worked" would call
+  // that a success and never try the other again.
+  //
+  // `attempted: 0` is different - it means there was nothing to tell, because
+  // no tag needed expiring or no web origin is configured. That is a decision
+  // somebody made, not an outage.
+  if (
+    revalidation.attempted > 0 &&
+    revalidation.delivered < revalidation.attempted
+  ) {
+    failures.push(
+      `cache: ${revalidation.delivered}/${revalidation.attempted} web origins accepted the invalidation`,
     );
   }
 

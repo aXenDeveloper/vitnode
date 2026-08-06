@@ -182,8 +182,25 @@ if (!outcome) throw new HTTPException(404);
 
 // Emits the right event for the operation, and syncs search. A no-op outcome
 // returns immediately, so a pointless save announces nothing.
-await contentEditorialEffects(c, articleContentType, outcome, { pluginId });
+const { event, search } = await contentEditorialEffects(
+  c,
+  articleContentType,
+  outcome,
+  { pluginId },
+);
 ```
+
+Both outcomes come back, and neither throws. `event.failures` lists listeners
+that fell over, `search.error` is set when the index refused the write, and both
+are `null` for a no-op. An interactive route ignores them - the mutation
+committed, and the person is owed a 200 either way. Background work that must be
+retried reads them and decides, which is exactly what
+[scheduled effects](/docs/dev/content-engine/scheduling#all-three-have-to-land)
+do.
+
+`pluginId` is not only for the search document: it is also the owner stamped on
+the event envelope, so `content.example.article.updated` belongs to the example
+plugin whether a route, a cron job or a queue handler emitted it.
 
 ### Calling the service directly
 

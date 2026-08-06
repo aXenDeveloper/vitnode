@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 
+import type { EventEmitResult } from "../../api/models/events";
 import type { ContentEventAction } from "../events";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentEditorialOutcome } from "./editorial-service";
@@ -23,15 +24,21 @@ const EVENT_ACTION: Record<
 
 const payloadFor = (
   outcome: ContentEditorialOutcome<AnyContentTypeDefinition>,
-  scheduledBy: null | number | undefined,
+  {
+    scheduledBy,
+    scheduleId,
+  }: Pick<ContentEditorialEffectsOptions, "scheduledBy" | "scheduleId">,
 ): Record<string, unknown> => {
   const base = {
     contentId: outcome.row.id,
     revisionId: outcome.revisionId ?? undefined,
-    // Present only when a schedule caused this. A listener that wants to know
-    // "was this a person, right now?" reads the envelope's actor; this answers
-    // the different question of who set it up, possibly weeks ago.
+    // Both present only when a schedule caused this. A listener that wants to
+    // know "was this a person, right now?" reads the envelope's actor; these
+    // answer the different questions of who set it up, possibly weeks ago, and
+    // which booking this is - the idempotency key for a listener that must act
+    // once across the effects task's retries.
     ...(scheduledBy === undefined ? {} : { scheduledBy }),
+    ...(scheduleId === undefined ? {} : { scheduleId }),
     version: outcome.version,
   };
 
@@ -56,6 +63,41 @@ const payloadFor = (
       return base;
   }
 };
+
+export interface ContentEditorialEffectsOptions {
+  /** The plugin that owns the content type, and therefore the event. */
+  pluginId: string;
+  /**
+   * The person who created the schedule that caused this, when one did.
+   *
+   * `undefined` for an interactive mutation, so the payload is unchanged
+   * there - the key is absent rather than null, and nothing existing sees a
+   * new field.
+   */
+  scheduledBy?: null | number;
+  /**
+   * The booking that caused this, when one did. Also `undefined` interactively.
+   *
+   * This is the identifier a listener uses to make itself idempotent: delivery
+   * is at-least-once, so the same `published` can arrive twice, but never with
+   * two different `scheduleId`s for the same booking.
+   */
+  scheduleId?: number;
+}
+
+export interface ContentEditorialEffectsResult {
+  /**
+   * What the event transport reported. `null` for a no-op outcome, which emits
+   * nothing at all.
+   *
+   * Present rather than discarded because `EventsModel.emit` does not throw:
+   * `failures` is the only place a dead listener or a broker outage is visible,
+   * and a caller that ignores it has decided - explicitly or not - that the
+   * event is allowed to go missing.
+   */
+  event: EventEmitResult | null;
+  search: ContentSearchSyncOutcome | null;
+}
 
 /**
  * Everything one editorial mutation owes the rest of the system, once its
@@ -82,31 +124,24 @@ export const contentEditorialEffects = async (
   c: Context,
   definition: AnyContentTypeDefinition,
   outcome: ContentEditorialOutcome<AnyContentTypeDefinition>,
-  {
-    pluginId,
-    scheduledBy,
-  }: {
-    pluginId: string;
-    /**
-     * The person who created the schedule that caused this, when one did.
-     *
-     * `undefined` for an interactive mutation, so the payload is unchanged
-     * there - the key is absent rather than null, and nothing existing sees a
-     * new field.
-     */
-    scheduledBy?: null | number;
-  },
-): Promise<{ search: ContentSearchSyncOutcome | null }> => {
-  if (!outcome.changed) return { search: null };
+  { pluginId, scheduledBy, scheduleId }: ContentEditorialEffectsOptions,
+): Promise<ContentEditorialEffectsResult> => {
+  if (!outcome.changed) return { event: null, search: null };
 
-  await emitContentEvent(
+  const event = await emitContentEvent(
     c,
     definition,
     EVENT_ACTION[outcome.operation],
-    payloadFor(outcome, scheduledBy) as never,
+    payloadFor(outcome, { scheduledBy, scheduleId }) as never,
+    // The plugin that owns the content type, not whichever module happens to be
+    // handling the request. Passed on every path, interactive and scheduled, so
+    // the envelope's owner is a property of the event rather than of how it was
+    // triggered.
+    { pluginId },
   );
 
   return {
+    event,
     search: await syncContentSearch(c, definition, {
       changed: outcome.changed,
       changedFields: outcome.changedFields,
