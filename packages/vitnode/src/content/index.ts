@@ -39,13 +39,17 @@ export type {
 } from "./cache";
 export {
   parseContentConflict,
+  parseContentTranslationConflict,
   parseContentUnprocessable,
   zodContentConflict,
+  zodContentTranslationConflict,
   zodContentUnprocessable,
 } from "./conflicts";
 export type {
   ContentConflict,
   ContentConflictCode,
+  ContentTranslationConflict,
+  ContentTranslationConflictCode,
   ContentUnprocessable,
   ContentUnprocessableCode,
 } from "./conflicts";
@@ -57,6 +61,10 @@ export {
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_ENUM_DEFAULT_LENGTH,
   CONTENT_FILTERABLE_FIELD_KINDS,
+  CONTENT_LOCALE_MAX_LENGTH,
+  CONTENT_LOCALE_PATTERN,
+  CONTENT_LOCALIZATION_FALLBACKS,
+  CONTENT_LOCALIZED_FIELD_KINDS,
   CONTENT_OPTIONS_LIMIT,
   CONTENT_PERMISSIONS,
   CONTENT_PREVIEW_DEFAULT_TTL_MINUTES,
@@ -89,15 +97,25 @@ export {
   CONTENT_SLUG_DEFAULT_LENGTH,
   CONTENT_SYSTEM_FIELDS,
   CONTENT_TEXT_DEFAULT_LENGTH,
+  CONTENT_TRANSLATION_CONFLICT_CODES,
+  CONTENT_TRANSLATION_SYSTEM_FIELDS,
+  CONTENT_TRANSLATION_TABLE_SUFFIX,
   CONTENT_UNPROCESSABLE_CODES,
   isContentPublicationStatus,
+  isFilterableFieldKind,
+  isLocalizableFieldKind,
   RESERVED_FILTER_KEYS,
 } from "./const";
 export { defineContentType } from "./define";
 export {
+  ContentDefaultTranslationRequired,
   ContentEngineError,
   ContentInputError,
+  ContentLanguageError,
   ContentRevisionNotRestorable,
+  ContentTranslationExists,
+  ContentTranslationItemMissing,
+  ContentTranslationVersionConflict,
   ContentVersionConflict,
 } from "./errors";
 export { contentEventName } from "./events";
@@ -112,7 +130,20 @@ export type {
 } from "./events";
 export { field } from "./fields";
 export { clampWithFingerprint, fingerprint } from "./fingerprint";
-export { contentIndexName, toSnakeCase } from "./indexes";
+export {
+  contentIndexName,
+  contentTranslationPrimaryKeyName,
+  resolveContentTranslationIndexes,
+  toSnakeCase,
+} from "./indexes";
+export {
+  contentLocalizationDisabled,
+  contentTranslationTableName,
+  isLocalizedContentField,
+  partitionContentFields,
+  resolveContentLocalization,
+} from "./localization";
+export type { ContentFieldPartition } from "./localization";
 export {
   contentAdminHref,
   contentPermissionEntries,
@@ -144,7 +175,7 @@ export type {
   ContentScheduleStatus,
 } from "./schedules";
 export { buildContentSchemas } from "./schemas";
-export type { ContentSchemas } from "./schemas";
+export type { ContentSchemas, ContentTranslationSchemas } from "./schemas";
 export {
   contentSearchDocumentId,
   contentSearchIndexedFieldNames,
@@ -175,6 +206,12 @@ export type {
   ContentFilterInput,
   ContentIndexConfig,
   ContentIndexInput,
+  ContentLocalizationConfig,
+  ContentLocalizationEnabled,
+  ContentLocalizationFallback,
+  ContentLocalizedFieldName,
+  ContentLocalizedUpdateValues,
+  ContentLocalizedValues,
   ContentNumberField,
   ContentOnDelete,
   ContentOrderableFieldName,
@@ -199,21 +236,28 @@ export type {
   ContentSearchTextField,
   ContentSearchTitleField,
   ContentSelect,
+  ContentSharedFieldName,
+  ContentSharedValues,
   ContentSlugField,
   ContentSlugRequired,
   ContentSystemField,
   ContentTextareaField,
   ContentTextField,
+  ContentTranslationMeta,
+  ContentTranslationRow,
+  ContentTranslationSystemField,
   ContentTypeDefinition,
   ContentUpdateInput,
   ContentUserField,
   EditorialContentTypeDefinition,
   FilterableContentFieldKind,
   FilterableContentFieldName,
+  LocalizedContentTypeDefinition,
   PreviewableContentTypeDefinition,
   ResolvedContentAdminConfig,
   ResolvedContentEditorialConfig,
   ResolvedContentIndex,
+  ResolvedContentLocalizationConfig,
   ResolvedContentPublicApiConfig,
   ResolvedContentPublicationConfig,
   ResolvedContentSearchConfig,

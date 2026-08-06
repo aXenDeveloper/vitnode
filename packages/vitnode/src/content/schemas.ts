@@ -5,15 +5,19 @@ import type {
   ContentCreateInput,
   ContentFieldDescriptor,
   ContentFieldMap,
+  ContentLocalizedUpdateValues,
+  ContentLocalizedValues,
   ContentPublicSelect,
   ContentSelect,
   ContentUpdateInput,
   ResolvedContentAdminConfig,
+  ResolvedContentLocalizationConfig,
   ResolvedContentPublicApiConfig,
 } from "./types";
 
 import {
   CONTENT_EDITORIAL_FIELDS,
+  CONTENT_LOCALE_MAX_LENGTH,
   CONTENT_PUBLIC_ALWAYS_ORDERABLE,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_PUBLICATION_STATUSES,
@@ -21,6 +25,10 @@ import {
   CONTENT_SYSTEM_FIELDS,
   isFilterableFieldKind,
 } from "./const";
+import {
+  contentLocalizationDisabled,
+  partitionContentFields,
+} from "./localization";
 
 /** What a content type without `publicApi` carries: nothing exposed at all. */
 const DISABLED_PUBLIC_API: ResolvedContentPublicApiConfig = {
@@ -35,8 +43,54 @@ const DISABLED_PUBLIC_API: ResolvedContentPublicApiConfig = {
   slugField: "",
 };
 
+/**
+ * The schemas one translation row is written and read through.
+ *
+ * Content values live under `values`, and everything else - the locale, the
+ * expected version - is transport that sits *beside* them. That split is what
+ * lets `values` stay a strict object of the content type's own localized fields:
+ * an `expectedVersion` key inside it would be indistinguishable from a field
+ * somebody is trying to mass-assign.
+ */
+export interface ContentTranslationSchemas<
+  TDefinition = AnyContentTypeDefinition,
+> {
+  /** Localized values for a new translation. Strict; requiredness per field. */
+  create: z.ZodType<ContentLocalizedValues<TDefinition>>;
+  /** `{ values }` - the create request body. */
+  createEnvelope: z.ZodType<{ values: ContentLocalizedValues<TDefinition> }>;
+  /** The same shape as a plain `ZodObject`, so routes can compose it. */
+  createObject: z.ZodObject<z.ZodRawShape>;
+  /**
+   * The form shape for one locale: a plain `ZodObject` with no `z.date()`, so
+   * `AutoForm` can run `z.toJSONSchema` on it. Stage 5B renders it.
+   */
+  form: z.ZodObject<z.ZodRawShape>;
+  /** Path parameters for a translation route: the item, then the locale. */
+  params: z.ZodObject<{ id: z.ZodCoercedNumber; locale: z.ZodString }>;
+  /** One translation as it comes back: metadata plus `values`. */
+  select: z.ZodObject<z.ZodRawShape>;
+  /** One translation without its values - what the list route returns. */
+  selectMeta: z.ZodObject<z.ZodRawShape>;
+  /** Localized values for an existing translation. Every key optional, never empty. */
+  update: z.ZodType<ContentLocalizedUpdateValues<TDefinition>>;
+  /** `{ expectedVersion, values }` - the update and delete request body. */
+  updateEnvelope: z.ZodType<{
+    expectedVersion: number;
+    values: ContentLocalizedUpdateValues<TDefinition>;
+  }>;
+  /** `{ expectedVersion }` - the delete request body. */
+  versionEnvelope: z.ZodType<{ expectedVersion: number }>;
+}
+
 export interface ContentSchemas<TDefinition = AnyContentTypeDefinition> {
-  /** Request body for create. Rejects unknown keys and system columns. */
+  /**
+   * Request body for create. Rejects unknown keys and system columns.
+   *
+   * Shared fields only. A localized content type's localized values arrive
+   * through `translation.create` instead, in the same transaction - see
+   * `localizedService.create`.
+   */
   create: z.ZodType<ContentCreateInput<TDefinition>>;
   /**
    * Query-string filters, restricted to filterable fields. Non-strict: it is
@@ -73,6 +127,15 @@ export interface ContentSchemas<TDefinition = AnyContentTypeDefinition> {
    * routes can `.extend(...)` it with the joined relation labels.
    */
   selectObject: z.ZodObject<z.ZodRawShape>;
+  /**
+   * The per-language schemas, or `null` when the content type is not localized.
+   *
+   * `null` rather than empty schemas, matching how `model.publicService` is
+   * `undefined` without a public API: a nullable value reads naturally in code
+   * that does not know which content type it was handed, and it cannot be used
+   * by accident.
+   */
+  translation: ContentTranslationSchemas<TDefinition> | null;
   /** Request body for update. Every field optional, but never empty. */
   update: z.ZodType<ContentUpdateInput<TDefinition>>;
   /**
@@ -298,20 +361,115 @@ const publicSelectShape = (
  * `defineContentType` can call it before the definition object exists and
  * without re-widening its field map.
  */
+/**
+ * The translation schemas for one content type, or `null` when it has none.
+ *
+ * Localized fields only, and never a metadata key: `itemId` and `languageId`
+ * identify the row rather than describing it, and `version` is assigned by the
+ * conditional `UPDATE` that guards on it. All three are absent from the strict
+ * `values` object, which is what stops any of them being mass-assigned.
+ */
+const buildTranslationSchemas = <TDefinition>({
+  admin,
+  localizedFields,
+  localization,
+}: {
+  admin: ResolvedContentAdminConfig;
+  localization: ResolvedContentLocalizationConfig;
+  localizedFields: ContentFieldMap;
+}): ContentTranslationSchemas<TDefinition> | null => {
+  if (!localization.enabled) return null;
+
+  const names = Object.keys(localizedFields);
+
+  const create = z.strictObject(inputShape(localizedFields, names));
+  const update = z
+    .strictObject(updateShape(localizedFields, names))
+    .refine(value => Object.keys(value).length > 0, {
+      message: "Provide at least one localized field to update.",
+    });
+
+  const expectedVersion = z.number().int().positive();
+  const selectMeta = z.object({
+    createdAt: z.date(),
+    itemId: z.number().int().positive(),
+    languageId: z.number().int().positive(),
+    locale: z.string(),
+    updatedAt: z.date(),
+    version: expectedVersion,
+  });
+
+  const values = z.object(
+    Object.fromEntries(
+      names.map(name => [
+        name,
+        applyNullable(
+          baseSelectSchema(localizedFields[name]),
+          localizedFields[name],
+        ),
+      ]),
+    ),
+  );
+
+  return {
+    create: create as unknown as z.ZodType<ContentLocalizedValues<TDefinition>>,
+    createEnvelope: z.strictObject({ values: create }) as unknown as z.ZodType<{
+      values: ContentLocalizedValues<TDefinition>;
+    }>,
+    createObject: create,
+    // The declared form fields, narrowed to the localized ones: a locale tab
+    // edits one language's values and nothing else.
+    form: z.object(
+      inputShape(
+        localizedFields,
+        admin.form.fields.filter(name => localizedFields[name] !== undefined),
+      ),
+    ),
+    params: z.object({
+      id: z.coerce.number(),
+      // Loose on purpose, like `publicParams.slug`: an unknown locale and a
+      // malformed one are both answered the same way, and the value is a bound
+      // parameter rather than an identifier.
+      locale: z.string().min(1).max(CONTENT_LOCALE_MAX_LENGTH),
+    }),
+    select: selectMeta.extend({ values }),
+    selectMeta,
+    update: update as unknown as z.ZodType<
+      ContentLocalizedUpdateValues<TDefinition>
+    >,
+    updateEnvelope: z.strictObject({
+      // Positive, so a client that forgot to send one cannot coerce `0` past the
+      // guard and race the very check it is meant to lose.
+      expectedVersion,
+      values: update,
+    }) as unknown as z.ZodType<{
+      expectedVersion: number;
+      values: ContentLocalizedUpdateValues<TDefinition>;
+    }>,
+    versionEnvelope: z.strictObject({ expectedVersion }),
+  };
+};
+
 export const buildContentSchemas = <TDefinition>({
   admin,
   editorial = false,
   fields,
+  localization = contentLocalizationDisabled(),
   publicApi = DISABLED_PUBLIC_API,
   publication = false,
 }: {
   admin: ResolvedContentAdminConfig;
   editorial?: boolean;
+  /** Every declared field. Partitioned here, so no caller has to. */
   fields: ContentFieldMap;
+  localization?: ResolvedContentLocalizationConfig;
   publicApi?: ResolvedContentPublicApiConfig;
   publication?: boolean;
 }): ContentSchemas<TDefinition> => {
-  const fieldNames = Object.keys(fields);
+  // Everything below this line is about the base table, so it reads the shared
+  // half only. The localized half gets its own schemas at the bottom.
+  const { localizedFields, sharedFields } = partitionContentFields(fields);
+  const fieldNames = Object.keys(sharedFields);
 
   // Read-only on the wire: absent from `create` and `update` (both strict), so
   // the only way to move them is `service.publish` / `service.unpublish`.
@@ -333,7 +491,7 @@ export const buildContentSchemas = <TDefinition>({
     ...Object.fromEntries(
       fieldNames.map(name => [
         name,
-        applyNullable(baseSelectSchema(fields[name]), fields[name]),
+        applyNullable(baseSelectSchema(sharedFields[name]), sharedFields[name]),
       ]),
     ),
     ...publicationSelectShape,
@@ -345,9 +503,9 @@ export const buildContentSchemas = <TDefinition>({
   // `strictObject` blocks mass assignment: an unknown key is an error, not
   // something quietly stripped. System columns are absent from the shape, so
   // they can never be set from a request.
-  const create = z.strictObject(inputShape(fields, fieldNames));
+  const create = z.strictObject(inputShape(sharedFields, fieldNames));
   const update = z
-    .strictObject(updateShape(fields, fieldNames))
+    .strictObject(updateShape(sharedFields, fieldNames))
     .refine(value => Object.keys(value).length > 0, {
       message: "Provide at least one field to update.",
     });
@@ -360,14 +518,16 @@ export const buildContentSchemas = <TDefinition>({
   ];
   const selectObject = z.object(selectShape);
 
-  const publicSelectObject = z.object(publicSelectShape(fields, publicApi));
+  const publicSelectObject = z.object(
+    publicSelectShape(sharedFields, publicApi),
+  );
   const publicFilterable = new Set(publicApi.filterableFields);
   // Derived from the same `filterShape`, then narrowed to the configured
   // allowlist - so a public filter can never reach a field the admin filter
   // schema would not have accepted either.
   const publicFilters = z.object(
     Object.fromEntries(
-      Object.entries(filterShape(fields)).filter(([name]) =>
+      Object.entries(filterShape(sharedFields)).filter(([name]) =>
         publicFilterable.has(name),
       ),
     ),
@@ -380,12 +540,12 @@ export const buildContentSchemas = <TDefinition>({
     // casts. `buildContentSchemas` is covered by `schemas.test-d.ts`.
     create: create as unknown as z.ZodType<ContentCreateInput<TDefinition>>,
     filters: z.object({
-      ...filterShape(fields),
+      ...filterShape(sharedFields),
       ...(publication
         ? { status: z.enum(CONTENT_PUBLICATION_STATUSES).optional() }
         : {}),
     }),
-    form: z.object(inputShape(fields, admin.form.fields)),
+    form: z.object(inputShape(sharedFields, admin.form.fields)),
     order: z.object({
       order: z.enum(["asc", "desc"]).optional(),
       orderBy: z.enum(orderable as [string, ...string[]]).optional(),
@@ -412,6 +572,11 @@ export const buildContentSchemas = <TDefinition>({
     publicSelectObject,
     select: selectObject as unknown as z.ZodType<ContentSelect<TDefinition>>,
     selectObject,
+    translation: buildTranslationSchemas<TDefinition>({
+      admin,
+      localization,
+      localizedFields,
+    }),
     update: update as unknown as z.ZodType<ContentUpdateInput<TDefinition>>,
     updateEnvelope: z.strictObject({
       // Positive, so a client that forgot to send one cannot coerce `0` past

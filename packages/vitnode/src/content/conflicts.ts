@@ -3,11 +3,15 @@ import { z } from "zod";
 import {
   CONTENT_CONFLICT_CODES,
   CONTENT_SCHEDULE_CODES,
+  CONTENT_TRANSLATION_CONFLICT_CODES,
   CONTENT_UNPROCESSABLE_CODES,
 } from "./const";
 
 export type ContentConflictCode =
   (typeof CONTENT_CONFLICT_CODES)[keyof typeof CONTENT_CONFLICT_CODES];
+
+export type ContentTranslationConflictCode =
+  (typeof CONTENT_TRANSLATION_CONFLICT_CODES)[keyof typeof CONTENT_TRANSLATION_CONFLICT_CODES];
 
 export type ContentUnprocessableCode =
   (typeof CONTENT_UNPROCESSABLE_CODES)[keyof typeof CONTENT_UNPROCESSABLE_CODES];
@@ -36,6 +40,68 @@ export const zodContentConflict = z.discriminatedUnion("code", [
 ]);
 
 export type ContentConflict = z.infer<typeof zodContentConflict>;
+
+/**
+ * The 409 body a translation route answers with.
+ *
+ * Its own union rather than three more members of {@link zodContentConflict}:
+ * that one is the contract Stage 4 editorial routes already publish, and every
+ * generated client is built from it. A translation route is new, so it can carry
+ * a shape that names the locale in every arm - which is the one thing a locale
+ * tab strip has to know to point at the right tab.
+ */
+export const zodContentTranslationConflict = z.discriminatedUnion("code", [
+  z.object({
+    code: z.literal(CONTENT_TRANSLATION_CONFLICT_CODES.version),
+    contentTypeId: z.string(),
+    currentVersion: z.number().int(),
+    expectedVersion: z.number().int(),
+    itemId: z.number().int(),
+    locale: z.string(),
+  }),
+  z.object({
+    code: z.literal(CONTENT_TRANSLATION_CONFLICT_CODES.defaultRequired),
+    contentTypeId: z.string(),
+    itemId: z.number().int(),
+    locale: z.string(),
+  }),
+  z.object({
+    code: z.literal(CONTENT_TRANSLATION_CONFLICT_CODES.exists),
+    contentTypeId: z.string(),
+    itemId: z.number().int(),
+    locale: z.string(),
+  }),
+  z.object({
+    code: z.literal(CONTENT_TRANSLATION_CONFLICT_CODES.languageDisabled),
+    contentTypeId: z.string(),
+    locale: z.string(),
+  }),
+  z.object({
+    code: z.literal(CONTENT_TRANSLATION_CONFLICT_CODES.unique),
+    contentTypeId: z.string(),
+    itemId: z.number().int().nullable(),
+    locale: z.string(),
+  }),
+]);
+
+export type ContentTranslationConflict = z.infer<
+  typeof zodContentTranslationConflict
+>;
+
+/** Reads a translation conflict out of a response body, or `null`. */
+export const parseContentTranslationConflict = (
+  body: string | undefined,
+): ContentTranslationConflict | null => {
+  if (body === undefined || body === "") return null;
+
+  try {
+    const parsed = zodContentTranslationConflict.safeParse(JSON.parse(body));
+
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+};
 
 /** The 422 body a restore answers with when the snapshot no longer fits. */
 export const zodContentUnprocessable = z.object({
