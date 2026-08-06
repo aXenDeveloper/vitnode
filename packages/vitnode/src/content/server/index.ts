@@ -12,6 +12,7 @@ export {
   buildEditorialColumns,
   buildPublicationColumns,
   buildSystemColumns,
+  buildTranslationSystemColumns,
 } from "./column-builders";
 export type { ColumnReferenceThunk } from "./column-builders";
 export { contentEditorialEffects } from "./editorial-effects";
@@ -35,6 +36,27 @@ export {
   withHttpErrors,
 } from "./http-errors";
 export type { ContentHttpErrorOptions } from "./http-errors";
+export {
+  assertContentLocalizationLanguages,
+  ensureContentLocalizationLanguages,
+  findContentLanguage,
+  findContentLocalizationProblems,
+  listContentLanguages,
+  resetContentLocalizationCheck,
+  resolveContentLanguage,
+  resolveDefaultContentLanguage,
+} from "./language-resolver";
+export type {
+  ContentLanguage,
+  ContentLocalizationProblem,
+} from "./language-resolver";
+export { createContentLocalizedService } from "./localized-service";
+export type {
+  ContentLocalizedCreateInput,
+  ContentLocalizedCreateOptions,
+  ContentLocalizedCreateResult,
+  ContentLocalizedService,
+} from "./localized-service";
 export { createContentModel, findContentModel } from "./model";
 export type {
   AnyContentModel,
@@ -138,7 +160,27 @@ export type {
 } from "./service";
 export { createSlugNormalizer } from "./slugs";
 export type { ContentSlugNormalizer } from "./slugs";
-export { contentTableColumns, createContentTable } from "./table";
+export {
+  assertContentReferences,
+  contentTableColumns,
+  createContentTable,
+} from "./table";
+export {
+  contentTranslationConflict,
+  withTranslationHttpErrors,
+} from "./translation-http-errors";
+export { createContentTranslationModel } from "./translation-model";
+export type {
+  ContentTranslationModel,
+  ContentTranslationOptions,
+  ContentTranslationUpdateResult,
+  ContentTranslationWriteOptions,
+} from "./translation-model";
+export { buildContentTranslationRoutes } from "./translation-routes";
+export {
+  contentTranslationTableColumns,
+  createContentTranslationTable,
+} from "./translation-table";
 export type {
   ContentColumnBuilder,
   ContentColumnBuilders,
@@ -149,4 +191,9 @@ export type {
   ContentSystemColumnBuilders,
   ContentTable,
   ContentTableFor,
+  ContentTranslationColumnBuilders,
+  ContentTranslationColumnName,
+  ContentTranslationSystemColumnBuilders,
+  ContentTranslationTable,
+  ContentTranslationTableFor,
 } from "./types";

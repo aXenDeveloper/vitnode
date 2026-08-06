@@ -6,6 +6,7 @@ import { HTTPException } from "hono/http-exception";
 import type {
   AnyContentTypeDefinition,
   ContentFilterInput,
+  ContentOrderableFieldName,
   ContentReferenceFieldName,
 } from "../types";
 import type { ContentModel } from "./model";
@@ -40,6 +41,7 @@ import { createContentPreviewToken } from "./preview-token";
 import { publicationMethods } from "./publication";
 import { CONTENT_REVISIONS_MAX_PAGE_SIZE } from "./revisions-model";
 import { syncContentSearch } from "./search-sync";
+import { buildContentTranslationRoutes } from "./translation-routes";
 
 const zodLabels = z.record(z.string(), z.string().nullable());
 
@@ -259,7 +261,14 @@ export const buildContentRoutes = <
 
       const data = await model.service(c).findMany({
         filters,
-        orderBy: { column: orderBy, order },
+        // `orderBy` came out of a `z.enum(orderableColumns(definition))`, which
+        // is the same allowlist `ContentOrderableFieldName` approximates - but
+        // that type is still deferred here, because `TDefinition` is open. The
+        // service re-checks the name against the runtime allowlist regardless.
+        orderBy: {
+          column: orderBy as ContentOrderableFieldName<TDefinition>,
+          order,
+        },
         query: { cursor, first, last, search },
       });
 
@@ -1153,6 +1162,11 @@ export const buildContentRoutes = <
     ...(previewEnabled ? [previewToken] : []),
     ...(definition.editorial.scheduling.enabled
       ? [scheduleList, scheduleCreate, scheduleCancel]
+      : []),
+    // Mounted under the same module and the same permissions, so a localized
+    // content type gets its translation routes without a second registration.
+    ...(definition.localization.enabled
+      ? buildContentTranslationRoutes(model, { pluginId })
       : []),
   ];
 };
