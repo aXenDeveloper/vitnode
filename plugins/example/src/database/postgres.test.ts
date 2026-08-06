@@ -2,7 +2,13 @@ import type { ContentSearchOperation } from "@vitnode/core/content/server";
 import type { Context } from "hono";
 
 import { executeContentSchedule } from "@vitnode/core/api/modules/content/helpers/execute-content-schedule";
-import { ContentVersionConflict } from "@vitnode/core/content";
+import {
+  ContentDefaultTranslationRequired,
+  ContentTranslationExists,
+  ContentTranslationItemMissing,
+  ContentTranslationVersionConflict,
+  ContentVersionConflict,
+} from "@vitnode/core/content";
 import {
   claimContentSchedule,
   createContentSearchIndexer,
@@ -15,13 +21,14 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import postgres from "postgres";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { CONFIG_PLUGIN, EXAMPLE_MIGRATIONS } from "@/const";
 import { articleContentType } from "@/content/article";
 
 import { articleContent } from "./articles";
 import { categoryContent } from "./categories";
+import { localizedArticleContent } from "./localized-articles";
 
 /**
  * A real Postgres smoke test for the Content Engine.
@@ -160,6 +167,26 @@ const CORE_QUEUE_STUB = `
   );
 `;
 
+/**
+ * Enough of `core_languages` for the localized translation table's foreign key.
+ *
+ * Stubbed for the same reason `core_users` is - core's own migrations are not
+ * replayed here - and it is the *whole* reason the localized suite has to insert
+ * its own languages: nothing in VitNode seeds them. They are created by the
+ * installer, so a test that assumed `en` existed would pass on a developer
+ * machine and fail on a fresh CI database.
+ */
+const CORE_LANGUAGES_STUB = `
+  CREATE TABLE "core_languages" (
+    "id" serial PRIMARY KEY NOT NULL,
+    "code" varchar(32) NOT NULL,
+    "name" varchar(255) NOT NULL,
+    "default" boolean DEFAULT false NOT NULL,
+    "protected" boolean DEFAULT false NOT NULL,
+    CONSTRAINT "core_languages_code_unique" UNIQUE("code")
+  );
+`;
+
 let sql: ReturnType<typeof postgres>;
 let context: Context;
 let db: ReturnType<typeof drizzle>;
@@ -211,6 +238,15 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     `);
     await sql.unsafe(CORE_USERS_STUB);
     await sql.unsafe(CORE_QUEUE_STUB);
+    await sql.unsafe(CORE_LANGUAGES_STUB);
+    // Inserted before the migrations run, so the localized translation table's
+    // `ON DELETE restrict` foreign key has something real to point at.
+    await sql`
+      INSERT INTO "core_languages" ("code", "name", "default") VALUES
+        ('en', 'English', true),
+        ('pl', 'Polski', false),
+        ('de', 'Deutsch', false)
+    `;
 
     const run = async (files: readonly string[]) => {
       for (const statement of migrationSql(files).split(
@@ -277,7 +313,22 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
             return {
               contentModels: [
                 { model: articleContent, pluginId: CONFIG_PLUGIN.pluginId },
+                {
+                  model: localizedArticleContent,
+                  pluginId: CONFIG_PLUGIN.pluginId,
+                },
               ],
+              // Which locales this app *serves*. `core_languages` is the registry
+              // of the ones that exist; a locale listed here with
+              // `enabled: false` is a deliberate switch-off, and the resolver
+              // refuses to write into it.
+              i18n: {
+                locales: [
+                  { code: "en", name: "English" },
+                  { code: "pl", name: "Polski" },
+                  { code: "de", enabled: false, name: "Deutsch" },
+                ],
+              },
             };
           }
           if (key === "queue") {
@@ -2046,5 +2097,733 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
         .service(context)
         .create({ category: 1, code: "x", title: "no" }),
     ).rejects.toThrow();
+  });
+
+  /**
+   * Localization against a real database.
+   *
+   * Everything here is a property of Postgres rather than of the engine, which is
+   * exactly why it cannot be unit-tested: a mock asked whether a rollback happened
+   * can only agree with itself, and the composite primary key, the two foreign keys
+   * and the per-language unique index are enforced by the server or not at all.
+   */
+  describe("localization", () => {
+    // Both are `undefined` for a content type without localization, so
+    // TypeScript refuses the call until the check has been made. Narrowed once
+    // here rather than asserted past at every call site.
+    const translations = (handle = context) => {
+      const build = localizedArticleContent.translationService;
+      if (!build) throw new Error("Expected a translation service.");
+
+      return build(handle);
+    };
+    const localizedService = (handle = context) => {
+      const build = localizedArticleContent.localizedService;
+      if (!build) throw new Error("Expected a localized service.");
+
+      return build(handle);
+    };
+
+    /** Every translation row for one record, straight out of SQL. */
+    const rowsFor = async (itemId: number) =>
+      await sql<
+        { languageId: number; slug: string; title: string; version: number }[]
+      >`
+        SELECT "languageId", "slug", "title", "version"
+        FROM "example_localized_articles_translations"
+        WHERE "itemId" = ${itemId}
+        ORDER BY "languageId"
+      `;
+
+    const countArticles = async () => {
+      const [{ count }] = await sql<{ count: number }[]>`
+        SELECT count(*)::int AS count FROM "example_localized_articles"
+      `;
+
+      return count;
+    };
+
+    const countTranslations = async () => {
+      const [{ count }] = await sql<{ count: number }[]>`
+        SELECT count(*)::int AS count
+        FROM "example_localized_articles_translations"
+      `;
+
+      return count;
+    };
+
+    beforeEach(async () => {
+      // The cascade is the point of one of the tests below, so clear the base
+      // table and let it take the translations with it.
+      await sql`DELETE FROM "example_localized_articles"`;
+    });
+
+    describe("atomic create", () => {
+      it("commits the base row and its default translation together", async () => {
+        const { row, translation } = await localizedService().create({
+          shared: { featured: true },
+          translation: { body: "Hello body", title: "Hello World" },
+        });
+
+        expect(row.featured).toBe(true);
+        expect(translation).toMatchObject({
+          itemId: row.id,
+          locale: "en",
+          version: 1,
+        });
+        expect(translation.values).toMatchObject({
+          slug: "hello-world",
+          title: "Hello World",
+        });
+
+        // Both really landed, read back through SQL rather than through the
+        // service that wrote them.
+        expect(await countArticles()).toBe(1);
+        expect(await rowsFor(row.id)).toEqual([
+          {
+            languageId: 1,
+            slug: "hello-world",
+            title: "Hello World",
+            version: 1,
+          },
+        ]);
+      });
+
+      it("keeps localized values off the base table", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body of Column Check", title: "Column Check" },
+        });
+
+        const columns = await sql<{ column_name: string }[]>`
+          SELECT column_name FROM information_schema.columns
+          WHERE table_name = 'example_localized_articles'
+        `;
+
+        expect(columns.map(column => column.column_name).sort()).toEqual([
+          "createdAt",
+          "featured",
+          "id",
+          "updatedAt",
+        ]);
+        expect(row).not.toHaveProperty("title");
+      });
+
+      it("leaves no base row when the translation cannot be written", async () => {
+        await localizedService().create({
+          shared: {},
+          translation: { body: "Body of First", slug: "taken", title: "First" },
+        });
+        const before = await countArticles();
+
+        // The unique `(languageId, slug)` index rejects the second English row.
+        await expect(
+          localizedService().create({
+            shared: {},
+            translation: {
+              body: "Body of Second",
+              slug: "taken",
+              title: "Second",
+            },
+          }),
+        ).rejects.toThrow();
+
+        // No orphan: the base insert went back with the transaction.
+        expect(await countArticles()).toBe(before);
+        expect(await countTranslations()).toBe(before);
+      });
+
+      it("creates nothing when the default language is missing", async () => {
+        // A context whose language registry has no `en` row at all - what a typo
+        // in `defaultLocale`, or a language somebody deleted, looks like.
+        const blind = {
+          get: (key: string) => {
+            if (key === "db") {
+              return {
+                ...db,
+                select: () => ({
+                  from: () => [],
+                  where: () => ({ limit: () => [] }),
+                }),
+              };
+            }
+
+            return context.get(key);
+          },
+        } as unknown as Context;
+
+        await expect(
+          localizedService(blind).create({
+            shared: {},
+            translation: {
+              body: "Body of Never Written",
+              title: "Never Written",
+            },
+          }),
+        ).rejects.toThrow();
+        expect(await countArticles()).toBe(0);
+      });
+
+      it("refuses to create a record straight into a non-default locale", async () => {
+        await expect(
+          localizedService().create(
+            {
+              shared: {},
+              translation: { body: "Body of Witaj", title: "Witaj" },
+            },
+            { locale: "pl" },
+          ),
+        ).rejects.toThrow(/created in its default locale/);
+        expect(await countArticles()).toBe(0);
+      });
+    });
+
+    describe("per-locale optimistic locking", () => {
+      it("versions each locale independently", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body of English One", title: "English One" },
+        });
+        await translations().create(row.id, "pl", {
+          body: "Body of Polski Jeden",
+          title: "Polski Jeden",
+        });
+
+        // Move English twice, Polish once.
+        await translations().update(
+          row.id,
+          "en",
+          { body: "Body of English Two", title: "English Two" },
+          { expectedVersion: 1 },
+        );
+        await translations().update(
+          row.id,
+          "en",
+          { body: "Body of English Three", title: "English Three" },
+          { expectedVersion: 2 },
+        );
+        await translations().update(
+          row.id,
+          "pl",
+          { body: "Body of Polski Dwa", title: "Polski Dwa" },
+          { expectedVersion: 1 },
+        );
+
+        expect(await rowsFor(row.id)).toMatchObject([
+          { languageId: 1, version: 3 },
+          { languageId: 2, version: 2 },
+        ]);
+      });
+
+      it("lets two locales be edited concurrently without conflicting", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: {
+            body: "Body of Concurrent English",
+            title: "Concurrent English",
+          },
+        });
+        await translations().create(row.id, "pl", {
+          body: "Body of Concurrent Polski",
+          title: "Concurrent Polski",
+        });
+        await translations().update(
+          row.id,
+          "en",
+          { body: "Body of English At Two", title: "English At Two" },
+          { expectedVersion: 1 },
+        );
+        await translations().update(
+          row.id,
+          "en",
+          { body: "Body of English At Three", title: "English At Three" },
+          { expectedVersion: 2 },
+        );
+
+        // English is at 3, Polish at 1. Two writers, two connections, one each.
+        const [english, polish] = await Promise.all([
+          translations().update(
+            row.id,
+            "en",
+            { body: "Body of English At Four", title: "English At Four" },
+            { expectedVersion: 3 },
+          ),
+          translations(rivalContext).update(
+            row.id,
+            "pl",
+            { body: "Body of Polski At Two", title: "Polski At Two" },
+            { expectedVersion: 1 },
+          ),
+        ]);
+
+        // Neither is told the other language moved: the lock is per row, and the
+        // rows are keyed by `(itemId, languageId)`.
+        expect(english).toMatchObject({ changed: true, version: 4 });
+        expect(polish).toMatchObject({ changed: true, version: 2 });
+      });
+
+      it("lets exactly one of two writers on the same locale win", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body of Race Subject", title: "Race Subject" },
+        });
+        await translations().create(row.id, "pl", {
+          body: "Body of Wersja Jeden",
+          title: "Wersja Jeden",
+        });
+        await translations().update(
+          row.id,
+          "pl",
+          { body: "Body of Wersja Dwa", title: "Wersja Dwa" },
+          { expectedVersion: 1 },
+        );
+
+        const outcomes = await Promise.allSettled([
+          translations().update(
+            row.id,
+            "pl",
+            { body: "Body of Wersja Trzy A", title: "Wersja Trzy A" },
+            { expectedVersion: 2 },
+          ),
+          translations(rivalContext).update(
+            row.id,
+            "pl",
+            { body: "Body of Wersja Trzy B", title: "Wersja Trzy B" },
+            { expectedVersion: 2 },
+          ),
+        ]);
+
+        const fulfilled = outcomes.filter(
+          outcome => outcome.status === "fulfilled",
+        );
+        const rejected = outcomes.filter(
+          outcome => outcome.status === "rejected",
+        );
+
+        expect(fulfilled).toHaveLength(1);
+        expect(rejected).toHaveLength(1);
+        expect(rejected[0]).toMatchObject({
+          reason: expect.objectContaining({
+            currentVersion: 3,
+            expectedVersion: 2,
+            locale: "pl",
+          }),
+        });
+        // The winner's value is the one that is stored, and the version moved once.
+        const [, polishRow] = await rowsFor(row.id);
+        expect(polishRow.version).toBe(3);
+      });
+
+      it("refuses a stale update", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body of Stale Update", title: "Stale Update" },
+        });
+        await translations().update(
+          row.id,
+          "en",
+          { body: "Body of Moved On", title: "Moved On" },
+          { expectedVersion: 1 },
+        );
+
+        await expect(
+          translations().update(
+            row.id,
+            "en",
+            { body: "Body of From The Past", title: "From The Past" },
+            { expectedVersion: 1 },
+          ),
+        ).rejects.toThrow(ContentTranslationVersionConflict);
+      });
+
+      it("refuses a stale delete", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body of Stale Delete", title: "Stale Delete" },
+        });
+        await translations().create(row.id, "pl", {
+          body: "Body of Do Usuniecia",
+          title: "Do Usuniecia",
+        });
+        await translations().update(
+          row.id,
+          "pl",
+          { body: "Body of Zmienione", title: "Zmienione" },
+          { expectedVersion: 1 },
+        );
+
+        await expect(
+          translations().delete(row.id, "pl", { expectedVersion: 1 }),
+        ).rejects.toThrow(ContentTranslationVersionConflict);
+        expect(await rowsFor(row.id)).toHaveLength(2);
+      });
+
+      it("leaves version and updatedAt alone on a no-op", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: {
+            body: "Body of No Op Subject",
+            title: "No Op Subject",
+          },
+        });
+        // The raw `postgres` client is used directly here rather than Drizzle,
+        // so a timestamp arrives as whatever the driver produced - hence the
+        // explicit `new Date`.
+        const [before] = await sql<{ updatedAt: string; version: number }[]>`
+          SELECT "updatedAt", "version"
+          FROM "example_localized_articles_translations"
+          WHERE "itemId" = ${row.id} AND "languageId" = 1
+        `;
+
+        const result = await translations().update(
+          row.id,
+          "en",
+          { body: "Body of No Op Subject", title: "No Op Subject" },
+          { expectedVersion: 1 },
+        );
+
+        const [after] = await sql<{ updatedAt: string; version: number }[]>`
+          SELECT "updatedAt", "version"
+          FROM "example_localized_articles_translations"
+          WHERE "itemId" = ${row.id} AND "languageId" = 1
+        `;
+
+        expect(result).toMatchObject({ changed: false, version: 1 });
+        expect(after.version).toBe(before.version);
+        // `$onUpdate` fires on any UPDATE, so an unchanged `updatedAt` is proof no
+        // statement ran at all.
+        expect(new Date(after.updatedAt).getTime()).toBe(
+          new Date(before.updatedAt).getTime(),
+        );
+      });
+
+      it("moves updatedAt on a real update", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body of Real Update", title: "Real Update" },
+        });
+        const [before] = await sql<{ updatedAt: string }[]>`
+          SELECT "updatedAt" FROM "example_localized_articles_translations"
+          WHERE "itemId" = ${row.id} AND "languageId" = 1
+        `;
+
+        await translations().update(
+          row.id,
+          "en",
+          { body: "Body of Really Updated", title: "Really Updated" },
+          { expectedVersion: 1 },
+        );
+
+        const [after] = await sql<{ updatedAt: string }[]>`
+          SELECT "updatedAt" FROM "example_localized_articles_translations"
+          WHERE "itemId" = ${row.id} AND "languageId" = 1
+        `;
+
+        expect(new Date(after.updatedAt).getTime()).toBeGreaterThanOrEqual(
+          new Date(before.updatedAt).getTime(),
+        );
+      });
+    });
+
+    describe("the default translation invariant", () => {
+      it("refuses to delete the default translation", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: {
+            body: "Body of Keeps Its English",
+            title: "Keeps Its English",
+          },
+        });
+
+        await expect(
+          translations().delete(row.id, "en", { expectedVersion: 1 }),
+        ).rejects.toThrow(ContentDefaultTranslationRequired);
+        expect(await rowsFor(row.id)).toHaveLength(1);
+      });
+
+      it("deletes an additional translation", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body of Has Two", title: "Has Two" },
+        });
+        await translations().create(row.id, "pl", {
+          body: "Body of Ma Dwa",
+          title: "Ma Dwa",
+        });
+
+        const removed = await translations().delete(row.id, "pl", {
+          expectedVersion: 1,
+        });
+
+        expect(removed).toMatchObject({ locale: "pl" });
+        expect(await rowsFor(row.id)).toMatchObject([{ languageId: 1 }]);
+      });
+    });
+
+    describe("locale-scoped slug uniqueness", () => {
+      it("allows the same slug in two different languages", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body of About", slug: "about", title: "About" },
+        });
+
+        await translations().create(row.id, "pl", {
+          body: "O nas po polsku",
+          slug: "about",
+          title: "O Nas",
+        });
+
+        // `/en/about` and `/pl/about` are two different pages, and that is the
+        // whole reason the unique index is `(languageId, slug)`.
+        expect((await rowsFor(row.id)).map(item => item.slug)).toEqual([
+          "about",
+          "about",
+        ]);
+      });
+
+      it("refuses two rows with the same slug in one language", async () => {
+        const first = await localizedService().create({
+          shared: {},
+          translation: {
+            body: "Body of First",
+            slug: "duplicate",
+            title: "First",
+          },
+        });
+        const second = await localizedService().create({
+          shared: {},
+          translation: {
+            body: "Body of Second",
+            slug: "other",
+            title: "Second",
+          },
+        });
+
+        const code = await pgErrorCode(async () =>
+          translations().update(
+            second.row.id,
+            "en",
+            { slug: "duplicate" },
+            { expectedVersion: 1 },
+          ),
+        );
+
+        expect(code).toBe("23505");
+        expect((await rowsFor(first.row.id))[0].slug).toBe("duplicate");
+      });
+
+      it("derives a different slug per language from that language's title", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: {
+            body: "Body of The English Title",
+            title: "The English Title",
+          },
+        });
+        await translations().create(row.id, "pl", {
+          body: "Body of Polski Tytul",
+          title: "Polski Tytul",
+        });
+
+        expect((await rowsFor(row.id)).map(item => item.slug)).toEqual([
+          "the-english-title",
+          "polski-tytul",
+        ]);
+      });
+    });
+
+    describe("foreign keys", () => {
+      it("cascades translations when the record is deleted", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body of Going Away", title: "Going Away" },
+        });
+        await translations().create(row.id, "pl", {
+          body: "Body of Odchodzi",
+          title: "Odchodzi",
+        });
+        expect(await rowsFor(row.id)).toHaveLength(2);
+
+        // One statement, no loop over locales: the database owns the cascade.
+        await localizedArticleContent.service(context).delete(row.id);
+
+        expect(await rowsFor(row.id)).toEqual([]);
+      });
+
+      it("restricts deleting a language that content is written in", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: {
+            body: "Body of Holds English",
+            title: "Holds English",
+          },
+        });
+        await translations().create(row.id, "pl", {
+          body: "Body of Trzyma Polski",
+          title: "Trzyma Polski",
+        });
+
+        const code = await pgErrorCode(
+          async () =>
+            await sql`DELETE FROM "core_languages" WHERE "code" = 'pl'`,
+        );
+
+        // `23503`, not a silent cascade: deleting a language must not quietly
+        // delete every article written in it.
+        expect(code).toBe("23503");
+        expect(await rowsFor(row.id)).toHaveLength(2);
+      });
+
+      it("refuses a translation for a record that does not exist", async () => {
+        await expect(
+          translations().create(999_999, "pl", {
+            body: "Body of Nigdzie",
+            title: "Nigdzie",
+          }),
+        ).rejects.toThrow(ContentTranslationItemMissing);
+      });
+    });
+
+    describe("the composite primary key", () => {
+      it("refuses a second translation in the same locale", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: {
+            body: "Body of Only One English",
+            title: "Only One English",
+          },
+        });
+
+        await expect(
+          translations().create(row.id, "en", {
+            body: "Body of Second English",
+            title: "Second English",
+          }),
+        ).rejects.toThrow(ContentTranslationExists);
+        expect(await rowsFor(row.id)).toHaveLength(1);
+      });
+
+      it("is the key Postgres actually created", async () => {
+        const [key] = await sql<{ columns: string[]; name: string }[]>`
+          SELECT
+            c.conname AS name,
+            array_agg(a.attname ORDER BY k.ord) AS columns
+          FROM pg_constraint c
+          JOIN unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord) ON true
+          JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
+          WHERE c.conrelid = 'example_localized_articles_translations'::regclass
+            AND c.contype = 'p'
+          GROUP BY c.conname
+        `;
+
+        expect(key.name).toBe(
+          "example_localized_articles_translations_item_id_language_id_pk",
+        );
+        expect(key.columns).toEqual(["itemId", "languageId"]);
+      });
+    });
+
+    describe("language resolution", () => {
+      it("returns the canonical locale whatever casing arrives", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: {
+            body: "Body of Casing Subject",
+            title: "Casing Subject",
+          },
+        });
+
+        expect((await translations().findByLocale(row.id, "EN"))?.locale).toBe(
+          "en",
+        );
+      });
+
+      it("refuses to write into a locale the app has disabled", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body of No German", title: "No German" },
+        });
+
+        // `de` exists in `core_languages` but the app config switched it off.
+        await expect(
+          translations().create(row.id, "de", {
+            body: "Body of Kein Deutsch",
+            title: "Kein Deutsch",
+          }),
+        ).rejects.toMatchObject({ reason: "disabled" });
+      });
+
+      it("refuses an unknown locale", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body of No Klingon", title: "No Klingon" },
+        });
+
+        await expect(
+          translations().create(row.id, "tlh", {
+            body: "Body of nuqneH",
+            title: "nuqneH",
+          }),
+        ).rejects.toMatchObject({ reason: "missing" });
+      });
+    });
+
+    describe("reads", () => {
+      it("lists every locale a record exists in, without the bodies", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "A long English body", title: "Listed" },
+        });
+        await translations().create(row.id, "pl", {
+          body: "Dlugi polski tekst",
+          title: "Na Liscie",
+        });
+
+        const edges = await translations().findManyForItem(row.id);
+
+        expect(edges.map(edge => edge.locale)).toEqual(["en", "pl"]);
+        for (const edge of edges) {
+          expect(edge).not.toHaveProperty("values");
+          expect(edge).not.toHaveProperty("body");
+        }
+      });
+
+      it("finds a translation by language id as well as by locale", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: {
+            body: "Body of Found Both Ways",
+            title: "Found Both Ways",
+          },
+        });
+
+        expect(await translations().findByLanguageId(row.id, 1)).toMatchObject({
+          locale: "en",
+          version: 1,
+        });
+        expect(await translations().exists(row.id, "pl")).toBe(false);
+        expect(await translations().exists(row.id, "en")).toBe(true);
+      });
+
+      it("never joins translations into an ordinary base list", async () => {
+        await localizedService().create({
+          shared: { featured: true },
+          translation: {
+            body: "Body of Base List Row",
+            title: "Base List Row",
+          },
+        });
+
+        const page = await localizedArticleContent
+          .service(context)
+          .findMany({ query: {} });
+
+        expect(page.edges).toHaveLength(1);
+        // Stage 5A loads translations explicitly, one record at a time. A list of
+        // 25 rows must not drag 25 records' worth of every language with it.
+        expect(page.edges[0]).not.toHaveProperty("title");
+        expect(page.edges[0]).toMatchObject({ featured: true });
+      });
+    });
   });
 });

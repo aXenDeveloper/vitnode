@@ -9,9 +9,28 @@ import { EXAMPLE_MIGRATIONS } from "@/const";
 
 import { example_articles } from "./articles";
 import { example_categories } from "./categories";
+import {
+  example_localized_articles,
+  example_localized_articles_translations,
+} from "./localized-articles";
 
 const articles = getTableConfig(example_articles);
 const categories = getTableConfig(example_categories);
+const localizedArticles = getTableConfig(example_localized_articles);
+
+// `translationTable` is `null` for every content type without localization, so
+// this narrows once - and fails loudly rather than silently skipping the
+// assertions below if the fixture ever stops being localized.
+const localizedTranslationTable = (() => {
+  if (!example_localized_articles_translations) {
+    throw new Error(
+      "example.localized-article generated no translation table.",
+    );
+  }
+
+  return example_localized_articles_translations;
+})();
+const localizedTranslations = getTableConfig(localizedTranslationTable);
 
 const indexNames = (config: typeof articles) =>
   config.indexes.map(item => item.config.name);
@@ -202,7 +221,12 @@ describe("the generated migration", () => {
       .filter(name => name.startsWith("example_"));
 
     expect([...created].sort(byName)).toEqual(
-      [...indexNames(articles), ...indexNames(categories)].sort(byName),
+      [
+        ...indexNames(articles),
+        ...indexNames(categories),
+        ...indexNames(localizedArticles),
+        ...indexNames(localizedTranslations),
+      ].sort(byName),
     );
   });
 
@@ -272,6 +296,160 @@ describe("the generated migration", () => {
     );
     expect(migration).toContain(
       'REFERENCES "public"."example_categories"("id") ON DELETE restrict',
+    );
+  });
+});
+
+describe("example_localized_articles", () => {
+  it("keeps every localized field off the base table", () => {
+    const columns = localizedArticles.columns.map(column => column.name);
+
+    // `title`, `slug` and `body` are declared on the content type and are
+    // deliberately absent here: they live one table over, one row per language.
+    expect(columns).toEqual(["id", "createdAt", "updatedAt", "featured"]);
+  });
+
+  it("keeps shared fields off the translation table", () => {
+    const columns = localizedTranslations.columns.map(column => column.name);
+
+    expect(columns).not.toContain("featured");
+    expect(columns).toEqual([
+      "itemId",
+      "languageId",
+      "version",
+      "createdAt",
+      "updatedAt",
+      "title",
+      "slug",
+      "body",
+    ]);
+  });
+
+  it("gives the translation table its own name", () => {
+    expect(getTableName(localizedTranslationTable)).toBe(
+      "example_localized_articles_translations",
+    );
+  });
+
+  it("enables row level security on both tables", () => {
+    expect(localizedArticles.enableRLS).toBe(true);
+    expect(localizedTranslations.enableRLS).toBe(true);
+  });
+
+  it("materialises the real column types, not JSON", () => {
+    const types = Object.fromEntries(
+      localizedTranslations.columns.map(column => [
+        column.name,
+        column.getSQLType(),
+      ]),
+    );
+
+    expect(types).toMatchObject({
+      body: "text", // textarea
+      itemId: "integer",
+      languageId: "integer",
+      slug: "varchar(160)",
+      title: "varchar(200)",
+      version: "integer",
+    });
+  });
+
+  it("versions each translation independently, starting at 1", () => {
+    const version = localizedTranslations.columns.find(
+      column => column.name === "version",
+    );
+
+    expect(version?.notNull).toBe(true);
+    expect(version?.default).toBe(1);
+  });
+
+  it("keys a translation by its record and its language", () => {
+    const [primaryKey] = localizedTranslations.primaryKeys;
+
+    expect(primaryKey.columns.map(column => column.name)).toEqual([
+      "itemId",
+      "languageId",
+    ]);
+    expect(primaryKey.getName()).toBe(
+      "example_localized_articles_translations_item_id_language_id_pk",
+    );
+    expect(primaryKey.getName().length).toBeLessThanOrEqual(63);
+  });
+
+  it("cascades from the record and restricts the language", () => {
+    const references = localizedTranslations.foreignKeys.map(foreignKey => {
+      const reference = foreignKey.reference();
+
+      return {
+        column: reference.columns[0].name,
+        onDelete: foreignKey.onDelete,
+        target: getTableName(reference.foreignTable),
+      };
+    });
+
+    expect(references).toEqual(
+      expect.arrayContaining([
+        // Translations are part of the record, so they go with it.
+        {
+          column: "itemId",
+          onDelete: "cascade",
+          target: "example_localized_articles",
+        },
+        // Deleting a language must not silently delete the content written in
+        // it - the language screen refuses instead.
+        {
+          column: "languageId",
+          onDelete: "restrict",
+          target: "core_languages",
+        },
+      ]),
+    );
+  });
+
+  it("scopes the localized slug's uniqueness to one language", () => {
+    const unique = localizedTranslations.indexes.find(
+      item => item.config.unique,
+    );
+
+    expect(unique?.config.name).toBe(
+      "example_localized_articles_translations_language_id_slug_key",
+    );
+    expect(
+      unique?.config.columns.map(column => "name" in column && column.name),
+    ).toEqual(["languageId", "slug"]);
+  });
+
+  it("indexes languageId on its own", () => {
+    // The composite primary key already serves `(itemId, languageId)` and
+    // `itemId`; "every row in Polish" needs its own index.
+    expect(indexNames(localizedTranslations)).toContain(
+      "example_localized_articles_translations_language_id_idx",
+    );
+  });
+
+  it("keeps every generated identifier inside the Postgres limit", () => {
+    for (const name of indexNames(localizedTranslations)) {
+      expect((name ?? "").length).toBeLessThanOrEqual(63);
+    }
+  });
+
+  it("creates both tables in the committed migration", () => {
+    expect(migration).toContain('CREATE TABLE "example_localized_articles"');
+    expect(migration).toContain(
+      'CREATE TABLE "example_localized_articles_translations"',
+    );
+    expect(migration).toContain('PRIMARY KEY("itemId","languageId")');
+    expect(migration).toContain(
+      'REFERENCES "public"."core_languages"("id") ON DELETE restrict',
+    );
+    expect(migration).toContain(
+      'CREATE UNIQUE INDEX "example_localized_articles_translations_language_id_slug_key"',
+    );
+  });
+
+  it("never adds a localized column to the base table in the migration", () => {
+    expect(migration).not.toMatch(
+      /ALTER TABLE "example_localized_articles" ADD COLUMN "title"/,
     );
   });
 });
