@@ -1,0 +1,253 @@
+---
+title: Translation lifecycle
+description: Each language publishes on its own schedule - and a translation is never public before the record is.
+icon: Languages
+---
+
+[Localization](/docs/dev/content-engine/localization) gave a record one row per
+language. This page is about what those rows *do*: a status of their own, a
+publish button of their own, and a rule about how the two levels relate.
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+
+  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  publication: { enabled: true },
+  editorial: { enabled: true },
+
+  fields: {
+    title: field.text({ localized: true, required: true }),
+    slug: field.slug({ localized: true, source: "title" }),
+    body: field.textarea({ localized: true, required: true }),
+    featured: field.boolean({ defaultValue: false }),
+  },
+  admin: { label: { plural: "Articles", singular: "Article" } },
+});
+```
+
+Three opt-ins, and each adds exactly what its name says. `localization` splits
+the fields. `publication` gives the record - **and every translation** - a
+draft/published lifecycle. `editorial` gives every translation its own version
+and its own [revision history](/docs/dev/content-engine/translation-revisions).
+
+## Two levels, one rule
+
+```text
+base record published  AND  translation published   →  this language is public
+base record draft                                   →  no language is public
+```
+
+That is the whole model. A translation's status is **subordinate**: publishing
+the Polish copy of a draft article puts nothing on the internet, and unpublishing
+the article takes every language down at once.
+
+<Callout title="Publishing the record does not publish its translations">
+  A record going live exposes the languages that were *already* marked published,
+  and no others. This is the difference between "we are ready to launch" and "the
+  Polish copy is finished", and they are rarely the same day. It also means
+  nobody can ship a half-finished translation by pressing one button.
+</Callout>
+
+## The states
+
+| | What it means |
+| --- | --- |
+| **Missing** | No translation row for this language. Nothing to publish. |
+| **Draft** | A translation exists and is not public. Where every one starts. |
+| **Published** | Public - if the base record is published too. |
+
+There is deliberately no **Outdated**. Its honest definition is "the source
+language changed after this translation did", and comparing two `updatedAt`
+timestamps does not mean that: a typo fix in English would mark every language
+stale, while a rewrite made a second before a translation was saved would not. A
+badge that is wrong half the time is worse than no badge.
+
+## What each transition does
+
+```text
+create a translation
+→ status draft, version 1, publishedAt null
+
+publish
+→ status published
+→ publishedAt stamped (first time only)
+→ version + 1, one revision, one event
+
+unpublish
+→ status draft
+→ publishedAt kept
+→ version + 1, one revision, one event
+
+publish an already published translation
+→ nothing at all
+
+unpublish an already draft translation
+→ nothing at all
+```
+
+`publishedAt` means **"first published in this language"** and is never
+rewritten. An unpublish leaves it alone because it stays true, and a republish
+keeps the original date - which is what a "published on" line should show.
+
+<Callout type="info" title="A no-op is genuinely nothing">
+  No version bump, no revision, no event, no search write, no cache
+  invalidation. That is what makes a double-clicked publish button, a retried
+  queue task and a re-run script all harmless.
+</Callout>
+
+## Doing it in code
+
+```ts
+const service = articleContent.translationEditorialService?.(c, { pluginId });
+
+const outcome = await service?.publish(7, "pl", {
+  actor: resolveContentActor(c),
+  // Optional. Publishing overwrites no field values, so requiring it would fail
+  // the button whenever a colleague had fixed a typo - for no protection against
+  // a lost update. When you do send it, it is AND-ed onto the state guard.
+  expectedVersion: 3,
+});
+```
+
+`translationEditorialService` is `undefined` unless the content type is **both**
+localized and editorial, so TypeScript refuses the call until you have checked.
+
+The outcome carries everything the follow-up work needs:
+
+```ts
+{
+  changed: true,              // false for a no-op
+  changedFields: [],          // localized field names, never a shared one
+  languageId: 2,
+  locale: "pl",
+  operation: "publish",
+  previousSlug: "stary-adres", // the URL this language answered to before
+  restoredFromRevisionId: null,
+  revisionId: 812,
+  row: { /* the translation */ },
+  version: 4,
+}
+```
+
+### The transaction boundary
+
+```text
+translation write
+version increment
+revision insert
+── commit ──
+event
+search synchronisation
+cache invalidation
+```
+
+Nothing after the line is inside the transaction, and nothing before it is
+outside. A rolled-back transaction cannot un-send an event, so the announcement
+waits for the commit; a revision written outside the transaction it describes is
+a lie waiting to happen, so it goes inside.
+
+`contentTranslationEffects` does the announcing, and the generated routes call it
+for you. A direct service call does not - it may be running inside a transaction
+of yours - so opt in explicitly, after the commit:
+
+```ts
+const outcome = await service.publish(7, "pl", { actor });
+if (outcome) {
+  await contentTranslationEffects(c, articleContentType, outcome, { pluginId });
+}
+```
+
+## Permissions
+
+| Action | Permission |
+| --- | --- |
+| Read a translation, read its history | `can_view` |
+| Create or update a translation | `can_translate` |
+| Publish or unpublish a translation | `can_publish` |
+| Restore a translation revision | `can_restore` |
+| Delete a non-default translation | `can_delete` |
+
+`can_translate` depends on `can_view` and **not** on `can_edit`, which is the
+whole point of having it: a translator gets every locale tab without gaining the
+ability to touch a shared field, move the record's global publication state or
+delete it.
+
+<Callout title="No migration, and denied by default">
+  Staff permissions are stored as JSON per role, so a new one simply is not on
+  any existing role. Grant it in AdminCP → Staff.
+</Callout>
+
+The default-locale translation stays undeletable **even with `can_delete`**. It
+is created with the record and is what makes "a record always resolves in some
+language" true; delete the record itself instead.
+
+## Routes
+
+```http
+POST /{id}/translations/{locale}/publish      can_publish
+POST /{id}/translations/{locale}/unpublish    can_publish
+```
+
+Both take `{ "expectedVersion": 3 }` and answer
+`{ "changed": true, "row": { … } }`. A stale version comes back as the same
+structured 409 every translation route uses, with `locale` in every arm - which
+is what lets a tab strip point at the right tab rather than at the record.
+
+Locales are canonical strings on the outside and numeric `core_languages.id`
+values on the inside. A client never sends an id, so it can never point one at a
+language it was not shown.
+
+## The AdminCP
+
+The edit dialog of a localized content type opens on a tab strip:
+
+```text
+Shared | English ✓ | Polski ● | Deutsch ○
+```
+
+- **Shared** holds the fields that are not per-language, plus the record's global
+  publication, history and scheduling.
+- **Each locale tab** holds that language's fields, its status, its version, its
+  publish button, its history and - for anything but the default - its delete
+  button.
+
+The strip loads metadata only, in one request. A language's values are fetched
+when its tab is opened, so opening the dialog on a record with nine languages
+costs one query rather than nine.
+
+Only languages the app actually serves get a tab: they come from the app config,
+already filtered to the enabled ones. And **opening a tab never creates a
+translation** - a missing language shows `Missing` and an explicit create button,
+because looking is not a decision to publish an empty page.
+
+### When somebody else got there first
+
+A stale save keeps the form exactly as you left it and shows a banner naming the
+language that moved, with a **Reload this language** button. Nothing is retried
+and nothing is merged: reloading is a decision, and so is saving over what the
+reload reveals.
+
+English and Polish edits are two different rows with two different version
+counters, so they never conflict with each other - only with another edit of the
+*same* language.
+
+## Stage 5B boundaries
+
+Localization still cannot be combined with:
+
+- **`publicApi`** — a public read has to resolve a locale and decide what to do
+  when a translation is missing. Stage 5C.
+- **`search`** — one document per record would index a single language and rank
+  every other one as a miss. Stage 5D.
+
+Because preview projects through `publicApi.fields`, **locale-bound preview links
+cannot be minted yet** either. The token format already carries the locale and
+both frozen revisions - see
+[Translation preview](/docs/dev/content-engine/translation-preview) - and the
+route that mints one lands with Stage 5C.
+
+Locale-specific *scheduling* stays outside Stage 5 entirely. A scheduled global
+publish exposes the languages already marked published and publishes no drafts; a
+scheduled global unpublish hides every language at once.

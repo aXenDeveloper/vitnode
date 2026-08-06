@@ -260,6 +260,29 @@ content.example.article.scheduled
 content.example.article.schedule_cancelled
 ```
 
+A content type that opts into
+[`localization`](/docs/dev/content-engine/localization) emits three more, plus
+two with `publication` and one with `editorial`:
+
+```text
+content.example.article.translation_created
+content.example.article.translation_updated
+content.example.article.translation_deleted
+
+content.example.article.translation_published     (with publication)
+content.example.article.translation_unpublished   (with publication)
+
+content.example.article.translation_restored      (with editorial)
+```
+
+Every one of them carries `locale` and `languageId`. They are deliberately
+**not** folded into `updated`: a shared update and a Polish translation update
+are different domain facts with different consequences - one invalidates every
+language, the other invalidates one - and a listener that had to inspect
+`changedFields` to tell them apart would get it wrong the first time a field was
+renamed. `changedFields` on a translation event names localized fields only,
+never a shared one.
+
 They are registered on the global map by the owning plugin with a single
 `declare module` block, so the names and payloads are as strongly typed as any
 core event - `changedFields` narrows to that content type's own field names.
@@ -291,6 +314,16 @@ core event - `changedFields` narrows to that content type's own field names.
     },
     restoredFromRevisionId: {
       description: "Restored only - the revision the values were taken from.",
+      type: "number",
+    },
+    locale: {
+      description:
+        "Translation events only - the canonical core_languages.code the mutation was made in. Always present, so a listener never has to go and ask which language.",
+      type: "string",
+    },
+    languageId: {
+      description:
+        "Translation events only - core_languages.id, for a listener joining against the languages table directly.",
       type: "number",
     },
     scheduleId: {

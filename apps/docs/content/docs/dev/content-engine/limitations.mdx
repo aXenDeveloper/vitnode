@@ -43,16 +43,15 @@ None of these are blocked - they are simply not generated. The service, the
 schemas and the table are all public, so a hand-written route sits next to a
 generated one without friction.
 
-## Localization is infrastructure only, for now
+## Localization does not read outwards yet
 
 [`localization`](/docs/dev/content-engine/localization) generates the tables, the
-types, the schemas, the services and the translation routes. What it deliberately
-refuses is every combination whose *reading* half is not built yet:
+types, the schemas, the services, the per-locale lifecycle, the per-locale history
+and the AdminCP locale tabs. What it deliberately refuses is every combination
+whose *reading* half is not built yet:
 
 | Combination | Refused until |
 | --- | --- |
-| `localization` + `publication` | Stage 5B |
-| `localization` + `editorial` | Stage 5B |
 | `localization` + `publicApi` | Stage 5C |
 | `localization` + `search` | Stage 5D |
 
@@ -60,10 +59,15 @@ Each is a definition-time error naming the stage. A localized content type that
 silently ran Stage 1-4 logic against its base table while ignoring its localized
 fields would be worse than one that refuses to be declared.
 
-Also not in Stage 5A: AdminCP locale tabs, completeness badges, `can_translate`,
-per-locale publication or revisions, fallback resolution, locale-aware cache tags
-and per-locale search documents. The translation routes reuse `can_view`,
-`can_edit` and `can_delete` until the UI they gate exists.
+Because preview projects through `publicApi.fields`, a **locale preview link
+cannot be minted** until Stage 5C either - the
+[token format](/docs/dev/content-engine/translation-preview) is in place and
+tested, but the routes that mint and read one are not.
+
+Also outside Stage 5B: fallback resolution, locale-aware cache tags, per-locale
+search documents, an `Outdated` badge (its honest definition needs a comparison
+two timestamps cannot make), a locale selector on the AdminCP *list*, and
+locale-specific scheduling.
 
 ## Localized field names cannot appear on base-table surfaces
 
@@ -73,7 +77,9 @@ A localized field has no column on the base table, so it cannot be an
 six are compile errors and runtime errors.
 
 `admin.titleField` therefore falls back to `null` on a content type whose only
-text fields are localized. Stage 5B gives the AdminCP a locale-aware title.
+text fields are localized. The locale tabs show the localized title inside each
+tab; the list still has no locale-aware title column, which arrives with the
+locale selector in Stage 5C.
 
 ## Foreign key names on a long translation table are truncated by Postgres
 

@@ -48,11 +48,11 @@ example_localized_articles_translations    itemId, languageId, version,
 A content type without the block generates the same single table, the same
 routes and the same wire shapes it always did.
 
-<Callout type="warn" title="Stage 5A is the foundation, not the finished feature">
-  Localization currently cannot be combined with `publication`, `editorial`,
-  `publicApi` or `search` - each combination is refused at definition time with a
-  message naming the stage that lifts it. See [Stage 5A
-  boundaries](#stage-5a-boundaries).
+<Callout type="warn" title="Two combinations are still refused">
+  Localization works with `publication` and `editorial` from Stage 5B on, but
+  cannot yet be combined with `publicApi` or `search` - each is refused at
+  definition time with a message naming the stage that lifts it. See [Stage 5B
+  boundaries](#stage-5b-boundaries).
 </Callout>
 
 ## This is not UI translation
@@ -274,28 +274,32 @@ offender at once rather than failing on the first, and it is skipped entirely
 when no content type is localized - an install with none never touches the
 languages table because of it.
 
-## Stage 5A boundaries
+## Stage 5B boundaries
 
-Localization lands as infrastructure. The stages that read *through* it are not
-here yet, and the honest failure for that is a refused definition rather than a
-content type that quietly runs Stage 1-4 logic against the base table while
-pretending its localized fields do not exist.
+Stage 5A landed the infrastructure; Stage 5B landed the editorial layer on top of
+it. What is still missing is everything that reads *outwards*, and the honest
+failure for that is a refused definition rather than a content type that quietly
+runs Stage 1-4 logic against the base table while pretending its localized fields
+do not exist.
 
 | Combination | Refused until | Why |
 | --- | --- | --- |
-| `localization` + `publication` | Stage 5B | A localized record has one status per *language*. Publishing the English draft must not put an empty Polish page on the internet |
-| `localization` + `editorial` | Stage 5B | A revision would snapshot the base row only, so restoring it would silently drop every translation |
 | `localization` + `publicApi` | Stage 5C | A public read has to resolve a locale and decide what to do when a translation is missing |
 | `localization` + `search` | Stage 5D | One document per record would index a single language and rank every other one as a miss |
 
 Each is a `ContentEngineError` at definition time, with the stage in the message.
 
+Because `editorial.preview` requires `publicApi`, a **locale preview link cannot
+be minted yet** either - the token format is in place and tested, and the routes
+land with Stage 5C. See
+[Locale preview](/docs/dev/content-engine/translation-preview).
+
 ## The roadmap
 
 | Stage | What it adds |
 | --- | --- |
-| **5A** (this one) | Tables, types, schemas, language resolution, translation service, per-locale locking, atomic create, routes, migrations |
-| **5B** | AdminCP locale tabs, completeness badges, per-locale publication status, per-locale revisions, `can_translate` |
+| **5A** | Tables, types, schemas, language resolution, translation service, per-locale locking, atomic create, routes, migrations |
+| **5B** (this one) | Per-locale publication, per-locale revisions and restore, locale-bound preview tokens, translation events, `can_translate`, AdminCP locale tabs |
 | **5C** | Locale-aware public API, fallback resolution, locale-aware cache tags |
 | **5D** | Per-locale search documents, `hreflang`, localized sitemap |
 
@@ -308,4 +312,7 @@ plugin onto the Content Engine.
 - [Localized fields](/docs/dev/content-engine/localized-fields) - which kinds, and why the others are refused
 - [Translation tables](/docs/dev/content-engine/translation-tables) - the generated schema, keys and indexes
 - [Translation service](/docs/dev/content-engine/translation-service) - every method, and every conflict it can raise
+- [Translation lifecycle](/docs/dev/content-engine/translation-editorial) - per-locale publish, the subordination rule, permissions and the locale tabs
+- [Translation revisions](/docs/dev/content-engine/translation-revisions) - one history per language, and what a restore may not cross
+- [Locale preview](/docs/dev/content-engine/translation-preview) - freezing one language, both halves of it
 - [Localization migrations](/docs/dev/content-engine/localization-migrations) - the generated migration, and how to localize an existing content type safely

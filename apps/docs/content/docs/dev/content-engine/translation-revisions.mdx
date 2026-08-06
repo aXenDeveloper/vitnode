@@ -1,0 +1,186 @@
+---
+title: Translation revisions
+description: Each language keeps its own history, and a restore can never cross a locale or reach a shared field.
+icon: History
+---
+
+A localized content type with `editorial: { enabled: true }` keeps **one history
+per language**. The Polish copy's versions are its own, the English copy's are
+its own, and restoring one cannot touch the other.
+
+## Where they live
+
+The same `core_content_revisions` table every editorial content type already
+uses, with one column added:
+
+```text
+languageId = NULL   →  a shared revision  (the base row)
+languageId = 2      →  a translation revision (that language)
+```
+
+`NULL` is what every revision written before Stage 5B already was, so the column
+arrives nullable with no default and backfills to exactly the right value with no
+data step.
+
+### Two partial unique indexes
+
+```sql
+UNIQUE (contentTypeId, itemId, version)             WHERE "languageId" IS NULL
+UNIQUE (contentTypeId, itemId, languageId, version) WHERE "languageId" IS NOT NULL
+```
+
+Two, not one. English v3 and Polish v3 are two different facts, so a single key
+over `(contentTypeId, itemId, version)` would reject the second - and a single
+key that *included* a nullable `languageId` would enforce nothing at all for the
+non-localized case it exists to protect, because Postgres treats every `NULL` as
+distinct.
+
+<Callout title="No foreign key to core_languages">
+  Matching how the table already declines a foreign key to the record itself. A
+  revision is an audit trail: "the Polish copy said this" stays true after the
+  language row is gone. A cascade would erase the fact, and a restrict would
+  block a language deletion the *translation* table has already had its say
+  about. The snapshot carries the locale code, so a revision stays readable
+  without the language it names.
+</Callout>
+
+## What a translation snapshot holds
+
+```jsonc
+{
+  "contentTypeId": "example.article",
+  "createdAt": "2026-02-01T10:00:00.000Z",
+  "fields": { "title": "Witaj", "slug": "witaj", "body": "…" },
+  "itemId": 7,
+  "languageId": 2,
+  "locale": "pl",
+  "publication": { "publishedAt": null, "status": "draft" },
+  "schemaVersion": 1,
+  "updatedAt": "2026-02-01T10:00:00.000Z",
+  "version": 3
+}
+```
+
+**Localized fields only.** What is absent is the point:
+
+- **No shared fields.** They live on the base row and have their own history.
+  This is a security boundary as much as a modelling one: a translation snapshot
+  that carried shared values would let a restore performed with `can_translate`
+  rewrite fields only `can_edit` may touch.
+- **No other locale's values.** Restoring Polish must not touch English.
+- **Nothing derived** - no public response object, no search document, no
+  relation labels. All three are shaped by configuration that may since have
+  changed.
+
+The publication pair is *recorded* but not restorable: it is absent from the
+update schema, so a restore structurally cannot move it.
+
+## One revision per real mutation
+
+```text
+create      → a `create` revision
+update      → an `update` revision
+publish     → a `publish` revision
+unpublish   → an `unpublish` revision
+restore     → a `restore` revision, naming the one it came from
+delete      → a `delete` revision at version + 1
+```
+
+A no-op writes none. An unchanged save, an already-published publish and a
+restore whose values already match all leave the history exactly as it was.
+
+The `delete` revision is stamped at `version + 1` because the row is gone and
+nothing holds the old version any more - recording it again would collide with
+the revision that last wrote it.
+
+<Callout type="info" title="The atomic create writes a translation revision too">
+  Pass `pluginId` and an `actor` to `localizedService.create` and the default
+  translation gets its own `create` revision, in the same transaction as the row.
+  Without them it is written through the plain repository and leaves no history,
+  which is the Stage 5A behaviour - and which would make the record's original
+  English text the one state no revision ever recorded.
+</Callout>
+
+## Retention is per language
+
+`editorial.revisions.retention` applies **per locale**. Fifty Polish edits do not
+evict the English history, because pruning runs inside the scope the write
+belongs to. An install with nine languages keeps nine windows, not one shared
+one.
+
+## Restore
+
+```ts
+const outcome = await service.restore(7, "pl", revisionId, {
+  actor: resolveContentActor(c),
+  expectedVersion: 4,
+});
+```
+
+What it does, and equally what it refuses:
+
+- **Scoped by content type, item *and* language before anything is read.** A
+  revision id belonging to another locale is simply not found - never fetched and
+  then rejected, which would leak that it exists.
+- **Validated against the *current* schemas**, not the ones in force when the
+  snapshot was taken.
+- **Localized fields only**, written through the repository so slug uniqueness
+  and the version guard still apply.
+- **Never moves publication state.** Rolling back a typo does not take a page off
+  the internet, and does not put one on it.
+- **Never restores the historical version number.** The translation moves
+  *forward* to a new version whose revision records where the values came from.
+  Newer revisions are kept.
+- **All or nothing.** Nothing is written unless everything validates.
+
+### Schema evolution
+
+| The content type has since… | Restore does |
+| --- | --- |
+| removed a localized field | ignores it |
+| added an optional localized field | leaves it at its current value |
+| added a **required** localized field the snapshot lacks | **refuses**, 422 |
+| changed a rule the old value now fails | **refuses**, 422 |
+| made that localized slug conflict | **refuses**, structured 409 |
+
+The 422 body names the content type's own field names and nothing else - never a
+Zod issue tree, which would leak internal paths:
+
+```json
+{
+  "code": "CONTENT_REVISION_NOT_RESTORABLE",
+  "contentTypeId": "example.article",
+  "fields": ["summary"],
+  "revisionId": 812
+}
+```
+
+## Routes
+
+```http
+GET  /{id}/translations/{locale}/revisions                        can_view
+GET  /{id}/translations/{locale}/revisions/{revisionId}           can_view
+POST /{id}/translations/{locale}/revisions/{revisionId}/restore   can_restore
+```
+
+Reading history is `can_view`, not `can_restore`: seeing what changed is part of
+seeing the record at all, and "may look, may not roll back" is a reasonable role.
+
+The list is metadata only and paginates by **version**, newest first - the cursor
+is the last version on the previous page and the route is exclusive on it, so
+pages append cleanly and never repeat their boundary row. A snapshot loads on
+demand, one at a time.
+
+## In the AdminCP
+
+Each locale tab has its own **Show this language's history** section, loaded when
+it is opened rather than with the tab - a language's history can be long, and
+nobody who only wanted to fix a typo should pay for it. Restore is offered on
+every version but the current one, and only with `can_restore`.
+
+## Related
+
+- [Translation lifecycle](/docs/dev/content-engine/translation-editorial) - the
+  per-locale publish/unpublish these revisions record
+- [Revisions](/docs/dev/content-engine/revisions) - the shared history the base
+  row keeps, and the retention rules both share

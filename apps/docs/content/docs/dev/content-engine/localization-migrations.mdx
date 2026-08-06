@@ -69,6 +69,55 @@ the timestamps, and the language-scoped unique slug index.
   `en` language exists. Test fixtures have to insert their own.
 </Callout>
 
+## Adding the editorial layer to an existing localized type
+
+Opting a Stage 5A content type into `publication` and `editorial` is purely
+additive, and `drizzle-kit` generates all of it. The committed
+`0030_add_translation_editorial.sql`, in full:
+
+```sql
+DROP INDEX "example_localized_articles_translations_language_id_idx";--> statement-breakpoint
+DROP INDEX "core_content_revisions_item_version_unique";--> statement-breakpoint
+ALTER TABLE "core_content_revisions" ADD COLUMN "languageId" integer;--> statement-breakpoint
+ALTER TABLE "example_localized_articles" ADD COLUMN "publishedAt" timestamp;--> statement-breakpoint
+ALTER TABLE "example_localized_articles" ADD COLUMN "status" varchar(32) DEFAULT 'draft' NOT NULL;--> statement-breakpoint
+ALTER TABLE "example_localized_articles" ADD COLUMN "version" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+ALTER TABLE "example_localized_articles_translations" ADD COLUMN "publishedAt" timestamp;--> statement-breakpoint
+ALTER TABLE "example_localized_articles_translations" ADD COLUMN "status" varchar(32) DEFAULT 'draft' NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "core_content_revisions_translation_version_unique" ON "core_content_revisions" USING btree ("contentTypeId","itemId","languageId","version") WHERE "languageId" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX "core_content_revisions_language_idx" ON "core_content_revisions" USING btree ("contentTypeId","itemId","languageId","version");--> statement-breakpoint
+CREATE INDEX "example_localized_articles_status_published_at_idx" ON "example_localized_articles" USING btree ("status","publishedAt");--> statement-breakpoint
+CREATE INDEX "example_localized_articles_translations_language_id_status_idx" ON "example_localized_articles_translations" USING btree ("languageId","status");--> statement-breakpoint
+CREATE UNIQUE INDEX "core_content_revisions_item_version_unique" ON "core_content_revisions" USING btree ("contentTypeId","itemId","version") WHERE "languageId" IS NULL;
+```
+
+No `DROP COLUMN`, no `DELETE`, no data step - which is why this one is safe to
+apply as generated. Four things are worth reading closely:
+
+1. **`status DEFAULT 'draft' NOT NULL`** backfills every existing translation to
+   a draft in one statement. That is the only correct answer: silently publishing
+   translations somebody wrote while the feature did not exist would put them on
+   the internet.
+2. **`publishedAt` arrives `NULL`** on every existing row, because none of them
+   has been published in this sense yet.
+3. **`languageId` arrives nullable with no default**, so every revision written
+   before this migration becomes a shared one - which is exactly what it was.
+4. **The unique index becomes two partial ones.** The old one is dropped and
+   recreated with `WHERE "languageId" IS NULL`, so it covers precisely the rows
+   it covered before; the new one covers the translation rows. One index over a
+   nullable `languageId` would enforce nothing at all, because Postgres treats
+   every `NULL` as distinct.
+
+The dropped `..._language_id_idx` is superseded rather than lost:
+`(languageId, status)` leads with the same column, so it serves "every row in
+Polish" as well as "every published row in Polish".
+
+<Callout title="Quote a camelCase column in a partial index predicate">
+  The predicate is raw SQL, so `WHERE language_id IS NULL` would look for a
+  column Postgres folded to lower case and fail at apply time with
+  `column "language_id" does not exist`. The engine writes `"languageId"`.
+</Callout>
+
 ## Localizing a Content Type that already has rows
 
 This is the interesting case, and the engine deliberately does **not** generate it
