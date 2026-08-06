@@ -85,7 +85,17 @@ export const ScheduleContentAction = ({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{label}</DialogTitle>
-              <DialogDescription>{t("desc", { title })}</DialogDescription>
+              {/* `t.rich`, because the message names the record with a
+                  `<title>` tag - the same shape delete, publish and restore
+                  use. Passing a plain string for a tag is a formatting error
+                  at render time, not a compile one. */}
+              <DialogDescription>
+                {t.rich("desc", {
+                  title: () => (
+                    <span className="text-foreground font-bold">{title}</span>
+                  ),
+                })}
+              </DialogDescription>
             </DialogHeader>
 
             <React.Suspense fallback={<Loader />}>
