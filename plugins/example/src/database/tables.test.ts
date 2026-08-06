@@ -219,8 +219,14 @@ describe("the generated migration", () => {
     ]
       .map(match => match[1])
       .filter(name => name.startsWith("example_"));
+    // An index a later migration dropped is not part of the schema a fresh
+    // database ends up with. `(languageId)` is the case: Stage 5B replaced it with
+    // `(languageId, status)`, which supersedes it.
+    const dropped = new Set(
+      [...migration.matchAll(/DROP INDEX "([^"]+)"/g)].map(match => match[1]),
+    );
 
-    expect([...created].sort(byName)).toEqual(
+    expect(created.filter(name => !dropped.has(name)).sort(byName)).toEqual(
       [
         ...indexNames(articles),
         ...indexNames(categories),
@@ -306,7 +312,17 @@ describe("example_localized_articles", () => {
 
     // `title`, `slug` and `body` are declared on the content type and are
     // deliberately absent here: they live one table over, one row per language.
-    expect(columns).toEqual(["id", "createdAt", "updatedAt", "featured"]);
+    // `status`, `publishedAt` and `version` are the base row's own lifecycle,
+    // which every translation's is subordinate to.
+    expect(columns).toEqual([
+      "id",
+      "createdAt",
+      "updatedAt",
+      "publishedAt",
+      "status",
+      "version",
+      "featured",
+    ]);
   });
 
   it("keeps shared fields off the translation table", () => {
@@ -319,6 +335,9 @@ describe("example_localized_articles", () => {
       "version",
       "createdAt",
       "updatedAt",
+      // The translation's own lifecycle, on the same terms the base row has it.
+      "publishedAt",
+      "status",
       "title",
       "slug",
       "body",
@@ -419,12 +438,69 @@ describe("example_localized_articles", () => {
     ).toEqual(["languageId", "slug"]);
   });
 
-  it("indexes languageId on its own", () => {
+  it("indexes languageId with the status that qualifies it", () => {
     // The composite primary key already serves `(itemId, languageId)` and
-    // `itemId`; "every row in Polish" needs its own index.
+    // `itemId`; "every published row in Polish" needs its own index. It leads with
+    // `languageId`, so it serves "every row in Polish" too - which is why the
+    // plain single-column index is not created alongside it.
     expect(indexNames(localizedTranslations)).toContain(
+      "example_localized_articles_translations_language_id_status_idx",
+    );
+    expect(indexNames(localizedTranslations)).not.toContain(
       "example_localized_articles_translations_language_id_idx",
     );
+  });
+
+  it("gives each translation its own lifecycle columns", () => {
+    const types = Object.fromEntries(
+      localizedTranslations.columns.map(column => [
+        column.name,
+        column.getSQLType(),
+      ]),
+    );
+
+    expect(types).toMatchObject({
+      publishedAt: "timestamp",
+      status: "varchar(32)",
+    });
+    // `DEFAULT 'draft'` is what makes the Stage 5B migration safe on an install
+    // that already has Stage 5A translations: every one becomes a draft rather
+    // than being silently published.
+    expect(migration).toContain(
+      `ALTER TABLE "example_localized_articles_translations" ADD COLUMN "status" varchar(32) DEFAULT 'draft' NOT NULL`,
+    );
+  });
+
+  it("adds the revision language scope without a data step", () => {
+    // Nullable and with no default, so every pre-Stage-5B revision is a shared
+    // one - which is exactly what it was.
+    expect(migration).toContain(
+      `ALTER TABLE "core_content_revisions" ADD COLUMN "languageId" integer`,
+    );
+    // Two partial indexes rather than one over a nullable column: Postgres treats
+    // every NULL as distinct, so a shared key would enforce nothing at all for the
+    // non-localized case it exists to protect.
+    expect(migration).toContain(
+      `CREATE UNIQUE INDEX "core_content_revisions_item_version_unique" ON "core_content_revisions" USING btree ("contentTypeId","itemId","version") WHERE "languageId" IS NULL`,
+    );
+    expect(migration).toContain(
+      `CREATE UNIQUE INDEX "core_content_revisions_translation_version_unique" ON "core_content_revisions" USING btree ("contentTypeId","itemId","languageId","version") WHERE "languageId" IS NOT NULL`,
+    );
+  });
+
+  it("drops no column and no data in the Stage 5B migration", () => {
+    const stage5b = readFileSync(
+      resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "../../../../apps/docs/migrations",
+        "0030_add_translation_editorial.sql",
+      ),
+      "utf8",
+    );
+
+    expect(stage5b).not.toMatch(/DROP COLUMN/);
+    expect(stage5b).not.toMatch(/DROP TABLE/);
+    expect(stage5b).not.toMatch(/DELETE FROM/);
   });
 
   it("keeps every generated identifier inside the Postgres limit", () => {

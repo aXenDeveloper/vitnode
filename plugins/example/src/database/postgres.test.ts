@@ -176,6 +176,15 @@ const CORE_QUEUE_STUB = `
  * installer, so a test that assumed `en` existed would pass on a developer
  * machine and fail on a fresh CI database.
  */
+/**
+ * Who the editorial suites act as.
+ *
+ * `userId: null` on purpose: `actorUserId` is a real foreign key to `core_users`,
+ * and these tests are about the revisions rather than about who wrote them - a
+ * seeded user would be a second fixture to keep in step for no assertion.
+ */
+const ACTOR = { type: "staff" as const, userId: null };
+
 const CORE_LANGUAGES_STUB = `
   CREATE TABLE "core_languages" (
     "id" serial PRIMARY KEY NOT NULL,
@@ -2117,11 +2126,18 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
 
       return build(handle);
     };
+    /**
+     * The atomic-create service.
+     *
+     * `pluginId` is passed on purpose: it is what lets the default translation get
+     * its own `create` revision, stamped with the right owner. Omitting it - which
+     * every Stage 5A caller does - falls back to the plain repository write.
+     */
     const localizedService = (handle = context) => {
       const build = localizedArticleContent.localizedService;
       if (!build) throw new Error("Expected a localized service.");
 
-      return build(handle);
+      return build(handle, { pluginId: CONFIG_PLUGIN.pluginId });
     };
 
     /** Every translation row for one record, straight out of SQL. */
@@ -2204,7 +2220,12 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
           "createdAt",
           "featured",
           "id",
+          // The base row's own lifecycle from Stage 5B on. Still no `title`,
+          // `slug` or `body` - those live one table over, one row per language.
+          "publishedAt",
+          "status",
           "updatedAt",
+          "version",
         ]);
         expect(row).not.toHaveProperty("title");
       });
@@ -2823,6 +2844,451 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
         // 25 rows must not drag 25 records' worth of every language with it.
         expect(page.edges[0]).not.toHaveProperty("title");
         expect(page.edges[0]).toMatchObject({ featured: true });
+      });
+    });
+
+    describe("translation lifecycle", () => {
+      const statusOf = async (itemId: number, languageId: number) => {
+        const [row] = await sql<
+          { publishedAt: null | string; status: string; version: number }[]
+        >`
+          SELECT "status", "publishedAt", "version"
+          FROM "example_localized_articles_translations"
+          WHERE "itemId" = ${itemId} AND "languageId" = ${languageId}
+        `;
+
+        return row;
+      };
+
+      /** A record with an English default translation and a Polish one. */
+      const twoLocales = async (title: string) => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: `Body of ${title}`, title },
+        });
+        await translations().create(row.id, "pl", {
+          body: `Tresc ${title}`,
+          title: `${title} PL`,
+        });
+
+        return row.id;
+      };
+
+      it("creates every translation as a draft", async () => {
+        const itemId = await twoLocales("Lifecycle Draft");
+
+        // A translator finishing a copy must not put it on the internet by
+        // pressing save. `DEFAULT 'draft'` is what the migration relies on too.
+        expect(await statusOf(itemId, 1)).toMatchObject({
+          publishedAt: null,
+          status: "draft",
+        });
+        expect(await statusOf(itemId, 2)).toMatchObject({ status: "draft" });
+      });
+
+      it("stamps publishedAt on the first publish and bumps the version", async () => {
+        const itemId = await twoLocales("Lifecycle Publish");
+
+        const result = await translations().publish(itemId, "pl");
+
+        expect(result).toMatchObject({ changed: true, version: 2 });
+        const after = await statusOf(itemId, 2);
+        expect(after.status).toBe("published");
+        expect(after.publishedAt).not.toBeNull();
+      });
+
+      it("is a true no-op when the translation is already published", async () => {
+        const itemId = await twoLocales("Lifecycle Idempotent");
+        await translations().publish(itemId, "pl");
+        const before = await statusOf(itemId, 2);
+
+        const result = await translations().publish(itemId, "pl");
+
+        expect(result).toMatchObject({ changed: false });
+        // No version, no timestamp, nothing - which is what keeps a retried task
+        // from writing a second revision and a second event.
+        expect(await statusOf(itemId, 2)).toEqual(before);
+      });
+
+      it("keeps the original publishedAt across a republish", async () => {
+        const itemId = await twoLocales("Lifecycle Republish");
+        await translations().publish(itemId, "pl");
+        const first = await statusOf(itemId, 2);
+
+        await translations().unpublish(itemId, "pl");
+        await translations().publish(itemId, "pl");
+
+        const after = await statusOf(itemId, 2);
+        expect(after.publishedAt).toBe(first.publishedAt);
+        expect(after.version).toBe(first.version + 2);
+      });
+
+      it("leaves publishedAt alone on unpublish", async () => {
+        const itemId = await twoLocales("Lifecycle Unpublish");
+        await translations().publish(itemId, "pl");
+        const published = await statusOf(itemId, 2);
+
+        await translations().unpublish(itemId, "pl");
+
+        const after = await statusOf(itemId, 2);
+        expect(after.status).toBe("draft");
+        // "First published on" stays true after it is taken down again.
+        expect(after.publishedAt).toBe(published.publishedAt);
+      });
+
+      it("publishes one locale without touching the other", async () => {
+        const itemId = await twoLocales("Lifecycle Independent");
+
+        await translations().publish(itemId, "pl");
+
+        expect(await statusOf(itemId, 1)).toMatchObject({
+          status: "draft",
+          version: 1,
+        });
+        expect(await statusOf(itemId, 2)).toMatchObject({
+          status: "published",
+        });
+      });
+
+      it("refuses a stale expectedVersion", async () => {
+        const itemId = await twoLocales("Lifecycle Stale");
+
+        await expect(
+          translations().publish(itemId, "pl", { expectedVersion: 9 }),
+        ).rejects.toThrow(/version 1, not 9/);
+      });
+
+      it("still publishes into a locale the app has switched off", async () => {
+        // `de` is `enabled: false` in this app's config. Taking existing content
+        // in it out of circulation - and putting it back - has to stay possible;
+        // what is refused is *growing* content there, which is a create.
+        const itemId = await twoLocales("Lifecycle Disabled");
+        await sql`
+          INSERT INTO "example_localized_articles_translations"
+            ("itemId", "languageId", "title", "slug", "body")
+          VALUES (${itemId}, 3, 'Deutsch', 'deutsch', 'Deutscher Text')
+        `;
+
+        const result = await translations().publish(itemId, "de");
+
+        expect(result).toMatchObject({ changed: true });
+      });
+
+      it("carries the lifecycle in the metadata list", async () => {
+        const itemId = await twoLocales("Lifecycle Metadata");
+        await translations().publish(itemId, "pl");
+
+        const metas = await translations().findManyForItem(itemId);
+
+        expect(metas).toHaveLength(2);
+        expect(metas[0]).toMatchObject({ locale: "en", status: "draft" });
+        expect(metas[1]).toMatchObject({ locale: "pl", status: "published" });
+      });
+    });
+
+    describe("translation revisions", () => {
+      const editorial = (handle = context) => {
+        const build = localizedArticleContent.translationEditorialService;
+        if (!build)
+          throw new Error("Expected a translation editorial service.");
+
+        return build(handle, { pluginId: CONFIG_PLUGIN.pluginId });
+      };
+
+      const revisionsFor = async (itemId: number, languageId: null | number) =>
+        await sql<
+          { languageId: null | number; operation: string; version: number }[]
+        >`
+          SELECT "languageId", "operation", "version"
+          FROM "core_content_revisions"
+          WHERE "contentTypeId" = 'example.localized-article'
+            AND "itemId" = ${itemId}
+            AND ${
+              languageId === null
+                ? sql`"languageId" IS NULL`
+                : sql`"languageId" = ${languageId}`
+            }
+          ORDER BY "version"
+        `;
+
+      beforeEach(async () => {
+        await sql`
+          DELETE FROM "core_content_revisions"
+          WHERE "contentTypeId" = 'example.localized-article'
+        `;
+      });
+
+      /**
+       * A record whose default translation has a `create` revision.
+       *
+       * `actor` is what asks for one: without it the default translation is written
+       * through the plain repository and leaves no history, which is exactly the
+       * Stage 5A behaviour the atomic-create tests above still exercise.
+       */
+      const guide = async (title: string) => {
+        const { row } = await localizedService().create(
+          {
+            shared: {},
+            translation: { body: `Body of ${title}`, title },
+          },
+          { actor: ACTOR },
+        );
+
+        return row.id;
+      };
+
+      it("writes one revision per real translation mutation", async () => {
+        const itemId = await guide("Revision Basics");
+
+        await editorial().create(
+          itemId,
+          "pl",
+          { body: "Tresc", title: "Polski" },
+          { actor: ACTOR },
+        );
+        await editorial().update(
+          itemId,
+          "pl",
+          { title: "Polski Nowy" },
+          { actor: ACTOR, expectedVersion: 1 },
+        );
+        await editorial().publish(itemId, "pl", { actor: ACTOR });
+
+        const rows = await revisionsFor(itemId, 2);
+        expect(rows.map(row => row.operation)).toEqual([
+          "create",
+          "update",
+          "publish",
+        ]);
+        expect(rows.map(row => row.version)).toEqual([1, 2, 3]);
+      });
+
+      it("writes no revision for a no-op", async () => {
+        const itemId = await guide("Revision No Op");
+        await editorial().create(
+          itemId,
+          "pl",
+          { body: "Tresc", title: "Polski" },
+          { actor: ACTOR },
+        );
+
+        await editorial().update(
+          itemId,
+          "pl",
+          { title: "Polski" },
+          { actor: ACTOR, expectedVersion: 1 },
+        );
+        await editorial().publish(itemId, "pl", { actor: ACTOR });
+        await editorial().publish(itemId, "pl", { actor: ACTOR });
+
+        // create, then publish. The unchanged update and the second publish both
+        // wrote nothing.
+        expect(
+          (await revisionsFor(itemId, 2)).map(row => row.operation),
+        ).toEqual(["create", "publish"]);
+      });
+
+      it("keeps each locale's versions independent under the partial index", async () => {
+        const itemId = await guide("Revision Independent");
+        await editorial().create(
+          itemId,
+          "pl",
+          { body: "Tresc", title: "Polski" },
+          { actor: ACTOR },
+        );
+
+        // English v1 and Polish v1 are two different facts, and so are their v2s.
+        // A single unique index over `(contentTypeId, itemId, version)` would have
+        // rejected the second of each pair.
+        await editorial().publish(itemId, "en", { actor: ACTOR });
+        await editorial().publish(itemId, "pl", { actor: ACTOR });
+
+        const english = await revisionsFor(itemId, 1);
+        const polish = await revisionsFor(itemId, 2);
+
+        expect(english.map(row => row.version)).toEqual([1, 2]);
+        expect(polish.map(row => row.version)).toEqual([1, 2]);
+      });
+
+      it("leaves the shared history unmixed with any locale's", async () => {
+        const itemId = await guide("Revision Shared");
+        await editorial().create(
+          itemId,
+          "pl",
+          { body: "Tresc", title: "Polski" },
+          { actor: ACTOR },
+        );
+
+        // The base row's own editorial history uses `languageId IS NULL`, which is
+        // exactly what every pre-Stage-5B revision already was.
+        expect(await revisionsFor(itemId, null)).toHaveLength(0);
+        expect(await revisionsFor(itemId, 2)).toHaveLength(1);
+      });
+
+      it("snapshots localized fields only", async () => {
+        const itemId = await guide("Revision Snapshot");
+        await editorial().create(
+          itemId,
+          "pl",
+          { body: "Tresc", title: "Polski" },
+          { actor: ACTOR },
+        );
+
+        const [row] = await sql<{ snapshot: Record<string, unknown> }[]>`
+          SELECT "snapshot" FROM "core_content_revisions"
+          WHERE "itemId" = ${itemId} AND "languageId" = 2
+        `;
+        const fields = (row.snapshot as { fields: Record<string, unknown> })
+          .fields;
+
+        // Order is not asserted: Postgres stores `jsonb` with its own key order.
+        expect(Object.keys(fields).sort()).toEqual(["body", "slug", "title"]);
+        expect(fields).not.toHaveProperty("featured");
+      });
+
+      it("scopes history reads to one locale", async () => {
+        const itemId = await guide("Revision Scoped");
+        await editorial().create(
+          itemId,
+          "pl",
+          { body: "Tresc", title: "Polski" },
+          { actor: ACTOR },
+        );
+
+        await editorial().update(
+          itemId,
+          "pl",
+          { title: "Polski Nowy" },
+          { actor: ACTOR, expectedVersion: 1 },
+        );
+
+        const english = await editorial().listRevisions(itemId, "en");
+        const polish = await editorial().listRevisions(itemId, "pl");
+
+        // One `create` each, plus the Polish update - and no overlap at all: the
+        // read filters on `languageId`, it is not a post-filter over a wider one.
+        expect(english.edges.map(edge => edge.operation)).toEqual(["create"]);
+        expect(polish.edges.map(edge => edge.operation)).toEqual([
+          "update",
+          "create",
+        ]);
+      });
+
+      it("restores one locale forward to a new version", async () => {
+        const itemId = await guide("Revision Restore");
+        await editorial().update(
+          itemId,
+          "en",
+          { title: "Second Title" },
+          { actor: ACTOR, expectedVersion: 1 },
+        );
+
+        const history = await editorial().listRevisions(itemId, "en");
+        const first = history.edges.at(-1);
+        if (!first) throw new Error("Expected a first revision.");
+
+        const outcome = await editorial().restore(itemId, "en", first.id, {
+          actor: ACTOR,
+          expectedVersion: 2,
+        });
+        expect(outcome?.changed).toBe(true);
+        // Forward to 3, not back to 1: the history stays append-only.
+        expect(outcome?.version).toBe(3);
+        expect(outcome?.restoredFromRevisionId).toBe(first.id);
+        expect((await rowsFor(itemId))[0]).toMatchObject({
+          title: "Revision Restore",
+          version: 3,
+        });
+      });
+
+      it("refuses a revision belonging to another locale", async () => {
+        const itemId = await guide("Revision Cross Locale");
+        await editorial().create(
+          itemId,
+          "pl",
+          { body: "Tresc", title: "Polski" },
+          { actor: ACTOR },
+        );
+        const polish = await editorial().listRevisions(itemId, "pl");
+        const revisionId = polish.edges[0]?.id;
+        if (revisionId === undefined) throw new Error("Expected a revision.");
+
+        // Scoped by language before anything is read, so the Polish revision is
+        // simply not found from the English tab.
+        expect(
+          await editorial().restore(itemId, "en", revisionId, {
+            actor: ACTOR,
+            expectedVersion: 1,
+          }),
+        ).toBeNull();
+      });
+
+      it("keeps the publication state across a restore", async () => {
+        const itemId = await guide("Revision Restore Published");
+        await editorial().publish(itemId, "en", { actor: ACTOR });
+        await editorial().update(
+          itemId,
+          "en",
+          { title: "Changed While Published" },
+          { actor: ACTOR, expectedVersion: 2 },
+        );
+
+        const history = await editorial().listRevisions(itemId, "en");
+        const original = history.edges.at(-1);
+        if (!original) throw new Error("Expected the create revision.");
+
+        await editorial().restore(itemId, "en", original.id, {
+          actor: ACTOR,
+          expectedVersion: 3,
+        });
+
+        // Restoring field values never takes a translation off the internet, and
+        // never puts one on it.
+        const [row] = await sql<{ status: string }[]>`
+          SELECT "status" FROM "example_localized_articles_translations"
+          WHERE "itemId" = ${itemId} AND "languageId" = 1
+        `;
+        expect(row.status).toBe("published");
+      });
+
+      it("prunes each locale's history against its own retention window", async () => {
+        const itemId = await guide("Revision Retention");
+
+        // Retention is 20 on this fixture, so nothing is pruned yet - what this
+        // proves is that the two locales' counters do not compete for the window.
+        for (let index = 0; index < 3; index += 1) {
+          await editorial().update(
+            itemId,
+            "en",
+            { title: `English ${index}` },
+            { actor: ACTOR, expectedVersion: index + 1 },
+          );
+        }
+
+        // The create plus three updates. Polish has none of them, so five Polish
+        // revisions could never evict an English one.
+        expect(await revisionsFor(itemId, 1)).toHaveLength(4);
+        expect(await revisionsFor(itemId, 2)).toHaveLength(0);
+      });
+
+      it("refuses a stale expectedVersion on a restore", async () => {
+        const itemId = await guide("Revision Restore Stale");
+        await editorial().update(
+          itemId,
+          "en",
+          { title: "Moved On" },
+          { actor: ACTOR, expectedVersion: 1 },
+        );
+        const history = await editorial().listRevisions(itemId, "en");
+        const first = history.edges.at(-1);
+        if (!first) throw new Error("Expected a first revision.");
+
+        await expect(
+          editorial().restore(itemId, "en", first.id, {
+            actor: ACTOR,
+            expectedVersion: 1,
+          }),
+        ).rejects.toThrow(/version 2, not 1/);
       });
     });
   });
