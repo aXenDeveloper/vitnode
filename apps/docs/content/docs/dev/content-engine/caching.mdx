@@ -201,8 +201,16 @@ and the queue does not run in Next - in a split deployment it is plain Node,
 where importing `next/cache` throws. So it posts to a small signed Route Handler
 in the web app, which does the expiring.
 
-It is best effort and logged, never fatal. The reasoning, the auth and the
-failure mode are all in
+The post is made by a **second queue task**, dispatched inside the same
+transaction as the publication itself. That is what stops a temporary outage
+costing an invalidation permanently: the task exists if and only if the
+transition committed, it retries on the queue's own backoff, and it never
+republishes - so retrying it is only ever another attempt at expiring a tag.
+
+The bridge itself never throws; the task around it fails when no origin accepted
+the request, which is what triggers the retry. Delivery is at-least-once, and
+expiring an already-expired tag is a no-op. The reasoning, the auth and the
+payload are all in
 [Scheduled publishing](/docs/dev/content-engine/scheduling#the-cache-bridge).
 
 ### The slug change

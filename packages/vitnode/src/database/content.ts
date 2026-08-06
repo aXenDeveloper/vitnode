@@ -74,6 +74,12 @@ export const core_content_revisions = pgTable(
     // this is what makes "exactly one revision per real mutation" true even
     // under two concurrent writers, and it doubles as the history index, since
     // `ORDER BY version DESC` for one record reads it directly.
+    //
+    // No `pluginId` in the key, deliberately. `validateContentTypes` rejects a
+    // duplicate content type id across *every* installed plugin at boot, so an
+    // id already identifies exactly one content type and one table - adding the
+    // owner would widen the index without excluding anything. It is still a
+    // column, because ownership is what the cleanup job keys off.
     uniqueIndex("core_content_revisions_item_version_unique").on(
       t.contentTypeId,
       t.itemId,
@@ -137,6 +143,16 @@ export const core_content_schedules = pgTable(
     completedAt: t.timestamp(),
     /** Why the last attempt failed. Set on an overdue row, cleared on success. */
     lastError: t.text(),
+    /**
+     * Why a *completed* schedule's announcements have not been delivered.
+     *
+     * The transition and its effects are two units of work on purpose, so they
+     * need two error fields. A value here means the record published exactly
+     * once and the event, search write or cache invalidation is still being
+     * retried by the `content-schedule-effects` task - never that the
+     * publication should run again.
+     */
+    effectsError: t.text(),
   }),
   t => [
     // At most one *pending* schedule per record and action, enforced by the

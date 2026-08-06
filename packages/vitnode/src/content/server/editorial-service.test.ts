@@ -112,6 +112,24 @@ const opsOf = (calls: RecordedCall[], op: string) =>
   calls.filter(call => call.op === op).map(call => call.arg);
 
 /**
+ * Which columns a Drizzle condition actually names.
+ *
+ * `JSON.stringify` cannot be used - a `PgColumn` holds a reference back to its
+ * table - so the nested `queryChunks` are walked instead, collecting anything
+ * that carries a column `name`.
+ */
+const columnsIn = (condition: unknown): string[] => {
+  const walk = (value: unknown): unknown[] =>
+    value !== null && typeof value === "object" && "queryChunks" in value
+      ? (value.queryChunks as unknown[]).flatMap(walk)
+      : [value];
+
+  return walk(condition)
+    .map(chunk => (chunk as null | { name?: unknown })?.name)
+    .filter((name): name is string => typeof name === "string");
+};
+
+/**
  * `editorialService` is `undefined` for a content type without the workflow, so
  * every call site would otherwise need a non-null assertion. Throwing here
  * keeps the tests readable and fails loudly if a fixture ever loses its
@@ -387,7 +405,10 @@ describe("editorial service", () => {
     it("captures a final revision one version past the last", async () => {
       const { c, calls } = createDbMock([[row({ version: 6 })], [{ id: 14 }]]);
 
-      const result = await service(c).delete(1, { actor: STAFF });
+      const result = await service(c).delete(1, {
+        actor: STAFF,
+        expectedVersion: 6,
+      });
 
       expect(result?.operation).toBe("delete");
       // The row is gone, so nothing holds version 7 - but the history stays
@@ -398,10 +419,51 @@ describe("editorial service", () => {
       ).toBe(7);
     });
 
-    it("returns null when there was nothing to delete", async () => {
-      const { c } = createDbMock([[]]);
+    it("guards the DELETE on the version it was given", async () => {
+      // The precondition has to be part of the statement that removes the row.
+      // Reading the version first and deleting second is the very race this
+      // exists to close.
+      const { c, calls } = createDbMock([[row({ version: 6 })], [{ id: 14 }]]);
 
-      await expect(service(c).delete(1, { actor: STAFF })).resolves.toBeNull();
+      await service(c).delete(1, { actor: STAFF, expectedVersion: 6 });
+
+      expect(columnsIn(opsOf(calls, "where")[0])).toEqual(
+        expect.arrayContaining(["id", "version"]),
+      );
+    });
+
+    it("returns null when there was nothing to delete", async () => {
+      // Nothing deleted and nothing there: the caller wanted it gone, and it
+      // is. A 404, never a conflict.
+      const { c } = createDbMock([[], []]);
+
+      await expect(
+        service(c).delete(1, { actor: STAFF, expectedVersion: 6 }),
+      ).resolves.toBeNull();
+    });
+
+    it("refuses to delete a version the caller has not seen", async () => {
+      // Nothing deleted, but the record is still there at a newer version -
+      // somebody saved after this table was rendered.
+      const { c } = createDbMock([[], [{ version: 9 }]]);
+
+      await expect(
+        service(c).delete(1, { actor: STAFF, expectedVersion: 6 }),
+      ).rejects.toMatchObject({
+        currentVersion: 9,
+        expectedVersion: 6,
+        name: "ContentVersionConflict",
+      });
+    });
+
+    it("writes no revision when the delete is refused", async () => {
+      const { c, calls } = createDbMock([[], [{ version: 9 }]]);
+
+      await expect(
+        service(c).delete(1, { actor: STAFF, expectedVersion: 6 }),
+      ).rejects.toThrow();
+
+      expect(opsOf(calls, "values")).toHaveLength(0);
     });
   });
 

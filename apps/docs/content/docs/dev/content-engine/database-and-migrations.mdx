@@ -298,6 +298,17 @@ Completed and cancelled rows are kept and swept by a daily cron rather than
 deleted on success. "Who scheduled this, and when did it go out" is the question
 the feature exists to answer.
 
+It carries two error columns rather than one, because a scheduled publication is
+two units of work:
+
+| Column | Means |
+| --- | --- |
+| `lastError` | The **transition** failed. The row is still `pending` and the queue is retrying the publish |
+| `effectsError` | The transition committed and the row is `completed`, but its event, search write or cache expiry has not landed yet |
+
+A completed schedule is never moved back to `pending` because an announcement
+bounced - the record really did publish, and only the telling is outstanding.
+
 ### When a plugin or content type is renamed
 
 Revisions are keyed by `pluginId` and `contentTypeId` as strings, so renaming

@@ -20,4 +20,5 @@ export const EXAMPLE_MIGRATIONS = [
   // Core again, for the same reason: the scheduling suites book a publication
   // for an article, and the row has to have somewhere to go.
   "0027_add_content_schedules.sql",
+  "0028_add_content_schedule_effects_error.sql",
 ];

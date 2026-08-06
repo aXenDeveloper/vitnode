@@ -60,22 +60,52 @@ the honest default: linking to a page nobody has written yet would just be a
   you cast past it.
 </Callout>
 
-## `CONTENT_PREVIEW_SECRET`
+## `CONTENT_PREVIEW_SECRET` is required
 
-```bash title=".env"
-CONTENT_PREVIEW_SECRET=a-long-random-string
-```
-
-This one value is the entire authorization story. Leave it unset and it falls
-back to a well-known default, which means anyone who has read the VitNode source
-can mint a link to any draft on your site. **AdminCP → System → Integrations**
-flags that as a warning, next to the same flag for `CRON_SECRET`.
-
-Generate one the usual way:
+**Preview does not work without one.** This single value is the entire
+authorization story - there is no session to fall back on - so a missing or
+guessable secret is not a warning, it is every draft on the site readable by
+anyone who has read the VitNode source.
 
 ```bash
 openssl rand -base64 32
 ```
+
+```bash title=".env"
+CONTENT_PREVIEW_SECRET=Q0hBTkdFLU1FLXRoaXMtaXMtYW4tZXhhbXBsZS12YWx1ZQ==
+```
+
+A secret is acceptable when all three are true:
+
+```text
+CONTENT_PREVIEW_SECRET is set
+it is not the built-in placeholder
+it is at least 32 bytes
+```
+
+Anything else and preview **fails closed**, everywhere:
+
+| Where | What happens |
+| --- | --- |
+| Boot, in production | The API refuses to start, naming the content types that made it mandatory |
+| Boot, in development | A warning on stdout. The app starts; preview does not |
+| `POST /{id}/preview` | **503**, with a message that names the variable |
+| `GET /content/{path}/preview/{token}` | **404** - the same answer a forged token gets, so an anonymous request learns nothing about the deployment |
+| AdminCP → System → Integrations | `contentPreview.secure: false`, next to the same flag for `CRON_SECRET` |
+
+<Callout type="warn" title="Why development is different, and why it is still off">
+  Refusing to start `pnpm dev` over a missing secret would be rude. Serving
+  drafts to anyone who guesses a URL would be worse. So a development install
+  boots and preview simply does not work until you set one - and the 503 says
+  exactly that, rather than failing somewhere unhelpful.
+</Callout>
+
+<Callout type="info" title="`next build` is exempt">
+  Next imports every route module while collecting page data, so the API's boot
+  check runs on the build machine too - which has no business holding a runtime
+  signing key. The build logs the warning and carries on; the process that
+  actually serves requests still refuses to start.
+</Callout>
 
 <Callout type="info" title="Rotating it is how you revoke">
   There is no revocation list, and no per-link kill switch. Changing the secret
@@ -101,15 +131,33 @@ and it is asserted by a test rather than left to review.
 // POST /{id}/preview
 {
   "token": "eyJhdWQiOiJjb250ZW50LXByZXZpZXci…",
-  "url": "/articles/preview/eyJhdWQiOiJjb250ZW50LXByZXZpZXci…",
+  "url": "https://example.com/articles/preview/eyJhdWQiOiJjb250ZW50LXByZXZpZXci…",
   "expiresAt": "2026-08-05T10:30:00.000Z",
   "revisionId": 42,
   "version": 5
 }
 ```
 
+### `url` is always absolute
+
+It goes on somebody's clipboard and into somebody else's chat window, so a path
+would be useless - and in a split deployment it would resolve against the wrong
+host. Which origin it resolves against depends on where the link actually points:
+
+| `preview.pathTemplate` | Resolved against | Example |
+| --- | --- | --- |
+| set | `NEXT_PUBLIC_WEB_URL` - your app renders the page | `https://example.com/articles/preview/{token}` |
+| unset | `NEXT_PUBLIC_API_URL` - the generated JSON endpoint | `https://api.example.com/api/@vitnode/example/content/articles/preview/{token}` |
+
+Two different origins, deliberately: the page is served by the web app and the
+endpoint by the API, and assuming they share a host is exactly the assumption a
+split deployment breaks. Both are validated at boot when preview is enabled, so
+a malformed `NEXT_PUBLIC_WEB_URL` is a startup error rather than a broken link
+handed to a reviewer.
+
 `url` is built on the server, because only the definition knows whether this
-install has a preview page or should link at the JSON endpoint.
+install has a preview page or should link at the JSON endpoint. The token is
+percent-encoded into the path.
 
 <Callout type="info" title="A slug of `preview` still works">
   `/preview/{token}` is two path segments and `/{slug}` is one, so they can never
@@ -228,7 +276,9 @@ rather than showing you one that may already have expired.
 | Previewing a **list** of drafts | There is no preview list route, and there will not be one |
 | Seeing who opened a link | It is an anonymous read. Nothing is logged per view |
 | Previewing a record with no public API | There would be nothing safe to render |
+| Keeping a previewed revision from being pruned | That needs persistent preview records. Retention wins, and the link 404s |
 | Comments or annotations on a preview | Read-only. A reviewer replies wherever they already talk to you |
+| Working without `CONTENT_PREVIEW_SECRET` | The signature *is* the access control. Missing means off, in every environment |
 
 ## Why it is safe
 
@@ -253,10 +303,35 @@ an accident:
 
 Adding `editorial` to a content type that already has rows leaves those rows at
 version 1 with no revisions - there is nothing to freeze. Their preview links
-read the **live row** instead, still scoped to the record in the signed token and
-still projected through the public allowlist. Only the frozen-snapshot guarantee
-is missing, because there is nothing to guarantee. The first edit fixes it.
+carry `revisionId: 0` and read the **live row** instead, still scoped to the
+record in the signed token and still projected through the public allowlist.
+Only the frozen-snapshot guarantee is missing, because there is nothing to
+guarantee: such a link follows any edit made before the reviewer opens it.
 
-If retention prunes the revision a link pointed at, the link 404s. Links are
-minted against the newest revision, which is the last one to be pruned, so this
-takes a busy record and a patient reviewer.
+The AdminCP says so in the popover rather than letting "preview" imply something
+this one link cannot deliver, and the first edit fixes it permanently.
+
+Fabricating a snapshot at mint time was the alternative, and it was rejected:
+inventing a revision that claims the record was written now puts a lie in the
+audit trail to smooth over a case that disappears on the next save.
+
+## The expiry outlives the revision
+
+A link is pinned to one revision, and
+[retention](/docs/dev/content-engine/revisions#retention) keeps only the newest
+`retention` of them. So a busy record can prune the revision a shared link
+points at **before** that link expires, and the link 404s early.
+
+That is accepted behaviour, not a bug to route around:
+
+- Links are minted against the **newest** revision, which is the last one to be
+  pruned - so it takes many saves and a slow reviewer.
+- Raise `revisions.retention` if your editors work in bursts, or shorten
+  `expiresInMinutes` so the two windows match.
+- The popover says the link is pinned to a version and can age out.
+
+<Callout type="warn" title="The TTL is a maximum, not a promise">
+  "Expires in 30 minutes" means *no later than* 30 minutes. Protecting the
+  referenced revision from pruning would need a table of live previews, which is
+  the persistent-preview feature this deliberately does not have.
+</Callout>

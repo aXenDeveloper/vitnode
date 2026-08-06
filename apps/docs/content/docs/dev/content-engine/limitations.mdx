@@ -17,6 +17,7 @@ other 20%, so you find out here rather than halfway through building.
 | To-the-second [scheduling](/docs/dev/content-engine/scheduling) | The queue drains on a one-minute tick, so a schedule fires within about a minute |
 | Scheduling a field edit, or a recurring schedule | Only `status` is scheduled. One row, one time, one action |
 | Revoking a single [preview link](/docs/dev/content-engine/preview) | Tokens are stateless. Rotate `CONTENT_PREVIEW_SECRET`, or wait out the expiry |
+| Keeping a previewed revision from being pruned | A link is pinned to one revision, and retention can remove it before the link expires. The TTL is a maximum, not a promise |
 | A preview **list** of drafts | Only one record at a time, by signed link. There is no list route and there will not be one |
 | Approval workflows, reviewer assignment, per-locale revisions | [`editorial`](/docs/dev/content-engine/editorial) records what happened; it does not gate who may do it beyond the staff permissions |
 | Field-level merge of a conflicting edit | The [conflict banner](/docs/dev/content-engine/revisions#the-conflict) shows both sides and lets a person choose |
@@ -191,18 +192,23 @@ The AdminCP shows that as **stale** rather than hiding it. Extra documents, for
 records that no longer qualify, are stale too: the counts have to match exactly for
 a collection to read as indexed.
 
-## Background cache invalidation is best effort
+## Background effects are at-least-once
 
 A [scheduled](/docs/dev/content-engine/scheduling) publish cannot expire a Next
 cache tag itself - the queue does not run in Next - so it asks the web app over
-a signed HTTP hop. Two attempts, then the failure is logged with a
-`[content-revalidate]` prefix and dropped.
+a signed HTTP hop, from a **second** queue task dispatched inside the same
+transaction as the transition.
 
-Failing the task instead would retry the *publish*, which is idempotent: the
-second run would find nothing changed and skip the invalidation entirely, which
-is strictly worse. So a public page can be stale for up to its own `cacheLife`
-after a background transition. Same kind of eventual consistency the search
-index already has, and bounded the same way.
+That is what makes the delivery durable: the task exists if and only if the
+publication committed, it retries on the queue's own backoff, and it never
+republishes anything. A web app that was redeploying gets its tags expired on
+the next attempt rather than never.
+
+The price is the usual one for a retry without an outbox: **effects can be
+delivered more than once.** A search upsert and a cache expiry are idempotent by
+construction, but a listener may see the same `published` event twice. Key off
+`scheduleId` or `revisionId` if that matters to you. There is no exactly-once
+guarantee, and this page will not pretend otherwise.
 
 ## History is bounded, and restore is not undelete
 

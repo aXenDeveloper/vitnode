@@ -430,7 +430,11 @@
         "title": "Delete {name}",
         "desc": "Are you sure you want to delete <title></title>? This action cannot be undone.",
         "confirm": "Yes, delete it",
-        "success": "{name} has been deleted."
+        "success": "{name} has been deleted.",
+        "conflict": {
+          "title": "This record changed",
+          "desc": "Someone saved it after this page loaded, so it was not deleted. Refresh the list, check what changed, and delete it again if you still want to."
+        }
       },
       "publish": {
         "title": "Publish {name}",
@@ -481,6 +485,8 @@
         "hide_changes": "Hide changes",
         "no_changes": "No field values changed.",
         "load_failed": "This version could not be loaded.",
+        "load_more": "Load older versions",
+        "loading_more": "Loading…",
         "operations": {
           "create": "Created",
           "update": "Edited",
@@ -506,7 +512,9 @@
         "copy": "Copy link",
         "open": "Open",
         "expires": "Expires <when></when>",
-        "warning": "Treat it like a password: it works for anyone until it expires, and the only way to revoke one early is to rotate CONTENT_PREVIEW_SECRET."
+        "warning": "Treat it like a password: it works for anyone until it expires, and the only way to revoke one early is to rotate CONTENT_PREVIEW_SECRET. It is pinned to this version, so heavy editing can age it out of the history before it expires.",
+        "unavailable": "Preview is not configured on this deployment. Set CONTENT_PREVIEW_SECRET to at least 32 random bytes and restart the API.",
+        "live": "This record has no saved version yet, so the link shows it live - it will follow any edits made before the reviewer opens it."
       },
       "schedule": {
         "title": "Schedule this {name}",
@@ -540,7 +548,8 @@
           "in_past": "That time has already passed. Pick a moment in the future.",
           "order": "An unpublish has to come after the publish that is already scheduled.",
           "unsupported": "This content type cannot be scheduled."
-        }
+        },
+        "effects_failed": "Published, but the announcements did not go out yet - retrying."
       },
       "permissions": {
         "can_view": "View list",

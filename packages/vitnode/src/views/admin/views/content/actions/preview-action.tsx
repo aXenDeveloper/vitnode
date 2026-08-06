@@ -122,6 +122,16 @@ export const PreviewContentAction = ({
               return;
             }
 
+            // 503 is the one failure with a fix the person reading it can
+            // apply, so it says what to do rather than "something went wrong".
+            if (result.status === 503) {
+              toast.error(tErrors("title"), {
+                description: t("unavailable"),
+              });
+
+              return;
+            }
+
             const errorKey = contentErrorKey(result.status);
             toast.error(tErrors("title"), {
               description: errorKey
@@ -184,6 +194,16 @@ export const PreviewContentAction = ({
                 variant="outline"
               />
             </div>
+
+            {/* `0` means the record predates its content type opting into
+                editorial, so there is no snapshot to freeze and the link reads
+                the live row. Worth saying out loud - "preview" otherwise
+                promises something this one link cannot deliver. */}
+            {preview.revisionId === 0 ? (
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                {t("live")}
+              </p>
+            ) : null}
 
             <p className="text-muted-foreground text-xs leading-relaxed">
               {t("warning")}

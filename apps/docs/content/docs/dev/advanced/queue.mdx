@@ -168,17 +168,49 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
 
 ## Tasks core ships
 
-| Task | What it does |
-| --- | --- |
-| `send-email` | Delivers a rendered email through the configured provider |
-| `rebuild-search-index` | Clears and rebuilds the [search](/docs/dev/content-engine/search) index, whole or per collection |
-| `content-schedule` | Runs one [scheduled publication](/docs/dev/content-engine/scheduling). A cancelled, rescheduled or already-executed schedule is a no-op |
+| Task | Attempts | What it does |
+| --- | --- | --- |
+| `send-email` | 3 | Delivers a rendered email through the configured provider |
+| `rebuild-search-index` | 3 | Clears and rebuilds the [search](/docs/dev/content-engine/search) index, whole or per collection |
+| `content-schedule` | 3 | Runs one [scheduled publication](/docs/dev/content-engine/scheduling). A cancelled, rescheduled or already-executed schedule is a no-op |
+| `content-schedule-effects` | 5 | Emits the event, syncs search and expires the cache for a scheduled transition that has **already committed**. Never republishes |
 
 `content-schedule` is worth reading as a pattern: its payload is
 `{ scheduleId, generation }` and nothing else. Every real value is re-read from
 the row under `FOR UPDATE`, so a task left over from a plan that has since
 changed finds a mismatch and quietly does nothing - which is far more reliable
-than trying to delete a queued row.
+than trying to delete a queued row. It holds that lock from the claim all the
+way to the commit, so a cancel arriving mid-flight waits and then honestly
+reports that the schedule already ran.
+
+### Why the effects are a second task
+
+The pair is worth reading as a pattern too, because splitting them is the whole
+point:
+
+```text
+content-schedule            claim → publish → revision → settle → enqueue effects
+                            ── one transaction ──────────────────────────────────
+content-schedule-effects    event → search → cache bridge
+```
+
+A transition is a database write that either committed or did not. Announcing it
+is three calls to systems a transaction cannot reach. Retrying them **together**
+would re-run a publish that is idempotent - so the second run finds nothing
+changed and skips the announcements entirely, which is how a scheduled unpublish
+ends up permanently serving a page it should have expired.
+
+The effects row is written inside the transition's transaction, so it exists if
+and only if the transition committed, and it carries everything frozen rather
+than re-reading a record that may have moved on. Delivery is at-least-once: the
+search write and the cache expiry are idempotent, but a listener can see one
+`published` twice.
+
+<Callout type="info" title="An announcement failure is not a publication failure">
+  The schedule stays `completed` and the reason lands in `effectsError` on the
+  schedule row. Nothing is ever moved back to `pending` because an event
+  bounced - the record really did publish.
+</Callout>
 
 ## Retries and backoff
 

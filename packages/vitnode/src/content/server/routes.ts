@@ -35,8 +35,10 @@ import { resolveContentActor } from "./actor";
 import { contentEditorialEffects } from "./editorial-effects";
 import { emitContentEvent } from "./emit";
 import { withHttpErrors } from "./http-errors";
+import { contentPreviewConfigProblems } from "./preview-config";
 import { createContentPreviewToken } from "./preview-token";
 import { publicationMethods } from "./publication";
+import { CONTENT_REVISIONS_MAX_PAGE_SIZE } from "./revisions-model";
 import { syncContentSearch } from "./search-sync";
 
 const zodLabels = z.record(z.string(), z.string().nullable());
@@ -167,19 +169,52 @@ export const buildContentRoutes = <
     c.get("core")?.contentPreviewSecret ?? CONFIG.contentPreviewSecret;
 
   /**
-   * Where the link points.
+   * Where the link points, as something a person can paste into a browser.
    *
-   * With a `pathTemplate` it is a page in the web app, which is what an editor
-   * wants to send a reviewer. Without one it is the JSON endpoint - honest
-   * rather than a link to a page nobody has written yet.
+   * Absolute in both branches, and against **different origins**, because they
+   * are served by different processes: a `pathTemplate` names a page in the web
+   * app, and the generated JSON endpoint lives on the API. Assuming those share
+   * a host is exactly the assumption a split deployment breaks, and a relative
+   * path would resolve against whichever one the AdminCP happened to be on.
+   *
+   * `split`/`join` rather than `String.replace`, so a `$` in the encoded token
+   * cannot be read as a replacement pattern. `defineContentType` has already
+   * proven the template holds exactly one `{token}`.
    */
-  const previewUrl = (token: string): string =>
-    definition.editorial.preview.pathTemplate
-      ? definition.editorial.preview.pathTemplate.replace(
-          CONTENT_PREVIEW_TOKEN_PLACEHOLDER,
-          encodeURIComponent(token),
-        )
-      : `/api/${pluginId}/content/${definition.publicApi.path}/preview/${encodeURIComponent(token)}`;
+  const previewUrl = (token: string): string => {
+    const encoded = encodeURIComponent(token);
+    const template = definition.editorial.preview.pathTemplate;
+
+    return template
+      ? new URL(
+          template.split(CONTENT_PREVIEW_TOKEN_PLACEHOLDER).join(encoded),
+          CONFIG.web,
+        ).toString()
+      : new URL(
+          `/api/${pluginId}/content/${definition.publicApi.path}/preview/${encoded}`,
+          CONFIG.api,
+        ).toString();
+  };
+
+  /**
+   * Refuses to mint a link the install cannot protect.
+   *
+   * 503 rather than 500: the request was fine and the code is fine, the
+   * deployment is missing a secret - and a service that is temporarily not
+   * offering a feature is what 503 means. The message names the environment
+   * variable, because the person clicking the button is usually the person who
+   * can set it.
+   */
+  const assertPreviewIsServable = (c: Context): void => {
+    const problems = contentPreviewConfigProblems(
+      c.get("core")?.contentPreviewSecret ?? process.env.CONTENT_PREVIEW_SECRET,
+    );
+    if (problems.length === 0) return;
+
+    throw new HTTPException(503, {
+      message: `Preview is unavailable: ${problems.join(" ")}`,
+    });
+  };
 
   const list = buildRoute({
     pluginId,
@@ -556,6 +591,21 @@ export const buildContentRoutes = <
     return value;
   };
 
+  /**
+   * The history cursor is a **version**, so both bounds are real constraints:
+   * versions start at 1, and a page larger than the cap would let one request
+   * pull an entire record's history.
+   */
+  const revisionQuery = z.object({
+    cursor: z.coerce.number().int().positive().optional(),
+    first: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(CONTENT_REVISIONS_MAX_PAGE_SIZE)
+      .optional(),
+  });
+
   const revisionList = buildRoute({
     pluginId,
     adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
@@ -563,33 +613,37 @@ export const buildContentRoutes = <
       method: "get",
       path: "/{id}/revisions",
       description: `History of one ${label.singular}`,
-      request: {
-        params: schemas.params,
-        query: z.object({
-          cursor: z.coerce.number().optional(),
-          first: z.coerce.number().optional(),
-        }),
-      },
+      request: { params: schemas.params, query: revisionQuery },
       responses: {
         200: jsonResponse(
-          z.object({ edges: z.array(zodRevisionMeta) }),
+          z.object({
+            edges: z.array(zodRevisionMeta),
+            pageInfo: z.object({
+              /** The last version on this page. Pass it back as `cursor`. */
+              endCursor: z.number().nullable(),
+              hasNextPage: z.boolean(),
+            }),
+          }),
           "Revisions, newest first",
         ),
-        400: invalidIdentifier,
+        400: { description: "Invalid query parameters" },
       },
     },
     handler: async c => {
+      // Parsed through the same schema the route declares, rather than
+      // re-derived with `Number(...)`: `?first=abc` is a 400 here and `NaN`
+      // there, and `NaN` would silently fall through to the default page size.
+      const { cursor, first } = revisionQuery.parse(c.req.query());
+
       // Metadata only. Opening the history must not drag every historical
       // snapshot of a long article across the wire; the detail route loads one
       // on demand.
-      const edges = await editorialService(c).revisions.list(identifier(c), {
-        cursor: c.req.query("cursor")
-          ? Number(c.req.query("cursor"))
-          : undefined,
-        limit: c.req.query("first") ? Number(c.req.query("first")) : undefined,
+      const page = await editorialService(c).revisions.list(identifier(c), {
+        cursor,
+        limit: first,
       });
 
-      return c.json({ edges }, 200);
+      return c.json(page, 200);
     },
   });
 
@@ -703,16 +757,25 @@ export const buildContentRoutes = <
             /** `0` when the record predates its content type opting in. */
             revisionId: z.number(),
             token: z.string(),
-            url: z.string(),
+            /** Absolute: the web page when one is configured, else the API. */
+            url: z.url(),
             version: z.number(),
           }),
           "Preview link created",
         ),
         400: invalidIdentifier,
         404: { description: `${label.singular} not found` },
+        503: {
+          description:
+            "Preview is not configured securely on this deployment, so no link can be signed",
+        },
       },
     },
     handler: async c => {
+      // Before the lookup, so a misconfigured install answers the same way for
+      // a record that exists and one that does not.
+      assertPreviewIsServable(c);
+
       const id = identifier(c);
 
       const row = await model.service(c).findById(id);
@@ -753,6 +816,8 @@ export const buildContentRoutes = <
     completedAt: z.union([z.date(), z.string()]).nullable(),
     createdAt: z.union([z.date(), z.string()]),
     createdBy: z.number().nullable(),
+    /** Set when the transition committed but its announcements have not. */
+    effectsError: z.string().nullable(),
     id: z.number(),
     lastError: z.string().nullable(),
     scheduledFor: z.union([z.date(), z.string()]),
@@ -936,6 +1001,67 @@ export const buildContentRoutes = <
     },
   });
 
+  /** The precondition an editorial delete carries. */
+  const deleteEnvelope = z.strictObject({
+    expectedVersion: z.number().int().positive(),
+  });
+
+  /**
+   * The editorial `DELETE`: same path and method, one required body key.
+   *
+   * A body on a `DELETE` is unusual, and it is still the right shape here: the
+   * precondition belongs with the request that acts on it, and the alternative
+   * - a query parameter - puts a value that must not be guessed into access
+   * logs and browser history.
+   *
+   * Required rather than optional. Deleting is the widest overwrite there is,
+   * and a confirmation dialog that names a record cannot describe a change the
+   * person has not seen.
+   */
+  const editorialRemove = buildRoute({
+    pluginId,
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.delete },
+    route: {
+      method: "delete",
+      path: "/{id}",
+      description: `Delete a ${label.singular}`,
+      request: { params: schemas.params, body: jsonBody(deleteEnvelope) },
+      responses: {
+        200: jsonResponse(
+          schemas.selectObject,
+          `${label.singular} deleted successfully`,
+        ),
+        400: invalidIdentifier,
+        404: { description: `${label.singular} not found` },
+        409: jsonResponse(
+          zodContentConflict,
+          "Still referenced by other content, or the version moved",
+        ),
+      },
+    },
+    handler: async c => {
+      const id = identifier(c);
+      const { expectedVersion } = await readJson(c, deleteEnvelope);
+
+      // The history outlives the record: a final `delete` revision is what makes
+      // "who removed this, and what did it say" answerable afterwards.
+      const result = await withHttpErrors(
+        "delete",
+        async () =>
+          await editorialService(c).delete(id, {
+            actor: resolveContentActor(c),
+            expectedVersion,
+          }),
+        { contentTypeId: definition.id, itemId: id, structured: true },
+      );
+      if (!result) throw notFound(definition);
+
+      await contentEditorialEffects(c, definition, result, { pluginId });
+
+      return c.json(result.row, 200);
+    },
+  });
+
   const remove = buildRoute({
     pluginId,
     adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.delete },
@@ -956,24 +1082,6 @@ export const buildContentRoutes = <
     },
     handler: async c => {
       const id = identifier(c);
-
-      // The history outlives the record: a final `delete` revision is what makes
-      // "who removed this, and what did it say" answerable afterwards.
-      if (editorial) {
-        const result = await withHttpErrors(
-          "delete",
-          async () =>
-            await editorialService(c).delete(id, {
-              actor: resolveContentActor(c),
-            }),
-          { contentTypeId: definition.id, itemId: id, structured: true },
-        );
-        if (!result) throw notFound(definition);
-
-        await contentEditorialEffects(c, definition, result, { pluginId });
-
-        return c.json(result.row, 200);
-      }
 
       const row = await withHttpErrors("delete", async () =>
         model.service(c).delete(id),
@@ -1003,7 +1111,7 @@ export const buildContentRoutes = <
     // Same method and path either way; only the body shape differs, so exactly
     // one of the two is ever mounted.
     editorial ? editorialUpdate : update,
-    remove,
+    editorial ? editorialRemove : remove,
     ...(definition.publication.enabled
       ? [publicationRoute("publish"), publicationRoute("unpublish")]
       : []),

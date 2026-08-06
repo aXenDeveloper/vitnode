@@ -238,6 +238,22 @@ export const CONTENT_SCHEDULE_RETENTION_DAYS = 30;
  */
 export const CONTENT_QUEUE_TASK_SCHEDULE = "content-schedule";
 
+/**
+ * The follow-up task that announces a schedule that has already happened.
+ *
+ * Separate from {@link CONTENT_QUEUE_TASK_SCHEDULE} because the two have
+ * different failure meanings. The transition is a database write that either
+ * committed or did not; the effects are an event, a search write and an HTTP
+ * hop to another process, any of which can fail long after the record is
+ * already published. Retrying them together would re-run an idempotent publish
+ * that then skips its own announcements - which is how a scheduled unpublish
+ * ends up permanently missing its cache invalidation.
+ *
+ * Dispatched **inside** the transition's transaction, so the task exists if and
+ * only if the transition committed.
+ */
+export const CONTENT_QUEUE_TASK_SCHEDULE_EFFECTS = "content-schedule-effects";
+
 /** Machine-readable reasons a schedule was refused. */
 export const CONTENT_SCHEDULE_CODES = {
   inPast: "CONTENT_SCHEDULE_IN_PAST",

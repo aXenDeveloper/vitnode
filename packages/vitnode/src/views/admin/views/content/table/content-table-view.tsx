@@ -190,6 +190,14 @@ export const ContentTableView = async ({
               pluginId={pluginId}
               singular={definition.admin.label.singular}
               title={title}
+              // The precondition the delete route checks. Taken from the row
+              // the person is actually looking at, so a stale table cannot
+              // remove a newer record.
+              version={
+                definition.editorial.enabled && typeof row.version === "number"
+                  ? row.version
+                  : undefined
+              }
             />
           </>
         );

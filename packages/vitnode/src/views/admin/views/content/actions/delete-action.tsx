@@ -25,6 +25,7 @@ export const DeleteContentAction = ({
   pluginId,
   singular,
   title,
+  version,
 }: {
   contentTypeId: string;
   id: number;
@@ -32,6 +33,11 @@ export const DeleteContentAction = ({
   pluginId: string;
   singular: string;
   title: string;
+  /**
+   * The version this row showed. `undefined` for a content type without
+   * `editorial`, whose delete has no precondition and never had one.
+   */
+  version?: number;
 }) => {
   const t = useTranslations("core.content.delete");
   const tErrors = useTranslations("core.global.errors");
@@ -56,9 +62,25 @@ export const DeleteContentAction = ({
             ),
           })}
           onSubmit={async ({ onClose }) => {
-            const mutation = await deleteContentAction(contentTypeId, id);
+            const mutation = await deleteContentAction(
+              contentTypeId,
+              id,
+              version,
+            );
 
             if (mutation.error !== undefined) {
+              // Someone saved while this dialog was open. Deliberately *not*
+              // retried with the new version: the whole point of the
+              // precondition is that the person confirms deleting the record as
+              // it is now, and they have not seen what changed.
+              if (mutation.conflict?.code === "CONTENT_VERSION_CONFLICT") {
+                toast.error(t("conflict.title"), {
+                  description: t("conflict.desc"),
+                });
+
+                return;
+              }
+
               // A restricted delete (409) is a normal, explainable outcome; an
               // unrecognised status is a server fault and reads as one.
               const errorKey = contentErrorKey(mutation.status);

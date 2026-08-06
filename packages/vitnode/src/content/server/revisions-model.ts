@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import { and, desc, eq, lte, notInArray, sql } from "drizzle-orm";
+import { and, desc, eq, lt, lte, notInArray, sql } from "drizzle-orm";
 
 import type {
   ContentActor,
@@ -48,11 +48,27 @@ export interface ContentRevisionsModel {
   list: (
     itemId: number,
     args?: { cursor?: number; limit?: number },
-  ) => Promise<ContentRevisionMeta[]>;
+  ) => Promise<ContentRevisionPage>;
 }
 
-const DEFAULT_PAGE_SIZE = 25;
-const MAX_PAGE_SIZE = 100;
+/**
+ * One page of history.
+ *
+ * `endCursor` is the **version** of the last row returned, not its id: version
+ * is what the query orders and filters by, it is unique per record, and it is
+ * strictly decreasing down the page. A revision id would be neither ordered nor
+ * dense once retention has pruned.
+ */
+export interface ContentRevisionPage {
+  edges: ContentRevisionMeta[];
+  pageInfo: {
+    endCursor: null | number;
+    hasNextPage: boolean;
+  };
+}
+
+export const CONTENT_REVISIONS_DEFAULT_PAGE_SIZE = 25;
+export const CONTENT_REVISIONS_MAX_PAGE_SIZE = 100;
 
 /**
  * Revision reads and writes for one content type.
@@ -164,6 +180,11 @@ export const createContentRevisionsModel = ({
     },
 
     list: async (itemId, { cursor, limit } = {}) => {
+      const size = Math.min(
+        Math.max(limit ?? CONTENT_REVISIONS_DEFAULT_PAGE_SIZE, 1),
+        CONTENT_REVISIONS_MAX_PAGE_SIZE,
+      );
+
       // One LEFT JOIN resolves every author in the same round trip - opening the
       // history must not cost one query per row.
       const rows = await c
@@ -177,12 +198,27 @@ export const createContentRevisionsModel = ({
         .where(
           cursor === undefined
             ? scope(itemId)
-            : and(scope(itemId), lte(core_content_revisions.version, cursor)),
+            : // Strictly less than, not `<=`. The cursor is the last version
+              // the caller already has, so including it again would repeat one
+              // row on every page boundary - and the AdminCP, which appends,
+              // would show it twice.
+              and(scope(itemId), lt(core_content_revisions.version, cursor)),
         )
         .orderBy(desc(core_content_revisions.version))
-        .limit(Math.min(limit ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE));
+        // One more than asked for: whether another page exists is a fact about
+        // the data, and reading one extra row is cheaper than a COUNT and
+        // cannot disagree with the rows just returned.
+        .limit(size + 1);
 
-      return rows;
+      const edges = rows.slice(0, size);
+
+      return {
+        edges,
+        pageInfo: {
+          endCursor: edges.at(-1)?.version ?? null,
+          hasNextPage: rows.length > size,
+        },
+      };
     },
   };
 };

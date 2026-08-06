@@ -11,11 +11,14 @@ import {
   testPostContentType,
 } from "@/tests/content-fixtures";
 
+import { CONFIG } from "../../lib/config";
+import { defineContentType } from "../define";
 import {
   ContentRevisionNotRestorable,
   ContentScheduleError,
   ContentVersionConflict,
 } from "../errors";
+import { field } from "../fields";
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
 
@@ -43,6 +46,32 @@ const posts = createContentModel(testPostContentType, {
 const editorialPosts = createContentModel(testEditorialPostContentType);
 
 const PLUGIN_ID = "@vitnode/example";
+const PREVIEW_SECRET = "unit-test-content-preview-secret-0123456789";
+
+/**
+ * Previewable, with no `pathTemplate`.
+ *
+ * The other branch of the preview URL: with no page in the web app to point
+ * at, the link has to resolve against the **API** origin instead, and the two
+ * origins are not the same host in a split deployment.
+ */
+const noTemplateContentType = defineContentType({
+  id: "test.notemplate",
+  tableName: "test_no_template",
+  fields: {
+    slug: field.slug({ source: "title" }),
+    title: field.text({ required: true }),
+  },
+  publication: { enabled: true },
+  publicApi: { enabled: true, fields: ["title", "slug"], path: "no-template" },
+  editorial: { enabled: true, preview: { enabled: true } },
+  admin: {
+    label: { plural: "No Templates", singular: "No Template" },
+    titleField: "title",
+    list: { columns: ["title"] },
+  },
+});
+const noTemplatePosts = createContentModel(noTemplateContentType);
 
 const adminUser = {
   avatarColor: "000000",
@@ -425,6 +454,16 @@ describe("generated content routes", () => {
 
       expect(res.status).toBe(409);
     });
+
+    it("still takes no body on a content type without editorial", async () => {
+      // The Stage 1-3 contract, unchanged. Adding a precondition to a delete
+      // that never had one would break every existing client.
+      const { app, service } = harness();
+      service.delete.mockResolvedValue(row);
+
+      expect((await app.request("/7", { method: "DELETE" })).status).toBe(200);
+      expect(service.delete).toHaveBeenCalledWith(7);
+    });
   });
 
   describe("options", () => {
@@ -609,7 +648,10 @@ describe("generated content routes", () => {
       ...overrides,
     });
 
-    const editorialHarness = ({ allow = true }: { allow?: boolean } = {}) => {
+    const editorialHarness = ({
+      allow = true,
+      previewSecret = PREVIEW_SECRET,
+    }: { allow?: boolean; previewSecret?: string } = {}) => {
       const emitted: Harness["emitted"] = [];
       const searched: unknown[] = [];
       const editorial = {
@@ -679,7 +721,12 @@ describe("generated content routes", () => {
           error: async () => Promise.resolve(),
         } as unknown as Context["var"]["log"]);
         c.set("admin", allow ? { user: adminUser } : null);
-        c.set("core", { hasCronAdapter: true } as never);
+        c.set("core", {
+          // A real one by default. Preview refuses to mint a link on a
+          // deployment whose secret is missing, well-known or under 32 bytes.
+          contentPreviewSecret: previewSecret,
+          hasCronAdapter: true,
+        } as never);
         c.set("user", null);
         await next();
       });
@@ -691,6 +738,37 @@ describe("generated content routes", () => {
       }
 
       return { app, editorial, emitted, service };
+    };
+
+    /** The same, for the content type with no `preview.pathTemplate`. */
+    const previewOnlyHarness = () => {
+      permissionGranted = true;
+
+      const service = { findById: vi.fn() };
+      vi.spyOn(noTemplatePosts, "service").mockReturnValue(service as never);
+      vi.spyOn(
+        noTemplatePosts as unknown as {
+          editorialService: () => { revisions: { latest: () => unknown } };
+        },
+        "editorialService",
+      ).mockReturnValue({
+        revisions: { latest: vi.fn().mockResolvedValue(null) },
+      });
+
+      const app = new OpenAPIHono();
+      app.use("*", async (c, next) => {
+        c.set("admin", { user: adminUser });
+        c.set("core", { contentPreviewSecret: PREVIEW_SECRET } as never);
+        c.set("user", null);
+        await next();
+      });
+      for (const { handler, route } of buildContentRoutes(noTemplatePosts, {
+        pluginId: PLUGIN_ID,
+      })) {
+        app.openapi(route, handler);
+      }
+
+      return { app, service };
     };
 
     describe("update envelope", () => {
@@ -813,9 +891,13 @@ describe("generated content routes", () => {
     });
 
     describe("revision history", () => {
-      it("returns metadata only", async () => {
-        const { app, editorial } = editorialHarness();
-        editorial.revisions.list.mockResolvedValue([
+      const revisionPage = (
+        pageInfo: { endCursor: null | number; hasNextPage: boolean } = {
+          endCursor: 5,
+          hasNextPage: false,
+        },
+      ) => ({
+        edges: [
           {
             actorName: "Test",
             actorType: "staff",
@@ -827,7 +909,13 @@ describe("generated content routes", () => {
             restoredFromRevisionId: null,
             version: 5,
           },
-        ]);
+        ],
+        pageInfo,
+      });
+
+      it("returns metadata only", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.revisions.list.mockResolvedValue(revisionPage());
 
         const res = await app.request("/7/revisions");
         const body = (await res.json()) as { edges: unknown[] };
@@ -837,6 +925,48 @@ describe("generated content routes", () => {
         // No snapshot in the list payload - opening the history must not drag
         // every historical version of a long article across the wire.
         expect(body.edges[0]).not.toHaveProperty("snapshot");
+      });
+
+      it("says whether there is another page, and where it starts", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.revisions.list.mockResolvedValue(
+          revisionPage({ endCursor: 5, hasNextPage: true }),
+        );
+
+        const res = await app.request("/7/revisions");
+
+        expect(await res.json()).toMatchObject({
+          pageInfo: { endCursor: 5, hasNextPage: true },
+        });
+      });
+
+      it("passes the cursor and page size through as numbers", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.revisions.list.mockResolvedValue(revisionPage());
+
+        await app.request("/7/revisions?cursor=5&first=10");
+
+        expect(editorial.revisions.list).toHaveBeenCalledWith(7, {
+          cursor: 5,
+          limit: 10,
+        });
+      });
+
+      it("refuses a page size past the cap", async () => {
+        // Validated by the route schema rather than clamped silently: a client
+        // asking for 5000 has misunderstood something, and a 400 says so.
+        const { app, editorial } = editorialHarness();
+        editorial.revisions.list.mockResolvedValue(revisionPage());
+
+        expect((await app.request("/7/revisions?first=5000")).status).toBe(400);
+      });
+
+      it("refuses a cursor that is not a version", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.revisions.list.mockResolvedValue(revisionPage());
+
+        expect((await app.request("/7/revisions?cursor=0")).status).toBe(400);
+        expect((await app.request("/7/revisions?cursor=abc")).status).toBe(400);
       });
 
       it("loads one snapshot on demand", async () => {
@@ -865,6 +995,99 @@ describe("generated content routes", () => {
         editorial.revisions.findById.mockResolvedValue(null);
 
         expect((await app.request("/7/revisions/20")).status).toBe(404);
+      });
+    });
+
+    describe("delete", () => {
+      it("requires the version the person was looking at", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.delete.mockResolvedValue(
+          outcome({ changedFields: [], operation: "delete" }),
+        );
+
+        const res = await app.request("/7", {
+          method: "DELETE",
+          ...json({ expectedVersion: 4 }),
+        });
+
+        expect(res.status).toBe(200);
+        expect(editorial.delete).toHaveBeenCalledWith(
+          7,
+          expect.objectContaining({ expectedVersion: 4 }),
+        );
+      });
+
+      it("refuses a delete that does not say which version", async () => {
+        // Optional would defeat the point: the client that forgot is exactly
+        // the client with a stale row.
+        const { app } = editorialHarness();
+
+        expect(
+          (await app.request("/7", { method: "DELETE", ...json({}) })).status,
+        ).toBe(400);
+      });
+
+      it("answers a structured 409 when the record moved", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.delete.mockRejectedValue(
+          new ContentVersionConflict({
+            contentTypeId: "test.editorial",
+            currentVersion: 5,
+            expectedVersion: 4,
+            itemId: 7,
+          }),
+        );
+
+        const res = await app.request("/7", {
+          method: "DELETE",
+          ...json({ expectedVersion: 4 }),
+        });
+
+        expect(res.status).toBe(409);
+        // The same envelope update and restore use, so the AdminCP tells
+        // "somebody saved first" from "still referenced" without reading prose.
+        expect(await res.json()).toEqual({
+          code: "CONTENT_VERSION_CONFLICT",
+          contentTypeId: "test.editorial",
+          currentVersion: 5,
+          expectedVersion: 4,
+          itemId: 7,
+        });
+      });
+
+      it("answers 404 for a record that is already gone", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.delete.mockResolvedValue(null);
+
+        expect(
+          (
+            await app.request("/7", {
+              method: "DELETE",
+              ...json({ expectedVersion: 4 }),
+            })
+          ).status,
+        ).toBe(404);
+      });
+
+      it("still maps a restricted foreign key to 409", async () => {
+        const { app, editorial } = editorialHarness();
+        editorial.delete.mockRejectedValue(
+          Object.assign(
+            new Error(
+              'update or delete on table "test_editorial_posts" violates foreign key constraint "fk_comments_post"',
+            ),
+            { code: "23503" },
+          ),
+        );
+
+        const res = await app.request("/7", {
+          method: "DELETE",
+          ...json({ expectedVersion: 4 }),
+        });
+
+        expect(res.status).toBe(409);
+        // The constraint name and the table name stay on the server.
+        expect(await res.text()).not.toMatch(/fk_comments_post/);
       });
     });
 
@@ -1020,10 +1243,73 @@ describe("generated content routes", () => {
         expect(body.revisionId).toBe(42);
         expect(body.version).toBe(5);
         // The fixture sets a `pathTemplate`, so the link points at the web app
-        // rather than the JSON endpoint.
+        // rather than the JSON endpoint - and it is absolute, because the
+        // AdminCP copies this value to a clipboard.
         expect(body.url).toBe(
-          `/editorial/preview/${encodeURIComponent(body.token)}`,
+          `${CONFIG.web.origin}/editorial/preview/${encodeURIComponent(body.token)}`,
         );
+      });
+
+      it("resolves the generated endpoint against the API origin", async () => {
+        // Different origin from the web app in a split deployment, so the two
+        // branches cannot share a base. `example.article` has a public API and
+        // preview but no `pathTemplate`.
+        const { app, service } = previewOnlyHarness();
+        service.findById.mockResolvedValue({ ...editorialRow, version: 2 });
+
+        const body = (await (
+          await app.request("/7/preview", { method: "POST" })
+        ).json()) as { token: string; url: string };
+
+        expect(body.url).toBe(
+          `${CONFIG.api.origin}/api/${PLUGIN_ID}/content/no-template/preview/${encodeURIComponent(body.token)}`,
+        );
+      });
+
+      it("percent-encodes the token into the path", async () => {
+        const { app, editorial, service } = editorialHarness();
+        service.findById.mockResolvedValue({ ...editorialRow, version: 5 });
+        editorial.revisions.latest.mockResolvedValue({ id: 42, version: 5 });
+
+        const body = (await (
+          await app.request("/7/preview", { method: "POST" })
+        ).json()) as { token: string; url: string };
+
+        const url = new URL(body.url);
+        // No double slash where the template met the origin, and the last
+        // segment decodes back to exactly the token that was signed.
+        expect(url.pathname).not.toContain("//");
+        expect(decodeURIComponent(url.pathname.split("/").at(-1) ?? "")).toBe(
+          body.token,
+        );
+      });
+
+      it("refuses to sign a link when the secret is not safe", async () => {
+        // 503 rather than 500: the request is fine, the deployment is missing a
+        // secret - and the message names the variable, because the person
+        // clicking the button is usually the person who can set it.
+        const { app, service } = editorialHarness({
+          previewSecret: "too-short",
+        });
+        service.findById.mockResolvedValue({ ...editorialRow, version: 5 });
+
+        const res = await app.request("/7/preview", { method: "POST" });
+
+        expect(res.status).toBe(503);
+        expect(await res.text()).toContain("CONTENT_PREVIEW_SECRET");
+      });
+
+      it("refuses before saying whether the record exists", async () => {
+        // A misconfigured install must answer the same way for a record that
+        // is there and one that is not.
+        const { app, service } = editorialHarness({
+          previewSecret: "too-short",
+        });
+        service.findById.mockResolvedValue(null);
+
+        expect(
+          (await app.request("/7/preview", { method: "POST" })).status,
+        ).toBe(503);
       });
 
       it("falls back to the live row when there is no revision", async () => {

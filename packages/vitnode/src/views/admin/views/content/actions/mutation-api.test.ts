@@ -445,12 +445,117 @@ describe("editorial", () => {
   });
 
   it("lists revisions", async () => {
-    responses = [{ data: { edges: [{ id: 20, version: 5 }] }, status: 200 }];
+    responses = [
+      {
+        data: {
+          edges: [{ id: 20, version: 5 }],
+          pageInfo: { endCursor: 5, hasNextPage: false },
+        },
+        status: 200,
+      },
+    ];
 
     const result = await listContentRevisionsAction("test.editorial", 7);
 
     expect(result.edges).toHaveLength(1);
     expect(fetches[0].path).toBe("/7/revisions");
+  });
+
+  it("carries the page info back so the dialog can offer another page", async () => {
+    responses = [
+      {
+        data: {
+          edges: [{ id: 20, version: 5 }],
+          pageInfo: { endCursor: 5, hasNextPage: true },
+        },
+        status: 200,
+      },
+    ];
+
+    const result = await listContentRevisionsAction("test.editorial", 7);
+
+    expect(result.pageInfo).toEqual({ endCursor: 5, hasNextPage: true });
+  });
+
+  it("sends the cursor as a query parameter", async () => {
+    responses = [
+      {
+        data: { edges: [], pageInfo: { endCursor: null, hasNextPage: false } },
+        status: 200,
+      },
+    ];
+
+    await listContentRevisionsAction("test.editorial", 7, 36);
+
+    expect(fetches[0]).toMatchObject({ path: "/7/revisions" });
+  });
+
+  it("reports the new version after a restore", async () => {
+    // The dialog stays open, so its next restore needs the version the record
+    // holds now - reusing the one it opened with would conflict with the
+    // restore it just performed.
+    responses = [
+      { data: editorialRow, status: 200 },
+      {
+        data: { changed: true, row: { ...editorialRow, version: 5 } },
+        status: 200,
+      },
+    ];
+
+    const result = await restoreContentRevisionAction(
+      "test.editorial",
+      7,
+      3,
+      4,
+    );
+
+    expect(result.version).toBe(5);
+  });
+
+  describe("delete", () => {
+    it("sends the version the row was showing", async () => {
+      responses = [{ data: editorialRow, status: 200 }];
+
+      await deleteContentAction("test.editorial", 7, 4);
+
+      expect(fetches[0]).toMatchObject({
+        body: { expectedVersion: 4 },
+        method: "delete",
+        path: "/7",
+      });
+    });
+
+    it("sends no body for a content type without editorial", async () => {
+      // The Stage 1-3 contract. A precondition on a route that never had one
+      // would break every existing client.
+      definition = testPostContentType;
+      responses = [{ data: { id: 7, publishedAt: null }, status: 200 }];
+
+      await deleteContentAction("test.post", 7, 4);
+
+      expect(fetches[0].body).toBeUndefined();
+    });
+
+    it("hands the version conflict back to the caller to explain", async () => {
+      responses = [
+        {
+          error: JSON.stringify({
+            code: "CONTENT_VERSION_CONFLICT",
+            contentTypeId: "test.editorial",
+            currentVersion: 5,
+            expectedVersion: 4,
+            itemId: 7,
+          }),
+          status: 409,
+        },
+      ];
+
+      const result = await deleteContentAction("test.editorial", 7, 4);
+
+      expect(result.conflict?.code).toBe("CONTENT_VERSION_CONFLICT");
+      // Nothing was deleted, so nothing public went stale.
+      expect(cacheCalls).toEqual([]);
+    });
   });
 
   it("expires the old and new slug when a restore moves the URL", async () => {

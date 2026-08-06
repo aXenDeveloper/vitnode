@@ -105,6 +105,30 @@ the engine.
   would be a way to publish an arbitrary record by inserting a queue row.
 </Callout>
 
+### Cancelling is guaranteed only *before* the claim
+
+The lock the task takes is held from the claim right through to the commit -
+the transition, its revision, the settlement and the follow-up task are one
+transaction. That gives cancellation a precise meaning:
+
+| When the cancel arrives | What happens |
+| --- | --- |
+| Before the task claims the row | The cancel wins. The task wakes, finds `status = 'cancelled'`, and does nothing |
+| While the task holds the lock | The cancel **waits** on the row, then re-checks its `status = 'pending'` condition, finds `completed`, and answers **404 Schedule not found** |
+| After the task committed | The same 404, immediately |
+
+So a successful cancel really means cancelled, and a 404 on a pending-looking
+schedule means it ran while you were clicking. There is no third outcome where
+the request says yes and the article goes live anyway.
+
+The settlement is guarded the same way - `SET status = 'completed' WHERE id = $id
+AND status = 'pending'` - so a worker that somehow lost its lock cannot rewrite
+a cancelled plan into one that ran. If that write matches nothing, the whole
+transition rolls back rather than publishing something nobody wanted.
+
+Rescheduling is a cancel and an insert in one transaction, so it follows exactly
+the same rules.
+
 ## Idempotency comes for free
 
 Nothing extra guards against a double run, because the existing transition guard
@@ -134,6 +158,57 @@ Exactly what happens when somebody clicks the button, through the same helper:
 Scheduling itself is **not** a revision and consumes no version - it changes no
 field value. It emits `scheduled` and `schedule_cancelled` instead, which are
 new events on schedulable content types only.
+
+### Two tasks, not one
+
+The transition and the announcements are separate units of work, because they
+fail differently. Publishing is a database write that either committed or did
+not. Telling everyone else - an event, a search document, an HTTP hop to the web
+app - is three calls to systems a transaction cannot reach, any of which can be
+down for a minute.
+
+```text
+content-schedule            claim → publish → revision → settle → enqueue effects
+                            ── one transaction ──────────────────────────────────
+content-schedule-effects    event → search → cache bridge
+```
+
+The `content-schedule-effects` row is written **inside** the transition's
+transaction, so it exists if and only if the transition committed. A crash a
+millisecond after the commit loses nothing: the row is durable and the queue
+drains it on the next tick.
+
+<Callout type="warn" title="Why they are not one task">
+  Retrying them together would re-run the publish - which is idempotent, so the
+  second run finds nothing changed and skips the announcements **entirely**.
+  That is exactly how a scheduled unpublish ends up permanently serving a cached
+  page it should have expired, and splitting the two is what removes it.
+</Callout>
+
+The effects task carries everything it needs, frozen at commit time: the row as
+the transition returned it, the revision id, the operation, and who booked the
+schedule. It never re-reads the record, and it never publishes anything - so a
+record edited in the meantime cannot turn one announcement into a different one.
+
+### Delivery is at-least-once
+
+| Effect | On a retry |
+| --- | --- |
+| Search | An upsert or a delete, idempotent by construction |
+| Cache | Expiring a tag again is the same operation |
+| Event | **Delivered again.** A listener that must act once needs its own idempotency key - `scheduleId` and `revisionId` are both in the payload and both stable |
+
+There is no outbox and no exactly-once claim. Five attempts with the queue's
+ordinary backoff, then the row is `failed` and visible in
+**Core → Advanced → Queue Tasks**.
+
+### An effect failure is not a publication failure
+
+The schedule stays `completed`, because the publication really did happen.
+What failed is recorded separately, in `effectsError` on the schedule row, and
+the AdminCP shows it as *"Published, but the announcements did not go out yet"*
+rather than as a failed publish. A schedule is never moved back to `pending`
+because an announcement bounced.
 
 ### Nobody is impersonated
 
@@ -172,14 +247,14 @@ export { POST } from "@vitnode/core/content/next/revalidate-route";
 | Auth | `Bearer CRON_SECRET`, compared with `timingSafeEqual`. Already documented as the secret "for internal API calls", already flagged when insecure |
 | Replay | A `±5 minute` timestamp window. Replaying a revalidation only expires a tag again, so a nonce store would be a table guarding nothing |
 | Which origin | `NEXT_PUBLIC_WEB_URL` by default; `buildApiConfig({ content: { revalidateOrigins: [...] } })` for several front ends, each posted independently |
-| Failure | **Best effort.** Two attempts, then logged with a `[content-revalidate]` prefix and dropped |
+| Failure | Two attempts inside the bridge, then the **effects task** retries the whole delivery on the queue's backoff |
 
-<Callout type="warn" title="Why a failure is swallowed">
-  Failing the queue task would retry the *publish* - which is idempotent, so the
-  second run finds nothing changed and skips the invalidation **entirely**.
-  Strictly worse than a stale page. The residual risk is bounded by the tag's
-  own `cacheLife`, and it is the same eventual consistency the search index
-  already has.
+<Callout type="info" title="A temporary outage no longer costs an invalidation">
+  The bridge itself is best effort and never throws - but the task that calls it
+  fails if no origin accepted the request, so the queue retries it. Because that
+  task never republishes, a web app that was redeploying for two minutes gets
+  its tags expired on the next attempt instead of never. That is the whole
+  reason the effects are a task of their own.
 </Callout>
 
 ### `immediate` from a Route Handler
@@ -209,10 +284,14 @@ with two fields: what should happen, and when.
 
 - The date field says which timezone it is reading, because "9am" is a question
   otherwise.
-- A pending schedule can be cancelled from the same list.
+- A pending schedule can be cancelled from the same list - up until the moment
+  the worker claims it, after which the cancel answers 404 because the schedule
+  already ran.
 - A pending schedule whose time has passed is marked **overdue**, with the last
   error if there was one - that is the shape a failed run takes, since there is
   no `failed` status.
+- A completed schedule whose announcements have not landed says so, in a
+  different colour and different words: the record *is* published.
 - Without a cron adapter, a warning sits above everything.
 
 ## Retention
@@ -233,4 +312,6 @@ days, and rows whose content type is no longer registered at all.
 | Freezing what goes live | The schedule publishes the record as it stands at that moment |
 | Recurring schedules | One row, one time, one action |
 | A `failed` status | An overdue `pending` row with `lastError` says the same thing with one fewer state that can be wrong |
+| Exactly-once events | Effects are retried as a unit, so a listener can see one `published` twice. Key off `scheduleId` or `revisionId` if that matters |
+| Cancelling a schedule that is mid-flight | The lock is held to the commit, so the cancel waits and then honestly reports that it ran |
 | Firing without a cron adapter | Nothing drains the queue. The UI warns |

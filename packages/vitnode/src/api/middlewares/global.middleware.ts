@@ -22,6 +22,7 @@ import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import { StorageModel } from "@/api/models/storage";
 import { validateContentTypes } from "@/content/registry";
+import { assertContentPreviewConfig } from "@/content/server/preview-config";
 import { CONFIG } from "@/lib/config";
 import { collectLocaleCodes } from "@/lib/i18n/load-messages";
 import { buildApiMessagesSources } from "@/lib/i18n/sources";
@@ -252,6 +253,14 @@ export const globalMiddleware = ({
       })),
     ),
   );
+
+  // Once, here, because "does anything have preview enabled" is only answerable
+  // after every plugin's content types are in. Throws in production rather than
+  // booting an install whose preview links anyone could forge.
+  assertContentPreviewConfig({
+    contentTypes: contentTypesMetadata,
+    secret: process.env.CONTENT_PREVIEW_SECRET,
+  });
 
   // Not validated: a model carries the definition that `contentTypesMetadata`
   // already checked, so a second pass would only repeat the same errors.

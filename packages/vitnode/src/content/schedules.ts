@@ -21,6 +21,14 @@ export interface ContentSchedule {
   completedAt: Date | null | string;
   createdAt: Date | string;
   createdBy: null | number;
+  /**
+   * Why the announcements for a *completed* schedule have not gone out yet.
+   *
+   * A separate field from `lastError` because it means something different: the
+   * record really did publish, and what is still being retried is the event,
+   * the search write and the cache invalidation.
+   */
+  effectsError: null | string;
   id: number;
   lastError: null | string;
   scheduledFor: Date | string;

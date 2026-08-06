@@ -264,14 +264,29 @@ export const reloadContentRowAction = async (
 
 const zodRevisionList = z.object({
   edges: z.array(z.object({ id: z.number() }).loose()),
+  pageInfo: z.object({
+    endCursor: z.number().nullable(),
+    hasNextPage: z.boolean(),
+  }),
 });
 
-/** The history list. Metadata only - snapshots load one at a time. */
+export interface ContentRevisionPageResult {
+  edges: ContentRevisionMeta[];
+  error?: string;
+  pageInfo: { endCursor: null | number; hasNextPage: boolean };
+}
+
+/**
+ * One page of history. Metadata only - snapshots load one at a time.
+ *
+ * The cursor is the last **version** on the previous page and the route is
+ * exclusive on it, so pages append cleanly and never repeat their boundary row.
+ */
 export const listContentRevisionsAction = async (
   contentTypeId: string,
   id: number,
   cursor?: number,
-): Promise<{ edges: ContentRevisionMeta[]; error?: string }> => {
+): Promise<ContentRevisionPageResult> => {
   const { definition, pluginId } = resolve(contentTypeId);
 
   const result = await contentApiFetch({
@@ -283,12 +298,15 @@ export const listContentRevisionsAction = async (
     schema: zodRevisionList,
   });
 
-  if (result.status !== 200) {
-    return { edges: [], error: result.error ?? "" };
+  const empty = { endCursor: null, hasNextPage: false };
+
+  if (result.status !== 200 || !result.data) {
+    return { edges: [], error: result.error ?? "", pageInfo: empty };
   }
 
   return {
-    edges: (result.data?.edges ?? []) as unknown as ContentRevisionMeta[],
+    edges: result.data.edges as unknown as ContentRevisionMeta[],
+    pageInfo: result.data.pageInfo,
   };
 };
 
@@ -312,12 +330,19 @@ export const getContentRevisionAction = async (
   return { revision: result.data as unknown as ContentRevisionDetail };
 };
 
+/**
+ * Restores one revision, and reports the version the record now holds.
+ *
+ * The version comes back because the history dialog stays open afterwards: its
+ * next restore needs the *new* precondition, and reusing the one it opened with
+ * would fail with a conflict against the restore it just performed.
+ */
 export const restoreContentRevisionAction = async (
   contentTypeId: string,
   id: number,
   revisionId: number,
   expectedVersion: number,
-): Promise<MutationResult> => {
+): Promise<MutationResult & { version?: number }> => {
   const { definition, pluginId } = resolve(contentTypeId);
 
   // Same as an edit: the old slug has to be known before the write, or a
@@ -340,7 +365,9 @@ export const restoreContentRevisionAction = async (
   // may have, and `invalidate` compares both rows to work out which.
   invalidate(definition, id, before, result.data?.row);
 
-  return {};
+  const version = result.data?.row.version;
+
+  return { version: typeof version === "number" ? version : undefined };
 };
 
 export interface ContentPreviewLink {
@@ -485,10 +512,20 @@ export const cancelContentScheduleAction = async (
 export const deleteContentAction = async (
   contentTypeId: string,
   id: number,
+  /**
+   * The version the row showed when the person clicked delete. Required by an
+   * editorial content type and ignored by every other one, so the table can
+   * pass it unconditionally.
+   */
+  expectedVersion?: number,
 ): Promise<MutationResult> => {
   const { definition, pluginId } = resolve(contentTypeId);
 
   const result = await contentApiFetch({
+    // A body on a `DELETE`, matching the route: the precondition travels with
+    // the request that acts on it rather than in a query string that ends up in
+    // access logs.
+    body: definition.editorial.enabled ? { expectedVersion } : undefined,
     definition,
     method: "delete",
     path: `/${id}`,

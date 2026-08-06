@@ -6,6 +6,7 @@ import type { AnyContentTypeDefinition } from "@/content/types";
 
 import {
   testArticleContentType,
+  testEditorialPostContentType,
   testPostContentType,
 } from "@/tests/content-fixtures";
 
@@ -39,6 +40,7 @@ vi.mock("@/content/admin/fetch.server", () => ({
 }));
 
 const { ContentTableView } = await import("./content-table-view");
+const { DeleteContentAction } = await import("../actions/delete-action");
 
 /**
  * The `order` prop the view hands `DataTable`.
@@ -63,6 +65,60 @@ const orderProp = async (definition: AnyContentTypeDefinition) => {
 
   return element.props.order;
 };
+
+/**
+ * The props the actions cell hands `DeleteContentAction` for one row.
+ *
+ * The cell is a plain function returning a fragment, so it can be called and
+ * walked without a DOM - which is the cheapest way to assert what a row action
+ * is actually given.
+ */
+const deleteProps = async (
+  definition: AnyContentTypeDefinition,
+  row: Record<string, unknown>,
+) => {
+  const element = (await ContentTableView({
+    columnSpecs: [],
+    entry: {
+      definition,
+      pluginId: "@vitnode/example",
+      registration: {},
+    } as never,
+    formSpec: {} as never,
+    searchParams: {},
+  })) as ReactElement<{
+    columns: {
+      cell?: (context: { row: Record<string, unknown> }) => ReactElement<{
+        children: ReactElement<Record<string, unknown>>[];
+      }>;
+      id?: string;
+    }[];
+  }>;
+
+  const actions = element.props.columns.find(column => column.id === "actions");
+  const rendered = actions?.cell?.({ row });
+
+  return rendered?.props.children.find(
+    child => child?.type === DeleteContentAction,
+  )?.props;
+};
+
+describe("the delete row action", () => {
+  it("is handed the version the row is showing", async () => {
+    // The precondition the editorial delete route requires. Taken from the row
+    // in front of the person, so a stale table cannot remove a newer record.
+    expect(
+      await deleteProps(testEditorialPostContentType, { id: 7, version: 4 }),
+    ).toMatchObject({ id: 7, version: 4 });
+  });
+
+  it("is handed no version without editorial", async () => {
+    // `test.post` has no `version` column and its delete route takes no body.
+    expect(await deleteProps(testPostContentType, { id: 7 })).toMatchObject({
+      version: undefined,
+    });
+  });
+});
 
 describe("sortable columns", () => {
   it("offers every column the generated route accepts", async () => {

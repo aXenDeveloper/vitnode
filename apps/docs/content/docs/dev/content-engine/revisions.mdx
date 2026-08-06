@@ -56,14 +56,47 @@ content and `version` itself can never be mass-assigned.
 | Route | `expectedVersion` |
 | --- | --- |
 | `PUT /{id}` | **required** |
+| `DELETE /{id}` | **required** |
 | `POST /{id}/revisions/{revisionId}/restore` | **required** |
 | `POST /{id}/publish`, `/unpublish` | not accepted over HTTP; optional on the service |
-| `DELETE /{id}` | not accepted |
 
 Publishing overwrites no field values. Requiring a version there would fail the
 publish button every time a colleague fixed a typo first, in exchange for no
 protection at all - the two operations do not contend. The service still accepts
 `expectedVersion` on both if your own code wants the stricter guarantee.
+
+### Deleting needs a version too
+
+Deleting is the widest overwrite there is, so it takes the same precondition as
+an edit - in a body, on a `DELETE`:
+
+```jsonc
+DELETE /api/@vitnode/example/admin/content/example_articles/7
+
+{ "expectedVersion": 4 }
+```
+
+```sql
+DELETE FROM example_articles
+WHERE id = $1 AND version = $2
+RETURNING …
+```
+
+Matched nothing? One narrow follow-up read tells the two cases apart, exactly
+like an update: **no such row** is a 404, because the caller wanted it gone and
+it is; **a different version** is a `CONTENT_VERSION_CONFLICT` 409. Nothing is
+deleted and no final revision is written on the conflict path.
+
+The AdminCP passes the version from the row the person is actually looking at,
+so a table left open in a tab cannot remove a record that has moved on since.
+When it conflicts, the dialog says the record changed and asks for a refresh -
+it does **not** quietly retry with the new version, because a confirmation
+dialog cannot describe a change nobody has seen.
+
+<Callout type="info" title="A content type without editorial is unchanged">
+  Its `DELETE /{id}` takes no body and never did. The precondition exists only
+  where the version column does.
+</Callout>
 
 ### The 409
 
@@ -333,6 +366,36 @@ for the one revision you actually expanded.
 Author names come from a `LEFT JOIN` in the list query, so a 25-row history is
 still one round trip to the database.
 
+### Paging through it
+
+```jsonc
+// GET /{id}/revisions?first=25&cursor=36
+{
+  "edges": [ /* … */ ],
+  "pageInfo": { "endCursor": 12, "hasNextPage": true }
+}
+```
+
+| | |
+| --- | --- |
+| `cursor` | The **version** of the last row you already have. Exclusive: the next page starts strictly below it, so no row is ever returned twice |
+| `first` | 1–100, defaulting to 25. Outside that range is a 400, not a silent clamp |
+| `endCursor` | The last version on this page. Pass it straight back as `cursor` |
+| `hasNextPage` | Read from one extra row, not a `COUNT` - so it cannot disagree with the rows beside it |
+
+The cursor is a version rather than an offset or a revision id, and that is what
+makes paging stable: versions are unique per record and strictly decreasing down
+the list, so a revision written between two requests is *newer* than the cursor
+and page two returns exactly what it would have returned before. A pruned
+revision leaves no gap in the sequence either, because the cursor is a bound and
+not a position.
+
+<Callout type="info" title="Every retained revision is reachable">
+  Retention defaults to 50 and a page to 25, so a single page was never the whole
+  history. The AdminCP has a **Load older versions** button that appends, and the
+  loop terminates when `hasNextPage` is false.
+</Callout>
+
 ## In the AdminCP
 
 ### The conflict
@@ -360,6 +423,11 @@ no raw JSON anywhere. A relation shows the id the snapshot stores; see
 Restore asks for confirmation and states all four facts: which version, that it
 creates a new one, that nothing in between is deleted, and that the publication
 state does not change.
+
+Afterwards the dialog stays open and does three things: reloads the first page
+so the restore's *own* revision appears, refreshes the table behind it, and
+adopts the new current version - so a second restore in the same sitting posts
+the right precondition instead of conflicting with the first.
 
 ## Calling the service directly
 
@@ -430,3 +498,10 @@ descriptor and core's static schema cannot name them. Deleting a record
 therefore leaves its history in place, which is what an audit trail is for.
 `serial` ids are not reused in normal operation, and the mandatory scoping means
 that even a manual `setval` cannot attach one record's history to another.
+
+The database unique key is `(contentTypeId, itemId, version)` with no
+`pluginId`, and that is sufficient rather than an oversight: content type ids
+are validated for uniqueness across **every installed plugin** at boot, so an id
+already identifies exactly one content type and one table. `pluginId` is still a
+column, because ownership is what the cleanup job keys off when a plugin is
+removed.

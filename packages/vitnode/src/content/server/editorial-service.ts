@@ -80,9 +80,17 @@ export interface ContentEditorialService<TDefinition> {
     values: ContentCreateInput<TDefinition>,
     options: ContentEditorialOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition>>;
+  /**
+   * Removes a record, and refuses if it moved since the caller read it.
+   *
+   * `expectedVersion` is required for the same reason `update` requires it: a
+   * delete is the widest possible overwrite. Somebody looking at v4 in a stale
+   * table must not be able to remove the v5 a colleague just wrote, and "are
+   * you sure?" cannot ask about a change the person has not seen.
+   */
   delete: (
     id: number,
-    options: ContentEditorialOptions,
+    options: ContentEditorialWriteOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
   publish: (
     id: number,
@@ -398,12 +406,36 @@ export const createContentEditorialService = <
 
     delete: async (id, options) =>
       await transact(options, async tx => {
+        // Same guard as `guardedWrite`, in a `DELETE` - the version has to be
+        // part of the statement that removes the row, not checked before it.
         const [row] = await tx
           .delete(table)
-          .where(eq(primaryCursor, id))
+          .where(
+            and(
+              eq(primaryCursor, id),
+              eq(versionColumn, options.expectedVersion),
+            ),
+          )
           .returning(ownSelection());
 
-        if (!row) return null;
+        if (!row) {
+          const [current] = await tx
+            .select({ version: versionColumn })
+            .from(table)
+            .where(eq(primaryCursor, id))
+            .limit(1);
+
+          // Gone already is a 404 and not a conflict: the caller wanted the
+          // record removed, and it is.
+          if (!current) return null;
+
+          throw new ContentVersionConflict({
+            contentTypeId,
+            currentVersion: versionOf(current),
+            expectedVersion: options.expectedVersion,
+            itemId: id,
+          });
+        }
 
         // The row is gone, so no version survives to hold this one. Recording
         // `version + 1` keeps the per-record history strictly increasing and

@@ -1,9 +1,12 @@
 import type { ContentSearchOperation } from "@vitnode/core/content/server";
 import type { Context } from "hono";
 
+import { executeContentSchedule } from "@vitnode/core/api/modules/content/helpers/execute-content-schedule";
 import { ContentVersionConflict } from "@vitnode/core/content";
 import {
+  claimContentSchedule,
   createContentSearchIndexer,
+  settleContentSchedule,
   syncContentSearch,
 } from "@vitnode/core/content/server";
 import { core_queue } from "@vitnode/core/database/queue";
@@ -162,6 +165,17 @@ let context: Context;
 let db: ReturnType<typeof drizzle>;
 let serverMajor = 0;
 
+/**
+ * A second connection, for the tests that need two things happening at once.
+ *
+ * The main client is `max: 1`, which serialises everything through one backend
+ * - fine for optimistic locking, useless for row locks, because a statement
+ * waiting on `FOR UPDATE` would be waiting on itself.
+ */
+let rival: ReturnType<typeof postgres>;
+let rivalDb: ReturnType<typeof drizzle>;
+let rivalContext: Context;
+
 const pgErrorCode = async (run: () => Promise<unknown>) => {
   try {
     await run();
@@ -241,51 +255,72 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     `;
 
     db = drizzle(sql, { casing: "camelCase" });
-    context = {
-      get: (key: string) => {
-        if (key === "db") return db;
-        // Stands in for `QueueModel.dispatch`, writing the same row it would.
-        // Faithful in the two ways these tests are about: it honours the `tx`
-        // it is handed, so the queue row commits with the schedule, and it
-        // stamps the `pluginId` the caller asked for. `QueueModel`'s own
-        // handling of both is unit-tested in core.
-        if (key === "queue") {
-          return {
-            dispatch: async ({
-              availableAt,
-              name,
-              payload,
-              pluginId,
-              tx,
-            }: {
-              availableAt?: Date;
-              name: string;
-              payload?: Record<string, unknown>;
-              pluginId?: string;
-              tx?: typeof db;
-            }) => {
-              const [queued] = await (tx ?? db)
-                .insert(core_queue)
-                .values({
-                  availableAt: availableAt ?? new Date(),
-                  name,
-                  payload: payload ?? {},
-                  pluginId: pluginId ?? "@vitnode/core",
-                })
-                .returning({ id: core_queue.id });
+    rival = postgres(url ?? "", { max: 1, onnotice: () => undefined });
+    rivalDb = drizzle(rival, { casing: "camelCase" });
 
-              return queued;
-            },
-          };
-        }
+    /**
+     * Everything the Content Engine reads off the request context.
+     *
+     * The queue is a stand-in for `QueueModel.dispatch`, writing the same row
+     * it would. Faithful in the two ways these tests are about: it honours the
+     * `tx` it is handed, so the queue row commits with the schedule, and it
+     * stamps the `pluginId` the caller asked for. `QueueModel`'s own handling
+     * of both is unit-tested in core.
+     */
+    const buildContext = (handle: typeof db) =>
+      ({
+        get: (key: string) => {
+          if (key === "db") return handle;
+          // How background work gets from a content type id to a table and a
+          // service, with no plugin context of its own.
+          if (key === "core") {
+            return {
+              contentModels: [
+                { model: articleContent, pluginId: CONFIG_PLUGIN.pluginId },
+              ],
+            };
+          }
+          if (key === "queue") {
+            return {
+              dispatch: async ({
+                availableAt,
+                name,
+                payload,
+                pluginId,
+                tx,
+              }: {
+                availableAt?: Date;
+                name: string;
+                payload?: Record<string, unknown>;
+                pluginId?: string;
+                tx?: typeof db;
+              }) => {
+                const [queued] = await (tx ?? handle)
+                  .insert(core_queue)
+                  .values({
+                    availableAt: availableAt ?? new Date(),
+                    name,
+                    payload: payload ?? {},
+                    pluginId: pluginId ?? "@vitnode/core",
+                  })
+                  .returning({ id: core_queue.id });
 
-        return undefined;
-      },
-    } as unknown as Context;
+                return queued;
+              },
+            };
+          }
+
+          return undefined;
+        },
+      }) as unknown as Context;
+
+    context = buildContext(db);
+    rivalContext = buildContext(rivalDb);
   }, 60_000);
 
   afterAll(async () => {
     await sql?.end();
+    await rival?.end();
   });
 
   describe("the slug backfill", () => {
@@ -1315,7 +1350,10 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
     it("keeps a final revision after the record is deleted", async () => {
       const { articleId, categoryId } = await seed();
 
-      await editorial().delete(articleId, { actor: STAFF });
+      await editorial().delete(articleId, {
+        actor: STAFF,
+        expectedVersion: 1,
+      });
 
       expect(await revisionsOf(articleId)).toEqual([
         { operation: "create", version: 1 },
@@ -1329,6 +1367,115 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
       `;
       await sql`DELETE FROM "example_categories" WHERE "id" = ${categoryId}`;
     }, 30_000);
+
+    it("refuses to delete a version nobody has looked at", async () => {
+      // The stale-table case: somebody edited the record after this row was
+      // rendered, and the confirmation dialog cannot describe a change the
+      // person has not seen.
+      const { articleId, categoryId } = await seed();
+      await editorial().update(
+        articleId,
+        { title: `Moved on ${seeded}` },
+        { actor: STAFF, expectedVersion: 1 },
+      );
+
+      await expect(
+        editorial().delete(articleId, { actor: STAFF, expectedVersion: 1 }),
+      ).rejects.toBeInstanceOf(ContentVersionConflict);
+
+      // Still there, and no `delete` revision was written either.
+      const [row] = await sql<{ version: number }[]>`
+        SELECT "version" FROM "example_articles" WHERE "id" = ${articleId}
+      `;
+      expect(row.version).toBe(2);
+      expect(
+        (await revisionsOf(articleId)).map(entry => entry.operation),
+      ).toEqual(["create", "update"]);
+
+      await cleanup(articleId, categoryId);
+    }, 30_000);
+
+    it("treats an already-deleted record as gone, not as a conflict", async () => {
+      const { articleId, categoryId } = await seed();
+      await editorial().delete(articleId, {
+        actor: STAFF,
+        expectedVersion: 1,
+      });
+
+      await expect(
+        editorial().delete(articleId, { actor: STAFF, expectedVersion: 1 }),
+      ).resolves.toBeNull();
+
+      await cleanup(articleId, categoryId);
+    }, 30_000);
+
+    describe("reading the history back", () => {
+      it("pages without repeating the boundary, and reaches every revision", async () => {
+        // Retention is 20 on this content type and the page size here is 7, so
+        // this is the exact shape the AdminCP hits: more history than one page.
+        const { articleId, categoryId } = await seed();
+        for (let index = 0; index < 11; index += 1) {
+          await editorial().update(
+            articleId,
+            { title: `Paged title ${seeded}-${index}` },
+            { actor: STAFF, expectedVersion: index + 1 },
+          );
+        }
+
+        const revisions = editorial().revisions;
+        const seen: number[] = [];
+        let cursor: number | undefined;
+
+        for (let page = 0; page < 5; page += 1) {
+          const result = await revisions.list(articleId, { cursor, limit: 7 });
+          seen.push(...result.edges.map(edge => edge.version));
+          if (!result.pageInfo.hasNextPage) break;
+          cursor = result.pageInfo.endCursor ?? undefined;
+        }
+
+        // 12 versions: the create plus 11 updates.
+        expect(seen).toHaveLength(12);
+        expect(new Set(seen).size).toBe(12);
+        // Newest first, strictly decreasing, all the way down.
+        expect(seen).toEqual([...seen].sort((a, b) => b - a));
+        expect(seen.at(-1)).toBe(1);
+
+        await cleanup(articleId, categoryId);
+      }, 60_000);
+
+      it("keeps page two stable when a revision lands in between", async () => {
+        // A version cursor cannot shift under a reader the way an offset can:
+        // anything written after page one is *newer* than the cursor.
+        const { articleId, categoryId } = await seed();
+        for (let index = 0; index < 5; index += 1) {
+          await editorial().update(
+            articleId,
+            { title: `Stable title ${seeded}-${index}` },
+            { actor: STAFF, expectedVersion: index + 1 },
+          );
+        }
+
+        const revisions = editorial().revisions;
+        const first = await revisions.list(articleId, { limit: 3 });
+
+        await editorial().update(
+          articleId,
+          { title: `Stable title ${seeded}-inserted` },
+          { actor: STAFF, expectedVersion: 6 },
+        );
+
+        const second = await revisions.list(articleId, {
+          cursor: first.pageInfo.endCursor ?? undefined,
+          limit: 3,
+        });
+
+        expect(first.edges.map(edge => edge.version)).toEqual([6, 5, 4]);
+        expect(second.edges.map(edge => edge.version)).toEqual([3, 2, 1]);
+        expect(second.pageInfo.hasNextPage).toBe(false);
+
+        await cleanup(articleId, categoryId);
+      }, 60_000);
+    });
 
     it("prunes past the retention window", async () => {
       const { articleId, categoryId } = await seed();
@@ -1362,17 +1509,19 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
   });
 
   describe("scheduled publication", () => {
-    const schedules = () => {
+    const schedulesOn = (on: Context) => {
       const build = articleContent.editorialService;
       if (!build) throw new Error("example.article has no editorial service");
 
-      const model = build(context, {
-        pluginId: CONFIG_PLUGIN.pluginId,
-      }).schedules;
+      const model = build(on, { pluginId: CONFIG_PLUGIN.pluginId }).schedules;
       if (!model) throw new Error("example.article has no scheduling");
 
       return model;
     };
+
+    const schedules = () => schedulesOn(context);
+    /** The same model on the second connection, for real lock contention. */
+    const rivalSchedules = () => schedulesOn(rivalContext);
 
     let scheduled = 0;
 
@@ -1572,6 +1721,289 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
       `;
 
       expect(table.relrowsecurity).toBe(true);
+    });
+
+    describe("racing a cancel against the worker", () => {
+      const statusOf = async (scheduleId: number) => {
+        const [row] = await sql<
+          { effectsError: null | string; status: string }[]
+        >`
+          SELECT "status", "effectsError" FROM "core_content_schedules"
+          WHERE "id" = ${scheduleId}
+        `;
+
+        return row;
+      };
+
+      const book = async (itemId: number, when = new Date(Date.now() - 1000)) =>
+        await schedules().schedule({
+          action: "publish",
+          actorUserId: null,
+          itemId,
+          scheduledFor: when,
+        });
+
+      const drain = async () => {
+        await sql`DELETE FROM "core_queue"`;
+      };
+
+      it("lets the cancel win when it commits first", async () => {
+        const { articleId, categoryId } = await seed();
+        const booked = await book(articleId);
+
+        // Committed before anything claims it.
+        await schedules().cancel(articleId, booked.id);
+
+        const outcome = await executeContentSchedule(context, {
+          generation: booked.generation,
+          scheduleId: booked.id,
+        });
+
+        expect(outcome.status).toBe("skipped");
+        expect((await statusOf(booked.id)).status).toBe("cancelled");
+
+        const [row] = await sql<{ status: string }[]>`
+          SELECT "status" FROM "example_articles" WHERE "id" = ${articleId}
+        `;
+        expect(row.status).toBe("draft");
+
+        await drain();
+        await cleanup(articleId, categoryId);
+      }, 30_000);
+
+      it("makes the cancel wait, and then fail, once the worker owns the row", async () => {
+        // The race the old shape lost. The worker used to release the lock
+        // between claiming and publishing, so a cancel could commit in the gap,
+        // report success, and then watch the article go live anyway.
+        const { articleId, categoryId } = await seed();
+        const booked = await book(articleId);
+
+        let cancelSettled = false;
+        let cancelling: Promise<null | { action: string }> | undefined;
+
+        await db.transaction(async tx => {
+          const claimed = await claimContentSchedule(tx, {
+            generation: booked.generation,
+            scheduleId: booked.id,
+          });
+          expect(claimed).not.toBeNull();
+
+          // Fired on the *other* connection and deliberately not awaited: it
+          // blocks on the row lock this transaction is holding.
+          cancelling = rivalSchedules()
+            .cancel(articleId, booked.id)
+            .then(result => {
+              cancelSettled = true;
+
+              return result;
+            });
+
+          // Still blocked while the transition runs.
+          await new Promise(resolve => setTimeout(resolve, 250));
+          expect(cancelSettled).toBe(false);
+
+          await settleContentSchedule(tx, booked.id, {
+            expectedStatus: "pending",
+            lastError: null,
+            status: "completed",
+          });
+        });
+
+        // Released by the commit, at which point the cancel re-evaluates its
+        // `status = 'pending'` predicate and matches nothing - so the route
+        // above it answers "no such pending schedule" rather than lying.
+        await expect(cancelling).resolves.toBeNull();
+        // Completed, not cancelled: the transition really happened.
+        expect((await statusOf(booked.id)).status).toBe("completed");
+
+        await drain();
+        await cleanup(articleId, categoryId);
+      }, 30_000);
+
+      it("never lets a stale worker overwrite a cancelled schedule", async () => {
+        // The guard `settleContentSchedule` carries. Without `expectedStatus`
+        // this write would rewrite history to say a cancelled plan ran.
+        const { articleId, categoryId } = await seed();
+        const booked = await book(articleId);
+        await schedules().cancel(articleId, booked.id);
+
+        const settled = await settleContentSchedule(db, booked.id, {
+          expectedStatus: "pending",
+          lastError: null,
+          status: "completed",
+        });
+
+        expect(settled).toBe(false);
+        expect((await statusOf(booked.id)).status).toBe("cancelled");
+
+        await drain();
+        await cleanup(articleId, categoryId);
+      }, 30_000);
+
+      it("ignores the task left behind by a reschedule", async () => {
+        const { articleId, categoryId } = await seed();
+        const first = await book(articleId);
+        const second = await book(articleId, new Date(Date.now() - 500));
+
+        // The old task still exists and still points at the old row.
+        const outcome = await executeContentSchedule(context, {
+          generation: first.generation,
+          scheduleId: first.id,
+        });
+
+        expect(outcome.status).toBe("skipped");
+        const [row] = await sql<{ status: string }[]>`
+          SELECT "status" FROM "example_articles" WHERE "id" = ${articleId}
+        `;
+        expect(row.status).toBe("draft");
+        // And the replacement is untouched, still waiting its turn.
+        expect((await statusOf(second.id)).status).toBe("pending");
+
+        await drain();
+        await cleanup(articleId, categoryId);
+      }, 30_000);
+
+      it("ignores a task whose generation no longer matches its row", async () => {
+        const { articleId, categoryId } = await seed();
+        const booked = await book(articleId);
+
+        const outcome = await executeContentSchedule(context, {
+          generation: booked.generation + 1,
+          scheduleId: booked.id,
+        });
+
+        expect(outcome.status).toBe("skipped");
+        expect((await statusOf(booked.id)).status).toBe("pending");
+
+        await drain();
+        await cleanup(articleId, categoryId);
+      }, 30_000);
+    });
+
+    describe("executing a due schedule", () => {
+      const drain = async () => {
+        await sql`DELETE FROM "core_queue"`;
+      };
+
+      it("publishes, settles and queues the announcements in one commit", async () => {
+        const { articleId, categoryId } = await seed();
+        const booked = await schedules().schedule({
+          action: "publish",
+          actorUserId: null,
+          itemId: articleId,
+          // Inside the past tolerance, so it is due on this tick.
+          scheduledFor: new Date(Date.now() - 1000),
+        });
+        await drain();
+
+        const outcome = await executeContentSchedule(context, {
+          generation: booked.generation,
+          scheduleId: booked.id,
+        });
+
+        expect(outcome.status).toBe("executed");
+
+        const [row] = await sql<{ status: string; version: number }[]>`
+          SELECT "status", "version" FROM "example_articles"
+          WHERE "id" = ${articleId}
+        `;
+        expect(row.status).toBe("published");
+        expect(row.version).toBe(2);
+
+        const [schedule] = await sql<{ completedAt: Date; status: string }[]>`
+          SELECT "status", "completedAt" FROM "core_content_schedules"
+          WHERE "id" = ${booked.id}
+        `;
+        expect(schedule.status).toBe("completed");
+        expect(schedule.completedAt).not.toBeNull();
+
+        // The revision the transition wrote, with the system as its actor.
+        const [revision] = await sql<
+          { actorType: string; operation: string; version: number }[]
+        >`
+          SELECT "operation", "version", "actorType"
+          FROM "core_content_revisions"
+          WHERE "itemId" = ${articleId} AND "operation" = 'publish'
+        `;
+        expect(revision).toMatchObject({
+          actorType: "system",
+          version: 2,
+        });
+
+        // And the announcements, durable and pointing at what committed.
+        const [queued] = await sql<
+          { payload: Record<string, unknown>; pluginId: string }[]
+        >`
+          SELECT "payload", "pluginId" FROM "core_queue"
+          WHERE "name" = 'content-schedule-effects'
+        `;
+        expect(queued.pluginId).toBe("@vitnode/core");
+        expect(queued.payload).toMatchObject({
+          itemId: articleId,
+          operation: "publish",
+          scheduleId: booked.id,
+          version: 2,
+        });
+
+        await drain();
+        await cleanup(articleId, categoryId);
+      }, 30_000);
+
+      it("writes no announcement when the transition rolls back", async () => {
+        // Atomicity in the direction that matters: a queue row for a
+        // publication that never happened would announce a lie.
+        const { articleId, categoryId } = await seed();
+        const booked = await schedules().schedule({
+          action: "publish",
+          actorUserId: null,
+          itemId: articleId,
+          scheduledFor: new Date(Date.now() - 1000),
+        });
+        await drain();
+
+        // Pre-claim version 2, which is the version the publish would write -
+        // so the revision insert violates the unique index and the whole
+        // transaction goes back.
+        await sql`
+          INSERT INTO "core_content_revisions"
+            ("pluginId", "contentTypeId", "itemId", "version", "operation", "snapshot")
+          VALUES (
+            ${CONFIG_PLUGIN.pluginId}, ${articleContentType.id}, ${articleId},
+            2, 'update', '{}'::jsonb
+          )
+        `;
+
+        await expect(
+          executeContentSchedule(context, {
+            generation: booked.generation,
+            scheduleId: booked.id,
+          }),
+        ).rejects.toThrow();
+
+        const [row] = await sql<{ status: string }[]>`
+          SELECT "status" FROM "example_articles" WHERE "id" = ${articleId}
+        `;
+        expect(row.status).toBe("draft");
+
+        const queued = await sql`
+          SELECT "id" FROM "core_queue" WHERE "name" = 'content-schedule-effects'
+        `;
+        expect(queued).toHaveLength(0);
+
+        // Left pending with the reason on it, so the AdminCP shows it overdue
+        // and the queue's backoff retries the transition.
+        const [schedule] = await sql<
+          { lastError: null | string; status: string }[]
+        >`
+          SELECT "status", "lastError" FROM "core_content_schedules"
+          WHERE "id" = ${booked.id}
+        `;
+        expect(schedule.status).toBe("pending");
+        expect(schedule.lastError).not.toBeNull();
+
+        await drain();
+        await cleanup(articleId, categoryId);
+      }, 30_000);
     });
   });
 

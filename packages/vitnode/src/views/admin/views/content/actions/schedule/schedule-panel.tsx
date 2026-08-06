@@ -78,6 +78,15 @@ const ScheduleRow = ({
         </span>
       ) : null}
 
+      {/* A different thing from `lastError`, and it reads as one: the record
+          really did publish, and what is still being retried is the event, the
+          search write and the cache invalidation. */}
+      {schedule.effectsError ? (
+        <span className="w-full text-xs wrap-break-word text-amber-600 dark:text-amber-400">
+          {t("effects_failed")}
+        </span>
+      ) : null}
+
       {pending ? (
         <Button
           aria-label={t("cancel")}

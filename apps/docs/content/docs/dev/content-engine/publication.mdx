@@ -295,11 +295,20 @@ Two things hang off the lifecycle, and both are opt-in:
 
 Enabling publication on its own still publishes nothing anywhere.
 
-## What this is not
+## Publishing later, and going back
 
-Scheduled publishing, approval workflows and revisions are not here. The
-published predicate already reads `publishedAt <= now()`, so scheduling can be
-added later without changing what is stored - but today `publish()` means
-*now*.
+`publish()` on its own means *now*.
+[`editorial`](/docs/dev/content-engine/editorial) adds the two things that
+change:
 
+- [Scheduling](/docs/dev/content-engine/scheduling) books a transition for a
+  time. It runs through this same `publish` / `unpublish`, with the same
+  idempotency guard - a schedule controls timing, never content.
+- [Revisions](/docs/dev/content-engine/revisions) record every transition, and
+  **restore never moves publication state.** `status` and `publishedAt` are
+  generated columns, absent from the strict update schema a restore validates
+  through, so restoring an old draft snapshot onto a live record leaves it live.
+  That guarantee is structural, not a check somebody remembered to write.
+
+Approval workflows are still not here.
 [Limitations](/docs/dev/content-engine/limitations) tracks the rest.

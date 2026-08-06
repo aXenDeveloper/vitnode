@@ -79,12 +79,36 @@ export {
   contentSnapshotRow,
   projectRevisionSnapshot,
 } from "./revision-snapshot";
-export { createContentRevisionsModel } from "./revisions-model";
+export {
+  CONTENT_REVISIONS_DEFAULT_PAGE_SIZE,
+  CONTENT_REVISIONS_MAX_PAGE_SIZE,
+  createContentRevisionsModel,
+} from "./revisions-model";
 export type {
   ContentRevisionCaptureInput,
+  ContentRevisionPage,
   ContentRevisionsModel,
 } from "./revisions-model";
 export { buildContentRoutes } from "./routes";
+export {
+  contentScheduleEffectsPayloadSchema,
+  runContentScheduleEffects,
+} from "./schedule-effects";
+export type {
+  ContentScheduleEffectsOutcome,
+  ContentScheduleEffectsPayload,
+} from "./schedule-effects";
+export {
+  claimContentSchedule,
+  createContentSchedulesModel,
+  pruneContentSchedules,
+  recordContentScheduleEffectsError,
+  settleContentSchedule,
+} from "./schedules-model";
+export type {
+  ClaimedContentSchedule,
+  ContentSchedulesModel,
+} from "./schedules-model";
 export { contentSearchDocument } from "./search-document";
 export { createContentSearchIndexer } from "./search-indexer";
 export type { ContentSearchIndexer } from "./search-indexer";

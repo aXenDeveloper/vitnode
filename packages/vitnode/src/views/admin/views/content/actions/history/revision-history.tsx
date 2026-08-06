@@ -79,7 +79,7 @@ const RevisionRow = ({
   currentVersion: number;
   id: number;
   isCurrent: boolean;
-  onRestored: () => void;
+  onRestored: (nextVersion?: number) => void;
   previousId: null | number;
   revision: ContentRevisionMeta;
   singular: string;
@@ -179,7 +179,9 @@ const RevisionRow = ({
                   }),
                 });
                 onClose();
-                onRestored();
+                // The new version travels back so the next restore in this
+                // still-open dialog posts the right precondition.
+                onRestored(mutation.version);
               }}
               textSubmit={t("restore.confirm")}
               title={t("restore.title", { version: revision.version })}
@@ -223,6 +225,22 @@ const RevisionRow = ({
   );
 };
 
+interface HistoryState {
+  edges: ContentRevisionMeta[];
+  endCursor: null | number;
+  error: null | string;
+  hasNextPage: boolean;
+  loaded: boolean;
+}
+
+const EMPTY: HistoryState = {
+  edges: [],
+  endCursor: null,
+  error: null,
+  hasNextPage: false,
+  loaded: false,
+};
+
 export const RevisionHistory = ({
   contentTypeId,
   currentVersion,
@@ -236,7 +254,12 @@ export const RevisionHistory = ({
   const t = useTranslations("core.content.history");
   const { push } = useRouter();
   const pathname = usePathname();
-  const [edges, setEdges] = React.useState<ContentRevisionMeta[] | null>(null);
+  const [state, setState] = React.useState<HistoryState>(EMPTY);
+  const [loadingMore, setLoadingMore] = React.useState(false);
+  // The version the record holds *now*, which stops being the prop the moment
+  // a restore succeeds - the dialog stays open, and the next restore needs the
+  // new precondition or it conflicts with the one just performed.
+  const [version, setVersion] = React.useState(currentVersion);
   const canRestore = useAdminStaffPermission({
     module: permissionModule,
     permission: CONTENT_PERMISSIONS.restore,
@@ -247,7 +270,15 @@ export const RevisionHistory = ({
     let active = true;
 
     void listContentRevisionsAction(contentTypeId, id).then(result => {
-      if (active) setEdges(result.edges);
+      if (!active) return;
+
+      setState({
+        edges: result.edges,
+        endCursor: result.pageInfo.endCursor,
+        error: result.error ?? null,
+        hasNextPage: result.pageInfo.hasNextPage,
+        loaded: true,
+      });
     });
 
     return () => {
@@ -255,40 +286,112 @@ export const RevisionHistory = ({
     };
   }, [contentTypeId, id]);
 
-  if (edges === null) return <Loader />;
+  /** Appends the next page. The cursor is exclusive, so nothing repeats. */
+  const loadMore = async () => {
+    if (state.endCursor === null) return;
+    setLoadingMore(true);
 
-  if (edges.length === 0) {
+    const result = await listContentRevisionsAction(
+      contentTypeId,
+      id,
+      state.endCursor,
+    );
+
+    setState(previous => {
+      if (result.error) return { ...previous, error: result.error };
+
+      // Belt and braces against a revision arriving between two page requests:
+      // the exclusive cursor already prevents a repeat, and this makes the list
+      // provably duplicate-free whatever the server sent.
+      const seen = new Set(previous.edges.map(edge => edge.id));
+
+      return {
+        ...previous,
+        edges: [
+          ...previous.edges,
+          ...result.edges.filter(edge => !seen.has(edge.id)),
+        ],
+        endCursor: result.pageInfo.endCursor ?? previous.endCursor,
+        error: null,
+        hasNextPage: result.pageInfo.hasNextPage,
+      };
+    });
+    setLoadingMore(false);
+  };
+
+  /** Reloads the first page, so the restore's own revision shows up. */
+  const reload = async (nextVersion?: number) => {
+    if (nextVersion !== undefined) setVersion(nextVersion);
+
+    const result = await listContentRevisionsAction(contentTypeId, id);
+
+    setState({
+      edges: result.edges,
+      endCursor: result.pageInfo.endCursor,
+      error: result.error ?? null,
+      hasNextPage: result.pageInfo.hasNextPage,
+      loaded: true,
+    });
+
+    // The table behind the dialog is now wrong too.
+    push(pathname);
+  };
+
+  if (!state.loaded) return <Loader />;
+
+  if (state.edges.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 py-8 text-center">
         <HistoryIcon aria-hidden className="text-muted-foreground size-8" />
         <p className="text-muted-foreground text-sm text-balance">
-          {t("empty")}
+          {state.error ?? t("empty")}
         </p>
       </div>
     );
   }
 
   return (
-    <ul className="flex max-h-[60vh] flex-col overflow-y-auto">
-      {edges.map((revision, index) => (
-        <RevisionRow
-          canRestore={canRestore}
-          contentTypeId={contentTypeId}
-          currentVersion={currentVersion}
-          id={id}
-          isCurrent={index === 0}
-          key={revision.id}
-          onRestored={() => {
-            push(pathname);
+    <div className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto">
+      <ul className="flex flex-col">
+        {state.edges.map((revision, index) => (
+          <RevisionRow
+            canRestore={canRestore}
+            contentTypeId={contentTypeId}
+            currentVersion={version}
+            id={id}
+            isCurrent={index === 0}
+            key={revision.id}
+            onRestored={nextVersion => {
+              void reload(nextVersion);
+            }}
+            // The list is newest first, so the previous version is the next
+            // entry - except at the end of a page that has more behind it,
+            // where the diff has nothing to compare against yet.
+            previousId={state.edges[index + 1]?.id ?? null}
+            revision={revision}
+            singular={singular}
+            spec={spec}
+            title={title}
+          />
+        ))}
+      </ul>
+
+      {state.error ? (
+        <p className="text-destructive text-sm">{state.error}</p>
+      ) : null}
+
+      {state.hasNextPage ? (
+        <Button
+          disabled={loadingMore}
+          onClick={() => {
+            void loadMore();
           }}
-          // The list is newest first, so the previous version is the next entry.
-          previousId={edges[index + 1]?.id ?? null}
-          revision={revision}
-          singular={singular}
-          spec={spec}
-          title={title}
-        />
-      ))}
-    </ul>
+          type="button"
+          variant="outline"
+        >
+          {loadingMore ? t("loading_more") : t("load_more")}
+        </Button>
+      ) : null}
+    </div>
   );
 };

@@ -106,6 +106,13 @@ happened rather than the number:
 | `CONTENT_UNIQUE_CONFLICT` | a record with these values already exists |
 | `CONTENT_REVISION_NOT_RESTORABLE` | this version cannot be restored: *fields* no longer fit this content type |
 
+A **delete** that hits `CONTENT_VERSION_CONFLICT` gets its own wording, because
+the situation is different: nothing of yours is at stake, the record simply
+moved. It reads *"someone saved it after this page loaded, so it was not
+deleted - refresh and check what changed"*, and it deliberately does **not**
+retry with the new version. A confirmation dialog cannot ask about a change
+nobody has seen.
+
 <Callout type="info" title="The database never speaks to the user">
   The generated routes translate Postgres error codes into a status and a generic
   sentence. Constraint names, column names and values stay on the server; the
@@ -172,6 +179,17 @@ It lists one line per version - the operation as a badge, the author or
 **System**, a localised date, and which fields moved - with a **Current** badge
 on the newest.
 
+Twenty-five at a time, with **Load older versions** underneath when there are
+more. It appends rather than replaces, so scrolling back through a long history
+never loses what you already read, and the button disappears once the last page
+arrives. Retention defaults to 50 and a page to 25, so this is the ordinary case
+rather than an edge one.
+
+Restoring reloads the list in place - the restore writes a revision of its own,
+and it should appear where it happened - refreshes the table behind the dialog,
+and adopts the new current version, so a second restore in the same sitting does
+not conflict with the first.
+
 The list carries metadata only. Expanding a version fetches that one snapshot
 and renders a field-level diff against the version before it:
 
@@ -213,6 +231,16 @@ sitting in a browser, most of them never used. Closing the popover throws the
 link away, so opening it again mints a fresh one instead of showing you one that
 may already have expired.
 
+The URL is absolute - it is going on a clipboard and into somebody else's chat
+window - and it points at the web app when `preview.pathTemplate` is set, or at
+the API's JSON endpoint when it is not. The popover also says when the link
+expires, that it is pinned to one version, and, for a record with no history
+yet, that it reads live rather than frozen.
+
+Without a usable `CONTENT_PREVIEW_SECRET` the server answers 503 and the toast
+names the variable, because the person clicking the button is usually the person
+who can set it.
+
 ### Scheduling
 
 With [`editorial.scheduling`](/docs/dev/content-engine/scheduling), a calendar
@@ -225,6 +253,12 @@ above a two-field form: what should happen, and when.
   the server uses - so the two cannot drift into disagreeing.
 - A pending schedule whose time has passed reads **overdue**, with the last error
   if there was one.
+- A completed schedule whose announcements have not landed says so in different
+  words and a different colour: the record *is* published, and the event, search
+  write and cache expiry are being retried.
+- Cancelling works until the worker claims the row. After that the request
+  answers 404, because the schedule already ran - the dialog never claims to
+  have stopped something it did not.
 - Without a cron adapter, a warning sits above everything: schedules will be
   saved and will never fire.
 

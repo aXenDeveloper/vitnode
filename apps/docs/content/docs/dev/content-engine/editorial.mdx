@@ -90,6 +90,13 @@ editorial: {
 - [`scheduling`](/docs/dev/content-engine/scheduling) - publish or unpublish at
   a set time, on a one-minute tick.
 
+<Callout type="warn" title="`preview` needs `CONTENT_PREVIEW_SECRET`">
+  At least 32 random bytes - `openssl rand -base64 32`. The signature is the
+  only access control a preview link has, so without one the API refuses to
+  start in production, and preview fails closed everywhere else. See
+  [Secure preview](/docs/dev/content-engine/preview#content_preview_secret-is-required).
+</Callout>
+
 ## `version` is generated, so you cannot declare it
 
 Exactly like `status` and `publishedAt` under
@@ -158,15 +165,24 @@ envelope.**
 is validated by `schemas.update` - a strict object of declared fields, which a
 transport concern has no business appearing in.
 
-Nothing else moves. `POST`, `DELETE`, `publish` and `unpublish` keep the bodies
-they had; the routes are generated per content type, so each one's OpenAPI
-document stays truthful about its own shape.
+`DELETE /{id}` gains the same precondition, on its own:
+
+```jsonc
+// Without editorial - no body, forever
+// With editorial
+{ "expectedVersion": 12 }
+```
+
+`POST`, `publish` and `unpublish` keep the bodies they had; the routes are
+generated per content type, so each one's OpenAPI document stays truthful about
+its own shape.
 
 <Callout type="warn" title="Adopting editorial is a breaking change for hand-written clients">
-  A client that sends a bare `PUT` body to a content type that has just enabled
-  `editorial` gets a 400. There is no way around that and still have a correct
-  precondition - the whole point is that the server knows which version you were
-  looking at. It is opt-in per content type, so you choose when.
+  A client that sends a bare `PUT` body - or a bodyless `DELETE` - to a content
+  type that has just enabled `editorial` gets a 400. There is no way around that
+  and still have a correct precondition: the whole point is that the server
+  knows which version you were looking at. It is opt-in per content type, so you
+  choose when.
 </Callout>
 
 The full contract - what a 409 looks like, when a version moves, what restore

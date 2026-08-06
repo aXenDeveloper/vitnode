@@ -19,7 +19,7 @@ import {
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "../../api/lib/with-pagination";
-import { CONFIG } from "../../lib/config";
+import { CONFIG, isSecureContentPreviewSecret } from "../../lib/config";
 import { CONTENT_PUBLIC_MAX_PAGE_SIZE } from "../const";
 import { ContentEngineError } from "../errors";
 import { publicOrderableColumns } from "../registry";
@@ -229,11 +229,20 @@ export const buildContentPublicRoutes = <
       },
     },
     handler: async c => {
+      const secret =
+        c.get("core")?.contentPreviewSecret ?? CONFIG.contentPreviewSecret;
+
+      // Fail closed, and fail *indistinguishably*. A deployment whose secret is
+      // missing or still the published placeholder can have its tokens forged
+      // by anyone, so no token is honoured at all - and the answer is the same
+      // 404 a bad signature gets, because "preview is misconfigured here" is
+      // not something an anonymous request needs to learn.
+      if (!isSecureContentPreviewSecret(secret)) throw notFound();
+
       const payload = verifyContentPreviewToken({
         definition,
         pluginId,
-        secret:
-          c.get("core")?.contentPreviewSecret ?? CONFIG.contentPreviewSecret,
+        secret,
         token: c.req.param("token"),
       });
       if (!payload) throw notFound();

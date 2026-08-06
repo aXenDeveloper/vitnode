@@ -10,7 +10,10 @@ import {
   verifyContentPreviewToken,
 } from "./preview-token";
 
-const SECRET = "preview-secret";
+// Long enough to be a real signing key: the preview routes fail closed on a
+// secret that is missing, well-known or under 32 bytes, so a short one here
+// would test the guard rather than the route.
+const SECRET = "unit-test-content-preview-secret-0123456789";
 const PLUGIN = "@vitnode/test";
 
 const NOW = new Date("2026-08-05T10:00:00.000Z");

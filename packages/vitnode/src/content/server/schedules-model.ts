@@ -2,7 +2,11 @@ import type { Context } from "hono";
 
 import { and, desc, eq, inArray, lt, notInArray, sql } from "drizzle-orm";
 
-import type { ContentSchedule, ContentScheduleAction } from "../schedules";
+import type {
+  ContentSchedule,
+  ContentScheduleAction,
+  ContentScheduleStatus,
+} from "../schedules";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDatabase } from "./service";
 
@@ -81,19 +85,66 @@ export const claimContentSchedule = async (
   };
 };
 
-/** Records how a claimed schedule ended. Also id-keyed, and for the same reason. */
+/**
+ * Records how a claimed schedule ended.
+ *
+ * Id-keyed like {@link claimContentSchedule}, and guarded by `expectedStatus`
+ * for a reason that is easy to miss: `cancelled` and `completed` are both
+ * terminal, so an unguarded write would let a stale worker turn a schedule an
+ * administrator cancelled into one that ran. The guard is `AND status = $x` in
+ * the same statement rather than a read followed by a write, so there is no
+ * window between checking and setting.
+ *
+ * Returns whether the row was in the expected state. `false` is a concurrency
+ * signal, never something to shrug at - the caller decides whether that means
+ * "somebody got there first, fine" or "this cannot happen, roll back".
+ */
 export const settleContentSchedule = async (
   db: ContentDatabase,
   scheduleId: number,
-  patch: { lastError?: null | string; status?: "cancelled" | "completed" },
-): Promise<void> => {
-  await db
+  patch: {
+    /** Only write when the row still holds this status. */
+    expectedStatus?: ContentScheduleStatus;
+    lastError?: null | string;
+    status?: "cancelled" | "completed";
+  },
+): Promise<boolean> => {
+  const rows = await db
     .update(core_content_schedules)
     .set({
       ...(patch.status ? { status: patch.status } : {}),
       ...(patch.status === "completed" ? { completedAt: new Date() } : {}),
       ...(patch.lastError === undefined ? {} : { lastError: patch.lastError }),
     })
+    .where(
+      patch.expectedStatus === undefined
+        ? eq(core_content_schedules.id, scheduleId)
+        : and(
+            eq(core_content_schedules.id, scheduleId),
+            eq(core_content_schedules.status, patch.expectedStatus),
+          ),
+    )
+    .returning({ id: core_content_schedules.id });
+
+  return rows.length > 0;
+};
+
+/**
+ * Records why a schedule's post-commit effects have not been delivered yet.
+ *
+ * Deliberately **not** a status change. The publication itself succeeded and
+ * must stay `completed`; what failed is the announcement, and moving the row
+ * back to `pending` would republish something that is already live. Cleared on
+ * the retry that finally gets through.
+ */
+export const recordContentScheduleEffectsError = async (
+  db: ContentDatabase,
+  scheduleId: number,
+  effectsError: null | string,
+): Promise<void> => {
+  await db
+    .update(core_content_schedules)
+    .set({ effectsError })
     .where(eq(core_content_schedules.id, scheduleId));
 };
 
@@ -198,6 +249,7 @@ export const createContentSchedulesModel = ({
           completedAt: core_content_schedules.completedAt,
           createdAt: core_content_schedules.createdAt,
           createdBy: core_content_schedules.createdBy,
+          effectsError: core_content_schedules.effectsError,
           id: core_content_schedules.id,
           lastError: core_content_schedules.lastError,
           scheduledFor: core_content_schedules.scheduledFor,
