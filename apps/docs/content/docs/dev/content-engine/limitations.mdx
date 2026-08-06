@@ -12,7 +12,8 @@ other 20%, so you find out here rather than halfway through building.
 | Not supported | Do this instead |
 | --- | --- |
 | One-to-one, many-to-many, polymorphic relations | Write the join table and the queries by hand |
-| Localised content fields | Use `core_languages_words` directly, as the blog plugin does |
+| Localised `boolean`, `number`, `date`, `enum`, `relation` or `user` fields | [Only text kinds can be localized](/docs/dev/content-engine/localized-fields#which-kinds-are-refused-and-why). Split the content type, or keep the value shared |
+| Locale-specific relations, localized media | Not in Stage 5 at all. A relation stays shared; the *related* content type can be localized in its own right |
 | Rich text, media and file fields | Hand-build the field, or store an id and resolve it yourself |
 | To-the-second [scheduling](/docs/dev/content-engine/scheduling) | The queue drains on a one-minute tick, so a schedule fires within about a minute |
 | Scheduling a field edit, or a recurring schedule | Only `status` is scheduled. One row, one time, one action |
@@ -41,6 +42,61 @@ other 20%, so you find out here rather than halfway through building.
 None of these are blocked - they are simply not generated. The service, the
 schemas and the table are all public, so a hand-written route sits next to a
 generated one without friction.
+
+## Localization is infrastructure only, for now
+
+[`localization`](/docs/dev/content-engine/localization) generates the tables, the
+types, the schemas, the services and the translation routes. What it deliberately
+refuses is every combination whose *reading* half is not built yet:
+
+| Combination | Refused until |
+| --- | --- |
+| `localization` + `publication` | Stage 5B |
+| `localization` + `editorial` | Stage 5B |
+| `localization` + `publicApi` | Stage 5C |
+| `localization` + `search` | Stage 5D |
+
+Each is a definition-time error naming the stage. A localized content type that
+silently ran Stage 1-4 logic against its base table while ignoring its localized
+fields would be worse than one that refuses to be declared.
+
+Also not in Stage 5A: AdminCP locale tabs, completeness badges, `can_translate`,
+per-locale publication or revisions, fallback resolution, locale-aware cache tags
+and per-locale search documents. The translation routes reuse `can_view`,
+`can_edit` and `can_delete` until the UI they gate exists.
+
+## Localized field names cannot appear on base-table surfaces
+
+A localized field has no column on the base table, so it cannot be an
+`admin.list` column, an `orderableFields` or `searchableFields` entry, a
+`form.fields` entry, `admin.titleField`, or part of an `indexes` declaration. All
+six are compile errors and runtime errors.
+
+`admin.titleField` therefore falls back to `null` on a content type whose only
+text fields are localized. Stage 5B gives the AdminCP a locale-aware title.
+
+## Foreign key names on a long translation table are truncated by Postgres
+
+Drizzle names a foreign key `<table>_<column>_<target>_<targetColumn>_fk`, which
+for a translation table on an already-long base table passes 63 characters and is
+silently truncated by Postgres. That is pre-existing Drizzle behaviour shared with
+every hand-written table, not a localization quirk - and the names the *engine*
+generates (the composite primary key and both indexes) carry a deterministic
+fingerprint and stay inside the limit.
+
+If two truncated names ever collide, Postgres says so when the migration runs.
+
+## Turning localization off is a hand-written migration
+
+Reverting to a single set of columns means choosing one language's values to keep,
+and there is no correct default for that choice - so nothing generates it. See
+[Localization migrations](/docs/dev/content-engine/localization-migrations#turning-localization-off).
+
+The same applies in the other direction: localizing a content type that already
+has rows generates a `DROP COLUMN` that is correct about the schema and silent
+about the data. Copy, verify, then drop - the
+[recipe](/docs/dev/content-engine/localization-migrations#localizing-a-content-type-that-already-has-rows)
+spells it out.
 
 ## Filters are equality, and only equality
 

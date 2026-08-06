@@ -167,6 +167,18 @@ the definition, since a definition holds `target` thunks and cannot cross the
 server/client boundary. `buildFormSchemaFromSpec` also folds an existing row in
 as Zod defaults, which is how the edit dialog prefills.
 
+## translation
+
+`null` unless the content type is localized. When it is, `schemas.translation`
+carries the per-language half - `create`, `update`, `select`, `selectMeta`,
+`params` and the two envelopes - built from the localized fields only, while
+`create`, `update` and `select` above narrow to the shared ones.
+
+Content values live under `values`, and the locale and `expectedVersion` sit
+beside them rather than inside, so `values` stays a strict object of the content
+type's own fields. See [Translation
+service](/docs/dev/content-engine/translation-service#request-and-response-shapes).
+
 ## Why not drizzle-zod
 
 A Drizzle column cannot tell you whether a `varchar` should render as a

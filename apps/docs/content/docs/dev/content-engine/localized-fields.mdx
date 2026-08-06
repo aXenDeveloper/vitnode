@@ -1,0 +1,191 @@
+---
+title: Localized fields
+description: Which field kinds can hold a translation, why the rest cannot, and the two slug rules that catch the mistakes nobody notices.
+icon: Type
+---
+
+`localized: true` moves a field's value off the base table and into the generated
+translation table, one row per language.
+
+```ts
+title: field.text({ localized: true, required: true }),
+```
+
+Three kinds accept it.
+
+## The three kinds
+
+| Kind | Column on the translation table | Notes |
+| --- | --- | --- |
+| `text` | `varchar(maxLength)`, default 255 | One line of prose. The usual title |
+| `textarea` | `text` | Long prose. The usual body |
+| `slug` | `varchar(maxLength)`, default 160 | Unique **per language**. See [the slug rules](#the-two-slug-rules) |
+
+Every other declaration works exactly as it did, and every modifier a field
+already had still applies - `required`, `nullable`, `minLength`, `maxLength` all
+carry through to the translation table's column:
+
+```ts
+title: field.text({ localized: true, required: true, maxLength: 200 }),
+// -> "title" varchar(200) NOT NULL
+
+body: field.textarea({ localized: true, nullable: true }),
+// -> "body" text
+```
+
+## Which kinds are refused, and why
+
+The builders for these do not take a `localized` argument, so passing one is a
+**compile error**:
+
+```ts
+// @ts-expect-error - each of these is rejected by the type of the argument
+field.boolean({ localized: true });
+field.number({ integer: true, localized: true });
+field.dateTime({ localized: true });
+field.enum({ localized: true, values: ["draft", "review"] });
+field.user({ localized: true });
+field.relation({ localized: true, target: () => otherContentType });
+```
+
+Not an oversight in each case - a decision:
+
+- **`boolean`, `number`, `dateTime`.** A per-locale `true`, `42` or timestamp is
+  not a translation of anything. If English and Polish genuinely need different
+  numbers, they are different facts and want different fields.
+- **`enum`.** Its *values* are identifiers that everything filters, sorts and
+  branches on, so they have to be the same in every language. Its *labels* are UI
+  strings, which the [ordinary i18n system](/docs/dev/i18n) already translates -
+  that is the split, and it is the right one.
+- **`relation` and `user`.** Foreign keys. A per-locale relation is a real
+  feature and it is explicitly out of scope for the whole of Stage 5; a relation
+  stays shared, and the *related* content type can be localized in its own right.
+
+`defineContentType` re-checks the same rule at runtime, because a JavaScript
+caller or a cast can reach it with anything at all:
+
+```text
+[Content Engine] example.article: Field "views" is `localized: true` but its kind
+is "number". Only slug, text, textarea fields can be localized - an enum's
+identifiers have to be the same in every language, and a relation's target is
+shared.
+```
+
+## `localized` needs `localization`
+
+Marking a field without the block is refused: there would be no translation table
+for the value to live in.
+
+```text
+[Content Engine] example.article: Field "title" is `localized: true` but the
+content type has no `localization: { enabled: true, defaultLocale }` block, so
+there is no translation table for it to live in.
+```
+
+And the reverse: a `localization` block with no localized field is refused too,
+because the generated table would hold nothing but its own keys.
+
+## The two slug rules
+
+A localized slug and its source have to agree about *where the value lives*.
+Both mistakes are silent data bugs rather than crashes, which is why they are
+compile-time and definition-time errors.
+
+### A localized slug needs a localized source
+
+```ts
+// ✗ Every language would derive the same URL from the one shared name.
+name: field.text({ required: true }),
+slug: field.slug({ localized: true, source: "name" }),
+
+// ✓
+title: field.text({ localized: true, required: true }),
+slug: field.slug({ localized: true, source: "title" }),
+```
+
+### A shared slug cannot come from a localized source
+
+```ts
+// ✗ `title` has a different value in every language, so there is no single
+//   value to derive one URL from.
+title: field.text({ localized: true, required: true }),
+slug: field.slug({ source: "title" }),
+```
+
+Either localize the slug too, or point it at a shared text field.
+
+### A slug with no source
+
+Perfectly fine, localized or not - it just means the caller always supplies it,
+so it is `required` in the translation payload:
+
+```ts
+heading: field.text({ localized: true, required: true }),
+slug: field.slug({ localized: true }),   // required in `values`
+```
+
+## Reserved names
+
+A localized field cannot be called `itemId`, `languageId` or `version` - those
+are columns the translation table always generates:
+
+```text
+[Content Engine] example.article: Localized field "version" collides with a
+generated translation column. Rename it - the translation table always carries
+itemId, languageId, version, createdAt, updatedAt.
+```
+
+`createdAt` and `updatedAt` are already reserved for every content type, localized
+or not.
+
+A **shared** field called `itemId` is fine: it lands on the base table, where
+nothing generated claims that name.
+
+## What the types know
+
+The partition is visible in the type system, so a localized value cannot be
+passed where a shared one is expected:
+
+```ts
+type Article = typeof localizedArticleContentType;
+
+ContentLocalizedFieldName<Article>;   // "title" | "slug" | "body"
+ContentSharedFieldName<Article>;      // "featured"
+
+ContentSharedValues<Article>;         // { featured?: boolean }
+ContentLocalizedValues<Article>;      // { title: string; slug?: string; body: string }
+
+ContentCreateInput<Article>;          // === ContentSharedValues<Article>
+ContentSelect<Article>;               // { id, createdAt, updatedAt, featured }
+```
+
+For a content type without localization, `ContentLocalizedFieldName` is `never`
+and `ContentLocalizedValues` is `{}` - which is what makes a `translation:` key
+impossible to fill in by accident on a Stage 1-4 definition, and what keeps every
+existing type exactly as it was.
+
+## Where a localized field may not appear
+
+Everything on this list addresses a column on the *base* table:
+
+```ts
+admin: {
+  list: {
+    columns: ["title"],            // ✗
+    orderableFields: ["title"],    // ✗
+    searchableFields: ["title"],   // ✗
+  },
+  form: { fields: ["title"] },     // ✗
+  titleField: "title",             // ✗
+},
+indexes: [{ on: ["title"] }],      // ✗
+```
+
+All six are compile errors, and all six are runtime errors as well. The defaults
+skip localized fields automatically, so a localized content type that says nothing
+about `admin.list` gets a sensible shared-only list without having to opt out of
+anything.
+
+`admin.titleField` falls back to `null` when every text field is localized. A
+toast whose wording depended on the reading admin's locale would be worse than no
+title at all; Stage 5B gives the AdminCP a locale-aware one.

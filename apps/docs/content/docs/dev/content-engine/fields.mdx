@@ -212,6 +212,20 @@ that reference each other still load fine.
   row. `defineContentType` rejects the combination up front instead.
 </Callout>
 
+## localized
+
+`text`, `textarea` and `slug` also accept `localized: true`, which moves the value
+into a generated per-language table instead of onto the base table:
+
+```ts
+title: field.text({ localized: true, required: true }),
+```
+
+It needs `localization: { enabled: true, defaultLocale }` on the content type, and
+the other builders do not take the argument at all - so a localized `boolean` is a
+compile error. See [Localized
+fields](/docs/dev/content-engine/localized-fields).
+
 ## Adding a field kind later
 
 The descriptor union plus one case in each of the six mappers - column, select

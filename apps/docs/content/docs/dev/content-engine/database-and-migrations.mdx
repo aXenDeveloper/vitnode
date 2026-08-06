@@ -331,6 +331,23 @@ Removing a content type for good needs no statement at all: the daily
 registered, on both tables. A rename looks exactly like a removal to it, which
 is why the `UPDATE` belongs in the same migration rather than the next release.
 
+## A localized Content Type generates two tables
+
+Marking a field `localized: true` moves its column onto a generated
+`<tableName>_translations` table, and the plugin's database module exports both:
+
+```ts
+export const example_localized_articles = localizedArticleContent.table;
+export const example_localized_articles_translations =
+  localizedArticleContent.translationTable;
+```
+
+`translationTable` is `null` without localization, so nothing about an existing
+module changes. The generated schema, its keys and its indexes are covered in
+[Translation tables](/docs/dev/content-engine/translation-tables); localizing a
+table that already has rows in it needs [a hand-written
+copy-verify-drop migration](/docs/dev/content-engine/localization-migrations#localizing-a-content-type-that-already-has-rows).
+
 ## Renaming or removing a field
 
 <Callout type="warn" title="Renaming a field drops the column">

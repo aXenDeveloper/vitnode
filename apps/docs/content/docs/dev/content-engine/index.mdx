@@ -44,7 +44,7 @@ That gives you:
   (plus `can_publish` with [publication](/docs/dev/content-engine/publication))
 - `content.example.article.created` / `.updated` / `.deleted` events
 
-Three more declarations, each opt-in:
+Four more declarations, each opt-in:
 
 - [`publication`](/docs/dev/content-engine/publication) adds a draft/published
   lifecycle, a `can_publish` permission and a badge in the AdminCP
@@ -54,9 +54,14 @@ Three more declarations, each opt-in:
 - [`editorial`](/docs/dev/content-engine/editorial) adds a `version` column,
   optimistic locking so two editors cannot silently overwrite each other, and a
   [revision history](/docs/dev/content-engine/revisions) you can restore from
+- [`localization`](/docs/dev/content-engine/localization) moves the text fields
+  you mark into a generated per-language table, with its own version per locale
+  and a URL per locale
 
 Publication alone exposes nothing. Public exposure requires both of the first
-two; `editorial` works with or without either.
+two; `editorial` works with or without either. `localization` is currently
+[exclusive of the other three](/docs/dev/content-engine/localization#stage-5a-boundaries) -
+each combination arrives in a later stage.
 
 ## What it is not
 

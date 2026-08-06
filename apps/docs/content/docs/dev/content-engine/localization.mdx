@@ -1,0 +1,311 @@
+---
+title: Localization
+description: One opt-in block that moves the text fields you name into a generated per-language table, with real columns and one version per locale.
+icon: Languages
+---
+
+An article exists in English and in Polish. Same author, same category, same
+"featured" flag - a different title, a different URL and a different body.
+
+`localization` is the block that models that.
+
+```ts title="src/content/localized-article.ts"
+export const localizedArticleContentType = defineContentType({
+  id: "example.localized-article",
+  tableName: "example_localized_articles",
+
+  localization: {
+    enabled: true,
+    defaultLocale: "en",
+  },
+
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+    body: field.textarea({ localized: true, required: true }),
+
+    featured: field.boolean({ defaultValue: false }),
+  },
+
+  admin: {
+    label: {
+      plural: "Example Localized Articles",
+      singular: "Example Localized Article",
+    },
+  },
+});
+```
+
+Two tables come out of that, not one:
+
+```text
+example_localized_articles                 id, createdAt, updatedAt, featured
+example_localized_articles_translations    itemId, languageId, version,
+                                           createdAt, updatedAt,
+                                           title, slug, body
+```
+
+A content type without the block generates the same single table, the same
+routes and the same wire shapes it always did.
+
+<Callout type="warn" title="Stage 5A is the foundation, not the finished feature">
+  Localization currently cannot be combined with `publication`, `editorial`,
+  `publicApi` or `search` - each combination is refused at definition time with a
+  message naming the stage that lifts it. See [Stage 5A
+  boundaries](#stage-5a-boundaries).
+</Callout>
+
+## This is not UI translation
+
+VitNode already has an i18n system, and it is a different thing.
+
+| | UI translations | Content Engine translations |
+| --- | --- | --- |
+| What they translate | Buttons, labels, emails, error messages | The records themselves |
+| Where they live | `src/locales/*.json`, `core_languages_words` | A generated `<table>_translations` table |
+| Who writes them | Developers and translators, in source control or AdminCP | Editors, through the content type's API |
+| Shape | Key to string | Real typed columns, one row per language |
+
+Both read the same registry: **`core_languages` is the source of truth for what a
+language *is*.** The Content Engine has no language list of its own, does not
+invent locale codes, and stores a foreign key to a row an admin created in
+AdminCP → Languages.
+
+## What it turns on
+
+| | |
+| --- | --- |
+| A generated translation table | One per localized content type. Real columns, real `NOT NULL`, real indexes |
+| A shared/localized split | Every field you did not mark stays on the base table, exactly as before |
+| [Per-locale versioning](#optimistic-locking-per-locale) | Each translation has its own `version`. Editing Polish cannot conflict with English |
+| Locale-scoped slug uniqueness | `/en/about` and `/pl/about` both work; two English `about` rows do not |
+| Atomic creation | A record and its default-locale translation commit together, or not at all |
+| A [translation service](/docs/dev/content-engine/translation-service) | Reads and writes, transaction-aware, with structured conflicts |
+| Five routes | `GET`/`POST`/`PUT`/`DELETE` under `/{id}/translations` |
+| A boot check | An install whose `defaultLocale` does not exist refuses to serve |
+
+## The block
+
+```ts
+localization: {
+  enabled: true,
+
+  // Required. Must name a row in `core_languages`.
+  defaultLocale: "en",
+
+  // Optional. What a public read does for a locale with no translation.
+  fallback: "none",
+}
+```
+
+| Key | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `enabled` | `true` | - | Literal `true`. Omit the block to stay non-localized |
+| `defaultLocale` | `string` | - | The locale every record is created in, and the one translation it can never lose |
+| `fallback` | `"none" \| "default"` | `"none"` | Reserved for Stage 5C. Resolved now so the configuration is stable before anything reads through it |
+
+`defaultLocale` is checked twice. Its **shape** is checked at definition time -
+it has to look like a locale code and fit `varchar(32)`. Whether it names a real,
+enabled row in `core_languages` is a fact about the *installation*, so it is
+checked [once at boot](#the-boot-check) instead.
+
+`fallback` does nothing yet, and this page will not pretend otherwise. Nothing in
+Stage 5A reads through it; it exists so that a content type declared today does
+not change public behaviour the moment Stage 5C lands. `"none"` is the default
+because it is the only answer that cannot silently publish the wrong language.
+
+## Which fields can be localized
+
+Three kinds, and they are the ones that hold prose:
+
+```ts
+title: field.text({ localized: true }),
+body: field.textarea({ localized: true }),
+slug: field.slug({ localized: true, source: "title" }),
+```
+
+Everything else stays shared, and the builders do not take the argument - so
+`field.boolean({ localized: true })` is a compile error, not a runtime surprise.
+See [Localized fields](/docs/dev/content-engine/localized-fields) for why each
+one is on the list it is on.
+
+## Shared and localized
+
+One rule, applied everywhere: **a field is localized when you say so, and shared
+otherwise.** The split drives table generation, schema generation, the services,
+the routes and the migration, and every one of them reads it from the same
+helper - so there is no way for a column to be generated on one table and read
+from the other.
+
+What lands where:
+
+| Base table | Translation table |
+| --- | --- |
+| `id`, `createdAt`, `updatedAt` | `itemId`, `languageId` (the primary key) |
+| Every shared field | Every localized field |
+| | `version`, `createdAt`, `updatedAt` |
+
+A localized field is **not** a column on the base table, which has consequences
+worth knowing up front:
+
+- it cannot appear in `admin.list.columns`, `orderableFields`, `searchableFields`
+  or `form.fields`,
+- it cannot be `admin.titleField`,
+- it cannot appear in `indexes`,
+- it is absent from `schemas.create`, `schemas.update` and `schemas.select`.
+
+All five are compile errors *and* runtime errors. Localized values get their own
+AdminCP surface in Stage 5B; until then there is nowhere on the base form for
+them to go, and a silently-dropped title is worse than a refused definition.
+
+## Optimistic locking per locale
+
+Every translation row carries its own `version`, and every write names the
+version it started from:
+
+```ts
+await translations.update(
+  itemId,
+  "pl",
+  { title: "Nowy tytuł" },
+  { expectedVersion: 3 },
+);
+```
+
+The version is part of the `UPDATE`'s `WHERE`, so two editors racing produce one
+statement that matches and one that does not - with no read-then-write window
+between them.
+
+The important half is what does **not** happen: an edit to Polish never conflicts
+with an edit to English. They are different rows, keyed by
+`(itemId, languageId)`, with independent counters. Two translators working in two
+languages at the same time is the normal case, not a race.
+
+A no-op is still a success and changes nothing at all: no version bump, no
+`updatedAt`, no write. See [Translation
+service](/docs/dev/content-engine/translation-service#no-ops).
+
+## The default translation
+
+Creating a localized record creates its default-locale translation in the same
+transaction:
+
+```ts
+const { row, translation } = await localizedService.create({
+  shared: { featured: true },
+  translation: { body: "...", slug: "hello", title: "Hello" },
+});
+```
+
+Either both exist or neither does. That invariant is what every later stage leans
+on - a record always resolves in at least one language, so a locale tab strip
+always has something to show and a public read always has something to fall back
+to.
+
+Two rules protect it:
+
+- **A record is created in its default locale.** Passing another one is refused,
+  because the record would then have no default translation at all.
+- **The default translation cannot be deleted.** The route answers a structured
+  `CONTENT_DEFAULT_TRANSLATION_REQUIRED` 409. Delete the record instead.
+
+Deleting the record removes its translations through the foreign key's `ON DELETE
+CASCADE` - one statement, no loop over locales, and no window in which a
+translation outlives its row.
+
+## Locale-scoped slugs
+
+A localized slug is unique **within one language**:
+
+```text
+/en/about   ✓
+/pl/about   ✓   same string, different language
+/en/about   ✗   409, the English one is taken
+```
+
+That is a `UNIQUE (languageId, slug)` index on the translation table, not on the
+base table. Each language derives its own slug from its own title, using the same
+`slugify` the rest of the engine uses - there is no second slug algorithm.
+
+## Language resolution
+
+Locales travel as strings (`pl`, `pt-BR`) and are resolved to
+`core_languages.id` internally. A numeric language id is never the public
+identifier of anything.
+
+Matching is case-insensitive and the **stored** code is what comes back, so
+`/PL/` and `/pl/` write to the same row and the response says `pl`. The registry
+is loaded once per request, so resolving twenty locales costs one query rather
+than twenty.
+
+Two ways a locale can fail, answered differently because they mean different
+things:
+
+| | | |
+| --- | --- | --- |
+| No such row in `core_languages` | `404` | There is nothing to address |
+| Listed in the app's `i18n.locales` with `enabled: false` | `409 CONTENT_LANGUAGE_DISABLED` | It exists, and this install switched it off |
+
+A disabled language is **readable and not writable**. Its content is already in
+the database, and hiding it would make it unrecoverable; growing more of it in a
+language nothing renders is the part that gets refused.
+
+Deleting a language that content is written in is refused by Postgres itself -
+the foreign key is `ON DELETE RESTRICT`. That is deliberately different from
+`core_languages_words`, which cascades: losing a UI string is an inconvenience,
+losing every article written in a language is not.
+
+## The boot check
+
+A content type definition is plain data built at import time, long before there
+is a database connection - so "does `core_languages` have a row for `en`" cannot
+be a definition-time check.
+
+It runs once per process instead, on the first request, before any handler:
+
+```text
+[Content Engine] Localized content types have an unusable default locale:
+  example.localized-article -> localization.defaultLocale "en" does not exist in core_languages
+```
+
+Loud on purpose. A broken `defaultLocale` means *no record of that type can be
+created at all*, which is not a degraded mode worth booting into. It names every
+offender at once rather than failing on the first, and it is skipped entirely
+when no content type is localized - an install with none never touches the
+languages table because of it.
+
+## Stage 5A boundaries
+
+Localization lands as infrastructure. The stages that read *through* it are not
+here yet, and the honest failure for that is a refused definition rather than a
+content type that quietly runs Stage 1-4 logic against the base table while
+pretending its localized fields do not exist.
+
+| Combination | Refused until | Why |
+| --- | --- | --- |
+| `localization` + `publication` | Stage 5B | A localized record has one status per *language*. Publishing the English draft must not put an empty Polish page on the internet |
+| `localization` + `editorial` | Stage 5B | A revision would snapshot the base row only, so restoring it would silently drop every translation |
+| `localization` + `publicApi` | Stage 5C | A public read has to resolve a locale and decide what to do when a translation is missing |
+| `localization` + `search` | Stage 5D | One document per record would index a single language and rank every other one as a miss |
+
+Each is a `ContentEngineError` at definition time, with the stage in the message.
+
+## The roadmap
+
+| Stage | What it adds |
+| --- | --- |
+| **5A** (this one) | Tables, types, schemas, language resolution, translation service, per-locale locking, atomic create, routes, migrations |
+| **5B** | AdminCP locale tabs, completeness badges, per-locale publication status, per-locale revisions, `can_translate` |
+| **5C** | Locale-aware public API, fallback resolution, locale-aware cache tags |
+| **5D** | Per-locale search documents, `hreflang`, localized sitemap |
+
+Explicitly outside all four: locale-specific relations, localized media, AI
+translation, translation memory, external TMS integration, and migrating the blog
+plugin onto the Content Engine.
+
+## Where to next
+
+- [Localized fields](/docs/dev/content-engine/localized-fields) - which kinds, and why the others are refused
+- [Translation tables](/docs/dev/content-engine/translation-tables) - the generated schema, keys and indexes
+- [Translation service](/docs/dev/content-engine/translation-service) - every method, and every conflict it can raise
+- [Localization migrations](/docs/dev/content-engine/localization-migrations) - the generated migration, and how to localize an existing content type safely
