@@ -197,3 +197,59 @@ export const testSearchablePostContentType = defineContentType({
     list: { defaultOrderBy: "publishedAt" },
   },
 });
+
+/**
+ * The Stage 5A shape: shared and localized fields on one content type.
+ *
+ * A separate fixture rather than a flag on an existing one, for the same reason
+ * the searchable and editorial ones are separate: leaving every Stage 1-4 fixture
+ * exactly as it was is what proves localization existing changes nothing for
+ * them.
+ */
+export const testLocalizedArticleContentType = defineContentType({
+  id: "test.localized",
+  tableName: "test_localized_articles",
+  localization: {
+    enabled: true,
+    defaultLocale: "en",
+    fallback: "none",
+  },
+  fields: {
+    title: field.text({
+      localized: true,
+      required: true,
+      minLength: 3,
+      maxLength: 200,
+    }),
+    slug: field.slug({ localized: true, source: "title" }),
+    body: field.textarea({ localized: true, nullable: true }),
+    // Shared, and deliberately the only one: "a localized field is absent from
+    // the base table" needs something present there to be contrasted with.
+    featured: field.boolean({ defaultValue: false }),
+    views: field.number({ integer: true, min: 0, defaultValue: 0 }),
+  },
+  admin: {
+    label: { plural: "Test Localized", singular: "Test Localized" },
+    list: { columns: ["featured", "views"], orderableFields: ["views"] },
+  },
+});
+
+/**
+ * Localized with a slug the caller always supplies.
+ *
+ * The other half of the slug rules: a sourceless localized slug is `required` in
+ * the translation create payload, where a sourced one is derived.
+ */
+export const testLocalizedNoteContentType = defineContentType({
+  id: "test.localized-note",
+  tableName: "test_localized_notes",
+  localization: { enabled: true, defaultLocale: "EN" },
+  fields: {
+    heading: field.text({ localized: true, required: true }),
+    slug: field.slug({ localized: true }),
+    pinned: field.boolean({ defaultValue: false }),
+  },
+  admin: {
+    label: { plural: "Test Localized Notes", singular: "Test Localized Note" },
+  },
+});
