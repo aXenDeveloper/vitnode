@@ -18,8 +18,11 @@ import type {
 import type {
   ContentEditorialField,
   ContentFieldsOf,
+  ContentLocalizedFieldName,
   ContentPublicationField,
+  ContentSharedFieldName,
   ContentSystemField,
+  ContentTranslationSystemField,
   HasColumnDefault,
 } from "../types";
 
@@ -117,6 +120,69 @@ export type ContentColumnBuilders<
     [K in keyof TFields]: ContentColumnBuilder<TFields[K]>;
   };
 
+/** `itemId`, `languageId`, `version` and the timestamps. */
+export interface ContentTranslationSystemColumnBuilders {
+  createdAt: NotNull<HasDefault<PgTimestampBuilderInitial<ColumnName>>>;
+  itemId: NotNull<PgIntegerBuilderInitial<ColumnName>>;
+  languageId: NotNull<PgIntegerBuilderInitial<ColumnName>>;
+  updatedAt: NotNull<HasDefault<PgTimestampBuilderInitial<ColumnName>>>;
+  version: NotNull<HasDefault<PgIntegerBuilderInitial<ColumnName>>>;
+}
+
+export type ContentTranslationColumnBuilders<TFields> =
+  ContentTranslationSystemColumnBuilders & {
+    [K in keyof TFields]: ContentColumnBuilder<TFields[K]>;
+  };
+
+/**
+ * The `pgTable` a localized content type's translations compile to.
+ *
+ * Built with Drizzle's own `BuildColumns`, exactly like {@link ContentTable}, so
+ * `$inferSelect` and `$inferInsert` come out of the same machinery a
+ * hand-written `pgTable` uses.
+ */
+export type ContentTranslationTable<
+  TName extends string,
+  TFields,
+> = PgTableWithColumns<{
+  columns: BuildColumns<TName, ContentTranslationColumnBuilders<TFields>, "pg">;
+  dialect: "pg";
+  name: TName;
+  schema: undefined;
+}>;
+
+/**
+ * The localized half of a field map, as a record.
+ *
+ * Spelled with a mapped type rather than `Pick` so the erased
+ * `AnyContentTypeDefinition` - whose localized name union is `never` - resolves
+ * to an empty record instead of to `never`.
+ */
+type LocalizedFieldsOf<TDefinition> = {
+  [
+    K in ContentLocalizedFieldName<TDefinition> &
+      keyof ContentFieldsOf<TDefinition>
+  ]: ContentFieldsOf<TDefinition>[K];
+};
+
+/**
+ * The translation table for one definition.
+ *
+ * `string` rather than the literal translation table name: that name is derived
+ * at *runtime* from `tableName` (suffixed, then clamped to 63 characters with a
+ * fingerprint), and re-deriving the clamp in the type system would be a second
+ * implementation of it. Nothing needs the literal - Drizzle only uses the name
+ * parameter to prefix column names it never exposes by literal type.
+ */
+export type ContentTranslationTableFor<TDefinition> = ContentTranslationTable<
+  string,
+  LocalizedFieldsOf<TDefinition>
+>;
+
+/** Column name -> Drizzle column on the translation table. */
+export type ContentTranslationColumnName<TDefinition> =
+  ContentLocalizedFieldName<TDefinition> | ContentTranslationSystemField;
+
 /**
  * The `pgTable` a content type compiles to.
  *
@@ -139,18 +205,40 @@ export type ContentTable<
   schema: undefined;
 }>;
 
+/**
+ * The shared half of a field map, as a record. See {@link LocalizedFieldsOf} for
+ * why it is a mapped type rather than a `Pick`.
+ */
+type SharedFieldsOf<TDefinition> = {
+  [
+    K in ContentSharedFieldName<TDefinition> &
+      keyof ContentFieldsOf<TDefinition>
+  ]: ContentFieldsOf<TDefinition>[K];
+};
+
+/**
+ * The base `pgTable` for one definition.
+ *
+ * Shared fields only. For a content type without localization every field is
+ * shared, so this is exactly the table it always generated.
+ */
 export type ContentTableFor<TDefinition> = TDefinition extends {
   editorial: { enabled: infer TEditorial extends boolean };
   publication: { enabled: infer TPublication extends boolean };
   tableName: infer TName extends string;
 }
-  ? ContentTable<TName, ContentFieldsOf<TDefinition>, TPublication, TEditorial>
+  ? ContentTable<TName, SharedFieldsOf<TDefinition>, TPublication, TEditorial>
   : never;
 
-/** Column name -> Drizzle column, used for allowlisted filters and ordering. */
+/**
+ * Column name -> Drizzle column, used for allowlisted filters and ordering.
+ *
+ * Shared fields only: a localized field is a column on the translation table,
+ * and {@link ContentTranslationColumnName} is the union that names those.
+ */
 export type ContentColumnName<TDefinition> =
+  | ContentSharedFieldName<TDefinition>
   | ContentSystemField
-  | (keyof ContentFieldsOf<TDefinition> & string)
   | (TDefinition extends { editorial: { enabled: true } }
       ? ContentEditorialField
       : never)

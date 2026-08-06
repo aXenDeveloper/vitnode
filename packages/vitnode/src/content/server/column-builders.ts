@@ -80,6 +80,52 @@ export const buildEditorialColumns = (): Record<
 });
 
 /**
+ * The columns every generated translation table carries.
+ *
+ * `itemId` and `languageId` are the composite primary key, added by
+ * `createContentTranslationTable` - both are `NOT NULL` here because a key
+ * column has to be, and both are written by the service rather than by a
+ * request.
+ *
+ * `version` mirrors the editorial column deliberately: a translation has *its
+ * own* optimistic lock, so an edit in Polish and an edit in English cannot
+ * conflict with each other. It defaults to 1 and is only ever moved by the
+ * conditional `UPDATE` that guards on it.
+ */
+export const buildTranslationSystemColumns = ({
+  itemReference,
+  languageReference,
+  onItemDelete = "cascade",
+}: {
+  itemReference: ColumnReferenceThunk;
+  languageReference: ColumnReferenceThunk;
+  onItemDelete?: "cascade";
+}): Record<string, PgColumnBuilderBase> => ({
+  itemId: integer()
+    .notNull()
+    // Cascade: a record's translations are part of the record, so removing it
+    // takes them with it in one statement - there is no loop over locales
+    // anywhere, and no window in which a translation outlives its row.
+    .references(itemReference, { onDelete: onItemDelete, onUpdate: "cascade" }),
+  languageId: integer()
+    .notNull()
+    // Restrict, unlike `core_languages_words`, which cascades. Deleting a
+    // language must not silently delete every article written in it: the
+    // AdminCP's language screen should refuse, and the person should decide
+    // what happens to the content first.
+    .references(languageReference, {
+      onDelete: "restrict",
+      onUpdate: "cascade",
+    }),
+  version: integer().notNull().default(1),
+  createdAt: timestamp().notNull().defaultNow(),
+  updatedAt: timestamp()
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/**
  * Applies `NOT NULL` and the column default.
  *
  * Written as a generic over the concrete builder so each `default(...)` call

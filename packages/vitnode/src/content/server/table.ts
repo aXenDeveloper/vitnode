@@ -27,6 +27,7 @@ import type {
 import { core_users } from "../../database/users";
 import { CONTENT_EDITORIAL_FIELDS, CONTENT_PUBLICATION_FIELDS } from "../const";
 import { ContentEngineError } from "../errors";
+import { partitionContentFields } from "../localization";
 import {
   buildContentColumn,
   buildEditorialColumns,
@@ -142,7 +143,9 @@ export const createContentTable = <
   }
 
   const { id: contentTypeId, indexes, tableName } = definition;
-  const fields = definition.fields;
+  // Shared only: a localized field's column lives on the generated translation
+  // table, and `createContentTranslationTable` puts it there.
+  const fields = partitionContentFields(definition.fields).sharedFields;
   const referenceThunks = references as Record<string, ColumnReferenceThunk>;
 
   const columns: Record<string, PgColumnBuilderBase> = {
@@ -222,7 +225,7 @@ export const contentTableColumns = <
     "updatedAt",
     ...(definition.publication.enabled ? CONTENT_PUBLICATION_FIELDS : []),
     ...(definition.editorial.enabled ? CONTENT_EDITORIAL_FIELDS : []),
-    ...Object.keys(definition.fields),
+    ...Object.keys(partitionContentFields(definition.fields).sharedFields),
   ];
 
   return Object.fromEntries(names.map(name => [name, source[name]])) as Record<

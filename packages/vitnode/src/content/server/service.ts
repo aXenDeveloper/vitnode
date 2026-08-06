@@ -12,11 +12,11 @@ import type { ContentSchemas } from "../schemas";
 import type {
   AnyContentTypeDefinition,
   ContentCreateInput,
-  ContentFieldName,
   ContentFilterInput,
   ContentOrderableFieldName,
   ContentReferenceFieldName,
   ContentSelect,
+  ContentSharedFieldName,
   ContentUpdateInput,
 } from "../types";
 
@@ -28,6 +28,7 @@ import {
   CONTENT_PUBLICATION_FIELDS,
 } from "../const";
 import { ContentEngineError } from "../errors";
+import { partitionContentFields } from "../localization";
 import { orderableColumns } from "../registry";
 import {
   buildFilterCondition,
@@ -83,7 +84,7 @@ export interface ContentServiceOptions {
 }
 
 export interface ContentUpdateResult<TDefinition> {
-  changedFields: ContentFieldName<TDefinition>[];
+  changedFields: ContentSharedFieldName<TDefinition>[];
   row: ContentSelect<TDefinition>;
 }
 
@@ -184,7 +185,10 @@ export const createContentService = <
   schemas: ContentSchemas<TDefinition>;
   table: PgTableWithColumns<TableConfig>;
 }): ContentService<TDefinition> => {
-  const fields = definition.fields;
+  // Shared only, everywhere in this file: this service reads and writes the base
+  // table, and a localized field is not a column on it. The translation model
+  // owns the other half.
+  const fields = partitionContentFields(definition.fields).sharedFields;
   const contentTypeId = definition.id;
   // `buildSystemColumns` always makes `id` a `serial`, which is what
   // `withPagination` needs to type its cursor.
@@ -192,10 +196,13 @@ export const createContentService = <
     ColumnBaseConfig<"number", string>
   >;
   const orderable = orderableColumns(definition);
-  // `Object.keys` erases the key union that `ContentFieldName` recovers. The
-  // object is the very field map that type is derived from, so this restates
-  // what TypeScript already knows rather than asserting anything new.
-  const fieldNames = Object.keys(fields) as ContentFieldName<TDefinition>[];
+  // `Object.keys` erases the key union that `ContentSharedFieldName` recovers.
+  // The object is the shared half of the very field map that type is derived
+  // from, so this restates what TypeScript already knows rather than asserting
+  // anything new.
+  const fieldNames = Object.keys(
+    fields,
+  ) as ContentSharedFieldName<TDefinition>[];
   const publication = definition.publication.enabled;
   const ownColumnNames = [
     "id",
