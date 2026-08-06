@@ -1,21 +1,35 @@
 import type { PgColumn } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import type { ContentSchemas } from "../schemas";
-import type { AnyContentTypeDefinition } from "../types";
+import type { ContentSchemas, ContentTranslationSchemas } from "../schemas";
+import type {
+  AnyContentTypeDefinition,
+  ResolvedContentLocalizationConfig,
+} from "../types";
 import type { ContentEditorialService } from "./editorial-service";
+import type { ContentLocalizedService } from "./localized-service";
 import type { ContentPublicService } from "./public-service";
 import type { ContentService } from "./service";
+import type { ContentTranslationModel } from "./translation-model";
 import type {
   ContentColumnName,
   ContentReferences,
   ContentTableFor,
+  ContentTranslationColumnName,
+  ContentTranslationTableFor,
 } from "./types";
 
+import { ContentEngineError } from "../errors";
 import { createContentEditorialService } from "./editorial-service";
+import { createContentLocalizedService } from "./localized-service";
 import { createContentPublicService } from "./public-service";
 import { createContentService } from "./service";
 import { contentTableColumns, createContentTable } from "./table";
+import { createContentTranslationModel } from "./translation-model";
+import {
+  contentTranslationTableColumns,
+  createContentTranslationTable,
+} from "./translation-table";
 
 export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
   /** Column name -> Drizzle column, for filters, ordering and custom queries. */
@@ -36,6 +50,25 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
       ) => ContentEditorialService<TDefinition>)
     | undefined;
   /**
+   * The resolved localization config, mirrored off the definition.
+   *
+   * Present on every model, so `model.localization.enabled` is the one flag route
+   * builders and background work branch on - without reaching through
+   * `definition` for it.
+   */
+  localization: ResolvedContentLocalizationConfig;
+  /**
+   * Creates a base row and its default translation in one transaction, or
+   * `undefined` when the content type is not localized.
+   *
+   * `undefined` rather than a throwing stub, matching `publicService` and
+   * `editorialService`: the check reads naturally in code that does not know
+   * which content type it was handed, and TypeScript refuses the call until it
+   * has been made.
+   */
+  localizedService:
+    ((c: Context) => ContentLocalizedService<TDefinition>) | undefined;
+  /**
    * The read-only public repository, or `undefined` when the content type has
    * no `publicApi`.
    *
@@ -50,6 +83,33 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
   service: (c: Context) => ContentService<TDefinition>;
   /** The generated `pgTable`. Export it so Drizzle Kit can find it. */
   table: ContentTableFor<TDefinition>;
+  /**
+   * Column name -> Drizzle column on the translation table, or `null` when the
+   * content type is not localized.
+   */
+  translationColumns: null | Record<
+    ContentTranslationColumnName<TDefinition>,
+    PgColumn
+  >;
+  /** The per-language schemas, or `null`. Mirrored off `schemas.translation`. */
+  translationSchemas: ContentTranslationSchemas<TDefinition> | null;
+  /**
+   * The translation repository, or `undefined` when the content type is not
+   * localized. Emits nothing and invalidates nothing - see
+   * {@link ContentTranslationModel}.
+   */
+  translationService:
+    ((c: Context) => ContentTranslationModel<TDefinition>) | undefined;
+  /**
+   * The generated translation `pgTable`, or `null`. Export it alongside `table`
+   * so Drizzle Kit finds it and the migration is generated:
+   *
+   * ```ts
+   * export const example_articles = articleContent.table;
+   * export const example_articles_translations = articleContent.translationTable;
+   * ```
+   */
+  translationTable: ContentTranslationTableFor<TDefinition> | null;
 }
 
 /**
@@ -114,6 +174,42 @@ export const createContentModel = <
   // anything new.
   const schemas: ContentSchemas<TDefinition> = definition.schemas;
 
+  const localized = definition.localization.enabled;
+  const translationTable = localized
+    ? createContentTranslationTable(definition, { table })
+    : null;
+  const translationColumns = translationTable
+    ? contentTranslationTableColumns(definition, translationTable)
+    : null;
+  const translationSchemas = schemas.translation;
+
+  /**
+   * One translation model per call, bound to the request's handle.
+   *
+   * Built here rather than inside each service so `localizedService` and
+   * `translationService` share the same instance for one request - and so the
+   * "localization is enabled" narrowing happens exactly once.
+   */
+  const buildTranslations = (
+    c: Context,
+  ): ContentTranslationModel<TDefinition> => {
+    if (!translationTable || !translationColumns || !translationSchemas) {
+      throw new ContentEngineError(
+        "This content type has no `localization` block, so it has no translations.",
+        { contentTypeId: definition.id },
+      );
+    }
+
+    return createContentTranslationModel({
+      c,
+      columns: translationColumns,
+      definition,
+      schemas: translationSchemas,
+      table,
+      translationTable,
+    });
+  };
+
   return {
     columns,
     definition,
@@ -133,6 +229,22 @@ export const createContentModel = <
             table,
           })
       : undefined,
+    localization: definition.localization,
+    localizedService: localized
+      ? (c: Context) =>
+          createContentLocalizedService({
+            c,
+            definition,
+            service: createContentService({
+              c,
+              columns,
+              definition,
+              schemas,
+              table,
+            }),
+            translations: buildTranslations(c),
+          })
+      : undefined,
     publicService: definition.publicApi.enabled
       ? (c: Context) =>
           createContentPublicService({ c, columns, definition, table })
@@ -147,5 +259,9 @@ export const createContentModel = <
         table,
       }),
     table,
+    translationColumns,
+    translationSchemas,
+    translationService: localized ? buildTranslations : undefined,
+    translationTable,
   };
 };
