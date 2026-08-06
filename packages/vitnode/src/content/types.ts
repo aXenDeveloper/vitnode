@@ -933,33 +933,57 @@ export type ContentLocalizedUpdateValues<TDefinition> = Prettify<
   Partial<ContentLocalizedValues<TDefinition>>
 >;
 
+/**
+ * One translation's own publication state, or nothing.
+ *
+ * Gated on the *base* content type having publication, for the same reason the
+ * columns are: a translation status is only meaningful as something subordinate
+ * to a global one. Optional members rather than a widened `string`, so reading
+ * `row.status` on a content type without publication is a compile error rather
+ * than a silent `undefined`.
+ */
+export type ContentTranslationPublicationColumns<TDefinition> =
+  TDefinition extends { publication: { enabled: true } }
+    ? {
+        /** First published, in this language. Never rewritten by a republish. */
+        publishedAt: Date | null;
+        status: ContentPublicationStatus;
+      }
+    : Record<never, never>;
+
 /** One translation row, as the service and the generated routes return it. */
-export interface ContentTranslationRow<TDefinition> {
-  createdAt: Date;
-  itemId: number;
-  languageId: number;
-  /** The canonical `core_languages.code`, never the caller's casing. */
-  locale: string;
-  updatedAt: Date;
-  values: ContentLocalizedValues<TDefinition>;
-  version: number;
-}
+export type ContentTranslationRow<TDefinition> = Prettify<
+  ContentTranslationPublicationColumns<TDefinition> & {
+    createdAt: Date;
+    itemId: number;
+    languageId: number;
+    /** The canonical `core_languages.code`, never the caller's casing. */
+    locale: string;
+    updatedAt: Date;
+    values: ContentLocalizedValues<TDefinition>;
+    version: number;
+  }
+>;
 
 /**
  * One translation without its values.
  *
  * What the list route returns, and deliberately so: a locale tab strip needs to
- * know which languages exist and how stale each one is, not to drag every
- * article body in every language across the wire to find out.
+ * know which languages exist, how stale each one is and whether each is
+ * published - not to drag every article body in every language across the wire
+ * to find out.
  */
-export interface ContentTranslationMeta {
-  createdAt: Date;
-  itemId: number;
-  languageId: number;
-  locale: string;
-  updatedAt: Date;
-  version: number;
-}
+export type ContentTranslationMeta<TDefinition = AnyContentTypeDefinition> =
+  Prettify<
+    ContentTranslationPublicationColumns<TDefinition> & {
+      createdAt: Date;
+      itemId: number;
+      languageId: number;
+      locale: string;
+      updatedAt: Date;
+      version: number;
+    }
+  >;
 
 // ---------------------------------------------------------------------------
 // Definition

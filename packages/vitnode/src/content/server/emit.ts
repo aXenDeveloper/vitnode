@@ -10,6 +10,12 @@ import type {
   ContentDeletedPayload,
   ContentEventAction,
   ContentPublishedPayload,
+  ContentTranslationCreatedPayload,
+  ContentTranslationDeletedPayload,
+  ContentTranslationPublishedPayload,
+  ContentTranslationRestoredPayload,
+  ContentTranslationUnpublishedPayload,
+  ContentTranslationUpdatedPayload,
   ContentUnpublishedPayload,
   ContentUpdatedPayload,
 } from "../events";
@@ -21,6 +27,12 @@ type ContentPayload =
   | ContentCreatedPayload
   | ContentDeletedPayload
   | ContentPublishedPayload
+  | ContentTranslationCreatedPayload
+  | ContentTranslationDeletedPayload
+  | ContentTranslationPublishedPayload
+  | ContentTranslationRestoredPayload<AnyContentTypeDefinition>
+  | ContentTranslationUnpublishedPayload
+  | ContentTranslationUpdatedPayload<AnyContentTypeDefinition>
   | ContentUnpublishedPayload
   | ContentUpdatedPayload<AnyContentTypeDefinition>;
 

@@ -36,12 +36,15 @@ export const ContentTableView = async ({
   columnSpecs,
   entry,
   formSpec,
+  translationSpec,
   searchParams,
 }: {
   columnSpecs: ContentColumnSpec[];
   entry: RegisteredFrontendContentType;
   formSpec: ContentFormSpec;
   searchParams: Record<string, string | string[] | undefined>;
+  /** Localized-field form spec, or `null` when the content type is not localized. */
+  translationSpec: ContentFormSpec | null;
 }) => {
   const t = await getTranslations("core.content");
   const { definition, pluginId, registration } = entry;
@@ -171,6 +174,8 @@ export const ContentTableView = async ({
             ) : null}
             <EditContentAction
               data={row}
+              defaultLocale={definition.localization.defaultLocale}
+              editorial={definition.editorial.enabled}
               fieldOverrides={Object.fromEntries(
                 Object.entries(registration.fields ?? {}).map(
                   ([name, override]) => [name, override.component],
@@ -182,6 +187,7 @@ export const ContentTableView = async ({
               singular={definition.admin.label.singular}
               spec={formSpec}
               title={title}
+              translationSpec={translationSpec}
             />
             <DeleteContentAction
               contentTypeId={definition.id}

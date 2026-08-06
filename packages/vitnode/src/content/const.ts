@@ -28,6 +28,19 @@ export const CONTENT_TRANSLATION_SYSTEM_FIELDS = [
   "updatedAt",
 ] as const;
 
+/**
+ * The two columns a translation row gains when the content type has publication.
+ *
+ * The same names the base table uses, and deliberately so: a translation's
+ * lifecycle is the same lifecycle, one row down. Present only with
+ * `publication: { enabled: true }` - without it there is no draft state for a
+ * translation's own status to be subordinate to.
+ */
+export const CONTENT_TRANSLATION_PUBLICATION_FIELDS = [
+  "status",
+  "publishedAt",
+] as const;
+
 export const CONTENT_PUBLICATION_STATUSES = ["draft", "published"] as const;
 
 const publicationStatuses: ReadonlySet<string> = new Set(
@@ -217,6 +230,23 @@ export const CONTENT_REVISION_OPERATIONS = [
 ] as const;
 
 /**
+ * What a *translation* revision records.
+ *
+ * The same six operations, and the same one-per-real-mutation rule. Its own list
+ * rather than a reuse of {@link CONTENT_REVISION_OPERATIONS} so the two can
+ * diverge without a silent widening - a translation cannot be scheduled, and a
+ * shared row cannot be translated.
+ */
+export const CONTENT_TRANSLATION_REVISION_OPERATIONS = [
+  "create",
+  "delete",
+  "publish",
+  "restore",
+  "unpublish",
+  "update",
+] as const;
+
+/**
  * Who performed a mutation.
  *
  * `system` exists so a scheduled publish needs no fake user id. Who *created*
@@ -325,8 +355,9 @@ export const CONTENT_SCHEDULE_CODES = {
 
 /**
  * Every content type gets the first four staff permissions. `can_publish` is
- * generated only for content types with `publication: { enabled: true }`, and
- * `can_restore` only for those with `editorial: { enabled: true }`.
+ * generated only for content types with `publication: { enabled: true }`,
+ * `can_restore` only for those with `editorial: { enabled: true }`, and
+ * `can_translate` only for those with `localization: { enabled: true }`.
  */
 export const CONTENT_PERMISSIONS = {
   create: "can_create",
@@ -334,6 +365,7 @@ export const CONTENT_PERMISSIONS = {
   edit: "can_edit",
   publish: "can_publish",
   restore: "can_restore",
+  translate: "can_translate",
   view: "can_view",
 } as const;
 

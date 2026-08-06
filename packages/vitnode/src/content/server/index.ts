@@ -12,6 +12,7 @@ export {
   buildEditorialColumns,
   buildPublicationColumns,
   buildSystemColumns,
+  buildTranslationPublicationColumns,
   buildTranslationSystemColumns,
 } from "./column-builders";
 export type { ColumnReferenceThunk } from "./column-builders";
@@ -103,7 +104,10 @@ export type { ReferenceTarget } from "./references";
 export {
   contentRevisionSnapshot,
   contentSnapshotRow,
+  contentTranslationRevisionSnapshot,
+  contentTranslationSnapshotRow,
   projectRevisionSnapshot,
+  projectTranslationRevisionSnapshot,
 } from "./revision-snapshot";
 export {
   CONTENT_REVISIONS_DEFAULT_PAGE_SIZE,
@@ -165,6 +169,20 @@ export {
   contentTableColumns,
   createContentTable,
 } from "./table";
+export { createContentTranslationEditorialService } from "./translation-editorial-service";
+export type {
+  ContentRevisionDetailForLocale,
+  ContentTranslationEditorialOptions,
+  ContentTranslationEditorialOutcome,
+  ContentTranslationEditorialService,
+  ContentTranslationEditorialTransitionOptions,
+  ContentTranslationEditorialWriteOptions,
+} from "./translation-editorial-service";
+export { contentTranslationEffects } from "./translation-effects";
+export type {
+  ContentTranslationEffectsOptions,
+  ContentTranslationEffectsResult,
+} from "./translation-effects";
 export {
   contentTranslationConflict,
   withTranslationHttpErrors,
@@ -173,6 +191,8 @@ export { createContentTranslationModel } from "./translation-model";
 export type {
   ContentTranslationModel,
   ContentTranslationOptions,
+  ContentTranslationTransitionOptions,
+  ContentTranslationTransitionResult,
   ContentTranslationUpdateResult,
   ContentTranslationWriteOptions,
 } from "./translation-model";

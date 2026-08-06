@@ -2,8 +2,10 @@ import { sql } from "drizzle-orm";
 import { index, pgTable, uniqueIndex } from "drizzle-orm/pg-core";
 
 import type {
+  ContentAnyRevisionSnapshot,
   ContentRevisionSnapshot,
   ContentSnapshotValue,
+  ContentTranslationRevisionSnapshot,
 } from "../content/revisions";
 
 import {
@@ -36,6 +38,22 @@ export const core_content_revisions = pgTable(
     pluginId: t.varchar({ length: 255 }).notNull(),
     contentTypeId: t.varchar({ length: 100 }).notNull(),
     itemId: t.integer().notNull(),
+    /**
+     * Which language this revision belongs to, or `NULL` for a shared one.
+     *
+     * `NULL` is the whole history of every non-localized content type and the
+     * *shared* history of a localized one, which is why it is the column default
+     * in effect: a nullable column with no default backfills every pre-Stage-5B
+     * row to exactly the right value in one statement.
+     *
+     * Deliberately **not** a foreign key, for the same reason there is none to
+     * the record: a revision is an audit trail, and "the Polish copy said this"
+     * stays true after the language row is gone. A cascade would erase the fact
+     * and a restrict would block a language deletion the *translation* table has
+     * already had its say about. The snapshot carries the locale code, so a
+     * revision remains readable without the language it names.
+     */
+    languageId: t.integer(),
     /** The version the record holds *after* this mutation. */
     version: t.integer().notNull(),
     operation: t
@@ -43,7 +61,7 @@ export const core_content_revisions = pgTable(
       .notNull(),
     snapshot: t
       .jsonb()
-      .$type<ContentRevisionSnapshot>()
+      .$type<ContentAnyRevisionSnapshot>()
       .notNull()
       .default({} as ContentRevisionSnapshot),
     /** Field names this mutation moved, so the history list needs no snapshot. */
@@ -80,9 +98,27 @@ export const core_content_revisions = pgTable(
     // id already identifies exactly one content type and one table - adding the
     // owner would widen the index without excluding anything. It is still a
     // column, because ownership is what the cleanup job keys off.
-    uniqueIndex("core_content_revisions_item_version_unique").on(
+    //
+    // Partial from Stage 5B on. A translation's version counter is its own, so
+    // English v3 and Polish v3 are two different facts and a single key over
+    // `(contentTypeId, itemId, version)` would reject the second one. Two partial
+    // indexes rather than one over a nullable `languageId`, because Postgres
+    // treats every `NULL` as distinct - a shared key including it would enforce
+    // nothing at all for the non-localized case it exists to protect.
+    uniqueIndex("core_content_revisions_item_version_unique")
+      .on(t.contentTypeId, t.itemId, t.version)
+      .where(sql`language_id IS NULL`),
+    uniqueIndex("core_content_revisions_translation_version_unique")
+      .on(t.contentTypeId, t.itemId, t.languageId, t.version)
+      .where(sql`language_id IS NOT NULL`),
+    // The locale history read: one record's revisions in one language, newest
+    // first. The partial unique index above cannot serve it - a partial index is
+    // only usable for queries the planner can prove match its predicate, and the
+    // history list does not filter on `language_id IS NOT NULL` in those terms.
+    index("core_content_revisions_language_idx").on(
       t.contentTypeId,
       t.itemId,
+      t.languageId,
       t.version,
     ),
     index("core_content_revisions_plugin_id_idx").on(t.pluginId),
@@ -173,4 +209,9 @@ export const core_content_schedules = pgTable(
 export type ContentScheduleRow = typeof core_content_schedules.$inferSelect;
 
 /** Re-exported so `src/database` consumers need not reach into `content/`. */
-export type { ContentRevisionSnapshot, ContentSnapshotValue };
+export type {
+  ContentAnyRevisionSnapshot,
+  ContentRevisionSnapshot,
+  ContentSnapshotValue,
+  ContentTranslationRevisionSnapshot,
+};

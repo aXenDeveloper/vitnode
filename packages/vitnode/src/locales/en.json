@@ -567,6 +567,51 @@
         "version_conflict": "Someone else saved this while you were editing. Your changes are still here.",
         "unique_conflict": "A record with these values already exists.",
         "not_restorable": "This version cannot be restored: {fields} no longer fit this content type."
+      },
+      "translations": {
+        "shared_tab": "Shared",
+        "save": "Save translation",
+        "create": "Create translation",
+        "publish": "Publish this language",
+        "unpublish": "Unpublish this language",
+        "delete": "Delete the {name} translation",
+        "version": "Version {version}",
+        "never_published": "Not published yet",
+        "missing_readonly": "There is no {name} translation yet. You need the translate permission to add one.",
+        "default_locale_note": "{name} is the default language, so its translation cannot be deleted. Delete the record itself instead.",
+        "states": {
+          "missing": "Missing",
+          "draft": "Draft",
+          "published": "Published"
+        },
+        "conflict": {
+          "title": "The {name} translation changed",
+          "desc": "Someone else saved this language while you were editing. Your changes are still here. Reload to see theirs, then decide what to keep.",
+          "reload": "Reload this language"
+        },
+        "success": {
+          "created": "Translation created",
+          "saved": "Translation saved",
+          "deleted": "Translation deleted",
+          "published": "Translation published",
+          "unpublished": "Translation unpublished"
+        },
+        "errors": {
+          "version_conflict": "Someone else saved this language while you were editing.",
+          "unique_conflict": "Another record already uses that address in this language.",
+          "exists": "This language already has a translation. Reload the tab to edit it.",
+          "language_disabled": "This language is switched off on this installation, so its content cannot be written.",
+          "default_required": "This is the default language, so its translation cannot be deleted."
+        },
+        "history": {
+          "show": "Show this language's history",
+          "hide": "Hide this language's history",
+          "empty": "No versions yet. The first edit will show up here.",
+          "restore": "Restore",
+          "restored": "Translation restored",
+          "restore_failed": "This version could not be restored.",
+          "not_restorable": "This version cannot be restored: {fields} no longer fit this content type."
+        }
       }
     }
   },

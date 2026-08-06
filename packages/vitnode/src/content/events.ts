@@ -1,4 +1,4 @@
-import type { ContentFieldName } from "./types";
+import type { ContentFieldName, ContentLocalizedFieldName } from "./types";
 
 export type ContentEventAction =
   | "created"
@@ -7,6 +7,12 @@ export type ContentEventAction =
   | "restored"
   | "schedule_cancelled"
   | "scheduled"
+  | "translation_created"
+  | "translation_deleted"
+  | "translation_published"
+  | "translation_restored"
+  | "translation_unpublished"
+  | "translation_updated"
   | "unpublished"
   | "updated";
 
@@ -150,6 +156,121 @@ type ContentEditorialEventsFor<TDefinition extends { id: string }> =
       : Record<never, never>);
 
 /**
+ * What every translation event carries.
+ *
+ * `locale` first because it is the one field a listener always needs: an event
+ * that said only "article 7 changed" would force every consumer to go and ask
+ * which language, and half of them would forget. `languageId` rides along for
+ * anything joining against `core_languages` directly.
+ *
+ * Deliberately **not** folded into `updated`. A shared update and a Polish
+ * translation update are different domain facts with different consequences - one
+ * invalidates every locale, the other invalidates one - and a listener that had to
+ * inspect `changedFields` to tell them apart would get it wrong the first time a
+ * field was renamed.
+ */
+export interface ContentTranslationEventPayload {
+  contentId: number;
+  languageId: number;
+  /** The canonical `core_languages.code`. */
+  locale: string;
+  /** The version *this translation* holds after the mutation. */
+  version: number;
+}
+
+export interface ContentTranslationCreatedPayload extends ContentTranslationEventPayload {
+  /**
+   * The revision this mutation wrote.
+   *
+   * Absent for a localized content type without `editorial`, which keeps no
+   * history - optional rather than `0`, so a listener that acts on a revision
+   * cannot be handed one that does not exist.
+   */
+  revisionId?: number;
+}
+
+export interface ContentTranslationUpdatedPayload<
+  TDefinition,
+> extends ContentTranslationEventPayload {
+  /** Localized field names this write moved. Never a shared field. */
+  changedFields: ContentLocalizedFieldName<TDefinition>[];
+  revisionId?: number;
+}
+
+export interface ContentTranslationDeletedPayload extends ContentTranslationEventPayload {
+  revisionId?: number;
+}
+
+export interface ContentTranslationPublishedPayload extends ContentTranslationEventPayload {
+  /** When this language was first published; never rewritten. */
+  publishedAt: Date | null;
+  revisionId?: number;
+}
+
+export interface ContentTranslationUnpublishedPayload extends ContentTranslationEventPayload {
+  revisionId?: number;
+}
+
+export interface ContentTranslationRestoredPayload<
+  TDefinition,
+> extends ContentTranslationEventPayload {
+  changedFields: ContentLocalizedFieldName<TDefinition>[];
+  /** The revision the values came from - always one of this locale's own. */
+  restoredFromRevisionId: number;
+  /** The revision this restore itself created. */
+  revisionId: number;
+}
+
+/**
+ * The six events a localized content type adds.
+ *
+ * Gated on `localization: { enabled: true }` exactly like the publication and
+ * editorial pairs, so a content type without it gains no key at all and a
+ * listener for one cannot be registered. That is what keeps every non-localized
+ * payload byte-identical to what it was before Stage 5B.
+ *
+ * The three lifecycle events are gated a second time on publication: without it
+ * there is no translation status to move.
+ */
+type ContentLocalizationEventsFor<TDefinition extends { id: string }> =
+  (TDefinition extends {
+    editorial: { enabled: true };
+    localization: { enabled: true };
+  }
+    ? Record<
+        `content.${TDefinition["id"]}.translation_restored`,
+        ContentTranslationRestoredPayload<TDefinition>
+      >
+    : Record<never, never>) &
+    (TDefinition extends {
+      localization: { enabled: true };
+      publication: { enabled: true };
+    }
+      ? Record<
+          `content.${TDefinition["id"]}.translation_published`,
+          ContentTranslationPublishedPayload
+        > &
+          Record<
+            `content.${TDefinition["id"]}.translation_unpublished`,
+            ContentTranslationUnpublishedPayload
+          >
+      : Record<never, never>) &
+    (TDefinition extends { localization: { enabled: true } }
+      ? Record<
+          `content.${TDefinition["id"]}.translation_created`,
+          ContentTranslationCreatedPayload
+        > &
+          Record<
+            `content.${TDefinition["id"]}.translation_deleted`,
+            ContentTranslationDeletedPayload
+          > &
+          Record<
+            `content.${TDefinition["id"]}.translation_updated`,
+            ContentTranslationUpdatedPayload<TDefinition>
+          >
+      : Record<never, never>);
+
+/**
  * The events a content type emits, as a literal-keyed map.
  *
  * Plugins graft these onto the global event map with one declaration - the
@@ -169,6 +290,7 @@ type ContentEditorialEventsFor<TDefinition extends { id: string }> =
  */
 export type ContentEventsFor<TDefinition extends { id: string }> =
   ContentEditorialEventsFor<TDefinition> &
+    ContentLocalizationEventsFor<TDefinition> &
     ContentPublicationEventsFor<TDefinition> &
     Record<`content.${TDefinition["id"]}.created`, ContentCreatedPayload> &
     Record<`content.${TDefinition["id"]}.deleted`, ContentDeletedPayload> &

@@ -253,3 +253,36 @@ export const testLocalizedNoteContentType = defineContentType({
     label: { plural: "Test Localized Notes", singular: "Test Localized Note" },
   },
 });
+
+/**
+ * The Stage 5B fixture: localized **and** editorial **and** published.
+ *
+ * All three, because that is the combination the editorial layer needs and the
+ * one Stage 5A refused. The translation table gains `status` and `publishedAt`,
+ * each locale gets its own version and its own history, and the base row keeps the
+ * global lifecycle every translation's visibility is subordinate to.
+ *
+ * `publicApi` and `search` are still absent - both remain refused alongside
+ * localization until Stage 5C and 5D respectively.
+ */
+export const testLocalizedGuideContentType = defineContentType({
+  id: "test.localized-guide",
+  tableName: "test_localized_guides",
+  editorial: { enabled: true, revisions: { retention: 5 } },
+  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  publication: { enabled: true },
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+    body: field.textarea({ localized: true, nullable: true }),
+    summary: field.text({ localized: true, nullable: true, maxLength: 300 }),
+    featured: field.boolean({ defaultValue: false }),
+  },
+  admin: {
+    label: {
+      plural: "Test Localized Guides",
+      singular: "Test Localized Guide",
+    },
+    list: { columns: ["featured", "status"] },
+  },
+});

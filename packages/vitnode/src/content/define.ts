@@ -1256,7 +1256,6 @@ export const defineContentType = <
   // Last, because the Stage 5A boundaries it enforces are stated in terms of
   // everything the other resolvers have already settled.
   const resolvedLocalization = resolveContentLocalization({
-    editorial: editorialEnabled,
     fields: fieldMap,
     id,
     // The `{ enabled: false }` arm exists only so an explicit literal

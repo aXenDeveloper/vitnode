@@ -15,6 +15,7 @@ export {
 export {
   buildContentColumnSpec,
   buildContentFormSpec,
+  buildContentTranslationFormSpec,
   buildFormSchemaFromSpec,
   contentFormValuesToPayload,
   contentTitleFromValues,
@@ -98,6 +99,8 @@ export {
   CONTENT_SYSTEM_FIELDS,
   CONTENT_TEXT_DEFAULT_LENGTH,
   CONTENT_TRANSLATION_CONFLICT_CODES,
+  CONTENT_TRANSLATION_PUBLICATION_FIELDS,
+  CONTENT_TRANSLATION_REVISION_OPERATIONS,
   CONTENT_TRANSLATION_SYSTEM_FIELDS,
   CONTENT_TRANSLATION_TABLE_SUFFIX,
   CONTENT_UNPROCESSABLE_CODES,
@@ -125,6 +128,14 @@ export type {
   ContentEventAction,
   ContentEventsFor,
   ContentPublishedPayload,
+  ContentRestoredPayload,
+  ContentTranslationCreatedPayload,
+  ContentTranslationDeletedPayload,
+  ContentTranslationEventPayload,
+  ContentTranslationPublishedPayload,
+  ContentTranslationRestoredPayload,
+  ContentTranslationUnpublishedPayload,
+  ContentTranslationUpdatedPayload,
   ContentUnpublishedPayload,
   ContentUpdatedPayload,
 } from "./events";
@@ -160,12 +171,15 @@ export { contentRevisionDiff } from "./revisions";
 export type {
   ContentActor,
   ContentActorType,
+  ContentAnyRevisionSnapshot,
   ContentRevisionDetail,
   ContentRevisionDiffEntry,
   ContentRevisionMeta,
   ContentRevisionOperation,
   ContentRevisionSnapshot,
   ContentSnapshotValue,
+  ContentTranslationRevisionOperation,
+  ContentTranslationRevisionSnapshot,
 } from "./revisions";
 export { contentScheduleTimingError } from "./schedules";
 export type {
@@ -244,6 +258,7 @@ export type {
   ContentTextareaField,
   ContentTextField,
   ContentTranslationMeta,
+  ContentTranslationPublicationColumns,
   ContentTranslationRow,
   ContentTranslationSystemField,
   ContentTypeDefinition,

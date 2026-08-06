@@ -373,10 +373,12 @@ const buildTranslationSchemas = <TDefinition>({
   admin,
   localizedFields,
   localization,
+  publication,
 }: {
   admin: ResolvedContentAdminConfig;
   localization: ResolvedContentLocalizationConfig;
   localizedFields: ContentFieldMap;
+  publication: boolean;
 }): ContentTranslationSchemas<TDefinition> | null => {
   if (!localization.enabled) return null;
 
@@ -390,11 +392,20 @@ const buildTranslationSchemas = <TDefinition>({
     });
 
   const expectedVersion = z.number().int().positive();
+  // Read-only on the wire, exactly like the base row's pair: absent from
+  // `create` and `update` (both strict), so the only way to move them is
+  // `publish` / `unpublish`.
   const selectMeta = z.object({
     createdAt: z.date(),
     itemId: z.number().int().positive(),
     languageId: z.number().int().positive(),
     locale: z.string(),
+    ...(publication
+      ? {
+          publishedAt: z.date().nullable(),
+          status: z.enum(CONTENT_PUBLICATION_STATUSES),
+        }
+      : {}),
     updatedAt: z.date(),
     version: expectedVersion,
   });
@@ -576,6 +587,7 @@ export const buildContentSchemas = <TDefinition>({
       admin,
       localization,
       localizedFields,
+      publication,
     }),
     update: update as unknown as z.ZodType<ContentUpdateInput<TDefinition>>,
     updateEnvelope: z.strictObject({

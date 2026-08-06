@@ -1,7 +1,8 @@
+import type { SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, ne, sql } from "drizzle-orm";
 
 import type { ContentTranslationSchemas } from "../schemas";
 import type {
@@ -15,7 +16,10 @@ import type {
 import type { ContentLanguage } from "./language-resolver";
 import type { ContentDatabase } from "./service";
 
-import { CONTENT_TRANSLATION_SYSTEM_FIELDS } from "../const";
+import {
+  CONTENT_TRANSLATION_PUBLICATION_FIELDS,
+  CONTENT_TRANSLATION_SYSTEM_FIELDS,
+} from "../const";
 import {
   ContentDefaultTranslationRequired,
   ContentEngineError,
@@ -46,6 +50,25 @@ export interface ContentTranslationUpdateResult<TDefinition> {
   /** `false` when nothing moved: no write, no version bump, no `updatedAt`. */
   changed: boolean;
   changedFields: ContentLocalizedFieldName<TDefinition>[];
+  row: ContentTranslationRow<TDefinition>;
+  version: number;
+}
+
+/**
+ * Publish and unpublish guard on the *state*, so `expectedVersion` is optional.
+ *
+ * Same rule the base row's transitions follow: publishing overwrites no field
+ * values, so requiring a version would fail the button whenever a colleague had
+ * fixed a typo, for no protection against a lost update. When one is supplied it
+ * is `AND`ed on top of the state guard rather than replacing it.
+ */
+export interface ContentTranslationTransitionOptions extends ContentTranslationOptions {
+  expectedVersion?: number;
+}
+
+export interface ContentTranslationTransitionResult<TDefinition> {
+  /** `false` when the translation was already in the requested state. */
+  changed: boolean;
   row: ContentTranslationRow<TDefinition>;
   version: number;
 }
@@ -100,11 +123,43 @@ export interface ContentTranslationModel<TDefinition> {
   findManyForItem: (
     itemId: number,
     options?: ContentTranslationOptions,
-  ) => Promise<ContentTranslationMeta[]>;
+  ) => Promise<ContentTranslationMeta<TDefinition>[]>;
+  /**
+   * Marks one translation published, idempotently.
+   *
+   * `null` when there is no such translation. `changed: false` when it was
+   * already published - no version bump, and therefore no revision, no event and
+   * no cache work either. `publishedAt` is stamped on the first transition and
+   * never rewritten, so a republish keeps the original date.
+   *
+   * Throws without `publication: { enabled: true }`: there is no column to move.
+   */
+  publish: (
+    itemId: number,
+    locale: string,
+    options?: ContentTranslationTransitionOptions,
+  ) => Promise<ContentTranslationTransitionResult<TDefinition> | null>;
   /** The language this content type creates records in. */
   resolveDefaultLanguage: (
     options?: ContentTranslationOptions,
   ) => Promise<ContentLanguage>;
+  /**
+   * One locale, resolved through the request's language registry, or a throw.
+   *
+   * Exposed so the editorial layer resolves a locale exactly the way the
+   * repository does - same cache, same case-insensitive match, same canonical code
+   * - rather than reaching into the resolver with its own arguments.
+   */
+  resolveLanguage: (
+    locale: string,
+    options?: { requireEnabled?: boolean; tx?: ContentDatabase },
+  ) => Promise<ContentLanguage>;
+  /** The mirror of {@link publish}. `publishedAt` is deliberately left alone. */
+  unpublish: (
+    itemId: number,
+    locale: string,
+    options?: ContentTranslationTransitionOptions,
+  ) => Promise<ContentTranslationTransitionResult<TDefinition> | null>;
   /** Conditional `UPDATE` guarded by `expectedVersion`. A no-op writes nothing. */
   update: (
     itemId: number,
@@ -116,6 +171,22 @@ export interface ContentTranslationModel<TDefinition> {
 
 const translationSystemFields: readonly string[] =
   CONTENT_TRANSLATION_SYSTEM_FIELDS;
+
+/**
+ * A timestamp column as a `Date`, or `null`.
+ *
+ * The `postgres` driver hands timestamps back as strings on some paths (a raw
+ * `RETURNING` among them), and `publishedAt` is compared and formatted rather
+ * than only echoed - so it is normalised once here instead of at every reader.
+ */
+const toNullableDate = (value: unknown): Date | null => {
+  if (value instanceof Date) return value;
+  if (typeof value !== "string") return null;
+
+  const parsed = new Date(value);
+
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
 
 export const createContentTranslationModel = <
   TDefinition extends AnyContentTypeDefinition,
@@ -156,6 +227,12 @@ export const createContentTranslationModel = <
   const versionColumn = columns.version;
   const baseId = (table as unknown as Record<string, PgColumn>).id;
 
+  const publication = definition.publication.enabled;
+  const metaNames = [
+    ...translationSystemFields,
+    ...(publication ? CONTENT_TRANSLATION_PUBLICATION_FIELDS : []),
+  ];
+
   // The same normaliser the base service uses, over the localized half of the
   // field map. Two slug algorithms is exactly the pair that drifts, and the
   // consequence would be `/en/my-post` and `/pl/my_post`.
@@ -165,9 +242,7 @@ export const createContentTranslationModel = <
   );
 
   const metaSelection = (): Record<string, PgColumn> =>
-    Object.fromEntries(
-      translationSystemFields.map(name => [name, columns[name]]),
-    );
+    Object.fromEntries(metaNames.map(name => [name, columns[name]]));
 
   const fullSelection = (): Record<string, PgColumn> => ({
     ...metaSelection(),
@@ -204,6 +279,35 @@ export const createContentTranslationModel = <
    * it means the update request body (`{ expectedVersion, values }`) and the
    * response have the same shape.
    */
+  /**
+   * The publication half of a row, or nothing.
+   *
+   * Read off the row rather than defaulted, so a content type without publication
+   * has no `status` key at all - a `"draft"` invented here would make
+   * `isTranslationPublic` answer a question this content type never asked.
+   */
+  const publicationOf = (row: Record<string, unknown>): object =>
+    publication
+      ? {
+          publishedAt: toNullableDate(row.publishedAt),
+          status: row.status,
+        }
+      : {};
+
+  const toMeta = (
+    row: Record<string, unknown>,
+    locale: string,
+  ): ContentTranslationMeta<TDefinition> =>
+    ({
+      ...publicationOf(row),
+      createdAt: row.createdAt as Date,
+      itemId: row.itemId as number,
+      languageId: row.languageId as number,
+      locale,
+      updatedAt: row.updatedAt as Date,
+      version: row.version as number,
+    }) as ContentTranslationMeta<TDefinition>;
+
   const toRow = (
     row: Record<string, unknown>,
     locale: string,
@@ -212,14 +316,9 @@ export const createContentTranslationModel = <
     for (const name of localizedNames) values[name] = row[name];
 
     return {
-      createdAt: row.createdAt as Date,
-      itemId: row.itemId as number,
-      languageId: row.languageId as number,
-      locale,
-      updatedAt: row.updatedAt as Date,
+      ...toMeta(row, locale),
       values: values as ContentLocalizedValues<TDefinition>,
-      version: row.version as number,
-    };
+    } as ContentTranslationRow<TDefinition>;
   };
 
   const versionOf = (row: Record<string, unknown>): number =>
@@ -237,6 +336,96 @@ export const createContentTranslationModel = <
       .limit(1);
 
     return row ?? null;
+  };
+
+  /**
+   * The `status` column, or a refusal.
+   *
+   * A content type without publication has no such column, so a publish call is a
+   * programming mistake rather than a runtime state - and `eq(undefined, ...)`
+   * would fail far from the cause with a Drizzle internal error.
+   */
+  const statusColumn = (): PgColumn => {
+    if (!publication) {
+      throw new ContentEngineError(
+        "Translations can only be published on a content type with `publication: { enabled: true }` - without it there is no status column for a translation status to be subordinate to.",
+        { contentTypeId },
+      );
+    }
+
+    return columns.status;
+  };
+
+  /**
+   * Publish and unpublish, which guard on the *state* rather than the version.
+   *
+   * The state guard is what makes them idempotent, and idempotency is what keeps
+   * a double-clicked button and a retried task from each producing a second
+   * version, a second revision and a second event. Deliberately the same shape
+   * `transition` in the base editorial service uses - two locales' transitions
+   * touch two rows, so they never contend with each other.
+   */
+  const transition = async (
+    itemId: number,
+    locale: string,
+    options: ContentTranslationTransitionOptions,
+    { guard, values }: { guard: SQL; values: Record<string, unknown> },
+  ): Promise<ContentTranslationTransitionResult<TDefinition> | null> => {
+    const target = await language(locale, {
+      // Publishing into a locale the install has switched off would put content
+      // on a page nothing renders; taking one down must stay possible, which is
+      // why only the publish direction is checked - by its own guard, below.
+      requireEnabled: false,
+      tx: options.tx,
+    });
+    const database = db(options);
+
+    const conditions = [
+      eq(itemColumn, itemId),
+      eq(languageColumn, target.id),
+      guard,
+    ];
+    if (options.expectedVersion !== undefined) {
+      conditions.push(eq(versionColumn, options.expectedVersion));
+    }
+
+    const [row] = await database
+      .update(translationTable)
+      .set({ ...values, version: sql`${versionColumn} + 1` })
+      .where(and(...conditions))
+      .returning(fullSelection());
+
+    if (row) {
+      return {
+        changed: true,
+        row: toRow(row, target.locale),
+        version: versionOf(row),
+      };
+    }
+
+    const current = await readOne(itemId, target.id, database);
+    if (!current) return null;
+
+    // Nothing matched but the row is there: either it was already in the
+    // requested state, or the version moved. Only the second is an error.
+    if (
+      options.expectedVersion !== undefined &&
+      versionOf(current) !== options.expectedVersion
+    ) {
+      throw new ContentTranslationVersionConflict({
+        contentTypeId,
+        currentVersion: versionOf(current),
+        expectedVersion: options.expectedVersion,
+        itemId,
+        locale: target.locale,
+      });
+    }
+
+    return {
+      changed: false,
+      row: toRow(current, target.locale),
+      version: versionOf(current),
+    };
   };
 
   const assertItemExists = async (
@@ -386,20 +575,40 @@ export const createContentTranslationModel = <
 
       const languages = await listContentLanguagesById(c, options?.tx);
 
-      return rows.map(row => ({
-        createdAt: row.createdAt as Date,
-        itemId: row.itemId as number,
-        languageId: row.languageId as number,
-        locale: languages.get(row.languageId as number)?.locale ?? "",
-        updatedAt: row.updatedAt as Date,
-        version: row.version as number,
-      }));
+      return rows.map(row =>
+        toMeta(row, languages.get(row.languageId as number)?.locale ?? ""),
+      );
     },
+
+    publish: async (itemId, locale, options) =>
+      await transition(itemId, locale, options ?? {}, {
+        // COALESCE, so a republish keeps the date this language first went out.
+        // The base row's publish does the same thing to the same effect.
+        guard: ne(statusColumn(), "published"),
+        values: {
+          publishedAt: sql`coalesce(${columns.publishedAt}, now())`,
+          status: "published",
+        },
+      }),
 
     resolveDefaultLanguage: async options =>
       await language(defaultLocale, {
         requireEnabled: true,
         tx: options?.tx,
+      }),
+
+    resolveLanguage: async (locale, options) =>
+      await language(locale, {
+        requireEnabled: options?.requireEnabled ?? false,
+        tx: options?.tx,
+      }),
+
+    unpublish: async (itemId, locale, options) =>
+      await transition(itemId, locale, options ?? {}, {
+        guard: eq(statusColumn(), "published"),
+        // `publishedAt` survives on purpose: it records when this language was
+        // first published, which stays true after it is taken down again.
+        values: { status: "draft" },
       }),
 
     update: async (itemId, locale, values, options) => {

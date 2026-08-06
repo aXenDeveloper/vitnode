@@ -13,12 +13,16 @@ import type {
 } from "./types";
 
 import { core_languages } from "../../database/languages";
-import { CONTENT_TRANSLATION_SYSTEM_FIELDS } from "../const";
+import {
+  CONTENT_TRANSLATION_PUBLICATION_FIELDS,
+  CONTENT_TRANSLATION_SYSTEM_FIELDS,
+} from "../const";
 import { ContentEngineError } from "../errors";
 import { contentTranslationPrimaryKeyName } from "../indexes";
 import { partitionContentFields } from "../localization";
 import {
   buildContentColumn,
+  buildTranslationPublicationColumns,
   buildTranslationSystemColumns,
 } from "./column-builders";
 
@@ -62,6 +66,12 @@ export const createContentTranslationTable = <
       itemReference: () => baseColumns.id,
       languageReference: () => core_languages.id,
     }),
+    // Only with publication, matching the base table exactly. Without a global
+    // draft state there is nothing for a translation's own status to be
+    // subordinate to, and the column would gate a visibility nothing consults.
+    ...(definition.publication.enabled
+      ? buildTranslationPublicationColumns()
+      : {}),
   };
 
   for (const [name, fieldValue] of Object.entries(localizedFields)) {
@@ -107,6 +117,9 @@ export const contentTranslationTableColumns = <
   const { localizedFields } = partitionContentFields(definition.fields);
   const names = [
     ...CONTENT_TRANSLATION_SYSTEM_FIELDS,
+    ...(definition.publication.enabled
+      ? CONTENT_TRANSLATION_PUBLICATION_FIELDS
+      : []),
     ...Object.keys(localizedFields),
   ];
 

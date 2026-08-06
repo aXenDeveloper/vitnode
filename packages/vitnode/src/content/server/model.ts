@@ -10,6 +10,7 @@ import type { ContentEditorialService } from "./editorial-service";
 import type { ContentLocalizedService } from "./localized-service";
 import type { ContentPublicService } from "./public-service";
 import type { ContentService } from "./service";
+import type { ContentTranslationEditorialService } from "./translation-editorial-service";
 import type { ContentTranslationModel } from "./translation-model";
 import type {
   ContentColumnName,
@@ -25,6 +26,7 @@ import { createContentLocalizedService } from "./localized-service";
 import { createContentPublicService } from "./public-service";
 import { createContentService } from "./service";
 import { contentTableColumns, createContentTable } from "./table";
+import { createContentTranslationEditorialService } from "./translation-editorial-service";
 import { createContentTranslationModel } from "./translation-model";
 import {
   contentTranslationTableColumns,
@@ -91,6 +93,20 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
     ContentTranslationColumnName<TDefinition>,
     PgColumn
   >;
+  /**
+   * The transactional translation editorial layer, or `undefined` unless the
+   * content type is **both** localized and editorial.
+   *
+   * `undefined` rather than a throwing stub, matching every other optional member
+   * here: the check reads naturally in code that does not know which content type
+   * it was handed, and TypeScript refuses the call until it has been made.
+   */
+  translationEditorialService:
+    | ((
+        c: Context,
+        options: { pluginId: string },
+      ) => ContentTranslationEditorialService<TDefinition>)
+    | undefined;
   /** The per-language schemas, or `null`. Mirrored off `schemas.translation`. */
   translationSchemas: ContentTranslationSchemas<TDefinition> | null;
   /**
@@ -261,6 +277,20 @@ export const createContentModel = <
     table,
     translationColumns,
     translationSchemas,
+    // Both flags, because the layer needs both halves: localization gives it a
+    // table to write and `editorial` gives it a history to write to. A localized
+    // content type without `editorial` keeps the plain repository and nothing else.
+    translationEditorialService:
+      localized && definition.editorial.enabled && translationSchemas
+        ? (c: Context, { pluginId }: { pluginId: string }) =>
+            createContentTranslationEditorialService({
+              c,
+              definition,
+              pluginId,
+              schemas: translationSchemas,
+              translations: buildTranslations(c),
+            })
+        : undefined,
     translationService: localized ? buildTranslations : undefined,
     translationTable,
   };

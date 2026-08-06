@@ -3,29 +3,58 @@ import type { Context } from "hono";
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
-import type { AnyContentTypeDefinition } from "../types";
+import type {
+  AnyContentTypeDefinition,
+  ContentLocalizedFieldName,
+  ContentTranslationRow,
+} from "../types";
 import type { ContentModel } from "./model";
+import type {
+  ContentTranslationEditorialOutcome,
+  ContentTranslationEditorialService,
+} from "./translation-editorial-service";
 import type { ContentTranslationModel } from "./translation-model";
 
 import { buildRoute } from "../../api/lib/route";
-import { zodContentTranslationConflict } from "../conflicts";
-import { CONTENT_LOCALE_MAX_LENGTH, CONTENT_PERMISSIONS } from "../const";
+import {
+  zodContentTranslationConflict,
+  zodContentUnprocessable,
+} from "../conflicts";
+import {
+  CONTENT_ACTOR_TYPES,
+  CONTENT_LOCALE_MAX_LENGTH,
+  CONTENT_PERMISSIONS,
+  CONTENT_TRANSLATION_REVISION_OPERATIONS,
+} from "../const";
+import { resolveContentActor } from "./actor";
+import { CONTENT_REVISIONS_MAX_PAGE_SIZE } from "./revisions-model";
+import { contentTranslationEffects } from "./translation-effects";
 import { withTranslationHttpErrors } from "./translation-http-errors";
 
 /**
- * The five generated translation routes for one localized content type.
+ * The generated translation routes for one localized content type.
  *
  * Identity is `(content type, item, locale)` and never the translation row's own
  * key: `(itemId, languageId)` is the primary key, there is no surrogate id to
  * leak, and a locale in the URL cannot be used to reach another content type's
  * translation because the module the route is mounted in already fixes which
- * table is being read.
+ * table is being read. Locales are canonical strings on the outside and numeric
+ * `core_languages.id` values on the inside - a client never sends an id, so it can
+ * never point one at a language it was not shown.
  *
- * Permissions reuse the ones the content type already has - `can_view` to read,
- * `can_edit` to write, `can_delete` to remove. A dedicated `can_translate` is
- * Stage 5B work: adding a permission means a migration for every existing role,
- * and doing that before the AdminCP has a translation screen to gate would ship a
- * checkbox that governs nothing anybody can see.
+ * Permissions:
+ *
+ * | Route | Permission |
+ * | --- | --- |
+ * | read, history | `can_view` |
+ * | create, update | `can_translate` |
+ * | publish, unpublish | `can_publish` |
+ * | restore | `can_restore` |
+ * | delete | `can_delete` |
+ *
+ * `can_translate` rather than `can_edit`, which is the point of having it: a
+ * translator gets every locale tab without gaining the ability to touch a shared
+ * field, move the global publication state or delete the record.
  */
 export const buildContentTranslationRoutes = <
   TDefinition extends AnyContentTypeDefinition,
@@ -47,9 +76,29 @@ export const buildContentTranslationRoutes = <
 
   const translationSchemas = schemas;
   const buildService = model.translationService;
+  const buildEditorial = model.translationEditorialService;
 
   const translations = (c: Context): ContentTranslationModel<TDefinition> =>
     buildService(c);
+
+  /**
+   * The editorial layer, for the routes that only exist when there is one.
+   *
+   * A 500 rather than a graceful degradation: every caller below is behind the
+   * `editorial.enabled` check that decides whether the route is built at all, so
+   * reaching this is a wiring bug in the engine and not something a request did.
+   */
+  const editorial = (
+    c: Context,
+  ): ContentTranslationEditorialService<TDefinition> => {
+    if (!buildEditorial) {
+      throw new HTTPException(500, {
+        message: "This content type has no translation history.",
+      });
+    }
+
+    return buildEditorial(c, { pluginId });
+  };
 
   const jsonBody = (schema: z.ZodType) => ({
     content: { "application/json": { schema } },
@@ -98,6 +147,52 @@ export const buildContentTranslationRoutes = <
   const notFound = {
     description: `${label.singular}, locale or translation not found`,
   };
+
+  /**
+   * Announces one translation mutation, once its transaction has committed.
+   *
+   * Every write route funnels through this rather than calling the effects
+   * directly, so "emit exactly one event per real mutation, and none for a no-op"
+   * is stated once. The outcome carries `changed`, and the effects respect it.
+   */
+  const announce = async (
+    c: Context,
+    outcome: ContentTranslationEditorialOutcome<TDefinition>,
+  ): Promise<void> => {
+    await contentTranslationEffects(c, definition, outcome, { pluginId });
+  };
+
+  /**
+   * Turns a bare repository result into the outcome the effects expect.
+   *
+   * The path a localized content type **without** `editorial` takes: there is no
+   * history to write, so there is no revision id - but the event still fires,
+   * because `translation_created` is gated on localization and not on editorial.
+   * With `editorial` the service produces a richer outcome itself and this is not
+   * used.
+   */
+  const plainOutcome = (
+    operation: ContentTranslationEditorialOutcome<TDefinition>["operation"],
+    row: ContentTranslationRow<TDefinition>,
+    {
+      changed = true,
+      changedFields = [],
+    }: {
+      changed?: boolean;
+      changedFields?: ContentLocalizedFieldName<TDefinition>[];
+    } = {},
+  ): ContentTranslationEditorialOutcome<TDefinition> => ({
+    changed,
+    changedFields,
+    languageId: row.languageId,
+    locale: row.locale,
+    operation,
+    previousSlug: null,
+    restoredFromRevisionId: null,
+    revisionId: null,
+    row,
+    version: row.version,
+  });
 
   const list = buildRoute({
     pluginId,
@@ -150,7 +245,7 @@ export const buildContentTranslationRoutes = <
 
   const create = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.translate },
     route: {
       method: "post",
       path: "/{id}/translations/{locale}",
@@ -171,19 +266,32 @@ export const buildContentTranslationRoutes = <
       const target = locale(c);
       const { values } = await readJson(c, translationSchemas.createEnvelope);
 
-      const row = await withTranslationHttpErrors(
+      // A new translation is always a draft. Publishing it is a separate,
+      // separately permissioned step - a translator finishing a Polish copy must
+      // not put it on the internet by pressing save.
+      const outcome = await withTranslationHttpErrors(
         "create",
-        async () => await translations(c).create(id, target, values),
+        async () =>
+          buildEditorial
+            ? await editorial(c).create(id, target, values, {
+                actor: resolveContentActor(c),
+              })
+            : plainOutcome(
+                "create",
+                await translations(c).create(id, target, values),
+              ),
         { contentTypeId: definition.id, itemId: id, locale: target },
       );
 
-      return c.json(row, 201);
+      await announce(c, outcome);
+
+      return c.json(outcome.row, 201);
     },
   });
 
   const update = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.translate },
     route: {
       // PUT, not PATCH: the Next.js API route handler exports no PATCH.
       method: "put",
@@ -215,19 +323,38 @@ export const buildContentTranslationRoutes = <
         translationSchemas.updateEnvelope,
       );
 
-      const result = await withTranslationHttpErrors(
+      const outcome = await withTranslationHttpErrors(
         "update",
         async () =>
-          await translations(c).update(id, target, values, {
-            expectedVersion,
-          }),
+          buildEditorial
+            ? await editorial(c).update(id, target, values, {
+                actor: resolveContentActor(c),
+                expectedVersion,
+              })
+            : await (async () => {
+                const result = await translations(c).update(
+                  id,
+                  target,
+                  values,
+                  { expectedVersion },
+                );
+
+                return result
+                  ? plainOutcome("update", result.row, {
+                      changed: result.changed,
+                      changedFields: result.changedFields,
+                    })
+                  : null;
+              })(),
         { contentTypeId: definition.id, itemId: id, locale: target },
       );
-      if (!result) {
+      if (!outcome) {
         throw new HTTPException(404, { message: "Translation not found." });
       }
 
-      return c.json({ changed: result.changed, row: result.row }, 200);
+      await announce(c, outcome);
+
+      return c.json({ changed: outcome.changed, row: outcome.row }, 200);
     },
   });
 
@@ -267,19 +394,284 @@ export const buildContentTranslationRoutes = <
         translationSchemas.versionEnvelope,
       );
 
-      const row = await withTranslationHttpErrors(
+      const outcome = await withTranslationHttpErrors(
         "delete",
         async () =>
-          await translations(c).delete(id, target, { expectedVersion }),
+          buildEditorial
+            ? await editorial(c).delete(id, target, {
+                actor: resolveContentActor(c),
+                expectedVersion,
+              })
+            : await (async () => {
+                const row = await translations(c).delete(id, target, {
+                  expectedVersion,
+                });
+
+                return row ? plainOutcome("delete", row) : null;
+              })(),
         { contentTypeId: definition.id, itemId: id, locale: target },
       );
-      if (!row) {
+      if (!outcome) {
         throw new HTTPException(404, { message: "Translation not found." });
       }
 
-      return c.json(row, 200);
+      await announce(c, outcome);
+
+      return c.json(outcome.row, 200);
     },
   });
 
-  return [list, detail, create, update, remove];
+  // -------------------------------------------------------------------------
+  // Lifecycle: only with `publication`, which is what a translation status is
+  // subordinate to. Without it the columns do not exist and there is nothing to
+  // move.
+  // -------------------------------------------------------------------------
+
+  const transitionRoute = (action: "publish" | "unpublish") =>
+    buildRoute({
+      pluginId,
+      adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.publish },
+      route: {
+        method: "post",
+        path: `/{id}/translations/{locale}/${action}`,
+        description: `${action === "publish" ? "Publish" : "Unpublish"} one ${label.singular} translation`,
+        request: {
+          params: translationSchemas.params,
+          body: jsonBody(translationSchemas.versionEnvelope),
+        },
+        responses: {
+          200: jsonResponse(
+            z.object({
+              /** `false` when it was already in that state - a true no-op. */
+              changed: z.boolean(),
+              row: translationSchemas.select,
+            }),
+            `Translation ${action}ed, or already ${action}ed`,
+          ),
+          400: invalidIdentifier,
+          404: notFound,
+          409: conflict,
+        },
+      },
+      handler: async c => {
+        const id = identifier(c);
+        const target = locale(c);
+        const { expectedVersion } = await readJson(
+          c,
+          translationSchemas.versionEnvelope,
+        );
+
+        const outcome = await withTranslationHttpErrors(
+          "update",
+          async () =>
+            await editorial(c)[action](id, target, {
+              actor: resolveContentActor(c),
+              expectedVersion,
+            }),
+          { contentTypeId: definition.id, itemId: id, locale: target },
+        );
+        if (!outcome) {
+          throw new HTTPException(404, { message: "Translation not found." });
+        }
+
+        await announce(c, outcome);
+
+        return c.json({ changed: outcome.changed, row: outcome.row }, 200);
+      },
+    });
+
+  // -------------------------------------------------------------------------
+  // History: only with `editorial`.
+  // -------------------------------------------------------------------------
+
+  const zodTranslationRevisionMeta = z.object({
+    actorName: z.string().nullable(),
+    actorType: z.enum(CONTENT_ACTOR_TYPES),
+    actorUserId: z.number().nullable(),
+    changedFields: z.array(z.string()),
+    createdAt: z.union([z.date(), z.string()]),
+    id: z.number(),
+    operation: z.enum(CONTENT_TRANSLATION_REVISION_OPERATIONS),
+    restoredFromRevisionId: z.number().nullable(),
+    version: z.number(),
+  });
+
+  // `.loose()` for the same reason the shared revision detail is loose: a snapshot
+  // is data this content type wrote, and its shape moves with the content type.
+  const zodTranslationRevisionDetail = zodTranslationRevisionMeta.extend({
+    locale: z.string(),
+    snapshot: z.object({}).loose(),
+  });
+
+  const revisionParams = z.object({
+    id: z.coerce.number(),
+    locale: z.string().min(1).max(CONTENT_LOCALE_MAX_LENGTH),
+    revisionId: z.coerce.number(),
+  });
+
+  const revisionIdentifier = (c: Context): number => {
+    const value = Number(c.req.param("revisionId"));
+    if (!Number.isInteger(value) || value <= 0) {
+      throw new HTTPException(400, { message: "Invalid revision identifier." });
+    }
+
+    return value;
+  };
+
+  const revisionQuery = z.object({
+    cursor: z.coerce.number().int().positive().optional(),
+    first: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(CONTENT_REVISIONS_MAX_PAGE_SIZE)
+      .optional(),
+  });
+
+  const revisionList = buildRoute({
+    pluginId,
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    route: {
+      method: "get",
+      path: "/{id}/translations/{locale}/revisions",
+      description: `History of one ${label.singular} translation`,
+      request: { params: translationSchemas.params, query: revisionQuery },
+      responses: {
+        200: jsonResponse(
+          z.object({
+            edges: z.array(zodTranslationRevisionMeta),
+            pageInfo: z.object({
+              endCursor: z.number().nullable(),
+              hasNextPage: z.boolean(),
+            }),
+          }),
+          "Revisions of this locale, newest first",
+        ),
+        400: invalidIdentifier,
+        404: notFound,
+      },
+    },
+    handler: async c => {
+      const { cursor, first } = revisionQuery.parse(c.req.query());
+
+      // Scoped to the locale in the URL, so the English history is unreachable
+      // from the Polish tab - the model filters on `languageId`, it is not a
+      // post-filter over a wider read.
+      const page = await withTranslationHttpErrors(
+        "read",
+        async () =>
+          await editorial(c).listRevisions(identifier(c), locale(c), {
+            cursor,
+            limit: first,
+          }),
+        { contentTypeId: definition.id },
+      );
+
+      return c.json(page, 200);
+    },
+  });
+
+  const revisionDetail = buildRoute({
+    pluginId,
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    route: {
+      method: "get",
+      path: "/{id}/translations/{locale}/revisions/{revisionId}",
+      description: `One revision of a ${label.singular} translation`,
+      request: { params: revisionParams },
+      responses: {
+        200: jsonResponse(zodTranslationRevisionDetail, "Revision found"),
+        400: invalidIdentifier,
+        404: { description: "Revision not found" },
+      },
+    },
+    handler: async c => {
+      const revision = await withTranslationHttpErrors(
+        "read",
+        async () =>
+          await editorial(c).findRevision(
+            identifier(c),
+            locale(c),
+            revisionIdentifier(c),
+          ),
+        { contentTypeId: definition.id },
+      );
+      if (!revision) {
+        throw new HTTPException(404, { message: "Revision not found." });
+      }
+
+      return c.json(revision, 200);
+    },
+  });
+
+  const restore = buildRoute({
+    pluginId,
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.restore },
+    route: {
+      method: "post",
+      path: "/{id}/translations/{locale}/revisions/{revisionId}/restore",
+      description: `Restore one ${label.singular} translation to an earlier revision`,
+      request: {
+        params: revisionParams,
+        body: jsonBody(translationSchemas.versionEnvelope),
+      },
+      responses: {
+        200: jsonResponse(
+          z.object({
+            changed: z.boolean(),
+            row: translationSchemas.select,
+          }),
+          "Translation restored, or already at those values",
+        ),
+        400: invalidIdentifier,
+        404: { description: "Revision not found" },
+        409: conflict,
+        422: jsonResponse(
+          zodContentUnprocessable,
+          "The revision no longer fits this content type",
+        ),
+      },
+    },
+    handler: async c => {
+      const id = identifier(c);
+      const target = locale(c);
+      const revisionId = revisionIdentifier(c);
+      const { expectedVersion } = await readJson(
+        c,
+        translationSchemas.versionEnvelope,
+      );
+
+      const outcome = await withTranslationHttpErrors(
+        "update",
+        async () =>
+          await editorial(c).restore(id, target, revisionId, {
+            actor: resolveContentActor(c),
+            expectedVersion,
+          }),
+        { contentTypeId: definition.id, itemId: id, locale: target },
+      );
+      if (!outcome) {
+        throw new HTTPException(404, { message: "Revision not found." });
+      }
+
+      await announce(c, outcome);
+
+      return c.json({ changed: outcome.changed, row: outcome.row }, 200);
+    },
+  });
+
+  const publication = definition.publication.enabled;
+  const editorialEnabled = definition.editorial.enabled;
+
+  return [
+    list,
+    detail,
+    create,
+    update,
+    remove,
+    ...(publication && editorialEnabled
+      ? [transitionRoute("publish"), transitionRoute("unpublish")]
+      : []),
+    ...(editorialEnabled ? [revisionList, revisionDetail, restore] : []),
+  ];
 };

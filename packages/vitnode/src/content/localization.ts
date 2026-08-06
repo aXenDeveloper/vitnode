@@ -186,45 +186,22 @@ const assertLocalizedFields = (
 };
 
 /**
- * Stage 5A boundaries.
+ * Stage 5B boundaries.
  *
- * Localization lands as infrastructure: the tables, the types, the services and
- * the versioning. The stages that read *through* it are not here yet, and the
- * honest failure for that is a refused definition rather than a content type
- * that quietly runs Stage 1-4 logic against the base table while pretending its
- * localized fields do not exist.
+ * Stage 5A landed the infrastructure and Stage 5B the editorial layer on top of
+ * it: per-locale publication, per-locale revisions, restore and the locale
+ * editor. What is still missing is everything that reads *outwards* - the public
+ * API and the search index - and the honest failure for that is a refused
+ * definition rather than a content type that quietly runs Stage 1-4 logic
+ * against the base table while pretending its localized fields do not exist.
  *
  * Every message names the stage that lifts the restriction, because "not yet" is
  * only useful when it says how long.
  */
 const assertStageBoundaries = (
   id: string,
-  {
-    editorial,
-    publicApi,
-    publication,
-    search,
-  }: {
-    editorial: boolean;
-    publicApi: boolean;
-    publication: boolean;
-    search: boolean;
-  },
+  { publicApi, search }: { publicApi: boolean; search: boolean },
 ): void => {
-  if (publication) {
-    throw new ContentEngineError(
-      "localization cannot be combined with `publication` yet. A localized record has one status per *language* - publishing the English draft must not put an empty Polish page on the internet - and per-locale publication lands in Stage 5B.",
-      { contentTypeId: id },
-    );
-  }
-
-  if (editorial) {
-    throw new ContentEngineError(
-      "localization cannot be combined with `editorial` yet. A revision would snapshot the base row only, so restoring it would silently drop every translation. Per-locale revisions land in Stage 5B.",
-      { contentTypeId: id },
-    );
-  }
-
   if (publicApi) {
     throw new ContentEngineError(
       "localization cannot be combined with `publicApi` yet. A public read has to resolve a locale and decide what to do when a translation is missing, and locale-aware public routes land in Stage 5C.",
@@ -249,7 +226,6 @@ const assertStageBoundaries = (
  * widened somewhere upstream, can reach this with anything at all.
  */
 export const resolveContentLocalization = ({
-  editorial,
   fields,
   id,
   localization,
@@ -258,7 +234,6 @@ export const resolveContentLocalization = ({
   search,
   tableName,
 }: {
-  editorial: boolean;
   fields: ContentFieldMap;
   id: string;
   localization: ContentLocalizationConfig | undefined;
@@ -281,12 +256,7 @@ export const resolveContentLocalization = ({
     return contentLocalizationDisabled();
   }
 
-  assertStageBoundaries(id, {
-    editorial,
-    publicApi: publicApi.enabled,
-    publication,
-    search,
-  });
+  assertStageBoundaries(id, { publicApi: publicApi.enabled, search });
 
   const defaultLocale = assertDefaultLocale(id, localization.defaultLocale);
   assertLocalizedFields(id, fields, localizedFields);
@@ -301,6 +271,7 @@ export const resolveContentLocalization = ({
     translationIndexes: resolveContentTranslationIndexes({
       contentTypeId: id,
       localizedFields,
+      publication,
       translationTableName,
     }),
     translationTableName,

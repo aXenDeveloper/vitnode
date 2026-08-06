@@ -3,16 +3,20 @@ import { ZodError } from "zod";
 
 import type { ContentTranslationConflict } from "../conflicts";
 
-import { CONTENT_TRANSLATION_CONFLICT_CODES } from "../const";
+import {
+  CONTENT_TRANSLATION_CONFLICT_CODES,
+  CONTENT_UNPROCESSABLE_CODES,
+} from "../const";
 import {
   ContentDefaultTranslationRequired,
   ContentInputError,
   ContentLanguageError,
+  ContentRevisionNotRestorable,
   ContentTranslationExists,
   ContentTranslationItemMissing,
   ContentTranslationVersionConflict,
 } from "../errors";
-import { rethrowAsHttpError } from "./http-errors";
+import { contentUnprocessable, rethrowAsHttpError } from "./http-errors";
 
 /** A structured 409, in the translation union. */
 export const contentTranslationConflict = (
@@ -41,18 +45,36 @@ export const contentTranslationConflict = (
  * name columns, constraints and values, never reaches a client from here either.
  */
 export const withTranslationHttpErrors = async <TResult>(
-  action: "create" | "delete" | "update",
+  action: "create" | "delete" | "read" | "update",
   run: () => Promise<TResult>,
   {
     contentTypeId,
     itemId,
     locale,
-  }: { contentTypeId: string; itemId: number; locale: string },
+  }: {
+    contentTypeId: string;
+    /** Absent on a read, which has no row to attribute a constraint failure to. */
+    itemId?: number;
+    locale?: string;
+  },
 ): Promise<TResult> => {
   try {
     return await run();
   } catch (error) {
     if (error instanceof HTTPException) throw error;
+
+    // A restore whose snapshot no longer fits the content type. Mapped here
+    // rather than left to the shared mapper so the 422 body is produced whether
+    // or not the caller asked for structured errors - a translation route always
+    // answers this way, and its OpenAPI schema says so.
+    if (error instanceof ContentRevisionNotRestorable) {
+      throw contentUnprocessable({
+        code: CONTENT_UNPROCESSABLE_CODES.notRestorable,
+        contentTypeId,
+        fields: error.fields,
+        revisionId: error.revisionId,
+      });
+    }
 
     if (error instanceof ContentTranslationVersionConflict) {
       throw contentTranslationConflict({
@@ -113,7 +135,14 @@ export const withTranslationHttpErrors = async <TResult>(
     }
 
     try {
-      return rethrowAsHttpError(error, { action, contentTypeId, itemId });
+      // `read` has no write semantics for the shared mapper to describe, so it is
+      // reported as an update - the only paths it can reach there are the generic
+      // ones, and a read never hits a constraint.
+      return rethrowAsHttpError(error, {
+        action: action === "read" ? "update" : action,
+        contentTypeId,
+        itemId,
+      });
     } catch (mapped) {
       // A localized unique clash is a slug that is taken *in this language*, so
       // it answers in the translation union with the locale attached rather than
@@ -122,8 +151,8 @@ export const withTranslationHttpErrors = async <TResult>(
         throw contentTranslationConflict({
           code: CONTENT_TRANSLATION_CONFLICT_CODES.unique,
           contentTypeId,
-          itemId,
-          locale,
+          itemId: itemId ?? null,
+          locale: locale ?? "",
         });
       }
 

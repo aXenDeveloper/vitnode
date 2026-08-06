@@ -12,6 +12,7 @@ import { contentI18nKeys, humanizeFieldName } from "@/content/admin/labels";
 import {
   buildContentColumnSpec,
   buildContentFormSpec,
+  buildContentTranslationFormSpec,
 } from "@/content/admin/spec";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 import { pathToContentTypeId } from "@/content/registry";
@@ -101,6 +102,14 @@ export const ContentAdminView = async ({
     labelField: labels.labelField,
     pluginId,
   });
+  // `null` for a content type that is not localized, which is what makes the
+  // locale tabs unreachable rather than empty.
+  const translationSpec = buildContentTranslationFormSpec({
+    definition,
+    labelEnum: labels.labelEnum,
+    labelField: labels.labelField,
+    pluginId,
+  });
   const columnSpecs = buildContentColumnSpec({
     definition,
     labelEnum: labels.labelEnum,
@@ -132,6 +141,7 @@ export const ContentAdminView = async ({
             entry={entry}
             formSpec={formSpec}
             searchParams={query}
+            translationSpec={translationSpec}
           />
         </React.Suspense>
       </div>

@@ -62,19 +62,27 @@ export const contentTranslationPrimaryKeyName = (
  *    delete has to make before it is allowed to proceed,
  * 2. one unique index per localized slug, scoped to the language - which is what
  *    lets `/en/about` and `/pl/about` coexist while a second English `about` is
- *    a 409.
+ *    a 409,
+ * 3. `(languageId, status)` when the content type has publication - the public
+ *    read's "every published Polish translation" and the AdminCP's per-locale
+ *    completeness counts both start there. It supersedes (1), which is a prefix
+ *    of it, so the two are deduplicated below rather than both created.
  */
 export const resolveContentTranslationIndexes = ({
   contentTypeId,
   localizedFields,
+  publication = false,
   translationTableName,
 }: {
   contentTypeId: string;
   localizedFields: ContentFieldMap;
+  publication?: boolean;
   translationTableName: string;
 }): ResolvedContentIndex[] => {
   const indexes: ResolvedContentIndex[] = [
-    named(translationTableName, { on: ["languageId"] }),
+    ...(publication
+      ? [named(translationTableName, { on: ["languageId", "status"] })]
+      : [named(translationTableName, { on: ["languageId"] })]),
     ...Object.entries(localizedFields)
       .filter(([, fieldValue]) => fieldValue.kind === "slug")
       .map(([name]) =>

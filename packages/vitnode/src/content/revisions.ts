@@ -1,7 +1,14 @@
-import type { CONTENT_ACTOR_TYPES, CONTENT_REVISION_OPERATIONS } from "./const";
+import type {
+  CONTENT_ACTOR_TYPES,
+  CONTENT_REVISION_OPERATIONS,
+  CONTENT_TRANSLATION_REVISION_OPERATIONS,
+} from "./const";
 
 export type ContentRevisionOperation =
   (typeof CONTENT_REVISION_OPERATIONS)[number];
+
+export type ContentTranslationRevisionOperation =
+  (typeof CONTENT_TRANSLATION_REVISION_OPERATIONS)[number];
 
 export type ContentActorType = (typeof CONTENT_ACTOR_TYPES)[number];
 
@@ -53,6 +60,50 @@ export interface ContentRevisionSnapshot {
   version: number;
 }
 
+/**
+ * The complete post-mutation state of **one translation**.
+ *
+ * The same design as {@link ContentRevisionSnapshot} - complete, plain JSON,
+ * nothing derived - restricted to one language. What is absent is the point:
+ *
+ * - **no shared fields.** They live on the base row and have their own history.
+ *   A translation restore that carried them would let somebody with
+ *   `can_translate` rewrite the record's shared values through the back door.
+ * - **no other locale's values.** Restoring Polish must not touch English.
+ * - **no public response object and no search document.** Both are derived, and
+ *   both are shaped by configuration that may since have changed.
+ *
+ * `locale` is carried alongside `languageId` on purpose: the revision row's
+ * `languageId` has no foreign key, so this is what keeps a revision readable
+ * after the language it names has been deleted.
+ */
+export interface ContentTranslationRevisionSnapshot {
+  contentTypeId: string;
+  createdAt: string;
+  /** Every *localized* field, by name. */
+  fields: Record<string, ContentSnapshotValue>;
+  itemId: number;
+  languageId: number;
+  /** The canonical `core_languages.code` at the time of the mutation. */
+  locale: string;
+  /** Present only for a content type with the publication lifecycle. */
+  publication?: { publishedAt: null | string; status: string };
+  schemaVersion: number;
+  updatedAt: string;
+  /** The version *this translation* holds after the mutation. */
+  version: number;
+}
+
+/**
+ * Either snapshot shape, for the shared `core_content_revisions.snapshot` column.
+ *
+ * They are told apart by the row's `languageId`, not by inspecting the JSON: the
+ * column is what the query filters on, and a discriminator inside the payload
+ * would be a second source of truth for the same fact.
+ */
+export type ContentAnyRevisionSnapshot =
+  ContentRevisionSnapshot | ContentTranslationRevisionSnapshot;
+
 /** One revision as the history list shows it - metadata, never the snapshot. */
 export interface ContentRevisionMeta {
   /** Display name of the actor, or `null` for a system mutation. */
@@ -67,9 +118,18 @@ export interface ContentRevisionMeta {
   version: number;
 }
 
-/** One revision with its snapshot, loaded on demand. */
-export interface ContentRevisionDetail extends ContentRevisionMeta {
-  snapshot: ContentRevisionSnapshot;
+/**
+ * One revision with its snapshot, loaded on demand.
+ *
+ * Generic over the snapshot shape so the translation history reads
+ * `ContentRevisionDetail<ContentTranslationRevisionSnapshot>` and gets the
+ * localized shape - without a second model, and without widening the existing
+ * default that every Stage 4 caller relies on.
+ */
+export interface ContentRevisionDetail<
+  TSnapshot = ContentRevisionSnapshot,
+> extends ContentRevisionMeta {
+  snapshot: TSnapshot;
 }
 
 export interface ContentRevisionDiffEntry {

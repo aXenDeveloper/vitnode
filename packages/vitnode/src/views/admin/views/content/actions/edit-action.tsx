@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import React from "react";
 
+import type { ContentFormSpec } from "@/content/admin/spec";
+
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,14 +32,39 @@ const ContentForm = dynamic(async () =>
   import("./content-form").then(mod => ({ default: mod.ContentForm })),
 );
 
+// The locale editor carries the whole per-language surface - the tab strip, the
+// panel, the history - so it is loaded with the dialog rather than with the table.
+const LocaleEditor = dynamic(async () =>
+  import("./translations/locale-editor").then(mod => ({
+    default: mod.LocaleEditor,
+  })),
+);
+
+/**
+ * The edit row action.
+ *
+ * For a localized content type it opens the tabbed locale editor instead of the
+ * plain form: `Shared` first, then one tab per language the app serves. The dialog
+ * is reachable with `can_edit` **or** `can_translate` - a translator who may not
+ * touch a shared field still needs somewhere to write the Polish copy, and each tab
+ * gates its own actions.
+ */
 export const EditContentAction = ({
+  defaultLocale,
+  editorial = false,
   permissionModule,
   pluginId,
   singular,
+  translationSpec = null,
   ...props
 }: ContentFormProps & {
+  /** The content type's default locale. Required when `translationSpec` is set. */
+  defaultLocale?: string;
+  editorial?: boolean;
   permissionModule: string;
   pluginId: string;
+  /** Localized-field form spec, or `null` when the content type is not localized. */
+  translationSpec?: ContentFormSpec | null;
 }) => {
   const t = useTranslations("core.content.edit");
   const canEdit = useAdminStaffPermission({
@@ -45,8 +72,15 @@ export const EditContentAction = ({
     permission: CONTENT_PERMISSIONS.edit,
     plugin: pluginId,
   });
+  const canTranslate = useAdminStaffPermission({
+    module: permissionModule,
+    permission: CONTENT_PERMISSIONS.translate,
+    plugin: pluginId,
+  });
 
-  if (!canEdit) return null;
+  const localized = translationSpec !== null && props.data !== undefined;
+
+  if (!canEdit && !(localized && canTranslate)) return null;
 
   return (
     <TooltipProvider>
@@ -77,7 +111,19 @@ export const EditContentAction = ({
             </DialogHeader>
 
             <React.Suspense fallback={<Loader />}>
-              <ContentForm singular={singular} {...props} />
+              {localized ? (
+                <LocaleEditor
+                  defaultLocale={defaultLocale ?? ""}
+                  editorial={editorial}
+                  permissionModule={permissionModule}
+                  pluginId={pluginId}
+                  singular={singular}
+                  translationSpec={translationSpec}
+                  {...props}
+                />
+              ) : (
+                <ContentForm singular={singular} {...props} />
+              )}
             </React.Suspense>
           </DialogContent>
         </Dialog>

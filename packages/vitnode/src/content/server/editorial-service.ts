@@ -27,6 +27,7 @@ import {
   ContentRevisionNotRestorable,
   ContentVersionConflict,
 } from "../errors";
+import { partitionContentFields } from "../localization";
 import { diffChangedFields, toColumnValues } from "./query";
 import {
   contentRevisionSnapshot,
@@ -160,7 +161,12 @@ export const createContentEditorialService = <
   }
 
   const contentTypeId = definition.id;
-  const fields = definition.fields;
+  // Shared fields only, everywhere below. A localized field is a column on the
+  // translation table, so selecting it here would address something that does not
+  // exist, and diffing it would report every language's value as changed at once.
+  // `partitionContentFields` returns every field for a content type without
+  // localization, so this is exactly the previous behaviour there.
+  const fields = partitionContentFields(definition.fields).sharedFields;
   const fieldNames = Object.keys(fields) as ContentFieldName<TDefinition>[];
   const primaryCursor = columns.id;
   const versionColumn = columns.version;

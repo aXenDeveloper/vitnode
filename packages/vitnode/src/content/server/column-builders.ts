@@ -126,6 +126,21 @@ export const buildTranslationSystemColumns = ({
 });
 
 /**
+ * The two columns a translation row gains with `publication: { enabled: true }`.
+ *
+ * Literally {@link buildPublicationColumns}, aliased so the translation table
+ * reads as what it is rather than borrowing a name that says "base table". The
+ * `DEFAULT 'draft'` is what makes this migration safe on an install that already
+ * has Stage 5A translations: every existing row becomes a draft in one statement,
+ * which is the only correct backfill - silently publishing translations somebody
+ * wrote while the feature did not exist would put them on the internet.
+ */
+export const buildTranslationPublicationColumns = (): Record<
+  string,
+  PgColumnBuilderBase
+> => buildPublicationColumns();
+
+/**
  * Applies `NOT NULL` and the column default.
  *
  * Written as a generic over the concrete builder so each `default(...)` call

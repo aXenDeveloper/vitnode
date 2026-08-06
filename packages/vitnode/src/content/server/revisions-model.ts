@@ -1,9 +1,10 @@
 import type { Context } from "hono";
 
-import { and, desc, eq, lt, lte, notInArray, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, lt, lte, notInArray, sql } from "drizzle-orm";
 
 import type {
   ContentActor,
+  ContentAnyRevisionSnapshot,
   ContentRevisionDetail,
   ContentRevisionMeta,
   ContentRevisionOperation,
@@ -15,18 +16,20 @@ import type { ContentDatabase } from "./service";
 import { core_content_revisions } from "../../database/content";
 import { core_users } from "../../database/users";
 
-export interface ContentRevisionCaptureInput {
+export interface ContentRevisionCaptureInput<
+  TSnapshot = ContentRevisionSnapshot,
+> {
   actor: ContentActor;
   changedFields: readonly string[];
   itemId: number;
   operation: ContentRevisionOperation;
   restoredFromRevisionId?: number;
-  snapshot: ContentRevisionSnapshot;
+  snapshot: TSnapshot;
   /** The version the record holds after the mutation. */
   version: number;
 }
 
-export interface ContentRevisionsModel {
+export interface ContentRevisionsModel<TSnapshot = ContentRevisionSnapshot> {
   /**
    * Writes one revision and prunes past the retention window.
    *
@@ -36,13 +39,13 @@ export interface ContentRevisionsModel {
    */
   capture: (
     tx: ContentDatabase,
-    input: ContentRevisionCaptureInput,
+    input: ContentRevisionCaptureInput<TSnapshot>,
   ) => Promise<number>;
   findById: (
     itemId: number,
     revisionId: number,
     tx?: ContentDatabase,
-  ) => Promise<ContentRevisionDetail | null>;
+  ) => Promise<ContentRevisionDetail<TSnapshot> | null>;
   latest: (itemId: number) => Promise<ContentRevisionMeta | null>;
   /** Newest first. Metadata only - a snapshot is loaded on demand. */
   list: (
@@ -71,23 +74,34 @@ export const CONTENT_REVISIONS_DEFAULT_PAGE_SIZE = 25;
 export const CONTENT_REVISIONS_MAX_PAGE_SIZE = 100;
 
 /**
- * Revision reads and writes for one content type.
+ * Revision reads and writes for one content type, in one language scope.
  *
- * **Every** statement in here filters on `pluginId`, `contentTypeId` *and*
- * `itemId`. A revision id on its own is never enough: the table is shared by
- * every editorial content type in the install, so trusting an id would let a
- * request for article 7 return - or restore - a revision belonging to some
- * other plugin's record entirely.
+ * **Every** statement in here filters on `pluginId`, `contentTypeId`, `itemId`
+ * *and* `languageId`. A revision id on its own is never enough: the table is
+ * shared by every editorial content type in the install, so trusting an id would
+ * let a request for article 7 return - or restore - a revision belonging to some
+ * other plugin's record entirely. `languageId` joins that list for exactly the
+ * same reason one step down: without it, the Polish history could restore the
+ * English snapshot.
+ *
+ * `languageId` defaults to `null`, which is the shared scope - so every Stage 1-4
+ * call site keeps the behaviour it had, reading and writing rows the two partial
+ * unique indexes treat as the non-localized history.
  */
-export const createContentRevisionsModel = ({
+export const createContentRevisionsModel = <
+  TSnapshot = ContentRevisionSnapshot,
+>({
   c,
   definition,
+  languageId = null,
   pluginId,
 }: {
   c: Context;
   definition: AnyContentTypeDefinition;
+  /** `null` for the shared history, a `core_languages.id` for one locale's. */
+  languageId?: null | number;
   pluginId: string;
-}): ContentRevisionsModel => {
+}): ContentRevisionsModel<TSnapshot> => {
   const contentTypeId = definition.id;
   const retention = definition.editorial.revisions.retention;
 
@@ -97,6 +111,11 @@ export const createContentRevisionsModel = ({
       eq(core_content_revisions.pluginId, pluginId),
       eq(core_content_revisions.contentTypeId, contentTypeId),
       eq(core_content_revisions.itemId, itemId),
+      // `IS NULL` rather than `= NULL`: the shared scope is the absence of a
+      // language, and an equality against `null` matches nothing in SQL.
+      languageId === null
+        ? isNull(core_content_revisions.languageId)
+        : eq(core_content_revisions.languageId, languageId),
     );
 
   const metaSelection = {
@@ -121,10 +140,11 @@ export const createContentRevisionsModel = ({
           changedFields: [...input.changedFields],
           contentTypeId,
           itemId: input.itemId,
+          languageId,
           operation: input.operation,
           pluginId,
           restoredFromRevisionId: input.restoredFromRevisionId ?? null,
-          snapshot: input.snapshot,
+          snapshot: input.snapshot as ContentAnyRevisionSnapshot,
           version: input.version,
         })
         .returning({ id: core_content_revisions.id });
@@ -160,7 +180,10 @@ export const createContentRevisionsModel = ({
         .where(and(scope(itemId), eq(core_content_revisions.id, revisionId)))
         .limit(1);
 
-      return row ? row : null;
+      // The column holds either snapshot shape; which one is settled by the
+      // `languageId` this model was built with, and the scope predicate above has
+      // just proven the row matches it.
+      return row ? (row as ContentRevisionDetail<TSnapshot>) : null;
     },
 
     latest: async itemId => {

@@ -23,6 +23,7 @@ import { buildContentTranslationRoutes } from "./translation-routes";
 
 let permissionGranted = true;
 const permissionChecks: { module: string; permission: string }[] = [];
+const emitted = vi.fn(() => ({ failures: [], listeners: 0 }));
 
 // `assertStaffPermission` reads roles out of the database. The routes' job is to
 // *call* it with the right module and permission, so the check itself is replaced
@@ -88,7 +89,10 @@ const harness = ({ allow = true }: { allow?: boolean } = {}): Harness => {
     findByLanguageId: vi.fn(),
     findByLocale: vi.fn(),
     findManyForItem: vi.fn(),
+    publish: vi.fn(),
     resolveDefaultLanguage: vi.fn(),
+    resolveLanguage: vi.fn(),
+    unpublish: vi.fn(),
     update: vi.fn(),
   };
 
@@ -102,6 +106,10 @@ const harness = ({ allow = true }: { allow?: boolean } = {}): Harness => {
 
   const context: MiddlewareHandler = async (c, next) => {
     c.set("admin", allow ? { user: adminUser } : null);
+    // Every write route announces itself after the commit. The transport is not
+    // what these tests are about, so it records instead of delivering - and a
+    // missing one would surface as a 500 rather than as a missing event.
+    c.set("events", { emit: emitted } as never);
     await next();
   };
   app.use("*", context);
@@ -120,7 +128,7 @@ beforeEach(() => {
 });
 
 describe("route registration", () => {
-  it("appends the five translation routes to a localized content type", () => {
+  it("appends the translation routes to a localized content type", () => {
     const paths = buildContentRoutes(localized, { pluginId: PLUGIN_ID }).map(
       entry => `${entry.route.method.toUpperCase()} ${entry.route.path}`,
     );
@@ -260,14 +268,14 @@ describe("POST /{id}/translations/{locale}", () => {
     });
   });
 
-  it("needs `can_edit`", async () => {
+  it("needs `can_translate`, not `can_edit`", async () => {
     const { app, translations } = harness();
     translations.create.mockResolvedValue(translationRow());
 
     await post(app, { values: { title: "Witaj" } });
 
     expect(permissionChecks).toEqual([
-      { module: "test_localized", permission: "can_edit" },
+      { module: "test_localized", permission: "can_translate" },
     ]);
   });
 

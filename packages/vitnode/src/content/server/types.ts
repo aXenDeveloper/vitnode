@@ -129,8 +129,11 @@ export interface ContentTranslationSystemColumnBuilders {
   version: NotNull<HasDefault<PgIntegerBuilderInitial<ColumnName>>>;
 }
 
-export type ContentTranslationColumnBuilders<TFields> =
-  ContentTranslationSystemColumnBuilders & {
+export type ContentTranslationColumnBuilders<
+  TFields,
+  TPublication extends boolean = false,
+> = ContentTranslationSystemColumnBuilders &
+  PublicationColumnBuilders<TPublication> & {
     [K in keyof TFields]: ContentColumnBuilder<TFields[K]>;
   };
 
@@ -144,8 +147,13 @@ export type ContentTranslationColumnBuilders<TFields> =
 export type ContentTranslationTable<
   TName extends string,
   TFields,
+  TPublication extends boolean = false,
 > = PgTableWithColumns<{
-  columns: BuildColumns<TName, ContentTranslationColumnBuilders<TFields>, "pg">;
+  columns: BuildColumns<
+    TName,
+    ContentTranslationColumnBuilders<TFields, TPublication>,
+    "pg"
+  >;
   dialect: "pg";
   name: TName;
   schema: undefined;
@@ -174,14 +182,29 @@ type LocalizedFieldsOf<TDefinition> = {
  * implementation of it. Nothing needs the literal - Drizzle only uses the name
  * parameter to prefix column names it never exposes by literal type.
  */
-export type ContentTranslationTableFor<TDefinition> = ContentTranslationTable<
-  string,
-  LocalizedFieldsOf<TDefinition>
->;
+export type ContentTranslationTableFor<TDefinition> = TDefinition extends {
+  publication: { enabled: infer TPublication extends boolean };
+}
+  ? ContentTranslationTable<
+      string,
+      LocalizedFieldsOf<TDefinition>,
+      TPublication
+    >
+  : never;
 
-/** Column name -> Drizzle column on the translation table. */
+/**
+ * Column name -> Drizzle column on the translation table.
+ *
+ * The publication pair is gated exactly like {@link ContentColumnName} gates it
+ * on the base table: a translation only carries `status` and `publishedAt` when
+ * the content type has a lifecycle for them to describe.
+ */
 export type ContentTranslationColumnName<TDefinition> =
-  ContentLocalizedFieldName<TDefinition> | ContentTranslationSystemField;
+  | ContentLocalizedFieldName<TDefinition>
+  | ContentTranslationSystemField
+  | (TDefinition extends { publication: { enabled: true } }
+      ? ContentPublicationField
+      : never);
 
 /**
  * The `pgTable` a content type compiles to.

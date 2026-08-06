@@ -14,7 +14,21 @@ import {
   contentTranslationTableName,
   isLocalizedContentField,
   partitionContentFields,
+  resolveContentLocalization,
 } from "./localization";
+
+/** `publicApi` as `defineContentType` resolves it when there is none. */
+const disabledPublicApi = {
+  defaultOrder: "desc" as const,
+  defaultOrderBy: "publishedAt",
+  enabled: false as const,
+  fields: [] as never[],
+  filterableFields: [] as never[],
+  orderableFields: [] as never[],
+  path: "",
+  searchableFields: [] as never[],
+  slugField: "",
+};
 
 /** Builds a localized content type with one thing swapped out. */
 const localized = (
@@ -315,7 +329,7 @@ describe("localization validation", () => {
   });
 });
 
-describe("Stage 5A capability boundaries", () => {
+describe("Stage 5B capability boundaries", () => {
   const withCapability = (extra: Record<string, unknown>) =>
     defineContentType({
       id: "test.boundary",
@@ -329,16 +343,22 @@ describe("Stage 5A capability boundaries", () => {
       ...extra,
     } as never);
 
-  it("refuses localization plus publication until Stage 5B", () => {
-    expect(() => withCapability({ publication: { enabled: true } })).toThrow(
-      /per-locale publication lands in Stage 5B/,
-    );
+  it("allows localization plus publication from Stage 5B", () => {
+    const definition = withCapability({ publication: { enabled: true } });
+
+    expect(definition.publication.enabled).toBe(true);
+    // The translation table gains the pair the base table has, so a translation
+    // has a status of its own to be subordinate with.
+    expect(
+      definition.localization.translationIndexes.map(index => index.on),
+    ).toContainEqual(["languageId", "status"]);
   });
 
-  it("refuses localization plus editorial until Stage 5B", () => {
-    expect(() => withCapability({ editorial: { enabled: true } })).toThrow(
-      /Per-locale revisions land in Stage 5B/,
-    );
+  it("allows localization plus editorial from Stage 5B", () => {
+    const definition = withCapability({ editorial: { enabled: true } });
+
+    expect(definition.editorial.enabled).toBe(true);
+    expect(definition.localization.enabled).toBe(true);
   });
 
   it("refuses localization plus publicApi until Stage 5C", () => {
@@ -350,16 +370,50 @@ describe("Stage 5A capability boundaries", () => {
     ).toThrow();
   });
 
-  it("names the stage in every boundary message", () => {
-    // "Not yet" is only useful when it says how long.
-    let message = "";
-    try {
-      withCapability({ publication: { enabled: true } });
-    } catch (error) {
-      message = error instanceof Error ? error.message : "";
-    }
+  it("refuses localization plus search until Stage 5D", () => {
+    expect(() =>
+      withCapability({
+        publication: { enabled: true },
+        publicApi: { enabled: true, fields: ["slug"], path: "boundaries" },
+        search: { enabled: true, titleField: "title" },
+      }),
+    ).toThrow();
+  });
 
-    expect(message).toMatch(/Stage 5B/);
+  it("names the stage in every remaining boundary message", () => {
+    // "Not yet" is only useful when it says how long.
+    const messageOf = (extra: Record<string, unknown>): string => {
+      try {
+        withCapability(extra);
+      } catch (error) {
+        return error instanceof Error ? error.message : "";
+      }
+
+      return "";
+    };
+
+    expect(
+      messageOf({
+        publication: { enabled: true },
+        publicApi: { enabled: true, fields: ["slug"], path: "boundaries" },
+      }),
+    ).toMatch(/Stage 5C/);
+    // `search` cannot be reached through `defineContentType` while `publicApi` is
+    // still refused - a searchable content type has to be a public one - so the
+    // 5D message is asserted against the resolver directly.
+    expect(() =>
+      resolveContentLocalization({
+        fields: {
+          title: field.text({ localized: true, required: true }),
+        },
+        id: "test.boundary",
+        localization: { defaultLocale: "en", enabled: true },
+        publicApi: { ...disabledPublicApi },
+        publication: true,
+        search: true,
+        tableName: "test_boundaries",
+      }),
+    ).toThrow(/Stage 5D/);
   });
 });
 

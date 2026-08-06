@@ -59,6 +59,7 @@ const orderProp = async (definition: AnyContentTypeDefinition) => {
     } as never,
     formSpec: {} as never,
     searchParams: {},
+    translationSpec: null,
   })) as ReactElement<{
     order: { columns: string[]; defaultOrder: { column: string } };
   }>;
@@ -86,6 +87,7 @@ const deleteProps = async (
     } as never,
     formSpec: {} as never,
     searchParams: {},
+    translationSpec: null,
   })) as ReactElement<{
     columns: {
       cell?: (context: { row: Record<string, unknown> }) => ReactElement<{

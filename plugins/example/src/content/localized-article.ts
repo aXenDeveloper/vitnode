@@ -1,20 +1,21 @@
 import { defineContentType, field } from "@vitnode/core/content";
 
 /**
- * The Stage 5A reference: one content type with both halves of the partition.
+ * The localization reference: one content type with both halves of the partition,
+ * and - from Stage 5B - the whole editorial layer on top of it.
  *
  * `featured` is shared, so it lives on `example_localized_articles`. `title`,
  * `slug` and `body` are localized, so they live on
  * `example_localized_articles_translations` - one row per language, each with its
- * own `version`, and a unique `(languageId, slug)` index so `/en/hello` and
- * `/pl/hello` can both exist while a second English `hello` is a 409.
+ * own `version`, its own `status`, its own `publishedAt` and its own revision
+ * history, and a unique `(languageId, slug)` index so `/en/hello` and `/pl/hello`
+ * can both exist while a second English `hello` is a 409.
  *
- * Deliberately minimal on every other axis. `publication`, `editorial`,
- * `publicApi` and `search` are all refused alongside `localization` in Stage 5A -
- * see the boundaries in `resolveContentLocalization` - so this fixture exercises
- * the tables, the schemas, the services and the routes and nothing else. It is
- * registered on the API side only: the AdminCP locale tabs that would give
- * `title` somewhere to be edited are Stage 5B.
+ * `publicApi` and `search` are still absent: both remain refused alongside
+ * `localization` until Stage 5C and Stage 5D respectively - see the boundaries in
+ * `resolveContentLocalization`. So this fixture exercises the tables, the schemas,
+ * the services, the per-locale lifecycle, the per-locale history and the generated
+ * routes, and nothing that reads outwards.
  */
 export const localizedArticleContentType = defineContentType({
   id: "example.localized-article",
@@ -26,10 +27,18 @@ export const localizedArticleContentType = defineContentType({
     // process. The Postgres suite inserts it (and `pl`) itself - nothing seeds
     // languages, they are created by the installer.
     defaultLocale: "en",
-    // The safest default, and the only one Stage 5A can honestly claim: nothing
-    // reads through the fallback yet, and Stage 5C is where it starts to.
-    fallback: "none",
+    // Resolved here, acted on in Stage 5C. `"default"` so the fixture carries the
+    // interesting value rather than the inert one.
+    fallback: "default",
   },
+
+  // The global lifecycle every translation's own status is subordinate to:
+  // publishing the English copy of a draft article puts nothing on the internet.
+  publication: { enabled: true },
+
+  // Per-locale versions, per-locale revisions, per-locale restore. `retention` is
+  // per language, so five Polish revisions do not evict the English ones.
+  editorial: { enabled: true, revisions: { retention: 20 } },
 
   fields: {
     title: field.text({
@@ -57,7 +66,8 @@ export const localizedArticleContentType = defineContentType({
     list: {
       // Shared columns only. A localized field is not a column on the base
       // table, so naming one here is a compile error as well as a runtime one.
-      columns: ["featured", "updatedAt"],
+      // The AdminCP's locale selector is what shows a localized title.
+      columns: ["featured", "status", "updatedAt"],
       orderableFields: ["featured"],
     },
   },

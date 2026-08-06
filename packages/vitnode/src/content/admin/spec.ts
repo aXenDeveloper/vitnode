@@ -6,6 +6,8 @@ import type {
   ContentFieldKind,
 } from "../types";
 
+import { partitionContentFields } from "../localization";
+
 /**
  * A single form field, reduced to plain JSON.
  *
@@ -71,6 +73,62 @@ const systemKinds: Record<string, "number" | "publication" | "system"> = {
   version: "number",
 };
 
+/** One field descriptor, projected into the serialisable form spec. */
+const projectFormField = (
+  name: string,
+  fieldValue: ContentFieldDescriptor,
+  labelEnum: ContentEnumLabeller,
+  labelField: ContentFieldLabeller,
+): ContentFormFieldSpec => {
+  const base: ContentFormFieldSpec = {
+    kind: fieldValue.kind,
+    label: labelField(name, fieldValue),
+    name,
+    nullable: fieldValue.nullable,
+    required: fieldValue.required,
+    ...(fieldValue.description === undefined
+      ? {}
+      : { description: fieldValue.description }),
+  };
+
+  switch (fieldValue.kind) {
+    case "boolean":
+      return { ...base, defaultValue: fieldValue.defaultValue };
+    case "enum":
+      return {
+        ...base,
+        defaultValue: fieldValue.defaultValue,
+        display: fieldValue.display,
+        options: fieldValue.values.map(value => ({
+          label: labelEnum(name, value),
+          value,
+        })),
+      };
+    case "number":
+      return {
+        ...base,
+        defaultValue: fieldValue.defaultValue,
+        integer: fieldValue.integer,
+        max: fieldValue.max,
+        min: fieldValue.min,
+      };
+    case "slug":
+      // No default and no minimum: an empty slug input means "derive it",
+      // and the server is what decides whether that is possible.
+      return { ...base, maxLength: fieldValue.maxLength };
+    case "text":
+    case "textarea":
+      return {
+        ...base,
+        defaultValue: fieldValue.defaultValue,
+        maxLength: fieldValue.maxLength,
+        minLength: fieldValue.minLength,
+      };
+    default:
+      return base;
+  }
+};
+
 /** Projects a definition's form fields into the serialisable spec. */
 export const buildContentFormSpec = ({
   definition,
@@ -89,56 +147,52 @@ export const buildContentFormSpec = ({
     contentTypeId: definition.id,
     pluginId,
     titleField: definition.admin.titleField,
-    fields: definition.admin.form.fields.map(name => {
-      const fieldValue = fields[name];
-      const base: ContentFormFieldSpec = {
-        kind: fieldValue.kind,
-        label: labelField(name, fieldValue),
-        name,
-        nullable: fieldValue.nullable,
-        required: fieldValue.required,
-        ...(fieldValue.description === undefined
-          ? {}
-          : { description: fieldValue.description }),
-      };
+    // Shared fields only, because that is what `admin.form.fields` resolves to.
+    // A localized field's input lives on its locale tab -
+    // {@link buildContentTranslationFormSpec} builds that one.
+    fields: definition.admin.form.fields.map(name =>
+      projectFormField(name, fields[name], labelEnum, labelField),
+    ),
+  };
+};
 
-      switch (fieldValue.kind) {
-        case "boolean":
-          return { ...base, defaultValue: fieldValue.defaultValue };
-        case "enum":
-          return {
-            ...base,
-            defaultValue: fieldValue.defaultValue,
-            display: fieldValue.display,
-            options: fieldValue.values.map(value => ({
-              label: labelEnum(name, value),
-              value,
-            })),
-          };
-        case "number":
-          return {
-            ...base,
-            defaultValue: fieldValue.defaultValue,
-            integer: fieldValue.integer,
-            max: fieldValue.max,
-            min: fieldValue.min,
-          };
-        case "slug":
-          // No default and no minimum: an empty slug input means "derive it",
-          // and the server is what decides whether that is possible.
-          return { ...base, maxLength: fieldValue.maxLength };
-        case "text":
-        case "textarea":
-          return {
-            ...base,
-            defaultValue: fieldValue.defaultValue,
-            maxLength: fieldValue.maxLength,
-            minLength: fieldValue.minLength,
-          };
-        default:
-          return base;
-      }
-    }),
+/**
+ * The form spec for **one locale tab**: localized fields only.
+ *
+ * `null` for a content type that is not localized, so a caller structurally cannot
+ * render a locale tab for something with no translations.
+ *
+ * Built from `partitionContentFields` rather than from `admin.form.fields`, which
+ * resolves to shared names only - and in declaration order, so the tab shows title
+ * above body for the same reason the shared form shows its fields in the order they
+ * were written.
+ */
+export const buildContentTranslationFormSpec = ({
+  definition,
+  labelEnum,
+  labelField,
+  pluginId,
+}: {
+  definition: AnyContentTypeDefinition;
+  labelEnum: ContentEnumLabeller;
+  labelField: ContentFieldLabeller;
+  pluginId: string;
+}): ContentFormSpec | null => {
+  if (!definition.localization.enabled) return null;
+
+  const { localizedFields } = partitionContentFields(definition.fields);
+  const fields = Object.entries(localizedFields).map(([name, fieldValue]) =>
+    projectFormField(name, fieldValue, labelEnum, labelField),
+  );
+
+  return {
+    contentTypeId: definition.id,
+    fields,
+    pluginId,
+    // The shared `titleField` names a shared field by construction, so it would
+    // describe the wrong thing in a locale toast. The first localized `text` field
+    // is what a translator is actually looking at.
+    titleField: fields.find(field => field.kind === "text")?.name ?? null,
   };
 };
 
