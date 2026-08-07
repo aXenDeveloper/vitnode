@@ -1,4 +1,13 @@
-import { and, countDistinct, desc, eq, like, max } from "drizzle-orm";
+import {
+  and,
+  count,
+  countDistinct,
+  desc,
+  eq,
+  like,
+  max,
+  ne,
+} from "drizzle-orm";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
@@ -13,6 +22,14 @@ const SYNC_ERROR_LIMIT = 10;
 
 const collectionSchema = z.object({
   /**
+   * Index rows, counting one per language.
+   *
+   * Separate from `indexed`, which counts distinct items: multi-language content
+   * is indexed once per translation, so its coverage has to be measured in
+   * documents or a fully-indexed collection would read as 33%.
+   */
+  documents: z.number(),
+  /**
    * Whether an indexer is registered for this item type *right now*. A stored
    * plugin owner does not imply one: the plugin may be uninstalled, renamed, or
    * simply not loaded in this process.
@@ -20,6 +37,20 @@ const collectionSchema = z.object({
   hasIndexer: z.boolean(),
   indexed: z.number(),
   itemType: z.string(),
+  /**
+   * One entry per language present in the index, newest first by count.
+   *
+   * Empty for a collection that is entirely language-agnostic. It is what makes
+   * "Polish is missing 40 documents" visible at all - a single total cannot say
+   * which language a rebuild failed halfway through.
+   */
+  languages: z.array(
+    z.object({
+      documents: z.number(),
+      languageCode: z.string(),
+      lastIndexedAt: z.date().nullable(),
+    }),
+  ),
   lastIndexedAt: z.date().nullable(),
   pluginId: z.string(),
   /** Source items the indexer reports. `null` when there is no indexer to ask. */
@@ -74,6 +105,7 @@ export const searchStatusDebugAdminRoute = buildRoute({
     const indexedByType = await db
       .select({
         itemType: core_search_index.itemType,
+        documents: count(),
         indexed: countDistinct(core_search_index.itemId),
         lastIndexedAt: max(core_search_index.indexedAt),
         pluginId: max(core_search_index.pluginId),
@@ -82,6 +114,36 @@ export const searchStatusDebugAdminRoute = buildRoute({
       .groupBy(core_search_index.itemType);
 
     const statsByType = new Map(indexedByType.map(row => [row.itemType, row]));
+
+    // Per language, so a rebuild that stopped halfway through one locale is
+    // visible as that locale rather than as a slightly-low total. The
+    // language-agnostic rows (`""`) are dropped: they are not a language, and
+    // listing them as one would put an unnamed row in every collection.
+    const byLanguage = await db
+      .select({
+        itemType: core_search_index.itemType,
+        documents: count(),
+        languageCode: core_search_index.languageCode,
+        lastIndexedAt: max(core_search_index.indexedAt),
+      })
+      .from(core_search_index)
+      .where(ne(core_search_index.languageCode, ""))
+      .groupBy(core_search_index.itemType, core_search_index.languageCode)
+      .orderBy(desc(count()));
+
+    const languagesByType = new Map<
+      string,
+      { documents: number; languageCode: string; lastIndexedAt: Date | null }[]
+    >();
+    for (const row of byLanguage) {
+      const entries = languagesByType.get(row.itemType) ?? [];
+      entries.push({
+        documents: row.documents,
+        languageCode: row.languageCode,
+        lastIndexedAt: row.lastIndexedAt,
+      });
+      languagesByType.set(row.itemType, entries);
+    }
 
     // Newest first, and bounded: this is a "what went wrong lately" panel, not a
     // log viewer. `LIKE 'prefix%'` needs no escaping - the prefix contains
@@ -138,7 +200,9 @@ export const searchStatusDebugAdminRoute = buildRoute({
             indexer?.pluginId ??
             searchDocumentOwner(stats?.pluginId) ??
             "unknown",
+          documents: stats?.documents ?? 0,
           indexed,
+          languages: languagesByType.get(itemType) ?? [],
           // Reported as measured, even when it is below `indexed`: more documents
           // than source records is a stale index, and raising the source count to
           // hide it is how that goes unnoticed. The UI clamps the bar instead.

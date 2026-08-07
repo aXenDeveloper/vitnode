@@ -329,7 +329,7 @@ describe("localization validation", () => {
   });
 });
 
-describe("Stage 5B capability boundaries", () => {
+describe("capability combinations", () => {
   const withCapability = (extra: Record<string, unknown>) =>
     defineContentType({
       id: "test.boundary",
@@ -376,27 +376,29 @@ describe("Stage 5B capability boundaries", () => {
     );
   });
 
-  it("refuses localization plus search until Stage 5D", () => {
-    expect(() =>
-      withCapability({
-        publication: { enabled: true },
-        publicApi: {
-          enabled: true,
-          fields: ["title", "slug"],
-          path: "boundaries",
-        },
-        search: {
-          contentFields: ["title"],
-          enabled: true,
-          pathTemplate: "/boundaries/{slug}",
-          titleField: "title",
-        },
-      }),
-    ).toThrow();
+  it("allows localization plus search from Stage 5D", () => {
+    const definition = withCapability({
+      publication: { enabled: true },
+      publicApi: {
+        enabled: true,
+        fields: ["title", "slug"],
+        path: "boundaries",
+      },
+      search: {
+        contentFields: ["title"],
+        enabled: true,
+        pathTemplate: "/{locale}/boundaries/{slug}",
+        titleField: "title",
+      },
+    });
+
+    expect(definition.search.enabled).toBe(true);
+    expect(definition.localization.enabled).toBe(true);
   });
 
-  it("names the stage in the one remaining boundary message", () => {
-    // "Not yet" is only useful when it says how long.
+  it("requires a locale in the search path template", () => {
+    // One document per language means one URL per language. Without it every
+    // translation of a record would carry the same link.
     expect(() =>
       withCapability({
         publication: { enabled: true },
@@ -412,7 +414,7 @@ describe("Stage 5B capability boundaries", () => {
           titleField: "title",
         },
       }),
-    ).toThrow(/Stage 5D/);
+    ).toThrow(/\{locale\}/);
   });
 });
 

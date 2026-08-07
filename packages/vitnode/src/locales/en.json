@@ -570,6 +570,8 @@
       },
       "translations": {
         "shared_tab": "Shared",
+        "default_locale": "default",
+        "locale_column": "{name} translation",
         "save": "Save translation",
         "create": "Create translation",
         "publish": "Publish this language",

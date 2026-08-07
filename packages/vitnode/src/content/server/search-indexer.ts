@@ -1,11 +1,13 @@
+import type { SQL } from "drizzle-orm";
 import type {
   PgColumn,
+  PgTable,
   PgTableWithColumns,
   TableConfig,
 } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { asc, count } from "drizzle-orm";
+import { and, asc, count, eq, gt, or } from "drizzle-orm";
 
 import type {
   SearchDocument,
@@ -15,9 +17,19 @@ import type {
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentModel } from "./model";
 
+import { ContentEngineError } from "../errors";
+import { partitionContentFields } from "../localization";
 import { contentSearchIndexedFieldNames } from "../search";
-import { publicationColumns, publishedCondition } from "./publication";
-import { contentSearchDocument } from "./search-document";
+import { listContentLanguages } from "./language-resolver";
+import {
+  contentTranslationPublicationColumns,
+  publicationColumns,
+  publishedCondition,
+} from "./publication";
+import {
+  contentSearchDocument,
+  contentTranslationSearchDocument,
+} from "./search-document";
 
 /** System columns the mapper reads, on top of the configured search fields. */
 const REQUIRED_COLUMNS = [
@@ -126,6 +138,190 @@ export const createContentSearchIndexer = <
       }) satisfies SearchDocument[];
 
       return { documents, itemsRead: rows.length };
+    },
+  };
+};
+
+/**
+ * The localized rebuild: one document per **published translation**.
+ *
+ * Two things make it a different function rather than a flag on the one above:
+ *
+ * 1. **The unit of paging is a translation, not a record.** `itemsRead` has to
+ *    count translation rows, or a record with three languages would advance the
+ *    offset by one and the rebuild would read it again forever.
+ * 2. **Paging is keyset, not offset.** The cursor is `(itemId, languageId)`,
+ *    which is the translation table's primary key, so a page can neither overlap
+ *    nor skip while rows are being published underneath it - and Postgres seeks
+ *    to it on the index rather than counting past every earlier row, which is
+ *    what makes a rebuild of a large table finish in linear time.
+ *
+ * The `offset` the contract hands in is used only as a *position counter*: the
+ * cursor is derived from the previous page's last row and kept here, keyed by
+ * the request, so the contract stays unchanged for every existing indexer.
+ *
+ * Both halves of the visibility rule are in the query: the base row's published
+ * predicate and the translation's. A translation of a draft record is not read,
+ * so it can never be indexed.
+ */
+export const createContentLocalizedSearchIndexer = <
+  TDefinition extends AnyContentTypeDefinition,
+>(
+  model: ContentModel<TDefinition>,
+  { pluginId }: { pluginId: string },
+): ContentSearchIndexer => {
+  const { definition } = model;
+  const table: PgTableWithColumns<TableConfig> = model.table;
+  const translationTable: null | PgTable = model.translationTable;
+  const columns = model.columns as Record<string, PgColumn>;
+  const translationColumns: null | Record<string, PgColumn> =
+    model.translationColumns;
+
+  if (!translationTable || !translationColumns) {
+    throw new ContentEngineError(
+      "The localized search indexer needs `localization: { enabled: true, defaultLocale }` on the content type.",
+      { contentTypeId: definition.id },
+    );
+  }
+
+  const rows = translationColumns;
+  const base = publicationColumns(definition, columns);
+  const translation = contentTranslationPublicationColumns(
+    definition,
+    translationColumns,
+  );
+
+  const { localizedFields, sharedFields } = partitionContentFields(
+    definition.fields,
+  );
+  const indexed = contentSearchIndexedFieldNames(definition);
+  const sharedSelection = [
+    ...new Set([
+      ...REQUIRED_COLUMNS,
+      ...indexed.filter(name => sharedFields[name] !== undefined),
+    ]),
+  ];
+  const localizedSelection = indexed.filter(
+    name => localizedFields[name] !== undefined,
+  );
+
+  const visible = (): SQL | undefined =>
+    and(publishedCondition(base), publishedCondition(translation));
+
+  /**
+   * The keyset cursor, per request.
+   *
+   * A `WeakMap` keyed by the Hono context, for the same reason the language
+   * registry uses one: the rebuild task calls `load` repeatedly within one
+   * request, and the entry is collected with it. A fresh request starts at the
+   * beginning, which is what a rebuild means.
+   */
+  const cursors = new WeakMap<
+    Context,
+    { itemId: number; languageId: number }
+  >();
+
+  return {
+    itemType: definition.id,
+
+    // Published *translations*, not published records: the coverage bar compares
+    // this against the number of indexed documents, and a record counts once per
+    // language it is actually readable in.
+    count: async c => {
+      const [row] = await c
+        .get("db")
+        .select({ value: count() })
+        .from(translationTable)
+        .innerJoin(table, eq(rows.itemId, columns.id))
+        .where(visible());
+
+      return row?.value ?? 0;
+    },
+
+    load: async (c, offset, limit) => {
+      // `offset === 0` is the start of a rebuild - the contract's only signal
+      // that this is a fresh pass rather than the next page of one.
+      if (offset === 0) cursors.delete(c);
+      const cursor = cursors.get(c);
+
+      const page = await c
+        .get("db")
+        .select({
+          ...Object.fromEntries(
+            sharedSelection.map(name => [name, columns[name]]),
+          ),
+          _languageId: rows.languageId,
+          _publishedAt: rows.publishedAt,
+          _status: rows.status,
+          _updatedAt: rows.updatedAt,
+          ...Object.fromEntries(
+            localizedSelection.map(name => [`t_${name}`, rows[name]]),
+          ),
+        })
+        .from(translationTable)
+        .innerJoin(table, eq(rows.itemId, columns.id))
+        .where(
+          cursor === undefined
+            ? visible()
+            : and(
+                visible(),
+                or(
+                  gt(columns.id, cursor.itemId),
+                  and(
+                    eq(columns.id, cursor.itemId),
+                    gt(rows.languageId, cursor.languageId),
+                  ),
+                ),
+              ),
+        )
+        .orderBy(asc(columns.id), asc(rows.languageId))
+        .limit(limit);
+
+      const last = page.at(-1) as Record<string, unknown> | undefined;
+      if (last) {
+        cursors.set(c, {
+          itemId: last.id as number,
+          languageId: last._languageId as number,
+        });
+      }
+
+      const languages = await listContentLanguages(c);
+      const localeOf = new Map(
+        languages.map(language => [language.id, language.locale]),
+      );
+
+      const documents = page.flatMap(row => {
+        const values = row as Record<string, unknown>;
+        const locale = localeOf.get(values._languageId as number);
+        // A translation whose language row has been deleted has no locale to
+        // index under. Skipped rather than guessed - a document under an invented
+        // code is one nothing would ever query.
+        if (locale === undefined) return [];
+
+        const document = contentTranslationSearchDocument(
+          definition,
+          {
+            base: values,
+            locale,
+            translation: {
+              publishedAt: values._publishedAt,
+              status: values._status,
+              updatedAt: values._updatedAt,
+              ...Object.fromEntries(
+                localizedSelection.map(name => [name, values[`t_${name}`]]),
+              ),
+            },
+          },
+          { pluginId },
+        );
+
+        return document ? [document] : [];
+      }) satisfies SearchDocument[];
+
+      // Translation rows, not documents: a published translation with no usable
+      // title projects to nothing, and reporting that as "no items" would end the
+      // rebuild before the rows behind it.
+      return { documents, itemsRead: page.length };
     },
   };
 };

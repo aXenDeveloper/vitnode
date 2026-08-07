@@ -57,15 +57,15 @@ Four more declarations, each opt-in:
 - [`localization`](/docs/dev/content-engine/localization) moves the text fields
   you mark into a generated per-language table, with its own version, its own
   [publish button](/docs/dev/content-engine/translation-editorial), its own
-  [history](/docs/dev/content-engine/translation-revisions) and a URL per locale
+  [history](/docs/dev/content-engine/translation-revisions), a
+  [URL per locale](/docs/dev/content-engine/localized-public-api) and a
+  [search document per language](/docs/dev/content-engine/localized-search)
 
 Publication alone exposes nothing. Public exposure requires both of the first
-two; `editorial` works with or without either. `localization` combines with
-`publication`, `editorial` and `publicApi` - a public read then
-[resolves one language](/docs/dev/content-engine/localized-public-api) - and is
-still
-[exclusive of `search`](/docs/dev/content-engine/localization#stage-5c-boundaries),
-which arrives in a later stage.
+two; `editorial` works with or without either. `localization` combines with all
+four - a public read
+[resolves one language](/docs/dev/content-engine/localized-public-api) and search
+[indexes one document per translation](/docs/dev/content-engine/localized-search).
 
 ## What it is not
 

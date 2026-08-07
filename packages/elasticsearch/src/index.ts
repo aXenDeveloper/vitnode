@@ -313,13 +313,23 @@ export const ElasticsearchSearchAdapter = (
     },
 
     // One document per language shares an (itemType, itemId), so remove every
-    // language variant with a query rather than a single id.
-    delete: async (_c, itemType, itemId) => {
+    // language variant with a query rather than a single id - unless the caller
+    // named one, which is how a single translation is taken down without
+    // touching the others.
+    delete: async (_c, itemType, itemId, languageCode) => {
       await getClient().deleteByQuery(
         {
           index,
           query: {
-            bool: { filter: [{ term: { itemType } }, { term: { itemId } }] },
+            bool: {
+              filter: [
+                { term: { itemType } },
+                { term: { itemId } },
+                ...(languageCode === undefined
+                  ? []
+                  : [{ term: { languageCode } }]),
+              ],
+            },
           },
         },
         { ignore: [404] },

@@ -27,6 +27,7 @@
     "translation-revisions",
     "translation-preview",
     "localized-public-api",
+    "localized-search",
     "localization-migrations",
     "admincp",
     "permissions",

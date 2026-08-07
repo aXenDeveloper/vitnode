@@ -344,6 +344,16 @@ per locale (the way the blog plugin indexes translations from
 own indexer - and one item type may only have one indexer, so it is one or the
 other.
 
+## Localized content types
+
+A [localized](/docs/dev/content-engine/localization) content type is indexed once
+per **published translation** rather than once per record, and
+`search.pathTemplate` has to carry `{locale}` so each document links to the
+language it matched. Everything on this page still applies to each document: the
+same allowlist, the same published predicate, the same rebuild contract.
+
+See [Localized search](/docs/dev/content-engine/localized-search).
+
 ## Limitations
 
 | Not supported                                   | Why                                                                                                  |

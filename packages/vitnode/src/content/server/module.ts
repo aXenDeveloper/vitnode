@@ -4,7 +4,10 @@ import type { ContentModel } from "./model";
 
 import { buildModule } from "../../api/lib/module";
 import { buildContentRoutes } from "./routes";
-import { createContentSearchIndexer } from "./search-indexer";
+import {
+  createContentLocalizedSearchIndexer,
+  createContentSearchIndexer,
+} from "./search-indexer";
 import { assertContentReferences } from "./table";
 
 /**
@@ -65,6 +68,14 @@ export const buildContentAdminModule = <P extends string>({
     // the owning plugin on every document.
     searchIndexers: contentTypes
       .filter(model => model.definition.search.enabled)
-      .map(model => createContentSearchIndexer(model, { pluginId })),
+      // A localized content type is indexed once per published translation, so
+      // its rebuild pages over translations rather than over records. Chosen here
+      // rather than inside one indexer because the two page differently -
+      // keyset over `(itemId, languageId)` against offset over `id`.
+      .map(model =>
+        model.definition.localization.enabled
+          ? createContentLocalizedSearchIndexer(model, { pluginId })
+          : createContentSearchIndexer(model, { pluginId }),
+      ),
   });
 };

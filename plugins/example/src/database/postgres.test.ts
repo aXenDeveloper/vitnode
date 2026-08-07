@@ -12,8 +12,10 @@ import {
 import {
   claimContentSchedule,
   contentPublicLocaleStates,
+  createContentLocalizedSearchIndexer,
   createContentSearchIndexer,
   settleContentSchedule,
+  syncContentLocalizedSearch,
   syncContentSearch,
 } from "@vitnode/core/content/server";
 import { core_queue } from "@vitnode/core/database/queue";
@@ -3578,6 +3580,317 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
         expect(
           await publicService().findById(itemId, { locale: "pl" }),
         ).toMatchObject({ locale: "en" });
+      });
+    });
+
+    /**
+     * Per-locale search, against a real database.
+     *
+     * One document per published translation, and the interesting parts are all
+     * in SQL: the keyset page over `(itemId, languageId)` and the two published
+     * predicates the join carries. The search *engine* is stubbed for the same
+     * reason it is in the base lifecycle test - `core_search_index` is a core
+     * table this plugin's migrations do not create - so the assertions are about
+     * the documents the engine is handed.
+     */
+    describe("localized search", () => {
+      const editorial = (handle = context) => {
+        const build = localizedArticleContent.translationEditorialService;
+        if (!build)
+          throw new Error("Expected a translation editorial service.");
+
+        return build(handle, { pluginId: CONFIG_PLUGIN.pluginId });
+      };
+
+      /** The stubbed engine, and everything it was asked to write. */
+      const engine = () => {
+        const indexed: {
+          languageCode?: string;
+          title: string;
+          url?: string;
+        }[] = [];
+        const deleted: { itemId: number; languageCode?: string }[] = [];
+
+        const searchContext = {
+          get: (key: string) => {
+            if (key === "search") {
+              return {
+                delete: async (
+                  _itemType: string,
+                  itemId: number,
+                  languageCode?: string,
+                ) => {
+                  deleted.push({ itemId, languageCode });
+                  await Promise.resolve();
+                },
+                index: async (document: {
+                  languageCode?: string;
+                  title: string;
+                  url?: string;
+                }) => {
+                  indexed.push(document);
+                  await Promise.resolve();
+                },
+              };
+            }
+            if (key === "log") {
+              return {
+                debug: async () => await Promise.resolve(),
+                error: async () => await Promise.resolve(),
+                warn: async () => await Promise.resolve(),
+              };
+            }
+            if (key === "core") return context.get("core");
+
+            return db;
+          },
+        } as unknown as Context;
+
+        return { deleted, indexed, searchContext };
+      };
+
+      const publishRecord = async (itemId: number) => {
+        await sql`
+          UPDATE "example_localized_articles"
+          SET "status" = 'published', "publishedAt" = now()
+          WHERE "id" = ${itemId}
+        `;
+      };
+
+      /** A published record with English published and Polish optional. */
+      const seed = async ({
+        pl,
+        title,
+      }: {
+        pl?: { published: boolean; title: string };
+        title: string;
+      }) => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: `Body of ${title}`, title },
+        });
+        await publishRecord(row.id);
+        await editorial().publish(row.id, "en", { actor: ACTOR });
+
+        if (pl) {
+          await translations().create(row.id, "pl", {
+            body: `Tresc ${pl.title}`,
+            title: pl.title,
+          });
+          if (pl.published) {
+            await editorial().publish(row.id, "pl", { actor: ACTOR });
+          }
+        }
+
+        return row.id;
+      };
+
+      /** Runs the whole rebuild, two translation rows per page. */
+      const rebuild = async (searchContext: Context) => {
+        const indexer = createContentLocalizedSearchIndexer(
+          localizedArticleContent,
+          { pluginId: CONFIG_PLUGIN.pluginId },
+        );
+
+        let offset = 0;
+        for (;;) {
+          const page = await indexer.load(searchContext, offset, 2);
+          for (const document of page.documents) {
+            await searchContext.get("search").index(document);
+          }
+          if (page.itemsRead === 0) break;
+          offset += page.itemsRead;
+        }
+
+        return indexer;
+      };
+
+      it("indexes one document per published translation", async () => {
+        await seed({
+          pl: { published: true, title: "Szukaj" },
+          title: "Search",
+        });
+        const { indexed, searchContext } = engine();
+
+        await rebuild(searchContext);
+
+        expect(
+          indexed.map(document => [document.languageCode, document.title]),
+        ).toEqual([
+          ["en", "Search"],
+          ["pl", "Szukaj"],
+        ]);
+      });
+
+      it("gives each language its own URL", async () => {
+        await seed({
+          pl: { published: true, title: "Adres" },
+          title: "Address",
+        });
+        const { indexed, searchContext } = engine();
+
+        await rebuild(searchContext);
+
+        // Two languages routinely answer to the same slug, so a template without
+        // `{locale}` would give both documents the same link.
+        expect(indexed.map(document => document.url)).toEqual([
+          "/en/localized-articles/address",
+          "/pl/localized-articles/adres",
+        ]);
+      });
+
+      it("leaves a draft translation out", async () => {
+        await seed({
+          pl: { published: false, title: "Szkic" },
+          title: "Draft PL",
+        });
+        const { indexed, searchContext } = engine();
+
+        await rebuild(searchContext);
+
+        expect(indexed.map(document => document.languageCode)).toEqual(["en"]);
+      });
+
+      it("indexes nothing at all while the record is a draft", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body", title: "Unpublished" },
+        });
+        await editorial().publish(row.id, "en", { actor: ACTOR });
+        const { indexed, searchContext } = engine();
+
+        await rebuild(searchContext);
+
+        // Subordination: a published translation of a draft record is not public,
+        // so it is not indexed either.
+        expect(indexed).toEqual([]);
+      });
+
+      it("pages over translations without skipping or repeating one", async () => {
+        // Three records with two languages each is six rows, read two at a time -
+        // so the keyset cursor is exercised across a record boundary.
+        for (const title of ["Page One", "Page Two", "Page Three"]) {
+          await seed({ pl: { published: true, title: `${title} PL` }, title });
+        }
+        const { indexed, searchContext } = engine();
+
+        await rebuild(searchContext);
+
+        expect(indexed).toHaveLength(6);
+        expect(new Set(indexed.map(document => document.title)).size).toBe(6);
+      });
+
+      it("counts published translations, not records", async () => {
+        await seed({ pl: { published: true, title: "Licz" }, title: "Count" });
+        const { searchContext } = engine();
+        const indexer = await rebuild(searchContext);
+
+        // The coverage bar compares this against the document count, so counting
+        // records would pin a fully-indexed two-language collection at 50%.
+        expect(await indexer.count?.(searchContext)).toBe(2);
+      });
+
+      it("takes one language out when its translation is unpublished", async () => {
+        const itemId = await seed({
+          pl: { published: true, title: "Wycofane" },
+          title: "Withdrawn",
+        });
+        const { deleted, indexed, searchContext } = engine();
+
+        const outcome = await editorial().unpublish(itemId, "pl", {
+          actor: ACTOR,
+        });
+        if (!outcome) throw new Error("Expected an outcome.");
+
+        const base = await localizedArticleContent
+          .service(context)
+          .findById(itemId);
+
+        await syncContentLocalizedSearch(
+          searchContext,
+          localizedArticleContent,
+          {
+            changed: outcome.changed,
+            locale: "pl",
+            operation: "unpublish",
+            pluginId: CONFIG_PLUGIN.pluginId,
+            row: base as object,
+          },
+        );
+
+        // Scoped to Polish. The English document is not rewritten and not
+        // removed - it was not part of what moved.
+        expect(deleted).toEqual([{ itemId, languageCode: "pl" }]);
+        expect(indexed).toEqual([]);
+      });
+
+      it("removes every language when the record itself is unpublished", async () => {
+        const itemId = await seed({
+          pl: { published: true, title: "Wszystkie" },
+          title: "All",
+        });
+        const { deleted, searchContext } = engine();
+
+        const result = await localizedArticleContent
+          .service(context)
+          .unpublish(itemId);
+        if (!result) throw new Error("Expected a transition.");
+
+        await syncContentLocalizedSearch(
+          searchContext,
+          localizedArticleContent,
+          {
+            changed: result.changed,
+            operation: "unpublish",
+            pluginId: CONFIG_PLUGIN.pluginId,
+            row: result.row,
+          },
+        );
+
+        // Every language at once: the record's publication state gates them all.
+        expect(deleted).toEqual([
+          { itemId, languageCode: "en" },
+          { itemId, languageCode: "pl" },
+        ]);
+      });
+
+      it("re-indexes only the language a translation edit touched", async () => {
+        const itemId = await seed({
+          pl: { published: true, title: "Edytowane" },
+          title: "Edited",
+        });
+        const { indexed, searchContext } = engine();
+
+        const outcome = await editorial().update(
+          itemId,
+          "pl",
+          { title: "Edytowane Ponownie" },
+          { actor: ACTOR, expectedVersion: 2 },
+        );
+        if (!outcome) throw new Error("Expected an outcome.");
+
+        const base = await localizedArticleContent
+          .service(context)
+          .findById(itemId);
+
+        await syncContentLocalizedSearch(
+          searchContext,
+          localizedArticleContent,
+          {
+            changedFields: outcome.changedFields,
+            locale: "pl",
+            operation: "update",
+            pluginId: CONFIG_PLUGIN.pluginId,
+            row: base as object,
+          },
+        );
+
+        expect(indexed).toEqual([
+          expect.objectContaining({
+            languageCode: "pl",
+            title: "Edytowane Ponownie",
+          }),
+        ]);
       });
     });
 

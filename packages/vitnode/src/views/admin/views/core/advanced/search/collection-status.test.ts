@@ -117,3 +117,50 @@ describe("getCollectionCoverageBar", () => {
     expect(getCollectionCoverageBar(unmanaged(11))).toBeNull();
   });
 });
+
+describe("multi-language collections", () => {
+  const localized = {
+    documents: 6,
+    hasIndexer: true,
+    indexed: 3,
+    languages: [
+      { documents: 3, languageCode: "en", lastIndexedAt: null },
+      { documents: 3, languageCode: "pl", lastIndexedAt: null },
+    ],
+    total: 6,
+  };
+
+  it("measures coverage in documents, not distinct items", () => {
+    // Three records in two languages is six documents. Comparing three against
+    // six would report a fully-indexed collection as half covered.
+    expect(getCollectionCoverage(localized)).toBe(100);
+    expect(getCollectionStatus(localized)).toBe("indexed");
+  });
+
+  it("still measures a single-language collection in items", () => {
+    expect(
+      getCollectionCoverage({
+        documents: 3,
+        indexed: 3,
+        languages: [],
+        total: 3,
+      }),
+    ).toBe(100);
+  });
+
+  it("reads a response that predates the per-language breakdown", () => {
+    // A web app deployed against an older API gets no `languages` at all, and
+    // that is the single-language case rather than a crash.
+    expect(getCollectionCoverage({ indexed: 3, total: 3 })).toBe(100);
+  });
+
+  it("still reports a half-finished language as stale", () => {
+    expect(
+      getCollectionStatus({
+        ...localized,
+        documents: 4,
+        languages: localized.languages,
+      }),
+    ).toBe("stale");
+  });
+});

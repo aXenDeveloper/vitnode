@@ -1,12 +1,22 @@
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import type { AnyContentTypeDefinition } from "../types";
+import { eq } from "drizzle-orm";
 
+import type { AnyContentTypeDefinition } from "../types";
+import type { AnyContentModel } from "./model";
+
+import { partitionContentFields } from "../localization";
 import {
   contentSearchDocumentId,
   contentSearchIndexedFieldNames,
 } from "../search";
-import { contentSearchDocument, isContentRowPublic } from "./search-document";
+import { listContentLanguages } from "./language-resolver";
+import {
+  contentSearchDocument,
+  contentTranslationSearchDocument,
+  isContentRowPublic,
+} from "./search-document";
 
 /** Which mutation just returned. Not an event name: nothing is emitted here. */
 export type ContentSearchOperation =
@@ -171,6 +181,240 @@ export const syncContentSearch = async (
     // search engine just did. Both are best effort *after* a committed write, and
     // neither may turn it into a failed request - so the fallback is the console,
     // and the outcome keeps the original search error rather than this one.
+    try {
+      await c.get("log").error(message);
+    } catch {
+      // eslint-disable-next-line no-console
+      console.error(
+        `[VitNode] Failed to log content search failure: ${message}`,
+      );
+    }
+
+    return { action, documentId, error };
+  }
+};
+
+export interface ContentLocalizedSearchSyncInput {
+  /**
+   * `publish` / `unpublish` only: `false` when nothing moved, which means the
+   * index already agrees.
+   */
+  changed?: boolean;
+  /**
+   * `update` and `restore` only. A write that touched no indexed field changes
+   * no document, in any language.
+   */
+  changedFields?: readonly string[];
+  /**
+   * One locale, for a mutation that touched one translation.
+   *
+   * Omitted for a mutation of the *record* - publishing it, editing a shared
+   * field - which changes every language's document at once, because every one of
+   * them is built from that row.
+   */
+  locale?: string;
+  operation: ContentSearchOperation;
+  pluginId?: string;
+  /** The base row the mutation returned, including `status` and `publishedAt`. */
+  row: object;
+}
+
+/** One translation, as the document builder needs it. */
+interface TranslationRecord {
+  languageId: number;
+  values: Record<string, unknown>;
+}
+
+const readTranslations = async (
+  c: Context,
+  model: AnyContentModel,
+  itemId: number,
+): Promise<TranslationRecord[]> => {
+  const columns: null | Record<string, PgColumn> = model.translationColumns;
+  const table: null | PgTable = model.translationTable;
+  if (!columns || !table) return [];
+
+  const { localizedFields } = partitionContentFields(model.definition.fields);
+
+  const rows = await c
+    .get("db")
+    .select({
+      languageId: columns.languageId,
+      publishedAt: columns.publishedAt,
+      status: columns.status,
+      updatedAt: columns.updatedAt,
+      ...Object.fromEntries(
+        Object.keys(localizedFields).map(name => [name, columns[name]]),
+      ),
+    })
+    .from(table)
+    .where(eq(columns.itemId, itemId));
+
+  return rows.map(row => ({
+    languageId: row.languageId as number,
+    values: row,
+  }));
+};
+
+/**
+ * Brings the search index in line with one mutation of a **localized** record.
+ *
+ * One document per published translation, so this is a loop rather than a single
+ * decision - and the loop is the point: a record's own publish or unpublish moves
+ * every language at once, while a translation's moves exactly one. `locale` is
+ * what distinguishes the two, and omitting it on a translation mutation would
+ * rewrite every other language's document for nothing.
+ *
+ * A translation that must not be indexed - a draft, a blank title, a record that
+ * is itself a draft - has its document **deleted for that language only**. Taking
+ * the Polish copy down must leave the English one exactly where it is, which is
+ * why `SearchModel.delete` takes a language.
+ *
+ * The same rules as the base sync otherwise: call it only after the write has
+ * returned, never inside the transaction, and a failing search engine never turns
+ * a successful write into a failed one.
+ */
+export const syncContentLocalizedSearch = async (
+  c: Context,
+  model: AnyContentModel,
+  input: ContentLocalizedSearchSyncInput,
+): Promise<ContentSearchSyncOutcome[]> => {
+  const { definition } = model;
+  const values = input.row as Record<string, unknown>;
+  const itemId = typeof values.id === "number" ? values.id : 0;
+
+  if (
+    !definition.search.enabled ||
+    !definition.localization.enabled ||
+    itemId === 0
+  ) {
+    return [];
+  }
+
+  // The record is gone, so every language's document is too. One call rather
+  // than one per locale: there is nothing left to enumerate them from.
+  if (input.operation === "delete") {
+    return [
+      await write(c, definition, {
+        documentId: contentSearchDocumentId(definition, itemId),
+        run: async () => {
+          await c.get("search").delete(definition.id, itemId);
+        },
+        action: "delete",
+        input,
+        itemId,
+      }),
+    ];
+  }
+
+  // An idempotent transition is a no-op for the same reason it emits no event:
+  // every document is already exactly what it would be rewritten to.
+  if (
+    (input.operation === "publish" || input.operation === "unpublish") &&
+    input.changed !== true
+  ) {
+    return [];
+  }
+
+  // A write that moved no indexed field changes no document. `status` is not a
+  // declared field, so a publish never reaches this.
+  if (input.operation === "update" || input.operation === "restore") {
+    const indexed = new Set(contentSearchIndexedFieldNames(definition));
+    const moved = (input.changedFields ?? []).some(name => indexed.has(name));
+    if (!moved) return [];
+  }
+
+  const languages = await listContentLanguages(c);
+  const localeOf = new Map(
+    languages.map(language => [language.id, language.locale]),
+  );
+
+  const translations = await readTranslations(c, model, itemId);
+  const wanted = input.locale?.trim().toLowerCase();
+
+  const outcomes: ContentSearchSyncOutcome[] = [];
+
+  for (const translation of translations) {
+    const locale = localeOf.get(translation.languageId);
+    // A translation whose language row has been deleted has no locale to index
+    // under. Its document is unreachable rather than wrong, and a rebuild is what
+    // removes it - inventing a code here would create a document nothing queries.
+    if (locale === undefined) continue;
+    if (wanted !== undefined && locale.toLowerCase() !== wanted) continue;
+
+    const document = contentTranslationSearchDocument(
+      definition,
+      { base: input.row, locale, translation: translation.values },
+      { pluginId: input.pluginId },
+    );
+
+    outcomes.push(
+      await write(c, definition, {
+        action: document ? "upsert" : "delete",
+        documentId: contentSearchDocumentId(definition, itemId, locale),
+        input,
+        itemId,
+        run: async () => {
+          if (document) {
+            await c.get("search").index(document);
+
+            return;
+          }
+
+          // Scoped to this language: unpublishing the Polish copy must leave the
+          // English document exactly where it is.
+          await c.get("search").delete(definition.id, itemId, locale);
+        },
+      }),
+    );
+  }
+
+  return outcomes;
+};
+
+/**
+ * Runs one index write and turns a failure into an outcome rather than a throw.
+ *
+ * Shared by the localized paths so the "log it, keep the error, never fail the
+ * mutation" rule is stated once - it is the same rule `syncContentSearch` follows
+ * for the non-localized case, and a second copy of it would be the one that
+ * eventually throws.
+ */
+const write = async (
+  c: Context,
+  definition: AnyContentTypeDefinition,
+  {
+    action,
+    documentId,
+    input,
+    itemId,
+    run,
+  }: {
+    action: "delete" | "upsert";
+    documentId: string;
+    input: { operation: ContentSearchOperation; pluginId?: string };
+    itemId: number;
+    run: () => Promise<void>;
+  },
+): Promise<ContentSearchSyncOutcome> => {
+  try {
+    await run();
+
+    return { action, documentId };
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+
+    const message = `[content-search] ${JSON.stringify({
+      action,
+      contentTypeId: definition.id,
+      documentId,
+      error: error.message,
+      itemId,
+      itemType: definition.id,
+      operation: input.operation,
+      pluginId: input.pluginId,
+    })}`;
+
     try {
       await c.get("log").error(message);
     } catch {

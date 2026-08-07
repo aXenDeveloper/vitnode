@@ -43,29 +43,28 @@ None of these are blocked - they are simply not generated. The service, the
 schemas and the table are all public, so a hand-written route sits next to a
 generated one without friction.
 
-## Localization does not read outwards yet
+## Localization is complete, with one shape rule
 
 [`localization`](/docs/dev/content-engine/localization) generates the tables, the
 types, the schemas, the services, the per-locale lifecycle, the per-locale history
 and the AdminCP locale tabs. What it deliberately refuses is every combination
 whose *reading* half is not built yet:
 
-| Combination | Refused until |
-| --- | --- |
-| `localization` + `search` | Stage 5D |
+Nothing is refused any more.
+[Locale-aware public reads](/docs/dev/content-engine/localized-public-api) landed
+in Stage 5C and [per-locale search](/docs/dev/content-engine/localized-search) in
+Stage 5D, so `localization` combines with `publication`, `editorial`, `publicApi`
+and `search`.
 
-It is a definition-time error naming the stage. A localized content type that
-silently indexed one language while ranking every other one as a miss would be
-worse than one that refuses to be declared.
+One shape rule remains, and it is a rule rather than a boundary:
+`search.pathTemplate` must contain `{locale}` on a localized content type. Two
+languages routinely answer to the same slug, so a template without it would give
+every translation of a record the same link.
 
-Stage 5C lifted the `publicApi` refusal, so
-[locale-aware public reads](/docs/dev/content-engine/localized-public-api),
-fallback resolution, strict-locale slugs, locale-aware cache tags and
-[locale preview links](/docs/dev/content-engine/translation-preview) all work now.
-
-Still outside Stage 5C: per-locale search documents, an `Outdated` badge (its
-honest definition needs a comparison two timestamps cannot make), a locale
-selector on the AdminCP *list*, and locale-specific scheduling.
+Still outside Stage 5: an `Outdated` translation badge (its honest definition
+needs a comparison two timestamps cannot make), locale-specific scheduling,
+`hreflang` and sitemap generation, locale-specific relations and localized
+media.
 
 ## A public list cannot be ordered by a localized field
 
@@ -85,8 +84,8 @@ six are compile errors and runtime errors.
 
 `admin.titleField` therefore falls back to `null` on a content type whose only
 text fields are localized. The locale tabs show the localized title inside each
-tab; the list still has no locale-aware title column, which arrives with the
-locale selector in Stage 5D.
+tab, and the list's language selector adds a column showing each record's title
+in the language being viewed.
 
 ## Foreign key names on a long translation table are truncated by Postgres
 

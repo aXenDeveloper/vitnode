@@ -7,6 +7,7 @@ import type { AnyContentTypeDefinition } from "@/content/types";
 import {
   testArticleContentType,
   testEditorialPostContentType,
+  testLocalizedPageContentType,
   testPostContentType,
 } from "@/tests/content-fixtures";
 
@@ -49,8 +50,32 @@ const { DeleteContentAction } = await import("../actions/delete-action");
  * before a single row exists, and getting it wrong shows up as a header with no
  * button rather than as an error.
  */
-const orderProp = async (definition: AnyContentTypeDefinition) => {
-  const element = (await ContentTableView({
+/**
+ * The rendered `DataTable`, whichever wrapper it came back inside.
+ *
+ * The view returns a fragment - a localized content type gets a locale selector
+ * above the table - so the table is found rather than assumed to be the root.
+ */
+const dataTable = <TProps,>(element: ReactElement): ReactElement<TProps> => {
+  const children = (element.props as { children?: unknown }).children;
+  if (children === undefined) return element as ReactElement<TProps>;
+
+  const found = (Array.isArray(children) ? children : [children]).find(
+    child =>
+      child !== null &&
+      typeof child === "object" &&
+      "props" in child &&
+      "columns" in (child as ReactElement<Record<string, unknown>>).props,
+  );
+
+  return (found ?? element) as ReactElement<TProps>;
+};
+
+const render = async (
+  definition: AnyContentTypeDefinition,
+  searchParams: Record<string, string | string[] | undefined> = {},
+) =>
+  (await ContentTableView({
     columnSpecs: [],
     entry: {
       definition,
@@ -58,14 +83,14 @@ const orderProp = async (definition: AnyContentTypeDefinition) => {
       registration: {},
     } as never,
     formSpec: {} as never,
-    searchParams: {},
+    searchParams,
     translationSpec: null,
-  })) as ReactElement<{
-    order: { columns: string[]; defaultOrder: { column: string } };
-  }>;
+  })) as ReactElement;
 
-  return element.props.order;
-};
+const orderProp = async (definition: AnyContentTypeDefinition) =>
+  dataTable<{ order: { columns: string[]; defaultOrder: { column: string } } }>(
+    await render(definition),
+  ).props.order;
 
 /**
  * The props the actions cell hands `DeleteContentAction` for one row.
@@ -78,24 +103,14 @@ const deleteProps = async (
   definition: AnyContentTypeDefinition,
   row: Record<string, unknown>,
 ) => {
-  const element = (await ContentTableView({
-    columnSpecs: [],
-    entry: {
-      definition,
-      pluginId: "@vitnode/example",
-      registration: {},
-    } as never,
-    formSpec: {} as never,
-    searchParams: {},
-    translationSpec: null,
-  })) as ReactElement<{
+  const element = dataTable<{
     columns: {
       cell?: (context: { row: Record<string, unknown> }) => ReactElement<{
         children: ReactElement<Record<string, unknown>>[];
       }>;
       id?: string;
     }[];
-  }>;
+  }>(await render(definition));
 
   const actions = element.props.columns.find(column => column.id === "actions");
   const rendered = actions?.cell?.({ row });
@@ -176,5 +191,47 @@ describe("sortable columns", () => {
       column: "publishedAt",
       order: "desc",
     });
+  });
+});
+
+describe("the locale selector", () => {
+  const columns = async (
+    definition: AnyContentTypeDefinition,
+    searchParams: Record<string, string | string[] | undefined> = {},
+  ) =>
+    dataTable<{ columns: { id?: string }[] }>(
+      await render(definition, searchParams),
+    ).props.columns;
+
+  it("adds no translation column without a language", async () => {
+    // The list is unchanged until somebody picks one. `Shared` is a real choice,
+    // not a fallback state.
+    expect(
+      (await columns(testLocalizedPageContentType)).map(column => column.id),
+    ).not.toContain("translation");
+  });
+
+  it("adds one when a language is selected", async () => {
+    expect(
+      (await columns(testLocalizedPageContentType, { locale: "pl" })).map(
+        column => column.id,
+      ),
+    ).toContain("translation");
+  });
+
+  it("puts it first, because it is what the person came to read", async () => {
+    const [first] = await columns(testLocalizedPageContentType, {
+      locale: "pl",
+    });
+
+    expect(first.id).toBe("translation");
+  });
+
+  it("adds nothing to a content type that is not localized", async () => {
+    expect(
+      (await columns(testEditorialPostContentType, { locale: "pl" })).map(
+        column => column.id,
+      ),
+    ).not.toContain("translation");
   });
 });

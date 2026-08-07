@@ -230,7 +230,24 @@ export interface SearchProviderApiPlugin {
   bulkIndex: (c: Context, docs: SearchDocument[]) => Promise<void>;
   capabilities?: SearchProviderCapabilities;
   clear: (c: Context, itemType?: string) => Promise<void>;
-  delete: (c: Context, itemType: string, itemId: number) => Promise<void>;
+  /**
+   * Removes one item's documents.
+   *
+   * `languageCode` narrows it to a single language, for content that is indexed
+   * once per translation: unpublishing the Polish copy of an article must not
+   * take the English one out of the index. Omit it and every language goes, which
+   * is what deleting the record itself means.
+   *
+   * Optional on purpose - a provider written before per-locale content simply
+   * ignores it and keeps removing every variant, which is wrong in only one
+   * direction and never leaves a document behind.
+   */
+  delete: (
+    c: Context,
+    itemType: string,
+    itemId: number,
+    languageCode?: string,
+  ) => Promise<void>;
   index: (c: Context, doc: SearchDocument) => Promise<void>;
   name: string;
   ping?: (c: Context) => Promise<boolean>;
@@ -369,7 +386,19 @@ export class SearchModel {
     await this.provider().clear(this.c, itemType);
   }
 
-  async delete(itemType: string, itemId: number): Promise<void> {
+  /**
+   * Removes one item from the index, in one language or in all of them.
+   *
+   * `languageCode` is the whole point of the overload: multi-language content is
+   * one row per `(itemType, itemId, languageCode)`, so taking the Polish
+   * translation down must leave the English document exactly where it is.
+   * Omitting it removes every language, which is what deleting the record means.
+   */
+  async delete(
+    itemType: string,
+    itemId: number,
+    languageCode?: string,
+  ): Promise<void> {
     await this.c
       .get("db")
       .delete(core_search_index)
@@ -377,10 +406,13 @@ export class SearchModel {
         and(
           eq(core_search_index.itemType, itemType),
           eq(core_search_index.itemId, itemId),
+          languageCode === undefined
+            ? undefined
+            : eq(core_search_index.languageCode, languageCode),
         ),
       );
 
-    await this.provider().delete(this.c, itemType, itemId);
+    await this.provider().delete(this.c, itemType, itemId, languageCode);
   }
 
   /** Canonical projection lives in `core_search_index`; the provider mirrors it. */

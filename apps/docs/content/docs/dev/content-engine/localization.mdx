@@ -48,11 +48,10 @@ example_localized_articles_translations    itemId, languageId, version,
 A content type without the block generates the same single table, the same
 routes and the same wire shapes it always did.
 
-<Callout type="warn" title="Two combinations are still refused">
-  Localization works with `publication`, `editorial` and `publicApi`, but
-  cannot yet be combined with `publicApi` or `search` - each is refused at
-  definition time with a message naming the stage that lifts it. See [Stage 5C
-  boundaries](#stage-5c-boundaries).
+<Callout title="It combines with everything">
+  Localization works with `publication`, `editorial`, `publicApi` and `search`.
+  There is one shape rule left - `search.pathTemplate` must carry `{locale}` -
+  and no capability is refused. See [the roadmap](#the-roadmap).
 </Callout>
 
 ## This is not UI translation
@@ -154,9 +153,11 @@ worth knowing up front:
 - it cannot appear in `indexes`,
 - it is absent from `schemas.create`, `schemas.update` and `schemas.select`.
 
-All five are compile errors *and* runtime errors. Localized values get their own
-AdminCP surface in Stage 5B; until then there is nowhere on the base form for
-them to go, and a silently-dropped title is worse than a refused definition.
+All five are compile errors *and* runtime errors: there is nowhere on the base
+form or in a base-table query for them to go, and a silently-dropped title is
+worse than a refused definition. Localized values have their own AdminCP surface -
+the [locale tabs](/docs/dev/content-engine/translation-editorial) in the edit
+dialog, and the language selector on the list.
 
 ## Optimistic locking per locale
 
@@ -274,37 +275,33 @@ offender at once rather than failing on the first, and it is skipped entirely
 when no content type is localized - an install with none never touches the
 languages table because of it.
 
-## Stage 5C boundaries
+## No capability is refused any more
 
-Stage 5A landed the infrastructure, Stage 5B the editorial layer and Stage 5C the
-[public read](/docs/dev/content-engine/localized-public-api). One thing still
-reads outwards without knowing about languages, and the honest failure for that is
-a refused definition rather than a content type that quietly indexes one language
-and ranks every other one as a miss.
+Stage 5A landed the infrastructure, Stage 5B the editorial layer, Stage 5C the
+[public read](/docs/dev/content-engine/localized-public-api) and Stage 5D
+[per-locale search](/docs/dev/content-engine/localized-search). `localization`
+combines with `publication`, `editorial`, `publicApi` and `search`, and every one
+of them reads the language it was asked for rather than pretending there is only
+one.
 
-| Combination | Refused until | Why |
-| --- | --- | --- |
-| `localization` + `search` | Stage 5D | One document per record would index a single language and rank every other one as a miss |
-
-It is a `ContentEngineError` at definition time, with the stage in the message.
-
-`localization` + `publicApi` is **no longer refused**: locale precedence, fallback,
-strict-locale slugs, locale-aware cache tags and the
-[locale preview link](/docs/dev/content-engine/translation-preview) all landed with
-Stage 5C.
+There is one *shape* rule left, and it is a rule rather than a boundary:
+`search.pathTemplate` must contain `{locale}` on a localized content type. One
+document per language means one URL per language, and two languages routinely
+answer to the same slug.
 
 ## The roadmap
 
 | Stage | What it adds |
 | --- | --- |
 | **5A** | Tables, types, schemas, language resolution, translation service, per-locale locking, atomic create, routes, migrations |
-| **5B** (this one) | Per-locale publication, per-locale revisions and restore, locale-bound preview tokens, translation events, `can_translate`, AdminCP locale tabs |
-| **5C** | Locale-aware public API, fallback resolution, locale-aware cache tags |
-| **5D** | Per-locale search documents, `hreflang`, localized sitemap |
+| **5B** | Per-locale publication, per-locale revisions and restore, locale-bound preview tokens, translation events, `can_translate`, AdminCP locale tabs |
+| **5C** | Locale-aware public API, locale precedence, fallback resolution, strict-locale slugs, locale-aware cache tags, locale preview links |
+| **5D** (this one) | Per-locale search documents, the localized rebuild, per-language diagnostics, the AdminCP list language selector |
 
 Explicitly outside all four: locale-specific relations, localized media, AI
-translation, translation memory, external TMS integration, and migrating the blog
-plugin onto the Content Engine.
+translation, translation memory, external TMS integration, `hreflang` and sitemap
+generation, locale-specific scheduling, and migrating the blog plugin onto the
+Content Engine.
 
 ## Where to next
 

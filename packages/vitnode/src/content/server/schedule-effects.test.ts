@@ -126,7 +126,7 @@ describe("runContentScheduleEffects", () => {
 
     await runContentScheduleEffects(c, payload());
 
-    expect(contentEditorialEffects.mock.calls[0][3]).toEqual({
+    expect(contentEditorialEffects.mock.calls[0][3]).toMatchObject({
       pluginId: PLUGIN_ID,
       scheduledBy: 3,
       scheduleId: 55,

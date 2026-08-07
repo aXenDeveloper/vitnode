@@ -20,6 +20,7 @@ import type { CollectionStatus, SearchCollection } from "./collection-status";
 import {
   getCollectionCoverage,
   getCollectionCoverageBar,
+  getCollectionIndexedCount,
   getCollectionStatus,
 } from "./collection-status";
 import { ReindexCollectionAction } from "./reindex-action";
@@ -76,7 +77,11 @@ export const CollectionsTable = async ({
         labels?.get(collection.itemType) ??
         t(getSearchTypeRenderer(collection.itemType).labelKey),
     }))
-    .sort((a, b) => b.indexed - a.indexed || a.label.localeCompare(b.label));
+    .sort(
+      (a, b) =>
+        getCollectionIndexedCount(b) - getCollectionIndexedCount(a) ||
+        a.label.localeCompare(b.label),
+    );
 
   const term = search?.trim().toLowerCase();
   const edges = term
@@ -132,13 +137,27 @@ export const CollectionsTable = async ({
       id: "items",
       header: t("admin.collections.columns.items"),
       cell: ({ row }) => (
-        <span className="tabular-nums">
-          <span className="text-foreground font-medium">{row.indexed}</span>
-          {/* An em dash, not `indexed`: with no indexer there is no source count
-              to compare against, and repeating the left number would read as
-              full coverage. */}
+        <div className="tabular-nums">
+          <span className="text-foreground font-medium">
+            {getCollectionIndexedCount(row)}
+          </span>
+          {/* An em dash, not the left number: with no indexer there is no source
+              count to compare against, and repeating it would read as full
+              coverage. */}
           <span className="text-muted-foreground"> / {row.total ?? "—"}</span>
-        </span>
+          {/* Per language, because a single total cannot say which locale a
+              rebuild stopped halfway through. Only for collections that have
+              languages at all - most have none. */}
+          {row.languages.length > 0 && (
+            <div className="text-muted-foreground mt-0.5 flex flex-wrap gap-x-2 text-xs">
+              {row.languages.map(language => (
+                <span key={language.languageCode}>
+                  {language.languageCode} {language.documents}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       ),
     },
     {

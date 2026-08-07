@@ -166,7 +166,10 @@ export const buildContentTranslationRoutes = <
     c: Context,
     outcome: ContentTranslationEditorialOutcome<TDefinition>,
   ): Promise<void> => {
-    await contentTranslationEffects(c, definition, outcome, { pluginId });
+    await contentTranslationEffects(c, definition, outcome, {
+      model,
+      pluginId,
+    });
   };
 
   /**

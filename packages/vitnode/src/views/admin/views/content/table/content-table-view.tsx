@@ -19,6 +19,7 @@ import { PreviewContentAction } from "../actions/preview-action";
 import { PublishContentAction } from "../actions/publish-action";
 import { ScheduleContentAction } from "../actions/schedule-action";
 import { ContentCell } from "./cells";
+import { ContentLocaleSelector } from "./locale-selector";
 
 const zodList = z.object({
   edges: z.array(
@@ -26,6 +27,15 @@ const zodList = z.object({
       .object({
         id: z.number(),
         labels: z.record(z.string(), z.string().nullable()),
+        /** Present only when the list is being viewed in a language. */
+        translation: z
+          .object({
+            locale: z.string(),
+            status: z.string().optional(),
+            title: z.string(),
+          })
+          .nullable()
+          .optional(),
       })
       .loose(),
   ),
@@ -75,8 +85,51 @@ export const ContentTableView = async ({
     published: t("status.published"),
   };
   const titleField = definition.admin.titleField;
+  const localized = definition.localization.enabled;
+  const viewedLocale =
+    typeof searchParams.locale === "string" ? searchParams.locale : undefined;
+  // The code rather than the display name: this is a server component and the
+  // language registry is client-side context. A locale code is what the selector
+  // and the URL already show, so the column header reads consistently with both.
+  const localeName = viewedLocale ?? "";
 
   const columns: ColumnDef<ContentRowData>[] = [
+    // First, and only when a language is selected: it is what the person came
+    // to the list to read. `Missing` is a state rather than a blank, because a
+    // record with no translation is exactly the row worth finding.
+    ...(localized && viewedLocale !== undefined
+      ? [
+          {
+            id: "translation",
+            header: t("translations.locale_column", { name: localeName }),
+            cell: ({ row }: { row: ContentRowData }) => {
+              const translation = row.translation as
+                null | undefined | { status?: string; title: string };
+
+              if (!translation) {
+                return (
+                  <span className="text-muted-foreground">
+                    {t("translations.states.missing")}
+                  </span>
+                );
+              }
+
+              return (
+                <span>
+                  {translation.title === "" ? emptyLabel : translation.title}
+                  {translation.status ? (
+                    <span className="text-muted-foreground ml-2 text-xs">
+                      {translation.status === "published"
+                        ? t("translations.states.published")
+                        : t("translations.states.draft")}
+                    </span>
+                  ) : null}
+                </span>
+              );
+            },
+          } satisfies ColumnDef<ContentRowData>,
+        ]
+      : []),
     ...columnSpecs.map((spec): ColumnDef<ContentRowData> => {
       const override = registration.columns?.[spec.name];
 
@@ -212,28 +265,37 @@ export const ContentTableView = async ({
   ];
 
   return (
-    <DataTable
-      columns={columns}
-      customNoResults={{
-        description: t("empty.desc"),
-        title: t("empty.title"),
-      }}
-      edges={data.edges}
-      id={`content-${definition.id}`}
-      order={{
-        // The same allowlist the generated route builds its `orderBy` enum
-        // from, so a header the backend would accept is never left unsortable.
-        // `admin.list.orderableFields` alone would leave out `id`, `createdAt`,
-        // `updatedAt` and - when publication is on - `status` and
-        // `publishedAt`, all of which the API has always allowed.
-        columns: orderableColumns(definition),
-        defaultOrder: {
-          column: definition.admin.list.defaultOrderBy,
-          order: definition.admin.list.defaultOrder,
-        },
-      }}
-      pageInfo={data.pageInfo}
-      search={definition.admin.list.searchableFields.length > 0}
-    />
+    <>
+      {localized ? (
+        <div className="mb-2 flex justify-end">
+          <ContentLocaleSelector
+            defaultLocale={definition.localization.defaultLocale}
+          />
+        </div>
+      ) : null}
+      <DataTable
+        columns={columns}
+        customNoResults={{
+          description: t("empty.desc"),
+          title: t("empty.title"),
+        }}
+        edges={data.edges}
+        id={`content-${definition.id}`}
+        order={{
+          // The same allowlist the generated route builds its `orderBy` enum
+          // from, so a header the backend would accept is never left unsortable.
+          // `admin.list.orderableFields` alone would leave out `id`, `createdAt`,
+          // `updatedAt` and - when publication is on - `status` and
+          // `publishedAt`, all of which the API has always allowed.
+          columns: orderableColumns(definition),
+          defaultOrder: {
+            column: definition.admin.list.defaultOrderBy,
+            order: definition.admin.list.defaultOrder,
+          },
+        }}
+        pageInfo={data.pageInfo}
+        search={definition.admin.list.searchableFields.length > 0}
+      />
+    </>
   );
 };

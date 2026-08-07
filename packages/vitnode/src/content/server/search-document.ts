@@ -1,7 +1,11 @@
 import type { SearchDocument } from "../../api/models/search";
 import type { AnyContentTypeDefinition } from "../types";
 
-import { isContentPubliclyVisible } from "../cache";
+import {
+  isContentPubliclyVisible,
+  isContentTranslationPubliclyVisible,
+} from "../cache";
+import { partitionContentFields } from "../localization";
 import { contentSearchUrl } from "../search";
 
 /** Collapses whitespace so a multi-line value cannot break a result heading. */
@@ -65,7 +69,7 @@ export const isContentRowPublic = (row: object): boolean => {
 export const contentSearchDocument = (
   definition: AnyContentTypeDefinition,
   row: object,
-  { pluginId }: { pluginId?: string } = {},
+  { locale, pluginId }: { locale?: string; pluginId?: string } = {},
 ): null | SearchDocument => {
   const { publicApi, search } = definition;
   if (!search.enabled) return null;
@@ -83,6 +87,7 @@ export const contentSearchDocument = (
   const url = contentSearchUrl(
     definition,
     normalize(values[publicApi.slugField]),
+    locale,
   );
   if (url === null) return null;
 
@@ -119,13 +124,86 @@ export const contentSearchDocument = (
     // The owning plugin, so a rebuild - which runs in the core cron request -
     // stores the same ownership a live write did.
     ...(pluginId === undefined ? {} : { pluginId }),
+    // `""` for a content type that is not localized - the language-agnostic
+    // value that matches every locale, and what every document written before
+    // Stage 5D already carries. A localized one is indexed once per language.
+    ...(locale === undefined || locale === "" ? {} : { languageCode: locale }),
     // Deliberately absent: `authorId` (a `user` field can never be public, and
     // the public search route resolves it into a person), `containerType` /
     // `containerId` (there is no `containerType` query filter to qualify them
-    // with), and `metadata` (nothing reads it). Also `languageCode`, which
-    // defaults to "" - the language-agnostic value that matches every locale.
+    // with), and `metadata` (nothing reads it).
     title,
     updatedAt: toDate(values.updatedAt),
     url,
   };
+};
+
+/**
+ * Projects one *translation* into a search document.
+ *
+ * A localized record is indexed **once per published translation**, and each
+ * document is the two halves of the page the reader would land on: shared values
+ * off the base row, localized ones off the translation. Indexing the base row
+ * alone would put one language in the index and rank every other one as a miss.
+ *
+ * Visibility is {@link isContentTranslationPubliclyVisible} - the base row *and*
+ * the translation both published - which is the same subordination the public
+ * read enforces in SQL. A translation is never indexed for a draft record, in any
+ * language.
+ *
+ * `createdAt` is this language's publication date when it has one, so "newest"
+ * sorts a late translation where it actually appeared rather than where its
+ * record did.
+ *
+ * Returns `null` for everything that must not be indexed, so every caller has one
+ * decision to make: "make sure nothing is indexed for this record in this
+ * language".
+ */
+export const contentTranslationSearchDocument = (
+  definition: AnyContentTypeDefinition,
+  {
+    base,
+    locale,
+    translation,
+  }: { base: object; locale: string; translation: object },
+  { pluginId }: { pluginId?: string } = {},
+): null | SearchDocument => {
+  if (!definition.search.enabled || !definition.localization.enabled) {
+    return null;
+  }
+
+  const baseValues = base as Record<string, unknown>;
+  const translationValues = translation as Record<string, unknown>;
+
+  if (
+    !isContentTranslationPubliclyVisible({
+      base: {
+        publishedAt: toTimestamp(baseValues.publishedAt),
+        status: normalize(baseValues.status) || undefined,
+      },
+      translation: {
+        publishedAt: toTimestamp(translationValues.publishedAt),
+        status: normalize(translationValues.status) || undefined,
+      },
+    })
+  ) {
+    return null;
+  }
+
+  const { localizedFields } = partitionContentFields(definition.fields);
+  // The localized half wins, and only for declared localized fields: a
+  // translation row also carries its own `createdAt`, `version` and publication
+  // state, and letting those through would describe the translation rather than
+  // the page.
+  const merged: Record<string, unknown> = { ...baseValues };
+  for (const name of Object.keys(localizedFields)) {
+    merged[name] = translationValues[name];
+  }
+
+  // `publishedAt` decides the document's date, and this language's is the honest
+  // one. The status is already known to be published on both halves.
+  merged.publishedAt = translationValues.publishedAt ?? baseValues.publishedAt;
+  merged.updatedAt = translationValues.updatedAt ?? baseValues.updatedAt;
+
+  return contentSearchDocument(definition, merged, { locale, pluginId });
 };

@@ -6,8 +6,10 @@ import type { AnyContentTypeDefinition } from "../types";
 import type { ContentEditorialOutcome } from "./editorial-service";
 import type { ContentSearchSyncOutcome } from "./search-sync";
 
+import type { AnyContentModel } from "./model";
+
 import { emitContentEvent } from "./emit";
-import { syncContentSearch } from "./search-sync";
+import { syncContentLocalizedSearch, syncContentSearch } from "./search-sync";
 
 /** A `delete` has no event action of its own beyond the existing one. */
 const EVENT_ACTION: Record<
@@ -65,6 +67,16 @@ const payloadFor = (
 };
 
 export interface ContentEditorialEffectsOptions {
+  /**
+   * The model, for a **localized** content type with `search`.
+   *
+   * Needed because such a record is indexed once per published translation, and
+   * enumerating them takes a table this function is not otherwise given. Optional
+   * so every existing caller compiles unchanged; a localized searchable content
+   * type whose caller omits it has its index write skipped and says so in the log,
+   * rather than silently indexing one language.
+   */
+  model?: AnyContentModel;
   /** The plugin that owns the content type, and therefore the event. */
   pluginId: string;
   /**
@@ -86,6 +98,11 @@ export interface ContentEditorialEffectsOptions {
 }
 
 export interface ContentEditorialEffectsResult {
+  /**
+   * One outcome per language, for a localized content type. Empty for every
+   * other one, whose single outcome is on `search`.
+   */
+  searchByLocale?: ContentSearchSyncOutcome[];
   /**
    * What the event transport reported. `null` for a no-op outcome, which emits
    * nothing at all.
@@ -124,7 +141,7 @@ export const contentEditorialEffects = async (
   c: Context,
   definition: AnyContentTypeDefinition,
   outcome: ContentEditorialOutcome<AnyContentTypeDefinition>,
-  { pluginId, scheduledBy, scheduleId }: ContentEditorialEffectsOptions,
+  { model, pluginId, scheduledBy, scheduleId }: ContentEditorialEffectsOptions,
 ): Promise<ContentEditorialEffectsResult> => {
   if (!outcome.changed) return { event: null, search: null };
 
@@ -140,6 +157,25 @@ export const contentEditorialEffects = async (
     { pluginId },
   );
 
+  // A localized record is indexed once per published translation, and a mutation
+  // of the *record* moves every one of them: its publication state gates them
+  // all, and a shared field is in all of them.
+  if (definition.localization.enabled && definition.search.enabled) {
+    return {
+      event,
+      search: null,
+      searchByLocale: model
+        ? await syncContentLocalizedSearch(c, model, {
+            changed: outcome.changed,
+            changedFields: outcome.changedFields,
+            operation: outcome.operation,
+            pluginId,
+            row: outcome.row,
+          })
+        : await warnMissingModel(c, definition),
+    };
+  }
+
   return {
     event,
     search: await syncContentSearch(c, definition, {
@@ -150,4 +186,29 @@ export const contentEditorialEffects = async (
       row: outcome.row,
     }),
   };
+};
+
+/**
+ * Says why nothing was indexed, rather than indexing the wrong thing.
+ *
+ * Reachable only from a hand-written caller: every generated path passes the
+ * model. Logging beats throwing here because the write has already committed -
+ * failing now would report a successful mutation as a failure - and it beats
+ * silence because the symptom otherwise is a search index that is quietly missing
+ * one content type.
+ */
+const warnMissingModel = async (
+  c: Context,
+  definition: AnyContentTypeDefinition,
+): Promise<ContentSearchSyncOutcome[]> => {
+  const message = `[content-search] ${definition.id} is localized and searchable, but contentEditorialEffects was called without \`model\`, so no document was written. Pass the content model.`;
+
+  try {
+    await c.get("log").error(message);
+  } catch {
+    // eslint-disable-next-line no-console
+    console.error(`[VitNode] ${message}`);
+  }
+
+  return [];
 };

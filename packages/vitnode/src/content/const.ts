@@ -202,8 +202,20 @@ export const CONTENT_SEARCH_DESCRIPTION_KINDS = ["text", "textarea"] as const;
  */
 export const CONTENT_SEARCH_TEXT_KINDS = ["slug", "text", "textarea"] as const;
 
-/** The only placeholder `search.pathTemplate` may use. */
+/** The placeholder every `search.pathTemplate` must use. */
 export const CONTENT_SEARCH_SLUG_PLACEHOLDER = "{slug}";
+
+/**
+ * The placeholder a **localized** `search.pathTemplate` must also use.
+ *
+ * Required there rather than optional: a localized content type is indexed once
+ * per language, and two languages routinely answer to the same slug - so a
+ * template without it would give every translation of a record the same link, and
+ * a search hit would point at whichever language the reader happened to be in.
+ * Refused on a content type that is not localized, where it could only ever
+ * substitute to nothing.
+ */
+export const CONTENT_SEARCH_LOCALE_PLACEHOLDER = "{locale}";
 
 /**
  * `core_search_index.itemType` is `varchar(100)` and a content type id is used

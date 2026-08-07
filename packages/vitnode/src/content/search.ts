@@ -1,6 +1,9 @@
 import type { AnyContentTypeDefinition } from "./types";
 
-import { CONTENT_SEARCH_SLUG_PLACEHOLDER } from "./const";
+import {
+  CONTENT_SEARCH_LOCALE_PLACEHOLDER,
+  CONTENT_SEARCH_SLUG_PLACEHOLDER,
+} from "./const";
 
 /**
  * The public URL of one record, for a search hit.
@@ -17,14 +20,30 @@ import { CONTENT_SEARCH_SLUG_PLACEHOLDER } from "./const";
 export const contentSearchUrl = (
   definition: AnyContentTypeDefinition,
   slug: string,
+  locale?: string,
 ): null | string => {
   const trimmed = slug.trim();
   if (trimmed === "" || definition.search.pathTemplate === "") return null;
 
-  return definition.search.pathTemplate.replace(
+  const localized = definition.localization.enabled;
+  const language = locale?.trim() ?? "";
+
+  // A localized content type has one document per language and one URL per
+  // language. Without a locale there is no URL to build, and a link to the wrong
+  // language is worse than no link at all.
+  if (localized && language === "") return null;
+
+  const withSlug = definition.search.pathTemplate.replace(
     CONTENT_SEARCH_SLUG_PLACEHOLDER,
     encodeURIComponent(trimmed),
   );
+
+  return localized
+    ? withSlug.replace(
+        CONTENT_SEARCH_LOCALE_PLACEHOLDER,
+        encodeURIComponent(language),
+      )
+    : withSlug;
 };
 
 /**
@@ -39,7 +58,11 @@ export const contentSearchUrl = (
 export const contentSearchDocumentId = (
   definition: AnyContentTypeDefinition,
   id: number,
-): string => `${definition.id}:${id}`;
+  locale?: string,
+): string =>
+  locale === undefined || locale === ""
+    ? `${definition.id}:${id}`
+    : `${definition.id}:${id}:${locale}`;
 
 /**
  * Every field whose value the search document is built from, including the slug

@@ -149,11 +149,18 @@ export type {
   ClaimedContentSchedule,
   ContentSchedulesModel,
 } from "./schedules-model";
-export { contentSearchDocument } from "./search-document";
-export { createContentSearchIndexer } from "./search-indexer";
+export {
+  contentSearchDocument,
+  contentTranslationSearchDocument,
+} from "./search-document";
+export {
+  createContentLocalizedSearchIndexer,
+  createContentSearchIndexer,
+} from "./search-indexer";
 export type { ContentSearchIndexer } from "./search-indexer";
-export { syncContentSearch } from "./search-sync";
+export { syncContentLocalizedSearch, syncContentSearch } from "./search-sync";
 export type {
+  ContentLocalizedSearchSyncInput,
   ContentSearchOperation,
   ContentSearchSyncInput,
   ContentSearchSyncOutcome,

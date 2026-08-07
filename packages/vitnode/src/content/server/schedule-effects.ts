@@ -187,11 +187,15 @@ export const runContentScheduleEffects = async (
 
   // The same helper the interactive routes use, so a scheduled publish and a
   // clicked one are indistinguishable to every listener and to the index.
-  const { event, search } = await contentEditorialEffects(
+  const { event, search, searchByLocale } = await contentEditorialEffects(
     c,
     definition,
     outcome,
     {
+      // How a localized record is enumerated into one document per published
+      // translation. The queue handler has the model because it looked the
+      // content type up to get here.
+      model: entry.model,
       // The content type's owner, not core - core only owns the queue handler
       // that happens to be running. `entry.pluginId` is the same value the
       // executor froze into the payload, and both are read back rather than
@@ -247,6 +251,15 @@ export const runContentScheduleEffects = async (
   }
 
   if (search?.error) failures.push(`search: ${search.error.message}`);
+
+  // One outcome per language on a localized content type, and one failure there
+  // is enough to fail the run: a document that was not written is a record that
+  // is missing from search in that language until the next rebuild.
+  for (const outcome of searchByLocale ?? []) {
+    if (outcome.error) {
+      failures.push(`search (${outcome.documentId}): ${outcome.error.message}`);
+    }
+  }
 
   // Every configured origin has to accept it. A partial delivery is the
   // dangerous case, not the acceptable one: with two web apps behind one API,

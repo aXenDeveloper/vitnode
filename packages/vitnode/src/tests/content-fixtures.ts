@@ -363,3 +363,49 @@ export const testStrictLocalizedPageContentType = defineContentType({
     list: { columns: ["featured", "status"] },
   },
 });
+
+/**
+ * The Stage 5D fixture: localized, public **and** searchable.
+ *
+ * The whole stack on one content type, because per-locale search is the only
+ * combination that needs all of it: the translation supplies the prose, the base
+ * row supplies the shared values and the publication state, and `publicApi`
+ * supplies the allowlist every indexed field has to be in.
+ *
+ * `pathTemplate` carries `{locale}`, which a localized content type must - two
+ * languages routinely answer to the same slug, so one URL for both would make a
+ * search hit ambiguous.
+ */
+export const testLocalizedSearchPageContentType = defineContentType({
+  id: "test.localized-search-page",
+  tableName: "test_localized_search_pages",
+  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  publication: { enabled: true },
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+    body: field.textarea({ localized: true, nullable: true }),
+    featured: field.boolean({ defaultValue: false }),
+  },
+  publicApi: {
+    enabled: true,
+    path: "pages",
+    fields: ["title", "slug", "body", "featured", "publishedAt"],
+    searchableFields: ["title", "body"],
+    orderableFields: ["publishedAt"],
+    filterableFields: ["featured"],
+  },
+  search: {
+    enabled: true,
+    titleField: "title",
+    contentFields: ["title", "body"],
+    pathTemplate: "/{locale}/pages/{slug}",
+  },
+  admin: {
+    label: {
+      plural: "Test Localized Search Pages",
+      singular: "Test Localized Search Page",
+    },
+    list: { columns: ["featured", "status"] },
+  },
+});

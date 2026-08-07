@@ -1186,6 +1186,32 @@ export type FilterableContentFieldName<TDefinition> = FieldNamesOfKind<
   FilterableContentFieldKind
 >;
 
+/** {@link FieldNamesOfKind} over every field, shared and localized alike. */
+type AnyFieldNamesOfKind<TDefinition, TKind extends ContentFieldKind> = string &
+  {
+    [
+      K in keyof ContentFieldsOf<TDefinition>
+    ]: ContentFieldsOf<TDefinition>[K] extends {
+      kind: TKind;
+    }
+      ? K
+      : never;
+  }[keyof ContentFieldsOf<TDefinition>];
+
+/**
+ * Field names a **public** filter may name.
+ *
+ * Wider than {@link FilterableContentFieldName} by exactly the localized half: an
+ * admin list is a query over the base table, but a public localized read already
+ * joins the translation it is serving, so filtering on a localized field is one
+ * more predicate on a row it was fetching anyway - evaluated against the language
+ * the reader will actually see.
+ */
+export type PublicFilterableContentFieldName<TDefinition> = AnyFieldNamesOfKind<
+  TDefinition,
+  FilterableContentFieldKind
+>;
+
 /**
  * Equality filters accepted by `service.findMany`, one key per filterable
  * field - plus `status` once publication is enabled, which is a generated
@@ -1331,7 +1357,7 @@ export type ContentPublicListRow<TDefinition> =
 export type ContentPublicFilterInput<TDefinition> = Partial<{
   [
     K in ContentPublicFieldName<TDefinition> &
-      FilterableContentFieldName<TDefinition>
+      PublicFilterableContentFieldName<TDefinition>
   ]: ContentFieldInput<ContentFieldsOf<TDefinition>[K]>;
 }>;
 

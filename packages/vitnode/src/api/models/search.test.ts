@@ -196,7 +196,20 @@ describe("SearchModel", () => {
     await new SearchModel(c).delete("blog_post", 5);
 
     expect(deleteFn).toHaveBeenCalledWith(core_search_index);
-    expect(provider.delete).toHaveBeenCalledWith(c, "blog_post", 5);
+    // No language: deleting the record means every language of it.
+    expect(provider.delete).toHaveBeenCalledWith(c, "blog_post", 5, undefined);
+  });
+
+  it("deletes one language without touching the others", async () => {
+    const provider = createProvider();
+    const { c, deleteFn } = createContext(provider);
+
+    // Multi-language content is one row per `(itemType, itemId, languageCode)`,
+    // so taking the Polish translation down must leave the English one indexed.
+    await new SearchModel(c).delete("blog_post", 5, "pl");
+
+    expect(deleteFn).toHaveBeenCalledWith(core_search_index);
+    expect(provider.delete).toHaveBeenCalledWith(c, "blog_post", 5, "pl");
   });
 
   it("delegates search to the provider", async () => {

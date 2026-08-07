@@ -60,6 +60,24 @@ export const localizedArticleContentType = defineContentType({
     defaultOrder: "desc",
   },
 
+  /**
+   * One search document per **published** translation.
+   *
+   * `titleField` and `contentFields` name localized fields, which is the whole
+   * point: an index built from the base row would hold no prose at all here,
+   * since every text field on this content type is localized.
+   *
+   * `{locale}` in `pathTemplate` is required rather than optional - two languages
+   * routinely answer to the same slug, so a template without it would give every
+   * translation of a record the same link.
+   */
+  search: {
+    enabled: true,
+    titleField: "title",
+    contentFields: ["title", "body"],
+    pathTemplate: "/{locale}/localized-articles/{slug}",
+  },
+
   // Per-locale versions, per-locale revisions, per-locale restore. `retention` is
   // per language, so five Polish revisions do not evict the English ones.
   // `preview` mints a link per language, freezing the shared revision and that

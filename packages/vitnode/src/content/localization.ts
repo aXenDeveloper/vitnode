@@ -185,29 +185,17 @@ const assertLocalizedFields = (
 };
 
 /**
- * Stage 5C boundaries.
+ * There is no capability boundary left.
  *
- * Stage 5A landed the infrastructure, Stage 5B the editorial layer and Stage 5C
- * the public read: locale precedence, fallback, strict-locale slugs and
- * locale-aware cache tags. One thing still reads outwards without knowing about
- * languages - the search index - and the honest failure for that is a refused
- * definition rather than a content type that quietly indexes one language and
- * ranks every other one as a miss.
+ * Stage 5A landed the infrastructure, Stage 5B the editorial layer, Stage 5C the
+ * public read and Stage 5D per-locale search. `localization` now combines with
+ * `publication`, `editorial`, `publicApi` and `search`, and every one of them
+ * reads the language it was asked for rather than pretending there is only one.
  *
- * The message names the stage that lifts the restriction, because "not yet" is
- * only useful when it says how long.
+ * The function is gone rather than left as an empty stub: a boundary that refuses
+ * nothing is a comment, and a comment is where the next one would be added
+ * silently.
  */
-const assertStageBoundaries = (
-  id: string,
-  { search }: { search: boolean },
-): void => {
-  if (search) {
-    throw new ContentEngineError(
-      "localization cannot be combined with `search` yet. One document per record would index a single language and rank every other one as a miss; per-locale search documents land in Stage 5D.",
-      { contentTypeId: id },
-    );
-  }
-};
 
 /**
  * Checks and fills in `localization`.
@@ -222,14 +210,12 @@ export const resolveContentLocalization = ({
   id,
   localization,
   publication,
-  search,
   tableName,
 }: {
   fields: ContentFieldMap;
   id: string;
   localization: ContentLocalizationConfig | undefined;
   publication: boolean;
-  search: boolean;
   tableName: string;
 }): ResolvedContentLocalizationConfig => {
   const { localizedFields } = partitionContentFields(fields);
@@ -245,8 +231,6 @@ export const resolveContentLocalization = ({
 
     return contentLocalizationDisabled();
   }
-
-  assertStageBoundaries(id, { search });
 
   const defaultLocale = assertDefaultLocale(id, localization.defaultLocale);
   assertLocalizedFields(id, fields, localizedFields);

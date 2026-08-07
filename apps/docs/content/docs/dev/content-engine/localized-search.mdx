@@ -1,0 +1,180 @@
+---
+title: Localized search
+description: One search document per published translation - how they are built, kept current, rebuilt, and what a rebuild counts.
+icon: Languages
+---
+
+A [searchable](/docs/dev/content-engine/search) content type that is also
+[localized](/docs/dev/content-engine/localization) is indexed **once per published
+translation**, not once per record.
+
+<Callout title="Why not one document per record">
+  A record's prose lives in its translations. Indexing the base row would index
+  whichever language happened to be there - usually none, since a localized
+  content type's text fields are all localized - and rank every other language as
+  a miss. One document per language is the only shape a multilingual index can
+  have.
+</Callout>
+
+## Turning it on
+
+```ts title="src/content/article.ts"
+search: {
+  enabled: true,
+  titleField: "title",              // localized, and that is the point
+  contentFields: ["title", "body"], // localized too
+  pathTemplate: "/{locale}/articles/{slug}",
+},
+```
+
+`{locale}` is **required** on a localized content type and refused on every other
+one. Two languages routinely answer to the same slug, so a template without it
+would give every translation of a record the same link and a search hit would
+point at whichever language the reader happened to be in.
+
+Everything else is unchanged: every indexed field must be in `publicApi.fields`,
+and `search` still needs `publication` and `publicApi`.
+
+## What a document holds
+
+Both halves of the page the reader would land on:
+
+| From | Fields |
+| --- | --- |
+| the **translation** | every localized field, `publishedAt`, `updatedAt` |
+| the **base row** | every shared field, `id`, the publication state |
+
+`languageCode` is the locale. `createdAt` is **this language's** publication date
+when it has one, so a translation published months after its record sorts by
+"newest" where it actually appeared rather than where the record did.
+
+## When a document exists
+
+The same subordination the public read enforces in SQL, in JavaScript:
+
+```text
+record published + translation published  →  indexed
+record published + translation draft      →  not indexed
+record draft     + translation published  →  not indexed, in any language
+```
+
+A translation that must not be indexed has its document **deleted for that
+language only**. Taking the Polish copy down leaves the English one exactly where
+it is, which is why `SearchModel.delete` takes an optional language:
+
+```ts
+await c.get("search").delete("example.article", 7, "pl"); // one language
+await c.get("search").delete("example.article", 7); // every language
+```
+
+## Keeping it current
+
+| What happened | What moves |
+| --- | --- |
+| A **translation** was created, edited, published, unpublished or restored | that language's document |
+| The **record** was published, unpublished or had a shared field edited | every language's document |
+| The **record** was deleted | every language's document, in one call |
+
+A mutation of the record moves every language because its publication state gates
+all of them and a shared field is in all of them. A Polish edit moves Polish:
+nothing else contains it.
+
+The generated routes do this for you. A direct service call does not - it may be
+inside a transaction that has not committed - so application code opts in after
+the write returns:
+
+```ts
+const outcome = await model.translationEditorialService(c, { pluginId })
+  .publish(id, "pl", { actor });
+
+if (outcome) {
+  await syncContentLocalizedSearch(c, model, {
+    changed: outcome.changed,
+    locale: "pl",
+    operation: "publish",
+    pluginId,
+    row: await model.service(c).findById(id),
+  });
+}
+```
+
+Omitting `locale` on a translation mutation would rewrite every other language's
+document for a change none of them contains.
+
+## Rebuilding
+
+The generated indexer pages over **translations**, with a keyset cursor on
+`(itemId, languageId)` - the translation table's primary key.
+
+Keyset rather than offset for two reasons, and the second is the one that
+matters at scale:
+
+1. A page can neither overlap nor skip while rows are being published underneath
+   it. An offset shifts when a row before it appears; a cursor does not.
+2. Postgres seeks straight to the cursor on the primary key instead of counting
+   past every earlier row, so a rebuild of a large table stays linear.
+
+`itemsRead` counts translation rows, not documents. A record with three languages
+advances the position by three, and a published translation with no usable title
+projects to nothing without ending the rebuild early.
+
+`count()` reports **published translations**, so the AdminCP coverage bar compares
+like with like - counting records would pin a fully-indexed two-language
+collection at 50%.
+
+## Diagnostics
+
+**AdminCP → Advanced → Search** shows, per collection:
+
+- `indexed / total` measured in **documents** when the collection has languages,
+  and in items when it does not. The switch is read off the data, so a collection
+  that gains a second language starts being measured correctly without anything
+  being turned on.
+- A per-language breakdown (`en 120  pl 84`). A single total cannot say which
+  language a rebuild stopped halfway through; two numbers can.
+- The same coverage bar, status and sync-error panel as before.
+
+Language-agnostic rows (`languageCode = ""`) are not listed as a language. They
+are not one, and an unnamed row in every collection would be noise.
+
+## Filtering a search by language
+
+The public search route already takes one:
+
+```http
+GET /api/@vitnode/core/search?search=hello&lang=pl
+```
+
+Rows with an empty `languageCode` match every locale, so a query scoped to Polish
+still finds language-agnostic content. That behaviour predates this page; what
+Stage 5D adds is content that actually has languages to filter on.
+
+## The AdminCP list
+
+A localized content type's list gets a language selector. It is a **view control,
+not a filter**: picking Polish adds a column showing each record's Polish title
+and status - including `Missing`, which is the row most worth finding. Hiding
+untranslated records would be the opposite of what somebody choosing a language is
+looking for.
+
+The choice lives in the URL, so it survives a reload, paginates with the table and
+can be sent to whoever is doing the translating. Changing it resets the cursor:
+page three of one ordering is not page three of another.
+
+## No migration
+
+`core_search_index` already stores one row per `(itemType, itemId, languageCode)`,
+with the unique key, the per-row text-search configuration and the language index
+in place since it was created. Stage 5D writes more rows into a table that was
+built for them; it changes no schema.
+
+An existing localized content type that turns `search` on is indexed by the next
+rebuild, or by the next publish of each translation - whichever comes first.
+
+## Related
+
+- [Search](/docs/dev/content-engine/search) - the non-localized shape this extends
+- [Localized public API](/docs/dev/content-engine/localized-public-api) - the read
+  layer a hit links into
+- [Translation editorial workflow](/docs/dev/content-engine/translation-editorial) -
+  what "published in this language" means

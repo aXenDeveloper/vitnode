@@ -5,7 +5,11 @@ import type { ContentEventAction } from "../events";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentTranslationEditorialOutcome } from "./translation-editorial-service";
 
+import type { AnyContentModel } from "./model";
+import type { ContentSearchSyncOutcome } from "./search-sync";
+
 import { emitContentEvent } from "./emit";
+import { syncContentLocalizedSearch } from "./search-sync";
 
 /** One translation operation, one event. Never `updated` - see `events.ts`. */
 const EVENT_ACTION: Record<
@@ -55,11 +59,26 @@ const payloadFor = (
 };
 
 export interface ContentTranslationEffectsOptions {
+  /**
+   * The model, for a content type with `search`.
+   *
+   * A translation mutation moves exactly one language's document, and finding it
+   * takes the base row and the translation table - neither of which this function
+   * is otherwise given. Optional so every Stage 5B caller compiles unchanged.
+   */
+  model?: AnyContentModel;
   /** The plugin that owns the content type, and therefore the event. */
   pluginId: string;
 }
 
 export interface ContentTranslationEffectsResult {
+  /**
+   * What the index write reported, or `null` when there was none to do - a
+   * content type without `search`, or a no-op outcome.
+   *
+   * A one-element array at most: a translation mutation is one language.
+   */
+  search?: ContentSearchSyncOutcome[];
   /**
    * What the event transport reported, or `null` for a no-op outcome.
    *
@@ -85,9 +104,10 @@ export interface ContentTranslationEffectsResult {
  * A no-op outcome does nothing at all. That is what keeps a double-clicked publish
  * button and an empty edit from each producing a second event.
  *
- * Search synchronisation is deliberately absent: a localized content type cannot
- * have `search` enabled yet, so there is no document to write. Stage 5D adds the
- * per-locale sync here. Cache invalidation is absent for the reason it is absent
+ * Search synchronisation is scoped to the locale that moved: one translation is
+ * one document, and rewriting the others would be work for a change none of them
+ * contains. A translation that must not be indexed has its document deleted for
+ * that language only. Cache invalidation is absent for the reason it is absent
  * from the base effects too - it needs the Next runtime, which the API process does
  * not have, so the Server Action owns it.
  */
@@ -95,19 +115,38 @@ export const contentTranslationEffects = async (
   c: Context,
   definition: AnyContentTypeDefinition,
   outcome: ContentTranslationEditorialOutcome<AnyContentTypeDefinition>,
-  { pluginId }: ContentTranslationEffectsOptions,
+  { model, pluginId }: ContentTranslationEffectsOptions,
 ): Promise<ContentTranslationEffectsResult> => {
   if (!outcome.changed) return { event: null };
 
+  const event = await emitContentEvent(
+    c,
+    definition,
+    EVENT_ACTION[outcome.operation],
+    payloadFor(outcome) as never,
+    // The plugin that owns the content type, not whichever module happens to be
+    // handling the request.
+    { pluginId },
+  );
+
+  if (!definition.search.enabled || !model) return { event };
+
+  // The base row, because a translation's document is built from both halves and
+  // its visibility is subordinate to the record's.
+  const base = await model.service(c).findById(outcome.row.itemId);
+  if (!base) return { event };
+
   return {
-    event: await emitContentEvent(
-      c,
-      definition,
-      EVENT_ACTION[outcome.operation],
-      payloadFor(outcome) as never,
-      // The plugin that owns the content type, not whichever module happens to be
-      // handling the request.
-      { pluginId },
-    ),
+    event,
+    // Scoped to the locale that moved. Omitting it would rewrite every other
+    // language's document for a change none of them contains.
+    search: await syncContentLocalizedSearch(c, model, {
+      changed: outcome.changed,
+      changedFields: outcome.changedFields,
+      locale: outcome.locale,
+      operation: outcome.operation,
+      pluginId,
+      row: base,
+    }),
   };
 };

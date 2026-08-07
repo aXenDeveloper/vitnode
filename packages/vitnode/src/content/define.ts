@@ -50,6 +50,7 @@ import {
   CONTENT_REVISION_MIN_RETENTION,
   CONTENT_SEARCH_DESCRIPTION_KINDS,
   CONTENT_SEARCH_ITEM_TYPE_MAX_LENGTH,
+  CONTENT_SEARCH_LOCALE_PLACEHOLDER,
   CONTENT_SEARCH_PATH_MAX_LENGTH,
   CONTENT_SEARCH_SLUG_PLACEHOLDER,
   CONTENT_SEARCH_TEXT_KINDS,
@@ -727,7 +728,11 @@ const assertSearchField = ({
   }
 };
 
-const assertSearchPathTemplate = (id: string, template: string): void => {
+const assertSearchPathTemplate = (
+  id: string,
+  template: string,
+  localized: boolean,
+): void => {
   if (!template.startsWith("/")) {
     throw new ContentEngineError(
       `search.pathTemplate "${template}" must start with "/". Search result URLs are relative to the site root.`,
@@ -751,17 +756,50 @@ const assertSearchPathTemplate = (id: string, template: string): void => {
     );
   }
 
-  // Everything else that looks like a placeholder is a typo, and substitution is
-  // a single literal replace - so an unvalidated one would end up in the URL.
-  const rest = template.replace(CONTENT_SEARCH_SLUG_PLACEHOLDER, "");
-  if (rest.includes("{") || rest.includes("}")) {
+  // A localized content type is indexed once per language, and two languages
+  // routinely answer to the same slug - so a template with no `{locale}` would
+  // give every translation of a record the same link, and a hit would point at
+  // whichever language the reader happened to be in.
+  const locales = template.split(CONTENT_SEARCH_LOCALE_PLACEHOLDER).length - 1;
+  if (localized && locales !== 1) {
     throw new ContentEngineError(
-      `search.pathTemplate "${template}" uses a placeholder other than "${CONTENT_SEARCH_SLUG_PLACEHOLDER}". No other placeholder is supported.`,
+      `search.pathTemplate "${template}" must contain exactly one "${CONTENT_SEARCH_LOCALE_PLACEHOLDER}" placeholder on a localized content type, not ${locales}. One document per language means one URL per language.`,
+      { contentTypeId: id },
+    );
+  }
+  if (!localized && locales > 0) {
+    throw new ContentEngineError(
+      `search.pathTemplate "${template}" uses "${CONTENT_SEARCH_LOCALE_PLACEHOLDER}", but this content type is not localized - there is no language for it to substitute.`,
       { contentTypeId: id },
     );
   }
 
-  if (rest.includes("//") || template.includes("..") || /\s/.test(template)) {
+  // Everything else that looks like a placeholder is a typo, and substitution is
+  // a single literal replace - so an unvalidated one would end up in the URL.
+  const rest = template
+    .replace(CONTENT_SEARCH_SLUG_PLACEHOLDER, "")
+    .replace(CONTENT_SEARCH_LOCALE_PLACEHOLDER, "");
+  if (rest.includes("{") || rest.includes("}")) {
+    throw new ContentEngineError(
+      `search.pathTemplate "${template}" uses a placeholder other than "${CONTENT_SEARCH_SLUG_PLACEHOLDER}"${localized ? ` and "${CONTENT_SEARCH_LOCALE_PLACEHOLDER}"` : ""}. No other placeholder is supported.`,
+      { contentTypeId: id },
+    );
+  }
+
+  // Substituted with a non-empty token rather than removed, so a template whose
+  // segments are placeholders (`/{locale}/articles/{slug}`) is not mistaken for
+  // one with an empty segment.
+  const structural = template
+    .split(CONTENT_SEARCH_SLUG_PLACEHOLDER)
+    .join("x")
+    .split(CONTENT_SEARCH_LOCALE_PLACEHOLDER)
+    .join("x");
+
+  if (
+    structural.includes("//") ||
+    template.includes("..") ||
+    /\s/.test(template)
+  ) {
     throw new ContentEngineError(
       `search.pathTemplate "${template}" must not contain an empty segment, "..", or whitespace.`,
       { contentTypeId: id },
@@ -781,6 +819,7 @@ const resolveSearch = (
   search: ContentSearchConfig | undefined,
   publicApi: ResolvedContentPublicApiConfig,
   publication: boolean,
+  localized: boolean,
 ): ResolvedContentSearchConfig => {
   if (!search?.enabled) return disabledSearch;
 
@@ -875,7 +914,7 @@ const resolveSearch = (
     });
   }
 
-  assertSearchPathTemplate(id, search.pathTemplate);
+  assertSearchPathTemplate(id, search.pathTemplate, localized);
 
   return {
     contentFields,
@@ -1269,6 +1308,7 @@ export const defineContentType = <
     search as ContentSearchConfig | undefined,
     resolvedPublicApi,
     publicationEnabled,
+    Object.keys(localizedFields).length > 0,
   );
 
   const resolvedEditorial = resolveEditorial(
@@ -1280,8 +1320,9 @@ export const defineContentType = <
     publicationEnabled,
   );
 
-  // Last, because the Stage 5C boundary it enforces is stated in terms of
-  // everything the other resolvers have already settled.
+  // Last, because it reads the field partition every other resolver has already
+  // been checked against. There is no capability it refuses any more: every
+  // subsystem reads the language it was asked for.
   const resolvedLocalization = resolveContentLocalization({
     fields: fieldMap,
     id,
@@ -1289,7 +1330,6 @@ export const defineContentType = <
     // typechecks - the same widening `publicApi`, `search` and `editorial` do.
     localization: localization as ContentLocalizationConfig | undefined,
     publication: publicationEnabled,
-    search: resolvedSearch.enabled,
     tableName,
   });
 

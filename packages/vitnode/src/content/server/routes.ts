@@ -23,17 +23,20 @@ import {
 } from "../conflicts";
 import {
   CONTENT_ACTOR_TYPES,
+  CONTENT_LOCALE_MAX_LENGTH,
   CONTENT_OPTIONS_LIMIT,
   CONTENT_PERMISSIONS,
   CONTENT_REVISION_OPERATIONS,
   CONTENT_SCHEDULE_ACTIONS,
   CONTENT_SCHEDULE_STATUSES,
 } from "../const";
+import { partitionContentFields } from "../localization";
 import { orderableColumns } from "../registry";
 import { resolveContentActor } from "./actor";
 import { contentEditorialEffects } from "./editorial-effects";
 import { emitContentEvent } from "./emit";
 import { withHttpErrors } from "./http-errors";
+import { findContentLanguage } from "./language-resolver";
 import {
   assertContentPreviewIsServable,
   contentPreviewSecret,
@@ -83,7 +86,29 @@ export const buildContentRoutes = <
   const module = definition.permissionModule;
   const label = definition.admin.label;
 
-  const listRow = schemas.selectObject.extend({ labels: zodLabels });
+  const localized = definition.localization.enabled;
+
+  /**
+   * One row's state in the language the list is being viewed in.
+   *
+   * `null` when that language has no translation, which is a state the table
+   * renders as `Missing` rather than as an error. Present only on a localized
+   * content type, so every other list response is unchanged.
+   */
+  const zodRowTranslation = z
+    .object({
+      locale: z.string(),
+      publishedAt: z.date().nullable().optional(),
+      status: z.string().optional(),
+      title: z.string(),
+      version: z.number(),
+    })
+    .nullable();
+
+  const listRow = schemas.selectObject.extend({
+    labels: zodLabels,
+    ...(localized ? { translation: zodRowTranslation.optional() } : {}),
+  });
   const publicationResponse = z.object({
     /** `false` when the record was already in the requested state. */
     changed: z.boolean(),
@@ -175,7 +200,23 @@ export const buildContentRoutes = <
       method: "get",
       path: "/",
       description: `List ${label.plural}`,
-      request: { query: paginationQuery.extend(schemas.filters.shape) },
+      request: {
+        query: paginationQuery.extend({
+          ...schemas.filters.shape,
+          // The language the list is being *viewed* in. It never filters: an
+          // admin list is a list of records, and hiding the ones a translator has
+          // not reached yet is the opposite of what the selector is for.
+          ...(localized
+            ? {
+                locale: z
+                  .string()
+                  .min(1)
+                  .max(CONTENT_LOCALE_MAX_LENGTH)
+                  .optional(),
+              }
+            : {}),
+        }),
+      },
       responses: {
         200: jsonResponse(
           z.object({
@@ -222,9 +263,95 @@ export const buildContentRoutes = <
         query: { cursor, first, last, search },
       });
 
-      return c.json(data, 200);
+      return c.json(await withRowTranslations(c, data, raw.locale), 200);
     },
   });
+
+  /**
+   * Attaches each row's translation in the language the list is being viewed in.
+   *
+   * One extra query for the whole page rather than a join, and deliberately so:
+   * the list is a query over the base table and its pagination, ordering and
+   * filters are all defined there. Joining a translation in would make the page
+   * size depend on how many languages a record has - and adding it afterwards
+   * keeps every existing list behaving exactly as it did.
+   *
+   * A locale with no translation comes back as `null` rather than being dropped:
+   * an admin list is a list of *records*, and the whole point of the selector is
+   * to see which ones a translator has not reached yet.
+   */
+  const withRowTranslations = async (
+    c: Context,
+    data: { edges: { id: number }[]; pageInfo: unknown },
+    locale: string | undefined,
+  ) => {
+    const build = model.translationService;
+    if (!localized || !build || locale === undefined || locale.trim() === "") {
+      return data;
+    }
+
+    const language = await findContentLanguage(c, locale);
+    // An unknown locale reads as "no translation in that language" rather than
+    // as an error: the selector is a view control, and a stale bookmark naming a
+    // language that has since been removed should still show the list.
+    if (!language) {
+      return {
+        ...data,
+        edges: data.edges.map(row => ({ ...row, translation: null })),
+      };
+    }
+
+    const translations = build(c);
+    // The first localized text field, in declaration order - the same rule the
+    // locale editor's tab titles follow, so the list and the editor agree about
+    // which value names a translation.
+    const titleField =
+      Object.entries(
+        partitionContentFields(definition.fields).localizedFields,
+      ).find(([, fieldValue]) => fieldValue.kind === "text")?.[0] ?? null;
+
+    const rows = await Promise.all(
+      data.edges.map(
+        async row =>
+          [
+            row.id,
+            await translations.findByLanguageId(row.id, language.id),
+          ] as const,
+      ),
+    );
+    const byId = new Map(rows);
+
+    return {
+      ...data,
+      edges: data.edges.map(row => {
+        const translation = byId.get(row.id);
+        if (!translation) return { ...row, translation: null };
+
+        const values = translation.values as Record<string, unknown>;
+        const meta = translation as unknown as Record<string, unknown>;
+
+        return {
+          ...row,
+          translation: {
+            locale: translation.locale,
+            ...(definition.publication.enabled
+              ? {
+                  publishedAt: meta.publishedAt as Date | null,
+                  status: meta.status as string,
+                }
+              : {}),
+            title:
+              titleField === null
+                ? ""
+                : typeof values[titleField] === "string"
+                  ? values[titleField]
+                  : "",
+            version: translation.version,
+          },
+        };
+      }),
+    };
+  };
 
   const options = buildRoute({
     pluginId,
@@ -313,7 +440,10 @@ export const buildContentRoutes = <
           { contentTypeId: definition.id, structured: true },
         );
 
-        await contentEditorialEffects(c, definition, result, { pluginId });
+        await contentEditorialEffects(c, definition, result, {
+          model,
+          pluginId,
+        });
 
         return c.json(result.row, 201);
       }
@@ -398,7 +528,7 @@ export const buildContentRoutes = <
       // One call rather than an event branch plus a search branch: which event
       // and which search operation an outcome deserves is a rule, and it is
       // stated once, in `contentEditorialEffects`.
-      await contentEditorialEffects(c, definition, result, { pluginId });
+      await contentEditorialEffects(c, definition, result, { model, pluginId });
 
       return c.json(result.row, 200);
     },
@@ -495,7 +625,10 @@ export const buildContentRoutes = <
 
           // Still idempotent: a no-op outcome emits nothing, indexes nothing
           // and - because the version did not move - leaves no revision.
-          await contentEditorialEffects(c, definition, result, { pluginId });
+          await contentEditorialEffects(c, definition, result, {
+            model,
+            pluginId,
+          });
 
           return c.json({ changed: result.changed, row: result.row }, 200);
         }
@@ -700,7 +833,7 @@ export const buildContentRoutes = <
         throw new HTTPException(404, { message: "Revision not found." });
       }
 
-      await contentEditorialEffects(c, definition, result, { pluginId });
+      await contentEditorialEffects(c, definition, result, { model, pluginId });
 
       return c.json({ changed: result.changed, row: result.row }, 200);
     },
@@ -1043,7 +1176,7 @@ export const buildContentRoutes = <
       );
       if (!result) throw notFound(definition);
 
-      await contentEditorialEffects(c, definition, result, { pluginId });
+      await contentEditorialEffects(c, definition, result, { model, pluginId });
 
       return c.json(result.row, 200);
     },
