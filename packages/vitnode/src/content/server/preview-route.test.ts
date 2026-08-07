@@ -305,6 +305,8 @@ describe("route registration", () => {
     const res = await app.request("/preview");
 
     expect(res.status).toBe(200);
-    expect(service.findBySlug).toHaveBeenCalledWith("preview");
+    expect(service.findBySlug).toHaveBeenCalledWith("preview", {
+      locale: undefined,
+    });
   });
 });

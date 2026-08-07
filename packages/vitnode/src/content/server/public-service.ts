@@ -31,7 +31,32 @@ import {
   buildSearchCondition,
 } from "./query";
 
-export interface ContentPublicFindManyArgs<TDefinition> {
+/**
+ * Which language a public read is for.
+ *
+ * Ignored by a content type that is not localized - there is one version of the
+ * row and it is the answer to every locale. Present on the shared interface
+ * rather than only on the localized one so a route handler, which is written
+ * against `AnyContentTypeDefinition` and cannot know which it was handed, passes
+ * the locale unconditionally and lets the service decide whether it means
+ * anything.
+ */
+export interface ContentPublicReadOptions {
+  /**
+   * The **canonical** locale this read is for, already resolved through
+   * `resolveContentPublicLocale`.
+   *
+   * A locale that names no language, or one the install has switched off, is a
+   * `null` result rather than a throw or a silent substitution: the caller answers
+   * the same 404 it answers for a slug that does not exist, and no reader is ever
+   * handed a language they did not ask for.
+   */
+  locale?: string;
+}
+
+export interface ContentPublicFindManyArgs<
+  TDefinition,
+> extends ContentPublicReadOptions {
   /** Equality filters, restricted to `publicApi.filterableFields`. */
   filters?: ContentPublicFilterInput<TDefinition>;
   orderBy?: {
@@ -51,10 +76,21 @@ export interface ContentPublicFindManyArgs<TDefinition> {
  */
 export interface ContentPublicService<TDefinition> {
   /** `null` unless the row exists *and* is published. */
-  findById: (id: number) => Promise<ContentPublicSelect<TDefinition> | null>;
-  /** The public detail lookup. `null` for a draft, an unpublished row or a typo. */
+  findById: (
+    id: number,
+    options?: ContentPublicReadOptions,
+  ) => Promise<ContentPublicSelect<TDefinition> | null>;
+  /**
+   * The public detail lookup. `null` for a draft, an unpublished row or a typo.
+   *
+   * **Never falls back.** A slug belongs to one language, so resolving a Polish
+   * URL against an English translation would answer a request for `/pl/witaj`
+   * with the English article - and then cache it under the Polish tag. See
+   * `createContentLocalizedPublicService`.
+   */
   findBySlug: (
     slug: string,
+    options?: ContentPublicReadOptions,
   ) => Promise<ContentPublicSelect<TDefinition> | null>;
   findMany: (args?: ContentPublicFindManyArgs<TDefinition>) => Promise<{
     edges: ContentPublicListRow<TDefinition>[];
@@ -134,7 +170,9 @@ export const contentPublicSelection = (
 });
 
 /** Public pages are smaller than admin ones, and the cap is lower too. */
-const clampPageSize = (value: string | undefined): string | undefined => {
+export const clampContentPublicPageSize = (
+  value: string | undefined,
+): string | undefined => {
   if (value === undefined) return undefined;
 
   const parsed = Number.parseInt(value, 10);
@@ -239,8 +277,8 @@ export const createContentPublicService = <
         params: {
           query: {
             ...query,
-            first: clampPageSize(query.first),
-            last: clampPageSize(query.last),
+            first: clampContentPublicPageSize(query.first),
+            last: clampContentPublicPageSize(query.last),
             // Folded into `where` above so the term is escaped; handing it to
             // `withPagination` would build an unescaped `ilike`.
             search: undefined,

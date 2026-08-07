@@ -4,7 +4,6 @@ import type {
   ContentLocalizationConfig,
   ContentLocalizationFallback,
   ResolvedContentLocalizationConfig,
-  ResolvedContentPublicApiConfig,
 } from "./types";
 
 import {
@@ -186,29 +185,22 @@ const assertLocalizedFields = (
 };
 
 /**
- * Stage 5B boundaries.
+ * Stage 5C boundaries.
  *
- * Stage 5A landed the infrastructure and Stage 5B the editorial layer on top of
- * it: per-locale publication, per-locale revisions, restore and the locale
- * editor. What is still missing is everything that reads *outwards* - the public
- * API and the search index - and the honest failure for that is a refused
- * definition rather than a content type that quietly runs Stage 1-4 logic
- * against the base table while pretending its localized fields do not exist.
+ * Stage 5A landed the infrastructure, Stage 5B the editorial layer and Stage 5C
+ * the public read: locale precedence, fallback, strict-locale slugs and
+ * locale-aware cache tags. One thing still reads outwards without knowing about
+ * languages - the search index - and the honest failure for that is a refused
+ * definition rather than a content type that quietly indexes one language and
+ * ranks every other one as a miss.
  *
- * Every message names the stage that lifts the restriction, because "not yet" is
+ * The message names the stage that lifts the restriction, because "not yet" is
  * only useful when it says how long.
  */
 const assertStageBoundaries = (
   id: string,
-  { publicApi, search }: { publicApi: boolean; search: boolean },
+  { search }: { search: boolean },
 ): void => {
-  if (publicApi) {
-    throw new ContentEngineError(
-      "localization cannot be combined with `publicApi` yet. A public read has to resolve a locale and decide what to do when a translation is missing, and locale-aware public routes land in Stage 5C.",
-      { contentTypeId: id },
-    );
-  }
-
   if (search) {
     throw new ContentEngineError(
       "localization cannot be combined with `search` yet. One document per record would index a single language and rank every other one as a miss; per-locale search documents land in Stage 5D.",
@@ -229,7 +221,6 @@ export const resolveContentLocalization = ({
   fields,
   id,
   localization,
-  publicApi,
   publication,
   search,
   tableName,
@@ -237,7 +228,6 @@ export const resolveContentLocalization = ({
   fields: ContentFieldMap;
   id: string;
   localization: ContentLocalizationConfig | undefined;
-  publicApi: ResolvedContentPublicApiConfig;
   publication: boolean;
   search: boolean;
   tableName: string;
@@ -256,7 +246,7 @@ export const resolveContentLocalization = ({
     return contentLocalizationDisabled();
   }
 
-  assertStageBoundaries(id, { publicApi: publicApi.enabled, search });
+  assertStageBoundaries(id, { search });
 
   const defaultLocale = assertDefaultLocale(id, localization.defaultLocale);
   assertLocalizedFields(id, fields, localizedFields);

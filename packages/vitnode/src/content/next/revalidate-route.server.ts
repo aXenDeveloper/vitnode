@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { z } from "zod";
 
 import { CONFIG } from "../../lib/config";
+import { CONTENT_LOCALE_MAX_LENGTH } from "../const";
 import {
   CONTENT_REVALIDATE_MAX_SKEW_MS,
   CONTENT_REVALIDATE_TIMESTAMP_HEADER,
@@ -13,6 +14,23 @@ const zodBody = z.object({
   contentTypeId: z.string().min(1),
   id: z.number().int().positive(),
   isPublic: z.boolean(),
+  /**
+   * The per-locale share of a localized mutation.
+   *
+   * Optional, so a Stage 1-4 body is accepted byte for byte and a web app that
+   * has not been redeployed keeps working. When present it is what
+   * `contentInvalidationTags` reads, and the flat fields above are ignored.
+   */
+  locales: z
+    .array(
+      z.object({
+        isPublic: z.boolean(),
+        locale: z.string().min(1).max(CONTENT_LOCALE_MAX_LENGTH),
+        slugs: z.array(z.string()),
+        wasPublic: z.boolean(),
+      }),
+    )
+    .optional(),
   mode: z.enum(["immediate", "stale-while-revalidate"]),
   slugs: z.array(z.string()),
   wasPublic: z.boolean(),

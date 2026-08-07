@@ -106,17 +106,39 @@ const payload = verifyContentPreviewToken({
 });
 ```
 
-## Stage 5B boundary
+## The routes
 
-`editorial.preview` requires `publicApi`, and `publicApi` is still refused
-alongside `localization` until Stage 5C - so **no locale preview link can be
-minted yet**. What Stage 5B lands is the token format above and the rules that
-make it safe: the locale binding, the two frozen revisions, the symmetric check
-and the tamper rejection, all covered by tests.
+```http
+POST /api/{pluginId}/admin/content/{module}/{id}/translations/{locale}/preview
+GET  /api/{pluginId}/content/{publicApi.path}/preview/{token}?locale={locale}
+```
 
-The route that mints one (`POST /{id}/translations/{locale}/preview`) and the
-public route that reads one arrive with the locale-aware public API in Stage 5C.
-Shipping the route now would ship a button that cannot be pressed.
+The mint route is behind `can_view`, exactly like the base one: a preview shows
+what the public route would show, so anyone allowed to read the record in the
+AdminCP is already allowed to see it. The link is the credential from there on.
+
+It freezes the record's newest **shared** revision and that locale's newest
+**translation** revision, and returns both ids alongside the link. A locale with
+no translation is a 404 rather than a link to the fallback - the button is on a
+language tab, and a link that quietly previewed a different language would be
+worse than no link.
+
+`?locale=` is a query parameter rather than a second placeholder in
+`editorial.preview.pathTemplate`, and that is deliberate: a new placeholder would
+have made every existing template wrong the day localization landed, and a locale
+that lived only in the path could not be honoured by the API form of the link at
+all. The reading side takes it through the same precedence every other public read
+uses, so a page passes it straight to `contentPreviewFetch`:
+
+```tsx title="src/app/[locale]/articles/preview/[token]/page.tsx"
+const { data } = await contentPreviewFetch({
+  definition: articleContentType,
+  locale: (await params).locale,
+  pluginId: "@vitnode/example",
+  token: (await params).token,
+});
+if (!data) notFound();
+```
 
 ## Related
 

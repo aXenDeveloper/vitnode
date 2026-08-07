@@ -38,15 +38,35 @@ export interface ContentPublicFetchResult<TData> {
  *
  * Only `200` responses are stored, so a 404 for a draft is never cached and
  * publishing it is visible immediately.
+ *
+ * ## Localized content types
+ *
+ * Pass `locale`. It does two things that have to happen together, which is why it
+ * is one argument rather than a query parameter you add yourself:
+ *
+ * 1. It goes to the API as `?locale=`, so the response is the one for that
+ *    language - explicitly, rather than through whatever `Accept-Language` the
+ *    server-side `fetch` happens to send (which is none).
+ * 2. It goes into the cache tags, so publishing a Polish translation expires the
+ *    Polish pages and leaves the English ones warm. Sharing one tag across
+ *    languages would make every publish a site-wide invalidation *and* let one
+ *    language's cached response be served under another's tag.
+ *
+ * Omitting it on a localized content type is not an error - the API falls back to
+ * the content type's default locale - but the response is then tagged as though it
+ * were locale-less, so a translation publish will not expire it. Pass it.
  */
 export const contentPublicFetch = async <TSchema extends z.ZodType>({
   definition,
+  locale,
   pluginId,
   query,
   schema,
   slug,
 }: {
   definition: PublicContentTypeDefinition;
+  /** The language to read, for a localized content type. */
+  locale?: string;
   pluginId: string;
   query?: Record<string, string | string[] | undefined>;
   schema?: TSchema;
@@ -56,8 +76,8 @@ export const contentPublicFetch = async <TSchema extends z.ZodType>({
   const contentTypeId = definition.id;
   const tags =
     slug === undefined
-      ? [contentPublicListTag(contentTypeId)]
-      : [contentPublicSlugTag(contentTypeId, slug)];
+      ? [contentPublicListTag(contentTypeId, locale)]
+      : [contentPublicSlugTag(contentTypeId, slug, locale)];
 
   const response = await rawApiFetch({
     method: "get",
@@ -75,7 +95,9 @@ export const contentPublicFetch = async <TSchema extends z.ZodType>({
     // path would turn its separators into `%2F`.
     path: slug === undefined ? "/" : `/${encodeURIComponent(slug)}`,
     pluginId,
-    query,
+    // Explicit, and last, so a caller cannot accidentally shadow it with a
+    // `locale` of its own in `query` and read one language under another's tag.
+    query: locale === undefined ? query : { ...query, locale },
   });
 
   if (!response.ok) return { status: response.status };
@@ -119,11 +141,22 @@ export const contentPublicFetch = async <TSchema extends z.ZodType>({
  */
 export const contentPreviewFetch = async <TSchema extends z.ZodType>({
   definition,
+  locale,
   pluginId,
   schema,
   token,
 }: {
   definition: PreviewableContentTypeDefinition;
+  /**
+   * The language the link previews, for a localized content type.
+   *
+   * It has to **match the token**, and the route refuses a mismatch in either
+   * direction rather than falling back - a preview whose language could shift
+   * under it is not a preview of anything. The mint route puts the right value in
+   * the link as `?locale=`, so a page usually reads it straight off its own
+   * `searchParams` and passes it through.
+   */
+  locale?: string;
   pluginId: string;
   schema?: TSchema;
   token: string;
@@ -134,6 +167,7 @@ export const contentPreviewFetch = async <TSchema extends z.ZodType>({
     options: { cache: "no-store" },
     path: `/preview/${encodeURIComponent(token)}`,
     pluginId,
+    query: locale === undefined ? undefined : { locale },
   });
 
   if (!response.ok) return { status: response.status };
@@ -150,8 +184,16 @@ export const contentPreviewFetch = async <TSchema extends z.ZodType>({
     : { status: response.status };
 };
 
-/** The tag a detail response keyed by identifier should carry. */
+/**
+ * The tag a detail response keyed by identifier should carry.
+ *
+ * `locale` for a localized content type, for the same reason
+ * {@link contentPublicFetch} takes one: the record has a page per language, and a
+ * tag that named only the record would make one language's publish expire them
+ * all.
+ */
 export const contentPublicItemTags = (
   definition: AnyContentTypeDefinition,
   id: number,
-): string[] => [contentPublicItemTag(definition.id, id)];
+  locale?: string,
+): string[] => [contentPublicItemTag(definition.id, id, locale)];

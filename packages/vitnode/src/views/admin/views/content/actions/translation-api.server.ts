@@ -20,6 +20,11 @@ import {
   parseContentUnprocessable,
 } from "@/content/conflicts";
 
+import {
+  invalidateContentLocales,
+  readContentPublicLocales,
+} from "./public-locale-cache";
+
 /**
  * The generic content screen ships from core, so its cached page path is the
  * catch-all route copied into every web app. Same constant the shared mutation
@@ -112,6 +117,44 @@ export interface TranslationRow {
   version: number;
 }
 
+/**
+ * The cache work one translation mutation owes, taken as a before-and-after pair.
+ *
+ * `changed: "translation"` narrows the fan-out to this locale - and, when the
+ * content type falls back to the default *and this is the default locale*, to
+ * every locale that has no translation of its own, because those are the pages
+ * built from the row that just moved. A Polish edit expires Polish pages and
+ * leaves the English cache warm.
+ *
+ * The snapshot is read on both sides rather than reasoned about, because whether
+ * a locale has a page depends on the base row, its own translation and the
+ * fallback - and that rule lives on the API, evaluated once.
+ */
+const withLocaleCache = async (
+  contentTypeId: string,
+  id: number,
+  locale: string,
+  mutate: () => Promise<TranslationMutationResult>,
+): Promise<TranslationMutationResult> => {
+  const { definition, pluginId } = resolve(contentTypeId);
+  const before = await readContentPublicLocales(definition, pluginId, id);
+
+  const result = await mutate();
+  if (result.error !== undefined || result.conflict || result.unprocessable) {
+    return result;
+  }
+
+  invalidateContentLocales(
+    definition,
+    id,
+    before,
+    await readContentPublicLocales(definition, pluginId, id),
+    { changed: "translation", locale },
+  );
+
+  return result;
+};
+
 /** One locale's presence and lifecycle, without its values. */
 export interface TranslationMeta {
   locale: string;
@@ -180,24 +223,25 @@ export const createContentTranslationAction = async (
   id: number,
   locale: string,
   values: Record<string, unknown>,
-): Promise<TranslationMutationResult> => {
-  const { definition, pluginId } = resolve(contentTypeId);
+): Promise<TranslationMutationResult> =>
+  await withLocaleCache(contentTypeId, id, locale, async () => {
+    const { definition, pluginId } = resolve(contentTypeId);
 
-  const result = await contentApiFetch({
-    body: { values },
-    definition,
-    method: "post",
-    path: `/${id}/translations/${segment(locale)}`,
-    pluginId,
-    schema: zodTranslation,
+    const result = await contentApiFetch({
+      body: { values },
+      definition,
+      method: "post",
+      path: `/${id}/translations/${segment(locale)}`,
+      pluginId,
+      schema: zodTranslation,
+    });
+
+    if (result.status !== 201) return failure(result);
+
+    revalidatePath(CONTENT_PAGE_PATH, "page");
+
+    return {};
   });
-
-  if (result.status !== 201) return failure(result);
-
-  revalidatePath(CONTENT_PAGE_PATH, "page");
-
-  return {};
-};
 
 export const editContentTranslationAction = async (
   contentTypeId: string,
@@ -205,48 +249,50 @@ export const editContentTranslationAction = async (
   locale: string,
   values: Record<string, unknown>,
   expectedVersion: number,
-): Promise<TranslationMutationResult> => {
-  const { definition, pluginId } = resolve(contentTypeId);
+): Promise<TranslationMutationResult> =>
+  await withLocaleCache(contentTypeId, id, locale, async () => {
+    const { definition, pluginId } = resolve(contentTypeId);
 
-  const result = await contentApiFetch({
-    body: { expectedVersion, values },
-    definition,
-    method: "put",
-    path: `/${id}/translations/${segment(locale)}`,
-    pluginId,
-    schema: zodTranslationResult,
+    const result = await contentApiFetch({
+      body: { expectedVersion, values },
+      definition,
+      method: "put",
+      path: `/${id}/translations/${segment(locale)}`,
+      pluginId,
+      schema: zodTranslationResult,
+    });
+
+    if (result.status !== 200) return failure(result);
+
+    revalidatePath(CONTENT_PAGE_PATH, "page");
+
+    return {};
   });
-
-  if (result.status !== 200) return failure(result);
-
-  revalidatePath(CONTENT_PAGE_PATH, "page");
-
-  return {};
-};
 
 export const deleteContentTranslationAction = async (
   contentTypeId: string,
   id: number,
   locale: string,
   expectedVersion: number,
-): Promise<TranslationMutationResult> => {
-  const { definition, pluginId } = resolve(contentTypeId);
+): Promise<TranslationMutationResult> =>
+  await withLocaleCache(contentTypeId, id, locale, async () => {
+    const { definition, pluginId } = resolve(contentTypeId);
 
-  const result = await contentApiFetch({
-    body: { expectedVersion },
-    definition,
-    method: "delete",
-    path: `/${id}/translations/${segment(locale)}`,
-    pluginId,
-    schema: zodTranslation,
+    const result = await contentApiFetch({
+      body: { expectedVersion },
+      definition,
+      method: "delete",
+      path: `/${id}/translations/${segment(locale)}`,
+      pluginId,
+      schema: zodTranslation,
+    });
+
+    if (result.status !== 200) return failure(result);
+
+    revalidatePath(CONTENT_PAGE_PATH, "page");
+
+    return {};
   });
-
-  if (result.status !== 200) return failure(result);
-
-  revalidatePath(CONTENT_PAGE_PATH, "page");
-
-  return {};
-};
 
 const transition = async (
   action: "publish" | "unpublish",
@@ -254,24 +300,25 @@ const transition = async (
   id: number,
   locale: string,
   expectedVersion: number,
-): Promise<TranslationMutationResult> => {
-  const { definition, pluginId } = resolve(contentTypeId);
+): Promise<TranslationMutationResult> =>
+  await withLocaleCache(contentTypeId, id, locale, async () => {
+    const { definition, pluginId } = resolve(contentTypeId);
 
-  const result = await contentApiFetch({
-    body: { expectedVersion },
-    definition,
-    method: "post",
-    path: `/${id}/translations/${segment(locale)}/${action}`,
-    pluginId,
-    schema: zodTranslationResult,
+    const result = await contentApiFetch({
+      body: { expectedVersion },
+      definition,
+      method: "post",
+      path: `/${id}/translations/${segment(locale)}/${action}`,
+      pluginId,
+      schema: zodTranslationResult,
+    });
+
+    if (result.status !== 200) return failure(result);
+
+    revalidatePath(CONTENT_PAGE_PATH, "page");
+
+    return {};
   });
-
-  if (result.status !== 200) return failure(result);
-
-  revalidatePath(CONTENT_PAGE_PATH, "page");
-
-  return {};
-};
 
 export const publishContentTranslationAction = async (
   contentTypeId: string,
@@ -360,21 +407,22 @@ export const restoreContentTranslationRevisionAction = async (
   locale: string,
   revisionId: number,
   expectedVersion: number,
-): Promise<TranslationMutationResult> => {
-  const { definition, pluginId } = resolve(contentTypeId);
+): Promise<TranslationMutationResult> =>
+  await withLocaleCache(contentTypeId, id, locale, async () => {
+    const { definition, pluginId } = resolve(contentTypeId);
 
-  const result = await contentApiFetch({
-    body: { expectedVersion },
-    definition,
-    method: "post",
-    path: `/${id}/translations/${segment(locale)}/revisions/${revisionId}/restore`,
-    pluginId,
-    schema: zodTranslationResult,
+    const result = await contentApiFetch({
+      body: { expectedVersion },
+      definition,
+      method: "post",
+      path: `/${id}/translations/${segment(locale)}/revisions/${revisionId}/restore`,
+      pluginId,
+      schema: zodTranslationResult,
+    });
+
+    if (result.status !== 200) return failure(result);
+
+    revalidatePath(CONTENT_PAGE_PATH, "page");
+
+    return {};
   });
-
-  if (result.status !== 200) return failure(result);
-
-  revalidatePath(CONTENT_PAGE_PATH, "page");
-
-  return {};
-};

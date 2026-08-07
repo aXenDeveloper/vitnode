@@ -2,15 +2,59 @@ import type { Context } from "hono";
 
 import { z } from "zod";
 
+import type { ContentLocaleInvalidation } from "../cache";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentEditorialOutcome } from "./editorial-service";
+import type { AnyContentModel } from "./model";
 
+import {
+  contentLocaleInvalidations,
+  diffContentPublicLocaleStates,
+} from "../cache";
 import { CONTENT_SCHEDULE_ACTIONS } from "../const";
 import { contentEditorialEffects } from "./editorial-effects";
 import { findContentModel } from "./model";
+import { contentPublicLocaleStates } from "./public-locales";
 import { dispatchContentRevalidation } from "./revalidate-bridge";
 import { recordContentScheduleEffectsError } from "./schedules-model";
 import { isContentRowPublic } from "./search-document";
+
+/**
+ * The per-locale cache work one scheduled transition owes.
+ *
+ * Taken as a before-and-after pair rather than reasoned about, because the two
+ * differ only in the *base* row's publication state and every locale's answer
+ * follows from that plus its own translation - which is exactly what
+ * `contentPublicLocaleStates` already computes. Synthesising the previous base
+ * state is safe here in a way it would not be generally: a publish or unpublish
+ * writes no field values, so nothing else about the row moved.
+ */
+const scheduledLocales = async (
+  c: Context,
+  model: AnyContentModel,
+  payload: ContentScheduleEffectsPayload,
+  row: Record<string, unknown>,
+): Promise<ContentLocaleInvalidation[]> => {
+  const after = await contentPublicLocaleStates(c, model, payload.itemId, {
+    row,
+  });
+  const before = await contentPublicLocaleStates(c, model, payload.itemId, {
+    row: {
+      ...row,
+      // `publishedAt` only has to be a past instant for the predicate; the real
+      // one is on the row when it was public, and irrelevant when it was not.
+      publishedAt: payload.wasPublic ? (row.publishedAt ?? new Date(0)) : null,
+      status: payload.wasPublic ? "published" : "draft",
+    },
+  });
+
+  return contentLocaleInvalidations({
+    changed: "shared",
+    defaultLocale: model.definition.localization.defaultLocale,
+    fallback: model.definition.localization.fallback,
+    states: diffContentPublicLocaleStates(before, after),
+  });
+};
 
 /**
  * Everything the announcements need, and nothing they have to re-read.
@@ -166,6 +210,13 @@ export const runContentScheduleEffects = async (
     contentTypeId: definition.id,
     id: payload.itemId,
     isPublic: isContentRowPublic(row),
+    // A scheduled transition moves the *record*, and the record's publication
+    // state gates every language - so every locale that had a page, or has one
+    // now, is expired. Absent for a content type that is not localized, which
+    // leaves the flat fields below as the whole input, exactly as before.
+    ...(definition.localization.enabled && definition.publicApi.enabled
+      ? { locales: await scheduledLocales(c, entry.model, payload, row) }
+      : {}),
     mode: "immediate",
     // Both, because a transition that moved the URL has to expire the one it
     // used to answer to as well.

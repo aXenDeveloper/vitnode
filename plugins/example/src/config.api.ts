@@ -5,6 +5,7 @@ import { adminModule } from "@/api/modules/admin/admin.module";
 import { CONFIG_PLUGIN } from "@/const";
 import { articleContent } from "@/database/articles";
 import { categoryContent } from "@/database/categories";
+import { localizedArticleContent } from "@/database/localized-articles";
 import "@/api/lib/events";
 
 /**
@@ -18,7 +19,9 @@ import "@/api/lib/events";
  * nothing, and it registers no content types of its own (that would be a
  * duplicate registration).
  *
- * Public routes land at `/api/@vitnode/example/content/articles/`.
+ * Public routes land at `/api/@vitnode/example/content/articles/` and, for the
+ * localized fixture, `/api/@vitnode/example/content/localized-articles/` - the
+ * same two shapes, with `?locale=` deciding which language they answer in.
  */
 export const exampleApiPlugin = () =>
   buildApiPlugin({
@@ -27,7 +30,11 @@ export const exampleApiPlugin = () =>
       adminModule,
       buildContentPublicModule({
         pluginId: CONFIG_PLUGIN.pluginId,
-        contentTypes: [articleContent, categoryContent],
+        contentTypes: [
+          articleContent,
+          categoryContent,
+          localizedArticleContent,
+        ],
       }),
     ],
   });

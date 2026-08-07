@@ -22,6 +22,7 @@ import type {
 
 import { ContentEngineError } from "../errors";
 import { createContentEditorialService } from "./editorial-service";
+import { createContentLocalizedPublicService } from "./localized-public-service";
 import { createContentLocalizedService } from "./localized-service";
 import { createContentPublicService } from "./public-service";
 import { createContentService } from "./service";
@@ -288,9 +289,22 @@ export const createContentModel = <
           });
         }
       : undefined,
+    // Two implementations behind one name, chosen by the definition rather than
+    // by the caller: a route builder is written against `AnyContentTypeDefinition`
+    // and has no way to know which it was handed, so the choice has to be made
+    // where the answer is a literal.
     publicService: definition.publicApi.enabled
       ? (c: Context) =>
-          createContentPublicService({ c, columns, definition, table })
+          localized && translationTable && translationColumns
+            ? createContentLocalizedPublicService({
+                c,
+                columns,
+                definition,
+                table,
+                translationColumns,
+                translationTable,
+              })
+            : createContentPublicService({ c, columns, definition, table })
       : undefined,
     schemas,
     service: (c: Context) =>

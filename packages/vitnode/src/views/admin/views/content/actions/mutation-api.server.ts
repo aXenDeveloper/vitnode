@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import type { ContentPublicLocaleState } from "@/content/cache";
 import type {
   ContentConflict,
   ContentScheduleRejection,
@@ -29,6 +30,11 @@ import {
 } from "@/content/conflicts";
 import { CONTENT_OPTIONS_LIMIT } from "@/content/const";
 import { revalidateContent } from "@/content/next/revalidate.server";
+
+import {
+  invalidateContentLocales,
+  readContentPublicLocales,
+} from "./public-locale-cache";
 
 /**
  * The generic content screen ships from core, so its cached page path is the
@@ -161,8 +167,22 @@ const invalidate = (
   id: number,
   before: ContentRow | undefined,
   after: ContentRow | undefined,
+  locales?: {
+    after: readonly ContentPublicLocaleState[];
+    before: readonly ContentPublicLocaleState[];
+  },
 ): void => {
   if (!definition.publicApi.enabled) return;
+
+  if (definition.localization.enabled) {
+    // Without a snapshot pair there is nothing honest to expire, and expiring
+    // tags that name pages which do not exist is worse than leaving them.
+    if (locales) {
+      invalidateContentLocales(definition, id, locales.before, locales.after);
+    }
+
+    return;
+  }
 
   const previous = publicStateOf(definition, before);
   const current = publicStateOf(definition, after);
@@ -197,9 +217,14 @@ export const createContentAction = async (
   if (result.status !== 201) return failure(result);
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
+  const created = result.data?.id ?? 0;
   // A new row starts as a draft, so this normally invalidates nothing at all -
-  // it is computed rather than assumed, so the rule holds if that changes.
-  invalidate(definition, result.data?.id ?? 0, undefined, result.data);
+  // it is computed rather than assumed, so the rule holds if that changes. The
+  // "before" side is empty because the record did not exist.
+  invalidate(definition, created, undefined, result.data, {
+    after: await readContentPublicLocales(definition, pluginId, created),
+    before: [],
+  });
 
   return {};
 };
@@ -218,6 +243,11 @@ export const editContentAction = async (
 
   // Before the write, so a slug change can invalidate the URL it replaced.
   const before = await readRow(definition, pluginId, id);
+  const localesBefore = await readContentPublicLocales(
+    definition,
+    pluginId,
+    id,
+  );
 
   const result = await contentApiFetch({
     body: definition.editorial.enabled ? { expectedVersion, values } : values,
@@ -231,7 +261,10 @@ export const editContentAction = async (
   if (result.status !== 200) return failure(result);
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
-  invalidate(definition, id, before, result.data);
+  invalidate(definition, id, before, result.data, {
+    after: await readContentPublicLocales(definition, pluginId, id),
+    before: localesBefore,
+  });
 
   return {};
 };
@@ -348,6 +381,11 @@ export const restoreContentRevisionAction = async (
   // Same as an edit: the old slug has to be known before the write, or a
   // restore that moves the URL leaves the previous one resolving.
   const before = await readRow(definition, pluginId, id);
+  const localesBefore = await readContentPublicLocales(
+    definition,
+    pluginId,
+    id,
+  );
 
   const result = await contentApiFetch({
     body: { expectedVersion },
@@ -363,7 +401,10 @@ export const restoreContentRevisionAction = async (
   revalidatePath(CONTENT_PAGE_PATH, "page");
   // A restore never moves `status`, so visibility is unchanged - but the slug
   // may have, and `invalidate` compares both rows to work out which.
-  invalidate(definition, id, before, result.data?.row);
+  invalidate(definition, id, before, result.data?.row, {
+    after: await readContentPublicLocales(definition, pluginId, id),
+    before: localesBefore,
+  });
 
   const version = result.data?.row.version;
 
@@ -521,6 +562,14 @@ export const deleteContentAction = async (
 ): Promise<MutationResult> => {
   const { definition, pluginId } = resolve(contentTypeId);
 
+  // Before the write, because afterwards there is no record left to ask which
+  // languages it had pages in.
+  const localesBefore = await readContentPublicLocales(
+    definition,
+    pluginId,
+    id,
+  );
+
   const result = await contentApiFetch({
     // A body on a `DELETE`, matching the route: the precondition travels with
     // the request that acts on it rather than in a query string that ends up in
@@ -537,7 +586,11 @@ export const deleteContentAction = async (
 
   revalidatePath(CONTENT_PAGE_PATH, "page");
 
-  if (definition.publicApi.enabled) {
+  // Every language loses its page at once, so the "after" side is empty rather
+  // than re-read - there is nothing left to read.
+  if (definition.localization.enabled) {
+    invalidateContentLocales(definition, id, localesBefore, []);
+  } else if (definition.publicApi.enabled) {
     // A delete is final, so the question is "was it ever published?" rather
     // than "was it live a second ago". `publishedAt` survives an unpublish, and
     // expiring a URL that is now gone forever costs nothing.
@@ -572,6 +625,14 @@ const publicationAction = async (
 ): Promise<MutationResult> => {
   const { definition, pluginId } = resolve(contentTypeId);
 
+  // Before the write, because a transition of the record moves every language
+  // it has a page in, and afterwards only the new side is readable.
+  const localesBefore = await readContentPublicLocales(
+    definition,
+    pluginId,
+    id,
+  );
+
   const result = await contentApiFetch({
     definition,
     method: "post",
@@ -586,7 +647,14 @@ const publicationAction = async (
 
   // A no-op transitioned nothing, so nothing public went stale. Expiring a tag
   // on every button press would throw away a warm cache for free.
-  if (result.data?.changed && definition.publicApi.enabled) {
+  if (result.data?.changed && definition.localization.enabled) {
+    invalidateContentLocales(
+      definition,
+      id,
+      localesBefore,
+      await readContentPublicLocales(definition, pluginId, id),
+    );
+  } else if (result.data?.changed && definition.publicApi.enabled) {
     const { isPublic, slug } = publicStateOf(definition, result.data.row);
 
     revalidateContent(

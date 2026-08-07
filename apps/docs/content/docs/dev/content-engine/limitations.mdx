@@ -52,22 +52,29 @@ whose *reading* half is not built yet:
 
 | Combination | Refused until |
 | --- | --- |
-| `localization` + `publicApi` | Stage 5C |
 | `localization` + `search` | Stage 5D |
 
-Each is a definition-time error naming the stage. A localized content type that
-silently ran Stage 1-4 logic against its base table while ignoring its localized
-fields would be worse than one that refuses to be declared.
+It is a definition-time error naming the stage. A localized content type that
+silently indexed one language while ranking every other one as a miss would be
+worse than one that refuses to be declared.
 
-Because preview projects through `publicApi.fields`, a **locale preview link
-cannot be minted** until Stage 5C either - the
-[token format](/docs/dev/content-engine/translation-preview) is in place and
-tested, but the routes that mint and read one are not.
+Stage 5C lifted the `publicApi` refusal, so
+[locale-aware public reads](/docs/dev/content-engine/localized-public-api),
+fallback resolution, strict-locale slugs, locale-aware cache tags and
+[locale preview links](/docs/dev/content-engine/translation-preview) all work now.
 
-Also outside Stage 5B: fallback resolution, locale-aware cache tags, per-locale
-search documents, an `Outdated` badge (its honest definition needs a comparison
-two timestamps cannot make), a locale selector on the AdminCP *list*, and
-locale-specific scheduling.
+Still outside Stage 5C: per-locale search documents, an `Outdated` badge (its
+honest definition needs a comparison two timestamps cannot make), a locale
+selector on the AdminCP *list*, and locale-specific scheduling.
+
+## A public list cannot be ordered by a localized field
+
+`publicApi.orderableFields` refuses one at definition time. A list ordered by a
+localized title would reshuffle itself for every language, and a fallback set
+would interleave two collations - so one cursor would mean two different
+positions depending on the language. Order by a column the record has one of.
+`filterableFields` and `searchableFields` *may* name a localized field: both are
+evaluated against the single translation the reader is being served.
 
 ## Localized field names cannot appear on base-table surfaces
 
@@ -79,7 +86,7 @@ six are compile errors and runtime errors.
 `admin.titleField` therefore falls back to `null` on a content type whose only
 text fields are localized. The locale tabs show the localized title inside each
 tab; the list still has no locale-aware title column, which arrives with the
-locale selector in Stage 5C.
+locale selector in Stage 5D.
 
 ## Foreign key names on a long translation table are truncated by Postgres
 

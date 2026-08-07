@@ -262,8 +262,9 @@ export const testLocalizedNoteContentType = defineContentType({
  * each locale gets its own version and its own history, and the base row keeps the
  * global lifecycle every translation's visibility is subordinate to.
  *
- * `publicApi` and `search` are still absent - both remain refused alongside
- * localization until Stage 5C and 5D respectively.
+ * `publicApi` and `search` are still absent - the first because
+ * `testLocalizedPageContentType` covers the public read layer, and the second
+ * because it remains refused alongside localization until Stage 5D.
  */
 export const testLocalizedGuideContentType = defineContentType({
   id: "test.localized-guide",
@@ -282,6 +283,82 @@ export const testLocalizedGuideContentType = defineContentType({
     label: {
       plural: "Test Localized Guides",
       singular: "Test Localized Guide",
+    },
+    list: { columns: ["featured", "status"] },
+  },
+});
+
+/**
+ * The Stage 5C fixture: localized **and** public.
+ *
+ * Everything the localized guide has, plus `publicApi` - so it exercises the
+ * things only a public localized content type can have: a locale-aware read, a
+ * strict-locale slug, a fallback, a per-locale cache tag and a preview link bound
+ * to one language.
+ *
+ * The allowlist deliberately mixes the two halves of the partition. `title`,
+ * `slug` and `body` come off the translation and `featured` off the base row, so
+ * a public response is a join rather than a projection - and `searchableFields`
+ * and `filterableFields` each name one of each, which is what proves both are
+ * evaluated against the translation actually being served.
+ */
+export const testLocalizedPageContentType = defineContentType({
+  id: "test.localized-page",
+  tableName: "test_localized_pages",
+  editorial: {
+    enabled: true,
+    preview: { enabled: true, expiresInMinutes: 30 },
+    revisions: { retention: 5 },
+  },
+  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  publication: { enabled: true },
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+    body: field.textarea({ localized: true, nullable: true }),
+    featured: field.boolean({ defaultValue: false }),
+  },
+  publicApi: {
+    enabled: true,
+    path: "localized-pages",
+    fields: ["title", "slug", "body", "featured", "publishedAt"],
+    searchableFields: ["title", "body"],
+    // Shared only, and that is the rule: a localized column is not on the base
+    // table, and a list ordered by one would reshuffle per language.
+    orderableFields: ["publishedAt"],
+    filterableFields: ["featured", "slug"],
+    defaultOrderBy: "publishedAt",
+    defaultOrder: "desc",
+  },
+  admin: {
+    label: { plural: "Test Localized Pages", singular: "Test Localized Page" },
+    list: { columns: ["featured", "status"] },
+  },
+});
+
+/** The same shape with `fallback: "none"`, for the refusal half of the rules. */
+export const testStrictLocalizedPageContentType = defineContentType({
+  id: "test.strict-localized-page",
+  tableName: "test_strict_localized_pages",
+  localization: { enabled: true, defaultLocale: "en", fallback: "none" },
+  publication: { enabled: true },
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+    featured: field.boolean({ defaultValue: false }),
+  },
+  publicApi: {
+    enabled: true,
+    path: "strict-localized-pages",
+    fields: ["title", "slug", "featured", "publishedAt"],
+    searchableFields: ["title"],
+    orderableFields: ["publishedAt"],
+    filterableFields: ["featured"],
+  },
+  admin: {
+    label: {
+      plural: "Test Strict Localized Pages",
+      singular: "Test Strict Localized Page",
     },
     list: { columns: ["featured", "status"] },
   },

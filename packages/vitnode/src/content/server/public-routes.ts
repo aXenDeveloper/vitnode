@@ -1,8 +1,13 @@
-import type { PgTableWithColumns, TableConfig } from "drizzle-orm/pg-core";
+import type {
+  PgColumn,
+  PgTable,
+  PgTableWithColumns,
+  TableConfig,
+} from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
 import { z } from "@hono/zod-openapi";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import type {
@@ -20,15 +25,24 @@ import {
   zodPaginationQuery,
 } from "../../api/lib/with-pagination";
 import { CONFIG, isSecureContentPreviewSecret } from "../../lib/config";
-import { CONTENT_PUBLIC_MAX_PAGE_SIZE } from "../const";
+import {
+  CONTENT_LOCALE_MAX_LENGTH,
+  CONTENT_PUBLIC_MAX_PAGE_SIZE,
+} from "../const";
 import { ContentEngineError } from "../errors";
+import { resolveContentPublicLocale } from "../locale";
+import { partitionContentFields } from "../localization";
 import { publicOrderableColumns } from "../registry";
+import { findContentLanguage, listContentLanguages } from "./language-resolver";
 import { verifyContentPreviewToken } from "./preview-token";
 import {
   contentPublicSelection,
   createContentPublicProjector,
 } from "./public-service";
-import { contentSnapshotRow } from "./revision-snapshot";
+import {
+  contentSnapshotRow,
+  projectTranslationRevisionSnapshot,
+} from "./revision-snapshot";
 
 /**
  * The read-only routes one public content type gets.
@@ -69,16 +83,28 @@ export const buildContentPublicRoutes = <
     return build(c);
   };
 
+  const localized = definition.localization.enabled;
+
   // `orderBy` is a literal enum, so a column outside the public allowlist is a
   // 400 at validation time and shows up in the OpenAPI document. The service
   // keeps its own allowlist check for callers that did not come through here.
   const orderable = publicOrderableColumns(definition) as [string, ...string[]];
+  const localeQuery = localized
+    ? {
+        // Loose on purpose, like `publicParams.slug`: an unknown locale and a
+        // malformed one are both the same 404, so a stricter pattern here would
+        // only turn one of them into a differently-shaped 400 that says more.
+        locale: z.string().min(1).max(CONTENT_LOCALE_MAX_LENGTH).optional(),
+      }
+    : {};
   const paginationQuery = zodPaginationQuery.extend({
+    ...localeQuery,
     order: z.enum(["asc", "desc"]).optional(),
     orderBy: z.enum(orderable).optional(),
     search: z.string().optional(),
   });
   const listQuery = paginationQuery.extend(schemas.publicFilters.shape);
+  const localeOnlyQuery = z.object(localeQuery);
 
   const notFound = () =>
     new HTTPException(404, {
@@ -87,11 +113,65 @@ export const buildContentPublicRoutes = <
 
   const project = createContentPublicProjector(definition);
 
+  /**
+   * Which language this request is for, or `null`.
+   *
+   * `null` is a 404, always. An explicit `?locale=xx` that names no language this
+   * install serves is a request for something that does not exist - substituting
+   * the default would answer a Polish URL with English content and then cache it
+   * under the Polish tag, which is the one failure locale-aware caching is here to
+   * prevent.
+   *
+   * A *negotiated* locale is a preference rather than an instruction, so an
+   * unmatched `Accept-Language` falls through to the default inside
+   * {@link resolveContentPublicLocale} and never reaches this as a `null`.
+   */
+  const localeFor = async (c: Context) => {
+    if (!localized) return { locale: undefined, source: "default" as const };
+
+    const languages = await listContentLanguages(c);
+
+    return resolveContentPublicLocale({
+      acceptLanguage: c.req.header("accept-language"),
+      // Only the locales this install actually serves. A disabled language is
+      // readable in the AdminCP and unreachable in public, which is the read-side
+      // half of the rule that already stops content being written into one.
+      available: languages
+        .filter(language => language.isEnabled)
+        .map(language => language.locale),
+      defaultLocale: definition.localization.defaultLocale,
+      explicit: c.req.query("locale"),
+    });
+  };
+
+  /**
+   * The response headers a localized read carries.
+   *
+   * `Content-Language` is the resolved locale, which with a fallback is not always
+   * the one that was asked for. `Vary: Accept-Language` is added only when the
+   * locale actually came from the header - a response chosen by an explicit
+   * `?locale=` is keyed by its URL, and varying on a header that did not decide
+   * anything would fragment every shared cache for nothing.
+   */
+  const localeHeaders = (
+    locale: string | undefined,
+    source: "default" | "explicit" | "negotiated",
+  ): Record<string, string> => {
+    if (locale === undefined) return {};
+
+    return {
+      "Content-Language": locale,
+      ...(source === "negotiated" ? { Vary: "Accept-Language" } : {}),
+    };
+  };
+
   // Widened, not cast: the generated table type carries every column as a
   // literal, which Drizzle's `.from()` overloads cannot resolve through a
   // generic. This is the same parameter type `createContentPublicService`
   // declares, so the assignment is checked rather than asserted.
   const table: PgTableWithColumns<TableConfig> = model.table;
+  /** The same widening, for the translation half of a localized preview. */
+  const translationTable: null | PgTable = model.translationTable;
 
   /**
    * The row a preview link points at.
@@ -138,6 +218,75 @@ export const buildContentPublicRoutes = <
     return row ?? null;
   };
 
+  /**
+   * The localized half of a preview: one language's field values.
+   *
+   * The language is resolved from the token's `l` - the locale **string** - and
+   * never from its `lid`. The id is carried so a reader that already trusts it can
+   * skip a lookup, but a signed token outlives the row it names: a language can be
+   * deleted and its id reused, and resolving the code through the registry is one
+   * query that cannot go stale in that direction.
+   *
+   * `tr === 0` reads live for the same reason `r === 0` does, and loses exactly
+   * the same guarantee: there is no translation revision to freeze.
+   */
+  const readPreviewTranslation = async (
+    c: Context,
+    payload: ContentPreviewTokenPayload,
+  ): Promise<null | Record<string, unknown>> => {
+    const locale = payload.l;
+    if (locale === undefined) return null;
+
+    const language = await findContentLanguage(c, locale);
+    if (!language) return null;
+
+    const translationColumns: null | Record<string, PgColumn> =
+      model.translationColumns;
+    if (!translationColumns || !translationTable) return null;
+
+    if (payload.tr && payload.tr > 0) {
+      const build = model.translationEditorialService;
+      if (!build) return null;
+
+      const revision = await build(c, { pluginId }).findRevision(
+        payload.i,
+        language.locale,
+        payload.tr,
+      );
+
+      // `projectTranslationRevisionSnapshot`, not the whole snapshot row: the
+      // localized *values* and nothing else. A translation snapshot also carries
+      // its own `createdAt`, `version` and publication state, and letting those
+      // through would overwrite the record's with the translation's.
+      return revision
+        ? projectTranslationRevisionSnapshot(definition, revision.snapshot)
+        : null;
+    }
+
+    const { localizedFields } = partitionContentFields(definition.fields);
+    const exposed = definition.publicApi.fields.filter(
+      name => localizedFields[name] !== undefined,
+    );
+
+    const [row] = await c
+      .get("db")
+      .select(
+        Object.fromEntries(
+          exposed.map(name => [name, translationColumns[name]]),
+        ),
+      )
+      .from(translationTable)
+      .where(
+        and(
+          eq(translationColumns.itemId, payload.i),
+          eq(translationColumns.languageId, language.id),
+        ),
+      )
+      .limit(1);
+
+    return row ?? null;
+  };
+
   const list = buildRoute({
     pluginId,
     route: {
@@ -172,8 +321,15 @@ export const buildContentPublicRoutes = <
         raw,
       ) as ContentPublicFilterInput<TDefinition>;
 
+      // An explicit locale naming no language this install serves is the same
+      // 404 the detail route answers, not an empty list: an empty list would say
+      // "this language has no articles", which is a different and untrue thing.
+      const resolved = await localeFor(c);
+      if (!resolved) throw notFound();
+
       const data = await service(c).findMany({
         filters,
+        locale: resolved.locale,
         // Both narrowings restate what the schemas just proved: `orderBy` came
         // out of a literal enum built from `publicApi.orderableFields`, and
         // `filters` out of a shape built from `publicApi.filterableFields`. The
@@ -185,7 +341,7 @@ export const buildContentPublicRoutes = <
         query: { cursor, first, last, search },
       });
 
-      return c.json(data, 200);
+      return c.json(data, 200, localeHeaders(resolved.locale, resolved.source));
     },
   });
 
@@ -208,6 +364,11 @@ export const buildContentPublicRoutes = <
    * - **Nothing caches it.** `private, no-store` keeps it out of shared caches
    *   and `noindex, nofollow` keeps it out of search results, in case a link is
    *   pasted somewhere public.
+   * - **A localized preview is bound to its language.** The locale this request
+   *   resolved to is handed to `verifyContentPreviewToken`, which compares it with
+   *   the token's own and refuses a mismatch in either direction. A `pl` link
+   *   opened on the English URL is the same 404 as a forged one - falling back
+   *   would hand a reviewer a different language from the one they were sent.
    */
   const preview = buildRoute({
     pluginId,
@@ -217,7 +378,10 @@ export const buildContentPublicRoutes = <
       // literally "preview" still resolves the ordinary way.
       path: "/preview/{token}",
       description: `Read one ${label.singular} from a signed preview link`,
-      request: { params: z.object({ token: z.string() }) },
+      request: {
+        params: z.object({ token: z.string() }),
+        ...(localized ? { query: localeOnlyQuery } : {}),
+      },
       responses: {
         200: {
           content: {
@@ -239,8 +403,12 @@ export const buildContentPublicRoutes = <
       // not something an anonymous request needs to learn.
       if (!isSecureContentPreviewSecret(secret)) throw notFound();
 
+      const resolved = await localeFor(c);
+      if (!resolved) throw notFound();
+
       const payload = verifyContentPreviewToken({
         definition,
+        locale: resolved.locale,
         pluginId,
         secret,
         token: c.req.param("token"),
@@ -250,10 +418,26 @@ export const buildContentPublicRoutes = <
       const row = await readPreviewRow(c, payload);
       if (!row) throw notFound();
 
-      return c.json(project(row), 200, {
-        "Cache-Control": "private, no-store",
-        "X-Robots-Tag": "noindex, nofollow",
-      });
+      // Both halves, or nothing. A localized preview promises the page as it
+      // stood, and a page is a record plus a translation - serving the shared
+      // half with the localized fields missing would be a different page.
+      const translated = localized
+        ? await readPreviewTranslation(c, payload)
+        : null;
+      if (localized && !translated) throw notFound();
+
+      return c.json(
+        {
+          ...project({ ...row, ...translated }),
+          ...(localized ? { locale: resolved.locale } : {}),
+        },
+        200,
+        {
+          "Cache-Control": "private, no-store",
+          "X-Robots-Tag": "noindex, nofollow",
+          ...localeHeaders(resolved.locale, resolved.source),
+        },
+      );
     },
   });
 
@@ -263,7 +447,10 @@ export const buildContentPublicRoutes = <
       method: "get",
       path: "/{slug}",
       description: `Get one published ${label.singular} by slug`,
-      request: { params: schemas.publicParams },
+      request: {
+        params: schemas.publicParams,
+        ...(localized ? { query: localeOnlyQuery } : {}),
+      },
       responses: {
         200: {
           content: {
@@ -275,13 +462,22 @@ export const buildContentPublicRoutes = <
       },
     },
     handler: async c => {
-      // A draft, an unpublished row, a cleared publication date and a typo are
-      // all the same 404. A 403 would confirm the record exists, which is the
-      // one thing a draft URL must not do.
-      const row = await service(c).findBySlug(c.req.param("slug"));
+      const resolved = await localeFor(c);
+      if (!resolved) throw notFound();
+
+      // A draft, an unpublished row, a cleared publication date, a translation
+      // that is not published in this language and a typo are all the same 404.
+      // A 403 would confirm the record exists, which is the one thing a draft
+      // URL must not do - and so would a 404 that only some of them produced.
+      //
+      // Strict-locale by construction: `findBySlug` does not fall back, so this
+      // never answers a Polish URL with the English article.
+      const row = await service(c).findBySlug(c.req.param("slug"), {
+        locale: resolved.locale,
+      });
       if (!row) throw notFound();
 
-      return c.json(row, 200);
+      return c.json(row, 200, localeHeaders(resolved.locale, resolved.source));
     },
   });
 

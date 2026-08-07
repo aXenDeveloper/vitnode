@@ -344,3 +344,115 @@ describe("publicApi", () => {
     });
   });
 });
+
+describe("publicApi on a localized content type", () => {
+  const localized = (publicApi: Record<string, unknown>) =>
+    defineContentType({
+      id: "test.public-localized",
+      tableName: "test_public_localized",
+      localization: { defaultLocale: "en", enabled: true },
+      publication: { enabled: true },
+      fields: {
+        title: field.text({ localized: true, required: true }),
+        slug: field.slug({ localized: true, source: "title" }),
+        featured: field.boolean({ defaultValue: false }),
+      },
+      admin: { label: { plural: "Localized", singular: "Localized" } },
+      publicApi,
+    } as never);
+
+  it("exposes a localized field alongside a shared one", () => {
+    const definition = localized({
+      enabled: true,
+      fields: ["title", "slug", "featured"],
+      path: "localized",
+    });
+
+    // A public localized response is a base row joined to a translation, so
+    // where a value is stored is a fact about the query, not the response.
+    expect(Object.keys(definition.schemas.publicSelectObject.shape)).toContain(
+      "title",
+    );
+  });
+
+  it("refuses a localized field in `orderableFields`", () => {
+    // A list ordered by a localized title reshuffles per language, and one
+    // cursor would mean two positions across a fallback set.
+    expect(() =>
+      localized({
+        enabled: true,
+        fields: ["title", "slug"],
+        orderableFields: ["title"],
+        path: "localized",
+      }),
+    ).toThrow(/localized field "title"/);
+  });
+
+  it("allows a localized field in `filterableFields`", () => {
+    const definition = localized({
+      enabled: true,
+      fields: ["title", "slug"],
+      filterableFields: ["slug"],
+      path: "localized",
+    });
+
+    expect(Object.keys(definition.schemas.publicFilters.shape)).toEqual([
+      "slug",
+    ]);
+  });
+
+  it("allows a localized field in `searchableFields`", () => {
+    expect(
+      localized({
+        enabled: true,
+        fields: ["title", "slug"],
+        path: "localized",
+        searchableFields: ["title"],
+      }).publicApi.searchableFields,
+    ).toEqual(["title"]);
+  });
+
+  it("reserves `locale`, which the response already carries", () => {
+    expect(() =>
+      defineContentType({
+        id: "test.public-locale-clash",
+        tableName: "test_public_locale_clash",
+        localization: { defaultLocale: "en", enabled: true },
+        publication: { enabled: true },
+        fields: {
+          title: field.text({ localized: true, required: true }),
+          slug: field.slug({ localized: true, source: "title" }),
+          locale: field.text({ nullable: true }),
+        },
+        admin: { label: { plural: "Clash", singular: "Clash" } },
+        publicApi: {
+          enabled: true,
+          fields: ["title", "slug", "locale"],
+          path: "clash",
+        },
+      } as never),
+    ).toThrow(/reserves/);
+  });
+
+  it("leaves a field called `locale` alone when nothing is localized", () => {
+    // The reservation is a consequence of localization, not a global rename.
+    expect(
+      () =>
+        defineContentType({
+          id: "test.public-locale-plain",
+          tableName: "test_public_locale_plain",
+          publication: { enabled: true },
+          fields: {
+            slug: field.slug({}),
+            locale: field.text({ nullable: true }),
+          },
+          admin: { label: { plural: "Plain", singular: "Plain" } },
+          publicApi: {
+            enabled: true,
+            fields: ["slug", "locale"],
+            path: "plain",
+          },
+        } as never).publicApi.fields,
+    ).not.toThrow();
+  });
+});

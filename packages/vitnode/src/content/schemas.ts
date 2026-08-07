@@ -334,12 +334,21 @@ const publicRelationSchema = (): z.ZodObject<z.ZodRawShape> =>
  * This is also what the public service's `SELECT` map is derived from, so a
  * field missing here is a field that never leaves Postgres - not one that is
  * fetched and then deleted.
+ *
+ * Takes **every** declared field, shared and localized alike: a public localized
+ * response is one base row joined to one translation, so where a value is stored
+ * is a fact about the query rather than about the response.
  */
 const publicSelectShape = (
   fields: ContentFieldMap,
   publicApi: ResolvedContentPublicApiConfig,
-): z.ZodRawShape =>
-  Object.fromEntries(
+  localization: ResolvedContentLocalizationConfig,
+): z.ZodRawShape => ({
+  // The language actually served, which with a fallback is not always the one
+  // that was asked for. `defineContentType` reserves the name on a localized
+  // content type, so this cannot shadow a declared field.
+  ...(localization.enabled ? { locale: z.string() } : {}),
+  ...Object.fromEntries(
     publicApi.fields.map(name => {
       if (name === "id") return [name, z.number()];
       if (name === "createdAt" || name === "updatedAt") return [name, z.date()];
@@ -354,7 +363,8 @@ const publicSelectShape = (
 
       return [name, applyNullable(baseSelectSchema(fieldValue), fieldValue)];
     }),
-  );
+  ),
+});
 
 /**
  * Takes only the pieces it needs rather than a whole definition, so
@@ -530,15 +540,21 @@ export const buildContentSchemas = <TDefinition>({
   const selectObject = z.object(selectShape);
 
   const publicSelectObject = z.object(
-    publicSelectShape(sharedFields, publicApi),
+    publicSelectShape(fields, publicApi, localization),
   );
   const publicFilterable = new Set(publicApi.filterableFields);
   // Derived from the same `filterShape`, then narrowed to the configured
   // allowlist - so a public filter can never reach a field the admin filter
   // schema would not have accepted either.
+  //
+  // Over **every** field rather than the shared half: a localized field can be
+  // filtered on publicly, because the localized public service evaluates that
+  // filter against the one translation the reader is actually being served. The
+  // admin filter schema below stays shared-only, since an admin list is a query
+  // over the base table.
   const publicFilters = z.object(
     Object.fromEntries(
-      Object.entries(filterShape(sharedFields)).filter(([name]) =>
+      Object.entries(filterShape(fields)).filter(([name]) =>
         publicFilterable.has(name),
       ),
     ),

@@ -26,6 +26,7 @@
     "translation-editorial",
     "translation-revisions",
     "translation-preview",
+    "localized-public-api",
     "localization-migrations",
     "admincp",
     "permissions",

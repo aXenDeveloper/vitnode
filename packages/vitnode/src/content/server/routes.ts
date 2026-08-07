@@ -16,7 +16,6 @@ import {
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "../../api/lib/with-pagination";
-import { CONFIG } from "../../lib/config";
 import {
   zodContentConflict,
   zodContentScheduleRejection,
@@ -26,7 +25,6 @@ import {
   CONTENT_ACTOR_TYPES,
   CONTENT_OPTIONS_LIMIT,
   CONTENT_PERMISSIONS,
-  CONTENT_PREVIEW_TOKEN_PLACEHOLDER,
   CONTENT_REVISION_OPERATIONS,
   CONTENT_SCHEDULE_ACTIONS,
   CONTENT_SCHEDULE_STATUSES,
@@ -36,7 +34,11 @@ import { resolveContentActor } from "./actor";
 import { contentEditorialEffects } from "./editorial-effects";
 import { emitContentEvent } from "./emit";
 import { withHttpErrors } from "./http-errors";
-import { contentPreviewConfigProblems } from "./preview-config";
+import {
+  assertContentPreviewIsServable,
+  contentPreviewSecret,
+  contentPreviewUrl,
+} from "./preview-link";
 import { createContentPreviewToken } from "./preview-token";
 import { publicationMethods } from "./publication";
 import { CONTENT_REVISIONS_MAX_PAGE_SIZE } from "./revisions-model";
@@ -161,62 +163,10 @@ export const buildContentRoutes = <
 
   const previewEnabled = definition.editorial.preview.enabled;
 
-  /**
-   * The secret from the boot config, falling back to the env getter.
-   *
-   * The fallback matters for a direct `app.request()` in a test, which does not
-   * go through the global middleware that populates `core`.
-   */
-  const previewSecret = (c: Context): string =>
-    c.get("core")?.contentPreviewSecret ?? CONFIG.contentPreviewSecret;
-
-  /**
-   * Where the link points, as something a person can paste into a browser.
-   *
-   * Absolute in both branches, and against **different origins**, because they
-   * are served by different processes: a `pathTemplate` names a page in the web
-   * app, and the generated JSON endpoint lives on the API. Assuming those share
-   * a host is exactly the assumption a split deployment breaks, and a relative
-   * path would resolve against whichever one the AdminCP happened to be on.
-   *
-   * `split`/`join` rather than `String.replace`, so a `$` in the encoded token
-   * cannot be read as a replacement pattern. `defineContentType` has already
-   * proven the template holds exactly one `{token}`.
-   */
-  const previewUrl = (token: string): string => {
-    const encoded = encodeURIComponent(token);
-    const template = definition.editorial.preview.pathTemplate;
-
-    return template
-      ? new URL(
-          template.split(CONTENT_PREVIEW_TOKEN_PLACEHOLDER).join(encoded),
-          CONFIG.web,
-        ).toString()
-      : new URL(
-          `/api/${pluginId}/content/${definition.publicApi.path}/preview/${encoded}`,
-          CONFIG.api,
-        ).toString();
-  };
-
-  /**
-   * Refuses to mint a link the install cannot protect.
-   *
-   * 503 rather than 500: the request was fine and the code is fine, the
-   * deployment is missing a secret - and a service that is temporarily not
-   * offering a feature is what 503 means. The message names the environment
-   * variable, because the person clicking the button is usually the person who
-   * can set it.
-   */
-  const assertPreviewIsServable = (c: Context): void => {
-    const problems = contentPreviewConfigProblems(
-      c.get("core")?.contentPreviewSecret ?? process.env.CONTENT_PREVIEW_SECRET,
-    );
-    if (problems.length === 0) return;
-
-    throw new HTTPException(503, {
-      message: `Preview is unavailable: ${problems.join(" ")}`,
-    });
-  };
+  const previewSecret = contentPreviewSecret;
+  const previewUrl = (token: string): string =>
+    contentPreviewUrl({ definition, pluginId, token });
+  const assertPreviewIsServable = assertContentPreviewIsServable;
 
   const list = buildRoute({
     pluginId,

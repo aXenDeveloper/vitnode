@@ -282,6 +282,17 @@ flag that would add one.
 must not surface through a result snippet, a highlighted match or an exact-match
 probe either.
 
+## Localized content types
+
+A [localized](/docs/dev/content-engine/localization) content type gets the same two
+routes plus a `locale` query parameter, and the response carries the language it
+resolved to. Everything on this page still applies - the allowlist, the published
+predicate, the 404-for-everything rule - with one addition and one restriction:
+`filterableFields` and `searchableFields` may name a localized field, and
+`orderableFields` may not.
+
+See [Localized public API](/docs/dev/content-engine/localized-public-api).
+
 ## What this is not
 
 No public writes, ever - under any configuration, including

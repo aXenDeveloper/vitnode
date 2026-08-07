@@ -11,6 +11,7 @@ import {
 } from "@vitnode/core/content";
 import {
   claimContentSchedule,
+  contentPublicLocaleStates,
   createContentSearchIndexer,
   settleContentSchedule,
   syncContentSearch,
@@ -3289,6 +3290,340 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
             expectedVersion: 1,
           }),
         ).rejects.toThrow(/version 2, not 1/);
+      });
+    });
+
+    /**
+     * The Stage 5C public read, against a real database.
+     *
+     * The interesting behaviour is entirely in the SQL: subordination is two
+     * `published` predicates on two tables, the fallback is which translation the
+     * join resolves to, and a strict-locale slug is the absence of a second arm.
+     * A mock asked whether the right translation was joined can only agree with
+     * itself.
+     */
+    describe("public reads", () => {
+      const publicService = (handle = context) => {
+        const build = localizedArticleContent.publicService;
+        if (!build) throw new Error("Expected a public service.");
+
+        return build(handle);
+      };
+
+      const editorial = (handle = context) => {
+        const build = localizedArticleContent.translationEditorialService;
+        if (!build)
+          throw new Error("Expected a translation editorial service.");
+
+        return build(handle, { pluginId: CONFIG_PLUGIN.pluginId });
+      };
+
+      /**
+       * A record published globally, with an English translation and - when asked
+       * - a Polish one, each published or left as a draft.
+       */
+      const seed = async ({
+        featured = false,
+        pl,
+        title,
+      }: {
+        featured?: boolean;
+        pl?: { published: boolean; title: string };
+        title: string;
+      }) => {
+        const { row } = await localizedService().create({
+          shared: { featured },
+          translation: { body: `Body of ${title}`, title },
+        });
+
+        await articlePublish(row.id);
+        await editorial().publish(row.id, "en", { actor: ACTOR });
+
+        if (pl) {
+          await translations().create(row.id, "pl", {
+            body: `Tresc ${pl.title}`,
+            title: pl.title,
+          });
+          if (pl.published) {
+            await editorial().publish(row.id, "pl", { actor: ACTOR });
+          }
+        }
+
+        return row.id;
+      };
+
+      /** Publishes the *record*, which every translation is subordinate to. */
+      const articlePublish = async (itemId: number) => {
+        await sql`
+          UPDATE "example_localized_articles"
+          SET "status" = 'published', "publishedAt" = now()
+          WHERE "id" = ${itemId}
+        `;
+      };
+
+      it("serves the requested language", async () => {
+        const itemId = await seed({
+          pl: { published: true, title: "Witaj" },
+          title: "Hello",
+        });
+
+        const row = await publicService().findById(itemId, { locale: "pl" });
+
+        expect(row).toMatchObject({ locale: "pl", title: "Witaj" });
+      });
+
+      it("mixes shared and localized columns in one row", async () => {
+        const itemId = await seed({ featured: true, title: "Mixed" });
+
+        // A public localized response is a base row joined to a translation.
+        expect(
+          await publicService().findById(itemId, { locale: "en" }),
+        ).toMatchObject({ featured: true, title: "Mixed" });
+      });
+
+      it("falls back to the default language and says so", async () => {
+        const itemId = await seed({ title: "Only English" });
+
+        const row = await publicService().findById(itemId, { locale: "pl" });
+
+        // Served, and honest about which language it is - which is what a
+        // language switcher and `hreflang` need.
+        expect(row).toMatchObject({ locale: "en", title: "Only English" });
+      });
+
+      it("never falls back to a draft translation", async () => {
+        const itemId = await seed({
+          pl: { published: false, title: "Szkic" },
+          title: "Published English",
+        });
+
+        // The fallback picks *which* translation the predicate runs against; it
+        // never relaxes the predicate.
+        expect(
+          await publicService().findById(itemId, { locale: "pl" }),
+        ).toMatchObject({ locale: "en" });
+      });
+
+      it("hides every language while the record itself is a draft", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body", title: "Unpublished Record" },
+        });
+        await editorial().publish(row.id, "en", { actor: ACTOR });
+
+        // Subordination: publishing the English copy of a draft article puts
+        // nothing on the internet.
+        expect(
+          await publicService().findById(row.id, { locale: "en" }),
+        ).toBeNull();
+      });
+
+      it("resolves a slug strictly in its own language", async () => {
+        await seed({
+          pl: { published: true, title: "Witaj Swiecie" },
+          title: "Hello World",
+        });
+        const polish = await publicService().findBySlug("witaj-swiecie", {
+          locale: "pl",
+        });
+
+        expect(polish).toMatchObject({ locale: "pl", title: "Witaj Swiecie" });
+        // The same slug on the English URL is a 404 rather than the Polish
+        // article: a URL belongs to a language.
+        expect(
+          await publicService().findBySlug("witaj-swiecie", { locale: "en" }),
+        ).toBeNull();
+      });
+
+      it("does not fall back on a slug lookup", async () => {
+        await seed({ title: "Fallback Slug" });
+
+        // The English article is reachable in Polish through the fallback, but
+        // its English URL is not a Polish URL.
+        expect(
+          await publicService().findBySlug("fallback-slug", { locale: "pl" }),
+        ).toBeNull();
+      });
+
+      it("lists one row per record, in the requested language", async () => {
+        await seed({ pl: { published: true, title: "Jeden" }, title: "One" });
+        await seed({ title: "Two" });
+
+        const { edges } = await publicService().findMany({ locale: "pl" });
+
+        // Two records, not three rows: the join resolves one translation each.
+        expect(edges.map(edge => edge.title).sort()).toEqual(["Jeden", "Two"]);
+      });
+
+      it("counts the same rows it returns", async () => {
+        await seed({ title: "Counted One" });
+        await seed({ title: "Counted Two" });
+
+        const { pageInfo } = await publicService().findMany({ locale: "en" });
+
+        // The `EXISTS` in the `WHERE` is what makes the paginator's `COUNT`
+        // agree with the joined read.
+        expect(pageInfo.totalCount).toBe(2);
+      });
+
+      it("omits a record with no published translation at all", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body", title: "Draft Everywhere" },
+        });
+        await articlePublish(row.id);
+
+        expect(
+          (await publicService().findMany({ locale: "en" })).edges,
+        ).toEqual([]);
+      });
+
+      it("filters on a localized field against the served translation", async () => {
+        await seed({
+          pl: { published: true, title: "Filtr" },
+          title: "Filter",
+        });
+
+        const matched = await publicService().findMany({
+          filters: { slug: "filtr" },
+          locale: "pl",
+        });
+        const crossed = await publicService().findMany({
+          filters: { slug: "filtr" },
+          locale: "en",
+        });
+
+        expect(matched.edges.map(edge => edge.title)).toEqual(["Filtr"]);
+        // The English read is served the English translation, whose slug is
+        // `filter` - so a filter can never match a language nobody will see.
+        expect(crossed.edges).toEqual([]);
+      });
+
+      it("searches a localized field against the served translation", async () => {
+        await seed({
+          pl: { published: true, title: "Wyszukiwanie" },
+          title: "Searching",
+        });
+
+        const polish = await publicService().findMany({
+          locale: "pl",
+          query: { search: "Wyszuk" },
+        });
+        const english = await publicService().findMany({
+          locale: "en",
+          query: { search: "Wyszuk" },
+        });
+
+        expect(polish.edges).toHaveLength(1);
+        expect(english.edges).toEqual([]);
+      });
+
+      it("filters on a shared field alongside a localized one", async () => {
+        await seed({ featured: true, title: "Featured One" });
+        await seed({ featured: false, title: "Plain One" });
+
+        const { edges } = await publicService().findMany({
+          filters: { featured: true },
+          locale: "en",
+        });
+
+        expect(edges.map(edge => edge.title)).toEqual(["Featured One"]);
+      });
+
+      it("returns nothing at all for a locale the install does not serve", async () => {
+        await seed({ title: "Unknown Locale" });
+
+        // Not a throw, and not a substitution: the route turns this into the
+        // same 404 a missing record gets.
+        expect(await publicService().findMany({ locale: "fr" })).toMatchObject({
+          edges: [],
+        });
+      });
+
+      it("returns nothing for a locale the app has switched off", async () => {
+        const itemId = await seed({ title: "Disabled Locale" });
+
+        // `de` exists in `core_languages` and is `enabled: false` in the app
+        // config: readable in the AdminCP, unreachable in public.
+        expect(
+          await publicService().findById(itemId, { locale: "de" }),
+        ).toBeNull();
+      });
+
+      it("exposes only the allowlisted columns", async () => {
+        const itemId = await seed({ title: "Allowlist" });
+
+        const row = await publicService().findById(itemId, { locale: "en" });
+
+        expect(Object.keys(row ?? {}).sort()).toEqual([
+          "body",
+          "featured",
+          "locale",
+          "publishedAt",
+          "slug",
+          "title",
+        ]);
+      });
+
+      it("hides a language again when its translation is unpublished", async () => {
+        const itemId = await seed({
+          pl: { published: true, title: "Znika" },
+          title: "Disappears",
+        });
+
+        await editorial().unpublish(itemId, "pl", { actor: ACTOR });
+
+        // Back to the fallback, not to a 404: the record is still public in
+        // English, and Polish has no translation of its own any more.
+        expect(
+          await publicService().findById(itemId, { locale: "pl" }),
+        ).toMatchObject({ locale: "en" });
+      });
+    });
+
+    /** Which languages a record is publicly reachable in, evaluated in SQL. */
+    describe("public locale states", () => {
+      const editorial = (handle = context) => {
+        const build = localizedArticleContent.translationEditorialService;
+        if (!build)
+          throw new Error("Expected a translation editorial service.");
+
+        return build(handle, { pluginId: CONFIG_PLUGIN.pluginId });
+      };
+
+      it("reports the fallback consumers as public but not their own", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body", title: "Locale States" },
+        });
+        await sql`
+          UPDATE "example_localized_articles"
+          SET "status" = 'published', "publishedAt" = now()
+          WHERE "id" = ${row.id}
+        `;
+        await editorial().publish(row.id, "en", { actor: ACTOR });
+
+        const states = await contentPublicLocaleStates(
+          context,
+          localizedArticleContent,
+          row.id,
+        );
+
+        // `de` is disabled in this app's config, so it is not reported at all.
+        expect(states).toEqual([
+          {
+            hasOwnTranslation: true,
+            isPublic: true,
+            locale: "en",
+            slug: "locale-states",
+          },
+          {
+            hasOwnTranslation: false,
+            isPublic: true,
+            locale: "pl",
+            slug: "locale-states",
+          },
+        ]);
       });
     });
   });

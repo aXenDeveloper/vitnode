@@ -11,11 +11,12 @@ import { defineContentType, field } from "@vitnode/core/content";
  * history, and a unique `(languageId, slug)` index so `/en/hello` and `/pl/hello`
  * can both exist while a second English `hello` is a 409.
  *
- * `publicApi` and `search` are still absent: both remain refused alongside
- * `localization` until Stage 5C and Stage 5D respectively - see the boundaries in
- * `resolveContentLocalization`. So this fixture exercises the tables, the schemas,
- * the services, the per-locale lifecycle, the per-locale history and the generated
- * routes, and nothing that reads outwards.
+ From Stage 5C it is public as well: `publicApi` exposes the localized `title`,
+ * `slug` and `body` alongside the shared `featured`, and a public read resolves one
+ * language - explicitly, negotiated or the default - with `fallback: "default"`
+ * serving English to a locale that has no translation of its own. `search` is the
+ * one thing still refused alongside `localization`; per-locale search documents
+ * land in Stage 5D.
  */
 export const localizedArticleContentType = defineContentType({
   id: "example.localized-article",
@@ -27,8 +28,10 @@ export const localizedArticleContentType = defineContentType({
     // process. The Postgres suite inserts it (and `pl`) itself - nothing seeds
     // languages, they are created by the installer.
     defaultLocale: "en",
-    // Resolved here, acted on in Stage 5C. `"default"` so the fixture carries the
-    // interesting value rather than the inert one.
+    // Acted on by the public read layer from Stage 5C. `"default"` so the
+    // fixture carries the interesting value rather than the inert one: a locale
+    // with no published translation is served the English copy, and says so in
+    // the `locale` field of the response.
     fallback: "default",
   },
 
@@ -36,9 +39,36 @@ export const localizedArticleContentType = defineContentType({
   // publishing the English copy of a draft article puts nothing on the internet.
   publication: { enabled: true },
 
+  /**
+   * The public read layer, over both halves of the partition.
+   *
+   * `orderableFields` names shared columns only, and that is a rule rather than
+   * an oversight: a list ordered by a localized title would reshuffle itself for
+   * every language, and a cursor would mean two different positions across a
+   * fallback set. `searchableFields` and `filterableFields` *may* name localized
+   * fields - both are evaluated against the one translation the reader is being
+   * served, so they can never match a language nobody will see.
+   */
+  publicApi: {
+    enabled: true,
+    path: "localized-articles",
+    fields: ["title", "slug", "body", "featured", "publishedAt"],
+    searchableFields: ["title", "body"],
+    orderableFields: ["publishedAt"],
+    filterableFields: ["featured", "slug"],
+    defaultOrderBy: "publishedAt",
+    defaultOrder: "desc",
+  },
+
   // Per-locale versions, per-locale revisions, per-locale restore. `retention` is
   // per language, so five Polish revisions do not evict the English ones.
-  editorial: { enabled: true, revisions: { retention: 20 } },
+  // `preview` mints a link per language, freezing the shared revision and that
+  // locale's translation revision together.
+  editorial: {
+    enabled: true,
+    preview: { enabled: true, expiresInMinutes: 30 },
+    revisions: { retention: 20 },
+  },
 
   fields: {
     title: field.text({

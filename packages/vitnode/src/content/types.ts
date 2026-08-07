@@ -1282,12 +1282,32 @@ type ContentPublicValue<TFields, TName extends string> = TName extends "id"
  * absent from this type *and* absent from the generated `SELECT`, so it never
  * leaves Postgres. Adding a field to the content type does not add it here.
  */
-export type ContentPublicSelect<TDefinition> = Prettify<{
-  [K in ContentPublicFieldName<TDefinition>]: ContentPublicValue<
-    ContentFieldsOf<TDefinition>,
-    K
-  >;
-}>;
+export type ContentPublicSelect<TDefinition> = Prettify<
+  ContentPublicLocaleColumn<TDefinition> & {
+    [K in ContentPublicFieldName<TDefinition>]: ContentPublicValue<
+      ContentFieldsOf<TDefinition>,
+      K
+    >;
+  }
+>;
+
+/**
+ * The language a public row is actually in, on a localized content type.
+ *
+ * Not always the language that was asked for: with `fallback: "default"` a locale
+ * with no translation of its own is served the default one, and a reader that
+ * cannot tell the difference cannot render `hreflang`, a language switcher or a
+ * "not translated yet" notice. So the served locale is part of the response
+ * rather than something inferred from the URL.
+ *
+ * `defineContentType` reserves the name: a localized content type with a public
+ * API may not expose a field called `locale`.
+ */
+type ContentPublicLocaleColumn<TDefinition> = TDefinition extends {
+  localization: { enabled: true };
+}
+  ? { locale: string }
+  : Record<never, never>;
 
 /**
  * A row in a public list.

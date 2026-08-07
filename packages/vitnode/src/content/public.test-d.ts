@@ -7,7 +7,10 @@ import {
   testPostContentType,
 } from "@/tests/content-fixtures";
 
-import type { ContentPublicService } from "./server/public-service";
+import type {
+  ContentPublicReadOptions,
+  ContentPublicService,
+} from "./server/public-service";
 import type {
   AnyContentTypeDefinition,
   ContentPublicFieldName,
@@ -174,10 +177,14 @@ describe("publicApi types", () => {
 
     it("takes no predicate argument on either lookup", () => {
       // The published condition is applied inside every method. There is no
-      // parameter a caller could pass to widen it.
-      expectTypeOf<Service["findById"]>().parameters.toEqualTypeOf<[number]>();
+      // parameter a caller could pass to widen it - the optional second one
+      // names a *language*, which chooses which translation the predicate runs
+      // against and can never relax it.
+      expectTypeOf<Service["findById"]>().parameters.toEqualTypeOf<
+        [number, ContentPublicReadOptions?]
+      >();
       expectTypeOf<Service["findBySlug"]>().parameters.toEqualTypeOf<
-        [string]
+        [string, ContentPublicReadOptions?]
       >();
     });
 

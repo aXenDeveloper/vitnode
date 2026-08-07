@@ -168,7 +168,9 @@ describe("public detail route", () => {
     const response = await app.request("/hello-world");
 
     expect(response.status).toBe(200);
-    expect(service.findBySlug).toHaveBeenCalledWith("hello-world");
+    expect(service.findBySlug).toHaveBeenCalledWith("hello-world", {
+      locale: undefined,
+    });
   });
 
   it("returns exactly the allowlisted keys", async () => {

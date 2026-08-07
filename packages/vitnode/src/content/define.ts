@@ -492,6 +492,7 @@ const resolvePublicApi = <TField extends string>(
   fields: ContentFieldMap,
   publicApi: ContentPublicApiConfig<TField> | undefined,
   publication: boolean,
+  localizedFields: ContentFieldMap,
 ): ResolvedContentPublicApiConfig => {
   if (!publicApi?.enabled) {
     return {
@@ -530,6 +531,17 @@ const resolvePublicApi = <TField extends string>(
   if (duplicate !== undefined) {
     throw new ContentEngineError(
       `publicApi.fields lists "${duplicate}" twice.`,
+      { contentTypeId: id },
+    );
+  }
+
+  // The localized public response carries the language it was actually served
+  // in, under `locale`. A declared field of that name would shadow it, and the
+  // reader would have no way to tell a Polish article from an English one served
+  // through the fallback - which is the one thing that response has to say.
+  if (Object.keys(localizedFields).length > 0 && exposed.includes("locale")) {
+    throw new ContentEngineError(
+      'publicApi.fields includes "locale", which a localized content type reserves: every public localized response carries the language it resolved to under that name. Rename the field.',
       { contentTypeId: id },
     );
   }
@@ -604,6 +616,20 @@ const resolvePublicApi = <TField extends string>(
 
   const declaredOrderable = (publicApi.orderableFields ?? []).map(String);
   assertExposed("publicApi.orderableFields", declaredOrderable);
+  // A localized column is not on the base table, and ordering by one would not
+  // just be awkward to generate - it would be wrong. The list a reader pages
+  // through would reshuffle itself for every language, and a fallback set would
+  // interleave two collations, so the same cursor would mean two different
+  // positions. Order by something the record has one of.
+  const localizedOrderable = declaredOrderable.find(
+    name => localizedFields[name] !== undefined,
+  );
+  if (localizedOrderable !== undefined) {
+    throw new ContentEngineError(
+      `publicApi.orderableFields includes the localized field "${localizedOrderable}". A public list is ordered by a column of the record, not of one of its translations - ordering by a localized field would reorder the list per language and make a cursor mean two different positions across a fallback.`,
+      { contentTypeId: id },
+    );
+  }
   const orderableFields = [
     ...new Set([...declaredOrderable, CONTENT_PUBLIC_ALWAYS_ORDERABLE]),
   ];
@@ -1232,6 +1258,7 @@ export const defineContentType = <
     // disabled config for anything that is not `enabled: true`.
     publicApi as ContentPublicApiConfig<TPublicField> | undefined,
     publicationEnabled,
+    localizedFields,
   );
 
   const resolvedSearch = resolveSearch(
@@ -1253,7 +1280,7 @@ export const defineContentType = <
     publicationEnabled,
   );
 
-  // Last, because the Stage 5A boundaries it enforces are stated in terms of
+  // Last, because the Stage 5C boundary it enforces is stated in terms of
   // everything the other resolvers have already settled.
   const resolvedLocalization = resolveContentLocalization({
     fields: fieldMap,
@@ -1261,7 +1288,6 @@ export const defineContentType = <
     // The `{ enabled: false }` arm exists only so an explicit literal
     // typechecks - the same widening `publicApi`, `search` and `editorial` do.
     localization: localization as ContentLocalizationConfig | undefined,
-    publicApi: resolvedPublicApi,
     publication: publicationEnabled,
     search: resolvedSearch.enabled,
     tableName,

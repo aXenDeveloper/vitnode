@@ -27,6 +27,13 @@ import {
   CONTENT_TRANSLATION_REVISION_OPERATIONS,
 } from "../const";
 import { resolveContentActor } from "./actor";
+import {
+  assertContentPreviewIsServable,
+  contentPreviewSecret,
+  contentPreviewUrl,
+} from "./preview-link";
+import { createContentPreviewToken } from "./preview-token";
+import { contentPublicLocaleStates } from "./public-locales";
 import { CONTENT_REVISIONS_MAX_PAGE_SIZE } from "./revisions-model";
 import { contentTranslationEffects } from "./translation-effects";
 import { withTranslationHttpErrors } from "./translation-http-errors";
@@ -660,6 +667,162 @@ export const buildContentTranslationRoutes = <
     },
   });
 
+  /**
+   * Mints a preview link for one language.
+   *
+   * The localized counterpart of `POST /{id}/preview`, and it freezes **both**
+   * halves of the page: the record's newest shared revision and this locale's
+   * newest translation revision. A preview says "this is what the page looked
+   * like when I shared the link", and a localized page is built from two rows -
+   * freezing one of them would let the other drift underneath the reviewer.
+   *
+   * `can_view`, exactly like the base preview route: a preview shows what the
+   * public route would show, so anyone allowed to read the record in the AdminCP
+   * is already allowed to see it. The link is the credential from there on, and it
+   * is bound to this locale - opening it on another language's URL is a 404.
+   *
+   * A locale with no translation is a 404 rather than a link to the fallback: the
+   * button is on a language tab, and a link that quietly previewed a different
+   * language would be worse than no link.
+   */
+  const previewToken = buildRoute({
+    pluginId,
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    route: {
+      method: "post",
+      path: "/{id}/translations/{locale}/preview",
+      description: `Create a preview link for one ${label.singular} in one language`,
+      request: { params: translationSchemas.params },
+      responses: {
+        200: jsonResponse(
+          z.object({
+            expiresAt: z.date(),
+            locale: z.string(),
+            /** `0` when the record predates its content type opting in. */
+            revisionId: z.number(),
+            token: z.string(),
+            /** `0` when this locale has no translation revision to freeze. */
+            translationRevisionId: z.number(),
+            /** Absolute, and carrying `?locale=` so the reader stays bound. */
+            url: z.url(),
+            version: z.number(),
+          }),
+          "Preview link created",
+        ),
+        400: invalidIdentifier,
+        404: notFound,
+        503: {
+          description:
+            "Preview is not configured securely on this deployment, so no link can be signed",
+        },
+      },
+    },
+    handler: async c => {
+      // Before the lookup, so a misconfigured install answers the same way for a
+      // record that exists and one that does not.
+      assertContentPreviewIsServable(c);
+
+      const id = identifier(c);
+      const target = locale(c);
+
+      const translation = await withTranslationHttpErrors(
+        "read",
+        async () => await translations(c).findByLocale(id, target),
+        { contentTypeId: definition.id, itemId: id, locale: target },
+      );
+      if (!translation) {
+        throw new HTTPException(404, { message: "Translation not found." });
+      }
+
+      const shared = model.editorialService?.(c, { pluginId });
+      const sharedRevision = shared ? await shared.revisions.latest(id) : null;
+
+      // Newest first, so one row is the whole answer. The newest is also the
+      // last one retention will prune, so a shared link stays resolvable for as
+      // long as any link would.
+      const history = buildEditorial
+        ? await editorial(c).listRevisions(id, translation.locale, { limit: 1 })
+        : { edges: [] };
+      const translationRevisionId = history.edges[0]?.id ?? 0;
+
+      const { expiresAt, token } = createContentPreviewToken({
+        definition,
+        itemId: id,
+        languageId: translation.languageId,
+        locale: translation.locale,
+        pluginId,
+        revisionId: sharedRevision?.id ?? 0,
+        secret: contentPreviewSecret(c),
+        translationRevisionId,
+        version: translation.version,
+      });
+
+      return c.json(
+        {
+          expiresAt,
+          locale: translation.locale,
+          revisionId: sharedRevision?.id ?? 0,
+          token,
+          translationRevisionId,
+          url: contentPreviewUrl({
+            definition,
+            locale: translation.locale,
+            pluginId,
+            token,
+          }),
+          version: translation.version,
+        },
+        200,
+      );
+    },
+  });
+
+  /**
+   * Which languages this record is publicly reachable in, and under which URL.
+   *
+   * Exists for the cache, and only incidentally for the screen. A Server Action
+   * runs in the web app and talks to the API over HTTP, so it cannot evaluate the
+   * fallback rule itself - and a second implementation of "is this locale public"
+   * living in the AdminCP is exactly the copy that drifts, with a stale page in
+   * one language as the symptom. It takes this snapshot on each side of a
+   * mutation and expires the difference.
+   *
+   * `can_view`, because it says no more than the public API already does - which
+   * languages have a page, and what its slug is.
+   */
+  const publicLocales = buildRoute({
+    pluginId,
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    route: {
+      method: "get",
+      path: "/{id}/public-locales",
+      description: `Which languages one ${label.singular} is publicly reachable in`,
+      request: { params: model.schemas.params },
+      responses: {
+        200: jsonResponse(
+          z.object({
+            edges: z.array(
+              z.object({
+                /** `false` when the fallback is what makes this locale public. */
+                hasOwnTranslation: z.boolean(),
+                isPublic: z.boolean(),
+                locale: z.string(),
+                slug: z.string(),
+              }),
+            ),
+          }),
+          "One entry per enabled language",
+        ),
+        400: invalidIdentifier,
+      },
+    },
+    handler: async c =>
+      c.json(
+        { edges: await contentPublicLocaleStates(c, model, identifier(c)) },
+        200,
+      ),
+  });
+
   const publication = definition.publication.enabled;
   const editorialEnabled = definition.editorial.enabled;
 
@@ -673,5 +836,9 @@ export const buildContentTranslationRoutes = <
       ? [transitionRoute("publish"), transitionRoute("unpublish")]
       : []),
     ...(editorialEnabled ? [revisionList, revisionDetail, restore] : []),
+    // `editorial.preview` already requires `publicApi`, so this exists only for a
+    // localized content type that has a public API to preview against.
+    ...(definition.editorial.preview.enabled ? [previewToken] : []),
+    ...(definition.publicApi.enabled ? [publicLocales] : []),
   ];
 };

@@ -361,57 +361,56 @@ describe("Stage 5B capability boundaries", () => {
     expect(definition.localization.enabled).toBe(true);
   });
 
-  it("refuses localization plus publicApi until Stage 5C", () => {
-    expect(() =>
-      withCapability({
-        publication: { enabled: false },
-        publicApi: { enabled: true, fields: ["slug"], path: "boundaries" },
-      }),
-    ).toThrow();
+  it("allows localization plus publicApi from Stage 5C", () => {
+    const definition = withCapability({
+      publication: { enabled: true },
+      publicApi: { enabled: true, fields: ["slug"], path: "boundaries" },
+    });
+
+    expect(definition.publicApi.enabled).toBe(true);
+    expect(definition.localization.enabled).toBe(true);
+    // The public response carries the language it resolved to, so a reader can
+    // tell a translation from a fallback.
+    expect(definition.schemas.publicSelectObject.shape).toHaveProperty(
+      "locale",
+    );
   });
 
   it("refuses localization plus search until Stage 5D", () => {
     expect(() =>
       withCapability({
         publication: { enabled: true },
-        publicApi: { enabled: true, fields: ["slug"], path: "boundaries" },
-        search: { enabled: true, titleField: "title" },
+        publicApi: {
+          enabled: true,
+          fields: ["title", "slug"],
+          path: "boundaries",
+        },
+        search: {
+          contentFields: ["title"],
+          enabled: true,
+          pathTemplate: "/boundaries/{slug}",
+          titleField: "title",
+        },
       }),
     ).toThrow();
   });
 
-  it("names the stage in every remaining boundary message", () => {
+  it("names the stage in the one remaining boundary message", () => {
     // "Not yet" is only useful when it says how long.
-    const messageOf = (extra: Record<string, unknown>): string => {
-      try {
-        withCapability(extra);
-      } catch (error) {
-        return error instanceof Error ? error.message : "";
-      }
-
-      return "";
-    };
-
-    expect(
-      messageOf({
-        publication: { enabled: true },
-        publicApi: { enabled: true, fields: ["slug"], path: "boundaries" },
-      }),
-    ).toMatch(/Stage 5C/);
-    // `search` cannot be reached through `defineContentType` while `publicApi` is
-    // still refused - a searchable content type has to be a public one - so the
-    // 5D message is asserted against the resolver directly.
     expect(() =>
-      resolveContentLocalization({
-        fields: {
-          title: field.text({ localized: true, required: true }),
+      withCapability({
+        publication: { enabled: true },
+        publicApi: {
+          enabled: true,
+          fields: ["title", "slug"],
+          path: "boundaries",
         },
-        id: "test.boundary",
-        localization: { defaultLocale: "en", enabled: true },
-        publicApi: { ...disabledPublicApi },
-        publication: true,
-        search: true,
-        tableName: "test_boundaries",
+        search: {
+          contentFields: ["title"],
+          enabled: true,
+          pathTemplate: "/boundaries/{slug}",
+          titleField: "title",
+        },
       }),
     ).toThrow(/Stage 5D/);
   });

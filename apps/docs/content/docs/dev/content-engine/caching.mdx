@@ -26,9 +26,29 @@ contentPublicSlugTag("example.article", "hello-world");
 // "content:example.article:slug:hello-world"
 ```
 
-Format: `content:{contentTypeId}:{scope}[:{key}]`. No plugin id - a content type
-id is already globally unique (`validateContentTypes` enforces it) and already
-namespaced, as in `example.article`.
+Format: `content:{contentTypeId}:{scope}[:{locale}][:{key}]`. No plugin id - a
+content type id is already globally unique (`validateContentTypes` enforces it)
+and already namespaced, as in `example.article`.
+
+On a [localized](/docs/dev/content-engine/localized-public-api) content type every
+builder takes a locale, and the segment sits **after** the scope so the two forms
+can never collide - `content:x:list` is three segments and `content:x:list:pl` is
+four, whatever the locale happens to spell:
+
+```ts
+contentPublicListTag("example.article", "pl");
+// "content:example.article:list:pl"
+
+contentPublicSlugTag("example.article", "witaj", "pl");
+// "content:example.article:slug:pl:witaj"
+```
+
+The locale is load-bearing on the slug tag rather than merely tidy: two languages
+routinely answer to the *same* slug (`/en/about` and `/pl/about`), so a
+locale-less slug tag would make one language's edit expire the other's page.
+
+A content type that is not localized produces exactly the tags it always did,
+byte for byte, so nothing existing has to be re-tagged.
 
 These are pure strings and they are **public API**. Tag your own `fetch` calls
 and your own `"use cache"` functions with them and your pages get expired at the
@@ -304,6 +324,29 @@ enforces rather than by a second, drifting rule:
 ```ts
 isContentPubliclyVisible({ publishedAt: row.publishedAt, status: row.status });
 ```
+
+`isContentTranslationPubliclyVisible` is the localized counterpart, and it is
+stated as an `&&` of that same predicate rather than as a second set of clauses -
+so the two cannot drift into disagreeing about what "published" means:
+
+```ts
+isContentTranslationPubliclyVisible({ base: row, translation });
+```
+
+### Which locales a mutation reaches
+
+`contentLocaleInvalidations` answers that, and it is pure:
+
+| What changed | Reaches |
+| --- | --- |
+| A **shared** field, or the record's publication state | **every** locale |
+| A translation in a **non-default** locale | that locale |
+| A translation in the **default** locale, `fallback: "default"` | that locale, plus every locale with no translation of its own |
+| A translation in the **default** locale, `fallback: "none"` | that locale |
+
+Nothing falls back to Polish, whatever the fallback setting is - so a Polish edit
+never throws away the English cache. See
+[Localized public API](/docs/dev/content-engine/localized-public-api#caching).
 
 ## Where the Next imports live
 

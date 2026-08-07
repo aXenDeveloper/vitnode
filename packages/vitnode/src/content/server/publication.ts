@@ -96,6 +96,66 @@ export const publishedCondition = (
   );
 
 /**
+ * The publication pair on a generated **translation** table.
+ *
+ * Its own function rather than a second argument to {@link publicationColumns}
+ * because the two check different things: a translation carries `status` and
+ * `publishedAt` only when the *base* content type has publication, and a
+ * localized content type without it has translations that are simply always
+ * visible once the record is.
+ */
+export const contentTranslationPublicationColumns = (
+  definition: AnyContentTypeDefinition,
+  translationColumns: Record<string, PgColumn>,
+): PublicationColumns => {
+  const { publishedAt, status } = translationColumns;
+
+  if (
+    !definition.localization.enabled ||
+    !definition.publication.enabled ||
+    !publishedAt ||
+    !status
+  ) {
+    throw new ContentEngineError(
+      "The translation published predicate needs both `localization: { enabled: true }` and `publication: { enabled: true }` on the content type.",
+      { contentTypeId: definition.id },
+    );
+  }
+
+  return { publishedAt, status };
+};
+
+/**
+ * The one definition of **publicly visible**.
+ *
+ * For a Stage 1-4 content type it is {@link publishedCondition} on the base row
+ * and nothing else. For a localized one it is that *and* the same predicate on the
+ * translation being served - subordination, stated once, in SQL:
+ *
+ * ```sql
+ * base.status = 'published'  AND base.published_at IS NOT NULL  AND base.published_at <= NOW()
+ * AND t.status = 'published' AND t.published_at    IS NOT NULL  AND t.published_at    <= NOW()
+ * ```
+ *
+ * Two clauses of the same predicate rather than a second predicate, which is what
+ * keeps "published" from meaning one thing for a record and a slightly different
+ * thing for its Polish translation. `isContentTranslationPubliclyVisible` is the
+ * JavaScript half, written the same way for the same reason.
+ *
+ * A published record with an unpublished translation is **not** public in that
+ * language. It may still be public in another one - that is what fallback decides,
+ * and the fallback is applied by choosing *which* translation this predicate is
+ * evaluated against, never by relaxing it.
+ */
+export const contentPublicCondition = (
+  base: PublicationColumns,
+  translation?: PublicationColumns,
+): SQL | undefined =>
+  translation === undefined
+    ? publishedCondition(base)
+    : and(publishedCondition(base), publishedCondition(translation));
+
+/**
  * Narrows a service to its publication methods.
  *
  * Route and module code is generic over `AnyContentTypeDefinition`, whose

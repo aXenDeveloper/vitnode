@@ -49,10 +49,10 @@ A content type without the block generates the same single table, the same
 routes and the same wire shapes it always did.
 
 <Callout type="warn" title="Two combinations are still refused">
-  Localization works with `publication` and `editorial` from Stage 5B on, but
+  Localization works with `publication`, `editorial` and `publicApi`, but
   cannot yet be combined with `publicApi` or `search` - each is refused at
-  definition time with a message naming the stage that lifts it. See [Stage 5B
-  boundaries](#stage-5b-boundaries).
+  definition time with a message naming the stage that lifts it. See [Stage 5C
+  boundaries](#stage-5c-boundaries).
 </Callout>
 
 ## This is not UI translation
@@ -102,7 +102,7 @@ localization: {
 | --- | --- | --- | --- |
 | `enabled` | `true` | - | Literal `true`. Omit the block to stay non-localized |
 | `defaultLocale` | `string` | - | The locale every record is created in, and the one translation it can never lose |
-| `fallback` | `"none" \| "default"` | `"none"` | Reserved for Stage 5C. Resolved now so the configuration is stable before anything reads through it |
+| `fallback` | `"none" \| "default"` | `"none"` | What a [public read](/docs/dev/content-engine/localized-public-api) does for a locale with no published translation |
 
 `defaultLocale` is checked twice. Its **shape** is checked at definition time -
 it has to look like a locale code and fit `varchar(32)`. Whether it names a real,
@@ -111,7 +111,7 @@ checked [once at boot](#the-boot-check) instead.
 
 `fallback` does nothing yet, and this page will not pretend otherwise. Nothing in
 Stage 5A reads through it; it exists so that a content type declared today does
-not change public behaviour the moment Stage 5C lands. `"none"` is the default
+not change public behaviour the moment the public read layer landed. `"none"` is the default
 because it is the only answer that cannot silently publish the wrong language.
 
 ## Which fields can be localized
@@ -274,25 +274,24 @@ offender at once rather than failing on the first, and it is skipped entirely
 when no content type is localized - an install with none never touches the
 languages table because of it.
 
-## Stage 5B boundaries
+## Stage 5C boundaries
 
-Stage 5A landed the infrastructure; Stage 5B landed the editorial layer on top of
-it. What is still missing is everything that reads *outwards*, and the honest
-failure for that is a refused definition rather than a content type that quietly
-runs Stage 1-4 logic against the base table while pretending its localized fields
-do not exist.
+Stage 5A landed the infrastructure, Stage 5B the editorial layer and Stage 5C the
+[public read](/docs/dev/content-engine/localized-public-api). One thing still
+reads outwards without knowing about languages, and the honest failure for that is
+a refused definition rather than a content type that quietly indexes one language
+and ranks every other one as a miss.
 
 | Combination | Refused until | Why |
 | --- | --- | --- |
-| `localization` + `publicApi` | Stage 5C | A public read has to resolve a locale and decide what to do when a translation is missing |
 | `localization` + `search` | Stage 5D | One document per record would index a single language and rank every other one as a miss |
 
-Each is a `ContentEngineError` at definition time, with the stage in the message.
+It is a `ContentEngineError` at definition time, with the stage in the message.
 
-Because `editorial.preview` requires `publicApi`, a **locale preview link cannot
-be minted yet** either - the token format is in place and tested, and the routes
-land with Stage 5C. See
-[Locale preview](/docs/dev/content-engine/translation-preview).
+`localization` + `publicApi` is **no longer refused**: locale precedence, fallback,
+strict-locale slugs, locale-aware cache tags and the
+[locale preview link](/docs/dev/content-engine/translation-preview) all landed with
+Stage 5C.
 
 ## The roadmap
 

@@ -29,14 +29,21 @@ export type {
 } from "./admin/spec";
 export {
   contentInvalidationTags,
+  contentLocaleInvalidationMode,
+  contentLocaleInvalidations,
   contentPublicItemTag,
   contentPublicListTag,
   contentPublicSlugTag,
+  diffContentPublicLocaleStates,
   isContentPubliclyVisible,
+  isContentTranslationPubliclyVisible,
 } from "./cache";
 export type {
   ContentInvalidationInput,
   ContentInvalidationMode,
+  ContentLocaleInvalidation,
+  ContentLocaleState,
+  ContentPublicLocaleState,
 } from "./cache";
 export {
   parseContentConflict,
@@ -147,6 +154,15 @@ export {
   resolveContentTranslationIndexes,
   toSnakeCase,
 } from "./indexes";
+export {
+  contentLocalesMatch,
+  isContentLocaleShaped,
+  negotiateContentLocale,
+  normalizeContentLocale,
+  parseAcceptLanguage,
+  resolveContentPublicLocale,
+} from "./locale";
+export type { ContentLocaleResolution, ContentLocaleSource } from "./locale";
 export {
   contentLocalizationDisabled,
   contentTranslationTableName,
@@ -269,6 +285,7 @@ export type {
   FilterableContentFieldName,
   LocalizedContentTypeDefinition,
   PreviewableContentTypeDefinition,
+  PublicContentTypeDefinition,
   ResolvedContentAdminConfig,
   ResolvedContentEditorialConfig,
   ResolvedContentIndex,

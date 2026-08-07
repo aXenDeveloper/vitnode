@@ -238,7 +238,8 @@ counters, so they never conflict with each other - only with another edit of the
 Localization still cannot be combined with:
 
 - **`publicApi`** — a public read has to resolve a locale and decide what to do
-  when a translation is missing. Stage 5C.
+  when a translation is missing. Landed in Stage 5C - see
+  [Localized public API](/docs/dev/content-engine/localized-public-api).
 - **`search`** — one document per record would index a single language and rank
   every other one as a miss. Stage 5D.
 
@@ -246,7 +247,7 @@ Because preview projects through `publicApi.fields`, **locale-bound preview link
 cannot be minted yet** either. The token format already carries the locale and
 both frozen revisions - see
 [Translation preview](/docs/dev/content-engine/translation-preview) - and the
-route that mints one lands with Stage 5C.
+route that mints one landed with Stage 5C.
 
 Locale-specific *scheduling* stays outside Stage 5 entirely. A scheduled global
 publish exposes the languages already marked published and publishes no drafts; a
