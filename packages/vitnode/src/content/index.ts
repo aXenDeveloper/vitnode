@@ -28,6 +28,9 @@ export type {
   ContentFormSpec,
 } from "./admin/spec";
 export {
+  contentDeliveryRedirectTag,
+  contentDeliverySitemapTag,
+  contentDeliveryTag,
   contentInvalidationTags,
   contentLocaleInvalidationMode,
   contentLocaleInvalidations,
@@ -39,6 +42,7 @@ export {
   isContentTranslationPubliclyVisible,
 } from "./cache";
 export type {
+  ContentDeliveryInvalidation,
   ContentInvalidationInput,
   ContentInvalidationMode,
   ContentLocaleInvalidation,
@@ -47,15 +51,19 @@ export type {
 } from "./cache";
 export {
   parseContentConflict,
+  parseContentDeliveryConflict,
   parseContentTranslationConflict,
   parseContentUnprocessable,
   zodContentConflict,
+  zodContentDeliveryConflict,
   zodContentTranslationConflict,
   zodContentUnprocessable,
 } from "./conflicts";
 export type {
   ContentConflict,
   ContentConflictCode,
+  ContentDeliveryCode,
+  ContentDeliveryConflict,
   ContentTranslationConflict,
   ContentTranslationConflictCode,
   ContentUnprocessable,
@@ -66,6 +74,13 @@ export {
   CONTENT_CACHE_TAG_MAX_LENGTH,
   CONTENT_CONFLICT_CODES,
   CONTENT_DEFAULT_PAGE_SIZE,
+  CONTENT_DELIVERY_CODES,
+  CONTENT_DELIVERY_DESCRIPTION_KINDS,
+  CONTENT_DELIVERY_NO_INDEX_KINDS,
+  CONTENT_DELIVERY_PATH_MAX_LENGTH,
+  CONTENT_DELIVERY_REDIRECT_STATUS,
+  CONTENT_DELIVERY_RESOLUTIONS,
+  CONTENT_DELIVERY_TITLE_KINDS,
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_ENUM_DEFAULT_LENGTH,
   CONTENT_FILTERABLE_FIELD_KINDS,
@@ -103,6 +118,9 @@ export {
   CONTENT_SEARCH_SLUG_PLACEHOLDER,
   CONTENT_SEARCH_TEXT_KINDS,
   CONTENT_SEARCH_TITLE_KINDS,
+  CONTENT_SITEMAP_CHANGE_FREQUENCIES,
+  CONTENT_SITEMAP_DEFAULT_PAGE_SIZE,
+  CONTENT_SITEMAP_MAX_URLS,
   CONTENT_SLUG_DEFAULT_LENGTH,
   CONTENT_SYSTEM_FIELDS,
   CONTENT_TEXT_DEFAULT_LENGTH,
@@ -113,15 +131,39 @@ export {
   CONTENT_TRANSLATION_TABLE_SUFFIX,
   CONTENT_UNPROCESSABLE_CODES,
   isContentPublicationStatus,
+  isContentSitemapChangeFrequency,
   isFilterableFieldKind,
   isLocalizableFieldKind,
   RESERVED_FILTER_KEYS,
 } from "./const";
 export { defineContentType } from "./define";
+export {
+  contentDeliveryDisabled,
+  contentDeliveryHreflang,
+  contentDeliveryOpenGraph,
+  contentDeliveryPath,
+  contentDeliveryRobots,
+  contentDeliverySeo,
+  contentDeliveryUrl,
+  contentSitemapDefaults,
+  isDeliverableContentType,
+  listDeliveryContentTypes,
+  parseContentDeliveryPath,
+  resolveContentDelivery,
+} from "./delivery";
+export type {
+  ContentDeliveryAlternate,
+  ContentDeliveryHreflang,
+  ContentDeliveryPathParts,
+  ContentDeliveryRobots,
+  ContentDeliverySeo,
+} from "./delivery";
 export type { ContentAdvancedCode } from "./errors";
 export {
   ContentAdvancedInputError,
   ContentDefaultTranslationRequired,
+  ContentDeliveryNotEnabled,
+  ContentDeliverySlugReserved,
   ContentEngineError,
   ContentInputError,
   ContentLanguageError,
@@ -135,6 +177,8 @@ export { contentEventName } from "./events";
 export type {
   ContentCreatedPayload,
   ContentDeletedPayload,
+  ContentDeliveryRedirectCreatedPayload,
+  ContentDeliverySlugChangedPayload,
   ContentEventAction,
   ContentEventsFor,
   ContentPublishedPayload,
@@ -214,6 +258,13 @@ export {
   contentSearchIndexedFieldNames,
   contentSearchUrl,
 } from "./search";
+export {
+  contentSitemapChunks,
+  contentSitemapIndexXml,
+  contentSitemapXml,
+  escapeXml,
+} from "./sitemap";
+export type { ContentSitemapEntry, ContentSitemapIndexEntry } from "./sitemap";
 export { slugify } from "./slug";
 export type {
   AnyContentTypeDefinition,
@@ -223,6 +274,16 @@ export type {
   ContentBooleanField,
   ContentCreateInput,
   ContentDateTimeField,
+  ContentDeliveryConfig,
+  ContentDeliveryDescriptionField,
+  ContentDeliveryEnabled,
+  ContentDeliveryHreflangConfig,
+  ContentDeliveryNoIndexField,
+  ContentDeliveryOpenGraphConfig,
+  ContentDeliveryRedirectsConfig,
+  ContentDeliverySeoConfig,
+  ContentDeliverySitemapConfig,
+  ContentDeliveryTitleField,
   ContentEditorialConfig,
   ContentEditorialEnabled,
   ContentEditorialField,
@@ -271,6 +332,7 @@ export type {
   ContentSelect,
   ContentSharedFieldName,
   ContentSharedValues,
+  ContentSitemapChangeFrequency,
   ContentSlugField,
   ContentSlugRequired,
   ContentSystemField,
@@ -283,6 +345,7 @@ export type {
   ContentTypeDefinition,
   ContentUpdateInput,
   ContentUserField,
+  DeliverableContentTypeDefinition,
   EditorialContentTypeDefinition,
   FilterableContentFieldKind,
   FilterableContentFieldName,
@@ -291,6 +354,8 @@ export type {
   PublicContentTypeDefinition,
   PublicFilterableContentFieldName,
   ResolvedContentAdminConfig,
+  ResolvedContentDeliveryConfig,
+  ResolvedContentDeliverySeoConfig,
   ResolvedContentEditorialConfig,
   ResolvedContentIndex,
   ResolvedContentLocalizationConfig,
