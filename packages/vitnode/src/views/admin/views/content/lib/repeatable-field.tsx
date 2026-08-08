@@ -65,7 +65,7 @@ export const ContentRepeatableField = ({
   const legendId = `content-repeatable-${spec.name}`;
 
   // Monotonic, so a row added and removed and added again never reuses a key.
-  const nextKey = React.useRef(0);
+  const nextKeyRef = React.useRef(0);
 
   const commit = (next: EditorRow[]) => {
     field.onChange(next.map(row => row.values));
@@ -181,10 +181,10 @@ export const ContentRepeatableField = ({
         className="mt-4"
         disabled={rows.length >= max}
         onClick={() => {
-          nextKey.current += 1;
+          nextKeyRef.current += 1;
           // No `id`: that is the whole write protocol. A row without one is
           // created; a row with one is updated in place and keeps it.
-          commit([...rows, { key: `new-${nextKey.current}`, values: {} }]);
+          commit([...rows, { key: `new-${nextKeyRef.current}`, values: {} }]);
         }}
         size="sm"
         type="button"

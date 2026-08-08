@@ -263,7 +263,9 @@ describe("groups", () => {
         fields: {
           name: field.text({ required: true }),
           meta: field.group({
-            fields: { owner: field.relation({ target: () => target }) } as never,
+            fields: {
+              owner: field.relation({ target: () => target }),
+            } as never,
           }),
         },
       }),
@@ -315,7 +317,9 @@ describe("groups", () => {
         ...base,
         fields: {
           name: field.text({ required: true }),
-          seo: field.group({ fields: { title: field.text({ required: true }) } }),
+          seo: field.group({
+            fields: { title: field.text({ required: true }) },
+          }),
         },
       }),
     ).toThrow(/every leaf needs a value it can fall back to/);
@@ -414,7 +418,9 @@ describe("repeatables", () => {
         ...base,
         fields: {
           faq: field.repeatable({
-            fields: { question: field.text({ localized: true, required: true }) },
+            fields: {
+              question: field.text({ localized: true, required: true }),
+            },
           }),
           name: field.text({ required: true }),
         },

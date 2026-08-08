@@ -29,7 +29,7 @@ let latest: FieldValues = {};
 
 const Harness = ({
   initial,
-  loadOptions = async () => await Promise.resolve([]),
+  loadOptions = async () => Promise.resolve([]),
   spec,
 }: {
   initial?: unknown;
@@ -129,7 +129,9 @@ const categoriesSpec: ContentFormFieldSpec = {
 
 describe("group editor", () => {
   it("renders a labelled section with one input per leaf", () => {
-    render(<Harness initial={{ description: null, title: null }} spec={seoSpec} />);
+    render(
+      <Harness initial={{ description: null, title: null }} spec={seoSpec} />,
+    );
 
     // A `fieldset`/`legend`, so a screen reader announces "SEO" with every leaf
     // - which is what tells `SEO / Title` from `Article / Title`.
@@ -156,7 +158,9 @@ describe("group editor", () => {
   });
 
   it("turns a nullable group off as null, not as an empty object", async () => {
-    render(<Harness initial={{ description: "A", title: "B" }} spec={seoSpec} />);
+    render(
+      <Harness initial={{ description: "A", title: "B" }} spec={seoSpec} />,
+    );
 
     fireEvent.click(screen.getByRole("switch"));
 
@@ -168,7 +172,12 @@ describe("group editor", () => {
   });
 
   it("shows no switch for a group that cannot be null", () => {
-    render(<Harness initial={{ title: null }} spec={{ ...seoSpec, nullable: false }} />);
+    render(
+      <Harness
+        initial={{ title: null }}
+        spec={{ ...seoSpec, nullable: false }}
+      />,
+    );
 
     expect(screen.queryByRole("switch")).toBeNull();
   });
@@ -191,7 +200,7 @@ describe("repeatable editor", () => {
     });
   });
 
-  it("stops at the declared maximum", async () => {
+  it("stops at the declared maximum", () => {
     render(
       <Harness
         initial={[
@@ -225,9 +234,9 @@ describe("repeatable editor", () => {
     fireEvent.click(screen.getByRole("button", { name: "list.move_down:1" }));
 
     await waitFor(() => {
-      expect((latest.value as { id: number }[]).map(row => row.id)).toStrictEqual(
-        [2, 1],
-      );
+      expect(
+        (latest.value as { id: number }[]).map(row => row.id),
+      ).toStrictEqual([2, 1]);
     });
   });
 
@@ -298,14 +307,18 @@ describe("repeatable editor", () => {
 
 describe("to-many relation picker", () => {
   const loadOptions = async () =>
-    await Promise.resolve([
+    Promise.resolve([
       { label: "News", value: "1" },
       { label: "Guides", value: "2" },
     ]);
 
   it("holds identifiers rather than combobox options", () => {
     render(
-      <Harness initial={[1, 2]} loadOptions={loadOptions} spec={categoriesSpec} />,
+      <Harness
+        initial={[1, 2]}
+        loadOptions={loadOptions}
+        spec={categoriesSpec}
+      />,
     );
 
     // Exactly what the API takes - nothing to convert on submit, which is what
@@ -317,7 +330,11 @@ describe("to-many relation picker", () => {
 
   it("removes a target without touching the others", async () => {
     render(
-      <Harness initial={[1, 2]} loadOptions={loadOptions} spec={categoriesSpec} />,
+      <Harness
+        initial={[1, 2]}
+        loadOptions={loadOptions}
+        spec={categoriesSpec}
+      />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "list.remove:1" }));
@@ -329,7 +346,11 @@ describe("to-many relation picker", () => {
 
   it("offers no reorder controls for an unordered relation", () => {
     render(
-      <Harness initial={[1, 2]} loadOptions={loadOptions} spec={categoriesSpec} />,
+      <Harness
+        initial={[1, 2]}
+        loadOptions={loadOptions}
+        spec={categoriesSpec}
+      />,
     );
 
     // The engine stores an unordered set in ascending target-id order whatever

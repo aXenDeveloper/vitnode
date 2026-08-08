@@ -125,7 +125,7 @@ const createArticle = async (
 ): Promise<{ id: number; version: number }> => {
   const outcome = await advancedArticleContent
     .editorialService?.(context, { pluginId: CONFIG_PLUGIN.pluginId })
-    .create({ ...values } as never, { actor: ACTOR });
+    .create({ ...values }, { actor: ACTOR });
   if (!outcome) throw new Error("create returned nothing");
 
   return { id: outcome.row.id, version: outcome.version };
@@ -177,7 +177,10 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
           if (key === "core") {
             return {
               contentModels: [
-                { model: advancedArticleContent, pluginId: CONFIG_PLUGIN.pluginId },
+                {
+                  model: advancedArticleContent,
+                  pluginId: CONFIG_PLUGIN.pluginId,
+                },
                 { model: categoryContent, pluginId: CONFIG_PLUGIN.pluginId },
               ],
               i18n: {
@@ -336,12 +339,12 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       await localized.create({
         shared: {},
         translation: { title: "Shared Title" },
-      } as never);
+      });
 
       const second = await localized.create({
         shared: {},
         translation: { title: "Another" },
-      } as never);
+      });
 
       const translations = advancedArticleContent.translationService?.(context);
       if (!translations) throw new Error("no translation service");
@@ -352,7 +355,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
         translations.update(
           second.row.id,
           "en",
-          { slug: "shared-title" } as never,
+          { slug: "shared-title" },
           { expectedVersion: 1 },
         ),
       ).rejects.toThrow();
@@ -361,7 +364,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
         translations.create(second.row.id, "pl", {
           slug: "shared-title",
           title: "Polski",
-        } as never),
+        }),
       ).resolves.toBeTruthy();
     });
   });
@@ -392,7 +395,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
       await editorial()?.update(
         first.id,
-        { relatedArticles: [third.id, second.id] } as never,
+        { relatedArticles: [third.id, second.id] },
         { actor: ACTOR, expectedVersion: first.version },
       );
 
@@ -412,7 +415,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
       const set = await editorial()?.update(
         article.id,
-        { relatedArticles: [a, b] } as never,
+        { relatedArticles: [a, b] },
         { actor: ACTOR, expectedVersion: 1 },
       );
       if (!set) throw new Error("update returned nothing");
@@ -421,7 +424,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       // per-row UPDATE would break against `UNIQUE (itemId, position)`.
       await editorial()?.update(
         article.id,
-        { relatedArticles: [b, a] } as never,
+        { relatedArticles: [b, a] },
         { actor: ACTOR, expectedVersion: set.version },
       );
 
@@ -472,7 +475,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       await createArticle({ categories: [categoryIds[0]] });
 
       const found = await service().findMany({
-        filters: { categories: { contains: categoryIds[1] } } as never,
+        filters: { categories: { contains: categoryIds[1] } },
       });
 
       expect(found.edges.map(edge => edge.id)).toStrictEqual([matching.id]);
@@ -548,7 +551,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       await expect(
         service().repeatable.faq.set(
           mine.id,
-          [{ answer: "A", id: stolen.id as number, question: "Question?" }],
+          [{ answer: "A", id: stolen.id, question: "Question?" }],
           { expectedVersion: 1 },
         ),
       ).rejects.toBeInstanceOf(ContentAdvancedInputError);
@@ -600,7 +603,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
       const result = await editorial()?.update(
         article.id,
-        { syndication: { priority: 3 } } as never,
+        { syndication: { priority: 3 } },
         { actor: ACTOR, expectedVersion: article.version },
       );
 
@@ -636,7 +639,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       const created = await localized.create({
         shared: {},
         translation: { title: "No SEO Here" },
-      } as never);
+      });
 
       const translation = await advancedArticleContent
         .translationService?.(context)
@@ -657,12 +660,12 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       const results = await Promise.allSettled([
         editorial()?.update(
           article.id,
-          { categories: [categoryIds[1]] } as never,
+          { categories: [categoryIds[1]] },
           { actor: ACTOR, expectedVersion: article.version },
         ),
         editorial(rivalContext)?.update(
           article.id,
-          { categories: [categoryIds[2]] } as never,
+          { categories: [categoryIds[2]] },
           { actor: ACTOR, expectedVersion: article.version },
         ),
       ]);
@@ -672,9 +675,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
       expect(won).toHaveLength(1);
       expect(lost).toHaveLength(1);
-      expect((lost[0] as PromiseRejectedResult).reason).toBeInstanceOf(
-        ContentVersionConflict,
-      );
+      expect(lost[0].reason).toBeInstanceOf(ContentVersionConflict);
 
       // The loser wrote nothing at all: exactly one category, from one writer.
       const stored = await service().relations.categories.get(article.id);
@@ -688,12 +689,12 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       const results = await Promise.allSettled([
         editorial()?.update(
           article.id,
-          { categories: [categoryIds[0]] } as never,
+          { categories: [categoryIds[0]] },
           { actor: ACTOR, expectedVersion: article.version },
         ),
         editorial(rivalContext)?.update(
           article.id,
-          { syndication: { priority: 1 } } as never,
+          { syndication: { priority: 1 } },
           { actor: ACTOR, expectedVersion: article.version },
         ),
       ]);
@@ -721,12 +722,12 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       const results = await Promise.allSettled([
         editorial()?.update(
           article.id,
-          { faq: [{ answer: "Mine", question: "Mine?" }] } as never,
+          { faq: [{ answer: "Mine", question: "Mine?" }] },
           { actor: ACTOR, expectedVersion: 1 },
         ),
         editorial(rivalContext)?.update(
           article.id,
-          { faq: [{ answer: "Theirs", question: "Theirs?" }] } as never,
+          { faq: [{ answer: "Theirs", question: "Theirs?" }] },
           { actor: ACTOR, expectedVersion: 1 },
         ),
       ]);
@@ -759,14 +760,14 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
           article.id,
           {
             faq: [ids[2], ids[1], ids[0]].map(id => ({ id })),
-          } as never,
+          },
           { actor: ACTOR, expectedVersion: 1 },
         ),
         editorial(rivalContext)?.update(
           article.id,
           {
             faq: [ids[1], ids[0], ids[2]].map(id => ({ id })),
-          } as never,
+          },
           { actor: ACTOR, expectedVersion: 1 },
         ),
       ]);
@@ -786,12 +787,12 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       const results = await Promise.all([
         editorial()?.update(
           first.id,
-          { categories: [categoryIds[0]] } as never,
+          { categories: [categoryIds[0]] },
           { actor: ACTOR, expectedVersion: first.version },
         ),
         editorial(rivalContext)?.update(
           second.id,
-          { categories: [categoryIds[1]] } as never,
+          { categories: [categoryIds[1]] },
           { actor: ACTOR, expectedVersion: second.version },
         ),
       ]);
@@ -848,7 +849,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
       const first = await editorial()?.update(
         article.id,
-        { relatedArticles: [a, b] } as never,
+        { relatedArticles: [a, b] },
         { actor: ACTOR, expectedVersion: 1 },
       );
       if (!first) throw new Error("update returned nothing");
@@ -858,7 +859,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
       const second = await editorial()?.update(
         article.id,
-        { relatedArticles: [b, a] } as never,
+        { relatedArticles: [b, a] },
         { actor: ACTOR, expectedVersion: first.version },
       );
       if (!second) throw new Error("update returned nothing");
@@ -885,7 +886,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
       const removed = await editorial()?.update(
         article.id,
-        { faq: [] } as never,
+        { faq: [] },
         { actor: ACTOR, expectedVersion: 1 },
       );
       if (!removed) throw new Error("update returned nothing");
@@ -901,10 +902,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
       const restored = await service().repeatable.faq.list(article.id);
 
-      expect(restored.map(row => row.question)).toStrictEqual([
-        "One?",
-        "Two?",
-      ]);
+      expect(restored.map(row => row.question)).toStrictEqual(["One?", "Two?"]);
       // Recreated rather than matched: the ids are gone, the values are not.
       expect(restored.every(row => typeof row.id === "number")).toBe(true);
     });
@@ -916,7 +914,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
       const cleared = await editorial()?.update(
         article.id,
-        { categories: [] } as never,
+        { categories: [] },
         { actor: ACTOR, expectedVersion: 1 },
       );
       if (!cleared) throw new Error("update returned nothing");
@@ -945,7 +943,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
       const changed = await editorial()?.update(
         article.id,
-        { syndication: { indexable: false, priority: 1 } } as never,
+        { syndication: { indexable: false, priority: 1 } },
         { actor: ACTOR, expectedVersion: 1 },
       );
       if (!changed) throw new Error("update returned nothing");
@@ -970,7 +968,10 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
   describe("public projection", () => {
     const publish = async (id: number, version: number) =>
-      await editorial()?.publish(id, { actor: ACTOR, expectedVersion: version });
+      await editorial()?.publish(id, {
+        actor: ACTOR,
+        expectedVersion: version,
+      });
 
     it("exposes the named leaves and nothing else", async () => {
       const localized = advancedArticleContent.localizedService?.(context, {
@@ -988,18 +989,22 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
           seo: { description: "Public description", title: "Public SEO" },
           title: "Public Article",
         },
-      } as never);
+      });
 
-      await publish(created.row.id, created.row.version);
+      // `localizedService.create` is typed against the erased definition, so
+      // its row comes back widened - narrowed here rather than at every use.
+      const itemId = Number(created.row.id);
+
+      await publish(itemId, Number(created.row.version));
       await advancedArticleContent
         .translationEditorialService?.(context, {
           pluginId: CONFIG_PLUGIN.pluginId,
         })
-        .publish(created.row.id, "en", { actor: ACTOR });
+        .publish(itemId, "en", { actor: ACTOR });
 
       const row = await advancedArticleContent
         .publicService?.(context)
-        .findById(created.row.id, { locale: "en" });
+        .findById(itemId, { locale: "en" });
 
       expect(row).toMatchObject({
         categories: [categoryIds[0]],
@@ -1012,7 +1017,8 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
       // The private leaf is absent from the response *and* from the SELECT.
       expect(
-        (row as unknown as { syndication: Record<string, unknown> }).syndication,
+        (row as unknown as { syndication: Record<string, unknown> })
+          .syndication,
       ).not.toHaveProperty("indexable");
       // A private collection is absent altogether.
       expect(row).not.toHaveProperty("relatedArticles");

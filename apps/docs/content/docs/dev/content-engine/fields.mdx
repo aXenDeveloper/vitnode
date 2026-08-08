@@ -1,6 +1,6 @@
 ---
 title: Supported fields
-description: The nine field kinds, and exactly what each one becomes in Postgres, in the API and in the AdminCP.
+description: The eleven field kinds, and exactly what each one becomes in Postgres, in the API and in the AdminCP.
 icon: ListChecks
 ---
 
@@ -18,6 +18,14 @@ things: a column, a Zod rule, an AdminCP input and a table cell.
 | `dateTime` | `timestamp` | ISO string | `AutoFormDateTime` | ✓ | ✗ | ✗ |
 | `user` | `integer` → `core_users.id` | `number` | async combobox | ✓ | ✓ | ✗ |
 | `relation` | `integer` → target `id` | `number` | async combobox | ✓ | ✓ | ✗ |
+| `relation` (`multiple`) | junction table | `number[]` | multi picker | ✗ | membership | ✗ |
+| `group` | one column per leaf | nested object | labelled section | per leaf | per leaf | per leaf |
+| `repeatable` | child table | array of rows | list editor | ✗ | ✗ | opt-in |
+
+The last three are [Advanced
+modeling](/docs/dev/content-engine/advanced-modeling), and every one of them is
+opt-in: a content type that declares none behaves exactly as it did before they
+existed.
 
 "Sortable" means the column *can* be allowlisted in `admin.list.orderableFields`
 - nothing is orderable until you list it. System columns always are.
@@ -212,10 +220,35 @@ that reference each other still load fine.
   row. `defineContentType` rejects the combination up front instead.
 </Callout>
 
+## group and repeatable
+
+Two structured kinds, each with a page of its own:
+
+```ts
+// Several leaves under one name, flattened into real columns.
+seo: field.group({
+  fields: {
+    title: field.text({ nullable: true }),
+    description: field.textarea({ nullable: true }),
+  },
+}),
+
+// Zero or more ordered child rows, in a generated child table.
+faq: field.repeatable({
+  fields: {
+    question: field.text({ required: true }),
+    answer: field.textarea({ required: true }),
+  },
+}),
+```
+
+See [Structured fields](/docs/dev/content-engine/structured-fields) and
+[Repeatable fields](/docs/dev/content-engine/repeatable-fields).
+
 ## localized
 
-`text`, `textarea` and `slug` also accept `localized: true`, which moves the value
-into a generated per-language table instead of onto the base table:
+`text`, `textarea`, `slug` and `group` also accept `localized: true`, which moves
+the value into a generated per-language table instead of onto the base table:
 
 ```ts
 title: field.text({ localized: true, required: true }),
@@ -223,8 +256,8 @@ title: field.text({ localized: true, required: true }),
 
 It needs `localization: { enabled: true, defaultLocale }` on the content type, and
 the other builders do not take the argument at all - so a localized `boolean` is a
-compile error. See [Localized
-fields](/docs/dev/content-engine/localized-fields).
+compile error. A `group` moves **whole**, and a `repeatable` never moves at all.
+See [Localized fields](/docs/dev/content-engine/localized-fields).
 
 ## Adding a field kind later
 

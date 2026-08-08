@@ -162,7 +162,9 @@ describe("create values", () => {
 
 describe("update values", () => {
   it("takes one leaf of a group without the others", () => {
-    assertType<ContentUpdateInput<Article>>({ seo: { description: "Just this" } });
+    assertType<ContentUpdateInput<Article>>({
+      seo: { description: "Just this" },
+    });
   });
 
   it("takes a collection whole", () => {
