@@ -6,7 +6,9 @@ import type {
   ContentFieldKind,
 } from "../types";
 
+import { contentRepeatableMax, contentRepeatableMin } from "../advanced";
 import { partitionContentFields } from "../localization";
+import { contentFieldPath, contentInnerFields } from "../paths";
 
 /**
  * A single form field, reduced to plain JSON.
@@ -21,17 +23,33 @@ export interface ContentFormFieldSpec {
   defaultValue?: boolean | null | number | string;
   description?: string;
   display?: "radio" | "select";
+  /**
+   * The leaves of a `group` or a `repeatable`, in declaration order.
+   *
+   * Recursive in the type and one level deep in practice: a leaf is always a
+   * scalar, which is what lets a group render as a section of ordinary inputs
+   * and a repeatable row render as the same section repeated.
+   */
+  fields?: ContentFormFieldSpec[];
   integer?: boolean;
   kind: ContentFieldKind;
   label: string;
   max?: number;
+  /** Upper bound on a repeatable's rows. */
+  maxItems?: number;
   maxLength?: number;
   min?: number;
+  /** Lower bound on a repeatable's rows. */
+  minItems?: number;
   minLength?: number;
+  /** A relation that holds many targets rather than one. */
+  multiple?: boolean;
   name: string;
   nullable: boolean;
   /** Enum choices, already translated. */
   options?: { label: string; value: string }[];
+  /** Whether an ordered relation's order is the author's to choose. */
+  ordered?: boolean;
   required: boolean;
 }
 
@@ -104,6 +122,30 @@ const projectFormField = (
           value,
         })),
       };
+    case "group":
+    case "repeatable":
+      return {
+        ...base,
+        fields: Object.entries(contentInnerFields(fieldValue)).map(
+          ([leaf, leafValue]) =>
+            projectFormField(
+              leaf,
+              leafValue,
+              labelEnum,
+              // A leaf's label is looked up under its canonical path, so an
+              // override for `seo.title` is possible without one for every
+              // group that happens to have a `title`.
+              (leafName, descriptor) =>
+                labelField(contentFieldPath(name, leafName), descriptor),
+            ),
+        ),
+        ...(fieldValue.kind === "repeatable"
+          ? {
+              maxItems: contentRepeatableMax(fieldValue),
+              minItems: contentRepeatableMin(fieldValue),
+            }
+          : {}),
+      };
     case "number":
       return {
         ...base,
@@ -111,6 +153,12 @@ const projectFormField = (
         integer: fieldValue.integer,
         max: fieldValue.max,
         min: fieldValue.min,
+      };
+    case "relation":
+      return {
+        ...base,
+        multiple: fieldValue.multiple,
+        ordered: fieldValue.ordered,
       };
     case "slug":
       // No default and no minimum: an empty slug input means "derive it",
@@ -237,6 +285,37 @@ export type ContentReferenceOption = z.infer<typeof referenceOptionSchema>;
 export const isReferenceKind = (kind: ContentFieldKind): boolean =>
   kind === "relation" || kind === "user";
 
+/**
+ * One group's or repeatable row's leaves, as a nested object schema.
+ *
+ * Nested rather than flattened into `seo.title` keys: react-hook-form would
+ * happily accept the dotted names, but then the value the form holds and the
+ * value the API takes would be two different shapes, and the conversion would
+ * have to live somewhere. One shape, all the way through.
+ */
+const leafObjectSchema = (
+  spec: ContentFormFieldSpec,
+  values?: Record<string, unknown>,
+): z.ZodObject<z.ZodRawShape> =>
+  z.object(
+    Object.fromEntries(
+      (spec.fields ?? []).map(leaf => {
+        const base = baseFieldSchema(leaf);
+        const nullable = leaf.nullable ? base.nullable() : base;
+        const current = values?.[leaf.name] ?? leaf.defaultValue;
+
+        return [
+          leaf.name,
+          current === undefined
+            ? leaf.required
+              ? nullable
+              : nullable.optional()
+            : nullable.default(current),
+        ];
+      }),
+    ),
+  );
+
 const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
   switch (spec.kind) {
     case "boolean":
@@ -252,6 +331,8 @@ const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
         ? z.enum(values as [string, ...string[]])
         : z.string();
     }
+    case "group":
+      return leafObjectSchema(spec);
     case "number": {
       // A number input hands react-hook-form a string, so the form schema
       // coerces - `z.number()` would reject "0" and disable submit.
@@ -262,6 +343,21 @@ const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
       return schema;
     }
     case "relation":
+      // A to-many relation holds identifiers, not combobox options: the picker
+      // renders the labels it fetched and stores what the API takes.
+      if (spec.multiple) return z.array(z.number());
+
+      return referenceOptionSchema;
+    case "repeatable": {
+      // `id` marks a child that already exists; a row without one is new. The
+      // client id the editor uses for its React keys never crosses the wire.
+      const row = leafObjectSchema(spec).extend({ id: z.number().optional() });
+
+      return z
+        .array(row)
+        .min(spec.minItems ?? 0)
+        .max(spec.maxItems ?? Number.MAX_SAFE_INTEGER);
+    }
     case "user":
       // `AutoFormCombobox` holds the whole option, not the id - the same shape
       // the blog plugin models by hand. `contentFormValuesToPayload` turns it
@@ -330,7 +426,17 @@ export const contentFormValuesToPayload = (
   Object.fromEntries(
     Object.entries(values).map(([name, value]) => {
       const fieldSpec = spec.fields.find(item => item.name === name);
-      if (!fieldSpec || !isReferenceKind(fieldSpec.kind)) return [name, value];
+      // A group and a repeatable already hold the shape the API takes - the
+      // editors control the nested value directly - and a to-many relation
+      // already holds identifiers. Only the single-relation combobox, which
+      // holds `{ label, value }` so it can show a name, needs converting.
+      if (
+        !fieldSpec ||
+        fieldSpec.multiple === true ||
+        !isReferenceKind(fieldSpec.kind)
+      ) {
+        return [name, value];
+      }
 
       const option = value as ContentReferenceOption | null | undefined;
       if (!option?.value) return [name, null];
@@ -354,8 +460,28 @@ export const buildFormSchemaFromSpec = (
   z.object(
     Object.fromEntries(
       spec.fields.map(fieldSpec => {
+        // A group builds its leaf defaults from the value it is editing, which
+        // a shared `baseFieldSchema` cannot see.
+        if (fieldSpec.kind === "group") {
+          const current = values?.[fieldSpec.name] as
+            null | Record<string, unknown> | undefined;
+          const object = leafObjectSchema(fieldSpec, current ?? undefined);
+          const nullable: z.ZodType = fieldSpec.nullable
+            ? object.nullable()
+            : object;
+
+          return [
+            fieldSpec.name,
+            // `seo: null` is a real state a nullable group can be in, and the
+            // editor has to open on it rather than on an empty object.
+            current === null ? nullable.default(null) : nullable.optional(),
+          ];
+        }
+
         const base =
-          isReferenceKind(fieldSpec.kind) && fieldSpec.required
+          isReferenceKind(fieldSpec.kind) &&
+          !fieldSpec.multiple &&
+          fieldSpec.required
             ? baseFieldSchema(fieldSpec).refine(
                 option => (option as ContentReferenceOption).value !== "",
               )

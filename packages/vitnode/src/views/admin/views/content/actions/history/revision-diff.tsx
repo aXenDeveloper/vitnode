@@ -42,8 +42,50 @@ const Value = ({
   options?: Record<string, string>;
   value: ContentSnapshotValue | undefined;
 }) => {
+  // Narrowed once, so the scalar branches below can use `String(...)` without
+  // every one of them having to prove the value is not an object.
   if (value === null || value === undefined || value === "") {
     return <Empty label={emptyLabel} />;
+  }
+
+  // The three Stage 6 shapes reach here as objects and arrays rather than
+  // scalars, and `String(...)` on any of them is `[object Object]`. Each gets a
+  // summary a person can read: a group as its leaves, a to-many relation as its
+  // targets, a repeatable as how many entries it holds.
+  if (Array.isArray(value)) {
+    if (value.length === 0) return <Empty label={emptyLabel} />;
+
+    if (typeof value[0] === "number") {
+      return (
+        <span>
+          {(value as number[])
+            .map(id => labels[String(id)] ?? `#${id}`)
+            .join(", ")}
+        </span>
+      );
+    }
+
+    return (
+      <span className="tabular-nums">
+        {emptyLabel === "" ? value.length : `× ${value.length}`}
+      </span>
+    );
+  }
+
+  if (typeof value === "object") {
+    const leaves = Object.entries(value as Record<string, unknown>).filter(
+      ([, leaf]) => leaf !== null && leaf !== "",
+    );
+
+    if (leaves.length === 0) return <Empty label={emptyLabel} />;
+
+    return (
+      <span className="wrap-break-word">
+        {leaves
+          .map(([leaf, leafValue]) => `${leaf}: ${String(leafValue)}`)
+          .join(", ")}
+      </span>
+    );
   }
 
   switch (kind) {

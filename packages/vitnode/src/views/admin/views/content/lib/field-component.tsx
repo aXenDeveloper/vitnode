@@ -12,6 +12,10 @@ import { AutoFormSelect } from "@/components/form/fields/select";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { AutoFormTextarea } from "@/components/form/fields/textarea";
 
+import { ContentGroupField } from "./group-field";
+import { ContentRelationSetField } from "./relation-set-field";
+import { ContentRepeatableField } from "./repeatable-field";
+
 export type ContentOptionsLoader = (args: {
   field: string;
   search: string;
@@ -58,6 +62,13 @@ export const ContentField = ({
       );
     }
 
+    // The three Stage 6 editors. Each one controls the nested value the API
+    // takes, so nothing is flattened on submit and nothing re-nested on load.
+    case "group":
+      return (
+        <ContentGroupField loadOptions={loadOptions} spec={spec} {...props} />
+      );
+
     case "number":
       // A nullable number needs the "no value" toggle; a plain one does not.
       return spec.nullable ? (
@@ -80,6 +91,17 @@ export const ContentField = ({
       );
 
     case "relation":
+      if (spec.multiple) {
+        return (
+          <ContentRelationSetField
+            loadOptions={loadOptions}
+            spec={spec}
+            {...props}
+          />
+        );
+      }
+
+    // eslint-disable-next-line no-fallthrough
     case "user":
       return (
         <AutoFormCombobox
@@ -91,6 +113,15 @@ export const ContentField = ({
           placeholder={t("relation.placeholder")}
           searchPlaceholder={t("relation.search_placeholder")}
           showClear={spec.nullable}
+          {...props}
+        />
+      );
+
+    case "repeatable":
+      return (
+        <ContentRepeatableField
+          loadOptions={loadOptions}
+          spec={spec}
           {...props}
         />
       );

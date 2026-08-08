@@ -466,6 +466,17 @@
         "boolean": {
           "on": "Yes",
           "off": "No"
+        },
+        "group": {
+          "enabled": "Has a value"
+        },
+        "list": {
+          "add": "Add {label}",
+          "empty": "Nothing here yet.",
+          "move_down": "Move entry {position} down",
+          "move_up": "Move entry {position} up",
+          "position": "{label} {position} of {total}",
+          "remove": "Remove entry {position}"
         }
       },
       "conflict": {
