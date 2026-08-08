@@ -244,7 +244,7 @@ export interface ContentRelationField<
  * `partitionContentFields` exists to prevent.
  */
 export interface ContentGroupField<
-  TFields = ContentFieldMap,
+  TFields = ContentLeafFieldMap,
   TRequired extends boolean = boolean,
   TNullable extends boolean = boolean,
   TLocalized extends boolean = boolean,
@@ -268,7 +268,7 @@ export interface ContentGroupField<
  * `apps/docs/.../repeatable-fields.mdx` for why that is a later stage.
  */
 export interface ContentRepeatableField<
-  TFields = ContentFieldMap,
+  TFields = ContentLeafFieldMap,
 > extends ContentFieldShared<false, false> {
   fields: TFields;
   kind: "repeatable";
@@ -1614,7 +1614,7 @@ export type ContentCreateInput<TDefinition> = ContentSharedValues<TDefinition>;
  * their own service call.
  */
 export type ContentUpdateInput<TDefinition> = Prettify<{
-  [K in keyof ContentCreateInput<TDefinition>]?: ContentFieldPatch<
+  [K in SharedFieldKeys<ContentFieldsOf<TDefinition>>]?: ContentFieldPatch<
     ContentFieldsOf<TDefinition>[K]
   >;
 }>;

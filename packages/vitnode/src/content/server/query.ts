@@ -3,7 +3,11 @@ import type { PgColumn } from "drizzle-orm/pg-core";
 
 import { and, eq, ilike, isNull, or } from "drizzle-orm";
 
-import type { ContentFieldDescriptor, ContentFieldMap } from "../types";
+import type {
+  ContentFieldDescriptor,
+  ContentFieldMap,
+  ContentRelationFilter,
+} from "../types";
 
 import {
   CONTENT_FILTERABLE_FIELD_KINDS,
@@ -12,6 +16,15 @@ import {
   isFilterableFieldKind,
 } from "../const";
 import { ContentEngineError } from "../errors";
+import {
+  contentFieldPath,
+  contentInnerFields,
+  contentLeafColumnName,
+  contentStorageColumns,
+  contentValuesToColumns,
+  isContentRelationCollection,
+  splitContentFieldPath,
+} from "../paths";
 
 /**
  * Escapes the `LIKE` wildcards so a search for "100%" matches the literal text
@@ -61,6 +74,7 @@ export const buildFilterCondition = ({
   contentTypeId,
   fields,
   filters,
+  membership,
   publication = false,
 }: {
   /**
@@ -73,6 +87,15 @@ export const buildFilterCondition = ({
   contentTypeId: string;
   fields: ContentFieldMap;
   filters: Record<string, unknown>;
+  /**
+   * Compiles a to-many relation's `{ contains }` filter into an indexed
+   * `EXISTS` over its junction table.
+   *
+   * Injected rather than built here because it needs the generated tables,
+   * which this module deliberately knows nothing about - and because a caller
+   * that passes none simply has no to-many relation to filter on.
+   */
+  membership?: (field: string, filter: ContentRelationFilter) => SQL | undefined;
   /** Whether `status` is a generated column and therefore filterable. */
   publication?: boolean;
 }): SQL | undefined => {
@@ -106,6 +129,24 @@ export const buildFilterCondition = ({
     }
 
     const fieldValue = fields[name];
+
+    // A to-many relation has no column, so it is answered before the column
+    // lookup: `{ contains: 7 }` becomes an indexed `EXISTS` over the junction
+    // table rather than an equality against something that does not exist.
+    if (fieldValue && isContentRelationCollection(fieldValue)) {
+      const filter = raw as ContentRelationFilter;
+      if (typeof filter?.contains !== "number") {
+        throw new ContentEngineError(
+          `Filter "${name}" is a to-many relation, which takes \`{ contains: <id> }\` rather than a value.`,
+          { contentTypeId },
+        );
+      }
+
+      const condition = membership?.(name, filter);
+      if (condition) conditions.push(condition);
+      continue;
+    }
+
     const column = columns[name];
     if (!fieldValue || !column) {
       throw new ContentEngineError(`Unknown filter "${name}".`, {
@@ -204,6 +245,99 @@ export const diffChangedFields = <TName extends string>(
     name => patch[name] !== undefined && !sameValue(current[name], patch[name]),
   );
 
+/**
+ * The **canonical paths** a patch actually changes, groups included.
+ *
+ * A scalar contributes its own name. A group contributes one path per leaf the
+ * patch names *and* moves, so `{ seo: { description } }` reports
+ * `["seo.description"]` and never `["seo"]` - which is what makes a changed-field
+ * list precise enough for a cache decision and a search decision to be made from
+ * it. `seo: null` reports every leaf that was not already null, because that is
+ * exactly what it blanks.
+ *
+ * `current` is a **column** row, as it comes back from Postgres; the patch is in
+ * logical shape. Comparing across the two is the whole job, and doing it here is
+ * what stops each service from flattening by hand.
+ */
+export const diffChangedPaths = (
+  fields: ContentFieldMap,
+  current: Record<string, unknown>,
+  patch: Record<string, unknown>,
+): string[] => {
+  const changed: string[] = [];
+
+  for (const [name, fieldValue] of Object.entries(fields)) {
+    const next = patch[name];
+    if (next === undefined) continue;
+
+    if (fieldValue.kind !== "group") {
+      if (!sameValue(current[name], next)) changed.push(name);
+      continue;
+    }
+
+    const inner = contentInnerFields(fieldValue);
+
+    if (next === null) {
+      for (const leaf of Object.keys(inner)) {
+        const column = contentLeafColumnName(name, leaf);
+        if (current[column] === null || current[column] === undefined) continue;
+
+        changed.push(contentFieldPath(name, leaf));
+      }
+      continue;
+    }
+
+    if (typeof next !== "object") continue;
+
+    for (const [leaf, leafValue] of Object.entries(
+      next as Record<string, unknown>,
+    )) {
+      if (!(leaf in inner) || leafValue === undefined) continue;
+
+      const column = contentLeafColumnName(name, leaf);
+      if (sameValue(current[column], leafValue)) continue;
+
+      changed.push(contentFieldPath(name, leaf));
+    }
+  }
+
+  return changed;
+};
+
+/**
+ * The column patch for a set of changed paths.
+ *
+ * Only the leaves that moved are written, so an `UPDATE` touches `seo_title` and
+ * leaves `seo_description` alone - which is what a partial group update has to
+ * mean if two people editing different leaves are not to overwrite each other.
+ */
+export const changedPathsToColumns = (
+  fields: ContentFieldMap,
+  patch: Record<string, unknown>,
+  changedPaths: readonly string[],
+): Record<string, unknown> => {
+  const picked: Record<string, unknown> = {};
+
+  for (const path of changedPaths) {
+    const parts = splitContentFieldPath(path);
+    if (!parts) {
+      if (fields[path] === undefined) continue;
+
+      picked[path] = patch[path];
+      continue;
+    }
+
+    const [owner, leaf] = parts;
+    const container = patch[owner];
+    picked[contentLeafColumnName(owner, leaf)] =
+      container === null
+        ? null
+        : ((container as Record<string, unknown> | undefined)?.[leaf] ?? null);
+  }
+
+  return toColumnValues(contentStorageColumns(fields), picked);
+};
+
 /** `dateTime` values arrive as ISO strings and have to become `Date` columns. */
 export const toColumnValues = (
   fields: ContentFieldMap,
@@ -217,4 +351,20 @@ export const toColumnValues = (
 
       return [name, new Date(value)];
     }),
+  );
+
+/**
+ * A whole logical value object, flattened into the columns an `INSERT` writes.
+ *
+ * {@link contentValuesToColumns} with the `dateTime` coercion applied
+ * afterwards, so a create writes `seo_title` from `{ seo: { title } }` and an
+ * ISO string still becomes a `Date`.
+ */
+export const toInsertColumns = (
+  fields: ContentFieldMap,
+  values: Record<string, unknown>,
+): Record<string, unknown> =>
+  toColumnValues(
+    contentStorageColumns(fields),
+    contentValuesToColumns(fields, values),
   );

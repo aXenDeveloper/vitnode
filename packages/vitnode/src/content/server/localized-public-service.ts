@@ -11,6 +11,7 @@ import { and, eq, exists, not, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 import type { AnyContentTypeDefinition, ContentPublicSelect } from "../types";
+import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentLanguage } from "./language-resolver";
 import type { ContentPublicService } from "./public-service";
 
@@ -21,11 +22,17 @@ import {
 } from "../const";
 import { ContentEngineError } from "../errors";
 import { partitionContentFields } from "../localization";
+import {
+  isContentRelationCollection,
+  splitContentFieldPath,
+} from "../paths";
 import { publicOrderableColumns } from "../registry";
 import { findContentLanguage } from "./language-resolver";
 import {
   clampContentPublicPageSize,
+  contentPublicCollectionFields,
   createContentPublicProjector,
+  nestContentPublicRow,
 } from "./public-service";
 import {
   contentTranslationPublicationColumns,
@@ -106,6 +113,7 @@ const EMPTY_PAGE = {
 export const createContentLocalizedPublicService = <
   TDefinition extends AnyContentTypeDefinition,
 >({
+  advanced,
   c,
   columns,
   definition,
@@ -113,6 +121,8 @@ export const createContentLocalizedPublicService = <
   translationColumns,
   translationTable,
 }: {
+  /** The collection store, or nothing for a content type that declares none. */
+  advanced?: ContentAdvancedStore;
   c: Context;
   columns: Record<string, PgColumn>;
   definition: TDefinition;
@@ -131,9 +141,8 @@ export const createContentLocalizedPublicService = <
     );
   }
 
-  const { localizedFields, sharedFields } = partitionContentFields(
-    definition.fields,
-  );
+  const { collectionFields, localizedFields, sharedFields } =
+    partitionContentFields(definition.fields);
   const isLocalized = (name: string): boolean =>
     localizedFields[name] !== undefined;
 
@@ -149,12 +158,65 @@ export const createContentLocalizedPublicService = <
   const orderable = publicOrderableColumns(definition);
   const project = createContentPublicProjector(definition);
 
-  const exposedShared = publicApi.fields.filter(name => !isLocalized(name));
-  const exposedLocalized = publicApi.fields.filter(isLocalized);
-  const sharedSearchable = publicApi.searchableFields.filter(
-    name => !isLocalized(name),
+  /**
+   * Which half of the join each exposed name is read from.
+   *
+   * A canonical path is answered by its **container**: `seo.title` is on the
+   * translation table when `seo` is a localized group and on the base row
+   * otherwise, because a group moves whole. A collection is neither - it has no
+   * column on either table, and is batch-loaded after the page is fetched.
+   */
+  const ownerOf = (name: string): string => {
+    const path = splitContentFieldPath(name);
+
+    return path ? path[0] : name;
+  };
+  const isColumnField = (name: string): boolean => {
+    const fieldValue = definition.fields[ownerOf(name)];
+
+    if (!fieldValue) return true;
+    if (fieldValue.kind === "repeatable") return false;
+
+    return !isContentRelationCollection(fieldValue);
+  };
+  const exposedColumns = publicApi.fields.filter(isColumnField);
+  const exposedShared = exposedColumns.filter(
+    name => !isLocalized(ownerOf(name)),
   );
-  const localizedSearchable = publicApi.searchableFields.filter(isLocalized);
+  const exposedLocalized = exposedColumns.filter(name =>
+    isLocalized(ownerOf(name)),
+  );
+  const publicCollections = contentPublicCollectionFields(definition);
+
+  /**
+   * Attaches the exposed collections to a page of rows.
+   *
+   * One batch per collection field for the whole page. A collection is shared,
+   * so it is the same in every language - there is nothing locale-aware to do
+   * here, and doing it once per page rather than once per locale is the point.
+   */
+  const withCollections = async (
+    rows: readonly Record<string, unknown>[],
+  ): Promise<Record<string, unknown>[]> => {
+    const nested = rows.map(nestContentPublicRow);
+    if (publicCollections.length === 0 || nested.length === 0) return nested;
+
+    const ids = nested
+      .map(row => row.id)
+      .filter((id): id is number => typeof id === "number");
+    const loaded = await advanced?.loadMany(ids, c.get("db"));
+
+    return nested.map(row => ({
+      ...row,
+      ...(typeof row.id === "number" ? loaded?.get(row.id) : undefined),
+    }));
+  };
+  const sharedSearchable = publicApi.searchableFields.filter(
+    name => !isLocalized(ownerOf(name)),
+  );
+  const localizedSearchable = publicApi.searchableFields.filter(name =>
+    isLocalized(ownerOf(name)),
+  );
 
   // Two aliases of the same table, because one statement reads it twice: the
   // language the reader asked for, and the one it may fall back to. Named rather
@@ -377,7 +439,11 @@ export const createContentLocalizedPublicService = <
       { limit: 1 },
     );
 
-    return row ? projectRow(row, scope) : null;
+    if (!row) return null;
+
+    const [withAdvanced] = await withCollections([row]);
+
+    return projectRow(withAdvanced, scope);
   };
 
   return {
@@ -413,10 +479,10 @@ export const createContentLocalizedPublicService = <
 
       const raw = filters as Record<string, unknown>;
       const sharedFilters = Object.fromEntries(
-        Object.entries(raw).filter(([name]) => !isLocalized(name)),
+        Object.entries(raw).filter(([name]) => !isLocalized(ownerOf(name))),
       );
       const localizedFilters = Object.fromEntries(
-        Object.entries(raw).filter(([name]) => isLocalized(name)),
+        Object.entries(raw).filter(([name]) => isLocalized(ownerOf(name))),
       );
 
       const term = query.search;
@@ -450,8 +516,9 @@ export const createContentLocalizedPublicService = <
           allowed: publicApi.filterableFields,
           columns,
           contentTypeId,
-          fields: sharedFields,
+          fields: { ...collectionFields, ...sharedFields },
           filters: sharedFilters,
+          membership: advanced?.membershipCondition,
         }),
         anyOf(
           sharedSearch,
@@ -502,7 +569,9 @@ export const createContentLocalizedPublicService = <
       });
 
       return {
-        edges: data.edges.map(row => projectRow(row, resolved)),
+        edges: (await withCollections(data.edges)).map(row =>
+          projectRow(row, resolved),
+        ),
         pageInfo: data.pageInfo,
       };
     },

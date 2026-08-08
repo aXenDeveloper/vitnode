@@ -1,4 +1,8 @@
+import type { CONTENT_ADVANCED_CODES } from "./const";
 import type { ContentScheduleCode } from "./schedules";
+
+export type ContentAdvancedCode =
+  (typeof CONTENT_ADVANCED_CODES)[keyof typeof CONTENT_ADVANCED_CODES];
 
 /**
  * Thrown while a content type definition is being built or registered - always
@@ -271,6 +275,46 @@ export class ContentTranslationItemMissing extends ContentEngineError {
   }
 
   readonly itemId: number;
+}
+
+/**
+ * A collection write the engine understood but cannot apply: a relation target
+ * that does not exist, or a repeatable child that belongs to another record.
+ *
+ * Per-request, like {@link ContentInputError}, and checked **before** anything is
+ * written so a collection mutation stays all or nothing. It exists rather than
+ * leaving the foreign key to fail because the driver's `23503` cannot say which
+ * of a junction row's two references was the bad one - and "category 99 is gone"
+ * and "article 99 is gone" want different answers.
+ *
+ * `ids` names the offending identifiers and nothing else. It is the caller's own
+ * input echoed back, so there is nothing internal in it for a client to read.
+ */
+export class ContentAdvancedInputError extends ContentInputError {
+  constructor({
+    code,
+    contentTypeId,
+    field,
+    ids,
+    message,
+  }: {
+    code: ContentAdvancedCode;
+    contentTypeId: string;
+    field: string;
+    ids: number[];
+    message: string;
+  }) {
+    super(message, { contentTypeId });
+
+    this.name = "ContentAdvancedInputError";
+    this.code = code;
+    this.field = field;
+    this.ids = ids;
+  }
+
+  readonly code: ContentAdvancedCode;
+  readonly field: string;
+  readonly ids: number[];
 }
 
 /**

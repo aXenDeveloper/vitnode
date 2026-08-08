@@ -18,6 +18,7 @@ import type {
 import type {
   ContentEditorialField,
   ContentFieldsOf,
+  ContentLeafPath,
   ContentLocalizedFieldName,
   ContentPublicationField,
   ContentSharedFieldName,
@@ -166,12 +167,12 @@ export type ContentTranslationTable<
  * `AnyContentTypeDefinition` - whose localized name union is `never` - resolves
  * to an empty record instead of to `never`.
  */
-type LocalizedFieldsOf<TDefinition> = {
+type LocalizedFieldsOf<TDefinition> = ContentStorageFields<{
   [
     K in ContentLocalizedFieldName<TDefinition> &
       keyof ContentFieldsOf<TDefinition>
   ]: ContentFieldsOf<TDefinition>[K];
-};
+}>;
 
 /**
  * The translation table for one definition.
@@ -240,6 +241,81 @@ type SharedFieldsOf<TDefinition> = {
 };
 
 /**
+ * The type-level twin of `contentStorageColumns`.
+ *
+ * A field map, flattened into the columns it actually generates: scalars keep
+ * their names, a group contributes `seoTitle` per leaf, and the two collection
+ * kinds vanish because neither is a column here. Spelled out in the type system
+ * as well as at runtime because `$inferSelect` and `$inferInsert` are what a
+ * plugin's own hand-written queries are checked against - a table type that
+ * still said `seo: <group>` would type-check code Postgres then rejects.
+ */
+export type ContentStorageFields<TFields> = GroupLeafColumnsOf<TFields> &
+  ScalarFieldsOf<TFields>;
+
+type ScalarFieldsOf<TFields> = {
+  [K in keyof TFields as TFields[K] extends { kind: "group" | "repeatable" }
+    ? never
+    : TFields[K] extends { kind: "relation"; multiple: true }
+      ? never
+      : K]: TFields[K];
+};
+
+/**
+ * Every group leaf column of a field map, keyed by its generated column name.
+ *
+ * Written as **one** mapped type over the union of canonical paths rather than
+ * as a per-group union folded back with the usual `UnionToIntersection` trick.
+ * That trick puts the union in a function-parameter position, which makes
+ * `TDefinition` contravariant in `ContentTableFor` and therefore invariant in
+ * `ContentModel` - and an invariant `ContentModel<T>` is no longer assignable to
+ * `ContentModel<AnyContentTypeDefinition>`, which every route builder and every
+ * registry needs. It is the same trap `ResolvedContentAdminConfig` documents,
+ * reached from a different direction.
+ */
+type GroupLeafColumnsOf<TFields> = {
+  [
+    TPath in GroupLeafPathsOf<TFields> as ColumnNameOfPath<TPath>
+  ]: LeafDescriptorAt<TFields, TPath>;
+};
+
+/** `"seo.title" | "seo.description"`, over a field map's groups. */
+type GroupLeafPathsOf<TFields> = {
+  [K in keyof TFields]: TFields[K] extends {
+    fields: infer TInner;
+    kind: "group";
+  }
+    ? `${K & string}.${keyof TInner & string}`
+    : never;
+}[keyof TFields];
+
+/** The type-level twin of `contentLeafColumnName`. */
+type ColumnNameOfPath<TPath> = TPath extends `${infer TOwner}.${infer TLeaf}`
+  ? `${TOwner}${Capitalize<TLeaf>}`
+  : never;
+
+type LeafDescriptorAt<TFields, TPath> =
+  TPath extends `${infer TOwner}.${infer TLeaf}`
+    ? TOwner extends keyof TFields
+      ? TFields[TOwner] extends { fields: infer TInner }
+        ? TLeaf extends keyof TInner
+          ? RelaxedLeaf<TFields[TOwner], TInner[TLeaf]>
+          : never
+        : never
+      : never
+    : never;
+
+/** The type-level twin of `relaxLeafNullability`. */
+type RelaxedLeaf<TGroup, TLeaf> = TGroup extends {
+  nullable: false;
+  required: true;
+}
+  ? TLeaf
+  : TLeaf extends { nullable: true }
+    ? TLeaf
+    : Omit<TLeaf, "nullable"> & { nullable: true };
+
+/**
  * The base `pgTable` for one definition.
  *
  * Shared fields only. For a content type without localization every field is
@@ -250,7 +326,12 @@ export type ContentTableFor<TDefinition> = TDefinition extends {
   publication: { enabled: infer TPublication extends boolean };
   tableName: infer TName extends string;
 }
-  ? ContentTable<TName, SharedFieldsOf<TDefinition>, TPublication, TEditorial>
+  ? ContentTable<
+      TName,
+      ContentStorageFields<SharedFieldsOf<TDefinition>>,
+      TPublication,
+      TEditorial
+    >
   : never;
 
 /**
@@ -258,27 +339,87 @@ export type ContentTableFor<TDefinition> = TDefinition extends {
  *
  * Shared fields only: a localized field is a column on the translation table,
  * and {@link ContentTranslationColumnName} is the union that names those.
+ *
+ * A group appears as its generated leaf columns **and** under its canonical
+ * paths: `contentTableColumns` registers `seo.title` as an alias of `seoTitle`,
+ * so a filter, an `orderBy` or a search that was configured in paths resolves
+ * without every one of them learning the mapping.
  */
 export type ContentColumnName<TDefinition> =
-  | ContentSharedFieldName<TDefinition>
+  | ContentLeafPath<ContentFieldsOf<TDefinition>>
   | ContentSystemField
   | (TDefinition extends { editorial: { enabled: true } }
       ? ContentEditorialField
       : never)
   | (TDefinition extends { publication: { enabled: true } }
       ? ContentPublicationField
-      : never);
+      : never)
+  | (keyof ContentStorageFields<SharedFieldsOf<TDefinition>> & string);
 
 /**
  * One thunk per `relation` field, resolving to the target table's `id`. Missing
  * or extra keys are a compile error, and the thunk keeps circular content type
  * references safe - Drizzle resolves it lazily, at serialization time.
+ *
+ * A **to-many** relation needs one too: its foreign key is `relatedItemId` on
+ * the generated junction table rather than a column on the row, but the target
+ * it points at is exactly as much a fact the database module has to supply.
  */
 export type ContentReferences<TFields> = {
   [
     K in keyof TFields as TFields[K] extends { kind: "relation" } ? K : never
   ]: () => AnyIdColumn;
 };
+
+/**
+ * The generated junction table for one to-many relation field.
+ *
+ * `string` for the table name for the same reason
+ * {@link ContentTranslationTableFor} uses one: the name is derived at runtime
+ * and clamped with a fingerprint, and re-deriving that clamp in the type system
+ * would be a second implementation of it.
+ */
+export type ContentJunctionTable = PgTableWithColumns<{
+  columns: BuildColumns<
+    string,
+    {
+      createdAt: NotNull<HasDefault<PgTimestampBuilderInitial<ColumnName>>>;
+      itemId: NotNull<PgIntegerBuilderInitial<ColumnName>>;
+      position: NotNull<PgIntegerBuilderInitial<ColumnName>>;
+      relatedItemId: NotNull<PgIntegerBuilderInitial<ColumnName>>;
+    },
+    "pg"
+  >;
+  dialect: "pg";
+  name: string;
+  schema: undefined;
+}>;
+
+/** The generated child table for one repeatable field. */
+export type ContentRepeatableChildTable<TFields> = PgTableWithColumns<{
+  columns: BuildColumns<
+    string,
+    {
+      createdAt: NotNull<HasDefault<PgTimestampBuilderInitial<ColumnName>>>;
+      id: PgSerialBuilderInitial<ColumnName>;
+      itemId: NotNull<PgIntegerBuilderInitial<ColumnName>>;
+      position: NotNull<PgIntegerBuilderInitial<ColumnName>>;
+      updatedAt: NotNull<HasDefault<PgTimestampBuilderInitial<ColumnName>>>;
+    } & {
+      [K in keyof TFields]: ContentColumnBuilder<TFields[K]>;
+    },
+    "pg"
+  >;
+  dialect: "pg";
+  name: string;
+  schema: undefined;
+}>;
+
+/** Every generated collection table of one content type, by field name. */
+export interface ContentAdvancedTables {
+  junctions: Record<string, ContentJunctionTable>;
+  repeatables: Record<string, ContentRepeatableChildTable<unknown>>;
+}
 
 // Loosest shape a foreign key target can take; the FK itself is validated by
 // Postgres, and by `getTableConfig` in the table tests.

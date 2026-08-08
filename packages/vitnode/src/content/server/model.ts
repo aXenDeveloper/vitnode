@@ -6,6 +6,7 @@ import type {
   AnyContentTypeDefinition,
   ResolvedContentLocalizationConfig,
 } from "../types";
+import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentEditorialService } from "./editorial-service";
 import type { ContentLocalizedService } from "./localized-service";
 import type { ContentPublicService } from "./public-service";
@@ -13,6 +14,7 @@ import type { ContentService } from "./service";
 import type { ContentTranslationEditorialService } from "./translation-editorial-service";
 import type { ContentTranslationModel } from "./translation-model";
 import type {
+  ContentAdvancedTables,
   ContentColumnName,
   ContentReferences,
   ContentTableFor,
@@ -21,6 +23,8 @@ import type {
 } from "./types";
 
 import { ContentEngineError } from "../errors";
+import { createContentAdvancedStore } from "./advanced-store";
+import { createContentAdvancedTables } from "./advanced-tables";
 import { createContentEditorialService } from "./editorial-service";
 import { createContentLocalizedPublicService } from "./localized-public-service";
 import { createContentLocalizedService } from "./localized-service";
@@ -35,6 +39,20 @@ import {
 } from "./translation-table";
 
 export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
+  /**
+   * The generated collection tables, by field name.
+   *
+   * Export them from the plugin's database module alongside `table`, so Drizzle
+   * Kit finds them and the migration is generated:
+   *
+   * ```ts
+   * export const example_articles_categories =
+   *   articleContent.advancedTables.junctions.categories;
+   * ```
+   *
+   * Empty for a content type that declares no advanced collection.
+   */
+  advancedTables: ContentAdvancedTables;
   /** Column name -> Drizzle column, for filters, ordering and custom queries. */
   columns: Record<ContentColumnName<TDefinition>, PgColumn>;
   definition: TDefinition;
@@ -188,6 +206,18 @@ export const createContentModel = <
 ): ContentModel<TDefinition> => {
   const table = createContentTable(definition, options);
   const columns = contentTableColumns(definition, table);
+  const advancedTables = createContentAdvancedTables(definition, {
+    ...options,
+    table,
+  });
+  // One store per model rather than one per request: it holds only the resolved
+  // tables and the memoised foreign-key targets, and every method takes the
+  // database handle it should run on.
+  const advanced: ContentAdvancedStore = createContentAdvancedStore({
+    definition,
+    table,
+    tables: advancedTables,
+  });
   // `ContentTypeDefinition` declares `schemas` against its own type parameters,
   // and reading it through the `AnyContentTypeDefinition` constraint widens the
   // row types back to the base field map. The object was built from this very
@@ -232,6 +262,7 @@ export const createContentModel = <
   };
 
   return {
+    advancedTables,
     columns,
     definition,
     // The plugin id arrives at call time rather than being captured here: a
@@ -242,6 +273,7 @@ export const createContentModel = <
     editorialService: definition.editorial.enabled
       ? (c: Context, { pluginId }: { pluginId: string }) =>
           createContentEditorialService({
+            advanced,
             c,
             columns,
             definition,
@@ -279,6 +311,7 @@ export const createContentModel = <
                   })
                 : undefined,
             service: createContentService({
+              advanced,
               c,
               columns,
               definition,
@@ -297,6 +330,7 @@ export const createContentModel = <
       ? (c: Context) =>
           localized && translationTable && translationColumns
             ? createContentLocalizedPublicService({
+                advanced,
                 c,
                 columns,
                 definition,
@@ -304,11 +338,18 @@ export const createContentModel = <
                 translationColumns,
                 translationTable,
               })
-            : createContentPublicService({ c, columns, definition, table })
+            : createContentPublicService({
+                advanced,
+                c,
+                columns,
+                definition,
+                table,
+              })
       : undefined,
     schemas,
     service: (c: Context) =>
       createContentService({
+        advanced,
         c,
         columns,
         definition,

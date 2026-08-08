@@ -33,7 +33,30 @@ export interface ContentActor {
  * runtime class instance in a snapshot, so re-reading one years later needs
  * nothing but `JSON.parse`.
  */
-export type ContentSnapshotValue = boolean | null | number | string;
+export type ContentSnapshotScalar = boolean | null | number | string;
+
+/**
+ * A value as it is stored in a snapshot.
+ *
+ * Still plain JSON - re-reading a snapshot years later needs nothing but
+ * `JSON.parse` - but Stage 6 gives it three shapes rather than one:
+ *
+ * - a **scalar**, as before;
+ * - a **group**, as the nested object the field actually is (`{ title, description }`),
+ *   or `null`. Never the flattened `seo_title` columns: a snapshot records the
+ *   logical state, and the column names are an internal mapping that a schema
+ *   change is allowed to move;
+ * - a **collection**, as identity. A to-many relation is `[2, 5, 9]` - the ids,
+ *   in stored order - and a repeatable is its child rows, each with its own `id`.
+ *   Never the *expanded* related records: those have their own history, their own
+ *   permissions and their own publication state, and restoring an article must
+ *   not rewrite a category.
+ */
+export type ContentSnapshotValue =
+  | ContentSnapshotScalar
+  | Record<string, ContentSnapshotScalar>
+  | Record<string, ContentSnapshotScalar>[]
+  | number[];
 
 /**
  * The complete post-mutation editable state of one record.
@@ -139,6 +162,26 @@ export interface ContentRevisionDiffEntry {
 }
 
 /**
+ * Whether two snapshot values are the same.
+ *
+ * `JSON.stringify` rather than `===`, because a group and a collection are
+ * objects: two structurally equal `seo` groups are the same state, and the
+ * revision list must not claim otherwise. Key order is deterministic - both
+ * sides are built by `contentRevisionSnapshot`, which emits declaration order -
+ * so the comparison is exact rather than approximate.
+ */
+const sameSnapshotValue = (
+  before: ContentSnapshotValue | undefined,
+  after: ContentSnapshotValue | undefined,
+): boolean => {
+  if (before === after) return true;
+  if (before === undefined || after === undefined) return false;
+  if (typeof before !== "object" || typeof after !== "object") return false;
+
+  return JSON.stringify(before) === JSON.stringify(after);
+};
+
+/**
  * Field-level difference between two snapshots, in declaration order.
  *
  * Walks `names` - the content type's *current* field list - rather than the
@@ -160,7 +203,7 @@ export const contentRevisionDiff = (
     const previous = before?.fields[name];
     const next = after.fields[name];
 
-    if (before !== null && previous === next) continue;
+    if (before !== null && sameSnapshotValue(previous, next)) continue;
 
     entries.push({ after: next, before: previous, name });
   }

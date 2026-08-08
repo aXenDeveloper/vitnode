@@ -79,7 +79,11 @@ const harness = ({
   const service = {
     create: vi.fn(),
     delete: vi.fn(),
+    advanced: vi.fn(),
+    findDetail: vi.fn(),
     findById: vi.fn(),
+    relations: {},
+    repeatable: {},
     findMany: vi.fn(),
     options: vi.fn(),
     publish: vi.fn(),

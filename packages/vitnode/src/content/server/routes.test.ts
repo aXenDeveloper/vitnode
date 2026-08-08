@@ -98,11 +98,22 @@ interface Harness {
  * so each test drives the real Hono pipeline (validation, status codes, error
  * mapping) without a database.
  */
+/**
+ * The two typed collection maps every service carries, empty.
+ *
+ * None of these fixtures declares an advanced field, and the generated routes
+ * reach for collections only through the ordinary create/update payload - so
+ * the maps have to exist and have nothing in them.
+ */
+const noCollections = { relations: {}, repeatable: {} };
+
 const harness = ({ allow = true }: { allow?: boolean } = {}): Harness => {
   const emitted: Harness["emitted"] = [];
   const service = {
     create: vi.fn(),
     delete: vi.fn(),
+    advanced: vi.fn(),
+    findDetail: vi.fn(),
     findById: vi.fn(),
     findMany: vi.fn(),
     options: vi.fn(),
@@ -110,7 +121,7 @@ const harness = ({ allow = true }: { allow?: boolean } = {}): Harness => {
   };
 
   permissionGranted = allow;
-  vi.spyOn(articles, "service").mockReturnValue(service);
+  vi.spyOn(articles, "service").mockReturnValue({ ...service, ...noCollections });
 
   const app = new OpenAPIHono();
 
@@ -145,6 +156,8 @@ const publicationHarness = ({ allow = true }: { allow?: boolean } = {}) => {
   const service = {
     create: vi.fn(),
     delete: vi.fn(),
+    advanced: vi.fn(),
+    findDetail: vi.fn(),
     findById: vi.fn(),
     findMany: vi.fn(),
     options: vi.fn(),
@@ -154,7 +167,7 @@ const publicationHarness = ({ allow = true }: { allow?: boolean } = {}) => {
   };
 
   permissionGranted = allow;
-  vi.spyOn(posts, "service").mockReturnValue(service);
+  vi.spyOn(posts, "service").mockReturnValue({ ...service, ...noCollections });
 
   const app = new OpenAPIHono();
   app.use("*", async (c, next) => {
@@ -688,6 +701,10 @@ describe("generated content routes", () => {
       const service = {
         create: vi.fn(),
         delete: vi.fn(),
+        advanced: vi.fn(),
+        findDetail: vi.fn(),
+        relations: {},
+        repeatable: {},
         findById: vi.fn(),
         findMany: vi.fn(),
         options: vi.fn(),

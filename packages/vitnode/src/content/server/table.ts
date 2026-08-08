@@ -28,6 +28,7 @@ import { core_users } from "../../database/users";
 import { CONTENT_EDITORIAL_FIELDS, CONTENT_PUBLICATION_FIELDS } from "../const";
 import { ContentEngineError } from "../errors";
 import { partitionContentFields } from "../localization";
+import { contentStorageColumns } from "../paths";
 import {
   buildContentColumn,
   buildEditorialColumns,
@@ -144,8 +145,12 @@ export const createContentTable = <
 
   const { id: contentTypeId, indexes, tableName } = definition;
   // Shared only: a localized field's column lives on the generated translation
-  // table, and `createContentTranslationTable` puts it there.
-  const fields = partitionContentFields(definition.fields).sharedFields;
+  // table, and `createContentTranslationTable` puts it there. Then flattened, so
+  // a group contributes its leaf columns and the two collection kinds - which
+  // have tables of their own - contribute nothing.
+  const fields = contentStorageColumns(
+    partitionContentFields(definition.fields).sharedFields,
+  );
   const referenceThunks = references as Record<string, ColumnReferenceThunk>;
 
   const columns: Record<string, PgColumnBuilderBase> = {
@@ -163,8 +168,12 @@ export const createContentTable = <
     });
   }
 
+  // Checked against the *declared* fields rather than the flattened columns: a
+  // to-many relation needs a reference thunk for its junction table's foreign
+  // key, and it has no column here to be found by.
+  const declaredFields = definition.fields as ContentFieldMap;
   const unknownReference = Object.keys(referenceThunks).find(
-    name => fields[name]?.kind !== "relation",
+    name => declaredFields[name]?.kind !== "relation",
   );
   if (unknownReference !== undefined) {
     throw new ContentEngineError(
@@ -211,7 +220,16 @@ export const assertContentReferences = (table: PgTable): void => {
   }
 };
 
-/** Column name -> Drizzle column, for allowlisted filters and ordering. */
+/**
+ * Column name -> Drizzle column, for allowlisted filters and ordering.
+ *
+ * A group's leaves appear twice, under the generated column name *and* under the
+ * canonical path: `columns["seoTitle"]` and `columns["seo.title"]` are the same
+ * `PgColumn`. That alias is what lets a filter, an `orderBy`, a search
+ * projection and an index all be configured in one vocabulary - paths - without
+ * every one of them learning the column-naming rule. There is still exactly one
+ * mapping, and it is the one `contentLeafColumnName` defines.
+ */
 export const contentTableColumns = <
   TDefinition extends AnyContentTypeDefinition,
 >(
@@ -219,17 +237,22 @@ export const contentTableColumns = <
   table: ContentTableFor<TDefinition>,
 ): Record<ContentColumnName<TDefinition>, PgColumn> => {
   const source = table as unknown as Record<string, PgColumn>;
+  const { sharedFields } = partitionContentFields(definition.fields);
   const names = [
     "id",
     "createdAt",
     "updatedAt",
     ...(definition.publication.enabled ? CONTENT_PUBLICATION_FIELDS : []),
     ...(definition.editorial.enabled ? CONTENT_EDITORIAL_FIELDS : []),
-    ...Object.keys(partitionContentFields(definition.fields).sharedFields),
+    ...Object.keys(contentStorageColumns(sharedFields)),
   ];
 
-  return Object.fromEntries(names.map(name => [name, source[name]])) as Record<
-    ContentColumnName<TDefinition>,
-    PgColumn
-  >;
+  return {
+    ...Object.fromEntries(names.map(name => [name, source[name]])),
+    ...Object.fromEntries(
+      definition.advanced.leaves
+        .filter(leaf => !leaf.localized)
+        .map(leaf => [leaf.path, source[leaf.columnName]]),
+    ),
+  } as Record<ContentColumnName<TDefinition>, PgColumn>;
 };

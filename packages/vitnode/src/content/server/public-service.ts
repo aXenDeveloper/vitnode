@@ -15,6 +15,7 @@ import type {
   ContentPublicOrderableFieldName,
   ContentPublicSelect,
 } from "../types";
+import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentPageInfo } from "./service";
 
 import { withPagination } from "../../api/lib/with-pagination";
@@ -23,7 +24,12 @@ import {
   CONTENT_PUBLIC_MAX_PAGE_SIZE,
 } from "../const";
 import { ContentEngineError } from "../errors";
+import {
+  isContentRelationCollection,
+  splitContentFieldPath,
+} from "../paths";
 import { publicOrderableColumns } from "../registry";
+import { groupPublicLeafPaths } from "../schemas";
 import { publicationColumns, publishedCondition } from "./publication";
 import {
   buildFilterCondition,
@@ -128,16 +134,43 @@ export const createContentPublicProjector = <
 
   const exposed = publicApi.fields;
   const exposesId = exposed.includes("id");
+  const flat = exposed.filter(name => splitContentFieldPath(name) === null);
   // A `user` field is never exposable, so this is only ever relations.
-  const exposedRelations = new Set(
-    exposed.filter(name => definition.fields[name]?.kind === "relation"),
+  const exposedToOne = new Set(
+    flat.filter(
+      name =>
+        definition.fields[name]?.kind === "relation" &&
+        !isContentRelationCollection(definition.fields[name]),
+    ),
+  );
+  const exposedToMany = new Set(
+    flat.filter(
+      name =>
+        definition.fields[name] !== undefined &&
+        isContentRelationCollection(definition.fields[name]),
+    ),
+  );
+  // Leaf-level privacy, resolved once: `seo` carries only the leaves the
+  // allowlist named, whatever else the group declares.
+  const containers = [...groupPublicLeafPaths(exposed)].map(
+    ([owner, leaves]) => ({
+      leaves,
+      owner,
+      repeatable: definition.fields[owner]?.kind === "repeatable",
+    }),
   );
 
   return row => {
     const projected: Record<string, unknown> = {};
 
-    for (const name of exposed) {
-      if (!exposedRelations.has(name)) {
+    for (const name of flat) {
+      if (exposedToMany.has(name)) {
+        const ids = row[name];
+        projected[name] = Array.isArray(ids) ? ids : [];
+        continue;
+      }
+
+      if (!exposedToOne.has(name)) {
         projected[name] = row[name];
         continue;
       }
@@ -146,11 +179,36 @@ export const createContentPublicProjector = <
       projected[name] = typeof id === "number" ? { id } : null;
     }
 
+    for (const { leaves, owner, repeatable } of containers) {
+      const value = row[owner];
+
+      if (repeatable) {
+        projected[owner] = Array.isArray(value)
+          ? (value as Record<string, unknown>[]).map(child => ({
+              id: child.id,
+              ...pick(child, leaves),
+            }))
+          : [];
+        continue;
+      }
+
+      projected[owner] =
+        value === null || value === undefined
+          ? null
+          : pick(value as Record<string, unknown>, leaves);
+    }
+
     if (exposesId) projected.id = row.id;
 
     return projected as ContentPublicSelect<TDefinition>;
   };
 };
+
+const pick = (
+  values: Record<string, unknown>,
+  keys: readonly string[],
+): Record<string, unknown> =>
+  Object.fromEntries(keys.map(key => [key, values[key] ?? null]));
 
 /**
  * The columns a public read selects: the allowlist, plus `id` for the cursor.
@@ -165,9 +223,81 @@ export const contentPublicSelection = (
 ): Record<string, PgColumn> => ({
   id: columns.id,
   ...Object.fromEntries(
-    definition.publicApi.fields.map(name => [name, columns[name]]),
+    definition.publicApi.fields
+      // A collection has no column, and a repeatable leaf is a column on a
+      // child table - both are batch-loaded after the page is fetched. A group
+      // leaf *is* a column, and `contentTableColumns` registers it under its
+      // canonical path, so `columns["seo.title"]` resolves here.
+      .filter(name => {
+        const path = splitContentFieldPath(name);
+        const owner = path ? path[0] : name;
+        const fieldValue = definition.fields[owner];
+
+        if (!fieldValue) return true;
+        if (fieldValue.kind === "repeatable") return false;
+
+        return !isContentRelationCollection(fieldValue);
+      })
+      .map(name => [name, columns[name]]),
   ),
 });
+
+/**
+ * The collection fields a public response actually needs.
+ *
+ * Empty unless the allowlist named one, which is what keeps a public list from
+ * joining every junction and child table a content type happens to have.
+ */
+export const contentPublicCollectionFields = (
+  definition: AnyContentTypeDefinition,
+): string[] => {
+  const named = new Set(
+    definition.publicApi.fields.map(name => {
+      const path = splitContentFieldPath(name);
+
+      return path ? path[0] : name;
+    }),
+  );
+
+  return [...named].filter(name => {
+    const fieldValue = definition.fields[name];
+
+    return (
+      fieldValue !== undefined &&
+      (fieldValue.kind === "repeatable" ||
+        isContentRelationCollection(fieldValue))
+    );
+  });
+};
+
+/**
+ * Folds a row's flat leaf columns back into the nested shape.
+ *
+ * A public read selects `seo.title` as a column alias, so the raw row carries a
+ * key with a dot in it. Nesting happens here rather than in the projector so the
+ * projector stays the one place that decides *what* is public, and this stays
+ * the one place that decides what it *looks like*.
+ */
+export const nestContentPublicRow = (
+  row: Record<string, unknown>,
+): Record<string, unknown> => {
+  const nested: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(row)) {
+    const path = splitContentFieldPath(key);
+    if (!path) {
+      nested[key] = value;
+      continue;
+    }
+
+    const [owner, leaf] = path;
+    const container = (nested[owner] as Record<string, unknown>) ?? {};
+    container[leaf] = value;
+    nested[owner] = container;
+  }
+
+  return nested;
+};
 
 /** Public pages are smaller than admin ones, and the cap is lower too. */
 export const clampContentPublicPageSize = (
@@ -202,11 +332,14 @@ export const clampContentPublicPageSize = (
 export const createContentPublicService = <
   TDefinition extends AnyContentTypeDefinition,
 >({
+  advanced,
   c,
   columns,
   definition,
   table,
 }: {
+  /** The collection store, or nothing for a content type that declares none. */
+  advanced?: ContentAdvancedStore;
   c: Context;
   columns: Record<string, PgColumn>;
   definition: TDefinition;
@@ -237,6 +370,32 @@ export const createContentPublicService = <
     contentPublicSelection(definition, columns);
 
   const project = createContentPublicProjector(definition);
+  // Loaded only when the allowlist actually exposes one, so a public list joins
+  // no junction and no child table unless a public response is made of them.
+  const publicCollections = contentPublicCollectionFields(definition);
+
+  /**
+   * Attaches the exposed collections to a page of rows.
+   *
+   * One batch per collection field for the whole page, keyed by the parent ids
+   * the page already fetched - never one query per row.
+   */
+  const withCollections = async (
+    rows: readonly Record<string, unknown>[],
+  ): Promise<Record<string, unknown>[]> => {
+    const nested = rows.map(nestContentPublicRow);
+    if (publicCollections.length === 0 || nested.length === 0) return nested;
+
+    const ids = nested
+      .map(row => row.id)
+      .filter((id): id is number => typeof id === "number");
+    const loaded = await advanced?.loadMany(ids, c.get("db"));
+
+    return nested.map(row => ({
+      ...row,
+      ...(typeof row.id === "number" ? loaded?.get(row.id) : undefined),
+    }));
+  };
 
   const readOne = async (
     condition: SQL,
@@ -248,7 +407,11 @@ export const createContentPublicService = <
       .where(and(publishedCondition(published), condition))
       .limit(1);
 
-    return row ? project(row) : null;
+    if (!row) return null;
+
+    const [projected] = await withCollections([row]);
+
+    return project(projected);
   };
 
   return {
@@ -268,6 +431,7 @@ export const createContentPublicService = <
           contentTypeId,
           fields,
           filters,
+          membership: advanced?.membershipCondition,
         }),
         buildSearchCondition(searchColumns, query.search),
       ].filter((item): item is SQL => item !== undefined);
@@ -311,7 +475,10 @@ export const createContentPublicService = <
             ),
       });
 
-      return { edges: data.edges.map(project), pageInfo: data.pageInfo };
+      return {
+        edges: (await withCollections(data.edges)).map(project),
+        pageInfo: data.pageInfo,
+      };
     },
   };
 };

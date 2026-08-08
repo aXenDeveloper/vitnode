@@ -12,23 +12,33 @@ import type { ContentActor, ContentRevisionOperation } from "../revisions";
 import type { ContentSchemas } from "../schemas";
 import type {
   AnyContentTypeDefinition,
+  ContentChangedPath,
   ContentCreateInput,
-  ContentFieldName,
   ContentSelect,
   ContentUpdateInput,
 } from "../types";
+import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentRevisionsModel } from "./revisions-model";
 import type { ContentSchedulesModel } from "./schedules-model";
 import type { ContentDatabase } from "./service";
 
-import { CONTENT_EDITORIAL_FIELDS, CONTENT_PUBLICATION_FIELDS } from "../const";
+import {
+  CONTENT_EDITORIAL_FIELDS,
+  CONTENT_PUBLICATION_FIELDS,
+  CONTENT_SYSTEM_FIELDS,
+} from "../const";
 import {
   ContentEngineError,
   ContentRevisionNotRestorable,
   ContentVersionConflict,
 } from "../errors";
 import { partitionContentFields } from "../localization";
-import { diffChangedFields, toColumnValues } from "./query";
+import { contentColumnsToValues, contentStorageColumns } from "../paths";
+import {
+  changedPathsToColumns,
+  diffChangedPaths,
+  toInsertColumns,
+} from "./query";
 import {
   contentRevisionSnapshot,
   projectRevisionSnapshot,
@@ -47,7 +57,8 @@ import { createSlugNormalizer } from "./slugs";
 export interface ContentEditorialOutcome<TDefinition> {
   /** `false` when nothing moved: no write, no revision, no event, no tags. */
   changed: boolean;
-  changedFields: ContentFieldName<TDefinition>[];
+  /** Canonical paths - see {@link ContentUpdateResult.changedFields}. */
+  changedFields: ContentChangedPath<TDefinition>[];
   operation: ContentRevisionOperation;
   /** The slug the record answered to *before* this mutation, if it has one. */
   previousSlug: null | string;
@@ -139,6 +150,7 @@ export interface ContentEditorialService<TDefinition> {
 export const createContentEditorialService = <
   TDefinition extends AnyContentTypeDefinition,
 >({
+  advanced,
   c,
   columns,
   definition,
@@ -146,6 +158,8 @@ export const createContentEditorialService = <
   schemas,
   table,
 }: {
+  /** The collection store, or nothing for a content type that declares none. */
+  advanced?: ContentAdvancedStore;
   c: Context;
   columns: Record<string, PgColumn>;
   definition: TDefinition;
@@ -161,13 +175,29 @@ export const createContentEditorialService = <
   }
 
   const contentTypeId = definition.id;
+  const store = advanced;
   // Shared fields only, everywhere below. A localized field is a column on the
   // translation table, so selecting it here would address something that does not
   // exist, and diffing it would report every language's value as changed at once.
   // `partitionContentFields` returns every field for a content type without
   // localization, so this is exactly the previous behaviour there.
-  const fields = partitionContentFields(definition.fields).sharedFields;
-  const fieldNames = Object.keys(fields) as ContentFieldName<TDefinition>[];
+  const { collectionFields, sharedFields } = partitionContentFields(
+    definition.fields,
+  );
+  const fields = sharedFields;
+  const storageColumns = contentStorageColumns(fields);
+  // Every canonical path a create "changes", which is all of them: a scalar by
+  // its own name, a group by each of its leaves, a collection whole.
+  const allPaths = [
+    ...Object.entries(fields).flatMap(([name, fieldValue]) =>
+      fieldValue.kind === "group"
+        ? Object.keys(
+            (fieldValue as { fields: Record<string, unknown> }).fields,
+          ).map(leaf => `${name}.${leaf}`)
+        : [name],
+    ),
+    ...Object.keys(collectionFields),
+  ] as ContentChangedPath<TDefinition>[];
   const primaryCursor = columns.id;
   const versionColumn = columns.version;
   const publication = definition.publication.enabled;
@@ -175,16 +205,28 @@ export const createContentEditorialService = <
     ? definition.publicApi.slugField
     : null;
 
-  const ownColumnNames = [
-    "id",
-    "createdAt",
-    "updatedAt",
+  const generatedColumnNames = [
+    ...CONTENT_SYSTEM_FIELDS,
     ...(publication ? CONTENT_PUBLICATION_FIELDS : []),
     ...CONTENT_EDITORIAL_FIELDS,
-    ...fieldNames,
+  ];
+  const ownColumnNames = [
+    ...generatedColumnNames,
+    ...Object.keys(storageColumns),
   ];
   const ownSelection = (): Record<string, PgColumn> =>
     Object.fromEntries(ownColumnNames.map(name => [name, columns[name]]));
+
+  /** A column row in the logical shape - see the plain service's twin. */
+  const projectRow = (row: Record<string, unknown>): Record<string, unknown> => {
+    const projected: Record<string, unknown> = {};
+
+    for (const name of generatedColumnNames) {
+      if (name in row) projected[name] = row[name];
+    }
+
+    return { ...projected, ...contentColumnsToValues(fields, row) };
+  };
 
   const revisions = createContentRevisionsModel({ c, definition, pluginId });
   const schedules = definition.editorial.scheduling.enabled
@@ -196,7 +238,7 @@ export const createContentEditorialService = <
   );
 
   const toRow = (row: Record<string, unknown>): ContentSelect<TDefinition> =>
-    row as ContentSelect<TDefinition>;
+    projectRow(row) as ContentSelect<TDefinition>;
 
   const versionOf = (row: Record<string, unknown>): number =>
     typeof row.version === "number" ? row.version : 1;
@@ -248,18 +290,33 @@ export const createContentEditorialService = <
       row: Record<string, unknown>;
       version: number;
     },
-  ): Promise<number> =>
-    await revisions.capture(tx, {
+  ): Promise<number> => {
+    const itemId = typeof row.id === "number" ? row.id : 0;
+    // Read **after** the write and **inside** the transaction, so the snapshot
+    // is the post-mutation state rather than the state the caller sent. A delete
+    // is the one case where the rows are already gone, and the caller passes the
+    // collections it read beforehand instead.
+    const collections =
+      operation === "delete"
+        ? ((row.__collections as Record<string, unknown> | undefined) ?? {})
+        : ((await store?.load(itemId, tx)) ?? {});
+
+    return await revisions.capture(tx, {
       actor,
       changedFields,
-      itemId: typeof row.id === "number" ? row.id : 0,
+      itemId,
       operation,
       restoredFromRevisionId,
       // Stamped with the version the record now holds, which for a delete is the
       // one it would have had - see `remove` below.
-      snapshot: contentRevisionSnapshot(definition, { ...row, version }),
+      snapshot: contentRevisionSnapshot(definition, {
+        ...row,
+        ...collections,
+        version,
+      }),
       version,
     });
+  };
 
   /**
    * The conditional write every editorial mutation goes through.
@@ -384,15 +441,22 @@ export const createContentEditorialService = <
 
         const [row] = await tx
           .insert(table)
-          .values(toColumnValues(fields, withCreateSlugs(parsed)))
+          .values(toInsertColumns(fields, withCreateSlugs(parsed)))
           .returning(ownSelection());
+
+        // In the same transaction as the row: a create that committed its
+        // categories and rolled back its article would leave junction rows
+        // pointing at nothing.
+        if (store?.enabled && typeof row.id === "number") {
+          await store.write(tx, row.id, parsed);
+        }
 
         const version = versionOf(row);
         const revisionId = await capture(tx, {
           actor: options.actor,
-          // Everything is new, so every field "changed" - which is what the
+          // Everything is new, so every path "changed" - which is what the
           // history should say about a create.
-          changedFields: fieldNames,
+          changedFields: allPaths,
           operation: "create",
           row,
           version,
@@ -400,7 +464,7 @@ export const createContentEditorialService = <
 
         return {
           changed: true,
-          changedFields: fieldNames,
+          changedFields: allPaths,
           operation: "create",
           previousSlug: null,
           restoredFromRevisionId: null,
@@ -412,6 +476,11 @@ export const createContentEditorialService = <
 
     delete: async (id, options) =>
       await transact(options, async tx => {
+        // Read before the `DELETE`: `ON DELETE CASCADE` takes the junction and
+        // child rows with the record, so this is the last moment the history can
+        // record what the record was related to.
+        const collections = (await store?.load(id, tx)) ?? {};
+
         // Same guard as `guardedWrite`, in a `DELETE` - the version has to be
         // part of the statement that removes the row, not checked before it.
         const [row] = await tx
@@ -452,7 +521,7 @@ export const createContentEditorialService = <
           actor: options.actor,
           changedFields: [],
           operation: "delete",
-          row,
+          row: { ...row, __collections: collections },
           version,
         });
 
@@ -515,8 +584,32 @@ export const createContentEditorialService = <
           });
         }
 
-        const patch = withUpdateSlugs(parsed.data);
-        const changedFields = diffChangedFields(fieldNames, current, patch);
+        // Made applicable to the record as it stands *before* anything is
+        // compared: a child whose id is gone comes back as a new entry, and a
+        // relation target that is gone stops the restore entirely rather than
+        // letting it write half a state.
+        const prepared = (await store?.prepareRestore(tx, id, parsed.data)) ?? {
+          missingRelations: [],
+          patch: parsed.data,
+        };
+
+        if (prepared.missingRelations.length > 0) {
+          throw new ContentRevisionNotRestorable({
+            contentTypeId,
+            fields: prepared.missingRelations.map(
+              entry => `${entry.field} (${entry.ids.join(", ")})`,
+            ),
+            revisionId,
+          });
+        }
+
+        const patch = withUpdateSlugs(prepared.patch);
+        const changedPaths = diffChangedPaths(fields, current, patch);
+        const changedCollections = (await store?.diff(tx, id, patch)) ?? [];
+        const changedFields = [
+          ...changedPaths,
+          ...changedCollections,
+        ] as ContentChangedPath<TDefinition>[];
 
         if (changedFields.length === 0) {
           return {
@@ -536,12 +629,13 @@ export const createContentEditorialService = <
           tx,
           id,
           options.expectedVersion,
-          toColumnValues(
-            fields,
-            Object.fromEntries(changedFields.map(key => [key, patch[key]])),
-          ),
+          changedPaths.length > 0
+            ? changedPathsToColumns(fields, patch, changedPaths)
+            : {},
         );
         if (!row) return null;
+
+        if (changedCollections.length > 0) await store?.write(tx, id, patch);
 
         const version = versionOf(row);
         const newRevisionId = await capture(tx, {
@@ -588,7 +682,15 @@ export const createContentEditorialService = <
         const current = await readOne(id, tx);
         if (!current) return null;
 
-        const changedFields = diffChangedFields(fieldNames, current, patch);
+        const changedPaths = diffChangedPaths(fields, current, patch);
+        // Computed before the guarded write, so "nothing moved" is one decision:
+        // a reorder to the order that is already stored is a no-op exactly like
+        // re-sending an unchanged title.
+        const changedCollections = (await store?.diff(tx, id, patch)) ?? [];
+        const changedFields = [
+          ...changedPaths,
+          ...changedCollections,
+        ] as ContentChangedPath<TDefinition>[];
 
         // A no-op is still a *successful* write from the caller's point of view,
         // but it must not bump the version or leave a revision: an editor who
@@ -608,16 +710,23 @@ export const createContentEditorialService = <
           };
         }
 
+        // The version guard runs **first**, before a single junction or child
+        // row is touched. That ordering is the whole concurrency story: a writer
+        // holding a stale `expectedVersion` fails here and leaves the
+        // collections exactly as it found them, so there is no partial mutation
+        // to roll back and no window where one writer's categories sit under
+        // another writer's version.
         const row = await guardedWrite(
           tx,
           id,
           options.expectedVersion,
-          toColumnValues(
-            fields,
-            Object.fromEntries(changedFields.map(key => [key, patch[key]])),
-          ),
+          changedPaths.length > 0
+            ? changedPathsToColumns(fields, patch, changedPaths)
+            : {},
         );
         if (!row) return null;
+
+        if (changedCollections.length > 0) await store?.write(tx, id, patch);
 
         const version = versionOf(row);
         const revisionId = await capture(tx, {
