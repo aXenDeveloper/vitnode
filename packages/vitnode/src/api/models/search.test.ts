@@ -7,7 +7,11 @@ import { core_search_index } from "@/database/search";
 
 import type { SearchDocument, SearchProviderApiPlugin } from "./search";
 
-import { normalizeSearchIndexerPage, SearchModel } from "./search";
+import {
+  assertSearchProviderCapabilities,
+  normalizeSearchIndexerPage,
+  SearchModel,
+} from "./search";
 
 const createProvider = (): SearchProviderApiPlugin => ({
   name: "postgres",
@@ -268,5 +272,107 @@ describe("normalizeSearchIndexerPage", () => {
       documents: [],
       itemsRead: 0,
     });
+  });
+});
+
+/**
+ * The one provider capability that is not a nicety.
+ *
+ * `delete(c, itemType, itemId, languageCode)` is a JavaScript call: a provider
+ * written before per-locale content accepts the fourth argument and drops it, so
+ * taking one translation down removes every language from that provider's store
+ * while the canonical `core_search_index` removes one. Nothing throws, nothing is
+ * logged, and the two disagree from then on - which is why the pairing is refused
+ * at boot instead of being discovered by whoever deletes a translation.
+ */
+describe("assertSearchProviderCapabilities", () => {
+  const legacy = (): SearchProviderApiPlugin => ({
+    ...createProvider(),
+    name: "legacy-engine",
+  });
+
+  const scoped = (): SearchProviderApiPlugin => ({
+    ...createProvider(),
+    name: "scoped-engine",
+    capabilities: {
+      authorBoost: false,
+      facets: false,
+      languageScopedDelete: true,
+      timeDecay: false,
+    },
+  });
+
+  it("allows a provider that declares nothing when nothing is localized", () => {
+    expect(() =>
+      assertSearchProviderCapabilities(legacy(), {
+        localizedSearchContentTypes: [],
+      }),
+    ).not.toThrow();
+  });
+
+  it("refuses a provider that cannot scope a delete to one language", () => {
+    expect(() =>
+      assertSearchProviderCapabilities(legacy(), {
+        localizedSearchContentTypes: ["example.article"],
+      }),
+    ).toThrow(/legacy-engine/);
+  });
+
+  it("names the content type and the missing capability", () => {
+    // A boot failure is only useful if it says what to change.
+    expect(() =>
+      assertSearchProviderCapabilities(legacy(), {
+        localizedSearchContentTypes: ["example.article"],
+      }),
+    ).toThrow(/example\.article/);
+    expect(() =>
+      assertSearchProviderCapabilities(legacy(), {
+        localizedSearchContentTypes: ["example.article"],
+      }),
+    ).toThrow(/languageScopedDelete/);
+  });
+
+  it("refuses a provider that declares the other capabilities but not this one", () => {
+    // Declaring `capabilities` is not the same as declaring this capability.
+    const partial: SearchProviderApiPlugin = {
+      ...createProvider(),
+      name: "facets-only",
+      capabilities: { authorBoost: true, facets: true, timeDecay: true },
+    };
+
+    expect(() =>
+      assertSearchProviderCapabilities(partial, {
+        localizedSearchContentTypes: ["example.article"],
+      }),
+    ).toThrow(/facets-only/);
+  });
+
+  it("allows a provider that declares it", () => {
+    expect(() =>
+      assertSearchProviderCapabilities(scoped(), {
+        localizedSearchContentTypes: ["example.article", "example.page"],
+      }),
+    ).not.toThrow();
+  });
+
+  it("lists every offending content type, not just the first", () => {
+    expect(() =>
+      assertSearchProviderCapabilities(legacy(), {
+        localizedSearchContentTypes: ["example.article", "example.page"],
+      }),
+    ).toThrow(/example\.article", "example\.page/);
+  });
+
+  it("says yes to the bundled Postgres provider", async () => {
+    // Its store *is* `core_search_index`, which `SearchModel.delete` already
+    // narrows by language before the provider is reached.
+    const { PostgresSearchAdapter } =
+      await import("@/api/adapters/search/postgres");
+
+    expect(() =>
+      assertSearchProviderCapabilities(PostgresSearchAdapter(), {
+        localizedSearchContentTypes: ["example.article"],
+      }),
+    ).not.toThrow();
   });
 });

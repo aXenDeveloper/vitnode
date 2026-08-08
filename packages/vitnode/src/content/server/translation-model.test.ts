@@ -4,7 +4,10 @@ import type { Context } from "hono";
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
 
-import { testLocalizedArticleContentType } from "@/tests/content-fixtures";
+import {
+  testLocalizedArticleContentType,
+  testLocalizedGuideContentType,
+} from "@/tests/content-fixtures";
 
 import {
   ContentDefaultTranslationRequired,
@@ -15,8 +18,10 @@ import {
   ContentTranslationVersionConflict,
 } from "../errors";
 import { createContentModel } from "./model";
+import { CONTENT_TRANSLATION_INITIAL_VERSION } from "./translation-model";
 
 const localized = createContentModel(testLocalizedArticleContentType);
+const withPublication = createContentModel(testLocalizedGuideContentType);
 
 const LANGUAGES = [
   { code: "en", id: 1, isDefault: true },
@@ -129,6 +134,23 @@ const translations = (c: Context) => {
   return build(c);
 };
 
+/** The same, for the fixture that has `publication` and therefore a status. */
+const publishable = (c: Context) => {
+  const build = withPublication.translationService;
+  if (!build) throw new Error("Expected a translation service.");
+
+  return build(c);
+};
+
+/** A context whose i18n config switches one locale off. */
+const withDisabledLocale = (c: Context, code: string): Context =>
+  ({
+    get: (key: string) =>
+      key === "core"
+        ? { i18n: { locales: [{ code, enabled: false, name: code }] } }
+        : c.get(key),
+  }) as unknown as Context;
+
 describe("create", () => {
   it("writes the resolved language id and starts at version 1", async () => {
     const { c, calls } = createDbMock([
@@ -149,6 +171,39 @@ describe("create", () => {
       slug: "hello",
       title: "Hello",
     });
+  });
+
+  it("writes the version the editorial layer asked for", async () => {
+    const { c, calls } = createDbMock([
+      [{ id: 7 }],
+      [translationRow({ languageId: 2, version: 4 })],
+    ]);
+
+    // The Polish translation existed before and was deleted; its history stops at
+    // 3. Starting again at 1 would collide with the revision its first `create`
+    // wrote, so the row is inserted at 4 and the sequence keeps going.
+    const row = await translations(c).create(
+      7,
+      "pl",
+      { title: "Witaj" },
+      { [CONTENT_TRANSLATION_INITIAL_VERSION]: 4 },
+    );
+
+    expect(row.version).toBe(4);
+    expect(opsOf(calls, "values")[0]).toMatchObject({ version: 4 });
+  });
+
+  it("refuses a version that is not a version", async () => {
+    const { c } = createDbMock([[{ id: 7 }]]);
+
+    await expect(
+      translations(c).create(
+        7,
+        "pl",
+        { title: "Witaj" },
+        { [CONTENT_TRANSLATION_INITIAL_VERSION]: 0 },
+      ),
+    ).rejects.toThrow(/versions are integers from 1 upwards/);
   });
 
   it("nests the localized values under `values`", async () => {
@@ -371,21 +426,80 @@ describe("update", () => {
 
   it("refuses to write into a disabled language", async () => {
     const { c } = createDbMock([]);
-    const context = {
-      get: (key: string) =>
-        key === "core"
-          ? { i18n: { locales: [{ code: "pl", enabled: false, name: "PL" }] } }
-          : c.get(key),
-    } as unknown as Context;
 
     await expect(
-      translations(context).update(
+      translations(withDisabledLocale(c, "pl")).update(
         7,
         "pl",
         { title: "Nowy" },
         { expectedVersion: 1 },
       ),
     ).rejects.toMatchObject({ reason: "disabled" });
+  });
+});
+
+/**
+ * One rule for a language the install has switched off, stated in both
+ * directions.
+ *
+ * Adding content to a locale nothing renders is not useful, so `create`,
+ * `update` and `publish` all refuse it. Taking content *down* has to keep
+ * working - an administrator who has just disabled a language usually wants to
+ * unpublish or delete what is in it, and refusing would strand published pages in
+ * a locale nobody can edit. So `unpublish`, `delete` and the history reads accept
+ * it.
+ */
+describe("a disabled language", () => {
+  const publishedRow = (overrides: Record<string, unknown> = {}) => ({
+    ...translationRow({ languageId: 2, version: 2 }),
+    publishedAt: new Date("2026-01-01T00:00:00Z"),
+    status: "published",
+    summary: null,
+    ...overrides,
+  });
+
+  it("cannot be published into", async () => {
+    const { c, calls } = createDbMock([]);
+
+    await expect(
+      publishable(withDisabledLocale(c, "pl")).publish(7, "pl"),
+    ).rejects.toMatchObject({ reason: "disabled" });
+    // Refused before the statement, so nothing partially happened.
+    expect(opsOf(calls, "update")).toEqual([]);
+  });
+
+  it("can still be unpublished", async () => {
+    const { c } = createDbMock([[publishedRow({ status: "draft" })]]);
+
+    await expect(
+      publishable(withDisabledLocale(c, "pl")).unpublish(7, "pl"),
+    ).resolves.toMatchObject({ changed: true, row: { locale: "pl" } });
+  });
+
+  it("can still be deleted", async () => {
+    const { c } = createDbMock([[publishedRow()]]);
+
+    await expect(
+      publishable(withDisabledLocale(c, "pl")).delete(7, "pl", {
+        expectedVersion: 2,
+      }),
+    ).resolves.toMatchObject({ locale: "pl" });
+  });
+
+  it("can still be read", async () => {
+    const { c } = createDbMock([[publishedRow()]]);
+
+    await expect(
+      publishable(withDisabledLocale(c, "pl")).findByLocale(7, "pl"),
+    ).resolves.toMatchObject({ locale: "pl", version: 2 });
+  });
+
+  it("is published into normally once it is enabled again", async () => {
+    const { c } = createDbMock([[publishedRow()]]);
+
+    await expect(publishable(c).publish(7, "pl")).resolves.toMatchObject({
+      changed: true,
+    });
   });
 });
 

@@ -20,6 +20,32 @@ export interface ContentPublicFetchResult<TData> {
 }
 
 /**
+ * The locale a cached public response is actually in.
+ *
+ * A localized content type has no locale-less public response: omit `locale` and
+ * the API resolves the content type's `defaultLocale`, so a tag built from the
+ * raw argument would name a page that does not exist while holding the default
+ * language's content. Nothing would ever expire it - translation invalidation
+ * targets the locale-aware tag - and the staleness would be permanent.
+ *
+ * So the substitution happens once, here, and the result is used for the query
+ * *and* the tags. A content type that is not localized gets `undefined` and every
+ * tag it has ever produced is byte-identical.
+ */
+const contentEffectiveLocale = (
+  definition: AnyContentTypeDefinition,
+  locale: string | undefined,
+): string | undefined => {
+  if (!definition.localization.enabled) return undefined;
+
+  const trimmed = locale?.trim();
+
+  return trimmed === undefined || trimmed === ""
+    ? definition.localization.defaultLocale
+    : trimmed;
+};
+
+/**
  * Reads the generated public API from a server component, cached and tagged.
  *
  * Two things happen here that a bare `fetch` would not do:
@@ -52,9 +78,13 @@ export interface ContentPublicFetchResult<TData> {
  *    languages would make every publish a site-wide invalidation *and* let one
  *    language's cached response be served under another's tag.
  *
- * Omitting it on a localized content type is not an error - the API falls back to
- * the content type's default locale - but the response is then tagged as though it
- * were locale-less, so a translation publish will not expire it. Pass it.
+ * Omitting it on a localized content type is not an error and not a trap either:
+ * the content type's `defaultLocale` is filled in here, and it goes to *both* the
+ * query and the tags. That is the whole reason the substitution happens in this
+ * function rather than being left to the API - the API would resolve the same
+ * language, but the tags would already have been built without one, and a response
+ * holding default-locale content under a locale-less tag is a page no translation
+ * publish can ever expire.
  */
 export const contentPublicFetch = async <TSchema extends z.ZodType>({
   definition,
@@ -74,10 +104,11 @@ export const contentPublicFetch = async <TSchema extends z.ZodType>({
   slug?: string;
 }): Promise<ContentPublicFetchResult<z.infer<TSchema>>> => {
   const contentTypeId = definition.id;
+  const effectiveLocale = contentEffectiveLocale(definition, locale);
   const tags =
     slug === undefined
-      ? [contentPublicListTag(contentTypeId, locale)]
-      : [contentPublicSlugTag(contentTypeId, slug, locale)];
+      ? [contentPublicListTag(contentTypeId, effectiveLocale)]
+      : [contentPublicSlugTag(contentTypeId, slug, effectiveLocale)];
 
   const response = await rawApiFetch({
     method: "get",
@@ -97,7 +128,12 @@ export const contentPublicFetch = async <TSchema extends z.ZodType>({
     pluginId,
     // Explicit, and last, so a caller cannot accidentally shadow it with a
     // `locale` of its own in `query` and read one language under another's tag.
-    query: locale === undefined ? query : { ...query, locale },
+    // The same value the tags were built from, which is the invariant this
+    // helper exists to hold: cache identity and response language never disagree.
+    query:
+      effectiveLocale === undefined
+        ? query
+        : { ...query, locale: effectiveLocale },
   });
 
   if (!response.ok) return { status: response.status };
@@ -190,10 +226,18 @@ export const contentPreviewFetch = async <TSchema extends z.ZodType>({
  * `locale` for a localized content type, for the same reason
  * {@link contentPublicFetch} takes one: the record has a page per language, and a
  * tag that named only the record would make one language's publish expire them
- * all.
+ * all. Omitting it on a localized content type resolves the `defaultLocale`
+ * rather than dropping the segment, so this and `contentPublicFetch` cannot
+ * disagree about what an untagged read was.
  */
 export const contentPublicItemTags = (
   definition: AnyContentTypeDefinition,
   id: number,
   locale?: string,
-): string[] => [contentPublicItemTag(definition.id, id, locale)];
+): string[] => [
+  contentPublicItemTag(
+    definition.id,
+    id,
+    contentEffectiveLocale(definition, locale),
+  ),
+];

@@ -32,6 +32,14 @@ the fields. `publication` gives the record - **and every translation** - a
 draft/published lifecycle. `editorial` gives every translation its own version
 and its own [revision history](/docs/dev/content-engine/translation-revisions).
 
+<Callout type="info" title="`editorial` is optional here">
+  `publication` alone is a complete configuration. The publish and unpublish
+  routes are generated from it, the transition is idempotent, and the event fires
+  exactly as below - what you give up is the history, so no revision is written
+  and no `revisionId` appears in the payload. Publishing is moving a status;
+  recording what the values were is a separate thing to want.
+</Callout>
+
 ## Two levels, one rule
 
 ```text
@@ -189,6 +197,9 @@ language" true; delete the record itself instead.
 POST /{id}/translations/{locale}/publish      can_publish
 POST /{id}/translations/{locale}/unpublish    can_publish
 ```
+
+Generated from `publication`, not from `editorial` - with history they also write
+a revision, without it they simply do not.
 
 Both take `{ "expectedVersion": 3 }` and answer
 `{ "changed": true, "row": { … } }`. A stale version comes back as the same

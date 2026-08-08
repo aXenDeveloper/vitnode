@@ -2692,9 +2692,17 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
             await sql`DELETE FROM "core_languages" WHERE "code" = 'pl'`,
         );
 
-        // `23503`, not a silent cascade: deleting a language must not quietly
+        // Refused, not silently cascaded: deleting a language must not quietly
         // delete every article written in it.
-        expect(code).toBe("23503");
+        //
+        // Postgres 18 reports an explicit `ON DELETE RESTRICT` as `23001`
+        // (restrict_violation) where earlier majors reported the generic
+        // `23503` (foreign_key_violation), so the version decides which one is
+        // correct rather than the assertion accepting either - "one of these
+        // two" would still pass if a future major stopped refusing at all.
+        expect(code).toBe(serverMajor >= 18 ? "23001" : "23503");
+        // The rows are what actually matter: the code says how it was refused,
+        // this says that nothing was lost.
         expect(await rowsFor(row.id)).toHaveLength(2);
       });
 
@@ -2961,10 +2969,12 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
         ).rejects.toThrow(/version 1, not 9/);
       });
 
-      it("still publishes into a locale the app has switched off", async () => {
-        // `de` is `enabled: false` in this app's config. Taking existing content
-        // in it out of circulation - and putting it back - has to stay possible;
-        // what is refused is *growing* content there, which is a create.
+      it("refuses to publish into a locale the app has switched off", async () => {
+        // `de` is `enabled: false` in this app's config, and one rule covers a
+        // disabled language in both directions: nothing new goes *into* it -
+        // create, update and publish all refuse - and everything can still come
+        // *out* of it. Publishing into a locale nothing renders would put a page
+        // on the internet that the app has no route for.
         const itemId = await twoLocales("Lifecycle Disabled");
         await sql`
           INSERT INTO "example_localized_articles_translations"
@@ -2972,9 +2982,63 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
           VALUES (${itemId}, 3, 'Deutsch', 'deutsch', 'Deutscher Text')
         `;
 
-        const result = await translations().publish(itemId, "de");
+        await expect(
+          translations().publish(itemId, "de"),
+        ).rejects.toMatchObject({ reason: "disabled" });
+        expect(await statusOf(itemId, 3)).toMatchObject({ status: "draft" });
+      });
 
-        expect(result).toMatchObject({ changed: true });
+      it("still unpublishes and deletes a locale the app has switched off", async () => {
+        // The other half of the rule, and the reason it is the other half: an
+        // administrator who has just disabled a language wants to take down what
+        // is already published in it. Refusing would strand those pages.
+        const itemId = await twoLocales("Lifecycle Disabled Down");
+        await sql`
+          INSERT INTO "example_localized_articles_translations"
+            ("itemId", "languageId", "title", "slug", "body", "status", "publishedAt")
+          VALUES (${itemId}, 3, 'Deutsch', 'deutsch-down', 'Deutscher Text', 'published', now())
+        `;
+
+        await expect(
+          translations().unpublish(itemId, "de"),
+        ).resolves.toMatchObject({ changed: true });
+        expect(await statusOf(itemId, 3)).toMatchObject({ status: "draft" });
+
+        await expect(
+          translations().delete(itemId, "de", { expectedVersion: 2 }),
+        ).resolves.toMatchObject({ locale: "de" });
+      });
+
+      /**
+       * The path a content type with `publication` and no `editorial` takes.
+       *
+       * The generated publish route calls the repository directly when there is
+       * no history to write, so this is that orchestration in SQL: the status
+       * moves, the version moves, an already-published translation is a true
+       * no-op, and nothing lands in `core_content_revisions`.
+       */
+      it("runs the whole lifecycle without writing any history", async () => {
+        const itemId = await twoLocales("Lifecycle No History");
+
+        const published = await translations().publish(itemId, "pl");
+        expect(published).toMatchObject({ changed: true, version: 2 });
+
+        // Idempotent: no second version, and therefore nothing for an event or a
+        // search write to be triggered by either.
+        const again = await translations().publish(itemId, "pl");
+        expect(again).toMatchObject({ changed: false, version: 2 });
+
+        const down = await translations().unpublish(itemId, "pl");
+        expect(down).toMatchObject({ changed: true, version: 3 });
+        expect(await statusOf(itemId, 2)).toMatchObject({ status: "draft" });
+
+        const [{ count }] = await sql<{ count: number }[]>`
+          SELECT count(*)::int AS count
+          FROM "core_content_revisions"
+          WHERE "contentTypeId" = 'example.localized-article'
+            AND "itemId" = ${itemId}
+        `;
+        expect(count).toBe(0);
       });
 
       it("carries the lifecycle in the metadata list", async () => {
@@ -3292,6 +3356,125 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
             expectedVersion: 1,
           }),
         ).rejects.toThrow(/version 2, not 1/);
+      });
+
+      /**
+       * A translation row is deleted physically; its history is not.
+       *
+       * So a locale can be recreated on top of revisions that already exist, and
+       * the version a fresh row starts at cannot be 1: the locale-scoped unique
+       * index on `(contentTypeId, itemId, languageId, version)` would reject the
+       * new `create` revision against the old one, and the write would fail with a
+       * `23505` a translator has no way to act on. The new row picks up where the
+       * old one left off instead.
+       */
+      it("keeps one increasing history across a delete and a recreate", async () => {
+        const itemId = await guide("Recreated");
+
+        const created = await editorial().create(
+          itemId,
+          "pl",
+          { body: "Tresc", title: "Polski" },
+          { actor: ACTOR },
+        );
+        expect(created.version).toBe(1);
+
+        const updated = await editorial().update(
+          itemId,
+          "pl",
+          { title: "Polski Nowy" },
+          { actor: ACTOR, expectedVersion: 1 },
+        );
+        expect(updated?.version).toBe(2);
+
+        // The row held 2; the delete revision records 3, so the number the row
+        // last held is not reused by the thing that removed it.
+        const deleted = await editorial().delete(itemId, "pl", {
+          actor: ACTOR,
+          expectedVersion: 2,
+        });
+        expect(deleted?.version).toBe(3);
+        expect((await rowsFor(itemId)).map(item => item.languageId)).toEqual([
+          1,
+        ]);
+
+        // 4, not 1. This is the write that used to fail.
+        const recreated = await editorial().create(
+          itemId,
+          "pl",
+          { body: "Znowu", title: "Polski Znowu" },
+          { actor: ACTOR },
+        );
+        expect(recreated.version).toBe(4);
+
+        const again = await editorial().update(
+          itemId,
+          "pl",
+          { title: "Polski Trzeci" },
+          { actor: ACTOR, expectedVersion: 4 },
+        );
+        expect(again?.version).toBe(5);
+
+        // Nothing was pruned to make room, and nothing collided.
+        expect(
+          (await revisionsFor(itemId, 2)).map(row => [
+            row.version,
+            row.operation,
+          ]),
+        ).toEqual([
+          [1, "create"],
+          [2, "update"],
+          [3, "delete"],
+          [4, "create"],
+          [5, "update"],
+        ]);
+
+        // And the AdminCP, which reads newest first, sees the same five.
+        const history = await editorial().listRevisions(itemId, "pl");
+        expect(history.edges.map(edge => edge.version)).toEqual([
+          5, 4, 3, 2, 1,
+        ]);
+
+        // The row itself is at 5, so the next optimistic write asks for 5.
+        expect(
+          (await rowsFor(itemId)).find(item => item.languageId === 2)?.version,
+        ).toBe(5);
+      });
+
+      it("leaves another locale's counter alone when one is recreated", async () => {
+        const itemId = await guide("Recreated Independently");
+
+        // English is at 1 from the atomic create. Polish runs to 3 and is
+        // deleted, so its next life starts at 4 - a shared counter would have
+        // started it at 5 and left a hole nothing explains.
+        await editorial().create(
+          itemId,
+          "pl",
+          { body: "Tresc", title: "Polski Nieza" },
+          { actor: ACTOR },
+        );
+        await editorial().update(
+          itemId,
+          "pl",
+          { title: "Polski Nieza Nowy" },
+          { actor: ACTOR, expectedVersion: 1 },
+        );
+        await editorial().delete(itemId, "pl", {
+          actor: ACTOR,
+          expectedVersion: 2,
+        });
+
+        const recreated = await editorial().create(
+          itemId,
+          "pl",
+          { body: "Znowu", title: "Polski Nieza Znowu" },
+          { actor: ACTOR },
+        );
+
+        expect(recreated.version).toBe(4);
+        expect((await revisionsFor(itemId, 1)).map(row => row.version)).toEqual(
+          [1],
+        );
       });
     });
 
@@ -3891,6 +4074,79 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
             title: "Edytowane Ponownie",
           }),
         ]);
+      });
+
+      it("removes only the deleted translation's document", async () => {
+        // The blocker this pair guards: a delete cannot enumerate translations
+        // (the row it would read is gone), so it has to read the locale off the
+        // input instead. Reading nothing meant deleting every language, and the
+        // English document would disappear because somebody removed the Polish
+        // copy.
+        const itemId = await seed({
+          pl: { published: true, title: "Do Usuniecia" },
+          title: "Keep English",
+        });
+        const { deleted, indexed, searchContext } = engine();
+
+        const outcome = await editorial().delete(itemId, "pl", {
+          actor: ACTOR,
+          expectedVersion: 2,
+        });
+        if (!outcome) throw new Error("Expected an outcome.");
+
+        const base = await localizedArticleContent
+          .service(context)
+          .findById(itemId);
+
+        await syncContentLocalizedSearch(
+          searchContext,
+          localizedArticleContent,
+          {
+            locale: outcome.locale,
+            operation: "delete",
+            pluginId: CONFIG_PLUGIN.pluginId,
+            row: base as object,
+          },
+        );
+
+        expect(deleted).toEqual([{ itemId, languageCode: "pl" }]);
+        expect(indexed).toEqual([]);
+
+        // And the English translation really is still there to be indexed, so
+        // the next rebuild puts its document back exactly where it was.
+        const rebuilt = engine();
+        await rebuild(rebuilt.searchContext);
+        expect(rebuilt.indexed.map(document => document.languageCode)).toEqual([
+          "en",
+        ]);
+      });
+
+      it("removes every language when the record is deleted", async () => {
+        const itemId = await seed({
+          pl: { published: true, title: "Cala Usunieta" },
+          title: "Delete Whole",
+        });
+        const { deleted, searchContext } = engine();
+
+        const removed = await localizedArticleContent
+          .service(context)
+          .delete(itemId);
+        if (!removed) throw new Error("Expected a deleted row.");
+
+        await syncContentLocalizedSearch(
+          searchContext,
+          localizedArticleContent,
+          {
+            operation: "delete",
+            pluginId: CONFIG_PLUGIN.pluginId,
+            row: removed,
+          },
+        );
+
+        // One call with no language: every `(itemType, itemId, *)` document
+        // goes, which is what deleting the record means - and there is nothing
+        // left to enumerate them from anyway.
+        expect(deleted).toEqual([{ itemId, languageCode: undefined }]);
       });
     });
 

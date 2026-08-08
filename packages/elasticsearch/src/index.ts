@@ -284,7 +284,15 @@ export const ElasticsearchSearchAdapter = (
 
   return {
     name: "elasticsearch",
-    capabilities: { facets: true, timeDecay: true, authorBoost: true },
+    // `languageScopedDelete`: `delete` below filters the delete-by-query on
+    // `languageCode` when it is given one, so taking the Polish translation down
+    // leaves the English document in place.
+    capabilities: {
+      facets: true,
+      timeDecay: true,
+      authorBoost: true,
+      languageScopedDelete: true,
+    },
 
     index: async (_c, doc) => {
       await ensureIndex();

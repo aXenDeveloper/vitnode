@@ -35,6 +35,7 @@ import {
 } from "./revision-snapshot";
 import { createContentRevisionsModel } from "./revisions-model";
 import { createSlugNormalizer } from "./slugs";
+import { CONTENT_TRANSLATION_INITIAL_VERSION } from "./translation-model";
 
 /**
  * Everything the post-commit effects need about one translation mutation.
@@ -364,7 +365,22 @@ export const createContentTranslationEditorialService = <
   return {
     create: async (itemId, locale, values, options) =>
       await transact(options, async tx => {
-        const row = await translations.create(itemId, locale, values, { tx });
+        // Resolved here, before the write, because the version this translation
+        // starts at is a fact about *this locale's* history - and history is
+        // keyed by language id, which only the registry can supply.
+        const target = await language(locale, { requireEnabled: true, tx });
+
+        // A translation row is deleted physically; its history is not. Starting
+        // a recreated locale at 1 would collide with the `create` revision the
+        // first life wrote, so the new row picks up where the old one left off:
+        // create 1, update 2, delete 3, recreate 4. Read inside the transaction,
+        // so the number cannot be taken by another writer in between.
+        const previous = await revisionsFor(target.id).latest(itemId, tx);
+
+        const row = await translations.create(itemId, target.locale, values, {
+          [CONTENT_TRANSLATION_INITIAL_VERSION]: (previous?.version ?? 0) + 1,
+          tx,
+        });
 
         const revisionId = await capture(tx, {
           actor: options.actor,

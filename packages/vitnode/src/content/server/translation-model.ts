@@ -42,6 +42,31 @@ export interface ContentTranslationOptions {
   tx?: ContentDatabase;
 }
 
+/**
+ * The version a freshly inserted translation starts at.
+ *
+ * A symbol rather than a name, because there is exactly one caller that may set
+ * it and no way to reach it by accident: writing this key requires importing the
+ * symbol, which is a deliberate act rather than a plausible typo in an options
+ * object. Ordinary callers get version 1 and cannot ask for anything else.
+ *
+ * It exists because a translation row is deleted physically while its history is
+ * not. Recreating `(itemId, languageId)` at version 1 would collide with the
+ * `create` revision the *first* life of that translation wrote, and the locale's
+ * history would stop being a sequence. The editorial layer reads the last version
+ * this locale ever reached and starts the new row after it.
+ *
+ * @internal
+ */
+export const CONTENT_TRANSLATION_INITIAL_VERSION: unique symbol = Symbol(
+  "vitnode.content.translation.initialVersion",
+);
+
+export interface ContentTranslationCreateOptions extends ContentTranslationOptions {
+  /** @internal Set only by the translation editorial service. */
+  [CONTENT_TRANSLATION_INITIAL_VERSION]?: number;
+}
+
 export interface ContentTranslationWriteOptions extends ContentTranslationOptions {
   expectedVersion: number;
 }
@@ -85,12 +110,18 @@ export interface ContentTranslationTransitionResult<TDefinition> {
  * exactly what atomic create needs it to be.
  */
 export interface ContentTranslationModel<TDefinition> {
-  /** Inserts one translation at version 1. Throws if the locale already has one. */
+  /**
+   * Inserts one translation at version 1. Throws if the locale already has one.
+   *
+   * The editorial layer may start it later than 1 - see
+   * {@link CONTENT_TRANSLATION_INITIAL_VERSION} - so a locale that has been
+   * deleted and recreated keeps one increasing history.
+   */
   create: (
     itemId: number,
     locale: string,
     values: ContentLocalizedValues<TDefinition>,
-    options?: ContentTranslationOptions,
+    options?: ContentTranslationCreateOptions,
   ) => Promise<ContentTranslationRow<TDefinition>>;
   /**
    * Removes one translation, guarded by its version.
@@ -133,6 +164,8 @@ export interface ContentTranslationModel<TDefinition> {
    * never rewritten, so a republish keeps the original date.
    *
    * Throws without `publication: { enabled: true }`: there is no column to move.
+   * Refuses a locale the install has switched off, exactly as `create` and
+   * `update` do - publishing into a language nothing renders is not useful.
    */
   publish: (
     itemId: number,
@@ -154,7 +187,11 @@ export interface ContentTranslationModel<TDefinition> {
     locale: string,
     options?: { requireEnabled?: boolean; tx?: ContentDatabase },
   ) => Promise<ContentLanguage>;
-  /** The mirror of {@link publish}. `publishedAt` is deliberately left alone. */
+  /**
+   * The mirror of {@link publish}. `publishedAt` is deliberately left alone, and
+   * a disabled locale is accepted: taking content down has to keep working after
+   * a language is switched off.
+   */
   unpublish: (
     itemId: number,
     locale: string,
@@ -369,13 +406,18 @@ export const createContentTranslationModel = <
     itemId: number,
     locale: string,
     options: ContentTranslationTransitionOptions,
-    { guard, values }: { guard: SQL; values: Record<string, unknown> },
+    {
+      guard,
+      requireEnabled,
+      values,
+    }: { guard: SQL; requireEnabled: boolean; values: Record<string, unknown> },
   ): Promise<ContentTranslationTransitionResult<TDefinition> | null> => {
     const target = await language(locale, {
       // Publishing into a locale the install has switched off would put content
-      // on a page nothing renders; taking one down must stay possible, which is
-      // why only the publish direction is checked - by its own guard, below.
-      requireEnabled: false,
+      // on a page nothing renders, so `publish` asks for an enabled one exactly
+      // as `create` and `update` do. Taking content *down* must stay possible
+      // after a language is switched off, so `unpublish` does not.
+      requireEnabled,
       tx: options.tx,
     });
     const database = db(options);
@@ -458,12 +500,28 @@ export const createContentTranslationModel = <
 
       const parsed = schemas.create.parse(values) as Record<string, unknown>;
 
+      // Left to the column default unless the editorial layer named one. A
+      // nonsensical value is rejected rather than written: the version is what
+      // the whole optimistic-locking story is built on, and a zero or a fraction
+      // would break every comparison downstream of it.
+      const initialVersion = options?.[CONTENT_TRANSLATION_INITIAL_VERSION];
+      if (
+        initialVersion !== undefined &&
+        (!Number.isInteger(initialVersion) || initialVersion < 1)
+      ) {
+        throw new ContentEngineError(
+          `A translation of ${itemId} cannot start at version ${String(initialVersion)} - versions are integers from 1 upwards.`,
+          { contentTypeId },
+        );
+      }
+
       const [row] = await database
         .insert(translationTable)
         .values({
           ...withCreateSlugs(parsed),
           itemId,
           languageId: target.id,
+          ...(initialVersion === undefined ? {} : { version: initialVersion }),
         })
         // Targeted at the primary key only, so "this locale already has a
         // translation" comes back as a row this can look up and name, while a
@@ -585,6 +643,7 @@ export const createContentTranslationModel = <
         // COALESCE, so a republish keeps the date this language first went out.
         // The base row's publish does the same thing to the same effect.
         guard: ne(statusColumn(), "published"),
+        requireEnabled: true,
         values: {
           publishedAt: sql`coalesce(${columns.publishedAt}, now())`,
           status: "published",
@@ -606,6 +665,10 @@ export const createContentTranslationModel = <
     unpublish: async (itemId, locale, options) =>
       await transition(itemId, locale, options ?? {}, {
         guard: eq(statusColumn(), "published"),
+        // Deliberately not `requireEnabled`: an administrator switching a
+        // language off next wants to take its pages down, and refusing that
+        // would leave published content in a locale nobody can edit.
+        requireEnabled: false,
         // `publishedAt` survives on purpose: it records when this language was
         // first published, which stays true after it is taken down again.
         values: { status: "draft" },

@@ -93,6 +93,29 @@ The `delete` revision is stamped at `version + 1` because the row is gone and
 nothing holds the old version any more - recording it again would collide with
 the revision that last wrote it.
 
+## Deleting a locale does not reset it
+
+A translation row is removed physically; its history is not. So a locale can be
+recreated on top of revisions that already exist, and a fresh row that started
+at version 1 again would collide with the `create` revision its first life wrote.
+
+The version a recreated translation starts at is read off the locale's own
+history instead, inside the same transaction as the insert:
+
+```text
+create      v1
+update      v2
+delete      v3   (the row goes; the revision stays)
+recreate    v4   ← not 1
+update      v5
+```
+
+One increasing sequence per `(content type, record, language)`, whatever happened
+to the row in between - so the history reads as a story rather than as two
+overlapping ones, and the unique index never has to be relaxed to allow it.
+Another language's counter is untouched: English staying at 1 while Polish runs
+to 5 is normal.
+
 <Callout type="info" title="The atomic create writes a translation revision too">
   Pass `pluginId` and an `actor` to `localizedService.create` and the default
   translation gets its own `create` revision, in the same transaction as the row.

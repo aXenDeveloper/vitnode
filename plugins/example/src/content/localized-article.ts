@@ -11,12 +11,12 @@ import { defineContentType, field } from "@vitnode/core/content";
  * history, and a unique `(languageId, slug)` index so `/en/hello` and `/pl/hello`
  * can both exist while a second English `hello` is a 409.
  *
- From Stage 5C it is public as well: `publicApi` exposes the localized `title`,
+ * From Stage 5C it is public as well: `publicApi` exposes the localized `title`,
  * `slug` and `body` alongside the shared `featured`, and a public read resolves one
  * language - explicitly, negotiated or the default - with `fallback: "default"`
- * serving English to a locale that has no translation of its own. `search` is the
- * one thing still refused alongside `localization`; per-locale search documents
- * land in Stage 5D.
+ * serving English to a locale that has no translation of its own. Stage 5D adds
+ * `search`, which indexes one document per published translation rather than one
+ * per record.
  */
 export const localizedArticleContentType = defineContentType({
   id: "example.localized-article",

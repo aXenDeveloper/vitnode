@@ -17,7 +17,11 @@ import { EmailModel } from "@/api/models/email";
 import { EventsModel } from "@/api/models/events";
 import { I18nModel } from "@/api/models/i18n";
 import { QueueModel } from "@/api/models/queue";
-import { SearchModel, validateSearchIndexers } from "@/api/models/search";
+import {
+  assertSearchProviderCapabilities,
+  SearchModel,
+  validateSearchIndexers,
+} from "@/api/models/search";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import { StorageModel } from "@/api/models/storage";
@@ -279,6 +283,24 @@ export const globalMiddleware = ({
     entry => entry.definition.localization.enabled,
   );
 
+  // Resolved once rather than per request - the adapter cannot change between
+  // them - which is also what makes the capability check below a boot-time fact.
+  const searchAdapter = search?.adapter ?? PostgresSearchAdapter();
+
+  // A localized searchable content type is indexed once per translation, so
+  // taking one translation down has to remove one document. A provider that
+  // ignores the language would remove them all and say nothing, so the pairing
+  // is refused here rather than discovered by whoever deletes a translation.
+  assertSearchProviderCapabilities(searchAdapter, {
+    localizedSearchContentTypes: contentTypesMetadata
+      .filter(
+        entry =>
+          entry.definition.localization.enabled &&
+          entry.definition.search.enabled,
+      )
+      .map(entry => entry.definition.id),
+  });
+
   const permissionStaffMetadata: PermissionStaffCatalogEntry[] = plugins.map(
     plugin => ({
       pluginId: plugin.pluginId,
@@ -342,7 +364,7 @@ export const globalMiddleware = ({
         adapter: events?.adapter ?? LocalEventsAdapter(),
         listeners: eventsMetadata,
       },
-      search: { adapter: search?.adapter ?? PostgresSearchAdapter() },
+      search: { adapter: searchAdapter },
       searchIndexers: searchIndexersMetadata,
       storage,
       authorization: {

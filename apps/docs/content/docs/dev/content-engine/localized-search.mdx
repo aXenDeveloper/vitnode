@@ -72,12 +72,23 @@ await c.get("search").delete("example.article", 7); // every language
 | What happened | What moves |
 | --- | --- |
 | A **translation** was created, edited, published, unpublished or restored | that language's document |
+| A **translation** was deleted | that language's document, and no other |
 | The **record** was published, unpublished or had a shared field edited | every language's document |
 | The **record** was deleted | every language's document, in one call |
 
 A mutation of the record moves every language because its publication state gates
 all of them and a shared field is in all of them. A Polish edit moves Polish:
 nothing else contains it.
+
+<Callout title="The two deletes are not the same call">
+  A delete can never enumerate translations - by the time the index is updated,
+  the rows it would read are gone - so it reads the locale off the mutation
+  instead. `locale` present means one translation went away and one document goes;
+  `locale` absent means the record went away and all of them do. Getting this
+  wrong is not a slower path but a wrong one: deleting the Polish copy would empty
+  the record out of the index in every language, and only the next rebuild would
+  put it back.
+</Callout>
 
 The generated routes do this for you. A direct service call does not - it may be
 inside a transaction that has not committed - so application code opts in after

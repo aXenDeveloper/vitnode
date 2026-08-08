@@ -251,6 +251,25 @@ A disabled language is **readable and not writable**. Its content is already in
 the database, and hiding it would make it unrecoverable; growing more of it in a
 language nothing renders is the part that gets refused.
 
+One rule, in both directions - everything that puts content *into* a disabled
+locale is refused, and everything that takes content *out* of it still works:
+
+| Operation | Disabled locale |
+| --- | --- |
+| create | refused |
+| update | refused |
+| restore | refused |
+| publish | refused |
+| unpublish | allowed |
+| delete | allowed |
+| read, history | allowed |
+
+`publish` sits on the refused side because publishing into a language the app
+does not serve puts a page on the internet that nothing routes to. `unpublish`
+and `delete` sit on the allowed side because switching a language off is usually
+the step *before* taking its pages down - refusing would strand published content
+in a locale nobody can edit.
+
 Deleting a language that content is written in is refused by Postgres itself -
 the foreign key is `ON DELETE RESTRICT`. That is deliberately different from
 `core_languages_words`, which cascades: losing a UI string is an inconvenience,

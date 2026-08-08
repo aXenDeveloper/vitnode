@@ -211,6 +211,9 @@ export interface ContentLocalizedSearchSyncInput {
    * Omitted for a mutation of the *record* - publishing it, editing a shared
    * field - which changes every language's document at once, because every one of
    * them is built from that row.
+   *
+   * On `delete` it is the difference between "this translation went away" and
+   * "the record went away", which is one document against all of them.
    */
   locale?: string;
   operation: ContentSearchOperation;
@@ -291,14 +294,25 @@ export const syncContentLocalizedSearch = async (
     return [];
   }
 
-  // The record is gone, so every language's document is too. One call rather
-  // than one per locale: there is nothing left to enumerate them from.
+  // A delete never enumerates translations: by the time this runs the row it
+  // would read is gone. `locale` is the whole difference between the two kinds
+  // of delete, and getting it wrong is not a slow path but a wrong one.
+  //
+  //   locale present  -  one *translation* was deleted  ->  one document
+  //   locale absent   -  the *record* was deleted       ->  every document
+  //
+  // Deleting the Polish translation must leave the English document exactly
+  // where it is; omitting the language here would empty the whole record out of
+  // the index and only the next rebuild would notice.
   if (input.operation === "delete") {
+    const locale = input.locale?.trim();
+    const scoped = locale === undefined || locale === "" ? undefined : locale;
+
     return [
       await write(c, definition, {
-        documentId: contentSearchDocumentId(definition, itemId),
+        documentId: contentSearchDocumentId(definition, itemId, scoped),
         run: async () => {
-          await c.get("search").delete(definition.id, itemId);
+          await c.get("search").delete(definition.id, itemId, scoped);
         },
         action: "delete",
         input,

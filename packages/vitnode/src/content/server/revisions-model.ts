@@ -46,7 +46,18 @@ export interface ContentRevisionsModel<TSnapshot = ContentRevisionSnapshot> {
     revisionId: number,
     tx?: ContentDatabase,
   ) => Promise<ContentRevisionDetail<TSnapshot> | null>;
-  latest: (itemId: number) => Promise<ContentRevisionMeta | null>;
+  /**
+   * The newest revision in this scope, or `null` when there is no history.
+   *
+   * Takes an optional transaction for the same reason `findById` does: a caller
+   * deciding what version a write should start at has to read the history from
+   * inside the transaction that write is in, or it reads a number another writer
+   * is about to take.
+   */
+  latest: (
+    itemId: number,
+    tx?: ContentDatabase,
+  ) => Promise<ContentRevisionMeta | null>;
   /** Newest first. Metadata only - a snapshot is loaded on demand. */
   list: (
     itemId: number,
@@ -186,9 +197,8 @@ export const createContentRevisionsModel = <
       return row ? (row as ContentRevisionDetail<TSnapshot>) : null;
     },
 
-    latest: async itemId => {
-      const [row] = await c
-        .get("db")
+    latest: async (itemId, tx) => {
+      const [row] = await (tx ?? c.get("db"))
         .select(metaSelection)
         .from(core_content_revisions)
         .leftJoin(

@@ -346,8 +346,9 @@ const language = await resolveContentLanguage(c, {
 ```
 
 - Case-insensitive, and the **stored** code comes back.
-- `requireEnabled` is the write path. Reading a disabled locale is allowed;
-  writing one is refused.
+- `requireEnabled` is the write path: `create`, `update`, `restore` and `publish`
+  pass it, and `unpublish`, `delete` and every read do not. Adding content to a
+  language nothing renders is refused; taking it down again is not.
 - The registry is loaded once per request, so resolving many locales is one query.
 - Pass `tx` when you are inside a transaction. This is not an optimisation: a pool
   whose only free connection is held by your transaction would otherwise wait

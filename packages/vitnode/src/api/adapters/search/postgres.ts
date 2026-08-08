@@ -75,7 +75,15 @@ const buildFilters = (params: SearchQueryParams): SQL | undefined => {
 
 export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
   name: "postgres",
-  capabilities: { authorBoost: false, facets: false, timeDecay: false },
+  // `languageScopedDelete` is true by construction: this provider's store *is*
+  // `core_search_index`, and `SearchModel.delete` already narrows that table by
+  // `languageCode` before it gets here. There is no second copy to keep in step.
+  capabilities: {
+    authorBoost: false,
+    facets: false,
+    languageScopedDelete: true,
+    timeDecay: false,
+  },
 
   // The SearchModel owns the canonical `core_search_index` table, which is this
   // provider's store, so the write methods are intentionally no-ops.

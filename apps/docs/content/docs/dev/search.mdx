@@ -281,6 +281,39 @@ export const vitNodeApiConfig = buildApiConfig({
 After changing the engine, run a rebuild so the new engine is populated from
 `core_search_index`.
 
+### Provider capabilities
+
+A provider may declare what it can do. Most of it is about ranking and is purely
+optional, but one entry is a hard requirement for multi-language content:
+
+```ts
+capabilities: {
+  authorBoost: false,
+  facets: false,
+  languageScopedDelete: true, // [!code highlight]
+  timeDecay: false,
+},
+```
+
+`languageScopedDelete` says that `delete(c, itemType, itemId, languageCode)`
+honours its fourth argument. It has to be **declared** because JavaScript cannot
+tell: a provider written as `delete(c, itemType, itemId)` accepts the extra
+argument and drops it, so taking one translation down would remove every language
+from that provider's store while `core_search_index` removed one - silently, and
+permanently.
+
+So an install that pairs a provider without it with a content type that is both
+[localized](/docs/dev/content-engine/localization) and searchable refuses to boot:
+
+```text
+[Search] The "legacy-engine" search provider does not support language-scoped
+deletion, but the content type "example.article" is localized and searchable …
+```
+
+Both bundled providers declare it. Nothing changes for a provider that indexes
+single-language content only - the capability is checked when a content type
+needs it, and not otherwise.
+
 ## Admin status
 
 **AdminCP → System → Search** shows the active engine, its health, how many items

@@ -87,6 +87,22 @@ export interface SearchResult {
 export interface SearchProviderCapabilities {
   authorBoost: boolean;
   facets: boolean;
+  /**
+   * Whether {@link SearchProviderApiPlugin.delete} honours its `languageCode`.
+   *
+   * Declared rather than inferred, because JavaScript cannot tell the difference:
+   * a provider written as `delete(c, itemType, itemId)` accepts the fourth
+   * argument at runtime and silently ignores it, so taking down one translation
+   * would remove every language from that provider's store while the canonical
+   * `core_search_index` removed one. The two would then disagree forever, and
+   * nothing would say so.
+   *
+   * Optional, so a provider written before localized content still compiles and
+   * still serves single-language content. Absent means "no", and
+   * {@link assertSearchProviderCapabilities} refuses to boot an install that
+   * pairs such a provider with a localized searchable content type.
+   */
+  languageScopedDelete?: boolean;
   timeDecay: boolean;
 }
 
@@ -220,6 +236,45 @@ export const validateSearchIndexers = (
 };
 
 /**
+ * Refuses to boot a provider that cannot express what the installed content
+ * types need.
+ *
+ * Only one requirement so far, and it is narrow on purpose: a content type that
+ * is both localized and searchable is indexed once per published translation, so
+ * unpublishing or deleting one of them has to remove exactly one document. A
+ * provider that ignores `languageCode` would take every language out instead, and
+ * because the extra argument is simply dropped there is no error, no log line and
+ * no way to notice until somebody searches for content that should still be
+ * there.
+ *
+ * Fails at boot rather than at the delete for the obvious reason: the delete is
+ * the moment the damage happens, and by then the install has been running.
+ *
+ * Content types are passed as plain ids so this stays where the rest of the
+ * search contract lives, with no dependency on the Content Engine.
+ */
+export const assertSearchProviderCapabilities = (
+  provider: SearchProviderApiPlugin,
+  {
+    localizedSearchContentTypes,
+  }: {
+    /** Ids of content types indexed once per translation. */
+    localizedSearchContentTypes: readonly string[];
+  },
+): void => {
+  if (localizedSearchContentTypes.length === 0) return;
+  if (provider.capabilities?.languageScopedDelete === true) return;
+
+  throw new Error(
+    `[Search] The "${provider.name}" search provider does not support language-scoped deletion, but ${localizedSearchContentTypes.length === 1 ? "the content type" : "the content types"} ${localizedSearchContentTypes
+      .map(id => `"${id}"`)
+      .join(
+        ", ",
+      )} ${localizedSearchContentTypes.length === 1 ? "is" : "are"} localized and searchable - each publishes one search document per translation. Taking one translation down must remove one document, and a provider that ignores the "languageCode" argument of "delete" would remove every language instead. Declare "capabilities: { languageScopedDelete: true }" on the provider once its "delete" honours that argument, or turn "search" off for ${localizedSearchContentTypes.length === 1 ? "that content type" : "those content types"}.`,
+  );
+};
+
+/**
  * A pluggable search engine. The {@link SearchModel} owns the canonical
  * `core_search_index` table for every provider, so a provider that queries that
  * table directly (the bundled Postgres one) implements the mutation methods as
@@ -238,9 +293,12 @@ export interface SearchProviderApiPlugin {
    * take the English one out of the index. Omit it and every language goes, which
    * is what deleting the record itself means.
    *
-   * Optional on purpose - a provider written before per-locale content simply
-   * ignores it and keeps removing every variant, which is wrong in only one
-   * direction and never leaves a document behind.
+   * Optional on the signature so a provider written before per-locale content
+   * still compiles - but ignoring it is **not** silently tolerated. A provider
+   * that honours it says so with
+   * `capabilities: { languageScopedDelete: true }`, and an install that pairs one
+   * that does not with a localized searchable content type refuses to boot. See
+   * {@link assertSearchProviderCapabilities}.
    */
   delete: (
     c: Context,

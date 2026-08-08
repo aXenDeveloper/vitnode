@@ -175,11 +175,12 @@ export const buildContentTranslationRoutes = <
   /**
    * Turns a bare repository result into the outcome the effects expect.
    *
-   * The path a localized content type **without** `editorial` takes: there is no
-   * history to write, so there is no revision id - but the event still fires,
-   * because `translation_created` is gated on localization and not on editorial.
-   * With `editorial` the service produces a richer outcome itself and this is not
-   * used.
+   * The path a localized content type **without** `editorial` takes, for every
+   * mutation including publish and unpublish: there is no history to write, so
+   * there is no revision id - but the event still fires, because
+   * `translation_published` and friends are gated on localization and publication,
+   * not on editorial. With `editorial` the service produces a richer outcome
+   * itself and this is not used.
    */
   const plainOutcome = (
     operation: ContentTranslationEditorialOutcome<TDefinition>["operation"],
@@ -435,6 +436,15 @@ export const buildContentTranslationRoutes = <
   // Lifecycle: only with `publication`, which is what a translation status is
   // subordinate to. Without it the columns do not exist and there is nothing to
   // move.
+  //
+  // Publication is independent of `editorial`, and these routes are gated on it
+  // alone: a translation's status column exists because `publication` put it
+  // there, so requiring history in order to *move* it would give a content type
+  // lifecycle columns and no generated way to reach them. With `editorial` the
+  // transition additionally captures a revision, in the same transaction as the
+  // write; without it, it does not. Everything after the write - the event, the
+  // search document, the outcome the AdminCP invalidates from - is the same on
+  // both paths, which is why they meet again at `announce`.
   // -------------------------------------------------------------------------
 
   const transitionRoute = (action: "publish" | "unpublish") =>
@@ -474,10 +484,22 @@ export const buildContentTranslationRoutes = <
         const outcome = await withTranslationHttpErrors(
           "update",
           async () =>
-            await editorial(c)[action](id, target, {
-              actor: resolveContentActor(c),
-              expectedVersion,
-            }),
+            buildEditorial
+              ? await editorial(c)[action](id, target, {
+                  actor: resolveContentActor(c),
+                  expectedVersion,
+                })
+              : await (async () => {
+                  const result = await translations(c)[action](id, target, {
+                    expectedVersion,
+                  });
+
+                  return result
+                    ? plainOutcome(action, result.row, {
+                        changed: result.changed,
+                      })
+                    : null;
+                })(),
           { contentTypeId: definition.id, itemId: id, locale: target },
         );
         if (!outcome) {
@@ -835,7 +857,7 @@ export const buildContentTranslationRoutes = <
     create,
     update,
     remove,
-    ...(publication && editorialEnabled
+    ...(publication
       ? [transitionRoute("publish"), transitionRoute("unpublish")]
       : []),
     ...(editorialEnabled ? [revisionList, revisionDetail, restore] : []),

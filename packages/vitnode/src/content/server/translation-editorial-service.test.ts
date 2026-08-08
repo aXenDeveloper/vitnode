@@ -8,6 +8,7 @@ import type { ContentTranslationModel } from "./translation-model";
 
 import { ContentRevisionNotRestorable } from "../errors";
 import { createContentTranslationEditorialService } from "./translation-editorial-service";
+import { CONTENT_TRANSLATION_INITIAL_VERSION } from "./translation-model";
 
 const PLUGIN_ID = "@vitnode/example";
 const ACTOR = { type: "staff" as const, userId: 1 };
@@ -26,6 +27,16 @@ const captured: {
 let nextRevisionId = 100;
 let storedRevision: ContentTranslationRevisionSnapshot | null = null;
 let revisionLanguageId = 1;
+
+/**
+ * The newest version each locale's history has ever reached.
+ *
+ * Keyed by language id, because that is how the history is scoped - and this is
+ * exactly what `create` has to consult: a translation row is deleted physically
+ * while its revisions are kept, so a recreated locale that started at 1 again
+ * would collide with the `create` revision its first life wrote.
+ */
+const latestVersionByLanguage = new Map<number, number>();
 
 // The revisions model is a real, tested unit of its own; what matters here is
 // *what this layer asks it to write* - which language, which operation, which
@@ -69,7 +80,11 @@ vi.mock("./revisions-model", () => ({
             version: 1,
           }
         : null,
-    latest: () => null,
+    latest: () => {
+      const version = latestVersionByLanguage.get(languageId ?? 0);
+
+      return version === undefined ? null : { version };
+    },
     list: () => ({
       edges: [],
       pageInfo: { endCursor: null, hasNextPage: false },
@@ -147,6 +162,7 @@ beforeEach(() => {
   nextRevisionId = 100;
   storedRevision = null;
   revisionLanguageId = 1;
+  latestVersionByLanguage.clear();
 });
 
 describe("create", () => {
@@ -169,6 +185,67 @@ describe("create", () => {
       languageId: 2,
       operation: "create",
       version: 1,
+    });
+  });
+
+  it("starts a fresh locale at version 1", async () => {
+    const model = translations();
+    model.create.mockResolvedValue(row());
+
+    await service(model).create(7, "pl", { title: "Witaj" }, { actor: ACTOR });
+
+    const options = model.create.mock.calls[0][3] as Record<symbol, unknown>;
+    expect(options[CONTENT_TRANSLATION_INITIAL_VERSION]).toBe(1);
+  });
+
+  it("resumes a recreated locale after its last recorded version", async () => {
+    // The Polish translation was created, edited and deleted: the delete revision
+    // holds version 3. Recreating it at 1 would collide with the `create`
+    // revision from its first life, because the history was never removed.
+    latestVersionByLanguage.set(2, 3);
+
+    const model = translations();
+    model.create.mockResolvedValue(row({ version: 4 }));
+
+    const outcome = await service(model).create(
+      7,
+      "pl",
+      { title: "Witaj" },
+      { actor: ACTOR },
+    );
+
+    const options = model.create.mock.calls[0][3] as Record<symbol, unknown>;
+    expect(options[CONTENT_TRANSLATION_INITIAL_VERSION]).toBe(4);
+    expect(captured[0]).toMatchObject({ operation: "create", version: 4 });
+    expect(outcome.version).toBe(4);
+  });
+
+  it("reads the history of the locale being created, not of another", async () => {
+    // English reached version 9; Polish has never existed. A shared counter would
+    // start the Polish translation at 10 and leave a hole nothing explains.
+    latestVersionByLanguage.set(1, 9);
+
+    const model = translations();
+    model.create.mockResolvedValue(row());
+
+    await service(model).create(7, "pl", { title: "Witaj" }, { actor: ACTOR });
+
+    const options = model.create.mock.calls[0][3] as Record<symbol, unknown>;
+    expect(options[CONTENT_TRANSLATION_INITIAL_VERSION]).toBe(1);
+  });
+
+  it("resolves the language itself, and requires an enabled one", async () => {
+    const model = translations();
+    model.create.mockResolvedValue(row());
+
+    await service(model).create(7, "PL", { title: "Witaj" }, { actor: ACTOR });
+
+    // Resolved once, here, and inside the transaction: the history read and the
+    // insert have to be talking about the same language id, and the read has to
+    // see what the transaction will.
+    expect(model.resolveLanguage).toHaveBeenCalledWith("PL", {
+      requireEnabled: true,
+      tx: expect.anything(),
     });
   });
 

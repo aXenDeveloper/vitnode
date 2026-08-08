@@ -195,9 +195,26 @@ if (!data) notFound();
 
 Passing `locale` does two things that have to happen together, which is why it is
 one argument rather than a query parameter you add yourself: it goes to the API as
-`?locale=`, **and** it goes into the cache tags. Omitting it is not an error - the
-API falls back to the default locale - but the response is then tagged as though
-it were locale-less, so a translation publish will not expire it.
+`?locale=`, **and** it goes into the cache tags.
+
+Omitting it is not an error and not a trap either. The content type's
+`defaultLocale` is filled in before either one is built, so the request and the
+tags always name the same language:
+
+```text
+locale: "pl"   →  ?locale=pl   content:example.article:list:pl
+locale omitted →  ?locale=en   content:example.article:list:en
+```
+
+<Callout type="warn" title="A localized response never has a locale-less tag">
+  It cannot: every invalidation path names the locale-aware tag, so an entry
+  tagged `content:example.article:list` would hold default-locale content that
+  nothing could ever expire - not a translation publish, not an edit, not a
+  rebuild. Filling the default in is what makes that shape unreachable.
+</Callout>
+
+`contentPublicItemTags` follows the same rule, so a page that tags its own
+`fetch` with it cannot disagree with one that used `contentPublicFetch`.
 
 ## Caching
 
