@@ -204,7 +204,10 @@ export const advancedArticleContentType = defineContentType({
       fallbackTitleField: "title",
       descriptionField: "seo.description",
       noIndexField: "syndication.noIndex",
-      openGraph: { titleField: "seo.title", descriptionField: "seo.description" },
+      openGraph: {
+        titleField: "seo.title",
+        descriptionField: "seo.description",
+      },
     },
     sitemap: { enabled: true, changeFrequency: "weekly", priority: 0.7 },
   },

@@ -1,4 +1,5 @@
 import type { SearchDocument } from "@vitnode/core/api/models/search";
+import type { ContentDeliverySitemapPage } from "@vitnode/core/content/server";
 import type { Context } from "hono";
 
 import {
@@ -136,16 +137,27 @@ const editorial = (target: Context = context) =>
 const delivery = (target: Context = context) =>
   articleContent.deliveryService?.(target, { pluginId: PLUGIN });
 
+/**
+ * A monotonic counter for the `unique: true` `code` field.
+ *
+ * `Date.now()` is not enough: several articles are created inside one millisecond by
+ * the tests below, and a duplicate `code` would surface as a `23505` from an
+ * unrelated constraint.
+ */
+let nextCode = 0;
+
 const createArticle = async (
   values: Record<string, unknown> = {},
 ): Promise<{ id: number; version: number }> => {
+  nextCode += 1;
+
   const outcome = await editorial()?.create(
     {
       category: categoryId,
-      code: `code-${Math.round(Date.now() % 1_000_000)}-${values.title ?? "x"}`,
+      code: `code-${nextCode}`,
       title: "Hello world",
       ...values,
-    } as never,
+    },
     { actor: ACTOR },
   );
   if (!outcome) throw new Error("create returned nothing");
@@ -174,7 +186,9 @@ const publishArticle = async (
 const historyRows = async (
   itemId: number,
 ): Promise<{ path: string; retired: boolean; slug: string }[]> => {
-  const rows = await sql<{ path: string; retiredAt: null | string; slug: string }[]>`
+  const rows = await sql<
+    { path: string; retiredAt: null | string; slug: string }[]
+  >`
     SELECT "slug", "path", "retiredAt"
     FROM "core_content_slug_history"
     WHERE "contentTypeId" = 'example.article' AND "itemId" = ${itemId}
@@ -238,7 +252,7 @@ const publishLocalized = async ({
     await translationEditorial()?.create(
       created.row.id,
       "pl",
-      { title: pl } as never,
+      { title: pl },
       { actor: ACTOR },
     );
     await translationEditorial()?.publish(created.row.id, "pl", {
@@ -327,17 +341,15 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
           }
           if (key === "events") {
             return {
-              emit: async (
-                name: string,
-                payload: Record<string, unknown>,
-              ) => {
+              emit: async (name: string, payload: Record<string, unknown>) => {
                 emitted.push({ name, payload });
 
                 return await Promise.resolve({ failures: [] });
               },
             };
           }
-          if (key === "log") return { error: async () => await Promise.resolve() };
+          if (key === "log")
+            return { error: async () => await Promise.resolve() };
           if (key === "core") {
             return {
               contentModels: [
@@ -658,7 +670,8 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
 
     it("brings a slug back into service when it is restored", async () => {
       const article = await publishArticle({ title: "Original name" });
-      const [original] = (await editorial()?.revisions.list(article.id))?.edges ?? [];
+      const [original] =
+        (await editorial()?.revisions.list(article.id))?.edges ?? [];
 
       const moved = await editorial()?.update(
         article.id,
@@ -692,7 +705,8 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
 
     it("writes no history for a restore that moves no slug", async () => {
       const article = await publishArticle({ title: "Stable" });
-      const [first] = (await editorial()?.revisions.list(article.id))?.edges ?? [];
+      const [first] =
+        (await editorial()?.revisions.list(article.id))?.edges ?? [];
 
       const edited = await editorial()?.update(
         article.id,
@@ -706,9 +720,9 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       });
 
       expect(restored?.delivery?.slugChanged).toBe(false);
-      expect((await historyRows(article.id)).map(row => row.slug)).toStrictEqual([
-        "stable",
-      ]);
+      expect(
+        (await historyRows(article.id)).map(row => row.slug),
+      ).toStrictEqual(["stable"]);
     });
   });
 
@@ -728,9 +742,9 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       // `hello` is free on the content table now - the first article moved off it -
       // so the reservation is the only thing standing between the second article
       // and somebody else's incoming links.
-      await expect(createArticle({ slug: "hello", title: "Second" })).rejects.toThrow(
-        ContentDeliverySlugReserved,
-      );
+      await expect(
+        createArticle({ slug: "hello", title: "Second" }),
+      ).rejects.toThrow(ContentDeliverySlugReserved);
     });
 
     it("names the address in the structured error", async () => {
@@ -842,9 +856,9 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
         ),
       ).rejects.toThrow(ContentVersionConflict);
 
-      expect((await historyRows(article.id)).map(row => row.slug)).toStrictEqual([
-        "original",
-      ]);
+      expect(
+        (await historyRows(article.id)).map(row => row.slug),
+      ).toStrictEqual(["original"]);
     });
 
     it("serialises two records racing for the same retired address", async () => {
@@ -873,9 +887,7 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
 
       // Both lose: the address belongs to the first article's history, and neither
       // of the two may take it.
-      expect(
-        results.every(result => result.status === "rejected"),
-      ).toBe(true);
+      expect(results.every(result => result.status === "rejected")).toBe(true);
     });
   });
 
@@ -921,13 +933,14 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       let cursor: null | number | undefined = undefined;
 
       for (let page = 0; page < 10; page += 1) {
-        const result = await delivery()?.sitemap({
-          cursor: cursor ?? undefined,
-          limit: 2,
-        });
+        // Annotated, because the optional-call chain through `deliveryService?.()`
+        // loses the element type in the typed-lint program even though `tsc`
+        // resolves it - and `itemId` is exactly what this test is about.
+        const result: ContentDeliverySitemapPage | undefined =
+          await delivery()?.sitemap({ cursor: cursor ?? undefined, limit: 2 });
         if (!result) break;
 
-        seen.push(...result.entries.map(entry => entry.itemId));
+        for (const entry of result.entries) seen.push(entry.itemId);
         cursor = result.nextCursor;
         if (cursor === null) break;
       }
@@ -1000,10 +1013,15 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       );
       if (!outcome) throw new Error("update returned nothing");
 
-      await contentEditorialEffects(context, articleContent.definition, outcome, {
-        model: articleContent,
-        pluginId: PLUGIN,
-      });
+      await contentEditorialEffects(
+        context,
+        articleContent.definition,
+        outcome,
+        {
+          model: articleContent,
+          pluginId: PLUGIN,
+        },
+      );
 
       expect(emitted.map(entry => entry.name)).toStrictEqual([
         "content.example.article.updated",
@@ -1056,18 +1074,23 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       if (!outcome) throw new Error("update returned nothing");
 
       indexed.length = 0;
-      await contentEditorialEffects(context, articleContent.definition, outcome, {
-        model: articleContent,
-        pluginId: PLUGIN,
-      });
+      await contentEditorialEffects(
+        context,
+        articleContent.definition,
+        outcome,
+        {
+          model: articleContent,
+          pluginId: PLUGIN,
+        },
+      );
 
       // One document, pointing at the new address. A retired URL never becomes a
       // second search result competing with the page it redirects to.
       expect(indexed).toHaveLength(1);
       expect(indexed[0].url).toBe("/articles/slug-b");
-      expect(indexed.filter(document => document.url === "/articles/slug-a")).toStrictEqual(
-        [],
-      );
+      expect(
+        indexed.filter(document => document.url === "/articles/slug-a"),
+      ).toStrictEqual([]);
     });
   });
 
@@ -1096,7 +1119,7 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       const before = await translationEditorial()?.update(
         article.id,
         "en",
-        { slug: "hello-there" } as never,
+        { slug: "hello-there" },
         { actor: ACTOR, expectedVersion: article.enVersion },
       );
 
@@ -1123,7 +1146,7 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       await translationEditorial()?.update(
         article.id,
         "en",
-        { slug: "hello-there" } as never,
+        { slug: "hello-there" },
         { actor: ACTOR, expectedVersion: article.enVersion },
       );
 
@@ -1150,7 +1173,7 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       await translationEditorial()?.update(
         first.id,
         "en",
-        { slug: "english-now" } as never,
+        { slug: "english-now" },
         { actor: ACTOR, expectedVersion: first.enVersion },
       );
 
@@ -1158,7 +1181,7 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       await translationEditorial()?.create(
         second.id,
         "pl",
-        { title: "Shared" } as never,
+        { title: "Shared" },
         { actor: ACTOR },
       );
       const pl = await translationEditorial()?.publish(second.id, "pl", {
@@ -1167,7 +1190,7 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       await translationEditorial()?.update(
         second.id,
         "pl",
-        { slug: "polski-teraz" } as never,
+        { slug: "polski-teraz" },
         { actor: ACTOR, expectedVersion: pl?.version ?? 0 },
       );
 
@@ -1195,7 +1218,7 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       await translationEditorial()?.create(
         article.id,
         "pl",
-        { title: "Wersja robocza" } as never,
+        { title: "Wersja robocza" },
         { actor: ACTOR },
       );
 
@@ -1243,7 +1266,7 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       const moved = await translationEditorial()?.update(
         article.id,
         "en",
-        { slug: "hello-there" } as never,
+        { slug: "hello-there" },
         { actor: ACTOR, expectedVersion: article.enVersion },
       );
 
@@ -1270,7 +1293,7 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       const outcome = await translationEditorial()?.update(
         article.id,
         "en",
-        { slug: "hello-there" } as never,
+        { slug: "hello-there" },
         { actor: ACTOR, expectedVersion: article.enVersion },
       );
       if (!outcome) throw new Error("update returned nothing");
@@ -1324,7 +1347,7 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       await translationEditorial()?.create(
         article.id,
         "pl",
-        { title: "Wersja robocza" } as never,
+        { title: "Wersja robocza" },
         { actor: ACTOR },
       );
 
@@ -1393,7 +1416,9 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       await translationEditorial()?.update(
         article.id,
         "en",
-        { seo: { description: "English summary", title: "English SEO" } } as never,
+        {
+          seo: { description: "English summary", title: "English SEO" },
+        },
         { actor: ACTOR, expectedVersion: article.enVersion },
       );
 
@@ -1437,7 +1462,7 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
 
       const outcome = await categoryContent
         .service(context)
-        .create({ name: "Guides" } as never);
+        .create({ name: "Guides" });
 
       expect(outcome).toBeTruthy();
       const [rows] = await sql<{ count: number }[]>`
@@ -1450,7 +1475,7 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
     it("reports no delivery outcome on its mutations", async () => {
       const outcome = await categoryContent
         .service(context)
-        .create({ name: "News two" } as never);
+        .create({ name: "News two" });
 
       expect(outcome).not.toHaveProperty("delivery");
     });
