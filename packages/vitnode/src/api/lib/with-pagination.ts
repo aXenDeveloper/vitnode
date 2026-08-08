@@ -8,7 +8,7 @@ import type {
 import type { Context } from "hono";
 
 import { z } from "@hono/zod-openapi";
-import { and, asc, count, desc, gt, ilike, lt, or } from "drizzle-orm";
+import { and, asc, count, desc, gt, ilike, lt, or, sql } from "drizzle-orm";
 
 function parsePaginationParams(params: {
   query: { cursor?: string; first?: string; last?: string };
@@ -144,7 +144,31 @@ export async function withPagination<
 
   const isForward = last === undefined;
   const orderFn = getOrderFn(isForward, orderByFromParams.order);
-  const orderBy: SQL = orderFn(table[orderByFromParams.column.name]);
+  const primary = table[primaryCursor.name];
+  const ordered = orderFn(table[orderByFromParams.column.name]);
+  /**
+   * The primary key, appended as a tiebreaker.
+   *
+   * Without it the ordering is only a partial one: every row that shares an
+   * `updatedAt` - a bulk import, a migration backfill, a batch publish - sits in
+   * an arbitrary position that Postgres is free to change between the two
+   * queries a page turn issues. The cursor is the identifier, so an arbitrary
+   * position means a row can be skipped or returned twice for no reason except
+   * that the page boundary fell inside a tie.
+   *
+   * Appending the identifier makes the ordering total, in the same direction the
+   * cursor compares in, so the two agree. It costs nothing when the order column
+   * is already unique.
+   *
+   * What it does **not** fix, and what the pagination docs state plainly: the
+   * cursor is the identifier, so ordering by a column with no relationship to it
+   * - a title, say - still cannot page exactly. Ordering by the identifier, or
+   * by a timestamp that moves with it, is exact.
+   */
+  const orderBy: SQL =
+    orderByFromParams.column.name === primaryCursor.name
+      ? ordered
+      : sql`${ordered}, ${orderFn(primary)}`;
 
   const searchWhere = buildSearchWhere(search, params.query.search);
   const baseWhere =

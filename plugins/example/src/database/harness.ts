@@ -153,6 +153,22 @@ export interface ContentTestHarness {
     searchError: Error | null;
   };
   context: Context;
+  /**
+   * A third connection that records every statement it issues.
+   *
+   * Query *counting* is the only way to state an N+1 guard as an invariant
+   * rather than as a hope: "one page costs a bounded number of round trips
+   * whatever the page size" is a fact about the SQL, and the SQL is the only
+   * place to observe it. Separate from the main handle so an ordinary test pays
+   * nothing for the instrumentation.
+   */
+  counted: {
+    context: Context;
+    db: ReturnType<typeof drizzle>;
+    /** Every statement since the last `reset`, in order. */
+    queries: string[];
+    reset: () => void;
+  };
   db: ReturnType<typeof drizzle>;
   /** Every `search.delete` the engine asked for, in order. */
   deleted: RecordedSearchDelete[];
@@ -232,6 +248,16 @@ export const createContentTestHarness =
       onnotice: () => undefined,
     });
     const rivalDb = drizzle(rival, { casing: "camelCase" });
+
+    const queries: string[] = [];
+    const countedSql = postgres(DATABASE_TEST_URL, {
+      debug: (_connection, query) => {
+        queries.push(query);
+      },
+      max: 1,
+      onnotice: () => undefined,
+    });
+    const countedDb = drizzle(countedSql, { casing: "camelCase" });
 
     const indexed: SearchDocument[] = [];
     const deleted: RecordedSearchDelete[] = [];
@@ -368,12 +394,21 @@ export const createContentTestHarness =
     return {
       behaviour,
       context: buildContext(db),
+      counted: {
+        context: buildContext(countedDb),
+        db: countedDb,
+        queries,
+        reset: () => {
+          queries.length = 0;
+        },
+      },
       db,
       deleted,
       emitted,
       end: async () => {
         await sql.end();
         await rival.end();
+        await countedSql.end();
       },
       indexed,
       logs,
