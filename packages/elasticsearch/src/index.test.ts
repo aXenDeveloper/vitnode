@@ -278,6 +278,37 @@ describe("ElasticsearchSearchAdapter.delete", () => {
       { ignore: [404] },
     );
   });
+
+  /**
+   * The behaviour `capabilities.languageScopedDelete` promises, asserted rather
+   * than trusted: an install pairing a localized searchable content type with a
+   * provider that dropped this argument would take every language out of the
+   * index on a single translation's unpublish, with no error to notice.
+   */
+  it("narrows the query to one language when given a locale", async () => {
+    await ElasticsearchSearchAdapter(config).delete(c, "blog_post", 1, "pl");
+
+    expect(deleteByQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: {
+          bool: {
+            filter: [
+              { term: { itemType: "blog_post" } },
+              { term: { itemId: 1 } },
+              { term: { languageCode: "pl" } },
+            ],
+          },
+        },
+      }),
+      { ignore: [404] },
+    );
+  });
+
+  it("declares the capability its delete actually honours", () => {
+    expect(
+      ElasticsearchSearchAdapter(config).capabilities?.languageScopedDelete,
+    ).toBe(true);
+  });
 });
 
 describe("ElasticsearchSearchAdapter.clear", () => {

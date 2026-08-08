@@ -59,12 +59,18 @@ import {
   CONTENT_TABLE_NAME_PATTERN,
   isFilterableFieldKind,
 } from "./const";
+import { resolveContentAdvanced } from "./advanced";
 import { ContentEngineError } from "./errors";
 import { resolveContentIndexes } from "./indexes";
 import {
   partitionContentFields,
   resolveContentLocalization,
 } from "./localization";
+import {
+  contentStorageColumns,
+  isContentRelationCollection,
+  splitContentFieldPath,
+} from "./paths";
 import { buildContentSchemas } from "./schemas";
 
 /** Kinds the default `searchableFields` picks up, and `titleField` falls back to. */
@@ -100,9 +106,14 @@ const slugifyModule = (value: string): string =>
 /** A field with no default that is neither required nor nullable is unwritable. */
 const hasWritableFallback = (fieldValue: ContentFieldDescriptor): boolean => {
   if (fieldValue.kind === "dateTime") return fieldValue.defaultNow;
-  if (fieldValue.kind === "relation" || fieldValue.kind === "user") {
-    return false;
+  // A group is writable because its leaves are - `resolveContentAdvanced`
+  // proves each of them is nullable or defaulted when the group is optional.
+  // A collection is writable because the empty set is its default.
+  if (fieldValue.kind === "group" || fieldValue.kind === "repeatable") {
+    return true;
   }
+  if (fieldValue.kind === "relation") return fieldValue.multiple;
+  if (fieldValue.kind === "user") return false;
   // A sourced slug has no column default and is not required, but it is always
   // writable: the service derives it from the source field.
   if (fieldValue.kind === "slug") return fieldValue.source !== undefined;
@@ -149,8 +160,10 @@ const FIELD_KINDS = new Set<string>([
   "boolean",
   "dateTime",
   "enum",
+  "group",
   "number",
   "relation",
+  "repeatable",
   "slug",
   "text",
   "textarea",
@@ -333,6 +346,77 @@ const assertNotLocalized = (
   }
 };
 
+/**
+ * Checks that every column an index names is one it can actually be built on.
+ *
+ * A repeatable leaf and a to-many relation are refused **loudly** rather than
+ * silently dropped: `{ on: ["faq.answer"] }` looks like it works, and an index
+ * that was quietly not created is a performance bug nobody can see. Both live on
+ * their own generated tables, which already carry the indexes they need.
+ */
+const assertIndexable = (
+  id: string,
+  names: readonly string[],
+  fields: ContentFieldMap,
+  localizedFields: ContentFieldMap,
+): void => {
+  for (const name of names) {
+    const path = splitContentFieldPath(name);
+    const owner = path ? path[0] : name;
+    const fieldValue = fields[owner];
+
+    if (localizedFields[owner] !== undefined) {
+      throw new ContentEngineError(
+        path
+          ? `indexes names "${name}", a leaf of the localized group "${owner}". Its column is on the translation table, where the unique scope is per language - see \`localization.translationIndexes\`.`
+          : `indexes names the localized field "${owner}", which is not a column on the base table. Localized values get their own AdminCP surface in Stage 5B.`,
+        { contentTypeId: id },
+      );
+    }
+
+    if (!fieldValue) continue;
+
+    if (fieldValue.kind === "repeatable") {
+      throw new ContentEngineError(
+        `indexes names "${name}", which belongs to the repeatable "${owner}". Repeatable leaves are columns on a generated child table, not on the base table, so an index here would have nothing to cover. The child table already carries \`(itemId, position)\`.`,
+        { contentTypeId: id },
+      );
+    }
+
+    if (isContentRelationCollection(fieldValue)) {
+      throw new ContentEngineError(
+        `indexes names the to-many relation "${owner}", which is not a column: its values live in a generated junction table, which already carries its own primary key and reverse index.`,
+        { contentTypeId: id },
+      );
+    }
+
+    if (fieldValue.kind === "group" && !path) {
+      throw new ContentEngineError(
+        `indexes names the group "${owner}", which is several columns rather than one. Name the leaves you mean, e.g. \`{ on: ["${owner}.${Object.keys((fieldValue as { fields: ContentFieldMap }).fields)[0]}"] }\`.`,
+        { contentTypeId: id },
+      );
+    }
+  }
+};
+
+/**
+ * Kinds that are not one column on the base table, so they cannot be a list
+ * cell, an `orderBy` or a `titleField`.
+ *
+ * A group is several columns under generated names; a repeatable and a to-many
+ * relation are on other tables entirely. All three still belong on the *form* -
+ * that is what `admin.form.fields` is for, and it is checked against the wider
+ * set.
+ */
+const NON_COLUMN_KINDS = new Set<ContentFieldDescriptor["kind"]>([
+  "group",
+  "repeatable",
+]);
+
+const isAdminColumnField = (fieldValue: ContentFieldDescriptor): boolean =>
+  !NON_COLUMN_KINDS.has(fieldValue.kind) &&
+  !isContentRelationCollection(fieldValue);
+
 const resolveAdmin = <TFields>(
   id: string,
   fields: ContentFieldMap,
@@ -342,6 +426,22 @@ const resolveAdmin = <TFields>(
   editorial: boolean,
 ): ResolvedContentAdminConfig => {
   const fieldNames = Object.keys(fields);
+  // The subset a DataTable cell, an `orderBy` and a toast title may name.
+  const columnFieldNames = fieldNames.filter(name =>
+    isAdminColumnField(fields[name]),
+  );
+  const assertColumnField = (label: string, names: readonly string[]): void => {
+    const advanced = names.find(
+      name => fields[name] !== undefined && !isAdminColumnField(fields[name]),
+    );
+    if (advanced === undefined) return;
+
+    throw new ContentEngineError(
+      `${label} names "${advanced}", a "${fields[advanced].kind}" field. It is not one column on the base table, so it cannot be shown as a cell, ordered by, or used as a title. List it in \`admin.form.fields\` instead${fields[advanced].kind === "group" ? `, or name one of its leaves` : ""}.`,
+      { contentTypeId: id },
+    );
+  };
+
   for (const [label, names] of [
     ["admin.form.fields", admin.form?.fields],
     ["admin.list.columns", admin.list?.columns],
@@ -360,6 +460,7 @@ const resolveAdmin = <TFields>(
   ] as const) {
     if (!names) continue;
     assertNotLocalized(id, label, names.map(String), localizedFields);
+    assertColumnField(label, names.map(String));
   }
 
   const generatedColumns = [
@@ -367,17 +468,17 @@ const resolveAdmin = <TFields>(
     ...(publication ? publicationFields : []),
     ...(editorial ? editorialFields : []),
   ];
-  const knownColumns = new Set([...fieldNames, ...generatedColumns]);
+  const knownColumns = new Set([...columnFieldNames, ...generatedColumns]);
 
   const searchableFields = (
     admin.list?.searchableFields?.map(String) ??
-    fieldNames.filter(name => SEARCHABLE_KINDS.has(fields[name].kind))
+    columnFieldNames.filter(name => SEARCHABLE_KINDS.has(fields[name].kind))
   ).map(String);
   assertKnownColumns(
     id,
     "admin.list.searchableFields",
     searchableFields,
-    new Set(fieldNames),
+    new Set(columnFieldNames),
   );
   const notSearchable = searchableFields.find(
     name => !EXPLICIT_SEARCHABLE_KINDS.has(fields[name].kind),
@@ -394,14 +495,16 @@ const resolveAdmin = <TFields>(
     id,
     "admin.list.orderableFields",
     orderableFields,
-    new Set(fieldNames),
+    new Set(columnFieldNames),
   );
 
   // A published/draft badge is the first thing anyone looks for, so it leads
-  // the default column list.
+  // the default column list. Advanced fields are absent by default: a to-many
+  // relation and a repeatable are each an extra query, and defaulting them into
+  // the list would issue one per row.
   const defaultColumns = publication
-    ? ["status", ...fieldNames, "updatedAt"]
-    : [...fieldNames, "updatedAt"];
+    ? ["status", ...columnFieldNames, "updatedAt"]
+    : [...columnFieldNames, "updatedAt"];
   const columns = (admin.list?.columns?.map(String) ?? defaultColumns).map(
     String,
   );
@@ -425,10 +528,11 @@ const resolveAdmin = <TFields>(
 
   const titleField =
     admin.titleField === undefined
-      ? (fieldNames.find(name => SEARCHABLE_KINDS.has(fields[name].kind)) ??
-        null)
+      ? (columnFieldNames.find(name =>
+          SEARCHABLE_KINDS.has(fields[name].kind),
+        ) ?? null)
       : String(admin.titleField);
-  if (titleField !== null && !fieldNames.includes(titleField)) {
+  if (titleField !== null && !columnFieldNames.includes(titleField)) {
     throw new ContentEngineError(
       `admin.titleField references unknown field "${titleField}".`,
       { contentTypeId: id },
@@ -475,6 +579,88 @@ const assertPublicPath = (id: string, path: string): void => {
   if (publicReservedPaths.includes(path)) {
     throw new ContentEngineError(
       `publicApi.path "${path}" is reserved. The admin gate matches any request path containing "/admin/", so a public route under that name would demand a staff session.`,
+      { contentTypeId: id },
+    );
+  }
+};
+
+/**
+ * Resolves a name or a canonical path to the descriptor it addresses.
+ *
+ * One function, so every allowlist in this file - public fields, searchable,
+ * filterable, orderable, and the three search slots - asks the same question and
+ * gets the same answer. `container` says where the value lives, which is what
+ * separates "a column on the row" from "a column on a child row": the second can
+ * be indexed for search but never filtered, ordered or searched by a list query.
+ */
+const resolveFieldTarget = (
+  fields: ContentFieldMap,
+  name: string,
+): null | {
+  container: "group" | "repeatable" | "row";
+  descriptor: ContentFieldDescriptor;
+} => {
+  const path = splitContentFieldPath(name);
+  if (!path) {
+    const fieldValue = fields[name];
+
+    return fieldValue ? { container: "row", descriptor: fieldValue } : null;
+  }
+
+  const [owner, leaf] = path;
+  const container = fields[owner];
+  if (container?.kind !== "group" && container?.kind !== "repeatable") {
+    return null;
+  }
+
+  const leafValue = (container as { fields: ContentFieldMap }).fields[leaf];
+
+  return leafValue
+    ? { container: container.kind, descriptor: leafValue }
+    : null;
+};
+
+/**
+ * Checks one exposed **leaf path**, e.g. `"seo.title"` or `"faq.question"`.
+ *
+ * The container has to be a group or a repeatable, and the leaf has to be one it
+ * declares: a path that resolves to nothing would be a key the response promises
+ * and never carries, which a generated OpenAPI schema turns into a lie rather
+ * than an error.
+ */
+const assertPublicLeafPath = (
+  id: string,
+  fields: ContentFieldMap,
+  name: string,
+  [owner, leaf]: [string, string],
+): void => {
+  const container = fields[owner];
+  if (!container) {
+    throw new ContentEngineError(
+      `publicApi.fields includes "${name}", but this content type declares no field called "${owner}".`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (container.kind !== "group" && container.kind !== "repeatable") {
+    throw new ContentEngineError(
+      `publicApi.fields includes "${name}", but "${owner}" is a "${container.kind}" field rather than a group or a repeatable. Only those have leaves.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const inner = (container as { fields: ContentFieldMap }).fields;
+  const leafValue = inner[leaf];
+  if (!leafValue) {
+    throw new ContentEngineError(
+      `publicApi.fields includes "${name}", but "${owner}" declares no leaf called "${leaf}". It has: ${Object.keys(inner).join(", ")}.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (!publicExposableKinds.has(leafValue.kind)) {
+    throw new ContentEngineError(
+      `publicApi.fields includes "${name}" of kind "${leafValue.kind}", which cannot be exposed publicly.`,
       { contentTypeId: id },
     );
   }
@@ -550,6 +736,12 @@ const resolvePublicApi = <TField extends string>(
   for (const name of exposed) {
     if (publicExposableColumns.includes(name)) continue;
 
+    const path = splitContentFieldPath(name);
+    if (path) {
+      assertPublicLeafPath(id, fields, name, path);
+      continue;
+    }
+
     const fieldValue = fields[name];
     if (!fieldValue) {
       if (publicationFields.includes(name)) {
@@ -568,6 +760,22 @@ const resolvePublicApi = <TField extends string>(
     if (fieldValue.kind === "user") {
       throw new ContentEngineError(
         `publicApi.fields includes the user field "${name}". User fields are not exposable: publishing a person by listing one word is exactly the accident this rule prevents. Write your own route with the shape you mean.`,
+        { contentTypeId: id },
+      );
+    }
+
+    // A group or a repeatable is never exposed whole. Naming `seo` would
+    // publish `seo.indexable` because somebody wanted `seo.title`, and a field
+    // added to the group later would become public without anyone deciding it
+    // should - which is precisely what an allowlist with no wildcard exists to
+    // stop. Its leaves are named one at a time.
+    if (fieldValue.kind === "group" || fieldValue.kind === "repeatable") {
+      const leaves = Object.keys(
+        (fieldValue as { fields: ContentFieldMap }).fields,
+      );
+
+      throw new ContentEngineError(
+        `publicApi.fields includes the ${fieldValue.kind} "${name}". A ${fieldValue.kind} is exposed one leaf at a time, so a leaf added later stays private until somebody says otherwise: list ${leaves.map(leaf => `"${name}.${leaf}"`).join(", ")} - or only the ones you mean.`,
         { contentTypeId: id },
       );
     }
@@ -593,38 +801,72 @@ const resolvePublicApi = <TField extends string>(
 
   const searchableFields = (publicApi.searchableFields ?? []).map(String);
   assertExposed("publicApi.searchableFields", searchableFields);
-  const notSearchable = searchableFields.find(
-    name => !EXPLICIT_SEARCHABLE_KINDS.has(fields[name]?.kind),
-  );
+  const notSearchable = searchableFields.find(name => {
+    const target = resolveFieldTarget(fields, name);
+
+    return (
+      target === null ||
+      target.container === "repeatable" ||
+      !EXPLICIT_SEARCHABLE_KINDS.has(target.descriptor.kind)
+    );
+  });
   if (notSearchable !== undefined) {
     throw new ContentEngineError(
-      `publicApi.searchableFields includes "${notSearchable}", which is not a text, textarea or slug field.`,
+      resolveFieldTarget(fields, notSearchable)?.container === "repeatable"
+        ? `publicApi.searchableFields includes the repeatable leaf "${notSearchable}", which lives on a child table rather than on the row. A list search is a predicate on the row; index it with \`search.contentFields\` instead.`
+        : `publicApi.searchableFields includes "${notSearchable}", which is not a text, textarea or slug field.`,
       { contentTypeId: id },
     );
   }
 
   const filterableFields = (publicApi.filterableFields ?? []).map(String);
   assertExposed("publicApi.filterableFields", filterableFields);
-  const notFilterable = filterableFields.find(
-    name => !isFilterableFieldKind(fields[name]?.kind ?? ""),
-  );
+  const notFilterable = filterableFields.find(name => {
+    const target = resolveFieldTarget(fields, name);
+    if (target === null || target.container === "repeatable") return true;
+    // A to-many relation filters through an indexed EXISTS over its junction
+    // table rather than by equality, but it is still a `relation` kind - so the
+    // ordinary kind check accepts it and the query builder branches on `multiple`.
+    return !isFilterableFieldKind(target.descriptor.kind);
+  });
   if (notFilterable !== undefined) {
     throw new ContentEngineError(
-      `publicApi.filterableFields includes "${notFilterable}", which is not an equality-filterable field. Filterable kinds: ${CONTENT_FILTERABLE_FIELD_KINDS.join(", ")}.`,
+      resolveFieldTarget(fields, notFilterable)?.container === "repeatable"
+        ? `publicApi.filterableFields includes the repeatable leaf "${notFilterable}", which lives on a child table. Filtering by one would ask "does any child match", which is a different question from equality - write your own route for it.`
+        : `publicApi.filterableFields includes "${notFilterable}", which is not an equality-filterable field. Filterable kinds: ${CONTENT_FILTERABLE_FIELD_KINDS.join(", ")}.`,
       { contentTypeId: id },
     );
   }
 
   const declaredOrderable = (publicApi.orderableFields ?? []).map(String);
   assertExposed("publicApi.orderableFields", declaredOrderable);
+  const notOrderable = declaredOrderable.find(name => {
+    const target = resolveFieldTarget(fields, name);
+
+    return (
+      target !== null &&
+      (target.container === "repeatable" ||
+        isContentRelationCollection(target.descriptor))
+    );
+  });
+  if (notOrderable !== undefined) {
+    throw new ContentEngineError(
+      `publicApi.orderableFields includes "${notOrderable}", which is not one column on the row: a repeatable leaf and a to-many relation are both sets, and a list cannot be ordered by a set.`,
+      { contentTypeId: id },
+    );
+  }
   // A localized column is not on the base table, and ordering by one would not
   // just be awkward to generate - it would be wrong. The list a reader pages
   // through would reshuffle itself for every language, and a fallback set would
   // interleave two collations, so the same cursor would mean two different
   // positions. Order by something the record has one of.
-  const localizedOrderable = declaredOrderable.find(
-    name => localizedFields[name] !== undefined,
-  );
+  const localizedOrderable = declaredOrderable.find(name => {
+    // A leaf of a localized group is on the translation table, so it is exactly
+    // as unorderable as the localized field it belongs to.
+    const path = splitContentFieldPath(name);
+
+    return localizedFields[path ? path[0] : name] !== undefined;
+  });
   if (localizedOrderable !== undefined) {
     throw new ContentEngineError(
       `publicApi.orderableFields includes the localized field "${localizedOrderable}". A public list is ordered by a column of the record, not of one of its translations - ordering by a localized field would reorder the list per language and make a cursor mean two different positions across a fallback.`,
@@ -691,6 +933,7 @@ const disabledSearch: ResolvedContentSearchConfig = {
  * function with anything at all.
  */
 const assertSearchField = ({
+  allowRepeatable = false,
   exposed,
   fields,
   id,
@@ -698,6 +941,8 @@ const assertSearchField = ({
   label,
   name,
 }: {
+  /** Whether a leaf of a child table may fill this slot. Only the body may. */
+  allowRepeatable?: boolean;
   exposed: ReadonlySet<string>;
   fields: ContentFieldMap;
   id: string;
@@ -705,10 +950,19 @@ const assertSearchField = ({
   label: string;
   name: string;
 }): void => {
-  const fieldValue = fields[name];
-  if (!fieldValue) {
+  const target = resolveFieldTarget(fields, name);
+  if (!target) {
     throw new ContentEngineError(
       `${label} references unknown field "${name}".`,
+      { contentTypeId: id },
+    );
+  }
+
+  const fieldValue = target.descriptor;
+
+  if (target.container === "repeatable" && !allowRepeatable) {
+    throw new ContentEngineError(
+      `${label} names the repeatable leaf "${name}", which is many values rather than one. A heading and a description each have to be a single value; use \`search.contentFields\` for prose that repeats.`,
       { contentTypeId: id },
     );
   }
@@ -861,7 +1115,7 @@ const resolveSearch = (
   // reaches full coverage. Rejecting the nullable field is the cheap half of
   // that; a blank value written straight into the database is still possible, so
   // the mapper keeps its own check.
-  if (fields[titleField].nullable) {
+  if (resolveFieldTarget(fields, titleField)?.descriptor.nullable) {
     throw new ContentEngineError(
       `search.titleField names the nullable field "${titleField}". A search result needs a heading, so the title field must not be nullable.`,
       { contentTypeId: id },
@@ -905,6 +1159,10 @@ const resolveSearch = (
 
   for (const name of contentFields) {
     assertSearchField({
+      // The body is the one slot a repeatable leaf can fill: `faq.answer` is
+      // many values, and many values concatenated in position order is exactly
+      // what a searchable body is made of.
+      allowRepeatable: true,
       exposed,
       fields,
       id,
@@ -1242,14 +1500,34 @@ export const defineContentType = <
 
   assertSlugSources(id, fieldMap);
 
+  // First, because every resolver below is stated in terms of what it produces:
+  // the generated table names, and above all the one leaf-path -> column mapping
+  // the indexes, the schemas, the services, the revisions, the public projection
+  // and the AdminCP all read. It throws on every advanced-field mistake, so
+  // nothing downstream has to defend against a half-valid group.
+  const resolvedAdvanced = resolveContentAdvanced({
+    fields: fieldMap,
+    id,
+    tableName,
+  });
+
   // The one partition every subsystem downstream of here reads. A localized
   // field is not a column on the base table, so it takes no part in the base
   // indexes, the admin surfaces or the base schemas.
-  const { localizedFields, sharedFields } = partitionContentFields(fieldMap);
-  const sharedFieldNames = Object.keys(sharedFields);
+  const { collectionFields, localizedFields, sharedFields } =
+    partitionContentFields(fieldMap);
+  // Groups flattened into the columns they generate, which is what an index and
+  // a unique constraint actually address.
+  const sharedColumns = contentStorageColumns(sharedFields);
+  const leafColumnByPath = new Map(
+    resolvedAdvanced.leaves.map(leaf => [leaf.path, leaf.columnName]),
+  );
 
   const knownColumns = new Set([
-    ...sharedFieldNames,
+    ...Object.keys(sharedColumns),
+    ...resolvedAdvanced.leaves
+      .filter(leaf => !leaf.localized)
+      .map(leaf => leaf.path),
     ...systemFields,
     ...(publicationEnabled ? publicationFields : []),
     ...(editorialEnabled ? editorialFields : []),
@@ -1258,22 +1536,24 @@ export const defineContentType = <
     contentTypeId: id,
     declared: indexes.map(index => {
       const on = index.on.map(String);
-      assertNotLocalized(id, "indexes", on, localizedFields);
+      assertIndexable(id, on, fieldMap, localizedFields);
       assertKnownColumns(id, "indexes", on, knownColumns);
 
-      return { ...index, on };
+      // Declared in canonical paths, materialised against real columns: the
+      // author writes `["seo.title"]` and the migration gets `seo_title`.
+      return { ...index, on: on.map(name => leafColumnByPath.get(name) ?? name) };
     }),
     // Shared only: a localized slug's unique index is scoped to a language and
     // belongs to the translation table, which `resolveContentTranslationIndexes`
     // builds.
-    fields: sharedFields,
+    fields: sharedColumns,
     publication: publicationEnabled,
     tableName,
   });
 
   const resolvedAdmin = resolveAdmin(
     id,
-    sharedFields,
+    { ...sharedFields, ...collectionFields },
     localizedFields,
     admin,
     publicationEnabled,
@@ -1335,6 +1615,7 @@ export const defineContentType = <
 
   return {
     admin: resolvedAdmin,
+    advanced: resolvedAdvanced,
     editorial: resolvedEditorial as ResolvedContentEditorialConfig<
       ContentEditorialEnabled<TEditorial>,
       ContentPreviewEnabled<TEditorial>,
@@ -1369,6 +1650,7 @@ export const defineContentType = <
       >
     >({
       admin: resolvedAdmin,
+      advanced: resolvedAdvanced,
       editorial: editorialEnabled,
       fields: fieldMap,
       localization: resolvedLocalization,

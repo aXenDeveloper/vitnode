@@ -181,6 +181,25 @@ export const buildContentColumn = ({
 }): PgColumnBuilderBase => {
   const { nullable } = fieldValue;
 
+  // A group is several columns and a repeatable is a table, so neither reaches
+  // here: `contentStorageColumns` flattens the first and drops the second before
+  // the table generator ever sees them. Reaching this line means a caller
+  // skipped that flattening, which would otherwise show up as an untyped column
+  // in the migration rather than as a message.
+  if (fieldValue.kind === "group" || fieldValue.kind === "repeatable") {
+    throw new ContentEngineError(
+      `Field "${name}" is a ${fieldValue.kind} and has no column of its own. Flatten the field map with \`contentStorageColumns\` before building columns from it.`,
+      { contentTypeId },
+    );
+  }
+
+  if (fieldValue.kind === "relation" && fieldValue.multiple) {
+    throw new ContentEngineError(
+      `Field "${name}" is a to-many relation, whose values live in a generated junction table rather than in a column.`,
+      { contentTypeId },
+    );
+  }
+
   switch (fieldValue.kind) {
     case "boolean":
       return withModifiers(boolean(), {

@@ -18,6 +18,7 @@ import {
 import { ContentEngineError } from "./errors";
 import { clampWithFingerprint } from "./fingerprint";
 import { resolveContentTranslationIndexes } from "./indexes";
+import { contentStorageColumns, isContentCollectionField } from "./paths";
 
 /**
  * The one place that decides whether a field is localized.
@@ -33,6 +34,18 @@ export const isLocalizedContentField = (
 ): boolean => fieldValue.localized === true;
 
 export interface ContentFieldPartition {
+  /**
+   * Fields whose value lives outside the row: a to-many relation (junction
+   * table) and a repeatable (child table).
+   *
+   * Present on the partition rather than left for each caller to filter,
+   * because "which fields are columns" is the same question the shared/localized
+   * split answers and it has to be answered in the same place. Every existing
+   * caller reads `sharedFields` and `localizedFields`, both of which now exclude
+   * these - so a Stage 1-5 content type, which declares none, sees exactly the
+   * partition it always did.
+   */
+  collectionFields: ContentFieldMap;
   /** Fields stored in the translation table, one row per language. */
   localizedFields: ContentFieldMap;
   /** Fields stored on the base table. */
@@ -42,16 +55,25 @@ export interface ContentFieldPartition {
 /**
  * Splits a field map into its base-table and translation-table halves.
  *
- * Declaration order is preserved in both, so the generated column order, the
- * generated schema key order and the migration all stay deterministic.
+ * Declaration order is preserved in all three, so the generated column order,
+ * the generated schema key order and the migration all stay deterministic.
+ *
+ * A `group` lands in whichever half its own `localized` flag names, whole: its
+ * leaves are flattened into columns of that one table by
+ * {@link contentStorageColumns}, never split across both.
  */
 export const partitionContentFields = (
   fields: ContentFieldMap,
 ): ContentFieldPartition => {
+  const collectionFields: ContentFieldMap = {};
   const localizedFields: ContentFieldMap = {};
   const sharedFields: ContentFieldMap = {};
 
   for (const [name, fieldValue] of Object.entries(fields)) {
+    if (isContentCollectionField(fieldValue)) {
+      collectionFields[name] = fieldValue;
+      continue;
+    }
     if (isLocalizedContentField(fieldValue)) {
       localizedFields[name] = fieldValue;
       continue;
@@ -59,7 +81,7 @@ export const partitionContentFields = (
     sharedFields[name] = fieldValue;
   }
 
-  return { localizedFields, sharedFields };
+  return { collectionFields, localizedFields, sharedFields };
 };
 
 /** `example_articles` -> `example_articles_translations`. */
@@ -141,9 +163,12 @@ const assertLocalizedFields = (
   }
 
   for (const [name, fieldValue] of Object.entries(localizedFields)) {
-    if (!isLocalizableFieldKind(fieldValue.kind)) {
+    // A `group` is localizable whatever its leaves are: it moves whole, and its
+    // leaves are already restricted to the scalar kinds by `resolveContentAdvanced`.
+    // What a leaf holds is a question about the group, not about localization.
+    if (fieldValue.kind !== "group" && !isLocalizableFieldKind(fieldValue.kind)) {
       throw new ContentEngineError(
-        `Field "${name}" is \`localized: true\` but its kind is "${fieldValue.kind}". Only ${CONTENT_LOCALIZED_FIELD_KINDS.join(", ")} fields can be localized - an enum's identifiers have to be the same in every language, and a relation's target is shared.`,
+        `Field "${name}" is \`localized: true\` but its kind is "${fieldValue.kind}". Only ${CONTENT_LOCALIZED_FIELD_KINDS.join(", ")} fields and \`field.group\` can be localized - an enum's identifiers have to be the same in every language, and a relation's target is shared.`,
         { contentTypeId: id },
       );
     }
@@ -154,6 +179,19 @@ const assertLocalizedFields = (
         { contentTypeId: id },
       );
     }
+  }
+
+  // A localized group's leaves become columns on the *translation* table, where
+  // the reserved names are different from the base table's. `seo.version` would
+  // pass every base-table check and then shadow the translation's optimistic
+  // lock, so it is caught here rather than at the first conditional UPDATE.
+  for (const columnName of Object.keys(contentStorageColumns(localizedFields))) {
+    if (!translationSystemFields.includes(columnName)) continue;
+
+    throw new ContentEngineError(
+      `A localized group leaf compiles to the column "${columnName}", which the translation table generates for itself. Rename the leaf - the translation table always carries ${translationSystemFields.join(", ")}.`,
+      { contentTypeId: id },
+    );
   }
 
   for (const [name, fieldValue] of Object.entries(fields)) {

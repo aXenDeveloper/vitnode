@@ -129,6 +129,91 @@ export const isLocalizableFieldKind = (kind: string): boolean =>
 /** Appended to the base table name to get the generated translation table. */
 export const CONTENT_TRANSLATION_TABLE_SUFFIX = "_translations";
 
+// ---------------------------------------------------------------------------
+// Advanced modeling (Stage 6)
+// ---------------------------------------------------------------------------
+
+/** What separates a container from its leaf in a canonical path: `seo.title`. */
+export const CONTENT_PATH_SEPARATOR = ".";
+
+/**
+ * Field kinds that may sit inside a `group` or a `repeatable`.
+ *
+ * Scalars only, and every exclusion is a decision rather than an oversight:
+ *
+ * - **group** - nesting would need a second level of column naming and a second
+ *   level of partial-update merging, for no modelling gain a second group next
+ *   to the first does not already give.
+ * - **repeatable** - a child table of a child table is a tree, and a tree needs
+ *   its own ordering, its own cascade and its own restore semantics.
+ * - **slug** - a slug is a URL segment with a uniqueness scope. Inside a group
+ *   the scope would be the row (fine) and inside a repeatable it would be the
+ *   parent (not a URL at all), so one name would mean two things.
+ * - **relation** / **user** - a foreign key the relation services do not look
+ *   at is a foreign key nothing maintains. Model it as a to-many relation on the
+ *   content type instead.
+ */
+export const CONTENT_ADVANCED_LEAF_KINDS = [
+  "boolean",
+  "dateTime",
+  "enum",
+  "number",
+  "text",
+  "textarea",
+] as const;
+
+/**
+ * How many children one repeatable field may hold, unless it says otherwise.
+ *
+ * A ceiling exists at all because every write replaces the whole list in one
+ * statement and every read loads it whole: a repeatable is a handful of FAQ
+ * entries, not a table. An author who wants more should model a content type.
+ */
+export const CONTENT_REPEATABLE_DEFAULT_MAX = 100;
+export const CONTENT_REPEATABLE_ABSOLUTE_MAX = 1000;
+
+/**
+ * How many targets one to-many relation may hold.
+ *
+ * Same reasoning as the repeatable ceiling, and the same shape of enforcement:
+ * the generated schema rejects a longer array before any query runs.
+ */
+export const CONTENT_RELATION_COLLECTION_MAX = 500;
+
+/** The first position of an ordered collection. Contiguous from here. */
+export const CONTENT_COLLECTION_FIRST_POSITION = 0;
+
+/** The columns every generated junction table carries. */
+export const CONTENT_JUNCTION_SYSTEM_FIELDS = [
+  "itemId",
+  "relatedItemId",
+  "position",
+  "createdAt",
+] as const;
+
+/**
+ * The columns every generated repeatable child table carries.
+ *
+ * `id` is a `serial` of its own rather than `(itemId, position)`: position is
+ * where a row currently sits, and identity has to survive a reorder or "edit the
+ * third one" means something different after every drag.
+ */
+export const CONTENT_REPEATABLE_SYSTEM_FIELDS = [
+  "id",
+  "itemId",
+  "position",
+  "createdAt",
+  "updatedAt",
+] as const;
+
+/** Machine-readable reasons an advanced write was refused. */
+export const CONTENT_ADVANCED_CODES = {
+  duplicateTarget: "CONTENT_RELATION_DUPLICATE_TARGET",
+  missingChild: "CONTENT_REPEATABLE_UNKNOWN_CHILD",
+  missingTarget: "CONTENT_RELATION_MISSING_TARGET",
+  notOrdered: "CONTENT_RELATION_NOT_ORDERED",
+} as const;
+
 /**
  * What a public read does when a locale has no translation.
  *

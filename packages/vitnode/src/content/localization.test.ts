@@ -247,7 +247,7 @@ describe("localization validation", () => {
         },
         admin: { label: { plural: "Bad", singular: "Bad" } },
       }),
-    ).toThrow(/Only slug, text, textarea fields can be localized/);
+    ).toThrow(/Only slug, text, textarea fields and `field.group`/);
   });
 
   it("rejects a localized field named after a translation column", () => {

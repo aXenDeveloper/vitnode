@@ -3,9 +3,11 @@ import type {
   ContentBooleanField,
   ContentDateTimeField,
   ContentEnumField,
+  ContentGroupField,
   ContentNumberField,
   ContentOnDelete,
   ContentRelationField,
+  ContentRepeatableField,
   ContentSlugField,
   ContentSlugRequired,
   ContentTextareaField,
@@ -220,19 +222,127 @@ const user = <
   };
 };
 
+/**
+ * A reference to rows of another content type - or of this one.
+ *
+ * ```ts
+ * category:   field.relation({ target: () => categoryContentType })
+ * categories: field.relation({ target: () => categoryContentType, multiple: true })
+ * related:    field.relation({ target: () => articleContentType, multiple: true, ordered: true })
+ * ```
+ *
+ * `target` is a thunk, which is what makes the third line legal inside
+ * `articleContentType` itself: the reference is resolved on first read rather
+ * than at declaration, so a self-relation needs nothing the other two do not.
+ *
+ * `multiple: true` moves the value off the row into a generated junction table.
+ * A to-many relation is therefore never `required` and never `nullable` - the
+ * empty set is what "no targets" looks like - and `defineContentType` rejects
+ * both arguments alongside it.
+ *
+ * `ordered: true` keeps the author's order. Without it the set comes back in
+ * ascending target-id order, which is still deterministic; it is simply not
+ * something anybody chose.
+ */
 const relation = <
   TRequired extends boolean = false,
   TNullable extends boolean = false,
+  TMultiple extends boolean = false,
+  TOrdered extends boolean = false,
 >(
   args: SharedArgs<TRequired, TNullable> & {
+    multiple?: TMultiple;
     onDelete?: ContentOnDelete;
+    ordered?: TOrdered;
     target: () => AnyContentTypeDefinition;
   },
-): ContentRelationField<TRequired, TNullable> => ({
+): ContentRelationField<TRequired, TNullable, TMultiple, TOrdered> => ({
   ...args,
   ...shared(args),
   kind: "relation",
+  // The assertions keep the literal the caller inferred, exactly as `shared`
+  // and `localizedOf` do: `?? false` alone widens back to `boolean`, and every
+  // `multiple extends true` partition would resolve to the to-one branch.
+  multiple: (args.multiple ?? false) as TMultiple,
   onDelete: args.onDelete ?? "restrict",
+  ordered: (args.ordered ?? false) as TOrdered,
+});
+
+/**
+ * A reusable structured group: several related leaves under one name.
+ *
+ * ```ts
+ * const seoGroup = field.group({
+ *   fields: {
+ *     title: field.text({ nullable: true }),
+ *     description: field.textarea({ nullable: true }),
+ *   },
+ * });
+ *
+ * // then, in as many content types as you like:
+ * fields: { title: field.text({ required: true }), seo: seoGroup }
+ * ```
+ *
+ * The value stays nested (`row.seo.title`); the storage stays relational (a
+ * `seo_title` column, indexable and constrainable like any other). Leaves are
+ * scalars - see `CONTENT_ADVANCED_LEAF_KINDS` for why each other kind is out.
+ *
+ * `localized: true` moves the **whole** group into the translation table.
+ * Marking one leaf is a definition-time error: half a logical value on each
+ * table would mean two revision histories and two permissions for one thing an
+ * editor sees as one box.
+ */
+const group = <
+  const TFields extends Record<string, { kind: string }>,
+  TRequired extends boolean = false,
+  TNullable extends boolean = false,
+  TLocalized extends boolean = false,
+>(
+  args: LocalizableArgs<TLocalized> &
+    SharedArgs<TRequired, TNullable> & { fields: TFields },
+): ContentGroupField<TFields, TRequired, TNullable, TLocalized> => ({
+  ...args,
+  ...shared(args),
+  kind: "group",
+  localized: localizedOf(args),
+});
+
+/**
+ * A repeatable structured group: zero or more ordered child rows.
+ *
+ * ```ts
+ * faq: field.repeatable({
+ *   fields: {
+ *     question: field.text({ required: true }),
+ *     answer: field.textarea({ required: true }),
+ *   },
+ * })
+ * ```
+ *
+ * Stored in a generated child table with a `serial` primary key, so every child
+ * keeps a stable identity across reorders - which is what makes "update child
+ * 11" and "restore the row that used to be here" mean anything.
+ *
+ * Never nullable, never required and never localized. The first two because the
+ * empty array already says "nothing here"; the third because a per-language list
+ * of *different lengths* has no defensible restore or reorder semantics, and
+ * guessing one is worse than saying no. `field.repeatable({ localized: true })`
+ * is a definition-time error with that explanation.
+ */
+const repeatable = <const TFields extends Record<string, { kind: string }>>(
+  args: {
+    description?: string;
+    fields: TFields;
+    /** Upper bound on child rows. Defaults to 100. */
+    max?: number;
+    /** Lower bound on child rows. Defaults to none. */
+    min?: number;
+  } & { localized?: never },
+): ContentRepeatableField<TFields> => ({
+  ...args,
+  kind: "repeatable",
+  nullable: false,
+  required: false,
 });
 
 /**
@@ -244,8 +354,10 @@ export const field = {
   boolean,
   dateTime,
   enum: enumField,
+  group,
   number,
   relation,
+  repeatable,
   slug,
   text,
   textarea,

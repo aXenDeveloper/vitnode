@@ -11,16 +11,23 @@ import type {
   ContentSelect,
   ContentUpdateInput,
   ResolvedContentAdminConfig,
+  ResolvedContentAdvancedConfig,
   ResolvedContentLocalizationConfig,
   ResolvedContentPublicApiConfig,
 } from "./types";
 
+import {
+  contentAdvancedDisabled,
+  contentRepeatableMax,
+  contentRepeatableMin,
+} from "./advanced";
 import {
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_LOCALE_MAX_LENGTH,
   CONTENT_PUBLIC_ALWAYS_ORDERABLE,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_PUBLICATION_STATUSES,
+  CONTENT_RELATION_COLLECTION_MAX,
   CONTENT_SLUG_DEFAULT_LENGTH,
   CONTENT_SYSTEM_FIELDS,
   isFilterableFieldKind,
@@ -29,6 +36,11 @@ import {
   contentLocalizationDisabled,
   partitionContentFields,
 } from "./localization";
+import {
+  contentInnerFields,
+  isContentRelationCollection,
+  splitContentFieldPath,
+} from "./paths";
 
 /** What a content type without `publicApi` carries: nothing exposed at all. */
 const DISABLED_PUBLIC_API: ResolvedContentPublicApiConfig = {
@@ -84,6 +96,15 @@ export interface ContentTranslationSchemas<
 }
 
 export interface ContentSchemas<TDefinition = AnyContentTypeDefinition> {
+  /**
+   * The advanced collections of one record: a `number[]` per to-many relation
+   * and an array of identified children per repeatable.
+   *
+   * An empty object for a content type that declares neither, which is what
+   * lets a generated route compose it unconditionally and still produce exactly
+   * the response schema it produced in Stage 5.
+   */
+  advancedSelect: z.ZodObject<z.ZodRawShape>;
   /**
    * Request body for create. Rejects unknown keys and system columns.
    *
@@ -191,9 +212,39 @@ const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
       return z.date();
     case "enum":
       return z.enum(fieldValue.values);
+    case "group": {
+      const inner = contentInnerFields(fieldValue);
+
+      return z.object(
+        Object.fromEntries(
+          Object.entries(inner).map(([leaf, leafValue]) => [
+            leaf,
+            applyNullable(baseSelectSchema(leafValue), leafValue),
+          ]),
+        ),
+      );
+    }
     case "number":
       return numberSchema(fieldValue);
     case "relation":
+      return fieldValue.multiple
+        ? z.array(referenceSchema())
+        : referenceSchema();
+    case "repeatable": {
+      const inner = contentInnerFields(fieldValue);
+
+      return z.array(
+        z.object({
+          id: referenceSchema(),
+          ...Object.fromEntries(
+            Object.entries(inner).map(([leaf, leafValue]) => [
+              leaf,
+              applyNullable(baseSelectSchema(leafValue), leafValue),
+            ]),
+          ),
+        }),
+      );
+    }
     case "user":
       return referenceSchema();
     case "slug":
@@ -234,7 +285,9 @@ const applyPresence = (
 
   if (
     fieldValue.kind !== "dateTime" &&
+    fieldValue.kind !== "group" &&
     fieldValue.kind !== "relation" &&
+    fieldValue.kind !== "repeatable" &&
     fieldValue.kind !== "slug" &&
     fieldValue.kind !== "user" &&
     fieldValue.defaultValue !== undefined
@@ -245,6 +298,110 @@ const applyPresence = (
   return schema.optional();
 };
 
+/**
+ * The set of target identifiers a to-many relation accepts.
+ *
+ * Positive integers, distinct, and bounded. Distinctness is enforced here rather
+ * than deduplicated silently: `[2, 2, 5]` is a caller that thinks it is setting
+ * three categories, and quietly storing two would be the kind of "helpful"
+ * behaviour that hides a bug in the caller's own list handling.
+ */
+const relationSetSchema = (): z.ZodType =>
+  z
+    .array(referenceSchema())
+    .max(CONTENT_RELATION_COLLECTION_MAX)
+    .refine(value => new Set(value).size === value.length, {
+      message: "Relation targets must be distinct.",
+    });
+
+/**
+ * One repeatable child, as it is written.
+ *
+ * `id` is optional and is the whole protocol: present means "this is the
+ * existing child with that identifier", absent means "create a new one". There
+ * is no `position` - the array order is the order, so a payload cannot describe
+ * two rows in the same slot.
+ */
+const repeatableRowSchema = (
+  fieldValue: ContentFieldDescriptor,
+): z.ZodType => {
+  const inner = contentInnerFields(fieldValue);
+  const names = Object.keys(inner);
+
+  return z.strictObject({
+    id: referenceSchema().optional(),
+    ...leafInputShape(inner, names),
+  });
+};
+
+const repeatableSchema = (fieldValue: ContentFieldDescriptor): z.ZodType =>
+  z
+    .array(repeatableRowSchema(fieldValue))
+    .min(contentRepeatableMin(fieldValue))
+    .max(contentRepeatableMax(fieldValue));
+
+/** The leaf half of {@link inputShape}, with no advanced kind to consider. */
+const leafInputShape = (
+  fields: ContentFieldMap,
+  names: readonly string[],
+): z.ZodRawShape =>
+  Object.fromEntries(
+    names.map(name => {
+      const fieldValue = fields[name];
+
+      return [
+        name,
+        applyPresence(
+          applyNullable(baseInputSchema(fieldValue), fieldValue),
+          fieldValue,
+        ),
+      ];
+    }),
+  );
+
+/**
+ * A group, as it is written on create: a nested object of its leaves.
+ *
+ * Strict, like every other content object in this file: an unknown key inside
+ * `seo` is a typo the author wants to hear about, not something to drop. The
+ * four presence states a group can be in - absent, `null`, present-and-complete,
+ * present-with-a-required-leaf-missing - fall straight out of `.nullable()`,
+ * `.optional()` and the leaves' own requiredness, with no fifth code path.
+ */
+const groupInputSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
+  const inner = contentInnerFields(fieldValue);
+  const object = z.strictObject(leafInputShape(inner, Object.keys(inner)));
+
+  return applyPresence(applyNullable(object, fieldValue), fieldValue);
+};
+
+/**
+ * A group, as it is written on update: every leaf optional.
+ *
+ * This is what makes `{ seo: { description } }` a one-leaf change rather than a
+ * request to blank `seo.title`. `.refine` keeps the object from being empty, so
+ * `{ seo: {} }` is a mistake rather than a silent no-op that still counts as a
+ * write.
+ */
+const groupPatchSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
+  const inner = contentInnerFields(fieldValue);
+  const names = Object.keys(inner);
+  const object = z
+    .strictObject(
+      Object.fromEntries(
+        names.map(name => [
+          name,
+          applyNullable(baseInputSchema(inner[name]), inner[name]).optional(),
+        ]),
+      ),
+    )
+    .refine(value => Object.keys(value).length > 0, {
+      message: "Provide at least one leaf to update, or send null.",
+    });
+
+  return applyNullable(object, fieldValue).optional();
+};
+
 const inputShape = (
   fields: ContentFieldMap,
   names: readonly string[],
@@ -252,6 +409,18 @@ const inputShape = (
   Object.fromEntries(
     names.map(name => {
       const fieldValue = fields[name];
+
+      if (fieldValue.kind === "group") {
+        return [name, groupInputSchema(fieldValue)];
+      }
+      if (fieldValue.kind === "repeatable") {
+        // Defaulted rather than optional: a create that says nothing about
+        // `faq` means "no entries", and the empty array is what that is.
+        return [name, repeatableSchema(fieldValue).default([])];
+      }
+      if (isContentRelationCollection(fieldValue)) {
+        return [name, relationSetSchema().default([])];
+      }
 
       return [
         name,
@@ -275,6 +444,16 @@ const updateShape = (
   Object.fromEntries(
     names.map(name => {
       const fieldValue = fields[name];
+
+      if (fieldValue.kind === "group") {
+        return [name, groupPatchSchema(fieldValue)];
+      }
+      if (fieldValue.kind === "repeatable") {
+        return [name, repeatableSchema(fieldValue).optional()];
+      }
+      if (isContentRelationCollection(fieldValue)) {
+        return [name, relationSetSchema().optional()];
+      }
 
       return [
         name,
@@ -308,8 +487,25 @@ const filterShape = (fields: ContentFieldMap): z.ZodRawShape =>
             return [name, z.enum(["true", "false"]).optional()];
           case "enum":
             return [name, z.enum(fieldValue.values).optional()];
-          case "number":
           case "relation":
+            // A to-many relation filters by membership, and it arrives from a
+            // query string as one identifier: `?categories=7`. The transform is
+            // what turns it into the `{ contains }` object the query builder
+            // branches on, so the wire format stays as flat as every other
+            // filter while the service still sees a shape it cannot confuse
+            // with an equality.
+            return fieldValue.multiple
+              ? [
+                  name,
+                  z.coerce
+                    .number()
+                    .optional()
+                    .transform(value =>
+                      value === undefined ? undefined : { contains: value },
+                    ),
+                ]
+              : [name, z.coerce.number().optional()];
+          case "number":
           case "user":
             return [name, z.coerce.number().optional()];
           default:
@@ -339,6 +535,62 @@ const publicRelationSchema = (): z.ZodObject<z.ZodRawShape> =>
  * response is one base row joined to one translation, so where a value is stored
  * is a fact about the query rather than about the response.
  */
+/**
+ * Groups an allowlist's leaf paths by the container they belong to.
+ *
+ * `["title", "seo.title", "seo.description"]` becomes `{ seo: ["title",
+ * "description"] }` and leaves `"title"` to the flat pass. Order within a
+ * container follows the allowlist, so the generated response shape is as
+ * deterministic as everything else the engine emits.
+ */
+export const groupPublicLeafPaths = (
+  names: readonly string[],
+): Map<string, string[]> => {
+  const owners = new Map<string, string[]>();
+
+  for (const name of names) {
+    const path = splitContentFieldPath(name);
+    if (!path) continue;
+
+    const [owner, leaf] = path;
+    const leaves = owners.get(owner);
+    if (leaves) {
+      leaves.push(leaf);
+      continue;
+    }
+    owners.set(owner, [leaf]);
+  }
+
+  return owners;
+};
+
+/**
+ * One exposed container - a group or a repeatable - carrying **only** the leaves
+ * the allowlist named.
+ *
+ * This is where leaf-level privacy is actually implemented: `seo.indexable` is
+ * absent from the shape, and therefore absent from the `SELECT` the shape drives,
+ * however many other `seo.*` paths are public.
+ */
+const publicContainerSchema = (
+  fieldValue: ContentFieldDescriptor,
+  leaves: readonly string[],
+): z.ZodType => {
+  const inner = contentInnerFields(fieldValue);
+  const shape = Object.fromEntries(
+    leaves.map(leaf => [
+      leaf,
+      applyNullable(baseSelectSchema(inner[leaf]), inner[leaf]),
+    ]),
+  );
+
+  if (fieldValue.kind === "repeatable") {
+    return z.array(z.object({ id: z.number(), ...shape }));
+  }
+
+  return applyNullable(z.object(shape), fieldValue);
+};
+
 const publicSelectShape = (
   fields: ContentFieldMap,
   publicApi: ResolvedContentPublicApiConfig,
@@ -349,20 +601,36 @@ const publicSelectShape = (
   // content type, so this cannot shadow a declared field.
   ...(localization.enabled ? { locale: z.string() } : {}),
   ...Object.fromEntries(
-    publicApi.fields.map(name => {
-      if (name === "id") return [name, z.number()];
-      if (name === "createdAt" || name === "updatedAt") return [name, z.date()];
-      if (name === "publishedAt") return [name, z.date().nullable()];
+    publicApi.fields
+      .filter(name => splitContentFieldPath(name) === null)
+      .map(name => {
+        if (name === "id") return [name, z.number()];
+        if (name === "createdAt" || name === "updatedAt") {
+          return [name, z.date()];
+        }
+        if (name === "publishedAt") return [name, z.date().nullable()];
 
-      const fieldValue = fields[name];
-      if (fieldValue.kind === "relation") {
-        const relation = publicRelationSchema();
+        const fieldValue = fields[name];
+        if (fieldValue.kind === "relation") {
+          // A to-many relation is a list of identifiers rather than a list of
+          // `{ id }` objects: the single-relation wrapper exists so a `null`
+          // relation is distinguishable from a missing key, and an empty array
+          // already says that on its own.
+          if (fieldValue.multiple) return [name, z.array(z.number())];
 
-        return [name, fieldValue.nullable ? relation.nullable() : relation];
-      }
+          const relation = publicRelationSchema();
 
-      return [name, applyNullable(baseSelectSchema(fieldValue), fieldValue)];
-    }),
+          return [name, fieldValue.nullable ? relation.nullable() : relation];
+        }
+
+        return [name, applyNullable(baseSelectSchema(fieldValue), fieldValue)];
+      }),
+  ),
+  ...Object.fromEntries(
+    [...groupPublicLeafPaths(publicApi.fields)].map(([owner, leaves]) => [
+      owner,
+      publicContainerSchema(fields[owner], leaves),
+    ]),
   ),
 });
 
@@ -473,6 +741,7 @@ const buildTranslationSchemas = <TDefinition>({
 
 export const buildContentSchemas = <TDefinition>({
   admin,
+  advanced = contentAdvancedDisabled(),
   editorial = false,
   fields,
   localization = contentLocalizationDisabled(),
@@ -480,6 +749,7 @@ export const buildContentSchemas = <TDefinition>({
   publication = false,
 }: {
   admin: ResolvedContentAdminConfig;
+  advanced?: ResolvedContentAdvancedConfig;
   editorial?: boolean;
   /** Every declared field. Partitioned here, so no caller has to. */
   fields: ContentFieldMap;
@@ -489,7 +759,16 @@ export const buildContentSchemas = <TDefinition>({
 }): ContentSchemas<TDefinition> => {
   // Everything below this line is about the base table, so it reads the shared
   // half only. The localized half gets its own schemas at the bottom.
-  const { localizedFields, sharedFields } = partitionContentFields(fields);
+  const { collectionFields, localizedFields, sharedFields } =
+    partitionContentFields(fields);
+  // A to-many relation and a repeatable are shared values that are not columns.
+  // They belong in every schema that describes what a caller may *write* - and
+  // in none of the ones that describe a row.
+  const writableFields: ContentFieldMap = {
+    ...sharedFields,
+    ...collectionFields,
+  };
+  const writableNames = Object.keys(writableFields);
   const fieldNames = Object.keys(sharedFields);
 
   // Read-only on the wire: absent from `create` and `update` (both strict), so
@@ -524,9 +803,9 @@ export const buildContentSchemas = <TDefinition>({
   // `strictObject` blocks mass assignment: an unknown key is an error, not
   // something quietly stripped. System columns are absent from the shape, so
   // they can never be set from a request.
-  const create = z.strictObject(inputShape(sharedFields, fieldNames));
+  const create = z.strictObject(inputShape(writableFields, writableNames));
   const update = z
-    .strictObject(updateShape(sharedFields, fieldNames))
+    .strictObject(updateShape(writableFields, writableNames))
     .refine(value => Object.keys(value).length > 0, {
       message: "Provide at least one field to update.",
     });
@@ -561,18 +840,29 @@ export const buildContentSchemas = <TDefinition>({
   );
 
   return {
+    // Keyed by the generated tables rather than by the field map, so a
+    // collection that has no table cannot appear here and a table that has no
+    // schema cannot be read - the two lists are resolved from the same place.
+    advancedSelect: z.object(
+      Object.fromEntries(
+        [
+          ...advanced.junctions.map(entry => entry.field),
+          ...advanced.repeatables.map(entry => entry.field),
+        ].map(name => [name, baseSelectSchema(collectionFields[name])]),
+      ),
+    ),
     // The shapes are assembled in a loop, so their Zod types are erased.
     // Re-attaching the descriptor-derived types here means every consumer -
     // route handler, service, AdminCP - stays fully typed with no further
     // casts. `buildContentSchemas` is covered by `schemas.test-d.ts`.
     create: create as unknown as z.ZodType<ContentCreateInput<TDefinition>>,
     filters: z.object({
-      ...filterShape(sharedFields),
+      ...filterShape(writableFields),
       ...(publication
         ? { status: z.enum(CONTENT_PUBLICATION_STATUSES).optional() }
         : {}),
     }),
-    form: z.object(inputShape(sharedFields, admin.form.fields)),
+    form: z.object(inputShape(writableFields, admin.form.fields)),
     order: z.object({
       order: z.enum(["asc", "desc"]).optional(),
       orderBy: z.enum(orderable as [string, ...string[]]).optional(),

@@ -3476,6 +3476,173 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
           [1],
         );
       });
+
+      /**
+       * The recreate above, run as a race on two connections.
+       *
+       * Both writers read the same `latest()` inside their own transaction and
+       * both compute the same next version, so the only thing standing between
+       * them and two rows is the primary key. `create` targets its
+       * `onConflictDoNothing` at `(itemId, languageId)` alone, which is what
+       * turns the loser into a named `ContentTranslationExists` instead of a
+       * `23505` a translator cannot act on - and what leaves a *slug* clash still
+       * reported as the unique violation it is.
+       */
+      it("lets exactly one of two concurrent recreates claim the version", async () => {
+        const itemId = await guide("Recreated Concurrently");
+
+        await editorial().create(
+          itemId,
+          "pl",
+          { body: "Tresc", title: "Polski Wyscig" },
+          { actor: ACTOR },
+        );
+        await editorial().delete(itemId, "pl", {
+          actor: ACTOR,
+          expectedVersion: 1,
+        });
+
+        const outcomes = await Promise.allSettled([
+          editorial().create(
+            itemId,
+            "pl",
+            { body: "Znowu A", title: "Polski Wyscig A" },
+            { actor: ACTOR },
+          ),
+          editorial(rivalContext).create(
+            itemId,
+            "pl",
+            { body: "Znowu B", title: "Polski Wyscig B" },
+            { actor: ACTOR },
+          ),
+        ]);
+
+        const fulfilled = outcomes.filter(
+          outcome => outcome.status === "fulfilled",
+        );
+        const rejected = outcomes.filter(
+          outcome => outcome.status === "rejected",
+        );
+
+        expect(fulfilled).toHaveLength(1);
+        expect(rejected).toHaveLength(1);
+        // Structured, and named for what actually happened - not the driver's
+        // constraint message.
+        expect(rejected[0]).toMatchObject({
+          reason: expect.objectContaining({
+            itemId,
+            locale: "pl",
+            name: "ContentTranslationExists",
+          }),
+        });
+
+        // One row, at the version the delete left room for.
+        const polish = (await rowsFor(itemId)).filter(
+          row => row.languageId === 2,
+        );
+        expect(polish).toHaveLength(1);
+        expect(polish[0].version).toBe(3);
+
+        // The loser's transaction took its revision down with it, so the history
+        // is still strictly increasing with no duplicate at 3.
+        expect(
+          (await revisionsFor(itemId, 2)).map(row => [
+            row.version,
+            row.operation,
+          ]),
+        ).toEqual([
+          [1, "create"],
+          [2, "delete"],
+          [3, "create"],
+        ]);
+      });
+
+      /**
+       * A delete and an update that both think the row is at the same version.
+       *
+       * Exactly one of them may take effect, and the loser has two legitimate
+       * answers depending on which order they land in - so the assertion is on
+       * the *pair*, not on either one:
+       *
+       * - the delete lands first, and the update finds no translation at all,
+       *   which is a `null` the route turns into a 404 rather than a conflict;
+       * - the update lands first, and the delete re-reads after its zero-row
+       *   statement, finds the row at 2 and reports a version conflict.
+       *
+       * What must never happen is both taking effect: a delete reporting that it
+       * removed a row the update had just moved would be a lost update, and an
+       * update writing over a row the delete had removed would resurrect it.
+       */
+      it("never lets a delete and a stale update resurrect or lose a translation", async () => {
+        const itemId = await guide("Delete Versus Update");
+
+        await editorial().create(
+          itemId,
+          "pl",
+          { body: "Tresc", title: "Polski Kontra" },
+          { actor: ACTOR },
+        );
+
+        const [deletion, revision] = await Promise.allSettled([
+          editorial().delete(itemId, "pl", {
+            actor: ACTOR,
+            expectedVersion: 1,
+          }),
+          editorial(rivalContext).update(
+            itemId,
+            "pl",
+            { title: "Polski Kontra Nowy" },
+            { actor: ACTOR, expectedVersion: 1 },
+          ),
+        ]);
+
+        const polish = (await rowsFor(itemId)).filter(
+          row => row.languageId === 2,
+        );
+        const history = await revisionsFor(itemId, 2);
+        const deleteWon = polish.length === 0;
+
+        if (deleteWon) {
+          // The update found nothing to update. `null`, not a conflict: there is
+          // no version to disagree about once the row is gone.
+          expect(deletion).toMatchObject({
+            status: "fulfilled",
+            value: expect.objectContaining({ version: 2 }),
+          });
+          expect(revision).toStrictEqual({
+            status: "fulfilled",
+            value: null,
+          });
+          expect(history.map(row => [row.version, row.operation])).toEqual([
+            [1, "create"],
+            [2, "delete"],
+          ]);
+
+          return;
+        }
+
+        // The update won, so the delete's `expectedVersion: 1` no longer matches
+        // a row that is sitting at 2 - and it says so rather than reporting a
+        // removal that never happened.
+        expect(revision).toMatchObject({
+          status: "fulfilled",
+          value: expect.objectContaining({ changed: true, version: 2 }),
+        });
+        expect(deletion).toMatchObject({
+          reason: expect.objectContaining({
+            currentVersion: 2,
+            expectedVersion: 1,
+            locale: "pl",
+            name: "ContentTranslationVersionConflict",
+          }),
+          status: "rejected",
+        });
+        expect(polish[0].version).toBe(2);
+        expect(history.map(row => [row.version, row.operation])).toEqual([
+          [1, "create"],
+          [2, "update"],
+        ]);
+      });
     });
 
     /**

@@ -186,22 +186,106 @@ export interface ContentUserField<
   onDelete: ContentOnDelete;
 }
 
+/**
+ * A reference to another content type's rows.
+ *
+ * `multiple: false` is the Stage 1 shape: one nullable-or-not foreign key column
+ * on the base table. `multiple: true` moves the reference off the row entirely
+ * and into a generated junction table - see {@link ContentRelationJunction} -
+ * because a column cannot hold a set.
+ *
+ * `target` is a thunk, which is also what makes a **self-relation** ordinary
+ * rather than special: `target: () => articleContentType` inside
+ * `articleContentType` is a forward reference resolved on first read, exactly
+ * like two content types pointing at each other.
+ */
 export interface ContentRelationField<
   TRequired extends boolean = boolean,
   TNullable extends boolean = boolean,
+  TMultiple extends boolean = boolean,
+  TOrdered extends boolean = boolean,
 > extends ContentFieldShared<TRequired, TNullable> {
   kind: "relation";
+  /**
+   * Many targets instead of one.
+   *
+   * Literal rather than optional-boolean for the same reason `localized` is:
+   * every partition in this file keys off `{ multiple: true }`, and a widened
+   * `boolean` would resolve a to-many relation to the to-one branch - which is
+   * a foreign-key column that does not exist.
+   */
+  multiple: TMultiple;
   onDelete: ContentOnDelete;
-  /** Thunk so two content types can reference each other. */
+  /**
+   * The author's order is the order the value comes back in.
+   *
+   * Only meaningful with `multiple: true`. Without it the set is stored in
+   * ascending target-id order, which is still deterministic - it is simply not
+   * something the author chose.
+   */
+  ordered: TOrdered;
+  /** Thunk so two content types - or one content type and itself - can refer. */
   target: () => AnyContentTypeDefinition;
+}
+
+/**
+ * A reusable structured group: several leaves under one logical name.
+ *
+ * The value stays nested (`seo.title`), and the storage stays relational - each
+ * leaf becomes an ordinary column on the base or translation table, named
+ * `seoTitle` and therefore `seo_title` in SQL. There is no JSONB here: a
+ * flattened column is indexable, constrainable and queryable, and a group is a
+ * fixed set of leaves rather than an open bag.
+ *
+ * Localization is a property of the **group**, not of its leaves: `localized:
+ * true` moves the whole group into the translation table. Marking a single leaf
+ * would split one logical value across two tables with two different revision
+ * histories and two different permissions, which is exactly the drift
+ * `partitionContentFields` exists to prevent.
+ */
+export interface ContentGroupField<
+  TFields = ContentFieldMap,
+  TRequired extends boolean = boolean,
+  TNullable extends boolean = boolean,
+  TLocalized extends boolean = boolean,
+> extends ContentFieldShared<TRequired, TNullable> {
+  /** Leaves, in declaration order. Scalar kinds only - groups do not nest. */
+  fields: TFields;
+  kind: "group";
+  localized: TLocalized;
+}
+
+/**
+ * A repeatable structured group: zero or more ordered child rows.
+ *
+ * Stored in a generated child table (`example_articles_faq`) with a `serial`
+ * primary key of its own, so a child has a **stable identity** that survives a
+ * reorder - which is what makes "edit row 3" mean something and what lets a
+ * revision restore put the same row back rather than a copy of it.
+ *
+ * Never nullable and never required: the value is an array, and the empty array
+ * is the natural "nothing here". Never localized either - see
+ * `apps/docs/.../repeatable-fields.mdx` for why that is a later stage.
+ */
+export interface ContentRepeatableField<
+  TFields = ContentFieldMap,
+> extends ContentFieldShared<false, false> {
+  fields: TFields;
+  kind: "repeatable";
+  /** Upper bound on child rows. Enforced by the generated schema. */
+  max?: number;
+  /** Lower bound on child rows. Enforced by the generated schema. */
+  min?: number;
 }
 
 export type ContentFieldDescriptor =
   | ContentBooleanField
   | ContentDateTimeField
   | ContentEnumField
+  | ContentGroupField
   | ContentNumberField
   | ContentRelationField
+  | ContentRepeatableField
   | ContentSlugField
   | ContentTextareaField
   | ContentTextField
@@ -209,7 +293,27 @@ export type ContentFieldDescriptor =
 
 export type ContentFieldKind = ContentFieldDescriptor["kind"];
 
+/**
+ * The kinds a group leaf or a repeatable leaf may be.
+ *
+ * Scalars only. A nested group would need a second level of column naming and a
+ * second level of partial-update merging for no modelling gain; a `slug` inside
+ * a group would need its uniqueness scoped to something; and a `relation` or
+ * `user` inside one would put a foreign key in a place the relation services do
+ * not look. All four are definition-time errors.
+ */
+export type ContentLeafFieldDescriptor =
+  | ContentBooleanField
+  | ContentDateTimeField
+  | ContentEnumField
+  | ContentNumberField
+  | ContentTextareaField
+  | ContentTextField;
+
 export type ContentFieldMap = Record<string, ContentFieldDescriptor>;
+
+/** A group's or repeatable's inner field map. Scalars only. */
+export type ContentLeafFieldMap = Record<string, ContentLeafFieldDescriptor>;
 
 /**
  * Type-parameter constraint for a field map - deliberately shallow.
@@ -248,42 +352,107 @@ type ApplyNullable<TValue, TField> = TField extends { nullable: true }
   ? null | TValue
   : TValue;
 
+/** The scalar half of {@link ContentFieldValue}, before nullability. */
+type ScalarFieldValue<TField> = TField extends { kind: "boolean" }
+  ? boolean
+  : TField extends { kind: "dateTime" }
+    ? Date
+    : TField extends { values: readonly (infer TValue)[] }
+      ? TValue
+      : TField extends { kind: "number" | "relation" | "user" }
+        ? number
+        : string;
+
+/** The scalar half of {@link ContentFieldInput}. `dateTime` crosses as ISO. */
+type ScalarFieldInput<TField> = TField extends { kind: "boolean" }
+  ? boolean
+  : TField extends { kind: "dateTime" }
+    ? string
+    : TField extends { values: readonly (infer TValue)[] }
+      ? TValue
+      : TField extends { kind: "number" | "relation" | "user" }
+        ? number
+        : string;
+
+/** Every leaf of a group, as it comes back. Nested, never flattened. */
+type ContentGroupValue<TFields> = Prettify<{
+  [K in keyof TFields]: ContentFieldValue<TFields[K]>;
+}>;
+
+/**
+ * One repeatable child row.
+ *
+ * `id` is the child table's own primary key and is always present on a read:
+ * it is what a later `update`, `delete` or `reorder` addresses, and what a
+ * revision restore matches an historical row against.
+ */
+export type ContentRepeatableRow<TFields> = Prettify<
+  { id: number } & {
+    [K in keyof TFields]: ContentFieldValue<TFields[K]>;
+  }
+>;
+
+/**
+ * One repeatable child row as it is written.
+ *
+ * `id` is optional and is the whole write protocol: present means "update this
+ * existing child", absent means "create a new one". Position comes from the
+ * array order, so nothing carries it explicitly.
+ */
+export type ContentRepeatableInputRow<TFields> = Prettify<
+  { id?: number } & CreateValuesOf<TFields, keyof TFields>
+>;
+
 /**
  * The value as it comes back from the API (`select`).
  *
  * Structural on purpose: `TField` is unconstrained so this also works with the
  * shallow {@link ContentFieldsConstraint}.
+ *
+ * The three advanced kinds resolve before the scalar branch, because a `group`
+ * has no scalar value at all and a to-many `relation` is a set of identifiers
+ * rather than one.
  */
-export type ContentFieldValue<TField> = ApplyNullable<
-  TField extends { kind: "boolean" }
-    ? boolean
-    : TField extends { kind: "dateTime" }
-      ? Date
-      : TField extends { values: readonly (infer TValue)[] }
-        ? TValue
-        : TField extends { kind: "number" | "relation" | "user" }
-          ? number
-          : string,
-  TField
->;
+export type ContentFieldValue<TField> = TField extends {
+  fields: infer TInner;
+  kind: "group";
+}
+  ? ApplyNullable<ContentGroupValue<TInner>, TField>
+  : TField extends { fields: infer TInner; kind: "repeatable" }
+    ? ContentRepeatableRow<TInner>[]
+    : TField extends { kind: "relation"; multiple: true }
+      ? number[]
+      : ApplyNullable<ScalarFieldValue<TField>, TField>;
 
 /**
  * The value as it is sent to the API. Identical to the select value except for
  * `dateTime`, which crosses the wire (and the AutoForm) as an ISO 8601 string -
  * `z.toJSONSchema` throws on `z.date()`, so a form schema can never hold one.
  */
-export type ContentFieldInput<TField> = ApplyNullable<
-  TField extends { kind: "boolean" }
-    ? boolean
-    : TField extends { kind: "dateTime" }
-      ? string
-      : TField extends { values: readonly (infer TValue)[] }
-        ? TValue
-        : TField extends { kind: "number" | "relation" | "user" }
-          ? number
-          : string,
-  TField
->;
+export type ContentFieldInput<TField> = TField extends {
+  fields: infer TInner;
+  kind: "group";
+}
+  ? ApplyNullable<CreateValuesOf<TInner, keyof TInner>, TField>
+  : TField extends { fields: infer TInner; kind: "repeatable" }
+    ? ContentRepeatableInputRow<TInner>[]
+    : TField extends { kind: "relation"; multiple: true }
+      ? number[]
+      : ApplyNullable<ScalarFieldInput<TField>, TField>;
+
+/**
+ * The value a **partial** update may send for one field.
+ *
+ * Identical to {@link ContentFieldInput} everywhere except a group, where every
+ * leaf becomes optional: `{ seo: { description } }` must be able to move one
+ * leaf without restating the others, and without blanking them.
+ */
+export type ContentFieldPatch<TField> = TField extends {
+  fields: infer TInner;
+  kind: "group";
+}
+  ? ApplyNullable<Prettify<Partial<CreateValuesOf<TInner, keyof TInner>>>, TField>
+  : ContentFieldInput<TField>;
 
 /**
  * Whether the generated column carries a Postgres default. Drives `hasDefault`
@@ -322,6 +491,129 @@ type SharedFieldKeys<TFields> = Exclude<
   keyof TFields,
   LocalizedFieldKeys<TFields>
 >;
+
+/**
+ * Fields whose value is **not** a column on either generated table: a to-many
+ * relation, which lives in a junction table, and a repeatable, which lives in a
+ * child table.
+ *
+ * Everything that addresses a column - the admin list, an index, an equality
+ * filter, `orderBy`, `ContentSelect` - subtracts these. Everything that
+ * addresses a *value* - the create payload, the update patch, `changedFields` -
+ * keeps them. That split is the whole of Stage 6's "opt-in" promise: a content
+ * type that declares none of them has an empty subtraction and behaves exactly
+ * as it did in Stage 5.
+ */
+type CollectionFieldKeys<TFields> = {
+  [K in keyof TFields]: TFields[K] extends { kind: "repeatable" }
+    ? K
+    : TFields[K] extends { kind: "relation"; multiple: true }
+      ? K
+      : never;
+}[keyof TFields];
+
+/** Shared fields that are actually stored on the base table. */
+type ColumnFieldKeys<TFields> = Exclude<
+  SharedFieldKeys<TFields>,
+  CollectionFieldKeys<TFields>
+>;
+
+type GroupFieldKeys<TFields> = {
+  [K in keyof TFields]: TFields[K] extends { kind: "group" } ? K : never;
+}[keyof TFields];
+
+/**
+ * Shared fields that are **one** column: a scalar, not a group.
+ *
+ * A group occupies several columns under generated names, so it is not
+ * something a list cell, an `orderBy` or an equality filter can address. Its
+ * *leaves* are, under their canonical paths - see {@link ContentLeafPath}.
+ */
+type ScalarColumnFieldKeys<TFields> = Exclude<
+  ColumnFieldKeys<TFields>,
+  GroupFieldKeys<TFields>
+>;
+
+/**
+ * The canonical dotted path of every group leaf: `"seo.title"`.
+ *
+ * One representation, used by `changedFields`, validation errors, index
+ * declarations, `publicApi.fields`, `search.contentFields` and revision
+ * diagnostics alike. The generated column name (`seo_title`) is an internal
+ * mapping and never appears in any of them.
+ */
+export type ContentLeafPath<TFields> = string &
+  {
+    [K in GroupFieldKeys<TFields>]: TFields[K] extends {
+      fields: infer TInner;
+    }
+      ? `${K & string}.${keyof TInner & string}`
+      : never;
+  }[GroupFieldKeys<TFields>];
+
+/** The canonical dotted path of every repeatable leaf: `"faq.question"`. */
+export type ContentRepeatableLeafPath<TFields> = string &
+  {
+    [K in keyof TFields]: TFields[K] extends {
+      fields: infer TInner;
+      kind: "repeatable";
+    }
+      ? `${K & string}.${keyof TInner & string}`
+      : never;
+  }[keyof TFields];
+
+/**
+ * Everything `changedFields` may name, and everything a nested validation error
+ * is keyed by: a scalar field, a group **leaf** path, or a collection name.
+ *
+ * A group never appears whole - `seo` moving is always one or more of
+ * `seo.title`, `seo.description`. A collection always appears whole: which
+ * child of `faq` moved is a question the revision snapshot answers, not
+ * something a cache tag or an event payload branches on.
+ */
+export type ContentChangedPath<TDefinition> =
+  | ContentLeafPath<ContentFieldsOf<TDefinition>>
+  | (CollectionFieldKeys<ContentFieldsOf<TDefinition>> & string)
+  | (ScalarColumnFieldKeys<ContentFieldsOf<TDefinition>> & string);
+
+/** Field names of a to-many relation. */
+export type ContentRelationCollectionName<TDefinition> = string &
+  {
+    [
+      K in keyof ContentFieldsOf<TDefinition>
+    ]: ContentFieldsOf<TDefinition>[K] extends {
+      kind: "relation";
+      multiple: true;
+    }
+      ? K
+      : never;
+  }[keyof ContentFieldsOf<TDefinition>];
+
+/** Field names of a repeatable group. */
+export type ContentRepeatableFieldName<TDefinition> = string &
+  {
+    [
+      K in keyof ContentFieldsOf<TDefinition>
+    ]: ContentFieldsOf<TDefinition>[K] extends { kind: "repeatable" }
+      ? K
+      : never;
+  }[keyof ContentFieldsOf<TDefinition>];
+
+/**
+ * The advanced collections of one record, loaded on demand.
+ *
+ * Deliberately **not** part of {@link ContentSelect}: a to-many relation and a
+ * repeatable are each an extra query, and an admin list that returned them
+ * would issue one per row. They are batch-loaded for a detail read and for the
+ * public projections that ask for them, and nowhere else.
+ */
+export type ContentAdvancedValues<TDefinition> = Prettify<{
+  [K in
+    | ContentRelationCollectionName<TDefinition>
+    | ContentRepeatableFieldName<TDefinition>]: ContentFieldValue<
+    ContentFieldsOf<TDefinition>[K]
+  >;
+}>;
 
 /**
  * A create-shaped object over a subset of the field map: required fields stay
@@ -378,7 +670,7 @@ type ContentAddressableColumn<
   | ContentEditorialColumn<TEditorial>
   | ContentPublicationColumn<TPublication>
   | ContentSystemField
-  | SharedFieldKeys<TFields>;
+  | ScalarColumnFieldKeys<TFields>;
 
 export interface ContentAdminListConfig<
   TFields = ContentFieldMap,
@@ -393,9 +685,9 @@ export interface ContentAdminListConfig<
    * Allowlist for `orderBy`. System columns - and the publication columns when
    * enabled - are always allowed and need no entry here.
    */
-  orderableFields?: SharedFieldKeys<TFields>[];
+  orderableFields?: ScalarColumnFieldKeys<TFields>[];
   /** Only shared `text` and `textarea` fields may be searched. */
-  searchableFields?: SharedFieldKeys<TFields>[];
+  searchableFields?: ScalarColumnFieldKeys<TFields>[];
 }
 
 export interface ContentAdminConfig<
@@ -419,7 +711,7 @@ export interface ContentAdminConfig<
    * naming one here would make a toast depend on whose locale the reader is in;
    * Stage 5B gives the AdminCP a locale-aware title of its own.
    */
-  titleField?: SharedFieldKeys<TFields>;
+  titleField?: ScalarColumnFieldKeys<TFields>;
 }
 
 /**
@@ -465,11 +757,26 @@ export interface ContentIndexInput<
   unique?: boolean;
 }
 
+/**
+ * Everything an index may name.
+ *
+ * The addressable columns, plus every **group leaf** by its canonical path. A
+ * leaf is an ordinary column under a generated name, so `{ on: ["seo.title"] }`
+ * compiles to exactly the index `{ on: ["title"] }` would have.
+ *
+ * Repeatable leaves and to-many relations are deliberately absent: neither is a
+ * column on the base table, so an index over one would have to be an index on a
+ * different table - which the child and junction tables already carry. Naming
+ * one is a compile error here and a definition-time error at runtime, rather
+ * than something silently dropped.
+ */
 type ContentIndexColumn<
   TFields,
   TPublication extends boolean,
   TEditorial extends boolean,
-> = ContentAddressableColumn<TFields, TPublication, TEditorial> & string;
+> = string &
+  (ContentAddressableColumn<TFields, TPublication, TEditorial> |
+    ContentLeafPath<TFields>);
 
 /**
  * Stored shape. Non-generic for the same reason as
@@ -531,9 +838,38 @@ type ContentPublicationColumns<TDefinition> = TDefinition extends {
 // Public API
 // ---------------------------------------------------------------------------
 
-/** Everything `publicApi.fields` may name: declared fields plus a few columns. */
+/**
+ * Everything `publicApi.fields` may name.
+ *
+ * Scalar fields and a few generated columns, as before - plus, in Stage 6,
+ * **leaf paths**. A group or a repeatable is never exposed whole: naming `seo`
+ * would publish `seo.indexable` because somebody wanted `seo.title`, and that is
+ * exactly the accident leaf-level allowlisting exists to prevent. A to-many
+ * relation *is* named whole, because its value is a list of identifiers and
+ * there is no sub-part of one to keep private.
+ */
 export type ContentPublicExposableField<TFields> =
-  (typeof CONTENT_PUBLIC_EXPOSABLE_COLUMNS)[number] | (keyof TFields & string);
+  | (typeof CONTENT_PUBLIC_EXPOSABLE_COLUMNS)[number]
+  | ContentLeafPath<TFields>
+  | ContentRepeatableLeafPath<TFields>
+  | (ExposableFlatFieldKeys<TFields> & string);
+
+/**
+ * Field names `publicApi.fields` may name directly, localized ones included: a
+ * public localized read joins the translation it is serving, so where a value is
+ * stored is a fact about the query rather than about the response.
+ *
+ * Groups and repeatables are subtracted because they are exposed leaf by leaf.
+ */
+type ExposableFlatFieldKeys<TFields> = Exclude<
+  keyof TFields,
+  | GroupFieldKeys<TFields>
+  | {
+      [K in keyof TFields]: TFields[K] extends { kind: "repeatable" }
+        ? K
+        : never;
+    }[keyof TFields]
+>;
 
 /**
  * Opts a content type into a generated, read-only public API.
@@ -598,6 +934,31 @@ type ContentFieldNamesOfKind<TFields, TKind extends string> = string &
     [K in keyof TFields]: TFields[K] extends { kind: TKind } ? K : never;
   }[keyof TFields];
 
+/**
+ * Leaf paths of one or more kinds, inside the named container kind.
+ *
+ * `TContainer` is what separates "a group leaf, which is a column on the row"
+ * from "a repeatable leaf, which is a column on a child row": a search title has
+ * to be one value, so it may come from the first and never from the second.
+ */
+type ContentLeafPathsOfKind<
+  TFields,
+  TKind extends string,
+  TContainer extends string,
+> = string &
+  {
+    [K in keyof TFields]: TFields[K] extends {
+      fields: infer TInner;
+      kind: TContainer;
+    }
+      ? {
+          [L in keyof TInner]: TInner[L] extends { kind: TKind }
+            ? `${K & string}.${L & string}`
+            : never;
+        }[keyof TInner]
+      : never;
+  }[keyof TFields];
+
 /** Field names of one or more kinds that also accept no `null`. */
 type ContentNonNullableFieldNamesOfKind<
   TFields,
@@ -628,23 +989,74 @@ export type ContentSearchTitleField<
   >
 >;
 
+/**
+ * The generated tables a to-many relation and a repeatable field each get.
+ *
+ * Resolved once by `defineContentType` and read by the table generator, the
+ * services and the migration docs alike, so the name a migration creates and the
+ * name a query addresses can never drift. Names are clamped to Postgres'
+ * 63-character identifier limit with a deterministic fingerprint, the same way
+ * index and translation table names already are.
+ */
+export interface ContentRelationJunction {
+  /** `(itemId, position)`, so an ordered relation has no duplicate slots. */
+  positionIndexName: string;
+  /** The source field this junction belongs to. */
+  field: string;
+  /** `<table>_<field>_related_idx` - the reverse lookup and the FK's index. */
+  relatedIndexName: string;
+  /** `<table>_<field>_pk` on `(itemId, relatedItemId)`. */
+  primaryKeyName: string;
+  tableName: string;
+}
+
+export interface ContentRepeatableTable {
+  field: string;
+  /** `(itemId, position)`, unique: two children cannot share a slot. */
+  positionIndexName: string;
+  tableName: string;
+}
+
 export type ContentSearchDescriptionField<
   TFields,
   TPublicField extends string,
 > = Extract<
   TPublicField,
-  ContentFieldNamesOfKind<
-    TFields,
-    (typeof CONTENT_SEARCH_DESCRIPTION_KINDS)[number]
-  >
+  | ContentFieldNamesOfKind<
+      TFields,
+      (typeof CONTENT_SEARCH_DESCRIPTION_KINDS)[number]
+    >
+  | ContentLeafPathsOfKind<
+      TFields,
+      (typeof CONTENT_SEARCH_DESCRIPTION_KINDS)[number],
+      "group"
+    >
 >;
 
+/**
+ * Field names and leaf paths `search.contentFields` accepts.
+ *
+ * Widest of the three, and the only one that reaches into a **repeatable**:
+ * `faq.question` is many values rather than one, which rules it out as a
+ * heading but makes it exactly the kind of prose a body should carry. The
+ * values are concatenated in position order - see `contentSearchText`.
+ */
 export type ContentSearchTextField<
   TFields,
   TPublicField extends string,
 > = Extract<
   TPublicField,
-  ContentFieldNamesOfKind<TFields, (typeof CONTENT_SEARCH_TEXT_KINDS)[number]>
+  | ContentFieldNamesOfKind<TFields, (typeof CONTENT_SEARCH_TEXT_KINDS)[number]>
+  | ContentLeafPathsOfKind<
+      TFields,
+      (typeof CONTENT_SEARCH_TEXT_KINDS)[number],
+      "group"
+    >
+  | ContentLeafPathsOfKind<
+      TFields,
+      (typeof CONTENT_SEARCH_TEXT_KINDS)[number],
+      "repeatable"
+    >
 >;
 
 /**
@@ -1060,6 +1472,43 @@ export type LocalizedContentTypeDefinition = AnyContentTypeDefinition & {
   localization: { enabled: true };
 };
 
+/**
+ * Everything Stage 6 resolves once, at definition time.
+ *
+ * Empty arrays for a content type that declares no advanced field, which is what
+ * makes "Stage 6 is opt-in" true rather than merely intended: every generator
+ * below loops over these, and an empty loop generates nothing.
+ */
+export interface ResolvedContentAdvancedConfig {
+  /** One generated junction table per to-many relation field. */
+  junctions: ContentRelationJunction[];
+  /**
+   * Every group leaf, by canonical path, with the column it compiles to.
+   *
+   * The single field-path mapping the whole engine reads: table generation,
+   * schemas, service reads and writes, revisions, the public projection, search
+   * and the AdminCP all take the column name from here rather than re-deriving
+   * it, so there is exactly one place the two representations meet.
+   */
+  leaves: ContentLeafColumn[];
+  /** One generated child table per repeatable field. */
+  repeatables: ContentRepeatableTable[];
+}
+
+/** One group leaf: its canonical path and the column it is stored in. */
+export interface ContentLeafColumn {
+  /** `seoTitle`, which Drizzle's camelCase casing emits as `seo_title`. */
+  columnName: string;
+  /** The owning group's name. */
+  group: string;
+  /** The leaf's own name inside the group. */
+  leaf: string;
+  /** Whether the owning group is `localized: true`. */
+  localized: boolean;
+  /** `seo.title`. */
+  path: string;
+}
+
 export interface ContentTypeDefinition<
   TId extends string = string,
   TFields = ContentFieldMap,
@@ -1073,6 +1522,8 @@ export interface ContentTypeDefinition<
   TLocalizationEnabled extends boolean = boolean,
 > {
   admin: ResolvedContentAdminConfig;
+  /** Generated junction tables, child tables and the leaf-path mapping. */
+  advanced: ResolvedContentAdvancedConfig;
   /** Editorial workflow, or the disabled default when `editorial` is omitted. */
   editorial: ResolvedContentEditorialConfig<
     TEditorialEnabled,
@@ -1132,18 +1583,41 @@ export type ContentFieldsOf<TDefinition> = TDefinition extends {
 export type ContentSelect<TDefinition> = Prettify<
   ContentEditorialColumns<TDefinition> &
     ContentPublicationColumns<TDefinition> & {
-      [K in SharedFieldKeys<ContentFieldsOf<TDefinition>>]: ContentFieldValue<
+      [K in ColumnFieldKeys<ContentFieldsOf<TDefinition>>]: ContentFieldValue<
         ContentFieldsOf<TDefinition>[K]
       >;
     } & { createdAt: Date; id: number; updatedAt: Date }
 >;
 
+/**
+ * One record with its advanced collections attached.
+ *
+ * What a detail read returns and what an editorial mutation echoes back. Two
+ * extra queries per record rather than per row, and only where a caller asked
+ * for the whole thing.
+ */
+export type ContentDetail<TDefinition> = Prettify<
+  ContentAdvancedValues<TDefinition> & ContentSelect<TDefinition>
+>;
+
 /** The base-table half of a create payload. See {@link ContentSharedValues}. */
 export type ContentCreateInput<TDefinition> = ContentSharedValues<TDefinition>;
 
-export type ContentUpdateInput<TDefinition> = Prettify<
-  Partial<ContentCreateInput<TDefinition>>
->;
+/**
+ * A partial update.
+ *
+ * Partial one level deeper than `Partial<ContentCreateInput>` would be: a group
+ * value may name a subset of its leaves, so `{ seo: { description } }` moves one
+ * leaf and leaves `seo.title` exactly where it was. A collection is replaced
+ * whole - `categories: [2, 5, 9]` is the complete new set - because a partial
+ * set has no meaning that is not either "add" or "remove", and both of those are
+ * their own service call.
+ */
+export type ContentUpdateInput<TDefinition> = Prettify<{
+  [K in keyof ContentCreateInput<TDefinition>]?: ContentFieldPatch<
+    ContentFieldsOf<TDefinition>[K]
+  >;
+}>;
 
 /**
  * Every field name the content type declares, localized ones included.
@@ -1164,13 +1638,13 @@ export type ContentFieldName<TDefinition> = keyof ContentFieldsOf<TDefinition> &
 type FieldNamesOfKind<TDefinition, TKind extends ContentFieldKind> = string &
   {
     [
-      K in SharedFieldKeys<ContentFieldsOf<TDefinition>>
+      K in ScalarColumnFieldKeys<ContentFieldsOf<TDefinition>>
     ]: ContentFieldsOf<TDefinition>[K] extends {
       kind: TKind;
     }
       ? K
       : never;
-  }[SharedFieldKeys<ContentFieldsOf<TDefinition>>];
+  }[ScalarColumnFieldKeys<ContentFieldsOf<TDefinition>>];
 
 /**
  * Kinds the generated filter schema understands, derived from the one runtime
@@ -1188,15 +1662,18 @@ export type FilterableContentFieldName<TDefinition> = FieldNamesOfKind<
 
 /** {@link FieldNamesOfKind} over every field, shared and localized alike. */
 type AnyFieldNamesOfKind<TDefinition, TKind extends ContentFieldKind> = string &
-  {
-    [
-      K in keyof ContentFieldsOf<TDefinition>
-    ]: ContentFieldsOf<TDefinition>[K] extends {
-      kind: TKind;
-    }
-      ? K
-      : never;
-  }[keyof ContentFieldsOf<TDefinition>];
+  Exclude<
+    {
+      [
+        K in keyof ContentFieldsOf<TDefinition>
+      ]: ContentFieldsOf<TDefinition>[K] extends {
+        kind: TKind;
+      }
+        ? K
+        : never;
+    }[keyof ContentFieldsOf<TDefinition>],
+    CollectionFieldKeys<ContentFieldsOf<TDefinition>>
+  >;
 
 /**
  * Field names a **public** filter may name.
@@ -1217,10 +1694,27 @@ export type PublicFilterableContentFieldName<TDefinition> = AnyFieldNamesOfKind<
  * field - plus `status` once publication is enabled, which is a generated
  * column rather than a declared field.
  */
+/**
+ * The one filter a to-many relation accepts: "this record is related to *that*
+ * row".
+ *
+ * An object rather than a bare identifier so it can never be confused with the
+ * equality filter a to-one relation takes, and so the SQL it compiles to - an
+ * indexed `EXISTS` over the junction table - is chosen by the shape of the value
+ * rather than by looking up the descriptor twice. There is deliberately no
+ * `containsAll`, no `containsAny` and no traversal: that is a query language,
+ * and a hand-written route is the better answer to it.
+ */
+export interface ContentRelationFilter {
+  contains: number;
+}
+
 export type ContentFilterInput<TDefinition> = Partial<
   (TDefinition extends { publication: { enabled: true } }
     ? { status: ContentPublicationStatus }
     : Record<never, never>) & {
+    [K in ContentRelationCollectionName<TDefinition>]: ContentRelationFilter;
+  } & {
     [K in FilterableContentFieldName<TDefinition>]: ContentFieldInput<
       ContentFieldsOf<TDefinition>[K]
     >;
@@ -1294,12 +1788,55 @@ type ContentPublicValue<TFields, TName extends string> = TName extends "id"
     : TName extends "publishedAt"
       ? Date | null
       : TName extends keyof TFields
-        ? TFields[TName] extends { kind: "relation" }
-          ? TFields[TName] extends { nullable: true }
-            ? ContentPublicRelation | null
-            : ContentPublicRelation
-          : ContentFieldValue<TFields[TName]>
+        ? TFields[TName] extends { kind: "relation"; multiple: true }
+          ? number[]
+          : TFields[TName] extends { kind: "relation" }
+            ? TFields[TName] extends { nullable: true }
+              ? ContentPublicRelation | null
+              : ContentPublicRelation
+            : ContentFieldValue<TFields[TName]>
         : never;
+
+/** The dotted paths in an allowlist, grouped by the field they belong to. */
+type PublicPathOwner<TName> = TName extends `${infer TOwner}.${string}`
+  ? TOwner
+  : never;
+
+type PublicPathLeaf<TName, TOwner extends string> =
+  TName extends `${TOwner}.${infer TLeaf}` ? TLeaf : never;
+
+/** The names in an allowlist that are plain fields rather than leaf paths. */
+type PublicFlatName<TName> = TName extends `${string}.${string}` ? never : TName;
+
+/**
+ * The nested half of a public response: one key per group or repeatable that
+ * has at least one exposed leaf, holding **only** the leaves that were exposed.
+ *
+ * Leaf-level privacy falls straight out of this: `seo.indexable` is absent from
+ * the type and absent from the generated `SELECT`, however many other `seo.*`
+ * paths the allowlist names.
+ */
+type ContentPublicNested<TFields, TName extends string> = {
+  [TOwner in PublicPathOwner<TName> & keyof TFields]: TFields[TOwner] extends {
+    fields: infer TInner;
+    kind: "repeatable";
+  }
+    ? Prettify<
+        { id: number } & {
+          [TLeaf in PublicPathLeaf<TName, TOwner & string> &
+            keyof TInner]: ContentFieldValue<TInner[TLeaf]>;
+        }
+      >[]
+    : TFields[TOwner] extends { fields: infer TInner; kind: "group" }
+      ? ApplyNullable<
+          Prettify<{
+            [TLeaf in PublicPathLeaf<TName, TOwner & string> &
+              keyof TInner]: ContentFieldValue<TInner[TLeaf]>;
+          }>,
+          TFields[TOwner]
+        >
+      : never;
+};
 
 /**
  * One public row: exactly the allowlisted fields, and not one key more.
@@ -1309,12 +1846,15 @@ type ContentPublicValue<TFields, TName extends string> = TName extends "id"
  * leaves Postgres. Adding a field to the content type does not add it here.
  */
 export type ContentPublicSelect<TDefinition> = Prettify<
-  ContentPublicLocaleColumn<TDefinition> & {
-    [K in ContentPublicFieldName<TDefinition>]: ContentPublicValue<
+  ContentPublicLocaleColumn<TDefinition> &
+    ContentPublicNested<
       ContentFieldsOf<TDefinition>,
-      K
-    >;
-  }
+      ContentPublicFieldName<TDefinition>
+    > & {
+      [K in PublicFlatName<
+        ContentPublicFieldName<TDefinition>
+      >]: ContentPublicValue<ContentFieldsOf<TDefinition>, K>;
+    }
 >;
 
 /**
@@ -1354,13 +1894,28 @@ export type ContentPublicListRow<TDefinition> =
  * `publicApi.filterableFields` array is not recoverable as a type, so the
  * narrower check is the runtime allowlist.
  */
-export type ContentPublicFilterInput<TDefinition> = Partial<{
-  [
-    K in ContentPublicFieldName<TDefinition> &
-      PublicFilterableContentFieldName<TDefinition>
-  ]: ContentFieldInput<ContentFieldsOf<TDefinition>[K]>;
-}>;
+export type ContentPublicFilterInput<TDefinition> = Partial<
+  {
+    [
+      K in ContentPublicFieldName<TDefinition> &
+        ContentRelationCollectionName<TDefinition>
+    ]: ContentRelationFilter;
+  } & {
+    [
+      K in ContentPublicFieldName<TDefinition> &
+        PublicFilterableContentFieldName<TDefinition>
+    ]: ContentFieldInput<ContentFieldsOf<TDefinition>[K]>;
+  }
+>;
 
-/** Columns the public list may be ordered by. */
+/**
+ * Columns the public list may be ordered by.
+ *
+ * Flat names only. A leaf path is a column and could in principle be ordered by,
+ * but a repeatable leaf and a to-many relation are not, and one union that
+ * accepts all three would put two of them past the compiler and into a runtime
+ * allowlist error.
+ */
 export type ContentPublicOrderableFieldName<TDefinition> =
-  "publishedAt" | ContentPublicFieldName<TDefinition>;
+  | "publishedAt"
+  | PublicFlatName<ContentPublicFieldName<TDefinition>>;
