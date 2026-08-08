@@ -141,6 +141,14 @@ export interface ContentTestHarness {
   readonly behaviour: {
     /** Listeners `emit` should report as having failed. */
     eventFailures: RecordedEventFailure[];
+    /**
+     * Web origins the revalidation bridge should post to.
+     *
+     * Empty by default, which is what an API with no `NEXT_PUBLIC_WEB_URL` sees
+     * - and what makes `attempted: 0` mean "there was nothing to tell" rather
+     * than "nobody answered".
+     */
+    revalidateOrigins: string[];
     /** When set, every `search.index`/`search.delete` throws it. */
     searchError: Error | null;
   };
@@ -231,6 +239,7 @@ export const createContentTestHarness =
     const logs: string[] = [];
     const behaviour: ContentTestHarness["behaviour"] = {
       eventFailures: [],
+      revalidateOrigins: [],
       searchError: null,
     };
 
@@ -292,6 +301,11 @@ export const createContentTestHarness =
           }
           if (key === "core") {
             return {
+              // What the revalidation bridge posts to, and the secret it signs
+              // with. Both live on the context in a real install too.
+              contentRevalidateOrigins: behaviour.revalidateOrigins,
+              cronSecret: "content-engine-test-secret",
+              hasCronAdapter: false,
               contentModels: [
                 { model: articleContent, pluginId: CONFIG_PLUGIN.pluginId },
                 { model: categoryContent, pluginId: CONFIG_PLUGIN.pluginId },
@@ -369,6 +383,7 @@ export const createContentTestHarness =
         emitted.length = 0;
         logs.length = 0;
         behaviour.eventFailures = [];
+        behaviour.revalidateOrigins = [];
         behaviour.searchError = null;
       },
       rivalContext: buildContext(rivalDb),
