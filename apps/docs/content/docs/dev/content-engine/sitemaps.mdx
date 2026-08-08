@@ -144,6 +144,23 @@ Both are omitted from the XML when unset, which is valid. There are deliberately
 per-record dynamic callbacks: a function that runs once per URL in a 50,000-URL file
 is a performance decision disguised as a configuration option.
 
+### It is also what the cache tag follows
+
+Because `lastModified` comes from `updatedAt`, a real edit to a published record changes
+that locale's sitemap file even when its URL does not move - so the file's cache tag is
+expired for a plain title or SEO edit, not only for a publish or a slug change:
+
+```text
+title edit on a published record
+→ updatedAt moves
+→ <lastmod> moves
+→ sitemap file tag expired   (the index is not)
+```
+
+A no-op edit writes no `UPDATE`, so `updatedAt` does not move and the cached file is
+still byte-correct. See [Caching](/docs/dev/content-engine/caching#delivery-tags) for
+the full matrix and for the file-versus-index distinction.
+
 ## Excluding one record
 
 ```ts

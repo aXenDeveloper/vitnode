@@ -43,6 +43,38 @@ arbitrary URLs. Slug history maps one record's old addresses to that record's cu
 one; a rule engine over paths is a different feature living in a different layer (a
 middleware, a CDN, a `next.config` `redirects` array).
 
+## Redirects require Editorial
+
+```ts
+delivery: { enabled: true, redirects: { enabled: true } }
+// ✖ without `editorial: { enabled: true }`
+```
+
+Slug history has to be written in the same transaction as the slug mutation, its version
+check and its revision - and only the editorial mutation paths own such a transaction.
+Without `editorial` a content type writes through the plain repository, so
+`redirects: { enabled: true }` there would record nothing.
+
+Refused at definition time rather than downgraded, and **only** `redirects` is affected:
+canonical URLs, SEO, alternates, `hreflang`, the sitemap and every delivery read remain
+available without Editorial, which keeps Stage 5's "publication and localization without
+Editorial" promise intact. See
+[Redirects require Editorial](/docs/dev/content-engine/slug-history-and-redirects#redirects-require-editorial).
+
+Lifting it would mean giving the plain mutation paths a version column and a
+transactional history write - which is most of what `editorial` already is.
+
+## A delivery path is a site-wide namespace
+
+Two plugins may publish the same `publicApi.path` while neither has `delivery`, because
+their API routes are `/api/{pluginId}/content/{path}`. Two **delivery-enabled** content
+types may not, because a canonical delivery URL is `/articles/{slug}` with no plugin id
+in it - one path would give one public URL two owners.
+
+The fix is a boot-time check rather than a prefix: adding the plugin id to canonical URLs
+would make every public content URL uglier for everybody to avoid a collision almost
+nobody hits. Rename one `publicApi.path`, or turn `delivery` off on one of them.
+
 ## No og:image
 
 `delivery.seo.openGraph` projects a title and a description, and stops there.

@@ -34,6 +34,10 @@ export const articleContentType = defineContentType({
     fields: ["id", "title", "slug", "excerpt", "publishedAt"],
   },
 
+  // `redirects` below needs this: slug history is written in the same transaction as
+  // the slug mutation and its revision.
+  editorial: { enabled: true },
+
   delivery: { // [!code highlight]
     enabled: true, // [!code highlight]
     redirects: { enabled: true }, // [!code highlight]
@@ -71,7 +75,7 @@ sitemap entry.
 
 | Block       | What it adds                                                       |
 | ----------- | ------------------------------------------------------------------ |
-| `redirects` | Durable [slug history](/docs/dev/content-engine/slug-history-and-redirects) and automatic 308s |
+| `redirects` | Durable [slug history](/docs/dev/content-engine/slug-history-and-redirects) and automatic 308s. **Needs `editorial`** |
 | `seo`       | [Title, description, Open Graph and robots](/docs/dev/content-engine/seo) projection |
 | `sitemap`   | A paginated [sitemap service](/docs/dev/content-engine/sitemaps)     |
 | `hreflang`  | An `x-default` for [localized alternates](/docs/dev/content-engine/localization-and-hreflang) |
@@ -163,6 +167,7 @@ being indexable - and that is not a symptom anybody notices.
 | Rule                                                   | Result                     |
 | ------------------------------------------------------ | -------------------------- |
 | `delivery` without `publicApi`                         | Compile error + throw      |
+| `redirects` without `editorial`                        | Compile error + throw      |
 | `sitemap` without `publication`                        | Throw                      |
 | `redirects` on a localized type with a **shared** slug  | Throw                      |
 | An SEO field not in `publicApi.fields`                 | Compile error + throw      |
@@ -176,7 +181,12 @@ being indexable - and that is not a symptom anybody notices.
 | A localized content type withholding `"id"`            | Throw                      |
 | A fallback SEO field with no primary                   | Throw                      |
 
-Two are worth a word. A **localized** content type has to expose `"id"` in
+Three are worth a word. `redirects` needs `editorial: { enabled: true }`, because slug
+history has to be written in the same transaction as the slug mutation and its revision -
+and only the editorial mutation paths own one. Nothing else in `delivery` needs it; see
+[Redirects require Editorial](/docs/dev/content-engine/slug-history-and-redirects#redirects-require-editorial).
+
+A **localized** content type has to expose `"id"` in
 `publicApi.fields`, because alternates and `hreflang` are resolved by identifier and
 delivery reads the public projection - so without it every localized response would
 carry an empty alternate set, which looks exactly like a record with one translation.

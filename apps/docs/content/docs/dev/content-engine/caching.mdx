@@ -417,20 +417,75 @@ contentInvalidationTags({
 });
 ```
 
-| Mutation                          | delivery | redirect (old + new) | sitemap |
-| --------------------------------- | -------- | -------------------- | ------- |
-| Slug change (published)            | ✅        | ✅                    | ✅       |
-| Publish / unpublish                | ✅        | ✅                    | ✅       |
-| Delete                            | ✅        | ✅                    | ✅       |
-| Restore that moves a slug          | ✅        | ✅                    | ✅       |
-| Translation create / delete        | ✅        | ✅                    | ✅       |
-| SEO field edit (still published)   | ✅        | ✅                    | ❌       |
+```ts
+contentInvalidationTags({
+  contentTypeId,
+  delivery: { sitemap: { contentChanged: true, indexChanged: false } },
+  id,
+  isPublic,
+  slugs: [previousSlug, currentSlug],
+  wasPublic,
+});
+```
 
-The last row is the one worth reading twice: an edit that only changed what an
-already-listed page *says* leaves the sitemap byte-identical, so its tag is not
-expired. Everything that adds, removes or moves a line in the file expires it - and on
-a localized content type that means each affected locale's file **and** the
-locale-less index that enumerates them.
+The sitemap is **two** decisions rather than one, and the reason is `<lastmod>`. A
+sitemap entry carries a `lastModified` derived from `updatedAt`, so a plain title edit
+on a published record changes the *bytes* of its sitemap file even though the set of
+URLs in it is identical:
+
+- **`contentChanged`** expires the sitemap **file** of each locale the mutation
+  reached. True for any real mutation of a record that is or was publicly reachable.
+- **`indexChanged`** expires the locale-less tag, which for a localized content type is
+  the *index* of its per-locale files. True only when public reachability flipped,
+  because an index lists files and counts URLs.
+
+| Mutation                            | delivery | redirect (old + new) | sitemap file | sitemap index |
+| ----------------------------------- | -------- | -------------------- | ------------ | ------------- |
+| Title / SEO edit (still published)   | ✅        | ✅                    | ✅            | ❌             |
+| Slug change (published)              | ✅        | ✅                    | ✅            | ❌             |
+| Publish / unpublish                  | ✅        | ✅                    | ✅            | ✅             |
+| Delete (was published)               | ✅        | ✅                    | ✅            | ✅             |
+| Restore that moves a slug            | ✅        | ✅                    | ✅            | ❌             |
+| Translation publish / unpublish      | ✅        | ✅                    | ✅            | ✅             |
+| Translation create / delete          | ✅        | ✅                    | ✅            | ✅             |
+| No-op edit                           | ❌        | ❌                    | ❌            | ❌             |
+| Draft edited into another draft      | ❌        | ❌                    | ❌            | ❌             |
+
+The first row is the one worth reading twice. **A real update to a published
+representation expires that locale's sitemap file, because its `lastModified` changes -
+even when the canonical URL stays the same.** Anything else would leave a cached
+sitemap serving a timestamp that is no longer true.
+
+The last two rows are the other half of the same rule: the engine issues no `UPDATE`
+for an update that changed nothing, so `updatedAt` does not move and the cached file is
+still byte-correct. A draft is in no sitemap either way.
+
+<Callout type="info" title="A nonlocalized content type has one file and no index">
+  Its locale-less tag *is* its sitemap file, so `contentChanged` is what expires it.
+  The locale-less tag means "the index" only for a localized content type, whose files
+  are the per-locale ones.
+</Callout>
+
+### Which locale's sitemap
+
+Per locale, reusing the Stage 5 fan-out above rather than a second rule:
+
+```text
+PL translation edit    → sitemap:pl
+EN translation edit    → sitemap:en
+shared field edit      → sitemap:en AND sitemap:pl   (the base `updatedAt` is in both)
+```
+
+A shared edit reaches every locale because a localized entry's `lastModified` is
+`max(base.updatedAt, translation.updatedAt)` - so a new base timestamp becomes the
+effective value for every published translation.
+
+One conservative case is worth naming: with `fallback: "default"`, an edit to the
+**default** locale's translation also reaches every locale that has no translation of
+its own, because that is where their public pages come from. Those locales contribute
+no sitemap URL at all - a sitemap never lists a fallback - so expiring their files is a
+cache miss rather than a necessity. Following the Stage 5 fan-out is deliberate: one
+locale-propagation rule, not two.
 
 <Callout type="warn" title="Delivery is opt-in at this layer too">
   Omit `delivery` from the input - which is what every content type without the block
@@ -444,6 +499,11 @@ locale-less index that enumerates them.
 A [scheduled](/docs/dev/content-engine/scheduling) publish reaches the web app through
 the same revalidation bridge, with the delivery tags included - there is no second
 cross-origin invalidation system, and the same all-origins-must-accept rule applies.
+
+The bridge's request schema declares `delivery` explicitly, because an object schema
+strips what it does not name: a body that carried delivery tags and arrived without
+them would leave a stale sitemap behind every background transition. It stays optional,
+so an API that has not been redeployed keeps working.
 
 ## Where the Next imports live
 
