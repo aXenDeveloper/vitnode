@@ -768,17 +768,18 @@ describe("public routes match their OpenAPI document", () => {
     ).mockReturnValue(() => ({
       findById: async () => await Promise.resolve(findById),
       findBySlug: async () => await Promise.resolve(findBySlug),
-      findMany: async () => await Promise.resolve({
-        edges: [publicRow],
-        pageInfo: {
-          count: 1,
-          endCursor: 7,
-          hasNextPage: false,
-          hasPreviousPage: false,
-          startCursor: 7,
-          totalCount: 1,
-        },
-      }),
+      findMany: async () =>
+        await Promise.resolve({
+          edges: [publicRow],
+          pageInfo: {
+            count: 1,
+            endCursor: 7,
+            hasNextPage: false,
+            hasPreviousPage: false,
+            startCursor: 7,
+            totalCount: 1,
+          },
+        }),
     }));
 
     return mount(buildContentPublicRoutes(posts, { pluginId: PLUGIN_ID }));

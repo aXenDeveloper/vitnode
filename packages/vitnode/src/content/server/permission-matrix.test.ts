@@ -387,7 +387,8 @@ describe("the generated permission matrix", () => {
       asked = [];
       granted = new Set([`${MODULE}:can_view`]);
       vi.spyOn(model, "service").mockReturnValue({
-        findMany: async () => await Promise.resolve({ edges: [], pageInfo: {} }),
+        findMany: async () =>
+          await Promise.resolve({ edges: [], pageInfo: {} }),
       } as never);
       const res = await other.request("/");
       vi.restoreAllMocks();
