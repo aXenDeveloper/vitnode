@@ -593,3 +593,193 @@ describe("generated database identifiers", () => {
     ).not.toThrow();
   });
 });
+
+/**
+ * Delivery paths are a **site-wide** namespace, unlike the API paths above.
+ *
+ * The asymmetry is the whole of this block. A generated API route is
+ * `/api/{pluginId}/content/{path}`, so two plugins publishing `articles` do not
+ * collide and Stage 1-7 deliberately allows it. A canonical delivery URL is
+ * `/articles/{slug}` with no plugin id in it at all, so the same pair really would
+ * give one public URL two owners: two resolvers claiming it, two sitemaps listing it,
+ * and one slug reservation table with no way to say whose a retired address was.
+ */
+describe("delivery paths", () => {
+  const deliveryWidget = (
+    id: string,
+    tableName: string,
+    path: string,
+    { delivery = true }: { delivery?: boolean } = {},
+  ) =>
+    defineContentType({
+      id,
+      tableName,
+      fields: {
+        title: field.text({ required: true }),
+        slug: field.slug({ source: "title" }),
+      },
+      publication: { enabled: true },
+      publicApi: {
+        enabled: true,
+        path,
+        fields: ["id", "title", "slug"],
+      },
+      ...(delivery ? { delivery: { enabled: true } } : {}),
+      admin: {
+        label: { plural: "Widgets", singular: "Widget" },
+        // Distinct, so the permission-module check does not fire first and mask the
+        // one this block is about.
+        permissionModule: tableName,
+      },
+    });
+
+  it("still lets two plugins share a path when neither has delivery", () => {
+    // The Stage 1-7 promise, restated here so a future delivery change cannot
+    // quietly turn the API namespace into a global one.
+    expect(() =>
+      validateContentTypes([
+        entry(
+          deliveryWidget("first.one", "first_ones", "articles", {
+            delivery: false,
+          }),
+          "@acme/one",
+        ),
+        entry(
+          deliveryWidget("second.one", "second_ones", "articles", {
+            delivery: false,
+          }),
+          "@acme/two",
+        ),
+      ]),
+    ).not.toThrow();
+  });
+
+  it("rejects two plugins claiming the same delivery path", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(
+          deliveryWidget("blog.article", "blog_articles", "articles"),
+          "@acme/blog",
+        ),
+        entry(
+          deliveryWidget("news.article", "news_articles", "articles"),
+          "@acme/news",
+        ),
+      ]),
+    ).toThrow(ContentEngineError);
+  });
+
+  it("names both conflicting owners", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(
+          deliveryWidget("blog.article", "blog_articles", "articles"),
+          "@acme/blog",
+        ),
+        entry(
+          deliveryWidget("news.article", "news_articles", "articles"),
+          "@acme/news",
+        ),
+      ]),
+    ).toThrow(
+      /Delivery path "articles" is claimed by both @acme\/blog -> blog\.article and @acme\/news -> news\.article/,
+    );
+  });
+
+  it("says why the namespace is global", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(
+          deliveryWidget("blog.article", "blog_articles", "articles"),
+          "@acme/blog",
+        ),
+        entry(
+          deliveryWidget("news.article", "news_articles", "articles"),
+          "@acme/news",
+        ),
+      ]),
+    ).toThrow(/site-wide public namespaces and must be globally unique/);
+  });
+
+  it("accepts different delivery paths across plugins", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(
+          deliveryWidget("blog.article", "blog_articles", "articles"),
+          "@acme/blog",
+        ),
+        entry(
+          deliveryWidget("news.article", "news_articles", "news"),
+          "@acme/news",
+        ),
+      ]),
+    ).not.toThrow();
+  });
+
+  it("rejects two content types in one plugin claiming one delivery path", () => {
+    // The per-plugin API check fires first here, which is correct - both rules are
+    // violated, and the one that names the narrower fix wins.
+    expect(() =>
+      validateContentTypes([
+        entry(
+          deliveryWidget("blog.article", "blog_articles", "articles"),
+          "@acme/blog",
+        ),
+        entry(
+          deliveryWidget("blog.news", "blog_news", "articles"),
+          "@acme/blog",
+        ),
+      ]),
+    ).toThrow(ContentEngineError);
+  });
+
+  it("does not let a non-delivery route reserve the site namespace", () => {
+    // A plugin whose `articles` route has no delivery claims nothing site-wide, so a
+    // delivery-enabled `articles` elsewhere is still free to take it.
+    expect(() =>
+      validateContentTypes([
+        entry(
+          deliveryWidget("plain.one", "plain_ones", "articles", {
+            delivery: false,
+          }),
+          "@acme/plain",
+        ),
+        entry(
+          deliveryWidget("blog.article", "blog_articles", "articles"),
+          "@acme/blog",
+        ),
+      ]),
+    ).not.toThrow();
+  });
+
+  it("rejects the mixed case whichever order the two arrive in", () => {
+    const delivered = () =>
+      entry(
+        deliveryWidget("blog.article", "blog_articles", "articles"),
+        "@acme/blog",
+      );
+    const other = () =>
+      entry(
+        deliveryWidget("news.article", "news_articles", "articles"),
+        "@acme/news",
+      );
+
+    expect(() => validateContentTypes([delivered(), other()])).toThrow(
+      ContentEngineError,
+    );
+    expect(() => validateContentTypes([other(), delivered()])).toThrow(
+      ContentEngineError,
+    );
+  });
+
+  it("leaves one delivery-enabled content type alone", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(
+          deliveryWidget("blog.article", "blog_articles", "articles"),
+          "@acme/blog",
+        ),
+      ]),
+    ).not.toThrow();
+  });
+});

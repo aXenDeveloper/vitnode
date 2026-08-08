@@ -133,6 +133,10 @@ const physicalIndexes = (
  * table name, or two content types resolving to the same Postgres index name.
  * Permission modules and public paths are checked per plugin, because the
  * plugin id is part of the key each one is addressed by.
+ *
+ * **Delivery paths are the one exception**, and the asymmetry is deliberate: an API
+ * route carries the plugin id and a canonical delivery URL does not, so the second is
+ * a site-wide namespace where the first is not. See `byDeliveryPath` below.
  */
 export const validateContentTypes = (
   entries: RegisteredContentType[],
@@ -141,6 +145,18 @@ export const validateContentTypes = (
   const byTable = new Map<string, TableOwner>();
   const byPermission = new Map<string, RegisteredContentType>();
   const byPublicPath = new Map<string, RegisteredContentType>();
+  /**
+   * Delivery paths, keyed by the path alone.
+   *
+   * A **second** map rather than a different key on `byPublicPath`, because the two
+   * namespaces are genuinely different and both have to be checked. A generated API
+   * route is `/api/{pluginId}/content/{path}`, so `plugin-a` and `plugin-b` may both
+   * publish `articles` - and forbidding that would make an app fail to boot over a
+   * name neither author can see. A **canonical delivery URL** is `/articles/{slug}`
+   * with no plugin id in it at all, so the same pair really would claim one site-wide
+   * namespace and `/articles/example` would have two owners.
+   */
+  const byDeliveryPath = new Map<string, RegisteredContentType>();
   const byIndexName = new Map<string, IndexOwner>();
 
   for (const entry of entries) {
@@ -204,6 +220,27 @@ export const validateContentTypes = (
         );
       }
       byPublicPath.set(pathKey, entry);
+
+      // Delivery is the exception, and only delivery. Its canonical URLs are
+      // framework-neutral **site** paths - `/articles/my-article`,
+      // `/pl/articles/moj-artykul` - built from `publicApi.path` with no plugin id in
+      // them, so two delivery-enabled content types sharing a path would give
+      // `/articles/example` two owners: two resolvers claiming one URL, two sitemaps
+      // listing it, and one slug reservation table with no way to say which of them a
+      // retired address belonged to.
+      //
+      // The fix is the check, not a prefix: adding the plugin id to the URL would
+      // solve the ambiguity by making every public content URL uglier for everybody.
+      if (definition.delivery.enabled) {
+        const duplicateDeliveryPath = byDeliveryPath.get(path);
+        if (duplicateDeliveryPath) {
+          throw new ContentEngineError(
+            `Delivery path "${path}" is claimed by both ${describe(duplicateDeliveryPath)} and ${describe(entry)}. Delivery paths are site-wide public namespaces and must be globally unique - give one of them a different \`publicApi.path\`, or turn \`delivery\` off on one of them.`,
+            { contentTypeId: definition.id },
+          );
+        }
+        byDeliveryPath.set(path, entry);
+      }
     }
 
     // `resolveContentIndexes` already rejects a collision inside one content
