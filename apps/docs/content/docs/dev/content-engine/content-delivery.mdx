@@ -173,9 +173,16 @@ being indexable - and that is not a symptom anybody notices.
 | `sitemap.priority` outside `0`–`1`                     | Throw                      |
 | An unknown `changeFrequency`                           | Compile error + throw      |
 | `hreflang` without `localization`                      | Throw                      |
+| A localized content type withholding `"id"`            | Throw                      |
 | A fallback SEO field with no primary                   | Throw                      |
 
-The last one is worth a word: `fallbackTitleField` without `titleField` is a
+Two are worth a word. A **localized** content type has to expose `"id"` in
+`publicApi.fields`, because alternates and `hreflang` are resolved by identifier and
+delivery reads the public projection - so without it every localized response would
+carry an empty alternate set, which looks exactly like a record with one translation.
+A nonlocalized content type has no alternates to resolve and needs nothing.
+
+And the last one: `fallbackTitleField` without `titleField` is a
 configuration that reads as if it does something and does nothing, because the
 fallback is only consulted when the primary is empty. Naming only the fallback
 means it is never reached, so the engine tells you to name it as the primary

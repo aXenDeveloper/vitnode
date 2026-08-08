@@ -145,6 +145,10 @@ export const advancedArticleContentType = defineContentType({
     enabled: true,
     path: "advanced-articles",
     fields: [
+      // Exposed because Stage 8 needs it: alternates and `hreflang` are resolved by
+      // identifier, and delivery reads the public projection - so a localized
+      // delivery content type that withheld `id` would carry an empty alternate set.
+      "id",
       "title",
       "slug",
       "categories",

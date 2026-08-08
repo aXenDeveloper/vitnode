@@ -1203,6 +1203,49 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       expect(rows.count).toBe(2);
     });
 
+    it("carries the alternates through resolveSlug, not only findById", async () => {
+      const article = await publishLocalized({ pl: "Witaj" });
+
+      const resolution = await advancedDelivery()?.resolveSlug("hello-world", {
+        locale: "en",
+      });
+
+      // The public resolve route is what a frontend calls, so an empty `hreflang`
+      // here would be invisible in the AdminCP and wrong on every page. It is only
+      // possible because the content type exposes `id` - which `delivery` requires
+      // of a localized content type for exactly this reason.
+      expect(resolution).toMatchObject({
+        itemId: article.id,
+        type: "content",
+      });
+      expect(
+        resolution?.type === "content" ? resolution.alternates : [],
+      ).toStrictEqual([
+        { locale: "en", path: "/en/advanced-articles/hello-world" },
+        { locale: "pl", path: "/pl/advanced-articles/witaj" },
+      ]);
+    });
+
+    it("resolves the default locale when the caller names none", async () => {
+      const article = await publishLocalized();
+      await translationEditorial()?.update(
+        article.id,
+        "en",
+        { slug: "hello-there" } as never,
+        { actor: ACTOR, expectedVersion: article.enVersion },
+      );
+
+      // The public read resolves `defaultLocale` internally when no locale is given,
+      // so the history lookup has to be about the same language - otherwise the live
+      // branch would search `en` while the redirect branch searched the shared rows
+      // and found nothing.
+      expect(await advancedDelivery()?.resolveSlug("hello-world")).toStrictEqual({
+        location: "/en/advanced-articles/hello-there",
+        status: 308,
+        type: "redirect",
+      });
+    });
+
     it("lists only real published translations as alternates", async () => {
       const article = await publishLocalized({ pl: "Witaj" });
 

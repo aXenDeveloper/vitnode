@@ -99,6 +99,9 @@ describe("advanced article: generated routes", () => {
     expect(Object.keys(shape).sort()).toStrictEqual([
       "categories",
       "faq",
+      // Stage 8: a localized delivery content type has to expose `id`, because
+      // alternates and `hreflang` are resolved by identifier.
+      "id",
       "locale",
       "publishedAt",
       "seo",

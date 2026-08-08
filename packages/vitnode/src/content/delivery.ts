@@ -279,6 +279,21 @@ export const resolveContentDelivery = ({
   }
 
   const exposed = new Set(publicApi.fields);
+
+  // Alternates and `hreflang` are resolved by identifier - the query enumerates a
+  // record's published translations - and delivery reads the **public projection**,
+  // so a localized content type that withholds `id` would silently produce an empty
+  // `hreflang` set from `resolveSlug`. Refused loudly here rather than left as a
+  // quiet gap: an empty `hreflang` looks exactly like a record with one translation.
+  //
+  // Not required of a nonlocalized content type, which has no alternates to resolve.
+  if (localization.enabled && !exposed.has("id")) {
+    throw new ContentEngineError(
+      'delivery on a localized content type needs "id" in publicApi.fields. Alternates and `hreflang` are resolved by identifier, and delivery reads the public projection - so without it every localized response would carry an empty alternate set.',
+      { contentTypeId: id },
+    );
+  }
+
   const seo = delivery.seo ?? {};
 
   for (const [label, name] of [

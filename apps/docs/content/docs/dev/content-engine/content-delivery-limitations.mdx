@@ -133,15 +133,18 @@ different `seo.title` changes the derived metadata on the next read. There is no
 SEO history, and there will not be one: two revision systems over the same values is two
 things to keep in sync.
 
-## itemId can be absent
+## itemId can be absent on a nonlocalized content type
 
-Delivery metadata reports `itemId: null` for a content type whose `publicApi.fields`
-withholds `"id"`.
+Delivery metadata reports `itemId: null` for a **nonlocalized** content type whose
+`publicApi.fields` withholds `"id"`.
 
 That is deliberate rather than a gap: delivery reads the **public projection**, so it
 cannot report a column the public API declined to publish. Expose `"id"` in the allowlist
 and it is always present. A sitemap entry always carries it, because a sitemap row is
 built from the row rather than from the projection.
+
+A **localized** content type has to expose `"id"` - alternates are resolved by
+identifier - so its `itemId` is never `null`.
 
 ## Not in Stage 8 at all
 

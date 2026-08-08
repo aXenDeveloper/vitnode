@@ -319,12 +319,27 @@ export const createContentDeliveryService = <
       : contentDeliveryPath({ definition, locale: served, slug });
   };
 
+  /**
+   * The language a read is *actually* for.
+   *
+   * The default locale when the caller named none, because that is what the public
+   * service resolves internally - and the history lookup has to be about the same
+   * language, or the live branch would search `en` while the redirect branch searched
+   * the shared rows and found nothing.
+   */
+  const localeFor = (locale: string | undefined): null | string => {
+    if (!localized) return null;
+
+    return normalizeContentLocale(
+      locale ?? definition.localization.defaultLocale,
+    );
+  };
+
   const resolve = async (
     slug: string,
     { locale, origin }: ContentDeliveryReadOptions = {},
   ): Promise<ContentDeliveryResolution> => {
-    const requestedLocale =
-      localized && locale !== undefined ? normalizeContentLocale(locale) : null;
+    const requestedLocale = localeFor(locale);
 
     // The live record first, and strictly by slug: a URL belongs to the language
     // it was published under, so `findBySlug` never falls back.
@@ -382,10 +397,7 @@ export const createContentDeliveryService = <
       return await metadataFor(row, {
         itemId,
         origin,
-        requestedLocale:
-          localized && locale !== undefined
-            ? normalizeContentLocale(locale)
-            : null,
+        requestedLocale: localeFor(locale),
       });
     },
 

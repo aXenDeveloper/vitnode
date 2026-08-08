@@ -308,6 +308,45 @@ describe("delivery definition validation", () => {
     ).toThrow(/needs a localized slug field/);
   });
 
+  it("refuses a localized content type that withholds id", () => {
+    expect(() =>
+      defineContentType({
+        ...base,
+        id: "delivery.no-id",
+        delivery: { enabled: true },
+        fields: {
+          slug: field.slug({ localized: true, source: "title" }),
+          title: field.text({ localized: true, required: true }),
+        },
+        localization: { defaultLocale: "en", enabled: true },
+        publicApi: {
+          enabled: true,
+          // No `id`, so alternates and `hreflang` could not be resolved - and an
+          // empty `hreflang` looks exactly like a record with one translation.
+          fields: ["title", "slug"],
+          path: "articles",
+        },
+        tableName: "delivery_no_id",
+      }),
+    ).toThrow(/needs "id" in publicApi.fields/);
+  });
+
+  it("does not require id of a nonlocalized content type", () => {
+    // It has no alternates to resolve, so there is nothing the identifier is needed
+    // for - `itemId` simply comes back `null` on its delivery metadata.
+    const withoutId = defineContentType({
+      ...base,
+      id: "delivery.no-id-flat",
+      delivery: { enabled: true },
+      fields,
+      publicApi: { enabled: true, fields: ["title", "slug"], path: "articles" },
+      tableName: "delivery_no_id_flat",
+    });
+
+    expect(withoutId.delivery.enabled).toBe(true);
+    expect(withoutId.publicApi.fields).not.toContain("id");
+  });
+
   it("refuses a localized noIndexField", () => {
     expect(() =>
       defineContentType({
@@ -330,7 +369,9 @@ describe("delivery definition validation", () => {
         localization: { defaultLocale: "en", enabled: true },
         publicApi: {
           enabled: true,
-          fields: ["title", "slug", "flags.noIndex"],
+          // `id` because a localized delivery content type has to expose it - see
+          // "refuses a localized content type that withholds id" below.
+          fields: ["id", "title", "slug", "flags.noIndex"],
           path: "articles",
         },
         tableName: "delivery_localized_noindex",

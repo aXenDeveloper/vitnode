@@ -35,6 +35,15 @@ public API would refuse to serve.
 Ordered by locale, so two processes rendering the same `hreflang` set produce the
 same markup.
 
+<Callout type="warn" title="A localized content type must expose id">
+  Alternates are resolved **by identifier** - the query enumerates a record's published
+  translations - and delivery reads the public projection, so a localized content type
+  that withholds `"id"` from `publicApi.fields` is a definition-time error. Without it
+  every localized response would carry an empty alternate set, which looks exactly like
+  a record with one translation. A nonlocalized content type has no alternates and needs
+  nothing.
+</Callout>
+
 ## Fallback never fabricates an alternate
 
 This is the rule to internalise:
