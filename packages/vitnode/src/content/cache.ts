@@ -80,6 +80,51 @@ export const contentPublicSlugTag = (
 ): string => tag(contentTypeId, "slug", ...localeParts(locale), slug);
 
 /**
+ * The delivery metadata of one record, in one locale.
+ *
+ * Separate from {@link contentPublicItemTag} even though both are keyed by
+ * identifier, because the two hold different responses: the item tag covers the
+ * public projection a page renders, and this one covers the canonical path, the
+ * alternates and the SEO metadata its `<head>` is built from. A page that reads
+ * both is tagged with both; one that renders only metadata - a `generateMetadata`
+ * that does not fetch the body - is tagged with this alone and is not thrown away
+ * when an unrelated field of the record changes.
+ */
+export const contentDeliveryTag = (
+  contentTypeId: string,
+  id: number,
+  locale?: string,
+): string => tag(contentTypeId, "delivery", ...localeParts(locale), id);
+
+/**
+ * One historical URL's redirect lookup, in one locale.
+ *
+ * Keyed by the **old** slug, which is what a request for a moved page arrives
+ * with. The locale is load-bearing for the same reason it is on the slug tag: two
+ * languages routinely retire the same slug, and a locale-less tag would make one
+ * language's slug change expire the other language's redirect.
+ */
+export const contentDeliveryRedirectTag = (
+  contentTypeId: string,
+  slug: string,
+  locale?: string,
+): string => tag(contentTypeId, "redirect", ...localeParts(locale), slug);
+
+/**
+ * One content type's sitemap - the whole thing, or one locale's share of it.
+ *
+ * Both forms exist and both are expired together by a mutation that changes what
+ * is listed: a localized content type has one sitemap per language *and* an index
+ * that enumerates them, and publishing a Polish translation changes the Polish
+ * file and the number of files. A content type that is not localized only ever
+ * produces the three-segment form.
+ */
+export const contentDeliverySitemapTag = (
+  contentTypeId: string,
+  locale?: string,
+): string => tag(contentTypeId, "sitemap", ...localeParts(locale));
+
+/**
  * How hard a mutation expires the tags it touched.
  *
  * Lives here, in the client-safe layer, because the background
@@ -107,8 +152,36 @@ export interface ContentLocaleInvalidation {
   wasPublic: boolean;
 }
 
+/**
+ * The delivery half of one mutation's invalidation.
+ *
+ * Absent for every content type without `delivery`, which is what makes Stage 8
+ * opt-in at the cache layer too: `contentInvalidationTags` returns exactly the
+ * strings it always returned when this is `undefined`, byte for byte, so nothing
+ * existing has to be re-tagged and no warm cache is thrown away for a feature the
+ * content type does not use.
+ *
+ * Nothing in here names a locale or a slug of its own: both are already on the
+ * input - `locales[].slugs` carries the old and the new URL of every locale the
+ * mutation reached - and deriving the delivery tags from the same data is what
+ * keeps the public tags and the delivery tags from disagreeing about what moved.
+ */
+export interface ContentDeliveryInvalidation {
+  /**
+   * Whether the set of URLs in the sitemap changed.
+   *
+   * `true` for a publish, an unpublish, a delete, a slug change and a translation
+   * appearing or disappearing - every mutation that adds, removes or moves a line
+   * in the file. `false` for an edit that only changed what an already-listed page
+   * says, which leaves the sitemap byte-identical.
+   */
+  sitemap: boolean;
+}
+
 export interface ContentInvalidationInput {
   contentTypeId: string;
+  /** Delivery tags, for a content type with `delivery: { enabled: true }`. */
+  delivery?: ContentDeliveryInvalidation;
   id: number;
   /** Whether the row is publicly reachable *after* the mutation. */
   isPublic: boolean;
@@ -154,6 +227,7 @@ const slugTags = (
  */
 export const contentInvalidationTags = ({
   contentTypeId,
+  delivery,
   id,
   isPublic,
   locales,
@@ -161,13 +235,21 @@ export const contentInvalidationTags = ({
   wasPublic,
 }: ContentInvalidationInput): string[] => {
   if (locales !== undefined) {
-    return locales
-      .filter(entry => entry.wasPublic || entry.isPublic)
-      .flatMap(entry => [
+    const reached = locales.filter(entry => entry.wasPublic || entry.isPublic);
+
+    return [
+      ...reached.flatMap(entry => [
         contentPublicListTag(contentTypeId, entry.locale),
         contentPublicItemTag(contentTypeId, id, entry.locale),
         ...slugTags(contentTypeId, entry.slugs, entry.locale),
-      ]);
+      ]),
+      ...deliveryTags({
+        contentTypeId,
+        delivery,
+        id,
+        locales: reached,
+      }),
+    ];
   }
 
   if (!wasPublic && !isPublic) return [];
@@ -176,6 +258,72 @@ export const contentInvalidationTags = ({
     contentPublicListTag(contentTypeId),
     contentPublicItemTag(contentTypeId, id),
     ...slugTags(contentTypeId, slugs),
+    ...deliveryTags({
+      contentTypeId,
+      delivery,
+      id,
+      locales: [{ isPublic, locale: undefined, slugs, wasPublic }],
+    }),
+  ];
+};
+
+/**
+ * The delivery tags one mutation touched, per locale it reached.
+ *
+ * Three scopes, and each answers a different question a page asked:
+ *
+ * - **delivery metadata**, keyed by identifier, because a `generateMetadata` reads
+ *   the canonical path and the alternates of one record;
+ * - **redirect lookups**, keyed by every slug the record answered to across the
+ *   mutation, because a resolver caches "this old URL points there" and a second
+ *   slug change moves the destination;
+ * - **the sitemap**, per locale and as a whole, but only when the set of listed
+ *   URLs actually changed.
+ *
+ * Empty when the content type has no delivery layer, which is the whole of Stage
+ * 8's opt-in promise at this layer.
+ */
+const deliveryTags = ({
+  contentTypeId,
+  delivery,
+  id,
+  locales,
+}: {
+  contentTypeId: string;
+  delivery: ContentDeliveryInvalidation | undefined;
+  id: number;
+  locales: readonly {
+    isPublic: boolean;
+    locale: string | undefined;
+    slugs: readonly string[];
+    wasPublic: boolean;
+  }[];
+}): string[] => {
+  if (delivery === undefined) return [];
+
+  const tags = locales.flatMap(entry => [
+    contentDeliveryTag(contentTypeId, id, entry.locale),
+    ...[...new Set(entry.slugs)]
+      .filter(slug => slug !== "")
+      .map(slug =>
+        contentDeliveryRedirectTag(contentTypeId, slug, entry.locale),
+      ),
+    ...(delivery.sitemap
+      ? [contentDeliverySitemapTag(contentTypeId, entry.locale)]
+      : []),
+  ]);
+
+  // The locale-less sitemap tag as well: a localized content type's sitemap index
+  // enumerates its per-locale files, so a language gaining or losing a page
+  // changes the index too. De-duplicated, because a content type that is not
+  // localized produces only this form and the per-locale line above already
+  // emitted it - and a tag list is asserted in tests as well as iterated.
+  return [
+    ...new Set(
+      delivery.sitemap
+        ? [...tags, contentDeliverySitemapTag(contentTypeId)]
+        : tags,
+    ),
   ];
 };
 

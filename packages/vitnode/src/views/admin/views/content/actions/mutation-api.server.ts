@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { ContentPublicLocaleState } from "@/content/cache";
 import type {
   ContentConflict,
+  ContentDeliveryConflict,
   ContentScheduleRejection,
   ContentUnprocessable,
 } from "@/content/conflicts";
@@ -25,6 +26,7 @@ import { contentApiFetch } from "@/content/admin/fetch.server";
 import { isContentPubliclyVisible } from "@/content/cache";
 import {
   parseContentConflict,
+  parseContentDeliveryConflict,
   parseContentScheduleRejection,
   parseContentUnprocessable,
 } from "@/content/conflicts";
@@ -51,6 +53,15 @@ interface MutationResult {
    * sentence.
    */
   conflict?: ContentConflict;
+  /**
+   * `CONTENT_DELIVERY_SLUG_RESERVED`, naming the address and its locale.
+   *
+   * Its own field rather than a third arm of `conflict`, because the two share a
+   * status and need different words: a unique clash is "another record holds that
+   * address now", and this is "another record used to hold it and it still
+   * redirects there".
+   */
+  delivery?: ContentDeliveryConflict;
   error?: string;
   /** Why a schedule was refused, when the API said. */
   rejection?: ContentScheduleRejection;
@@ -66,6 +77,7 @@ const failure = (result: {
   status: number;
 }): MutationResult => ({
   conflict: parseContentConflict(result.error) ?? undefined,
+  delivery: parseContentDeliveryConflict(result.error) ?? undefined,
   error: result.error ?? "",
   rejection: parseContentScheduleRejection(result.error) ?? undefined,
   status: result.status,
@@ -190,6 +202,7 @@ const invalidate = (
   revalidateContent(
     {
       contentTypeId: definition.id,
+      ...deliveryInvalidationFor(definition, previous, current),
       id,
       isPublic: current.isPublic,
       // Both, so a slug change stops the old URL and starts the new one.
@@ -199,6 +212,32 @@ const invalidate = (
     { mode: modeFor(previous, current) },
   );
 };
+
+/**
+ * The delivery half of a nonlocalized mutation's invalidation.
+ *
+ * `{}` for a content type without `delivery`, so spreading it leaves the input -
+ * and therefore the tag list - exactly as it was. A sitemap line is added, removed
+ * or moved when public reachability changed or when the URL did, which is the same
+ * rule `applyContentDeliveryWrite` reports from inside the transaction; stated twice
+ * because the Server Action cannot see the outcome, only the two rows.
+ */
+const deliveryInvalidationFor = (
+  definition: AnyContentTypeDefinition,
+  previous: { isPublic: boolean; slug: string },
+  current: { isPublic: boolean; slug: string },
+): { delivery?: { sitemap: boolean } } =>
+  definition.delivery.enabled
+    ? {
+        delivery: {
+          sitemap:
+            previous.isPublic !== current.isPublic ||
+            (previous.slug !== "" &&
+              current.slug !== "" &&
+              previous.slug !== current.slug),
+        },
+      }
+    : {};
 
 export const createContentAction = async (
   contentTypeId: string,
@@ -594,12 +633,19 @@ export const deleteContentAction = async (
     // A delete is final, so the question is "was it ever published?" rather
     // than "was it live a second ago". `publishedAt` survives an unpublish, and
     // expiring a URL that is now gone forever costs nothing.
+    const removed = publicStateOf(definition, result.data);
+
     revalidateContent(
       {
         contentTypeId: definition.id,
+        // The sitemap has lost a line whenever the record had one, which is exactly
+        // "was it ever published" - the same question the `wasPublic` below asks.
+        ...(definition.delivery.enabled
+          ? { delivery: { sitemap: result.data?.publishedAt != null } }
+          : {}),
         id,
         isPublic: false,
-        slugs: [publicStateOf(definition, result.data).slug],
+        slugs: [removed.slug],
         wasPublic: result.data?.publishedAt != null,
       },
       // The row is gone. Serving its cached response one more time would be a
@@ -660,6 +706,8 @@ const publicationAction = async (
     revalidateContent(
       {
         contentTypeId: definition.id,
+        // A real transition always adds or removes a sitemap line.
+        ...(definition.delivery.enabled ? { delivery: { sitemap: true } } : {}),
         id,
         isPublic,
         slugs: [slug],

@@ -87,17 +87,37 @@ export const invalidateContentLocales = (
 ): void => {
   if (!definition.publicApi.enabled || !definition.localization.enabled) return;
 
+  const states = diffContentPublicLocaleStates(before, after);
   const reached = contentLocaleInvalidations({
     changed,
     defaultLocale: definition.localization.defaultLocale,
     fallback: definition.localization.fallback,
     locale,
-    states: diffContentPublicLocaleStates(before, after),
+    states,
   });
 
   revalidateContent(
     {
       contentTypeId: definition.id,
+      // The delivery tags, for a content type with `delivery`. Absent otherwise,
+      // which is what keeps a Stage 1-7 content type's tag list byte-identical.
+      //
+      // The sitemap is expired when a locale gained or lost its page, or when one
+      // moved its URL - which is exactly what the before/after diff already knows,
+      // so it is read off the states rather than passed down from the action.
+      ...(definition.delivery.enabled
+        ? {
+            delivery: {
+              sitemap: states.some(
+                state =>
+                  state.isPublic !== state.wasPublic ||
+                  (state.previousSlug !== undefined &&
+                    state.previousSlug !== "" &&
+                    state.previousSlug !== state.slug),
+              ),
+            },
+          }
+        : {}),
       id,
       // Not consulted when `locales` is present, and supplied truthfully anyway:
       // a record is publicly reachable when any of its languages is.
