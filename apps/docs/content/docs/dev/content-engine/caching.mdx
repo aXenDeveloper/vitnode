@@ -158,9 +158,22 @@ Two things worth stating out loud:
   free.
 - **A no-op touches nothing.** Publishing something already published
   transitioned nothing, so a double-clicked button costs one 200 and no cache.
+  The same holds for an unpublish, and for a restore that changed nothing -
+  each of those routes answers with `changed`, and the Server Action reads it.
 
 Nothing global is ever expired, and one content type's mutation never touches
 another's tags.
+
+<Callout title="One redundant case, stated rather than hidden">
+An **update** that changed nothing is the exception: the generated `PUT` answers
+with the row, not with a `changed` flag, so the Server Action cannot tell a
+saved-but-identical edit from a real one and treats it as
+`update published, same slug`. That expires three tags
+stale-while-revalidate - the responses stay served while they refresh, so the
+cost is a refresh nobody needed rather than a cache miss. Widening a public
+response contract to save it would be the wrong trade; correctness first, hit
+rate second.
+</Callout>
 
 [Restore](/docs/dev/content-engine/revisions#restore) has no rules of its own -
 it lands on the update rows above, because as far as a visitor is concerned a
