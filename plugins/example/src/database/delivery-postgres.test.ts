@@ -951,6 +951,64 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       expect(cursor).toBeNull();
     });
 
+    it("moves lastModified on an ordinary edit that keeps the URL", async () => {
+      const article = await publishArticle({ title: "Timestamped" });
+      const first = await delivery()?.sitemap();
+      const before = first?.entries[0].lastModified.getTime() ?? 0;
+
+      // A title edit. The slug is never re-derived on update, so the URL is
+      // unchanged - and the sitemap's `<lastmod>` still has to move, which is the
+      // whole reason `contentChanged` cannot be "did membership change".
+      await editorial()?.update(
+        article.id,
+        { excerpt: "A new summary." },
+        { actor: ACTOR, expectedVersion: article.version },
+      );
+
+      const second = await delivery()?.sitemap();
+
+      expect(second?.entries[0].path).toBe(first?.entries[0].path);
+      expect(second?.entries[0].lastModified.getTime()).toBeGreaterThan(before);
+    });
+
+    it("reports the edit as a sitemap content change but not an index change", async () => {
+      const article = await publishArticle({ title: "Timestamped two" });
+
+      const outcome = await editorial()?.update(
+        article.id,
+        { excerpt: "Changed." },
+        { actor: ACTOR, expectedVersion: article.version },
+      );
+
+      // The invariant the cache layer reads: the file's bytes moved, the set of files
+      // did not. A stale sitemap is exactly what the first half prevents.
+      expect(outcome?.delivery?.sitemap).toStrictEqual({
+        contentChanged: true,
+        indexChanged: false,
+      });
+    });
+
+    it("reports no sitemap change for a no-op edit", async () => {
+      const article = await publishArticle({ title: "Untouched" });
+      const before = await delivery()?.sitemap();
+
+      // Re-sending the stored value writes nothing, so `updatedAt` does not move and
+      // the cached sitemap is still byte-correct.
+      const outcome = await editorial()?.update(
+        article.id,
+        { title: "Untouched" },
+        { actor: ACTOR, expectedVersion: article.version },
+      );
+
+      expect(outcome?.changed).toBe(false);
+      expect(outcome?.delivery).toBeUndefined();
+
+      const after = await delivery()?.sitemap();
+      expect(after?.entries[0].lastModified.getTime()).toBe(
+        before?.entries[0].lastModified.getTime(),
+      );
+    });
+
     it("uses the base row's updatedAt for a nonlocalized entry", async () => {
       const article = await publishArticle({ title: "Timestamped" });
       // Read through the same driver as the sitemap, never as `::text`: a
@@ -1402,6 +1460,54 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
         (await advancedDelivery()?.sitemap({ locale: "pl" }))?.entries,
       ).toStrictEqual([]);
       expect(article.id).toBeGreaterThan(0);
+    });
+
+    it("moves a translation's lastModified on an ordinary edit", async () => {
+      const article = await publishLocalized();
+      const before = await advancedDelivery()?.sitemap({ locale: "en" });
+
+      const outcome = await translationEditorial()?.update(
+        article.id,
+        "en",
+        { seo: { description: "A new summary." } },
+        { actor: ACTOR, expectedVersion: article.enVersion },
+      );
+
+      const after = await advancedDelivery()?.sitemap({ locale: "en" });
+
+      // Same URL, later timestamp - and the outcome says so, which is what expires
+      // `sitemap:en` and nothing else.
+      expect(after?.entries[0].path).toBe(before?.entries[0].path);
+      expect(after?.entries[0].lastModified.getTime()).toBeGreaterThan(
+        before?.entries[0].lastModified.getTime() ?? 0,
+      );
+      expect(outcome?.delivery?.sitemap).toStrictEqual({
+        contentChanged: true,
+        indexChanged: false,
+      });
+    });
+
+    it("reports an index change when a translation is published", async () => {
+      const localized = localizedService();
+      if (!localized) throw new Error("no localized service");
+
+      const created = await localized.create({
+        shared: {},
+        translation: { title: "Fresh" },
+      });
+      await advancedEditorial()?.publish(created.row.id, { actor: ACTOR });
+
+      const outcome = await translationEditorial()?.publish(
+        created.row.id,
+        "en",
+        { actor: ACTOR },
+      );
+
+      // A language gained a URL, so how many the index counts moved too.
+      expect(outcome?.delivery?.sitemap).toStrictEqual({
+        contentChanged: true,
+        indexChanged: true,
+      });
     });
 
     it("takes the later of the base and translation timestamps", async () => {

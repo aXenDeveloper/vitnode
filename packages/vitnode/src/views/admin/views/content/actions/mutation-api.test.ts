@@ -5,6 +5,7 @@ import type { AnyContentTypeDefinition } from "@/content/types";
 
 import {
   testCategoryContentType,
+  testDeliveredPostContentType,
   testEditorialPostContentType,
   testPostContentType,
 } from "@/tests/content-fixtures";
@@ -78,6 +79,27 @@ const slugTag = (slug: string) => `content:test.post:slug:${slug}`;
 /** The editorial fixture is a different content type, so different tags. */
 const editorialSlugTag = (slug: string) =>
   `content:test.editorial:slug:${slug}`;
+
+/** The delivery fixture's own tags. */
+const DELIVERED = "test.delivered-post";
+const DELIVERY_ITEM = `content:${DELIVERED}:delivery:7`;
+const DELIVERY_SITEMAP = `content:${DELIVERED}:sitemap`;
+const deliveryRedirectTag = (slug: string) =>
+  `content:${DELIVERED}:redirect:${slug}`;
+
+/**
+ * One `updatedAt` per call, monotonically increasing.
+ *
+ * A real write moves the timestamp; a no-op does not. That distinction is the whole
+ * signal the sitemap decision reads, so the fixtures have to be explicit about it
+ * rather than reusing one constant everywhere.
+ */
+let clock = Date.parse("2026-01-01T00:00:00.000Z");
+const tick = (): string => {
+  clock += 60_000;
+
+  return new Date(clock).toISOString();
+};
 
 const tags = () => cacheCalls.map(call => call.tag);
 /** Which Next cache API was used - `updateTag` is the immediate one. */
@@ -161,6 +183,154 @@ describe("edit", () => {
 
     expect(fetches.map(item => item.method)).toEqual(["put"]);
     expect(cacheCalls).toEqual([]);
+  });
+});
+
+/**
+ * The sitemap half of delivery invalidation.
+ *
+ * A sitemap entry carries `<lastmod>`, derived from `updatedAt` - so a plain title
+ * edit on a published record changes the **bytes** of its sitemap file even though the
+ * set of URLs is identical. Treating "the sitemap changed" as "membership changed"
+ * leaves a cached file serving a stale timestamp, which is what these tests pin down.
+ */
+describe("delivery sitemap invalidation", () => {
+  const published = (slug: string, updatedAt: string) => ({
+    data: {
+      id: 7,
+      publishedAt: past,
+      slug,
+      status: "published",
+      updatedAt,
+    },
+    status: 200,
+  });
+
+  beforeEach(() => {
+    definition = testDeliveredPostContentType;
+  });
+
+  it("expires the sitemap for a title edit that moved no URL", async () => {
+    const before = tick();
+    responses = [published("same", before), published("same", tick())];
+
+    await editContentAction(DELIVERED, 7, { title: "Hello" });
+
+    // The URL did not move, so nothing was added to or removed from the file - but
+    // `updatedAt` did, so its `<lastmod>` is different and the cached bytes are stale.
+    expect(tags()).toContain(DELIVERY_SITEMAP);
+  });
+
+  it("expires the sitemap for an SEO-only edit", async () => {
+    const before = tick();
+    responses = [published("same", before), published("same", tick())];
+
+    await editContentAction(DELIVERED, 7, { excerpt: "A new summary." });
+
+    expect(tags()).toContain(DELIVERY_SITEMAP);
+  });
+
+  it("leaves the sitemap alone for a no-op edit", async () => {
+    // The engine issues no `UPDATE` for an update that changed nothing, so
+    // `updatedAt` does not move and the cached sitemap is still byte-correct.
+    const unchanged = tick();
+    responses = [published("same", unchanged), published("same", unchanged)];
+
+    await editContentAction(DELIVERED, 7, { title: "Hello" });
+
+    expect(tags()).not.toContain(DELIVERY_SITEMAP);
+    // The rest of the delivery invalidation still happens: the metadata tag and the
+    // slug's redirect lookup are expired whether or not the sitemap moved.
+    expect(tags()).toContain(DELIVERY_ITEM);
+    expect(tags()).toContain(deliveryRedirectTag("same"));
+  });
+
+  it("leaves the sitemap alone for a draft edit", async () => {
+    const draft = (updatedAt: string) => ({
+      data: {
+        id: 7,
+        publishedAt: null,
+        slug: "draft",
+        status: "draft",
+        updatedAt,
+      },
+      status: 200,
+    });
+    responses = [draft(tick()), draft(tick())];
+
+    await editContentAction(DELIVERED, 7, { title: "Hello" });
+
+    // Not public before or after, so it is in no sitemap file either way.
+    expect(cacheCalls).toEqual([]);
+  });
+
+  it("expires the sitemap on a slug change", async () => {
+    responses = [published("old", tick()), published("new", tick())];
+
+    await editContentAction(DELIVERED, 7, { title: "Hello" });
+
+    expect(tags()).toContain(DELIVERY_SITEMAP);
+    expect(tags()).toContain(deliveryRedirectTag("old"));
+    expect(tags()).toContain(deliveryRedirectTag("new"));
+  });
+
+  it("expires the sitemap on publish and on unpublish", async () => {
+    responses = [
+      {
+        data: {
+          changed: true,
+          row: {
+            id: 7,
+            publishedAt: past,
+            slug: "hello",
+            status: "published",
+            updatedAt: tick(),
+          },
+        },
+        status: 200,
+      },
+    ];
+
+    await publishContentAction(DELIVERED, 7);
+
+    expect(tags()).toContain(DELIVERY_SITEMAP);
+  });
+
+  it("expires the sitemap on delete when the record had been published", async () => {
+    responses = [published("hello", tick())];
+
+    await deleteContentAction(DELIVERED, 7, 1);
+
+    expect(tags()).toContain(DELIVERY_SITEMAP);
+  });
+
+  it("leaves the sitemap alone when deleting a record that was never published", async () => {
+    responses = [
+      {
+        data: {
+          id: 7,
+          publishedAt: null,
+          slug: "draft",
+          status: "draft",
+          updatedAt: tick(),
+        },
+        status: 200,
+      },
+    ];
+
+    await deleteContentAction(DELIVERED, 7, 1);
+
+    expect(tags()).not.toContain(DELIVERY_SITEMAP);
+  });
+
+  it("adds no delivery tags at all to a content type without delivery", async () => {
+    // The Stage 1-7 promise: the tag list of an existing content type does not move.
+    definition = testPostContentType;
+    responses = [published("same", tick()), published("same", tick())];
+
+    await editContentAction("test.post", 7, { title: "Hello" });
+
+    expect(tags()).toEqual([LIST, ITEM, slugTag("same")]);
   });
 });
 

@@ -119,7 +119,7 @@ describe("contentInvalidationTags with delivery", () => {
     expect(
       contentInvalidationTags({
         contentTypeId: ID,
-        delivery: { sitemap: false },
+        delivery: { sitemap: { contentChanged: false, indexChanged: false } },
         id: 42,
         isPublic: true,
         slugs: ["old", "new"],
@@ -136,34 +136,39 @@ describe("contentInvalidationTags with delivery", () => {
     ]);
   });
 
-  it("adds the sitemap tag only when the set of listed URLs changed", () => {
+  it("expires the sitemap file whenever its bytes moved", () => {
+    // A nonlocalized content type's locale-less tag *is* its one sitemap file, so
+    // `contentChanged` is what expires it - including for a plain title edit, whose
+    // `<lastmod>` moved even though the URL did not.
     const withSitemap = contentInvalidationTags({
       contentTypeId: ID,
-      delivery: { sitemap: true },
+      delivery: { sitemap: { contentChanged: true, indexChanged: false } },
       id: 42,
       isPublic: true,
-      slugs: ["new"],
-      wasPublic: false,
+      slugs: ["same"],
+      wasPublic: true,
     });
 
     expect(withSitemap).toContain(contentDeliverySitemapTag(ID));
 
-    const withoutSitemap = contentInvalidationTags({
+    const untouched = contentInvalidationTags({
       contentTypeId: ID,
-      delivery: { sitemap: false },
+      delivery: { sitemap: { contentChanged: false, indexChanged: false } },
       id: 42,
       isPublic: true,
       slugs: ["new"],
       wasPublic: true,
     });
 
-    expect(withoutSitemap).not.toContain(contentDeliverySitemapTag(ID));
+    expect(untouched).not.toContain(contentDeliverySitemapTag(ID));
   });
 
   it("emits the sitemap tag once for a nonlocalized content type", () => {
+    // `contentChanged` and `indexChanged` name the same tag here, because a
+    // nonlocalized content type has one file and no index.
     const tags = contentInvalidationTags({
       contentTypeId: ID,
-      delivery: { sitemap: true },
+      delivery: { sitemap: { contentChanged: true, indexChanged: true } },
       id: 42,
       isPublic: true,
       slugs: ["new"],
@@ -178,7 +183,7 @@ describe("contentInvalidationTags with delivery", () => {
   it("expires each locale's sitemap and the index that lists them", () => {
     const tags = contentInvalidationTags({
       contentTypeId: ID,
-      delivery: { sitemap: true },
+      delivery: { sitemap: { contentChanged: true, indexChanged: true } },
       id: 7,
       isPublic: true,
       locales: [
@@ -191,15 +196,35 @@ describe("contentInvalidationTags with delivery", () => {
 
     expect(tags).toContain(contentDeliverySitemapTag(ID, "en"));
     expect(tags).toContain(contentDeliverySitemapTag(ID, "pl"));
-    // The locale-less one too: a localized content type's index enumerates its
-    // per-locale files, so a language gaining a page changes the index.
+    // The locale-less one too, because a language gaining a page changes how many
+    // files the index lists.
     expect(tags).toContain(contentDeliverySitemapTag(ID));
+  });
+
+  it("expires a locale's file without its index on an ordinary edit", () => {
+    // The rule §3.6 asks for: a title edit rewrites bytes inside an existing file and
+    // changes neither which files exist nor how many.
+    const tags = contentInvalidationTags({
+      contentTypeId: ID,
+      delivery: { sitemap: { contentChanged: true, indexChanged: false } },
+      id: 7,
+      isPublic: true,
+      locales: [
+        { isPublic: true, locale: "pl", slugs: ["witaj"], wasPublic: true },
+      ],
+      slugs: [],
+      wasPublic: true,
+    });
+
+    expect(tags).toContain(contentDeliverySitemapTag(ID, "pl"));
+    expect(tags).not.toContain(contentDeliverySitemapTag(ID));
+    expect(tags).not.toContain(contentDeliverySitemapTag(ID, "en"));
   });
 
   it("keeps one locale's delivery tags out of another's", () => {
     const tags = contentInvalidationTags({
       contentTypeId: ID,
-      delivery: { sitemap: false },
+      delivery: { sitemap: { contentChanged: false, indexChanged: false } },
       id: 7,
       isPublic: true,
       locales: [
@@ -226,7 +251,7 @@ describe("contentInvalidationTags with delivery", () => {
     expect(
       contentInvalidationTags({
         contentTypeId: ID,
-        delivery: { sitemap: false },
+        delivery: { sitemap: { contentChanged: false, indexChanged: false } },
         id: 1,
         isPublic: false,
         slugs: ["a", "b"],
@@ -238,7 +263,7 @@ describe("contentInvalidationTags with delivery", () => {
   it("drops an empty slug rather than tagging a redirect for it", () => {
     const tags = contentInvalidationTags({
       contentTypeId: ID,
-      delivery: { sitemap: false },
+      delivery: { sitemap: { contentChanged: false, indexChanged: false } },
       id: 42,
       isPublic: true,
       slugs: ["", "new"],

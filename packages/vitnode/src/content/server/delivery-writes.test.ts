@@ -26,6 +26,7 @@ import { applyContentDeliveryWrite } from "./delivery-writes";
 const articleType = defineContentType({
   admin: { label: { plural: "Articles", singular: "Article" } },
   id: "writes.article",
+  editorial: { enabled: true },
   delivery: { enabled: true, redirects: { enabled: true } },
   fields: {
     slug: field.slug({ source: "title" }),
@@ -43,6 +44,7 @@ const articleType = defineContentType({
 const localizedType = defineContentType({
   admin: { label: { plural: "Articles", singular: "Article" } },
   id: "writes.localized",
+  editorial: { enabled: true },
   delivery: { enabled: true, redirects: { enabled: true } },
   fields: {
     slug: field.slug({ localized: true, source: "title" }),
@@ -149,7 +151,8 @@ describe("a draft", () => {
     expect(outcome).toMatchObject({
       canonicalPath: "/articles/hello",
       redirectCreated: false,
-      sitemapChanged: false,
+      // Neither public before nor after, so no sitemap file lists it either way.
+      sitemap: { contentChanged: false, indexChanged: false },
       slugChanged: false,
     });
   });
@@ -207,8 +210,12 @@ describe("publishing", () => {
         kind: "reserve",
       },
     ]);
-    // A publish adds a sitemap line even though no URL moved.
-    expect(outcome).toMatchObject({ sitemapChanged: true, slugChanged: false });
+    // A publish adds a sitemap line even though no URL moved, and changes how many
+    // URLs the index counts.
+    expect(outcome).toMatchObject({
+      sitemap: { contentChanged: true, indexChanged: true },
+      slugChanged: false,
+    });
   });
 
   it("refuses an address another record's history owns", async () => {
@@ -250,7 +257,9 @@ describe("moving a published URL", () => {
       previousPath: "/articles/old",
       previousSlug: "old",
       redirectCreated: true,
-      sitemapChanged: true,
+      // The file's bytes moved - one line now reads a different URL - but the number
+      // of files an index lists did not.
+      sitemap: { contentChanged: true, indexChanged: false },
       slugChanged: true,
     });
   });
@@ -292,7 +301,10 @@ describe("unpublishing and deleting", () => {
     // No retire (the slug did not move) and no reserve (it is not public). The
     // resolver stops redirecting because it reads the live publication state.
     expect(calls).toStrictEqual([]);
-    expect(outcome).toMatchObject({ sitemapChanged: true, slugChanged: false });
+    expect(outcome).toMatchObject({
+      sitemap: { contentChanged: true, indexChanged: true },
+      slugChanged: false,
+    });
   });
 
   it("writes nothing on a delete, and reports the lost sitemap line", async () => {
@@ -309,7 +321,7 @@ describe("unpublishing and deleting", () => {
     expect(calls).toStrictEqual([]);
     expect(outcome).toMatchObject({
       canonicalPath: null,
-      sitemapChanged: true,
+      sitemap: { contentChanged: true, indexChanged: true },
       slug: null,
       slugChanged: false,
     });
@@ -396,10 +408,10 @@ describe("delivery without redirects", () => {
     expect(outcome).toMatchObject({
       canonicalPath: "/a/new",
       previousPath: "/a/old",
-      // The URL moved and the sitemap changed - the engine simply cannot redirect
-      // the old address, because nothing recorded it.
+      // The URL moved and the file changed - the engine simply cannot redirect the
+      // old address, because nothing recorded it.
       redirectCreated: false,
-      sitemapChanged: true,
+      sitemap: { contentChanged: true, indexChanged: false },
       slugChanged: true,
     });
   });

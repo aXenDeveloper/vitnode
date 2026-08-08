@@ -23,6 +23,7 @@ import {
 const articleType = defineContentType({
   admin: { label: { plural: "Articles", singular: "Article" } },
   id: "effects.article",
+  editorial: { enabled: true },
   delivery: { enabled: true, redirects: { enabled: true } },
   fields: {
     slug: field.slug({ source: "title" }),
@@ -62,7 +63,8 @@ const outcome = (
   previousPath: "/articles/old",
   previousSlug: "old",
   redirectCreated: true,
-  sitemapChanged: true,
+  // A slug change on a published record: the file's bytes moved, the index did not.
+  sitemap: { contentChanged: true, indexChanged: false },
   slug: "new",
   slugChanged: true,
   ...overrides,
@@ -203,23 +205,24 @@ describe("contentDeliveryInvalidation", () => {
     expect(contentDeliveryInvalidation(plainType, outcome())).toBeUndefined();
   });
 
-  it("reports the sitemap only when the set of listed URLs changed", () => {
+  it("passes the sitemap change through unchanged", () => {
     expect(contentDeliveryInvalidation(articleType, outcome())).toStrictEqual({
-      sitemap: true,
+      sitemap: { contentChanged: true, indexChanged: false },
     });
     expect(
       contentDeliveryInvalidation(
         articleType,
-        outcome({ sitemapChanged: false }),
+        outcome({ sitemap: { contentChanged: true, indexChanged: true } }),
       ),
-    ).toStrictEqual({ sitemap: false });
+    ).toStrictEqual({ sitemap: { contentChanged: true, indexChanged: true } });
   });
 
-  it("still expires the delivery metadata when no URL moved", () => {
-    // A shared SEO field moving changes what every locale's `<head>` renders even
-    // though nothing was added to or removed from the sitemap.
+  it("expires no sitemap for a mutation that reported no delivery outcome", () => {
+    // The delivery metadata tag still goes out - a shared SEO field moving changes
+    // what every locale's `<head>` renders - but a mutation that touched no
+    // slug-bearing path has nothing to say about the sitemap.
     expect(contentDeliveryInvalidation(articleType, undefined)).toStrictEqual({
-      sitemap: false,
+      sitemap: { contentChanged: false, indexChanged: false },
     });
   });
 });
