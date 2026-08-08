@@ -149,8 +149,11 @@ export const contentSearchDocument = (
   return {
     // `SearchModel.index` strips HTML from `content` (but never from `title`,
     // which is why the title is normalized above).
+    // `readSearchValue` has already collapsed the whitespace *inside* each
+    // value; normalizing again here would flatten the newlines that separate
+    // one repeatable child's answer from the next's into single spaces.
     content: sources
-      .map(name => normalize(readSearchValue(values, name)))
+      .map(name => readSearchValue(values, name))
       .filter(value => value !== "")
       .join("\n\n"),
     createdAt,

@@ -22,6 +22,7 @@ import {
   contentLeafColumnName,
   contentStorageColumns,
   contentValuesToColumns,
+  isContentCollectionField,
   isContentRelationCollection,
   splitContentFieldPath,
 } from "../paths";
@@ -272,6 +273,9 @@ export const diffChangedPaths = (
   for (const [name, fieldValue] of Object.entries(fields)) {
     const next = patch[name];
     if (next === undefined) continue;
+    // A collection is not a column, so it is not this function's to diff - the
+    // advanced store answers for it, against the rows rather than the patch.
+    if (isContentCollectionField(fieldValue)) continue;
 
     if (fieldValue.kind !== "group") {
       if (!sameValue(current[name], next)) changed.push(name);
