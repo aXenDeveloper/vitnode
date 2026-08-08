@@ -483,3 +483,100 @@ export const testAdvancedLocalizedContentType = defineContentType({
     list: { columns: ["featured", "status"] },
   },
 });
+
+/**
+ * The Stage 8 shape: `testPostContentType` plus the whole delivery layer.
+ *
+ * A separate fixture rather than a flag on the post, for the same reason the
+ * searchable and editorial ones are separate: leaving the post exactly as it was is
+ * what proves a content type without `delivery` produces the same tables, the same
+ * routes, the same cache tags and the same events it always did.
+ */
+export const testDeliveredPostContentType = defineContentType({
+  id: "test.delivered-post",
+  tableName: "test_delivered_posts",
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+    hidden: field.boolean({ defaultValue: false }),
+  },
+  publication: { enabled: true },
+  editorial: { enabled: true },
+  publicApi: {
+    enabled: true,
+    path: "delivered-posts",
+    fields: ["id", "title", "slug", "excerpt", "hidden", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  delivery: {
+    enabled: true,
+    redirects: { enabled: true },
+    seo: {
+      titleField: "title",
+      descriptionField: "excerpt",
+      noIndexField: "hidden",
+      openGraph: { titleField: "title", descriptionField: "excerpt" },
+    },
+    sitemap: { enabled: true, changeFrequency: "weekly", priority: 0.7 },
+  },
+  admin: { label: { plural: "Test Delivered", singular: "Test Delivered" } },
+});
+
+/**
+ * A localized delivery content type: locale-prefixed URLs and per-locale history.
+ *
+ * Its slug is `localized: true`, which is what `delivery.redirects` requires on a
+ * localized content type - a shared slug would give every language the same segment,
+ * so one retired address would belong to several URLs at once.
+ */
+export const testDeliveredLocalizedContentType = defineContentType({
+  id: "test.delivered-localized",
+  tableName: "test_delivered_localized",
+  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  publication: { enabled: true },
+  editorial: { enabled: true },
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+    seo: field.group({
+      localized: true,
+      nullable: true,
+      fields: {
+        title: field.text({ nullable: true, maxLength: 200 }),
+        description: field.textarea({ nullable: true, maxLength: 500 }),
+      },
+    }),
+  },
+  publicApi: {
+    enabled: true,
+    path: "delivered-localized",
+    fields: [
+      "id",
+      "title",
+      "slug",
+      "seo.title",
+      "seo.description",
+      "publishedAt",
+    ],
+    defaultOrderBy: "publishedAt",
+  },
+  delivery: {
+    enabled: true,
+    redirects: { enabled: true },
+    hreflang: { xDefault: "defaultLocale" },
+    seo: {
+      titleField: "seo.title",
+      fallbackTitleField: "title",
+      descriptionField: "seo.description",
+    },
+    sitemap: { enabled: true, changeFrequency: "daily", priority: 0.5 },
+  },
+  admin: {
+    label: {
+      plural: "Test Delivered Localized",
+      singular: "Test Delivered Localized",
+    },
+    list: { columns: ["status", "updatedAt"] },
+  },
+});

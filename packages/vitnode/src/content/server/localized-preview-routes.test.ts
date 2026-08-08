@@ -66,6 +66,12 @@ const harness = ({ secret = SECRET }: { secret?: string } = {}) => {
     create: vi.fn(),
     delete: vi.fn(),
     exists: vi.fn(),
+    // Stage 8 reads the base row's publication state to decide whether a
+    // translation's address is publicly reachable. Resolved as "published" so
+    // these suites keep exercising what they were written for.
+    findBasePublication: vi
+      .fn()
+      .mockResolvedValue({ publishedAt: new Date(0), status: "published" }),
     findByLanguageId: vi.fn(),
     findByLocale: vi.fn().mockResolvedValue(translationRow()),
     findManyForItem: vi.fn(),
