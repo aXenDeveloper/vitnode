@@ -166,7 +166,10 @@ const assertLocalizedFields = (
     // A `group` is localizable whatever its leaves are: it moves whole, and its
     // leaves are already restricted to the scalar kinds by `resolveContentAdvanced`.
     // What a leaf holds is a question about the group, not about localization.
-    if (fieldValue.kind !== "group" && !isLocalizableFieldKind(fieldValue.kind)) {
+    if (
+      fieldValue.kind !== "group" &&
+      !isLocalizableFieldKind(fieldValue.kind)
+    ) {
       throw new ContentEngineError(
         `Field "${name}" is \`localized: true\` but its kind is "${fieldValue.kind}". Only ${CONTENT_LOCALIZED_FIELD_KINDS.join(", ")} fields and \`field.group\` can be localized - an enum's identifiers have to be the same in every language, and a relation's target is shared.`,
         { contentTypeId: id },
@@ -185,7 +188,9 @@ const assertLocalizedFields = (
   // the reserved names are different from the base table's. `seo.version` would
   // pass every base-table check and then shadow the translation's optimistic
   // lock, so it is caught here rather than at the first conditional UPDATE.
-  for (const columnName of Object.keys(contentStorageColumns(localizedFields))) {
+  for (const columnName of Object.keys(
+    contentStorageColumns(localizedFields),
+  )) {
     if (!translationSystemFields.includes(columnName)) continue;
 
     throw new ContentEngineError(

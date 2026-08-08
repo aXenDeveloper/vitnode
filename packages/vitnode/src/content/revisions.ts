@@ -54,9 +54,9 @@ export type ContentSnapshotScalar = boolean | null | number | string;
  */
 export type ContentSnapshotValue =
   | ContentSnapshotScalar
+  | number[]
   | Record<string, ContentSnapshotScalar>
-  | Record<string, ContentSnapshotScalar>[]
-  | number[];
+  | Record<string, ContentSnapshotScalar>[];
 
 /**
  * The complete post-mutation editable state of one record.

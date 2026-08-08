@@ -78,7 +78,7 @@ const toFieldSnapshot = (
       // second, and both have to snapshot identically.
       const raw =
         values[contentLeafColumnName(name, leaf)] ??
-        (values[name] as Record<string, unknown> | null | undefined)?.[leaf] ??
+        (values[name] as null | Record<string, unknown> | undefined)?.[leaf] ??
         null;
       const snapshot = toSnapshotValue(raw);
       if (snapshot !== null) allNull = false;
@@ -233,7 +233,7 @@ export const projectRevisionSnapshot = (
         projected[name] =
           value === null || typeof value !== "object" || Array.isArray(value)
             ? null
-            : pickLeaves(value as Record<string, ContentSnapshotScalar>, leaves);
+            : pickLeaves(value, leaves);
         continue;
       }
 

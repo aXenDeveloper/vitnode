@@ -6,10 +6,7 @@ import type {
   ContentRepeatableField,
 } from "./types";
 
-import {
-  CONTENT_ADVANCED_LEAF_KINDS,
-  CONTENT_PATH_SEPARATOR,
-} from "./const";
+import { CONTENT_ADVANCED_LEAF_KINDS, CONTENT_PATH_SEPARATOR } from "./const";
 
 /**
  * The one place a canonical field path is built, split or turned into a column.
@@ -60,8 +57,7 @@ export const contentLeafColumnName = (owner: string, leaf: string): string =>
 const leafKinds: ReadonlySet<string> = new Set(CONTENT_ADVANCED_LEAF_KINDS);
 
 /** Whether a descriptor may sit inside a group or a repeatable. */
-export const isContentLeafKind = (kind: string): boolean =>
-  leafKinds.has(kind);
+export const isContentLeafKind = (kind: string): boolean => leafKinds.has(kind);
 
 export const isContentGroupField = (
   fieldValue: ContentFieldDescriptor,
@@ -85,15 +81,13 @@ export const isContentRepeatableField = (
  */
 export const isContentRelationCollection = (
   fieldValue: ContentFieldDescriptor,
-): boolean => fieldValue.kind === "relation" && fieldValue.multiple === true;
+): boolean => fieldValue.kind === "relation" && fieldValue.multiple;
 
 /** The to-many relation descriptor, or `null` when the field is not one. */
 export const asContentRelationCollection = (
   fieldValue: ContentFieldDescriptor,
 ): ContentRelationField | null =>
-  fieldValue.kind === "relation" && fieldValue.multiple
-    ? fieldValue
-    : null;
+  fieldValue.kind === "relation" && fieldValue.multiple ? fieldValue : null;
 
 /** The repeatable descriptor, or `null` when the field is not one. */
 export const asContentRepeatableField = (
@@ -117,7 +111,7 @@ export const contentInnerFields = (
   fieldValue: ContentFieldDescriptor,
 ): ContentFieldMap => {
   if (fieldValue.kind === "group" || fieldValue.kind === "repeatable") {
-    return fieldValue.fields as ContentFieldMap;
+    return fieldValue.fields;
   }
 
   return {};
@@ -143,7 +137,7 @@ export const contentLeafColumns = (
         columnName: contentLeafColumnName(group, leaf),
         group,
         leaf,
-        localized: fieldValue.localized === true,
+        localized: fieldValue.localized,
         path: contentFieldPath(group, leaf),
       });
     }
@@ -274,8 +268,11 @@ export const contentValuesToColumns = (
   for (const [name, value] of Object.entries(values)) {
     const fieldValue = fields[name];
 
-    if (!fieldValue || fieldValue.kind !== "group") {
+    if (fieldValue?.kind !== "group") {
+      // A collection is not a column, so it is dropped here and written by the
+      // store instead - which is what lets a create pass one payload to both.
       if (fieldValue && isContentCollectionField(fieldValue)) continue;
+
       columns[name] = value;
       continue;
     }

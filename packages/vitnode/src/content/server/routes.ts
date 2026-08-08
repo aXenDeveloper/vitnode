@@ -9,7 +9,7 @@ import type {
   ContentOrderableFieldName,
   ContentReferenceFieldName,
 } from "../types";
-import type { ContentModel } from "./model";
+import type { AnyContentModel, ContentModel } from "./model";
 
 import { buildRoute } from "../../api/lib/route";
 import {
@@ -32,6 +32,7 @@ import {
 } from "../const";
 import { partitionContentFields } from "../localization";
 import { orderableColumns } from "../registry";
+import { contentSearchIndexesCollections } from "../search";
 import { resolveContentActor } from "./actor";
 import { contentEditorialEffects } from "./editorial-effects";
 import { emitContentEvent } from "./emit";
@@ -75,6 +76,27 @@ const identifier = (c: Context): number => {
  * under `/admin/` so the global admin session middleware runs - both are
  * required for `assertStaffPermission` to have an admin to check.
  */
+/**
+ * The collections a search document is made of, or nothing.
+ *
+ * Read after the write has returned, and only when the search configuration
+ * actually names a collection leaf: a document built from `faq.answer` is built
+ * from child rows, which are not on the row the mutation gave back. Every
+ * Stage 1-5 content type indexes none, so this is a boolean check and no query.
+ */
+const advancedForSearch = async (
+  c: Context,
+  model: AnyContentModel,
+  row: object,
+): Promise<Record<string, unknown> | undefined> => {
+  if (!contentSearchIndexesCollections(model.definition)) return undefined;
+
+  const id = (row as { id?: unknown }).id;
+  if (typeof id !== "number") return undefined;
+
+  return await model.service(c).advanced(id);
+};
+
 export const buildContentRoutes = <
   TDefinition extends AnyContentTypeDefinition,
   P extends string,
@@ -468,6 +490,7 @@ export const buildContentRoutes = <
       // computed from the row rather than assumed, the same way the Server
       // Action computes its cache tags.
       await syncContentSearch(c, definition, {
+        advanced: await advancedForSearch(c, model, row),
         operation: "create",
         pluginId,
         row,
@@ -577,6 +600,7 @@ export const buildContentRoutes = <
       // A slug change is just a rewritten `url`: the search document is keyed by
       // item type and id, so there is no stale document to clean up.
       await syncContentSearch(c, definition, {
+        advanced: await advancedForSearch(c, model, result.row),
         changedFields: result.changedFields,
         operation: "update",
         pluginId,
@@ -656,6 +680,7 @@ export const buildContentRoutes = <
         }
 
         await syncContentSearch(c, definition, {
+          advanced: await advancedForSearch(c, model, result.row),
           changed: result.changed,
           operation: action,
           pluginId,

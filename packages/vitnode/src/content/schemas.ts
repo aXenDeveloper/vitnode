@@ -245,8 +245,6 @@ const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
         }),
       );
     }
-    case "user":
-      return referenceSchema();
     case "slug":
       // Never empty: the service normalises before writing, and a value that
       // folds to nothing is rejected rather than stored.
@@ -257,6 +255,8 @@ const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
     case "text":
     case "textarea":
       return textSchema(fieldValue);
+    case "user":
+      return referenceSchema();
   }
 };
 
@@ -322,9 +322,7 @@ const relationSetSchema = (): z.ZodType =>
  * is no `position` - the array order is the order, so a payload cannot describe
  * two rows in the same slot.
  */
-const repeatableRowSchema = (
-  fieldValue: ContentFieldDescriptor,
-): z.ZodType => {
+const repeatableRowSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
   const inner = contentInnerFields(fieldValue);
   const names = Object.keys(inner);
 
@@ -487,6 +485,9 @@ const filterShape = (fields: ContentFieldMap): z.ZodRawShape =>
             return [name, z.enum(["true", "false"]).optional()];
           case "enum":
             return [name, z.enum(fieldValue.values).optional()];
+          case "number":
+          case "user":
+            return [name, z.coerce.number().optional()];
           case "relation":
             // A to-many relation filters by membership, and it arrives from a
             // query string as one identifier: `?categories=7`. The transform is
@@ -505,9 +506,6 @@ const filterShape = (fields: ContentFieldMap): z.ZodRawShape =>
                     ),
                 ]
               : [name, z.coerce.number().optional()];
-          case "number":
-          case "user":
-            return [name, z.coerce.number().optional()];
           default:
             return [name, z.string().optional()];
         }

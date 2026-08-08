@@ -387,9 +387,9 @@ type ContentGroupValue<TFields> = Prettify<{
  * revision restore matches an historical row against.
  */
 export type ContentRepeatableRow<TFields> = Prettify<
-  { id: number } & {
+  {
     [K in keyof TFields]: ContentFieldValue<TFields[K]>;
-  }
+  } & { id: number }
 >;
 
 /**
@@ -400,7 +400,7 @@ export type ContentRepeatableRow<TFields> = Prettify<
  * array order, so nothing carries it explicitly.
  */
 export type ContentRepeatableInputRow<TFields> = Prettify<
-  { id?: number } & CreateValuesOf<TFields, keyof TFields>
+  CreateValuesOf<TFields, keyof TFields> & { id?: number }
 >;
 
 /**
@@ -451,7 +451,10 @@ export type ContentFieldPatch<TField> = TField extends {
   fields: infer TInner;
   kind: "group";
 }
-  ? ApplyNullable<Prettify<Partial<CreateValuesOf<TInner, keyof TInner>>>, TField>
+  ? ApplyNullable<
+      Prettify<Partial<CreateValuesOf<TInner, keyof TInner>>>,
+      TField
+    >
   : ContentFieldInput<TField>;
 
 /**
@@ -572,8 +575,8 @@ export type ContentRepeatableLeafPath<TFields> = string &
  * something a cache tag or an event payload branches on.
  */
 export type ContentChangedPath<TDefinition> =
-  | ContentLeafPath<ContentFieldsOf<TDefinition>>
   | (CollectionFieldKeys<ContentFieldsOf<TDefinition>> & string)
+  | ContentLeafPath<ContentFieldsOf<TDefinition>>
   | (ScalarColumnFieldKeys<ContentFieldsOf<TDefinition>> & string);
 
 /** Field names of a to-many relation. */
@@ -608,11 +611,11 @@ export type ContentRepeatableFieldName<TDefinition> = string &
  * public projections that ask for them, and nowhere else.
  */
 export type ContentAdvancedValues<TDefinition> = Prettify<{
-  [K in
-    | ContentRelationCollectionName<TDefinition>
-    | ContentRepeatableFieldName<TDefinition>]: ContentFieldValue<
-    ContentFieldsOf<TDefinition>[K]
-  >;
+  [
+    K in
+      | ContentRelationCollectionName<TDefinition>
+      | ContentRepeatableFieldName<TDefinition>
+  ]: ContentFieldValue<ContentFieldsOf<TDefinition>[K]>;
 }>;
 
 /**
@@ -774,9 +777,11 @@ type ContentIndexColumn<
   TFields,
   TPublication extends boolean,
   TEditorial extends boolean,
-> = string &
-  (ContentAddressableColumn<TFields, TPublication, TEditorial> |
-    ContentLeafPath<TFields>);
+> = (
+  | ContentAddressableColumn<TFields, TPublication, TEditorial>
+  | ContentLeafPath<TFields>
+) &
+  string;
 
 /**
  * Stored shape. Non-generic for the same reason as
@@ -999,14 +1004,14 @@ export type ContentSearchTitleField<
  * index and translation table names already are.
  */
 export interface ContentRelationJunction {
-  /** `(itemId, position)`, so an ordered relation has no duplicate slots. */
-  positionIndexName: string;
   /** The source field this junction belongs to. */
   field: string;
-  /** `<table>_<field>_related_idx` - the reverse lookup and the FK's index. */
-  relatedIndexName: string;
+  /** `(itemId, position)`, so an ordered relation has no duplicate slots. */
+  positionIndexName: string;
   /** `<table>_<field>_pk` on `(itemId, relatedItemId)`. */
   primaryKeyName: string;
+  /** `<table>_<field>_related_idx` - the reverse lookup and the FK's index. */
+  relatedIndexName: string;
   tableName: string;
 }
 
@@ -1661,19 +1666,19 @@ export type FilterableContentFieldName<TDefinition> = FieldNamesOfKind<
 >;
 
 /** {@link FieldNamesOfKind} over every field, shared and localized alike. */
-type AnyFieldNamesOfKind<TDefinition, TKind extends ContentFieldKind> = string &
-  Exclude<
-    {
-      [
-        K in keyof ContentFieldsOf<TDefinition>
-      ]: ContentFieldsOf<TDefinition>[K] extends {
-        kind: TKind;
-      }
-        ? K
-        : never;
-    }[keyof ContentFieldsOf<TDefinition>],
-    CollectionFieldKeys<ContentFieldsOf<TDefinition>>
-  >;
+type AnyFieldNamesOfKind<TDefinition, TKind extends ContentFieldKind> = Exclude<
+  {
+    [
+      K in keyof ContentFieldsOf<TDefinition>
+    ]: ContentFieldsOf<TDefinition>[K] extends {
+      kind: TKind;
+    }
+      ? K
+      : never;
+  }[keyof ContentFieldsOf<TDefinition>],
+  CollectionFieldKeys<ContentFieldsOf<TDefinition>>
+> &
+  string;
 
 /**
  * Field names a **public** filter may name.
@@ -1710,15 +1715,14 @@ export interface ContentRelationFilter {
 }
 
 export type ContentFilterInput<TDefinition> = Partial<
-  (TDefinition extends { publication: { enabled: true } }
-    ? { status: ContentPublicationStatus }
-    : Record<never, never>) & {
-    [K in ContentRelationCollectionName<TDefinition>]: ContentRelationFilter;
-  } & {
-    [K in FilterableContentFieldName<TDefinition>]: ContentFieldInput<
-      ContentFieldsOf<TDefinition>[K]
-    >;
-  }
+  Record<ContentRelationCollectionName<TDefinition>, ContentRelationFilter> &
+    (TDefinition extends { publication: { enabled: true } }
+      ? { status: ContentPublicationStatus }
+      : Record<never, never>) & {
+      [K in FilterableContentFieldName<TDefinition>]: ContentFieldInput<
+        ContentFieldsOf<TDefinition>[K]
+      >;
+    }
 >;
 
 /**
@@ -1802,11 +1806,15 @@ type PublicPathOwner<TName> = TName extends `${infer TOwner}.${string}`
   ? TOwner
   : never;
 
-type PublicPathLeaf<TName, TOwner extends string> =
-  TName extends `${TOwner}.${infer TLeaf}` ? TLeaf : never;
+type PublicPathLeaf<
+  TName,
+  TOwner extends string,
+> = TName extends `${TOwner}.${infer TLeaf}` ? TLeaf : never;
 
 /** The names in an allowlist that are plain fields rather than leaf paths. */
-type PublicFlatName<TName> = TName extends `${string}.${string}` ? never : TName;
+type PublicFlatName<TName> = TName extends `${string}.${string}`
+  ? never
+  : TName;
 
 /**
  * The nested half of a public response: one key per group or repeatable that
@@ -1817,21 +1825,23 @@ type PublicFlatName<TName> = TName extends `${string}.${string}` ? never : TName
  * paths the allowlist names.
  */
 type ContentPublicNested<TFields, TName extends string> = {
-  [TOwner in PublicPathOwner<TName> & keyof TFields]: TFields[TOwner] extends {
+  [TOwner in keyof TFields & PublicPathOwner<TName>]: TFields[TOwner] extends {
     fields: infer TInner;
     kind: "repeatable";
   }
     ? Prettify<
-        { id: number } & {
-          [TLeaf in PublicPathLeaf<TName, TOwner & string> &
-            keyof TInner]: ContentFieldValue<TInner[TLeaf]>;
-        }
+        {
+          [
+            TLeaf in keyof TInner & PublicPathLeaf<TName, string & TOwner>
+          ]: ContentFieldValue<TInner[TLeaf]>;
+        } & { id: number }
       >[]
     : TFields[TOwner] extends { fields: infer TInner; kind: "group" }
       ? ApplyNullable<
           Prettify<{
-            [TLeaf in PublicPathLeaf<TName, TOwner & string> &
-              keyof TInner]: ContentFieldValue<TInner[TLeaf]>;
+            [
+              TLeaf in keyof TInner & PublicPathLeaf<TName, string & TOwner>
+            ]: ContentFieldValue<TInner[TLeaf]>;
           }>,
           TFields[TOwner]
         >
@@ -1851,9 +1861,9 @@ export type ContentPublicSelect<TDefinition> = Prettify<
       ContentFieldsOf<TDefinition>,
       ContentPublicFieldName<TDefinition>
     > & {
-      [K in PublicFlatName<
-        ContentPublicFieldName<TDefinition>
-      >]: ContentPublicValue<ContentFieldsOf<TDefinition>, K>;
+      [
+        K in PublicFlatName<ContentPublicFieldName<TDefinition>>
+      ]: ContentPublicValue<ContentFieldsOf<TDefinition>, K>;
     }
 >;
 
@@ -1895,12 +1905,11 @@ export type ContentPublicListRow<TDefinition> =
  * narrower check is the runtime allowlist.
  */
 export type ContentPublicFilterInput<TDefinition> = Partial<
-  {
-    [
-      K in ContentPublicFieldName<TDefinition> &
-        ContentRelationCollectionName<TDefinition>
-    ]: ContentRelationFilter;
-  } & {
+  Record<
+    ContentPublicFieldName<TDefinition> &
+      ContentRelationCollectionName<TDefinition>,
+    ContentRelationFilter
+  > & {
     [
       K in ContentPublicFieldName<TDefinition> &
         PublicFilterableContentFieldName<TDefinition>
@@ -1917,5 +1926,4 @@ export type ContentPublicFilterInput<TDefinition> = Partial<
  * allowlist error.
  */
 export type ContentPublicOrderableFieldName<TDefinition> =
-  | "publishedAt"
-  | PublicFlatName<ContentPublicFieldName<TDefinition>>;
+  "publishedAt" | PublicFlatName<ContentPublicFieldName<TDefinition>>;

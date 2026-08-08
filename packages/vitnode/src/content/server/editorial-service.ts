@@ -218,7 +218,9 @@ export const createContentEditorialService = <
     Object.fromEntries(ownColumnNames.map(name => [name, columns[name]]));
 
   /** A column row in the logical shape - see the plain service's twin. */
-  const projectRow = (row: Record<string, unknown>): Record<string, unknown> => {
+  const projectRow = (
+    row: Record<string, unknown>,
+  ): Record<string, unknown> => {
     const projected: Record<string, unknown> = {};
 
     for (const name of generatedColumnNames) {

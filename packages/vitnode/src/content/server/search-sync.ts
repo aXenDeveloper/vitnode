@@ -7,10 +7,8 @@ import type { AnyContentTypeDefinition } from "../types";
 import type { AnyContentModel } from "./model";
 
 import { partitionContentFields } from "../localization";
-import {
-  contentSearchDocumentId,
-  contentSearchIndexedFieldNames,
-} from "../search";
+import { contentColumnsToValues, contentStorageColumns } from "../paths";
+import { contentSearchDocumentId, contentSearchIndexedPaths } from "../search";
 import { listContentLanguages } from "./language-resolver";
 import {
   contentSearchDocument,
@@ -23,6 +21,15 @@ export type ContentSearchOperation =
   "create" | "delete" | "publish" | "restore" | "unpublish" | "update";
 
 export interface ContentSearchSyncInput {
+  /**
+   * The record's advanced collections, when the content type indexes one.
+   *
+   * Passed in rather than loaded here, because this function is deliberately
+   * model-free: it takes a definition and a row. The effects layer already holds
+   * the model and reads them once, after commit, only when
+   * `contentSearchIndexesCollections` says a document is made of them.
+   */
+  advanced?: Record<string, unknown>;
   /**
    * `publish` / `unpublish` only: `false` when the record was already in the
    * requested state, which means the index already agrees and there is nothing
@@ -88,7 +95,7 @@ const decide = (
   // the exposed slug is one of the indexed field names.
   if (!isPublic) return "skip";
 
-  const indexed = new Set(contentSearchIndexedFieldNames(definition));
+  const indexed = contentSearchIndexedPaths(definition);
 
   return (changedFields ?? []).some(name => indexed.has(name))
     ? "upsert"
@@ -146,9 +153,11 @@ export const syncContentSearch = async (
   // text it was indexed with last time.
   const document =
     decided === "upsert"
-      ? contentSearchDocument(definition, input.row, {
-          pluginId: input.pluginId,
-        })
+      ? contentSearchDocument(
+          definition,
+          { ...input.row, ...input.advanced },
+          { pluginId: input.pluginId },
+        )
       : null;
   const action = decided === "upsert" && !document ? "delete" : decided;
 
@@ -238,6 +247,10 @@ const readTranslations = async (
   if (!columns || !table) return [];
 
   const { localizedFields } = partitionContentFields(model.definition.fields);
+  // Flattened, so a localized group is selected as its leaf columns - and then
+  // folded back below, so the document builder sees the same nested shape a
+  // public read would.
+  const storage = contentStorageColumns(localizedFields);
 
   const rows = await c
     .get("db")
@@ -247,7 +260,7 @@ const readTranslations = async (
       status: columns.status,
       updatedAt: columns.updatedAt,
       ...Object.fromEntries(
-        Object.keys(localizedFields).map(name => [name, columns[name]]),
+        Object.keys(storage).map(name => [name, columns[name]]),
       ),
     })
     .from(table)
@@ -255,7 +268,7 @@ const readTranslations = async (
 
   return rows.map(row => ({
     languageId: row.languageId as number,
-    values: row,
+    values: { ...row, ...contentColumnsToValues(localizedFields, row) },
   }));
 };
 
@@ -333,7 +346,7 @@ export const syncContentLocalizedSearch = async (
   // A write that moved no indexed field changes no document. `status` is not a
   // declared field, so a publish never reaches this.
   if (input.operation === "update" || input.operation === "restore") {
-    const indexed = new Set(contentSearchIndexedFieldNames(definition));
+    const indexed = contentSearchIndexedPaths(definition);
     const moved = (input.changedFields ?? []).some(name => indexed.has(name));
     if (!moved) return [];
   }

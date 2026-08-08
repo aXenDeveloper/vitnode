@@ -22,8 +22,8 @@ import { ContentEngineError } from "./errors";
 import { clampWithFingerprint } from "./fingerprint";
 import { toSnakeCase } from "./indexes";
 import {
-  contentLeafColumns,
   contentLeafColumnName,
+  contentLeafColumns,
   isContentLeafKind,
   isContentRelationCollection,
   partitionContentStorage,
@@ -72,10 +72,7 @@ export const contentCollectionTableName = (
   );
 
 const suffixed = (tableName: string, suffix: string): string =>
-  clampWithFingerprint(
-    `${tableName}_${suffix}`,
-    CONTENT_IDENTIFIER_MAX_LENGTH,
-  );
+  clampWithFingerprint(`${tableName}_${suffix}`, CONTENT_IDENTIFIER_MAX_LENGTH);
 
 const junctionSystemFields: readonly string[] = CONTENT_JUNCTION_SYSTEM_FIELDS;
 const repeatableSystemFields: readonly string[] =
@@ -229,7 +226,11 @@ const assertRepeatable = (
   });
 
   const max = repeatableValue.max ?? CONTENT_REPEATABLE_DEFAULT_MAX;
-  if (!Number.isInteger(max) || max < 1 || max > CONTENT_REPEATABLE_ABSOLUTE_MAX) {
+  if (
+    !Number.isInteger(max) ||
+    max < 1 ||
+    max > CONTENT_REPEATABLE_ABSOLUTE_MAX
+  ) {
     throw new ContentEngineError(
       `Repeatable field "${name}" has max ${max}; it must be a whole number between 1 and ${CONTENT_REPEATABLE_ABSOLUTE_MAX}. A repeatable is a handful of rows a person edits in one form - model a content type for anything larger.`,
       { contentTypeId: id },
@@ -287,7 +288,7 @@ const assertRelation = (
     return;
   }
 
-  if (fieldValue.ordered === true) {
+  if (fieldValue.ordered) {
     throw new ContentEngineError(
       `Relation field "${name}" is \`ordered: true\` but not \`multiple: true\`. One target has no order. Add \`multiple: true\`, or drop \`ordered\`.`,
       { contentTypeId: id },
@@ -317,7 +318,8 @@ export const resolveContentAdvanced = ({
   for (const [name, fieldValue] of Object.entries(fields)) {
     if (fieldValue.kind === "relation") assertRelation(id, name, fieldValue);
     if (fieldValue.kind === "group") assertGroup(id, name, fieldValue);
-    if (fieldValue.kind === "repeatable") assertRepeatable(id, name, fieldValue);
+    if (fieldValue.kind === "repeatable")
+      assertRepeatable(id, name, fieldValue);
   }
 
   const leaves = contentLeafColumns(fields);
@@ -433,13 +435,16 @@ const assertGeneratedTableNames = (
 };
 
 /** The resolved ceiling on a repeatable's child count. */
-export const contentRepeatableMax = (fieldValue: ContentFieldDescriptor): number =>
+export const contentRepeatableMax = (
+  fieldValue: ContentFieldDescriptor,
+): number =>
   fieldValue.kind === "repeatable"
     ? (fieldValue.max ?? CONTENT_REPEATABLE_DEFAULT_MAX)
     : CONTENT_REPEATABLE_DEFAULT_MAX;
 
-export const contentRepeatableMin = (fieldValue: ContentFieldDescriptor): number =>
-  fieldValue.kind === "repeatable" ? (fieldValue.min ?? 0) : 0;
+export const contentRepeatableMin = (
+  fieldValue: ContentFieldDescriptor,
+): number => (fieldValue.kind === "repeatable" ? (fieldValue.min ?? 0) : 0);
 
 export const contentRelationCollectionMax = (): number =>
   CONTENT_RELATION_COLLECTION_MAX;

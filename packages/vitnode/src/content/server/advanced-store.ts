@@ -9,6 +9,7 @@ import type {
   ContentFieldMap,
   ContentRelationFilter,
 } from "../types";
+import type { ContentDatabase } from "./service";
 import type { ContentAdvancedTables } from "./types";
 
 import {
@@ -22,7 +23,6 @@ import {
   isContentCollectionField,
 } from "../paths";
 import { toColumnValues } from "./query";
-import type { ContentDatabase } from "./service";
 
 /**
  * The read and write layer for a content type's advanced collections.
@@ -82,6 +82,17 @@ export interface ContentAdvancedStore {
     database: ContentDatabase,
   ) => Promise<Map<number, Record<string, unknown>>>;
   /**
+   * An indexed `EXISTS` over one relation's junction table.
+   *
+   * `EXISTS` rather than a join, so a record matches once however many junction
+   * rows it has and the outer query needs no `DISTINCT`. The junction's primary
+   * key `(itemId, relatedItemId)` covers the lookup exactly.
+   */
+  membershipCondition: (
+    field: string,
+    filter: ContentRelationFilter,
+  ) => SQL | undefined;
+  /**
    * Makes a historical collection state applicable to the record as it stands.
    *
    * Two different rules, because the two kinds fail differently:
@@ -104,17 +115,6 @@ export interface ContentAdvancedStore {
     missingRelations: { field: string; ids: number[] }[];
     patch: Record<string, unknown>;
   }>;
-  /**
-   * An indexed `EXISTS` over one relation's junction table.
-   *
-   * `EXISTS` rather than a join, so a record matches once however many junction
-   * rows it has and the outer query needs no `DISTINCT`. The junction's primary
-   * key `(itemId, relatedItemId)` covers the lookup exactly.
-   */
-  membershipCondition: (
-    field: string,
-    filter: ContentRelationFilter,
-  ) => SQL | undefined;
   /** Applies a patch's collection half. Returns the fields that moved. */
   write: (
     tx: ContentDatabase,
@@ -187,7 +187,7 @@ export const createContentAdvancedStore = <
   tables: ContentAdvancedTables;
 }): ContentAdvancedStore => {
   const contentTypeId = definition.id;
-  const fields = definition.fields as ContentFieldMap;
+  const fields = definition.fields;
   const collectionNames = Object.keys(fields).filter(name =>
     isContentCollectionField(fields[name]),
   );
@@ -195,7 +195,7 @@ export const createContentAdvancedStore = <
 
   const junctionOf = (
     field: string,
-  ): { columns: Record<string, PgColumn>; table: PgTable } | null => {
+  ): null | { columns: Record<string, PgColumn>; table: PgTable } => {
     const junction = tables.junctions[field];
     if (!junction) return null;
 
@@ -207,7 +207,7 @@ export const createContentAdvancedStore = <
 
   const childOf = (
     field: string,
-  ): { columns: Record<string, PgColumn>; table: PgTable } | null => {
+  ): null | { columns: Record<string, PgColumn>; table: PgTable } => {
     const child = tables.repeatables[field];
     if (!child) return null;
 
@@ -493,10 +493,7 @@ export const createContentAdvancedStore = <
           .update(child.table)
           .set({ ...values, position: parked(index) })
           .where(
-            and(
-              eq(child.columns.itemId, itemId),
-              eq(child.columns.id, row.id),
-            ),
+            and(eq(child.columns.itemId, itemId), eq(child.columns.id, row.id)),
           );
         continue;
       }
@@ -536,10 +533,7 @@ export const createContentAdvancedStore = <
       if (relation) {
         if (!Array.isArray(value)) continue;
 
-        const desired = normalizeTargets(
-          value as number[],
-          relation.ordered === true,
-        );
+        const desired = normalizeTargets(value as number[], relation.ordered);
         const current =
           (await readJunction(field, [itemId], tx)).get(itemId) ?? [];
 
@@ -579,18 +573,18 @@ export const createContentAdvancedStore = <
 
   const enabled = collectionNames.length > 0;
 
+  // Every method a no-op, so a content type with no advanced collection can be
+  // handed the same object every other one gets and pay for nothing.
   const disabled: ContentAdvancedStore = {
-    diff: async () => [],
+    diff: async () => Promise.resolve([]),
     enabled: false,
     fields: [],
-    load: async () => ({}),
-    loadMany: async () => new Map(),
+    load: async () => Promise.resolve({}),
+    loadMany: async () => Promise.resolve(new Map()),
     membershipCondition: () => undefined,
-    prepareRestore: async (_tx, _itemId, patch) => ({
-      missingRelations: [],
-      patch,
-    }),
-    write: async () => [],
+    prepareRestore: async (_tx, _itemId, patch) =>
+      Promise.resolve({ missingRelations: [], patch }),
+    write: async () => Promise.resolve([]),
   };
 
   if (!enabled) return disabled;
@@ -675,7 +669,8 @@ export const createContentAdvancedStore = <
           const found = new Set(rows.map(row => Number(row.id)));
           const missing = ids.filter(id => !found.has(id));
 
-          if (missing.length > 0) missingRelations.push({ field, ids: missing });
+          if (missing.length > 0)
+            missingRelations.push({ field, ids: missing });
           continue;
         }
 
@@ -689,9 +684,11 @@ export const createContentAdvancedStore = <
         prepared[field] = (value as ChildValues[]).map(row => {
           if (typeof row.id === "number" && known.has(row.id)) return row;
 
-          const { id: _dropped, ...rest } = row;
-
-          return rest;
+          // Dropping `id` is the "create a new one" branch of the write
+          // protocol, so the entry comes back with its values and a fresh id.
+          return Object.fromEntries(
+            Object.entries(row).filter(([key]) => key !== "id"),
+          );
         });
       }
 

@@ -256,10 +256,7 @@ export const createContentAdvancedTables = <
     });
   }
 
-  const repeatables: Record<
-    string,
-    ContentRepeatableChildTable<unknown>
-  > = {};
+  const repeatables: Record<string, ContentRepeatableChildTable<unknown>> = {};
   for (const entry of advanced.repeatables) {
     repeatables[entry.field] = createContentRepeatableTable({
       contentTypeId,

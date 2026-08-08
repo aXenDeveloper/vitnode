@@ -26,6 +26,7 @@ import type {
   ResolvedContentSearchConfig,
 } from "./types";
 
+import { resolveContentAdvanced } from "./advanced";
 import {
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_ENUM_DEFAULT_LENGTH,
@@ -59,7 +60,6 @@ import {
   CONTENT_TABLE_NAME_PATTERN,
   isFilterableFieldKind,
 } from "./const";
-import { resolveContentAdvanced } from "./advanced";
 import { ContentEngineError } from "./errors";
 import { resolveContentIndexes } from "./indexes";
 import {
@@ -827,6 +827,7 @@ const resolvePublicApi = <TField extends string>(
     // A to-many relation filters through an indexed EXISTS over its junction
     // table rather than by equality, but it is still a `relation` kind - so the
     // ordinary kind check accepts it and the query builder branches on `multiple`.
+
     return !isFilterableFieldKind(target.descriptor.kind);
   });
   if (notFilterable !== undefined) {
@@ -1541,7 +1542,10 @@ export const defineContentType = <
 
       // Declared in canonical paths, materialised against real columns: the
       // author writes `["seo.title"]` and the migration gets `seo_title`.
-      return { ...index, on: on.map(name => leafColumnByPath.get(name) ?? name) };
+      return {
+        ...index,
+        on: on.map(name => leafColumnByPath.get(name) ?? name),
+      };
     }),
     // Shared only: a localized slug's unique index is scoped to a language and
     // belongs to the translation table, which `resolveContentTranslationIndexes`

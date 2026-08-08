@@ -121,7 +121,10 @@ const harness = ({ allow = true }: { allow?: boolean } = {}): Harness => {
   };
 
   permissionGranted = allow;
-  vi.spyOn(articles, "service").mockReturnValue({ ...service, ...noCollections });
+  vi.spyOn(articles, "service").mockReturnValue({
+    ...service,
+    ...noCollections,
+  });
 
   const app = new OpenAPIHono();
 

@@ -171,7 +171,7 @@ export const createContentTable = <
   // Checked against the *declared* fields rather than the flattened columns: a
   // to-many relation needs a reference thunk for its junction table's foreign
   // key, and it has no column here to be found by.
-  const declaredFields = definition.fields as ContentFieldMap;
+  const declaredFields = definition.fields;
   const unknownReference = Object.keys(referenceThunks).find(
     name => declaredFields[name]?.kind !== "relation",
   );

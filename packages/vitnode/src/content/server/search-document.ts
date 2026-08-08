@@ -6,11 +6,51 @@ import {
   isContentTranslationPubliclyVisible,
 } from "../cache";
 import { partitionContentFields } from "../localization";
+import { readContentPath, splitContentFieldPath } from "../paths";
 import { contentSearchUrl } from "../search";
 
 /** Collapses whitespace so a multi-line value cannot break a result heading. */
 const normalize = (value: unknown): string =>
   typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
+
+/**
+ * One configured search field, resolved to text.
+ *
+ * Three shapes, one rule - what a reader would see, in the order they would see
+ * it:
+ *
+ * - `"title"` is the value on the row;
+ * - `"seo.description"` is the leaf of a group, or nothing when the group is
+ *   `null`;
+ * - `"faq.question"` is **every** child's leaf, joined in **position order**.
+ *   Position order rather than insertion order, because position is what the
+ *   page renders and an index that disagreed with the page would highlight the
+ *   wrong entry. The join is a newline, so two entries never run together into a
+ *   phrase neither of them contains.
+ *
+ * A relation is never here: `defineContentType` refuses one in every search
+ * slot, and indexing foreign keys as text would make a record match a number
+ * somebody typed into a search box.
+ */
+const readSearchValue = (
+  values: Record<string, unknown>,
+  name: string,
+): string => {
+  const path = splitContentFieldPath(name);
+  if (!path) return normalize(values[name]);
+
+  const [owner, leaf] = path;
+  const container = values[owner];
+
+  if (Array.isArray(container)) {
+    return (container as Record<string, unknown>[])
+      .map(child => normalize(child[leaf]))
+      .filter(value => value !== "")
+      .join("\n");
+  }
+
+  return normalize(readContentPath(values, name));
+};
 
 const toDate = (value: unknown): Date | undefined => {
   if (value instanceof Date) return value;
@@ -81,7 +121,7 @@ export const contentSearchDocument = (
 
   if (!isContentRowPublic(row)) return null;
 
-  const title = normalize(values[search.titleField]);
+  const title = normalize(readSearchValue(values, search.titleField));
   if (title === "") return null;
 
   const url = contentSearchUrl(
@@ -110,7 +150,7 @@ export const contentSearchDocument = (
     // `SearchModel.index` strips HTML from `content` (but never from `title`,
     // which is why the title is normalized above).
     content: sources
-      .map(name => normalize(values[name]))
+      .map(name => normalize(readSearchValue(values, name)))
       .filter(value => value !== "")
       .join("\n\n"),
     createdAt,

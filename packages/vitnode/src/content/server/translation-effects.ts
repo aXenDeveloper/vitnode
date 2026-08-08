@@ -3,10 +3,9 @@ import type { Context } from "hono";
 import type { EventEmitResult } from "../../api/models/events";
 import type { ContentEventAction } from "../events";
 import type { AnyContentTypeDefinition } from "../types";
-import type { ContentTranslationEditorialOutcome } from "./translation-editorial-service";
-
 import type { AnyContentModel } from "./model";
 import type { ContentSearchSyncOutcome } from "./search-sync";
+import type { ContentTranslationEditorialOutcome } from "./translation-editorial-service";
 
 import { emitContentEvent } from "./emit";
 import { syncContentLocalizedSearch } from "./search-sync";
@@ -73,13 +72,6 @@ export interface ContentTranslationEffectsOptions {
 
 export interface ContentTranslationEffectsResult {
   /**
-   * What the index write reported, or `null` when there was none to do - a
-   * content type without `search`, or a no-op outcome.
-   *
-   * A one-element array at most: a translation mutation is one language.
-   */
-  search?: ContentSearchSyncOutcome[];
-  /**
    * What the event transport reported, or `null` for a no-op outcome.
    *
    * Present rather than discarded because `EventsModel.emit` does not throw:
@@ -88,6 +80,13 @@ export interface ContentTranslationEffectsResult {
    * transaction is closed - which is exactly why the caller gets to see it.
    */
   event: EventEmitResult | null;
+  /**
+   * What the index write reported, or `null` when there was none to do - a
+   * content type without `search`, or a no-op outcome.
+   *
+   * A one-element array at most: a translation mutation is one language.
+   */
+  search?: ContentSearchSyncOutcome[];
 }
 
 /**

@@ -4,6 +4,7 @@ import {
   CONTENT_SEARCH_LOCALE_PLACEHOLDER,
   CONTENT_SEARCH_SLUG_PLACEHOLDER,
 } from "./const";
+import { isContentRelationCollection, splitContentFieldPath } from "./paths";
 
 /**
  * The public URL of one record, for a search hit.
@@ -88,3 +89,52 @@ export const contentSearchIndexedFieldNames = (
     ),
   ];
 };
+
+/**
+ * Everything a `changedFields` entry may name that would change the document.
+ *
+ * The indexed names, plus the **container** of every indexed leaf path. A
+ * repeatable reports itself whole (`faq`) when its children move, while the
+ * configuration names leaves (`faq.question`), so without the container the
+ * synchronizer would decide a rewritten answer changed nothing. A group is the
+ * other way round - it reports leaves and is configured by leaves - so its
+ * container simply never appears in a diff and adding it costs nothing.
+ */
+export const contentSearchIndexedPaths = (
+  definition: AnyContentTypeDefinition,
+): Set<string> => {
+  const names = contentSearchIndexedFieldNames(definition);
+
+  return new Set(
+    names.flatMap(name => {
+      const path = splitContentFieldPath(name);
+
+      return path ? [name, path[0]] : [name];
+    }),
+  );
+};
+
+/**
+ * Whether any indexed field lives in a generated collection table.
+ *
+ * The one question that decides whether the effects layer has to read a
+ * record's collections back after a write: a document made of `faq.answer` is
+ * made of child rows, and those are not on the row the mutation returned. A
+ * content type that indexes none - which is every Stage 1-5 one - reads nothing
+ * extra, ever.
+ */
+export const contentSearchIndexesCollections = (
+  definition: AnyContentTypeDefinition,
+): boolean =>
+  contentSearchIndexedFieldNames(definition).some(name => {
+    const path = splitContentFieldPath(name);
+    if (!path) return false;
+
+    const fieldValue = definition.fields[path[0]];
+
+    return (
+      fieldValue !== undefined &&
+      (fieldValue.kind === "repeatable" ||
+        isContentRelationCollection(fieldValue))
+    );
+  });

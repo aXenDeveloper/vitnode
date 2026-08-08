@@ -95,7 +95,10 @@ export const buildFilterCondition = ({
    * which this module deliberately knows nothing about - and because a caller
    * that passes none simply has no to-many relation to filter on.
    */
-  membership?: (field: string, filter: ContentRelationFilter) => SQL | undefined;
+  membership?: (
+    field: string,
+    filter: ContentRelationFilter,
+  ) => SQL | undefined;
   /** Whether `status` is a generated column and therefore filterable. */
   publication?: boolean;
 }): SQL | undefined => {

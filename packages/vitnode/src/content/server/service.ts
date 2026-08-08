@@ -36,10 +36,10 @@ import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
 import { orderableColumns } from "../registry";
 import {
-  changedPathsToColumns,
   buildFilterCondition,
   buildOrderColumn,
   buildSearchCondition,
+  changedPathsToColumns,
   diffChangedPaths,
   toInsertColumns,
 } from "./query";
@@ -110,17 +110,14 @@ export interface ContentUpdateResult<TDefinition> {
  * what makes that true by construction instead of by six call sites remembering.
  */
 export interface ContentRelationMethods<TDefinition> {
-  /** The current targets, in stored order. */
-  get: (
-    itemId: number,
-    options?: ContentServiceOptions,
-  ) => Promise<number[]>;
   /** Adds one target. A target already present is a no-op. */
   add: (
     itemId: number,
     relatedItemId: number,
     options?: ContentWriteOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
+  /** The current targets, in stored order. */
+  get: (itemId: number, options?: ContentServiceOptions) => Promise<number[]>;
   /** Removes one target. A target that is not there is a no-op. */
   remove: (
     itemId: number,
@@ -263,6 +260,10 @@ export interface ContentServiceBase<TDefinition> {
     id: number,
     options?: ContentServiceOptions,
   ) => Promise<ContentSelect<TDefinition> | null>;
+  findById: (
+    id: number,
+    options?: ContentServiceOptions,
+  ) => Promise<ContentSelect<TDefinition> | null>;
   /**
    * One record with its advanced collections attached.
    *
@@ -273,10 +274,6 @@ export interface ContentServiceBase<TDefinition> {
     id: number,
     options?: ContentServiceOptions,
   ) => Promise<ContentDetail<TDefinition> | null>;
-  findById: (
-    id: number,
-    options?: ContentServiceOptions,
-  ) => Promise<ContentSelect<TDefinition> | null>;
   findMany: (args?: ContentFindManyArgs<TDefinition>) => Promise<{
     edges: ContentListRow<TDefinition>[];
     pageInfo: ContentPageInfo;
@@ -389,7 +386,9 @@ export const createContentService = <
    * nullable and every leaf is empty. For a content type with no group this is
    * a copy, which is why a Stage 1-5 row comes back byte-identical.
    */
-  const projectRow = (row: Record<string, unknown>): Record<string, unknown> => {
+  const projectRow = (
+    row: Record<string, unknown>,
+  ): Record<string, unknown> => {
     const projected: Record<string, unknown> = {};
 
     for (const name of generatedColumnNames) {
@@ -713,8 +712,7 @@ export const createContentService = <
         const changedPaths = diffChangedPaths(fields, current, patch);
         // Read before anything is written, so "nothing moved" is decided once
         // and the collection write below is not a second, separate decision.
-        const changedCollections =
-          (await store?.diff(tx, id, patch)) ?? [];
+        const changedCollections = (await store?.diff(tx, id, patch)) ?? [];
         const changedFields = [...changedPaths, ...changedCollections];
 
         // Nothing actually moved - skip the write so `updatedAt` and the
@@ -769,7 +767,7 @@ export const createContentService = <
       return Array.isArray(value) ? (value as number[]) : [];
     };
 
-    const write = (
+    const write = async (
       itemId: number,
       next: readonly number[],
       options?: ContentWriteOptions,
@@ -827,7 +825,7 @@ export const createContentService = <
       return Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
     };
 
-    const write = (
+    const write = async (
       itemId: number,
       rows: readonly Record<string, unknown>[],
       options?: ContentWriteOptions,
@@ -840,7 +838,11 @@ export const createContentService = <
 
     return {
       create: async (itemId, values, options) =>
-        await write(itemId, [...(await read(itemId, options)), values], options),
+        await write(
+          itemId,
+          [...(await read(itemId, options)), values],
+          options,
+        ),
 
       delete: async (itemId, childId, options) =>
         await write(

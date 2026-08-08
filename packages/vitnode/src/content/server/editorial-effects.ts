@@ -4,10 +4,10 @@ import type { EventEmitResult } from "../../api/models/events";
 import type { ContentEventAction } from "../events";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentEditorialOutcome } from "./editorial-service";
+import type { AnyContentModel } from "./model";
 import type { ContentSearchSyncOutcome } from "./search-sync";
 
-import type { AnyContentModel } from "./model";
-
+import { contentSearchIndexesCollections } from "../search";
 import { emitContentEvent } from "./emit";
 import { syncContentLocalizedSearch, syncContentSearch } from "./search-sync";
 
@@ -99,11 +99,6 @@ export interface ContentEditorialEffectsOptions {
 
 export interface ContentEditorialEffectsResult {
   /**
-   * One outcome per language, for a localized content type. Empty for every
-   * other one, whose single outcome is on `search`.
-   */
-  searchByLocale?: ContentSearchSyncOutcome[];
-  /**
    * What the event transport reported. `null` for a no-op outcome, which emits
    * nothing at all.
    *
@@ -114,6 +109,11 @@ export interface ContentEditorialEffectsResult {
    */
   event: EventEmitResult | null;
   search: ContentSearchSyncOutcome | null;
+  /**
+   * One outcome per language, for a localized content type. Empty for every
+   * other one, whose single outcome is on `search`.
+   */
+  searchByLocale?: ContentSearchSyncOutcome[];
 }
 
 /**
@@ -179,6 +179,13 @@ export const contentEditorialEffects = async (
   return {
     event,
     search: await syncContentSearch(c, definition, {
+      // Read back only when a document is actually made of collection values.
+      // A content type that indexes none - which is every Stage 1-5 one - pays
+      // for nothing here.
+      advanced:
+        model && contentSearchIndexesCollections(definition)
+          ? await model.service(c).advanced(idOf(outcome.row))
+          : undefined,
       changed: outcome.changed,
       changedFields: outcome.changedFields,
       operation: outcome.operation,
@@ -186,6 +193,13 @@ export const contentEditorialEffects = async (
       row: outcome.row,
     }),
   };
+};
+
+/** The record's own identifier, off a row whose type is still open. */
+const idOf = (row: object): number => {
+  const id = (row as { id?: unknown }).id;
+
+  return typeof id === "number" ? id : 0;
 };
 
 /**

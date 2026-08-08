@@ -22,10 +22,7 @@ import {
 } from "../const";
 import { ContentEngineError } from "../errors";
 import { partitionContentFields } from "../localization";
-import {
-  isContentRelationCollection,
-  splitContentFieldPath,
-} from "../paths";
+import { isContentRelationCollection, splitContentFieldPath } from "../paths";
 import { publicOrderableColumns } from "../registry";
 import { findContentLanguage } from "./language-resolver";
 import {

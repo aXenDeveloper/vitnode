@@ -254,11 +254,13 @@ export type ContentStorageFields<TFields> = GroupLeafColumnsOf<TFields> &
   ScalarFieldsOf<TFields>;
 
 type ScalarFieldsOf<TFields> = {
-  [K in keyof TFields as TFields[K] extends { kind: "group" | "repeatable" }
-    ? never
-    : TFields[K] extends { kind: "relation"; multiple: true }
+  [
+    K in keyof TFields as TFields[K] extends { kind: "group" | "repeatable" }
       ? never
-      : K]: TFields[K];
+      : TFields[K] extends { kind: "relation"; multiple: true }
+        ? never
+        : K
+  ]: TFields[K];
 };
 
 /**
@@ -348,13 +350,13 @@ export type ContentTableFor<TDefinition> = TDefinition extends {
 export type ContentColumnName<TDefinition> =
   | ContentLeafPath<ContentFieldsOf<TDefinition>>
   | ContentSystemField
+  | (keyof ContentStorageFields<SharedFieldsOf<TDefinition>> & string)
   | (TDefinition extends { editorial: { enabled: true } }
       ? ContentEditorialField
       : never)
   | (TDefinition extends { publication: { enabled: true } }
       ? ContentPublicationField
-      : never)
-  | (keyof ContentStorageFields<SharedFieldsOf<TDefinition>> & string);
+      : never);
 
 /**
  * One thunk per `relation` field, resolving to the target table's `id`. Missing
@@ -400,13 +402,13 @@ export type ContentRepeatableChildTable<TFields> = PgTableWithColumns<{
   columns: BuildColumns<
     string,
     {
+      [K in keyof TFields]: ContentColumnBuilder<TFields[K]>;
+    } & {
       createdAt: NotNull<HasDefault<PgTimestampBuilderInitial<ColumnName>>>;
       id: PgSerialBuilderInitial<ColumnName>;
       itemId: NotNull<PgIntegerBuilderInitial<ColumnName>>;
       position: NotNull<PgIntegerBuilderInitial<ColumnName>>;
       updatedAt: NotNull<HasDefault<PgTimestampBuilderInitial<ColumnName>>>;
-    } & {
-      [K in keyof TFields]: ContentColumnBuilder<TFields[K]>;
     },
     "pg"
   >;

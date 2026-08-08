@@ -24,10 +24,7 @@ import {
   CONTENT_PUBLIC_MAX_PAGE_SIZE,
 } from "../const";
 import { ContentEngineError } from "../errors";
-import {
-  isContentRelationCollection,
-  splitContentFieldPath,
-} from "../paths";
+import { isContentRelationCollection, splitContentFieldPath } from "../paths";
 import { publicOrderableColumns } from "../registry";
 import { groupPublicLeafPaths } from "../schemas";
 import { publicationColumns, publishedCondition } from "./publication";
