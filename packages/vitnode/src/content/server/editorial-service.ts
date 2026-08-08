@@ -24,10 +24,12 @@ import type {
   ContentValuesOf,
 } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
+import type { ContentDeliveryOutcome } from "./delivery-writes";
 import type { ContentRevisionsModel } from "./revisions-model";
 import type { ContentSchedulesModel } from "./schedules-model";
 import type { ContentDatabase } from "./service";
 
+import { isContentPubliclyVisible } from "../cache";
 import {
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_PUBLICATION_FIELDS,
@@ -45,6 +47,10 @@ import {
   buildContentRepeatableOperations,
   contentCollectionKinds,
 } from "./collection-api";
+import {
+  applyContentDeliveryWrite,
+  contentSlugHistoryFor,
+} from "./delivery-writes";
 import {
   changedPathsToColumns,
   diffChangedPaths,
@@ -70,6 +76,13 @@ export interface ContentEditorialOutcome<TDefinition> {
   changed: boolean;
   /** Canonical paths - see {@link ContentUpdateResult.changedFields}. */
   changedFields: ContentChangedPath<TDefinition>[];
+  /**
+   * What this mutation did to the record's public URLs, or absent.
+   *
+   * Absent for every content type without `delivery` - which is every Stage 1-7
+   * one - so the outcome those produce is byte-identical to what it always was.
+   */
+  delivery?: ContentDeliveryOutcome;
   operation: ContentRevisionOperation;
   /** The slug the record answered to *before* this mutation, if it has one. */
   previousSlug: null | string;
@@ -338,6 +351,79 @@ export const createContentEditorialService = <
   const schedules = definition.editorial.scheduling.enabled
     ? createContentSchedulesModel({ c, definition, pluginId })
     : undefined;
+
+  // Only a **shared** slug is this service's business. A localized slug is a column
+  // on the translation table, so a base-row mutation cannot move it and
+  // `translation-editorial-service` owns its history - which is also why a localized
+  // content type's redirects are per language while a shared slug's are not.
+  const deliveryEnabled =
+    definition.delivery.enabled && definition.delivery.slugScope === "shared";
+  const slugHistory = contentSlugHistoryFor({ c, definition, pluginId });
+
+  /** Whether a base row is publicly reachable right now. `false` without publication. */
+  const publiclyVisible = (row: null | Record<string, unknown>): boolean => {
+    if (row === null || !publication) return false;
+
+    return isContentPubliclyVisible({
+      publishedAt: row.publishedAt as Date | null | undefined,
+      status: typeof row.status === "string" ? row.status : undefined,
+    });
+  };
+
+  /**
+   * The publication state a row held *before* a transition.
+   *
+   * Reconstructed rather than re-read, and it is not a guess: a transition is
+   * guarded on the state it changes, so a `publish` that returned a row can only
+   * have found it unpublished, and an `unpublish` can only have found it published.
+   * A second `SELECT` would race with the writer that just won.
+   */
+  const invert = (
+    operation: "publish" | "unpublish",
+    row: Record<string, unknown>,
+  ): Record<string, unknown> => ({
+    publishedAt: row.publishedAt,
+    status: operation === "publish" ? "draft" : "published",
+  });
+
+  /**
+   * The delivery half of one mutation, inside its transaction.
+   *
+   * `undefined` for a content type without delivery, which is what keeps every
+   * Stage 1-7 outcome byte-identical - and `before`/`after` are the rows the caller
+   * already holds on each side of its own guarded write, never a re-read.
+   */
+  const applyDelivery = async (
+    tx: ContentDatabase,
+    {
+      after,
+      before,
+      itemId,
+    }: {
+      after: null | Record<string, unknown>;
+      before: null | Record<string, unknown>;
+      itemId: number;
+    },
+  ): Promise<ContentDeliveryOutcome | undefined> => {
+    if (!deliveryEnabled) return undefined;
+
+    return await applyContentDeliveryWrite({
+      definition,
+      slugHistory,
+      transition: {
+        isPublic: publiclyVisible(after),
+        itemId,
+        // A shared slug belongs to no single language: one reservation covers every
+        // locale the record appears in, because they all answer to the same segment.
+        languageId: null,
+        locale: null,
+        previousSlug: slugOf(before),
+        slug: slugOf(after),
+        wasPublic: publiclyVisible(before),
+      },
+      tx,
+    });
+  };
   const { withCreateSlugs, withUpdateSlugs } = createSlugNormalizer(
     contentTypeId,
     fields,
@@ -553,9 +639,20 @@ export const createContentEditorialService = <
         version,
       });
 
+      // The moment an address becomes - or stops being - publicly addressable, which
+      // is exactly when a slug earns its reservation. A publish reserves the current
+      // slug; an unpublish leaves the history where it is, because the record is
+      // coming back and its old URLs should redirect again when it does.
+      const delivery = await applyDelivery(tx, {
+        after: row,
+        before: { ...row, ...invert(operation, row) },
+        itemId: id,
+      });
+
       return {
         changed: true,
         changedFields: [],
+        ...(delivery === undefined ? {} : { delivery }),
         operation,
         previousSlug: slugOf(row),
         restoredFromRevisionId: null,
@@ -713,9 +810,19 @@ export const createContentEditorialService = <
           version,
         });
 
+        // A created row is a draft, so it reserves nothing - but its slug is still
+        // checked against the reservations, because "that address belongs to an
+        // article that moved" is far better heard now than at publish time.
+        const delivery = await applyDelivery(tx, {
+          after: row,
+          before: null,
+          itemId: typeof row.id === "number" ? row.id : 0,
+        });
+
         return {
           changed: true,
           changedFields: allPaths,
+          ...(delivery === undefined ? {} : { delivery }),
           operation: "create",
           previousSlug: null,
           restoredFromRevisionId: null,
@@ -776,9 +883,20 @@ export const createContentEditorialService = <
           version,
         });
 
+        // History is deliberately **kept**: an incoming link to a deleted article is
+        // exactly the diagnostic somebody will want, and the resolver answers 404
+        // for it by reading the live record rather than by having forgotten the URL.
+        // So there is nothing to write here - only a sitemap that has lost a line.
+        const delivery = await applyDelivery(tx, {
+          after: null,
+          before: row,
+          itemId: id,
+        });
+
         return {
           changed: true,
           changedFields: [],
+          ...(delivery === undefined ? {} : { delivery }),
           operation: "delete",
           previousSlug: slugOf(row),
           restoredFromRevisionId: null,
@@ -898,9 +1016,20 @@ export const createContentEditorialService = <
           version,
         });
 
+        // A restore that brings an older slug back moves the canonical URL exactly
+        // like an edit does, so it retires the current address and redirects it at
+        // the restored one. A restore that changed no slug writes nothing - which is
+        // also why this runs after the guarded write rather than before it.
+        const delivery = await applyDelivery(tx, {
+          after: row,
+          before: current,
+          itemId: id,
+        });
+
         return {
           changed: true,
           changedFields,
+          ...(delivery === undefined ? {} : { delivery }),
           operation: "restore" as const,
           previousSlug: slugOf(current),
           restoredFromRevisionId: revisionId,
@@ -1000,9 +1129,19 @@ export const createContentEditorialService = <
           version,
         });
 
+        // After the guarded write, so the reservation is only taken by the writer
+        // that actually won the version race - a loser throws above and leaves the
+        // history exactly as it found it.
+        const delivery = await applyDelivery(tx, {
+          after: row,
+          before: current,
+          itemId: id,
+        });
+
         return {
           changed: true,
           changedFields,
+          ...(delivery === undefined ? {} : { delivery }),
           operation: "update" as const,
           previousSlug: slugOf(current),
           restoredFromRevisionId: null,

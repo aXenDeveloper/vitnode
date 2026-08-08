@@ -145,6 +145,23 @@ export interface ContentTranslationModel<TDefinition> {
     locale: string,
     options?: ContentTranslationOptions,
   ) => Promise<boolean>;
+  /**
+   * The **base** row's publication state, or `null` when the record is gone.
+   *
+   * Exposed because a translation's public reachability is subordinate to the
+   * record's: a published Polish translation of a draft article is not a public
+   * URL, so the delivery layer cannot decide whether to reserve an address without
+   * both halves. It lives here rather than in the editorial layer for the same
+   * reason `resolveLanguage` does - the base table is this repository's, and a
+   * second reader would be a second place the two could disagree.
+   *
+   * `{ publishedAt: null, status: undefined }` for a content type without
+   * publication, where a translation is visible as soon as the record is.
+   */
+  findBasePublication: (
+    itemId: number,
+    options?: ContentTranslationOptions,
+  ) => Promise<null | { publishedAt: Date | null; status: string | undefined }>;
   findByLanguageId: (
     itemId: number,
     languageId: number,
@@ -616,6 +633,30 @@ export const createContentTranslationModel = <
         .limit(1);
 
       return row !== undefined;
+    },
+
+    findBasePublication: async (itemId, options) => {
+      const baseColumns = table as unknown as Record<string, PgColumn>;
+      const [row] = await db(options)
+        .select(
+          publication
+            ? {
+                publishedAt: baseColumns.publishedAt,
+                status: baseColumns.status,
+              }
+            : { publishedAt: baseId, status: baseId },
+        )
+        .from(table)
+        .where(eq(baseId, itemId))
+        .limit(1);
+
+      if (!row) return null;
+      if (!publication) return { publishedAt: null, status: undefined };
+
+      return {
+        publishedAt: toNullableDate(row.publishedAt),
+        status: typeof row.status === "string" ? row.status : undefined,
+      };
     },
 
     findByLanguageId: async (itemId, languageId, options) => {

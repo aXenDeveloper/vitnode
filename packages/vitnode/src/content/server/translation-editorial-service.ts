@@ -14,6 +14,7 @@ import type {
   ContentLocalizedValues,
   ContentTranslationRow,
 } from "../types";
+import type { ContentDeliveryOutcome } from "./delivery-writes";
 import type { ContentLanguage } from "./language-resolver";
 import type {
   ContentRevisionPage,
@@ -22,6 +23,7 @@ import type {
 import type { ContentDatabase } from "./service";
 import type { ContentTranslationModel } from "./translation-model";
 
+import { isContentTranslationPubliclyVisible } from "../cache";
 import {
   ContentEngineError,
   ContentRevisionNotRestorable,
@@ -33,6 +35,10 @@ import {
   contentInnerFields,
   splitContentFieldPath,
 } from "../paths";
+import {
+  applyContentDeliveryWrite,
+  contentSlugHistoryFor,
+} from "./delivery-writes";
 import { diffChangedPaths } from "./query";
 import {
   contentTranslationRevisionSnapshot,
@@ -54,6 +60,14 @@ export interface ContentTranslationEditorialOutcome<TDefinition> {
   /** `false` when nothing moved: no write, no revision, no event, no tags. */
   changed: boolean;
   changedFields: ContentLocalizedFieldName<TDefinition>[];
+  /**
+   * What this mutation did to **this locale's** public URL, or absent.
+   *
+   * Absent for every content type without `delivery`, and for one whose slug is
+   * shared - a shared slug is a column on the base row, so a translation mutation
+   * cannot move it and the base editorial service owns its history.
+   */
+  delivery?: ContentDeliveryOutcome;
   languageId: number;
   /** The canonical `core_languages.code`, never the caller's casing. */
   locale: string;
@@ -232,6 +246,90 @@ export const createContentTranslationEditorialService = <
     localizedFields,
   );
 
+  // Only a **localized** slug is this service's business. A shared one is a column
+  // on the base row, so a translation mutation cannot move it - see the base
+  // editorial service, which owns that history.
+  const deliveryEnabled =
+    definition.delivery.enabled &&
+    definition.delivery.slugScope === "localized";
+  const slugHistory = contentSlugHistoryFor({ c, definition, pluginId });
+
+  /**
+   * The delivery half of one translation mutation, inside its transaction.
+   *
+   * The publication test is the **subordinated** one - the base row published *and*
+   * this translation published - because that is what makes a localized URL public.
+   * A published Polish translation of a draft article is not an address anybody can
+   * reach, so reserving its slug would hand out a permanent claim on a URL that was
+   * never live.
+   */
+  const applyDelivery = async (
+    tx: ContentDatabase,
+    {
+      after,
+      before,
+      itemId,
+      languageId,
+      locale,
+    }: {
+      after: ContentTranslationRow<TDefinition> | null;
+      before: ContentTranslationRow<TDefinition> | null;
+      itemId: number;
+      languageId: number;
+      locale: string;
+    },
+  ): Promise<ContentDeliveryOutcome | undefined> => {
+    if (!deliveryEnabled) return undefined;
+
+    const base = (await translations.findBasePublication(itemId, { tx })) ?? {
+      publishedAt: null,
+      status: undefined,
+    };
+    const visible = (
+      row: ContentTranslationRow<TDefinition> | null,
+    ): boolean => {
+      if (row === null) return false;
+
+      return isContentTranslationPubliclyVisible({
+        base,
+        translation: {
+          publishedAt: (row as { publishedAt?: Date | null }).publishedAt,
+          status: (row as { status?: string }).status,
+        },
+      });
+    };
+
+    return await applyContentDeliveryWrite({
+      definition,
+      slugHistory,
+      transition: {
+        isPublic: visible(after),
+        itemId,
+        languageId,
+        locale,
+        previousSlug: slugOf(before),
+        slug: slugOf(after),
+        wasPublic: visible(before),
+      },
+      tx,
+    });
+  };
+
+  /**
+   * The publication state one translation held before a transition.
+   *
+   * The localized twin of the base service's `invert`, and correct for the same
+   * reason: a transition is guarded on the state it changes, so a `publish` that
+   * returned a row can only have found it unpublished.
+   */
+  const invertTranslation = (
+    operation: "publish" | "unpublish",
+    row: ContentTranslationRow<TDefinition>,
+  ): ContentTranslationRow<TDefinition> => ({
+    ...row,
+    status: operation === "publish" ? "draft" : "published",
+  });
+
   /**
    * One locale's revision model.
    *
@@ -366,9 +464,22 @@ export const createContentTranslationEditorialService = <
         version: result.version,
       });
 
+      // Publishing a language is the moment its address becomes live, so this is
+      // where the reservation is taken. Unpublishing writes nothing: the history
+      // stays, and the resolver stops redirecting to it because it reads the live
+      // publication state rather than the history.
+      const delivery = await applyDelivery(tx, {
+        after: result.row,
+        before: invertTranslation(operation, result.row),
+        itemId: result.row.itemId,
+        languageId: result.row.languageId,
+        locale: result.row.locale,
+      });
+
       return {
         changed: true,
         changedFields: [],
+        ...(delivery === undefined ? {} : { delivery }),
         languageId: result.row.languageId,
         locale: result.row.locale,
         operation,
@@ -412,9 +523,21 @@ export const createContentTranslationEditorialService = <
           version: row.version,
         });
 
+        // A new translation starts as a draft, so it reserves nothing - but its slug
+        // is checked, because "that address belongs to an article that moved" is far
+        // better heard now than at publish time.
+        const delivery = await applyDelivery(tx, {
+          after: row,
+          before: null,
+          itemId: row.itemId,
+          languageId: row.languageId,
+          locale: row.locale,
+        });
+
         return {
           changed: true,
           changedFields: localizedPaths,
+          ...(delivery === undefined ? {} : { delivery }),
           languageId: row.languageId,
           locale: row.locale,
           operation: "create" as const,
@@ -449,9 +572,21 @@ export const createContentTranslationEditorialService = <
           version,
         });
 
+        // The history of a deleted translation is kept, exactly as a deleted
+        // record's is: the URL existed, and the resolver answers 404 for it by
+        // finding no live translation rather than by having forgotten it.
+        const delivery = await applyDelivery(tx, {
+          after: null,
+          before: row,
+          itemId: row.itemId,
+          languageId: row.languageId,
+          locale: row.locale,
+        });
+
         return {
           changed: true,
           changedFields: [],
+          ...(delivery === undefined ? {} : { delivery }),
           languageId: row.languageId,
           locale: row.locale,
           operation: "delete" as const,
@@ -591,9 +726,21 @@ export const createContentTranslationEditorialService = <
           version: result.version,
         });
 
+        // A restore that brings an older localized slug back moves this language's
+        // canonical URL exactly as an edit does - and one that changed no slug
+        // writes nothing, which is why it runs after the diff proved something moved.
+        const delivery = await applyDelivery(tx, {
+          after: result.row,
+          before: current,
+          itemId: result.row.itemId,
+          languageId: result.row.languageId,
+          locale: result.row.locale,
+        });
+
         return {
           changed: true,
           changedFields: result.changedFields,
+          ...(delivery === undefined ? {} : { delivery }),
           languageId: result.row.languageId,
           locale: result.row.locale,
           operation: "restore" as const,
@@ -632,9 +779,20 @@ export const createContentTranslationEditorialService = <
           version: result.version,
         });
 
+        // After the guarded write, so the reservation is only taken by the writer
+        // that actually won this locale's version race.
+        const delivery = await applyDelivery(tx, {
+          after: result.row,
+          before,
+          itemId: result.row.itemId,
+          languageId: result.row.languageId,
+          locale: result.row.locale,
+        });
+
         return {
           changed: true,
           changedFields: result.changedFields,
+          ...(delivery === undefined ? {} : { delivery }),
           languageId: result.row.languageId,
           locale: result.row.locale,
           operation: "update" as const,
