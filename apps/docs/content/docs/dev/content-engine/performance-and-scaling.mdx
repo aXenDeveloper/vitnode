@@ -1,0 +1,167 @@
+---
+title: Performance and scaling
+description: What a page costs in round trips, why that number does not move when the page grows, and where cursor pagination is exact.
+icon: Gauge
+---
+
+None of the numbers here are milliseconds. A wall-clock figure says more about
+the machine than about the code, and a test built on one fails on a busy CI
+runner for reasons nobody can act on.
+
+What is measured instead is **algorithmic**: how many round trips one page costs,
+whether that number moves when the page grows, and whether a lookup seeks on an
+index or reads the whole table. Those are properties of the SQL, and they are the
+ones that decide whether a collection stays usable at a hundred thousand rows.
+
+## A page costs a bounded number of queries
+
+The invariant an N+1 breaks is not "few queries" - it is "the *same* number of
+queries for five rows and for sixty".
+
+| Read | Round trips per page |
+| ---- | -------------------- |
+| Admin list, labels included | bounded - one count, one select, joins inside it |
+| Public list | bounded |
+| Localized public list | bounded, whatever the locale |
+| Public list with advanced collections | bounded, **plus one batch per exposed collection** |
+| Revision history page | bounded |
+| Search rebuild page | bounded |
+
+Two things make that hold.
+
+**Labels are joined, not looked up.** One `LEFT JOIN` per reference field
+resolves every display name in the same round trip - there is no per-row lookup
+anywhere in the list path.
+
+**Collections are batched by parent id.** A to-many relation is deliberately
+absent from `ContentSelect` for exactly this reason: a list that carried one
+would issue a query per row, and a table of 25 rows with two collections would be
+50 round trips. `loadMany` takes the whole page's ids and issues one query per
+collection field.
+
+## Only what the projection asks for
+
+A public read loads the collections the allowlist actually exposes, and no
+others. `relatedArticles` is private on the example content type, so a public
+list never touches its junction table at all - querying it to discard the rows
+afterwards is work with no answer attached.
+
+The same rule runs through search: `contentSearchAdvancedValues` loads only the
+collections the search configuration names. A content type that indexes none -
+every Stage 1-5 one - pays a boolean check and no query.
+
+## Shared collections are loaded once, not once per locale
+
+The localized rebuild emits one document per published translation, so a record
+with three languages appears three times on a page. Its FAQ is *shared*, and
+loading it three times would be an N+1 hiding behind a perfectly correct result.
+
+So the batch loader deduplicates parent ids before it queries. Three translations
+of one record read the FAQ once.
+
+## Cursor pagination
+
+The cursor is the primary key, and pages are keyset reads rather than `OFFSET` -
+so a page deep into a large collection seeks on the index instead of counting
+past every earlier row.
+
+**What is guaranteed:**
+
+- a row already returned never comes back;
+- the cursor always advances, so a loop always terminates;
+- deleting everything past the cursor ends the walk rather than looping;
+- ordering is **total** - the primary key is appended as a tiebreaker, so rows
+  sharing an `updatedAt` are not free to move between the two queries a page turn
+  issues;
+- a public page is capped at the server's ceiling however large a `first` an
+  anonymous caller sends.
+
+**What is not:**
+
+<Callout type="warn" title="A cursor is a position, not a snapshot">
+Rows inserted behind the cursor are not seen until the next pass. That is the
+trade every keyset pagination makes, and it is the right one - the alternative is
+holding a transaction open across requests.
+</Callout>
+
+<Callout type="warn" title="Order by something that moves with the identifier">
+The cursor **is** the identifier. Ordering by a column with no relationship to it
+- a title, say - cannot page exactly: rows whose identifiers fall on the wrong
+side of the cursor are skipped. Every generated default (`updatedAt`,
+`publishedAt`, `createdAt`, `id`) moves with the identifier and is exact; a
+custom `orderableFields` entry that does not is a deep-pagination hazard.
+</Callout>
+
+## Indexes
+
+Everything a generated query needs is generated with it, and the definitions are
+asserted rather than assumed:
+
+| Query | Index |
+| ----- | ----- |
+| `findById` | the primary key |
+| `findBySlug` | the slug's unique index |
+| localized slug lookup | `UNIQUE (languageId, slug)` on the translation table |
+| public list | `(status, publishedAt)` from the publication block |
+| revision history | `UNIQUE (contentTypeId, itemId, version)` |
+| translation history | the partial unique index on `(…, languageId, version)` |
+| relation membership `EXISTS` | the junction's primary key `(itemId, relatedItemId)` |
+| reverse relation lookup | `(relatedItemId)` - Postgres does not index the child side of a foreign key on its own |
+| repeatable `loadMany` | `UNIQUE (itemId, position)` |
+| schedule claims | `(status, scheduledFor)` and `(contentTypeId, itemId)` |
+
+The plans are checked too, on a table large enough for the planner to have a real
+choice: a slug lookup and an identifier lookup both seek, and a revision history
+page does not scan. Nothing asserts a *cost* - planner costs move between majors
+for reasons that are none of the engine's business.
+
+## Adding an index of your own
+
+```ts
+indexes: [
+  { on: ["status", "createdAt"] },
+  // Leaf paths work, and compile against the generated column.
+  { on: ["syndication.priority"] },
+],
+```
+
+Names are derived from the table and clamped to Postgres' 63 characters with a
+fingerprint, and a collision anywhere in the schema is a **boot failure** rather
+than a migration that fails at deploy time. That includes the names nobody wrote
+down: a junction's primary key, its position constraint, its target index and a
+repeatable's position constraint.
+
+## Reads stay page-bound
+
+A page is a page whatever the table holds behind it: `first: 25` materialises 25
+rows, and `totalCount` is an aggregate rather than a fetch. Nothing in the list
+path reads a collection whole.
+
+The one read that deliberately loads everything is `findDetail`, which is what an
+edit form needs - one record, with its collections attached. A list must never
+call it, and does not.
+
+## Where the limits actually are
+
+- **A repeatable is a handful of rows a person edits in one form.** The ceiling
+  is 200 and the default is 50; model a content type for anything larger.
+- **A to-many relation is capped** for the same reason - it is edited as a set in
+  a picker, not paged.
+- **A rebuild is a queue task**, paged, and safe to run against a large table.
+  It is not free; run it when you need it rather than on a schedule.
+- **`totalCount` is a `COUNT(*)`** on every list page. On a very large table with
+  a filter that no index covers, that is the expensive part of the request - and
+  the fix is an index on the filter, not a change to the pagination.
+
+## Running the scale suite
+
+```bash
+DATABASE_TEST_URL=postgres://postgres:postgres@localhost:5432/vitnode_test \
+  pnpm --filter @vitnode/example test
+```
+
+`performance-postgres.test.ts` seeds a few thousand rows rather than the ten
+thousand a plan might suggest, because every property above is visible at any size
+above "a handful" - and a suite nobody waits for is a suite nobody runs. Where
+scale genuinely matters, because a sequential scan is cheaper than an index on a
+tiny table, the fixture is grown until the planner has a real choice to make.

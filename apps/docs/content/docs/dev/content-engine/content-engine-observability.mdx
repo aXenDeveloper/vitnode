@@ -1,0 +1,165 @@
+---
+title: Observability
+description: The two questions an operator asks at three in the morning, and where the Content Engine answers them.
+icon: Activity
+---
+
+This is not a monitoring product. There is no time series, no Prometheus and no
+dashboard, because the install has none of those and the Content Engine is not
+the place to introduce them.
+
+What it does have is answers to the two questions that actually get asked when
+something looks wrong.
+
+## Is the search index telling the truth?
+
+The database is the source of truth. So "how many documents should there be" is a
+`COUNT` over published rows, and "how many are there" is a `COUNT` over
+`core_search_index`. A difference is drift.
+
+```http
+GET /api/@vitnode/core/admin/debug/content/status
+```
+
+```json
+{
+  "healthy": false,
+  "contentTypes": [
+    {
+      "contentTypeId": "example.localized-article",
+      "pluginId": "@vitnode/example",
+      "features": {
+        "editorial": true,
+        "localization": true,
+        "publicApi": true,
+        "publication": true,
+        "scheduling": false,
+        "search": true
+      },
+      "search": {
+        "contentTypeId": "example.localized-article",
+        "healthy": false,
+        "locales": [
+          { "locale": "en", "expected": 421, "indexed": 421, "healthy": true },
+          { "locale": "pl", "expected": 421, "indexed": 419, "healthy": false }
+        ]
+      },
+      "schedules": null
+    }
+  ]
+}
+```
+
+Two aggregates per content type, whatever its size, so this is safe to open on an
+install with a large table.
+
+<Callout title="Why this is not the same as /search/status">
+The existing search status page reports what is *in* the index, measured against
+the indexer's own count. A collection can read as fully covered there and still
+be missing every Polish document. This measures against the **rows**.
+</Callout>
+
+Three things it can tell you:
+
+- **`indexed` below `expected`** - a live synchronisation that threw, or a
+  rebuild that stopped part-way. Fix the engine, then rebuild.
+- **`indexed` above `expected`** - documents that outlived their records. Reported
+  as measured rather than clamped, because a stale document is exactly what needs
+  seeing.
+- **One locale healthy and another not** - the shape a half-finished localized
+  rebuild makes, and the one a single total cannot show.
+
+The expected side uses the **same** `publishedCondition` the indexer uses. Re-
+deriving "published" here would let the diagnostic disagree with the thing it is
+diagnosing, which is the one way a health check is worse than none.
+
+### Repairing drift
+
+```http
+POST /api/@vitnode/core/admin/debug/search/rebuild
+{ "itemType": "example.localized-article" }
+```
+
+Scoped to one collection so a single-collection reindex never wipes the rest of
+the index. A rebuild reproduces exactly what live synchronisation would have
+written, so repairing drift never changes what search returns beyond making it
+correct.
+
+## Did anything scheduled fail to announce itself?
+
+A scheduled transition that committed but whose event, index write or cache
+expiry did not is recorded on the schedule row - and counted per content type on
+the same status route:
+
+```json
+"schedules": { "pending": 3, "withErrors": 0, "failedEffects": 1 }
+```
+
+| Field | Means |
+| ----- | ----- |
+| `pending` | Bookings still waiting to fire. |
+| `withErrors` | Pending bookings whose last run threw. The transition has not happened. |
+| `failedEffects` | Transitions that **did** happen and were never announced. |
+
+`failedEffects` is the one worth alerting on: the record *is* published, and
+nobody has been told. The effects task retries on the queue's backoff, so a
+non-zero value that stays non-zero is an outage rather than a blip. Per booking,
+the AdminCP schedule panel shows the reason.
+
+## The logs
+
+Two greppable prefixes in `core_logs`, visible in AdminCP → Advanced → Logs.
+
+| Prefix | Written when |
+| ------ | ------------ |
+| `[content-search]` | An index write or delete threw after a committed mutation. |
+| `[content-effects]` | An event was emitted and a listener did not receive it. |
+| `[content-revalidate]` | A web origin refused or could not be reached. |
+
+Each is a single JSON object behind the prefix, with the content type, the item,
+the operation and the underlying error - enough to find the record without
+correlating three systems by timestamp.
+
+Deliberately **not** logged as errors: a `404`, a no-op mutation, and a draft that
+was not indexed. All three are the engine working, and a log full of them is a log
+nobody reads.
+
+## Using the diagnostics from code
+
+Everything the route returns is available directly, so a plugin can build its own
+panel or a cron job can alert on it:
+
+```ts
+import {
+  contentEngineDiagnostics,
+  contentScheduleHealth,
+  contentSearchDrift,
+} from "@vitnode/core/content/server";
+
+// Everything, sorted by content type id so two calls - and two processes -
+// report the same order.
+const report = await contentEngineDiagnostics(c);
+
+// Or one content type at a time.
+const drift = await contentSearchDrift(c, { model: articleContent });
+if (!drift.healthy) {
+  await c.get("log").error(`[my-plugin] ${JSON.stringify(drift.locales)}`);
+}
+
+// Or just the schedules, in one grouped query for many content types.
+const schedules = await contentScheduleHealth(c, ["example.article"]);
+```
+
+The route is behind `system: can_view`, like the rest of the debug surface. There
+is nothing in the response an administrator could not read elsewhere, but there is
+nothing in it a visitor should read either.
+
+## What this deliberately does not do
+
+- **It does not repair anything.** Drift is detected by counting; correcting it is
+  a rebuild, and a rebuild is a decision an operator makes.
+- **It does not compare documents.** A count is not a checksum: two stale
+  documents still count as two. It catches the failure that actually happens - a
+  write that threw, a rebuild that stopped - for the price of two aggregates.
+- **It keeps no history.** Every number is computed on demand. Trending them over
+  time is what a monitoring system is for, and this is not one.

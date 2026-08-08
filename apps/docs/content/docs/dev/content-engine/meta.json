@@ -40,6 +40,13 @@
     "permissions",
     "events",
     "overriding-admincp",
+    "production-hardening",
+    "concurrency",
+    "failure-and-retries",
+    "content-engine-security",
+    "content-engine-observability",
+    "performance-and-scaling",
+    "migration-hardening",
     "limitations"
   ]
 }

@@ -1,0 +1,175 @@
+---
+title: Migration hardening
+description: Proving an upgrade is safe before you run it against an install that has rows in it.
+icon: DatabaseZap
+---
+
+A fresh install gets its schema from `drizzle-kit` and that is the end of it. An
+existing install is the interesting case: it has rows, and the upgrade has to
+move them onto the newer shape without a destructive step nobody reviewed.
+
+The patterns are on
+[localization migrations](/docs/dev/content-engine/localization-migrations) and
+[advanced modeling migrations](/docs/dev/content-engine/advanced-modeling-migrations).
+This page is about **proving** them, and about the invariants each one has to
+hold.
+
+## The rule every pattern shares
+
+> The destructive statement lives in a different migration from the copy.
+
+Two files, because between them somebody has to look at the counts. A backfill
+that silently dropped three rows and then deleted its source is not something
+anybody can notice afterwards - the evidence went with the source.
+
+That is why the to-one → to-many pattern is two migrations, why the JSON array →
+repeatable pattern is two, and why the localization pattern has a verification
+step that aborts rather than continuing.
+
+## The invariants
+
+Every upgrade in the test suite checks the same six things. Yours should too.
+
+| Invariant | How to check it |
+| --------- | --------------- |
+| **Row count** | `count(*)` on the source and the destination, before the drop. |
+| **Nullability** | Every new `NOT NULL` column has a default, or the `ALTER` fails on a populated table. |
+| **Foreign keys** | Add them *after* the copy, so a bad reference is a named failure with the data intact. |
+| **Uniqueness** | Same: a pre-existing duplicate surfaces at the index, not halfway through a backfill. |
+| **Order** | `WITH ORDINALITY` for a JSON array; `position` starting at zero, which is where the engine reads from. |
+| **Source intact** | The old column is still there when the first migration ends. |
+
+## What PostgreSQL gives you for free
+
+DDL is transactional. A migration file that fails on its third statement leaves
+**nothing** behind - not the rows it inserted, and not the table it created. So a
+failed migration is always safe to fix and re-run, and the verification step can
+`RAISE EXCEPTION` knowing it will take the whole file with it:
+
+```sql
+DO $$
+DECLARE source_count integer; copied_count integer;
+BEGIN
+  SELECT count(*) INTO source_count FROM "example_articles";
+  SELECT count(*) INTO copied_count FROM "example_articles_translations";
+
+  IF source_count <> copied_count THEN
+    RAISE EXCEPTION 'Copied % of % rows; refusing to drop the source columns.',
+      copied_count, source_count;
+  END IF;
+END $$;
+```
+
+<Callout type="warn" title="The exception">
+`CREATE INDEX CONCURRENTLY` cannot run inside a transaction at all, so a
+migration that uses one is **not** atomic - a failure leaves an invalid index
+behind, and you have to drop it by hand. Nothing the Content Engine generates
+uses `CONCURRENTLY`; if you add one for a large table, put it in a migration of
+its own and know what it costs.
+</Callout>
+
+## The upgrades that are covered
+
+Each of these runs against a populated table in
+`plugins/example/src/database/migration-postgres.test.ts`.
+
+### Adding a structured group
+
+Additive and safe, because `defineContentType` already requires every leaf of an
+optional group to be nullable or defaulted:
+
+```sql
+ALTER TABLE "example_articles"
+  ADD COLUMN "syndicationIndexable" boolean DEFAULT true NOT NULL,
+  ADD COLUMN "syndicationPriority"  integer DEFAULT 5 NOT NULL;
+```
+
+Every existing row gets the default. A `NOT NULL` column with no default is a
+`23502` on a table with rows in it - which is the same rule the definition
+enforces, arrived at from the other side.
+
+### Regrouping columns you already have
+
+Moving `seoTitle` and `seoDescription` into a `seo` group needs **no data
+migration**: `field.text()` named `seoTitle` and `seo.title` compile to the same
+column. Generate the migration and check it is empty before believing it.
+
+### To-one → to-many
+
+Copy at position 0, verify, then drop in a second migration:
+
+```sql
+INSERT INTO "example_articles_categories" ("itemId", "relatedItemId", "position")
+SELECT "id", "category", 0 FROM "example_articles" WHERE "category" IS NOT NULL;
+```
+
+The junction's foreign key goes on afterwards, so a stale reference is a `23503`
+you can look at rather than a half-finished copy.
+
+### JSON array → repeatable
+
+`WITH ORDINALITY` is what carries the order across, and `ordinality - 1` is what
+puts it where the engine reads from:
+
+```sql
+INSERT INTO "example_articles_faq" ("itemId", "position", "question", "answer")
+SELECT a."id", entry.ordinality - 1,
+       entry.value ->> 'question', entry.value ->> 'answer'
+FROM "example_articles" a,
+     jsonb_array_elements(a."faqJson") WITH ORDINALITY AS entry(value, ordinality)
+WHERE a."faqJson" IS NOT NULL;
+```
+
+Get that wrong and nothing fails - somebody's FAQ is silently reordered.
+
+### Non-localized → localized
+
+The longest one, and the only one with a mandatory verification step. Six stages:
+create the table, resolve the language id, copy, **verify**, constrain, drop.
+
+Two details the tests pin:
+
+- **The timestamps travel with the values.** A translation stamped `now()` would
+  tell every editor the whole collection was rewritten on deployment day.
+- **The language is resolved, not hardcoded.** A literal `1` is right on the
+  machine it was written on and wrong on every other install.
+
+And one consequence worth expecting: uniqueness moves from *global* to *per
+language*. The base table's old unique slug index goes away with the column, and
+`/en/about` and `/pl/about` become two legal rows.
+
+## Before you run it anywhere real
+
+1. **Against a copy of production first.** The verification step turns a data
+   loss into a failed migration, which is the whole point - but a failed
+   migration is still better discovered on a copy.
+2. **Check the counts by hand between the two files.** That pause is the entire
+   safety mechanism. Automating it away is a product decision made by a script.
+3. **Take constraint and index names from the generated file.** They are derived
+   from your table name and clamped to 63 characters; a name that does not match
+   makes every future diff noisy.
+4. **Never regenerate an applied migration.** It bumps the journal's `when` and
+   the migrator replays the whole file, which fails on `relation already exists`
+   at best. Add a new one.
+
+## Testing your own migration
+
+Copy the shape of the example suite: build the old table, put rows in it that are
+awkward on purpose, run your migration script, and assert the invariants before
+the destructive step.
+
+```ts
+it("copies every entry and preserves its order", async () => {
+  await migrate(CREATE_CHILD);
+
+  const [{ expected }] = await sql`
+    SELECT coalesce(sum(jsonb_array_length("faqJson")), 0)::int AS expected
+    FROM "legacy_articles"
+  `;
+  expect(await countOf("legacy_articles_faq")).toBe(expected);
+});
+```
+
+The awkward rows are the ones worth having: a `NULL` array, a duplicate that will
+collide with the new unique index, a row whose title normalises to nothing. Every
+one of those has been a real migration bug in something, somewhere.

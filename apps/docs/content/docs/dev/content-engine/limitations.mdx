@@ -149,11 +149,14 @@ API, not a Content Engine quirk. Everything a handler *itself* produces
 [is documented](/docs/dev/content-engine/permissions#what-each-route-documents),
 including the unique-conflict 409.
 
-## Index names are checked across Content Types, not across the schema
+## Generated names are checked across Content Types, not across the schema
 
 The registry sees every registered content type at once, so it catches two of
-them resolving to the same index name - across plugins included. It cannot see
-anything else in your database:
+them resolving to the same physical name - across plugins included. That covers
+every name the engine generates: base tables, translation tables, junction
+tables, repeatable child tables, declared indexes, and the primary key, position
+and target constraints each generated table carries. It cannot see anything else
+in your database:
 
 - a collision with a **hand-written table's** index is invisible to it,
 - so is a collision with an index created directly in a migration.
@@ -303,9 +306,19 @@ a `DELETE` when it was not.
 ## The public cursor is always the row id
 
 `withPagination` paginates on the primary key, so a list sorted by `publishedAt`
-still pages by `id`. That is pre-existing behaviour shared with every admin
-list, not a public-API quirk - but it means two rows with the same
-`publishedAt` can order differently between pages.
+still pages by `id`. That is pre-existing behaviour shared with every admin list,
+not a public-API quirk.
+
+Ties no longer matter: the primary key is appended to the ordering as a
+tiebreaker, so two rows sharing a `publishedAt` have a fixed position rather than
+whichever one Postgres happened to return first. What still matters is
+**correlation** - the cursor is the identifier, so an order column with no
+relationship to it cannot page exactly, and a row whose identifier falls on the
+wrong side of the cursor is skipped. Every generated default (`updatedAt`,
+`publishedAt`, `createdAt`, `id`) moves with the identifier and is exact; a
+custom `orderableFields` entry that does not - a title, say - is a deep-pagination
+hazard. See
+[performance and scaling](/docs/dev/content-engine/performance-and-scaling#cursor-pagination).
 
 ## Content types are code
 
@@ -320,3 +333,10 @@ migrations.
 Content events are emitted after a successful write, in-process, with no outbox
 and no retries. If a listener must not be missed, do the work in the same
 request or push it onto the [queue](/docs/dev/advanced/queue).
+
+A listener that fails does not fail the request - the write has already
+committed, and reporting 500 would say it was lost when it was not - but it is
+never swallowed either: the failure is logged behind `[content-effects]` with the
+content type, the item and the listener, and on the scheduled path it is also
+recorded on the booking and retried. See
+[failure and retries](/docs/dev/content-engine/failure-and-retries).
