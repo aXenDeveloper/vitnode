@@ -2,10 +2,14 @@ import { z } from "zod";
 
 import {
   CONTENT_CONFLICT_CODES,
+  CONTENT_DELIVERY_CODES,
   CONTENT_SCHEDULE_CODES,
   CONTENT_TRANSLATION_CONFLICT_CODES,
   CONTENT_UNPROCESSABLE_CODES,
 } from "./const";
+
+export type ContentDeliveryCode =
+  (typeof CONTENT_DELIVERY_CODES)[keyof typeof CONTENT_DELIVERY_CODES];
 
 export type ContentConflictCode =
   (typeof CONTENT_CONFLICT_CODES)[keyof typeof CONTENT_CONFLICT_CODES];
@@ -96,6 +100,46 @@ export const parseContentTranslationConflict = (
 
   try {
     const parsed = zodContentTranslationConflict.safeParse(JSON.parse(body));
+
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * The 409 body a write refused by the slug reservation answers with.
+ *
+ * Its own schema rather than a third member of {@link zodContentConflict}: that
+ * union is the contract Stage 4 editorial routes already publish, and widening it
+ * would change a response schema every generated client is built from. A route
+ * that can hit the reservation declares this one **alongside** it, so a client
+ * that only knows the older union still parses the arms it knows.
+ *
+ * `locale` is `null` for a content type whose slug is shared, and the locale code
+ * when the slug is localized - which is exactly the scope the reservation covers.
+ * There is deliberately no owning-record id: a 409 on a public-facing address must
+ * not become a way to enumerate records the caller cannot read.
+ */
+export const zodContentDeliveryConflict = z.object({
+  code: z.literal(CONTENT_DELIVERY_CODES.slugReserved),
+  contentTypeId: z.string(),
+  locale: z.string().nullable(),
+  slug: z.string(),
+});
+
+export type ContentDeliveryConflict = z.infer<
+  typeof zodContentDeliveryConflict
+>;
+
+/** Reads a delivery conflict out of a response body, or `null`. */
+export const parseContentDeliveryConflict = (
+  body: string | undefined,
+): ContentDeliveryConflict | null => {
+  if (body === undefined || body === "") return null;
+
+  try {
+    const parsed = zodContentDeliveryConflict.safeParse(JSON.parse(body));
 
     return parsed.success ? parsed.data : null;
   } catch {

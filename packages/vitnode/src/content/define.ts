@@ -1,6 +1,11 @@
 import type {
   AnyContentTypeDefinition,
   ContentAdminConfig,
+  ContentDeliveryConfig,
+  ContentDeliveryDescriptionField,
+  ContentDeliveryEnabled,
+  ContentDeliveryNoIndexField,
+  ContentDeliveryTitleField,
   ContentEditorialConfig,
   ContentEditorialEnabled,
   ContentFieldDescriptor,
@@ -21,6 +26,7 @@ import type {
   ContentSearchTitleField,
   ContentTypeDefinition,
   ResolvedContentAdminConfig,
+  ResolvedContentDeliveryConfig,
   ResolvedContentEditorialConfig,
   ResolvedContentLocalizationConfig,
   ResolvedContentPublicApiConfig,
@@ -64,6 +70,7 @@ import {
   CONTENT_TABLE_NAME_PATTERN,
   isFilterableFieldKind,
 } from "./const";
+import { resolveContentDelivery } from "./delivery";
 import { ContentEngineError } from "./errors";
 import { resolveContentIndexes } from "./indexes";
 import {
@@ -1410,8 +1417,22 @@ export const defineContentType = <
   TLocalization extends ContentLocalizationConfig | { enabled: false } = {
     enabled: false;
   },
+  // The whole `delivery` argument, inferred as one type, for the same two reasons
+  // `TSearch` and `TEditorial` are. Its *constraint* is what enforces the field
+  // rules - a constraint is checked once `TPublicField` and `TPublicEnabled` are
+  // resolved, which is what makes "delivery needs a public API" and "an SEO field
+  // has to be public" compile errors rather than boot-time ones.
+  TDelivery extends
+    | ContentDeliveryConfig<
+        TPublicEnabled,
+        ContentDeliveryTitleField<TFields, TPublicField>,
+        ContentDeliveryDescriptionField<TFields, TPublicField>,
+        ContentDeliveryNoIndexField<TFields, TPublicField>
+      >
+    | { enabled: false } = { enabled: false },
 >({
   admin,
+  delivery,
   editorial,
   fields,
   id,
@@ -1427,6 +1448,13 @@ export const defineContentType = <
     TPublication,
     ContentEditorialEnabled<TEditorial>
   >;
+  /**
+   * Opts into the delivery layer: canonical URLs, slug history, automatic
+   * redirects, localized alternates, `hreflang`, SEO projection and sitemap
+   * entries. Needs `publicApi`, and every SEO field it names has to be in
+   * `publicApi.fields`. Omit it and nothing about the content type changes.
+   */
+  delivery?: TDelivery;
   /**
    * Opts into the editorial workflow: a `version` column, optimistic locking
    * and revision history, plus optional preview and scheduling. Omit it and
@@ -1471,7 +1499,8 @@ export const defineContentType = <
   ContentEditorialEnabled<TEditorial>,
   ContentPreviewEnabled<TEditorial>,
   ContentSchedulingEnabled<TEditorial>,
-  ContentLocalizationEnabled<TLocalization>
+  ContentLocalizationEnabled<TLocalization>,
+  ContentDeliveryEnabled<TDelivery>
 > => {
   if (!CONTENT_ID_PATTERN.test(id)) {
     throw new ContentEngineError(
@@ -1643,6 +1672,24 @@ export const defineContentType = <
     tableName,
   });
 
+  // After localization, because "which language owns a historical URL" is read
+  // off the field partition, and after `publicApi`, because every canonical path
+  // and every SEO field is stated in terms of the resolved public allowlist.
+  const resolvedDelivery = resolveContentDelivery({
+    // The `{ enabled: false }` arm exists only so an explicit literal typechecks -
+    // the same widening `publicApi`, `search`, `editorial` and `localization` do.
+    delivery: delivery as ContentDeliveryConfig | undefined,
+    fields: fieldMap,
+    id,
+    localization: {
+      defaultLocale: resolvedLocalization.defaultLocale,
+      enabled: resolvedLocalization.enabled,
+    },
+    localizedFields,
+    publicApi: resolvedPublicApi,
+    publication: publicationEnabled,
+  });
+
   const definition: ContentTypeDefinition<
     TId,
     TFields,
@@ -1653,10 +1700,14 @@ export const defineContentType = <
     ContentEditorialEnabled<TEditorial>,
     ContentPreviewEnabled<TEditorial>,
     ContentSchedulingEnabled<TEditorial>,
-    ContentLocalizationEnabled<TLocalization>
+    ContentLocalizationEnabled<TLocalization>,
+    ContentDeliveryEnabled<TDelivery>
   > = {
     admin: resolvedAdmin,
     advanced: resolvedAdvanced,
+    delivery: resolvedDelivery as ResolvedContentDeliveryConfig<
+      ContentDeliveryEnabled<TDelivery>
+    >,
     editorial: resolvedEditorial as ResolvedContentEditorialConfig<
       ContentEditorialEnabled<TEditorial>,
       ContentPreviewEnabled<TEditorial>,
@@ -1688,7 +1739,8 @@ export const defineContentType = <
         ContentEditorialEnabled<TEditorial>,
         ContentPreviewEnabled<TEditorial>,
         ContentSchedulingEnabled<TEditorial>,
-        ContentLocalizationEnabled<TLocalization>
+        ContentLocalizationEnabled<TLocalization>,
+        ContentDeliveryEnabled<TDelivery>
       >
     >({
       admin: resolvedAdmin,

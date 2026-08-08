@@ -318,6 +318,66 @@ export class ContentAdvancedInputError extends ContentInputError {
 }
 
 /**
+ * A slug that another record's public URL history already owns.
+ *
+ * A historical public URL stays reserved for the content type and locale that
+ * retired it, for as long as redirects are enabled, and this is what enforces
+ * that. Without the reservation `/articles/hello` could stop redirecting to the
+ * article it belonged to and start resolving to an unrelated one - so every link,
+ * bookmark and search result pointing at it would silently change meaning.
+ *
+ * Per-request, like {@link ContentInputError}, and structured for the same reason
+ * {@link ContentVersionConflict} is: the AdminCP points at the slug field and says
+ * which URL is taken, which it cannot do from prose. Everything it carries is the
+ * caller's own input echoed back plus the content type id, so there is nothing
+ * internal in it - in particular never the owning record's identifier, which would
+ * let a public write probe for records it cannot read.
+ */
+export class ContentDeliverySlugReserved extends ContentEngineError {
+  constructor({
+    contentTypeId,
+    locale,
+    slug,
+  }: {
+    contentTypeId: string;
+    locale: null | string;
+    slug: string;
+  }) {
+    super(
+      locale === null
+        ? `The address "${slug}" is reserved: another record used it publicly and it still redirects there. Pick a different one.`
+        : `The address "${slug}" is reserved in "${locale}": another record used it publicly and it still redirects there. Pick a different one.`,
+      { contentTypeId },
+    );
+
+    this.name = "ContentDeliverySlugReserved";
+    this.locale = locale;
+    this.slug = slug;
+  }
+
+  readonly locale: null | string;
+  readonly slug: string;
+}
+
+/**
+ * A delivery operation on a content type that has no delivery layer.
+ *
+ * A configuration bug rather than a per-request one - the model exposes no
+ * `deliveryService` at all for such a content type, so reaching this means
+ * somebody built the service by hand.
+ */
+export class ContentDeliveryNotEnabled extends ContentEngineError {
+  constructor({ contentTypeId }: { contentTypeId: string }) {
+    super(
+      "This content type has no `delivery` block, so it has no canonical URL, no slug history and no sitemap. Add `delivery: { enabled: true }` to generate them.",
+      { contentTypeId },
+    );
+
+    this.name = "ContentDeliveryNotEnabled";
+  }
+}
+
+/**
  * A schedule that does not make sense: a time already past, or an unpublish
  * that would fire before the publish it is meant to follow.
  *

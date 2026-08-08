@@ -450,6 +450,112 @@ export const CONTENT_SCHEDULE_CODES = {
   unsupported: "CONTENT_SCHEDULE_UNSUPPORTED",
 } as const;
 
+// ---------------------------------------------------------------------------
+// Content delivery (Stage 8)
+// ---------------------------------------------------------------------------
+
+/**
+ * Field kinds `delivery.seo.titleField` may name.
+ *
+ * `text` only, and the same reasoning `CONTENT_SEARCH_TITLE_KINDS` gives: a
+ * `<title>` is one line, a `textarea` in that slot puts a paragraph in a browser
+ * tab, and a slug is already in the URL the title accompanies.
+ */
+export const CONTENT_DELIVERY_TITLE_KINDS = ["text"] as const;
+
+/** Field kinds `delivery.seo.descriptionField` may name. */
+export const CONTENT_DELIVERY_DESCRIPTION_KINDS = ["text", "textarea"] as const;
+
+/**
+ * Field kinds `delivery.seo.noIndexField` may name.
+ *
+ * `boolean` only: "should a crawler index this" has two answers, and a truthy
+ * string would make the sitemap's exclusion rule depend on what somebody typed.
+ */
+export const CONTENT_DELIVERY_NO_INDEX_KINDS = ["boolean"] as const;
+
+/**
+ * The `changefreq` values the sitemap protocol defines.
+ *
+ * Validated rather than passed through: a crawler ignores an unknown value
+ * silently, so a typo would be a hint nobody ever receives.
+ */
+export const CONTENT_SITEMAP_CHANGE_FREQUENCIES = [
+  "always",
+  "hourly",
+  "daily",
+  "weekly",
+  "monthly",
+  "yearly",
+  "never",
+] as const;
+
+const sitemapChangeFrequencies: ReadonlySet<string> = new Set(
+  CONTENT_SITEMAP_CHANGE_FREQUENCIES,
+);
+
+export const isContentSitemapChangeFrequency = (
+  value: unknown,
+): value is (typeof CONTENT_SITEMAP_CHANGE_FREQUENCIES)[number] =>
+  typeof value === "string" && sitemapChangeFrequencies.has(value);
+
+/**
+ * The sitemap protocol's own ceiling: 50,000 URLs in one file.
+ *
+ * A delivery sitemap page never returns more than this, and the index helper
+ * chunks by it - so a content type with a million records produces a sitemap
+ * index rather than an invalid document.
+ */
+export const CONTENT_SITEMAP_MAX_URLS = 50_000;
+
+/**
+ * How many URLs one `sitemap.list` page returns by default.
+ *
+ * Far below the protocol ceiling on purpose: a page is one keyset query plus one
+ * batched translation read, and 1,000 rows is a response a serverless function
+ * can hold without thinking about it. A caller that wants a whole 50,000-URL
+ * file asks for it explicitly.
+ */
+export const CONTENT_SITEMAP_DEFAULT_PAGE_SIZE = 1_000;
+
+/**
+ * The redirect a moved canonical URL answers with.
+ *
+ * `308` rather than `301`, and the difference is not cosmetic: `301` lets a
+ * client rewrite the method to `GET`, `308` does not. A content URL is read with
+ * `GET` today, so the two behave identically now - and only one of them still
+ * behaves correctly the day somebody `POST`s to a form under a moved path.
+ *
+ * One status, not a configuration knob: every historical URL of every content
+ * type answers with this, so there is no per-content-type setting to get wrong
+ * and no reason for two of them to disagree.
+ */
+export const CONTENT_DELIVERY_REDIRECT_STATUS = 308;
+
+/**
+ * How a delivery resolution came out.
+ *
+ * `not_found` rather than a `gone` tombstone: the engine has no abstraction that
+ * distinguishes "deleted on purpose" from "unpublished for now", and a `410`
+ * that guessed would tell a crawler to forget a URL that is coming back.
+ */
+export const CONTENT_DELIVERY_RESOLUTIONS = [
+  "content",
+  "not_found",
+  "redirect",
+] as const;
+
+/** `core_content_slug_history.path` is `varchar(512)`. */
+export const CONTENT_DELIVERY_PATH_MAX_LENGTH = 512;
+
+/** Machine-readable reasons a delivery write or read was refused. */
+export const CONTENT_DELIVERY_CODES = {
+  invalidUrl: "CONTENT_DELIVERY_INVALID_URL",
+  notEnabled: "CONTENT_DELIVERY_NOT_ENABLED",
+  redirectConflict: "CONTENT_DELIVERY_REDIRECT_CONFLICT",
+  slugReserved: "CONTENT_DELIVERY_SLUG_RESERVED",
+} as const;
+
 /**
  * Every content type gets the first four staff permissions. `can_publish` is
  * generated only for content types with `publication: { enabled: true }`,

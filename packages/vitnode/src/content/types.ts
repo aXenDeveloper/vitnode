@@ -1,4 +1,7 @@
 import type {
+  CONTENT_DELIVERY_DESCRIPTION_KINDS,
+  CONTENT_DELIVERY_NO_INDEX_KINDS,
+  CONTENT_DELIVERY_TITLE_KINDS,
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_FILTERABLE_FIELD_KINDS,
   CONTENT_LOCALIZATION_FALLBACKS,
@@ -8,6 +11,7 @@ import type {
   CONTENT_SEARCH_DESCRIPTION_KINDS,
   CONTENT_SEARCH_TEXT_KINDS,
   CONTENT_SEARCH_TITLE_KINDS,
+  CONTENT_SITEMAP_CHANGE_FREQUENCIES,
   CONTENT_SYSTEM_FIELDS,
   CONTENT_TRANSLATION_SYSTEM_FIELDS,
 } from "./const";
@@ -1168,6 +1172,238 @@ export interface ResolvedContentSearchConfig<
 }
 
 // ---------------------------------------------------------------------------
+// Delivery (Stage 8)
+// ---------------------------------------------------------------------------
+
+export type ContentSitemapChangeFrequency =
+  (typeof CONTENT_SITEMAP_CHANGE_FREQUENCIES)[number];
+
+/**
+ * Field names and group leaf paths `delivery.seo` may name, of one or more kinds.
+ *
+ * Three rules, one `Extract`, and they are the same three `ContentSearchTitleField`
+ * enforces for the same reasons: `TPublicField` is the public allowlist, so a
+ * private field cannot become a `<title>`; the kind union keeps prose out of a
+ * title slot and a number out of a description; and a **repeatable** leaf is
+ * absent, because a page has one title and a repeatable has many values.
+ */
+export type ContentDeliveryTextField<
+  TFields,
+  TPublicField extends string,
+  TKind extends string,
+> = Extract<
+  TPublicField,
+  | ContentFieldNamesOfKind<TFields, TKind>
+  | ContentLeafPathsOfKind<TFields, TKind, "group">
+>;
+
+/** Field names `delivery.seo.titleField` and its fallback accept. */
+export type ContentDeliveryTitleField<
+  TFields,
+  TPublicField extends string,
+> = ContentDeliveryTextField<
+  TFields,
+  TPublicField,
+  (typeof CONTENT_DELIVERY_TITLE_KINDS)[number]
+>;
+
+/** Field names `delivery.seo.descriptionField` and its fallback accept. */
+export type ContentDeliveryDescriptionField<
+  TFields,
+  TPublicField extends string,
+> = ContentDeliveryTextField<
+  TFields,
+  TPublicField,
+  (typeof CONTENT_DELIVERY_DESCRIPTION_KINDS)[number]
+>;
+
+/** Field names `delivery.seo.noIndexField` accepts. */
+export type ContentDeliveryNoIndexField<
+  TFields,
+  TPublicField extends string,
+> = ContentDeliveryTextField<
+  TFields,
+  TPublicField,
+  (typeof CONTENT_DELIVERY_NO_INDEX_KINDS)[number]
+>;
+
+/**
+ * Optional Open Graph projection, on top of the SEO one.
+ *
+ * Separate fields rather than a flag, because the two audiences differ: a
+ * `<title>` competes in a search result and an `og:title` competes in a chat
+ * preview, and an author who wants them identical simply names the same field
+ * twice. There is deliberately no `imageField` - see
+ * `apps/docs/.../content-delivery-limitations.mdx`.
+ */
+export interface ContentDeliveryOpenGraphConfig<
+  TTitle extends string = string,
+  TDescription extends string = string,
+> {
+  descriptionField?: TDescription;
+  titleField?: TTitle;
+}
+
+/**
+ * What a frontend renders in `<head>`, projected from public fields.
+ *
+ * Every slot is optional and every fallback is explicit. There is no "derive a
+ * description from the first 160 characters of the body": a summary somebody did
+ * not write is a summary nobody reviewed, and it would silently become the
+ * description of every page that forgot to set one.
+ */
+export interface ContentDeliverySeoConfig<
+  TTitle extends string = string,
+  TDescription extends string = string,
+  TNoIndex extends string = string,
+> {
+  descriptionField?: TDescription;
+  /** Used when `descriptionField` resolves to `null` or an empty string. */
+  fallbackDescriptionField?: TDescription;
+  /** Used when `titleField` resolves to `null` or an empty string. */
+  fallbackTitleField?: TTitle;
+  /**
+   * A **shared** boolean field that keeps one record out of the sitemap and
+   * reports `robots: { index: false }`.
+   *
+   * Shared rather than localized on purpose: the two consumers have to agree, and
+   * a per-locale value would make "is this record in the sitemap" a question with
+   * one answer per language while the record has one canonical decision. A
+   * localized field here is a definition-time error.
+   */
+  noIndexField?: TNoIndex;
+  openGraph?: ContentDeliveryOpenGraphConfig<TTitle, TDescription>;
+  titleField?: TTitle;
+}
+
+/**
+ * Automatic redirects from a record's historical public URLs.
+ *
+ * Needs a slug field, which `publicApi` already guarantees. What it adds is
+ * persistence: every slug that was ever *publicly addressable* is written to
+ * `core_content_slug_history`, which is what makes an old URL resolvable after
+ * the row has moved on - and what reserves it, so unrelated content cannot
+ * quietly inherit somebody else's incoming links.
+ */
+export interface ContentDeliveryRedirectsConfig {
+  enabled: true;
+}
+
+export interface ContentDeliverySitemapConfig {
+  /** One of the seven `changefreq` values the protocol defines. */
+  changeFrequency?: ContentSitemapChangeFrequency;
+  enabled: true;
+  /** `0` to `1` inclusive. */
+  priority?: number;
+}
+
+/**
+ * `x-default` for a localized content type.
+ *
+ * `"defaultLocale"` is the only supported mapping, and that is deliberate: an
+ * `x-default` has to point at a URL that actually resolves, and the default
+ * locale's canonical path is the one URL a localized record is guaranteed to have
+ * whenever it is public at all. Omit the block and no `x-default` is emitted -
+ * inventing a locale-less route that the engine does not serve would be worse
+ * than emitting nothing.
+ */
+export interface ContentDeliveryHreflangConfig {
+  xDefault: "defaultLocale";
+}
+
+/**
+ * Opts a content type into the delivery layer: canonical URLs, slug history,
+ * redirects, localized alternates, SEO projection and sitemap entries.
+ *
+ * Requires `publicApi: { enabled: true }`, checked at compile time through
+ * `TPublicEnabled` and again at definition time - a content type with no public
+ * API has no public URL, so there is nothing for delivery to be about.
+ *
+ * `enabled` is literal `true` for the same reason every other opt-in's is: every
+ * conditional keys off `{ enabled: true }`, and a widened `boolean` would
+ * silently resolve to "no delivery".
+ */
+export interface ContentDeliveryConfig<
+  // Defaults to `true` rather than `boolean`, which is what keeps the bare
+  // `ContentDeliveryConfig` usable as a widened parameter type: `boolean extends
+  // true` is false, so a `boolean` default would resolve `enabled` to `never` and
+  // make the erased form describe a config nobody can write.
+  TPublicEnabled extends boolean = true,
+  TTitle extends string = string,
+  TDescription extends string = string,
+  TNoIndex extends string = string,
+> {
+  /**
+   * Literal `true`, and only when the content type has a public API.
+   *
+   * `never` otherwise, which is what turns "delivery needs `publicApi`" into a
+   * compile error on the `enabled: true` itself rather than a boot-time throw. The
+   * runtime check stays as well, for a JavaScript caller and for a value that
+   * widened somewhere upstream.
+   */
+  enabled: TPublicEnabled extends true ? true : never;
+  hreflang?: ContentDeliveryHreflangConfig;
+  redirects?: TPublicEnabled extends true
+    ? ContentDeliveryRedirectsConfig | { enabled: false }
+    : { enabled: false };
+  seo?: ContentDeliverySeoConfig<TTitle, TDescription, TNoIndex>;
+  sitemap?: ContentDeliverySitemapConfig | { enabled: false };
+}
+
+/**
+ * Whether a `delivery` argument opted in.
+ *
+ * Read back off the argument for the same reason `ContentSearchEnabled` is: the
+ * whole object is inferred as one type parameter, and an intersection member is
+ * not an inference site, so this is the only way the literal survives.
+ */
+export type ContentDeliveryEnabled<TDelivery> = TDelivery extends {
+  enabled: true;
+}
+  ? true
+  : false;
+
+/** `delivery.seo` after `defineContentType` has filled in every default. */
+export interface ResolvedContentDeliverySeoConfig {
+  descriptionField: null | string;
+  fallbackDescriptionField: null | string;
+  fallbackTitleField: null | string;
+  noIndexField: null | string;
+  openGraph: null | {
+    descriptionField: null | string;
+    titleField: null | string;
+  };
+  titleField: null | string;
+}
+
+/** `delivery` after `defineContentType` has filled in every default. */
+export interface ResolvedContentDeliveryConfig<
+  TEnabled extends boolean = boolean,
+> {
+  enabled: TEnabled;
+  hreflang: { xDefault: "defaultLocale" | null };
+  redirects: { enabled: boolean };
+  seo: ResolvedContentDeliverySeoConfig;
+  sitemap: {
+    changeFrequency: ContentSitemapChangeFrequency | null;
+    enabled: boolean;
+    priority: null | number;
+  };
+  /**
+   * Where the slug that addresses this content type lives.
+   *
+   * `"localized"` when `publicApi.slugField` is a localized field, `"shared"`
+   * otherwise - and it is the only thing the whole delivery layer branches on to
+   * decide which language a historical URL belongs to. A localized slug is
+   * reserved per language, a shared one once for the content type, and both are
+   * correct for the URLs they actually produce.
+   *
+   * `"none"` for a content type without delivery, which addresses nothing.
+   */
+  slugScope: "localized" | "none" | "shared";
+}
+
+// ---------------------------------------------------------------------------
 // Editorial
 // ---------------------------------------------------------------------------
 
@@ -1504,6 +1740,20 @@ export type SchedulableContentTypeDefinition =
   };
 
 /**
+ * A content type with a delivery layer: canonical URLs, alternates, SEO and a
+ * sitemap.
+ *
+ * Both halves are pinned, because delivery is defined in terms of the public
+ * projection: the canonical path is built from `publicApi.path` and the exposed
+ * slug field, and every SEO field is one of `publicApi.fields`. A content type
+ * without a public allowlist cannot reach the delivery service at all - which is
+ * a compile error rather than an empty response.
+ */
+export type DeliverableContentTypeDefinition = PublicContentTypeDefinition & {
+  delivery: { enabled: true };
+};
+
+/**
  * A content type whose records exist in more than one language.
  *
  * An intersection rather than a tenth type argument, for the same reason
@@ -1563,10 +1813,17 @@ export interface ContentTypeDefinition<
   TPreviewEnabled extends boolean = boolean,
   TSchedulingEnabled extends boolean = boolean,
   TLocalizationEnabled extends boolean = boolean,
+  TDeliveryEnabled extends boolean = boolean,
 > {
   admin: ResolvedContentAdminConfig;
   /** Generated junction tables, child tables and the leaf-path mapping. */
   advanced: ResolvedContentAdvancedConfig;
+  /**
+   * Canonical URLs, slug history, SEO and sitemap - or the disabled default when
+   * `delivery` is omitted, which is what keeps every Stage 1-7 content type
+   * byte-identical.
+   */
+  delivery: ResolvedContentDeliveryConfig<TDeliveryEnabled>;
   /** Editorial workflow, or the disabled default when `editorial` is omitted. */
   editorial: ResolvedContentEditorialConfig<
     TEditorialEnabled,
@@ -1598,7 +1855,8 @@ export interface ContentTypeDefinition<
       TEditorialEnabled,
       TPreviewEnabled,
       TSchedulingEnabled,
-      TLocalizationEnabled
+      TLocalizationEnabled,
+      TDeliveryEnabled
     >
   >;
   /** Search synchronization, or the disabled default when `search` is omitted. */
