@@ -98,6 +98,15 @@ export const advancedArticleContentType = defineContentType({
     syndication: field.group({
       fields: {
         indexable: field.boolean({ defaultValue: true }),
+        /**
+         * The Stage 8 `noIndexField`, and shared rather than localized on purpose.
+         *
+         * Sitemap exclusion and the `robots` metadata are driven by the same
+         * boolean, so they cannot disagree - and a per-locale value would give one
+         * record one answer per language while it has a single canonical decision.
+         * `delivery` refuses a localized field here for exactly that reason.
+         */
+        noIndex: field.boolean({ defaultValue: false }),
         priority: field.number({
           integer: true,
           min: 0,
@@ -142,6 +151,10 @@ export const advancedArticleContentType = defineContentType({
       "seo.title",
       "seo.description",
       "syndication.priority",
+      // Public because delivery projects it: `robots: { index: false }` is rendered
+      // into the page, so the field it comes from has to be something the public API
+      // would already have said out loud.
+      "syndication.noIndex",
       "faq.question",
       "faq.answer",
       "publishedAt",
@@ -164,6 +177,36 @@ export const advancedArticleContentType = defineContentType({
     descriptionField: "seo.description",
     contentFields: ["title", "seo.description", "faq.question", "faq.answer"],
     pathTemplate: "/{locale}/advanced-articles/{slug}",
+  },
+
+  /**
+   * The Stage 8 reference for a **localized** content type.
+   *
+   * Its canonical path carries the locale - `/pl/advanced-articles/moj-artykul` -
+   * and so does its slug history: the slug is `localized: true`, so each language
+   * gets its own reservation and changing the English URL creates no Polish
+   * redirect.
+   *
+   * `seo` reads the localized group, so every language has its own title and
+   * description, with `fallbackTitleField: "title"` filling in when `seo.title` is
+   * empty - which it usually is, because nobody writes one twice.
+   *
+   * `hreflang.xDefault` points at the default locale's canonical path, and only when
+   * that language is genuinely published: an `x-default` pointing at a translation
+   * this record does not have would be a hint to crawl a 404.
+   */
+  delivery: {
+    enabled: true,
+    redirects: { enabled: true },
+    hreflang: { xDefault: "defaultLocale" },
+    seo: {
+      titleField: "seo.title",
+      fallbackTitleField: "title",
+      descriptionField: "seo.description",
+      noIndexField: "syndication.noIndex",
+      openGraph: { titleField: "seo.title", descriptionField: "seo.description" },
+    },
+    sitemap: { enabled: true, changeFrequency: "weekly", priority: 0.7 },
   },
 
   // Leaf paths, materialised against the generated columns: this compiles to an

@@ -35,4 +35,12 @@ export const EXAMPLE_MIGRATIONS = [
   // table - each with the constraints that make its ordering and its integrity
   // facts about the database rather than about the service.
   "0031_add_example_advanced_articles.sql",
+  // Stage 8. Core again: `core_content_slug_history` is what makes an old public
+  // URL keep working, and the delivery suites write reservations for both example
+  // content types - so the table has to exist before either of them publishes.
+  "0032_add_content_slug_history.sql",
+  // The shared boolean `delivery.seo.noIndexField` reads, which drives the sitemap
+  // exclusion and the `robots` metadata together. Additive and defaulted, so every
+  // existing row becomes indexable rather than silently disappearing from a sitemap.
+  "0033_add_example_article_no_index.sql",
 ];

@@ -107,13 +107,16 @@ describe("advanced article: generated routes", () => {
       "title",
     ]);
     // A private collection is absent from the contract as well as from the
-    // response - and `syndication` carries only the leaf that was exposed.
+    // response - and `syndication` carries only the leaves that were exposed.
+    // `indexable` is still absent, which is the whole point of leaf-level
+    // allowlisting: `noIndex` joined it in Stage 8 because delivery projects the
+    // value into a public `robots` directive, and `indexable` did not.
     expect(shape.relatedArticles).toBeUndefined();
     expect(
       Object.keys(
         (shape.syndication as unknown as { shape: Record<string, unknown> })
           .shape,
-      ),
-    ).toStrictEqual(["priority"]);
+      ).sort(),
+    ).toStrictEqual(["noIndex", "priority"]);
   });
 });

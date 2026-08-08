@@ -663,6 +663,9 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
       expect(row?.syndication).toStrictEqual({
         indexable: false,
+        // Stage 8 added a third leaf to the group. It is untouched by a write that
+        // named only `priority`, which is exactly what "partial group update" means.
+        noIndex: false,
         priority: 3,
       });
     });
@@ -1406,6 +1409,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       // Nested, never the flattened column names.
       expect(snapshot.fields.syndication).toStrictEqual({
         indexable: true,
+        noIndex: false,
         priority: 5,
       });
     });
@@ -1525,6 +1529,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
       expect(row?.syndication).toStrictEqual({
         indexable: true,
+        noIndex: false,
         priority: 7,
       });
     });

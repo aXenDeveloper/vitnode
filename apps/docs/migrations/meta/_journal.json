@@ -225,6 +225,20 @@
       "when": 1786181800826,
       "tag": "0031_add_example_advanced_articles",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1786194085698,
+      "tag": "0032_add_content_slug_history",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1786195724174,
+      "tag": "0033_add_example_article_no_index",
+      "breakpoints": true
     }
   ]
 }
