@@ -167,15 +167,35 @@ export interface ContentLocaleInvalidation {
  * keeps the public tags and the delivery tags from disagreeing about what moved.
  */
 export interface ContentDeliveryInvalidation {
-  /**
-   * Whether the set of URLs in the sitemap changed.
-   *
-   * `true` for a publish, an unpublish, a delete, a slug change and a translation
-   * appearing or disappearing - every mutation that adds, removes or moves a line
-   * in the file. `false` for an edit that only changed what an already-listed page
-   * says, which leaves the sitemap byte-identical.
-   */
-  sitemap: boolean;
+  /** What this mutation did to the sitemap. See {@link ContentSitemapChange}. */
+  sitemap: ContentSitemapChange;
+}
+
+/**
+ * How one mutation changed a sitemap, split into the two things a tag can cache.
+ *
+ * One boolean is not enough, and the reason is `<lastmod>`. A sitemap entry carries
+ * `lastModified`, derived from `updatedAt` - so a plain title edit on a published
+ * record changes the **bytes** of that locale's sitemap file even though the set of
+ * URLs in it is identical. Treating "the sitemap changed" as "membership changed"
+ * leaves a cached file serving a stale `<lastmod>` for as long as the tag lives.
+ *
+ * The two are separate because they cache different documents:
+ *
+ * - **`contentChanged`** - the sitemap *file* for this locale is no longer
+ *   byte-identical. True for any real mutation of a record that is or was publicly
+ *   reachable, whether what moved was a URL, a title or an SEO field.
+ * - **`indexChanged`** - the set of sitemap files, or how many of them there are,
+ *   moved. True only when public reachability flipped, because an index lists files
+ *   and their count follows the number of URLs. A title edit changes neither.
+ *
+ * Declared here rather than next to the write path because `cache.ts` is the
+ * client-safe layer and must not import from `server/` - the same reason the tag
+ * builders are plain strings a directory up from Drizzle.
+ */
+export interface ContentSitemapChange {
+  contentChanged: boolean;
+  indexChanged: boolean;
 }
 
 export interface ContentInvalidationInput {
@@ -308,19 +328,22 @@ const deliveryTags = ({
       .map(slug =>
         contentDeliveryRedirectTag(contentTypeId, slug, entry.locale),
       ),
-    ...(delivery.sitemap
+    // The sitemap *file* this locale is listed in. For a content type that is not
+    // localized `entry.locale` is `undefined`, so this is the locale-less tag - which
+    // is that content type's only sitemap file rather than an index of files.
+    ...(delivery.sitemap.contentChanged
       ? [contentDeliverySitemapTag(contentTypeId, entry.locale)]
       : []),
   ]);
 
-  // The locale-less sitemap tag as well: a localized content type's sitemap index
-  // enumerates its per-locale files, so a language gaining or losing a page
-  // changes the index too. De-duplicated, because a content type that is not
-  // localized produces only this form and the per-locale line above already
-  // emitted it - and a tag list is asserted in tests as well as iterated.
+  // The locale-less tag on its own means the *index* of a localized content type's
+  // per-locale files, so it is expired only when the set of files or their count
+  // moved - never for a title edit, which rewrites bytes inside one existing file.
+  // De-duplicated, because a content type that is not localized produces only this
+  // form and the line above already emitted it.
   return [
     ...new Set(
-      delivery.sitemap
+      delivery.sitemap.indexChanged
         ? [...tags, contentDeliverySitemapTag(contentTypeId)]
         : tags,
     ),

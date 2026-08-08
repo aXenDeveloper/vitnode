@@ -121,6 +121,12 @@ export const contentDeliveryInvalidation = (
 
   // A content type with delivery whose mutation reported nothing still expires its
   // delivery metadata - a shared SEO field moving changes what every locale's
-  // `<head>` renders even though no URL moved. Only the sitemap is conditional.
-  return { sitemap: delivery?.sitemapChanged ?? false };
+  // `<head>` renders even though no URL moved. Only the sitemap is conditional, and
+  // an absent outcome means the mutation touched no slug-bearing path at all.
+  return {
+    sitemap: delivery?.sitemap ?? {
+      contentChanged: false,
+      indexChanged: false,
+    },
+  };
 };

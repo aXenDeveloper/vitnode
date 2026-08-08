@@ -48,6 +48,7 @@ export type {
   ContentLocaleInvalidation,
   ContentLocaleState,
   ContentPublicLocaleState,
+  ContentSitemapChange,
 } from "./cache";
 export {
   parseContentConflict,

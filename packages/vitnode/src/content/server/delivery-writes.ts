@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 
+import type { ContentSitemapChange } from "../cache";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDatabase } from "./service";
 import type { ContentSlugHistoryModel } from "./slug-history-model";
@@ -36,8 +37,15 @@ export interface ContentDeliveryOutcome {
    * moved". It is what the `delivery_redirect_created` event is gated on.
    */
   redirectCreated: boolean;
-  /** Whether the set of URLs a sitemap lists changed. */
-  sitemapChanged: boolean;
+  /**
+   * What this mutation did to the sitemap.
+   *
+   * Two booleans rather than one, because a sitemap entry carries a `<lastmod>`
+   * derived from `updatedAt`: a plain title edit on a published record changes the
+   * file's bytes without changing which URLs it lists. See
+   * {@link ContentSitemapChange}.
+   */
+  sitemap: ContentSitemapChange;
   /** The slug the record answers to now, or `null` once it is deleted. */
   slug: null | string;
   /** Whether the canonical URL is different from what it was. */
@@ -166,10 +174,16 @@ export const applyContentDeliveryWrite = async ({
     previousPath: slugChanged ? previousPath : null,
     previousSlug: slugChanged ? previousSlug : null,
     redirectCreated,
-    // A line is added, removed or moved when public reachability changed or when
-    // the URL did. An edit that only changed what an already-listed page says
-    // leaves the sitemap byte-identical.
-    sitemapChanged: wasPublic !== isPublic || slugChanged,
+    sitemap: {
+      // Any real mutation of a record that is or was publicly reachable changes the
+      // file: it gained a line, lost one, moved one, or moved its own `<lastmod>`.
+      // This function is only ever reached for a real mutation - a no-op update
+      // returns before the delivery step - so "was or is public" is the whole test.
+      contentChanged: wasPublic || isPublic,
+      // Only appearing or disappearing changes how many files an index lists. A slug
+      // change rewrites one line inside a file; a title edit rewrites a timestamp.
+      indexChanged: wasPublic !== isPublic,
+    },
     slug,
     slugChanged,
   };

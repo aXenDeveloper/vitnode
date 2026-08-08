@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import type { ContentPublicLocaleState } from "@/content/cache";
+import type { ContentDeliveryInvalidation } from "@/content/cache";
 import type {
   ContentConflict,
   ContentDeliveryConflict,
@@ -202,7 +203,7 @@ const invalidate = (
   revalidateContent(
     {
       contentTypeId: definition.id,
-      ...deliveryInvalidationFor(definition, previous, current),
+      ...deliveryInvalidationFor(definition, before, after, previous, current),
       id,
       isPublic: current.isPublic,
       // Both, so a slug change stops the old URL and starts the new one.
@@ -216,28 +217,67 @@ const invalidate = (
 /**
  * The delivery half of a nonlocalized mutation's invalidation.
  *
- * `{}` for a content type without `delivery`, so spreading it leaves the input -
- * and therefore the tag list - exactly as it was. A sitemap line is added, removed
- * or moved when public reachability changed or when the URL did, which is the same
- * rule `applyContentDeliveryWrite` reports from inside the transaction; stated twice
- * because the Server Action cannot see the outcome, only the two rows.
+ * `{}` for a content type without `delivery`, so spreading it leaves the input - and
+ * therefore the tag list - exactly as it was.
+ *
+ * `contentChanged` is decided by comparing `updatedAt` across the write, which is not
+ * a proxy for "did the sitemap change" but *the value the sitemap serializes*: a
+ * sitemap entry's `<lastmod>` is `base.updatedAt`, so the two move together by
+ * construction. It also answers "was this a no-op" for free - the engine issues no
+ * `UPDATE` for an update that changed nothing, so the timestamp does not move and the
+ * cached sitemap is still correct.
+ *
+ * `indexChanged` is public reachability flipping, and nothing else: an index lists
+ * files and counts URLs, so a slug change or a title edit leaves it alone.
  */
 const deliveryInvalidationFor = (
   definition: AnyContentTypeDefinition,
-  previous: { isPublic: boolean; slug: string },
-  current: { isPublic: boolean; slug: string },
-): { delivery?: { sitemap: boolean } } =>
-  definition.delivery.enabled
-    ? {
-        delivery: {
-          sitemap:
-            previous.isPublic !== current.isPublic ||
-            (previous.slug !== "" &&
-              current.slug !== "" &&
-              previous.slug !== current.slug),
-        },
-      }
-    : {};
+  before: ContentRow | undefined,
+  after: ContentRow | undefined,
+  previous: { isPublic: boolean },
+  current: { isPublic: boolean },
+): { delivery?: ContentDeliveryInvalidation } => {
+  if (!definition.delivery.enabled) return {};
+
+  const reachable = previous.isPublic || current.isPublic;
+
+  return {
+    delivery: {
+      sitemap: {
+        contentChanged: reachable && timestampMoved(before, after),
+        indexChanged: previous.isPublic !== current.isPublic,
+      },
+    },
+  };
+};
+
+/**
+ * Whether `updatedAt` moved across a write.
+ *
+ * `true` when either side is missing - a create or a delete - because the record
+ * appeared or disappeared and there is no pair to compare. Unparseable values are
+ * treated the same way: a cached sitemap that might be stale is worse than a cache
+ * miss.
+ */
+const timestampMoved = (
+  before: ContentRow | undefined,
+  after: ContentRow | undefined,
+): boolean => {
+  const at = (row: ContentRow | undefined): null | number => {
+    const value = row?.updatedAt;
+    if (value instanceof Date) return value.getTime();
+    if (typeof value !== "string") return null;
+
+    const parsed = new Date(value).getTime();
+
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  const first = at(before);
+  const second = at(after);
+
+  return first === null || second === null || first !== second;
+};
 
 export const createContentAction = async (
   contentTypeId: string,
@@ -635,13 +675,22 @@ export const deleteContentAction = async (
     // expiring a URL that is now gone forever costs nothing.
     const removed = publicStateOf(definition, result.data);
 
+    const wasEverPublic = result.data?.publishedAt != null;
+
     revalidateContent(
       {
         contentTypeId: definition.id,
-        // The sitemap has lost a line whenever the record had one, which is exactly
-        // "was it ever published" - the same question the `wasPublic` below asks.
+        // A delete removes a line from the file and one URL from the index's count,
+        // whenever the record had one - which is exactly "was it ever published".
         ...(definition.delivery.enabled
-          ? { delivery: { sitemap: result.data?.publishedAt != null } }
+          ? {
+              delivery: {
+                sitemap: {
+                  contentChanged: wasEverPublic,
+                  indexChanged: wasEverPublic,
+                },
+              },
+            }
           : {}),
         id,
         isPublic: false,
@@ -706,8 +755,15 @@ const publicationAction = async (
     revalidateContent(
       {
         contentTypeId: definition.id,
-        // A real transition always adds or removes a sitemap line.
-        ...(definition.delivery.enabled ? { delivery: { sitemap: true } } : {}),
+        // A real transition flips reachability, so it moves both the file and the
+        // index that counts its URLs.
+        ...(definition.delivery.enabled
+          ? {
+              delivery: {
+                sitemap: { contentChanged: true, indexChanged: true },
+              },
+            }
+          : {}),
         id,
         isPublic,
         slugs: [slug],

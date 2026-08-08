@@ -102,19 +102,28 @@ export const invalidateContentLocales = (
       // The delivery tags, for a content type with `delivery`. Absent otherwise,
       // which is what keeps a Stage 1-7 content type's tag list byte-identical.
       //
-      // The sitemap is expired when a locale gained or lost its page, or when one
-      // moved its URL - which is exactly what the before/after diff already knows,
-      // so it is read off the states rather than passed down from the action.
+      // Derived from the locales this mutation actually **reached**, which is the
+      // Stage 5 fan-out rather than a second locale-propagation rule: a shared field
+      // reaches every locale, a translation reaches its own, and `sitemap:pl` is
+      // expired exactly when Polish's public representation moved. That is also what
+      // makes a plain title edit expire the right file - the sitemap's `<lastmod>` is
+      // derived from `updatedAt`, so any real edit to a published translation changes
+      // that file's bytes even though its URL did not move.
       ...(definition.delivery.enabled
         ? {
             delivery: {
-              sitemap: states.some(
-                state =>
-                  state.isPublic !== state.wasPublic ||
-                  (state.previousSlug !== undefined &&
-                    state.previousSlug !== "" &&
-                    state.previousSlug !== state.slug),
-              ),
+              sitemap: {
+                // Every reached locale that is or was public has a file whose bytes
+                // moved. This helper is only called for a real mutation.
+                contentChanged: reached.some(
+                  entry => entry.isPublic || entry.wasPublic,
+                ),
+                // Only a locale appearing or disappearing changes how many files the
+                // index lists.
+                indexChanged: reached.some(
+                  entry => entry.isPublic !== entry.wasPublic,
+                ),
+              },
             },
           }
         : {}),

@@ -212,10 +212,13 @@ export const runContentScheduleEffects = async (
 
   const revalidation = await dispatchContentRevalidation(c, {
     contentTypeId: definition.id,
-    // A scheduled transition always adds or removes a sitemap line, so the delivery
-    // tags - including the sitemap's - go out with the rest. Absent for a content
-    // type without `delivery`, which keeps its tag list byte-identical.
-    ...(definition.delivery.enabled ? { delivery: { sitemap: true } } : {}),
+    // A scheduled transition always flips public reachability, so it changes both the
+    // file it adds a line to (or removes one from) and the index that counts them.
+    // Absent for a content type without `delivery`, which keeps its tag list
+    // byte-identical.
+    ...(definition.delivery.enabled
+      ? { delivery: { sitemap: { contentChanged: true, indexChanged: true } } }
+      : {}),
     id: payload.itemId,
     isPublic: isContentRowPublic(row),
     // A scheduled transition moves the *record*, and the record's publication
