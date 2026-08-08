@@ -13,6 +13,7 @@ import { orderableColumns } from "@/content/registry";
 import type { ContentRowData } from "./cells";
 
 import { DeleteContentAction } from "../actions/delete-action";
+import { DeliveryContentAction } from "../actions/delivery-action";
 import { EditContentAction } from "../actions/edit-action";
 import { HistoryContentAction } from "../actions/history-action";
 import { PreviewContentAction } from "../actions/preview-action";
@@ -170,6 +171,7 @@ export const ContentTableView = async ({
         definition.editorial.enabled ? "w-36" : "",
         definition.editorial.preview.enabled ? "w-44" : "",
         definition.editorial.scheduling.enabled ? "w-52" : "",
+        definition.delivery.enabled ? "w-60" : "",
       ]
         .filter(Boolean)
         .at(-1),
@@ -181,6 +183,16 @@ export const ContentTableView = async ({
 
         return (
           <>
+            {definition.delivery.enabled ? (
+              <DeliveryContentAction
+                contentTypeId={definition.id}
+                id={row.id}
+                locale={viewedLocale}
+                permissionModule={definition.permissionModule}
+                pluginId={pluginId}
+                singular={definition.admin.label.singular}
+              />
+            ) : null}
             {definition.editorial.preview.enabled ? (
               <PreviewContentAction
                 contentTypeId={definition.id}

@@ -527,6 +527,23 @@
         "unavailable": "Preview is not configured on this deployment. Set CONTENT_PREVIEW_SECRET to at least 32 random bytes and restart the API.",
         "live": "This record has no saved version yet, so the link shows it live - it will follow any edits made before the reviewer opens it."
       },
+      "delivery": {
+        "title": "Delivery for this {name}",
+        "desc": "Where this record lives on the public site, and where it used to.",
+        "canonical": "Canonical URL",
+        "no_canonical": "This record has no public URL yet. It gets one when it is published.",
+        "historical": "Historical URLs",
+        "no_history": "No previous URLs. Changing the address of a published record adds one here.",
+        "redirect_active": "redirects to the current URL",
+        "redirect_inactive": "not redirecting while this is unpublished",
+        "retired_at": "Replaced",
+        "inactive_note": "These URLs start redirecting again as soon as this record is published.",
+        "load_failed": "This record's delivery state could not be read.",
+        "states": {
+          "published": "Published",
+          "not_published": "Not published"
+        }
+      },
       "schedule": {
         "title": "Schedule this {name}",
         "desc": "Publish or unpublish <title></title> at a set time. Scheduling changes nothing now.",
@@ -577,7 +594,8 @@
         "forbidden": "You do not have permission to do this.",
         "version_conflict": "Someone else saved this while you were editing. Your changes are still here.",
         "unique_conflict": "A record with these values already exists.",
-        "not_restorable": "This version cannot be restored: {fields} no longer fit this content type."
+        "not_restorable": "This version cannot be restored: {fields} no longer fit this content type.",
+        "slug_reserved": "That address is reserved: another record used it publicly and it still redirects there. Pick a different one."
       },
       "translations": {
         "shared_tab": "Shared",
@@ -614,7 +632,8 @@
           "unique_conflict": "Another record already uses that address in this language.",
           "exists": "This language already has a translation. Reload the tab to edit it.",
           "language_disabled": "This language is switched off on this installation, so its content cannot be written.",
-          "default_required": "This is the default language, so its translation cannot be deleted."
+          "default_required": "This is the default language, so its translation cannot be deleted.",
+          "slug_reserved": "That address is reserved in this language: another record used it publicly and it still redirects there."
         },
         "history": {
           "show": "Show this language's history",

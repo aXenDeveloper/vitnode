@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import type {
+  ContentDeliveryConflict,
   ContentTranslationConflict,
   ContentUnprocessable,
 } from "@/content/conflicts";
@@ -16,6 +17,7 @@ import type {
 import { findFrontendContentType } from "@/content/admin/config";
 import { contentApiFetch } from "@/content/admin/fetch.server";
 import {
+  parseContentDeliveryConflict,
   parseContentTranslationConflict,
   parseContentUnprocessable,
 } from "@/content/conflicts";
@@ -44,6 +46,16 @@ const CONTENT_PAGE_PATH =
  */
 export interface TranslationMutationResult {
   conflict?: ContentTranslationConflict;
+  /**
+   * `CONTENT_DELIVERY_SLUG_RESERVED`, when a localized address is owned by another
+   * record's URL history.
+   *
+   * Its own field rather than a sixth arm of `conflict`, because it is a fact about
+   * *delivery* rather than about translations - the base routes answer with the same
+   * shape, and one code for one condition is what lets the AdminCP say the same
+   * sentence wherever the address was typed.
+   */
+  delivery?: ContentDeliveryConflict;
   error?: string;
   status?: number;
   unprocessable?: ContentUnprocessable;
@@ -54,6 +66,7 @@ const failure = (result: {
   status: number;
 }): TranslationMutationResult => ({
   conflict: parseContentTranslationConflict(result.error) ?? undefined,
+  delivery: parseContentDeliveryConflict(result.error) ?? undefined,
   error: result.error ?? "",
   status: result.status,
   unprocessable: parseContentUnprocessable(result.error) ?? undefined,

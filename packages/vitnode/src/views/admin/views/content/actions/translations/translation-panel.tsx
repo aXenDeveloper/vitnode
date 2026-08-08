@@ -184,7 +184,12 @@ export const TranslationPanel = ({
   const report = (result: TranslationMutationResult): boolean => {
     if (result.error === undefined) return true;
 
-    const key = conflictMessage(result.conflict);
+    // The delivery reservation first: it shares a status with the unique clash and
+    // says a different thing - "that address still redirects to another record"
+    // rather than "another record holds it now".
+    const key = result.delivery
+      ? "slug_reserved"
+      : conflictMessage(result.conflict);
 
     if (result.conflict?.code === "CONTENT_TRANSLATION_VERSION_CONFLICT") {
       // The form keeps every value the translator typed. Nothing is retried and
