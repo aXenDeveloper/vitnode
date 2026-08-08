@@ -246,10 +246,11 @@ const adminService = () => ({
     edges: [{ ...row, labels: {} }],
     pageInfo: {
       count: 1,
-      endCursor: 7,
+      // Opaque, as `withPagination` mints them: the ordered tuple, base64url'd.
+      endCursor: "eyJjb2x1bW4iOiJ2ZXJzaW9uIiwiaWQiOjcsInZhbHVlIjo0fQ",
       hasNextPage: false,
       hasPreviousPage: false,
-      startCursor: 7,
+      startCursor: "eyJjb2x1bW4iOiJ2ZXJzaW9uIiwiaWQiOjcsInZhbHVlIjo0fQ",
       totalCount: 1,
     },
   }),
@@ -773,10 +774,11 @@ describe("public routes match their OpenAPI document", () => {
           edges: [publicRow],
           pageInfo: {
             count: 1,
-            endCursor: 7,
+            // Opaque, as `withPagination` mints them.
+            endCursor: "eyJjb2x1bW4iOiJwdWJsaXNoZWRBdCIsImlkIjo3fQ",
             hasNextPage: false,
             hasPreviousPage: false,
-            startCursor: 7,
+            startCursor: "eyJjb2x1bW4iOiJwdWJsaXNoZWRBdCIsImlkIjo3fQ",
             totalCount: 1,
           },
         }),

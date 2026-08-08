@@ -61,18 +61,47 @@ of one record read the FAQ once.
 
 ## Cursor pagination
 
-The cursor is the primary key, and pages are keyset reads rather than `OFFSET` -
-so a page deep into a large collection seeks on the index instead of counting
-past every earlier row.
+Pages are keyset reads rather than `OFFSET`, so a page deep into a large
+collection seeks on the index instead of counting past every earlier row.
+
+The cursor is the **ordered tuple**: the sort column's value *and* the row's
+identifier. That is not a detail - it is the whole correctness argument. A list
+ordered by `title` and a cursor that is only an identifier describe two
+different sequences, and a page boundary between them skips rows permanently,
+because a short page looks exactly like the end of a collection.
+
+```text
+ORDER BY updatedAt DESC, id DESC
+
+WHERE updatedAt < :cursorValue
+   OR (updatedAt = :cursorValue AND id < :cursorId)
+```
+
+Ascending flips both comparisons; backward pagination (`last`) runs the whole
+thing in reverse and flips the page back afterwards. The `ORDER BY` and the
+predicate are built from the same tuple in the same direction, which is the
+invariant everything else rests on.
+
+<Callout title="The cursor is opaque">
+It is `base64url(JSON)` carrying the column, the value and the identifier - so
+it is meaningless outside the ordering that produced it, and it says so: a
+cursor minted while a list was ordered by `updatedAt` and replayed against the
+same list ordered by `title` is a `400`, not a page of wrong rows. Hand it back
+unchanged; never parse it, and never build one.
+</Callout>
 
 **What is guaranteed:**
 
-- a row already returned never comes back;
-- the cursor always advances, so a loop always terminates;
-- deleting everything past the cursor ends the walk rather than looping;
-- ordering is **total** - the primary key is appended as a tiebreaker, so rows
-  sharing an `updatedAt` are not free to move between the two queries a page turn
-  issues;
+- **any** orderable column pages exactly - a title, a nullable `publishedAt`, a
+  custom field, whatever its relationship to the identifier;
+- rows sharing a sort value are returned exactly once, because the identifier is
+  the tiebreaker in both the ordering and the predicate;
+- a nullable order column walks through its null block correctly - Postgres sorts
+  `NULLS LAST` ascending and `NULLS FIRST` descending, and the predicate names
+  the block rather than letting `column > NULL` end the walk early;
+- a row already returned never comes back, and the cursor always advances, so a
+  loop always terminates;
+- a page never claims a neighbour it cannot hand out a cursor for;
 - a public page is capped at the server's ceiling however large a `first` an
   anonymous caller sends.
 
@@ -84,13 +113,23 @@ trade every keyset pagination makes, and it is the right one - the alternative i
 holding a transaction open across requests.
 </Callout>
 
-<Callout type="warn" title="Order by something that moves with the identifier">
-The cursor **is** the identifier. Ordering by a column with no relationship to it
-- a title, say - cannot page exactly: rows whose identifiers fall on the wrong
-side of the cursor are skipped. Every generated default (`updatedAt`,
-`publishedAt`, `createdAt`, `id`) moves with the identifier and is exact; a
-custom `orderableFields` entry that does not is a deep-pagination hazard.
-</Callout>
+### Invalid input is refused, not repaired
+
+`first=0` used to clamp its way into a one-row page that reported
+`hasNextPage: true`; `first=abc` became `NaN` and fell through to the default
+page size. Both are requests nobody made, answered as if they had. Every one of
+these is now a `400`, most of them from the route's own schema:
+
+```text
+first=0        last=0        first=-1       last=-1
+first=abc      last=abc      first=1.5
+first=5&last=5
+cursor=<anything that is not a cursor>
+```
+
+A legacy numeric cursor still works in the one place it was ever correct -
+a list ordered by its identifier, where the number really is the whole tuple.
+Anywhere else it is refused rather than guessed at.
 
 ## Indexes
 

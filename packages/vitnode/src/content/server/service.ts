@@ -66,10 +66,17 @@ export type ContentListRow<TDefinition> = ContentSelect<TDefinition> & {
 
 export interface ContentPageInfo {
   count: number;
-  endCursor: null | number;
+  /**
+   * An opaque cursor for the last row on this page.
+   *
+   * It encodes the ordered tuple - the sort column's value *and* the row's
+   * identifier - so it is meaningless outside the ordering that produced it.
+   * Hand it back as `cursor`; never parse it.
+   */
+  endCursor: null | string;
   hasNextPage: boolean;
   hasPreviousPage: boolean;
-  startCursor: null | number;
+  startCursor: null | string;
   totalCount: number;
 }
 

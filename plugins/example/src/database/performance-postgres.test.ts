@@ -201,7 +201,7 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine at scale", () => {
         });
         seen.push(...result.edges.map(row => row.id));
         if (!result.pageInfo.hasNextPage) break;
-        cursor = String(result.pageInfo.endCursor);
+        cursor = result.pageInfo.endCursor ?? undefined;
       }
 
       expect(seen).toHaveLength(103);
@@ -221,7 +221,7 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine at scale", () => {
 
       const second = await articleContent.service(h.context).findMany({
         query: {
-          cursor: String(first.pageInfo.endCursor),
+          cursor: first.pageInfo.endCursor ?? undefined,
           first: String(PAGE),
         },
       });
@@ -238,16 +238,17 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine at scale", () => {
         .service(h.context)
         .findMany({ query: { first: String(PAGE) } });
 
-      // The list is newest-first, so everything *after* the cursor has a
-      // smaller identifier than it.
+      // Everything after the first page. The cursor is opaque now, so the
+      // boundary is the last identifier the page actually handed back - the
+      // list is newest-first, so "after" means a smaller identifier.
+      const boundary = first.edges.at(-1)?.id ?? 0;
       await h.sql`
-        DELETE FROM "example_articles"
-        WHERE "id" < ${Number(first.pageInfo.endCursor)}
+        DELETE FROM "example_articles" WHERE "id" < ${boundary}
       `;
 
       const second = await articleContent.service(h.context).findMany({
         query: {
-          cursor: String(first.pageInfo.endCursor),
+          cursor: first.pageInfo.endCursor ?? undefined,
           first: String(PAGE),
         },
       });

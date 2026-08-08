@@ -32,10 +32,11 @@ const edges: DemoUser[] = [
 
 const pageInfo = {
   count: edges.length,
-  endCursor: 2,
+  // Opaque strings, as `withPagination` mints them - never row ids.
+  endCursor: "eyJjb2x1bW4iOiJpZCIsImlkIjoyLCJ2YWx1ZSI6Mn0",
   hasNextPage: false,
   hasPreviousPage: false,
-  startCursor: 1,
+  startCursor: "eyJjb2x1bW4iOiJpZCIsImlkIjoxLCJ2YWx1ZSI6MX0",
   totalCount: edges.length,
 };
 

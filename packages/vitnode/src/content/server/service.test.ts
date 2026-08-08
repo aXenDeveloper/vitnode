@@ -324,10 +324,24 @@ describe("content service", () => {
     const page = (rows: unknown[]) => [[{ count: rows.length }], rows];
 
     it("joins once per reference field instead of querying per row", async () => {
+      // `updatedAt` is on the rows because the list really selects it - the
+      // page is built from `ownSelection()`. That matters here: the cursor is
+      // the ordered tuple, so a page whose rows are missing the order column
+      // costs one extra round trip to mint one.
       const { c, calls } = createDbMock(
         page([
-          { id: 1, label__author: "Ada", label__category: "News" },
-          { id: 2, label__author: null, label__category: "News" },
+          {
+            id: 1,
+            label__author: "Ada",
+            label__category: "News",
+            updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+          },
+          {
+            id: 2,
+            label__author: null,
+            label__category: "News",
+            updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+          },
         ]),
       );
 

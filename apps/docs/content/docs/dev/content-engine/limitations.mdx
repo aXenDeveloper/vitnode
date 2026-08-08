@@ -303,21 +303,18 @@ the rows orphaned by `contentTypeId` - the same story as an orphaned search
 collection, and with the same fix: a one-line `UPDATE` when it was a rename, and
 a `DELETE` when it was not.
 
-## The public cursor is always the row id
+## Pagination is a position, not a snapshot
 
-`withPagination` paginates on the primary key, so a list sorted by `publishedAt`
-still pages by `id`. That is pre-existing behaviour shared with every admin list,
-not a public-API quirk.
+The cursor encodes the **ordered tuple** - the sort column's value and the row's
+identifier - so any orderable column pages exactly, ties included and nulls
+included. What it deliberately does not do is freeze the collection: rows
+inserted behind the cursor are not seen until the next pass. Holding a
+transaction open across requests is the only alternative, and it is a worse one.
 
-Ties no longer matter: the primary key is appended to the ordering as a
-tiebreaker, so two rows sharing a `publishedAt` have a fixed position rather than
-whichever one Postgres happened to return first. What still matters is
-**correlation** - the cursor is the identifier, so an order column with no
-relationship to it cannot page exactly, and a row whose identifier falls on the
-wrong side of the cursor is skipped. Every generated default (`updatedAt`,
-`publishedAt`, `createdAt`, `id`) moves with the identifier and is exact; a
-custom `orderableFields` entry that does not - a title, say - is a deep-pagination
-hazard. See
+The cursor is opaque and belongs to the ordering that produced it. Replaying one
+against a different `orderBy` is a `400` rather than a page of wrong rows, and a
+legacy numeric cursor is honoured only where the identifier really is the whole
+tuple - a list ordered by `id`. See
 [performance and scaling](/docs/dev/content-engine/performance-and-scaling#cursor-pagination).
 
 ## Content types are code
