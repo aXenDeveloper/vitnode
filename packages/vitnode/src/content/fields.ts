@@ -231,7 +231,7 @@ const user = <
  * `defineContentType` did not rebind the thunk, and a relation silently
  * pointing at the wrong table is a data bug rather than a crash.
  */
-const unboundSelfTarget = (): AnyContentTypeDefinition => {
+export const unboundSelfTarget = (): AnyContentTypeDefinition => {
   throw new ContentEngineError(
     "A `self: true` relation was read before `defineContentType` bound it. Build the field inside a `defineContentType` call.",
   );
@@ -261,22 +261,29 @@ const unboundSelfTarget = (): AnyContentTypeDefinition => {
  * `ordered: true` keeps the author's order. Without it the set comes back in
  * ascending target-id order, which is still deterministic; it is simply not
  * something anybody chose.
+ *
+ * Exactly one of `self` and `target` is required. It is checked by
+ * `defineContentType` rather than by a union in this signature, because a union
+ * here would stop TypeScript inferring `self` as a literal - and
+ * `ContentReferences` reads that literal to decide which relations the database
+ * module has to supply a thunk for. The check still fails at import time.
  */
 const relation = <
   TRequired extends boolean = false,
   TNullable extends boolean = false,
   TMultiple extends boolean = false,
   TOrdered extends boolean = false,
+  TSelf extends boolean = false,
 >(
   args: SharedArgs<TRequired, TNullable> & {
     multiple?: TMultiple;
     onDelete?: ContentOnDelete;
     ordered?: TOrdered;
-  } & (
-      | { self: true; target?: never }
-      | { self?: false; target: () => AnyContentTypeDefinition }
-    ),
-): ContentRelationField<TRequired, TNullable, TMultiple, TOrdered> => ({
+    /** The target is this content type. Mutually exclusive with `target`. */
+    self?: TSelf;
+    target?: () => AnyContentTypeDefinition;
+  },
+): ContentRelationField<TRequired, TNullable, TMultiple, TOrdered, TSelf> => ({
   ...args,
   ...shared(args),
   kind: "relation",
@@ -286,7 +293,7 @@ const relation = <
   multiple: (args.multiple ?? false) as TMultiple,
   onDelete: args.onDelete ?? "restrict",
   ordered: (args.ordered ?? false) as TOrdered,
-  self: args.self === true,
+  self: (args.self ?? false) as TSelf,
   target: args.target ?? unboundSelfTarget,
 });
 

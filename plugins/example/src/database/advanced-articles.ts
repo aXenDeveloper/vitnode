@@ -13,11 +13,12 @@ export const advancedArticleContent = createContentModel(
       // rather than a column on the row, but the target is just as much a fact
       // this module has to supply.
       categories: () => example_categories.id,
-      // The self-relation points at this content type's own table, which is
-      // being declared right here. The thunk is what makes that legal: Drizzle
-      // leaves it unevaluated until it serializes the table, so there is no
-      // circular initialization to trip over.
-      relatedArticles: () => advancedArticleContent.table.id,
+      // `relatedArticles` is deliberately absent. It is a `self: true`
+      // relation, and the engine resolves it from the table it is building:
+      // writing `() => advancedArticleContent.table.id` here would reference
+      // the model inside its own initializer, and TypeScript resolves that by
+      // widening the whole model to `any` - silently taking every typed
+      // service, schema and column map with it.
     },
   },
 );

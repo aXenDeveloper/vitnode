@@ -751,23 +751,22 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
           { answer: "C", question: "Three?" },
         ],
       });
-      const ids = (await service().repeatable.faq.list(article.id)).map(
-        row => row.id as number,
-      );
+      const stored = await service().repeatable.faq.list(article.id);
+      const at = (index: number) => ({
+        answer: String(stored[index].answer),
+        id: Number(stored[index].id),
+        question: String(stored[index].question),
+      });
 
       await Promise.allSettled([
         editorial()?.update(
           article.id,
-          {
-            faq: [ids[2], ids[1], ids[0]].map(id => ({ id })),
-          },
+          { faq: [at(2), at(1), at(0)] },
           { actor: ACTOR, expectedVersion: 1 },
         ),
         editorial(rivalContext)?.update(
           article.id,
-          {
-            faq: [ids[1], ids[0], ids[2]].map(id => ({ id })),
-          },
+          { faq: [at(1), at(0), at(2)] },
           { actor: ACTOR, expectedVersion: 1 },
         ),
       ]);
@@ -993,9 +992,9 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
       // `localizedService.create` is typed against the erased definition, so
       // its row comes back widened - narrowed here rather than at every use.
-      const itemId = Number(created.row.id);
+      const itemId = created.row.id;
 
-      await publish(itemId, Number(created.row.version));
+      await publish(itemId, created.row.version);
       await advancedArticleContent
         .translationEditorialService?.(context, {
           pluginId: CONFIG_PLUGIN.pluginId,

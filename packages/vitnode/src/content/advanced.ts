@@ -19,6 +19,7 @@ import {
   CONTENT_REPEATABLE_SYSTEM_FIELDS,
 } from "./const";
 import { ContentEngineError } from "./errors";
+import { unboundSelfTarget } from "./fields";
 import { clampWithFingerprint } from "./fingerprint";
 import { toSnakeCase } from "./indexes";
 import {
@@ -431,6 +432,47 @@ const assertGeneratedTableNames = (
       );
     }
     byName.set(entry.tableName, `"${entry.field}"`);
+  }
+};
+
+/**
+ * Exactly one of `self` and `target`, on every relation.
+ *
+ * Runs **before** `bindSelfRelations` rebinds the thunk, which is the only
+ * moment the two are still distinguishable: after binding, a self-relation's
+ * `target` is a real function too.
+ *
+ * Checked here rather than by a union in `field.relation`'s signature, because
+ * a union there would stop TypeScript inferring `self` as a literal - and
+ * `ContentReferences` reads that literal to decide which relations a database
+ * module has to supply a thunk for.
+ */
+export const assertContentRelationTargets = (
+  id: string,
+  fields: ContentFieldMap,
+): void => {
+  for (const [name, fieldValue] of Object.entries(fields)) {
+    if (fieldValue.kind !== "relation") continue;
+
+    // The placeholder `field.relation` installs for a self-relation is not a
+    // target the caller supplied; comparing identity is what tells them apart.
+    const hasTarget =
+      fieldValue.target !== undefined &&
+      fieldValue.target !== unboundSelfTarget;
+
+    if (fieldValue.self && hasTarget) {
+      throw new ContentEngineError(
+        `Relation field "${name}" declares both \`self: true\` and a \`target\`. A self-relation's target is this content type, so drop the \`target\`.`,
+        { contentTypeId: id },
+      );
+    }
+
+    if (!fieldValue.self && !hasTarget) {
+      throw new ContentEngineError(
+        `Relation field "${name}" needs a \`target\` - or \`self: true\` if it points at this content type.`,
+        { contentTypeId: id },
+      );
+    }
   }
 };
 

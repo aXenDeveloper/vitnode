@@ -159,6 +159,30 @@ describe("relations", () => {
     ).toThrow(/nothing to null/);
   });
 
+  it("rejects a relation with both `self` and a `target`", () => {
+    expect(() =>
+      defineContentType({
+        ...base,
+        fields: {
+          name: field.text({ required: true }),
+          both: field.relation({ self: true, target: () => target }),
+        },
+      }),
+    ).toThrow(/declares both `self: true` and a `target`/);
+  });
+
+  it("rejects a relation with neither", () => {
+    expect(() =>
+      defineContentType({
+        ...base,
+        fields: {
+          name: field.text({ required: true }),
+          neither: field.relation({ nullable: true }),
+        },
+      }),
+    ).toThrow(/needs a `target`/);
+  });
+
   it("rejects a localized to-many relation", () => {
     expect(() =>
       defineContentType({

@@ -235,7 +235,12 @@ export const createContentAdvancedTables = <
     const fieldValue = asContentRelationCollection(fields[entry.field]);
     if (!fieldValue) continue;
 
-    const relatedReference = referenceThunks[entry.field];
+    // A self-relation resolves from the table being built. Requiring it in
+    // `references` would mean writing `() => thisContent.table.id` inside the
+    // model's own initializer, which widens the whole model to `any`.
+    const relatedReference: ColumnReferenceThunk | undefined = fieldValue.self
+      ? itemReference
+      : referenceThunks[entry.field];
     if (!relatedReference) {
       throw new ContentEngineError(
         `To-many relation "${entry.field}" has no entry in \`references\`. Add \`${entry.field}: () => <target_table>.id\` - the junction table's foreign key needs a target just as much as a column would.`,

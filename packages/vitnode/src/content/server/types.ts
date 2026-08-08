@@ -356,10 +356,20 @@ export type ContentColumnName<TDefinition> =
  * A **to-many** relation needs one too: its foreign key is `relatedItemId` on
  * the generated junction table rather than a column on the row, but the target
  * it points at is exactly as much a fact the database module has to supply.
+ *
+ * A **self**-relation does not, and must not: `() => thisContent.table.id`
+ * would reference the model inside its own initializer, and TypeScript resolves
+ * that by widening the model to `any` - silently taking every typed service,
+ * schema and column map with it. `createContentModel` resolves it from the
+ * table it is building, which is the only place that reference exists anyway.
  */
 export type ContentReferences<TFields> = {
   [
-    K in keyof TFields as TFields[K] extends { kind: "relation" } ? K : never
+    K in keyof TFields as TFields[K] extends { kind: "relation"; self: true }
+      ? never
+      : TFields[K] extends { kind: "relation" }
+        ? K
+        : never
   ]: () => AnyIdColumn;
 };
 

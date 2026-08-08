@@ -204,6 +204,7 @@ export interface ContentRelationField<
   TNullable extends boolean = boolean,
   TMultiple extends boolean = boolean,
   TOrdered extends boolean = boolean,
+  TSelf extends boolean = boolean,
 > extends ContentFieldShared<TRequired, TNullable> {
   kind: "relation";
   /**
@@ -237,8 +238,12 @@ export interface ContentRelationField<
    * `defineContentType` rebinds the thunk to the finished definition, so
    * everything downstream sees an ordinary relation pointing at an ordinary
    * content type.
+   *
+   * Literal, like `multiple` and `ordered`: `ContentReferences` subtracts a
+   * self-relation from the reference map it demands, and a widened `boolean`
+   * would leave it demanding the one thunk nobody can write.
    */
-  self: boolean;
+  self: TSelf;
   /** Thunk so two content types can refer to each other. */
   target: () => AnyContentTypeDefinition;
 }

@@ -97,7 +97,9 @@ const resolveReference = (
   const thunk = references[name];
   if (!thunk) {
     throw new ContentEngineError(
-      `Relation field "${name}" has no entry in \`references\`. Add \`${name}: () => <target_table>.id\`.`,
+      fieldValue.self
+        ? `Self-relation "${name}" should not have an entry in \`references\` - the engine resolves it from the table it is building. This is an internal error.`
+        : `Relation field "${name}" has no entry in \`references\`. Add \`${name}: () => <target_table>.id\`.`,
       { contentTypeId },
     );
   }

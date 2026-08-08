@@ -27,7 +27,10 @@ import type {
   ResolvedContentSearchConfig,
 } from "./types";
 
-import { resolveContentAdvanced } from "./advanced";
+import {
+  assertContentRelationTargets,
+  resolveContentAdvanced,
+} from "./advanced";
 import {
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_ENUM_DEFAULT_LENGTH,
@@ -1494,6 +1497,10 @@ export const defineContentType = <
   // to the real descriptor union here. This is the only unchecked widening in
   // the engine, and `assertFieldKind` below makes it true at runtime for
   // anything that skipped the `field.*` builders.
+  // Before the rebind, which is the only moment a supplied `target` and the
+  // self-relation placeholder are still distinguishable.
+  assertContentRelationTargets(id, fields as unknown as ContentFieldMap);
+
   const fieldMap = bindSelfRelations(
     fields as unknown as ContentFieldMap,
     // Read lazily, so `definition` is fully assigned by the time a relation
