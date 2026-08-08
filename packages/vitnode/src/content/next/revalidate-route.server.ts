@@ -12,6 +12,23 @@ import { revalidateContent } from "./revalidate.server";
 
 const zodBody = z.object({
   contentTypeId: z.string().min(1),
+  /**
+   * The delivery share of a mutation, for a content type with `delivery`.
+   *
+   * Optional for the same reason `locales` is: an API that has not been redeployed
+   * posts a body without it, and that body still has to be accepted. Without this
+   * member the object schema would **strip** it - so a scheduled publish would cross
+   * the bridge carrying its delivery tags and arrive with none, leaving a stale
+   * sitemap and a stale canonical response behind every background transition.
+   */
+  delivery: z
+    .object({
+      sitemap: z.object({
+        contentChanged: z.boolean(),
+        indexChanged: z.boolean(),
+      }),
+    })
+    .optional(),
   id: z.number().int().positive(),
   isPublic: z.boolean(),
   /**

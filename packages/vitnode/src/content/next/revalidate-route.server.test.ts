@@ -81,6 +81,64 @@ describe("the revalidation Route Handler", () => {
     ]);
   });
 
+  it("carries the delivery tags across the bridge", async () => {
+    // The bug this pins down: `zodBody` strips whatever it does not declare, so a
+    // missing `delivery` member meant a scheduled publish crossed the bridge with its
+    // delivery tags and arrived with none - leaving a stale sitemap and a stale
+    // canonical response behind every background transition.
+    await POST(
+      request({
+        body: JSON.stringify({
+          ...body,
+          delivery: { sitemap: { contentChanged: true, indexChanged: true } },
+        }),
+      }),
+    );
+
+    const tags = calls.map(call => call.tag);
+
+    expect(tags).toContain("content:example.article:delivery:7");
+    expect(tags).toContain("content:example.article:redirect:hello-world");
+    expect(tags).toContain("content:example.article:sitemap");
+  });
+
+  it("expires no sitemap tag when the bridge says it did not move", async () => {
+    await POST(
+      request({
+        body: JSON.stringify({
+          ...body,
+          delivery: { sitemap: { contentChanged: false, indexChanged: false } },
+        }),
+      }),
+    );
+
+    const tags = calls.map(call => call.tag);
+
+    expect(tags).toContain("content:example.article:delivery:7");
+    expect(tags).not.toContain("content:example.article:sitemap");
+  });
+
+  it("accepts a body with no delivery member at all", async () => {
+    // An API that has not been redeployed posts the Stage 1-7 shape, and that body
+    // still has to be accepted rather than 400.
+    const response = await POST(request());
+
+    expect(response.status).toBe(200);
+    expect(calls.map(call => call.tag)).not.toContain(
+      "content:example.article:delivery:7",
+    );
+  });
+
+  it("refuses a malformed delivery member", async () => {
+    const response = await POST(
+      request({
+        body: JSON.stringify({ ...body, delivery: { sitemap: true } }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+  });
+
   it("honours stale-while-revalidate", async () => {
     await POST(
       request({
