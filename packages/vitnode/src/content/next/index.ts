@@ -9,11 +9,25 @@
  * The cache *tags* live in `@vitnode/core/content`, because they are strings.
  */
 export {
+  contentDeliveryItem,
+  contentDeliveryMetadata,
+  contentDeliveryResolve,
+  contentDeliveryToNextMetadata,
+  contentSitemapEntries,
+} from "./delivery.server";
+export type {
+  ContentDeliveryNextMetadata,
+  ContentDeliveryNextSitemapEntry,
+  ContentDeliveryResolutionResponse,
+  ContentDeliveryResponse,
+} from "./delivery.server";
+export {
   contentPreviewFetch,
   contentPublicFetch,
   contentPublicItemTags,
 } from "./fetch.server";
 export type { ContentPublicFetchResult } from "./fetch.server";
+export { contentDeliveryPage } from "./redirect.server";
 export { POST as contentRevalidateRoute } from "./revalidate-route.server";
 export { revalidateContent } from "./revalidate.server";
 export type {
