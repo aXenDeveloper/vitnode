@@ -7,9 +7,12 @@ import type { ContentEditorialOutcome } from "./editorial-service";
 import type { AnyContentModel } from "./model";
 import type { ContentSearchSyncOutcome } from "./search-sync";
 
-import { contentSearchIndexesCollections } from "../search";
 import { emitContentEvent } from "./emit";
-import { syncContentLocalizedSearch, syncContentSearch } from "./search-sync";
+import {
+  contentSearchAdvancedValues,
+  syncContentLocalizedSearch,
+  syncContentSearch,
+} from "./search-sync";
 
 /** A `delete` has no event action of its own beyond the existing one. */
 const EVENT_ACTION: Record<
@@ -166,6 +169,14 @@ export const contentEditorialEffects = async (
       search: null,
       searchByLocale: model
         ? await syncContentLocalizedSearch(c, model, {
+            // A shared field moved, so **every** locale's document is rewritten
+            // - and each rewrite has to carry the shared collections too, or a
+            // title edit would drop the FAQ out of every language at once.
+            advanced: await contentSearchAdvancedValues(
+              c,
+              model,
+              idOf(outcome.row),
+            ),
             changed: outcome.changed,
             changedFields: outcome.changedFields,
             operation: outcome.operation,
@@ -179,13 +190,12 @@ export const contentEditorialEffects = async (
   return {
     event,
     search: await syncContentSearch(c, definition, {
-      // Read back only when a document is actually made of collection values.
-      // A content type that indexes none - which is every Stage 1-5 one - pays
-      // for nothing here.
-      advanced:
-        model && contentSearchIndexesCollections(definition)
-          ? await model.service(c).advanced(idOf(outcome.row))
-          : undefined,
+      // Read back only when a document is actually made of collection values,
+      // and only the collections it names. A content type that indexes none -
+      // which is every Stage 1-5 one - pays for nothing here.
+      advanced: model
+        ? await contentSearchAdvancedValues(c, model, idOf(outcome.row))
+        : undefined,
       changed: outcome.changed,
       changedFields: outcome.changedFields,
       operation: outcome.operation,

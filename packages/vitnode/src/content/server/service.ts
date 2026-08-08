@@ -16,10 +16,16 @@ import type {
   ContentCreateInput,
   ContentDetail,
   ContentFilterInput,
+  ContentInnerFieldsOf,
   ContentOrderableFieldName,
   ContentReferenceFieldName,
+  ContentRelationCollectionName,
+  ContentRepeatableFieldName,
+  ContentRepeatableInputRow,
+  ContentRepeatableRow,
   ContentSelect,
   ContentUpdateInput,
+  ContentValuesOf,
 } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
 
@@ -35,6 +41,11 @@ import { ContentEngineError } from "../errors";
 import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
 import { orderableColumns } from "../registry";
+import {
+  buildContentRelationOperations,
+  buildContentRepeatableOperations,
+  contentCollectionKinds,
+} from "./collection-api";
 import {
   buildFilterCondition,
   buildOrderColumn,
@@ -101,13 +112,19 @@ export interface ContentUpdateResult<TDefinition> {
 }
 
 /**
- * The typed collection API of one content type.
+ * The typed collection API of one content type, on the **plain** service.
  *
- * Every method is a thin wrapper over `update`, and deliberately so: a relation
- * or repeatable mutation *is* an edit of the source record, so it has to take
- * the same lock, bump the same version, leave the same revision, emit the same
- * event and invalidate the same tags. Routing them through one write path is
- * what makes that true by construction instead of by six call sites remembering.
+ * Every mutating method is a read-modify-write that runs inside one transaction
+ * with the source row locked first, so two concurrent `add` calls merge instead
+ * of one overwriting the other. It goes through the same `update` an ordinary
+ * field edit does, which is what gives it the no-op rule and the `updatedAt`
+ * bump for free.
+ *
+ * What it does **not** do is write a revision or emit an event - the plain
+ * service never has, for a field edit either. Those belong to
+ * `model.editorialService(c)?.relations` and
+ * `model.editorialService(c)?.repeatable`, which additionally require an
+ * `expectedVersion` and answer a stale one with a structured conflict.
  */
 export interface ContentRelationMethods<TDefinition> {
   /** Adds one target. A target already present is a no-op. */
@@ -144,11 +161,17 @@ export interface ContentRelationMethods<TDefinition> {
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
 }
 
-export interface ContentRepeatableMethods<TDefinition> {
-  /** Appends one child. */
+export interface ContentRepeatableMethods<TDefinition, TName> {
+  /**
+   * Appends one child.
+   *
+   * Typed from the repeatable's own leaves, so `{ question, answer }` compiles
+   * and `{ unknownField }` does not - the definition already carries the child
+   * shape, and a `Record<string, unknown>` here would throw it away.
+   */
   create: (
     itemId: number,
-    values: Record<string, unknown>,
+    values: ContentValuesOf<ContentInnerFieldsOf<TDefinition, TName>>,
     options?: ContentWriteOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
   /** Removes one child by its stable identifier. */
@@ -161,7 +184,9 @@ export interface ContentRepeatableMethods<TDefinition> {
   list: (
     itemId: number,
     options?: ContentServiceOptions,
-  ) => Promise<Record<string, unknown>[]>;
+  ) => Promise<
+    ContentRepeatableRow<ContentInnerFieldsOf<TDefinition, TName>>[]
+  >;
   /** Rearranges the existing children. Refuses a non-permutation. */
   reorder: (
     itemId: number,
@@ -177,30 +202,41 @@ export interface ContentRepeatableMethods<TDefinition> {
    */
   set: (
     itemId: number,
-    rows: readonly Record<string, unknown>[],
+    rows: readonly ContentRepeatableInputRow<
+      ContentInnerFieldsOf<TDefinition, TName>
+    >[],
     options?: ContentWriteOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
-  /** Updates one child by its stable identifier. */
+  /**
+   * Updates one child by its stable identifier.
+   *
+   * Partial, and over the repeatable's own leaves: naming a leaf the repeatable
+   * does not declare is a compile error rather than a value silently dropped by
+   * the strict schema at runtime.
+   */
   update: (
     itemId: number,
     childId: number,
-    values: Record<string, unknown>,
+    values: Partial<ContentValuesOf<ContentInnerFieldsOf<TDefinition, TName>>>,
     options?: ContentWriteOptions,
   ) => Promise<ContentUpdateResult<TDefinition> | null>;
 }
 
 /**
- * Options for a collection mutation.
+ * Options for a collection mutation on the **plain** service.
  *
- * `expectedVersion` is the source record's, and it is optional here for the same
- * reason it does not exist at all on the plain `update`: this service is the
- * non-editorial one, which has no `version` column to guard on and serialises
- * concurrent writers with `SELECT ... FOR UPDATE` instead. The editorial service
- * takes a required one - see `ContentEditorialWriteOptions`.
+ * Deliberately identical to `ContentServiceOptions`: there is no
+ * `expectedVersion` here, because this service has no version column to guard on
+ * and would have had to ignore one. Concurrent writers are serialised by the
+ * source row's `SELECT ... FOR UPDATE` instead, so two `add` calls merge rather
+ * than one of them being rejected.
+ *
+ * Optimistic locking, revisions and events are the editorial service's -
+ * `model.editorialService(c)?.relations`, which takes a required
+ * `expectedVersion` and an `actor`. The two are separate objects rather than one
+ * that behaves differently depending on where it came from.
  */
-export interface ContentWriteOptions extends ContentServiceOptions {
-  expectedVersion?: number;
-}
+export type ContentWriteOptions = ContentServiceOptions;
 
 export interface ContentPublicationResult<TDefinition> {
   /**
@@ -251,6 +287,20 @@ export interface ContentServiceBase<TDefinition> {
     id: number,
     options?: ContentServiceOptions,
   ) => Promise<ContentAdvancedValues<TDefinition>>;
+  /**
+   * A named subset of the advanced collections, for a caller with an allowlist.
+   *
+   * The search synchronizer and the public projection each need only the
+   * collections their configuration actually mentions, and querying a private
+   * junction table to discard the rows afterwards is work with no answer
+   * attached. Untyped in its keys on purpose: the allowlist is derived from
+   * configuration at runtime, and `advanced` is the typed whole-record read.
+   */
+  advancedFields: (
+    id: number,
+    fields: readonly string[],
+    options?: ContentServiceOptions,
+  ) => Promise<Record<string, unknown>>;
   /** Throws a `ZodError` if `values` does not satisfy `schemas.create`. */
   create: (
     values: ContentCreateInput<TDefinition>,
@@ -284,15 +334,28 @@ export interface ContentServiceBase<TDefinition> {
     search?: string,
   ) => Promise<{ label: string; value: number }[]>;
   /**
-   * Typed to-many relation operations, keyed by field name.
+   * Typed to-many relation operations, keyed by the content type's **actual**
+   * relation collection names.
    *
+   * A mapped type rather than a `Record<string, …>`: with the latter,
+   * `service.relations.thisFieldDoesNotExist` compiled and failed at runtime.
    * Empty for a content type that declares none, so `service.relations` always
-   * exists and `service.relations.categories` is a compile error unless there is
-   * a `categories`.
+   * exists and every key on it is one the definition has.
    */
-  relations: Record<string, ContentRelationMethods<TDefinition>>;
-  /** Typed repeatable operations, keyed by field name. */
-  repeatable: Record<string, ContentRepeatableMethods<TDefinition>>;
+  relations: Record<
+    ContentRelationCollectionName<TDefinition>,
+    ContentRelationMethods<TDefinition>
+  >;
+  /**
+   * Typed repeatable operations, keyed by the content type's actual repeatable
+   * field names - each one carrying its own child shape.
+   */
+  repeatable: {
+    [K in ContentRepeatableFieldName<TDefinition>]: ContentRepeatableMethods<
+      TDefinition,
+      K
+    >;
+  };
   /** Throws a `ZodError` if `values` does not satisfy `schemas.update`. */
   update: (
     id: number,
@@ -370,6 +433,23 @@ export const createContentService = <
     contentTypeId,
     fields,
   );
+
+  /**
+   * The keyed collection maps, assembled after the service object exists.
+   *
+   * Built as loose records and re-typed once at the boundary: the public type is
+   * keyed by the content type's actual collection names, which is what makes
+   * `service.relations.typo` a compile error - but a loop cannot prove to
+   * TypeScript that it filled exactly those keys.
+   */
+  const mutableRelations: Record<
+    string,
+    ContentRelationMethods<TDefinition>
+  > = {};
+  const mutableRepeatables: Record<
+    string,
+    ContentRepeatableMethods<TDefinition, never>
+  > = {};
 
   const db = (options?: ContentServiceOptions): ContentDatabase =>
     options?.tx ?? c.get("db");
@@ -519,6 +599,21 @@ export const createContentService = <
   };
 
   /**
+   * Always a transaction, even for a content type with no collections.
+   *
+   * `transact` skips one when there is nothing to be atomic about; a collection
+   * mutation is a read-modify-write and always has something, so it needs the
+   * stronger guarantee unconditionally.
+   */
+  const inTransaction = async <TResult>(
+    options: ContentServiceOptions | undefined,
+    body: (tx: ContentDatabase) => Promise<TResult>,
+  ): Promise<TResult> =>
+    options?.tx
+      ? await body(options.tx)
+      : await c.get("db").transaction(async tx => await body(tx));
+
+  /**
    * Serialises concurrent collection writers on a **non-editorial** content
    * type.
    *
@@ -528,8 +623,15 @@ export const createContentService = <
    * result rather than the state they both read. Records are independent because
    * the lock is per row.
    */
-  const lockRow = async (tx: ContentDatabase, id: number): Promise<boolean> => {
-    if (!store?.enabled) return true;
+  const lockRow = async (
+    tx: ContentDatabase,
+    id: number,
+    { force = false }: { force?: boolean } = {},
+  ): Promise<boolean> => {
+    // A content type with no collections has no read-modify-write to protect, so
+    // an ordinary `update` skips the extra statement. `force` is the collection
+    // path, which always needs it.
+    if (!force && !store?.enabled) return true;
 
     const [row] = await tx
       .select({ id: primaryCursor })
@@ -545,6 +647,9 @@ export const createContentService = <
     advanced: async (id, options) =>
       ((await store?.load(id, db(options))) ??
         {}) as ContentAdvancedValues<TDefinition>,
+
+    advancedFields: async (id, wanted, options) =>
+      (await store?.load(id, db(options), wanted)) ?? {},
 
     create: async (values, options) =>
       await transact(options, async tx => {
@@ -692,9 +797,9 @@ export const createContentService = <
       });
     },
 
-    relations: {},
+    relations: mutableRelations,
 
-    repeatable: {},
+    repeatable: mutableRepeatables as ContentService<TDefinition>["repeatable"],
 
     update: async (id, values, options) =>
       await transact(options, async tx => {
@@ -706,217 +811,144 @@ export const createContentService = <
 
         if (!(await lockRow(tx, id))) return null;
 
-        const current = await readOne(id, tx);
-        if (!current) return null;
-
-        const changedPaths = diffChangedPaths(fields, current, patch);
-        // Read before anything is written, so "nothing moved" is decided once
-        // and the collection write below is not a second, separate decision.
-        const changedCollections = (await store?.diff(tx, id, patch)) ?? [];
-        const changedFields = [...changedPaths, ...changedCollections];
-
-        // Nothing actually moved - skip the write so `updatedAt` and the
-        // `content.*.updated` event both stay honest. A reorder to the order
-        // that is already stored lands here.
-        if (changedFields.length === 0) {
-          return {
-            changedFields: changedFields as ContentChangedPath<TDefinition>[],
-            row: toRow(current),
-          };
-        }
-
-        if (changedCollections.length > 0) await store?.write(tx, id, patch);
-
-        // `updatedAt` has to move even when only a collection changed: it is
-        // what an editor sees as "last edited", and a category swap is an edit.
-        const [row] = await tx
-          .update(table)
-          .set(
-            changedPaths.length > 0
-              ? changedPathsToColumns(fields, patch, changedPaths)
-              : { updatedAt: new Date() },
-          )
-          .where(eq(primaryCursor, id))
-          .returning(ownSelection());
-
-        return {
-          changedFields: changedFields as ContentChangedPath<TDefinition>[],
-          row: toRow(row),
-        };
+        return await applyPatch(tx, id, patch);
       }),
   };
 
   /**
-   * Turns a collection field into the five typed operations callers use.
+   * Applies an already-parsed patch to a **locked** row.
    *
-   * Each one reads the current state, computes the whole new list and hands it
-   * to `update` - so every one of them inherits the no-op rule, the row lock,
-   * the `updatedAt` bump and, on the editorial service, the version guard, the
-   * revision and the event. There is no second write path to keep in step.
+   * Split out of `update` so the collection helpers can lock, read the current
+   * collection and apply the result they compute from it without leaving the
+   * transaction - the read and the write have to be one atomic step, or two
+   * concurrent `add` calls each write a list that never saw the other's.
    */
-  const relationMethods = (
-    field: string,
-  ): ContentRelationMethods<TDefinition> => {
-    const read = async (
-      itemId: number,
-      options?: ContentServiceOptions,
-    ): Promise<number[]> => {
-      const loaded = await store?.load(itemId, db(options));
-      const value = loaded?.[field];
+  const applyPatch = async (
+    tx: ContentDatabase,
+    id: number,
+    patch: Record<string, unknown>,
+  ): Promise<ContentUpdateResult<TDefinition> | null> => {
+    {
+      const current = await readOne(id, tx);
+      if (!current) return null;
 
-      return Array.isArray(value) ? (value as number[]) : [];
-    };
+      const changedPaths = diffChangedPaths(fields, current, patch);
+      // Read before anything is written, so "nothing moved" is decided once
+      // and the collection write below is not a second, separate decision.
+      const changedCollections = (await store?.diff(tx, id, patch)) ?? [];
+      const changedFields = [...changedPaths, ...changedCollections];
 
-    const write = async (
-      itemId: number,
-      next: readonly number[],
-      options?: ContentWriteOptions,
-    ): Promise<ContentUpdateResult<TDefinition> | null> =>
-      service.update(
-        itemId,
-        { [field]: [...next] } as ContentUpdateInput<TDefinition>,
-        options,
-      );
+      // Nothing actually moved - skip the write so `updatedAt` and the
+      // `content.*.updated` event both stay honest. A reorder to the order
+      // that is already stored lands here.
+      if (changedFields.length === 0) {
+        return {
+          changedFields: changedFields as ContentChangedPath<TDefinition>[],
+          row: toRow(current),
+        };
+      }
 
-    return {
-      add: async (itemId, relatedItemId, options) => {
-        const current = await read(itemId, options);
+      if (changedCollections.length > 0) await store?.write(tx, id, patch);
 
-        return await write(
-          itemId,
-          current.includes(relatedItemId)
-            ? current
-            : [...current, relatedItemId],
-          options,
-        );
-      },
+      // `updatedAt` has to move even when only a collection changed: it is
+      // what an editor sees as "last edited", and a category swap is an edit.
+      const [row] = await tx
+        .update(table)
+        .set(
+          changedPaths.length > 0
+            ? changedPathsToColumns(fields, patch, changedPaths)
+            : { updatedAt: new Date() },
+        )
+        .where(eq(primaryCursor, id))
+        .returning(ownSelection());
 
-      get: read,
-
-      remove: async (itemId, relatedItemId, options) =>
-        await write(
-          itemId,
-          (await read(itemId, options)).filter(id => id !== relatedItemId),
-          options,
-        ),
-
-      reorder: async (itemId, relatedItemIds, options) => {
-        const current = await read(itemId, options);
-        assertPermutation(field, current, relatedItemIds, "target");
-
-        return await write(itemId, relatedItemIds, options);
-      },
-
-      set: async (itemId, relatedItemIds, options) =>
-        await write(itemId, relatedItemIds, options),
-    };
-  };
-
-  const repeatableMethods = (
-    field: string,
-  ): ContentRepeatableMethods<TDefinition> => {
-    const read = async (
-      itemId: number,
-      options?: ContentServiceOptions,
-    ): Promise<Record<string, unknown>[]> => {
-      const loaded = await store?.load(itemId, db(options));
-      const value = loaded?.[field];
-
-      return Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
-    };
-
-    const write = async (
-      itemId: number,
-      rows: readonly Record<string, unknown>[],
-      options?: ContentWriteOptions,
-    ): Promise<ContentUpdateResult<TDefinition> | null> =>
-      service.update(
-        itemId,
-        { [field]: [...rows] } as ContentUpdateInput<TDefinition>,
-        options,
-      );
-
-    return {
-      create: async (itemId, values, options) =>
-        await write(
-          itemId,
-          [...(await read(itemId, options)), values],
-          options,
-        ),
-
-      delete: async (itemId, childId, options) =>
-        await write(
-          itemId,
-          (await read(itemId, options)).filter(row => row.id !== childId),
-          options,
-        ),
-
-      list: read,
-
-      reorder: async (itemId, childIds, options) => {
-        const current = await read(itemId, options);
-        assertPermutation(
-          field,
-          current.map(row => Number(row.id)),
-          childIds,
-          "entry",
-        );
-
-        const byId = new Map(current.map(row => [Number(row.id), row]));
-
-        return await write(
-          itemId,
-          childIds.map(childId => byId.get(childId) ?? {}),
-          options,
-        );
-      },
-
-      set: async (itemId, rows, options) => await write(itemId, rows, options),
-
-      update: async (itemId, childId, values, options) =>
-        await write(
-          itemId,
-          (await read(itemId, options)).map(row =>
-            row.id === childId ? { ...row, ...values, id: childId } : row,
-          ),
-          options,
-        ),
-    };
+      return {
+        changedFields: changedFields as ContentChangedPath<TDefinition>[],
+        row: toRow(row),
+      };
+    }
   };
 
   /**
-   * A reorder has to be a permutation of what is stored.
+   * Locks the source record, reads one collection and applies what `compute`
+   * makes of it - all in one transaction.
    *
-   * Refused rather than treated as a `set`, because the two mean different
-   * things and only one of them is reversible by looking at the request: a
-   * reorder that silently dropped an entry would look like a successful drag.
+   * The order is the fix: `SELECT ... FOR UPDATE` first, *then* the read. Two
+   * concurrent `add` calls therefore serialise on the row rather than both
+   * reading the same empty list and each writing a single-element one - which is
+   * how one of the two additions used to disappear with nothing to show it had.
+   *
+   * The lock is the database's, not the process's: a second API instance is
+   * serialised by exactly the same primitive.
    */
-  const assertPermutation = (
+  const runCollection = async (
+    itemId: number,
     field: string,
-    current: readonly number[],
-    next: readonly number[],
-    noun: string,
-  ): void => {
-    const before = [...current].sort((a, b) => a - b);
-    const after = [...new Set(next)].sort((a, b) => a - b);
+    compute: (current: unknown[]) => unknown[],
+    options: ContentServiceOptions | undefined,
+  ): Promise<ContentUpdateResult<TDefinition> | null> =>
+    await inTransaction(options, async tx => {
+      if (!(await lockRow(tx, itemId, { force: true }))) return null;
 
-    const same =
-      before.length === after.length &&
-      before.every((id, index) => id === after[index]);
-    if (same && next.length === new Set(next).size) return;
+      const current = await store?.load(itemId, tx, [field]);
+      const value = current?.[field];
+      const next = compute(Array.isArray(value) ? value : []);
 
-    throw new ContentEngineError(
-      `Reorder of "${field}" must list exactly the ${noun} ids it already has, once each. Use \`set\` to add or remove.`,
-      { contentTypeId },
-    );
+      return await applyPatch(
+        tx,
+        itemId,
+        schemas.update.parse({ [field]: next }),
+      );
+    });
+
+  const collectionApi = {
+    read: async (itemId: number, field: string, options: unknown) => {
+      const loaded = await store?.load(
+        itemId,
+        db(options as ContentServiceOptions | undefined),
+        [field],
+      );
+      const value = loaded?.[field];
+
+      return Array.isArray(value) ? value : [];
+    },
+    run: runCollection,
+    write: async (
+      itemId: number,
+      field: string,
+      next: readonly unknown[],
+      options: ContentServiceOptions | undefined,
+    ) =>
+      // `set` replaces the whole collection, so it never reads and cannot lose a
+      // concurrent write. It still goes through `update`, which locks.
+      await service.update(
+        itemId,
+        { [field]: [...next] } as ContentUpdateInput<TDefinition>,
+        options,
+      ),
   };
 
-  for (const field of store?.fields ?? []) {
-    if (definition.fields[field]?.kind === "repeatable") {
-      service.repeatable[field] = repeatableMethods(field);
-      continue;
-    }
-    service.relations[field] = relationMethods(field);
+  // The operations themselves live in `collection-api.ts`: they are the same
+  // arithmetic on both services, and the only thing that differs is the locking
+  // the runner above supplies.
+  const { relations, repeatables } = contentCollectionKinds(
+    definition,
+    store?.fields ?? [],
+  );
+
+  for (const field of relations) {
+    mutableRelations[field] = buildContentRelationOperations({
+      api: collectionApi,
+      contentTypeId,
+      field,
+    });
+  }
+  for (const field of repeatables) {
+    mutableRepeatables[field] = buildContentRepeatableOperations({
+      api: collectionApi,
+      contentTypeId,
+      field,
+    }) as ContentRepeatableMethods<TDefinition, never>;
   }
 
   // `ContentService` resolves its publication half from

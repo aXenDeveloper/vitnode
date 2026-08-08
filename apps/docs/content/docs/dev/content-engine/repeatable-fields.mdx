@@ -76,27 +76,37 @@ once. No deferrable constraint, no delete-and-recreate, and identity survives.
 One call, not one per row:
 
 ```ts
-await service.repeatable.faq.set(
+await model.editorialService?.(c, { pluginId }).repeatable.faq.set(
   7,
   [
     { id: 11, question: "Kept?",  answer: "Yes" },
     { question: "New?", answer: "Also yes" },
   ],
-  { expectedVersion: 4 },
+  { actor, expectedVersion: 4 },
 );
 ```
 
 An AdminCP form save is one HTTP request with one `expectedVersion` - not five
-mutations racing each other's version. The granular operations exist too, and
-each is a wrapper over the same call:
+mutations racing each other's version. The granular operations exist too:
 
 ```ts
 await service.repeatable.faq.list(7);
-await service.repeatable.faq.create(7, { question: "…", answer: "…" }, opts);
-await service.repeatable.faq.update(7, 11, { answer: "…" }, opts);
-await service.repeatable.faq.delete(7, 11, opts);
-await service.repeatable.faq.reorder(7, [15, 11], opts);
+await service.repeatable.faq.create(7, { question: "…", answer: "…" });
+await service.repeatable.faq.update(7, 11, { answer: "…" });
+await service.repeatable.faq.delete(7, 11);
+await service.repeatable.faq.reorder(7, [15, 11]);
 ```
+
+Each is a read-modify-write that locks the source row **before** it reads, so two
+concurrent `create` calls both survive rather than one overwriting the other. The
+values are typed from the repeatable's own leaves, so `{ unknownField }` is a
+compile error.
+
+As with relations there are two APIs:
+`service.repeatable` merges under a row lock and writes no revision;
+`editorialService.repeatable` additionally requires `{ actor, expectedVersion }`
+and gives you the version bump, the revision and the event. See
+[Relations](/docs/dev/content-engine/relations#reading-and-writing).
 
 `reorder` refuses a list that is not a permutation of what is stored: a reorder
 that silently dropped an entry would look like a successful drag.

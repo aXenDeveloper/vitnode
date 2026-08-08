@@ -24,6 +24,7 @@ import {
   contentValuesToColumns,
   isContentCollectionField,
   isContentRelationCollection,
+  readContentLeaf,
   splitContentFieldPath,
 } from "../paths";
 
@@ -286,8 +287,8 @@ export const diffChangedPaths = (
 
     if (next === null) {
       for (const leaf of Object.keys(inner)) {
-        const column = contentLeafColumnName(name, leaf);
-        if (current[column] === null || current[column] === undefined) continue;
+        const stored = readContentLeaf(current, name, leaf);
+        if (stored === null || stored === undefined) continue;
 
         changed.push(contentFieldPath(name, leaf));
       }
@@ -301,8 +302,11 @@ export const diffChangedPaths = (
     )) {
       if (!(leaf in inner) || leafValue === undefined) continue;
 
-      const column = contentLeafColumnName(name, leaf);
-      if (sameValue(current[column], leafValue)) continue;
+      // `readContentLeaf` rather than a direct column read, so the same diff
+      // works against a database row (flattened columns) and against a logical
+      // one - a translation's `values` is the second, and the translation
+      // restore path diffs exactly that.
+      if (sameValue(readContentLeaf(current, name, leaf), leafValue)) continue;
 
       changed.push(contentFieldPath(name, leaf));
     }

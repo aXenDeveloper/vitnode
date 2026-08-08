@@ -206,7 +206,14 @@ export const createContentLocalizedPublicService = <
     const ids = nested
       .map(row => row.id)
       .filter((id): id is number => typeof id === "number");
-    const loaded = await advanced?.loadMany(ids, c.get("db"));
+    // Only the collections the allowlist actually exposes: querying a private
+    // junction table to discard its rows afterwards is work with no answer
+    // attached, and `publicCollections` is already exactly that list.
+    const loaded = await advanced?.loadMany(
+      ids,
+      c.get("db"),
+      publicCollections,
+    );
 
     return nested.map(row => ({
       ...row,

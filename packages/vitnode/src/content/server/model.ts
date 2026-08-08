@@ -40,6 +40,18 @@ import {
 
 export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
   /**
+   * The read and write layer for this content type's advanced collections.
+   *
+   * On the model rather than built per request, because it holds only the
+   * resolved tables and the memoised foreign-key targets - every method takes
+   * the database handle it should run on. A disabled stub for a content type
+   * that declares no collection, so a caller can use it unconditionally.
+   *
+   * Public so the rebuild indexers can batch-load a page's collections: they are
+   * built from the model and have no service of their own.
+   */
+  advanced: ContentAdvancedStore;
+  /**
    * The generated collection tables, by field name.
    *
    * Export them from the plugin's database module alongside `table`, so Drizzle
@@ -262,6 +274,7 @@ export const createContentModel = <
   };
 
   return {
+    advanced,
     advancedTables,
     columns,
     definition,

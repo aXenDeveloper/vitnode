@@ -8,7 +8,11 @@ import type { AnyContentModel } from "./model";
 
 import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
-import { contentSearchDocumentId, contentSearchIndexedPaths } from "../search";
+import {
+  contentSearchDocumentId,
+  contentSearchIndexedCollections,
+  contentSearchIndexedPaths,
+} from "../search";
 import { listContentLanguages } from "./language-resolver";
 import {
   contentSearchDocument,
@@ -205,6 +209,18 @@ export const syncContentSearch = async (
 
 export interface ContentLocalizedSearchSyncInput {
   /**
+   * The record's shared advanced collections, when the content type indexes one.
+   *
+   * A localized document is built from three sources - the base row, the shared
+   * collections and one translation - and every path that builds one has to
+   * supply all three or the documents differ. Passed in rather than loaded here
+   * for the same reason the non-localized input takes it: this function is
+   * model-free by design, and the effects layer already holds the model.
+   *
+   * A collection is shared, so the same values feed **every** locale's document.
+   */
+  advanced?: Record<string, unknown>;
+  /**
    * `publish` / `unpublish` only: `false` when nothing moved, which means the
    * index already agrees.
    */
@@ -371,7 +387,15 @@ export const syncContentLocalizedSearch = async (
 
     const document = contentTranslationSearchDocument(
       definition,
-      { base: input.row, locale, translation: translation.values },
+      {
+        // The shared half of the document: the row *and* its shared
+        // collections. Omitting the second would rebuild every locale's
+        // document without its repeatable text - so editing one localized leaf
+        // would silently drop the FAQ out of the index.
+        base: { ...input.row, ...input.advanced },
+        locale,
+        translation: translation.values,
+      },
       { pluginId: input.pluginId },
     );
 
@@ -397,6 +421,28 @@ export const syncContentLocalizedSearch = async (
   }
 
   return outcomes;
+};
+
+/**
+ * The shared collections a search document needs, or `undefined`.
+ *
+ * The one place the "does this document depend on collection values" question is
+ * asked, so the live path, the translation path and the base editorial path
+ * cannot answer it differently - which is exactly how two of them ended up
+ * writing documents the third would not reproduce.
+ *
+ * Loads **only** the indexed collections. A content type that indexes none -
+ * every Stage 1-5 one - costs a boolean check and no query.
+ */
+export const contentSearchAdvancedValues = async (
+  c: Context,
+  model: AnyContentModel,
+  itemId: number,
+): Promise<Record<string, unknown> | undefined> => {
+  const wanted = contentSearchIndexedCollections(model.definition);
+  if (wanted.length === 0 || itemId === 0) return undefined;
+
+  return await model.service(c).advancedFields(itemId, wanted);
 };
 
 /**

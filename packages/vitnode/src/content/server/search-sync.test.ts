@@ -80,6 +80,7 @@ const harness = ({
     create: vi.fn(),
     delete: vi.fn(),
     advanced: vi.fn(),
+    advancedFields: vi.fn(),
     findDetail: vi.fn(),
     findById: vi.fn(),
     relations: {},

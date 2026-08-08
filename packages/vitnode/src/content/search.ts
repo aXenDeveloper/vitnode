@@ -115,6 +115,39 @@ export const contentSearchIndexedPaths = (
 };
 
 /**
+ * The collection fields a search document is actually made of.
+ *
+ * Empty for every Stage 1-5 content type, and for a Stage 6 one whose search
+ * config names no collection path - which is what keeps "read the collections
+ * back after a write" from becoming a cost every content type pays. When it is
+ * not empty it is also the *allowlist*: only these are loaded, so indexing
+ * `faq.answer` never queries a private junction table.
+ */
+export const contentSearchIndexedCollections = (
+  definition: AnyContentTypeDefinition,
+): string[] => {
+  const owners = new Set<string>();
+
+  for (const name of contentSearchIndexedFieldNames(definition)) {
+    const path = splitContentFieldPath(name);
+    if (!path) continue;
+
+    const fieldValue = definition.fields[path[0]];
+    if (!fieldValue) continue;
+    if (
+      fieldValue.kind !== "repeatable" &&
+      !isContentRelationCollection(fieldValue)
+    ) {
+      continue;
+    }
+
+    owners.add(path[0]);
+  }
+
+  return [...owners];
+};
+
+/**
  * Whether any indexed field lives in a generated collection table.
  *
  * The one question that decides whether the effects layer has to read a
@@ -125,16 +158,4 @@ export const contentSearchIndexedPaths = (
  */
 export const contentSearchIndexesCollections = (
   definition: AnyContentTypeDefinition,
-): boolean =>
-  contentSearchIndexedFieldNames(definition).some(name => {
-    const path = splitContentFieldPath(name);
-    if (!path) return false;
-
-    const fieldValue = definition.fields[path[0]];
-
-    return (
-      fieldValue !== undefined &&
-      (fieldValue.kind === "repeatable" ||
-        isContentRelationCollection(fieldValue))
-    );
-  });
+): boolean => contentSearchIndexedCollections(definition).length > 0;

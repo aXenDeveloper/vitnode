@@ -413,6 +413,24 @@ export type ContentRepeatableRow<TFields> = Prettify<
 >;
 
 /**
+ * A create-shaped object over every key of a field map.
+ *
+ * Exported so the service can type a repeatable's child input from the leaves
+ * the definition already declares, rather than falling back to
+ * `Record<string, unknown>` and losing every one of them.
+ */
+export type ContentValuesOf<TFields> = CreateValuesOf<TFields, keyof TFields>;
+
+/** The inner field map of one group or repeatable, by name. */
+export type ContentInnerFieldsOf<TDefinition, TName> =
+  ContentFieldsOf<TDefinition>[keyof ContentFieldsOf<TDefinition> &
+    TName] extends {
+    fields: infer TInner;
+  }
+    ? TInner
+    : never;
+
+/**
  * One repeatable child row as it is written.
  *
  * `id` is optional and is the whole write protocol: present means "update this

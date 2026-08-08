@@ -294,6 +294,86 @@ describe("admin surfaces", () => {
   });
 });
 
+type Service = ReturnType<ContentModel<Article>["service"]>;
+type Editorial = ReturnType<
+  NonNullable<ContentModel<Article>["editorialService"]>
+>;
+
+declare const service: Service;
+declare const editorial: Editorial;
+
+describe("the typed collection API", () => {
+  it("keys relations by the content type's actual collection names", () => {
+    expectTypeOf<Service["relations"]>().toHaveProperty("categories");
+    expectTypeOf<Service["relations"]>().toHaveProperty("related");
+    // `Record<string, …>` accepted this and failed at runtime.
+    expectTypeOf<Service["relations"]>().not.toHaveProperty(
+      "thisFieldDoesNotExist",
+    );
+    // A repeatable is not a relation, and vice versa.
+    expectTypeOf<Service["relations"]>().not.toHaveProperty("faq");
+  });
+
+  it("keys repeatables by the content type's actual repeatable names", () => {
+    expectTypeOf<Service["repeatable"]>().toHaveProperty("faq");
+    expectTypeOf<Service["repeatable"]>().not.toHaveProperty(
+      "thisFieldDoesNotExist",
+    );
+    expectTypeOf<Service["repeatable"]>().not.toHaveProperty("categories");
+  });
+
+  it("types a relation helper's arguments", () => {
+    expectTypeOf<Service["relations"]["categories"]["add"]>()
+      .parameter(1)
+      .toEqualTypeOf<number>();
+    expectTypeOf<
+      Service["relations"]["categories"]["get"]
+    >().returns.resolves.toEqualTypeOf<number[]>();
+  });
+
+  it("infers a repeatable's create values from its own leaves", () => {
+    void service.repeatable.faq.create(7, { answer: "A", question: "Q" });
+    // @ts-expect-error `unknownField` is not a leaf of `faq`.
+    void service.repeatable.faq.create(7, { unknownField: "no" });
+    // @ts-expect-error `answer` is required.
+    void service.repeatable.faq.create(7, { question: "Q" });
+  });
+
+  it("infers a repeatable's update values as a partial of the same leaves", () => {
+    void service.repeatable.faq.update(7, 11, { answer: "A" });
+    // @ts-expect-error partial does not mean permissive.
+    void service.repeatable.faq.update(7, 11, { unknownField: "no" });
+  });
+
+  it("types what a repeatable lists", () => {
+    assertType<Promise<{ answer: string; id: number; question: string }[]>>(
+      service.repeatable.faq.list(7),
+    );
+    // Every child comes back with the identity a later edit addresses it by.
+    expectTypeOf(service.repeatable.faq.list(7)).resolves.toHaveProperty(
+      "length",
+    );
+  });
+
+  it("requires an actor and a version on the editorial helpers", () => {
+    void editorial.relations.categories.add(7, 1, {
+      actor: { type: "staff", userId: 1 },
+      expectedVersion: 3,
+    });
+    // @ts-expect-error the editorial API never writes without a version guard.
+    void editorial.relations.categories.add(7, 1, {});
+    // @ts-expect-error and never without an actor to attribute the revision to.
+    void editorial.relations.categories.add(7, 1, { expectedVersion: 3 });
+  });
+
+  it("keeps the plain helpers free of an expected version", () => {
+    // The plain service has no version column to guard on, so offering the
+    // argument would be offering one it has to ignore.
+    // @ts-expect-error use `editorialService.relations` for optimistic locking.
+    void service.relations.categories.add(7, 1, { expectedVersion: 3 });
+  });
+});
+
 describe("variance", () => {
   /**
    * A concrete model stays assignable to the erased one.

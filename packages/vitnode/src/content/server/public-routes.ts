@@ -32,6 +32,11 @@ import {
 import { ContentEngineError } from "../errors";
 import { resolveContentPublicLocale } from "../locale";
 import { partitionContentFields } from "../localization";
+import {
+  contentColumnsToValues,
+  contentStorageColumns,
+  splitContentFieldPath,
+} from "../paths";
 import { publicOrderableColumns } from "../registry";
 import { findContentLanguage, listContentLanguages } from "./language-resolver";
 import { verifyContentPreviewToken } from "./preview-token";
@@ -264,15 +269,36 @@ export const buildContentPublicRoutes = <
     }
 
     const { localizedFields } = partitionContentFields(definition.fields);
-    const exposed = definition.publicApi.fields.filter(
-      name => localizedFields[name] !== undefined,
+    // Classified by the **owner** of each exposed name, so a leaf of a localized
+    // group is read from the translation exactly as the field it belongs to is.
+    // A top-level lookup would find neither `seo.title` nor `seo.description`
+    // and silently preview a draft without its SEO - while the *revision* path
+    // above, which projects a snapshot, would include them.
+    const exposedLocalized = definition.publicApi.fields.filter(name => {
+      const path = splitContentFieldPath(name);
+
+      return localizedFields[path ? path[0] : name] !== undefined;
+    });
+    const localizedColumns = contentStorageColumns(
+      Object.fromEntries(
+        [
+          ...new Set(
+            exposedLocalized.map(
+              name => splitContentFieldPath(name)?.[0] ?? name,
+            ),
+          ),
+        ].map(name => [name, localizedFields[name]]),
+      ),
     );
 
     const [row] = await c
       .get("db")
       .select(
         Object.fromEntries(
-          exposed.map(name => [name, translationColumns[name]]),
+          Object.keys(localizedColumns).map(name => [
+            name,
+            translationColumns[name],
+          ]),
         ),
       )
       .from(translationTable)
@@ -284,7 +310,11 @@ export const buildContentPublicRoutes = <
       )
       .limit(1);
 
-    return row ?? null;
+    // Folded back into the nested logical shape, so the projector - which reads
+    // a group by its own name - sees the same thing a live public read gives it.
+    return row
+      ? { ...row, ...contentColumnsToValues(localizedFields, row) }
+      : null;
   };
 
   const list = buildRoute({

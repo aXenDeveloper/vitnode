@@ -64,10 +64,18 @@ export interface ContentAdvancedStore {
   readonly enabled: boolean;
   /** The collection field names, in declaration order. */
   readonly fields: string[];
-  /** Every collection of one record, in logical shape. */
+  /**
+   * Every collection of one record, in logical shape.
+   *
+   * `only` narrows it to the fields a caller actually needs: a public read wants
+   * the exposed ones and a search document wants the indexed ones, and querying
+   * a private junction table to discard the rows afterwards is work with no
+   * answer attached. Omit it for all of them.
+   */
   load: (
     itemId: number,
     database: ContentDatabase,
+    only?: readonly string[],
   ) => Promise<Record<string, unknown>>;
   /**
    * Every collection of many records, in **two queries per collection field**
@@ -80,6 +88,7 @@ export interface ContentAdvancedStore {
   loadMany: (
     itemIds: readonly number[],
     database: ContentDatabase,
+    only?: readonly string[],
   ) => Promise<Map<number, Record<string, unknown>>>;
   /**
    * An indexed `EXISTS` over one relation's junction table.
@@ -574,6 +583,18 @@ export const createContentAdvancedStore = <
     return changes;
   };
 
+  /**
+   * The collection fields one read should touch.
+   *
+   * An unknown name is dropped rather than rejected: callers pass an allowlist
+   * derived from configuration - the public `fields`, the search paths - and a
+   * name that is not a collection simply has no collection to load.
+   */
+  const selected = (only?: readonly string[]): string[] =>
+    only === undefined
+      ? collectionNames
+      : collectionNames.filter(field => only.includes(field));
+
   const enabled = collectionNames.length > 0;
 
   // Every method a no-op, so a content type with no advanced collection can be
@@ -600,9 +621,9 @@ export const createContentAdvancedStore = <
 
     fields: collectionNames,
 
-    load: async (itemId, database) => {
+    load: async (itemId, database, only) => {
       const loaded = await Promise.all(
-        collectionNames.map(async field => {
+        selected(only).map(async field => {
           if (tables.junctions[field]) {
             const rows =
               (await readJunction(field, [itemId], database)).get(itemId) ?? [];
@@ -620,17 +641,18 @@ export const createContentAdvancedStore = <
       return Object.fromEntries(loaded);
     },
 
-    loadMany: async (itemIds, database) => {
+    loadMany: async (itemIds, database, only) => {
+      const wanted = selected(only);
       const result = new Map<number, Record<string, unknown>>();
       for (const itemId of itemIds) {
         result.set(
           itemId,
-          Object.fromEntries(collectionNames.map(field => [field, []])),
+          Object.fromEntries(wanted.map(field => [field, []])),
         );
       }
       if (itemIds.length === 0) return result;
 
-      for (const field of collectionNames) {
+      for (const field of wanted) {
         if (tables.junctions[field]) {
           const rows = await readJunction(field, itemIds, database);
           for (const [itemId, list] of rows) {

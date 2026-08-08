@@ -326,6 +326,36 @@ export const contentColumnsToValues = (
 };
 
 /**
+ * Reads one group leaf out of a row, whichever shape the row is in.
+ *
+ * A database row carries the flattened column (`seoTitle`); a logical row - a
+ * translation's `values`, a restore's patch - carries the nested object
+ * (`seo.title`). Both reach the snapshotter and the differ, and both have to
+ * produce the same answer, so the "which shape is this" question is asked in
+ * exactly one place.
+ *
+ * `undefined` means the leaf is not represented at all, which a caller has to be
+ * able to tell from a stored `null`: a projection that did not select `seo` must
+ * not look like a record whose SEO is empty.
+ */
+export const readContentLeaf = (
+  values: Record<string, unknown>,
+  group: string,
+  leaf: string,
+): unknown => {
+  const column = contentLeafColumnName(group, leaf);
+  if (column in values) return values[column] ?? null;
+
+  if (!(group in values)) return undefined;
+
+  const nested = values[group];
+  if (nested === null || nested === undefined) return null;
+  if (typeof nested !== "object" || Array.isArray(nested)) return undefined;
+
+  return (nested as Record<string, unknown>)[leaf] ?? null;
+};
+
+/**
  * Reads one canonical path out of a logical value object.
  *
  * `"title"` reads a top-level value; `"seo.title"` reads through the group and

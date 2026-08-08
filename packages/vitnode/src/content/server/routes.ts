@@ -46,7 +46,7 @@ import {
 import { createContentPreviewToken } from "./preview-token";
 import { publicationMethods } from "./publication";
 import { CONTENT_REVISIONS_MAX_PAGE_SIZE } from "./revisions-model";
-import { syncContentSearch } from "./search-sync";
+import { contentSearchAdvancedValues, syncContentSearch } from "./search-sync";
 import { buildContentTranslationRoutes } from "./translation-routes";
 
 const zodLabels = z.record(z.string(), z.string().nullable());
@@ -80,21 +80,19 @@ const identifier = (c: Context): number => {
  * The collections a search document is made of, or nothing.
  *
  * Read after the write has returned, and only when the search configuration
- * actually names a collection leaf: a document built from `faq.answer` is built
- * from child rows, which are not on the row the mutation gave back. Every
- * Stage 1-5 content type indexes none, so this is a boolean check and no query.
+ * actually names a collection leaf - `contentSearchAdvancedValues` owns that
+ * decision so every effects path answers it identically.
  */
 const advancedForSearch = async (
   c: Context,
   model: AnyContentModel,
   row: object,
 ): Promise<Record<string, unknown> | undefined> => {
-  if (!contentSearchIndexesCollections(model.definition)) return undefined;
-
   const id = (row as { id?: unknown }).id;
-  if (typeof id !== "number") return undefined;
 
-  return await model.service(c).advanced(id);
+  return typeof id === "number"
+    ? await contentSearchAdvancedValues(c, model, id)
+    : undefined;
 };
 
 export const buildContentRoutes = <

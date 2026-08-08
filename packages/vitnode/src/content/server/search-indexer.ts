@@ -14,11 +14,17 @@ import type {
   SearchIndexer,
   SearchIndexerPage,
 } from "../../api/models/search";
-import type { AnyContentTypeDefinition } from "../types";
+import type { AnyContentTypeDefinition, ContentFieldMap } from "../types";
+import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentModel } from "./model";
 
 import { ContentEngineError } from "../errors";
 import { partitionContentFields } from "../localization";
+import {
+  contentColumnsToValues,
+  contentLeafColumnName,
+  splitContentFieldPath,
+} from "../paths";
 import { contentSearchIndexedFieldNames } from "../search";
 import { listContentLanguages } from "./language-resolver";
 import {
@@ -39,6 +45,117 @@ const REQUIRED_COLUMNS = [
   "status",
   "publishedAt",
 ] as const;
+
+/**
+ * Where each indexed value comes from.
+ *
+ * A rebuild cannot classify a search field by looking it up in the top-level
+ * field maps: `seo.description` is not a key in either of them, and
+ * `faq.question` is not a column at all. Resolving the paths once - here - is
+ * what lets both indexers select real columns, fold groups back into their
+ * logical shape, and batch the collections they actually need.
+ */
+interface ContentSearchSources {
+  /** Collection fields to batch-load for the page's parent ids. */
+  collections: string[];
+  /** Column names to select from the translation table. */
+  localizedColumns: string[];
+  /** Localized group descriptors, for folding translation columns back. */
+  localizedGroups: ContentFieldMap;
+  /** Column names to select from the base table. */
+  sharedColumns: string[];
+  /** Shared group descriptors, for folding base columns back. */
+  sharedGroups: ContentFieldMap;
+}
+
+/**
+ * Splits the configured search fields by where their values actually live.
+ *
+ * Three destinations, and a path is the only way to tell two of them apart:
+ *
+ * - a **scalar** field is a column, on whichever table its `localized` flag says;
+ * - a **group leaf** is a column too, under its generated name, on the table the
+ *   *group* moved to - localization is a property of the group, so one leaf can
+ *   never be on the other side from its siblings;
+ * - a **collection leaf** is not a column anywhere. Its parent is batch-loaded.
+ */
+const resolveSearchSources = (
+  definition: AnyContentTypeDefinition,
+): ContentSearchSources => {
+  const { localizedFields, sharedFields } = partitionContentFields(
+    definition.fields,
+  );
+  const sources: ContentSearchSources = {
+    collections: [],
+    localizedColumns: [],
+    localizedGroups: {},
+    sharedColumns: [],
+    sharedGroups: {},
+  };
+
+  for (const name of contentSearchIndexedFieldNames(definition)) {
+    const path = splitContentFieldPath(name);
+
+    if (!path) {
+      if (localizedFields[name] !== undefined) {
+        sources.localizedColumns.push(name);
+        continue;
+      }
+      if (sharedFields[name] !== undefined) sources.sharedColumns.push(name);
+      continue;
+    }
+
+    const [owner, leaf] = path;
+    const container = definition.fields[owner];
+    if (!container) continue;
+
+    if (container.kind !== "group") {
+      // A repeatable or a to-many relation: its rows are on their own table, so
+      // the parent is loaded whole rather than projected into this SELECT.
+      if (!sources.collections.includes(owner)) sources.collections.push(owner);
+      continue;
+    }
+
+    const column = contentLeafColumnName(owner, leaf);
+    if (localizedFields[owner] !== undefined) {
+      sources.localizedColumns.push(column);
+      sources.localizedGroups[owner] = container;
+      continue;
+    }
+
+    sources.sharedColumns.push(column);
+    sources.sharedGroups[owner] = container;
+  }
+
+  return sources;
+};
+
+/**
+ * The shared collections for one rebuild page, in one batch per field.
+ *
+ * Keyed by parent id and deduplicated first, which is what makes the localized
+ * rebuild safe: a record with three published translations appears three times on
+ * a page, and loading its FAQ once rather than three times is the difference
+ * between a bounded query count and an N+1.
+ */
+const loadSearchCollections = async ({
+  advanced,
+  c,
+  itemIds,
+  wanted,
+}: {
+  advanced: ContentAdvancedStore;
+  c: Context;
+  itemIds: readonly number[];
+  wanted: readonly string[];
+}): Promise<Map<number, Record<string, unknown>>> => {
+  if (wanted.length === 0) return new Map();
+
+  const unique = [...new Set(itemIds.filter(id => Number.isInteger(id)))];
+  if (unique.length === 0) return new Map();
+
+  return await advanced.loadMany(unique, c.get("db"), wanted);
+};
 
 /**
  * A generated indexer, pinned to the modern page contract.
@@ -88,13 +205,13 @@ export const createContentSearchIndexer = <
   const published = publicationColumns(definition, columns);
   const primaryCursor = columns.id;
 
+  const sources = resolveSearchSources(definition);
+  const advanced = model.advanced;
   const selection: Record<string, PgColumn> = Object.fromEntries(
-    [
-      ...new Set([
-        ...REQUIRED_COLUMNS,
-        ...contentSearchIndexedFieldNames(definition),
-      ]),
-    ].map(name => [name, columns[name]]),
+    [...new Set([...REQUIRED_COLUMNS, ...sources.sharedColumns])].map(name => [
+      name,
+      columns[name],
+    ]),
   );
 
   return {
@@ -131,8 +248,29 @@ export const createContentSearchIndexer = <
         .limit(limit)
         .offset(offset);
 
+      // One batch for the whole page, and only the collections the search
+      // configuration names - never one query per document.
+      const collections = await loadSearchCollections({
+        advanced,
+        c,
+        itemIds: rows.map(row => Number((row as Record<string, unknown>).id)),
+        wanted: sources.collections,
+      });
+
       const documents = rows.flatMap(row => {
-        const document = contentSearchDocument(definition, row, { pluginId });
+        const values = row as Record<string, unknown>;
+        const document = contentSearchDocument(
+          definition,
+          {
+            ...values,
+            // Folded back into the nested logical shape the document builder
+            // reads: it is handed `seo.description`, and a flat `seoDescription`
+            // column would resolve to nothing.
+            ...contentColumnsToValues(sources.sharedGroups, values),
+            ...collections.get(Number(values.id)),
+          },
+          { pluginId },
+        );
 
         return document ? [document] : [];
       }) satisfies SearchDocument[];
@@ -191,19 +329,12 @@ export const createContentLocalizedSearchIndexer = <
     translationColumns,
   );
 
-  const { localizedFields, sharedFields } = partitionContentFields(
-    definition.fields,
-  );
-  const indexed = contentSearchIndexedFieldNames(definition);
+  const sources = resolveSearchSources(definition);
+  const advanced = model.advanced;
   const sharedSelection = [
-    ...new Set([
-      ...REQUIRED_COLUMNS,
-      ...indexed.filter(name => sharedFields[name] !== undefined),
-    ]),
+    ...new Set([...REQUIRED_COLUMNS, ...sources.sharedColumns]),
   ];
-  const localizedSelection = indexed.filter(
-    name => localizedFields[name] !== undefined,
-  );
+  const localizedSelection = [...new Set(sources.localizedColumns)];
 
   const visible = (): SQL | undefined =>
     and(publishedCondition(base), publishedCondition(translation));
@@ -290,6 +421,16 @@ export const createContentLocalizedSearchIndexer = <
         languages.map(language => [language.id, language.locale]),
       );
 
+      // Deduplicated across locales: a collection is shared, so three
+      // translations of one record reuse one loaded value rather than issuing
+      // three identical child queries.
+      const collections = await loadSearchCollections({
+        advanced,
+        c,
+        itemIds: page.map(row => Number((row as Record<string, unknown>).id)),
+        wanted: sources.collections,
+      });
+
       const documents = page.flatMap(row => {
         const values = row as Record<string, unknown>;
         const locale = localeOf.get(values._languageId as number);
@@ -298,17 +439,30 @@ export const createContentLocalizedSearchIndexer = <
         // code is one nothing would ever query.
         if (locale === undefined) return [];
 
+        const translationColumnValues = Object.fromEntries(
+          localizedSelection.map(name => [name, values[`t_${name}`]]),
+        );
+
         const document = contentTranslationSearchDocument(
           definition,
           {
-            base: values,
+            base: {
+              ...values,
+              ...contentColumnsToValues(sources.sharedGroups, values),
+              ...collections.get(Number(values.id)),
+            },
             locale,
             translation: {
               publishedAt: values._publishedAt,
               status: values._status,
               updatedAt: values._updatedAt,
-              ...Object.fromEntries(
-                localizedSelection.map(name => [name, values[`t_${name}`]]),
+              ...translationColumnValues,
+              // Localized groups fold from the translation's own columns, so a
+              // localized `seo.description` reads from the language being built
+              // rather than from the base row.
+              ...contentColumnsToValues(
+                sources.localizedGroups,
+                translationColumnValues,
               ),
             },
           },

@@ -8,7 +8,10 @@ import type { ContentSearchSyncOutcome } from "./search-sync";
 import type { ContentTranslationEditorialOutcome } from "./translation-editorial-service";
 
 import { emitContentEvent } from "./emit";
-import { syncContentLocalizedSearch } from "./search-sync";
+import {
+  contentSearchAdvancedValues,
+  syncContentLocalizedSearch,
+} from "./search-sync";
 
 /** One translation operation, one event. Never `updated` - see `events.ts`. */
 const EVENT_ACTION: Record<
@@ -140,6 +143,10 @@ export const contentTranslationEffects = async (
     // Scoped to the locale that moved. Omitting it would rewrite every other
     // language's document for a change none of them contains.
     search: await syncContentLocalizedSearch(c, model, {
+      // A translation mutation rewrites this locale's whole document, so it has
+      // to carry the shared collections as well: changing `seo.description`
+      // must not silently remove the indexed `faq.question` and `faq.answer`.
+      advanced: await contentSearchAdvancedValues(c, model, outcome.row.itemId),
       changed: outcome.changed,
       changedFields: outcome.changedFields,
       locale: outcome.locale,

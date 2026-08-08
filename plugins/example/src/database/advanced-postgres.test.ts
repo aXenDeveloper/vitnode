@@ -1,3 +1,4 @@
+import type { SearchDocument } from "@vitnode/core/api/models/search";
 import type { Context } from "hono";
 
 import {
@@ -5,6 +6,11 @@ import {
   ContentRevisionNotRestorable,
   ContentVersionConflict,
 } from "@vitnode/core/content";
+import {
+  contentTranslationEffects,
+  createContentLocalizedSearchIndexer,
+  syncContentLocalizedSearch,
+} from "@vitnode/core/content/server";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -13,6 +19,7 @@ import postgres from "postgres";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { CONFIG_PLUGIN, EXAMPLE_MIGRATIONS } from "@/const";
+import { advancedArticleContentType } from "@/content/advanced-article";
 
 import { advancedArticleContent } from "./advanced-articles";
 import { categoryContent } from "./categories";
@@ -94,6 +101,16 @@ const ACTOR = { type: "staff" as const, userId: null };
 let sql: ReturnType<typeof postgres>;
 let db: ReturnType<typeof drizzle>;
 let context: Context;
+/**
+ * The Postgres major, for the one assertion whose SQLSTATE moved.
+ *
+ * Postgres 18 reports an explicit `ON DELETE RESTRICT` as `23001`
+ * (restrict_violation) where earlier majors reported the generic `23503`
+ * (foreign_key_violation). The version decides which is correct rather than the
+ * assertion accepting either - "one of these two" would still pass if a future
+ * major stopped refusing the delete at all.
+ */
+let serverMajor = 0;
 
 /**
  * A second connection, for the tests that need two writers at once.
@@ -119,6 +136,16 @@ const pgErrorCode = async (run: () => Promise<unknown>) => {
 
 /** Categories every test can point at. Recreated per test, ids move. */
 let categoryIds: number[] = [];
+
+/**
+ * Whatever the search engine was asked to do, in order.
+ *
+ * A recorder rather than a real engine: what these tests are about is the
+ * *document* the engine is handed - and above all whether the rebuild hands it
+ * the same one live synchronization did.
+ */
+const indexed: SearchDocument[] = [];
+const deleted: { itemId: number; itemType: string; locale?: string }[] = [];
 
 const createArticle = async (
   values: Record<string, unknown> = {},
@@ -149,6 +176,11 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
     sql = postgres(url ?? "", { max: 1, onnotice: () => undefined });
 
+    const [{ version }] = await sql<{ version: number }[]>`
+      SELECT current_setting('server_version_num')::int AS version
+    `;
+    serverMajor = Math.floor(version / 10_000);
+
     await sql.unsafe(`
       DROP SCHEMA IF EXISTS public CASCADE;
       CREATE SCHEMA public;
@@ -174,6 +206,30 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       ({
         get: (key: string) => {
           if (key === "db") return handle;
+          if (key === "search") {
+            return {
+              delete: async (
+                itemType: string,
+                itemId: number,
+                locale?: string,
+              ) => {
+                deleted.push({ itemId, itemType, locale });
+
+                return Promise.resolve();
+              },
+              index: async (document: SearchDocument) => {
+                indexed.push(document);
+
+                return Promise.resolve();
+              },
+            };
+          }
+          if (key === "events") {
+            return { emit: async () => Promise.resolve({ failures: [] }) };
+          }
+          if (key === "log") {
+            return { error: async () => Promise.resolve() };
+          }
           if (key === "core") {
             return {
               contentModels: [
@@ -216,6 +272,8 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       RETURNING "id"
     `;
     categoryIds = rows.map(row => row.id);
+    indexed.length = 0;
+    deleted.length = 0;
   });
 
   // -------------------------------------------------------------------------
@@ -290,8 +348,12 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
 
       // `onDelete: "restrict"` on the field, enforced by Postgres rather than by
       // a check in service code that a direct DELETE would walk past.
-      expect(code).toBe("23503");
-      expect(article.id).toBeGreaterThan(0);
+      expect(code).toBe(serverMajor >= 18 ? "23001" : "23503");
+      // The code says *how* it was refused; this says the reference survived,
+      // which is what the constraint is actually for.
+      await expect(
+        service().relations.categories.get(article.id),
+      ).resolves.toStrictEqual([categoryIds[0]]);
     });
 
     it("takes the junction and child rows with the record", async () => {
@@ -377,11 +439,11 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
     it("stores an unordered set in ascending target order", async () => {
       const article = await createArticle();
 
-      await service().relations.categories.set(
-        article.id,
-        [categoryIds[2], categoryIds[0], categoryIds[1]],
-        { expectedVersion: article.version },
-      );
+      await service().relations.categories.set(article.id, [
+        categoryIds[2],
+        categoryIds[0],
+        categoryIds[1],
+      ]);
 
       await expect(
         service().relations.categories.get(article.id),
@@ -437,9 +499,7 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       const article = await createArticle();
 
       await expect(
-        service().relations.categories.set(article.id, [999999], {
-          expectedVersion: article.version,
-        }),
+        service().relations.categories.set(article.id, [999999]),
       ).rejects.toBeInstanceOf(ContentAdvancedInputError);
     });
 
@@ -450,7 +510,6 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       const result = await service().relations.categories.reorder(
         article.id,
         stored,
-        { expectedVersion: 1 },
       );
 
       expect(result?.changedFields).toStrictEqual([]);
@@ -492,11 +551,9 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       });
 
       const before = await service().repeatable.faq.list(article.id);
-      const ids = before.map(row => row.id as number);
+      const ids = before.map(row => row.id);
 
-      await service().repeatable.faq.reorder(article.id, [ids[1], ids[0]], {
-        expectedVersion: 1,
-      });
+      await service().repeatable.faq.reorder(article.id, [ids[1], ids[0]]);
 
       const after = await service().repeatable.faq.list(article.id);
 
@@ -516,16 +573,12 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       });
 
       const current = await service().repeatable.faq.list(article.id);
-      const keptId = current[0].id as number;
+      const keptId = current[0].id;
 
-      const result = await service().repeatable.faq.set(
-        article.id,
-        [
-          { answer: "A revised", id: keptId, question: "Keep?" },
-          { answer: "C", question: "New?" },
-        ],
-        { expectedVersion: 1 },
-      );
+      const result = await service().repeatable.faq.set(article.id, [
+        { answer: "A revised", id: keptId, question: "Keep?" },
+        { answer: "C", question: "New?" },
+      ]);
 
       expect(result?.changedFields).toStrictEqual(["faq"]);
 
@@ -549,11 +602,9 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       const [stolen] = await service().repeatable.faq.list(theirs.id);
 
       await expect(
-        service().repeatable.faq.set(
-          mine.id,
-          [{ answer: "A", id: stolen.id, question: "Question?" }],
-          { expectedVersion: 1 },
-        ),
+        service().repeatable.faq.set(mine.id, [
+          { answer: "A", id: stolen.id, question: "Question?" },
+        ]),
       ).rejects.toBeInstanceOf(ContentAdvancedInputError);
     });
 
@@ -566,7 +617,6 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       const result = await service().repeatable.faq.set(
         article.id,
         current.map(row => ({ ...row })),
-        { expectedVersion: 1 },
       );
 
       expect(result?.changedFields).toStrictEqual([]);
@@ -751,12 +801,10 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
           { answer: "C", question: "Three?" },
         ],
       });
+      // `list` now returns the repeatable's own child shape, so the rows go
+      // straight back into `update` with no coercion in between.
       const stored = await service().repeatable.faq.list(article.id);
-      const at = (index: number) => ({
-        answer: String(stored[index].answer),
-        id: Number(stored[index].id),
-        question: String(stored[index].question),
-      });
+      const at = (index: number) => stored[index];
 
       await Promise.allSettled([
         editorial()?.update(
@@ -777,6 +825,255 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       `;
 
       expect(rows.map(row => row.position)).toStrictEqual([0, 1, 2]);
+    });
+
+    /**
+     * The plain service merges; the editorial service arbitrates.
+     *
+     * Both are correct, and they are different: the plain API has no version to
+     * guard on, so two additions to the same relation both survive. The
+     * editorial API guards, so one of two writers holding the same expected
+     * version is told it lost. A single API doing both depending on where it came
+     * from would be the thing nobody could reason about.
+     */
+    describe("plain service serialises without losing an update", () => {
+      it("keeps both concurrent relation additions", async () => {
+        const article = await createArticle();
+
+        await Promise.all([
+          service().relations.categories.add(article.id, categoryIds[0]),
+          service(rivalContext).relations.categories.add(
+            article.id,
+            categoryIds[1],
+          ),
+        ]);
+
+        // The read used to happen before `update` took the row lock, so both
+        // writers computed their next list from the same empty one and the second
+        // overwrote the first. Now the lock comes first and the loser reads the
+        // winner's state.
+        await expect(
+          service().relations.categories.get(article.id),
+        ).resolves.toStrictEqual(
+          [categoryIds[0], categoryIds[1]].sort((a, b) => a - b),
+        );
+      });
+
+      it("does not lose a removal against a concurrent addition", async () => {
+        const article = await createArticle({ categories: [categoryIds[0]] });
+
+        await Promise.all([
+          service().relations.categories.remove(article.id, categoryIds[0]),
+          service(rivalContext).relations.categories.add(
+            article.id,
+            categoryIds[1],
+          ),
+        ]);
+
+        const stored = await service().relations.categories.get(article.id);
+
+        // Whichever order they ran in, the surviving state reflects both: the
+        // removal removed and the addition added.
+        expect(stored).toStrictEqual([categoryIds[1]]);
+      });
+
+      it("keeps both concurrently created repeatable children", async () => {
+        const article = await createArticle();
+
+        await Promise.all([
+          service().repeatable.faq.create(article.id, {
+            answer: "First answer",
+            question: "First?",
+          }),
+          service(rivalContext).repeatable.faq.create(article.id, {
+            answer: "Second answer",
+            question: "Second?",
+          }),
+        ]);
+
+        const children = await service().repeatable.faq.list(article.id);
+
+        expect(children).toHaveLength(2);
+        expect(children.map(child => child.question).sort()).toStrictEqual([
+          "First?",
+          "Second?",
+        ]);
+        // Contiguous from zero, and no duplicate slot survived.
+        const rows = await sql<{ position: number }[]>`
+          SELECT "position" FROM "example_advanced_articles_faq"
+          WHERE "itemId" = ${article.id} ORDER BY "position"
+        `;
+        expect(rows.map(row => row.position)).toStrictEqual([0, 1]);
+      });
+
+      it("does not lose a child edit against a concurrent creation", async () => {
+        const article = await createArticle({
+          faq: [{ answer: "Original", question: "Kept?" }],
+        });
+        const [existing] = await service().repeatable.faq.list(article.id);
+
+        await Promise.all([
+          service().repeatable.faq.update(article.id, existing.id, {
+            answer: "Edited",
+          }),
+          service(rivalContext).repeatable.faq.create(article.id, {
+            answer: "Added answer",
+            question: "Added?",
+          }),
+        ]);
+
+        const children = await service().repeatable.faq.list(article.id);
+
+        expect(children).toHaveLength(2);
+        // The edit survived *and* kept its identity, and the creation survived.
+        const kept = children.find(child => child.id === existing.id);
+        expect(kept?.answer).toBe("Edited");
+        expect(children.some(child => child.question === "Added?")).toBe(true);
+      });
+
+      it("keeps positions contiguous under concurrent reorders", async () => {
+        const article = await createArticle({
+          faq: [
+            { answer: "A", question: "One?" },
+            { answer: "B", question: "Two?" },
+            { answer: "C", question: "Three?" },
+          ],
+        });
+        const ids = (await service().repeatable.faq.list(article.id)).map(
+          child => child.id,
+        );
+
+        await Promise.all([
+          service().repeatable.faq.reorder(article.id, [
+            ids[2],
+            ids[1],
+            ids[0],
+          ]),
+          service(rivalContext).repeatable.faq.reorder(article.id, [
+            ids[1],
+            ids[0],
+            ids[2],
+          ]),
+        ]);
+
+        const rows = await sql<{ id: number; position: number }[]>`
+          SELECT "id", "position" FROM "example_advanced_articles_faq"
+          WHERE "itemId" = ${article.id} ORDER BY "position"
+        `;
+
+        expect(rows.map(row => row.position)).toStrictEqual([0, 1, 2]);
+        // Stable identity: a reorder never recreates a child.
+        expect(rows.map(row => row.id).sort((a, b) => a - b)).toStrictEqual(
+          [...ids].sort((a, b) => a - b),
+        );
+      });
+    });
+
+    describe("editorial service arbitrates instead of merging", () => {
+      const editorialFor = (target: Context = context) => {
+        const value = editorial(target);
+        if (!value) throw new Error("no editorial service");
+
+        return value;
+      };
+
+      it("lets exactly one of two racing `add` calls win", async () => {
+        const article = await createArticle();
+
+        const results = await Promise.allSettled([
+          editorialFor().relations.categories.add(article.id, categoryIds[0], {
+            actor: ACTOR,
+            expectedVersion: article.version,
+          }),
+          editorialFor(rivalContext).relations.categories.add(
+            article.id,
+            categoryIds[1],
+            { actor: ACTOR, expectedVersion: article.version },
+          ),
+        ]);
+
+        expect(
+          results.filter(result => result.status === "fulfilled"),
+        ).toHaveLength(1);
+        const lost = results.filter(
+          (result): result is PromiseRejectedResult =>
+            result.status === "rejected",
+        );
+        expect(lost).toHaveLength(1);
+        expect(lost[0].reason).toBeInstanceOf(ContentVersionConflict);
+
+        // Exactly one addition, exactly one version increment, and no silent
+        // retry that would have overwritten the winner.
+        const stored = await service().relations.categories.get(article.id);
+        expect(stored).toHaveLength(1);
+        const [row] = await sql<{ version: number }[]>`
+          SELECT "version" FROM "example_advanced_articles"
+          WHERE "id" = ${article.id}
+        `;
+        expect(row.version).toBe(2);
+      });
+
+      it("writes exactly one revision per real collection mutation", async () => {
+        const article = await createArticle();
+
+        const outcome = await editorialFor().relations.categories.add(
+          article.id,
+          categoryIds[0],
+          { actor: ACTOR, expectedVersion: article.version },
+        );
+
+        expect(outcome?.changed).toBe(true);
+        expect(outcome?.changedFields).toStrictEqual(["categories"]);
+        expect(outcome?.revisionId).not.toBeNull();
+
+        const [revisions] = await sql<{ count: number }[]>`
+          SELECT count(*)::int AS count FROM "core_content_revisions"
+          WHERE "itemId" = ${article.id} AND "operation" = 'update'
+        `;
+        expect(revisions.count).toBe(1);
+      });
+
+      it("writes no revision for a no-op collection mutation", async () => {
+        const article = await createArticle({ categories: [categoryIds[0]] });
+        const before = await sql<{ count: number }[]>`
+          SELECT count(*)::int AS count FROM "core_content_revisions"
+          WHERE "itemId" = ${article.id}
+        `;
+
+        // Adding a target that is already there computes the list that is
+        // already stored, so the diff finds nothing.
+        const outcome = await editorialFor().relations.categories.add(
+          article.id,
+          categoryIds[0],
+          { actor: ACTOR, expectedVersion: 1 },
+        );
+
+        expect(outcome?.changed).toBe(false);
+        expect(outcome?.changedFields).toStrictEqual([]);
+        expect(outcome?.revisionId).toBeNull();
+
+        const after = await sql<{ count: number }[]>`
+          SELECT count(*)::int AS count FROM "core_content_revisions"
+          WHERE "itemId" = ${article.id}
+        `;
+        expect(after[0].count).toBe(before[0].count);
+
+        const [row] = await sql<{ version: number }[]>`
+          SELECT "version" FROM "example_advanced_articles"
+          WHERE "id" = ${article.id}
+        `;
+        expect(row.version).toBe(1);
+      });
+
+      it("refuses a collection mutation with no expected version", async () => {
+        const article = await createArticle();
+
+        await expect(
+          editorialFor().relations.categories.add(article.id, categoryIds[0], {
+            actor: ACTOR,
+          } as never),
+        ).rejects.toThrow(/needs `\{ actor, expectedVersion \}`/);
+      });
     });
 
     it("keeps two different records independent", async () => {
@@ -803,6 +1100,278 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
       await expect(
         service().relations.categories.get(second.id),
       ).resolves.toStrictEqual([categoryIds[1]]);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Search
+  // -------------------------------------------------------------------------
+
+  describe("localized search", () => {
+    const localized = () => {
+      const value = advancedArticleContent.localizedService?.(context, {
+        pluginId: CONFIG_PLUGIN.pluginId,
+      });
+      if (!value) throw new Error("no localized service");
+
+      return value;
+    };
+
+    const translationEditorial = () => {
+      const value = advancedArticleContent.translationEditorialService?.(
+        context,
+        { pluginId: CONFIG_PLUGIN.pluginId },
+      );
+      if (!value) throw new Error("no translation editorial service");
+
+      return value;
+    };
+
+    /**
+     * One published record, in two languages, with a shared FAQ.
+     *
+     * The FAQ is the point: it is shared, so both documents are built from it -
+     * and every path that builds one has to load it or the two disagree.
+     */
+    const publishedInTwoLocales = async (title: string) => {
+      const created = await localized().create({
+        shared: {
+          faq: [
+            { answer: "First answer", question: "First question?" },
+            { answer: "Second answer", question: "Second question?" },
+          ],
+          syndication: { indexable: true, priority: 5 },
+        },
+        translation: {
+          seo: { description: `${title} EN description`, title: `${title} EN` },
+          title,
+        },
+      });
+      const itemId = created.row.id;
+
+      await translations().create(itemId, "pl", {
+        seo: { description: `${title} PL opis`, title: `${title} PL` },
+        title: `${title} PL`,
+      });
+
+      await editorial()?.publish(itemId, { actor: ACTOR });
+      await translationEditorial().publish(itemId, "en", { actor: ACTOR });
+      await translationEditorial().publish(itemId, "pl", { actor: ACTOR });
+
+      return itemId;
+    };
+
+    const translations = () => {
+      const value = advancedArticleContent.translationService?.(context);
+      if (!value) throw new Error("no translation service");
+
+      return value;
+    };
+
+    /** Every document the rebuild produces, in one pass. */
+    const rebuild = async (): Promise<SearchDocument[]> => {
+      const indexer = createContentLocalizedSearchIndexer(
+        advancedArticleContent,
+        { pluginId: CONFIG_PLUGIN.pluginId },
+      );
+      const documents: SearchDocument[] = [];
+      let offset = 0;
+
+      for (;;) {
+        const page = await indexer.load(context, offset, 10);
+        documents.push(...page.documents);
+        if (page.itemsRead === 0) break;
+        offset += page.itemsRead;
+      }
+
+      return documents;
+    };
+
+    /** Re-runs live synchronization for a record and returns what it wrote. */
+    const liveSync = async (itemId: number): Promise<SearchDocument[]> => {
+      indexed.length = 0;
+      const row = await advancedArticleContent
+        .service(context)
+        .findById(itemId);
+      if (!row) throw new Error("no row");
+
+      await syncContentLocalizedSearch(context, advancedArticleContent, {
+        advanced: await advancedArticleContent
+          .service(context)
+          .advancedFields(itemId, ["faq"]),
+        operation: "publish",
+        changed: true,
+        pluginId: CONFIG_PLUGIN.pluginId,
+        row,
+      });
+
+      return [...indexed];
+    };
+
+    const byUrl = (documents: readonly SearchDocument[]) =>
+      [...documents].sort((a, b) => (a.url ?? "").localeCompare(b.url ?? ""));
+
+    it("indexes repeatable text in every published locale", async () => {
+      const itemId = await publishedInTwoLocales("Repeatable Live");
+      const live = byUrl(await liveSync(itemId));
+
+      expect(live).toHaveLength(2);
+      for (const document of live) {
+        // The bug: `syncContentLocalizedSearch` was handed the base row only, so
+        // a document made of `faq.question` and `faq.answer` contained neither.
+        expect(document.content).toContain("First question?");
+        expect(document.content).toContain("Second answer");
+      }
+    });
+
+    it("indexes repeatable values in position order", async () => {
+      const itemId = await publishedInTwoLocales("Repeatable Order");
+      const [document] = byUrl(await liveSync(itemId));
+
+      expect(document.content.indexOf("First question?")).toBeLessThan(
+        document.content.indexOf("Second question?"),
+      );
+    });
+
+    it("reproduces the live documents on a rebuild", async () => {
+      const itemId = await publishedInTwoLocales("Rebuild Parity");
+      const live = byUrl(await liveSync(itemId));
+      const rebuilt = byUrl(await rebuild());
+
+      // The whole invariant: a rebuild has to produce the document live
+      // synchronization already wrote. The rebuild classified `seo.description`
+      // and `faq.*` by looking them up in the top-level field maps, found
+      // neither, and silently omitted both.
+      expect(rebuilt).toStrictEqual(live);
+    });
+
+    it("writes one document per published translation", async () => {
+      await publishedInTwoLocales("One Per Locale");
+      const rebuilt = byUrl(await rebuild());
+
+      expect(rebuilt.map(document => document.languageCode)).toStrictEqual([
+        "en",
+        "pl",
+      ]);
+      expect(rebuilt.map(document => document.url)).toStrictEqual([
+        expect.stringContaining("/en/"),
+        expect.stringContaining("/pl/"),
+      ]);
+    });
+
+    it("does not index a draft translation", async () => {
+      const created = await localized().create({
+        shared: { faq: [{ answer: "A", question: "Draft question?" }] },
+        translation: { seo: null, title: "Draft Locale" },
+      });
+      await translations().create(created.row.id, "pl", {
+        seo: null,
+        title: "Draft Locale PL",
+      });
+      await editorial()?.publish(created.row.id, { actor: ACTOR });
+      // English published, Polish left a draft.
+      await translationEditorial().publish(created.row.id, "en", {
+        actor: ACTOR,
+      });
+
+      const rebuilt = await rebuild();
+
+      expect(rebuilt).toHaveLength(1);
+      expect(rebuilt[0].languageCode).toBe("en");
+    });
+
+    it("indexes nothing while the record itself is a draft", async () => {
+      const created = await localized().create({
+        shared: { faq: [{ answer: "A", question: "Hidden question?" }] },
+        translation: { seo: null, title: "Draft Record" },
+      });
+      // The translation is published but the record is not: visibility is
+      // subordinate, so neither is readable and neither is indexed.
+      await translationEditorial().publish(created.row.id, "en", {
+        actor: ACTOR,
+      });
+
+      await expect(rebuild()).resolves.toStrictEqual([]);
+    });
+
+    it("keeps repeatable text when only a localized leaf changes", async () => {
+      const itemId = await publishedInTwoLocales("Translation Rewrite");
+      indexed.length = 0;
+
+      const outcome = await translationEditorial().update(
+        itemId,
+        "pl",
+        { seo: { description: "Nowy opis" } },
+        { actor: ACTOR, expectedVersion: 2 },
+      );
+      await contentTranslationEffects(
+        context,
+        advancedArticleContentType,
+        outcome as never,
+        { model: advancedArticleContent, pluginId: CONFIG_PLUGIN.pluginId },
+      );
+
+      // One locale rewritten...
+      expect(indexed).toHaveLength(1);
+      expect(indexed[0].languageCode).toBe("pl");
+      expect(indexed[0].content).toContain("Nowy opis");
+      // ...and its FAQ still in it. Without the collections the rewrite would
+      // have replaced a complete document with one missing every answer.
+      expect(indexed[0].content).toContain("First question?");
+      expect(indexed[0].content).toContain("Second answer");
+    });
+
+    it("rewrites every locale when the shared FAQ changes", async () => {
+      const itemId = await publishedInTwoLocales("Shared Rewrite");
+      indexed.length = 0;
+
+      const [row] = await sql<{ version: number }[]>`
+        SELECT "version" FROM "example_advanced_articles" WHERE "id" = ${itemId}
+      `;
+      await editorial()?.update(
+        itemId,
+        { faq: [{ answer: "Rewritten answer", question: "Rewritten?" }] },
+        { actor: ACTOR, expectedVersion: row.version },
+      );
+
+      const live = byUrl(await liveSync(itemId));
+
+      expect(live).toHaveLength(2);
+      for (const document of live) {
+        expect(document.content).toContain("Rewritten?");
+        expect(document.content).not.toContain("First question?");
+      }
+
+      // And the rebuild still agrees.
+      expect(byUrl(await rebuild())).toStrictEqual(live);
+    });
+
+    it("removes a locale's document when its translation is unpublished", async () => {
+      const itemId = await publishedInTwoLocales("Unpublish Locale");
+      deleted.length = 0;
+
+      const outcome = await translationEditorial().unpublish(itemId, "pl", {
+        actor: ACTOR,
+      });
+      await contentTranslationEffects(
+        context,
+        advancedArticleContentType,
+        outcome as never,
+        { model: advancedArticleContent, pluginId: CONFIG_PLUGIN.pluginId },
+      );
+
+      // Scoped to the one language: taking the Polish copy down must leave the
+      // English document exactly where it is.
+      expect(deleted).toStrictEqual([
+        {
+          itemId,
+          itemType: "example.advanced-article",
+          locale: "pl",
+        },
+      ]);
+      expect(
+        byUrl(await rebuild()).map(document => document.languageCode),
+      ).toStrictEqual(["en"]);
     });
   });
 

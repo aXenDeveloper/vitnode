@@ -121,10 +121,25 @@ await editorialService.update(
 );
 ```
 
-One request, one version guard, one revision, one event. There are typed
-shortcuts too - `service.relations.categories.add(...)`,
-`service.repeatable.faq.reorder(...)` - and every one of them is a wrapper over
-this same call, so none of them can drift from it.
+One request, one version guard, one revision, one event.
+
+There are typed shortcuts too, on both services:
+
+```ts
+// Merges under a row lock. No version guard, no revision, no event.
+await model.service(c).relations.categories.add(7, 12);
+
+// Arbitrates. Requires the version, writes the revision, emits the event.
+await model.editorialService?.(c, { pluginId }).repeatable.faq.reorder(
+  7,
+  [15, 11],
+  { actor, expectedVersion: 4 },
+);
+```
+
+Every one of them locks the source row **before** reading the collection it is
+about to modify, and then goes through the same `update` above - so none of them
+can lose a concurrent write, and none can drift from the rules that call follows.
 
 ## Where to go next
 

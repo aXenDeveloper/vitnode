@@ -10,8 +10,8 @@ import { CONTENT_REVISION_SNAPSHOT_VERSION } from "../const";
 import { partitionContentFields } from "../localization";
 import {
   contentInnerFields,
-  contentLeafColumnName,
   isContentRelationCollection,
+  readContentLeaf,
 } from "../paths";
 
 const toIso = (value: unknown): string => {
@@ -73,14 +73,10 @@ const toFieldSnapshot = (
     let allNull = true;
 
     for (const leaf of leaves) {
-      // Read from the column when the row is a database row, and from the
-      // nested value when it is already logical - a restore hands over the
-      // second, and both have to snapshot identically.
-      const raw =
-        values[contentLeafColumnName(name, leaf)] ??
-        (values[name] as null | Record<string, unknown> | undefined)?.[leaf] ??
-        null;
-      const snapshot = toSnapshotValue(raw);
+      // Reads the flattened column on a database row and the nested value on a
+      // logical one - a base snapshot is taken from the first, a translation
+      // snapshot from the second, and both have to produce the same shape.
+      const snapshot = toSnapshotValue(readContentLeaf(values, name, leaf));
       if (snapshot !== null) allNull = false;
 
       nested[leaf] = snapshot;
@@ -208,19 +204,35 @@ export const projectRevisionSnapshot = (
   definition: AnyContentTypeDefinition,
   snapshot: ContentRevisionSnapshot,
 ): Record<string, ContentSnapshotValue> => {
-  const projected: Record<string, ContentSnapshotValue> = {};
   const { collectionFields, sharedFields } = partitionContentFields(
     definition.fields,
   );
-  const restorable: ContentFieldMap = {
-    ...sharedFields,
-    ...collectionFields,
-  };
+
+  return projectSnapshotFields(
+    { ...sharedFields, ...collectionFields },
+    snapshot.fields,
+  );
+};
+
+/**
+ * The restorable half of a snapshot, for one set of currently declared fields.
+ *
+ * Shared by the base and translation projections rather than written twice: the
+ * schema-evolution rules are identical on both sides - a field or a **leaf** the
+ * content type has since dropped is ignored, one added since is absent - and two
+ * copies of that rule is the pair where a localized group ends up restoring
+ * something a shared one would not.
+ */
+const projectSnapshotFields = (
+  restorable: ContentFieldMap,
+  stored: Record<string, ContentSnapshotValue>,
+): Record<string, ContentSnapshotValue> => {
+  const projected: Record<string, ContentSnapshotValue> = {};
 
   for (const [name, fieldValue] of Object.entries(restorable)) {
-    if (!(name in snapshot.fields)) continue;
+    if (!(name in stored)) continue;
 
-    const value = snapshot.fields[name];
+    const value = stored[name];
 
     // A leaf the group has since dropped is ignored, for exactly the reason a
     // dropped field is: the snapshot records the past, and the past is allowed
@@ -283,8 +295,12 @@ export const contentTranslationRevisionSnapshot = (
   const fields: Record<string, ContentSnapshotValue> = {};
   const { localizedFields } = partitionContentFields(definition.fields);
 
-  for (const name of Object.keys(localizedFields)) {
-    fields[name] = toSnapshotValue(values[name]);
+  // The same field snapshotter the shared half uses, so a localized group is
+  // recorded in its canonical nested shape rather than run through the scalar
+  // coercion - which returns `null` for an object, and would silently record
+  // every localized group as absent.
+  for (const [name, fieldValue] of Object.entries(localizedFields)) {
+    fields[name] = toFieldSnapshot(name, fieldValue, values);
   }
 
   const snapshot: ContentTranslationRevisionSnapshot = {
@@ -336,14 +352,7 @@ export const projectTranslationRevisionSnapshot = (
   definition: AnyContentTypeDefinition,
   snapshot: ContentTranslationRevisionSnapshot,
 ): Record<string, ContentSnapshotValue> => {
-  const projected: Record<string, ContentSnapshotValue> = {};
   const { localizedFields } = partitionContentFields(definition.fields);
 
-  for (const name of Object.keys(localizedFields)) {
-    if (!(name in snapshot.fields)) continue;
-
-    projected[name] = snapshot.fields[name];
-  }
-
-  return projected;
+  return projectSnapshotFields(localizedFields, snapshot.fields);
 };

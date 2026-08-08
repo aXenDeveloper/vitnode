@@ -14,8 +14,14 @@ import type {
   AnyContentTypeDefinition,
   ContentChangedPath,
   ContentCreateInput,
+  ContentInnerFieldsOf,
+  ContentRelationCollectionName,
+  ContentRepeatableFieldName,
+  ContentRepeatableInputRow,
+  ContentRepeatableRow,
   ContentSelect,
   ContentUpdateInput,
+  ContentValuesOf,
 } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentRevisionsModel } from "./revisions-model";
@@ -34,6 +40,11 @@ import {
 } from "../errors";
 import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
+import {
+  buildContentRelationOperations,
+  buildContentRepeatableOperations,
+  contentCollectionKinds,
+} from "./collection-api";
 import {
   changedPathsToColumns,
   diffChangedPaths,
@@ -108,6 +119,28 @@ export interface ContentEditorialService<TDefinition> {
     id: number,
     options: ContentEditorialPublicationOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
+  /**
+   * Typed to-many relation operations, keyed by the content type's actual
+   * relation collection names.
+   *
+   * The **editorial** ones: each takes an `actor` and an `expectedVersion`,
+   * bumps the version exactly once per real mutation, writes exactly one
+   * revision, and answers a stale expectation with a structured
+   * `ContentVersionConflict`. The plain `service.relations` does none of that -
+   * it has no version column to guard and no history to write - so the two are
+   * deliberately separate objects rather than one with different behaviour
+   * depending on where it came from.
+   */
+  relations: Record<
+    ContentRelationCollectionName<TDefinition>,
+    ContentEditorialRelationMethods<TDefinition>
+  >;
+  /** The editorial repeatable operations, each carrying its own child shape. */
+  repeatable: {
+    [
+      K in ContentRepeatableFieldName<TDefinition>
+    ]: ContentEditorialRepeatableMethods<TDefinition, K>;
+  };
   restore: (
     id: number,
     revisionId: number,
@@ -130,6 +163,77 @@ export interface ContentEditorialService<TDefinition> {
   update: (
     id: number,
     values: ContentUpdateInput<TDefinition>,
+    options: ContentEditorialWriteOptions,
+  ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
+}
+
+/**
+ * The editorial to-many relation operations.
+ *
+ * Every mutating one requires the same `actor` and `expectedVersion` an editorial
+ * `update` does, for the same reason: a collection mutation is an edit of the
+ * source record, and an edit that could not lose a race would be the only one in
+ * the engine that cannot.
+ */
+export interface ContentEditorialRelationMethods<TDefinition> {
+  add: (
+    itemId: number,
+    relatedItemId: number,
+    options: ContentEditorialWriteOptions,
+  ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
+  /** The current targets, in stored order. Reads take no version. */
+  get: (itemId: number, options?: ContentEditorialOptions) => Promise<number[]>;
+  remove: (
+    itemId: number,
+    relatedItemId: number,
+    options: ContentEditorialWriteOptions,
+  ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
+  reorder: (
+    itemId: number,
+    relatedItemIds: readonly number[],
+    options: ContentEditorialWriteOptions,
+  ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
+  set: (
+    itemId: number,
+    relatedItemIds: readonly number[],
+    options: ContentEditorialWriteOptions,
+  ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
+}
+
+/** The editorial repeatable operations, typed from the field's own leaves. */
+export interface ContentEditorialRepeatableMethods<TDefinition, TName> {
+  create: (
+    itemId: number,
+    values: ContentValuesOf<ContentInnerFieldsOf<TDefinition, TName>>,
+    options: ContentEditorialWriteOptions,
+  ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
+  delete: (
+    itemId: number,
+    childId: number,
+    options: ContentEditorialWriteOptions,
+  ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
+  list: (
+    itemId: number,
+    options?: ContentEditorialOptions,
+  ) => Promise<
+    ContentRepeatableRow<ContentInnerFieldsOf<TDefinition, TName>>[]
+  >;
+  reorder: (
+    itemId: number,
+    childIds: readonly number[],
+    options: ContentEditorialWriteOptions,
+  ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
+  set: (
+    itemId: number,
+    rows: readonly ContentRepeatableInputRow<
+      ContentInnerFieldsOf<TDefinition, TName>
+    >[],
+    options: ContentEditorialWriteOptions,
+  ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
+  update: (
+    itemId: number,
+    childId: number,
+    values: Partial<ContentValuesOf<ContentInnerFieldsOf<TDefinition, TName>>>,
     options: ContentEditorialWriteOptions,
   ) => Promise<ContentEditorialOutcome<TDefinition> | null>;
 }
@@ -329,6 +433,31 @@ export const createContentEditorialService = <
    * when nothing matched, to tell a deleted record (404) from a moved one (409)
    * - the same shape `transition` in the plain service already uses.
    */
+  /**
+   * Takes the source row's write lock.
+   *
+   * Only for a content type with collections: an ordinary editorial update is
+   * already serialised by its guarded `UPDATE`, and a read-modify-write is not -
+   * it reads the junction and child rows first, and that read has to be inside
+   * the same lock as the write it feeds.
+   */
+  const lockRow = async (
+    tx: ContentDatabase,
+    id: number,
+    { force = false }: { force?: boolean } = {},
+  ): Promise<boolean> => {
+    if (!force && !store?.enabled) return true;
+
+    const [row] = await tx
+      .select({ id: primaryCursor })
+      .from(table)
+      .where(eq(primaryCursor, id))
+      .limit(1)
+      .for("update");
+
+    return row !== undefined;
+  };
+
   const guardedWrite = async (
     tx: ContentDatabase,
     id: number,
@@ -436,7 +565,127 @@ export const createContentEditorialService = <
       };
     });
 
-  return {
+  /**
+   * Locks the source record, reads one collection and applies what `compute`
+   * makes of it - all inside the transaction that will write it.
+   *
+   * Two guarantees at once, and the order is what produces both:
+   *
+   * 1. `SELECT ... FOR UPDATE` before the read, so the next state is computed
+   *    from the committed collection rather than from one a concurrent writer has
+   *    since replaced;
+   * 2. the ordinary `update` afterwards, so the caller's `expectedVersion` still
+   *    decides the winner. A loser waits for the lock, then finds the version has
+   *    moved, and is told so - it never merges silently and never overwrites.
+   */
+  /**
+   * Every editorial collection mutation needs an actor and an expected version.
+   *
+   * Checked rather than defaulted: a collection mutation is an edit of the record,
+   * and defaulting the version would make this the one editorial write that
+   * silently overwrites whatever it finds.
+   */
+  const assertWriteOptions = (
+    field: string,
+    options: Partial<ContentEditorialWriteOptions> | undefined,
+  ): ContentEditorialWriteOptions => {
+    if (options?.actor && typeof options.expectedVersion === "number") {
+      return options as ContentEditorialWriteOptions;
+    }
+
+    throw new ContentEngineError(
+      `An editorial mutation of "${field}" needs \`{ actor, expectedVersion }\`. Use \`model.service(c).${field}\` for a write with no version guard.`,
+      { contentTypeId },
+    );
+  };
+
+  const runCollection = async (
+    itemId: number,
+    field: string,
+    compute: (current: unknown[]) => unknown[],
+    options: Partial<ContentEditorialWriteOptions> | undefined,
+  ): Promise<ContentEditorialOutcome<TDefinition> | null> => {
+    const write = assertWriteOptions(field, options);
+
+    return await transact(write, async tx => {
+      if (!(await lockRow(tx, itemId, { force: true }))) return null;
+
+      const current = await store?.load(itemId, tx, [field]);
+      const value = current?.[field];
+      const next = compute(Array.isArray(value) ? value : []);
+
+      return await editorial.update(
+        itemId,
+        schemas.update.parse({
+          [field]: next,
+        }),
+        { ...write, tx },
+      );
+    });
+  };
+
+  const collectionApi = {
+    read: async (itemId: number, field: string, options: unknown) => {
+      const loaded = await store?.load(
+        itemId,
+        (options as ContentEditorialOptions | undefined)?.tx ?? c.get("db"),
+        [field],
+      );
+      const value = loaded?.[field];
+
+      return Array.isArray(value) ? value : [];
+    },
+    run: runCollection,
+    write: async (
+      itemId: number,
+      field: string,
+      next: readonly unknown[],
+      options: Partial<ContentEditorialWriteOptions> | undefined,
+    ) => {
+      // `set` replaces the collection whole, so it reads nothing and needs no
+      // lock of its own - the guarded `UPDATE` inside `update` is the whole
+      // story. It still needs the actor and the expected version, for the same
+      // reason every other editorial write does.
+      const write = assertWriteOptions(field, options);
+
+      return await editorial.update(
+        itemId,
+        { [field]: [...next] } as ContentUpdateInput<TDefinition>,
+        write,
+      );
+    },
+  };
+
+  const { relations, repeatables } = contentCollectionKinds(
+    definition,
+    store?.fields ?? [],
+  );
+
+  const mutableRelations: Record<
+    string,
+    ContentEditorialRelationMethods<TDefinition>
+  > = {};
+  const mutableRepeatables: Record<
+    string,
+    ContentEditorialRepeatableMethods<TDefinition, never>
+  > = {};
+
+  for (const field of relations) {
+    mutableRelations[field] = buildContentRelationOperations({
+      api: collectionApi,
+      contentTypeId,
+      field,
+    });
+  }
+  for (const field of repeatables) {
+    mutableRepeatables[field] = buildContentRepeatableOperations({
+      api: collectionApi,
+      contentTypeId,
+      field,
+    }) as ContentEditorialRepeatableMethods<TDefinition, never>;
+  }
+
+  const editorial: ContentEditorialService<TDefinition> = {
     create: async (values, options) =>
       await transact(options, async tx => {
         const parsed = schemas.create.parse(values) as Record<string, unknown>;
@@ -661,6 +910,11 @@ export const createContentEditorialService = <
         };
       }),
 
+    relations: mutableRelations,
+
+    repeatable:
+      mutableRepeatables as ContentEditorialService<TDefinition>["repeatable"],
+
     revisions,
 
     schedules,
@@ -680,6 +934,13 @@ export const createContentEditorialService = <
         // query. Slugs are normalised before the diff, so re-sending the stored
         // slug in a different case counts as no change.
         const patch = withUpdateSlugs(schemas.update.parse(values));
+
+        // Locked before the collections are read, so a collection mutation
+        // derives its next state from the committed one. The version guard below
+        // is still what decides the winner - the lock only makes the loser wait
+        // long enough to be told it lost, instead of overwriting from a state it
+        // read before the winner existed.
+        if (!(await lockRow(tx, id))) return null;
 
         const current = await readOne(id, tx);
         if (!current) return null;
@@ -751,4 +1012,6 @@ export const createContentEditorialService = <
         };
       }),
   };
+
+  return editorial;
 };

@@ -409,3 +409,77 @@ export const testLocalizedSearchPageContentType = defineContentType({
     list: { columns: ["featured", "status"] },
   },
 });
+
+/**
+ * The Stage 6 localized fixture: a localized group and a **shared** repeatable
+ * on one searchable, localized content type.
+ *
+ * It exists for the three places Stage 6 and Stage 5 meet and can disagree:
+ *
+ * 1. a translation revision has to record `seo` in its nested logical shape,
+ *    not run it through the scalar coercion that turns an object into `null`;
+ * 2. a localized search document is built from three sources at once - the base
+ *    row, the shared collections and one translation - and every path that
+ *    builds one has to supply all three or the documents differ;
+ * 3. the rebuild has to reproduce exactly what live synchronization wrote.
+ */
+export const testAdvancedLocalizedContentType = defineContentType({
+  id: "test.advanced-localized",
+  tableName: "test_advanced_localized",
+  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  publication: { enabled: true },
+  editorial: { enabled: true },
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+    // Localized whole: both leaves live on the translation table, and a
+    // translation revision has to record them nested.
+    seo: field.group({
+      localized: true,
+      nullable: true,
+      fields: {
+        title: field.text({ nullable: true, maxLength: 200 }),
+        description: field.textarea({ nullable: true }),
+      },
+    }),
+    featured: field.boolean({ defaultValue: false }),
+    // Shared, like every Stage 6 repeatable - so every locale's document is
+    // built from the same children, and all of them have to contain them.
+    faq: field.repeatable({
+      fields: {
+        question: field.text({ required: true, maxLength: 200 }),
+        answer: field.textarea({ required: true }),
+      },
+    }),
+  },
+  publicApi: {
+    enabled: true,
+    path: "advanced-localized",
+    fields: [
+      "title",
+      "slug",
+      "seo.title",
+      "seo.description",
+      "faq.question",
+      "faq.answer",
+      "featured",
+      "publishedAt",
+    ],
+    searchableFields: ["title"],
+    orderableFields: ["publishedAt"],
+  },
+  search: {
+    enabled: true,
+    titleField: "title",
+    descriptionField: "seo.description",
+    contentFields: ["title", "seo.description", "faq.question", "faq.answer"],
+    pathTemplate: "/{locale}/advanced-localized/{slug}",
+  },
+  admin: {
+    label: {
+      plural: "Test Advanced Localized",
+      singular: "Test Advanced Localized",
+    },
+    list: { columns: ["featured", "status"] },
+  },
+});

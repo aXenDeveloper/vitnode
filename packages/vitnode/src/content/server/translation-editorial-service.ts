@@ -28,7 +28,12 @@ import {
   ContentTranslationVersionConflict,
 } from "../errors";
 import { partitionContentFields } from "../localization";
-import { diffChangedFields } from "./query";
+import {
+  contentFieldPath,
+  contentInnerFields,
+  splitContentFieldPath,
+} from "../paths";
+import { diffChangedPaths } from "./query";
 import {
   contentTranslationRevisionSnapshot,
   projectTranslationRevisionSnapshot,
@@ -197,8 +202,21 @@ export const createContentTranslationEditorialService = <
   }
 
   const { localizedFields } = partitionContentFields(definition.fields);
-  const localizedNames = Object.keys(
-    localizedFields,
+  /**
+   * Every canonical path this locale owns: a scalar by its own name, a group by
+   * each of its leaves.
+   *
+   * What a create "changed", and the vocabulary the base half already reports -
+   * `seo.title` rather than `seo`, so a listener, a cache decision and the search
+   * synchronizer all read the same strings whichever half moved.
+   */
+  const localizedPaths = Object.entries(localizedFields).flatMap(
+    ([name, fieldValue]) =>
+      fieldValue.kind === "group"
+        ? Object.keys(contentInnerFields(fieldValue)).map(leaf =>
+            contentFieldPath(name, leaf),
+          )
+        : [name],
   ) as ContentLocalizedFieldName<TDefinition>[];
 
   // The localized slug, if there is one. A content type may declare at most one
@@ -386,7 +404,7 @@ export const createContentTranslationEditorialService = <
           actor: options.actor,
           // Everything is new, so every localized field "changed" - which is
           // what the history should say about a create.
-          changedFields: localizedNames,
+          changedFields: localizedPaths,
           languageId: row.languageId,
           locale: row.locale,
           operation: "create",
@@ -396,7 +414,7 @@ export const createContentTranslationEditorialService = <
 
         return {
           changed: true,
-          changedFields: localizedNames,
+          changedFields: localizedPaths,
           languageId: row.languageId,
           locale: row.locale,
           operation: "create" as const,
@@ -513,11 +531,14 @@ export const createContentTranslationEditorialService = <
 
         const patch = withUpdateSlugs(parsed.data);
         const currentValues = current.values as Record<string, unknown>;
-        const changedFields = diffChangedFields(
-          localizedNames,
+        // Canonical paths, and group-aware: `current.values` is the *logical*
+        // shape, so a scalar diff would compare two `seo` objects by identity and
+        // report every restore as a change even when nothing moved.
+        const changedFields = diffChangedPaths(
+          localizedFields,
           currentValues,
           patch,
-        );
+        ) as ContentLocalizedFieldName<TDefinition>[];
 
         if (changedFields.length === 0) {
           return {
@@ -533,8 +554,17 @@ export const createContentTranslationEditorialService = <
         const result = await translations.update(
           itemId,
           target.locale,
+          // Keyed by the *owner* of each changed path, so a group is written
+          // whole: the projected snapshot is the group's complete historical
+          // value, and writing one leaf of it would restore half a state.
           Object.fromEntries(
-            changedFields.map(key => [key, patch[key]]),
+            [
+              ...new Set(
+                changedFields.map(
+                  path => splitContentFieldPath(path)?.[0] ?? path,
+                ),
+              ),
+            ].map(key => [key, patch[key]]),
           ) as ContentLocalizedUpdateValues<TDefinition>,
           { expectedVersion: options.expectedVersion, tx },
         );

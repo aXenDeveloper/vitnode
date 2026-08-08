@@ -68,6 +68,17 @@ relatedArticles: field.relation({
 }),
 ```
 
+`references` takes no entry for it - the engine resolves the foreign key from the
+table it is building:
+
+```ts
+export const articleContent = createContentModel(articleContentType, {
+  references: { categories: () => example_categories.id },
+  // `relatedArticles` is absent, and must be: `() => articleContent.table.id`
+  // names the model inside its own initializer, which widens it to `any`.
+});
+```
+
 `ordered: true` keeps the order you wrote:
 
 ```ts
@@ -137,28 +148,67 @@ categories: field.relation({
 
 ## Reading and writing
 
+There are **two** collection APIs, and the difference is deliberate.
+
+### `service.relations` - merges
+
 ```ts
-await service.relations.categories.get(7);              // [2, 5, 9]
-await service.relations.categories.set(7, [2, 5], opts);
-await service.relations.categories.add(7, 12, opts);
-await service.relations.categories.remove(7, 5, opts);
-await service.relations.categories.reorder(7, [9, 2], opts);
+const service = model.service(c);
+
+await service.relations.categories.get(7);           // [2, 5, 9]
+await service.relations.categories.set(7, [2, 5]);
+await service.relations.categories.add(7, 12);
+await service.relations.categories.remove(7, 5);
+await service.relations.categories.reorder(7, [9, 2]);
 ```
 
-Every one of them is a wrapper over `update`, so each inherits the same rules:
+No `expectedVersion`, because this service has no version column to guard on and
+would have had to ignore one. Concurrency is handled by a **row lock**: each
+mutation opens a transaction, takes `SELECT ... FOR UPDATE` on the source record,
+*then* reads the collection, computes the next state and writes it.
+
+That ordering is the whole guarantee. Two concurrent `add` calls serialise on the
+row and both survive:
+
+```text
+A: add(1)  ─ lock ─ read [] ─ write [1] ─ commit
+B: add(2)  ─────── wait ──── lock ─ read [1] ─ write [1,2] ─ commit
+```
+
+No revision and no event - the plain service has never written either, for a
+field edit or a collection one.
+
+### `editorialService.relations` - arbitrates
+
+```ts
+const editorial = model.editorialService?.(c, { pluginId });
+
+await editorial.relations.categories.add(7, 12, {
+  actor,
+  expectedVersion: 4,
+});
+```
+
+`actor` and `expectedVersion` are **required** - a collection mutation is an edit
+of the record, and an edit that could not lose a race would be the only one in
+the engine that cannot. Same lock, plus the version guard, so two writers holding
+version 4 produce exactly one winner and one `ContentVersionConflict`.
+
+One real mutation is one version increment, one revision, one event, one cache
+invalidation.
+
+### Rules both share
 
 - **No-op detection.** A `set` to the current set, an `add` of a target already
   there, a `reorder` to the current order - none of them bumps the version,
-  writes a revision, emits an event or touches the cache.
-- **Optimistic locking.** On an editorial content type, `expectedVersion` guards
-  the source record's version, and the guard runs *before* a single junction row
-  is touched. A writer that loses the race leaves the relations exactly as it
-  found them.
+  writes a revision, emits an event or touches the cache. It falls out of
+  computing the whole next state rather than issuing a targeted `INSERT`.
 - **Validation.** A target that does not exist is a
   `ContentAdvancedInputError` naming the identifiers, checked before anything is
   written. A duplicate in the payload is a schema error rather than something
   silently deduplicated.
-- **`reorder` must be a permutation.** A list that added or dropped a target is
+- **`reorder` must be a permutation.** Checked *inside* the lock, against the
+  list the write is about to replace. A list that added or dropped a target is
   refused, because that is a `set` wearing a different name and the caller would
   never find out which it got.
 
