@@ -48,6 +48,9 @@ const fields = {
 const articleType = defineContentType({
   ...base,
   id: "delivery.article",
+  // `redirects` needs `editorial`: slug history has to be written in the same
+  // transaction as the slug mutation and its revision.
+  editorial: { enabled: true },
   delivery: {
     enabled: true,
     redirects: { enabled: true },
@@ -291,6 +294,7 @@ describe("delivery definition validation", () => {
       defineContentType({
         ...base,
         id: "delivery.shared-slug",
+        editorial: { enabled: true },
         delivery: { enabled: true, redirects: { enabled: true } },
         fields: {
           body: field.textarea({ localized: true, required: true }),
@@ -306,6 +310,132 @@ describe("delivery definition validation", () => {
         tableName: "delivery_shared_slug",
       }),
     ).toThrow(/needs a localized slug field/);
+  });
+
+  it("refuses redirects without editorial", () => {
+    expect(() =>
+      defineContentType({
+        ...base,
+        id: "delivery.no-editorial",
+        // No `editorial`, so the only mutation path is the plain repository - which
+        // has no version to guard and no history to write. Accepting this would be
+        // accepting a redirect feature that silently records nothing.
+        delivery: {
+          enabled: true,
+          redirects: { enabled: true as never },
+        },
+        fields,
+        publicApi,
+        tableName: "delivery_no_editorial",
+      }),
+    ).toThrow(/delivery.redirects needs `editorial/);
+  });
+
+  it("refuses localized redirects without editorial", () => {
+    expect(() =>
+      defineContentType({
+        ...base,
+        id: "delivery.localized-no-editorial",
+        delivery: {
+          enabled: true,
+          redirects: { enabled: true as never },
+        },
+        fields: {
+          slug: field.slug({ localized: true, source: "title" }),
+          title: field.text({ localized: true, required: true }),
+        },
+        localization: { defaultLocale: "en", enabled: true },
+        publicApi: {
+          enabled: true,
+          fields: ["id", "title", "slug"],
+          path: "articles",
+        },
+        tableName: "delivery_localized_no_editorial",
+      }),
+    ).toThrow(/delivery.redirects needs `editorial/);
+  });
+
+  it("accepts redirects with editorial", () => {
+    const withEditorial = defineContentType({
+      ...base,
+      id: "delivery.with-editorial",
+      editorial: { enabled: true },
+      delivery: { enabled: true, redirects: { enabled: true } },
+      fields,
+      publicApi,
+      tableName: "delivery_with_editorial",
+    });
+
+    expect(withEditorial.delivery.redirects.enabled).toBe(true);
+  });
+
+  it("accepts delivery without redirects and without editorial", () => {
+    // Everything except slug history is a read over data the content type already
+    // has, so none of it needs a transactional mutation path.
+    const withoutEditorial = defineContentType({
+      ...base,
+      id: "delivery.reads-only",
+      delivery: {
+        enabled: true,
+        seo: { descriptionField: "excerpt", titleField: "title" },
+        sitemap: { changeFrequency: "weekly", enabled: true, priority: 0.7 },
+      },
+      fields,
+      publicApi,
+      tableName: "delivery_reads_only",
+    });
+
+    expect(withoutEditorial.delivery).toMatchObject({
+      enabled: true,
+      redirects: { enabled: false },
+      seo: { descriptionField: "excerpt", titleField: "title" },
+      sitemap: { changeFrequency: "weekly", enabled: true, priority: 0.7 },
+    });
+  });
+
+  it("accepts localized delivery reads without editorial", () => {
+    // Stage 5 supports publication and localization without editorial, and Stage 8
+    // must not take that away - only `redirects` needs the extra dependency.
+    const localizedReads = defineContentType({
+      ...base,
+      id: "delivery.localized-reads",
+      delivery: {
+        enabled: true,
+        hreflang: { xDefault: "defaultLocale" },
+        seo: { fallbackTitleField: "title", titleField: "seo.title" },
+        sitemap: { enabled: true },
+      },
+      fields: {
+        seo: field.group({
+          fields: { title: field.text({ nullable: true }) },
+          localized: true,
+          nullable: true,
+        }),
+        slug: field.slug({ localized: true, source: "title" }),
+        title: field.text({ localized: true, required: true }),
+      },
+      localization: { defaultLocale: "en", enabled: true, fallback: "default" },
+      publicApi: {
+        enabled: true,
+        fields: ["id", "title", "slug", "seo.title"],
+        path: "articles",
+      },
+      tableName: "delivery_localized_reads",
+    });
+
+    expect(localizedReads.delivery).toMatchObject({
+      enabled: true,
+      hreflang: { xDefault: "defaultLocale" },
+      redirects: { enabled: false },
+      sitemap: { enabled: true },
+      slugScope: "localized",
+    });
+  });
+
+  it("leaves a content type without delivery untouched by the rule", () => {
+    // No `editorial`, no `delivery` - the Stage 1-7 shape, still accepted.
+    expect(plainType.delivery.enabled).toBe(false);
+    expect(plainType.editorial.enabled).toBe(false);
   });
 
   it("refuses a localized content type that withholds id", () => {
@@ -383,6 +513,7 @@ describe("delivery definition validation", () => {
 const localizedType = defineContentType({
   ...base,
   id: "delivery.localized",
+  editorial: { enabled: true },
   delivery: {
     enabled: true,
     hreflang: { xDefault: "defaultLocale" },

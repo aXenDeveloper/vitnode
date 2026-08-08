@@ -55,6 +55,7 @@ const shared = {
 const deliveredType = defineContentType({
   ...shared,
   id: "typed.delivered",
+  editorial: { enabled: true },
   delivery: {
     enabled: true,
     redirects: { enabled: true },
@@ -141,6 +142,63 @@ describe("delivery requires a public API", () => {
     });
 
     expectTypeOf(off.delivery.enabled).toEqualTypeOf<false>();
+  });
+});
+
+describe("redirects require editorial", () => {
+  it("refuses `redirects: { enabled: true }` without editorial", () => {
+    defineContentType({
+      ...shared,
+      id: "typed.no-editorial",
+      delivery: {
+        enabled: true,
+        // @ts-expect-error - slug history has to be written in the same transaction
+        // as the slug mutation and its revision, and only the editorial mutation
+        // paths own one. Without `editorial` this would record nothing.
+        redirects: { enabled: true },
+      },
+      tableName: "typed_no_editorial",
+    });
+  });
+
+  it("still accepts an explicit `redirects: { enabled: false }`", () => {
+    const off = defineContentType({
+      ...shared,
+      id: "typed.redirects-off",
+      delivery: { enabled: true, redirects: { enabled: false } },
+      tableName: "typed_redirects_off",
+    });
+
+    expectTypeOf(off.delivery.enabled).toEqualTypeOf<true>();
+  });
+
+  it("accepts redirects once editorial is enabled", () => {
+    const on = defineContentType({
+      ...shared,
+      id: "typed.redirects-on",
+      editorial: { enabled: true },
+      delivery: { enabled: true, redirects: { enabled: true } },
+      tableName: "typed_redirects_on",
+    });
+
+    expectTypeOf(on.delivery.enabled).toEqualTypeOf<true>();
+  });
+
+  it("leaves every other delivery block available without editorial", () => {
+    // The rule is narrow on purpose: only slug history needs a transaction.
+    const reads = defineContentType({
+      ...shared,
+      id: "typed.reads-only",
+      delivery: {
+        enabled: true,
+        seo: { descriptionField: "excerpt", titleField: "title" },
+        sitemap: { changeFrequency: "daily", enabled: true, priority: 0.5 },
+      },
+      tableName: "typed_reads_only",
+    });
+
+    expectTypeOf(reads.delivery.enabled).toEqualTypeOf<true>();
+    expectTypeOf(reads.editorial.enabled).toEqualTypeOf<false>();
   });
 });
 

@@ -1425,6 +1425,7 @@ export const defineContentType = <
   TDelivery extends
     | ContentDeliveryConfig<
         TPublicEnabled,
+        ContentEditorialEnabled<TEditorial>,
         ContentDeliveryTitleField<TFields, TPublicField>,
         ContentDeliveryDescriptionField<TFields, TPublicField>,
         ContentDeliveryNoIndexField<TFields, TPublicField>
@@ -1679,6 +1680,9 @@ export const defineContentType = <
     // The `{ enabled: false }` arm exists only so an explicit literal typechecks -
     // the same widening `publicApi`, `search`, `editorial` and `localization` do.
     delivery: delivery as ContentDeliveryConfig | undefined,
+    // Read off the *resolved* editorial config rather than the argument, so the
+    // redirect check sees exactly what `resolveEditorial` decided.
+    editorial: resolvedEditorial.enabled,
     fields: fieldMap,
     id,
     localization: {

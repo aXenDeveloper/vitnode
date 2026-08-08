@@ -179,6 +179,7 @@ const assertSeoField = ({
  */
 export const resolveContentDelivery = ({
   delivery,
+  editorial,
   fields,
   id,
   localization,
@@ -187,6 +188,8 @@ export const resolveContentDelivery = ({
   publication,
 }: {
   delivery: ContentDeliveryConfig | undefined;
+  /** Whether the content type opted into the editorial workflow. */
+  editorial: boolean;
   fields: ContentFieldMap;
   id: string;
   localization: { defaultLocale: string; enabled: boolean };
@@ -216,6 +219,23 @@ export const resolveContentDelivery = ({
     delivery.sitemap?.enabled === true ? delivery.sitemap : null;
   const slugScope =
     localizedFields[slugField] === undefined ? "shared" : "localized";
+
+  // Slug history has to be written in the same transaction as the slug mutation, the
+  // version check and the revision - and the only mutation paths that own such a
+  // transaction are `editorial-service` and `translation-editorial-service`. Without
+  // `editorial` a content type writes through the plain repository, which has neither
+  // a version to guard nor a history to write, so accepting this would be accepting a
+  // feature that records nothing.
+  //
+  // Refused rather than downgraded to `redirects: { enabled: false }`: an author who
+  // asked for redirects and silently got none would find out from a broken link
+  // months later. The type system refuses it too - see `ContentDeliveryConfig`.
+  if (redirects && !editorial) {
+    throw new ContentEngineError(
+      "delivery.redirects needs `editorial: { enabled: true }`. Redirect history has to be written atomically with the slug mutation and its version and revision, and only the editorial mutation paths own that transaction. Delivery without `redirects` - canonical URLs, SEO, alternates and the sitemap - works without editorial.",
+      { contentTypeId: id },
+    );
+  }
 
   // A localized content type whose slug is *shared* has one URL segment and several
   // URLs - `/en/articles/hello` and `/pl/articles/hello` are both live, and a slug

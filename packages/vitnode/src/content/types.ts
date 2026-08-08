@@ -1324,11 +1324,12 @@ export interface ContentDeliveryHreflangConfig {
  * silently resolve to "no delivery".
  */
 export interface ContentDeliveryConfig<
-  // Defaults to `true` rather than `boolean`, which is what keeps the bare
+  // Both flags default to `true` rather than `boolean`, which is what keeps the bare
   // `ContentDeliveryConfig` usable as a widened parameter type: `boolean extends
   // true` is false, so a `boolean` default would resolve `enabled` to `never` and
   // make the erased form describe a config nobody can write.
   TPublicEnabled extends boolean = true,
+  TEditorialEnabled extends boolean = true,
   TTitle extends string = string,
   TDescription extends string = string,
   TNoIndex extends string = string,
@@ -1343,8 +1344,23 @@ export interface ContentDeliveryConfig<
    */
   enabled: TPublicEnabled extends true ? true : never;
   hreflang?: ContentDeliveryHreflangConfig;
+  /**
+   * Gated on **editorial** as well as on the public API, and the second gate is not
+   * a taste decision: slug history has to be written in the same transaction as the
+   * slug mutation, the version check and the revision - and the only mutation paths
+   * that own such a transaction are the editorial ones. Without `editorial` a
+   * content type writes through the plain repository, which has no version to guard
+   * and no history to write, so `redirects: { enabled: true }` there would be a
+   * feature that silently records nothing.
+   *
+   * Only `redirects` is gated. Canonical URLs, SEO, alternates, `hreflang` and the
+   * sitemap are all reads over data the content type already has, and they remain
+   * available without `editorial`.
+   */
   redirects?: TPublicEnabled extends true
-    ? ContentDeliveryRedirectsConfig | { enabled: false }
+    ? TEditorialEnabled extends true
+      ? ContentDeliveryRedirectsConfig | { enabled: false }
+      : { enabled: false }
     : { enabled: false };
   seo?: ContentDeliverySeoConfig<TTitle, TDescription, TNoIndex>;
   sitemap?: ContentDeliverySitemapConfig | { enabled: false };

@@ -29,6 +29,7 @@ const PLUGIN = "@vitnode/test";
 const articleType = defineContentType({
   admin: { label: { plural: "Articles", singular: "Article" } },
   id: "delivery.article",
+  editorial: { enabled: true },
   delivery: {
     enabled: true,
     redirects: { enabled: true },
@@ -69,6 +70,7 @@ const withoutRedirects = defineContentType({
 const localizedType = defineContentType({
   admin: { label: { plural: "Articles", singular: "Article" } },
   id: "delivery.localized",
+  editorial: { enabled: true },
   delivery: {
     enabled: true,
     hreflang: { xDefault: "defaultLocale" },
