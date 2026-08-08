@@ -323,6 +323,55 @@ describe("delivery sitemap invalidation", () => {
     expect(tags()).not.toContain(DELIVERY_SITEMAP);
   });
 
+  it("expires the sitemap for a restore that moved the slug", async () => {
+    responses = [
+      published("current", tick()),
+      {
+        data: {
+          changed: true,
+          row: {
+            id: 7,
+            publishedAt: past,
+            slug: "restored",
+            status: "published",
+            updatedAt: tick(),
+          },
+        },
+        status: 200,
+      },
+    ];
+
+    await restoreContentRevisionAction(DELIVERED, 7, 3, 4);
+
+    expect(tags()).toContain(DELIVERY_SITEMAP);
+    expect(tags()).toContain(deliveryRedirectTag("current"));
+    expect(tags()).toContain(deliveryRedirectTag("restored"));
+  });
+
+  it("leaves the sitemap alone for a restore that changed nothing", async () => {
+    const unchanged = tick();
+    responses = [
+      published("current", unchanged),
+      {
+        data: {
+          changed: false,
+          row: {
+            id: 7,
+            publishedAt: past,
+            slug: "current",
+            status: "published",
+            updatedAt: unchanged,
+          },
+        },
+        status: 200,
+      },
+    ];
+
+    await restoreContentRevisionAction(DELIVERED, 7, 3, 4);
+
+    expect(tags()).not.toContain(DELIVERY_SITEMAP);
+  });
+
   it("adds no delivery tags at all to a content type without delivery", async () => {
     // The Stage 1-7 promise: the tag list of an existing content type does not move.
     definition = testPostContentType;
