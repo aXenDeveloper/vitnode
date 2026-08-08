@@ -17,6 +17,34 @@ export {
 } from "./column-builders";
 export type { ColumnReferenceThunk } from "./column-builders";
 export {
+  readDeliveryAlternates,
+  readDeliveryAlternatesMany,
+} from "./delivery-alternates";
+export {
+  contentDeliveryEffects,
+  contentDeliveryInvalidation,
+} from "./delivery-effects";
+export type { ContentDeliveryEffectsResult } from "./delivery-effects";
+export { buildContentDeliveryRoutes } from "./delivery-routes";
+export { createContentDeliveryService } from "./delivery-service";
+export type {
+  ContentDeliveryMetadata,
+  ContentDeliveryReadOptions,
+  ContentDeliveryResolution,
+  ContentDeliveryService,
+  ContentDeliverySitemapArgs,
+} from "./delivery-service";
+export { readContentDeliverySitemapPage } from "./delivery-sitemap";
+export type { ContentDeliverySitemapPage } from "./delivery-sitemap";
+export {
+  applyContentDeliveryWrite,
+  contentSlugHistoryFor,
+} from "./delivery-writes";
+export type {
+  ContentDeliveryOutcome,
+  ContentDeliveryTransition,
+} from "./delivery-writes";
+export {
   contentEngineDiagnostics,
   contentScheduleHealth,
   contentSearchDrift,
@@ -195,6 +223,16 @@ export type {
   ContentServiceOptions,
   ContentUpdateResult,
 } from "./service";
+export {
+  contentSlugHistoryCurrentPaths,
+  contentSlugHistoryPath,
+  createContentSlugHistoryModel,
+} from "./slug-history-model";
+export type {
+  ContentSlugHistoryEntry,
+  ContentSlugHistoryModel,
+  ContentSlugHistoryTarget,
+} from "./slug-history-model";
 export { createSlugNormalizer } from "./slugs";
 export type { ContentSlugNormalizer } from "./slugs";
 export {

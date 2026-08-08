@@ -7,6 +7,7 @@ import type {
   ResolvedContentLocalizationConfig,
 } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
+import type { ContentDeliveryService } from "./delivery-service";
 import type { ContentEditorialService } from "./editorial-service";
 import type { ContentLocalizedService } from "./localized-service";
 import type { ContentPublicService } from "./public-service";
@@ -25,6 +26,7 @@ import type {
 import { ContentEngineError } from "../errors";
 import { createContentAdvancedStore } from "./advanced-store";
 import { createContentAdvancedTables } from "./advanced-tables";
+import { createContentDeliveryService } from "./delivery-service";
 import { createContentEditorialService } from "./editorial-service";
 import { createContentLocalizedPublicService } from "./localized-public-service";
 import { createContentLocalizedService } from "./localized-service";
@@ -68,6 +70,21 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
   /** Column name -> Drizzle column, for filters, ordering and custom queries. */
   columns: Record<ContentColumnName<TDefinition>, PgColumn>;
   definition: TDefinition;
+  /**
+   * The read-only delivery layer, or `undefined` without a `delivery` block.
+   *
+   * `undefined` rather than a throwing stub, matching `publicService` and
+   * `editorialService`: the check reads naturally in code that does not know which
+   * content type it was handed, and TypeScript refuses the call until it has been
+   * made.
+   *
+   * `options.pluginId` is required because slug history is stamped with its owner -
+   * the same reason `editorialService` takes one, and `createContentModel` is
+   * called from `src/database/*.ts`, which has no reason to know it.
+   */
+  deliveryService:
+    | ((c: Context, options: { pluginId: string }) => ContentDeliveryService)
+    | undefined;
   /**
    * The transactional editorial repository, or `undefined` when the content
    * type has no `editorial` block.
@@ -273,11 +290,20 @@ export const createContentModel = <
     });
   };
 
-  return {
+  const model: ContentModel<TDefinition> = {
     advanced,
     advancedTables,
     columns,
     definition,
+    // Reads `model` lazily, which is what lets the delivery service be built from
+    // the finished model without a circular construction: it needs
+    // `publicService`, the table and the translation table, and every one of them
+    // is assigned by the time a request calls this.
+    deliveryService:
+      definition.delivery.enabled && definition.publicApi.enabled
+        ? (c: Context, { pluginId }: { pluginId: string }) =>
+            createContentDeliveryService({ c, model, pluginId })
+        : undefined,
     // The plugin id arrives at call time rather than being captured here: a
     // revision is stamped with its owner, and `createContentModel` is called
     // from `src/database/*.ts`, which does not otherwise need to know it. Every
@@ -389,4 +415,6 @@ export const createContentModel = <
     translationService: localized ? buildTranslations : undefined,
     translationTable,
   };
+
+  return model;
 };
