@@ -38,6 +38,7 @@ import {
   splitContentFieldPath,
 } from "../paths";
 import { publicOrderableColumns } from "../registry";
+import { buildContentDeliveryRoutes } from "./delivery-routes";
 import { findContentLanguage, listContentLanguages } from "./language-resolver";
 import { verifyContentPreviewToken } from "./preview-token";
 import {
@@ -514,8 +515,13 @@ export const buildContentPublicRoutes = <
   return [
     list,
     // Before `detail` for readability only - the two can never both match, so
-    // the order carries no meaning.
+    // the order carries no meaning. The delivery routes are the same: every one of
+    // them begins with a static `delivery` segment and `/{slug}` is a single
+    // segment, so a record whose slug is literally "delivery" still resolves.
     ...(definition.editorial.preview.enabled ? [preview] : []),
+    ...(definition.delivery.enabled
+      ? buildContentDeliveryRoutes(model, { pluginId })
+      : []),
     detail,
   ];
 };

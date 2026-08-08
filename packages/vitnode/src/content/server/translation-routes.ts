@@ -17,6 +17,7 @@ import type { ContentTranslationModel } from "./translation-model";
 
 import { buildRoute } from "../../api/lib/route";
 import {
+  zodContentDeliveryConflict,
   zodContentTranslationConflict,
   zodContentUnprocessable,
 } from "../conflicts";
@@ -146,9 +147,18 @@ export const buildContentTranslationRoutes = <
     return value;
   };
 
+  // A localized content type with `delivery.redirects` can also refuse a slug that
+  // another record's URL history owns, which answers in the delivery union rather
+  // than this one - see `withTranslationHttpErrors` for why the two are different
+  // facts. Declared as a union so both shapes are in the generated document, and a
+  // client written before Stage 8 still parses the arms it knows.
   const conflict = jsonResponse(
-    zodContentTranslationConflict,
-    "The translation moved, already exists, is the default one, or a localized value is taken",
+    definition.delivery.enabled && definition.delivery.redirects.enabled
+      ? z.union([zodContentTranslationConflict, zodContentDeliveryConflict])
+      : zodContentTranslationConflict,
+    definition.delivery.redirects.enabled
+      ? "The translation moved, already exists, is the default one, a localized value is taken, or the address is reserved by a historical URL"
+      : "The translation moved, already exists, is the default one, or a localized value is taken",
   );
   const invalidIdentifier = { description: "Invalid identifier or locale" };
   const notFound = {

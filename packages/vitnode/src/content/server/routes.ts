@@ -18,6 +18,7 @@ import {
 } from "../../api/lib/with-pagination";
 import {
   zodContentConflict,
+  zodContentDeliveryConflict,
   zodContentScheduleRejection,
   zodContentUnprocessable,
 } from "../conflicts";
@@ -181,10 +182,21 @@ export const buildContentRoutes = <
   // a client can tell "someone saved first" from "that value is taken" and act
   // on the difference. Everything else keeps the plain-text 409 it has always
   // returned - a Stage 1-3 route's contract does not change.
+  // A content type with `delivery.redirects` adds a third arm: an address another
+  // record's URL history still owns. Declared as a union with the editorial pair
+  // rather than replacing it, so a client generated before Stage 8 still parses the
+  // two arms it knows and only fails to recognise the new one.
+  const conflictSchema =
+    definition.delivery.enabled && definition.delivery.redirects.enabled
+      ? z.union([zodContentConflict, zodContentDeliveryConflict])
+      : zodContentConflict;
+
   const uniqueConflict = editorial
     ? jsonResponse(
-        zodContentConflict,
-        "A record with these values already exists, or the version moved",
+        conflictSchema,
+        definition.delivery.redirects.enabled
+          ? "A record with these values already exists, the version moved, or the address is reserved by a historical URL"
+          : "A record with these values already exists, or the version moved",
       )
     : { description: "A record with these values already exists" };
 
@@ -863,6 +875,93 @@ export const buildContentRoutes = <
   });
 
   /**
+   * The delivery state of one record: where it lives, and where it used to.
+   *
+   * `can_view` rather than a permission of its own, and deliberately so. This is
+   * read-only - it reports what the slug mutations already did - so the permission
+   * that allowed the mutation is the only one it needs, and inventing a
+   * `can_manage_redirects` for a screen that manages nothing would be a permission
+   * every install has to configure for no decision it can make.
+   *
+   * `locale` scopes it to one language on a content type whose slug is localized,
+   * which is what lets the AdminCP's Polish tab show Polish URLs and nothing else.
+   */
+  const deliveryDetail = buildRoute({
+    pluginId,
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    route: {
+      method: "get",
+      path: "/{id}/delivery",
+      description: `Canonical URL and historical URLs of one ${label.singular}`,
+      request: {
+        params: schemas.params,
+        query: z.object({
+          locale: z.string().min(1).max(CONTENT_LOCALE_MAX_LENGTH).optional(),
+        }),
+      },
+      responses: {
+        200: jsonResponse(
+          z.object({
+            /** `null` while the record has no public URL - a draft, say. */
+            canonicalPath: z.string().nullable(),
+            /**
+             * Every address it has ever answered to, current one first.
+             *
+             * `path` is the URL exactly as it was live, which is what somebody's
+             * bookmark holds. The storage columns behind it - `languageId`,
+             * `pluginId`, the row id - are deliberately absent: they are details of
+             * `core_content_slug_history` rather than part of this contract.
+             */
+            history: z.array(
+              z.object({
+                createdAt: z.date(),
+                path: z.string(),
+                retiredAt: z.date().nullable(),
+                slug: z.string(),
+              }),
+            ),
+            /** Whether the record is publicly reachable in this language now. */
+            isPublic: z.boolean(),
+            locale: z.string().nullable(),
+          }),
+          `Delivery state of one ${label.singular}`,
+        ),
+        400: invalidIdentifier,
+        404: { description: `${label.singular} not found` },
+      },
+    },
+    handler: async c => {
+      const build = model.deliveryService;
+      if (!build) throw notFound(definition);
+
+      const id = identifier(c);
+      const locale = c.req.query("locale");
+      const delivery = build(c, { pluginId });
+
+      // The canonical path comes from the public read, so a draft reports `null`
+      // rather than a URL that answers 404 - "this is where it *would* live" is a
+      // different claim from "this is where it lives", and the panel says so.
+      const metadata = await delivery.findById(id, { locale });
+      const history = await delivery.history(id, { locale });
+
+      return c.json(
+        {
+          canonicalPath: metadata?.canonicalPath ?? null,
+          history: history.map(entry => ({
+            createdAt: entry.createdAt,
+            path: entry.path,
+            retiredAt: entry.retiredAt,
+            slug: entry.slug,
+          })),
+          isPublic: metadata !== null,
+          locale: metadata?.locale ?? null,
+        },
+        200,
+      );
+    },
+  });
+
+  /**
    * Mints a preview link for the record's newest revision.
    *
    * `can_view` rather than `can_edit`: a preview shows what the public route
@@ -1266,6 +1365,7 @@ export const buildContentRoutes = <
       : []),
     ...(editorial ? [revisionList, revisionDetail, restore] : []),
     ...(previewEnabled ? [previewToken] : []),
+    ...(definition.delivery.enabled ? [deliveryDetail] : []),
     ...(definition.editorial.scheduling.enabled
       ? [scheduleList, scheduleCreate, scheduleCancel]
       : []),

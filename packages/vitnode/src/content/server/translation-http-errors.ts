@@ -4,11 +4,13 @@ import { ZodError } from "zod";
 import type { ContentTranslationConflict } from "../conflicts";
 
 import {
+  CONTENT_DELIVERY_CODES,
   CONTENT_TRANSLATION_CONFLICT_CODES,
   CONTENT_UNPROCESSABLE_CODES,
 } from "../const";
 import {
   ContentDefaultTranslationRequired,
+  ContentDeliverySlugReserved,
   ContentInputError,
   ContentLanguageError,
   ContentRevisionNotRestorable,
@@ -16,7 +18,11 @@ import {
   ContentTranslationItemMissing,
   ContentTranslationVersionConflict,
 } from "../errors";
-import { contentUnprocessable, rethrowAsHttpError } from "./http-errors";
+import {
+  contentDeliveryConflict,
+  contentUnprocessable,
+  rethrowAsHttpError,
+} from "./http-errors";
 
 /** A structured 409, in the translation union. */
 export const contentTranslationConflict = (
@@ -39,6 +45,7 @@ export const contentTranslationConflict = (
  * | version moved                  | 409    | `CONTENT_TRANSLATION_VERSION_CONFLICT` |
  * | default translation delete     | 409    | `CONTENT_DEFAULT_TRANSLATION_REQUIRED` |
  * | localized slug taken           | 409    | `CONTENT_TRANSLATION_UNIQUE_CONFLICT`  |
+ * | localized slug reserved        | 409    | `CONTENT_DELIVERY_SLUG_RESERVED`       |
  *
  * Anything it does not recognise falls through to {@link rethrowAsHttpError},
  * which owns the Postgres constraint codes - so the driver's message, which can
@@ -122,6 +129,22 @@ export const withTranslationHttpErrors = async <TResult>(
 
     if (error instanceof ContentTranslationItemMissing) {
       throw new HTTPException(404, { message: error.message });
+    }
+
+    // Answered in the **delivery** union rather than translated into
+    // `CONTENT_TRANSLATION_UNIQUE_CONFLICT`, and the difference matters to a client:
+    // a unique clash means another record holds that address *now*, so switching to
+    // it is impossible; a reservation means another record *used* to hold it and it
+    // still redirects, which is a different thing to explain and possibly to undo.
+    // It also has to be caught here rather than left to the fallthrough below, which
+    // rewrites every 409 the shared mapper produces into the unique-clash arm.
+    if (error instanceof ContentDeliverySlugReserved) {
+      throw contentDeliveryConflict({
+        code: CONTENT_DELIVERY_CODES.slugReserved,
+        contentTypeId,
+        locale: error.locale,
+        slug: error.slug,
+      });
     }
 
     // Written for the client on purpose, like the base service's: "send the slug

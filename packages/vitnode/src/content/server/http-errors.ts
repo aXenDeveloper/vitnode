@@ -1,11 +1,20 @@
 import { HTTPException } from "hono/http-exception";
 import { ZodError } from "zod";
 
-import type { ContentConflict, ContentUnprocessable } from "../conflicts";
+import type {
+  ContentConflict,
+  ContentDeliveryConflict,
+  ContentUnprocessable,
+} from "../conflicts";
 import type { ContentScheduleCode } from "../schedules";
 
-import { CONTENT_CONFLICT_CODES, CONTENT_UNPROCESSABLE_CODES } from "../const";
 import {
+  CONTENT_CONFLICT_CODES,
+  CONTENT_DELIVERY_CODES,
+  CONTENT_UNPROCESSABLE_CODES,
+} from "../const";
+import {
+  ContentDeliverySlugReserved,
   ContentInputError,
   ContentRevisionNotRestorable,
   ContentScheduleError,
@@ -51,6 +60,19 @@ const jsonError = (status: 400 | 409 | 422, body: unknown): HTTPException =>
 /** A structured 409. Editorial content types only - see `zodContentConflict`. */
 export const contentConflict = (body: ContentConflict): HTTPException =>
   jsonError(409, body);
+
+/**
+ * A structured 409, for a slug another record's URL history owns.
+ *
+ * 409 rather than 400: nothing about the request is malformed, the address is
+ * simply taken - by a URL that still redirects somewhere, which is a state of the
+ * system rather than a mistake in the payload. Its own body shape rather than a
+ * third arm of `zodContentConflict`, so a client generated before Stage 8 still
+ * parses the arms it knows.
+ */
+export const contentDeliveryConflict = (
+  body: ContentDeliveryConflict,
+): HTTPException => jsonError(409, body);
 
 /** A structured 422, for a revision that no longer fits the content type. */
 export const contentUnprocessable = (
@@ -101,6 +123,19 @@ export const rethrowAsHttpError = (
       currentVersion: error.currentVersion,
       expectedVersion: error.expectedVersion,
       itemId: error.itemId,
+    });
+  }
+
+  // Before the generic unique-violation mapping below, and before
+  // `ContentInputError`: a reserved address is a 409 that names the slug and the
+  // locale, where the driver's own `23505` cannot say which of the two constraints
+  // - the live slug index or the history reservation - refused the write.
+  if (error instanceof ContentDeliverySlugReserved) {
+    throw contentDeliveryConflict({
+      code: CONTENT_DELIVERY_CODES.slugReserved,
+      contentTypeId: error.contentTypeId ?? contentTypeId ?? "",
+      locale: error.locale,
+      slug: error.slug,
     });
   }
 
