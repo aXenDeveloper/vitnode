@@ -38,21 +38,21 @@ import {
  * queries, computed on demand, behind an admin permission.
  */
 
-/** One locale's share of a content type's index, expected against actual. */
+/** One locale's share of a content type's index, from every storage that has one. */
 export interface ContentSearchDriftLocale {
-  /** Published rows (or published translations) the database holds. */
-  expected: number;
   /**
-   * `true` when the two counts agree.
+   * `true` when the canonical table matches the database.
    *
    * A count is not a checksum: two documents can be stale and still count as
    * two. It is the cheap check that catches the failure that actually happens -
    * a live sync that threw, or a rebuild that stopped halfway - and it costs two
    * aggregates rather than a full comparison.
    */
-  healthy: boolean;
-  /** Documents actually in the index for this locale. */
-  indexed: number;
+  canonicalHealthy: boolean;
+  /** Documents the canonical `core_search_index` holds for this locale. */
+  canonicalIndexed: number;
+  /** Published rows - or published translations - the database holds. */
+  expected: number;
   /**
    * `""` for a content type that is not localized.
    *
@@ -61,28 +61,66 @@ export interface ContentSearchDriftLocale {
    * the row really holds.
    */
   locale: string;
+  /**
+   * `true` when the active provider matches, `false` when it does not, and
+   * `null` when nobody looked.
+   *
+   * The three-way answer is the point. A provider that offers no diagnostics
+   * cannot be called healthy, and calling it healthy anyway is how an
+   * Elasticsearch outage hides behind a perfectly good canonical table.
+   */
+  providerHealthy: boolean | null;
+  /** Documents the active provider holds, or `null` when it cannot say. */
+  providerIndexed: null | number;
+}
+
+/** What the active search provider could be asked, and what it answered. */
+export interface ContentSearchDriftProvider {
+  /** Why the provider could not be counted, when that is the answer. */
+  error?: string;
+  /** `null` when unverified - see {@link ContentSearchDriftLocale.providerHealthy}. */
+  healthy: boolean | null;
+  name: string;
+  /**
+   * Whether the provider was actually asked.
+   *
+   * `false` means it offers no `count`, so nothing about its contents is known.
+   * `true` with `healthy: false` means it was asked and it disagreed - or it
+   * threw, and `error` says so.
+   */
+  verified: boolean;
 }
 
 export interface ContentSearchDrift {
+  /** `true` when `core_search_index` matches the database in every locale. */
+  canonicalHealthy: boolean;
   contentTypeId: string;
-  /** `true` when every locale agrees. */
+  /**
+   * `true` only when the canonical table **and** the active provider both agree.
+   *
+   * An unverified provider is not healthy: absence of evidence is reported as
+   * absence of evidence, and the operator decides what to do about it.
+   */
   healthy: boolean;
   locales: ContentSearchDriftLocale[];
+  provider: ContentSearchDriftProvider;
 }
 
 /**
- * Compares what the database says should be indexed against what is.
+ * Compares what the database says should be indexed against what is - in the
+ * canonical table **and** in the active search provider.
  *
- * Two aggregates per content type, whatever its size: `GROUP BY languageCode`
- * over the index, and one `COUNT` (or one grouped `COUNT` for a localized
- * content type) over the published rows. Neither reads a row body, so this stays
- * cheap on a table with a hundred thousand articles.
+ * The two are not the same question, and conflating them was the gap this
+ * closes. `SearchModel.index` writes `core_search_index` and then hands the
+ * document to the provider; an Elasticsearch that refuses the second half leaves
+ * a canonical table that is perfectly correct and a search box that is missing
+ * results. A diagnostic that only ever looked at the canonical table would call
+ * that healthy.
  *
- * The expected side is deliberately the **same predicate the indexer uses** -
- * `publishedCondition`, and for a localized content type the base row's
- * predicate `AND` the translation's. Re-deriving "published" here would let the
- * diagnostic disagree with the thing it is diagnosing, which is the one way a
- * health check is worse than none.
+ * Costs: two aggregates for the canonical side, whatever the collection's size,
+ * plus one provider count per locale. The bundled Postgres provider is skipped
+ * entirely - its store *is* the canonical table, so asking twice would buy
+ * nothing.
  */
 export const contentSearchDrift = async (
   c: Context,
@@ -110,22 +148,138 @@ export const contentSearchDrift = async (
 
   const expectedByLocale = await expectedDocuments(c, model);
 
-  const locales = [
+  const keys = [
     ...new Set([...expectedByLocale.keys(), ...indexedByLocale.keys()]),
-  ]
-    .sort()
-    .map(locale => {
-      const expected = expectedByLocale.get(locale) ?? 0;
-      const indexed = indexedByLocale.get(locale) ?? 0;
+  ].sort();
 
-      return { expected, healthy: expected === indexed, indexed, locale };
-    });
+  const provider = await providerCounts(c, {
+    contentTypeId,
+    locales: keys,
+  });
+
+  const locales: ContentSearchDriftLocale[] = keys.map(locale => {
+    const expected = expectedByLocale.get(locale) ?? 0;
+    const canonicalIndexed = indexedByLocale.get(locale) ?? 0;
+    const canonicalHealthy = expected === canonicalIndexed;
+    // The canonical count stands in for the provider only when they are one
+    // storage. Everywhere else an absent count means unverified, never healthy.
+    const providerIndexed = provider.canonical
+      ? canonicalIndexed
+      : (provider.byLocale.get(locale) ?? null);
+
+    return {
+      canonicalHealthy,
+      canonicalIndexed,
+      expected,
+      locale,
+      providerHealthy:
+        providerIndexed === null ? null : providerIndexed === expected,
+      providerIndexed,
+    };
+  });
+
+  const canonicalHealthy = locales.every(entry => entry.canonicalHealthy);
+  const providerHealthy = provider.verified
+    ? provider.error === undefined &&
+      locales.every(entry => entry.providerHealthy === true)
+    : null;
 
   return {
+    canonicalHealthy,
     contentTypeId,
-    healthy: locales.every(entry => entry.healthy),
+    healthy: canonicalHealthy && providerHealthy === true,
     locales,
+    provider: {
+      ...(provider.error === undefined ? {} : { error: provider.error }),
+      healthy: providerHealthy,
+      name: provider.name,
+      verified: provider.verified,
+    },
   };
+};
+
+/**
+ * Asks the active provider how many documents it holds, per locale.
+ *
+ * Three outcomes, and the middle one is the one Stage 7 exists for:
+ *
+ * - **canonical storage** - the bundled Postgres provider. Verified, and the
+ *   canonical counts are its counts; no query is issued.
+ * - **no `count`** - a provider that offers no diagnostics. Unverified, which is
+ *   reported as such rather than turned into `healthy: true`.
+ * - **it threw** - Elasticsearch is down. Verified and unhealthy, with the
+ *   reason attached, and the status route still answers: a diagnostic that
+ *   crashes when the thing it diagnoses is broken is a diagnostic nobody can
+ *   use.
+ */
+const providerCounts = async (
+  c: Context,
+  { contentTypeId, locales }: { contentTypeId: string; locales: string[] },
+): Promise<{
+  byLocale: Map<string, number>;
+  canonical: boolean;
+  error?: string;
+  name: string;
+  verified: boolean;
+}> => {
+  const search = c.get("search");
+  const name = search.name();
+
+  if (search.isCanonicalStorage()) {
+    return { byLocale: new Map(), canonical: true, name, verified: true };
+  }
+
+  const byLocale = new Map<string, number>();
+  try {
+    for (const locale of locales) {
+      const counted = await search.countDocuments({
+        itemType: contentTypeId,
+        // The empty locale is what a language-agnostic document is stored
+        // under, and it is a real value to filter on rather than "any".
+        languageCode: locale,
+      });
+      if (counted === null) {
+        return { byLocale: new Map(), canonical: false, name, verified: false };
+      }
+      byLocale.set(locale, counted);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown error";
+    await logDiagnosticFailure(
+      c,
+      `${CONTENT_DIAGNOSTICS_LOG_PREFIX} ${JSON.stringify({
+        contentTypeId,
+        error: message,
+        provider: name,
+      })}`,
+    );
+
+    return {
+      byLocale: new Map(),
+      canonical: false,
+      error: message,
+      name,
+      verified: true,
+    };
+  }
+
+  return { byLocale, canonical: false, name, verified: true };
+};
+
+/** The prefix a provider diagnostic failure is logged behind. */
+export const CONTENT_DIAGNOSTICS_LOG_PREFIX = "[content-diagnostics]";
+
+/** Logging is best effort: it writes to the database, so it can fail too. */
+const logDiagnosticFailure = async (
+  c: Context,
+  message: string,
+): Promise<void> => {
+  try {
+    await c.get("log").error(message);
+  } catch {
+    // eslint-disable-next-line no-console
+    console.error(`[VitNode] ${message}`);
+  }
 };
 
 /**
@@ -269,8 +423,32 @@ export interface ContentTypeDiagnostic {
 
 export interface ContentEngineDiagnostics {
   contentTypes: ContentTypeDiagnostic[];
-  /** `true` when every searchable content type's index agrees with the database. */
+  /**
+   * Whether anything scheduled committed and was never announced.
+   *
+   * A *pending* schedule is normal - it has not fired yet - and so is a pending
+   * one whose last attempt threw, because the transition has not happened and
+   * the queue is still retrying it. `effectsError` is the one that matters: the
+   * record **is** published and nobody was told, and no amount of waiting fixes
+   * it on its own.
+   */
+  effectsHealthy: boolean;
+  /**
+   * `searchHealthy && effectsHealthy`.
+   *
+   * Explicit dimensions rather than one number, because `healthy: true` beside
+   * `failedEffects: 15` is worse than no answer - it tells an operator to stop
+   * looking.
+   */
   healthy: boolean;
+  /**
+   * Whether every searchable content type agrees with the database - in the
+   * canonical table **and** in the active provider.
+   *
+   * A provider that offers no diagnostics leaves this `false`: unverified is not
+   * healthy, and the per-content-type `provider.verified` says which it was.
+   */
+  searchHealthy: boolean;
 }
 
 /**
@@ -319,8 +497,17 @@ export const contentEngineDiagnostics = async (
     });
   }
 
+  const searchHealthy = contentTypes.every(
+    entry => entry.search === null || entry.search.healthy,
+  );
+  const effectsHealthy = contentTypes.every(
+    entry => (entry.schedules?.failedEffects ?? 0) === 0,
+  );
+
   return {
     contentTypes,
-    healthy: contentTypes.every(entry => entry.search?.healthy !== false),
+    effectsHealthy,
+    healthy: searchHealthy && effectsHealthy,
+    searchHealthy,
   };
 };

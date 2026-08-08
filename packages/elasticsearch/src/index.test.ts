@@ -6,6 +6,7 @@ const {
   bulk,
   index,
   deleteByQuery,
+  countDocs,
   ping,
   search,
   exists,
@@ -15,6 +16,7 @@ const {
   const bulk = vi.fn();
   const del = vi.fn();
   const deleteByQuery = vi.fn();
+  const countDocs = vi.fn();
   const ping = vi.fn();
   const search = vi.fn();
   const exists = vi.fn();
@@ -25,6 +27,7 @@ const {
       bulk,
       delete: del,
       deleteByQuery,
+      count: countDocs,
       ping,
       search,
       indices: { exists, create },
@@ -44,6 +47,7 @@ const {
     bulk,
     index,
     deleteByQuery,
+    countDocs,
     ping,
     search,
     exists,
@@ -446,5 +450,78 @@ describe("ElasticsearchSearchAdapter.ping", () => {
     ping.mockRejectedValue(new Error("down"));
 
     expect(await ElasticsearchSearchAdapter(config).ping?.(c)).toBe(false);
+  });
+});
+
+/**
+ * Provider-level diagnostics.
+ *
+ * The canonical `core_search_index` and this index are two storages, and only
+ * one of them is what a visitor actually searches. A drift diagnostic that could
+ * not ask this one would report a perfectly healthy canonical table while the
+ * search box was missing results - which is the failure this API exists to make
+ * visible.
+ */
+describe("ElasticsearchSearchAdapter.count", () => {
+  it("declares itself countable, so diagnostics can verify it", () => {
+    const adapter = ElasticsearchSearchAdapter(config);
+
+    expect(typeof adapter.count).toBe("function");
+    // And it is *not* the canonical storage: it mirrors, so it can drift.
+    expect(adapter.capabilities?.canonicalStorage).toBeUndefined();
+  });
+
+  it("counts one collection without fetching a single document", async () => {
+    countDocs.mockResolvedValue({ count: 42 });
+
+    const total = await ElasticsearchSearchAdapter(config).count?.(c, {
+      itemType: "blog_post",
+    });
+
+    expect(total).toBe(42);
+    // `_count`, never `_search`: a diagnostic over a large index has to cost
+    // the same as one over an empty one.
+    expect(search).not.toHaveBeenCalled();
+    expect(countDocs.mock.calls[0][0]).toMatchObject({
+      index: "test",
+      query: { bool: { filter: [{ term: { itemType: "blog_post" } }] } },
+    });
+  });
+
+  it("narrows to one language when asked", async () => {
+    // Per-locale is the whole point: "Polish is missing forty documents" is not
+    // something a single total can say.
+    countDocs.mockResolvedValue({ count: 7 });
+
+    await ElasticsearchSearchAdapter(config).count?.(c, {
+      itemType: "blog_post",
+      languageCode: "pl",
+    });
+
+    expect(countDocs.mock.calls[0][0].query.bool.filter).toEqual([
+      { term: { itemType: "blog_post" } },
+      { term: { languageCode: "pl" } },
+    ]);
+  });
+
+  it("reads an index that does not exist yet as empty", async () => {
+    // An install that has never rebuilt has no index. That is drift to report,
+    // not a crash in the status route.
+    countDocs.mockResolvedValue({});
+
+    await expect(
+      ElasticsearchSearchAdapter(config).count?.(c, { itemType: "blog_post" }),
+    ).resolves.toBe(0);
+    expect(countDocs.mock.calls[0][1]).toMatchObject({ ignore: [404] });
+  });
+
+  it("lets a transport failure surface, so the caller can report it", async () => {
+    // Swallowing it here would turn "Elasticsearch is down" into "zero
+    // documents", which reads as drift rather than as an outage.
+    countDocs.mockRejectedValue(new Error("connect ECONNREFUSED"));
+
+    await expect(
+      ElasticsearchSearchAdapter(config).count?.(c, { itemType: "blog_post" }),
+    ).rejects.toThrow("connect ECONNREFUSED");
   });
 });

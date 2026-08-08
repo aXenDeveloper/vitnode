@@ -86,6 +86,17 @@ export interface SearchResult {
 
 export interface SearchProviderCapabilities {
   authorBoost: boolean;
+  /**
+   * Whether the provider's store **is** `core_search_index`.
+   *
+   * True only for the bundled Postgres provider, which queries the canonical
+   * table directly rather than mirroring it. Diagnostics use this to skip a
+   * second count of the same rows: canonical and provider are one storage, so
+   * asking twice would cost a query to learn something already known.
+   *
+   * A mirroring provider - anything with its own store - must leave it unset.
+   */
+  canonicalStorage?: boolean;
   facets: boolean;
   /**
    * Whether {@link SearchProviderApiPlugin.delete} honours its `languageCode`.
@@ -286,6 +297,22 @@ export interface SearchProviderApiPlugin {
   capabilities?: SearchProviderCapabilities;
   clear: (c: Context, itemType?: string) => Promise<void>;
   /**
+   * How many documents the provider holds for one collection.
+   *
+   * Optional, and its absence is meaningful: a provider that cannot be counted
+   * is reported as **unverified** rather than healthy, because "we did not look"
+   * and "we looked and it was fine" are different answers and only one of them
+   * is worth acting on.
+   *
+   * It must count rather than fetch - `_count` on Elasticsearch, `COUNT(*)` on a
+   * table - and honour `languageCode` where the provider stores one document per
+   * translation. Omitting the language means every language.
+   */
+  count?: (
+    c: Context,
+    args: { itemType: string; languageCode?: string },
+  ) => Promise<number>;
+  /**
    * Removes one item's documents.
    *
    * `languageCode` narrows it to a single language, for content that is indexed
@@ -445,6 +472,23 @@ export class SearchModel {
   }
 
   /**
+   * How many documents the **provider** holds, or `null` when it cannot say.
+   *
+   * `null` is not zero and not healthy: it means the provider offers no
+   * diagnostics, and a caller has to report that as unverified rather than
+   * turning an absence of evidence into a clean bill of health.
+   */
+  async countDocuments(args: {
+    itemType: string;
+    languageCode?: string;
+  }): Promise<null | number> {
+    const provider = this.provider();
+    if (!provider.count) return null;
+
+    return await provider.count(this.c, args);
+  }
+
+  /**
    * Removes one item from the index, in one language or in all of them.
    *
    * `languageCode` is the whole point of the overload: multi-language content is
@@ -482,6 +526,16 @@ export class SearchModel {
 
     await this.upsertRow(clean);
     await this.provider().index(this.c, clean);
+  }
+
+  /**
+   * Whether the active provider's store is the canonical table itself.
+   *
+   * Diagnostics ask this before counting twice - see
+   * {@link SearchProviderCapabilities.canonicalStorage}.
+   */
+  isCanonicalStorage(): boolean {
+    return this.provider().capabilities?.canonicalStorage === true;
   }
 
   name(): string {

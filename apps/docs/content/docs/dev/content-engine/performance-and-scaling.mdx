@@ -170,6 +170,24 @@ than a migration that fails at deploy time. That includes the names nobody wrote
 down: a junction's primary key, its position constraint, its target index and a
 repeatable's position constraint.
 
+## A rebuild walks by key, not by offset
+
+Both generated indexers page with a cursor: `(itemId, languageId)` for the
+localized one, `id` for the other. `OFFSET` was wrong twice over - it re-reads
+and discards every earlier row, so a deep page pays for every page before it,
+and the offset counts rows in a set that is *moving*. A record unpublished after
+page one shifts everything behind it forward by one, and the next `OFFSET 100`
+steps straight over a row nobody ever indexed.
+
+<Callout type="warn" title="A rebuild is not a snapshot">
+It walks the collection as it stands. A row published **ahead** of the cursor is
+picked up by the same pass; one published behind it is not, and is indexed by its
+own publish instead. A row unpublished before the walk reaches it is simply never
+read; one unpublished after it was read has already had its document written, and
+the live unpublish is what removes it. Nothing is skipped that the walk had not
+already passed.
+</Callout>
+
 ## Reads stay page-bound
 
 A page is a page whatever the table holds behind it: `first: 25` materialises 25
@@ -186,8 +204,9 @@ call it, and does not.
   is 200 and the default is 50; model a content type for anything larger.
 - **A to-many relation is capped** for the same reason - it is edited as a set in
   a picker, not paged.
-- **A rebuild is a queue task**, paged, and safe to run against a large table.
-  It is not free; run it when you need it rather than on a schedule.
+- **A rebuild is a queue task**, paged by key rather than by `OFFSET`, so page
+  five hundred costs what page one costs. It is not free; run it when you need it
+  rather than on a schedule.
 - **`totalCount` is a `COUNT(*)`** on every list page. On a very large table with
   a filter that no index covers, that is the expensive part of the request - and
   the fix is an index on the filter, not a change to the pagination.

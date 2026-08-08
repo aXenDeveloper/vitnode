@@ -115,6 +115,29 @@ const published = async () => {
   return { id: created.id, version: outcome?.version ?? created.version };
 };
 
+/**
+ * Writes the canonical index rows a healthy install would hold.
+ *
+ * Shared, because "search is fine" is the baseline several tests need before
+ * they can say anything about a *different* dimension of health.
+ */
+const indexPublished = async (): Promise<void> => {
+  const rows = await h.sql<{ id: number; title: string }[]>`
+    SELECT "id", "title" FROM "example_articles"
+    WHERE "status" = 'published' AND "publishedAt" IS NOT NULL
+  `;
+  for (const row of rows) {
+    await h.sql`
+      INSERT INTO "core_search_index"
+        ("pluginId", "itemType", "itemId", "languageCode", "title", "content", "createdAt")
+      VALUES (
+        ${CONFIG_PLUGIN.pluginId}, ${articleContentType.id}, ${row.id},
+        '', ${row.title}, ${row.title}, now()
+      )
+    `;
+  }
+};
+
 const DEAD_LISTENER = {
   error: "Service unavailable",
   listener: "send-notification",
@@ -660,6 +683,182 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine failure resilience", () => {
       );
     });
 
+    /**
+     * The rebuild walks by key, not by offset.
+     *
+     * `OFFSET` counts rows in a set that is *moving*: a record unpublished after
+     * page one shifts everything behind it forward by one, and the next
+     * `OFFSET 100` steps straight over a row nobody ever indexed. A rebuild that
+     * silently misses rows is the failure a rebuild exists to fix.
+     */
+    describe("while the collection changes underneath it", () => {
+      /** Reads one page at a time so the fixture can mutate between them. */
+      const pager = () => {
+        const build = indexer();
+        let offset = 0;
+
+        return async (limit: number) => {
+          const page = await build.load(h.context, offset, limit);
+          offset += page.itemsRead;
+
+          return page;
+        };
+      };
+
+      it("visits every remaining row when an already-read one is unpublished", async () => {
+        // The regression, exactly: page one is read, one of *its* rows goes
+        // away, and the walk continues. With `OFFSET` the next page would start
+        // one row too far in and skip an untouched record forever.
+        const ids: number[] = [];
+        for (let index = 0; index < 10; index += 1) {
+          const { id } = await published();
+          ids.push(id);
+        }
+
+        const next = pager();
+        const first = await next(5);
+        expect(first.itemsRead).toBe(5);
+
+        // A row from the page just read is withdrawn.
+        await h.sql`
+          UPDATE "example_articles" SET "status" = 'draft'
+          WHERE "id" = ${ids[2]}
+        `;
+
+        const seen = first.documents.map(document => document.itemId);
+        for (let page = 0; page < 10; page += 1) {
+          const result = await next(5);
+          if (result.itemsRead === 0) break;
+          seen.push(...result.documents.map(document => document.itemId));
+        }
+
+        // Every row, exactly once. The withdrawn one is in there because page
+        // one had already read it - the live unpublish is what removes its
+        // document, and that is a different mechanism. What matters here is
+        // that nothing *else* moved: with `OFFSET` the shift would have stepped
+        // over an untouched record and lost it for the whole rebuild.
+        expect(seen.sort((a, b) => a - b)).toEqual(
+          [...ids].sort((a, b) => a - b),
+        );
+        expect(new Set(seen).size).toBe(ids.length);
+      });
+
+      it("simply never reaches a row unpublished before it got there", async () => {
+        const ids: number[] = [];
+        for (let index = 0; index < 10; index += 1) {
+          const { id } = await published();
+          ids.push(id);
+        }
+
+        const next = pager();
+        await next(4);
+
+        // Withdrawn while it is still ahead of the cursor.
+        await h.sql`
+          UPDATE "example_articles" SET "status" = 'draft'
+          WHERE "id" = ${ids[8]}
+        `;
+
+        const seen: number[] = [];
+        for (let page = 0; page < 10; page += 1) {
+          const result = await next(4);
+          if (result.itemsRead === 0) break;
+          seen.push(...result.documents.map(document => document.itemId));
+        }
+
+        expect(seen).not.toContain(ids[8]);
+        // And nothing near it was disturbed.
+        expect(seen).toContain(ids[9]);
+        expect(seen).toContain(ids[7]);
+      });
+
+      /**
+       * A row published mid-rebuild with a **higher** identifier is picked up by
+       * the same pass, because the cursor has not reached it yet. One with a
+       * lower identifier is not - the walk is already past that point.
+       *
+       * That is the honest consequence of a keyset walk, and it is stated here
+       * rather than described as a snapshot: a rebuild is not one.
+       */
+      it("picks up a row published ahead of the cursor, and not one behind it", async () => {
+        const ids: number[] = [];
+        for (let index = 0; index < 6; index += 1) {
+          const { id } = await published();
+          ids.push(id);
+        }
+
+        const next = pager();
+        const first = await next(3);
+        expect(first.itemsRead).toBe(3);
+
+        // One behind the cursor, one ahead of it.
+        const behind = await article();
+        await h.sql`
+          UPDATE "example_articles"
+          SET "status" = 'published', "publishedAt" = now(), "id" = ${ids[0] - 1}
+          WHERE "id" = ${behind.id}
+        `;
+        const ahead = await published();
+
+        const seen: number[] = [];
+        for (let page = 0; page < 10; page += 1) {
+          const result = await next(3);
+          if (result.itemsRead === 0) break;
+          seen.push(...result.documents.map(document => document.itemId));
+        }
+
+        expect(seen).toContain(ahead.id);
+        expect(seen).not.toContain(ids[0] - 1);
+      });
+
+      it("issues no SQL OFFSET at all", async () => {
+        // The property, asserted against the statements the driver really sent.
+        await published();
+        await published();
+        await published();
+
+        const build = createContentSearchIndexer(articleContent, {
+          pluginId: CONFIG_PLUGIN.pluginId,
+        });
+
+        h.counted.reset();
+        let offset = 0;
+        for (let page = 0; page < 5; page += 1) {
+          const result = await build.load(h.counted.context, offset, 2);
+          if (result.itemsRead === 0) break;
+          offset += result.itemsRead;
+        }
+
+        expect(h.counted.queries).not.toHaveLength(0);
+        expect(
+          h.counted.queries.filter(query => /\boffset\b/i.test(query)),
+        ).toEqual([]);
+        // And it does seek by key instead.
+        expect(
+          h.counted.queries.some(query => /"id"\s*>\s*\$/.test(query)),
+        ).toBe(true);
+      });
+
+      it("restarts from the beginning when a fresh rebuild begins", async () => {
+        // `offset === 0` is the contract's only "this is a new pass" signal.
+        const ids: number[] = [];
+        for (let index = 0; index < 4; index += 1) {
+          const { id } = await published();
+          ids.push(id);
+        }
+
+        const build = indexer();
+        await build.load(h.context, 0, 2);
+        await build.load(h.context, 2, 2);
+
+        const restarted = await build.load(h.context, 0, 2);
+
+        expect(restarted.documents.map(document => document.itemId)).toEqual(
+          ids.slice(0, 2),
+        );
+      });
+    });
+
     it("counts exactly the records it would index", async () => {
       await published();
       await published();
@@ -772,24 +971,6 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine failure resilience", () => {
   // -------------------------------------------------------------------------
 
   describe("index drift is diagnosable", () => {
-    /** Writes the canonical index rows a healthy install would hold. */
-    const indexPublished = async () => {
-      const rows = await h.sql<{ id: number; title: string }[]>`
-        SELECT "id", "title" FROM "example_articles"
-        WHERE "status" = 'published' AND "publishedAt" IS NOT NULL
-      `;
-      for (const row of rows) {
-        await h.sql`
-          INSERT INTO "core_search_index"
-            ("pluginId", "itemType", "itemId", "languageCode", "title", "content", "createdAt")
-          VALUES (
-            ${CONFIG_PLUGIN.pluginId}, ${articleContentType.id}, ${row.id},
-            '', ${row.title}, ${row.title}, now()
-          )
-        `;
-      }
-    };
-
     it("reports a healthy index as healthy", async () => {
       await published();
       await published();
@@ -800,12 +981,38 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine failure resilience", () => {
       });
 
       expect(drift).toMatchObject({
+        canonicalHealthy: true,
         contentTypeId: articleContentType.id,
         healthy: true,
       });
       expect(drift.locales).toEqual([
-        { expected: 2, healthy: true, indexed: 2, locale: "" },
+        {
+          canonicalHealthy: true,
+          canonicalIndexed: 2,
+          expected: 2,
+          locale: "",
+          providerHealthy: true,
+          providerIndexed: 2,
+        },
       ]);
+    });
+
+    it("reports the bundled provider as verified without counting twice", async () => {
+      // Its store *is* `core_search_index`, so the canonical counts are its
+      // counts - asking the same table again would cost a query to learn
+      // something already known.
+      await published();
+      await indexPublished();
+
+      const drift = await contentSearchDrift(h.context, {
+        model: articleContent,
+      });
+
+      expect(drift.provider).toEqual({
+        healthy: true,
+        name: "postgres",
+        verified: true,
+      });
     });
 
     it("reports a document the index never received", async () => {
@@ -822,7 +1029,11 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine failure resilience", () => {
       });
 
       expect(drift.healthy).toBe(false);
-      expect(drift.locales[0]).toMatchObject({ expected: 2, indexed: 1 });
+      expect(drift.canonicalHealthy).toBe(false);
+      expect(drift.locales[0]).toMatchObject({
+        canonicalIndexed: 1,
+        expected: 2,
+      });
     });
 
     it("reports a document that outlived its record", async () => {
@@ -845,7 +1056,111 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine failure resilience", () => {
       // reported as measured rather than clamped - a stale document is exactly
       // what an operator needs to see.
       expect(drift.healthy).toBe(false);
-      expect(drift.locales[0]).toMatchObject({ expected: 1, indexed: 2 });
+      expect(drift.locales[0]).toMatchObject({
+        canonicalIndexed: 2,
+        expected: 1,
+      });
+    });
+
+    /**
+     * The regression the whole provider split exists for.
+     *
+     * `SearchModel.index` writes the canonical row and *then* hands the document
+     * to the provider. An Elasticsearch that refuses the second half leaves a
+     * canonical table that is perfectly correct and a search box that is missing
+     * results - and a diagnostic that only ever looked at the canonical table
+     * would call that healthy.
+     */
+    it("reports the provider unhealthy when only the provider is missing a document", async () => {
+      await published();
+      await published();
+      await indexPublished();
+
+      h.behaviour.providerName = "elasticsearch";
+      h.behaviour.providerCounts = new Map([["", 1]]);
+
+      const drift = await contentSearchDrift(h.context, {
+        model: articleContent,
+      });
+
+      expect(drift.canonicalHealthy).toBe(true);
+      expect(drift.locales[0]).toMatchObject({
+        canonicalHealthy: true,
+        canonicalIndexed: 2,
+        expected: 2,
+        providerHealthy: false,
+        providerIndexed: 1,
+      });
+      expect(drift.provider).toMatchObject({
+        healthy: false,
+        name: "elasticsearch",
+        verified: true,
+      });
+      // The part that used to be wrong: a healthy canonical table is not a
+      // healthy search.
+      expect(drift.healthy).toBe(false);
+    });
+
+    it("reports a provider that cannot be counted as unverified, not healthy", async () => {
+      await published();
+      await indexPublished();
+
+      h.behaviour.providerName = "custom-search";
+      h.behaviour.providerCounts = "unsupported";
+
+      const drift = await contentSearchDrift(h.context, {
+        model: articleContent,
+      });
+
+      expect(drift.canonicalHealthy).toBe(true);
+      expect(drift.locales[0].providerHealthy).toBeNull();
+      expect(drift.locales[0].providerIndexed).toBeNull();
+      expect(drift.provider).toEqual({
+        healthy: null,
+        name: "custom-search",
+        verified: false,
+      });
+      // Absence of evidence is not a clean bill of health.
+      expect(drift.healthy).toBe(false);
+    });
+
+    it("stays usable when the provider itself is unavailable", async () => {
+      await published();
+      await indexPublished();
+
+      h.behaviour.providerName = "elasticsearch";
+      h.behaviour.providerCounts = new Map([["", 1]]);
+      h.behaviour.providerCountError = new Error("connect ECONNREFUSED");
+
+      const drift = await contentSearchDrift(h.context, {
+        model: articleContent,
+      });
+
+      // It answers rather than throwing: a diagnostic that crashes when the
+      // thing it diagnoses is broken is a diagnostic nobody can use.
+      expect(drift.canonicalHealthy).toBe(true);
+      expect(drift.provider).toMatchObject({
+        error: "connect ECONNREFUSED",
+        healthy: false,
+        verified: true,
+      });
+      expect(drift.healthy).toBe(false);
+      expect(h.logs.some(line => line.includes("[content-diagnostics]"))).toBe(
+        true,
+      );
+    });
+
+    it("keeps the whole status route answering when the provider is down", async () => {
+      await published();
+      await indexPublished();
+      h.behaviour.providerCounts = new Map([["", 1]]);
+      h.behaviour.providerCountError = new Error("elasticsearch unavailable");
+
+      const report = await contentEngineDiagnostics(h.context);
+
+      expect(report.contentTypes).not.toHaveLength(0);
+      expect(report.searchHealthy).toBe(false);
+      expect(report.healthy).toBe(false);
     });
 
     it("counts a localized content type per locale", async () => {
@@ -891,9 +1206,80 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine failure resilience", () => {
 
       expect(drift.healthy).toBe(false);
       expect(drift.locales).toEqual([
-        { expected: 1, healthy: true, indexed: 1, locale: "en" },
-        { expected: 1, healthy: false, indexed: 0, locale: "pl" },
+        {
+          canonicalHealthy: true,
+          canonicalIndexed: 1,
+          expected: 1,
+          locale: "en",
+          providerHealthy: true,
+          providerIndexed: 1,
+        },
+        {
+          canonicalHealthy: false,
+          canonicalIndexed: 0,
+          expected: 1,
+          locale: "pl",
+          providerHealthy: false,
+          providerIndexed: 0,
+        },
       ]);
+    });
+
+    it("reports one locale unhealthy when only that locale is missing from the provider", async () => {
+      // The localized shape of the same regression: English agrees everywhere,
+      // Polish is in the canonical table and absent from the provider. A single
+      // total cannot show that; a per-locale provider count can.
+      const { row } = await localizedService(h.context).create(
+        {
+          shared: {},
+          translation: { body: "English body", title: "Locale Drift" },
+        },
+        { actor: ACTOR },
+      );
+      const base = localizedArticleContent.editorialService;
+      if (!base) throw new Error("no editorial service");
+      await translationEditorial(h.context).create(
+        row.id,
+        "pl",
+        { body: "Tresc", title: "Polski Locale" },
+        { actor: ACTOR },
+      );
+      await base(h.context, { pluginId: CONFIG_PLUGIN.pluginId }).publish(
+        row.id,
+        { actor: ACTOR },
+      );
+      for (const locale of ["en", "pl"] as const) {
+        await translationEditorial(h.context).publish(row.id, locale, {
+          actor: ACTOR,
+        });
+        await h.sql`
+          INSERT INTO "core_search_index"
+            ("pluginId", "itemType", "itemId", "languageCode", "title", "content", "createdAt")
+          VALUES (
+            ${CONFIG_PLUGIN.pluginId}, ${localizedArticleContent.definition.id},
+            ${row.id}, ${locale}, 'Locale Drift', 'Locale Drift', now()
+          )
+        `;
+      }
+
+      h.behaviour.providerName = "elasticsearch";
+      h.behaviour.providerCounts = new Map([
+        ["en", 1],
+        ["pl", 0],
+      ]);
+
+      const drift = await contentSearchDrift(h.context, {
+        model: localizedArticleContent,
+      });
+
+      expect(drift.canonicalHealthy).toBe(true);
+      expect(
+        drift.locales.map(entry => [entry.locale, entry.providerHealthy]),
+      ).toEqual([
+        ["en", true],
+        ["pl", false],
+      ]);
+      expect(drift.healthy).toBe(false);
     });
 
     it("agrees with the localized rebuild about how many documents there should be", async () => {
@@ -984,6 +1370,114 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine failure resilience", () => {
           item => item.contentTypeId === "example.category",
         )?.search,
       ).toBeNull();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Overall health
+  // -------------------------------------------------------------------------
+
+  /**
+   * `healthy: true` beside `failedEffects: 15` is worse than no answer - it
+   * tells an operator to stop looking. So the report carries the two dimensions
+   * separately and derives the headline from them.
+   */
+  describe("overall health", () => {
+    const bookSchedule = async (itemId: number) => {
+      const model = editorial(h.context).schedules;
+      if (!model) throw new Error("no scheduling");
+
+      return await model.schedule({
+        action: "unpublish",
+        actorUserId: null,
+        itemId,
+        scheduledFor: new Date(Date.now() + 3_600_000),
+      });
+    };
+
+    it("is healthy when search agrees and nothing is outstanding", async () => {
+      const report = await contentEngineDiagnostics(h.context);
+
+      expect(report).toMatchObject({
+        effectsHealthy: true,
+        healthy: true,
+        searchHealthy: true,
+      });
+    });
+
+    it("treats a pending schedule as normal rather than unhealthy", async () => {
+      // It has not fired yet. Nothing is wrong.
+      const { id } = await published();
+      await indexPublished();
+      await bookSchedule(id);
+
+      const report = await contentEngineDiagnostics(h.context);
+
+      expect(report.effectsHealthy).toBe(true);
+      expect(report.healthy).toBe(true);
+      expect(
+        report.contentTypes.find(
+          item => item.contentTypeId === articleContentType.id,
+        )?.schedules?.pending,
+      ).toBe(1);
+    });
+
+    it("treats a pending schedule whose last attempt threw as still pending", async () => {
+      // The transition has not happened and the queue is retrying it, so this
+      // is visible - `withErrors` - without being a failure of the engine.
+      const { id } = await published();
+      await indexPublished();
+      const booked = await bookSchedule(id);
+      await h.sql`
+        UPDATE "core_content_schedules"
+        SET "lastError" = 'connection reset'
+        WHERE "id" = ${booked.id}
+      `;
+
+      const report = await contentEngineDiagnostics(h.context);
+
+      expect(report.effectsHealthy).toBe(true);
+      expect(report.healthy).toBe(true);
+      expect(
+        report.contentTypes.find(
+          item => item.contentTypeId === articleContentType.id,
+        )?.schedules?.withErrors,
+      ).toBe(1);
+    });
+
+    it("is unhealthy when a committed transition was never announced", async () => {
+      // The record *is* published and nobody was told. No amount of waiting
+      // fixes that on its own, so it is the one that moves the headline.
+      const { id } = await published();
+      await indexPublished();
+      const booked = await bookSchedule(id);
+      await h.sql`
+        UPDATE "core_content_schedules"
+        SET "effectsError" = 'search: down'
+        WHERE "id" = ${booked.id}
+      `;
+
+      const report = await contentEngineDiagnostics(h.context);
+
+      expect(report).toMatchObject({
+        effectsHealthy: false,
+        healthy: false,
+        // Search is fine; the headline is not, and the two are separable.
+        searchHealthy: true,
+      });
+    });
+
+    it("is unhealthy when search drifts even though nothing is outstanding", async () => {
+      await published();
+      // Nothing indexed at all, so the canonical table disagrees.
+
+      const report = await contentEngineDiagnostics(h.context);
+
+      expect(report).toMatchObject({
+        effectsHealthy: true,
+        healthy: false,
+        searchHealthy: false,
+      });
     });
   });
 });

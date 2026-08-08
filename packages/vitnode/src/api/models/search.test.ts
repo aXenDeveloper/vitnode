@@ -7,6 +7,7 @@ import { core_search_index } from "@/database/search";
 
 import type { SearchDocument, SearchProviderApiPlugin } from "./search";
 
+import { PostgresSearchAdapter } from "../adapters/search/postgres";
 import {
   assertSearchProviderCapabilities,
   normalizeSearchIndexerPage,
@@ -374,5 +375,51 @@ describe("assertSearchProviderCapabilities", () => {
         localizedSearchContentTypes: ["example.article"],
       }),
     ).not.toThrow();
+  });
+});
+
+/**
+ * The provider half of a search diagnostic.
+ *
+ * `SearchModel.index` writes the canonical row and *then* hands the document to
+ * the provider, so the two can disagree - and a diagnostic that cannot ask the
+ * provider would report the canonical table's health as the whole story.
+ */
+describe("provider diagnostics", () => {
+  const modelFor = (provider: SearchProviderApiPlugin) =>
+    new SearchModel({
+      get: (key: string) =>
+        key === "core" ? { search: { adapter: provider } } : undefined,
+    } as never);
+
+  it("reports the bundled Postgres provider as canonical storage", () => {
+    // Its store *is* `core_search_index`, so a diagnostic can use the canonical
+    // count rather than paying for a second one over the same rows.
+    expect(modelFor(PostgresSearchAdapter()).isCanonicalStorage()).toBe(true);
+  });
+
+  it("reports a mirroring provider as not canonical", () => {
+    expect(modelFor(createProvider()).isCanonicalStorage()).toBe(false);
+  });
+
+  it("answers null when the provider offers no count", async () => {
+    // `null` is not zero and not healthy - it means nobody looked, and the
+    // caller has to report that as unverified.
+    await expect(
+      modelFor(createProvider()).countDocuments({ itemType: "blog_post" }),
+    ).resolves.toBeNull();
+  });
+
+  it("passes the item type and language straight through", async () => {
+    const count = vi.fn().mockResolvedValue(12);
+    const model = modelFor({ ...createProvider(), count });
+
+    await expect(
+      model.countDocuments({ itemType: "blog_post", languageCode: "pl" }),
+    ).resolves.toBe(12);
+    expect(count.mock.calls[0][1]).toEqual({
+      itemType: "blog_post",
+      languageCode: "pl",
+    });
   });
 });

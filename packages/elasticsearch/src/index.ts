@@ -294,6 +294,39 @@ export const ElasticsearchSearchAdapter = (
       languageScopedDelete: true,
     },
 
+    /**
+     * How many documents this index holds for one collection.
+     *
+     * `_count` rather than a search: it returns a number without fetching a
+     * single document, so a diagnostic over a large index costs the same as one
+     * over an empty one. `languageCode` narrows it to a single translation,
+     * which is what makes per-locale drift visible - "Polish is missing forty
+     * documents" is not something a total can say.
+     *
+     * A missing index means zero rather than an error: an install that has never
+     * rebuilt has no index yet, and that is drift to report, not a crash.
+     */
+    count: async (_c, { itemType, languageCode }) => {
+      const response = await getClient().count(
+        {
+          index,
+          query: {
+            bool: {
+              filter: [
+                { term: { itemType } },
+                ...(languageCode === undefined
+                  ? []
+                  : [{ term: { languageCode } }]),
+              ],
+            },
+          },
+        },
+        { ignore: [404] },
+      );
+
+      return response.count ?? 0;
+    },
+
     index: async (_c, doc) => {
       await ensureIndex();
       await getClient().index({

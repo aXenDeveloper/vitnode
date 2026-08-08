@@ -143,7 +143,18 @@ describe("generated content search indexer", () => {
 
       expect(opOf(calls, "orderBy")).toBeDefined();
       expect(opOf(calls, "limit")).toBe(200);
-      expect(opOf(calls, "offset")).toBe(400);
+    });
+
+    it("never issues a SQL OFFSET, however deep the rebuild has gone", async () => {
+      // `OFFSET` re-reads and discards every earlier row, and counts rows in a
+      // set that moves underneath it - a record unpublished after an earlier
+      // page shifts the rest forward and the next page steps over one. The
+      // walk is a keyset seek on the primary key instead.
+      const { c, calls } = createDbMock([[]]);
+
+      await indexerFor(searchable).load(c, 400, 200);
+
+      expect(opOf(calls, "offset")).toBeUndefined();
     });
 
     it("maps every row into a document, and stamps the owning plugin", async () => {

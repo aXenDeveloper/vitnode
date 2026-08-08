@@ -214,6 +214,16 @@ export const createContentSearchIndexer = <
     ]),
   );
 
+  /**
+   * The keyset cursor, per request.
+   *
+   * A `WeakMap` keyed by the Hono context, exactly as the localized indexer
+   * does: the rebuild task calls `load` repeatedly within one request, and the
+   * entry is collected with it. A fresh request starts at the beginning, which
+   * is what a rebuild means.
+   */
+  const cursors = new WeakMap<Context, number>();
+
   return {
     itemType: definition.id,
 
@@ -230,23 +240,49 @@ export const createContentSearchIndexer = <
       return row?.value ?? 0;
     },
 
-    // Offset paging, which is what the contract exposes. Ordering by the primary
-    // key keeps pages from overlapping within one rebuild; a row whose
-    // publication state changes mid-rebuild can still shift, and that is what
-    // the next publish - or the next rebuild - repairs.
-    //
-    // `itemsRead` is the row count, not the document count. A published row with
-    // no usable title projects to nothing, and reporting that as "no items" would
-    // end the rebuild before the valid rows after it.
+    /**
+     * Keyset paging on `id`, not `OFFSET`.
+     *
+     * `OFFSET` was wrong twice over. It re-reads and discards every earlier row,
+     * so page 500 of a rebuild costs five hundred pages of work - and worse, the
+     * offset counts rows in a set that is *moving*: a record unpublished after
+     * page one shifts everything behind it forward by one, and the next
+     * `OFFSET 100` steps straight over a row nobody ever indexed. A rebuild that
+     * silently misses rows is the failure a rebuild exists to fix.
+     *
+     * `WHERE id > :last` has neither problem. It seeks on the primary key, and
+     * it is anchored to a value rather than to a position, so rows appearing or
+     * disappearing behind the cursor cannot move it.
+     *
+     * The `offset` argument stays in the signature because the
+     * {@link SearchIndexer} contract is shared with hand-written indexers; it is
+     * used only as the "this is a fresh pass" signal, exactly as the localized
+     * indexer uses it.
+     *
+     * `itemsRead` is the row count, not the document count. A published row with
+     * no usable title projects to nothing, and reporting that as "no items"
+     * would end the rebuild before the valid rows after it.
+     */
     load: async (c, offset, limit) => {
+      // The contract's only signal that this is a fresh pass rather than the
+      // next page of one.
+      if (offset === 0) cursors.delete(c);
+      const cursor = cursors.get(c);
+
       const rows = await c
         .get("db")
         .select(selection)
         .from(table)
-        .where(publishedCondition(published))
+        .where(
+          cursor === undefined
+            ? publishedCondition(published)
+            : and(publishedCondition(published), gt(primaryCursor, cursor)),
+        )
         .orderBy(asc(primaryCursor))
-        .limit(limit)
-        .offset(offset);
+        .limit(limit);
+
+      const last = rows.at(-1);
+      if (last && typeof last.id === "number") cursors.set(c, last.id);
 
       // One batch for the whole page, and only the collections the search
       // configuration names - never one query per document.

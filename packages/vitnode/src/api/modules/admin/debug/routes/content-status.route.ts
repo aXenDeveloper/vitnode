@@ -5,12 +5,16 @@ import { CONFIG_PLUGIN } from "@/config";
 import { contentEngineDiagnostics } from "@/content/server/diagnostics";
 
 const localeDriftSchema = z.object({
+  /** Documents `core_search_index` holds for this locale. */
+  canonicalIndexed: z.number(),
+  canonicalHealthy: z.boolean(),
   /** Published rows - or published translations - the database holds. */
   expected: z.number(),
-  healthy: z.boolean(),
-  indexed: z.number(),
   /** `""` for a content type that is not localized. */
   locale: z.string(),
+  /** `null` when the provider offers no diagnostics - unverified, not healthy. */
+  providerHealthy: z.boolean().nullable(),
+  providerIndexed: z.number().nullable(),
 });
 
 const contentTypeSchema = z.object({
@@ -27,9 +31,19 @@ const contentTypeSchema = z.object({
   /** `null` for a content type without `search`. */
   search: z
     .object({
+      canonicalHealthy: z.boolean(),
       contentTypeId: z.string(),
+      /** Canonical **and** provider both agree. Unverified is not healthy. */
       healthy: z.boolean(),
       locales: z.array(localeDriftSchema),
+      provider: z.object({
+        /** Why the provider could not be counted, when that is the answer. */
+        error: z.string().optional(),
+        healthy: z.boolean().nullable(),
+        name: z.string(),
+        /** Whether the provider was actually asked. */
+        verified: z.boolean(),
+      }),
     })
     .nullable(),
   /** `null` for a content type without scheduling. */
@@ -71,7 +85,11 @@ export const contentStatusDebugAdminRoute = buildRoute({
           "application/json": {
             schema: z.object({
               contentTypes: z.array(contentTypeSchema),
+              /** No scheduled transition committed without being announced. */
+              effectsHealthy: z.boolean(),
+              /** `searchHealthy && effectsHealthy`. */
               healthy: z.boolean(),
+              searchHealthy: z.boolean(),
             }),
           },
         },

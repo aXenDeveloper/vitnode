@@ -141,6 +141,21 @@ export interface ContentTestHarness {
   readonly behaviour: {
     /** Listeners `emit` should report as having failed. */
     eventFailures: RecordedEventFailure[];
+    /** When set, the provider's `count` throws it. */
+    providerCountError: Error | null;
+    /**
+     * What the provider's own diagnostics answer.
+     *
+     * `"canonical"` is the bundled Postgres provider - its store *is*
+     * `core_search_index`, so it is verified without a second query.
+     * `"unsupported"` is a provider with no `count`, which has to be reported as
+     * unverified rather than healthy. A `Map` is a mirroring provider that can
+     * be counted, keyed by locale (`""` for language-agnostic content) - which
+     * is how a provider that is missing documents the canonical table has is
+     * simulated at all.
+     */
+    providerCounts: "canonical" | "unsupported" | Map<string, number>;
+    providerName: string;
     /**
      * Web origins the revalidation bridge should post to.
      *
@@ -265,6 +280,9 @@ export const createContentTestHarness =
     const logs: string[] = [];
     const behaviour: ContentTestHarness["behaviour"] = {
       eventFailures: [],
+      providerCountError: null,
+      providerCounts: "canonical",
+      providerName: "postgres",
       revalidateOrigins: [],
       searchError: null,
     };
@@ -284,6 +302,29 @@ export const createContentTestHarness =
           if (key === "db") return handle;
           if (key === "search") {
             return {
+              countDocuments: async ({
+                languageCode,
+              }: {
+                itemType: string;
+                languageCode?: string;
+              }) => {
+                if (behaviour.providerCountError) {
+                  throw behaviour.providerCountError;
+                }
+                if (behaviour.providerCounts === "unsupported") {
+                  return await Promise.resolve(null);
+                }
+                if (behaviour.providerCounts === "canonical") {
+                  return await Promise.resolve(0);
+                }
+
+                return await Promise.resolve(
+                  behaviour.providerCounts.get(languageCode ?? "") ?? 0,
+                );
+              },
+              isCanonicalStorage: () =>
+                behaviour.providerCounts === "canonical",
+              name: () => behaviour.providerName,
               delete: async (
                 itemType: string,
                 itemId: number,
@@ -418,6 +459,9 @@ export const createContentTestHarness =
         emitted.length = 0;
         logs.length = 0;
         behaviour.eventFailures = [];
+        behaviour.providerCountError = null;
+        behaviour.providerCounts = "canonical";
+        behaviour.providerName = "postgres";
         behaviour.revalidateOrigins = [];
         behaviour.searchError = null;
       },
