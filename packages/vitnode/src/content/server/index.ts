@@ -33,10 +33,6 @@ export type {
   ContentEditorialEffectsOptions,
   ContentEditorialEffectsResult,
 } from "./editorial-effects";
-export {
-  CONTENT_EFFECTS_LOG_PREFIX,
-  reportContentEventFailures,
-} from "./effects-log";
 export { createContentEditorialService } from "./editorial-service";
 export type {
   ContentEditorialOptions,
@@ -45,6 +41,10 @@ export type {
   ContentEditorialService,
   ContentEditorialWriteOptions,
 } from "./editorial-service";
+export {
+  CONTENT_EFFECTS_LOG_PREFIX,
+  reportContentEventFailures,
+} from "./effects-log";
 export { emitContentEvent } from "./emit";
 export {
   contentConflict,

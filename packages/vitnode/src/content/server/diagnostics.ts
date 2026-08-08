@@ -40,6 +40,8 @@ import {
 
 /** One locale's share of a content type's index, expected against actual. */
 export interface ContentSearchDriftLocale {
+  /** Published rows (or published translations) the database holds. */
+  expected: number;
   /**
    * `true` when the two counts agree.
    *
@@ -59,8 +61,6 @@ export interface ContentSearchDriftLocale {
    * the row really holds.
    */
   locale: string;
-  /** Published rows (or published translations) the database holds. */
-  expected: number;
 }
 
 export interface ContentSearchDrift {
@@ -140,7 +140,7 @@ const expectedDocuments = async (
   model: RegisteredContentModel["model"],
 ): Promise<Map<string, number>> => {
   const { definition } = model;
-  const columns = model.columns as Record<string, PgColumn>;
+  const columns = model.columns;
 
   if (!definition.publication.enabled) return new Map();
 
@@ -241,9 +241,9 @@ export const contentScheduleHealth = async (
 
   for (const row of rows) {
     result.set(row.contentTypeId, {
-      failedEffects: Number(row.failedEffects),
-      pending: Number(row.pending),
-      withErrors: Number(row.withErrors),
+      failedEffects: row.failedEffects,
+      pending: row.pending,
+      withErrors: row.withErrors,
     });
   }
 
@@ -261,10 +261,10 @@ export interface ContentTypeDiagnostic {
     search: boolean;
   };
   pluginId: string;
-  /** `null` for a content type without `search`, which indexes nothing. */
-  search: ContentSearchDrift | null;
   /** `null` for a content type without scheduling, which books nothing. */
   schedules: ContentScheduleHealth | null;
+  /** `null` for a content type without `search`, which indexes nothing. */
+  search: ContentSearchDrift | null;
 }
 
 export interface ContentEngineDiagnostics {
