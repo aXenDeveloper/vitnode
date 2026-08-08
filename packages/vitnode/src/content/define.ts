@@ -1,4 +1,5 @@
 import type {
+  AnyContentTypeDefinition,
   ContentAdminConfig,
   ContentEditorialConfig,
   ContentEditorialEnabled,
@@ -198,7 +199,14 @@ const assertField = (
     }
   }
 
-  if (fieldValue.kind === "relation" || fieldValue.kind === "user") {
+  // A to-many relation is checked by `resolveContentAdvanced` instead: it is
+  // never nullable by construction, and `"set null"` means something different
+  // for a junction row than for a column - so the message has to be different
+  // too, and there is only one place it can be.
+  if (
+    (fieldValue.kind === "relation" && !fieldValue.multiple) ||
+    fieldValue.kind === "user"
+  ) {
     // Postgres would accept the definition and then fail at delete time, when
     // it tries to write NULL into a NOT NULL column.
     if (fieldValue.onDelete === "set null" && !fieldValue.nullable) {
@@ -1486,7 +1494,14 @@ export const defineContentType = <
   // to the real descriptor union here. This is the only unchecked widening in
   // the engine, and `assertFieldKind` below makes it true at runtime for
   // anything that skipped the `field.*` builders.
-  const fieldMap = fields as unknown as ContentFieldMap;
+  const fieldMap = bindSelfRelations(
+    fields as unknown as ContentFieldMap,
+    // Read lazily, so `definition` is fully assigned by the time a relation
+    // resolves. The widening is the same one `AnyContentTypeDefinition` exists
+    // for: a self-relation's target is read by code that cannot know which
+    // concrete content type it was handed.
+    () => definition as unknown as AnyContentTypeDefinition,
+  );
   const fieldNames = Object.keys(fieldMap);
   if (fieldNames.length === 0) {
     throw new ContentEngineError("A content type needs at least one field.", {
@@ -1621,7 +1636,18 @@ export const defineContentType = <
     tableName,
   });
 
-  return {
+  const definition: ContentTypeDefinition<
+    TId,
+    TFields,
+    TPublication,
+    TPublicField,
+    TPublicEnabled,
+    ContentSearchEnabled<TSearch>,
+    ContentEditorialEnabled<TEditorial>,
+    ContentPreviewEnabled<TEditorial>,
+    ContentSchedulingEnabled<TEditorial>,
+    ContentLocalizationEnabled<TLocalization>
+  > = {
     admin: resolvedAdmin,
     advanced: resolvedAdvanced,
     editorial: resolvedEditorial as ResolvedContentEditorialConfig<
@@ -1629,7 +1655,8 @@ export const defineContentType = <
       ContentPreviewEnabled<TEditorial>,
       ContentSchedulingEnabled<TEditorial>
     >,
-    fields,
+    // The rebound copy, so a self-relation resolves rather than throwing.
+    fields: fieldMap as unknown as TFields,
     id,
     indexes: resolvedIndexes,
     localization: resolvedLocalization as ResolvedContentLocalizationConfig<
@@ -1670,4 +1697,32 @@ export const defineContentType = <
     >,
     tableName,
   };
+
+  return definition;
+};
+
+/**
+ * Rebinds every `self: true` relation to the definition being built.
+ *
+ * On a **copy** of the field map, never in place: a descriptor object can be a
+ * shared `const` reused by several content types, and mutating it would point
+ * one content type's relation at another's table. The copy is what the
+ * definition carries, so `field.target()` resolves correctly everywhere
+ * downstream - and the thunk is read lazily, so `definition` is fully assigned
+ * by the time anybody calls it.
+ */
+const bindSelfRelations = (
+  fields: ContentFieldMap,
+  self: () => AnyContentTypeDefinition,
+): ContentFieldMap => {
+  const bound: ContentFieldMap = {};
+
+  for (const [name, fieldValue] of Object.entries(fields)) {
+    bound[name] =
+      fieldValue.kind === "relation" && fieldValue.self
+        ? { ...fieldValue, target: self }
+        : fieldValue;
+  }
+
+  return bound;
 };

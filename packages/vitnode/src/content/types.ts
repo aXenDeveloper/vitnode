@@ -224,7 +224,22 @@ export interface ContentRelationField<
    * something the author chose.
    */
   ordered: TOrdered;
-  /** Thunk so two content types - or one content type and itself - can refer. */
+  /**
+   * The target is **this** content type.
+   *
+   * `self: true` rather than `target: () => thisContentType`, and the reason is
+   * the type system rather than taste: a definition whose own field map
+   * mentions its own inferred type is circular, and TypeScript resolves that by
+   * quietly widening the whole definition to `any`. Every nested value type,
+   * every allowlist check and every compile-time guarantee in this file would
+   * disappear - silently, because `any` is not an error.
+   *
+   * `defineContentType` rebinds the thunk to the finished definition, so
+   * everything downstream sees an ordinary relation pointing at an ordinary
+   * content type.
+   */
+  self: boolean;
+  /** Thunk so two content types can refer to each other. */
   target: () => AnyContentTypeDefinition;
 }
 

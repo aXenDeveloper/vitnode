@@ -10,12 +10,13 @@ import { categoryContentType } from "./category";
  *   foreign key at each end; `onDelete: "restrict"` means Postgres itself
  *   refuses to delete a category that is still in use, rather than a check in
  *   service code that a direct `DELETE` would walk past.
- * - **`relatedArticles`** - an **ordered self-relation**. `target` is a thunk,
- *   which is what makes pointing at this very content type ordinary rather than
- *   special: the reference is resolved on first read, exactly like two content
- *   types referring to each other. `ordered: true` keeps the author's order, and
- *   `UNIQUE (itemId, position)` is what makes that order a fact rather than a
- *   hope.
+ * - **`relatedArticles`** - an **ordered self-relation**, declared with
+ *   `self: true` rather than `target: () => advancedArticleContentType`. The
+ *   difference is not stylistic: a definition whose field map mentions its own
+ *   inferred type is circular, and TypeScript resolves that by widening the
+ *   whole definition to `any` - silently taking every nested value type with
+ *   it. `ordered: true` keeps the author's order, and `UNIQUE (itemId,
+ *   position)` is what makes that order a fact rather than a hope.
  * - **`seo`** - a **localized** group. Its leaves are stored as `seoTitle` and
  *   `seoDescription` on the *translation* table, so every language gets its own
  *   SEO copy - and the value stays nested (`row.seo.title`) whatever the columns
@@ -76,7 +77,7 @@ export const advancedArticleContentType = defineContentType({
       multiple: true,
       onDelete: "cascade",
       ordered: true,
-      target: () => advancedArticleContentType,
+      self: true,
     }),
 
     // Localized whole: both leaves move to the translation table together, with

@@ -15,6 +15,8 @@ import type {
   ContentUserField,
 } from "./types";
 
+import { ContentEngineError } from "./errors";
+
 interface SharedArgs<
   TRequired extends boolean = false,
   TNullable extends boolean = false,
@@ -223,17 +225,33 @@ const user = <
 };
 
 /**
+ * The placeholder a `self: true` relation carries until it is rebound.
+ *
+ * Throws rather than returning something plausible: reaching it means
+ * `defineContentType` did not rebind the thunk, and a relation silently
+ * pointing at the wrong table is a data bug rather than a crash.
+ */
+const unboundSelfTarget = (): AnyContentTypeDefinition => {
+  throw new ContentEngineError(
+    "A `self: true` relation was read before `defineContentType` bound it. Build the field inside a `defineContentType` call.",
+  );
+};
+
+/**
  * A reference to rows of another content type - or of this one.
  *
  * ```ts
  * category:   field.relation({ target: () => categoryContentType })
  * categories: field.relation({ target: () => categoryContentType, multiple: true })
- * related:    field.relation({ target: () => articleContentType, multiple: true, ordered: true })
+ * related:    field.relation({ self: true, multiple: true, ordered: true })
  * ```
  *
- * `target` is a thunk, which is what makes the third line legal inside
- * `articleContentType` itself: the reference is resolved on first read rather
- * than at declaration, so a self-relation needs nothing the other two do not.
+ * `target` is a thunk, so two content types can point at each other without a
+ * circular import. A **self**-relation uses `self: true` instead, and the
+ * difference is not stylistic: `target: () => thisContentType` would make the
+ * definition's own inferred type circular, and TypeScript resolves that by
+ * widening the whole definition to `any` - taking every nested value type and
+ * every allowlist check with it, silently.
  *
  * `multiple: true` moves the value off the row into a generated junction table.
  * A to-many relation is therefore never `required` and never `nullable` - the
@@ -254,8 +272,10 @@ const relation = <
     multiple?: TMultiple;
     onDelete?: ContentOnDelete;
     ordered?: TOrdered;
-    target: () => AnyContentTypeDefinition;
-  },
+  } & (
+      | { self: true; target?: never }
+      | { self?: false; target: () => AnyContentTypeDefinition }
+    ),
 ): ContentRelationField<TRequired, TNullable, TMultiple, TOrdered> => ({
   ...args,
   ...shared(args),
@@ -266,6 +286,8 @@ const relation = <
   multiple: (args.multiple ?? false) as TMultiple,
   onDelete: args.onDelete ?? "restrict",
   ordered: (args.ordered ?? false) as TOrdered,
+  self: args.self === true,
+  target: args.target ?? unboundSelfTarget,
 });
 
 /**
