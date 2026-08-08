@@ -1231,7 +1231,7 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       await translationEditorial()?.update(
         article.id,
         "en",
-        { slug: "hello-there" } as never,
+        { slug: "hello-there" },
         { actor: ACTOR, expectedVersion: article.enVersion },
       );
 
@@ -1239,7 +1239,9 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       // so the history lookup has to be about the same language - otherwise the live
       // branch would search `en` while the redirect branch searched the shared rows
       // and found nothing.
-      expect(await advancedDelivery()?.resolveSlug("hello-world")).toStrictEqual({
+      expect(
+        await advancedDelivery()?.resolveSlug("hello-world"),
+      ).toStrictEqual({
         location: "/en/advanced-articles/hello-there",
         status: 308,
         type: "redirect",
