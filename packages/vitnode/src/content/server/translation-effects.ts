@@ -3,10 +3,12 @@ import type { Context } from "hono";
 import type { EventEmitResult } from "../../api/models/events";
 import type { ContentEventAction } from "../events";
 import type { AnyContentTypeDefinition } from "../types";
+import type { ContentDeliveryEffectsResult } from "./delivery-effects";
 import type { AnyContentModel } from "./model";
 import type { ContentSearchSyncOutcome } from "./search-sync";
 import type { ContentTranslationEditorialOutcome } from "./translation-editorial-service";
 
+import { contentDeliveryEffects } from "./delivery-effects";
 import { reportContentEventFailures } from "./effects-log";
 import { emitContentEvent } from "./emit";
 import {
@@ -76,6 +78,11 @@ export interface ContentTranslationEffectsOptions {
 
 export interface ContentTranslationEffectsResult {
   /**
+   * The delivery events this translation mutation emitted, or `undefined` for a
+   * content type without `delivery`.
+   */
+  delivery?: ContentDeliveryEffectsResult;
+  /**
    * What the event transport reported, or `null` for a no-op outcome.
    *
    * Present rather than discarded because `EventsModel.emit` does not throw:
@@ -144,14 +151,22 @@ export const contentTranslationEffects = async (
     locale: outcome.locale,
   });
 
-  if (!definition.search.enabled || !model) return { event };
+  const delivery = definition.delivery.enabled
+    ? await contentDeliveryEffects(c, definition, outcome.delivery, {
+        pluginId,
+      })
+    : undefined;
+  const withDelivery = delivery === undefined ? {} : { delivery };
+
+  if (!definition.search.enabled || !model) return { ...withDelivery, event };
 
   // The base row, because a translation's document is built from both halves and
   // its visibility is subordinate to the record's.
   const base = await model.service(c).findById(outcome.row.itemId);
-  if (!base) return { event };
+  if (!base) return { ...withDelivery, event };
 
   return {
+    ...withDelivery,
     event,
     // Scoped to the locale that moved. Omitting it would rewrite every other
     // language's document for a change none of them contains.

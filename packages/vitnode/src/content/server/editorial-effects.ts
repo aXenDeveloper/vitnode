@@ -3,10 +3,12 @@ import type { Context } from "hono";
 import type { EventEmitResult } from "../../api/models/events";
 import type { ContentEventAction } from "../events";
 import type { AnyContentTypeDefinition } from "../types";
+import type { ContentDeliveryEffectsResult } from "./delivery-effects";
 import type { ContentEditorialOutcome } from "./editorial-service";
 import type { AnyContentModel } from "./model";
 import type { ContentSearchSyncOutcome } from "./search-sync";
 
+import { contentDeliveryEffects } from "./delivery-effects";
 import { reportContentEventFailures } from "./effects-log";
 import { emitContentEvent } from "./emit";
 import {
@@ -103,6 +105,12 @@ export interface ContentEditorialEffectsOptions {
 
 export interface ContentEditorialEffectsResult {
   /**
+   * The delivery events this mutation emitted, or `undefined` for a content type
+   * without `delivery` - which is what keeps every existing caller's result shape
+   * unchanged.
+   */
+  delivery?: ContentDeliveryEffectsResult;
+  /**
    * What the event transport reported. `null` for a no-op outcome, which emits
    * nothing at all.
    *
@@ -173,11 +181,21 @@ export const contentEditorialEffects = async (
     itemId: idOf(outcome.row),
   });
 
+  // After the ordinary event, never instead of it: a URL moving and a field moving
+  // are two facts, and a listener that mirrors content wants the first while one
+  // that warms a CDN wants the second.
+  const delivery = definition.delivery.enabled
+    ? await contentDeliveryEffects(c, definition, outcome.delivery, {
+        pluginId,
+      })
+    : undefined;
+
   // A localized record is indexed once per published translation, and a mutation
   // of the *record* moves every one of them: its publication state gates them
   // all, and a shared field is in all of them.
   if (definition.localization.enabled && definition.search.enabled) {
     return {
+      ...(delivery === undefined ? {} : { delivery }),
       event,
       search: null,
       searchByLocale: model
@@ -201,6 +219,7 @@ export const contentEditorialEffects = async (
   }
 
   return {
+    ...(delivery === undefined ? {} : { delivery }),
     event,
     search: await syncContentSearch(c, definition, {
       // Read back only when a document is actually made of collection values,

@@ -3,6 +3,8 @@ import type { ContentFieldName, ContentLocalizedFieldName } from "./types";
 export type ContentEventAction =
   | "created"
   | "deleted"
+  | "delivery_redirect_created"
+  | "delivery_slug_changed"
   | "published"
   | "restored"
   | "schedule_cancelled"
@@ -271,6 +273,76 @@ type ContentLocalizationEventsFor<TDefinition extends { id: string }> =
       : Record<never, never>);
 
 /**
+ * A record's canonical public URL moved.
+ *
+ * Emitted **in addition to** the `updated` (or `restored`) event, not instead of
+ * it: the field mutation and the URL change are two different facts with two
+ * different audiences. A listener that mirrors content into another system wants
+ * the first; one that warms a CDN, tells an external search engine or writes to an
+ * edge redirect table wants the second, and would otherwise have to inspect
+ * `changedFields` for a slug field whose name it cannot know.
+ *
+ * `locale` is `null` when the slug is shared - a content type that is not
+ * localized, or a localized one whose slug lives on the base row.
+ */
+export interface ContentDeliverySlugChangedPayload {
+  /** The path the record answers to now. */
+  canonicalPath: string;
+  contentId: number;
+  locale: null | string;
+  /** The path it answered to before, or `null` when it had no public URL yet. */
+  previousPath: null | string;
+  previousSlug: null | string;
+  slug: string;
+}
+
+/**
+ * A historical public URL became a redirect.
+ *
+ * Emitted only when the old slug had genuinely been *publicly addressable* - so a
+ * draft whose slug was corrected three times before it was ever published emits
+ * nothing, and a published article that moves emits exactly one. That is the
+ * difference between "a URL exists that needs a redirect" and "somebody edited a
+ * field", and it is why this is a separate event from the one above rather than a
+ * boolean on it.
+ */
+export interface ContentDeliveryRedirectCreatedPayload {
+  /** Where the historical path now redirects to. */
+  canonicalPath: string;
+  contentId: number;
+  locale: null | string;
+  /** The retired path, which now answers with a permanent redirect. */
+  previousPath: string;
+  previousSlug: string;
+}
+
+/**
+ * The two events the delivery layer adds.
+ *
+ * Gated on `delivery: { enabled: true }` exactly like the publication, editorial
+ * and localization groups, so a content type without it gains no key at all and a
+ * listener for one cannot be registered - which is what keeps every Stage 1-7
+ * event map byte-identical.
+ *
+ * Both keys are gated on `delivery` alone rather than the redirect one being gated a
+ * second time on `redirects`. Whether a content type keeps slug history is a
+ * *resolved* boolean rather than a literal on the definition's type, so a second gate
+ * would need another type parameter on `ContentTypeDefinition` to buy one thing: a
+ * listener nobody can register for an event that would never have fired anyway.
+ */
+type ContentDeliveryEventsFor<TDefinition extends { id: string }> =
+  TDefinition extends { delivery: { enabled: true } }
+    ? Record<
+        `content.${TDefinition["id"]}.delivery_redirect_created`,
+        ContentDeliveryRedirectCreatedPayload
+      > &
+        Record<
+          `content.${TDefinition["id"]}.delivery_slug_changed`,
+          ContentDeliverySlugChangedPayload
+        >
+    : Record<never, never>;
+
+/**
  * The events a content type emits, as a literal-keyed map.
  *
  * Plugins graft these onto the global event map with one declaration - the
@@ -289,7 +361,8 @@ type ContentLocalizationEventsFor<TDefinition extends { id: string }> =
  * payloads stay minimal.
  */
 export type ContentEventsFor<TDefinition extends { id: string }> =
-  ContentEditorialEventsFor<TDefinition> &
+  ContentDeliveryEventsFor<TDefinition> &
+    ContentEditorialEventsFor<TDefinition> &
     ContentLocalizationEventsFor<TDefinition> &
     ContentPublicationEventsFor<TDefinition> &
     Record<`content.${TDefinition["id"]}.created`, ContentCreatedPayload> &
