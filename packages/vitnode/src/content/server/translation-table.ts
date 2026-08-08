@@ -20,6 +20,7 @@ import {
 import { ContentEngineError } from "../errors";
 import { contentTranslationPrimaryKeyName } from "../indexes";
 import { partitionContentFields } from "../localization";
+import { contentStorageColumns } from "../paths";
 import {
   buildContentColumn,
   buildTranslationPublicationColumns,
@@ -58,7 +59,11 @@ export const createContentTranslationTable = <
     );
   }
 
-  const { localizedFields } = partitionContentFields(definition.fields);
+  // Flattened, so a localized group contributes its leaf columns here exactly
+  // as a shared one does on the base table.
+  const localizedFields = contentStorageColumns(
+    partitionContentFields(definition.fields).localizedFields,
+  );
   const baseColumns = table as unknown as Record<string, PgColumn>;
 
   const columns: Record<string, PgColumnBuilderBase> = {
@@ -120,11 +125,18 @@ export const contentTranslationTableColumns = <
     ...(definition.publication.enabled
       ? CONTENT_TRANSLATION_PUBLICATION_FIELDS
       : []),
-    ...Object.keys(localizedFields),
+    ...Object.keys(contentStorageColumns(localizedFields)),
   ];
 
-  return Object.fromEntries(names.map(name => [name, source[name]])) as Record<
-    ContentTranslationColumnName<TDefinition>,
-    PgColumn
-  >;
+  return {
+    ...Object.fromEntries(names.map(name => [name, source[name]])),
+    // Canonical paths as aliases of the generated leaf columns, exactly as
+    // `contentTableColumns` registers them for the base table - so a filter or a
+    // search configured in paths resolves on either side of the join.
+    ...Object.fromEntries(
+      definition.advanced.leaves
+        .filter(leaf => leaf.localized)
+        .map(leaf => [leaf.path, source[leaf.columnName]]),
+    ),
+  } as Record<ContentTranslationColumnName<TDefinition>, PgColumn>;
 };

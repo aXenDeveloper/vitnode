@@ -310,8 +310,8 @@ export const diffChangedPaths = (
 /**
  * The column patch for a set of changed paths.
  *
- * Only the leaves that moved are written, so an `UPDATE` touches `seo_title` and
- * leaves `seo_description` alone - which is what a partial group update has to
+ * Only the leaves that moved are written, so an `UPDATE` touches `seoTitle` and
+ * leaves `seoDescription` alone - which is what a partial group update has to
  * mean if two people editing different leaves are not to overwrite each other.
  */
 export const changedPathsToColumns = (

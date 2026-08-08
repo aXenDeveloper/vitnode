@@ -10,6 +10,7 @@ import { alias, getTableConfig } from "drizzle-orm/pg-core";
 import type { AnyContentTypeDefinition } from "../types";
 
 import { ContentEngineError } from "../errors";
+import { isContentRelationCollection } from "../paths";
 
 export interface ReferenceTarget {
   /** Aliased, so two relations pointing at the same table can both be joined. */
@@ -67,6 +68,10 @@ export const resolveReferenceTargets = (
 
   for (const [name, fieldValue] of Object.entries(fields)) {
     if (fieldValue.kind !== "relation" && fieldValue.kind !== "user") continue;
+    // A to-many relation has no foreign key *here*: its two are on the
+    // generated junction table, and its picker resolves through
+    // `model.advancedTables` rather than through a column on this row.
+    if (isContentRelationCollection(fieldValue)) continue;
 
     const reference = byOwnerColumn.get(name);
     if (!reference) {

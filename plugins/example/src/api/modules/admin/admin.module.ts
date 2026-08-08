@@ -2,6 +2,7 @@ import { buildModule } from "@vitnode/core/api/lib/module";
 import { buildContentAdminModule } from "@vitnode/core/content/server";
 
 import { CONFIG_PLUGIN } from "@/const";
+import { advancedArticleContent } from "@/database/advanced-articles";
 import { articleContent } from "@/database/articles";
 import { categoryContent } from "@/database/categories";
 import { localizedArticleContent } from "@/database/localized-articles";
@@ -26,7 +27,12 @@ export const adminModule = buildModule({
       // could not edit `title` in any language would be a worse thing to ship
       // than no form at all. Stage 5B adds the locale tabs and registers it in
       // `config.tsx` alongside the others.
-      contentTypes: [articleContent, categoryContent, localizedArticleContent],
+      contentTypes: [
+        advancedArticleContent,
+        articleContent,
+        categoryContent,
+        localizedArticleContent,
+      ],
     }),
   ],
 });

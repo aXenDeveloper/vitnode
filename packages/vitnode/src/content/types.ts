@@ -232,8 +232,8 @@ export interface ContentRelationField<
  * A reusable structured group: several leaves under one logical name.
  *
  * The value stays nested (`seo.title`), and the storage stays relational - each
- * leaf becomes an ordinary column on the base or translation table, named
- * `seoTitle` and therefore `seo_title` in SQL. There is no JSONB here: a
+ * leaf becomes an ordinary column on the base or translation table, called
+ * `seoTitle`. There is no JSONB here: a
  * flattened column is indexable, constrainable and queryable, and a group is a
  * fixed set of leaves rather than an open bag.
  *
@@ -542,7 +542,7 @@ type ScalarColumnFieldKeys<TFields> = Exclude<
  *
  * One representation, used by `changedFields`, validation errors, index
  * declarations, `publicApi.fields`, `search.contentFields` and revision
- * diagnostics alike. The generated column name (`seo_title`) is an internal
+ * diagnostics alike. The generated column name (`seoTitle`) is an internal
  * mapping and never appears in any of them.
  */
 export type ContentLeafPath<TFields> = string &
@@ -1502,7 +1502,7 @@ export interface ResolvedContentAdvancedConfig {
 
 /** One group leaf: its canonical path and the column it is stored in. */
 export interface ContentLeafColumn {
-  /** `seoTitle`, which Drizzle's camelCase casing emits as `seo_title`. */
+  /** `seoTitle` - the generated column, in the same camelCase every other one uses. */
   columnName: string;
   /** The owning group's name. */
   group: string;

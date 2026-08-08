@@ -51,7 +51,7 @@ const toSnapshotValue = (value: unknown): ContentSnapshotScalar => {
  * One field's value, in the **logical** shape.
  *
  * A group is snapshotted as the nested object it is, read out of the flattened
- * columns the row actually carries - so a snapshot never mentions `seo_title`,
+ * columns the row actually carries - so a snapshot never mentions `seoTitle`,
  * and a later rename of the column-naming rule cannot invalidate the history. A
  * nullable group whose every leaf is empty is `null`, exactly as a read of it
  * would be.

@@ -118,7 +118,9 @@ export {
   RESERVED_FILTER_KEYS,
 } from "./const";
 export { defineContentType } from "./define";
+export type { ContentAdvancedCode } from "./errors";
 export {
+  ContentAdvancedInputError,
   ContentDefaultTranslationRequired,
   ContentEngineError,
   ContentInputError,

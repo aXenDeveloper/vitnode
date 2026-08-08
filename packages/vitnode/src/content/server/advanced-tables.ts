@@ -51,14 +51,14 @@ import { buildContentColumn } from "./column-builders";
  *
  * ```text
  * example_articles_categories
- *   item_id         -> example_articles.id      ON DELETE CASCADE
- *   related_item_id -> example_categories.id    ON DELETE <configured>
- *   position        integer NOT NULL
- *   created_at      timestamp NOT NULL DEFAULT now()
+ *   itemId        -> example_articles.id     ON DELETE CASCADE
+ *   relatedItemId -> example_categories.id   ON DELETE <configured>
+ *   position      integer NOT NULL
+ *   createdAt     timestamp NOT NULL DEFAULT now()
  *
- *   PRIMARY KEY (item_id, related_item_id)
- *   UNIQUE      (item_id, position)
- *   INDEX       (related_item_id)
+ *   PRIMARY KEY (itemId, relatedItemId)
+ *   UNIQUE      (itemId, position)
+ *   INDEX       (relatedItemId)
  * ```
  *
  * `itemId` always cascades: the references *belong to* the source record, so
@@ -141,15 +141,15 @@ export const createContentJunctionTable = ({
  *
  * ```text
  * example_articles_faq
- *   id         serial PRIMARY KEY
- *   item_id    -> example_articles.id  ON DELETE CASCADE
- *   position   integer NOT NULL
- *   created_at timestamp NOT NULL DEFAULT now()
- *   updated_at timestamp NOT NULL DEFAULT now()
- *   question   varchar(255) NOT NULL
- *   answer     text NOT NULL
+ *   id        serial PRIMARY KEY
+ *   itemId    -> example_articles.id  ON DELETE CASCADE
+ *   position  integer NOT NULL
+ *   createdAt timestamp NOT NULL DEFAULT now()
+ *   updatedAt timestamp NOT NULL DEFAULT now()
+ *   question  varchar(200) NOT NULL
+ *   answer    text NOT NULL
  *
- *   UNIQUE (item_id, position)
+ *   UNIQUE (itemId, position)
  * ```
  *
  * `id` is a `serial` of its own and **not** `(itemId, position)`. Position is

@@ -29,4 +29,10 @@ export const EXAMPLE_MIGRATIONS = [
   // `DEFAULT 'draft'`, so every translation written while Stage 5A was current
   // becomes a draft rather than being silently published.
   "0030_add_translation_editorial.sql",
+  // Stage 6: the advanced-modeling fixture. One base table with a flattened
+  // shared group, one translation table with a flattened localized group, two
+  // junction tables (one of them a self-relation) and one repeatable child
+  // table - each with the constraints that make its ordering and its integrity
+  // facts about the database rather than about the service.
+  "0031_add_example_advanced_articles.sql",
 ];

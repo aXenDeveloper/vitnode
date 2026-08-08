@@ -29,6 +29,11 @@ import {
 } from "../errors";
 import { partitionContentFields } from "../localization";
 import {
+  contentColumnsToValues,
+  contentStorageColumns,
+  contentValuesToColumns,
+} from "../paths";
+import {
   contentDatabase,
   findContentLanguage,
   listContentLanguages,
@@ -254,10 +259,21 @@ export const createContentTranslationModel = <
   }
 
   const { localizedFields } = partitionContentFields(definition.fields);
+  // Flattened, so a localized group is selected, written and diffed as its leaf
+  // columns - and folded back into its nested shape by `toRow`.
+  const localizedColumns = contentStorageColumns(localizedFields);
   const localizedNames = Object.keys(
-    localizedFields,
+    localizedColumns,
   ) as ContentLocalizedFieldName<TDefinition>[];
   const { defaultLocale } = definition.localization;
+
+  // Generated column -> canonical path, so a translation reports `seo.title`
+  // where it stores `seoTitle`.
+  const pathByColumn = new Map(
+    definition.advanced.leaves
+      .filter(leaf => leaf.localized)
+      .map(leaf => [leaf.columnName, leaf.path]),
+  );
 
   const itemColumn = columns.itemId;
   const languageColumn = columns.languageId;
@@ -275,7 +291,7 @@ export const createContentTranslationModel = <
   // consequence would be `/en/my-post` and `/pl/my_post`.
   const { withCreateSlugs, withUpdateSlugs } = createSlugNormalizer(
     contentTypeId,
-    localizedFields,
+    localizedColumns,
   );
 
   const metaSelection = (): Record<string, PgColumn> =>
@@ -349,8 +365,10 @@ export const createContentTranslationModel = <
     row: Record<string, unknown>,
     locale: string,
   ): ContentTranslationRow<TDefinition> => {
-    const values: Record<string, unknown> = {};
-    for (const name of localizedNames) values[name] = row[name];
+    // Nested, as the caller declared it: `seoTitle` and `seoDescription` become
+    // `seo: { title, description }`, or `seo: null` when the group is nullable
+    // and both leaves are empty.
+    const values = contentColumnsToValues(localizedFields, row);
 
     return {
       ...toMeta(row, locale),
@@ -518,7 +536,7 @@ export const createContentTranslationModel = <
       const [row] = await database
         .insert(translationTable)
         .values({
-          ...withCreateSlugs(parsed),
+          ...withCreateSlugs(contentValuesToColumns(localizedFields, parsed)),
           itemId,
           languageId: target.id,
           ...(initialVersion === undefined ? {} : { version: initialVersion }),
@@ -685,12 +703,21 @@ export const createContentTranslationModel = <
       // query. Slugs are normalised before the diff, so re-sending the stored
       // slug in a different case counts as no change rather than a pointless
       // write.
-      const patch = withUpdateSlugs(schemas.update.parse(values));
+      const parsed = schemas.update.parse(values);
+      const patch = withUpdateSlugs(
+        contentValuesToColumns(localizedFields, parsed),
+      );
 
       const current = await readOne(itemId, target.id, database);
       if (!current) return null;
 
-      const changedFields = diffChangedFields(localizedNames, current, patch);
+      // Diffed in **columns**, reported in canonical paths: `seo.description`
+      // rather than `seoDescription`, so a translation's changed-field list
+      // speaks the same vocabulary the base row's does.
+      const changedColumns = diffChangedFields(localizedNames, current, patch);
+      const changedFields = changedColumns.map(
+        name => pathByColumn.get(name) ?? name,
+      ) as typeof changedColumns;
 
       // A no-op is a successful write that changed nothing: it must not bump the
       // version, must not move `updatedAt`, and must not fail on a stale
@@ -708,7 +735,7 @@ export const createContentTranslationModel = <
       const [row] = await database
         .update(translationTable)
         .set({
-          ...Object.fromEntries(changedFields.map(key => [key, patch[key]])),
+          ...Object.fromEntries(changedColumns.map(key => [key, patch[key]])),
           version: sql`${versionColumn} + 1`,
         })
         .where(

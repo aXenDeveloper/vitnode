@@ -218,6 +218,13 @@
       "when": 1786044755458,
       "tag": "0030_add_translation_editorial",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1786181800826,
+      "tag": "0031_add_example_advanced_articles",
+      "breakpoints": true
     }
   ]
 }

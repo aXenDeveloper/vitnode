@@ -460,6 +460,10 @@ const resolveAdmin = <TFields>(
   ] as const) {
     if (!names) continue;
     assertNotLocalized(id, label, names.map(String), localizedFields);
+    // Every surface here addresses a *column* - except the form, which is the
+    // one that renders a group as a section and a collection as an editor.
+    if (label === "admin.form.fields") continue;
+
     assertColumnField(label, names.map(String));
   }
 

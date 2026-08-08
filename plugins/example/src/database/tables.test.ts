@@ -7,6 +7,13 @@ import { describe, expect, it } from "vitest";
 
 import { EXAMPLE_MIGRATIONS } from "@/const";
 
+import {
+  example_advanced_articles,
+  example_advanced_articles_categories,
+  example_advanced_articles_faq,
+  example_advanced_articles_related_articles,
+  example_advanced_articles_translations,
+} from "./advanced-articles";
 import { example_articles } from "./articles";
 import { example_categories } from "./categories";
 import {
@@ -31,6 +38,21 @@ const localizedTranslationTable = (() => {
   return example_localized_articles_translations;
 })();
 const localizedTranslations = getTableConfig(localizedTranslationTable);
+
+const advancedArticles = getTableConfig(example_advanced_articles);
+const advancedCategories = getTableConfig(example_advanced_articles_categories);
+const advancedRelated = getTableConfig(
+  example_advanced_articles_related_articles,
+);
+const advancedFaq = getTableConfig(example_advanced_articles_faq);
+
+const advancedTranslations = (() => {
+  if (!example_advanced_articles_translations) {
+    throw new Error("example.advanced-article generated no translation table.");
+  }
+
+  return getTableConfig(example_advanced_articles_translations);
+})();
 
 const indexNames = (config: typeof articles) =>
   config.indexes.map(item => item.config.name);
@@ -232,6 +254,15 @@ describe("the generated migration", () => {
         ...indexNames(categories),
         ...indexNames(localizedArticles),
         ...indexNames(localizedTranslations),
+        // Stage 6: the base table, its translations, the two junctions and the
+        // repeatable child table. Every one of them is generated from a
+        // resolved definition entry, so the migration and the definition agree
+        // here for exactly the reason the four above do.
+        ...indexNames(advancedArticles),
+        ...indexNames(advancedTranslations),
+        ...indexNames(advancedCategories),
+        ...indexNames(advancedRelated),
+        ...indexNames(advancedFaq),
       ].sort(byName),
     );
   });

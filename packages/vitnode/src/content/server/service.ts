@@ -381,7 +381,7 @@ export const createContentService = <
    * A database row, in the logical shape callers see.
    *
    * The generated columns pass straight through; the declared fields go through
-   * `contentColumnsToValues`, which folds `seo_title` and `seo_description` back
+   * `contentColumnsToValues`, which folds `seoTitle` and `seoDescription` back
    * into `seo: { title, description }` - or into `seo: null` when the group is
    * nullable and every leaf is empty. For a content type with no group this is
    * a copy, which is why a Stage 1-5 row comes back byte-identical.

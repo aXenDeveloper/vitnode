@@ -184,6 +184,11 @@ export const createContentLocalizedPublicService = <
     isLocalized(ownerOf(name)),
   );
   const publicCollections = contentPublicCollectionFields(definition);
+  const localizedColumnByPath = new Map(
+    definition.advanced.leaves
+      .filter(leaf => leaf.localized)
+      .map(leaf => [leaf.path, leaf.columnName]),
+  );
 
   /**
    * Attaches the exposed collections to a page of rows.
@@ -297,13 +302,28 @@ export const createContentLocalizedPublicService = <
    * translation matched and every localized value comes from it, or none did and
    * every value comes from the fallback.
    */
+  /**
+   * A canonical path, resolved to the column on the **aliased** translation.
+   *
+   * The two aliases are fresh Drizzle tables, so they carry the generated
+   * column keys and not the path aliases `contentTranslationTableColumns`
+   * registers. Mapping here rather than there is what keeps the alias trick a
+   * convenience on the model's column map instead of something every join has
+   * to reproduce.
+   */
+  const translationColumnName = (name: string): string =>
+    localizedColumnByPath.get(name) ?? name;
+
   const localizedValue = (
     name: string,
     withFallback: boolean,
-  ): PgColumn | SQL =>
-    withFallback
-      ? sql`case when ${requestedRows.itemId} is not null then ${requestedRows[name]} else ${fallbackRows[name]} end`
-      : requestedRows[name];
+  ): PgColumn | SQL => {
+    const column = translationColumnName(name);
+
+    return withFallback
+      ? sql`case when ${requestedRows.itemId} is not null then ${requestedRows[column]} else ${fallbackRows[column]} end`
+      : requestedRows[column];
+  };
 
   const selection = (
     withFallback: boolean,

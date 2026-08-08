@@ -239,8 +239,11 @@ export const createContentAdvancedStore = <
     const resolved = junction
       ? (getTableConfig(junction as unknown as PgTable)
           .foreignKeys.map(foreignKey => foreignKey.reference())
+          // Drizzle is configured with no `casing` transform, so a column is
+          // named by its object key on both sides - `relatedItemId` here and
+          // `relatedItemId` in SQL.
           .find(reference =>
-            reference.columns.some(column => column.name === "related_item_id"),
+            reference.columns.some(column => column.name === "relatedItemId"),
           )?.foreignColumns[0] ?? null)
       : null;
 

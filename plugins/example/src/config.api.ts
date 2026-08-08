@@ -3,6 +3,7 @@ import { buildContentPublicModule } from "@vitnode/core/content/server";
 
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { CONFIG_PLUGIN } from "@/const";
+import { advancedArticleContent } from "@/database/advanced-articles";
 import { articleContent } from "@/database/articles";
 import { categoryContent } from "@/database/categories";
 import { localizedArticleContent } from "@/database/localized-articles";
@@ -31,6 +32,7 @@ export const exampleApiPlugin = () =>
       buildContentPublicModule({
         pluginId: CONFIG_PLUGIN.pluginId,
         contentTypes: [
+          advancedArticleContent,
           articleContent,
           categoryContent,
           localizedArticleContent,

@@ -301,21 +301,11 @@ type LeafDescriptorAt<TFields, TPath> =
     ? TOwner extends keyof TFields
       ? TFields[TOwner] extends { fields: infer TInner }
         ? TLeaf extends keyof TInner
-          ? RelaxedLeaf<TFields[TOwner], TInner[TLeaf]>
+          ? TInner[TLeaf]
           : never
         : never
       : never
     : never;
-
-/** The type-level twin of `relaxLeafNullability`. */
-type RelaxedLeaf<TGroup, TLeaf> = TGroup extends {
-  nullable: false;
-  required: true;
-}
-  ? TLeaf
-  : TLeaf extends { nullable: true }
-    ? TLeaf
-    : Omit<TLeaf, "nullable"> & { nullable: true };
 
 /**
  * The base `pgTable` for one definition.

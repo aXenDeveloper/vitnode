@@ -12,7 +12,7 @@ import { CONTENT_ADVANCED_LEAF_KINDS, CONTENT_PATH_SEPARATOR } from "./const";
  * The one place a canonical field path is built, split or turned into a column.
  *
  * Stage 6 gives one logical value two representations: `seo.title`, which every
- * subsystem speaks, and `seo_title`, which only Postgres speaks. Every subsystem
+ * subsystem speaks, and `seoTitle`, which only Postgres speaks. Every subsystem
  * that needs the second one asks *this* module for it - the table generator, the
  * schemas, the services, the revision snapshotter, the public projector, the
  * search mapper and the AdminCP alike - so the mapping cannot be reinvented
@@ -46,10 +46,11 @@ export const isContentFieldPath = (path: string): boolean =>
 /**
  * `("seo", "title")` -> `"seoTitle"`.
  *
- * camelCase because the Drizzle client runs with `casing: "camelCase"`, which is
- * what turns it into `seo_title` in SQL - the same rule every hand-written
- * VitNode column already follows. Building the SQL identifier here instead would
- * make the generated table the only one in the codebase that does not.
+ * camelCase, because that is what every VitNode column is called in SQL too:
+ * Drizzle is configured with no `casing` transform, so a column key is the
+ * column name verbatim - `createdAt`, not `created_at`. A leaf column joining
+ * that convention rather than inventing a second one is what keeps a generated
+ * migration readable next to a hand-written table.
  */
 export const contentLeafColumnName = (owner: string, leaf: string): string =>
   `${owner}${leaf.charAt(0).toUpperCase()}${leaf.slice(1)}`;
@@ -171,42 +172,18 @@ export const contentStorageColumns = (
 
     const inner = contentInnerFields(fieldValue);
     for (const [leaf, leafValue] of Object.entries(inner)) {
-      // A leaf of an optional or nullable group has to be storable as NULL:
-      // omitting the group has to write *something*, and the only honest
-      // something is nothing. See `relaxLeafNullability`.
-      columns[contentLeafColumnName(name, leaf)] = relaxLeafNullability(
-        fieldValue,
-        leafValue,
-      );
+      // The leaf's own nullability, unchanged. `resolveContentAdvanced` has
+      // already proven the two states a group can be in are both storable: a
+      // `nullable: true` group has all-nullable leaves, so `seo: null` can blank
+      // every column, and an optional group has leaves that are nullable or
+      // defaulted, so omitting it writes something valid. Nothing has to be
+      // relaxed here, which is why `syndicationIndexable` comes out
+      // `NOT NULL DEFAULT true` rather than merely defaulted.
+      columns[contentLeafColumnName(name, leaf)] = leafValue;
     }
   }
 
   return columns;
-};
-
-/**
- * The column nullability of one leaf.
- *
- * A leaf inside a group that may be absent (`required: false`) or explicitly
- * blanked (`nullable: true`) is stored in a nullable column whatever its own
- * `nullable` says, because both of those states have to be representable. The
- * leaf's own `nullable` still governs what a *request* may send: `seo: { title:
- * null }` is rejected for a non-nullable leaf even though the column would take
- * it, which is what keeps "the group is absent" and "the title was cleared" two
- * different things.
- */
-export const relaxLeafNullability = (
-  group: ContentFieldDescriptor,
-  leaf: ContentFieldDescriptor,
-): ContentFieldDescriptor => {
-  if (group.required && !group.nullable) return leaf;
-  if (leaf.nullable) return leaf;
-
-  // The spread widens `nullable` past what a few descriptor interfaces pin -
-  // `repeatable` declares it literally `false` - but a leaf is only ever one of
-  // `CONTENT_ADVANCED_LEAF_KINDS`, which `resolveContentAdvanced` has already
-  // proven, and every one of those takes `nullable: boolean`.
-  return { ...leaf, nullable: true } as ContentFieldDescriptor;
 };
 
 export interface ContentAdvancedPartition {
