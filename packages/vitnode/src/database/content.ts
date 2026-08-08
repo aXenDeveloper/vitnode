@@ -10,9 +10,11 @@ import type {
 
 import {
   CONTENT_ACTOR_TYPES,
+  CONTENT_DELIVERY_PATH_MAX_LENGTH,
   CONTENT_REVISION_OPERATIONS,
   CONTENT_SCHEDULE_ACTIONS,
   CONTENT_SCHEDULE_STATUSES,
+  CONTENT_SLUG_DEFAULT_LENGTH,
 } from "../content/const";
 import { core_users } from "./users";
 
@@ -207,6 +209,90 @@ export const core_content_schedules = pgTable(
 ).enableRLS();
 
 export type ContentScheduleRow = typeof core_content_schedules.$inferSelect;
+
+/**
+ * Every slug that has ever been a **publicly addressable** URL, for content types
+ * with `delivery.redirects`.
+ *
+ * Shared and foreign-key-free for the same two reasons as
+ * {@link core_content_revisions}: the target table is generated at runtime so
+ * core's static schema cannot name it, and a URL's history stays true after the
+ * record is gone. It is scoped by `(contentTypeId, itemId)` on every query, and a
+ * delete leaves the history in place - an incoming link to a deleted article is
+ * exactly the diagnostic somebody will want, and the resolver answers 404 for it
+ * by reading the live record rather than by having forgotten the URL.
+ *
+ * `languageId` is the locale identity, and `NULL` means the slug is **shared**:
+ * either the content type is not localized, or it is and its slug lives on the
+ * base row. That single column is what makes `/en/articles/hello` and
+ * `/pl/articles/hello` two independent histories - changing the English URL
+ * creates no Polish redirect - while a shared slug stays one reservation covering
+ * every language it appears in.
+ *
+ * `retiredAt` is `NULL` while the slug is the record's *current* address and is
+ * stamped when it moves away. Both states are stored, which is what makes the
+ * uniqueness below a **reservation** rather than only a log: a retired URL cannot
+ * be claimed by unrelated content, so nobody's incoming links quietly change
+ * meaning.
+ */
+export const core_content_slug_history = pgTable(
+  "core_content_slug_history",
+  t => ({
+    id: t.serial().primaryKey(),
+    pluginId: t.varchar({ length: 255 }).notNull(),
+    contentTypeId: t.varchar({ length: 100 }).notNull(),
+    itemId: t.integer().notNull(),
+    /** `NULL` for a shared slug. See the table comment. */
+    languageId: t.integer(),
+    slug: t.varchar({ length: CONTENT_SLUG_DEFAULT_LENGTH }).notNull(),
+    /**
+     * The canonical path this slug produced, e.g. `/pl/articles/stary-slug`.
+     *
+     * Stored rather than rebuilt on read, and the reason is that it is the one
+     * thing the engine cannot recompute later: a path is built from
+     * `publicApi.path`, which is source configuration a developer may change. The
+     * URL that was live is a historical fact, so it is recorded as one - and the
+     * AdminCP shows exactly the address somebody's bookmark holds.
+     */
+    path: t.varchar({ length: CONTENT_DELIVERY_PATH_MAX_LENGTH }).notNull(),
+    createdAt: t.timestamp().notNull().defaultNow(),
+    /** When this slug stopped being the record's address. `NULL` while current. */
+    retiredAt: t.timestamp(),
+  }),
+  t => [
+    // The reservation, and the resolver's lookup, in one index each.
+    //
+    // Two partial uniques rather than one over a nullable `languageId`, for
+    // exactly the reason `core_content_revisions` needs two: Postgres treats every
+    // `NULL` as distinct, so a single key including it would enforce nothing at
+    // all for the shared case it exists to protect.
+    //
+    // No `pluginId` in either key. `validateContentTypes` rejects a duplicate
+    // content type id across every installed plugin at boot, so an id already
+    // identifies one content type - adding the owner would widen the index without
+    // excluding anything. It is still a column, because ownership is what a
+    // cleanup or an audit keys off.
+    uniqueIndex("core_content_slug_history_shared_unique")
+      .on(t.contentTypeId, t.slug)
+      .where(sql`"languageId" IS NULL`),
+    uniqueIndex("core_content_slug_history_locale_unique")
+      .on(t.contentTypeId, t.languageId, t.slug)
+      .where(sql`"languageId" IS NOT NULL`),
+    // One record's history, for the AdminCP panel and for retiring the slug a
+    // mutation just moved away from. The unique indexes above cannot serve it:
+    // they lead with the slug rather than with the item, and a partial index is
+    // only usable for queries the planner can prove match its predicate.
+    index("core_content_slug_history_item_idx").on(
+      t.contentTypeId,
+      t.itemId,
+      t.languageId,
+    ),
+    index("core_content_slug_history_plugin_id_idx").on(t.pluginId),
+  ],
+).enableRLS();
+
+export type ContentSlugHistoryRow =
+  typeof core_content_slug_history.$inferSelect;
 
 /** Re-exported so `src/database` consumers need not reach into `content/`. */
 export type {
