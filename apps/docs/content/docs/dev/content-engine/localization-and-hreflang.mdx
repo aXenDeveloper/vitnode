@@ -1,0 +1,207 @@
+---
+title: Localization and hreflang
+description: Alternates are real published translations and nothing else - so an hreflang never points at a 404, and a fallback never fabricates a URL.
+icon: Languages
+---
+
+A localized record has one URL per language, and a page has to announce the others.
+`delivery.alternates()` is that list, and its defining property is what it leaves
+out.
+
+```ts
+await delivery.alternates(42);
+// [
+//   { locale: "en", path: "/en/articles/my-article" },
+//   { locale: "pl", path: "/pl/articles/moj-artykul" },
+// ]
+```
+
+## An alternate is a promise that a URL resolves
+
+So it is included only when **all** of this holds:
+
+```text
+the base row is published
+AND the translation is published
+AND publishedAt <= now
+AND the installation still serves that language
+```
+
+That is the same subordinated predicate the
+[localized public read](/docs/dev/content-engine/localized-public-api) applies - not
+a second implementation of it - so an alternate can never describe something the
+public API would refuse to serve.
+
+Ordered by locale, so two processes rendering the same `hreflang` set produce the
+same markup.
+
+## Fallback never fabricates an alternate
+
+This is the rule to internalise:
+
+```text
+Article #42
+  EN published
+  PL published
+  DE draft
+```
+
+```text
+alternates:  /en/articles/…  /pl/articles/…
+             (no DE)
+```
+
+A German reader with `fallback: "default"` will be *served* the English copy - that
+is what fallback is for. But German has no URL of its own, so listing
+`/de/articles/…` would announce an `hreflang` pointing at a 404 and invite a crawler
+to index the same content twice under two addresses.
+
+Fallback decides **which translation answers a request**. It never creates a URL.
+
+## hreflang
+
+```ts
+const metadata = await delivery.findById(42, { locale: "pl" });
+
+metadata.hreflang;
+// {
+//   languages: { en: "/en/articles/my-article", pl: "/pl/articles/moj-artykul" },
+//   xDefault: "/en/articles/my-article",
+// }
+```
+
+Framework-neutral by design: `{ languages, xDefault? }` rather than a Next.js
+`Metadata` object, because the core engine has no business knowing which framework
+renders it. The [Next.js adapter](/docs/dev/content-engine/content-delivery-nextjs)
+turns it into `alternates.languages` in one line, and an Astro or Remix adapter would
+do the same.
+
+## x-default
+
+```ts
+delivery: {
+  enabled: true,
+  hreflang: { xDefault: "defaultLocale" },
+}
+```
+
+`"defaultLocale"` is the only supported value, and that is deliberate: an `x-default`
+has to point at a URL that actually resolves, and the default locale's canonical path
+is the one URL a localized record is guaranteed to have whenever it is public at all.
+
+It is emitted **only when that language is genuinely published**:
+
+```text
+EN published, PL published   →  x-default = /en/articles/…
+EN unpublished, PL published →  no x-default at all
+```
+
+An `x-default` pointing at a translation the record does not have would be a hint to
+crawl a 404 - worse than emitting nothing.
+
+Omit the block and no `x-default` is emitted. The engine will not invent a
+locale-less route it does not serve.
+
+<Callout type="info" title="It needs localization">
+  `delivery.hreflang` on a content type without `localization` is a definition-time
+  error. One language has no alternates, so there is nothing for an `x-default` to be
+  the default of.
+</Callout>
+
+## Per-locale slug history
+
+Each locale's redirects are its own, because `languageId` is part of the history key:
+
+```text
+EN:  /en/articles/hello  →  /en/articles/hello-world
+PL:  /pl/articles/witaj      (unchanged, no redirect created)
+```
+
+Changing the English URL retires an English address and reserves an English one. The
+Polish history is not read and not written.
+
+The same slug may be retired independently in two locales - `/en/x/shared` and
+`/pl/x/shared` are two URLs, so two different records may each own one of them:
+
+```sql
+UNIQUE (contentTypeId, languageId, slug) WHERE languageId IS NOT NULL
+```
+
+A nonlocalized content type uses `languageId = NULL` and the other partial index.
+
+### A localized slug is required for redirects
+
+```ts
+// ✖ localized content type, shared slug
+fields: {
+  slug: field.slug({ source: "title" }),   // shared
+  title: field.text({ localized: true, required: true }),
+}
+delivery: { enabled: true, redirects: { enabled: true } }
+```
+
+Every language would answer to the same segment, so `/en/x/hello` and `/pl/x/hello`
+are both live and one slug change moves both at once. Slug history stores *the URL
+that was live*, so one retired row would have to be several paths - and the AdminCP
+would show one of them as if it were the address somebody bookmarked.
+
+Canonical URLs, SEO, alternates and the sitemap all work fine in that shape. Only the
+reservation is ambiguous, so only `redirects` is refused. Mark the slug
+`localized: true` and everything is available.
+
+## Unpublishing one language
+
+```text
+EN translation unpublished
+  /en/articles/hello-world     not_found
+  /en/articles/hello (retired) not_found
+  /pl/articles/witaj           still canonical
+```
+
+One language going dark is not the record going dark. The resolver reads the live
+subordinated publication state per locale, so nothing else is affected - and
+republishing the English translation brings its redirects back.
+
+## Deleting one translation
+
+The translation's history is **kept**, exactly as a deleted record's is: the URL
+existed, and the resolver answers `not_found` for it by finding no live translation
+rather than by having forgotten it.
+
+## The locale is normalized everywhere
+
+`PL`, `pl` and `" pl "` produce one path, one cache tag and one history lookup. The
+canonical spelling always comes back off `core_languages.code`, never the caller's
+casing - see [Canonical URLs](/docs/dev/content-engine/canonical-urls#the-locale-is-normalized).
+
+## Localized sitemaps
+
+Each language is its own sitemap file, and a draft translation contributes nothing:
+
+```text
+Article #42   EN published   PL published   DE draft
+
+/en/articles/article
+/pl/articles/artykul
+```
+
+No fallback URLs, for the same reason there are no fallback alternates. See
+[Sitemaps](/docs/dev/content-engine/sitemaps#localized-sitemaps).
+
+## Events
+
+A translation slug change emits the delivery events with the locale attached:
+
+```ts
+{
+  contentId: 42,
+  locale: "pl",
+  previousSlug: "stary-slug",
+  slug: "nowy-slug",
+  previousPath: "/pl/articles/stary-slug",
+  canonicalPath: "/pl/articles/nowy-slug",
+}
+```
+
+They arrive **alongside** `translation_updated`, never instead of it. See
+[Slug history and redirects](/docs/dev/content-engine/slug-history-and-redirects#events).

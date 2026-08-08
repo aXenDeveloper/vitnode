@@ -275,7 +275,33 @@ content.example.article.translation_unpublished   (with publication)
 content.example.article.translation_restored      (with editorial)
 ```
 
-Every one of them carries `locale` and `languageId`. They are deliberately
+And one that opts into
+[`delivery`](/docs/dev/content-engine/content-delivery) emits two more:
+
+```text
+content.example.article.delivery_slug_changed
+content.example.article.delivery_redirect_created
+```
+
+These arrive **alongside** `updated` (or `restored`, or `translation_updated`), never
+instead of one: a field moving and a URL moving are different facts with different
+audiences. A listener that mirrors content wants the first; one that warms a CDN, tells
+an external search engine or writes to an edge redirect table wants the second, and
+would otherwise have to inspect `changedFields` for a slug field whose name it cannot
+know.
+
+`delivery_redirect_created` fires only when the old address had genuinely been
+**publicly addressable** - so an article whose slug was corrected three times while it
+was still a draft emits nothing, and a published article that moves emits exactly one.
+That is the difference between "a URL now needs a redirect" and "somebody edited a
+field". Both payloads carry `previousPath` and `canonicalPath`, and `locale` is `null`
+when the slug is shared.
+
+There is deliberately no sitemap event: every mutation that changes a sitemap line
+already emits one of these or a publication event, and a third carrying no new
+information would be one more thing to keep consistent for no listener's benefit.
+
+Every translation event carries `locale` and `languageId`. They are deliberately
 **not** folded into `updated`: a shared update and a Polish translation update
 are different domain facts with different consequences - one invalidates every
 language, the other invalidates one - and a listener that had to inspect
@@ -315,6 +341,21 @@ core event - `changedFields` narrows to that content type's own field names.
     restoredFromRevisionId: {
       description: "Restored only - the revision the values were taken from.",
       type: "number",
+    },
+    previousSlug: {
+      description:
+        "Delivery only - the slug the record answered to before this mutation.",
+      type: "string",
+    },
+    previousPath: {
+      description:
+        "Delivery only - the full path it answered to before, e.g. `/pl/articles/stary-slug`.",
+      type: "string",
+    },
+    canonicalPath: {
+      description:
+        "Delivery only - the path it answers to now, and where the historical one redirects.",
+      type: "string",
     },
     locale: {
       description:

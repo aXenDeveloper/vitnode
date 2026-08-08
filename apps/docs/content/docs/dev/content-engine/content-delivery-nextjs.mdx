@@ -1,0 +1,253 @@
+---
+title: Delivery in Next.js
+description: A thin adapter that turns framework-neutral delivery metadata into a generateMetadata return value, a sitemap.ts and a 308 - and nothing more.
+icon: FileCode
+---
+
+The core delivery layer is framework-neutral on purpose, so `@vitnode/core/content/next`
+is a translation layer and nothing else: it maps delivery metadata onto the two shapes
+Next.js asks for, and issues the redirect the resolver reports.
+
+It reads over **HTTP** rather than through `model.deliveryService`, because in VitNode's
+split deployment the web app is not the process that holds the database. A
+single-process install can call the service directly and skip this entirely.
+
+## generateMetadata
+
+```tsx title="src/app/[locale]/articles/[slug]/page.tsx"
+import { contentDeliveryMetadata } from "@vitnode/core/content/next";
+
+import { articleContentType } from "@vitnode/example/content/article";
+
+export const generateMetadata = async ({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}) => {
+  const { locale, slug } = await params;
+
+  return await contentDeliveryMetadata({
+    definition: articleContentType,
+    locale,
+    origin: "https://example.com",
+    pluginId: "@vitnode/example",
+    slug,
+  });
+};
+```
+
+That produces, for a published record:
+
+```ts
+{
+  title: "My article",
+  description: "A summary.",
+  alternates: {
+    canonical: "https://example.com/en/articles/my-article",
+    languages: {
+      en: "https://example.com/en/articles/my-article",
+      pl: "https://example.com/pl/articles/moj-artykul",
+      "x-default": "https://example.com/en/articles/my-article",
+    },
+  },
+  openGraph: {
+    title: "My article",
+    description: "A summary.",
+    url: "https://example.com/en/articles/my-article",
+  },
+  robots: { index: true, follow: true },
+}
+```
+
+Every key is **absent** rather than present-and-null when there is no value. Next
+renders a `null` title as an empty `<title>` and an absent one not at all, and an empty
+`<title>` is worse than none.
+
+`{}` for a URL that does not resolve, rather than a throw: `generateMetadata` runs
+alongside the page, the page is what calls `notFound()`, and a metadata function that
+threw would replace a clean 404 with an error boundary.
+
+### Pass an origin
+
+Optional, and strongly recommended. Without it every URL in the result is relative - a
+relative `canonical` is legal and resolves against the page, and an absolute one is
+what every SEO checker asks for.
+
+### The pure half
+
+```ts
+import { contentDeliveryToNextMetadata } from "@vitnode/core/content/next";
+
+contentDeliveryToNextMetadata(deliveryResponse, { origin });
+```
+
+Exported separately so a page that already holds the delivery response - because it
+fetched the record and its metadata together - can translate it without a second round
+trip. It is also what makes the mapping unit-testable without a network.
+
+## The page: redirect, render, or 404
+
+```tsx title="src/app/[locale]/articles/[slug]/page.tsx"
+import { contentDeliveryPage } from "@vitnode/core/content/next";
+
+const Page = async ({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}) => {
+  const { locale, slug } = await params;
+
+  // Only returns for the current slug: a moved URL has already 308ed, and a missing
+  // one has already 404ed.
+  const delivery = await contentDeliveryPage({
+    definition: articleContentType,
+    locale,
+    pluginId: "@vitnode/example",
+    slug,
+  });
+
+  return <Article delivery={delivery} />;
+};
+
+export default Page;
+```
+
+`contentDeliveryPage` is the only helper in the adapter with a side effect, which is why
+it lives in its own module: `next/navigation`'s control-flow functions throw to unwind
+the render, so a page that only wanted metadata should not be able to reach them by
+accident.
+
+It issues a **308** via `permanentRedirect`, with `RedirectType.replace` so a reader who
+follows an old link does not have to press back twice to leave a page they were never
+meant to land on.
+
+A draft, an unpublished record, a deleted one, a slug that never existed and a
+historical URL whose destination is no longer public are all the same `notFound()`. A
+redirect to hidden content would be a way to confirm it exists.
+
+<Callout type="info" title="Why not vitnode-frontend/navigation">
+  That wrapper is the locale-aware one every app-level redirect should use, and this is
+  the one place it would be wrong: a delivery location is a **complete** path that
+  already carries its locale segment - the engine built it - so routing it through
+  `next-intl` would prefix the locale a second time. It is also a 307, and a canonical
+  slug change needs the permanent, method-preserving 308.
+</Callout>
+
+### Resolving without acting
+
+```ts
+import { contentDeliveryResolve } from "@vitnode/core/content/next";
+
+const resolution = await contentDeliveryResolve({
+  definition: articleContentType,
+  locale,
+  pluginId: "@vitnode/example",
+  slug,
+});
+
+switch (resolution.type) {
+  case "content":
+    return resolution; // canonical metadata
+  case "redirect":
+    return resolution; // { location, status: 308 }
+  case "not_found":
+    return null;
+}
+```
+
+A discriminated union, so a caller branches on `type` rather than inferring which arm it
+is holding. The route answers `not_found` as a **200 with a body** rather than a 404,
+which is what lets a caller tell "this URL resolves to nothing" from "the delivery API
+is unreachable" - and keeps a negative out of the response cache, so publishing the
+record makes it resolve immediately.
+
+## Sitemap
+
+```ts title="src/app/sitemap.ts"
+import { contentSitemapEntries } from "@vitnode/core/content/next";
+
+const sitemap = async () => {
+  const { entries } = await contentSitemapEntries({
+    definition: articleContentType,
+    origin: "https://example.com",
+    pluginId: "@vitnode/example",
+  });
+
+  return entries;
+};
+
+export default sitemap;
+```
+
+It pages through the delivery sitemap route until the cursor runs out, so a content type
+with 40,000 published records is 40 requests rather than one enormous response.
+`maxPages` (default 100) is a backstop, because an unbounded loop against a paginated
+API is the one bug in this file that could take a site down - and reaching it is
+reported through `truncated` rather than thrown, so a partial sitemap is still a valid
+sitemap.
+
+```ts
+const { entries, truncated } = await contentSitemapEntries({ … });
+if (truncated) {
+  // Split with `generateSitemaps` - see contentSitemapChunks.
+}
+```
+
+Next caps a `sitemap.ts` at 50,000 URLs and splits beyond that with `generateSitemaps`;
+[`contentSitemapChunks`](/docs/dev/content-engine/sitemaps#scaling-past-one-file) is the
+helper that decides how many files that is.
+
+For a localized site, one call per locale:
+
+```ts
+const sitemap = async () => {
+  const locales = ["en", "pl"];
+  const pages = await Promise.all(
+    locales.map(async locale =>
+      (
+        await contentSitemapEntries({
+          definition: articleContentType,
+          locale,
+          origin: "https://example.com",
+          pluginId: "@vitnode/example",
+        })
+      ).entries,
+    ),
+  );
+
+  return pages.flat();
+};
+```
+
+## Cache tags
+
+Every read here is `cache: "force-cache"` and carries the delivery tag that a mutation
+expires:
+
+| Helper                     | Tag                                       |
+| -------------------------- | ----------------------------------------- |
+| `contentDeliveryResolve`   | `content:{id}:redirect:{locale?}:{slug}`   |
+| `contentDeliveryItem`      | `content:{id}:delivery:{locale?}:{itemId}` |
+| `contentSitemapEntries`    | `content:{id}:sitemap:{locale?}`           |
+
+`resolve` is tagged by the **slug** rather than the record, which is what makes a moved
+page stop being served from its former URL: a slug change expires the old address's
+lookup and the record's metadata at the same moment.
+
+`contentDeliveryItem` is tagged by the record, which makes it the right call for a page
+that already knows which record it is rendering - an edit to the SEO description expires
+it, and an unrelated record's publish does not.
+
+See [Cache behaviour](/docs/dev/content-engine/caching) for the whole tag list and what
+expires each one.
+
+## Metadata types are not in core
+
+`ContentDeliveryNextMetadata` is a structural type rather than an
+`import type { Metadata } from "next"`, so the core package does not grow a
+compile-time dependency on the framework's type surface for four keys. It is assignable
+to `Metadata`, which is what a `generateMetadata` needs it to be.
+
+That is the same reason the core engine returns `{ languages, xDefault? }` rather than
+Next's `alternates` shape: move to Astro and you write a different forty lines against
+the same service.

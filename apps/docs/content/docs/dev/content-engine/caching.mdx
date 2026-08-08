@@ -361,6 +361,90 @@ Nothing falls back to Polish, whatever the fallback setting is - so a Polish edi
 never throws away the English cache. See
 [Localized public API](/docs/dev/content-engine/localized-public-api#caching).
 
+## Delivery tags
+
+A content type with [`delivery`](/docs/dev/content-engine/content-delivery) produces
+three more scopes, in the same namespace and with the locale in the same position:
+
+```ts
+import {
+  contentDeliveryRedirectTag,
+  contentDeliverySitemapTag,
+  contentDeliveryTag,
+} from "@vitnode/core/content";
+
+contentDeliveryTag("example.article", 42);
+// "content:example.article:delivery:42"
+
+contentDeliveryTag("example.article", 42, "pl");
+// "content:example.article:delivery:pl:42"
+
+contentDeliveryRedirectTag("example.article", "stary-slug", "pl");
+// "content:example.article:redirect:pl:stary-slug"
+
+contentDeliverySitemapTag("example.article", "pl");
+// "content:example.article:sitemap:pl"
+```
+
+Each answers a different question a page asked, which is why they are separate from
+the three above rather than folded into them:
+
+| Scope      | Keyed by      | Holds                                              |
+| ---------- | ------------- | -------------------------------------------------- |
+| `delivery` | the record    | canonical path, alternates, SEO metadata            |
+| `redirect` | the **slug**  | "does this address still resolve here"              |
+| `sitemap`  | the locale    | one locale's file, and the index that lists them    |
+
+A `generateMetadata` that renders only metadata is tagged `delivery` alone, so an
+unrelated field of the record changing does not throw it away. A redirect lookup is
+tagged by the **old** address, because that is what a request for a moved page arrives
+with.
+
+### What expires them
+
+`contentInvalidationTags` takes an optional `delivery` block and derives everything
+from the data it already has - the affected locales and every slug the record answered
+to across the mutation:
+
+```ts
+contentInvalidationTags({
+  contentTypeId,
+  delivery: { sitemap: true },
+  id,
+  isPublic,
+  slugs: [previousSlug, currentSlug],
+  wasPublic,
+});
+```
+
+| Mutation                          | delivery | redirect (old + new) | sitemap |
+| --------------------------------- | -------- | -------------------- | ------- |
+| Slug change (published)            | ✅        | ✅                    | ✅       |
+| Publish / unpublish                | ✅        | ✅                    | ✅       |
+| Delete                            | ✅        | ✅                    | ✅       |
+| Restore that moves a slug          | ✅        | ✅                    | ✅       |
+| Translation create / delete        | ✅        | ✅                    | ✅       |
+| SEO field edit (still published)   | ✅        | ✅                    | ❌       |
+
+The last row is the one worth reading twice: an edit that only changed what an
+already-listed page *says* leaves the sitemap byte-identical, so its tag is not
+expired. Everything that adds, removes or moves a line in the file expires it - and on
+a localized content type that means each affected locale's file **and** the
+locale-less index that enumerates them.
+
+<Callout type="warn" title="Delivery is opt-in at this layer too">
+  Omit `delivery` from the input - which is what every content type without the block
+  does - and `contentInvalidationTags` returns exactly the strings it always returned,
+  byte for byte. Nothing existing has to be re-tagged, and no warm cache is thrown
+  away for a feature the content type does not use. A test asserts the exact lists.
+</Callout>
+
+### Background mutations
+
+A [scheduled](/docs/dev/content-engine/scheduling) publish reaches the web app through
+the same revalidation bridge, with the delivery tags included - there is no second
+cross-origin invalidation system, and the same all-origins-must-accept rule applies.
+
 ## Where the Next imports live
 
 Exactly one place: `@vitnode/core/content/next`.

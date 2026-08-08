@@ -1,0 +1,166 @@
+---
+title: Delivery limitations
+description: What Content Delivery deliberately does not do, and the reasoning behind each line - so you can tell a gap from a decision.
+icon: OctagonAlert
+---
+
+Delivery is metadata and routing infrastructure. Most of the list below is not
+"unfinished" - it is the shape of that decision.
+
+## It does not render anything
+
+No page builder, no layout builder, no block renderer, no React page generation. The
+engine answers "what is the URL of this, and what should the page say about itself"; what
+the page *is* belongs to the application.
+
+The practical consequence: delivery returns a path and a metadata object, and a plugin or
+an app builds `/pl/articles/moj-artykul` from them. It does not assume your route
+structure and it will not generate one.
+
+## No manual redirect manager
+
+There is no UI, no route and no service for creating a redirect by hand - and none for
+deleting one.
+
+The AdminCP panel is **read-only** on purpose. A redirect is somebody else's incoming
+link, so deleting one silently breaks traffic nobody in that dialog can see. That is a
+destructive action, and a destructive action needs its own permission, a confirmation
+that explains the consequence, and an audit trail. Displaying the history is useful
+today; managing it is a product rather than a button.
+
+Consequences worth knowing:
+
+- A historical address stays reserved for as long as redirects are enabled. There is no
+  way to release one through the engine, so
+  [slug reuse](/docs/dev/content-engine/slug-history-and-redirects#historical-addresses-are-reserved)
+  by an unrelated record is refused permanently.
+- If you genuinely need to release one, delete the row. It is an ordinary table, and the
+  [migrations guide](/docs/dev/content-engine/content-delivery-migrations) documents its
+  shape.
+
+There are also no **wildcard** or **regex** redirects, and no redirects between
+arbitrary URLs. Slug history maps one record's old addresses to that record's current
+one; a rule engine over paths is a different feature living in a different layer (a
+middleware, a CDN, a `next.config` `redirects` array).
+
+## No og:image
+
+`delivery.seo.openGraph` projects a title and a description, and stops there.
+
+An `og:image` needs an absolute URL, known dimensions and a stable content type for the
+file - which is a media subsystem, and Stage 8 does not build one. Emit it from your own
+`generateMetadata` alongside the delivery metadata:
+
+```ts
+const metadata = await contentDeliveryMetadata({ … });
+
+return {
+  ...metadata,
+  openGraph: { ...metadata.openGraph, images: [await coverImageFor(slug)] },
+};
+```
+
+## noIndex is shared, not per locale
+
+`delivery.seo.noIndexField` must be a **shared** boolean, and a localized one is a
+definition-time error.
+
+The reason is that one field drives two consumers - the sitemap exclusion and the
+`robots` directive - and they have to agree. A per-locale value would give one record one
+answer per language while it has a single canonical decision, and the two consumers could
+then disagree about which URLs exist.
+
+Per-locale indexing is a real thing to want. It is deferred rather than approximated,
+because doing it properly means a per-locale sitemap decision *and* a per-locale
+`robots`, both derived from the translation actually being served.
+
+## A localized content type needs a localized slug for redirects
+
+```ts
+// ✖ localized content type, shared slug field
+delivery: { enabled: true, redirects: { enabled: true } }
+```
+
+Every language answers to the same segment, so `/en/x/hello` and `/pl/x/hello` are both
+live and one slug change moves both at once. Slug history stores *the URL that was live*,
+so one retired row would have to be several paths - and the panel would show one of them
+as if it were the address somebody bookmarked.
+
+Canonical URLs, SEO, alternates and the sitemap all work in that shape. Only the
+reservation is ambiguous, so only `redirects` is refused. Mark the slug
+`localized: true` and everything is available.
+
+## 410 Gone is not distinguished from 404
+
+A historical URL whose destination is unpublished or deleted answers `not_found`.
+
+A `410` would be more informative for a deletion - it tells a crawler to forget the URL -
+but the engine has no tombstone abstraction that distinguishes "deleted on purpose" from
+"unpublished for now", and a `410` that guessed would tell a crawler to forget a URL that
+is coming back next week. One documented status, chosen because it is the one that is
+always correct.
+
+## The redirect status is not configurable
+
+Always `308`. Every historical URL of every content type answers with it, so there is no
+per-content-type setting to get wrong and no reason for two of them to disagree. `301` is
+not offered: it lets a client rewrite the method to `GET`, and `308` does not.
+
+## Sitemap frequency and priority are static
+
+Per content type, not per record. There are no dynamic callbacks: a function that runs
+once per URL in a 50,000-URL file is a performance decision disguised as a configuration
+option.
+
+## No site-wide robots.txt
+
+`delivery.seo.noIndexField` is per record. Site-wide crawl rules - `Disallow`, crawl
+delay, sitemap declarations - are application or core configuration, not something a
+content type gets to influence.
+
+## No delivery mutations in the service
+
+`model.deliveryService` is read-only, and structurally so: slug history is written by the
+editorial services inside the transaction that moves the slug, so there is no `reserve`
+to call without one. Admin or manual history mutation, if it ever exists, will be a
+separate API with its own permission.
+
+## Delivery metadata is not a revision
+
+SEO is derived from content fields, so it already participates in
+[revisions](/docs/dev/content-engine/revisions) - restoring a revision that had a
+different `seo.title` changes the derived metadata on the next read. There is no separate
+SEO history, and there will not be one: two revision systems over the same values is two
+things to keep in sync.
+
+## itemId can be absent
+
+Delivery metadata reports `itemId: null` for a content type whose `publicApi.fields`
+withholds `"id"`.
+
+That is deliberate rather than a gap: delivery reads the **public projection**, so it
+cannot report a column the public API declined to publish. Expose `"id"` in the allowlist
+and it is always present. A sitemap entry always carries it, because a sitemap row is
+built from the row rather than from the projection.
+
+## Not in Stage 8 at all
+
+For the avoidance of doubt: no domain management, no CDN configuration, no content
+approval workflow, no collaborative editing, no AI SEO generation, no AI translation, no
+translation memory, no external TMS, no GraphQL, no semantic search, no analytics, no A/B
+testing and no personalized URLs.
+
+## See also
+
+<Cards>
+  <Card
+    href="/docs/dev/content-engine/limitations"
+    title="Content Engine limitations"
+    description="The stage-wide list."
+  />
+  <Card
+    href="/docs/dev/content-engine/content-delivery-migrations"
+    title="Delivery migrations"
+    description="What is not backfilled, and how to backfill it yourself."
+  />
+</Cards>

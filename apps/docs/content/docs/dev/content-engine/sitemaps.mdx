@@ -1,0 +1,276 @@
+---
+title: Sitemaps
+description: A cursor-paginated service that lists what is public right now, plus pure helpers that turn its entries into valid XML and a sitemap index.
+icon: Map
+---
+
+```ts
+delivery: {
+  enabled: true,
+  sitemap: { enabled: true, changeFrequency: "weekly", priority: 0.7 },
+}
+```
+
+That is the whole configuration. The engine does not build a file - it answers "which
+URLs are public right now", one page at a time, and leaves serialization to a pure
+helper.
+
+## Querying and serializing are separate
+
+Deliberately, and it is the design decision that makes both testable: "which URLs are
+public" is a keyset scan over two tables, and "what does a sitemap file look like" is
+a string. Folded into one function, the XML would be untestable without a database
+and the pagination untestable without parsing XML.
+
+```ts
+// the query
+const page = await delivery.sitemap({ locale: "pl", limit: 1_000 });
+
+// the serialization
+import { contentSitemapXml } from "@vitnode/core/content";
+
+const xml = contentSitemapXml({
+  entries: page.entries,
+  origin: "https://example.com",
+});
+```
+
+## One page of entries
+
+```ts
+await delivery.sitemap({ cursor, limit, locale });
+```
+
+```ts
+{
+  entries: [
+    {
+      itemId: 42,
+      locale: "pl",
+      path: "/pl/articles/moj-artykul",
+      lastModified: new Date("2026-01-02T03:04:05.000Z"),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+  ],
+  nextCursor: 42,   // pass back as `cursor`; null on the last page
+}
+```
+
+### Cursors, never offsets
+
+`cursor` is the last `itemId` of the previous page, and pagination is a keyset over
+the primary key. An `OFFSET` deep into a large table both slows down linearly *and*
+skips rows when something is published between two pages - and a sitemap is
+regenerated from scratch every time a crawler asks, so both matter.
+
+Ordering is `ORDER BY id ASC`, which makes the output deterministic: no duplicates, no
+gaps, and the same document from two processes.
+
+`limit` defaults to 1,000 and is capped at the protocol's 50,000. A page is one keyset
+query plus one batched read, so 1,000 rows is a response a serverless function can
+hold without thinking about it; a caller that wants a whole 50,000-URL file asks for
+it explicitly.
+
+### Only what is public right now
+
+The publication predicate is not a parameter:
+
+```text
+nonlocalized   the base row published
+localized      the base row AND the translation published
+```
+
+A draft, an unpublished record and a `publishedAt` in the future are all simply
+absent. The localized form is the same subordination the
+[public read](/docs/dev/content-engine/localized-public-api) applies.
+
+## Localized sitemaps
+
+Each published translation is one URL, and each language is its own file:
+
+```text
+Article #42   EN published   PL published   DE draft
+
+/en/articles/article
+/pl/articles/artykul
+```
+
+No DE, and **no fallback URLs**. A locale served English through
+`fallback: "default"` has no URL of its own, so listing one would put the same
+content in the sitemap twice under two addresses.
+
+A locale that names no language this install serves gets an empty page rather than an
+error - a crawler asking for `/sitemaps/blog.article-de.xml` on a site with no German
+should get a valid empty document.
+
+## lastModified
+
+| Content type   | Value                                        |
+| -------------- | -------------------------------------------- |
+| nonlocalized   | `base.updatedAt`                             |
+| localized      | `max(base.updatedAt, translation.updatedAt)` |
+
+The localized rule is the interesting one: both halves are rendered into the page, so
+a **shared** field moving changes what every language's document says even though no
+translation row was touched. Taking the translation's timestamp alone would tell a
+crawler nothing had changed.
+
+<Callout type="info" title="Timestamps are read through the column's own decoder">
+  Drizzle turns off the driver's timestamp parsing so its column mappers can treat a
+  naive `timestamp` as UTC. A raw `sql` fragment has no mapper, so the driver's
+  fallback parses the same value as *local* time - the two disagree by the server's
+  offset. The `greatest()` expression borrows the column's decoder with `.mapWith`,
+  which is why a localized `lastmod` is not hours out. The PostgreSQL suite asserts
+  it.
+</Callout>
+
+## changeFrequency and priority
+
+Static, per content type, and validated:
+
+```ts
+sitemap: { enabled: true, changeFrequency: "weekly", priority: 0.7 }
+```
+
+`changeFrequency` must be one of the seven values the protocol defines - `always`,
+`hourly`, `daily`, `weekly`, `monthly`, `yearly`, `never`. A crawler ignores an
+unknown value silently, so a typo has to be a compile error or it is a hint nobody
+ever receives.
+
+`priority` must be between `0` and `1` inclusive, and is emitted at one decimal place.
+
+Both are omitted from the XML when unset, which is valid. There are deliberately no
+per-record dynamic callbacks: a function that runs once per URL in a 50,000-URL file
+is a performance decision disguised as a configuration option.
+
+## Excluding one record
+
+```ts
+seo: { noIndexField: "syndication.noIndex" }
+```
+
+`noIndex = true` removes the record from the sitemap **and** reports
+`robots: { index: false }` - one boolean behind both, so they cannot disagree. It is a
+single clause in the query rather than a post-filter, so a page of 1,000 entries is
+1,000 listed URLs rather than however many survived.
+
+The field must be a shared boolean. See [SEO](/docs/dev/content-engine/seo#robots-and-noindex).
+
+## The XML helper
+
+```ts
+import { contentSitemapXml } from "@vitnode/core/content";
+
+contentSitemapXml({ entries, origin: "https://example.com" });
+```
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://example.com/articles/my-article</loc>
+    <lastmod>2026-01-02T03:04:05.000Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>
+```
+
+`origin` is required rather than optional: the protocol only accepts absolute URLs, so
+this is the one place delivery cannot stay origin-agnostic. An entry whose path will
+not resolve against it is **dropped** rather than emitted - one malformed `<loc>` is a
+document a crawler may reject whole.
+
+XML's five predefined entities are escaped, with `&` first: escaping it after `<` would
+turn the `&lt;` just produced into `&amp;lt;`.
+
+### hreflang inside a sitemap
+
+```ts
+contentSitemapXml({
+  alternates: await readDeliveryAlternatesMany({ c, itemIds, model }),
+  entries,
+  origin: "https://example.com",
+});
+```
+
+```xml
+<url>
+  <loc>https://example.com/en/articles/my-article</loc>
+  <xhtml:link rel="alternate" hreflang="en" href="https://example.com/en/articles/my-article" />
+  <xhtml:link rel="alternate" hreflang="pl" href="https://example.com/pl/articles/moj-artykul" />
+</url>
+```
+
+Opt-in, and standards-compliant: the namespace is declared on the root element, and
+every alternate of a group is repeated inside **each** of its `<url>` entries -
+including the entry's own. That last rule is the one implementations get wrong, and it
+is why alternates are supplied per entry rather than derived: the caller has already
+resolved which translations are published, and the serializer does not go looking.
+
+`readDeliveryAlternatesMany` batches a whole page into one query rather than one per
+URL.
+
+## Scaling past one file
+
+```ts
+import { contentSitemapChunks, contentSitemapIndexXml } from "@vitnode/core/content";
+
+const { pages, size } = contentSitemapChunks({ total, size: 1_000 });
+```
+
+```text
+/sitemap.xml                      the index
+/sitemaps/blog.article-1.xml
+/sitemaps/blog.article-2.xml
+```
+
+```ts
+contentSitemapIndexXml({
+  entries: Array.from({ length: pages }, (_, page) => ({
+    path: `/sitemaps/blog.article-${page + 1}.xml`,
+  })),
+  origin: "https://example.com",
+});
+```
+
+`pages` is at least `1` even for an empty content type, and that is on purpose: an
+index that lists a file which does not exist is a broken index, and a content type
+with nothing published today will have something tomorrow. `size` is clamped to the
+protocol's 50,000-URL ceiling, so a caller cannot ask for one enormous invalid file.
+
+`contentSitemapIndexXml` emits `<sitemapindex>` with `<sitemap>` children - a separate
+function from `contentSitemapXml` because it is a separate document type, and because
+an index whose entries were `<url>` elements is the single most common way to publish a
+sitemap no crawler reads.
+
+## A site-level sitemap
+
+```ts
+import { listDeliveryContentTypes } from "@vitnode/core/content";
+
+const delivered = listDeliveryContentTypes(core.contentModels);
+```
+
+Every delivery-enabled content type of the installation, sorted by id. Build one index
+entry per content type per locale per chunk, and no plugin name is ever hardcoded -
+installing a plugin adds its URLs and removing it takes them out again.
+
+## Memory
+
+Nothing here loads a content type whole:
+
+- one keyset page at a time, bounded by `limit`;
+- one batched translation read per page, never one per row;
+- one batched alternates read per page, when alternates are asked for;
+- `noIndex` as a `WHERE` clause rather than a post-filter.
+
+The PostgreSQL suite pages a fixture in twos and asserts every record appears exactly
+once, in ascending key order, with the cursor ending at `null`.
+
+## Next.js
+
+`contentSitemapEntries` pages through the delivery route and returns entries a
+`sitemap.ts` can return directly. See
+[Next.js helpers](/docs/dev/content-engine/content-delivery-nextjs#sitemap).

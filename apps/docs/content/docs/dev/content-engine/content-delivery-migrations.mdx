@@ -1,0 +1,184 @@
+---
+title: Delivery migrations
+description: One new core table, one deterministic migration, and a clear statement about what history does *not* get backfilled.
+icon: Database
+---
+
+Enabling `delivery` adds no columns to your content tables. It needs one shared core
+table, and that is the whole schema change.
+
+## The migration
+
+```bash
+pnpm drizzle-kit generate --name=add_content_slug_history
+pnpm db:migrate
+```
+
+```sql
+CREATE TABLE "core_content_slug_history" (
+  "id" serial PRIMARY KEY NOT NULL,
+  "pluginId" varchar(255) NOT NULL,
+  "contentTypeId" varchar(100) NOT NULL,
+  "itemId" integer NOT NULL,
+  "languageId" integer,
+  "slug" varchar(160) NOT NULL,
+  "path" varchar(512) NOT NULL,
+  "createdAt" timestamp DEFAULT now() NOT NULL,
+  "retiredAt" timestamp
+);
+ALTER TABLE "core_content_slug_history" ENABLE ROW LEVEL SECURITY;
+
+CREATE UNIQUE INDEX "core_content_slug_history_shared_unique"
+  ON "core_content_slug_history" ("contentTypeId","slug")
+  WHERE "languageId" IS NULL;
+
+CREATE UNIQUE INDEX "core_content_slug_history_locale_unique"
+  ON "core_content_slug_history" ("contentTypeId","languageId","slug")
+  WHERE "languageId" IS NOT NULL;
+
+CREATE INDEX "core_content_slug_history_item_idx"
+  ON "core_content_slug_history" ("contentTypeId","itemId","languageId");
+
+CREATE INDEX "core_content_slug_history_plugin_id_idx"
+  ON "core_content_slug_history" ("pluginId");
+```
+
+One table for every delivery-enabled content type in the install, for the same reason
+`core_content_revisions` is shared: a content table is generated at runtime from a
+descriptor, so core's static schema cannot name it - and a per-type history table would
+mean a second generated table and a second migration for every plugin.
+
+### The indexes are the feature
+
+| Index                | What it is for                                        |
+| -------------------- | ----------------------------------------------------- |
+| `…_shared_unique`    | The reservation, for a nonlocalized or shared slug     |
+| `…_locale_unique`    | The reservation, per language                          |
+| `…_item_idx`         | One record's history, and retiring the slug it moved off |
+| `…_plugin_id_idx`    | Ownership, for an audit or a cleanup                   |
+
+The two uniques double as the resolver's lookup, which is why they lead with
+`(contentTypeId, slug)`: a redirect lookup runs on a public request path for a URL that
+is very often a typo, so it has to be an index hit rather than a scan. The PostgreSQL
+suite asserts all four exist and that the shared one really is partial.
+
+Two partial uniques rather than one over a nullable `languageId`, because Postgres treats
+every `NULL` as distinct - a single key including it would enforce nothing at all for the
+shared case it exists to protect.
+
+## History is not backfilled
+
+**Nothing existing gets a history row.** History starts when Stage 8 begins tracking
+future public slug changes, and that is a decision rather than an omission:
+
+```text
+existing published article, slug = hello
+  → no history row
+  → /articles/hello is canonical, as it always was
+  → the *next* slug change creates the redirect
+```
+
+A record's current slug does not need to be history - it is the canonical URL, and the
+resolver finds it through the ordinary public read. The first row for a record is written
+the next time it is published or the next time its live slug moves.
+
+### Why revisions are not scanned
+
+It is tempting to reconstruct history from
+[Stage 4 revisions](/docs/dev/content-engine/revisions), and the engine deliberately does
+not:
+
+- **Revision snapshots include draft-only slugs.** A record whose slug was corrected
+  three times before publication would produce three redirects to URLs nobody ever
+  visited - and three permanent reservations blocking those addresses.
+- **Publication timing is ambiguous.** A snapshot records the values at a version, not
+  whether that version was ever the *live* one. Reconstructing "was this slug
+  addressable" from a revision list means guessing.
+- **Old schemas differ.** A snapshot taken before a field was renamed does not name the
+  slug field the content type has today.
+
+An automatic backfill would therefore create incorrect redirects, and an incorrect
+permanent redirect is worse than a missing one: it sends real traffic somewhere wrong and
+reserves an address nobody can reclaim.
+
+### An explicit backfill, if you want one
+
+If you *know* your data - because you have an access log, an external redirect map, or a
+changelog - insert the rows yourself. The shape is documented above and the engine reads
+it directly:
+
+```sql
+INSERT INTO "core_content_slug_history"
+  ("pluginId", "contentTypeId", "itemId", "languageId", "slug", "path", "retiredAt")
+VALUES
+  ('@vitnode/example', 'example.article', 42, NULL,
+   'old-slug', '/articles/old-slug', now());
+```
+
+Three rules to hold:
+
+1. **`retiredAt` must be set** for a historical address. A `NULL` means "this is the
+   record's current slug", and two current rows for one record is a state the engine does
+   not produce.
+2. **`path` must be the URL that was live**, not one rebuilt from today's
+   `publicApi.path`. That is the whole reason the column exists.
+3. **`languageId`** is the language for a localized slug and `NULL` for a shared one -
+   matching `delivery.slugScope`. Getting it wrong puts the row in the other partial
+   unique index and the resolver will not find it.
+
+Verify with the AdminCP delivery panel: it lists exactly what the resolver will use.
+
+## Changing `publicApi.path`
+
+```text
+/articles  →  /blog
+```
+
+This is **source configuration**, not a content mutation, and the engine creates no
+redirects for it. Every record's URL changes at once, at deploy time, for a reason no
+row in the database records.
+
+Automating it would mean writing one history row per record on boot - a migration
+disguised as a config change, running inside a process that may be one of several
+starting at the same moment. So it is left to you, deliberately:
+
+```sql
+-- One row per published record, with the old prefix.
+INSERT INTO "core_content_slug_history"
+  ("pluginId", "contentTypeId", "itemId", "languageId", "slug", "path", "retiredAt")
+SELECT
+  '@vitnode/example', 'example.article', a."id", NULL,
+  a."slug", '/articles/' || a."slug", now()
+FROM "example_articles" a
+WHERE a."status" = 'published' AND a."publishedAt" IS NOT NULL
+ON CONFLICT DO NOTHING;
+```
+
+That is safe because the slug is unchanged - only the prefix moved - so the retired
+`path` is the old URL and the resolver's destination is the record's current canonical
+path under the new prefix. Run it in the same deploy as the config change.
+
+Stage 8's automatic redirects are for **slug changes**. Route-prefix migrations are a
+deployment decision, and they get explicit tooling or explicit SQL.
+
+## Turning delivery off
+
+Removing the `delivery` block stops the engine reading or writing history. The table and
+its rows stay - which is what you want, because turning it back on restores every
+redirect rather than starting from nothing.
+
+Nothing else about the content type changes: no columns are dropped, no routes disappear
+beyond the three delivery ones, and no cache tag it produced was ever a delivery tag.
+
+## Adding delivery to an existing content type
+
+Safe and additive:
+
+1. Add the block. No schema change to your table.
+2. Run the core migration if you have not already.
+3. Existing published records keep their canonical URLs and gain sitemap entries
+   immediately.
+4. The first slug change on a published record creates the first redirect.
+
+There is no reindex, no rebuild and no backfill step - which is the practical
+consequence of delivery being a projection over data the content type already had.

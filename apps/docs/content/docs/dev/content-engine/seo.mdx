@@ -1,0 +1,232 @@
+---
+title: SEO metadata
+description: Project a title, a description, Open Graph and a robots directive out of fields the public API already exposes - with explicit fallbacks and no invented text.
+icon: Search
+---
+
+`delivery.seo` names which **public** fields become which piece of page metadata.
+It projects; it never invents.
+
+```ts
+delivery: {
+  enabled: true,
+  seo: {
+    titleField: "seo.title",
+    fallbackTitleField: "title",
+    descriptionField: "seo.description",
+    fallbackDescriptionField: "excerpt",
+    noIndexField: "syndication.noIndex",
+    openGraph: {
+      titleField: "seo.title",
+      descriptionField: "seo.description",
+    },
+  },
+}
+```
+
+## Every field has to be public
+
+```ts
+seo: { titleField: "internalNote" }
+// ✖ Type error, and a definition-time throw
+```
+
+A `<title>` is rendered into a public page, so it has to be something the public API
+would already have said out loud. That is a **compile error** as well as a runtime
+one - `ContentDeliveryTitleField` extracts from `publicApi.fields`, so an
+unexposed name is not in the union at all.
+
+It is also true at runtime for free, and this is the part worth understanding: SEO
+is projected from the **public projection** rather than from the base row. A private
+column is never fetched, so it is not in the object the projection returns - the
+metadata cannot reach it even by mistake.
+
+## Field kinds
+
+| Slot                       | Kinds                | Why                                            |
+| -------------------------- | -------------------- | ---------------------------------------------- |
+| `titleField`               | `text`               | A `<title>` is one line, not a paragraph        |
+| `descriptionField`         | `text`, `textarea`   | Prose is exactly what a description is          |
+| `noIndexField`             | `boolean`, **shared** | Two answers, one canonical decision             |
+
+A **repeatable leaf** is refused in every slot: a page has one title and a
+repeatable has many values. A **group leaf** is accepted everywhere - `seo.title` is
+one column under a generated name, so it is one value.
+
+```ts
+fields: {
+  seo: field.group({
+    localized: true,
+    nullable: true,
+    fields: {
+      title: field.text({ nullable: true, maxLength: 200 }),
+      description: field.textarea({ nullable: true, maxLength: 500 }),
+    },
+  }),
+}
+```
+
+Paths use the same canonical dotted form the rest of the engine speaks - see
+[Structured fields](/docs/dev/content-engine/structured-fields). There is no second
+flatten/unflatten implementation here; delivery reads the projected row through
+`readContentPath`, exactly as search does.
+
+## Fallbacks are explicit
+
+```ts
+seo: {
+  titleField: "seo.title",
+  fallbackTitleField: "title",
+}
+```
+
+The fallback is consulted when the primary resolves to `null` or to whitespace - a
+`<title>` of three spaces is a missing title with extra steps. That covers the common
+case exactly: nobody writes an SEO title twice, so `seo.title` is usually empty and
+the article's real `title` is what should appear.
+
+There is deliberately **no** "derive a description from the first 160 characters of
+the body". A summary somebody did not write is a summary nobody reviewed, and it
+would silently become the description of every page that forgot to set one.
+
+<Callout type="warn" title="A fallback with no primary is refused">
+  `fallbackTitleField` without `titleField` reads as if it does something and does
+  nothing: the fallback is only reached when the primary is empty, so on its own it
+  is never consulted. Name it as `titleField` instead.
+</Callout>
+
+## The result
+
+```ts
+const metadata = await delivery.findById(42, { locale: "pl" });
+
+metadata.seo;
+// { title: "Mój artykuł", description: "…" }
+```
+
+The shape is stable whether or not the block was configured - a content type that
+names nothing gets `{ title: null, description: null }` - so a frontend never
+branches on "was SEO set up", only on "did a value come back".
+
+## Open Graph
+
+```ts
+seo: {
+  titleField: "seo.title",
+  openGraph: { titleField: "social.title" },
+}
+```
+
+`null` when the content type configured none, and that is a different fact from "it
+did, and this page has no title" - a renderer treats them differently, because the
+first emits no tags at all.
+
+Each Open Graph slot falls back to the ordinary SEO one, which makes the common case
+- the same title in both places - a two-line config:
+
+```ts
+openGraph: {}   // inherits titleField and descriptionField
+```
+
+<Callout type="info" title="No og:image">
+  Stage 8 does not implement a media subsystem, and an `og:image` needs one: an
+  absolute URL, known dimensions and a stable content type for the file. Emit it from
+  your own `generateMetadata` alongside the delivery metadata - see
+  [Limitations](/docs/dev/content-engine/content-delivery-limitations).
+</Callout>
+
+## Robots and noindex
+
+```ts
+seo: { noIndexField: "syndication.noIndex" }
+```
+
+```ts
+metadata.robots;
+// { index: false, follow: true }
+```
+
+One boolean drives **two** consumers, and that is the whole reason it exists as a
+single field: a record excluded from the sitemap and a record reporting `index:
+false` have to be the same record. Two settings would eventually disagree.
+
+`follow` is always `true`. "Do not list this page" and "do not follow the links on
+it" are different instructions, and a content type that asked for the first has not
+asked for the second - a `noindex, nofollow` page is a dead end for a crawler walking
+the site, which is a decision for site-wide robots configuration rather than for one
+record.
+
+`null` when no `noIndexField` is configured, so a content type that never thought
+about indexing emits no `robots` meta tag rather than an affirmative "yes, index
+this".
+
+### It has to be shared
+
+```ts
+// ✖ a localized group's leaf
+seo: { noIndexField: "flags.noIndex" }
+```
+
+A localized boolean would give one record one answer per language while it has a
+single canonical decision - and the sitemap exclusion and the `robots` directive
+would then be able to disagree. Delivery refuses it at definition time.
+
+Per-locale indexing is a real thing to want; it is deferred rather than approximated.
+See [Limitations](/docs/dev/content-engine/content-delivery-limitations).
+
+## Localized SEO
+
+A localized group gives every language its own copy:
+
+```ts
+fields: {
+  seo: field.group({ localized: true, nullable: true, fields: { … } }),
+}
+```
+
+```text
+en:  { title: "English SEO",  description: "English summary" }
+pl:  { title: null,           description: null }            → falls back to the
+                                                               Polish `title`
+```
+
+The fallback is **that language's own** field, never English's. The projection reads
+one row - the translation being served - so it has nothing else to reach for.
+
+On a fallback read the metadata reports the locale it actually served, and the
+canonical URL follows it:
+
+```ts
+{
+  requestedLocale: "pl",
+  locale: "en",
+  isFallback: true,
+  canonicalPath: "/en/articles/article",
+  seo: { title: "The English title", … },
+}
+```
+
+See [Canonical URLs](/docs/dev/content-engine/canonical-urls#the-canonical-url-is-the-served-locale).
+
+## SEO has no revision history of its own
+
+SEO is derived from content fields, so it already participates in
+[revisions](/docs/dev/content-engine/revisions):
+
+```text
+restore a revision that had seo.title = "Old heading"
+→ seo.title is "Old heading" again
+→ the delivery metadata says so on the next read
+```
+
+There is no second history to keep in sync, and restoring SEO is not a separate
+operation. That is the reason `delivery.seo` names fields rather than storing values.
+
+## Search
+
+Changing an SEO field already triggers
+[search synchronization](/docs/dev/content-engine/search) when the field is one
+`search` indexes - there is no second indexing path, and delivery adds none. What
+delivery guarantees is narrower and worth stating: a search document carries the
+**current** canonical URL, and a historical URL never becomes a second document
+competing with the page it redirects to.
