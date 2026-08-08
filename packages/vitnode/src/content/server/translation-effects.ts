@@ -7,6 +7,7 @@ import type { AnyContentModel } from "./model";
 import type { ContentSearchSyncOutcome } from "./search-sync";
 import type { ContentTranslationEditorialOutcome } from "./translation-editorial-service";
 
+import { reportContentEventFailures } from "./effects-log";
 import { emitContentEvent } from "./emit";
 import {
   contentSearchAdvancedValues,
@@ -130,6 +131,18 @@ export const contentTranslationEffects = async (
     // handling the request.
     { pluginId },
   );
+
+  // Same rule as the base effects: the transaction is closed, so a listener that
+  // never heard about this translation cannot fail the request - but it must not
+  // vanish either. The locale travels with it, because "nobody heard about the
+  // Polish copy" is a different incident from "nobody heard about the record".
+  await reportContentEventFailures(c, {
+    action: EVENT_ACTION[outcome.operation],
+    contentTypeId: definition.id,
+    event,
+    itemId: outcome.row.itemId,
+    locale: outcome.locale,
+  });
 
   if (!definition.search.enabled || !model) return { event };
 

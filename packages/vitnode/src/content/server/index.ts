@@ -16,11 +16,27 @@ export {
   buildTranslationSystemColumns,
 } from "./column-builders";
 export type { ColumnReferenceThunk } from "./column-builders";
+export {
+  contentEngineDiagnostics,
+  contentScheduleHealth,
+  contentSearchDrift,
+} from "./diagnostics";
+export type {
+  ContentEngineDiagnostics,
+  ContentScheduleHealth,
+  ContentSearchDrift,
+  ContentSearchDriftLocale,
+  ContentTypeDiagnostic,
+} from "./diagnostics";
 export { contentEditorialEffects } from "./editorial-effects";
 export type {
   ContentEditorialEffectsOptions,
   ContentEditorialEffectsResult,
 } from "./editorial-effects";
+export {
+  CONTENT_EFFECTS_LOG_PREFIX,
+  reportContentEventFailures,
+} from "./effects-log";
 export { createContentEditorialService } from "./editorial-service";
 export type {
   ContentEditorialOptions,

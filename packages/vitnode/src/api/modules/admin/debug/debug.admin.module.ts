@@ -1,6 +1,7 @@
 import { CONFIG_PLUGIN } from "../../../../config";
 import { buildModule } from "../../../lib/module";
 import { clearSearchDebugAdminRoute } from "./routes/clear-search.route";
+import { contentStatusDebugAdminRoute } from "./routes/content-status.route";
 import { integrationsDebugAdminRoute } from "./routes/integrations.route";
 import { logsDebugAdminRoute } from "./routes/logs.route";
 import { queueDebugAdminRoute } from "./routes/queue.route";
@@ -20,6 +21,7 @@ export const debugAdminModule = buildModule({
     searchStatusDebugAdminRoute,
     rebuildSearchDebugAdminRoute,
     clearSearchDebugAdminRoute,
+    contentStatusDebugAdminRoute,
     sendTestEmailDebugAdminRoute,
     testAiDebugAdminRoute,
     testStorageUploadDebugAdminRoute,

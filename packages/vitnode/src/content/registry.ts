@@ -31,6 +31,96 @@ interface IndexOwner {
   entry: RegisteredContentType;
 }
 
+/** A physical table name, and the field or content type that generated it. */
+interface TableOwner {
+  entry: RegisteredContentType;
+  /** How the name came about, for an error message somebody has to act on. */
+  origin: string;
+}
+
+const describeTableOwner = (owner: TableOwner): string =>
+  `${describe(owner.entry)} (${owner.origin})`;
+
+/**
+ * Every physical table one content type puts into the schema.
+ *
+ * The base table and the translation table are declared; a junction and a
+ * repeatable child table are **generated** from a field name, clamped to
+ * Postgres' 63-character limit. Two content types can therefore reach the same
+ * physical name without either author writing it down - which Postgres would
+ * accept, because the second `CREATE TABLE` simply never happens and both
+ * definitions then read and write one table.
+ */
+const physicalTables = (
+  entry: RegisteredContentType,
+): { name: string; origin: string }[] => {
+  const { definition } = entry;
+
+  return [
+    { name: definition.tableName, origin: "its base table" },
+    ...(definition.localization.enabled
+      ? [
+          {
+            name: definition.localization.translationTableName,
+            origin: "its translation table",
+          },
+        ]
+      : []),
+    ...definition.advanced.junctions.map(junction => ({
+      name: junction.tableName,
+      origin: `the junction table of "${junction.field}"`,
+    })),
+    ...definition.advanced.repeatables.map(repeatable => ({
+      name: repeatable.tableName,
+      origin: `the child table of "${repeatable.field}"`,
+    })),
+  ];
+};
+
+/**
+ * Every index and constraint name one content type puts into the schema.
+ *
+ * Same namespace problem as the tables, one level down: `UNIQUE (itemId,
+ * position)` on a junction is named after the junction, which is named after a
+ * field, which is clamped. Postgres keeps index and constraint names unique per
+ * schema, so two of them colliding is a migration that fails at deploy time -
+ * or, with the truncation, one that silently constrains the wrong table.
+ */
+const physicalIndexes = (
+  entry: RegisteredContentType,
+): { columns: string[]; name: string }[] => {
+  const { definition } = entry;
+
+  return [
+    ...definition.indexes.map(index => ({
+      columns: index.on,
+      name: index.name,
+    })),
+    ...definition.localization.translationIndexes.map(index => ({
+      columns: index.on,
+      name: index.name,
+    })),
+    ...definition.advanced.junctions.flatMap(junction => [
+      {
+        columns: [`${junction.field} primary key`],
+        name: junction.primaryKeyName,
+      },
+      {
+        columns: [`${junction.field} position`],
+        name: junction.positionIndexName,
+      },
+      {
+        columns: [`${junction.field} target`],
+        name: junction.relatedIndexName,
+      },
+    ]),
+    ...definition.advanced.repeatables.map(repeatable => ({
+      columns: [`${repeatable.field} position`],
+      name: repeatable.positionIndexName,
+    })),
+  ];
+};
+
 /**
  * Validates a set of content types coming from one or more plugins.
  *
@@ -48,7 +138,7 @@ export const validateContentTypes = (
   entries: RegisteredContentType[],
 ): RegisteredContentType[] => {
   const byId = new Map<string, RegisteredContentType>();
-  const byTable = new Map<string, RegisteredContentType>();
+  const byTable = new Map<string, TableOwner>();
   const byPermission = new Map<string, RegisteredContentType>();
   const byPublicPath = new Map<string, RegisteredContentType>();
   const byIndexName = new Map<string, IndexOwner>();
@@ -65,30 +155,22 @@ export const validateContentTypes = (
     }
     byId.set(definition.id, entry);
 
-    const duplicateTable = byTable.get(definition.tableName);
-    if (duplicateTable) {
-      throw new ContentEngineError(
-        `Table "${definition.tableName}" is claimed by both ${describe(duplicateTable)} and ${describe(entry)}.`,
-        { contentTypeId: definition.id },
-      );
-    }
-    byTable.set(definition.tableName, entry);
-
-    // The generated translation table shares one namespace with every base
-    // table, so a content type called `example_articles_translations` and a
-    // localized `example_articles` would collide - and the shortening clamp
-    // makes that reachable with two long names that differ only past character
-    // 63. Both directions are caught by holding one map.
-    if (definition.localization.enabled) {
-      const translationTable = definition.localization.translationTableName;
-      const duplicateTranslationTable = byTable.get(translationTable);
-      if (duplicateTranslationTable) {
+    // Base, translation, junction and child tables all in one map: they share
+    // one Postgres namespace, so a content type called
+    // `example_articles_translations` and a localized `example_articles` would
+    // collide - and so would a repeatable called `tags` on `example_articles`
+    // and a content type whose own table is `example_articles_tags`. The
+    // shortening clamp makes every one of those reachable with two long names
+    // that differ only past character 63, and Postgres truncates silently.
+    for (const { name, origin } of physicalTables(entry)) {
+      const owner = byTable.get(name);
+      if (owner) {
         throw new ContentEngineError(
-          `Translation table "${translationTable}" is claimed by both ${describe(duplicateTranslationTable)} and ${describe(entry)}. Rename one of the base tables.`,
+          `Table "${name}" is claimed by both ${describeTableOwner(owner)} and ${describeTableOwner({ entry, origin })}. Two content types cannot share a physical table - rename one of them, or the field that generates it.`,
           { contentTypeId: definition.id },
         );
       }
-      byTable.set(translationTable, entry);
+      byTable.set(name, { entry, origin });
     }
 
     // Permission modules are scoped per plugin, so only a collision inside one
@@ -125,20 +207,20 @@ export const validateContentTypes = (
     }
 
     // `resolveContentIndexes` already rejects a collision inside one content
-    // type. Postgres index names are unique per *schema*, though, so two
-    // content types - from one plugin or from two - cannot share one either.
-    for (const index of [
-      ...definition.indexes,
-      ...definition.localization.translationIndexes,
-    ]) {
+    // type. Postgres index and constraint names are unique per *schema*,
+    // though, so two content types - from one plugin or from two - cannot share
+    // one either. The generated junction and repeatable names are in here too:
+    // they are derived from a field name and clamped, so they are exactly the
+    // ones nobody wrote down and nobody would think to check.
+    for (const index of physicalIndexes(entry)) {
       const owner = byIndexName.get(index.name);
       if (owner) {
         throw new ContentEngineError(
-          `Index name "${index.name}" is used by both ${describeIndexOwner(owner)} and ${describeIndexOwner({ columns: index.on, entry })}. Postgres index names are unique per schema, so rename one of them.`,
+          `Index name "${index.name}" is used by both ${describeIndexOwner(owner)} and ${describeIndexOwner({ columns: index.columns, entry })}. Postgres index names are unique per schema, so rename one of them.`,
           { contentTypeId: definition.id },
         );
       }
-      byIndexName.set(index.name, { columns: index.on, entry });
+      byIndexName.set(index.name, { columns: index.columns, entry });
     }
   }
 

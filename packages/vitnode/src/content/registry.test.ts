@@ -393,3 +393,203 @@ describe("public paths", () => {
     ).not.toThrow();
   });
 });
+
+/**
+ * Names nobody wrote down.
+ *
+ * A junction or repeatable child table is generated from a field name, snake-
+ * cased and clamped to Postgres' 63-character limit - so two content types can
+ * reach the same physical table without either author ever typing it. Postgres
+ * would not complain: the second `CREATE TABLE` simply never runs, and from then
+ * on two definitions read and write one table. The same applies one level down,
+ * to the `UNIQUE (itemId, position)` constraint each of them carries.
+ */
+describe("generated database identifiers", () => {
+  const related = (
+    id: string,
+    tableName: string,
+    fields: Parameters<typeof defineContentType>[0]["fields"],
+  ) =>
+    defineContentType({
+      id,
+      tableName,
+      fields,
+      admin: {
+        label: { plural: "Things", singular: "Thing" },
+        permissionModule: tableName,
+        form: { fields: Object.keys(fields) },
+      },
+    });
+
+  const withRelation = (id: string, tableName: string, field_: string) =>
+    related(id, tableName, {
+      title: field.text({ required: true }),
+      [field_]: field.relation({
+        multiple: true,
+        target: () => testCategoryContentType,
+      }),
+    });
+
+  const withRepeatable = (id: string, tableName: string, field_: string) =>
+    related(id, tableName, {
+      title: field.text({ required: true }),
+      [field_]: field.repeatable({
+        fields: { question: field.text({ required: true }) },
+      }),
+    });
+
+  it("accepts advanced content types whose generated names differ", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(withRelation("test.one", "test_ones", "tags")),
+        entry(withRepeatable("test.two", "test_twos", "faq")),
+      ]),
+    ).not.toThrow();
+  });
+
+  it("rejects a base table that collides with another type's junction table", () => {
+    // `test_ones` + `tags` generates `test_ones_tags`, which is exactly the base
+    // table the second content type declares. Silently sharing it would give one
+    // definition's rows two owners.
+    expect(() =>
+      validateContentTypes([
+        entry(withRelation("test.one", "test_ones", "tags"), "@vitnode/a"),
+        entry(
+          related("test.two", "test_ones_tags", {
+            title: field.text({ required: true }),
+          }),
+          "@vitnode/b",
+        ),
+      ]),
+    ).toThrow(/Table "test_ones_tags" is claimed by both/);
+  });
+
+  it("rejects a base table that collides with another type's repeatable table", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(
+          related("test.two", "test_ones_faq", {
+            title: field.text({ required: true }),
+          }),
+          "@vitnode/b",
+        ),
+        entry(withRepeatable("test.one", "test_ones", "faq"), "@vitnode/a"),
+      ]),
+    ).toThrow(/Table "test_ones_faq" is claimed by both/);
+  });
+
+  it("names the field that generated the colliding table", () => {
+    // A boot error is only useful if it says which of the two to rename, and the
+    // generated side is the one that has no obvious name to look for.
+    expect(() =>
+      validateContentTypes([
+        entry(withRelation("test.one", "test_ones", "tags"), "@vitnode/a"),
+        entry(
+          related("test.two", "test_ones_tags", {
+            title: field.text({ required: true }),
+          }),
+          "@vitnode/b",
+        ),
+      ]),
+    ).toThrow(/the junction table of "tags"/);
+  });
+
+  it("rejects two content types generating the same junction table", () => {
+    // Different content types, different fields, one physical table: the
+    // second's junction is named after the first's.
+    expect(() =>
+      validateContentTypes([
+        entry(withRelation("test.one", "test_ones", "tags"), "@vitnode/a"),
+        entry(
+          withRelation("test.two", "test_ones_tags", "labels"),
+          "@vitnode/b",
+        ),
+      ]),
+    ).toThrow(/Table "test_ones_tags" is claimed by both/);
+  });
+
+  it("registers the generated position constraint in the index namespace", () => {
+    // `test_ones` + `faq` generates `test_ones_faq_position_key`. An explicit
+    // index of that name on another content type would be the same identifier
+    // in the same schema, and only one of the two would exist.
+    expect(() =>
+      validateContentTypes([
+        entry(withRepeatable("test.one", "test_ones", "faq"), "@vitnode/a"),
+        entry(
+          related("test.two", "test_twos", {
+            title: field.text({ required: true }),
+          }),
+          "@vitnode/b",
+        ),
+      ]),
+    ).not.toThrow();
+
+    expect(() =>
+      validateContentTypes([
+        entry(withRepeatable("test.one", "test_ones", "faq"), "@vitnode/a"),
+        entry(
+          defineContentType({
+            id: "test.two",
+            tableName: "test_twos",
+            fields: { title: field.text({ required: true }) },
+            indexes: [{ name: "test_ones_faq_position_key", on: ["title"] }],
+            admin: {
+              label: { plural: "Twos", singular: "Two" },
+              permissionModule: "test_twos",
+            },
+          }),
+          "@vitnode/b",
+        ),
+      ]),
+    ).toThrow(/Index name "test_ones_faq_position_key" is used by both/);
+  });
+
+  it("registers a junction's primary key and target index too", () => {
+    for (const name of [
+      "test_ones_tags_pk",
+      "test_ones_tags_related_item_id_idx",
+    ]) {
+      expect(() =>
+        validateContentTypes([
+          entry(withRelation("test.one", "test_ones", "tags"), "@vitnode/a"),
+          entry(
+            defineContentType({
+              id: "test.two",
+              tableName: "test_twos",
+              fields: { title: field.text({ required: true }) },
+              indexes: [{ name, on: ["title"] }],
+              admin: {
+                label: { plural: "Twos", singular: "Two" },
+                permissionModule: "test_twos",
+              },
+            }),
+            "@vitnode/b",
+          ),
+        ]),
+      ).toThrow(new RegExp(`Index name "${name}" is used by both`));
+    }
+  });
+
+  it("keeps two long generated table names apart by their fingerprint", () => {
+    // The clamp is what makes a collision reachable at all; the fingerprint is
+    // what makes it vanishingly unlikely. Both names fill the limit exactly and
+    // still differ, so the pair boots.
+    const base = `t_${"a".repeat(56)}`;
+    const first = withRepeatable("test.long1", `${base}_x`, "faq");
+    const second = withRepeatable("test.long2", `${base}_y`, "faq");
+
+    const [firstTable, secondTable] = [first, second].map(
+      definition => definition.advanced.repeatables[0].tableName,
+    );
+
+    expect(firstTable).toHaveLength(63);
+    expect(secondTable).toHaveLength(63);
+    expect(firstTable).not.toBe(secondTable);
+    expect(() =>
+      validateContentTypes([
+        entry(first, "@vitnode/a"),
+        entry(second, "@vitnode/b"),
+      ]),
+    ).not.toThrow();
+  });
+});

@@ -7,6 +7,7 @@ import type { ContentEditorialOutcome } from "./editorial-service";
 import type { AnyContentModel } from "./model";
 import type { ContentSearchSyncOutcome } from "./search-sync";
 
+import { reportContentEventFailures } from "./effects-log";
 import { emitContentEvent } from "./emit";
 import {
   contentSearchAdvancedValues,
@@ -159,6 +160,18 @@ export const contentEditorialEffects = async (
     // triggered.
     { pluginId },
   );
+
+  // Logged here rather than left to each caller. The scheduled path additionally
+  // records the failure on the schedule row and retries; an interactive route
+  // does neither, and without this a dead listener on a clicked publish would be
+  // invisible everywhere. The write has committed either way, so the response
+  // stays a success - see `reportContentEventFailures`.
+  await reportContentEventFailures(c, {
+    action: EVENT_ACTION[outcome.operation],
+    contentTypeId: definition.id,
+    event,
+    itemId: idOf(outcome.row),
+  });
 
   // A localized record is indexed once per published translation, and a mutation
   // of the *record* moves every one of them: its publication state gates them
