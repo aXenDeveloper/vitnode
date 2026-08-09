@@ -59,10 +59,11 @@ export const usersAdminRoute = buildRoute({
         query,
       },
       primaryCursor: core_users.id,
-      query: async ({ limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, where, orderBy }) =>
         await c
           .get("db")
           .select({
+            ...cursorSelection,
             id: core_users.id,
             name: core_users.name,
             email: core_users.email,

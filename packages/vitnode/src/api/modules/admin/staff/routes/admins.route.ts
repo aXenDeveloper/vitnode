@@ -38,10 +38,11 @@ export const listAdminsStaffAdminRoute = buildRoute({
         query,
       },
       primaryCursor: core_admin_permissions.id,
-      query: async ({ limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, where, orderBy }) =>
         await c
           .get("db")
           .select({
+            ...cursorSelection,
             id: core_admin_permissions.id,
             roleId: core_admin_permissions.roleId,
             userId: core_admin_permissions.userId,

@@ -311,6 +311,16 @@ beforeEach(() => {
 });
 
 describe("admin routes match their OpenAPI document", () => {
+  it("publishes nothing about pagination's own column", () => {
+    // `__cursorValue` is projected by every list query so a cursor can be
+    // minted from the same statement as the row. It is implementation, not
+    // contract: it is stripped before the handler sees a row, so it must not
+    // appear anywhere a generated client would find it.
+    expect(JSON.stringify(editorialSuite().document)).not.toContain(
+      "__cursorValue",
+    );
+  });
+
   it("lists", async () => {
     await expectParity(editorialSuite(), {
       expected: 200,
@@ -786,6 +796,10 @@ describe("public routes match their OpenAPI document", () => {
 
     return mount(buildContentPublicRoutes(posts, { pluginId: PLUGIN_ID }));
   };
+
+  it("publishes nothing about pagination's own column", () => {
+    expect(JSON.stringify(suite().document)).not.toContain("__cursorValue");
+  });
 
   it("lists", async () => {
     await expectParity(suite(), {

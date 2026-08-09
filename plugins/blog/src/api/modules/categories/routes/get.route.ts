@@ -7,7 +7,14 @@ import {
 } from "@vitnode/core/api/lib/with-pagination";
 import { core_languages_words } from "@vitnode/core/database/languages";
 import { multiLangValueSchema } from "@vitnode/core/lib/helpers/multi-lang";
-import { and, eq, ilike, inArray, type SQL } from "drizzle-orm";
+import {
+  and,
+  eq,
+  getTableColumns,
+  ilike,
+  inArray,
+  type SQL,
+} from "drizzle-orm";
 
 import { CONFIG_PLUGIN } from "@/const";
 import { blog_categories } from "@/database/categories";
@@ -65,7 +72,7 @@ export const categoriesRoute = buildRoute({
         query,
       },
       primaryCursor: blog_categories.id,
-      query: async ({ limit, where, orderBy }) => {
+      query: async ({ cursorSelection, limit, where, orderBy }) => {
         // The title lives in `core_languages_words`, so search resolves matching
         // category ids from there rather than a column on `blog_categories`.
         const searchCondition = query.search
@@ -99,7 +106,7 @@ export const categoriesRoute = buildRoute({
 
         return await c
           .get("db")
-          .select()
+          .select({ ...getTableColumns(blog_categories), ...cursorSelection })
           .from(blog_categories)
           .where(combinedWhere)
           .orderBy(orderBy)

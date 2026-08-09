@@ -100,10 +100,11 @@ export const listRolesAdminRoute = buildRoute({
           )
         : undefined,
       primaryCursor: core_roles.id,
-      query: async ({ limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, where, orderBy }) =>
         await c
           .get("db")
           .select({
+            ...cursorSelection,
             id: core_roles.id,
             color: core_roles.color,
             protected: core_roles.protected,

@@ -10,6 +10,7 @@ import type { Context } from "hono";
 import { and, eq, exists, not, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
+import type { PaginationCursorSelection } from "../../api/lib/with-pagination";
 import type { AnyContentTypeDefinition, ContentPublicSelect } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentLanguage } from "./language-resolver";
@@ -414,11 +415,20 @@ export const createContentLocalizedPublicService = <
   const read = async (
     scope: ResolvedLocale,
     where: SQL | undefined,
-    { limit, order }: { limit: number; order?: SQL },
+    {
+      cursorSelection,
+      limit,
+      order,
+    }: {
+      /** Only a paginated read asks for one; a single read has nothing to mint. */
+      cursorSelection?: PaginationCursorSelection;
+      limit: number;
+      order?: SQL;
+    },
   ): Promise<Record<string, unknown>[]> => {
     const query = c
       .get("db")
-      .select(selection(scope.fallbackTo !== null))
+      .select({ ...selection(scope.fallbackTo !== null), ...cursorSelection })
       .from(table);
 
     if (!scope.fallbackTo) {
@@ -582,8 +592,14 @@ export const createContentLocalizedPublicService = <
         },
         table,
         where,
-        query: async ({ limit, orderBy: order, where: paged }) =>
+        query: async ({
+          cursorSelection,
+          limit,
+          orderBy: order,
+          where: paged,
+        }) =>
           await read(resolved, paged, {
+            cursorSelection,
             limit:
               typeof limit === "number"
                 ? Math.min(limit, CONTENT_PUBLIC_MAX_PAGE_SIZE + 1)

@@ -16,7 +16,6 @@ import {
   eq,
   gt,
   ilike,
-  inArray,
   isNotNull,
   isNull,
   lt,
@@ -38,6 +37,25 @@ import {
 
 /** Nobody may ask for more than this in one page, whatever they send. */
 const MAX_PAGE_SIZE = 100;
+
+/**
+ * The column a page query carries purely so its rows can be turned into cursors.
+ *
+ * Selected by the **same statement** that returns the rows, and removed again
+ * before anything leaves this module. It exists because a cursor has to describe
+ * the position the returned row actually occupied, and the only way to be
+ * certain of that is to read the two out of one snapshot.
+ *
+ * Prefixed so it cannot collide with a column name, and stripped rather than
+ * documented, because it is pagination's business and nobody else's.
+ */
+export const PAGINATION_CURSOR_FIELD = "__cursorValue";
+
+/** What a page query must spread into its projection. */
+export type PaginationCursorSelection = Record<
+  typeof PAGINATION_CURSOR_FIELD,
+  PgColumn | SQL<string>
+>;
 
 /**
  * Reads `first`, `last` and `cursor`, or refuses the request with a 400.
@@ -187,10 +205,10 @@ function buildCursorCondition({
  *
  * Two shapes, because two kinds of value survive a round trip differently:
  *
- * - a **date** travels as the database's own `::text` and is bound back with an
- *   explicit cast, so Postgres parses the microseconds it wrote. Binding a
- *   JavaScript `Date` here would silently truncate to milliseconds and exclude
- *   the whole millisecond the cursor came from.
+ * - a **temporal** value travels as the database's own `::text` and is bound
+ *   back with an explicit cast, so Postgres parses the microseconds it wrote.
+ *   Binding a JavaScript `Date` here would silently truncate to milliseconds and
+ *   exclude the whole millisecond the cursor came from.
  * - **everything else** - a number, a string, a boolean, a bigint - is exact in
  *   JavaScript already, so it goes through the column's own encoder.
  *
@@ -261,6 +279,14 @@ export async function withPagination<
   };
   primaryCursor: PgColumn<Primary>;
   query: (args: {
+    /**
+     * Spread this into the projection: `.select({ ...fields, ...cursorSelection })`.
+     *
+     * Not optional in practice. It is how the cursor value is read out of the
+     * same statement as the row, and a query that omits it can only be paged by
+     * a column it happens to have selected itself.
+     */
+    cursorSelection: PaginationCursorSelection;
     limit: number | Placeholder<string, unknown>;
     orderBy: SQL;
     where: SQL | undefined;
@@ -269,7 +295,7 @@ export async function withPagination<
   table: Omit<PgTableWithColumns<T>, "enableRLS">;
   where?: SQL;
 }): Promise<{
-  edges: QueryMin[];
+  edges: Omit<QueryMin, typeof PAGINATION_CURSOR_FIELD>[];
   pageInfo: {
     count: number;
     /** An opaque cursor. Hand it back as `cursor`; never parse it. */
@@ -343,22 +369,34 @@ export async function withPagination<
 
   const totalCount = await fetchTotalCount(c, table, baseWhere);
 
+  /**
+   * The cursor value, projected by the page query itself.
+   *
+   * A temporal column goes through `::text` so no microsecond is lost on the way
+   * out; everything else is exact in JavaScript already and is selected as it
+   * is. Either way it rides along with the row, which is the point: a cursor
+   * minted from a *second* read would describe wherever the boundary row had got
+   * to by then, not where it was when it was chosen for this page.
+   */
+  const cursorSelection: PaginationCursorSelection = {
+    [PAGINATION_CURSOR_FIELD]: cursorValueIsCanonicalText(orderColumn)
+      ? sql<string>`${orderColumn}::text`
+      : orderColumn,
+  };
+
   const limit = (first ?? last ?? 50) + 1;
-  const edges = await query({ limit, where, orderBy });
+  const edges = await query({ cursorSelection, limit, where, orderBy });
 
   const requested = first ?? last ?? edges.length;
   const hasMore = edges.length > requested;
   const slicedEdges = edges.slice(0, requested);
   const finalEdges = isForward ? slicedEdges : slicedEdges.reverse();
 
-  const boundaries = await cursorsFor({
-    c,
+  const boundaries = cursorsFrom({
     edges: finalEdges,
     orderColumn,
     orderName,
-    primary,
     primaryName: primaryCursor.name,
-    table,
   });
 
   return {
@@ -373,80 +411,86 @@ export async function withPagination<
         finalEdges.length === 0 ? false : isForward ? Boolean(cursor) : hasMore,
       ...boundaries,
     },
-    edges: finalEdges,
+    edges: finalEdges.map(withoutCursorField),
   };
 }
 
 /**
- * The two cursors a page hands back.
+ * The row as the caller asked for it, with pagination's own column taken back.
  *
- * The order column's value normally comes straight off the row, because a list
- * almost always selects the column it sorts by. Two cases need one extra
- * primary-key lookup of at most two rows:
- *
- * 1. **a projection that does not include the order column** - a public read
- *    naming a subset of fields. Without the value there is no tuple to mint, and
- *    falling back to an identifier is the bug this module exists to remove;
- * 2. **a date column** - the row carries a JavaScript `Date`, which has already
- *    lost the microseconds Postgres stored. The canonical `::text` is fetched so
- *    the cursor carries the value the next comparison will be parsed from.
- *
- * The lookup reads the boundary rows *now*, while they are still the boundary -
- * it is part of minting the cursor, not part of using one. Nothing re-reads them
- * when the cursor comes back.
+ * The internal value is projected for one purpose and has no business in an
+ * admin response, a public response, an OpenAPI schema, a search document or a
+ * revision snapshot - all of which are built from what this returns.
  */
-async function cursorsFor({
-  c,
+function withoutCursorField<QueryMin extends Record<string, unknown>>(
+  row: QueryMin,
+): Omit<QueryMin, typeof PAGINATION_CURSOR_FIELD> {
+  if (!(PAGINATION_CURSOR_FIELD in row)) return row;
+
+  const { [PAGINATION_CURSOR_FIELD]: _cursorValue, ...rest } = row;
+
+  return rest;
+}
+
+/**
+ * The two cursors a page hands back, read off the page itself.
+ *
+ * No query. That is the entire design: the value and the row come out of one
+ * `SELECT`, so the tuple a cursor names is the tuple that actually decided where
+ * the row sat.
+ *
+ * It used to be a second `SELECT` of the boundary rows by id, which looked
+ * harmless and was not. Between the page query and that lookup another writer
+ * can move the boundary row - so a row chosen at `(10:00, 42)` would be handed
+ * back as a cursor saying `(14:00, 42)`, and the next page would start after
+ * 14:00 and skip everything in between. A `DELETE` in the same window was worse:
+ * the lookup returned nothing, the value became `null`, and for a nullable
+ * ordering `null` is a *real* position inside the null block - so the walk
+ * jumped there and abandoned the rest of the collection. Both are gone by
+ * construction rather than by locking.
+ */
+function cursorsFrom({
   edges,
   orderColumn,
   orderName,
-  primary,
   primaryName,
-  table,
 }: {
-  c: Context;
   edges: readonly Record<string, unknown>[];
   orderColumn: PgColumn;
   orderName: string;
-  primary: PgColumn;
   primaryName: string;
-  table: PgTable;
-}): Promise<{ endCursor: null | string; startCursor: null | string }> {
+}): { endCursor: null | string; startCursor: null | string } {
   const first = edges[0];
   const last = edges.at(-1);
   if (!first || !last) return { endCursor: null, startCursor: null };
 
-  const idOf = (row: Record<string, unknown>): number =>
-    Number(row[primaryName]);
+  /**
+   * Where the boundary value comes from, in order of preference.
+   *
+   * The projected field is the answer for every query built through this module.
+   * A query that omits it can still be paged by a column it selected itself -
+   * exact for a number, a string or a boolean, and from the same statement, so
+   * the invariant holds. A temporal column is the one case with no safe
+   * fallback: the row carries a `Date` that has already dropped the microseconds
+   * the next comparison needs, so minting from it would hand out a cursor that
+   * silently re-reads part of the page it came from.
+   */
+  const valueOf = (row: Record<string, unknown>): unknown => {
+    if (PAGINATION_CURSOR_FIELD in row) return row[PAGINATION_CURSOR_FIELD];
+    if (!cursorValueIsCanonicalText(orderColumn) && orderName in row) {
+      return row[orderName];
+    }
 
-  const canonical = cursorValueIsCanonicalText(orderColumn);
-  const onTheRow = !canonical && orderName in first && orderName in last;
-
-  const values = new Map<number, unknown>();
-  if (onTheRow) {
-    values.set(idOf(first), first[orderName]);
-    values.set(idOf(last), last[orderName]);
-  } else {
-    const ids = [...new Set([idOf(first), idOf(last)])];
-    const rows = await c
-      .get("db")
-      .select({
-        id: primary,
-        // `::text` for a date, so no precision is lost between the value the
-        // cursor carries and the value the next page compares against.
-        value: canonical ? sql<string>`${orderColumn}::text` : orderColumn,
-      })
-      .from(table)
-      .where(inArray(primary, ids));
-
-    for (const row of rows) values.set(Number(row.id), row.value);
-  }
+    throw new Error(
+      `The page query for "${orderName}" must spread \`cursorSelection\` into its projection, so the cursor value is read from the same statement as the row.`,
+    );
+  };
 
   const mint = (row: Record<string, unknown>): string =>
     encodePaginationCursor({
       column: orderName,
-      id: idOf(row),
-      value: cursorValueOf(orderColumn, values.get(idOf(row))),
+      id: Number(row[primaryName]),
+      value: cursorValueOf(orderColumn, valueOf(row)),
     });
 
   return { endCursor: mint(last), startCursor: mint(first) };

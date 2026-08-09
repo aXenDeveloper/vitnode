@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 
+import { withPagination } from "@vitnode/core/api/lib/with-pagination";
 import { HTTPException } from "hono/http-exception";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -7,7 +8,7 @@ import { CONFIG_PLUGIN } from "@/const";
 
 import type { ContentTestHarness } from "./harness";
 
-import { articleContent } from "./articles";
+import { articleContent, example_articles } from "./articles";
 import {
   clearContentTables,
   createContentTestHarness,
@@ -438,6 +439,129 @@ describe.skipIf(!DATABASE_TEST_URL)(
         const seen = await walkFrom(page.pageInfo.endCursor ?? undefined);
         expect(seen).toHaveLength(5);
       });
+
+      /**
+       * The window between choosing the rows and describing where they were.
+       *
+       * The cursor value used to be fetched by a *second* statement, after the
+       * page rows had already come back - which is a time-of-check /
+       * time-of-use gap wide enough for another writer to walk through. The row
+       * was chosen at one position and handed back as a cursor pointing at
+       * another, so the next page started somewhere the reader had never been
+       * and everything in between was gone.
+       *
+       * There is no window now: the value is projected by the page query
+       * itself. These tests prove that by mutating the boundary row in exactly
+       * that gap - after the rows are in hand, before the cursor is minted -
+       * and showing the cursor does not notice.
+       */
+      describe("while the page is being turned into cursors", () => {
+        const decode = (cursor: null | string | undefined) =>
+          JSON.parse(
+            Buffer.from(cursor ?? "", "base64url").toString("utf8"),
+          ) as { id: number; value: null | string };
+
+        /**
+         * One page, with a mutation spliced into the mint-time gap.
+         *
+         * `withPagination` is driven directly because the gap is inside it:
+         * the callback is what fetched the rows, so running the mutation on the
+         * way out of it lands precisely between the page query and the cursor.
+         */
+        const pageWithRace = async (
+          mutate: (boundaryId: number) => Promise<void>,
+        ) =>
+          await withPagination({
+            c: h.context,
+            orderBy: { column: example_articles.updatedAt, order: "asc" },
+            params: { query: { first: "1" } },
+            primaryCursor: example_articles.id,
+            query: async ({ cursorSelection, limit, orderBy, where }) => {
+              const rows = await h.db
+                .select({ id: example_articles.id, ...cursorSelection })
+                .from(example_articles)
+                .where(where)
+                .orderBy(orderBy)
+                .limit(typeof limit === "number" ? limit : 2);
+
+              const boundary = rows[0];
+              if (boundary) await mutate(boundary.id);
+
+              return rows;
+            },
+            table: example_articles,
+          });
+
+        it("mints the position the row had, not the one it was given meanwhile", async () => {
+          const ids = await seed(LADDER);
+
+          const page = await pageWithRace(
+            async id => await moveTo(id, "2026-08-09T14:00:00"),
+          );
+
+          expect(page.edges[0].id).toBe(ids[0]);
+          // The row now says 14:00. The cursor still says 10:00, because 10:00
+          // is where the row was when it ended this page.
+          expect(decode(page.pageInfo.endCursor).value).toBe(
+            "2026-08-09 10:00:00",
+          );
+
+          // And the consequence that matters: 10:01, 11:00, 12:00 and 13:00 are
+          // all still reachable. A cursor carrying 14:00 would have skipped
+          // every one of them, permanently and without an error.
+          const seen = await walkFrom(page.pageInfo.endCursor ?? undefined);
+          for (const id of ids.slice(1)) expect(seen).toContain(id);
+        });
+
+        it("mints a real position when the row is deleted meanwhile", async () => {
+          // The worse half of the old race. A second lookup found nothing, and
+          // "nothing" became `null` - which for a nullable ordering is not the
+          // absence of a position but a real one, inside the null block. The
+          // walk jumped there and abandoned the rest of the collection.
+          const ids = await seed(LADDER);
+
+          const page = await pageWithRace(async id => {
+            await h.sql`DELETE FROM "example_articles" WHERE "id" = ${id}`;
+          });
+
+          expect(decode(page.pageInfo.endCursor).value).toBe(
+            "2026-08-09 10:00:00",
+          );
+
+          const seen = await walkFrom(page.pageInfo.endCursor ?? undefined);
+          expect(seen.sort((a, b) => a - b)).toEqual(ids.slice(1));
+        });
+
+        it("reads its cursor value out of the page query, not a second one", async () => {
+          // The structural regression assertion. There is nothing to race with
+          // if there is no second statement, so this is the property to guard
+          // rather than the symptom.
+          await seed(LADDER);
+
+          const list = async () =>
+            await service(h.counted.context).findMany({
+              orderBy: { column: "updatedAt" as never, order: "asc" },
+              query: { first: "2" },
+            });
+
+          // Warmed first: `postgres` prepares a statement the first time it
+          // sees its shape, so a cold call issues messages a warm one does not.
+          await list();
+          h.counted.reset();
+          await list();
+
+          const selects = h.counted.queries.filter(query =>
+            /^\s*select/i.test(query),
+          );
+
+          // Two, and only two: the total count, and the page. A third would be
+          // the boundary lookup coming back.
+          expect(selects).toHaveLength(2);
+          // The page carries the cursor value with it, at the database's own
+          // precision.
+          expect(selects.some(query => query.includes("::text"))).toBe(true);
+        });
+      });
     });
 
     // -------------------------------------------------------------------------
@@ -737,6 +861,26 @@ describe.skipIf(!DATABASE_TEST_URL)(
       ).toMatchObject({ column: "title" });
     });
 
+    it("keeps its own projected column out of every row it returns", async () => {
+      // The page query selects the cursor value so it can be minted from the
+      // same statement. That column is pagination's business: it is taken back
+      // before a row reaches a handler, so it cannot reach a response, a
+      // schema, a search document or a revision snapshot either.
+      await seed(NON_MONOTONIC);
+      const publicService = articleContent.publicService;
+      if (!publicService) throw new Error("no public service");
+
+      const admin = await service().findMany({ query: { first: "3" } });
+      const anonymous = await publicService(h.context).findMany({
+        query: { first: "3" },
+      });
+
+      expect(admin.edges.length).toBeGreaterThan(0);
+      for (const row of [...admin.edges, ...anonymous.edges]) {
+        expect(Object.keys(row)).not.toContain("__cursorValue");
+      }
+    });
+
     // -------------------------------------------------------------------------
     // Validation
     // -------------------------------------------------------------------------
@@ -797,6 +941,84 @@ describe.skipIf(!DATABASE_TEST_URL)(
           throw new Error(`Expected ${String(value)} to be refused.`);
         },
       );
+
+      /**
+       * The values a pattern lets through and Postgres does not.
+       *
+       * `2026-02-30` has the shape of a timestamp and is not a day, so a shape
+       * check passes it straight into `'2026-02-30'::timestamp` - and the
+       * answer to that is `invalid input syntax`, arriving at a client as a 500
+       * from a route whose contract says it does not do that. Each of these is
+       * refused before anything is bound.
+       */
+      it.each([
+        ["month 13", "2026-13-01"],
+        ["month 0", "2026-00-01"],
+        ["30 February", "2026-02-30"],
+        ["29 February in a common year", "2025-02-29"],
+        ["31 April", "2026-04-31"],
+        ["day 32", "2026-01-32"],
+        ["hour 24", "2026-08-09 24:00:00"],
+        ["minute 60", "2026-08-09 23:60:00"],
+        ["second 61", "2026-08-09 23:59:61"],
+        ["an impossible offset", "2026-08-09 10:00:00+25:00"],
+        ["an offset with 99 minutes", "2026-08-09 10:00:00+12:99"],
+      ])(
+        "answers 400 for a cursor holding %s, which Postgres would refuse",
+        async (_why, value) => {
+          await seed(NON_MONOTONIC);
+
+          try {
+            await service().findMany({
+              orderBy: { column: "updatedAt" as never, order: "asc" },
+              query: { cursor: tampered(value), first: "5" },
+            });
+          } catch (error) {
+            expect(error).toBeInstanceOf(HTTPException);
+            expect(statusOf(error)).toBe(400);
+            // Specifically not a Postgres error wearing a different hat.
+            expect((error as Error).message).not.toMatch(
+              /invalid input syntax/i,
+            );
+
+            return;
+          }
+
+          throw new Error(`Expected ${value} to be refused.`);
+        },
+      );
+
+      it("still answers a leap day, which is a real one", async () => {
+        // The other half of the check: refusing impossible values must not
+        // refuse possible ones. 2024 is a leap year and 2024-02-29 exists.
+        const ids = await seed([
+          {
+            code: "leap",
+            title: "Leap",
+            updatedAt: new Date("2024-02-29T10:00:00Z"),
+          },
+          {
+            code: "after",
+            title: "After",
+            updatedAt: new Date("2024-03-01T10:00:00Z"),
+          },
+        ]);
+
+        const cursor = Buffer.from(
+          JSON.stringify({
+            column: "updatedAt",
+            id: ids[0],
+            value: "2024-02-29 10:00:00",
+          }),
+        ).toString("base64url");
+
+        const page = await service().findMany({
+          orderBy: { column: "updatedAt" as never, order: "asc" },
+          query: { cursor, first: "5" },
+        });
+
+        expect(page.edges.map(row => row.id)).toEqual([ids[1]]);
+      });
 
       it("leaves the table alone when a cursor tries to inject SQL", async () => {
         await seed(NON_MONOTONIC);

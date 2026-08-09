@@ -284,6 +284,11 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine at scale", () => {
      * move the exact count by one without anything being wrong. What must never
      * move is the *shape*: a page of 25 and a page of 100 cost the same number
      * of round trips, and that is what an N+1 would break.
+     *
+     * The bounds came down by one when the cursor value moved into the page
+     * query's own projection. There is no boundary-row lookup left to pay for -
+     * and that saving is the same change that closed the window another writer
+     * could edit the boundary through.
      */
     const boundedAcrossPageSizes = async (
       run: (size: number) => Promise<unknown>,
@@ -307,7 +312,7 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine at scale", () => {
           await articleContent
             .service(h.counted.context)
             .findMany({ query: { first: String(size) } }),
-        4,
+        3,
       );
     });
 
@@ -321,7 +326,7 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine at scale", () => {
           await service(h.counted.context).findMany({
             query: { first: String(size) },
           }),
-        4,
+        3,
       );
     });
 
@@ -363,7 +368,7 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine at scale", () => {
             locale: "pl",
             query: { first: String(size) },
           }),
-        6,
+        5,
       );
     });
 

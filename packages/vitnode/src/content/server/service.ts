@@ -743,10 +743,17 @@ export const createContentService = <
         },
         table,
         where: combined,
-        query: async ({ limit, orderBy: order, where: rowWhere }) => {
+        query: async ({
+          cursorSelection,
+          limit,
+          orderBy: order,
+          where: rowWhere,
+        }) => {
           // One LEFT JOIN per reference field resolves every label in the same
-          // round trip - there is no per-row lookup anywhere.
-          const selection: Record<string, PgColumn> = {
+          // round trip - there is no per-row lookup anywhere. The cursor value
+          // rides along in the same statement, which is what makes the cursor a
+          // record of where the row was rather than where it has since moved.
+          const selection: Record<string, PgColumn | SQL<string>> = {
             ...ownSelection(),
             ...Object.fromEntries(
               Object.entries(references).map(([name, target]) => [
@@ -754,6 +761,9 @@ export const createContentService = <
                 target.labelColumn,
               ]),
             ),
+            // Last, so a content field can never shadow it and leave the page
+            // with no way to mint a cursor.
+            ...cursorSelection,
           };
 
           let builder = c.get("db").select(selection).from(table).$dynamic();

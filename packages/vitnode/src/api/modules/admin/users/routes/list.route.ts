@@ -90,10 +90,11 @@ export const listUsersAdminRoute = buildRoute({
       search: [core_users.name, core_users.email, core_users.nameCode],
       where: roleIds.length ? inArray(core_users.roleId, roleIds) : undefined,
       primaryCursor: core_users.id,
-      query: async ({ limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, where, orderBy }) =>
         await c
           .get("db")
           .select({
+            ...cursorSelection,
             id: core_users.id,
             name: core_users.name,
             email: core_users.email,

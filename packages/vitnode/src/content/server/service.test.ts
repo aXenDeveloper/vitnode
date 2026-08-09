@@ -324,23 +324,19 @@ describe("content service", () => {
     const page = (rows: unknown[]) => [[{ count: rows.length }], rows];
 
     it("joins once per reference field instead of querying per row", async () => {
-      // `updatedAt` is on the rows because the list really selects it - the
-      // page is built from `ownSelection()`. That matters here: the cursor is
-      // the ordered tuple, so a page whose rows are missing the order column
-      // costs one extra round trip to mint one.
       const { c, calls } = createDbMock(
         page([
           {
+            __cursorValue: "2026-01-02 00:00:00",
             id: 1,
             label__author: "Ada",
             label__category: "News",
-            updatedAt: new Date("2026-01-02T00:00:00.000Z"),
           },
           {
+            __cursorValue: "2026-01-01 00:00:00",
             id: 2,
             label__author: null,
             label__category: "News",
-            updatedAt: new Date("2026-01-01T00:00:00.000Z"),
           },
         ]),
       );
@@ -349,22 +345,29 @@ describe("content service", () => {
 
       // `author` and `category` - one join each, and no per-row lookup.
       expect(opsOf(calls, "leftJoin")).toHaveLength(2);
-      // Three, and all three are constant: the count, the page, and one
-      // primary-key read of the two boundary rows to mint the cursors. That
-      // last one exists because the default ordering is a timestamp, and a
-      // timestamp has to be carried at the database's own precision - see
-      // `pagination-cursor.ts`. What matters is that none of them grows with
-      // the page.
-      expect(opsOf(calls, "select")).toHaveLength(3);
+      // Two, and both constant: the count and the page. There is no third
+      // read to mint the cursors, because the page query already selected the
+      // value they are made of - which is also what makes a cursor describe
+      // where the row was rather than where it has since moved.
+      expect(opsOf(calls, "select")).toHaveLength(2);
     });
 
     it("splits the joined labels out of the row", async () => {
       const { c } = createDbMock(
-        page([{ id: 1, label__author: "Ada", label__category: "News" }]),
+        page([
+          {
+            __cursorValue: "2026-01-02 00:00:00",
+            id: 1,
+            label__author: "Ada",
+            label__category: "News",
+          },
+        ]),
       );
 
       const { edges } = await articles.service(c).findMany();
 
+      // No `__cursorValue`: pagination takes its own column back before the
+      // row reaches anybody.
       expect(edges[0]).toEqual({
         id: 1,
         labels: { author: "Ada", category: "News" },
@@ -373,7 +376,14 @@ describe("content service", () => {
 
     it("reports a missing label as null", async () => {
       const { c } = createDbMock(
-        page([{ id: 1, label__author: null, label__category: "News" }]),
+        page([
+          {
+            __cursorValue: "2026-01-02 00:00:00",
+            id: 1,
+            label__author: null,
+            label__category: "News",
+          },
+        ]),
       );
 
       const { edges } = await articles.service(c).findMany();

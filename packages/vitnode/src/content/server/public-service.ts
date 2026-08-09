@@ -465,10 +465,13 @@ export const createContentPublicService = <
         },
         table,
         where: conditions.length > 1 ? and(...conditions) : conditions[0],
-        query: async ({ limit, orderBy: order, where }) =>
+        query: async ({ cursorSelection, limit, orderBy: order, where }) =>
           await c
             .get("db")
-            .select(selection())
+            // The cursor value is projected by this statement and stripped from
+            // the row before `project` ever sees it, so the public allowlist is
+            // unchanged: it is pagination's own column, not a field.
+            .select({ ...selection(), ...cursorSelection })
             .from(table)
             .where(where)
             .orderBy(order)

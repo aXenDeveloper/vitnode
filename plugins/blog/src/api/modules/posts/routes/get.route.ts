@@ -77,10 +77,11 @@ export const postsRoute = buildRoute({
         query,
       },
       primaryCursor: blog_posts.id,
-      query: async ({ limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, where, orderBy }) =>
         await c
           .get("db")
           .select({
+            ...cursorSelection,
             id: blog_posts.id,
             categoryId: blog_posts.categoryId,
             createdAt: blog_posts.createdAt,

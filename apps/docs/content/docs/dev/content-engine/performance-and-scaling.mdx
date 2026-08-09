@@ -97,6 +97,44 @@ one - a page of results nobody ever sees, with no error and no short page to
 notice it by.
 </Callout>
 
+### The value is captured by the query that returned the row
+
+**The cursor value comes from the same `SQL` statement as the row it describes.
+There is no second lookup of the boundary row.** The page query projects it
+alongside the ordinary columns:
+
+```sql
+SELECT title, slug, updatedAt::text AS "__cursorValue"
+FROM articles
+ORDER BY updatedAt ASC, id ASC
+LIMIT 26
+```
+
+The reason is the same one that makes a cursor self-contained, applied half a
+step earlier. A cursor has to name **the exact ordered tuple the row occupied at
+issuance**, and a second `SELECT` after the page has come back is a
+time-of-check / time-of-use gap another writer can walk through:
+
+```text
+page query returns   id=42, updatedAt=10:00
+                     ← another writer sets id=42 to 14:00
+boundary lookup      id=42, updatedAt=14:00
+cursor issued        (14:00, 42)     ← the row was never there
+```
+
+The next page then starts after 14:00 and 10:01, 11:00, 12:00 and 13:00 are gone
+for good. A `DELETE` in the same window was worse: the lookup found nothing, the
+value became `null`, and `null` is not "no position" - for a nullable ordering it
+is a *real* one inside the null block, so the walk jumped there and abandoned the
+rest of the collection.
+
+One statement closes the window rather than locking it. `__cursorValue` is
+internal: it is stripped before a row reaches a handler, so it appears in no
+response, no OpenAPI schema, no search document and no revision snapshot. A
+projection that names only `title` and `slug` still pages by `updatedAt`
+correctly, because pagination selects what it needs without widening the
+allowlist.
+
 ### Timestamps travel as the database wrote them
 
 A Postgres `timestamp` keeps microseconds; a JavaScript `Date` keeps
@@ -106,7 +144,7 @@ whole millisecond it came from - which, since `now()` stamps every row in one
 statement identically, would end a bulk-imported collection's walk after page
 one.
 
-So a date cursor carries the column's own `::text` and the predicate binds it
+So a temporal cursor carries the column's own `::text` and the predicate binds it
 back with an explicit cast. The value in the cursor is byte-identical to the
 value the next comparison is parsed from.
 
@@ -121,20 +159,50 @@ column it claims to describe:
 | bigint | a decimal integer string |
 | boolean | a JSON boolean |
 | string | a JSON string |
-| date | a canonical Postgres timestamp, `timestamptz`, date or ISO string |
+| `date` | `2026-08-09` - a day, and nothing more |
+| `time` | `10:00:00`, `10:00:00.123456`, plus an offset only if the column has a zone |
+| `timestamp`, `timestamptz` | a day, optionally a time, optionally an offset - `2026-08-09 10:00:00.123456+00` |
 | any | `null`, which is a real position |
 
 Coercion is the failure mode being avoided, not an inelegance: `Boolean("false")`
 is `true`, `Number("")` is `0`, and `BigInt("nonsense")` throws a `SyntaxError`
-that would leave the route answering `500`. Every mismatch is a `400`, and no
-malformed value ever reaches Postgres as a failed cast.
+that would leave the route answering `500`. Every mismatch is a `400`.
+
+**A malformed or impossible timestamp cursor is rejected as `400` before it
+reaches PostgreSQL.** Shape is not enough for a temporal value, because a shape
+check cannot tell a day from a date that looks like one:
+
+```text
+2026-13-01    2026-00-01    2026-02-30    2025-02-29
+2026-01-32    2026-08-09 24:00:00         2026-08-09 23:60:00
+2026-08-09 23:59:61         2026-08-09 10:00:00+25:00
+```
+
+Every one of those matches `YYYY-MM-DD HH:MM:SS` and none of them is a moment,
+so Postgres answers the cast with `invalid input syntax` - a `500` produced by a
+query string. So the components are range-checked as well: month 1-12, the day
+count for that month *in that year* (2024-02-29 is a day, 2025-02-29 is not),
+hours 0-23, minutes and seconds 0-59, and an offset within ±15:59:59.
+
+The grammar is derived from the column's SQL type rather than from Drizzle's
+JavaScript one, because the two disagree exactly where it matters: `date()` and
+`time()` hand back plain strings, so a value bound straight through would reach
+Postgres as `'nonsense'::date`. Validation is deliberately **stricter** than
+Postgres in one place - `24:00:00` is a valid input to Postgres and something its
+own `::text` never writes, so a cursor carrying one did not come from a row.
+
+The original string is what gets bound; nothing is reformatted, so microseconds
+survive validation digit for digit. Two forms this repository does not mint are
+not accepted either: an era suffix (`… BC`) and a year past 294276.
 
 **What is guaranteed:**
 
 - **any** orderable column pages exactly - a title, a nullable `publishedAt`, a
   custom field, whatever its relationship to the identifier;
 - the boundary is **stable**: updating or deleting the row the cursor named does
-  not move it, and every row that was after that position is still reachable;
+  not move it, and every row that was after that position is still reachable -
+  including when the change lands *between* the page query and the cursor being
+  minted, because there is nothing in between;
 - rows sharing a sort value are returned exactly once, because the identifier is
   the tiebreaker in both the ordering and the predicate;
 - a nullable order column walks through its null block correctly - Postgres sorts
