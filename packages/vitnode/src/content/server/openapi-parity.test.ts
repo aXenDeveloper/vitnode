@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { JsonSchemaLike } from "@/tests/openapi-validate";
 
 import {
+  testDeliveredPostContentType,
   testEditorialPostContentType,
   testLocalizedPageContentType,
 } from "@/tests/content-fixtures";
@@ -15,6 +16,7 @@ import { validateAgainstJsonSchema } from "@/tests/openapi-validate";
 
 import {
   ContentDefaultTranslationRequired,
+  ContentDeliverySlugReserved,
   ContentRevisionNotRestorable,
   ContentScheduleError,
   ContentTranslationVersionConflict,
@@ -825,6 +827,246 @@ describe("public routes match their OpenAPI document", () => {
       method: "GET",
       path: "/hello-world",
       template: "/{slug}",
+    });
+  });
+});
+
+/**
+ * The Stage 8 routes, held to the same contract as everything above.
+ *
+ * They are the ones with the most to get wrong: a `Date` that has to leave as an
+ * ISO string, a discriminated union a frontend branches on to decide between
+ * rendering a page and issuing a 308, and a third arm on the editorial `409`. A
+ * generated client is built from the document, so each of those is a promise the
+ * handler has to keep rather than a schema that merely looks right.
+ */
+describe("delivery routes match their OpenAPI document", () => {
+  const delivered = createContentModel(testDeliveredPostContentType);
+
+  const metadata = {
+    alternates: [],
+    canonicalPath: "/delivered-posts/hello-world",
+    hreflang: { languages: {} },
+    isFallback: false,
+    itemId: 42,
+    locale: null,
+    openGraph: { description: "Prose", title: "Hello world" },
+    requestedLocale: null,
+    robots: { follow: true, index: true },
+    seo: { description: "Prose", title: "Hello world" },
+  };
+
+  const deliveryStub = () => ({
+    alternates: vi.fn().mockResolvedValue([]),
+    findById: vi.fn().mockResolvedValue(metadata),
+    history: vi.fn().mockResolvedValue([
+      {
+        createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        itemId: 42,
+        languageId: null,
+        path: "/delivered-posts/hello-world",
+        retiredAt: null,
+        slug: "hello-world",
+      },
+      {
+        createdAt: new Date("2025-12-01T00:00:00.000Z"),
+        itemId: 42,
+        languageId: null,
+        path: "/delivered-posts/old-address",
+        retiredAt: new Date("2026-01-01T00:00:00.000Z"),
+        slug: "old-address",
+      },
+    ]),
+    resolvePath: vi.fn(),
+    resolveSlug: vi.fn().mockResolvedValue({ ...metadata, type: "content" }),
+    sitemap: vi.fn().mockResolvedValue({
+      entries: [
+        {
+          changeFrequency: "weekly",
+          itemId: 42,
+          // A `Date` in the service, an ISO string on the wire: exactly the pair
+          // this suite exists to keep honest.
+          lastModified: new Date("2026-01-02T03:04:05.000Z"),
+          locale: null,
+          path: "/delivered-posts/hello-world",
+          priority: 0.7,
+        },
+      ],
+      nextCursor: null,
+    }),
+  });
+
+  let delivery: ReturnType<typeof deliveryStub>;
+
+  /** The public delivery routes: resolve, item and sitemap. */
+  const publicSuite = (): Suite => {
+    delivery = deliveryStub();
+    vi.spyOn(delivered, "deliveryService", "get").mockReturnValue(
+      () => delivery,
+    );
+    vi.spyOn(
+      delivered as unknown as { publicService: unknown },
+      "publicService",
+      "get",
+    ).mockReturnValue(() => ({
+      findById: vi.fn(),
+      findBySlug: vi.fn(),
+      findMany: vi.fn(),
+    }));
+
+    return mount(buildContentPublicRoutes(delivered, { pluginId: PLUGIN_ID }));
+  };
+
+  /** The AdminCP delivery panel's route, plus the editorial routes around it. */
+  const adminSuite = (
+    editorialOverrides: Record<string, unknown> = {},
+  ): Suite => {
+    delivery = deliveryStub();
+    vi.spyOn(delivered, "deliveryService", "get").mockReturnValue(
+      () => delivery,
+    );
+    vi.spyOn(delivered, "service").mockReturnValue(adminService() as never);
+    const editorial = { ...editorialStub(), ...editorialOverrides };
+    vi.spyOn(
+      delivered as unknown as { editorialService: unknown },
+      "editorialService",
+      "get",
+    ).mockReturnValue(() => editorial);
+
+    return mount(buildContentRoutes(delivered, { pluginId: PLUGIN_ID }));
+  };
+
+  it("publishes nothing about pagination's own column", () => {
+    expect(JSON.stringify(publicSuite().document)).not.toContain(
+      "__cursorValue",
+    );
+    expect(JSON.stringify(adminSuite().document)).not.toContain(
+      "__cursorValue",
+    );
+  });
+
+  it("resolves a slug into the content arm", async () => {
+    const body = await expectParity(publicSuite(), {
+      expected: 200,
+      method: "GET",
+      path: "/delivery/resolve/hello-world",
+      template: "/delivery/resolve/{slug}",
+    });
+
+    expect(body).toMatchObject({ type: "content" });
+  });
+
+  it("resolves a retired slug into the redirect arm", async () => {
+    const suite = publicSuite();
+    delivery.resolveSlug.mockResolvedValue({
+      location: "/delivered-posts/hello-world",
+      status: 308,
+      type: "redirect",
+    });
+
+    const body = await expectParity(suite, {
+      expected: 200,
+      method: "GET",
+      path: "/delivery/resolve/old-address",
+      template: "/delivery/resolve/{slug}",
+    });
+
+    // The discriminant a frontend branches on to issue a 308 rather than render.
+    expect(body).toMatchObject({ status: 308, type: "redirect" });
+  });
+
+  it("answers an unknown slug with the not_found arm, still a 200", async () => {
+    const suite = publicSuite();
+    delivery.resolveSlug.mockResolvedValue({ type: "not_found" });
+
+    const body = await expectParity(suite, {
+      expected: 200,
+      method: "GET",
+      path: "/delivery/resolve/nope",
+      template: "/delivery/resolve/{slug}",
+    });
+
+    expect(body).toStrictEqual({ type: "not_found" });
+  });
+
+  it("reads one record's delivery metadata", async () => {
+    await expectParity(publicSuite(), {
+      expected: 200,
+      method: "GET",
+      path: "/delivery/item/42",
+      template: "/delivery/item/{id}",
+    });
+  });
+
+  it("answers 404 for a record with no public version", async () => {
+    const suite = publicSuite();
+    delivery.findById.mockResolvedValue(null);
+
+    await expectParity(suite, {
+      expected: 404,
+      method: "GET",
+      path: "/delivery/item/42",
+      template: "/delivery/item/{id}",
+    });
+  });
+
+  it("serves a sitemap page whose lastModified is the documented string", async () => {
+    const body = await expectParity(publicSuite(), {
+      expected: 200,
+      method: "GET",
+      path: "/delivery/sitemap",
+      template: "/delivery/sitemap",
+    });
+
+    expect(body).toMatchObject({
+      entries: [{ lastModified: "2026-01-02T03:04:05.000Z" }],
+      nextCursor: null,
+    });
+  });
+
+  it("serves the AdminCP delivery panel, dates and all", async () => {
+    const body = await expectParity(adminSuite(), {
+      expected: 200,
+      method: "GET",
+      path: "/7/delivery",
+      template: "/{id}/delivery",
+    });
+
+    // The storage columns behind a history row are not part of the contract, and
+    // the schema is closed, so the document validating is what proves it.
+    expect(body).toMatchObject({
+      canonicalPath: "/delivered-posts/hello-world",
+      history: [{ slug: "hello-world" }, { slug: "old-address" }],
+    });
+    expect(body).not.toHaveProperty("history.0.languageId");
+  });
+
+  it("answers a reserved address with the documented 409 arm", async () => {
+    // The write fails the way a taken historical address fails: the slug is free
+    // on the live table and owned by another record's URL history.
+    const suite = adminSuite({
+      update: vi.fn().mockRejectedValue(
+        new ContentDeliverySlugReserved({
+          contentTypeId: testDeliveredPostContentType.id,
+          locale: null,
+          slug: "hello-world",
+        }),
+      ),
+    });
+
+    const body = await expectParity(suite, {
+      body: { expectedVersion: 4, values: { title: "Hello again" } },
+      expected: 409,
+      method: "PUT",
+      path: "/7",
+      template: "/{id}",
+    });
+
+    // The third arm, and the reason it is a union rather than a replacement: a
+    // client generated before Stage 8 still parses the two it knows.
+    expect(body).toMatchObject({
+      code: "CONTENT_DELIVERY_SLUG_RESERVED",
+      slug: "hello-world",
     });
   });
 });

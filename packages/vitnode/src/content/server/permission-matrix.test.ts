@@ -81,8 +81,20 @@ const kitchenSink = defineContentType({
   publicApi: {
     enabled: true,
     path: "everything",
-    fields: ["title", "slug", "featured", "publishedAt"],
+    // `id` is exposed because delivery resolves alternates by identifier off the
+    // public projection, and a localized delivery content type is refused without
+    // it.
+    fields: ["id", "title", "slug", "featured", "publishedAt"],
     orderableFields: ["publishedAt"],
+  },
+  // Stage 8, so the delivery route is audited like every other one. `redirects`
+  // needs `editorial` and a localized slug, and this fixture has both - which is
+  // the whole reason it is the maximal one rather than a second fixture.
+  delivery: {
+    enabled: true,
+    redirects: { enabled: true },
+    seo: { titleField: "title" },
+    sitemap: { enabled: true },
   },
   admin: {
     label: { plural: "Everythings", singular: "Everything" },
@@ -219,6 +231,10 @@ describe("the generated permission matrix", () => {
       "GET /": "can_view",
       "GET /options/{field}": "can_view",
       "GET /{id}": "can_view",
+      // Read-only: it reports what the slug mutations already did, so the
+      // permission that allowed the mutation is the only one it needs. There is
+      // no manual redirect manager to gate separately.
+      "GET /{id}/delivery": "can_view",
       "GET /{id}/public-locales": "can_view",
       "GET /{id}/revisions": "can_view",
       "GET /{id}/revisions/{revisionId}": "can_view",

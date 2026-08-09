@@ -5,6 +5,7 @@ import type { ContentDeliveryInvalidation } from "../cache";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDeliveryOutcome } from "./delivery-writes";
 
+import { reportContentEventFailures } from "./effects-log";
 import { emitContentEvent } from "./emit";
 
 export interface ContentDeliveryEffectsResult {
@@ -51,6 +52,46 @@ export const contentDeliveryEffects = async (
 ): Promise<ContentDeliveryEffectsResult> => {
   const events: EventEmitResult[] = [];
 
+  /**
+   * Emits one delivery event and reports whoever did not hear it.
+   *
+   * The reporting is not optional decoration. `EventsModel.emit` reports rather
+   * than throws, so `failures` is the only place a dead listener is visible - and
+   * these events are the ones with the most expensive silent failure in the engine:
+   * a listener that writes an edge redirect table or purges a CDN missing a
+   * `delivery_slug_changed` leaves a moved URL 404ing at the edge while the origin
+   * is perfectly correct. The base and translation effects log their own event for
+   * exactly this reason, and a delivery event that skipped the log would be the one
+   * announcement nobody could find afterwards.
+   *
+   * The write has already committed, so this never fails the request - see
+   * `reportContentEventFailures`.
+   */
+  const announce = async (
+    action: "delivery_redirect_created" | "delivery_slug_changed",
+    payload: Record<string, unknown>,
+    { itemId, locale }: { itemId: number; locale: null | string },
+  ): Promise<void> => {
+    const event = await emitContentEvent(
+      c,
+      definition,
+      action,
+      payload as never,
+      { pluginId },
+    );
+
+    events.push(event);
+    await reportContentEventFailures(c, {
+      action,
+      contentTypeId: definition.id,
+      event,
+      itemId,
+      // Present only for a localized URL: "nobody heard the Polish article moved"
+      // is a different incident from "nobody heard the article moved".
+      ...(locale === null ? {} : { locale }),
+    });
+  };
+
   // A canonical path this engine could not build is a URL nobody can visit, so
   // there is no delivery fact to announce. It happens for a slug written straight
   // into the database, and for a localized content type whose slug is shared - which
@@ -63,21 +104,17 @@ export const contentDeliveryEffects = async (
     return { events };
   }
 
-  events.push(
-    await emitContentEvent(
-      c,
-      definition,
-      "delivery_slug_changed",
-      {
-        canonicalPath: delivery.canonicalPath,
-        contentId: delivery.itemId,
-        locale: delivery.locale,
-        previousPath: delivery.previousPath,
-        previousSlug: delivery.previousSlug,
-        slug: delivery.slug,
-      } as never,
-      { pluginId },
-    ),
+  await announce(
+    "delivery_slug_changed",
+    {
+      canonicalPath: delivery.canonicalPath,
+      contentId: delivery.itemId,
+      locale: delivery.locale,
+      previousPath: delivery.previousPath,
+      previousSlug: delivery.previousSlug,
+      slug: delivery.slug,
+    },
+    { itemId: delivery.itemId, locale: delivery.locale },
   );
 
   if (
@@ -85,20 +122,16 @@ export const contentDeliveryEffects = async (
     delivery.previousPath !== null &&
     delivery.previousSlug !== null
   ) {
-    events.push(
-      await emitContentEvent(
-        c,
-        definition,
-        "delivery_redirect_created",
-        {
-          canonicalPath: delivery.canonicalPath,
-          contentId: delivery.itemId,
-          locale: delivery.locale,
-          previousPath: delivery.previousPath,
-          previousSlug: delivery.previousSlug,
-        } as never,
-        { pluginId },
-      ),
+    await announce(
+      "delivery_redirect_created",
+      {
+        canonicalPath: delivery.canonicalPath,
+        contentId: delivery.itemId,
+        locale: delivery.locale,
+        previousPath: delivery.previousPath,
+        previousSlug: delivery.previousSlug,
+      },
+      { itemId: delivery.itemId, locale: delivery.locale },
     );
   }
 

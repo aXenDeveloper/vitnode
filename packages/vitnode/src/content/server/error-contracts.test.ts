@@ -6,6 +6,7 @@ import { ZodError } from "zod";
 import {
   ContentAdvancedInputError,
   ContentDefaultTranslationRequired,
+  ContentDeliverySlugReserved,
   ContentInputError,
   ContentLanguageError,
   ContentRevisionNotRestorable,
@@ -210,6 +211,59 @@ describe("domain failures map onto their documented codes", () => {
     });
   });
 
+  /**
+   * A reserved historical address, which a `23505` could not have explained.
+   *
+   * Two constraints can refuse the same write - the live slug index and the
+   * history reservation - and the driver's code is identical for both. So the
+   * reservation is checked in the transaction and raised as a domain error, and
+   * this is the arm it lands on: a 409 that names the slug and the locale rather
+   * than a SQLSTATE the client would have to guess at.
+   */
+  it("answers a reserved address with its own 409 code", async () => {
+    const result = await responseOf(
+      throwing(
+        new ContentDeliverySlugReserved({
+          contentTypeId: CONTENT_TYPE_ID,
+          locale: null,
+          slug: "hello-world",
+        }),
+      ),
+      { itemId: 7, structured: true },
+    );
+
+    expect(result.status).toBe(409);
+    expect(JSON.parse(result.body)).toEqual({
+      code: "CONTENT_DELIVERY_SLUG_RESERVED",
+      contentTypeId: CONTENT_TYPE_ID,
+      locale: null,
+      slug: "hello-world",
+    });
+  });
+
+  it("keeps the reserved address out of the unique-clash arm", async () => {
+    // The two share a status and mean different things: a unique clash is
+    // "another record holds that address now", and this is "another record used
+    // to hold it and it still redirects there". A client that could not tell them
+    // apart could not word either one.
+    const result = await responseOf(
+      throwing(
+        new ContentDeliverySlugReserved({
+          contentTypeId: CONTENT_TYPE_ID,
+          locale: "pl",
+          slug: "stary-slug",
+        }),
+      ),
+      { itemId: 7, structured: true },
+    );
+
+    expect(JSON.parse(result.body)).toMatchObject({
+      code: "CONTENT_DELIVERY_SLUG_RESERVED",
+      locale: "pl",
+    });
+    expect(result.body).not.toContain("CONTENT_UNIQUE_CONFLICT");
+  });
+
   it("answers an unrestorable revision with 422 and the field names", async () => {
     const result = await responseOf(
       throwing(
@@ -362,6 +416,19 @@ describe("translation failures keep their own union", () => {
       }),
       409,
       "CONTENT_LANGUAGE_DISABLED",
+    ],
+    [
+      // In the delivery union rather than translated into the translation one:
+      // the translation mapper rewrites every 409 the shared mapper produces
+      // into the unique-clash arm, so this has to be caught before it.
+      "a localized address another record's history owns",
+      new ContentDeliverySlugReserved({
+        contentTypeId: CONTENT_TYPE_ID,
+        locale: "pl",
+        slug: "stary-slug",
+      }),
+      409,
+      "CONTENT_DELIVERY_SLUG_RESERVED",
     ],
   ])("answers %s with %i and a code", async (_why, error, status, code) => {
     const result = await translationResponseOf(throwing(error));

@@ -342,6 +342,20 @@ event.
 Both are documented in
 [Built-in events](/docs/dev/events/built-in-events).
 
+### When nobody hears them
+
+Both are emitted **after** the transaction commits, and `emit()` reports a dead
+listener rather than throwing one - so a broker outage cannot roll a slug change
+back, and the request still answers 200. It is not swallowed either: the failure
+goes to `core_logs` behind `[content-effects]` with the content type, the item, the
+locale and the listener that failed, exactly like the publication events. See
+[Observability](/docs/dev/content-engine/content-engine-observability#the-logs).
+
+That log line is the one worth alerting on. A listener that purges a CDN or writes
+an edge redirect table missing a `delivery_slug_changed` leaves the old address
+404ing at the edge while the origin is entirely correct - which is the failure
+nobody notices from the inside.
+
 ## AdminCP
 
 Every delivery-enabled content type gets a read-only delivery panel on its row

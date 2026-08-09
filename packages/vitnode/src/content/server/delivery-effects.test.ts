@@ -70,8 +70,17 @@ const outcome = (
   ...overrides,
 });
 
-const buildContext = () => {
+/** One dead listener, as `EventsModel.emit` reports it rather than throws it. */
+const DEAD_LISTENER = {
+  error: "Service unavailable",
+  listener: "warm-edge-cache",
+  module: "cdn",
+  pluginId: "@vitnode/edge",
+};
+
+const buildContext = ({ failing = false }: { failing?: boolean } = {}) => {
   const emitted: { name: string; payload: Record<string, unknown> }[] = [];
+  const logged: string[] = [];
 
   const c = {
     get: (key: string) => {
@@ -80,7 +89,22 @@ const buildContext = () => {
           emit: async (name: string, payload: Record<string, unknown>) => {
             emitted.push({ name, payload });
 
-            return await Promise.resolve({ failures: [] });
+            return await Promise.resolve({
+              delivered: failing ? 0 : 1,
+              eventId: `event-${emitted.length}`,
+              failures: failing ? [DEAD_LISTENER] : [],
+              status: "delivered",
+            });
+          },
+        };
+      }
+
+      if (key === "log") {
+        return {
+          error: async (message: string) => {
+            logged.push(message);
+
+            return await Promise.resolve();
           },
         };
       }
@@ -89,7 +113,7 @@ const buildContext = () => {
     },
   } as unknown as Context;
 
-  return { c, emitted };
+  return { c, emitted, logged };
 };
 
 describe("contentDeliveryEffects", () => {
@@ -197,6 +221,89 @@ describe("contentDeliveryEffects", () => {
     );
 
     expect(emitted[0].payload).toMatchObject({ locale: "pl" });
+  });
+
+  /**
+   * The same post-commit rule the base and translation effects follow.
+   *
+   * `EventsModel.emit` reports rather than throws, so `failures` is the only place
+   * a dead listener is visible - and a missed `delivery_slug_changed` is the most
+   * expensive one to miss: the listener that purges a CDN or writes an edge
+   * redirect table never hears the URL moved, so the old address keeps 404ing at
+   * the edge while the origin is entirely correct.
+   */
+  describe("reporting a delivery failure", () => {
+    it("logs the failed listener behind the effects prefix", async () => {
+      const { c, logged } = buildContext({ failing: true });
+
+      await contentDeliveryEffects(c, articleType, outcome(), {
+        pluginId: "@vitnode/test",
+      });
+
+      // One line per event, and both events fired for this outcome.
+      expect(logged).toHaveLength(2);
+      expect(logged[0]).toContain("[content-effects]");
+      expect(logged[0]).toContain("effects.article");
+      expect(logged[0]).toContain('"itemId":42');
+      expect(logged[0]).toContain("warm-edge-cache");
+      expect(logged[0]).toContain("Service unavailable");
+    });
+
+    it("names the delivery action, so it is not read as a failed edit", async () => {
+      const { c, logged } = buildContext({ failing: true });
+
+      await contentDeliveryEffects(c, articleType, outcome(), {
+        pluginId: "@vitnode/test",
+      });
+
+      expect(logged[0]).toContain("delivery_slug_changed");
+      expect(logged[1]).toContain("delivery_redirect_created");
+    });
+
+    it("carries the locale, so a Polish URL is a distinct incident", async () => {
+      const { c, logged } = buildContext({ failing: true });
+
+      await contentDeliveryEffects(
+        c,
+        articleType,
+        outcome({
+          canonicalPath: "/pl/articles/nowy",
+          locale: "pl",
+          previousPath: "/pl/articles/stary",
+          previousSlug: "stary",
+          redirectCreated: false,
+          slug: "nowy",
+        }),
+        { pluginId: "@vitnode/test" },
+      );
+
+      expect(logged).toHaveLength(1);
+      expect(logged[0]).toContain('"locale":"pl"');
+    });
+
+    it("still returns normally, because the write has already committed", async () => {
+      const { c, logged } = buildContext({ failing: true });
+
+      const result = await contentDeliveryEffects(c, articleType, outcome(), {
+        pluginId: "@vitnode/test",
+      });
+
+      // The events are still reported back to the caller, failures and all.
+      expect(result.events).toHaveLength(2);
+      expect(logged).toHaveLength(2);
+    });
+
+    it("writes nothing when every listener heard it", async () => {
+      const { c, logged } = buildContext();
+
+      await contentDeliveryEffects(c, articleType, outcome(), {
+        pluginId: "@vitnode/test",
+      });
+
+      // An expected success is not an error, and a log full of them is a log
+      // nobody reads.
+      expect(logged).toStrictEqual([]);
+    });
   });
 });
 
