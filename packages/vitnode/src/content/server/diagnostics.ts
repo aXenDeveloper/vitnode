@@ -80,6 +80,18 @@ export interface ContentSearchDriftProvider {
   error?: string;
   /** `null` when unverified - see {@link ContentSearchDriftLocale.providerHealthy}. */
   healthy: boolean | null;
+  /**
+   * Every document the provider holds for this content type, in **any** locale.
+   *
+   * The guard against ghosts. Per-locale counts can only ask about locales the
+   * database still knows about, so a document left behind in a locale that has
+   * since been removed - or one whose canonical row was deleted while the
+   * provider's delete failed - is invisible to them. A total is not: it is
+   * larger than `expectedTotal`, and that is enough to say something is wrong.
+   *
+   * `null` when the provider offers no diagnostics.
+   */
+  indexedTotal: null | number;
   name: string;
   /**
    * Whether the provider was actually asked.
@@ -92,11 +104,16 @@ export interface ContentSearchDriftProvider {
 }
 
 export interface ContentSearchDrift {
-  /** `true` when `core_search_index` matches the database in every locale. */
+  /** `true` when `core_search_index` matches the database, per locale and in total. */
   canonicalHealthy: boolean;
+  /** Documents `core_search_index` holds for this content type, all locales. */
+  canonicalIndexedTotal: number;
   contentTypeId: string;
+  /** Published rows - or published translations - the database holds, all locales. */
+  expectedTotal: number;
   /**
-   * `true` only when the canonical table **and** the active provider both agree.
+   * `true` only when the canonical table **and** the active provider both agree,
+   * per locale and in total.
    *
    * An unverified provider is not healthy: absence of evidence is reported as
    * absence of evidence, and the operator decides what to do about it.
@@ -110,17 +127,24 @@ export interface ContentSearchDrift {
  * Compares what the database says should be indexed against what is - in the
  * canonical table **and** in the active search provider.
  *
- * The two are not the same question, and conflating them was the gap this
+ * The two are not the same question, and conflating them was the first gap this
  * closes. `SearchModel.index` writes `core_search_index` and then hands the
  * document to the provider; an Elasticsearch that refuses the second half leaves
  * a canonical table that is perfectly correct and a search box that is missing
- * results. A diagnostic that only ever looked at the canonical table would call
- * that healthy.
+ * results.
+ *
+ * The second gap is the opposite direction, and it needs a different instrument.
+ * Deletion runs canonical-first: `SearchModel.delete` removes the row and then
+ * asks the provider. If the provider's half fails, the document survives in a
+ * locale that no longer appears in either the database or the canonical table -
+ * so per-locale enumeration, which is built from those two, can never ask about
+ * it. Hence `indexedTotal`: one unfiltered count that no amount of missing
+ * enumeration can hide from.
  *
  * Costs: two aggregates for the canonical side, whatever the collection's size,
- * plus one provider count per locale. The bundled Postgres provider is skipped
- * entirely - its store *is* the canonical table, so asking twice would buy
- * nothing.
+ * plus one provider total and one provider count per locale. The bundled
+ * Postgres provider is skipped entirely - its store *is* the canonical table, so
+ * asking twice would buy nothing.
  */
 export const contentSearchDrift = async (
   c: Context,
@@ -152,7 +176,17 @@ export const contentSearchDrift = async (
     ...new Set([...expectedByLocale.keys(), ...indexedByLocale.keys()]),
   ].sort();
 
+  const sum = (values: Iterable<number>): number => {
+    let total = 0;
+    for (const value of values) total += value;
+
+    return total;
+  };
+  const expectedTotal = sum(expectedByLocale.values());
+  const canonicalIndexedTotal = sum(indexedByLocale.values());
+
   const provider = await providerCounts(c, {
+    canonicalTotal: canonicalIndexedTotal,
     contentTypeId,
     locales: keys,
   });
@@ -160,7 +194,6 @@ export const contentSearchDrift = async (
   const locales: ContentSearchDriftLocale[] = keys.map(locale => {
     const expected = expectedByLocale.get(locale) ?? 0;
     const canonicalIndexed = indexedByLocale.get(locale) ?? 0;
-    const canonicalHealthy = expected === canonicalIndexed;
     // The canonical count stands in for the provider only when they are one
     // storage. Everywhere else an absent count means unverified, never healthy.
     const providerIndexed = provider.canonical
@@ -168,7 +201,7 @@ export const contentSearchDrift = async (
       : (provider.byLocale.get(locale) ?? null);
 
     return {
-      canonicalHealthy,
+      canonicalHealthy: expected === canonicalIndexed,
       canonicalIndexed,
       expected,
       locale,
@@ -178,20 +211,30 @@ export const contentSearchDrift = async (
     };
   });
 
-  const canonicalHealthy = locales.every(entry => entry.canonicalHealthy);
+  // The total is part of *both* verdicts, not decoration on the provider one:
+  // a canonical row in a locale nothing expects is a ghost too, and the grouped
+  // query above already sees every locale the table holds.
+  const canonicalHealthy =
+    canonicalIndexedTotal === expectedTotal &&
+    locales.every(entry => entry.canonicalHealthy);
+
   const providerHealthy = provider.verified
     ? provider.error === undefined &&
+      provider.total === expectedTotal &&
       locales.every(entry => entry.providerHealthy === true)
     : null;
 
   return {
     canonicalHealthy,
+    canonicalIndexedTotal,
     contentTypeId,
+    expectedTotal,
     healthy: canonicalHealthy && providerHealthy === true,
     locales,
     provider: {
       ...(provider.error === undefined ? {} : { error: provider.error }),
       healthy: providerHealthy,
+      indexedTotal: provider.total,
       name: provider.name,
       verified: provider.verified,
     },
@@ -199,9 +242,15 @@ export const contentSearchDrift = async (
 };
 
 /**
- * Asks the active provider how many documents it holds, per locale.
+ * Asks the active provider how many documents it holds - in total, and per
+ * locale.
  *
- * Three outcomes, and the middle one is the one Stage 7 exists for:
+ * The total goes first and is asked **unconditionally**, including for a content
+ * type with no rows and no canonical documents at all. That is the case the
+ * per-locale loop cannot cover: with nothing to enumerate, `[].every(...)` is
+ * `true`, and a ghost document would sail through as healthy.
+ *
+ * Three outcomes:
  *
  * - **canonical storage** - the bundled Postgres provider. Verified, and the
  *   canonical counts are its counts; no query is issued.
@@ -210,27 +259,50 @@ export const contentSearchDrift = async (
  * - **it threw** - Elasticsearch is down. Verified and unhealthy, with the
  *   reason attached, and the status route still answers: a diagnostic that
  *   crashes when the thing it diagnoses is broken is a diagnostic nobody can
- *   use.
+ *   use. A failure in either call is handled the same way.
  */
 const providerCounts = async (
   c: Context,
-  { contentTypeId, locales }: { contentTypeId: string; locales: string[] },
+  {
+    canonicalTotal,
+    contentTypeId,
+    locales,
+  }: { canonicalTotal: number; contentTypeId: string; locales: string[] },
 ): Promise<{
   byLocale: Map<string, number>;
   canonical: boolean;
   error?: string;
   name: string;
+  total: null | number;
   verified: boolean;
 }> => {
   const search = c.get("search");
   const name = search.name();
 
   if (search.isCanonicalStorage()) {
-    return { byLocale: new Map(), canonical: true, name, verified: true };
+    return {
+      byLocale: new Map(),
+      canonical: true,
+      name,
+      total: canonicalTotal,
+      verified: true,
+    };
   }
+
+  const unverified = {
+    byLocale: new Map<string, number>(),
+    canonical: false,
+    name,
+    total: null,
+    verified: false,
+  };
 
   const byLocale = new Map<string, number>();
   try {
+    // Every locale, including ones nothing here knows the name of.
+    const total = await search.countDocuments({ itemType: contentTypeId });
+    if (total === null) return unverified;
+
     for (const locale of locales) {
       const counted = await search.countDocuments({
         itemType: contentTypeId,
@@ -238,11 +310,11 @@ const providerCounts = async (
         // under, and it is a real value to filter on rather than "any".
         languageCode: locale,
       });
-      if (counted === null) {
-        return { byLocale: new Map(), canonical: false, name, verified: false };
-      }
+      if (counted === null) return unverified;
       byLocale.set(locale, counted);
     }
+
+    return { byLocale, canonical: false, name, total, verified: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown error";
     await logDiagnosticFailure(
@@ -259,11 +331,10 @@ const providerCounts = async (
       canonical: false,
       error: message,
       name,
+      total: null,
       verified: true,
     };
   }
-
-  return { byLocale, canonical: false, name, verified: true };
 };
 
 /** The prefix a provider diagnostic failure is logged behind. */

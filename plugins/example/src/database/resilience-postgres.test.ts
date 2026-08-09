@@ -982,9 +982,12 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine failure resilience", () => {
 
       expect(drift).toMatchObject({
         canonicalHealthy: true,
+        canonicalIndexedTotal: 2,
         contentTypeId: articleContentType.id,
+        expectedTotal: 2,
         healthy: true,
       });
+      expect(drift.provider.indexedTotal).toBe(2);
       expect(drift.locales).toEqual([
         {
           canonicalHealthy: true,
@@ -1010,6 +1013,8 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine failure resilience", () => {
 
       expect(drift.provider).toEqual({
         healthy: true,
+        // Reused from the canonical count rather than queried again.
+        indexedTotal: 1,
         name: "postgres",
         verified: true,
       });
@@ -1077,7 +1082,7 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine failure resilience", () => {
       await indexPublished();
 
       h.behaviour.providerName = "elasticsearch";
-      h.behaviour.providerCounts = new Map([["", 1]]);
+      h.behaviour.providerCounts = { byLocale: new Map([["", 1]]), total: 1 };
 
       const drift = await contentSearchDrift(h.context, {
         model: articleContent,
@@ -1101,6 +1106,209 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine failure resilience", () => {
       expect(drift.healthy).toBe(false);
     });
 
+    /**
+     * The other direction, and the one per-locale counts cannot see.
+     *
+     * Deletion runs canonical-first: `SearchModel.delete` removes the row and
+     * then asks the provider. If the provider's half fails, the document
+     * survives in a locale that no longer appears in the database *or* the
+     * canonical table - so the locale list, which is built from those two, never
+     * thinks to ask about it. Only an unfiltered total can find it.
+     */
+    describe("a document that exists only in the provider", () => {
+      it("is caught on a content type with nothing in it at all", async () => {
+        // The empty case matters on its own: a localized content type with no
+        // published translations enumerates *no* locales, so `[].every(...)` is
+        // `true` and a ghost would sail straight through on the per-locale
+        // checks alone.
+        h.behaviour.providerName = "elasticsearch";
+        h.behaviour.providerCounts = { byLocale: new Map(), total: 1 };
+
+        const drift = await contentSearchDrift(h.context, {
+          model: localizedArticleContent,
+        });
+
+        expect(drift.locales).toEqual([]);
+        expect(drift.expectedTotal).toBe(0);
+        expect(drift.canonicalIndexedTotal).toBe(0);
+        expect(drift.canonicalHealthy).toBe(true);
+        expect(drift.provider).toMatchObject({
+          healthy: false,
+          indexedTotal: 1,
+          verified: true,
+        });
+        expect(drift.healthy).toBe(false);
+      });
+
+      it("is caught on a non-localized content type with no rows either", async () => {
+        // Here one locale *is* enumerated - the empty one - and it agrees on
+        // both sides. The total is still the thing that catches the ghost.
+        h.behaviour.providerName = "elasticsearch";
+        h.behaviour.providerCounts = { byLocale: new Map(), total: 1 };
+
+        const drift = await contentSearchDrift(h.context, {
+          model: articleContent,
+        });
+
+        expect(drift.locales).toEqual([
+          {
+            canonicalHealthy: true,
+            canonicalIndexed: 0,
+            expected: 0,
+            locale: "",
+            providerHealthy: true,
+            providerIndexed: 0,
+          },
+        ]);
+        expect(drift.provider).toMatchObject({
+          healthy: false,
+          indexedTotal: 1,
+        });
+        expect(drift.healthy).toBe(false);
+      });
+
+      it("is caught when every locale it does enumerate agrees", async () => {
+        // The proof that the total is doing the work: `""` matches on both
+        // sides, so per-locale parity is perfect and the total is not.
+        await published();
+        await indexPublished();
+
+        h.behaviour.providerName = "elasticsearch";
+        h.behaviour.providerCounts = {
+          byLocale: new Map([["", 1]]),
+          total: 2,
+        };
+
+        const drift = await contentSearchDrift(h.context, {
+          model: articleContent,
+        });
+
+        expect(drift.locales).toEqual([
+          {
+            canonicalHealthy: true,
+            canonicalIndexed: 1,
+            expected: 1,
+            locale: "",
+            providerHealthy: true,
+            providerIndexed: 1,
+          },
+        ]);
+        expect(drift.canonicalHealthy).toBe(true);
+        expect(drift.provider).toMatchObject({
+          healthy: false,
+          indexedTotal: 2,
+        });
+        expect(drift.healthy).toBe(false);
+      });
+
+      it("is caught in a locale the content type no longer has", async () => {
+        // EN is published and agrees everywhere. PL exists only in the
+        // provider - no translation, no canonical row, no expectation - so it
+        // is never enumerated, and the total is the only thing that sees it.
+        const { row } = await localizedService(h.context).create(
+          {
+            shared: {},
+            translation: { body: "English body", title: "Ghost Subject" },
+          },
+          { actor: ACTOR },
+        );
+        const base = localizedArticleContent.editorialService;
+        if (!base) throw new Error("no editorial service");
+        await base(h.context, { pluginId: CONFIG_PLUGIN.pluginId }).publish(
+          row.id,
+          { actor: ACTOR },
+        );
+        await translationEditorial(h.context).publish(row.id, "en", {
+          actor: ACTOR,
+        });
+        await h.sql`
+          INSERT INTO "core_search_index"
+            ("pluginId", "itemType", "itemId", "languageCode", "title", "content", "createdAt")
+          VALUES (
+            ${CONFIG_PLUGIN.pluginId}, ${localizedArticleContent.definition.id},
+            ${row.id}, 'en', 'Ghost Subject', 'Ghost Subject', now()
+          )
+        `;
+
+        h.behaviour.providerName = "elasticsearch";
+        h.behaviour.providerCounts = {
+          // Only `en` is ever asked for, and it agrees.
+          byLocale: new Map([["en", 1]]),
+          total: 2,
+        };
+
+        const drift = await contentSearchDrift(h.context, {
+          model: localizedArticleContent,
+        });
+
+        expect(drift.locales.map(entry => entry.locale)).toEqual(["en"]);
+        expect(drift.locales[0].providerHealthy).toBe(true);
+        expect(drift.canonicalHealthy).toBe(true);
+        expect(drift.expectedTotal).toBe(1);
+        expect(drift.provider.indexedTotal).toBe(2);
+        expect(drift.provider.healthy).toBe(false);
+        expect(drift.healthy).toBe(false);
+      });
+
+      it("makes the whole engine report unhealthy", async () => {
+        h.behaviour.providerName = "elasticsearch";
+        h.behaviour.providerCounts = { byLocale: new Map(), total: 1 };
+
+        const report = await contentEngineDiagnostics(h.context);
+        expect(report.contentTypes).not.toHaveLength(0);
+
+        expect(report.searchHealthy).toBe(false);
+        expect(report.healthy).toBe(false);
+      });
+
+      it("still reports healthy when the total agrees as well", async () => {
+        // The control: same provider, same enumeration, honest total.
+        await published();
+        await indexPublished();
+
+        h.behaviour.providerName = "elasticsearch";
+        h.behaviour.providerCounts = {
+          byLocale: new Map([["", 1]]),
+          total: 1,
+        };
+
+        const drift = await contentSearchDrift(h.context, {
+          model: articleContent,
+        });
+
+        expect(drift.provider).toMatchObject({
+          healthy: true,
+          indexedTotal: 1,
+          verified: true,
+        });
+        expect(drift.healthy).toBe(true);
+      });
+    });
+
+    it("reports a canonical row in a locale nothing expects", async () => {
+      // The canonical side has the same failure mode, and the grouped query
+      // already sees every locale the table holds - so the total closes it too.
+      await published();
+      await indexPublished();
+      await h.sql`
+        INSERT INTO "core_search_index"
+          ("pluginId", "itemType", "itemId", "languageCode", "title", "content", "createdAt")
+        VALUES (
+          ${CONFIG_PLUGIN.pluginId}, ${articleContentType.id}, 424242,
+          'de', 'Ghost', 'Ghost', now()
+        )
+      `;
+
+      const drift = await contentSearchDrift(h.context, {
+        model: articleContent,
+      });
+
+      expect(drift.expectedTotal).toBe(1);
+      expect(drift.canonicalIndexedTotal).toBe(2);
+      expect(drift.canonicalHealthy).toBe(false);
+      expect(drift.healthy).toBe(false);
+    });
+
     it("reports a provider that cannot be counted as unverified, not healthy", async () => {
       await published();
       await indexPublished();
@@ -1117,6 +1325,7 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine failure resilience", () => {
       expect(drift.locales[0].providerIndexed).toBeNull();
       expect(drift.provider).toEqual({
         healthy: null,
+        indexedTotal: null,
         name: "custom-search",
         verified: false,
       });
@@ -1129,7 +1338,7 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine failure resilience", () => {
       await indexPublished();
 
       h.behaviour.providerName = "elasticsearch";
-      h.behaviour.providerCounts = new Map([["", 1]]);
+      h.behaviour.providerCounts = { byLocale: new Map([["", 1]]), total: 1 };
       h.behaviour.providerCountError = new Error("connect ECONNREFUSED");
 
       const drift = await contentSearchDrift(h.context, {
@@ -1153,7 +1362,7 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine failure resilience", () => {
     it("keeps the whole status route answering when the provider is down", async () => {
       await published();
       await indexPublished();
-      h.behaviour.providerCounts = new Map([["", 1]]);
+      h.behaviour.providerCounts = { byLocale: new Map([["", 1]]), total: 1 };
       h.behaviour.providerCountError = new Error("elasticsearch unavailable");
 
       const report = await contentEngineDiagnostics(h.context);
@@ -1263,10 +1472,13 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine failure resilience", () => {
       }
 
       h.behaviour.providerName = "elasticsearch";
-      h.behaviour.providerCounts = new Map([
-        ["en", 1],
-        ["pl", 0],
-      ]);
+      h.behaviour.providerCounts = {
+        byLocale: new Map([
+          ["en", 1],
+          ["pl", 0],
+        ]),
+        total: 1,
+      };
 
       const drift = await contentSearchDrift(h.context, {
         model: localizedArticleContent,

@@ -515,6 +515,35 @@ describe("ElasticsearchSearchAdapter.count", () => {
     expect(countDocs.mock.calls[0][1]).toMatchObject({ ignore: [404] });
   });
 
+  it("counts every language when none is named", async () => {
+    // The unfiltered total, which is what catches a document left behind in a
+    // locale the content type no longer has - per-locale counts can only ask
+    // about locales somebody already knows to ask for.
+    countDocs.mockResolvedValue({ count: 9 });
+
+    await ElasticsearchSearchAdapter(config).count?.(c, {
+      itemType: "blog_post",
+    });
+
+    expect(countDocs.mock.calls[0][0].query.bool.filter).toEqual([
+      { term: { itemType: "blog_post" } },
+    ]);
+  });
+
+  it("creates no index as a side effect", async () => {
+    // A diagnostic is observational. Creating the index here would make the
+    // health check change the thing it is measuring - and would report a
+    // never-rebuilt install as a healthy empty one.
+    countDocs.mockResolvedValue({ count: 0 });
+
+    await ElasticsearchSearchAdapter(config).count?.(c, {
+      itemType: "blog_post",
+    });
+
+    expect(create).not.toHaveBeenCalled();
+    expect(exists).not.toHaveBeenCalled();
+  });
+
   it("lets a transport failure surface, so the caller can report it", async () => {
     // Swallowing it here would turn "Elasticsearch is down" into "zero
     // documents", which reads as drift rather than as an outage.

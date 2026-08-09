@@ -32,7 +32,11 @@ const contentTypeSchema = z.object({
   search: z
     .object({
       canonicalHealthy: z.boolean(),
+      /** Documents `core_search_index` holds, every locale. */
+      canonicalIndexedTotal: z.number(),
       contentTypeId: z.string(),
+      /** Published rows - or translations - the database holds, every locale. */
+      expectedTotal: z.number(),
       /** Canonical **and** provider both agree. Unverified is not healthy. */
       healthy: z.boolean(),
       locales: z.array(localeDriftSchema),
@@ -40,6 +44,13 @@ const contentTypeSchema = z.object({
         /** Why the provider could not be counted, when that is the answer. */
         error: z.string().optional(),
         healthy: z.boolean().nullable(),
+        /**
+         * Every document the provider holds, in any locale.
+         *
+         * The guard against a document left behind in a locale the database no
+         * longer knows about, which per-locale counts can never ask for.
+         */
+        indexedTotal: z.number().nullable(),
         name: z.string(),
         /** Whether the provider was actually asked. */
         verified: z.boolean(),

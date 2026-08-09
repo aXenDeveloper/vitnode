@@ -226,6 +226,221 @@ describe.skipIf(!DATABASE_TEST_URL)(
     });
 
     // -------------------------------------------------------------------------
+    // The cursor is a historical position
+    // -------------------------------------------------------------------------
+
+    /**
+     * A cursor names where the page ended, not which row ended it.
+     *
+     * The distinction only shows itself when the boundary row moves. If the next
+     * page's comparison were built from that row's *current* value, one edit
+     * would drag the boundary with it and silently skip every row the ordering
+     * used to have in between - a page of results nobody ever sees, with no
+     * error and no short page to notice.
+     *
+     * The fixture makes the continuation deterministic: five rows ascending by
+     * `updatedAt`, identifiers ascending with them.
+     */
+    describe("when the boundary row changes after the cursor was issued", () => {
+      const LADDER: Seed[] = [
+        {
+          code: "l1",
+          title: "One",
+          updatedAt: new Date("2026-08-09T10:00:00Z"),
+        },
+        {
+          code: "l2",
+          title: "Two",
+          updatedAt: new Date("2026-08-09T10:01:00Z"),
+        },
+        {
+          code: "l3",
+          title: "Three",
+          updatedAt: new Date("2026-08-09T11:00:00Z"),
+        },
+        {
+          code: "l4",
+          title: "Four",
+          updatedAt: new Date("2026-08-09T12:00:00Z"),
+        },
+        {
+          code: "l5",
+          title: "Five",
+          updatedAt: new Date("2026-08-09T13:00:00Z"),
+        },
+      ];
+
+      /** Page 1 of one row, plus the cursor it handed back. */
+      const firstPage = async (order: "asc" | "desc" = "asc") => {
+        const page = await service().findMany({
+          orderBy: { column: "updatedAt" as never, order },
+          query: { first: "1" },
+        });
+
+        return {
+          boundary: page.edges[0].id,
+          cursor: page.pageInfo.endCursor ?? undefined,
+        };
+      };
+
+      const walkFrom = async (
+        cursor: string | undefined,
+        order: "asc" | "desc" = "asc",
+      ) => {
+        const seen: number[] = [];
+        let next = cursor;
+        for (let page = 0; page < 20; page += 1) {
+          const result = await service().findMany({
+            orderBy: { column: "updatedAt" as never, order },
+            query: { cursor: next, first: "2" },
+          });
+          seen.push(...result.edges.map(row => row.id));
+          if (!result.pageInfo.hasNextPage) break;
+          next = result.pageInfo.endCursor ?? undefined;
+        }
+
+        return seen;
+      };
+
+      const moveTo = async (id: number, when: string) => {
+        await h.sql`
+          UPDATE "example_articles"
+          SET "updatedAt" = ${when}::timestamp
+          WHERE "id" = ${id}
+        `;
+      };
+
+      it("still reaches every row that was after the cursor when it was issued", async () => {
+        // The regression. Moving the boundary row to the *end* of the ordering
+        // would drag a re-read boundary with it, and 10:01, 11:00, 12:00 and
+        // 13:00 would be skipped for good.
+        const ids = await seed(LADDER);
+        const { boundary, cursor } = await firstPage();
+        expect(boundary).toBe(ids[0]);
+
+        await moveTo(boundary, "2026-08-09T14:00:00");
+
+        const seen = await walkFrom(cursor);
+
+        for (const id of ids.slice(1)) expect(seen).toContain(id);
+        expect(new Set(seen).size).toBe(seen.length);
+      });
+
+      it("shows the moved row again, because it moved into unvisited ground", async () => {
+        // The honest consequence, stated rather than hidden: a keyset walk is
+        // not a snapshot, so a row that moves from behind the cursor to ahead
+        // of it is seen a second time. What matters is that nothing else moved.
+        const ids = await seed(LADDER);
+        const { boundary, cursor } = await firstPage();
+
+        await moveTo(boundary, "2026-08-09T14:00:00");
+
+        const seen = await walkFrom(cursor);
+
+        expect(seen).toContain(boundary);
+        expect(seen.sort((a, b) => a - b)).toEqual(
+          [...ids].sort((a, b) => a - b),
+        );
+      });
+
+      it("does not show it again when it moves further behind the cursor", async () => {
+        const ids = await seed(LADDER);
+        const { boundary, cursor } = await firstPage();
+
+        await moveTo(boundary, "2026-08-09T09:00:00");
+
+        const seen = await walkFrom(cursor);
+
+        expect(seen).not.toContain(boundary);
+        expect(seen.sort((a, b) => a - b)).toEqual(ids.slice(1));
+      });
+
+      it("keeps working when the boundary row is deleted outright", async () => {
+        // Nothing to re-read, and nothing that needs re-reading: the position
+        // is in the cursor.
+        const ids = await seed(LADDER);
+        const { boundary, cursor } = await firstPage();
+
+        await h.sql`DELETE FROM "example_articles" WHERE "id" = ${boundary}`;
+
+        const seen = await walkFrom(cursor);
+
+        expect(seen.sort((a, b) => a - b)).toEqual(ids.slice(1));
+        expect(new Set(seen).size).toBe(seen.length);
+      });
+
+      it("survives the whole first page being deleted", async () => {
+        const ids = await seed(LADDER);
+        const page = await service().findMany({
+          orderBy: { column: "updatedAt" as never, order: "asc" },
+          query: { first: "3" },
+        });
+        const read = page.edges.map(row => row.id);
+
+        for (const id of read) {
+          await h.sql`DELETE FROM "example_articles" WHERE "id" = ${id}`;
+        }
+
+        const seen = await walkFrom(page.pageInfo.endCursor ?? undefined);
+
+        expect(seen.sort((a, b) => a - b)).toEqual(
+          ids.filter(id => !read.includes(id)).sort((a, b) => a - b),
+        );
+      });
+
+      it("holds the same way descending", async () => {
+        const ids = await seed(LADDER);
+        const { boundary, cursor } = await firstPage("desc");
+
+        await moveTo(boundary, "2026-08-09T00:01:00");
+
+        const seen = await walkFrom(cursor, "desc");
+
+        for (const id of ids.slice(0, 4)) expect(seen).toContain(id);
+        expect(new Set(seen).size).toBe(seen.length);
+      });
+
+      it("carries the database's own timestamp text, microseconds included", async () => {
+        // The reason the cursor can be self-contained at all. A JavaScript
+        // `Date` holds milliseconds; `now()` writes microseconds. A cursor that
+        // had been through a `Date` would be strictly smaller than the stored
+        // value and would exclude the whole millisecond it came from - and here
+        // every row shares one `now()`, so the walk would stop after page one.
+        await h.sql`
+          INSERT INTO "example_articles"
+            ("title", "slug", "code", "category", "status", "updatedAt")
+          SELECT 'Micro ' || i, 'micro-' || i, 'micro-' || i, ${categoryId},
+                 'draft', now()
+          FROM generate_series(1, 6::int) AS i
+        `;
+
+        const page = await service().findMany({
+          orderBy: { column: "updatedAt" as never, order: "asc" },
+          query: { first: "1" },
+        });
+        const decoded = JSON.parse(
+          Buffer.from(page.pageInfo.endCursor ?? "", "base64url").toString(
+            "utf8",
+          ),
+        ) as { value: string };
+
+        // Byte-identical to what the column holds, rather than "has enough
+        // digits": trailing zeros are dropped by `::text`, so counting them
+        // would be a coin flip, and equality is the property that matters.
+        const [stored] = await h.sql<{ text: string }[]>`
+          SELECT "updatedAt"::text AS text FROM "example_articles"
+          WHERE "id" = ${page.edges[0].id}
+        `;
+        expect(decoded.value).toBe(stored.text);
+
+        // And the walk completes, which it cannot if the boundary was
+        // truncated: every row here shares one `now()`.
+        const seen = await walkFrom(page.pageInfo.endCursor ?? undefined);
+        expect(seen).toHaveLength(5);
+      });
+    });
+
+    // -------------------------------------------------------------------------
     // Ties
     // -------------------------------------------------------------------------
 
@@ -538,6 +753,81 @@ describe.skipIf(!DATABASE_TEST_URL)(
 
         throw new Error(`Expected ${JSON.stringify(query)} to be refused.`);
       };
+
+      /**
+       * The cursor is opaque but not signed, so every field is hostile input.
+       *
+       * These go through the real service, which is where the column is known -
+       * a value that looks fine in isolation is only wrong relative to the
+       * column it claims to describe.
+       */
+      const tampered = (value: unknown, column = "updatedAt") =>
+        Buffer.from(JSON.stringify({ column, id: 1, value })).toString(
+          "base64url",
+        );
+
+      it.each([
+        ["nonsense", "not-a-date", "updatedAt"],
+        ["a number", 1_700_000_000, "updatedAt"],
+        ["a boolean", true, "updatedAt"],
+        [
+          "an injection attempt",
+          "2026-08-09'; DROP TABLE example_articles; --",
+          "updatedAt",
+        ],
+        ["a number where a string belongs", 12, "title"],
+        ["a boolean where a string belongs", false, "title"],
+      ])(
+        "answers 400 for a cursor holding %s, without reaching Postgres",
+        async (_why, value, column) => {
+          try {
+            await service().findMany({
+              orderBy: { column: column as never, order: "asc" },
+              query: { cursor: tampered(value, column), first: "5" },
+            });
+          } catch (error) {
+            // An `HTTPException`, never a `SyntaxError`, a `RangeError` or a
+            // Postgres cast failure - each of which would surface as a 500.
+            expect(error).toBeInstanceOf(HTTPException);
+            expect(statusOf(error)).toBe(400);
+
+            return;
+          }
+
+          throw new Error(`Expected ${String(value)} to be refused.`);
+        },
+      );
+
+      it("leaves the table alone when a cursor tries to inject SQL", async () => {
+        await seed(NON_MONOTONIC);
+
+        await expect(
+          service().findMany({
+            orderBy: { column: "updatedAt" as never, order: "asc" },
+            query: {
+              cursor: tampered("2026-08-09'; DROP TABLE example_articles; --"),
+              first: "5",
+            },
+          }),
+        ).rejects.toBeInstanceOf(HTTPException);
+
+        await expect(service().findMany()).resolves.toMatchObject({
+          pageInfo: { totalCount: 3 },
+        });
+      });
+
+      it("refuses a cursor whose identifier is not a positive integer", async () => {
+        const zeroId = Buffer.from(
+          JSON.stringify({ column: "updatedAt", id: 0, value: null }),
+        ).toString("base64url");
+
+        await expect(
+          service().findMany({
+            orderBy: { column: "updatedAt" as never, order: "asc" },
+            query: { cursor: zeroId, first: "5" },
+          }),
+        ).rejects.toBeInstanceOf(HTTPException);
+      });
 
       it.each([
         ["first=0", { first: "0" }],

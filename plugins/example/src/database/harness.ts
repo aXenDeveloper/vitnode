@@ -149,12 +149,18 @@ export interface ContentTestHarness {
      * `"canonical"` is the bundled Postgres provider - its store *is*
      * `core_search_index`, so it is verified without a second query.
      * `"unsupported"` is a provider with no `count`, which has to be reported as
-     * unverified rather than healthy. A `Map` is a mirroring provider that can
-     * be counted, keyed by locale (`""` for language-agnostic content) - which
-     * is how a provider that is missing documents the canonical table has is
-     * simulated at all.
+     * unverified rather than healthy.
+     *
+     * The object form is a mirroring provider that can be counted: `byLocale`
+     * answers a filtered count and `total` answers an unfiltered one. They are
+     * separate on purpose - a ghost document lives in a locale nothing
+     * enumerates, so the only way to simulate one is a total that exceeds the
+     * locales anybody thinks to ask about.
      */
-    providerCounts: "canonical" | "unsupported" | Map<string, number>;
+    providerCounts:
+      | "canonical"
+      | "unsupported"
+      | { byLocale: Map<string, number>; total: number };
     providerName: string;
     /**
      * Web origins the revalidation bridge should post to.
@@ -318,8 +324,13 @@ export const createContentTestHarness =
                   return await Promise.resolve(0);
                 }
 
+                // No language means every language - which is what makes a
+                // ghost in an unenumerated locale visible at all.
                 return await Promise.resolve(
-                  behaviour.providerCounts.get(languageCode ?? "") ?? 0,
+                  languageCode === undefined
+                    ? behaviour.providerCounts.total
+                    : (behaviour.providerCounts.byLocale.get(languageCode) ??
+                        0),
                 );
               },
               isCanonicalStorage: () =>

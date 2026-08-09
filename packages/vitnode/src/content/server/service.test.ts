@@ -347,9 +347,15 @@ describe("content service", () => {
 
       await articles.service(c).findMany();
 
-      // `author` and `category` - one join each, and no extra round trips.
+      // `author` and `category` - one join each, and no per-row lookup.
       expect(opsOf(calls, "leftJoin")).toHaveLength(2);
-      expect(opsOf(calls, "select")).toHaveLength(2); // count + page
+      // Three, and all three are constant: the count, the page, and one
+      // primary-key read of the two boundary rows to mint the cursors. That
+      // last one exists because the default ordering is a timestamp, and a
+      // timestamp has to be carried at the database's own precision - see
+      // `pagination-cursor.ts`. What matters is that none of them grows with
+      // the page.
+      expect(opsOf(calls, "select")).toHaveLength(3);
     });
 
     it("splits the joined labels out of the row", async () => {

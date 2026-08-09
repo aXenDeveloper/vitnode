@@ -1,3 +1,4 @@
+import { bigint, pgTable, timestamp } from "drizzle-orm/pg-core";
 // @vitest-environment node
 import { HTTPException } from "hono/http-exception";
 import { describe, expect, it } from "vitest";
@@ -6,11 +7,18 @@ import { core_users } from "@/database/users";
 
 import {
   cursorValueForColumn,
+  cursorValueIsCanonicalText,
   cursorValueOf,
   decodePaginationCursor,
   encodePaginationCursor,
   isCursorSortableColumn,
 } from "./pagination-cursor";
+
+/** A bigint order column, which core has only on a table without one. */
+const probes = pgTable("cursor_probes", {
+  big: bigint({ mode: "bigint" }),
+  moment: timestamp(),
+});
 
 /**
  * The cursor is the ordered tuple, or it is nothing.
@@ -160,14 +168,21 @@ describe("legacy numeric cursors", () => {
 });
 
 describe("column values", () => {
-  it("flattens a Date to an ISO string and back", () => {
-    const date = new Date("2026-08-08T12:00:00.000Z");
-    const flattened = cursorValueOf(core_users.createdAt, date);
+  it("keeps a timestamp as text on both sides", () => {
+    // Deliberately *not* a `Date` round trip. A `Date` holds milliseconds and
+    // Postgres holds microseconds, so turning the text back into one would
+    // truncate the value the next comparison is parsed from - and exclude the
+    // whole millisecond the cursor came from. The predicate casts this text
+    // back to the column's type instead, and lets Postgres do the parsing.
+    const flattened = cursorValueOf(
+      core_users.createdAt,
+      "2026-08-08 12:00:00.123456",
+    );
 
-    expect(flattened).toBe("2026-08-08T12:00:00.000Z");
-    // Back as a `Date`, because that is what the column compares against -
-    // handing Postgres the string would compare a timestamp with text.
-    expect(cursorValueForColumn(core_users.createdAt, flattened)).toEqual(date);
+    expect(flattened).toBe("2026-08-08 12:00:00.123456");
+    expect(cursorValueForColumn(core_users.createdAt, flattened)).toBe(
+      "2026-08-08 12:00:00.123456",
+    );
   });
 
   it("keeps a string a string", () => {
@@ -185,7 +200,7 @@ describe("column values", () => {
     expect(cursorValueForColumn(core_users.createdAt, null)).toBeNull();
   });
 
-  it("refuses an unparseable date rather than comparing against Invalid Date", () => {
+  it("refuses an unparseable date rather than letting Postgres fail the cast", () => {
     expect(() =>
       cursorValueForColumn(core_users.createdAt, "not-a-date"),
     ).toThrow(HTTPException);
@@ -196,5 +211,181 @@ describe("column values", () => {
     expect(isCursorSortableColumn(core_users.name)).toBe(true);
     expect(isCursorSortableColumn(core_users.createdAt)).toBe(true);
     expect(isCursorSortableColumn(core_users.newsletter)).toBe(true);
+    expect(isCursorSortableColumn(probes.big)).toBe(true);
+  });
+});
+
+/**
+ * A cursor is opaque, not signed. A client can edit it.
+ *
+ * So every field is hostile input, checked against the column it claims to
+ * describe. Coercion is the failure mode to avoid, not just an inelegance:
+ * `Boolean("false")` is `true`, `Number("")` is `0`, and `BigInt("nonsense")`
+ * throws a `SyntaxError` that would leave the route as a 500. Each of those is
+ * a wrong page or a wrong status code handed to somebody who asked for neither.
+ */
+describe("a tampered cursor value is refused, never coerced", () => {
+  const refuses = (
+    column: Parameters<typeof cursorValueForColumn>[0],
+    value: unknown,
+  ) => {
+    expect(() => cursorValueForColumn(column, value as never)).toThrow(
+      HTTPException,
+    );
+    try {
+      cursorValueForColumn(column, value as never);
+    } catch (error) {
+      expect(statusOf(error)).toBe(400);
+    }
+  };
+
+  describe("boolean", () => {
+    it('refuses the string "false", which coercion would read as true', () => {
+      refuses(core_users.newsletter, "false");
+    });
+
+    it.each([
+      ["a number", 0],
+      ["a string", "true"],
+      ["an empty string", ""],
+    ])("refuses %s", (_why, value) => {
+      refuses(core_users.newsletter, value);
+    });
+
+    it("accepts a real boolean, and null", () => {
+      expect(cursorValueForColumn(core_users.newsletter, false)).toBe(false);
+      expect(cursorValueForColumn(core_users.newsletter, true)).toBe(true);
+      expect(cursorValueForColumn(core_users.newsletter, null)).toBeNull();
+    });
+  });
+
+  describe("number", () => {
+    it.each([
+      ["a numeric string", "42"],
+      ["an empty string", ""],
+      ["a boolean", true],
+      ["nonsense", "not-a-number"],
+    ])("refuses %s", (_why, value) => {
+      refuses(core_users.id, value);
+    });
+
+    it("accepts a finite number, and null", () => {
+      expect(cursorValueForColumn(core_users.id, 42)).toBe(42);
+      expect(cursorValueForColumn(core_users.id, null)).toBeNull();
+    });
+  });
+
+  describe("bigint", () => {
+    it("refuses a value that would make BigInt() throw", () => {
+      // The one that used to escape as a native `SyntaxError`, and therefore
+      // as a 500.
+      refuses(probes.big, "not-a-bigint");
+    });
+
+    it.each([
+      ["a fractional string", "1.5"],
+      ["an empty string", ""],
+      ["a number", 12],
+      ["a boolean", false],
+      ["whitespace", " 12 "],
+    ])("refuses %s", (_why, value) => {
+      refuses(probes.big, value);
+    });
+
+    it("accepts a decimal integer string, signed or not, and null", () => {
+      expect(cursorValueForColumn(probes.big, "9007199254740993")).toBe(
+        9007199254740993n,
+      );
+      expect(cursorValueForColumn(probes.big, "-4")).toBe(-4n);
+      expect(cursorValueForColumn(probes.big, null)).toBeNull();
+    });
+  });
+
+  describe("timestamp", () => {
+    it.each([
+      ["nonsense", "not-a-date"],
+      ["a number", 1_700_000_000],
+      ["a boolean", true],
+      ["a half-written date", "2026-08"],
+      ["an injection attempt", "2026-08-09'; DROP TABLE users; --"],
+    ])("refuses %s", (_why, value) => {
+      // Reaching Postgres with any of these would be an invalid-cast 500
+      // rather than a 400 - and the last one has no business getting near a
+      // cast at all.
+      refuses(core_users.createdAt, value);
+    });
+
+    it.each([
+      ["a Postgres timestamp", "2026-08-09 10:00:00.123456"],
+      ["a Postgres timestamptz", "2026-08-09 10:00:00.123456+00"],
+      ["a plain date", "2026-08-09"],
+      ["an ISO string", "2026-08-09T10:00:00.123Z"],
+    ])("accepts %s, unchanged", (_why, value) => {
+      // Unchanged is the point: the predicate casts this text back to the
+      // column's type, so Postgres parses it at the precision it stored.
+      expect(cursorValueForColumn(core_users.createdAt, value)).toBe(value);
+    });
+
+    it("is the one kind bound as text plus a cast", () => {
+      expect(cursorValueIsCanonicalText(core_users.createdAt)).toBe(true);
+      expect(cursorValueIsCanonicalText(core_users.id)).toBe(false);
+      expect(cursorValueIsCanonicalText(core_users.name)).toBe(false);
+    });
+  });
+
+  describe("string", () => {
+    it.each([
+      ["a number", 12],
+      ["a boolean", true],
+    ])("refuses %s", (_why, value) => {
+      refuses(core_users.name, value);
+    });
+
+    it("accepts a string, and null", () => {
+      expect(cursorValueForColumn(core_users.name, "Ada")).toBe("Ada");
+      expect(cursorValueForColumn(core_users.name, null)).toBeNull();
+    });
+  });
+
+  it("never lets a native parser error escape", () => {
+    // Whatever is thrown, it is an `HTTPException` - not a `SyntaxError`, a
+    // `RangeError`, or anything else that would surface as a 500.
+    const hostile = [
+      [probes.big, "nope"],
+      [core_users.createdAt, "nope"],
+      [core_users.newsletter, "nope"],
+      [core_users.id, "nope"],
+    ] as const;
+
+    for (const [column, value] of hostile) {
+      try {
+        cursorValueForColumn(column, value);
+        throw new Error(`Expected ${column.name} to refuse ${value}.`);
+      } catch (error) {
+        expect(error).toBeInstanceOf(HTTPException);
+      }
+    }
+  });
+});
+
+describe("minting keeps the database's own representation", () => {
+  it("keeps a Postgres timestamp string exactly as it was read", () => {
+    // Microseconds and all: this is the value the next comparison is parsed
+    // from, so anything lost here is lost from the ordering.
+    expect(
+      cursorValueOf(core_users.createdAt, "2026-08-09 10:00:00.123456"),
+    ).toBe("2026-08-09 10:00:00.123456");
+  });
+
+  it("falls back to an ISO string only when handed a Date", () => {
+    expect(
+      cursorValueOf(core_users.createdAt, new Date("2026-08-09T10:00:00.123Z")),
+    ).toBe("2026-08-09T10:00:00.123Z");
+  });
+
+  it("carries a bigint as a decimal string, which JSON can hold", () => {
+    expect(cursorValueOf(probes.big, 9007199254740993n)).toBe(
+      "9007199254740993",
+    );
   });
 });

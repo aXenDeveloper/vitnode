@@ -75,13 +75,40 @@ GET /api/@vitnode/core/admin/debug/content/status
 | `expected` | Published rows - or published translations - the **database** holds. |
 | `canonicalIndexed` | Documents in `core_search_index`. |
 | `canonicalHealthy` | The canonical table matches the database. |
-| `providerIndexed` | Documents the **active provider** holds. `null` when it cannot say. |
-| `providerHealthy` | The provider matches the database. `null` when nobody looked. |
+| `providerIndexed` | Documents the **active provider** holds for this locale. `null` when it cannot say. |
+| `providerHealthy` | The provider matches the database for this locale. `null` when nobody looked. |
+| `expectedTotal` | Every published row or translation, all locales. |
+| `canonicalIndexedTotal` | Every canonical document, all locales. |
+| `provider.indexedTotal` | Every provider document, **all locales, including ones nothing knows about**. |
 | `verified` | Whether the provider was actually asked. |
-| `healthy` | Canonical **and** provider both agree. |
+| `healthy` | Canonical **and** provider agree, per locale *and* in total. |
 
 There is deliberately no single `indexed` number. Once there are two storages,
 one number can only be a guess about which of them you meant.
+
+### Why the totals matter as well as the locales
+
+Per-locale counts can only ask about locales somebody already knows to ask for -
+and that list is built from the database and the canonical table. A document that
+exists **only** in the provider is invisible to it.
+
+That is not hypothetical. Deletion runs canonical-first: `SearchModel.delete`
+removes the canonical row and then asks the provider. If the provider's half
+fails, the document survives in a locale that no longer appears in either source,
+so nothing enumerates it:
+
+```text
+database expected  pl: 0
+core_search_index  pl: 0
+Elasticsearch      pl: 1   ← nothing asks about "pl" any more
+```
+
+An unfiltered total finds it, because it is not built from an enumeration:
+`providerTotal > expectedTotal` is enough to say something is wrong even when
+every locale anybody checked agreed. The same guard covers a locale that was
+removed from the installation entirely, and a content type with **no** rows at
+all - where the per-locale list is empty and `[].every(...)` would otherwise say
+everything is fine.
 
 <Callout type="warn" title="Unverified is not healthy">
 A provider that offers no `count` reports `verified: false` and
@@ -95,9 +122,9 @@ health is exactly how a broken search box hides behind a good canonical table.
 | Provider | Behaviour |
 | -------- | --------- |
 | **Postgres** (bundled) | Its store *is* `core_search_index`, so it declares `canonicalStorage` and is verified without a second query. Canonical and provider always agree, because they are one thing. |
-| **Elasticsearch** | Implements `count` with the `_count` API - a number, never fetched documents - filtered by `itemType` and, where applicable, `languageCode`. |
+| **Elasticsearch** | Implements `count` with the `_count` API - a number, never fetched documents - filtered by `itemType`, and by `languageCode` when one is given. Omitting the language is the unfiltered total. It creates no index as a side effect: a diagnostic is observational. |
 | **Anything else** | Reported as `verified: false` unless it implements `count`. |
-| **A provider that throws** | `verified: true`, `healthy: false`, and `error` carries the reason. The status route still answers, and the failure is logged behind `[content-diagnostics]`. |
+| **A provider that throws** | `verified: true`, `healthy: false`, and `error` carries the reason. A failure in either the total or a per-locale count is handled the same way. The status route still answers, and the failure is logged behind `[content-diagnostics]`. |
 
 The expected side uses the **same** `publishedCondition` the indexer uses.
 Re-deriving "published" here would let the diagnostic disagree with the thing it
@@ -116,7 +143,12 @@ export const MySearchAdapter = (): SearchProviderApiPlugin => ({
 
 Count, do not fetch: a diagnostic over a large collection has to cost the same
 as one over an empty one. Honour `languageCode` if your store keeps one document
-per translation - a single total cannot say "Polish is missing forty documents".
+per translation - a single total cannot say "Polish is missing forty documents" -
+and treat an **omitted** `languageCode` as every language, because that call is
+what finds a document in a locale nobody thought to ask about.
+
+Make it observational. Creating an index, warming a cache or writing anything
+would let the health check change the thing it is measuring.
 
 ### Repairing drift
 

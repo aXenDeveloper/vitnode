@@ -29,6 +29,7 @@ import type { PaginationCursor } from "./pagination-cursor";
 
 import {
   cursorValueForColumn,
+  cursorValueIsCanonicalText,
   cursorValueOf,
   decodePaginationCursor,
   encodePaginationCursor,
@@ -118,6 +119,13 @@ function required(value: SQL | undefined): SQL {
  * column < :value OR (column = :value AND id < :id)   -- descending
  * ```
  *
+ * `:value` comes from the **cursor** and nowhere else. That is the invariant a
+ * cursor exists to provide: it is the position as it stood when the page was
+ * generated, so editing the row that happened to sit on the boundary must not
+ * move it. Reading the row's current value instead would mean one edit silently
+ * skips every row the ordering used to have between the old position and the
+ * new one - and deleting it would leave no position at all.
+ *
  * The `NULL` branches are the part that is easy to get wrong. Postgres sorts
  * `NULLS LAST` for `ASC` and `NULLS FIRST` for `DESC`, and `column > NULL` is
  * `NULL` rather than true - so a nullable order column needs the null block
@@ -130,14 +138,12 @@ function buildCursorCondition({
   direction,
   isPrimaryOrder,
   primary,
-  table,
 }: {
   column: PgColumn;
   cursor: PaginationCursor;
   direction: "asc" | "desc";
   isPrimaryOrder: boolean;
   primary: PgColumn;
-  table: PgTable;
 }): SQL {
   const after = direction === "asc" ? gt : lt;
 
@@ -145,7 +151,7 @@ function buildCursorCondition({
   // is no second half to compare and no null block to worry about.
   if (isPrimaryOrder) return after(primary, cursor.id);
 
-  const boundary = boundaryValue({ column, cursor, primary, table });
+  const boundary = boundaryValue(column, cursor);
 
   if (direction === "asc") {
     // NULLS LAST: a null cursor is inside the trailing block, and everything
@@ -177,43 +183,29 @@ function buildCursorCondition({
 }
 
 /**
- * The value to compare against, read back from the row the cursor names.
+ * The cursor's own value, bound so Postgres compares it at full precision.
  *
- * A cursor cannot carry a Postgres `timestamp` faithfully: the column keeps
- * microseconds and a JavaScript `Date` keeps milliseconds, so a value that has
- * been out to a client and back is *strictly smaller* than the one still in the
- * table. Comparing against it would exclude the whole millisecond it came from
- * - and since `now()` gives every row in one statement the same microsecond
- * stamp, that is not an edge case: a bulk-imported collection would end its walk
- * after the first page, silently.
+ * Two shapes, because two kinds of value survive a round trip differently:
  *
- * So the comparison uses the stored value. The subquery is uncorrelated - one
- * primary-key lookup, evaluated once - and the cursor's own copy is the fallback
- * for the one case the row cannot supply: it has been deleted since. That copy
- * is millisecond-accurate rather than exact, which is the honest best available
- * when the row it described is gone.
+ * - a **date** travels as the database's own `::text` and is bound back with an
+ *   explicit cast, so Postgres parses the microseconds it wrote. Binding a
+ *   JavaScript `Date` here would silently truncate to milliseconds and exclude
+ *   the whole millisecond the cursor came from.
+ * - **everything else** - a number, a string, a boolean, a bigint - is exact in
+ *   JavaScript already, so it goes through the column's own encoder.
+ *
+ * `getSQLType()` is derived from the schema rather than from the request, which
+ * is what makes `sql.raw` safe here; the value itself is always a bound
+ * parameter.
  */
-function boundaryValue({
-  column,
-  cursor,
-  primary,
-  table,
-}: {
-  column: PgColumn;
-  cursor: PaginationCursor;
-  primary: PgColumn;
-  table: PgTable;
-}): SQL {
-  // `sql.param(value, column)` rather than a bare interpolation: the value has
-  // to go through the column's own encoder, or the driver is handed an ISO
-  // string where it declared a timestamp and refuses the whole statement.
-  const fallback = sql.param(
-    cursorValueForColumn(column, cursor.value),
-    column,
-  );
-  const id = sql.param(cursor.id, primary);
+function boundaryValue(column: PgColumn, cursor: PaginationCursor): SQL {
+  const value = cursorValueForColumn(column, cursor.value);
 
-  return sql`coalesce((select ${column} from ${table} where ${primary} = ${id}), ${fallback})`;
+  if (cursorValueIsCanonicalText(column)) {
+    return sql`${String(value)}::${sql.raw(column.getSQLType())}`;
+  }
+
+  return sql`${sql.param(value, column)}`;
 }
 
 function buildSearchWhere(
@@ -342,7 +334,6 @@ export async function withPagination<
         direction,
         isPrimaryOrder,
         primary,
-        table,
       })
     : undefined;
   const where =
@@ -390,10 +381,19 @@ export async function withPagination<
  * The two cursors a page hands back.
  *
  * The order column's value normally comes straight off the row, because a list
- * almost always selects the column it sorts by. When it does not - a projection
- * that names a subset - the two boundary values are read in one extra query
- * rather than the cursor quietly falling back to an identifier, which is exactly
- * the bug this module exists to remove.
+ * almost always selects the column it sorts by. Two cases need one extra
+ * primary-key lookup of at most two rows:
+ *
+ * 1. **a projection that does not include the order column** - a public read
+ *    naming a subset of fields. Without the value there is no tuple to mint, and
+ *    falling back to an identifier is the bug this module exists to remove;
+ * 2. **a date column** - the row carries a JavaScript `Date`, which has already
+ *    lost the microseconds Postgres stored. The canonical `::text` is fetched so
+ *    the cursor carries the value the next comparison will be parsed from.
+ *
+ * The lookup reads the boundary rows *now*, while they are still the boundary -
+ * it is part of minting the cursor, not part of using one. Nothing re-reads them
+ * when the cursor comes back.
  */
 async function cursorsFor({
   c,
@@ -419,16 +419,23 @@ async function cursorsFor({
   const idOf = (row: Record<string, unknown>): number =>
     Number(row[primaryName]);
 
-  const projected = orderName in first && orderName in last;
+  const canonical = cursorValueIsCanonicalText(orderColumn);
+  const onTheRow = !canonical && orderName in first && orderName in last;
+
   const values = new Map<number, unknown>();
-  if (projected) {
+  if (onTheRow) {
     values.set(idOf(first), first[orderName]);
     values.set(idOf(last), last[orderName]);
   } else {
     const ids = [...new Set([idOf(first), idOf(last)])];
     const rows = await c
       .get("db")
-      .select({ id: primary, value: orderColumn })
+      .select({
+        id: primary,
+        // `::text` for a date, so no precision is lost between the value the
+        // cursor carries and the value the next page compares against.
+        value: canonical ? sql<string>`${orderColumn}::text` : orderColumn,
+      })
       .from(table)
       .where(inArray(primary, ids));
 

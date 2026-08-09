@@ -82,18 +82,59 @@ thing in reverse and flips the page back afterwards. The `ORDER BY` and the
 predicate are built from the same tuple in the same direction, which is the
 invariant everything else rests on.
 
-<Callout title="The cursor is opaque">
+<Callout title="The cursor is opaque, and self-contained">
 It is `base64url(JSON)` carrying the column, the value and the identifier - so
 it is meaningless outside the ordering that produced it, and it says so: a
 cursor minted while a list was ordered by `updatedAt` and replayed against the
 same list ordered by `title` is a `400`, not a page of wrong rows. Hand it back
 unchanged; never parse it, and never build one.
+
+Nothing re-reads the row it came from. A cursor is the position **as it stood
+when the page was generated**, so editing or deleting the row that happened to
+sit on the boundary does not move it. Re-reading would mean one edit silently
+skips every row the ordering used to have between the old position and the new
+one - a page of results nobody ever sees, with no error and no short page to
+notice it by.
 </Callout>
+
+### Timestamps travel as the database wrote them
+
+A Postgres `timestamp` keeps microseconds; a JavaScript `Date` keeps
+milliseconds. A boundary value that had been through a `Date` would be strictly
+*smaller* than the one still in the table, and the next page would exclude the
+whole millisecond it came from - which, since `now()` stamps every row in one
+statement identically, would end a bulk-imported collection's walk after page
+one.
+
+So a date cursor carries the column's own `::text` and the predicate binds it
+back with an explicit cast. The value in the cursor is byte-identical to the
+value the next comparison is parsed from.
+
+### A tampered cursor is refused, not coerced
+
+The cursor is opaque but not signed, so every field is checked against the
+column it claims to describe:
+
+| Column | Accepted |
+| ------ | -------- |
+| number | a JSON number, finite |
+| bigint | a decimal integer string |
+| boolean | a JSON boolean |
+| string | a JSON string |
+| date | a canonical Postgres timestamp, `timestamptz`, date or ISO string |
+| any | `null`, which is a real position |
+
+Coercion is the failure mode being avoided, not an inelegance: `Boolean("false")`
+is `true`, `Number("")` is `0`, and `BigInt("nonsense")` throws a `SyntaxError`
+that would leave the route answering `500`. Every mismatch is a `400`, and no
+malformed value ever reaches Postgres as a failed cast.
 
 **What is guaranteed:**
 
 - **any** orderable column pages exactly - a title, a nullable `publishedAt`, a
   custom field, whatever its relationship to the identifier;
+- the boundary is **stable**: updating or deleting the row the cursor named does
+  not move it, and every row that was after that position is still reachable;
 - rows sharing a sort value are returned exactly once, because the identifier is
   the tiebreaker in both the ordering and the predicate;
 - a nullable order column walks through its null block correctly - Postgres sorts
@@ -108,9 +149,11 @@ unchanged; never parse it, and never build one.
 **What is not:**
 
 <Callout type="warn" title="A cursor is a position, not a snapshot">
-Rows inserted behind the cursor are not seen until the next pass. That is the
-trade every keyset pagination makes, and it is the right one - the alternative is
-holding a transaction open across requests.
+Rows inserted behind the cursor are not seen until the next pass, and a row that
+is *edited* so that it moves from behind the cursor to ahead of it is seen a
+second time. That is the trade every keyset pagination makes, and it is the right
+one - the alternative is holding a transaction open across requests. What never
+happens is a row being skipped because something *else* moved.
 </Callout>
 
 ### Invalid input is refused, not repaired
