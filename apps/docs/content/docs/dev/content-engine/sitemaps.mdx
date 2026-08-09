@@ -172,6 +172,10 @@ seo: { noIndexField: "syndication.noIndex" }
 single clause in the query rather than a post-filter, so a page of 1,000 entries is
 1,000 listed URLs rather than however many survived.
 
+Only `true` excludes. The clause is `IS DISTINCT FROM TRUE`, so a nullable field's `null`
+is listed exactly like a `false` - which is what an upgrade produces, and what the
+`robots` metadata says about the same row.
+
 The field must be a shared boolean. See [SEO](/docs/dev/content-engine/seo#robots-and-noindex).
 
 ## The XML helper

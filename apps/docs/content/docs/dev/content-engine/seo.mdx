@@ -160,6 +160,28 @@ record.
 about indexing emits no `robots` meta tag rather than an affirmative "yes, index
 this".
 
+### A nullable field is fine
+
+```ts
+noIndex: field.boolean({ nullable: true });
+```
+
+Only `true` withholds a record. `false` and `null` both mean indexable, in both places
+that read the flag:
+
+| Value   | `robots.index` | In the sitemap |
+| ------- | -------------- | -------------- |
+| `true`  | `false`        | no             |
+| `false` | `true`         | yes            |
+| `null`  | `true`         | yes            |
+
+That matters most on an upgrade, because a boolean added to a table that already has
+rows arrives full of `NULL`. The sitemap predicate is `IS DISTINCT FROM TRUE` rather
+than `<> TRUE` for exactly this reason: in SQL `NULL <> TRUE` is `NULL`, and a `WHERE`
+clause drops every row it cannot prove - so the loose spelling would quietly empty the
+sitemap of every record nobody had ever set the flag on, while each of their pages went
+on rendering `index: true`.
+
 ### It has to be shared
 
 ```ts

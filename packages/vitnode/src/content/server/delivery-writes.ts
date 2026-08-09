@@ -128,6 +128,50 @@ export const applyContentDeliveryWrite = async ({
   let redirectCreated = false;
 
   if (slugHistory !== null) {
+    /**
+     * Whether this mutation takes the previous public address out of service.
+     *
+     * Three ways it can: the slug moved, the record was deleted (`slug === null`),
+     * or it stopped being publicly reachable. All three end with a URL that used to
+     * answer and now does not, which is precisely when history has to hold it.
+     */
+    const leavingService = slugChanged || slug === null || !isPublic;
+
+    // The lazy bootstrap, and the reason Stage 8 ships no backfill migration.
+    //
+    // A record published *before* this table existed has no row in it, so the
+    // first mutation that moved it would find nothing to retire and
+    // `/articles/hello` would simply be forgotten - a redirect the documentation
+    // promises and the engine never wrote. Backfilling every content type at
+    // migration time cannot fix that: the database has one slug per row and no
+    // record of which historical values were ever public, so it would have to
+    // choose between missing the same URLs and inventing redirects for slugs that
+    // only ever existed on a draft.
+    //
+    // This mutation does not have to choose. It is holding the row on both sides
+    // of its own write, so `wasPublic` is evidence: that address was reachable a
+    // moment ago, and it is going away now. `previousPath !== null` is the second
+    // half - an address the engine cannot even build a path for was never
+    // addressable, so there is nothing to preserve.
+    //
+    // `ensureCurrent` rather than `reserve`: a row that is already on file is left
+    // exactly as it stands. Establishing a missing fact and resurrecting a retired
+    // address are different operations, and only the first one belongs here.
+    if (
+      wasPublic &&
+      previousSlug !== null &&
+      previousPath !== null &&
+      leavingService
+    ) {
+      await slugHistory.ensureCurrent(tx, {
+        itemId,
+        languageId,
+        locale,
+        path: previousPath,
+        slug: previousSlug,
+      });
+    }
+
     if (slugChanged && previousSlug !== null) {
       const { retired } = await slugHistory.retire(tx, {
         itemId,
@@ -135,7 +179,8 @@ export const applyContentDeliveryWrite = async ({
         slug: previousSlug,
       });
       // A retired row is proof the URL was live: it is only ever written by a
-      // publish or by a slug change on an already-public record.
+      // publish, by a slug change on an already-public record, or by the
+      // bootstrap above - which runs on the same proof.
       redirectCreated = retired;
     }
 

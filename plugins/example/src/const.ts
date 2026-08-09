@@ -43,4 +43,8 @@ export const EXAMPLE_MIGRATIONS = [
   // exclusion and the `robots` metadata together. Additive and defaulted, so every
   // existing row becomes indexable rather than silently disappearing from a sitemap.
   "0033_add_example_article_no_index.sql",
+  // The same field on `example.article`, but **nullable** - the shape an upgrade
+  // actually produces. `NULL` has to mean "indexable" identically in the metadata
+  // and in the sitemap predicate, and only a nullable column can prove it.
+  "0034_add_example_article_no_index_flag.sql",
 ];

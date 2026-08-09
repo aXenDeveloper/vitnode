@@ -239,6 +239,13 @@
       "when": 1786195724174,
       "tag": "0033_add_example_article_no_index",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1786292946013,
+      "tag": "0034_add_example_article_no_index_flag",
+      "breakpoints": true
     }
   ]
 }

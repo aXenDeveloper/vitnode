@@ -74,6 +74,35 @@ export interface ContentSlugHistoryModel {
     args: ContentSlugHistoryTarget,
   ) => Promise<void>;
   /**
+   * Records an address the caller can **prove** was live, if it is not on file.
+   *
+   * The lazy half of slug history, and the reason Stage 8 needs no backfill
+   * migration. A record published before this table existed has no row at all, so
+   * the first mutation that moves it off that address would find nothing to
+   * retire - and `/articles/hello` would be lost the moment somebody renamed it.
+   * A global backfill is not the answer: it would have to guess which historical
+   * values were ever public, and a draft's discarded slug must never become a
+   * redirect. The mutation itself does not have to guess. It is holding the row on
+   * both sides of its own write, so `wasPublic` is evidence rather than inference,
+   * and this is where that evidence is spent.
+   *
+   * Distinct from {@link reserve} in one deliberate way: a row that already exists
+   * is left **exactly** as it is, retired or not. This establishes a missing fact;
+   * it never brings a retired address back into service, which is `reserve`'s job
+   * and only correct when the record really is live there.
+   *
+   * Idempotent, transactional, and throws {@link ContentDeliverySlugReserved} when
+   * another record owns the address. Writes nothing but the row: no event, no
+   * cache tag, no search document.
+   */
+  ensureCurrent: (
+    tx: ContentDatabase,
+    args: ContentSlugHistoryTarget & {
+      /** The path that address served, recorded as the historical fact it is. */
+      path: string;
+    },
+  ) => Promise<{ created: boolean }>;
+  /**
    * Every address one record has ever had, newest first.
    *
    * Scoped by language when one is given, which is what makes the AdminCP's Polish
@@ -102,10 +131,8 @@ export interface ContentSlugHistoryModel {
    * task and a double-clicked publish button harmless.
    *
    * Throws {@link ContentDeliverySlugReserved} when another record owns the
-   * address. That check is a `SELECT ... FOR UPDATE` inside the caller's
-   * transaction rather than a caught unique violation, so the error names the slug
-   * and the locale instead of a Postgres constraint - and so two concurrent
-   * reservations of the same URL serialise instead of racing.
+   * address, whichever order two concurrent writers arrive in - see the `claim`
+   * helper for why that is an insert rather than a check.
    */
   reserve: (
     tx: ContentDatabase,
@@ -202,6 +229,62 @@ export const createContentSlugHistoryModel = ({
     return row ? toEntry(row) : null;
   };
 
+  /**
+   * Takes one address for one record, or says who already has it.
+   *
+   * **Insert first, ask afterwards**, and that ordering is the whole point.
+   * `SELECT ... FOR UPDATE` locks rows that exist; there is no such thing as
+   * locking a row that does not. So two transactions reserving one *previously
+   * unseen* address both read nothing, both decide the address is free, and both
+   * insert - one of them straight into a `23505` from the partial unique index.
+   * The database stays consistent, but the contract does not: the loser gets a raw
+   * driver failure that the shared mapper reads as a generic unique clash, where
+   * Stage 8 promises `CONTENT_DELIVERY_SLUG_RESERVED` naming the slug and the
+   * locale. Which of the two a caller saw depended on timing.
+   *
+   * `ON CONFLICT DO NOTHING` moves the decision into the one place that can make
+   * it. The second insert takes a speculative-insertion lock, waits for the first
+   * transaction to finish, and then either does nothing (it committed) or inserts
+   * after all (it rolled back). `RETURNING` reports which happened, so the loser is
+   * identified rather than caught, and the address is never claimed by two writers.
+   *
+   * The follow-up read still takes `FOR UPDATE`: the row exists by then, and
+   * locking it is what serialises this claim against a concurrent `retire` of the
+   * same row.
+   */
+  const claim = async (
+    tx: ContentDatabase,
+    {
+      itemId,
+      languageId,
+      locale,
+      path,
+      slug,
+    }: ContentSlugHistoryTarget & { path: string },
+  ): Promise<{ created: boolean }> => {
+    const [inserted] = await tx
+      .insert(core_content_slug_history)
+      .values({ contentTypeId, itemId, languageId, path, pluginId, slug })
+      .onConflictDoNothing()
+      .returning({ id: core_content_slug_history.id });
+
+    if (inserted) return { created: true };
+
+    const owner = await findOwner(tx, { languageId, slug }, { lock: true });
+
+    // A missing owner here means the row that blocked the insert is not visible to
+    // this transaction's snapshot. Under READ COMMITTED that cannot happen - the
+    // insert waited for the other transaction and the next statement sees its
+    // commit - and under a stricter isolation level it means somebody else has the
+    // address and we simply cannot see them yet. Either way this transaction did
+    // not get it, and refusing is the only answer that is never wrong.
+    if (owner?.itemId !== itemId) {
+      throw new ContentDeliverySlugReserved({ contentTypeId, locale, slug });
+    }
+
+    return { created: false };
+  };
+
   return {
     assertAvailable: async (tx, { itemId, languageId, locale, slug }) => {
       const owner = await findOwner(tx, { languageId, slug });
@@ -209,6 +292,11 @@ export const createContentSlugHistoryModel = ({
 
       throw new ContentDeliverySlugReserved({ contentTypeId, locale, slug });
     },
+
+    // Establish and stop. A row that is already here is left as it stands - a
+    // retired address stays retired, because this call means "this was live once"
+    // and never "this is live now".
+    ensureCurrent: async (tx, args) => await claim(tx, args),
 
     list: async ({ itemId, languageId, limit }, database) => {
       const conditions = [scope, eq(core_content_slug_history.itemId, itemId)];
@@ -238,55 +326,29 @@ export const createContentSlugHistoryModel = ({
     owner: async (args, database) =>
       await findOwner(database ?? c.get("db"), args),
 
-    reserve: async (tx, { itemId, languageId, locale, path, slug }) => {
-      // Locked, so two writers reserving the same address in two transactions
-      // serialise here rather than both reaching the unique index and one of them
-      // surfacing a raw `23505`.
-      const existing = await findOwner(
-        tx,
-        { languageId, slug },
-        { lock: true },
-      );
+    reserve: async (tx, args) => {
+      const { created } = await claim(tx, args);
+      if (created) return { created: true };
 
-      if (existing !== null) {
-        if (existing.itemId !== itemId) {
-          throw new ContentDeliverySlugReserved({
-            contentTypeId,
-            locale,
-            slug,
-          });
-        }
+      const { itemId, languageId, path, slug } = args;
 
-        // Its own row, coming back into service: a slug that moved away and then
-        // moved back, or a republish of the address it already had.
-        await tx
-          .update(core_content_slug_history)
-          .set({ path, retiredAt: null })
-          .where(
-            and(
-              scope,
-              eq(core_content_slug_history.itemId, itemId),
-              eq(core_content_slug_history.slug, slug),
-              languageCondition(
-                languageId,
-                core_content_slug_history.languageId,
-              ),
-            ),
-          );
+      // Its own row, coming back into service: a slug that moved away and then
+      // moved back, or a republish of the address it already had. `path` is
+      // rewritten as well as `retiredAt`, because a content type whose
+      // `publicApi.path` changed serves the address from a different prefix now.
+      await tx
+        .update(core_content_slug_history)
+        .set({ path, retiredAt: null })
+        .where(
+          and(
+            scope,
+            eq(core_content_slug_history.itemId, itemId),
+            eq(core_content_slug_history.slug, slug),
+            languageCondition(languageId, core_content_slug_history.languageId),
+          ),
+        );
 
-        return { created: false };
-      }
-
-      await tx.insert(core_content_slug_history).values({
-        contentTypeId,
-        itemId,
-        languageId,
-        path,
-        pluginId,
-        slug,
-      });
-
-      return { created: true };
+      return { created: false };
     },
 
     retire: async (tx, { itemId, languageId, slug }) => {

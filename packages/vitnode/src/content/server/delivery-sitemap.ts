@@ -6,7 +6,7 @@ import type {
 } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { and, asc, eq, gt, ne, sql } from "drizzle-orm";
+import { and, asc, eq, gt, sql } from "drizzle-orm";
 
 import type { ContentSitemapEntry } from "../sitemap";
 import type { AnyContentTypeDefinition } from "../types";
@@ -132,10 +132,19 @@ export const readContentDeliverySitemapPage = async <
   const conditions: (SQL | undefined)[] = [
     publishedCondition(base),
     args.cursor === undefined ? undefined : gt(columns.id, args.cursor),
-    // `ne(..., true)` rather than `eq(..., false)`: the column is `NOT NULL` today,
-    // and a nullable one added later would silently drop every row whose value was
-    // never set if this asked for an exact `false`.
-    exclude === null ? undefined : ne(exclude, true),
+    // `IS DISTINCT FROM TRUE`, which is the only spelling that agrees with the
+    // metadata. `contentDeliveryRobots` reads `value !== true`, so a `noIndex` of
+    // `null` means `index: true` - and the sitemap has to list exactly what claims
+    // to be indexable, because "absent from the sitemap" and "robots says index
+    // me" is a contradiction a crawler resolves however it likes.
+    //
+    // `<> TRUE` cannot say it. In SQL `NULL <> TRUE` is `NULL`, not `TRUE`, and a
+    // `WHERE` clause drops every row it cannot prove - so a nullable `noIndexField`
+    // would quietly empty the sitemap of every record nobody had ever set the flag
+    // on, while every one of their pages rendered `index: true`. `IS DISTINCT
+    // FROM` is the null-aware comparison: `true` excludes, `false` and `null`
+    // include, which is the metadata rule written once more in SQL.
+    exclude === null ? undefined : sql`${exclude} is distinct from true`,
   ];
 
   if (!localized) {

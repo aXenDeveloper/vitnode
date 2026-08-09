@@ -1,6 +1,6 @@
 ---
 title: Delivery migrations
-description: One new core table, one deterministic migration, and a clear statement about what history does *not* get backfilled.
+description: One new core table, one deterministic migration, how history establishes itself without a backfill, and what a route-prefix change needs instead.
 icon: Database
 ---
 
@@ -66,21 +66,46 @@ Two partial uniques rather than one over a nullable `languageId`, because Postgr
 every `NULL` as distinct - a single key including it would enforce nothing at all for the
 shared case it exists to protect.
 
-## History is not backfilled
+## History is established lazily, not backfilled
 
-**Nothing existing gets a history row.** History starts when Stage 8 begins tracking
-future public slug changes, and that is a decision rather than an omission:
+**No migration writes a history row.** Nothing scans your tables, and that is a decision
+rather than an omission. What happens instead is that each record establishes its own
+address the first time a mutation needs it:
 
 ```text
 existing published article, slug = hello
   → no history row
   → /articles/hello is canonical, as it always was
-  → the *next* slug change creates the redirect
+
+rename hello → world
+  → the mutation knows the record was public a moment ago
+  → it writes `hello`, retires it, and reserves `world`
+  → /articles/hello answers 308 → /articles/world
 ```
 
-A record's current slug does not need to be history - it is the canonical URL, and the
-resolver finds it through the ordinary public read. The first row for a record is written
-the next time it is published or the next time its live slug moves.
+The mutation is the only thing that can do this correctly, and the reason is evidence. It
+holds the row on both sides of its own write, so "that address was publicly reachable"
+is a fact it already has - not something reconstructed afterwards from a table that never
+recorded it. A migration has no such evidence, which is the whole of the next section.
+
+Three mutations spend it, and they are exactly the ones that take a live URL out of
+service:
+
+| Mutation on a published record | What is written |
+| ------------------------------ | ---------------- |
+| slug change | the old address, then retired; the new one, current |
+| unpublish | the address, kept current so nobody else can claim it |
+| delete | the same - the record is gone and the URL stays reserved |
+
+A **draft** spends nothing. Its slug was never an address, so correcting it three times
+before publishing writes nothing at all - which is the distinction an automatic backfill
+cannot make.
+
+<Callout type="info" title="It is idempotent">
+  A record that already has its row is left exactly as it stands, retired or not.
+  Establishing a missing fact and bringing a retired address back into service are
+  different operations, and only the second one un-retires anything.
+</Callout>
 
 ### Why revisions are not scanned
 
@@ -134,32 +159,41 @@ Verify with the AdminCP delivery panel: it lists exactly what the resolver will 
 /articles  →  /blog
 ```
 
-This is **source configuration**, not a content mutation, and the engine creates no
-redirects for it. Every record's URL changes at once, at deploy time, for a reason no
-row in the database records.
+**Stage 8 cannot redirect this, and no amount of history will make it.** The reason is
+one line in the resolver rather than a missing feature:
 
-Automating it would mean writing one history row per record on boot - a migration
-disguised as a config change, running inside a process that may be one of several
-starting at the same moment. So it is left to you, deliberately:
-
-```sql
--- One row per published record, with the old prefix.
-INSERT INTO "core_content_slug_history"
-  ("pluginId", "contentTypeId", "itemId", "languageId", "slug", "path", "retiredAt")
-SELECT
-  '@vitnode/example', 'example.article', a."id", NULL,
-  a."slug", '/articles/' || a."slug", now()
-FROM "example_articles" a
-WHERE a."status" = 'published' AND a."publishedAt" IS NOT NULL
-ON CONFLICT DO NOTHING;
+```ts
+// parseContentDeliveryPath
+if (prefix !== definition.publicApi.path) return null;
 ```
 
-That is safe because the slug is unchanged - only the prefix moved - so the retired
-`path` is the old URL and the resolver's destination is the record's current canonical
-path under the new prefix. Run it in the same deploy as the config change.
+`resolvePath()` splits an incoming URL against the prefix the content type has **now**.
+After the config says `blog`, a request for `/articles/foo` is not a path this content
+type produces, so it is `not_found` before slug history is consulted at all. History
+answers "which record used to live at this *slug*", and the prefix is not part of the
+slug.
 
-Stage 8's automatic redirects are for **slug changes**. Route-prefix migrations are a
-deployment decision, and they get explicit tooling or explicit SQL.
+<Callout type="warn" title="Inserting history rows will not help">
+  A hand-written row carrying `/articles/foo` never gets read, because the request is
+  refused one step earlier. Worse, a row whose `slug` is the one the record still holds
+  collides with its own current reservation - the partial unique index is on
+  `(contentTypeId, slug)`, not on `path`.
+</Callout>
+
+`publicApi.path` is the routing namespace itself. Changing it moves every record at once,
+at deploy time, for a reason no row in the database records - so the old prefix has to be
+redirected by whatever owns routing:
+
+- a rewrite or redirect rule in your framework's router or middleware;
+- a `redirects()` entry in `next.config`, or the equivalent for your host;
+- a CDN or reverse-proxy rule, which is where a permanent prefix move usually belongs.
+
+All three are one rule for the whole prefix - `/articles/:slug → /blog/:slug` - rather
+than one row per record, which is the right shape for a change that affected every record
+identically.
+
+Stage 8's automatic redirects are for **slug changes**: the record moved and the engine
+was there when it happened. A prefix move is a deployment decision, and it stays one.
 
 ## Turning delivery off
 
@@ -178,7 +212,17 @@ Safe and additive:
 2. Run the core migration if you have not already.
 3. Existing published records keep their canonical URLs and gain sitemap entries
    immediately.
-4. The first slug change on a published record creates the first redirect.
+4. The first slug change on a published record creates the first redirect - the mutation
+   establishes the old address on its way past, so nothing is lost for having upgraded
+   late.
 
 There is no reindex, no rebuild and no backfill step - which is the practical
 consequence of delivery being a projection over data the content type already had.
+
+<Callout type="info" title="A nullable `noIndexField` is fine">
+  Adding `field.boolean({ nullable: true })` and naming it as `delivery.seo.noIndexField`
+  needs no default and no table rewrite. `null` means indexable in both places that read
+  it: `robots` renders `index: true`, and the sitemap predicate is
+  `IS DISTINCT FROM TRUE`, so every existing row is listed rather than silently dropped.
+  Only an explicit `true` withholds a record.
+</Callout>

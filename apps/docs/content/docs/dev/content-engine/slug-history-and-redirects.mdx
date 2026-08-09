@@ -86,6 +86,28 @@ redirects at all, because none of those URLs was ever live. Without that rule a
 content type would accumulate a redirect per typo, and each one would be a
 permanent claim on an address nobody had visited.
 
+### Records older than the table
+
+The rule holds for content published *before* slug history existed, and it does so
+without a backfill migration. A mutation that takes a live address out of service
+establishes that address first, then retires it:
+
+```text
+upgraded install: published article, slug = hello, no history rows
+
+rename hello → world
+  → `hello` is written and retired, `world` reserved
+  → /articles/hello answers 308 → /articles/world
+```
+
+The mutation is holding the row on both sides of its own write, so "this was public a
+moment ago" is evidence rather than a guess - which is exactly what a migration scanning
+your tables would not have. It is idempotent (a record that already has the row is left
+as it stands, retired or not) and it is spent only where a URL is leaving service: a slug
+change, an unpublish, or a delete. A draft still writes nothing.
+
+See [Delivery migrations](/docs/dev/content-engine/content-delivery-migrations#history-is-established-lazily-not-backfilled).
+
 ## What is stored
 
 One shared table, `core_content_slug_history`:
@@ -304,8 +326,38 @@ history: exactly one retirement and one new reservation
 ```
 
 Two *different* records racing for the same retired address both lose: the
-reservation lookup takes a row lock, so they serialise rather than race, and the
+reservation takes a row lock on the owner, so they serialise rather than race, and the
 address belongs to neither of them.
+
+### An address nobody has ever held
+
+The harder case, and the reason a reservation is an **insert** rather than a check:
+
+```text
+record A → "brand-new"
+record B → "brand-new"     (no history row exists for it)
+```
+
+`SELECT ... FOR UPDATE` locks rows that exist, and there is no such thing as locking a
+row that is not there - so a check-then-insert lets both transactions read nothing, both
+conclude the address is free, and the second one land on the unique index as a raw
+`23505`. The database stays consistent and the *contract* does not: the loser would get a
+driver failure that the shared mapper reads as a generic unique clash, where Stage 8
+promises `CONTENT_DELIVERY_SLUG_RESERVED`.
+
+So the reservation inserts first, with `ON CONFLICT DO NOTHING ... RETURNING`. The second
+insert takes a speculative-insertion lock, waits for the first transaction to finish, and
+then either does nothing (it committed) or inserts after all (it rolled back) - and
+`RETURNING` says which happened. One writer gets the address; the other gets the
+structured refusal, whichever order they arrived in.
+
+<Callout type="info" title="A slug field is also unique on its own table">
+  So two *published* records renaming onto one brand-new slug usually collide there
+  first, one statement earlier, and the loser is told `CONTENT_UNIQUE_CONFLICT` - "that
+  address is taken now". `CONTENT_DELIVERY_SLUG_RESERVED` is the other sentence: "another
+  record used to hold it, and it still redirects there". Both are structured 409s; the
+  wording differs because the situations do.
+</Callout>
 
 ## Events
 

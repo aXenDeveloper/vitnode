@@ -1,5 +1,8 @@
 import type { SearchDocument } from "@vitnode/core/api/models/search";
-import type { ContentDeliverySitemapPage } from "@vitnode/core/content/server";
+import type {
+  ContentDatabase,
+  ContentDeliverySitemapPage,
+} from "@vitnode/core/content/server";
 import type { Context } from "hono";
 
 import {
@@ -10,8 +13,11 @@ import {
   contentDeliveryEffects,
   contentEditorialEffects,
   contentTranslationEffects,
+  createContentSlugHistoryModel,
+  withHttpErrors,
 } from "@vitnode/core/content/server";
 import { drizzle } from "drizzle-orm/postgres-js";
+import { HTTPException } from "hono/http-exception";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -889,6 +895,305 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       // of the two may take it.
       expect(results.every(result => result.status === "rejected")).toBe(true);
     });
+
+    /**
+     * Two writers reaching for an address **nobody has ever held**.
+     *
+     * A different case from the one above, and the one a check-then-insert cannot
+     * survive. `SELECT ... FOR UPDATE` locks rows that exist; there is nothing to
+     * lock when the row is missing, so both transactions read nothing, both
+     * conclude the address is free, and the second insert lands on the partial
+     * unique index as a raw `23505` - a driver failure where the contract promises
+     * `CONTENT_DELIVERY_SLUG_RESERVED`, and a different answer depending on which
+     * transaction happened to be quicker.
+     *
+     * The overlap here is constructed rather than hoped for: the first transaction
+     * is parked open after its insert, so the second one is genuinely inside the
+     * window while the first is uncommitted.
+     */
+    it("refuses the loser when two writers insert one unseen address at once", async () => {
+      const history = createContentSlugHistoryModel({
+        c: context,
+        definition: articleContent.definition,
+        pluginId: PLUGIN,
+      });
+      const rivalDb = rivalContext.get("db") as ContentDatabase;
+
+      const first = await publishArticle({ title: "First" });
+      const second = await publishArticle({ title: "Second" });
+
+      const target = {
+        languageId: null,
+        locale: null,
+        path: "/articles/totally-new-contested-slug",
+        slug: "totally-new-contested-slug",
+      };
+
+      // Nothing owns it. That is the whole premise.
+      expect(
+        await history.owner({ languageId: null, slug: target.slug }),
+      ).toBeNull();
+
+      let inserted!: () => void;
+      const hasInserted = new Promise<void>(resolve => {
+        inserted = resolve;
+      });
+      let release!: () => void;
+      const mayCommit = new Promise<void>(resolve => {
+        release = resolve;
+      });
+
+      const winner = db.transaction(async tx => {
+        await history.reserve(tx, {
+          ...target,
+          itemId: first.id,
+        });
+        inserted();
+        // Parked: the row is written and the transaction is still open, which is
+        // exactly the window the second writer has to survive.
+        await mayCommit;
+
+        return "first" as const;
+      });
+
+      await hasInserted;
+
+      const loser = rivalDb.transaction(
+        async tx =>
+          await history.reserve(tx as ContentDatabase, {
+            ...target,
+            itemId: second.id,
+          }),
+      );
+
+      // Long enough for the second INSERT to reach the speculative-insertion lock
+      // and block on it, then let the first transaction commit.
+      await new Promise(resolve => setTimeout(resolve, 150));
+      release();
+
+      const results = await Promise.allSettled([winner, loser]);
+
+      expect(results.map(result => result.status)).toStrictEqual([
+        "fulfilled",
+        "rejected",
+      ]);
+      // The domain error, naming the address - never a bare `23505` for the shared
+      // mapper to read as a generic unique clash.
+      const rejection = results[1] as PromiseRejectedResult;
+      expect(rejection.reason).toBeInstanceOf(ContentDeliverySlugReserved);
+      expect(rejection.reason).toMatchObject({
+        contentTypeId: "example.article",
+        locale: null,
+        slug: target.slug,
+      });
+
+      // Exactly one owner, and it is the writer that won.
+      const owners = await sql<{ itemId: number }[]>`
+        SELECT "itemId" FROM "core_content_slug_history"
+        WHERE "contentTypeId" = 'example.article' AND "slug" = ${target.slug}
+      `;
+      expect(owners.map(row => row.itemId)).toStrictEqual([first.id]);
+    });
+
+    /**
+     * The same unseen address, in two languages, at the same time.
+     *
+     * Both must succeed: uniqueness is scoped per locale, so `/en/x/hello` and
+     * `/pl/x/hello` are two addresses. The conflict is resolved by the partial
+     * unique index rather than by a target named in the insert, so this is what
+     * catches the reservation ever becoming locale-blind - a mistake that would
+     * only show up as one language silently unable to reuse the other's slug.
+     */
+    it("lets two locales take the same unseen address concurrently", async () => {
+      const history = createContentSlugHistoryModel({
+        c: context,
+        definition: advancedArticleContent.definition,
+        pluginId: PLUGIN,
+      });
+      const rivalDb = rivalContext.get("db") as ContentDatabase;
+
+      const article = await publishLocalized({
+        pl: "Polski",
+        title: "English",
+      });
+      const slug = "shared-across-locales";
+
+      const results = await Promise.allSettled([
+        db.transaction(
+          async tx =>
+            await history.ensureCurrent(tx, {
+              itemId: article.id,
+              languageId: localeIds.en,
+              locale: "en",
+              path: `/en/advanced-articles/${slug}`,
+              slug,
+            }),
+        ),
+        rivalDb.transaction(
+          async tx =>
+            await history.ensureCurrent(tx, {
+              itemId: article.id,
+              languageId: localeIds.pl,
+              locale: "pl",
+              path: `/pl/advanced-articles/${slug}`,
+              slug,
+            }),
+        ),
+      ]);
+
+      expect(results.map(result => result.status)).toStrictEqual([
+        "fulfilled",
+        "fulfilled",
+      ]);
+
+      const rows = await sql<{ languageId: number }[]>`
+        SELECT "languageId" FROM "core_content_slug_history"
+        WHERE "contentTypeId" = 'example.advanced-article' AND "slug" = ${slug}
+        ORDER BY "languageId"
+      `;
+      expect(rows.map(row => row.languageId)).toStrictEqual(
+        [localeIds.en, localeIds.pl].sort((a, b) => a - b),
+      );
+    });
+
+    /**
+     * The same race, driven through the whole editorial mutation.
+     *
+     * The refusal comes from a different index than the test above, and the
+     * distinction is the contract rather than an implementation detail. A slug
+     * field carries a unique index on the **content table**, so two published
+     * records moving onto one brand-new address collide there first - one
+     * statement before delivery runs - and the loser is told the address is taken
+     * *now*. That is `CONTENT_UNIQUE_CONFLICT`, and it is the honest answer:
+     * `CONTENT_DELIVERY_SLUG_RESERVED` means "another record used to hold this and
+     * it still redirects there", which is not what happened.
+     *
+     * Reordering the write so delivery answered first would be worse than the
+     * wording: it would reserve an address for a writer that had not yet won its
+     * version race.
+     *
+     * What this pins down is what a caller observes end to end: one winner, one
+     * refusal, and a loser whose transaction left nothing at all behind.
+     */
+    it("keeps one winner and rolls the loser back completely", async () => {
+      const first = await publishArticle({ title: "Racer one" });
+      const second = await publishArticle({ title: "Racer two" });
+
+      const results = await Promise.allSettled([
+        editorial()?.update(
+          first.id,
+          { slug: "totally-new-contested-slug" },
+          { actor: ACTOR, expectedVersion: first.version },
+        ),
+        editorial(rivalContext)?.update(
+          second.id,
+          { slug: "totally-new-contested-slug" },
+          { actor: ACTOR, expectedVersion: second.version },
+        ),
+      ]);
+
+      expect(
+        results.filter(result => result.status === "fulfilled"),
+      ).toHaveLength(1);
+      expect(
+        results.filter(result => result.status === "rejected"),
+      ).toHaveLength(1);
+
+      // One owner of the contested address, in the live table and in history alike.
+      const live = await sql<{ id: number }[]>`
+        SELECT "id" FROM "example_articles"
+        WHERE "slug" = 'totally-new-contested-slug'
+      `;
+      expect(live).toHaveLength(1);
+
+      const owners = await sql<{ itemId: number }[]>`
+        SELECT "itemId" FROM "core_content_slug_history"
+        WHERE "contentTypeId" = 'example.article'
+          AND "slug" = 'totally-new-contested-slug'
+      `;
+      expect(owners.map(row => row.itemId)).toStrictEqual([live[0].id]);
+
+      const winnerId = live[0].id;
+      const loserId = winnerId === first.id ? second.id : first.id;
+      const loserVersion =
+        loserId === first.id ? first.version : second.version;
+
+      // The loser's transaction left nothing at all: not the slug, not the version
+      // bump, not a revision, not a history row.
+      const [row] = await sql<{ slug: string; version: number }[]>`
+        SELECT "slug", "version" FROM "example_articles" WHERE "id" = ${loserId}
+      `;
+      expect(row.slug).not.toBe("totally-new-contested-slug");
+      expect(row.version).toBe(loserVersion);
+
+      const loserHistory = await historyRows(loserId);
+      expect(
+        loserHistory.filter(
+          entry => entry.slug === "totally-new-contested-slug",
+        ),
+      ).toStrictEqual([]);
+
+      const revisions = await sql<{ count: number }[]>`
+        SELECT count(*)::int AS count FROM "core_content_revisions"
+        WHERE "contentTypeId" = 'example.article'
+          AND "itemId" = ${loserId}
+          AND "snapshot"->>'slug' = 'totally-new-contested-slug'
+      `;
+      expect(revisions[0].count).toBe(0);
+    });
+
+    /**
+     * What the loser is actually told, at the boundary a client can see.
+     *
+     * A service throws whatever refused the write - that is the Stage 1-7 design,
+     * and the routes wrap every mutation in `withHttpErrors` for exactly this
+     * reason. So the assertion belongs here rather than on the service call: a
+     * SQLSTATE, a constraint name and a table name must never reach a response
+     * body, whichever of the two indexes did the refusing.
+     */
+    it("maps the losing write onto a structured 409, never a SQLSTATE", async () => {
+      const holder = await publishArticle({ title: "Holder" });
+      const other = await publishArticle({ title: "Other" });
+
+      const response = await withHttpErrors(
+        "update",
+        async () =>
+          await editorial()?.update(
+            other.id,
+            // Taken on the live table, and by a record that still holds it.
+            { slug: "holder" },
+            { actor: ACTOR, expectedVersion: other.version },
+          ),
+        {
+          contentTypeId: "example.article",
+          itemId: other.id,
+          structured: true,
+        },
+      ).catch(async (error: unknown) => {
+        if (!(error instanceof HTTPException)) throw error;
+        // Once: reading the body twice would consume it.
+        const raw = error.getResponse();
+
+        return { body: await raw.text(), status: raw.status };
+      });
+
+      expect(response).toMatchObject({ status: 409 });
+      const { body } = response as { body: string };
+      expect(JSON.parse(body)).toStrictEqual({
+        code: "CONTENT_UNIQUE_CONFLICT",
+        contentTypeId: "example.article",
+        itemId: other.id,
+      });
+      for (const internal of [
+        "23505",
+        "example_articles_slug_key",
+        "example_articles",
+        "Failed query",
+      ]) {
+        expect(body).not.toContain(internal);
+      }
+      expect(holder.id).not.toBe(other.id);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -1605,6 +1910,294 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
   // -------------------------------------------------------------------------
   // Stage 1-7 regression
   // -------------------------------------------------------------------------
+
+  /**
+   * Records that existed before `core_content_slug_history` did.
+   *
+   * Stage 8 ships no backfill migration, so an install that upgrades has published
+   * rows with no history at all. Deleting the rows after publishing reproduces that
+   * state exactly - the article is live at an address the table has never heard of.
+   *
+   * Every test here failed before the lazy bootstrap: the first mutation that moved
+   * such a record found nothing to retire, and its previous public URL was gone.
+   */
+  describe("a record that predates slug history", () => {
+    /** Publishes, then forgets - an article as an upgraded install would have it. */
+    const publishWithoutHistory = async (values: Record<string, unknown>) => {
+      const article = await publishArticle(values);
+      await sql`DELETE FROM "core_content_slug_history"`;
+
+      return article;
+    };
+
+    it("redirects its first slug change instead of losing the URL", async () => {
+      const article = await publishWithoutHistory({ title: "Hello" });
+      expect(await historyRows(article.id)).toStrictEqual([]);
+
+      await editorial()?.update(
+        article.id,
+        { slug: "world" },
+        { actor: ACTOR, expectedVersion: article.version },
+      );
+
+      // The address it used to answer to, retired; the one it answers to now,
+      // current. Both established by this one mutation.
+      expect(await historyRows(article.id)).toStrictEqual([
+        { path: "/articles/hello", retired: true, slug: "hello" },
+        { path: "/articles/world", retired: false, slug: "world" },
+      ]);
+
+      // The promise the documentation makes, actually kept.
+      expect(await delivery()?.resolvePath("/articles/hello")).toStrictEqual({
+        location: "/articles/world",
+        status: 308,
+        type: "redirect",
+      });
+    });
+
+    it("emits the redirect event, because the URL really was live", async () => {
+      const article = await publishWithoutHistory({ title: "Announced" });
+
+      const outcome = await editorial()?.update(
+        article.id,
+        { slug: "announced-two" },
+        { actor: ACTOR, expectedVersion: article.version },
+      );
+      if (!outcome) throw new Error("update returned nothing");
+
+      emitted.length = 0;
+      await contentDeliveryEffects(
+        context,
+        articleContent.definition,
+        outcome.delivery,
+        { pluginId: PLUGIN },
+      );
+
+      expect(emitted.map(entry => entry.name)).toStrictEqual([
+        "content.example.article.delivery_slug_changed",
+        "content.example.article.delivery_redirect_created",
+      ]);
+    });
+
+    it("invents no history when a draft's slug is corrected", async () => {
+      const draft = await createArticle({ title: "Draft one" });
+      await sql`DELETE FROM "core_content_slug_history"`;
+
+      await editorial()?.update(
+        draft.id,
+        { slug: "draft-two" },
+        { actor: ACTOR, expectedVersion: draft.version },
+      );
+
+      // Never public, so there is no evidence and nothing is written. A redirect
+      // here would permanently reserve an address nobody could ever have visited.
+      expect(await historyRows(draft.id)).toStrictEqual([]);
+      expect(
+        await delivery()?.resolvePath("/articles/draft-one"),
+      ).toStrictEqual({ type: "not_found" });
+    });
+
+    it("keeps the address reserved after a delete", async () => {
+      const article = await publishWithoutHistory({ title: "Retired" });
+
+      await editorial()?.delete(article.id, {
+        actor: ACTOR,
+        expectedVersion: article.version,
+      });
+
+      // The record is gone and the address is still spoken for, which is what stops
+      // an unrelated article inheriting somebody's incoming links.
+      expect(await historyRows(article.id)).toStrictEqual([
+        { path: "/articles/retired", retired: false, slug: "retired" },
+      ]);
+
+      const other = await createArticle({ title: "Opportunist" });
+      await expect(
+        editorial()?.update(
+          other.id,
+          { slug: "retired" },
+          { actor: ACTOR, expectedVersion: other.version },
+        ),
+      ).rejects.toThrow(ContentDeliverySlugReserved);
+    });
+
+    it("keeps the address reserved after an unpublish, and serves it again", async () => {
+      const article = await publishWithoutHistory({ title: "Paused" });
+
+      const unpublished = await editorial()?.unpublish(article.id, {
+        actor: ACTOR,
+      });
+      if (!unpublished) throw new Error("unpublish returned nothing");
+
+      expect(await historyRows(article.id)).toStrictEqual([
+        { path: "/articles/paused", retired: false, slug: "paused" },
+      ]);
+      // Withdrawn, so the URL answers nothing while it is down.
+      expect(await delivery()?.resolvePath("/articles/paused")).toStrictEqual({
+        type: "not_found",
+      });
+
+      await editorial()?.publish(article.id, { actor: ACTOR });
+
+      expect(await delivery()?.resolvePath("/articles/paused")).toMatchObject({
+        canonicalPath: "/articles/paused",
+        type: "content",
+      });
+      expect(await historyRows(article.id)).toStrictEqual([
+        { path: "/articles/paused", retired: false, slug: "paused" },
+      ]);
+    });
+
+    it("stays idempotent across a move away and back", async () => {
+      const article = await publishWithoutHistory({ title: "Wanderer" });
+
+      const away = await editorial()?.update(
+        article.id,
+        { slug: "elsewhere" },
+        { actor: ACTOR, expectedVersion: article.version },
+      );
+      if (!away) throw new Error("update returned nothing");
+
+      await editorial()?.update(
+        article.id,
+        { slug: "wanderer" },
+        { actor: ACTOR, expectedVersion: away.version },
+      );
+
+      // Two rows, never three: the original address came back into service through
+      // its own row rather than gaining a duplicate.
+      expect(await historyRows(article.id)).toStrictEqual([
+        { path: "/articles/wanderer", retired: false, slug: "wanderer" },
+        { path: "/articles/elsewhere", retired: true, slug: "elsewhere" },
+      ]);
+      expect(
+        await delivery()?.resolvePath("/articles/elsewhere"),
+      ).toStrictEqual({
+        location: "/articles/wanderer",
+        status: 308,
+        type: "redirect",
+      });
+    });
+
+    it("refuses to bootstrap an address another record owns", async () => {
+      // Two records, one address: the first retires `contested`, and the second is
+      // a pre-Stage-8 row that Postgres says is also sitting on it. That cannot be
+      // silently absorbed into the second record's history.
+      const first = await publishArticle({ title: "Contested" });
+      await editorial()?.update(
+        first.id,
+        { slug: "moved-on" },
+        { actor: ACTOR, expectedVersion: first.version },
+      );
+
+      const second = await publishArticle({ title: "Second" });
+      await sql`
+        DELETE FROM "core_content_slug_history" WHERE "itemId" = ${second.id}
+      `;
+      await sql`
+        UPDATE "example_articles" SET "slug" = 'contested' WHERE "id" = ${second.id}
+      `;
+
+      await expect(
+        editorial()?.update(
+          second.id,
+          { slug: "second-moved" },
+          { actor: ACTOR, expectedVersion: second.version },
+        ),
+      ).rejects.toThrow(ContentDeliverySlugReserved);
+    });
+  });
+
+  /**
+   * A `noIndexField` that is nullable, which is what an upgrade actually produces.
+   *
+   * The metadata reads `value !== true`, so `null` means "index me". The sitemap
+   * has to say the same thing, and `<> TRUE` cannot: `NULL <> TRUE` is `NULL`, and
+   * a `WHERE` clause drops every row it cannot prove. So a nullable flag used to
+   * empty the sitemap of every record nobody had ever set it on, while each of
+   * their pages rendered `robots: { index: true }` - a contradiction that only
+   * shows up in a crawler's log.
+   */
+  describe("a nullable noIndex flag", () => {
+    const sitemapSlugs = async (): Promise<string[]> => {
+      const page = await delivery()?.sitemap();
+
+      return (page?.entries ?? []).map(entry => entry.path);
+    };
+
+    it("treats null as indexable, in the metadata and the sitemap alike", async () => {
+      const article = await publishArticle({ title: "Never set" });
+
+      // Exactly the state `ALTER TABLE ... ADD COLUMN "noIndex" boolean` leaves.
+      const [row] = await sql<{ noIndex: boolean | null }[]>`
+        SELECT "noIndex" FROM "example_articles" WHERE "id" = ${article.id}
+      `;
+      expect(row.noIndex).toBeNull();
+
+      const metadata = await delivery()?.findById(article.id);
+      expect(metadata?.robots).toStrictEqual({ follow: true, index: true });
+      expect(await sitemapSlugs()).toStrictEqual(["/articles/never-set"]);
+    });
+
+    it("treats false the same way", async () => {
+      const article = await publishArticle({ title: "Explicitly false" });
+      await editorial()?.update(
+        article.id,
+        { noIndex: false },
+        { actor: ACTOR, expectedVersion: article.version },
+      );
+
+      const metadata = await delivery()?.findById(article.id);
+      expect(metadata?.robots).toStrictEqual({ follow: true, index: true });
+      expect(await sitemapSlugs()).toStrictEqual([
+        "/articles/explicitly-false",
+      ]);
+    });
+
+    it("withholds only an explicit true", async () => {
+      const article = await publishArticle({ title: "Hidden" });
+      await editorial()?.update(
+        article.id,
+        { noIndex: true },
+        { actor: ACTOR, expectedVersion: article.version },
+      );
+
+      const metadata = await delivery()?.findById(article.id);
+      expect(metadata?.robots).toStrictEqual({ follow: true, index: false });
+      expect(await sitemapSlugs()).toStrictEqual([]);
+    });
+
+    it("keeps the sitemap and the metadata agreeing across all three states", async () => {
+      const nullish = await publishArticle({ title: "State null" });
+      const explicit = await publishArticle({ title: "State false" });
+      await editorial()?.update(
+        explicit.id,
+        { noIndex: false },
+        { actor: ACTOR, expectedVersion: explicit.version },
+      );
+      const hidden = await publishArticle({ title: "State true" });
+      await editorial()?.update(
+        hidden.id,
+        { noIndex: true },
+        { actor: ACTOR, expectedVersion: hidden.version },
+      );
+
+      const listed = await sitemapSlugs();
+
+      // One boolean drives both, so "in the sitemap" and "robots says index me"
+      // have to be the same set. Asserted as a pair rather than separately,
+      // because the bug was that they disagreed.
+      for (const article of [nullish, explicit, hidden]) {
+        const metadata = await delivery()?.findById(article.id);
+        expect([
+          article.id,
+          listed.includes(metadata?.canonicalPath ?? ""),
+        ]).toStrictEqual([article.id, metadata?.robots?.index ?? false]);
+      }
+
+      expect(listed).toHaveLength(2);
+    });
+  });
 
   describe("a content type without delivery", () => {
     it("has no delivery service and writes no history", async () => {

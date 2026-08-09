@@ -43,6 +43,30 @@ arbitrary URLs. Slug history maps one record's old addresses to that record's cu
 one; a rule engine over paths is a different feature living in a different layer (a
 middleware, a CDN, a `next.config` `redirects` array).
 
+## Changing `publicApi.path` is not a redirect
+
+Slug history maps a record's old **slugs** to its current one. The prefix in front of
+them is not part of that:
+
+```text
+publicApi.path: "articles" → "blog"
+
+/articles/foo   → not_found
+/blog/foo       → the record
+```
+
+`resolvePath()` splits an incoming URL against the prefix the content type has *now*, so
+a request carrying the old one is refused before slug history is consulted at all -
+`parseContentDeliveryPath` returns `null` on the prefix comparison. Inserting history
+rows whose `path` carries the old prefix does not change that: the lookup is by slug, and
+the request never reaches it.
+
+That is deliberate rather than missing. `publicApi.path` is the routing namespace itself,
+so moving it moves every record at once for a reason no row records - and the fix is one
+rule for the whole prefix (`/articles/:slug → /blog/:slug`) in your router, middleware,
+`next.config` `redirects`, or CDN. Teaching the resolver to accept historical prefixes
+would mean a second, path-shaped redirect engine living beside the record-shaped one.
+
 ## Redirects require Editorial
 
 ```ts
@@ -196,6 +220,6 @@ testing and no personalized URLs.
   <Card
     href="/docs/dev/content-engine/content-delivery-migrations"
     title="Delivery migrations"
-    description="What is not backfilled, and how to backfill it yourself."
+    description="How history is established lazily, and what a prefix change needs instead."
   />
 </Cards>

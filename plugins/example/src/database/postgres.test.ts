@@ -831,6 +831,9 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
       "category",
       "excerpt",
       "featured",
+      // Public because Stage 8 projects it into `robots`: a field the page renders
+      // has to be one the public API would already have said out loud.
+      "noIndex",
       "publishedAt",
       "slug",
       "title",
@@ -2086,6 +2089,9 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
       "excerpt",
       "featured",
       "id",
+      // `delivery.seo.noIndexField`. Nullable, so the column arrives without a
+      // default and every existing row reads as indexable.
+      "noIndex",
       "publishedAt",
       "slug",
       "status",
