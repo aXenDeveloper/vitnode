@@ -192,8 +192,19 @@ Postgres in one place - `24:00:00` is a valid input to Postgres and something it
 own `::text` never writes, so a cursor carrying one did not come from a row.
 
 The original string is what gets bound; nothing is reformatted, so microseconds
-survive validation digit for digit. Two forms this repository does not mint are
-not accepted either: an era suffix (`… BC`) and a year past 294276.
+survive validation digit for digit.
+
+<Callout title="The supported temporal domain">
+Temporal cursor pagination intentionally supports **AD years 1 through 294276**
+and does not support PostgreSQL BC-era representations. Values outside that
+domain are rejected with `400`.
+
+This is a deliberate limit on the accepted grammar, not an inability to produce
+one: cursor values are read straight from `orderColumn::text`, so a row genuinely
+holding a BC-era or out-of-range timestamp would mint a cursor the next request
+then refuses. Narrowing the domain keeps validation something that can be read
+and reasoned about; widening it is a decision, not a fix.
+</Callout>
 
 **What is guaranteed:**
 

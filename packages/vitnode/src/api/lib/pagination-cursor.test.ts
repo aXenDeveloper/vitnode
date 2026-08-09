@@ -368,7 +368,10 @@ describe("a tampered cursor value is refused, never coerced", () => {
         ["an offset that is not a number", "2026-08-09 10:00:00+ab"],
         ["a seven-digit fraction", "2026-08-09 10:00:00.1234567"],
         ["trailing rubbish", "2026-08-09 10:00:00 OR 1=1"],
-        ["an era suffix, which nothing here mints", "2026-08-09 BC"],
+        [
+          "an era suffix, which is outside the supported domain",
+          "2026-08-09 BC",
+        ],
       ])("refuses %s", (_why, value) => {
         refuses(core_users.createdAt, value);
       });
