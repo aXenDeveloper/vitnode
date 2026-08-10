@@ -1,92 +1,65 @@
 {
   "@vitnode/blog": {
     "title": "Blog",
-    "admin": {
-      "nav": {
-        "posts": "Wpisy",
-        "categories": "Kategorie"
-      },
-      "categories": {
-        "desc": "Zarządzaj kategoriami wpisów na blogu.",
-        "table": {
+    "content": {
+      "post": {
+        "title": "Artykuły",
+        "desc": "Pisz artykuły na blogu i zarządzaj nimi.",
+        "fields": {
           "title": "Tytuł",
-          "color": "Kolor",
-          "updated_at": "Zaktualizowano"
-        },
-        "delete": {
-          "title": "Usuń kategorię",
-          "desc": "Czy na pewno chcesz usunąć kategorię <title></title>? Tej akcji nie można cofnąć.",
-          "confirm": "Tak, usuń tę kategorię",
-          "success": "Kategoria została pomyślnie usunięta."
-        },
-        "create": {
-          "title": "Utwórz kategorię",
-          "desc": "Nowa kategoria dla wpisów na blogu.",
-          "form": {
-            "title": {
-              "label": "Tytuł",
-              "already_exists": "Kategoria o tym tytule już istnieje."
-            },
-            "color": "Kolor"
-          },
-          "submit": "Utwórz",
-          "success": "Kategoria została pomyślnie utworzona."
-        },
-        "edit": {
-          "title": "Edytuj kategorię",
-          "submit": "Zapisz zmiany",
-          "success": "Kategoria została pomyślnie zaktualizowana."
+          "friendlyUrl": "Przyjazny adres URL",
+          "content": "Treść",
+          "categoryId": "Kategoria",
+          "authorId": "Autor",
+          "status": "Status",
+          "publishedAt": "Opublikowano",
+          "updatedAt": "Zaktualizowano"
         }
       },
-      "posts": {
-        "desc": "Twórz wpisy na blogu i zarządzaj nimi.",
-        "table": {
-          "title": "Tytuł",
-          "category": "Kategoria",
-          "author": "Autor",
-          "updated_at": "Zaktualizowano"
+      "category": {
+        "title": "Kategorie",
+        "desc": "Grupuj artykuły razem.",
+        "fields": {
+          "name": "Nazwa",
+          "color": "Kolor",
+          "updatedAt": "Zaktualizowano"
+        }
+      }
+    },
+    "admin": {
+      "article": {
+        "content": {
+          "label": "Treść"
         },
-        "create": {
-          "title": "Utwórz wpis",
-          "desc": "Napisz nowy artykuł na swój blog.",
-          "form": {
-            "title": {
-              "label": "Tytuł",
-              "already_exists": "Wpis o tym tytule już istnieje."
-            },
-            "friendly_url": {
-              "label": "Przyjazny adres URL",
-              "desc": "Używany w adresie wpisu. Wypełniany automatycznie na podstawie tytułu.",
-              "already_exists": "Taki przyjazny adres URL już istnieje."
-            },
-            "content": "Treść",
-            "category": "Kategoria"
-          },
-          "submit": "Utwórz wpis",
-          "success": "Wpis został pomyślnie utworzony."
-        },
-        "edit": {
-          "title": "Edytuj wpis",
-          "submit": "Zapisz zmiany",
-          "success": "Wpis został pomyślnie zaktualizowany."
-        },
-        "delete": {
-          "title": "Usuń wpis",
-          "desc": "Czy na pewno chcesz usunąć wpis <title></title>? Tej akcji nie można cofnąć.",
-          "confirm": "Tak, usuń ten wpis",
-          "success": "Wpis został pomyślnie usunięty."
+        "form": {
+          "publish": "Publikacja",
+          "settings": {
+            "title": "Ustawienia artykułu",
+            "locale_desc": "Adres i metadane wersji w tym języku."
+          }
+        }
+      },
+      "category": {
+        "color": {
+          "label": "Kolor",
+          "desc": "Wyświetlany obok kategorii na listach.",
+          "none": "Brak koloru"
         }
       }
     }
   },
-  "@vitnode/blog:posts": "Wpisy",
-  "@vitnode/blog:posts:can_view": "Wyświetlanie listy wpisów",
-  "@vitnode/blog:posts:can_create": "Tworzenie wpisów",
-  "@vitnode/blog:posts:can_edit": "Edytowanie wpisów",
-  "@vitnode/blog:posts:can_delete": "Usuwanie wpisów",
+  "@vitnode/blog:posts": "Artykuły",
+  "@vitnode/blog:posts:can_view": "Wyświetlanie listy artykułów",
+  "@vitnode/blog:posts:can_create": "Tworzenie artykułów",
+  "@vitnode/blog:posts:can_edit": "Edytowanie artykułów",
+  "@vitnode/blog:posts:can_delete": "Usuwanie artykułów",
+  "@vitnode/blog:posts:can_publish": "Publikowanie i cofanie publikacji artykułów",
+  "@vitnode/blog:posts:can_restore": "Przywracanie wcześniejszej wersji artykułu",
+  "@vitnode/blog:posts:can_translate": "Pisanie tłumaczeń artykułów",
   "@vitnode/blog:categories": "Kategorie",
   "@vitnode/blog:categories:can_view": "Wyświetlanie listy kategorii",
   "@vitnode/blog:categories:can_create": "Tworzenie kategorii",
   "@vitnode/blog:categories:can_edit": "Edytowanie kategorii",
-  "@vitnode/blog:categories:can_delete": "Usuwanie kategorii"
+  "@vitnode/blog:categories:can_delete": "Usuwanie kategorii",
+  "@vitnode/blog:categories:can_translate": "Pisanie tłumaczeń kategorii"
 }
