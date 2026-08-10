@@ -126,6 +126,7 @@ export const buildContentRoutes = <
     })
     .nullable();
 
+  const detailRow = schemas.selectObject.extend({ labels: zodLabels });
   const listRow = schemas.selectObject.extend({
     labels: zodLabels,
     ...(localized ? { translation: zodRowTranslation.optional() } : {}),
@@ -426,13 +427,17 @@ export const buildContentRoutes = <
       description: `Get one ${label.singular}`,
       request: { params: schemas.params },
       responses: {
-        200: jsonResponse(schemas.selectObject, `${label.singular} found`),
+        // `labels` alongside the record, the same way the list returns them:
+        // a `relation` holds an identifier, and the form that edits it has to
+        // show the name behind it. Additive to the row every earlier client
+        // already parses.
+        200: jsonResponse(detailRow, `${label.singular} found`),
         400: invalidIdentifier,
         404: { description: `${label.singular} not found` },
       },
     },
     handler: async c => {
-      const row = await model.service(c).findById(identifier(c));
+      const row = await model.service(c).findRowById(identifier(c));
       if (!row) throw notFound(definition);
 
       return c.json(row, 200);

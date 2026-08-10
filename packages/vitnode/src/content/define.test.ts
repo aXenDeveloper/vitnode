@@ -462,6 +462,40 @@ describe("defineContentType", () => {
     });
   });
 
+  describe("admin form presentation", () => {
+    it("defaults create and edit to the dialog", () => {
+      const dialog = define();
+
+      expect(dialog.admin.create.mode).toBe("dialog");
+      expect(dialog.admin.edit.mode).toBe("dialog");
+    });
+
+    it("takes page mode for create and edit independently", () => {
+      const pageCreate = define({
+        admin: { create: { mode: "page" }, label },
+      });
+      const pageEdit = define({ admin: { edit: { mode: "page" }, label } });
+
+      expect(pageCreate.admin.create.mode).toBe("page");
+      expect(pageCreate.admin.edit.mode).toBe("dialog");
+      expect(pageEdit.admin.create.mode).toBe("dialog");
+      expect(pageEdit.admin.edit.mode).toBe("page");
+    });
+
+    it.each(["create", "edit"] as const)("rejects an unknown %s mode", key => {
+      expect(() =>
+        define({
+          admin: {
+            label,
+            // Only reachable from JavaScript, or from a value that widened
+            // upstream - the type refuses it outright.
+            [key]: { mode: "drawer" as unknown as "dialog" },
+          },
+        }),
+      ).toThrow(ContentEngineError);
+    });
+  });
+
   describe("admin validation", () => {
     it("rejects a searchable field that is not text-like", () => {
       expect(() =>

@@ -8,7 +8,7 @@ import type { ContentColumnSpec, ContentFormSpec } from "@/content/admin/spec";
 import { zodPaginationPageInfo } from "@/api/lib/with-pagination";
 import { DataTable } from "@/components/table/data-table";
 import { contentApiFetch } from "@/content/admin/fetch.server";
-import { orderableColumns } from "@/content/registry";
+import { contentEditHref, orderableColumns } from "@/content/registry";
 
 import type { ContentRowData } from "./cells";
 
@@ -246,6 +246,13 @@ export const ContentTableView = async ({
                   ([name, override]) => [name, override.component],
                 ),
               )}
+              // Page mode turns the pencil into a link. Nothing of the form is
+              // mounted, so a 25-row table stays 25 anchors.
+              href={
+                definition.admin.edit.mode === "page"
+                  ? contentEditHref(definition.id, row.id)
+                  : undefined
+              }
               permissionModule={definition.permissionModule}
               pluginId={pluginId}
               publication={definition.publication.enabled}

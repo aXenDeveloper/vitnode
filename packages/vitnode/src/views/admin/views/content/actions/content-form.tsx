@@ -2,17 +2,15 @@
 // `create-action`/`edit-action`, which are already client entries. Declaring
 // it again would make this a nested client entry, and `next/dynamic` cannot
 // resolve one from inside a published package - the dialog spins forever.
-import { CircleCheckIcon, FileClockIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
+import type { ContentFormLayout } from "@/lib/plugin";
 
-import { DateFormat } from "@/components/date-format";
 import { AutoForm, type AutoFormOnSubmit } from "@/components/form/auto-form";
-import { Badge } from "@/components/ui/badge";
 import { useDialog } from "@/components/ui/dialog";
 import {
   buildFormSchemaFromSpec,
@@ -23,6 +21,8 @@ import { usePathname, useRouter } from "@/lib/navigation";
 
 import type { ContentConflictState } from "./conflict-notice";
 
+import { ContentFormProvider } from "../form/context";
+import { ContentFormPublication } from "../form/publication-status";
 import { ContentField } from "../lib/field-component";
 import { contentErrorKey } from "../lib/mutation-feedback";
 import { ConflictNotice } from "./conflict-notice";
@@ -33,43 +33,6 @@ import {
   reloadContentRowAction,
 } from "./mutation-api.server";
 
-/**
- * A read-only line saying where the row is in the lifecycle.
- *
- * Read-only on purpose: `status` and `publishedAt` are not in the form schema,
- * and the one place that moves them is the table's publish action. Two
- * competing mutation paths in one dialog is how a form ends up fighting its own
- * optimistic state.
- */
-const PublicationStatus = ({
-  publishedAt,
-  status,
-}: {
-  publishedAt: unknown;
-  status: unknown;
-}) => {
-  const t = useTranslations("core.content.status");
-  const published = status === "published";
-  const date = typeof publishedAt === "string" ? new Date(publishedAt) : null;
-
-  return (
-    <div className="flex flex-wrap items-center gap-2 text-sm">
-      <span className="text-muted-foreground">{t("label")}</span>
-      <Badge variant={published ? "default" : "secondary"}>
-        {published ? (
-          <CircleCheckIcon aria-hidden />
-        ) : (
-          <FileClockIcon aria-hidden />
-        )}
-        {published ? t("published") : t("draft")}
-      </Badge>
-      <span className="text-muted-foreground">
-        {date ? <DateFormat date={date} /> : t("never_published")}
-      </span>
-    </div>
-  );
-};
-
 export interface ContentFormProps {
   /** Existing values when editing; absent when creating. */
   data?: Record<string, unknown> & { id: number };
@@ -78,6 +41,18 @@ export interface ContentFormProps {
     string,
     (props: ItemAutoFormComponentProps) => React.ReactNode
   >;
+  /** Custom layout declared in `buildPlugin`. Presentation only. */
+  layout?: ContentFormLayout;
+  /**
+   * Where a page-mode create hands the new record over. Ignored in a dialog,
+   * which closes and refreshes the list instead.
+   */
+  onCreated?: (id: number) => void;
+  /**
+   * Where the form is. A dialog closes itself and refreshes the list behind it;
+   * a page navigates instead, because there is nothing behind it to refresh.
+   */
+  presentation?: "dialog" | "page";
   /** Whether the content type has the draft/published lifecycle. */
   publication?: boolean;
   /** The content type's singular label, used in the success toast. */
@@ -90,6 +65,9 @@ export interface ContentFormProps {
 export const ContentForm = ({
   data,
   fieldOverrides = {},
+  layout,
+  onCreated,
+  presentation = "dialog",
   publication = false,
   singular,
   spec,
@@ -105,7 +83,7 @@ export const ContentForm = ({
     null,
   );
 
-  // The version this dialog opened with, and the one every save is checked
+  // The version this form opened with, and the one every save is checked
   // against - until a conflict is resolved, which replaces it with the version
   // the editor has now actually seen.
   const [expectedVersion, setExpectedVersion] = React.useState(() =>
@@ -148,7 +126,7 @@ export const ContentForm = ({
       : await createContentAction(spec.contentTypeId, payload);
 
     if (mutation.error !== undefined) {
-      // A lost update is the one failure with somewhere to go: the dialog stays
+      // A lost update is the one failure with somewhere to go: the form stays
       // open with everything the editor typed, and the banner offers to show
       // what changed underneath them.
       if (mutation.conflict?.code === "CONTENT_VERSION_CONFLICT") {
@@ -181,16 +159,63 @@ export const ContentForm = ({
       },
     );
 
+    if (presentation === "page") {
+      // A page has nothing behind it to refresh, so a create hands over to
+      // whoever knows where the record should be opened next, and an edit stays
+      // put with fresh server data.
+      if (!data && mutation.id !== undefined) {
+        onCreated?.(mutation.id);
+
+        return;
+      }
+
+      push(pathname);
+
+      return;
+    }
+
     // Close first, then navigate: a refresh fired while the dialog is still
     // animating out leaves its overlay stranded over the page.
     setOpen?.(false);
     push(pathname);
   };
 
+  const fields = spec.fields.map(
+    (
+      fieldSpec,
+    ): {
+      component: (props: ItemAutoFormComponentProps) => React.ReactNode;
+      id: string;
+    } => ({
+      id: fieldSpec.name,
+
+      // MUST NOT be async: `AutoForm` calls this to get an element, and an
+      // async function hands it a fresh Promise every render - React 19
+      // suspends on promise children, so the dialog spins forever.
+      // eslint-disable-next-line @typescript-eslint/promise-function-async -- see above
+      component: props => {
+        const override = fieldOverrides[fieldSpec.name];
+        if (override) return override(props);
+
+        return (
+          <ContentField
+            loadOptions={async ({ field, search }) =>
+              await loadContentOptionsAction(spec.contentTypeId, field, search)
+            }
+            spec={fieldSpec}
+            {...props}
+          />
+        );
+      },
+    }),
+  );
+
+  const Layout = layout;
+
   return (
     <>
-      {publication && data ? (
-        <PublicationStatus
+      {publication && data && !Layout ? (
+        <ContentFormPublication
           publishedAt={data.publishedAt}
           status={data.status}
         />
@@ -206,33 +231,38 @@ export const ContentForm = ({
       ) : null}
 
       <AutoForm
-        fields={spec.fields.map(fieldSpec => ({
-          id: fieldSpec.name,
-
-          // MUST NOT be async: `AutoForm` calls this to get an element, and an
-          // async function hands it a fresh Promise every render - React 19
-          // suspends on promise children, so the dialog spins forever.
-          // eslint-disable-next-line @typescript-eslint/promise-function-async -- see above
-          component: props => {
-            const override = fieldOverrides[fieldSpec.name];
-            if (override) return override(props);
-
-            return (
-              <ContentField
-                loadOptions={async ({ field, search }) =>
-                  await loadContentOptionsAction(
-                    spec.contentTypeId,
-                    field,
-                    search,
-                  )
-                }
-                spec={fieldSpec}
-                {...props}
-              />
-            );
-          },
-        }))}
+        fields={fields}
         formSchema={formSchema}
+        layout={
+          Layout
+            ? renderedFields => (
+                <ContentFormProvider
+                  value={{
+                    fieldNames: spec.fields.map(field => field.name),
+                    fields: renderedFields,
+                    mode: data ? "edit" : "create",
+                    publication: {
+                      enabled: publication,
+                      publishedAt: data?.publishedAt,
+                      status: data?.status,
+                    },
+                    surface: "shared",
+                  }}
+                >
+                  <Layout
+                    contentTypeId={spec.contentTypeId}
+                    itemId={data?.id}
+                    mode={data ? "edit" : "create"}
+                    pluginId={spec.pluginId}
+                    publication={publication}
+                    singular={singular}
+                    surface="shared"
+                    title={title}
+                  />
+                </ContentFormProvider>
+              )
+            : undefined
+        }
         onSubmit={onSubmit}
         submitButtonProps={{
           children: t(data ? "edit.submit" : "create.submit"),

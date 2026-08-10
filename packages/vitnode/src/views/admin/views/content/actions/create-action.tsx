@@ -15,6 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Loader } from "@/components/ui/loader";
+import { Link } from "@/lib/navigation";
 
 import type { ContentFormProps } from "./content-form";
 
@@ -24,11 +25,28 @@ const ContentForm = dynamic(async () =>
   import("./content-form").then(mod => ({ default: mod.ContentForm })),
 );
 
+/**
+ * The Create button.
+ *
+ * With `admin.create.mode: "page"` the content type is given `href`, and this is
+ * an ordinary link - not a dialog that mounts and immediately redirects. Nothing
+ * of the form is downloaded until the page it points at is actually requested.
+ */
 export const CreateContentAction = ({
+  href,
   singular,
   ...props
-}: Omit<ContentFormProps, "data">) => {
+}: Omit<ContentFormProps, "data"> & { href?: string }) => {
   const t = useTranslations("core.content.create");
+
+  if (href) {
+    return (
+      <Button render={<Link href={href} />}>
+        <PlusIcon />
+        {t("title", { name: singular })}
+      </Button>
+    );
+  }
 
   return (
     <Dialog>

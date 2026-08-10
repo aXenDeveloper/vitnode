@@ -116,6 +116,7 @@ const harness = ({ allow = true }: { allow?: boolean } = {}): Harness => {
     advancedFields: vi.fn(),
     findDetail: vi.fn(),
     findById: vi.fn(),
+    findRowById: vi.fn(),
     findMany: vi.fn(),
     options: vi.fn(),
     update: vi.fn(),
@@ -164,6 +165,7 @@ const publicationHarness = ({ allow = true }: { allow?: boolean } = {}) => {
     advancedFields: vi.fn(),
     findDetail: vi.fn(),
     findById: vi.fn(),
+    findRowById: vi.fn(),
     findMany: vi.fn(),
     options: vi.fn(),
     publish: vi.fn(),
@@ -294,17 +296,19 @@ describe("generated content routes", () => {
   describe("detail", () => {
     it("returns the row", async () => {
       const { app, service } = harness();
-      service.findById.mockResolvedValue(row);
+      // The detail route reads the row *with* its reference labels, so a form
+      // opening on it can show the name behind a relation rather than its id.
+      service.findRowById.mockResolvedValue({ ...row, labels: {} });
 
       const res = await app.request("/7");
 
       expect(res.status).toBe(200);
-      await expect(res.json()).resolves.toMatchObject({ id: 7 });
+      await expect(res.json()).resolves.toMatchObject({ id: 7, labels: {} });
     });
 
     it("returns 404 for a missing row", async () => {
       const { app, service } = harness();
-      service.findById.mockResolvedValue(null);
+      service.findRowById.mockResolvedValue(null);
 
       expect((await app.request("/7")).status).toBe(404);
     });
@@ -712,6 +716,7 @@ describe("generated content routes", () => {
         relations: {},
         repeatable: {},
         findById: vi.fn(),
+        findRowById: vi.fn(),
         findMany: vi.fn(),
         options: vi.fn(),
         publish: vi.fn(),

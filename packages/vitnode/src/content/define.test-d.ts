@@ -178,4 +178,45 @@ describe("content type inference", () => {
       expectTypeOf<HasColumnDefault<Fields["author"]>>().toEqualTypeOf<false>();
     });
   });
+
+  describe("admin form presentation", () => {
+    it("accepts the two presentation modes", () => {
+      expectTypeOf(
+        defineContentType({
+          id: "test.modes",
+          tableName: "test_modes",
+          fields: { title: field.text({ required: true }) },
+          admin: {
+            create: { mode: "page" },
+            edit: { mode: "dialog" },
+            label: { plural: "Modes", singular: "Mode" },
+          },
+        }).admin.create.mode,
+      ).toEqualTypeOf<"dialog" | "page">();
+    });
+
+    it("refuses anything else", () => {
+      defineContentType({
+        id: "test.modes",
+        tableName: "test_modes",
+        fields: { title: field.text({ required: true }) },
+        admin: {
+          // @ts-expect-error - only "dialog" and "page" are presentation modes
+          create: { mode: "drawer" },
+          label: { plural: "Modes", singular: "Mode" },
+        },
+      });
+
+      defineContentType({
+        id: "test.modes",
+        tableName: "test_modes",
+        fields: { title: field.text({ required: true }) },
+        admin: {
+          // @ts-expect-error - only "dialog" and "page" are presentation modes
+          edit: { mode: "sheet" },
+          label: { plural: "Modes", singular: "Mode" },
+        },
+      });
+    });
+  });
 });

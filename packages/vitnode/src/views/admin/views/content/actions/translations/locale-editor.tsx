@@ -124,11 +124,13 @@ export const LocaleEditor = ({
           <TranslationPanel
             contentTypeId={translationSpec.contentTypeId}
             editorial={editorial}
+            fieldOverrides={form.fieldOverrides}
             isDefaultLocale={
               language.code.toLowerCase() === defaultLocale.toLowerCase()
             }
             itemId={itemId}
             languageName={language.name ?? language.code}
+            layout={form.layout}
             locale={language.code}
             onMutated={() => {
               setReloads(count => count + 1);

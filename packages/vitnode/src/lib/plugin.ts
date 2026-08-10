@@ -48,6 +48,73 @@ export interface ContentCellProps<
 }
 
 /**
+ * Which of a content type's two form surfaces a layout is being rendered in.
+ *
+ * A localized content type has both at once: `shared` holds the fields that are
+ * columns on the base table, and `translation` holds one language's own. The
+ * same layout is rendered in each, and a `ContentFormField` naming a field that
+ * is not in this surface renders nothing - so one layout can place `title` and
+ * `category` wherever it likes without knowing which table either lives on.
+ */
+export type ContentFormSurface = "shared" | "translation";
+
+/**
+ * Everything a custom form layout is handed, and nothing more.
+ *
+ * Deliberately all serialisable: a layout is a client component referenced from
+ * `config.tsx`, which is a **server** module, so React props cross an RSC
+ * boundary to reach it. Field elements, the form instance and the submit action
+ * are not here for exactly that reason - they come from
+ * `useContentForm()`/`ContentFormField`, which are client context and therefore
+ * never cross anything.
+ *
+ * There is no database handle, Drizzle table, Hono context or mutation model in
+ * this shape, and there is not going to be: a layout decides where a field
+ * appears, and the Content Engine decides what happens when it is submitted.
+ */
+export interface ContentFormLayoutProps {
+  contentTypeId: string;
+  /** `undefined` while creating - the record does not exist yet. */
+  itemId?: number;
+  /** The locale being written, on a `translation` surface. */
+  locale?: string;
+  mode: "create" | "edit";
+  pluginId: string;
+  /** Whether the content type has the draft/published lifecycle. */
+  publication: boolean;
+  singular: string;
+  surface: ContentFormSurface;
+  /** The record's resolved title while editing, for headings. */
+  title?: string;
+}
+
+export type ContentFormLayout = (
+  props: ContentFormLayoutProps,
+) => React.ReactNode;
+
+/**
+ * Layout overrides for the generated create and edit forms.
+ *
+ * `layout` alone covers the common case - one editor screen used for both - and
+ * `create`/`edit` override it when they genuinely differ. Normalised by
+ * `resolveContentFormLayout`, so nothing downstream has to know about the
+ * fallback.
+ */
+export interface ContentTypeFormsRegistration {
+  create?: { layout?: ContentFormLayout };
+  edit?: { layout?: ContentFormLayout };
+  /** Used by both create and edit unless one of them overrides it. */
+  layout?: ContentFormLayout;
+}
+
+/** The layout for one action, or `undefined` for the generated one. */
+export const resolveContentFormLayout = (
+  forms: ContentTypeFormsRegistration | undefined,
+  mode: "create" | "edit",
+): ContentFormLayout | undefined =>
+  forms?.[mode]?.layout ?? forms?.layout ?? undefined;
+
+/**
  * A content type registration once its definition generic has been erased, so
  * one plugin can list content types with different field maps in one array.
  */
@@ -61,6 +128,8 @@ export interface ContentTypeFrontendRegistration {
     string,
     { component: (props: ItemAutoFormComponentProps) => React.ReactNode }
   >;
+  /** Custom create/edit form layouts. Presentation only - see `forms`. */
+  forms?: ContentTypeFormsRegistration;
   icon?: React.ReactNode;
 }
 
@@ -82,6 +151,16 @@ interface TypedContentTypeRegistration<
       { component: (props: ItemAutoFormComponentProps) => React.ReactNode }
     >
   >;
+  /**
+   * Replace the generated form **layout** - where the fields are, not what they
+   * do.
+   *
+   * The Content Engine still owns the form schema, the validation, the defaults,
+   * the mutation, the version precondition, the structured errors, the toast and
+   * the cache invalidation. A layout places `<ContentFormField name="..." />`
+   * and `<ContentFormActions />` inside one shared form instance.
+   */
+  forms?: ContentTypeFormsRegistration;
   /** Sidebar icon. Defaults to a generic document icon. */
   icon?: React.ReactNode;
 }

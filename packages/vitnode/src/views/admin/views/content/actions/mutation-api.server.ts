@@ -64,6 +64,14 @@ interface MutationResult {
    */
   delivery?: ContentDeliveryConflict;
   error?: string;
+  /**
+   * The identifier of a newly created record.
+   *
+   * Only set by `createContentAction`, and only on success - a page-mode create
+   * navigates to the record's own edit page, and guessing at the id would open
+   * the wrong one.
+   */
+  id?: number;
   /** Why a schedule was refused, when the API said. */
   rejection?: ContentScheduleRejection;
   /** Lets the UI tell a restricted delete (409) from a generic failure. */
@@ -305,7 +313,7 @@ export const createContentAction = async (
     before: [],
   });
 
-  return {};
+  return { id: created };
 };
 
 export const editContentAction = async (

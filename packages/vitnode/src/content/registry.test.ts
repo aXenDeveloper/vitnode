@@ -13,7 +13,11 @@ import { defineContentType } from "./define";
 import { ContentEngineError } from "./errors";
 import { field } from "./fields";
 import {
+  CONTENT_EDIT_HREF_PLACEHOLDER,
   contentAdminHref,
+  contentCreateHref,
+  contentEditHref,
+  contentEditHrefTemplate,
   contentTypeToPath,
   findContentTypeById,
   orderableColumns,
@@ -273,6 +277,18 @@ describe("routing helpers", () => {
     expect(contentTypeToPath("example.article")).toBe("example/article");
     expect(contentAdminHref("example.article")).toBe(
       "/admin/content/example/article",
+    );
+  });
+
+  it("builds the generated form page URLs off the list one", () => {
+    expect(contentCreateHref("example.article")).toBe(
+      "/admin/content/example/article/create",
+    );
+    expect(contentEditHref("example.article", 42)).toBe(
+      "/admin/content/example/article/42/edit",
+    );
+    expect(contentEditHrefTemplate("example.article")).toBe(
+      `/admin/content/example/article/${CONTENT_EDIT_HREF_PLACEHOLDER}/edit`,
     );
   });
 

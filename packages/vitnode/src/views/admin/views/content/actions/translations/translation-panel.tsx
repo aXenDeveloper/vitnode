@@ -3,8 +3,10 @@ import { useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
 
+import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
 import type { ContentTranslationConflict } from "@/content/conflicts";
+import type { ContentFormLayout } from "@/lib/plugin";
 
 import { DateFormat } from "@/components/date-format";
 import { AutoForm, type AutoFormOnSubmit } from "@/components/form/auto-form";
@@ -20,7 +22,10 @@ import type {
   TranslationRow,
 } from "../translation-api.server";
 
+import { ContentFormProvider } from "../../form/context";
+import { ContentField } from "../../lib/field-component";
 import { contentErrorKey } from "../../lib/mutation-feedback";
+import { loadContentOptionsAction } from "../mutation-api.server";
 import {
   createContentTranslationAction,
   deleteContentTranslationAction,
@@ -39,11 +44,18 @@ export interface TranslationPanelProps {
   contentTypeId: string;
   /** Enables the history and restore sections. */
   editorial: boolean;
+  /** Per-field component overrides declared in `buildPlugin`. */
+  fieldOverrides?: Record<
+    string,
+    (props: ItemAutoFormComponentProps) => React.ReactNode
+  >;
   /** `true` when this locale is the content type's default - never deletable. */
   isDefaultLocale: boolean;
   itemId: number;
   /** Human name of the language, for headings and toasts. */
   languageName: string;
+  /** Custom layout declared in `buildPlugin`. Presentation only. */
+  layout?: ContentFormLayout;
   locale: string;
   /** Reloads the tab strip after a mutation, so its badges stay honest. */
   onMutated: () => void;
@@ -97,7 +109,9 @@ const conflictMessage = (
 export const TranslationPanel = ({
   contentTypeId,
   editorial,
+  fieldOverrides = {},
   isDefaultLocale,
+  layout,
   itemId,
   languageName,
   locale,
@@ -276,6 +290,8 @@ export const TranslationPanel = ({
 
   if (!settled) return <Loader />;
 
+  const Layout = layout;
+
   const publishedAt =
     typeof row?.publishedAt === "string" ? new Date(row.publishedAt) : null;
 
@@ -324,8 +340,59 @@ export const TranslationPanel = ({
 
       {canTranslate ? (
         <AutoForm
-          fields={spec.fields.map(fieldSpec => ({ id: fieldSpec.name }))}
+          fields={spec.fields.map(fieldSpec => ({
+            id: fieldSpec.name,
+
+            // MUST NOT be async, for the same reason the shared form's is not:
+            // `AutoForm` calls this to get an element, and an async function
+            // hands it a fresh Promise every render.
+            // eslint-disable-next-line @typescript-eslint/promise-function-async -- see above
+            component: props => {
+              const override = fieldOverrides[fieldSpec.name];
+              if (override) return override(props);
+
+              return (
+                <ContentField
+                  loadOptions={async ({ field, search }) =>
+                    await loadContentOptionsAction(contentTypeId, field, search)
+                  }
+                  spec={fieldSpec}
+                  {...props}
+                />
+              );
+            },
+          }))}
           formSchema={formSchema}
+          layout={
+            Layout
+              ? renderedFields => (
+                  <ContentFormProvider
+                    value={{
+                      fieldNames: spec.fields.map(field => field.name),
+                      fields: renderedFields,
+                      mode: present ? "edit" : "create",
+                      publication: {
+                        enabled: publication,
+                        publishedAt: row?.publishedAt,
+                        status: row?.status,
+                      },
+                      surface: "translation",
+                    }}
+                  >
+                    <Layout
+                      contentTypeId={contentTypeId}
+                      itemId={itemId}
+                      locale={locale}
+                      mode={present ? "edit" : "create"}
+                      pluginId={pluginId}
+                      publication={publication}
+                      singular={languageName}
+                      surface="translation"
+                    />
+                  </ContentFormProvider>
+                )
+              : undefined
+          }
           onSubmit={onSubmit}
           submitButtonProps={{
             children: present ? t("save") : t("create"),

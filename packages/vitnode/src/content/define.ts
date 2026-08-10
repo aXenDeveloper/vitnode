@@ -1,6 +1,8 @@
 import type {
   AnyContentTypeDefinition,
+  ContentAdminActionConfig,
   ContentAdminConfig,
+  ContentAdminFormMode,
   ContentDeliveryConfig,
   ContentDeliveryDescriptionField,
   ContentDeliveryEnabled,
@@ -38,6 +40,7 @@ import {
   resolveContentAdvanced,
 } from "./advanced";
 import {
+  CONTENT_ADMIN_FORM_MODES,
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_ENUM_DEFAULT_LENGTH,
   CONTENT_FIELD_NAME_PATTERN,
@@ -435,6 +438,33 @@ const isAdminColumnField = (fieldValue: ContentFieldDescriptor): boolean =>
   !NON_COLUMN_KINDS.has(fieldValue.kind) &&
   !isContentRelationCollection(fieldValue);
 
+const adminFormModes: readonly string[] = CONTENT_ADMIN_FORM_MODES;
+
+/**
+ * `admin.create.mode` / `admin.edit.mode`, defaulted and checked.
+ *
+ * Defaults to `dialog`, which is what keeps every content type written before
+ * page mode existed behaving exactly as it did. The runtime check is here for a
+ * JavaScript caller and for a value that widened somewhere upstream - the type
+ * already refuses anything outside the union.
+ */
+const resolveFormMode = (
+  id: string,
+  label: string,
+  action: ContentAdminActionConfig | undefined,
+): ContentAdminFormMode => {
+  const mode = action?.mode ?? "dialog";
+
+  if (!adminFormModes.includes(mode)) {
+    throw new ContentEngineError(
+      `${label} is "${mode}". Expected one of ${adminFormModes.map(value => `"${value}"`).join(", ")}.`,
+      { contentTypeId: id },
+    );
+  }
+
+  return mode;
+};
+
 const resolveAdmin = <TFields>(
   id: string,
   fields: ContentFieldMap,
@@ -553,7 +583,11 @@ const resolveAdmin = <TFields>(
       ? (columnFieldNames.find(name =>
           SEARCHABLE_KINDS.has(fields[name].kind),
         ) ?? null)
-      : String(admin.titleField);
+      : // `null` is a decision, not an omission: it says this content type has
+        // no shared title rather than "pick one for me".
+        admin.titleField === null
+        ? null
+        : String(admin.titleField);
   if (titleField !== null && !columnFieldNames.includes(titleField)) {
     throw new ContentEngineError(
       `admin.titleField references unknown field "${titleField}".`,
@@ -562,6 +596,8 @@ const resolveAdmin = <TFields>(
   }
 
   return {
+    create: { mode: resolveFormMode(id, "admin.create.mode", admin.create) },
+    edit: { mode: resolveFormMode(id, "admin.edit.mode", admin.edit) },
     form: { fields: formFields },
     label: admin.label,
     list: {

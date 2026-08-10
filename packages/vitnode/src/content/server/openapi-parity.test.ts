@@ -244,6 +244,7 @@ const adminService = () => ({
   delete: vi.fn(),
   findById: vi.fn().mockResolvedValue(row),
   findDetail: vi.fn(),
+  findRowById: vi.fn().mockResolvedValue({ ...row, labels: {} }),
   findMany: vi.fn().mockResolvedValue({
     edges: [{ ...row, labels: {} }],
     pageInfo: {
@@ -343,7 +344,7 @@ describe("admin routes match their OpenAPI document", () => {
 
   it("answers 404 for a record that is not there", async () => {
     const suite = editorialSuite();
-    service.findById.mockResolvedValue(null);
+    service.findRowById.mockResolvedValue(null);
 
     await expectParity(suite, {
       expected: 404,

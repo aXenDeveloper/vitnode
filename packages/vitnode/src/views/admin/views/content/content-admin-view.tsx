@@ -3,22 +3,25 @@ import { notFound } from "next/navigation";
 import React from "react";
 
 import type { RegisteredFrontendContentType } from "@/content/admin/config";
+import type { ContentAdminRoute } from "@/content/admin/route";
 
 import { I18nProvider } from "@/components/i18n-provider";
 import { DataTableSkeleton } from "@/components/table/data-table";
 import { HeaderContent } from "@/components/ui/header-content";
 import { findFrontendContentType } from "@/content/admin/config";
 import { contentI18nKeys, humanizeFieldName } from "@/content/admin/labels";
+import { resolveContentAdminRoute } from "@/content/admin/route";
 import {
   buildContentColumnSpec,
   buildContentFormSpec,
   buildContentTranslationFormSpec,
 } from "@/content/admin/spec";
 import { CONTENT_PERMISSIONS } from "@/content/const";
-import { pathToContentTypeId } from "@/content/registry";
+import { contentCreateHref } from "@/content/registry";
 import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
 
 import { CreateContentAction } from "./actions/create-action";
+import { ContentCreatePageView, ContentEditPageView } from "./page/page-views";
 import { ContentTableView } from "./table/content-table-view";
 
 export interface ContentAdminViewProps {
@@ -27,16 +30,39 @@ export interface ContentAdminViewProps {
 }
 
 /**
+ * Resolves what the catch-all slug was asking for: which content type, and
+ * whether it wants the list, the create page or an edit page.
+ *
+ * Shared with `generateMetadata` and the breadcrumb slot, so all three agree
+ * about a URL rather than each parsing it their own way.
+ */
+export const resolveContentRoute = async (
+  params: ContentAdminViewProps["params"],
+): Promise<
+  (ContentAdminRoute & { entry: RegisteredFrontendContentType }) | undefined
+> => {
+  const { slug } = await params;
+  const route = resolveContentAdminRoute(
+    slug,
+    contentTypeId => findFrontendContentType(contentTypeId)?.definition,
+  );
+  if (!route) return undefined;
+
+  const entry = findFrontendContentType(route.contentTypeId);
+
+  return entry ? { ...route, entry } : undefined;
+};
+
+/**
  * Resolves a registered content type from the catch-all slug, or `undefined`.
- * Shared with `generateMetadata` and the breadcrumb slot.
+ *
+ * Kept as its own export because that is what `generateMetadata` and the
+ * breadcrumb slot in every app already call.
  */
 export const resolveContentType = async (
   params: ContentAdminViewProps["params"],
-): Promise<RegisteredFrontendContentType | undefined> => {
-  const { slug } = await params;
-
-  return findFrontendContentType(pathToContentTypeId(slug));
-};
+): Promise<RegisteredFrontendContentType | undefined> =>
+  (await resolveContentRoute(params))?.entry;
 
 /**
  * Resolves the display strings for a content type.
@@ -70,13 +96,19 @@ export const getContentLabels = async (
   };
 };
 
-export const ContentAdminView = async ({
-  params,
+/**
+ * The generated list screen.
+ *
+ * Split out from `ContentAdminView` so the dispatcher below reads as the three
+ * screens it serves rather than as one function with a mode flag in it.
+ */
+const ContentListView = async ({
+  entry,
   searchParams,
-}: ContentAdminViewProps) => {
-  const entry = await resolveContentType(params);
-  if (!entry) notFound();
-
+}: {
+  entry: RegisteredFrontendContentType;
+  searchParams: ContentAdminViewProps["searchParams"];
+}) => {
   const { definition, pluginId, registration } = entry;
 
   const [labels, canView, canCreate, query] = await Promise.all([
@@ -117,34 +149,67 @@ export const ContentAdminView = async ({
   });
 
   return (
-    <I18nProvider namespaces={["core.content"]}>
-      <div className="p-4">
-        <HeaderContent desc={labels.desc} h1={labels.title}>
-          {canCreate && (
-            <CreateContentAction
-              fieldOverrides={Object.fromEntries(
-                Object.entries(registration.fields ?? {}).map(
-                  ([name, override]) => [name, override.component],
-                ),
-              )}
-              singular={definition.admin.label.singular}
-              spec={formSpec}
-            />
-          )}
-        </HeaderContent>
-
-        <React.Suspense
-          fallback={<DataTableSkeleton columns={columnSpecs.length + 1} />}
-        >
-          <ContentTableView
-            columnSpecs={columnSpecs}
-            entry={entry}
-            formSpec={formSpec}
-            searchParams={query}
-            translationSpec={translationSpec}
+    <div className="p-4">
+      <HeaderContent desc={labels.desc} h1={labels.title}>
+        {canCreate && (
+          <CreateContentAction
+            fieldOverrides={Object.fromEntries(
+              Object.entries(registration.fields ?? {}).map(
+                ([name, override]) => [name, override.component],
+              ),
+            )}
+            // Page mode makes this a link. The dialog is not mounted at all,
+            // so none of the form's chunks are downloaded until the page is.
+            href={
+              definition.admin.create.mode === "page"
+                ? contentCreateHref(definition.id)
+                : undefined
+            }
+            singular={definition.admin.label.singular}
+            spec={formSpec}
           />
-        </React.Suspense>
-      </div>
+        )}
+      </HeaderContent>
+
+      <React.Suspense
+        fallback={<DataTableSkeleton columns={columnSpecs.length + 1} />}
+      >
+        <ContentTableView
+          columnSpecs={columnSpecs}
+          entry={entry}
+          formSpec={formSpec}
+          searchParams={query}
+          translationSpec={translationSpec}
+        />
+      </React.Suspense>
+    </div>
+  );
+};
+
+/**
+ * One route, three screens.
+ *
+ * `/admin/content/blog/post` is the list, `.../create` and `.../42/edit` are the
+ * generated form pages - and the last two exist only for a content type that
+ * opted into `admin.create.mode` / `admin.edit.mode` of `page`, so nothing about
+ * an existing content type moves.
+ */
+export const ContentAdminView = async ({
+  params,
+  searchParams,
+}: ContentAdminViewProps) => {
+  const route = await resolveContentRoute(params);
+  if (!route) notFound();
+
+  return (
+    <I18nProvider namespaces={["core.content"]}>
+      {route.action === "list" ? (
+        <ContentListView entry={route.entry} searchParams={searchParams} />
+      ) : route.action === "create" ? (
+        <ContentCreatePageView entry={route.entry} />
+      ) : (
+        <ContentEditPageView entry={route.entry} itemId={route.itemId ?? 0} />
+      )}
     </I18nProvider>
   );
 };

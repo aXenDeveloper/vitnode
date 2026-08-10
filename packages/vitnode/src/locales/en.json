@@ -426,6 +426,9 @@
         "submit": "Save changes",
         "success": "{name} has been updated."
       },
+      "page": {
+        "back": "Back to {name}"
+      },
       "delete": {
         "title": "Delete {name}",
         "desc": "Are you sure you want to delete <title></title>? This action cannot be undone.",

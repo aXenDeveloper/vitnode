@@ -101,6 +101,11 @@
       "types": "./dist/src/content/next/revalidate-route.server.d.ts",
       "default": "./dist/src/content/next/revalidate-route.server.js"
     },
+    "./content/admin-form": {
+      "import": "./dist/src/views/admin/views/content/form/index.js",
+      "types": "./dist/src/views/admin/views/content/form/index.d.ts",
+      "default": "./dist/src/views/admin/views/content/form/index.js"
+    },
     "./api/config": {
       "import": "./dist/src/api/config.js",
       "types": "./dist/src/api/config.d.ts",

@@ -335,6 +335,22 @@ export interface ContentServiceBase<TDefinition> {
     edges: ContentListRow<TDefinition>[];
     pageInfo: ContentPageInfo;
   }>;
+  /**
+   * One record **with its reference labels**, exactly as the list returns them.
+   *
+   * The read a form makes: a `relation` or `user` value is an identifier, and an
+   * editor has to be shown the name behind it. `findById` deliberately stays a
+   * plain row - the labels cost one LEFT JOIN per reference field, and the
+   * callers that only want the record should not pay for them.
+   *
+   * Administrative, like every label: it is read from the target's
+   * `admin.titleField`, which may name something the target never publishes. The
+   * public projection does not use it.
+   */
+  findRowById: (
+    id: number,
+    options?: ContentServiceOptions,
+  ) => Promise<ContentListRow<TDefinition> | null>;
   /** Options for a `user` or `relation` picker, filtered by a search term. */
   options: (
     field: ContentReferenceFieldName<TDefinition>,
@@ -693,6 +709,31 @@ export const createContentService = <
       const row = await readOne(id, db(options));
 
       return row ? toRow(row) : null;
+    },
+
+    findRowById: async (id, options) => {
+      const selection: Record<string, PgColumn | SQL<string>> = {
+        ...ownSelection(),
+        ...Object.fromEntries(
+          Object.entries(references).map(([name, target]) => [
+            `${LABEL_PREFIX}${name}`,
+            target.labelColumn,
+          ]),
+        ),
+      };
+
+      let builder = db(options).select(selection).from(table).$dynamic();
+
+      for (const target of Object.values(references)) {
+        builder = builder.leftJoin(
+          target.aliased,
+          eq(target.owner, target.idColumn),
+        );
+      }
+
+      const [row] = await builder.where(eq(primaryCursor, id)).limit(1);
+
+      return row ? splitLabels(row) : null;
     },
 
     findDetail: async (id, options) => {

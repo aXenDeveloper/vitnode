@@ -1,4 +1,5 @@
 import type {
+  CONTENT_ADMIN_FORM_MODES,
   CONTENT_DELIVERY_DESCRIPTION_KINDS,
   CONTENT_DELIVERY_NO_INDEX_KINDS,
   CONTENT_DELIVERY_TITLE_KINDS,
@@ -735,11 +736,34 @@ export interface ContentAdminListConfig<
   searchableFields?: ScalarColumnFieldKeys<TFields>[];
 }
 
+/**
+ * How the AdminCP presents a create or an edit form.
+ *
+ * `dialog` is the default and always will be: every content type written before
+ * this existed keeps the screen it had, and opting into `page` is one line.
+ */
+export type ContentAdminFormMode = (typeof CONTENT_ADMIN_FORM_MODES)[number];
+
+/**
+ * One AdminCP action's presentation.
+ *
+ * An object rather than a bare string so the shape has somewhere to grow - and
+ * so `create: { mode: "page" }` reads the same as every other block in the
+ * descriptor.
+ */
+export interface ContentAdminActionConfig {
+  mode?: ContentAdminFormMode;
+}
+
 export interface ContentAdminConfig<
   TFields = ContentFieldMap,
   TPublication extends boolean = boolean,
   TEditorial extends boolean = boolean,
 > {
+  /** Presentation of the create form. Defaults to `{ mode: "dialog" }`. */
+  create?: ContentAdminActionConfig;
+  /** Presentation of the edit form. Defaults to `{ mode: "dialog" }`. */
+  edit?: ContentAdminActionConfig;
   form?: { fields?: SharedFieldKeys<TFields>[] };
   label: ContentAdminLabel;
   list?: ContentAdminListConfig<TFields, TPublication, TEditorial>;
@@ -754,9 +778,14 @@ export interface ContentAdminConfig<
    *
    * Shared fields only. A localized title has a different value per language, so
    * naming one here would make a toast depend on whose locale the reader is in;
-   * Stage 5B gives the AdminCP a locale-aware title of its own.
+   * the AdminCP's locale tabs are where a localized value appears.
+   *
+   * `null` says the content type genuinely has no shared title - which is the
+   * honest answer for one whose every text field is localized. Left `undefined`
+   * the first shared text field is picked, and that guess is wrong for, say, a
+   * category whose only shared column is a colour.
    */
-  titleField?: ScalarColumnFieldKeys<TFields>;
+  titleField?: null | ScalarColumnFieldKeys<TFields>;
 }
 
 /**
@@ -769,6 +798,8 @@ export interface ContentAdminConfig<
  * the narrower type bought nothing.
  */
 export interface ResolvedContentAdminConfig {
+  create: { mode: ContentAdminFormMode };
+  edit: { mode: ContentAdminFormMode };
   form: { fields: string[] };
   label: ContentAdminLabel;
   list: {

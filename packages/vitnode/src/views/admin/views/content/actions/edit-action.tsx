@@ -25,6 +25,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CONTENT_PERMISSIONS } from "@/content/const";
+import { Link } from "@/lib/navigation";
 
 import type { ContentFormProps } from "./content-form";
 
@@ -52,6 +53,7 @@ const LocaleEditor = dynamic(async () =>
 export const EditContentAction = ({
   defaultLocale,
   editorial = false,
+  href,
   permissionModule,
   pluginId,
   singular,
@@ -61,6 +63,8 @@ export const EditContentAction = ({
   /** The content type's default locale. Required when `translationSpec` is set. */
   defaultLocale?: string;
   editorial?: boolean;
+  /** Set by `admin.edit.mode: "page"` - navigates instead of opening a dialog. */
+  href?: string;
   permissionModule: string;
   pluginId: string;
   /** Localized-field form spec, or `null` when the content type is not localized. */
@@ -81,6 +85,29 @@ export const EditContentAction = ({
   const localized = translationSpec !== null && props.data !== undefined;
 
   if (!canEdit && !(localized && canTranslate)) return null;
+
+  if (href) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                aria-label={t("title", { name: singular })}
+                render={<Link href={href} />}
+                size="icon"
+                variant="ghost"
+              >
+                <PencilIcon className="size-4" />
+              </Button>
+            }
+          />
+
+          <TooltipContent>{t("title", { name: singular })}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
 
   return (
     <TooltipProvider>

@@ -6,6 +6,8 @@ import type {
 import type { AnyContentTypeDefinition } from "./types";
 
 import {
+  CONTENT_ADMIN_CREATE_SEGMENT,
+  CONTENT_ADMIN_EDIT_SEGMENT,
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_PERMISSIONS,
   CONTENT_PUBLICATION_FIELDS,
@@ -303,6 +305,34 @@ export const pathToContentTypeId = (slug: readonly string[]): string =>
 /** `/admin/content/example/article` */
 export const contentAdminHref = (id: string): string =>
   `/admin/content/${contentTypeToPath(id)}`;
+
+/**
+ * `/admin/content/example/article/create` - the generated create **page**.
+ *
+ * Built off `contentAdminHref` rather than spelled out again, so the list URL
+ * and the two form URLs cannot drift apart. Only meaningful for a content type
+ * whose `admin.create.mode` is `page`; the resolver refuses it otherwise.
+ */
+export const contentCreateHref = (id: string): string =>
+  `${contentAdminHref(id)}/${CONTENT_ADMIN_CREATE_SEGMENT}`;
+
+/** `/admin/content/example/article/42/edit` - the generated edit **page**. */
+export const contentEditHref = (id: string, itemId: number): string =>
+  `${contentAdminHref(id)}/${itemId}/${CONTENT_ADMIN_EDIT_SEGMENT}`;
+
+/**
+ * The edit URL with `{id}` still in it.
+ *
+ * A create page is a server component and the identifier only exists once the
+ * mutation has answered, so the client half is handed a template rather than a
+ * callback - a function cannot cross an RSC boundary, and a second copy of the
+ * URL shape would be free to drift from {@link contentEditHref}.
+ */
+export const contentEditHrefTemplate = (id: string): string =>
+  contentEditHref(id, CONTENT_EDIT_HREF_PLACEHOLDER as unknown as number);
+
+/** The token {@link contentEditHrefTemplate} leaves behind for the client. */
+export const CONTENT_EDIT_HREF_PLACEHOLDER = "{id}";
 
 /**
  * The permissions every content type gets. `can_view` gates the list and the

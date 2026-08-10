@@ -220,7 +220,11 @@ export {
 } from "./localization";
 export type { ContentFieldPartition } from "./localization";
 export {
+  CONTENT_EDIT_HREF_PLACEHOLDER,
   contentAdminHref,
+  contentCreateHref,
+  contentEditHref,
+  contentEditHrefTemplate,
   contentPermissionEntries,
   contentTypeToPath,
   findContentTypeById,
@@ -269,7 +273,9 @@ export type { ContentSitemapEntry, ContentSitemapIndexEntry } from "./sitemap";
 export { slugify } from "./slug";
 export type {
   AnyContentTypeDefinition,
+  ContentAdminActionConfig,
   ContentAdminConfig,
+  ContentAdminFormMode,
   ContentAdminLabel,
   ContentAdminListConfig,
   ContentBooleanField,

@@ -557,6 +557,27 @@ export const CONTENT_DELIVERY_CODES = {
 } as const;
 
 /**
+ * How the AdminCP may present a create or an edit form.
+ *
+ * `dialog` is first because it is the default, and the default is the whole
+ * point: a content type written before page mode existed keeps the screen it
+ * already had, and nothing about its behaviour moves until somebody says so.
+ */
+export const CONTENT_ADMIN_FORM_MODES = ["dialog", "page"] as const;
+
+/**
+ * The last URL segment of a generated create page, and of an edit one.
+ *
+ * Reserved rather than free-form: `/admin/content/[...slug]` resolves a content
+ * type id from the same slug, so these two words are what tells
+ * `/admin/content/blog/post` from `/admin/content/blog/post/create`. A content
+ * type that genuinely wants to be called `blog.post.create` still wins - the
+ * exact match is tried first.
+ */
+export const CONTENT_ADMIN_CREATE_SEGMENT = "create";
+export const CONTENT_ADMIN_EDIT_SEGMENT = "edit";
+
+/**
  * Every content type gets the first four staff permissions. `can_publish` is
  * generated only for content types with `publication: { enabled: true }`,
  * `can_restore` only for those with `editorial: { enabled: true }`, and

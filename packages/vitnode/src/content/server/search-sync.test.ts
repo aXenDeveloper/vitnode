@@ -83,6 +83,7 @@ const harness = ({
     advancedFields: vi.fn(),
     findDetail: vi.fn(),
     findById: vi.fn(),
+    findRowById: vi.fn(),
     relations: {},
     repeatable: {},
     findMany: vi.fn(),
