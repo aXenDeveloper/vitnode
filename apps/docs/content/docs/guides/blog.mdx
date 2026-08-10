@@ -140,12 +140,16 @@ The colour is the AdminCP's own picker through a
 [field override](/docs/dev/content-engine/admin-form-layouts#field-and-column-overrides),
 and the colour column is a swatch **plus** the value in words.
 
-<Callout type="info" title="Why titleField is null">
-  Every text field on a category is localized, so there is no shared column that
-  could honestly be its name - left undefined, the engine would pick `color`, and
-  "#3260c0 has been deleted" is not a sentence anybody wants to read. The
-  article's category picker gets its labels from a small field override for the
-  same reason; the relation itself is entirely the engine's.
+<Callout type="warn" title="A localized category has no name the picker can read">
+  `titleField` is `null` because every text field on a category is localized -
+  left undefined, the engine would pick `color`, and "#3260c0 has been deleted"
+  is not a sentence anybody wants to read. The consequence is that the article's
+  category picker labels its options `#3` rather than "Engineering": a relation
+  label is resolved from a **shared** column on the target, and a localized
+  content type has none. Resolving one from the translation table is a Content
+  Engine change, not something a plugin should paper over - `config.tsx` is
+  loaded by the `vitnode` CLI, so a field override cannot reach a server action
+  to look the names up itself.
 </Callout>
 
 ### Articles - the rich example

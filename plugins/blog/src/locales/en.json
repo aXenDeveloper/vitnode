@@ -37,9 +37,6 @@
             "title": "Article settings",
             "locale_desc": "The address and metadata of this language's version."
           }
-        },
-        "category": {
-          "label": "Category"
         }
       },
       "category": {

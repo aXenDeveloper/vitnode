@@ -1,6 +1,7 @@
-import { blogPostContentType } from "@vitnode/blog/content/post";
 import { contentAdminHref } from "@vitnode/core/content";
 import { redirect } from "@vitnode/core/lib/navigation";
+
+import { blogPostContentType } from "@vitnode/blog/content/post";
 
 /**
  * The address articles used to live at.

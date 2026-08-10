@@ -62,6 +62,14 @@ contentTypeAdmin({
 The override receives the same props the generated input would, so the field
 stays wired into `AutoForm`'s validation and error display.
 
+<Callout type="warn" title="An override cannot reach a server action">
+  `config.tsx` is loaded by the `vitnode` CLI to enumerate a plugin's routes and
+  messages, so **anything `server-only` reachable from it breaks `vitnode init`**
+  - including a `"use server"` module a field override imports. Server data
+  reaches an override the way the generated inputs get it: through the props the
+  Content Engine already passes, such as `ContentField`'s `loadOptions`.
+</Callout>
+
 <Callout type="warn" title="Overrides must be client components">
   `config.tsx` is a server module, so an inline arrow written there is a server
   closure and cannot be handed to the client form. Put the component in its own

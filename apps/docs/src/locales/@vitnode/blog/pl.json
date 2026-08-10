@@ -37,9 +37,6 @@
             "title": "Ustawienia artykułu",
             "locale_desc": "Adres i metadane wersji w tym języku."
           }
-        },
-        "category": {
-          "label": "Kategoria"
         }
       },
       "category": {

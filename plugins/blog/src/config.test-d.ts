@@ -21,10 +21,7 @@ describe("blog content admin registration", () => {
 
     contentTypeAdmin({
       definition: blogPostContentType,
-      fields: {
-        categoryId: { component: () => null },
-        content: { component: () => null },
-      },
+      fields: { content: { component: () => null } },
       forms: { layout: () => null },
     });
   });
