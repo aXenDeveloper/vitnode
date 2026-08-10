@@ -23,8 +23,13 @@ vi.mock("next-intl", () => ({
 }));
 
 vi.mock("@/lib/navigation", () => ({
-  Link: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
+  // Spreads everything, like the real `Link` - a mock that swallowed the props
+  // Base UI merges in would hide an accessibility warning rather than surface it.
+  Link: ({
+    children,
+    ...props
+  }: { children: React.ReactNode } & React.ComponentProps<"a">) => (
+    <a {...props}>{children}</a>
   ),
   usePathname: () => "/admin/content/blog/post",
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -248,6 +253,38 @@ describe("content form layouts", () => {
     );
 
     expect(screen.getByText("draft")).toBeTruthy();
+  });
+
+  it("offers a way out that is a real link, and says so accessibly", () => {
+    const errors: unknown[][] = [];
+    const spy = vi
+      .spyOn(console, "error")
+      .mockImplementation((...args: unknown[]) => {
+        errors.push(args);
+      });
+
+    render(
+      <Harness
+        fieldNames={[]}
+        layout={() => (
+          <ContentFormActions
+            cancelHref="/admin/content/blog/post"
+            submitLabel="Save"
+          />
+        )}
+      />,
+    );
+
+    // `role="button"` on an anchor is Base UI's own answer for a non-native
+    // button, and the same one every other link-button in the AdminCP gives.
+    const cancel = screen.getByRole("button", { name: "cancel" });
+
+    expect(cancel.tagName).toBe("A");
+    expect(cancel.getAttribute("href")).toBe("/admin/content/blog/post");
+    // Base UI only warns - a link-rendered button that kept `nativeButton` would
+    // still look right and would have lost its button semantics.
+    expect(errors).toEqual([]);
+    spy.mockRestore();
   });
 
   it("warns in development about a field the layout forgot", () => {

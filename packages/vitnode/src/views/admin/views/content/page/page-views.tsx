@@ -107,7 +107,11 @@ export const ContentCreatePageView = async ({
         desc={t("desc", { name: singular })}
         h1={t("title", { name: singular })}
       >
-        <Button render={<Link href={backHref} />} variant="outline">
+        <Button
+          nativeButton={false}
+          render={<Link href={backHref} />}
+          variant="outline"
+        >
           <ArrowLeftIcon />
           {tPage("back", { name: definition.admin.label.plural })}
         </Button>
@@ -203,7 +207,11 @@ export const ContentEditPageView = async ({
   return (
     <div className="p-4">
       <HeaderContent desc={title} h1={t("title", { name: singular })}>
-        <Button render={<Link href={backHref} />} variant="outline">
+        <Button
+          nativeButton={false}
+          render={<Link href={backHref} />}
+          variant="outline"
+        >
           <ArrowLeftIcon />
           {tPage("back", { name: definition.admin.label.plural })}
         </Button>

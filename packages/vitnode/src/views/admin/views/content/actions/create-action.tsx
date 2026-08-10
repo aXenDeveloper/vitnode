@@ -41,7 +41,7 @@ export const CreateContentAction = ({
 
   if (href) {
     return (
-      <Button render={<Link href={href} />}>
+      <Button nativeButton={false} render={<Link href={href} />}>
         <PlusIcon />
         {t("title", { name: singular })}
       </Button>

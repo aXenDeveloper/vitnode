@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
 
@@ -11,8 +11,14 @@ vi.mock("next-intl", () => ({
 }));
 
 vi.mock("@/lib/navigation", () => ({
-  Link: ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a data-testid="link" href={href}>
+  // Spreads everything, like the real `Link`. A mock that dropped the props
+  // Base UI merges in - the ref above all - would render an anchor Base UI never
+  // sees, and the accessibility check below would pass by not looking.
+  Link: ({
+    children,
+    ...props
+  }: { children: React.ReactNode } & React.ComponentProps<"a">) => (
+    <a data-testid="link" {...props}>
       {children}
     </a>
   ),
@@ -43,6 +49,29 @@ const spec: ContentFormSpec = {
  * field component, the editor, the lot - to show it for one frame.
  */
 describe("page-mode actions", () => {
+  /**
+   * Base UI complains rather than throws when a button renders as something that
+   * is not a `<button>` and `nativeButton` was left `true` - which costs the
+   * element its native button semantics in forms and assistive technology. A
+   * warning nobody asserts on is a warning that ships, so every case below fails
+   * on one.
+   */
+  let logged: unknown[][] = [];
+
+  beforeEach(() => {
+    logged = [];
+    for (const level of ["error", "warn"] as const) {
+      vi.spyOn(console, level).mockImplementation((...args: unknown[]) => {
+        logged.push(args);
+      });
+    }
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    expect(logged).toEqual([]);
+  });
+
   it("creates through a link when the content type asked for a page", () => {
     render(
       <CreateContentAction

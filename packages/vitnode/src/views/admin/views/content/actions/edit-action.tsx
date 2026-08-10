@@ -94,6 +94,7 @@ export const EditContentAction = ({
             render={
               <Button
                 aria-label={t("title", { name: singular })}
+                nativeButton={false}
                 render={<Link href={href} />}
                 size="icon"
                 variant="ghost"

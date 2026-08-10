@@ -106,7 +106,11 @@ export const ContentFormActions = ({
     >
       {children}
       {cancelHref ? (
-        <Button render={<Link href={cancelHref} />} variant="ghost">
+        <Button
+          nativeButton={false}
+          render={<Link href={cancelHref} />}
+          variant="ghost"
+        >
           {t("cancel")}
         </Button>
       ) : null}
