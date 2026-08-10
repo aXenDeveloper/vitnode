@@ -4,6 +4,7 @@ import { ListIcon, NotebookPenIcon } from "lucide-react";
 import { CONFIG_PLUGIN } from "@/const";
 import { blogCategoryContentType } from "@/content/category";
 import { blogPostContentType } from "@/content/post";
+import { BlogArticleCategoryField } from "@/views/admin/article/category-field";
 import { BlogArticleEditorField } from "@/views/admin/article/editor-field";
 import { BlogArticleFormLayout } from "@/views/admin/article/form-layout";
 import { BlogCategoryColorCell } from "@/views/admin/category/color-cell";
@@ -34,6 +35,9 @@ export const blogPlugin = () => {
         fields: {
           // The Tiptap editor, inside the same AutoForm as everything else.
           content: { component: BlogArticleEditorField },
+          // A label override, so the picker names categories rather than
+          // numbering them - the relation itself is still the engine's.
+          categoryId: { component: BlogArticleCategoryField },
         },
         forms: {
           // One layout for both actions - they are the same screen, and writing

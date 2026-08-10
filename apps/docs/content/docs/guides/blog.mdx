@@ -140,6 +140,14 @@ The colour is the AdminCP's own picker through a
 [field override](/docs/dev/content-engine/admin-form-layouts#field-and-column-overrides),
 and the colour column is a swatch **plus** the value in words.
 
+<Callout type="info" title="Why titleField is null">
+  Every text field on a category is localized, so there is no shared column that
+  could honestly be its name - left undefined, the engine would pick `color`, and
+  "#3260c0 has been deleted" is not a sentence anybody wants to read. The
+  article's category picker gets its labels from a small field override for the
+  same reason; the relation itself is entirely the engine's.
+</Callout>
+
 ### Articles - the rich example
 
 Page create and edit, a custom layout, `AutoFormEditor` for the body, a native
