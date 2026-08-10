@@ -49,6 +49,7 @@
     "permissions",
     "events",
     "overriding-admincp",
+    "admin-form-layouts",
     "production-hardening",
     "concurrency",
     "failure-and-retries",

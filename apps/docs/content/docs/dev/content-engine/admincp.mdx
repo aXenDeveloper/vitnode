@@ -29,7 +29,9 @@ You get a nav item, a breadcrumb, and a screen at:
 - **Sorting** - `admin.list.orderableFields`, plus the system columns and the
   publication ones ([below](#what-is-sortable))
 - **Pagination** - the standard cursor pagination, capped at 100 per page
-- **Create / Edit** - `AutoForm` dialogs, lazy-loaded on open
+- **Create / Edit** - `AutoForm` dialogs, lazy-loaded on open - or full pages,
+  with `admin.create.mode` / `admin.edit.mode`
+  ([below](#dialog-or-page))
 - **Delete** - a confirmation dialog
 - **History** - with [`editorial`](#editorial): every version, a diff, and restore
 - **Empty, loading and error states** - out of the box
@@ -54,6 +56,22 @@ chunks, so it is downloaded once:
   twice or land back on a shared chunk anyway - so the loader would be a few
   milliseconds of theatre either way.
 </Callout>
+
+## Dialog or page
+
+The forms open in a dialog by default. A content type people spend an hour
+inside can ask for a page instead, and a plugin can rearrange either without
+giving up any of the generated behaviour:
+
+```ts
+admin: {
+  create: { mode: "page" },
+  edit: { mode: "page" },
+}
+```
+
+`"dialog"` is the default and stays the default. See
+[Dialog or page, and custom layouts](/docs/dev/content-engine/admin-form-layouts).
 
 ## What is sortable
 

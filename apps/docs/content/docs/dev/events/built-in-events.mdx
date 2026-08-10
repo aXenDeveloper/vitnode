@@ -18,10 +18,10 @@ the emitting plugin are needed, the event map is global.
 | `role.deleted`          | `{ roleId }`                             | A role is deleted in the AdminCP                        |
 | `blog.post.created`     | `{ postId, categoryId }`                 | A blog post is created                                  |
 | `blog.post.updated`     | `{ postId, categoryId }`                 | A blog post is edited                                   |
-| `blog.post.deleted`     | `{ postId, categoryId }`                 | A blog post is deleted                                  |
+| `blog.post.deleted`     | `{ postId }`                             | A blog post is deleted                                  |
 | `blog.category.created` | `{ categoryId }`                         | A blog category is created                              |
 | `blog.category.updated` | `{ categoryId }`                         | A blog category is edited                               |
-| `blog.category.deleted` | `{ categoryId, postIds }`                | A blog category (and its posts, via cascade) is deleted |
+| `blog.category.deleted` | `{ categoryId, postIds }`                | A blog category is deleted (`postIds` is always empty)  |
 
 ## Core
 
@@ -166,10 +166,19 @@ themselves, and core will emit it once deletion lands.
 
 ## Blog (`@vitnode/blog`)
 
+<Callout type="warn" title="These are compatibility adapters now">
+  The blog runs on the [Content
+  Engine](/docs/dev/content-engine), so the events that describe what actually
+  happened are `content.blog.post.*` and `content.blog.category.*` - they carry
+  changed fields, revision ids, publication transitions, per-locale translation
+  events and slug history. The four names below are re-emitted from those by
+  listeners in the plugin, so existing consumers keep working. Prefer the
+  `content.*` ones for anything new.
+</Callout>
+
 ### blog.category.created / blog.category.updated
 
-Emitted after a category (and its translated titles) is created or edited in
-the AdminCP.
+Re-emitted after `content.blog.category.created` / `.updated`.
 
 <TypeTable
   type={{
@@ -183,10 +192,11 @@ the AdminCP.
 **Use cases:** keep navigation menus or externally-cached category trees in
 sync, or notify an external CMS/feed of taxonomy changes.
 
-### blog.post.created / blog.post.updated / blog.post.deleted
+### blog.post.created / blog.post.updated
 
-Emitted from the AdminCP post routes after the post (and its translations and
-search index entries) are written.
+Re-emitted after `content.blog.post.created` / `.updated`. The listener reads
+the article back to fill in `categoryId`, so a record deleted in between is
+simply not announced.
 
 <TypeTable
   type={{
@@ -206,11 +216,29 @@ webhook (via a queue task) that shares the post to social media, invalidate an
 external cache/CDN, or keep plugin-owned derived data (reading lists, related
 posts) in sync.
 
+### blog.post.deleted
+
+Re-emitted after `content.blog.post.deleted`.
+
+<TypeTable
+  type={{
+    postId: {
+      description: "Id of the deleted post.",
+      type: "number",
+    },
+  }}
+/>
+
+<Callout type="warn" title="No categoryId, unlike created and updated">
+  The row is gone by the time this is emitted, so there is nothing left to read
+  it from - and inventing one would put a wrong id into an audit trail. A
+  listener that needs the category should watch `content.blog.post.deleted` and
+  keep its own index.
+</Callout>
+
 ### blog.category.deleted
 
-Emitted after a category is deleted. Deleting a category cascade-deletes its
-posts at the database level, so the payload carries the ids of the posts that
-were removed with it.
+Re-emitted after `content.blog.category.deleted`.
 
 <TypeTable
   type={{
@@ -219,16 +247,12 @@ were removed with it.
       type: "number",
     },
     postIds: {
-      description: "Posts removed by the category's cascade delete.",
+      description:
+        "Always empty. `blog_posts.categoryId` is ON DELETE RESTRICT, so a category with articles cannot be deleted at all - the field is kept so existing listeners still compile.",
       type: "number[]",
     },
   }}
 />
-
-**Use cases:** the blog plugin itself ships a listener on this event
-(`cleanup-category-search`) that removes the cascade-deleted posts from the
-search index - a good template for cleaning up any data your plugin keys by
-post id.
 
 ## Content Engine events
 

@@ -85,3 +85,115 @@ npm run dev
 
 </Step>
 </Steps>
+
+## How it is built
+
+The blog is the Content Engine's reference implementation. Two content types,
+three component overrides and one layout - and no CRUD of its own:
+
+```text
+plugins/blog/src/
+├── content/category.ts        Blog Category  (blog.category)
+├── content/post.ts            Blog Article   (blog.post)
+├── database/{categories,posts}.ts   createContentModel(...)
+├── config.tsx                 contentTypeAdmin(...) x2
+└── views/admin/
+    ├── category/color-field.tsx     AutoFormColor override
+    ├── category/color-cell.tsx      table cell override
+    ├── article/editor-field.tsx     AutoFormEditor override
+    └── article/form-layout.tsx      the editor screen
+```
+
+There is no `api/modules/admin/**`, no create/edit dialog, no manual validation,
+no manual search sync and no hand-written slug uniqueness check. The generated
+routes, forms, permissions, events, search documents and canonical URLs come
+from the two definitions.
+
+### Categories - the simple example
+
+Dialog create and edit, because a name and a colour do not need a page:
+
+```ts title="src/content/category.ts"
+export const blogCategoryContentType = defineContentType({
+  id: "blog.category",
+  tableName: "blog_categories",
+
+  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+
+  fields: {
+    color: field.text({ maxLength: 50, nullable: true }),
+    name: field.text({ localized: true, required: true, maxLength: 100 }),
+  },
+
+  admin: {
+    label: { plural: "Categories", singular: "Category" },
+    permissionModule: "categories",
+    titleField: null,
+    create: { mode: "dialog" },
+    edit: { mode: "dialog" },
+    list: { columns: ["color", "updatedAt"] },
+  },
+});
+```
+
+The colour is the AdminCP's own picker through a
+[field override](/docs/dev/content-engine/admin-form-layouts#field-and-column-overrides),
+and the colour column is a swatch **plus** the value in words.
+
+### Articles - the rich example
+
+Page create and edit, a custom layout, `AutoFormEditor` for the body, a native
+relation to the category, an author, publication, editorial history, search and
+delivery:
+
+```text
+/admin/content/blog/post            list
+/admin/content/blog/post/create     create
+/admin/content/blog/post/42/edit    edit
+```
+
+```text
+┌───────────────────────────────────────────────────────┐
+│ Title                          │ Publish              │
+│ [............................] │ Status: Draft        │
+│                                │            [ Save ]  │
+│ Content                        ├──────────────────────┤
+│ ┌────────────────────────────┐ │ Article settings     │
+│ │      AutoFormEditor        │ │ Friendly URL         │
+│ └────────────────────────────┘ │ Category             │
+│                                │ Author               │
+└───────────────────────────────────────────────────────┘
+```
+
+Below `lg` it is a single column: body first, then metadata, then the actions.
+
+Articles are localized, so the editor is the same layout on the shared tab and
+on each language tab - `ContentFormField` renders nothing for a field the
+current surface does not have, so `title` and `content` appear per language
+while `categoryId` and `authorId` appear once.
+
+### Upgrading from an older blog
+
+Migration `0035_migrate_blog_to_content_engine.sql` is additive. No table is
+dropped and no record moves:
+
+- `blog_categories` and `blog_posts` keep their names, ids, colours, categories,
+  authors and timestamps.
+- The text moves out of `core_languages_words` and into
+  `blog_categories_translations` / `blog_posts_translations`, one row per
+  language that actually had a translation.
+- Every existing article becomes `published` with `publishedAt = createdAt` -
+  they were all publicly readable before, and that is the one publication fact
+  the old schema can prove. `version` starts at 1 and no revision history is
+  invented.
+- A record with no default-locale translation gets one built from a name it
+  already has, rather than being left unreadable.
+
+Two things do change, deliberately:
+
+| Was | Now |
+| --- | --- |
+| `GET /api/@vitnode/blog/posts` | `GET /api/@vitnode/blog/content/blog` |
+| `GET /api/@vitnode/blog/categories` | removed - categories have no public URL |
+| `/admin/blog/posts`, `/admin/blog/categories` | redirect to the generated screens |
+| `blog.post.deleted` carried `categoryId` | it does not; see [Built-in events](/docs/dev/events/built-in-events#blogpostdeleted) |
