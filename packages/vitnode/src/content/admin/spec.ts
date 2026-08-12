@@ -6,8 +6,12 @@ import type {
   ContentFieldKind,
 } from "../types";
 
+import {
+  getLangValue,
+  type MultiLangValue,
+  upsertLangValue,
+} from "../../lib/helpers/multi-lang";
 import { contentRepeatableMax, contentRepeatableMin } from "../advanced";
-import { partitionContentFields } from "../localization";
 import { contentFieldPath, contentInnerFields } from "../paths";
 
 /**
@@ -34,6 +38,15 @@ export interface ContentFormFieldSpec {
   integer?: boolean;
   kind: ContentFieldKind;
   label: string;
+  /**
+   * Whether this field's value lives on the translation table.
+   *
+   * Presentation reads it as "render a language switcher inside this input"; the
+   * submit path reads it as "this value goes to the translation rows rather than
+   * the base row". Both from one flag, so a plugin never has to declare a field
+   * override just because a field is translated.
+   */
+  localized?: boolean;
   max?: number;
   /** Upper bound on a repeatable's rows. */
   maxItems?: number;
@@ -55,6 +68,15 @@ export interface ContentFormFieldSpec {
 
 export interface ContentFormSpec {
   contentTypeId: string;
+  /**
+   * The locale every record must exist in, or `null` when the content type is
+   * not localized.
+   *
+   * Not a display choice - the editor sees their own language first. This is the
+   * translation the engine refuses to create a record without, so the form can
+   * say which language a required field is still missing in.
+   */
+  defaultLocale: null | string;
   fields: ContentFormFieldSpec[];
   pluginId: string;
   /** Field the toast describes a newly created row by, if there is one. */
@@ -64,6 +86,13 @@ export interface ContentFormSpec {
 export interface ContentColumnSpec {
   kind: "publication" | "system" | ContentFieldKind;
   label: string;
+  /**
+   * Whether the cell reads from the row's translation rather than the row.
+   *
+   * The list resolves one translation per record - the reader's own language -
+   * so a localized cell is an ordinary cell with one more lookup in front of it.
+   */
+  localized?: boolean;
   name: string;
   /** Enum value -> translated label, for badge cells. */
   options?: Record<string, string>;
@@ -104,6 +133,7 @@ const projectFormField = (
     name,
     nullable: fieldValue.nullable,
     required: fieldValue.required,
+    ...(fieldValue.localized === true ? { localized: true } : {}),
     ...(fieldValue.description === undefined
       ? {}
       : { description: fieldValue.description }),
@@ -193,56 +223,25 @@ export const buildContentFormSpec = ({
 
   return {
     contentTypeId: definition.id,
+    defaultLocale: definition.localization.enabled
+      ? definition.localization.defaultLocale
+      : null,
     pluginId,
     titleField: definition.admin.titleField,
-    // Shared fields only, because that is what `admin.form.fields` resolves to.
-    // A localized field's input lives on its locale tab -
-    // {@link buildContentTranslationFormSpec} builds that one.
+    // One form, shared and localized fields alike, in the order they were
+    // declared. Where a value is *stored* is settled by `spec.localized` on the
+    // way back out - it is not a reason to split the screen in two.
     fields: definition.admin.form.fields.map(name =>
       projectFormField(name, fields[name], labelEnum, labelField),
     ),
   };
 };
 
-/**
- * The form spec for **one locale tab**: localized fields only.
- *
- * `null` for a content type that is not localized, so a caller structurally cannot
- * render a locale tab for something with no translations.
- *
- * Built from `partitionContentFields` rather than from `admin.form.fields`, which
- * resolves to shared names only - and in declaration order, so the tab shows title
- * above body for the same reason the shared form shows its fields in the order they
- * were written.
- */
-export const buildContentTranslationFormSpec = ({
-  definition,
-  labelEnum,
-  labelField,
-  pluginId,
-}: {
-  definition: AnyContentTypeDefinition;
-  labelEnum: ContentEnumLabeller;
-  labelField: ContentFieldLabeller;
-  pluginId: string;
-}): ContentFormSpec | null => {
-  if (!definition.localization.enabled) return null;
-
-  const { localizedFields } = partitionContentFields(definition.fields);
-  const fields = Object.entries(localizedFields).map(([name, fieldValue]) =>
-    projectFormField(name, fieldValue, labelEnum, labelField),
-  );
-
-  return {
-    contentTypeId: definition.id,
-    fields,
-    pluginId,
-    // The shared `titleField` names a shared field by construction, so it would
-    // describe the wrong thing in a locale toast. The first localized `text` field
-    // is what a translator is actually looking at.
-    titleField: fields.find(field => field.kind === "text")?.name ?? null,
-  };
-};
+/** The localized field names of a form spec, in declaration order. */
+export const contentLocalizedFieldNames = (spec: ContentFormSpec): string[] =>
+  spec.fields
+    .filter(field => field.localized === true)
+    .map(field => field.name);
 
 /** Projects the list columns into the serialisable spec. */
 export const buildContentColumnSpec = ({
@@ -263,6 +262,7 @@ export const buildContentColumnSpec = ({
       kind: systemKinds[name] ?? fieldValue?.kind ?? "system",
       label: labelField(name, fieldValue),
       name,
+      ...(fieldValue?.localized === true ? { localized: true } : {}),
       ...(fieldValue?.kind === "enum"
         ? {
             options: Object.fromEntries(
@@ -406,44 +406,216 @@ const toInitialValue = (
 /**
  * The row's own title, for a toast that says what was just written. Falls back
  * to nothing when the content type declares no title field.
+ *
+ * A localized title is read in `locale` - the language the editor is working in -
+ * because that is the copy they just typed and the one they would recognise.
  */
 export const contentTitleFromValues = (
   spec: ContentFormSpec,
   values: Record<string, unknown>,
+  locale?: string,
 ): string | undefined => {
   if (spec.titleField === null) return undefined;
 
-  const value = values[spec.titleField];
+  const raw = values[spec.titleField];
+  const value = Array.isArray(raw)
+    ? getLangValue(raw as MultiLangValue, locale ?? spec.defaultLocale ?? "")
+    : raw;
 
   return typeof value === "string" && value.trim() !== "" ? value : undefined;
 };
 
-/** Turns validated form values into the payload the generated API accepts. */
+/**
+ * Turns validated form values into the payload the generated API accepts.
+ *
+ * Shared fields only. A localized field's value is a per-language array, and it
+ * travels to the translation rows through
+ * {@link contentFormValuesToTranslations} instead - the split lives here rather
+ * than in the form, which is exactly why a layout never has to know about it.
+ */
 export const contentFormValuesToPayload = (
   spec: ContentFormSpec,
   values: Record<string, unknown>,
 ): Record<string, unknown> =>
   Object.fromEntries(
-    Object.entries(values).map(([name, value]) => {
-      const fieldSpec = spec.fields.find(item => item.name === name);
-      // A group and a repeatable already hold the shape the API takes - the
-      // editors control the nested value directly - and a to-many relation
-      // already holds identifiers. Only the single-relation combobox, which
-      // holds `{ label, value }` so it can show a name, needs converting.
-      if (
-        !fieldSpec ||
-        fieldSpec.multiple === true ||
-        !isReferenceKind(fieldSpec.kind)
-      ) {
-        return [name, value];
+    Object.entries(values)
+      .filter(([name]) => !isLocalizedFieldName(spec, name))
+      .map(([name, value]) => {
+        const fieldSpec = spec.fields.find(item => item.name === name);
+        // A group and a repeatable already hold the shape the API takes - the
+        // editors control the nested value directly - and a to-many relation
+        // already holds identifiers. Only the single-relation combobox, which
+        // holds `{ label, value }` so it can show a name, needs converting.
+        if (
+          !fieldSpec ||
+          fieldSpec.multiple === true ||
+          !isReferenceKind(fieldSpec.kind)
+        ) {
+          return [name, value];
+        }
+
+        const option = value as ContentReferenceOption | null | undefined;
+        if (!option?.value) return [name, null];
+
+        return [name, Number(option.value)];
+      }),
+  );
+
+const isLocalizedFieldName = (spec: ContentFormSpec, name: string): boolean =>
+  spec.fields.some(field => field.name === name && field.localized === true);
+
+/**
+ * What one localized field holds for one language, ready for the API.
+ *
+ * `undefined` means "say nothing about this field in this language", which is a
+ * different thing from `null`: a slug left blank is derived from the title, and a
+ * language nobody has typed into gets no translation row invented for it.
+ */
+const localizedValueForApi = (
+  fieldSpec: ContentFormFieldSpec,
+  raw: string,
+): unknown => {
+  if (raw.trim() !== "") return raw;
+  // An empty slug means "derive it from the source field in this language".
+  if (EMPTY_MEANS_UNSET.has(fieldSpec.kind)) return undefined;
+  if (fieldSpec.nullable) return null;
+
+  return undefined;
+};
+
+/**
+ * The per-language halves of a submitted form, keyed by locale.
+ *
+ * A locale appears only when the editor actually typed something into it, which
+ * is what keeps "I opened the Polish selector to look" from creating an empty
+ * Polish translation. Locales already present on the record are handled by the
+ * caller, which knows which rows exist.
+ */
+export const contentFormValuesToTranslations = (
+  spec: ContentFormSpec,
+  values: Record<string, unknown>,
+): Record<string, Record<string, unknown>> => {
+  const byLocale: Record<string, Record<string, unknown>> = {};
+
+  for (const fieldSpec of spec.fields) {
+    if (fieldSpec.localized !== true) continue;
+
+    const entries = values[fieldSpec.name];
+    if (!Array.isArray(entries)) continue;
+
+    for (const entry of entries as MultiLangValue) {
+      const locale = entry.languageCode;
+      if (typeof locale !== "string" || locale === "") continue;
+
+      const value = localizedValueForApi(fieldSpec, entry.value ?? "");
+      if (value === undefined) continue;
+
+      byLocale[locale] = { ...byLocale[locale], [fieldSpec.name]: value };
+    }
+  }
+
+  return byLocale;
+};
+
+/**
+ * Folds a record's translations back into per-field, per-language form values.
+ *
+ * The one adapter between how localization is *stored* - one row per language,
+ * with its own version - and how it is *edited*: a field holding every language
+ * it has, so its input can switch between them without the form having a locale
+ * of its own.
+ */
+export const contentFormInitialValues = (
+  spec: ContentFormSpec,
+  data?: Record<string, unknown>,
+  translations: readonly {
+    locale: string;
+    values: Record<string, unknown>;
+  }[] = [],
+): Record<string, unknown> | undefined => {
+  if (!data && translations.length === 0) return data;
+
+  const initial: Record<string, unknown> = { ...data };
+
+  for (const fieldSpec of spec.fields) {
+    if (fieldSpec.localized !== true) continue;
+
+    let value: MultiLangValue = [];
+    for (const translation of translations) {
+      const stored = translation.values[fieldSpec.name];
+      value = upsertLangValue(
+        value,
+        translation.locale,
+        typeof stored === "string" ? stored : "",
+      );
+    }
+
+    initial[fieldSpec.name] = value;
+  }
+
+  return initial;
+};
+
+/**
+ * One localized field's rules, stated per language.
+ *
+ * Two rules, and the difference between them is the whole of the localized
+ * editing model:
+ *
+ * - a language somebody **typed into** has to satisfy the field's own length
+ *   rules, because it is going to become a translation row;
+ * - a language nobody typed into is simply absent. It is not "too short" and it
+ *   is not an error - it is a translation that does not exist yet, and the
+ *   language selector inside the input is for reading as much as for writing.
+ *
+ * The exception is the default locale of a required field. The engine will not
+ * store a record without its default translation, so the form says which
+ * language a value is missing in rather than letting the server refuse a save
+ * the editor thought was complete.
+ */
+const localizedFieldSchema = (
+  fieldSpec: ContentFormFieldSpec,
+  defaultLocale: null | string,
+  initial: MultiLangValue,
+): z.ZodType => {
+  // `maxLength` on the item, so the rendered input carries the attribute and the
+  // language switcher can read it back through `getMultiLangConstraints`.
+  // `minLength` deliberately is not: an empty box would fail it, and an empty box
+  // is how "no translation" looks.
+  let value = z.string();
+  if (fieldSpec.maxLength !== undefined) value = value.max(fieldSpec.maxLength);
+
+  const entries = z.array(z.object({ languageCode: z.string(), value }));
+
+  return entries
+    .superRefine((rows, ctx) => {
+      for (const row of rows) {
+        const text = row.value ?? "";
+        if (text.trim() === "") continue;
+        if (
+          fieldSpec.minLength !== undefined &&
+          text.length < fieldSpec.minLength
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            message: `${fieldSpec.label} needs at least ${fieldSpec.minLength} characters in "${row.languageCode}".`,
+          });
+        }
       }
 
-      const option = value as ContentReferenceOption | null | undefined;
-      if (!option?.value) return [name, null];
+      if (!fieldSpec.required || fieldSpec.nullable || defaultLocale === null) {
+        return;
+      }
 
-      return [name, Number(option.value)];
-    }),
-  );
+      if (getLangValue(rows, defaultLocale).trim() === "") {
+        ctx.addIssue({
+          code: "custom",
+          message: `${fieldSpec.label} is required in "${defaultLocale}", the language every record is stored in.`,
+        });
+      }
+    })
+    .default(initial);
+};
 
 /**
  * Rebuilds the AutoForm schema on the client.
@@ -460,6 +632,19 @@ export const buildFormSchemaFromSpec = (
   z.object(
     Object.fromEntries(
       spec.fields.map(fieldSpec => {
+        // A localized field holds every language at once, so its rules are
+        // per-language rather than per-field.
+        if (fieldSpec.localized === true) {
+          return [
+            fieldSpec.name,
+            localizedFieldSchema(
+              fieldSpec,
+              spec.defaultLocale,
+              (values?.[fieldSpec.name] as MultiLangValue | undefined) ?? [],
+            ),
+          ];
+        }
+
         // A group builds its leaf defaults from the value it is editing, which
         // a shared `baseFieldSchema` cannot see.
         if (fieldSpec.kind === "group") {

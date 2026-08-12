@@ -177,17 +177,16 @@ export interface TranslationMeta {
 }
 
 /**
- * Which languages one record exists in.
+ * Every language one record exists in, values included, in **one** request.
  *
- * Metadata only, and one request for the whole strip: a tab bar needs to know
- * which locales are present and whether each is published, not to drag every
- * body in every language across the wire to find out. The panel loads one locale's
- * values when its tab is opened.
+ * What the edit form opens on. Its localized inputs each carry their own
+ * language switcher, so they need the whole set up front - reading it language
+ * by language would be one round trip per language to open one record.
  */
 export const listContentTranslationsAction = async (
   contentTypeId: string,
   id: number,
-): Promise<{ edges: TranslationMeta[]; error?: string }> => {
+): Promise<{ edges: TranslationRow[]; error?: string }> => {
   const { definition, pluginId } = resolve(contentTypeId);
 
   const result = await contentApiFetch({
@@ -202,7 +201,7 @@ export const listContentTranslationsAction = async (
     return { edges: [], error: result.error ?? "" };
   }
 
-  return { edges: result.data.edges as unknown as TranslationMeta[] };
+  return { edges: result.data.edges as unknown as TranslationRow[] };
 };
 
 export const getContentTranslationAction = async (
@@ -306,48 +305,6 @@ export const deleteContentTranslationAction = async (
 
     return {};
   });
-
-const transition = async (
-  action: "publish" | "unpublish",
-  contentTypeId: string,
-  id: number,
-  locale: string,
-  expectedVersion: number,
-): Promise<TranslationMutationResult> =>
-  await withLocaleCache(contentTypeId, id, locale, async () => {
-    const { definition, pluginId } = resolve(contentTypeId);
-
-    const result = await contentApiFetch({
-      body: { expectedVersion },
-      definition,
-      method: "post",
-      path: `/${id}/translations/${segment(locale)}/${action}`,
-      pluginId,
-      schema: zodTranslationResult,
-    });
-
-    if (result.status !== 200) return failure(result);
-
-    revalidatePath(CONTENT_PAGE_PATH, "page");
-
-    return {};
-  });
-
-export const publishContentTranslationAction = async (
-  contentTypeId: string,
-  id: number,
-  locale: string,
-  expectedVersion: number,
-): Promise<TranslationMutationResult> =>
-  await transition("publish", contentTypeId, id, locale, expectedVersion);
-
-export const unpublishContentTranslationAction = async (
-  contentTypeId: string,
-  id: number,
-  locale: string,
-  expectedVersion: number,
-): Promise<TranslationMutationResult> =>
-  await transition("unpublish", contentTypeId, id, locale, expectedVersion);
 
 export interface TranslationRevisionPageResult {
   edges: ContentRevisionMeta[];

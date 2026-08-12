@@ -1272,8 +1272,9 @@ describe.skipIf(!url)("Stage 6 advanced modeling against Postgres", () => {
         title: "Draft Locale PL",
       });
       await editorial()?.publish(created.row.id, { actor: ACTOR });
-      // English published, Polish left a draft.
-      await translationEditorial().publish(created.row.id, "en", {
+      // Publishing the record published both languages, so Polish is taken back
+      // down: that is what a draft language of a published record now is.
+      await translationEditorial().unpublish(created.row.id, "pl", {
         actor: ACTOR,
       });
 

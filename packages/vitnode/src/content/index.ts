@@ -15,9 +15,11 @@ export {
 export {
   buildContentColumnSpec,
   buildContentFormSpec,
-  buildContentTranslationFormSpec,
   buildFormSchemaFromSpec,
+  contentFormInitialValues,
   contentFormValuesToPayload,
+  contentFormValuesToTranslations,
+  contentLocalizedFieldNames,
   contentTitleFromValues,
 } from "./admin/spec";
 export type {

@@ -196,14 +196,16 @@ demand, one at a time.
 
 ## In the AdminCP
 
-Each locale tab has its own **Show this language's history** section, loaded when
-it is opened rather than with the tab - a language's history can be long, and
-nobody who only wanted to fix a typo should pay for it. Restore is offered on
-every version but the current one, and only with `can_restore`.
+History is per-language, so it lives in the row's **Languages** action rather than
+in the form: each language gets its own **Show this language's history** section,
+loaded when it is opened rather than with the dialog - a language's history can be
+long, and nobody who only wanted to fix a typo should pay for it. Restore is
+offered on every version but the current one, and only with `can_restore`.
 
 ## Related
 
-- [Translation lifecycle](/docs/dev/content-engine/translation-editorial) - the
-  per-locale publish/unpublish these revisions record
+- [Localized editing](/docs/dev/content-engine/translation-editorial) - the
+  per-locale publish/unpublish these revisions record, and the form they are
+  reached from
 - [Revisions](/docs/dev/content-engine/revisions) - the shared history the base
   row keeps, and the retention rules both share

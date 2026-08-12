@@ -32,6 +32,11 @@ export interface ContentFieldProps extends ItemAutoFormComponentProps {
  * Nothing new is invented here - `relation` and `user` both reuse the async
  * combobox, and the loader behind them is a server action so the picker never
  * needs the API origin or a second permission.
+ *
+ * `localized: true` becomes `multiLang` on the input, which is the AdminCP's
+ * existing language-aware behaviour and not a Content Engine invention: the
+ * field grows its own small language switcher and holds one value per language.
+ * A plugin never writes a field override just because a field is translated.
  */
 export const ContentField = ({
   loadOptions,
@@ -39,6 +44,7 @@ export const ContentField = ({
   ...props
 }: ContentFieldProps) => {
   const t = useTranslations("core.content.form");
+  const multiLang = spec.localized === true;
 
   switch (spec.kind) {
     case "boolean":
@@ -127,9 +133,20 @@ export const ContentField = ({
       );
 
     case "textarea":
-      return <AutoFormTextarea label={spec.label} rows={5} {...props} />;
+      return (
+        <AutoFormTextarea
+          label={spec.label}
+          multiLang={multiLang}
+          rows={5}
+          {...props}
+        />
+      );
 
+    // `text` and `slug`. A localized slug switches language with the rest, and
+    // the server still derives an empty one from *that* language's source field.
     default:
-      return <AutoFormInput label={spec.label} {...props} />;
+      return (
+        <AutoFormInput label={spec.label} multiLang={multiLang} {...props} />
+      );
   }
 };

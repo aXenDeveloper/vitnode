@@ -164,28 +164,33 @@ and `ContentLocalizedValues` is `{}` - which is what makes a `translation:` key
 impossible to fill in by accident on a Stage 1-4 definition, and what keeps every
 existing type exactly as it was.
 
-## Where a localized field may not appear
+## Where a localized field may appear
 
-Everything on this list addresses a column on the *base* table:
+The engine draws one line, and it is between **showing** a value and **querying**
+one.
 
 ```ts
 admin: {
   list: {
-    columns: ["title"],            // ✗
-    orderableFields: ["title"],    // ✗
-    searchableFields: ["title"],   // ✗
+    columns: ["title"],            // ✓  shown in the reader's own language
+    orderableFields: ["title"],    // ✗  ORDER BY on the base table
+    searchableFields: ["title"],   // ✗  a predicate on the base row
   },
-  form: { fields: ["title"] },     // ✗
-  titleField: "title",             // ✗
+  form: { fields: ["title"] },     // ✓  one form, with its own language switcher
+  titleField: "title",             // ✓  resolved per reader
 },
-indexes: [{ on: ["title"] }],      // ✗
+indexes: [{ on: ["title"] }],      // ✗  no such column to index
 ```
 
-All six are compile errors, and all six are runtime errors as well. The defaults
-skip localized fields automatically, so a localized content type that says nothing
-about `admin.list` gets a sensible shared-only list without having to opt out of
-anything.
+The refusals are compile errors *and* runtime errors. They are not squeamishness:
+a list ordered by a per-language title would reshuffle itself for every reader,
+and one cursor would mean two positions at once.
 
-`admin.titleField` falls back to `null` when every text field is localized. A
-toast whose wording depended on the reading admin's locale would be worse than no
-title at all; Stage 5B gives the AdminCP a locale-aware one.
+The **defaults** stay shared-only. A localized content type that says nothing
+about `admin.list` gets a shared-only list of columns without opting out of
+anything; naming a localized column is a decision you make.
+
+`admin.titleField` does fall back to a localized field when there is no shared
+one, because the alternative was `#123`. The AdminCP resolves it from the
+translation it already loaded for the reader's language - see [Localized
+editing](/docs/dev/content-engine/translation-editorial#the-admincp).

@@ -2,7 +2,7 @@
 // `create-action`/`edit-action`, which are already client entries. Declaring
 // it again would make this a nested client entry, and `next/dynamic` cannot
 // resolve one from inside a published package - the dialog spins forever.
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import React from "react";
 import { toast } from "sonner";
 
@@ -12,14 +12,19 @@ import type { ContentFormLayout } from "@/lib/plugin";
 
 import { AutoForm, type AutoFormOnSubmit } from "@/components/form/auto-form";
 import { useDialog } from "@/components/ui/dialog";
+import { Loader } from "@/components/ui/loader";
 import {
   buildFormSchemaFromSpec,
+  contentFormInitialValues,
   contentFormValuesToPayload,
+  contentFormValuesToTranslations,
+  contentLocalizedFieldNames,
   contentTitleFromValues,
 } from "@/content/admin/spec";
 import { usePathname, useRouter } from "@/lib/navigation";
 
 import type { ContentConflictState } from "./conflict-notice";
+import type { TranslationRow } from "./translation-api.server";
 
 import { ContentFormProvider } from "../form/context";
 import { ContentFormPublication } from "../form/publication-status";
@@ -28,10 +33,13 @@ import { contentErrorKey } from "../lib/mutation-feedback";
 import { ConflictNotice } from "./conflict-notice";
 import {
   createContentAction,
+  createLocalizedContentAction,
   editContentAction,
+  editLocalizedContentAction,
   loadContentOptionsAction,
   reloadContentRowAction,
 } from "./mutation-api.server";
+import { listContentTranslationsAction } from "./translation-api.server";
 
 export interface ContentFormProps {
   /** Existing values when editing; absent when creating. */
@@ -60,9 +68,89 @@ export interface ContentFormProps {
   spec: ContentFormSpec;
   /** Resolved title of the row, shown as the toast description. */
   title?: string;
+  /**
+   * Every translation the record already has, values included.
+   *
+   * Read once, in one query - so opening an article that exists in nine
+   * languages costs one request rather than nine. Supplied by a page-mode form,
+   * whose server component already did the read; a dialog loads it itself, since
+   * there is no server render between the click and the form.
+   *
+   * Empty while creating, and empty for a content type that is not localized.
+   */
+  translations?: readonly TranslationRow[];
 }
 
+/**
+ * Resolves the record's translations before the form is built.
+ *
+ * The form's defaults are read from the schema exactly once, when `AutoForm`
+ * mounts, so the values every language holds have to be in hand *before* that -
+ * rendering an empty form and filling it in afterwards would fight
+ * react-hook-form for the editor's first keystroke.
+ */
 export const ContentForm = ({
+  data,
+  spec,
+  translations,
+  ...props
+}: ContentFormProps) => {
+  const localized = spec.defaultLocale !== null;
+  const [loaded, setLoaded] = React.useState<null | readonly TranslationRow[]>(
+    translations ?? (localized && data ? null : []),
+  );
+
+  const contentTypeId = spec.contentTypeId;
+  const itemId = data?.id;
+
+  React.useEffect(() => {
+    if (loaded !== null || itemId === undefined) return;
+
+    let active = true;
+
+    void listContentTranslationsAction(contentTypeId, itemId).then(
+      ({ edges }) => {
+        if (active) setLoaded(edges);
+      },
+    );
+
+    return () => {
+      active = false;
+    };
+  }, [contentTypeId, itemId, loaded]);
+
+  if (loaded === null) return <Loader />;
+
+  return (
+    <ContentFormFields
+      data={data}
+      spec={spec}
+      translations={loaded}
+      {...props}
+    />
+  );
+};
+
+/**
+ * The generated create/edit form - one form, whatever a field is stored in.
+ *
+ * A localized field holds every language at once and renders its own small
+ * language switcher, so the screen has no locale of its own: there is no
+ * `Shared | English | Polish` strip, no locale in the URL, and no form-global
+ * language state. Switching `Title` to English leaves the editor and the slug
+ * exactly where they were, which is the point - a translator comparing one
+ * heading against another should not have to move the whole page to do it.
+ *
+ * Every localized input starts in the language the person is already using
+ * VitNode in, through `useMultiLangField`, which is the AdminCP's existing
+ * behaviour and not a Content Engine invention.
+ *
+ * Saving is one request. Underneath it is still the Content Engine's
+ * localization model - a base row, one translation row per language, each with
+ * its own version - and the composite route writes all of them in one
+ * transaction so a conflict in one language cannot leave another half-saved.
+ */
+const ContentFormFields = ({
   data,
   fieldOverrides = {},
   layout,
@@ -72,6 +160,7 @@ export const ContentForm = ({
   singular,
   spec,
   title,
+  translations = [],
 }: ContentFormProps) => {
   const t = useTranslations("core.content");
   const tErrors = useTranslations("core.global.errors");
@@ -79,9 +168,16 @@ export const ContentForm = ({
   const { setOpen } = useDialog();
   const { push } = useRouter();
   const pathname = usePathname();
+  const locale = useLocale();
   const [conflict, setConflict] = React.useState<ContentConflictState | null>(
     null,
   );
+
+  const localizedFields = React.useMemo(
+    () => contentLocalizedFieldNames(spec),
+    [spec],
+  );
+  const localized = localizedFields.length > 0;
 
   // The version this form opened with, and the one every save is checked
   // against - until a conflict is resolved, which replaces it with the version
@@ -90,9 +186,24 @@ export const ContentForm = ({
     typeof data?.version === "number" ? data.version : undefined,
   );
 
+  /**
+   * What every language held when the form opened.
+   *
+   * Kept so the save can send **only** what moved: a Polish-only edit must not
+   * bump the English translation's version, write an English revision or expire
+   * the English cache. And each locale's own `version` travels with it, so two
+   * translators editing two languages of the same record never contend.
+   */
+  const [opened, setOpened] = React.useState(() => translations);
+
+  const values = React.useMemo(
+    () => contentFormInitialValues(spec, data, opened),
+    [spec, data, opened],
+  );
+
   const formSchema = React.useMemo(
-    () => buildFormSchemaFromSpec(spec, data),
-    [spec, data],
+    () => buildFormSchemaFromSpec(spec, values),
+    [spec, values],
   );
 
   const onReload = async () => {
@@ -111,19 +222,86 @@ export const ContentForm = ({
     if (typeof row.version === "number") setExpectedVersion(row.version);
   };
 
-  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
-    // Relation and user fields hold the whole combobox option; the API wants
-    // the identifier.
-    const payload = contentFormValuesToPayload(spec, values);
+  /**
+   * The per-language halves of this submit, each carrying the version it was
+   * loaded at.
+   *
+   * A language is included only when something in it actually changed, and a
+   * language nobody typed into is never included at all - selecting one to read
+   * what is there must not create an empty translation.
+   */
+  const translationPayload = (submitted: Record<string, unknown>) => {
+    const byLocale = contentFormValuesToTranslations(spec, submitted);
+    const entries: {
+      expectedVersion?: number;
+      locale: string;
+      values: Record<string, unknown>;
+    }[] = [];
 
-    const mutation = data
-      ? await editContentAction(
-          spec.contentTypeId,
-          data.id,
-          payload,
-          expectedVersion,
-        )
-      : await createContentAction(spec.contentTypeId, payload);
+    for (const [code, next] of Object.entries(byLocale)) {
+      const existing = opened.find(
+        row => row.locale.toLowerCase() === code.toLowerCase(),
+      );
+
+      if (!existing) {
+        entries.push({ locale: code, values: next });
+        continue;
+      }
+
+      const changed = Object.fromEntries(
+        Object.entries(next).filter(
+          ([name, value]) => existing.values[name] !== value,
+        ),
+      );
+      if (Object.keys(changed).length === 0) continue;
+
+      entries.push({
+        expectedVersion: existing.version,
+        locale: existing.locale,
+        values: changed,
+      });
+    }
+
+    return entries;
+  };
+
+  /** `true` when a shared field actually moved, so a no-op sends nothing. */
+  const sharedChanged = (payload: Record<string, unknown>): boolean => {
+    if (!data) return true;
+
+    return Object.entries(payload).some(
+      ([name, value]) => data[name] !== value,
+    );
+  };
+
+  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async submitted => {
+    // Relation and user fields hold the whole combobox option; the API wants
+    // the identifier. Localized fields are split off here rather than in the
+    // form, which is why a layout never has to know which table a field is on.
+    const payload = contentFormValuesToPayload(spec, submitted);
+
+    const mutation = localized
+      ? data
+        ? await editLocalizedContentAction(
+            spec.contentTypeId,
+            data.id,
+            sharedChanged(payload) ? payload : undefined,
+            translationPayload(submitted),
+            expectedVersion,
+          )
+        : await createLocalizedContentAction(
+            spec.contentTypeId,
+            payload,
+            translationPayload(submitted),
+          )
+      : data
+        ? await editContentAction(
+            spec.contentTypeId,
+            data.id,
+            payload,
+            expectedVersion,
+          )
+        : await createContentAction(spec.contentTypeId, payload);
 
     if (mutation.error !== undefined) {
       // A lost update is the one failure with somewhere to go: the form stays
@@ -131,6 +309,16 @@ export const ContentForm = ({
       // what changed underneath them.
       if (mutation.conflict?.code === "CONTENT_VERSION_CONFLICT") {
         setConflict({ currentVersion: mutation.conflict.currentVersion });
+
+        return;
+      }
+
+      // A translation conflict names the language it happened in, so the toast
+      // can say which one rather than "something went wrong".
+      if (mutation.translationConflict) {
+        toast.error(tErrors("title"), {
+          description: t("translations.errors.version_conflict"),
+        });
 
         return;
       }
@@ -151,10 +339,11 @@ export const ContentForm = ({
     toast.success(
       t(data ? "edit.success" : "create.success", { name: singular }),
       {
-        // On create there is no row yet, so the toast names what was typed.
+        // On create there is no row yet, so the toast names what was typed - in
+        // the language the editor is working in.
         description:
+          contentTitleFromValues(spec, submitted, locale) ??
           title ??
-          contentTitleFromValues(spec, values) ??
           t("create.desc", { name: singular }),
       },
     );
@@ -169,6 +358,10 @@ export const ContentForm = ({
         return;
       }
 
+      // Every language just moved forward a version, and the next save has to
+      // send the new ones. The page reload replaces `translations`, and this
+      // keeps the form honest until it arrives.
+      setOpened(mutation.translations ?? opened);
       push(pathname);
 
       return;
@@ -195,7 +388,15 @@ export const ContentForm = ({
       // eslint-disable-next-line @typescript-eslint/promise-function-async -- see above
       component: props => {
         const override = fieldOverrides[fieldSpec.name];
-        if (override) return override(props);
+        // The override gets the same language-aware flag the generated input
+        // would have, so a plugin that swaps in its own editor keeps the
+        // switcher without re-deriving where the value is stored.
+        if (override) {
+          return override({
+            ...props,
+            multiLang: fieldSpec.localized === true,
+          });
+        }
 
         return (
           <ContentField
@@ -240,13 +441,13 @@ export const ContentForm = ({
                   value={{
                     fieldNames: spec.fields.map(field => field.name),
                     fields: renderedFields,
+                    localizedFieldNames: localizedFields,
                     mode: data ? "edit" : "create",
                     publication: {
                       enabled: publication,
                       publishedAt: data?.publishedAt,
                       status: data?.status,
                     },
-                    surface: "shared",
                   }}
                 >
                   <Layout
@@ -256,7 +457,6 @@ export const ContentForm = ({
                     pluginId={spec.pluginId}
                     publication={publication}
                     singular={singular}
-                    surface="shared"
                     title={title}
                   />
                 </ContentFormProvider>

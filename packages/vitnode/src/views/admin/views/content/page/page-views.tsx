@@ -1,18 +1,14 @@
 import { ArrowLeftIcon } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
 import type { RegisteredFrontendContentType } from "@/content/admin/config";
-import type { ContentFormSpec } from "@/content/admin/spec";
 
 import { Button } from "@/components/ui/button";
 import { HeaderContent } from "@/components/ui/header-content";
 import { contentApiFetch } from "@/content/admin/fetch.server";
-import {
-  buildContentFormSpec,
-  buildContentTranslationFormSpec,
-} from "@/content/admin/spec";
+import { buildContentFormSpec } from "@/content/admin/spec";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 import { contentAdminHref, contentEditHrefTemplate } from "@/content/registry";
 import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
@@ -39,7 +35,7 @@ const fieldOverridesOf = (entry: RegisteredFrontendContentType) =>
   );
 
 /**
- * The specs a form page needs, and the labels its headings use.
+ * The spec a form page needs, and the labels its headings use.
  *
  * Identical to what the list screen builds for its dialogs - page mode changes
  * where the form is, not what the form is.
@@ -47,23 +43,22 @@ const fieldOverridesOf = (entry: RegisteredFrontendContentType) =>
 const buildPageSpecs = async (entry: RegisteredFrontendContentType) => {
   const { definition, pluginId } = entry;
   const labels = await getContentLabels(entry);
-  const shared = {
-    definition,
-    labelEnum: labels.labelEnum,
-    labelField: labels.labelField,
-    pluginId,
-  };
 
   return {
     labels,
-    spec: buildContentFormSpec(shared),
-    translationSpec: buildContentTranslationFormSpec(shared),
-  } satisfies {
-    labels: Awaited<ReturnType<typeof getContentLabels>>;
-    spec: ContentFormSpec;
-    translationSpec: ContentFormSpec | null;
+    spec: buildContentFormSpec({
+      definition,
+      labelEnum: labels.labelEnum,
+      labelField: labels.labelField,
+      pluginId,
+    }),
   };
 };
+
+/** Every translation of one record, values included, in one request. */
+const zodTranslations = z.object({
+  edges: z.array(z.object({ locale: z.string() }).loose()),
+});
 
 /**
  * The generated **create page**.
@@ -119,9 +114,8 @@ export const ContentCreatePageView = async ({
 
       <ContentFormPage
         backHref={backHref}
-        // A localized content type has nothing to translate until the record
-        // exists, so a create always hands over to the edit page when there is
-        // one. Everything else goes back to the list.
+        // A create hands over to the record's own edit page when there is one,
+        // so the author lands where its history and its languages are.
         createdHrefTemplate={
           definition.admin.edit.mode === "page"
             ? contentEditHrefTemplate(definition.id)
@@ -129,8 +123,6 @@ export const ContentCreatePageView = async ({
         }
         fieldOverrides={fieldOverridesOf(entry)}
         layout={resolveContentFormLayout(registration.forms, "create")}
-        permissionModule={definition.permissionModule}
-        pluginId={pluginId}
         publication={definition.publication.enabled}
         singular={singular}
         spec={spec}
@@ -161,9 +153,12 @@ export const ContentEditPageView = async ({
   const { definition, pluginId, registration } = entry;
   const localized = definition.localization.enabled;
 
-  const [t, tPage, canView, canEdit, canTranslate] = await Promise.all([
+  const [t, tPage, locale, canView, canEdit, canTranslate] = await Promise.all([
     getTranslations("core.content.edit"),
     getTranslations("core.content.page"),
+    // The language this person reads VitNode in, which is the language the
+    // heading and every localized input open in.
+    getLocale(),
     checkAdminPermissionApi({
       module: definition.permissionModule,
       permission: CONTENT_PERMISSIONS.view,
@@ -194,15 +189,40 @@ export const ContentEditPageView = async ({
 
   if (result.status !== 200 || !result.data) notFound();
 
-  const { spec, translationSpec } = await buildPageSpecs(entry);
+  // Every language of this record, in one request, before the form is rendered:
+  // its localized inputs each hold every language at once, and a form that had
+  // to fetch them after mounting would fight react-hook-form for the defaults.
+  const translations = localized
+    ? await contentApiFetch({
+        definition,
+        method: "get",
+        path: `/${itemId}/translations`,
+        pluginId,
+        schema: zodTranslations,
+      })
+    : undefined;
+
+  const { spec } = await buildPageSpecs(entry);
   const backHref = contentAdminHref(definition.id);
   const singular = definition.admin.label.singular;
   const data = result.data as Record<string, unknown> & { id: number };
   const titleField = definition.admin.titleField;
+  const localizedValues = (
+    (translations?.data?.edges ?? []) as {
+      locale: string;
+      values?: Record<string, unknown>;
+    }[]
+  ).find(row => row.locale.toLowerCase() === locale.toLowerCase())?.values;
+  // The heading reads in the language this person is already using, exactly as
+  // the list's rows do - a localized title has no single value to print.
+  const rawTitle =
+    titleField === null
+      ? undefined
+      : definition.fields[titleField]?.localized === true
+        ? localizedValues?.[titleField]
+        : data[titleField];
   const title =
-    titleField && typeof data[titleField] === "string"
-      ? data[titleField]
-      : `#${data.id}`;
+    typeof rawTitle === "string" && rawTitle !== "" ? rawTitle : `#${data.id}`;
 
   return (
     <div className="p-4">
@@ -220,17 +240,13 @@ export const ContentEditPageView = async ({
       <ContentFormPage
         backHref={backHref}
         data={data}
-        defaultLocale={definition.localization.defaultLocale}
-        editorial={definition.editorial.enabled}
         fieldOverrides={fieldOverridesOf(entry)}
         layout={resolveContentFormLayout(registration.forms, "edit")}
-        permissionModule={definition.permissionModule}
-        pluginId={pluginId}
         publication={definition.publication.enabled}
         singular={singular}
         spec={spec}
         title={title}
-        translationSpec={translationSpec}
+        translations={(translations?.data?.edges ?? []) as never}
       />
     </div>
   );

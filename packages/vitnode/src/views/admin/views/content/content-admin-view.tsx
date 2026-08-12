@@ -14,7 +14,6 @@ import { resolveContentAdminRoute } from "@/content/admin/route";
 import {
   buildContentColumnSpec,
   buildContentFormSpec,
-  buildContentTranslationFormSpec,
 } from "@/content/admin/spec";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 import { contentCreateHref } from "@/content/registry";
@@ -134,14 +133,6 @@ const ContentListView = async ({
     labelField: labels.labelField,
     pluginId,
   });
-  // `null` for a content type that is not localized, which is what makes the
-  // locale tabs unreachable rather than empty.
-  const translationSpec = buildContentTranslationFormSpec({
-    definition,
-    labelEnum: labels.labelEnum,
-    labelField: labels.labelField,
-    pluginId,
-  });
   const columnSpecs = buildContentColumnSpec({
     definition,
     labelEnum: labels.labelEnum,
@@ -179,7 +170,6 @@ const ContentListView = async ({
           entry={entry}
           formSpec={formSpec}
           searchParams={query}
-          translationSpec={translationSpec}
         />
       </React.Suspense>
     </div>
@@ -202,7 +192,17 @@ export const ContentAdminView = async ({
   if (!route) notFound();
 
   return (
-    <I18nProvider namespaces={["core.content"]}>
+    // The owning plugin's namespace travels with `core.content`, because a
+    // plugin's overrides are client components that translate themselves: a
+    // `forms.layout`, a field component and a column cell each call
+    // `useTranslations("@vitnode/blog.…")`, and `I18nProvider` ships only the
+    // namespaces it is handed. Without this every one of them is a
+    // `MISSING_MESSAGE` the moment it renders - and the plugin id *is* the
+    // top-level messages key, so there is nothing for an author to declare.
+    <I18nProvider
+      namespaces={["core.content"]}
+      runtimeNamespaces={[route.entry.pluginId]}
+    >
       {route.action === "list" ? (
         <ContentListView entry={route.entry} searchParams={searchParams} />
       ) : route.action === "create" ? (

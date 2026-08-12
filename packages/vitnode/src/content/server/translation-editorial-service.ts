@@ -534,18 +534,38 @@ export const createContentTranslationEditorialService = <
           locale: row.locale,
         });
 
+        // ...unless the record it belongs to is already published, in which case
+        // this language is published with it. Publication is the record's decision
+        // - publishing a record moves every language it has - so a language added
+        // afterwards that stayed a draft would be a language nothing can publish.
+        // It goes through the ordinary transition, in this transaction, so it
+        // reserves its address and records the publish in its own history exactly
+        // as any other publish does.
+        const base = await translations.findBasePublication(itemId, { tx });
+        const published =
+          base?.status === "published"
+            ? await transition(
+                itemId,
+                row.locale,
+                { actor: options.actor, tx },
+                "publish",
+              )
+            : null;
+        const live = published?.changed === true ? published : null;
+        const outcome = live?.delivery ?? delivery;
+
         return {
           changed: true,
           changedFields: localizedPaths,
-          ...(delivery === undefined ? {} : { delivery }),
+          ...(outcome === undefined ? {} : { delivery: outcome }),
           languageId: row.languageId,
           locale: row.locale,
           operation: "create" as const,
           previousSlug: null,
           restoredFromRevisionId: null,
           revisionId,
-          row,
-          version: row.version,
+          row: live?.row ?? row,
+          version: live?.version ?? row.version,
         };
       }),
 

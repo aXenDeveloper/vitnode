@@ -28,7 +28,7 @@ vi.mock("@/lib/navigation", () => ({
   Link: ({
     children,
     ...props
-  }: { children: React.ReactNode } & React.ComponentProps<"a">) => (
+  }: React.ComponentProps<"a"> & { children: React.ReactNode }) => (
     <a {...props}>{children}</a>
   ),
   usePathname: () => "/admin/content/blog/post",
@@ -76,7 +76,13 @@ const Harness = ({
     formSchema={schema}
     layout={fields => (
       <ContentFormProvider
-        value={{ fieldNames, fields, mode, publication, surface: "shared" }}
+        value={{
+          fieldNames,
+          fields,
+          localizedFieldNames: [],
+          mode,
+          publication,
+        }}
       >
         {layout({
           contentTypeId: "blog.post",
@@ -84,7 +90,6 @@ const Harness = ({
           pluginId: "@vitnode/blog",
           publication: publication.enabled,
           singular: "Article",
-          surface: "shared",
         })}
       </ContentFormProvider>
     )}

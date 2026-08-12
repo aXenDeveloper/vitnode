@@ -244,6 +244,10 @@ describe("the generated permission matrix", () => {
       "GET /{id}/translations/{locale}/revisions": "can_view",
       "GET /{id}/translations/{locale}/revisions/{revisionId}": "can_view",
       "POST /": "can_create",
+      // The composite create the AdminCP form posts to. `can_create`, exactly
+      // like the plain one - it writes the same base row, plus the default
+      // translation the engine has always required alongside it.
+      "POST /localized": "can_create",
       "POST /{id}/preview": "can_view",
       "POST /{id}/publish": "can_publish",
       "POST /{id}/revisions/{revisionId}/restore": "can_restore",
@@ -257,6 +261,11 @@ describe("the generated permission matrix", () => {
       "POST /{id}/translations/{locale}/unpublish": "can_publish",
       "POST /{id}/unpublish": "can_publish",
       "PUT /{id}": "can_edit",
+      // The composite save. Gated on `can_translate` at the route, and on
+      // `can_edit` in the handler the moment the payload carries a shared field -
+      // so a translator reaches it and still cannot touch the base row. The
+      // second check is covered by `translator isolation` below.
+      "PUT /{id}/localized": "can_translate",
       "PUT /{id}/translations/{locale}": "can_translate",
     });
   });

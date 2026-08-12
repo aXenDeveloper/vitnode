@@ -48,17 +48,6 @@ export interface ContentCellProps<
 }
 
 /**
- * Which of a content type's two form surfaces a layout is being rendered in.
- *
- * A localized content type has both at once: `shared` holds the fields that are
- * columns on the base table, and `translation` holds one language's own. The
- * same layout is rendered in each, and a `ContentFormField` naming a field that
- * is not in this surface renders nothing - so one layout can place `title` and
- * `category` wherever it likes without knowing which table either lives on.
- */
-export type ContentFormSurface = "shared" | "translation";
-
-/**
  * Everything a custom form layout is handed, and nothing more.
  *
  * Deliberately all serialisable: a layout is a client component referenced from
@@ -76,14 +65,11 @@ export interface ContentFormLayoutProps {
   contentTypeId: string;
   /** `undefined` while creating - the record does not exist yet. */
   itemId?: number;
-  /** The locale being written, on a `translation` surface. */
-  locale?: string;
   mode: "create" | "edit";
   pluginId: string;
   /** Whether the content type has the draft/published lifecycle. */
   publication: boolean;
   singular: string;
-  surface: ContentFormSurface;
   /** The record's resolved title while editing, for headings. */
   title?: string;
 }

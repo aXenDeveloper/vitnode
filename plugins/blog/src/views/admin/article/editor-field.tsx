@@ -33,6 +33,11 @@ const AutoFormEditor = dynamic(
  * one schema, one submit. There is no editor-local state atom and no second save
  * button - `field.value` and `field.onChange` are the whole integration, and
  * dirty state and validation work because of it.
+ *
+ * `multiLang` is not hardcoded here. The Content Engine already knows `content`
+ * is `localized: true` and hands the flag down with the rest of the props, so
+ * the editor grows its own language switcher for the same reason the title input
+ * does - and an override of a shared field gets none.
  */
 export const BlogArticleEditorField = (props: ItemAutoFormComponentProps) => {
   const t = useTranslations("@vitnode/blog.admin.article");

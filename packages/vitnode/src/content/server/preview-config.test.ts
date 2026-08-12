@@ -9,9 +9,9 @@ import {
 
 import { INSECURE_DEFAULT_CONTENT_PREVIEW_SECRET } from "../../lib/config";
 import {
-  assertContentPreviewConfig,
   contentPreviewConfigProblems,
   contentPreviewSecretProblem,
+  warnAboutContentPreviewConfig,
 } from "./preview-config";
 
 const STRONG = "unit-test-content-preview-secret-0123456789";
@@ -91,72 +91,89 @@ describe("contentPreviewConfigProblems", () => {
   });
 });
 
-describe("assertContentPreviewConfig", () => {
+describe("warnAboutContentPreviewConfig", () => {
+  const spyOnWarn = () =>
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
   it("says nothing when no content type can be previewed", () => {
-    // Nothing signs anything, so there is nothing to secure.
-    expect(() =>
-      assertContentPreviewConfig({
-        contentTypes: withoutPreview,
-        isProduction: true,
-        secret: undefined,
-      }),
-    ).not.toThrow();
+    // Nothing signs anything, so there is nothing to secure - and nothing to
+    // nag an install about.
+    const warn = spyOnWarn();
+
+    warnAboutContentPreviewConfig({
+      contentTypes: withoutPreview,
+      secret: undefined,
+    });
+
+    expect(warn).not.toHaveBeenCalled();
   });
 
-  it("boots happily with a real secret", () => {
-    expect(() =>
-      assertContentPreviewConfig({
-        contentTypes: previewable,
-        isProduction: true,
-        secret: STRONG,
-      }),
-    ).not.toThrow();
+  it("says nothing when the secret is real", () => {
+    const warn = spyOnWarn();
+
+    warnAboutContentPreviewConfig({
+      contentTypes: previewable,
+      secret: STRONG,
+    });
+
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it.each([
     ["missing", undefined],
     ["the published fallback", INSECURE_DEFAULT_CONTENT_PREVIEW_SECRET],
     ["too short", "hunter2"],
-  ])("refuses to boot production when the secret is %s", (_, secret) => {
-    expect(() =>
-      assertContentPreviewConfig({
-        contentTypes: previewable,
-        isProduction: true,
-        secret,
-      }),
-    ).toThrow(/CONTENT_PREVIEW_SECRET/);
+  ])("warns when the secret is %s", (_, secret) => {
+    const warn = spyOnWarn();
+
+    warnAboutContentPreviewConfig({ contentTypes: previewable, secret });
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("CONTENT_PREVIEW_SECRET"),
+    );
   });
 
-  it("names the content types that made it mandatory", () => {
-    expect(() =>
-      assertContentPreviewConfig({
-        contentTypes: previewable,
-        isProduction: true,
-        secret: undefined,
-      }),
-    ).toThrow(/test\.editorial/);
+  it("names the content types that wanted it", () => {
+    const warn = spyOnWarn();
+
+    warnAboutContentPreviewConfig({
+      contentTypes: previewable,
+      secret: undefined,
+    });
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("test.editorial"),
+    );
   });
 
-  it("tells the reader how to generate one", () => {
-    expect(() =>
-      assertContentPreviewConfig({
-        contentTypes: previewable,
-        isProduction: true,
-        secret: undefined,
-      }),
-    ).toThrow(/openssl rand/);
+  it("tells the reader how to generate one, and that preview is off until then", () => {
+    const warn = spyOnWarn();
+
+    warnAboutContentPreviewConfig({
+      contentTypes: previewable,
+      secret: undefined,
+    });
+
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("openssl rand"));
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("Preview stays disabled"),
+    );
   });
 
-  it("lets `next build` collect page data without the secret", () => {
-    // Next imports every route module during a production build, so the API's
-    // boot code runs on a machine that has no business holding a signing key.
-    // The serving process still refuses to start, which is where it matters.
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  it.each([
+    ["production", "phase-production-server"],
+    ["a production build", "phase-production-build"],
+    ["development", ""],
+  ])("never throws, including in %s", (_, phase) => {
+    // `CONTENT_PREVIEW_SECRET` is optional. One content type's opt-in feature
+    // must not stop the API from booting - or a build machine, which has no
+    // business holding a runtime signing key, from finishing a build.
+    const warn = spyOnWarn();
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("NEXT_PHASE", "phase-production-build");
+    vi.stubEnv("NEXT_PHASE", phase);
 
     expect(() =>
-      assertContentPreviewConfig({
+      warnAboutContentPreviewConfig({
         contentTypes: previewable,
         secret: undefined,
       }),
@@ -164,36 +181,5 @@ describe("assertContentPreviewConfig", () => {
     expect(warn).toHaveBeenCalled();
 
     vi.unstubAllEnvs();
-  });
-
-  it("still refuses a production process that is actually serving", () => {
-    vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("NEXT_PHASE", "phase-production-server");
-
-    expect(() =>
-      assertContentPreviewConfig({
-        contentTypes: previewable,
-        secret: undefined,
-      }),
-    ).toThrow(/CONTENT_PREVIEW_SECRET/);
-
-    vi.unstubAllEnvs();
-  });
-
-  it("warns instead of throwing outside production", () => {
-    // `pnpm dev` should still start. Preview itself stays switched off - the
-    // routes fail closed - but a local database is not a reason to refuse boot.
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-
-    expect(() =>
-      assertContentPreviewConfig({
-        contentTypes: previewable,
-        isProduction: false,
-        secret: undefined,
-      }),
-    ).not.toThrow();
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("CONTENT_PREVIEW_SECRET"),
-    );
   });
 });

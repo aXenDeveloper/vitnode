@@ -223,6 +223,26 @@ const translationEditorial = (target: Context = context) =>
 const advancedEditorial = () =>
   advancedArticleContent.editorialService?.(context, { pluginId: PLUGIN });
 
+const translationService = () =>
+  advancedArticleContent.translationService?.(context);
+
+/**
+ * A language of a published record that has *no* public URL.
+ *
+ * Adding a language to a published record publishes it - publication is the
+ * record's decision - so a draft one is made by taking that language back down.
+ * The per-locale transition stays available for exactly this kind of override.
+ */
+const draftTranslation = async (itemId: number, title: string) => {
+  await translationEditorial()?.create(
+    itemId,
+    "pl",
+    { title },
+    { actor: ACTOR },
+  );
+  await translationEditorial()?.unpublish(itemId, "pl", { actor: ACTOR });
+};
+
 const advancedDelivery = () =>
   advancedArticleContent.deliveryService?.(context, { pluginId: PLUGIN });
 
@@ -1476,6 +1496,56 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       expect(new Set(rows.map(row => row.languageId)).size).toBe(2);
     });
 
+    /**
+     * One publish, every address.
+     *
+     * The bug: a record's publish moved only the base row, so a localized article
+     * read as published while every one of its languages was still a draft with no
+     * reservation - the AdminCP said "published" and the canonical URL said "not
+     * published". Publishing the record now takes each language's address with it,
+     * which is the only way "published" and "reachable" mean the same thing.
+     */
+    it("reserves every language's address when the record is published", async () => {
+      const localized = localizedService();
+      if (!localized) throw new Error("no localized service");
+
+      const created = await localized.create({
+        shared: {},
+        translation: { title: "One Click" },
+      });
+      await translationEditorial()?.create(
+        created.row.id,
+        "pl",
+        { title: "Jeden klik" },
+        { actor: ACTOR },
+      );
+
+      // A draft record reserves nothing, in any language.
+      expect(await localizedHistory(created.row.id)).toHaveLength(0);
+
+      await advancedEditorial()?.publish(created.row.id, { actor: ACTOR });
+
+      const rows = await localizedHistory(created.row.id);
+      expect(rows.map(row => row.path).sort()).toStrictEqual([
+        "/en/advanced-articles/one-click",
+        "/pl/advanced-articles/jeden-klik",
+      ]);
+      expect(rows.every(row => !row.retired)).toBe(true);
+    });
+
+    /** And the way back down takes them out of service together. */
+    it("stops resolving every language when the record is unpublished", async () => {
+      const article = await publishLocalized({ pl: "Witaj" });
+
+      await advancedEditorial()?.unpublish(article.id, { actor: ACTOR });
+
+      for (const locale of ["en", "pl"]) {
+        expect(
+          await translationService()?.findByLocale(article.id, locale),
+        ).toMatchObject({ status: "draft" });
+      }
+    });
+
     it("keeps an English slug change out of the Polish history", async () => {
       const article = await publishLocalized({ pl: "Witaj" });
 
@@ -1622,13 +1692,7 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
 
     it("never fabricates an alternate from a draft translation", async () => {
       const article = await publishLocalized();
-      // Created but deliberately not published.
-      await translationEditorial()?.create(
-        article.id,
-        "pl",
-        { title: "Wersja robocza" },
-        { actor: ACTOR },
-      );
+      await draftTranslation(article.id, "Wersja robocza");
 
       expect(await advancedDelivery()?.alternates(article.id)).toStrictEqual([
         { locale: "en", path: "/en/advanced-articles/hello-world" },
@@ -1752,12 +1816,7 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
 
     it("omits a draft translation and never falls back for it", async () => {
       const article = await publishLocalized();
-      await translationEditorial()?.create(
-        article.id,
-        "pl",
-        { title: "Wersja robocza" },
-        { actor: ACTOR },
-      );
+      await draftTranslation(article.id, "Wersja robocza");
 
       // No Polish entry at all: it has no URL of its own, and listing the English
       // one under a Polish path would put the same content in the sitemap twice.
@@ -1792,19 +1851,16 @@ describe.skipIf(!url)("Stage 8 content delivery against Postgres", () => {
       });
     });
 
-    it("reports an index change when a translation is published", async () => {
-      const localized = localizedService();
-      if (!localized) throw new Error("no localized service");
+    it("reports an index change when a language gains a URL", async () => {
+      const article = await publishLocalized();
 
-      const created = await localized.create({
-        shared: {},
-        translation: { title: "Fresh" },
-      });
-      await advancedEditorial()?.publish(created.row.id, { actor: ACTOR });
-
-      const outcome = await translationEditorial()?.publish(
-        created.row.id,
-        "en",
+      // Adding a language to a published record publishes it, which is where a
+      // new URL now comes from: the record's own publish is the only other one,
+      // and it moved every language it already had.
+      const outcome = await translationEditorial()?.create(
+        article.id,
+        "pl",
+        { title: "Nowy" },
         { actor: ACTOR },
       );
 

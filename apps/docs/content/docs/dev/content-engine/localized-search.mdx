@@ -162,15 +162,14 @@ Stage 5D adds is content that actually has languages to filter on.
 
 ## The AdminCP list
 
-A localized content type's list gets a language selector. It is a **view control,
-not a filter**: picking Polish adds a column showing each record's Polish title
-and status - including `Missing`, which is the row most worth finding. Hiding
-untranslated records would be the opposite of what somebody choosing a language is
-looking for.
+A localized content type's list is shown in the language you are already reading
+VitNode in. There is no selector above the table and nothing in the URL: the
+AdminCP resolves your locale server-side and asks the list route for it.
 
-The choice lives in the URL, so it survives a reload, paginates with the table and
-can be sent to whoever is doing the translating. Changing it resets the cursor:
-page three of one ordering is not page three of another.
+It is a **view, not a filter**. Every record is listed, and one with no
+translation in your language shows `Missing` rather than being hidden - that is
+the row most worth finding. Sorting and searching still address the base table,
+so a localized column is displayed without a sort control.
 
 ## No migration
 

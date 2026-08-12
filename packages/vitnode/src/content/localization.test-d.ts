@@ -255,28 +255,46 @@ describe("localization", () => {
     });
   });
 
-  describe("admin config addresses shared columns only", () => {
-    it("rejects a localized field as a list column", () => {
+  describe("admin config separates showing a value from querying one", () => {
+    it("accepts a localized field as a list column", () => {
+      // A cell renders whatever the reader's own translation holds. It is a
+      // projection, not a column on the base table - so it is allowed here and
+      // still refused everywhere a query would address it.
       defineContentType({
-        id: "test.badcolumn",
-        tableName: "test_bad_columns",
+        id: "test.localizedcolumn",
+        tableName: "test_localized_columns",
         localization: { enabled: true, defaultLocale: "en" },
         fields: {
           title: field.text({ localized: true, required: true }),
           featured: field.boolean({ defaultValue: false }),
         },
         admin: {
-          label: { plural: "Bad", singular: "Bad" },
-          // @ts-expect-error - `title` is not a column on the base table.
+          label: { plural: "Fine", singular: "Fine" },
           list: { columns: ["title"] },
         },
       });
     });
 
-    it("rejects a localized field as the title field", () => {
+    it("accepts a localized field as the title field", () => {
       defineContentType({
-        id: "test.badtitle",
-        tableName: "test_bad_titles",
+        id: "test.localizedtitle",
+        tableName: "test_localized_titles",
+        localization: { enabled: true, defaultLocale: "en" },
+        fields: {
+          title: field.text({ localized: true, required: true }),
+          featured: field.boolean({ defaultValue: false }),
+        },
+        admin: {
+          label: { plural: "Fine", singular: "Fine" },
+          titleField: "title",
+        },
+      });
+    });
+
+    it("still rejects a localized field as an orderable one", () => {
+      defineContentType({
+        id: "test.badorder",
+        tableName: "test_bad_orders",
         localization: { enabled: true, defaultLocale: "en" },
         fields: {
           title: field.text({ localized: true, required: true }),
@@ -284,8 +302,25 @@ describe("localization", () => {
         },
         admin: {
           label: { plural: "Bad", singular: "Bad" },
-          // @ts-expect-error - a localized title has a value per language.
-          titleField: "title",
+          // @ts-expect-error - `orderBy` is SQL on the base table.
+          list: { orderableFields: ["title"] },
+        },
+      });
+    });
+
+    it("still rejects a localized field as a searchable one", () => {
+      defineContentType({
+        id: "test.badsearch",
+        tableName: "test_bad_searches",
+        localization: { enabled: true, defaultLocale: "en" },
+        fields: {
+          title: field.text({ localized: true, required: true }),
+          featured: field.boolean({ defaultValue: false }),
+        },
+        admin: {
+          label: { plural: "Bad", singular: "Bad" },
+          // @ts-expect-error - an admin list search is a predicate on the row.
+          list: { searchableFields: ["title"] },
         },
       });
     });

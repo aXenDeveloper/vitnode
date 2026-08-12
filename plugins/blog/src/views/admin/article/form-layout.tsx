@@ -1,7 +1,5 @@
 "use client";
 
-import type { ContentFormLayoutProps } from "@vitnode/core/lib/plugin";
-
 import {
   ContentFormActions,
   ContentFormField,
@@ -23,17 +21,18 @@ import { useTranslations } from "next-intl";
  * happen exactly as they do in the generated dialog. This file decides where
  * things are and nothing else - there is not a single API call in it.
  *
- * One layout for create and edit, and one for both surfaces of a localized
- * content type. `ContentFormField` renders nothing for a field this surface does
- * not have, so the shared tab shows the category and the author while each
- * language tab shows that language's title, body and URL - from the same source.
+ * One layout for create and edit, and one for every language. The title, the
+ * body and the URL are localized and the category and the author are not, and
+ * this file cannot tell: a localized field renders its own small language
+ * switcher, so `ContentFormField` places all five in one screen without knowing
+ * which table any of them is stored on.
  *
  * The publication state is read-only, deliberately and consistently with the
  * generated dialog: `status` and `publishedAt` are not in the form schema, and
  * the publish action on the list is the one thing that moves them. Two mutation
  * paths in one screen is how a form ends up fighting its own state.
  */
-export const BlogArticleFormLayout = ({ surface }: ContentFormLayoutProps) => {
+export const BlogArticleFormLayout = () => {
   const t = useTranslations("@vitnode/blog.admin.article.form");
 
   return (
@@ -51,12 +50,7 @@ export const BlogArticleFormLayout = ({ surface }: ContentFormLayoutProps) => {
           <ContentFormActions className="justify-end" />
         </ContentFormSection>
 
-        <ContentFormSection
-          desc={
-            surface === "translation" ? t("settings.locale_desc") : undefined
-          }
-          title={t("settings.title")}
-        >
+        <ContentFormSection title={t("settings.title")}>
           <ContentFormField name="friendlyUrl" />
           <ContentFormField name="categoryId" />
           <ContentFormField name="authorId" />

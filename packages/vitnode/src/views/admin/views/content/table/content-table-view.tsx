@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 
 import type { ColumnDef } from "@/components/table/data-table";
@@ -19,8 +19,19 @@ import { HistoryContentAction } from "../actions/history-action";
 import { PreviewContentAction } from "../actions/preview-action";
 import { PublishContentAction } from "../actions/publish-action";
 import { ScheduleContentAction } from "../actions/schedule-action";
+import { TranslationsContentAction } from "../actions/translations-action";
 import { ContentCell } from "./cells";
-import { ContentLocaleSelector } from "./locale-selector";
+
+/** Width of the actions column, indexed by how many capability buttons it has. */
+const ACTION_WIDTHS = [
+  "w-20",
+  "w-28",
+  "w-36",
+  "w-44",
+  "w-52",
+  "w-60",
+  "w-68",
+] as const;
 
 const zodList = z.object({
   edges: z.array(
@@ -28,12 +39,13 @@ const zodList = z.object({
       .object({
         id: z.number(),
         labels: z.record(z.string(), z.string().nullable()),
-        /** Present only when the list is being viewed in a language. */
+        /** The record's translation in the reader's own language. */
         translation: z
           .object({
             locale: z.string(),
             status: z.string().optional(),
             title: z.string(),
+            values: z.record(z.string(), z.unknown()),
           })
           .nullable()
           .optional(),
@@ -47,24 +59,30 @@ export const ContentTableView = async ({
   columnSpecs,
   entry,
   formSpec,
-  translationSpec,
   searchParams,
 }: {
   columnSpecs: ContentColumnSpec[];
   entry: RegisteredFrontendContentType;
   formSpec: ContentFormSpec;
   searchParams: Record<string, string | string[] | undefined>;
-  /** Localized-field form spec, or `null` when the content type is not localized. */
-  translationSpec: ContentFormSpec | null;
 }) => {
-  const t = await getTranslations("core.content");
+  const [t, locale] = await Promise.all([
+    getTranslations("core.content"),
+    // The language this person is already using VitNode in. There is no locale
+    // control above the table, and there is nothing for one to add: somebody
+    // reading the AdminCP in Polish came to read Polish content.
+    getLocale(),
+  ]);
   const { definition, pluginId, registration } = entry;
+  const localized = definition.localization.enabled;
 
   const result = await contentApiFetch({
     definition,
     method: "get",
     pluginId,
-    query: searchParams,
+    // `locale` last, so a stale bookmark carrying `?locale=` cannot make the
+    // list disagree with the language the rest of the screen is in.
+    query: localized ? { ...searchParams, locale } : searchParams,
     schema: zodList,
   });
 
@@ -81,56 +99,33 @@ export const ContentTableView = async ({
   };
 
   const emptyLabel = t("table.empty_value");
+  const missingLabel = t("translations.states.missing");
   const statusLabels = {
     draft: t("status.draft"),
     published: t("status.published"),
   };
   const titleField = definition.admin.titleField;
-  const localized = definition.localization.enabled;
-  const viewedLocale =
-    typeof searchParams.locale === "string" ? searchParams.locale : undefined;
-  // The code rather than the display name: this is a server component and the
-  // language registry is client-side context. A locale code is what the selector
-  // and the URL already show, so the column header reads consistently with both.
-  const localeName = viewedLocale ?? "";
+  const localizedTitle =
+    titleField !== null && definition.fields[titleField]?.localized === true;
+
+  /**
+   * The record's human name, in the language this person is reading.
+   *
+   * A localized title comes off the translation the list already resolved, so a
+   * toast, a tooltip and a confirmation dialog all say the same thing the row
+   * above them says - and `#123` is the last resort rather than the normal one.
+   */
+  const titleOf = (row: ContentRowData): string => {
+    if (titleField === null) return `#${row.id}`;
+
+    const value = localizedTitle
+      ? row.translation?.values?.[titleField]
+      : row[titleField];
+
+    return typeof value === "string" && value !== "" ? value : `#${row.id}`;
+  };
 
   const columns: ColumnDef<ContentRowData>[] = [
-    // First, and only when a language is selected: it is what the person came
-    // to the list to read. `Missing` is a state rather than a blank, because a
-    // record with no translation is exactly the row worth finding.
-    ...(localized && viewedLocale !== undefined
-      ? [
-          {
-            id: "translation",
-            header: t("translations.locale_column", { name: localeName }),
-            cell: ({ row }: { row: ContentRowData }) => {
-              const translation = row.translation as
-                null | undefined | { status?: string; title: string };
-
-              if (!translation) {
-                return (
-                  <span className="text-muted-foreground">
-                    {t("translations.states.missing")}
-                  </span>
-                );
-              }
-
-              return (
-                <span>
-                  {translation.title === "" ? emptyLabel : translation.title}
-                  {translation.status ? (
-                    <span className="text-muted-foreground ml-2 text-xs">
-                      {translation.status === "published"
-                        ? t("translations.states.published")
-                        : t("translations.states.draft")}
-                    </span>
-                  ) : null}
-                </span>
-              );
-            },
-          } satisfies ColumnDef<ContentRowData>,
-        ]
-      : []),
     ...columnSpecs.map((spec): ColumnDef<ContentRowData> => {
       const override = registration.columns?.[spec.name];
 
@@ -143,6 +138,7 @@ export const ContentTableView = async ({
             return (
               <ContentCell
                 emptyLabel={emptyLabel}
+                missingLabel={missingLabel}
                 row={row}
                 spec={spec}
                 statusLabels={statusLabels}
@@ -163,31 +159,46 @@ export const ContentTableView = async ({
       id: "actions",
       header: "",
       align: "right",
-      // One column per button: publication adds a third, editorial a fourth,
-      // preview a fifth and scheduling a sixth.
-      className: [
-        "w-20",
-        definition.publication.enabled ? "w-28" : "",
-        definition.editorial.enabled ? "w-36" : "",
-        definition.editorial.preview.enabled ? "w-44" : "",
-        definition.editorial.scheduling.enabled ? "w-52" : "",
-        definition.delivery.enabled ? "w-60" : "",
-      ]
-        .filter(Boolean)
-        .at(-1),
+      // Edit and delete are always there; every capability adds one more button.
+      // Written as a lookup rather than a template string, because Tailwind can
+      // only see class names it can read in the source.
+      className:
+        ACTION_WIDTHS[
+          Math.min(
+            [
+              definition.publication.enabled,
+              definition.editorial.enabled,
+              definition.editorial.preview.enabled,
+              definition.editorial.scheduling.enabled,
+              definition.delivery.enabled,
+              localized,
+            ].filter(Boolean).length,
+            ACTION_WIDTHS.length - 1,
+          )
+        ],
       cell: ({ row }) => {
-        const title =
-          titleField && typeof row[titleField] === "string"
-            ? row[titleField]
-            : `#${row.id}`;
+        const title = titleOf(row);
 
         return (
           <>
+            {localized ? (
+              <TranslationsContentAction
+                contentTypeId={definition.id}
+                defaultLocale={definition.localization.defaultLocale}
+                editorial={definition.editorial.enabled}
+                id={row.id}
+                permissionModule={definition.permissionModule}
+                pluginId={pluginId}
+                publication={definition.publication.enabled}
+                singular={definition.admin.label.singular}
+                title={title}
+              />
+            ) : null}
             {definition.delivery.enabled ? (
               <DeliveryContentAction
                 contentTypeId={definition.id}
                 id={row.id}
-                locale={viewedLocale}
+                locale={localized ? locale : undefined}
                 permissionModule={definition.permissionModule}
                 pluginId={pluginId}
                 singular={definition.admin.label.singular}
@@ -239,8 +250,6 @@ export const ContentTableView = async ({
             ) : null}
             <EditContentAction
               data={row}
-              defaultLocale={definition.localization.defaultLocale}
-              editorial={definition.editorial.enabled}
               fieldOverrides={Object.fromEntries(
                 Object.entries(registration.fields ?? {}).map(
                   ([name, override]) => [name, override.component],
@@ -253,13 +262,13 @@ export const ContentTableView = async ({
                   ? contentEditHref(definition.id, row.id)
                   : undefined
               }
+              localized={localized}
               permissionModule={definition.permissionModule}
               pluginId={pluginId}
               publication={definition.publication.enabled}
               singular={definition.admin.label.singular}
               spec={formSpec}
               title={title}
-              translationSpec={translationSpec}
             />
             <DeleteContentAction
               contentTypeId={definition.id}
@@ -284,37 +293,31 @@ export const ContentTableView = async ({
   ];
 
   return (
-    <>
-      {localized ? (
-        <div className="mb-2 flex justify-end">
-          <ContentLocaleSelector
-            defaultLocale={definition.localization.defaultLocale}
-          />
-        </div>
-      ) : null}
-      <DataTable
-        columns={columns}
-        customNoResults={{
-          description: t("empty.desc"),
-          title: t("empty.title"),
-        }}
-        edges={data.edges}
-        id={`content-${definition.id}`}
-        order={{
-          // The same allowlist the generated route builds its `orderBy` enum
-          // from, so a header the backend would accept is never left unsortable.
-          // `admin.list.orderableFields` alone would leave out `id`, `createdAt`,
-          // `updatedAt` and - when publication is on - `status` and
-          // `publishedAt`, all of which the API has always allowed.
-          columns: orderableColumns(definition),
-          defaultOrder: {
-            column: definition.admin.list.defaultOrderBy,
-            order: definition.admin.list.defaultOrder,
-          },
-        }}
-        pageInfo={data.pageInfo}
-        search={definition.admin.list.searchableFields.length > 0}
-      />
-    </>
+    <DataTable
+      columns={columns}
+      customNoResults={{
+        description: t("empty.desc"),
+        title: t("empty.title"),
+      }}
+      edges={data.edges}
+      id={`content-${definition.id}`}
+      order={{
+        // The same allowlist the generated route builds its `orderBy` enum
+        // from, so a header the backend would accept is never left unsortable.
+        // `admin.list.orderableFields` alone would leave out `id`, `createdAt`,
+        // `updatedAt` and - when publication is on - `status` and
+        // `publishedAt`, all of which the API has always allowed. A localized
+        // column is deliberately absent: it is one column on the *translation*
+        // table, and a list ordered by it would reshuffle per language and make
+        // a cursor mean two positions at once.
+        columns: orderableColumns(definition),
+        defaultOrder: {
+          column: definition.admin.list.defaultOrderBy,
+          order: definition.admin.list.defaultOrder,
+        },
+      }}
+      pageInfo={data.pageInfo}
+      search={definition.admin.list.searchableFields.length > 0}
+    />
   );
 };

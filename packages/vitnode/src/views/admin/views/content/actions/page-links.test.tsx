@@ -17,7 +17,7 @@ vi.mock("@/lib/navigation", () => ({
   Link: ({
     children,
     ...props
-  }: { children: React.ReactNode } & React.ComponentProps<"a">) => (
+  }: React.ComponentProps<"a"> & { children: React.ReactNode }) => (
     <a data-testid="link" {...props}>
       {children}
     </a>
@@ -37,6 +37,7 @@ const { EditContentAction } = await import("./edit-action");
 
 const spec: ContentFormSpec = {
   contentTypeId: "blog.post",
+  defaultLocale: null,
   fields: [],
   pluginId: "@vitnode/blog",
   titleField: null,

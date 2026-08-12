@@ -474,8 +474,17 @@ const resolveAdmin = <TFields>(
   editorial: boolean,
 ): ResolvedContentAdminConfig => {
   const fieldNames = Object.keys(fields);
-  // The subset a DataTable cell, an `orderBy` and a toast title may name.
-  const columnFieldNames = fieldNames.filter(name =>
+  const isLocalized = (name: string): boolean =>
+    localizedFields[name] !== undefined;
+  // The subset an `orderBy`, a filter and an index may name: one column on the
+  // **base** table.
+  const columnFieldNames = fieldNames.filter(
+    name => !isLocalized(name) && isAdminColumnField(fields[name]),
+  );
+  // The wider subset a DataTable cell and a toast title may name. A localized
+  // field is one column on the translation table, so it can be *shown* in the
+  // reader's own language - it just cannot be sorted or filtered by.
+  const displayFieldNames = fieldNames.filter(name =>
     isAdminColumnField(fields[name]),
   );
   const assertColumnField = (label: string, names: readonly string[]): void => {
@@ -490,15 +499,11 @@ const resolveAdmin = <TFields>(
     );
   };
 
+  // The surfaces that address a column of the **base table**: a localized field
+  // is not one, and a query cannot pretend otherwise.
   for (const [label, names] of [
-    ["admin.form.fields", admin.form?.fields],
-    ["admin.list.columns", admin.list?.columns],
     ["admin.list.orderableFields", admin.list?.orderableFields],
     ["admin.list.searchableFields", admin.list?.searchableFields],
-    [
-      "admin.titleField",
-      admin.titleField === undefined ? undefined : [admin.titleField],
-    ],
     [
       "admin.list.defaultOrderBy",
       admin.list?.defaultOrderBy === undefined
@@ -508,10 +513,21 @@ const resolveAdmin = <TFields>(
   ] as const) {
     if (!names) continue;
     assertNotLocalized(id, label, names.map(String), localizedFields);
-    // Every surface here addresses a *column* - except the form, which is the
-    // one that renders a group as a section and a collection as an editor.
-    if (label === "admin.form.fields") continue;
+    assertColumnField(label, names.map(String));
+  }
 
+  // The presentation surfaces. Localized names are welcome; a group or a
+  // collection still is not, because neither is one cell or one title.
+  for (const [label, names] of [
+    ["admin.list.columns", admin.list?.columns],
+    [
+      "admin.titleField",
+      admin.titleField === undefined || admin.titleField === null
+        ? undefined
+        : [admin.titleField],
+    ],
+  ] as const) {
+    if (!names) continue;
     assertColumnField(label, names.map(String));
   }
 
@@ -520,7 +536,7 @@ const resolveAdmin = <TFields>(
     ...(publication ? publicationFields : []),
     ...(editorial ? editorialFields : []),
   ];
-  const knownColumns = new Set([...columnFieldNames, ...generatedColumns]);
+  const knownColumns = new Set([...displayFieldNames, ...generatedColumns]);
 
   const searchableFields = (
     admin.list?.searchableFields?.map(String) ??
@@ -580,15 +596,22 @@ const resolveAdmin = <TFields>(
 
   const titleField =
     admin.titleField === undefined
-      ? (columnFieldNames.find(name =>
+      ? // A shared title first, because it reads the same for everybody. Failing
+        // that a localized one, resolved per reader - which is still a name,
+        // where the alternative is `#123`.
+        (columnFieldNames.find(name =>
           SEARCHABLE_KINDS.has(fields[name].kind),
-        ) ?? null)
+        ) ??
+        displayFieldNames.find(name =>
+          SEARCHABLE_KINDS.has(fields[name].kind),
+        ) ??
+        null)
       : // `null` is a decision, not an omission: it says this content type has
-        // no shared title rather than "pick one for me".
+        // no title at all rather than "pick one for me".
         admin.titleField === null
         ? null
         : String(admin.titleField);
-  if (titleField !== null && !columnFieldNames.includes(titleField)) {
+  if (titleField !== null && !displayFieldNames.includes(titleField)) {
     throw new ContentEngineError(
       `admin.titleField references unknown field "${titleField}".`,
       { contentTypeId: id },
@@ -1647,9 +1670,11 @@ export const defineContentType = <
     tableName,
   });
 
+  // Every declared field, in declaration order: the AdminCP renders one form,
+  // and a localized input sits in it wherever it was written.
   const resolvedAdmin = resolveAdmin(
     id,
-    { ...sharedFields, ...collectionFields },
+    fieldMap,
     localizedFields,
     admin,
     publicationEnabled,

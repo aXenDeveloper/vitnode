@@ -314,6 +314,58 @@ export const createContentModel = <
           createContentEditorialService({
             advanced,
             c,
+            // So publishing the record publishes the languages it has, in the
+            // record's own transaction, each through the editorial layer that
+            // knows how to give a language a revision and an address. Built here
+            // because this is the only place that has both halves; `null` for a
+            // content type that has no languages to move.
+            cascadeTranslations:
+              localized && translationSchemas
+                ? async ({ actor, itemId, operation, tx }) => {
+                    const translations = buildTranslations(c);
+                    const editorial = createContentTranslationEditorialService({
+                      c,
+                      definition,
+                      pluginId,
+                      schemas: translationSchemas,
+                      translations,
+                    });
+
+                    // Read in the caller's transaction, so a language created a
+                    // moment ago in the same transaction is moved too.
+                    const rows = await translations.findManyForItem(itemId, {
+                      tx,
+                    });
+
+                    let moved = 0;
+
+                    for (const row of rows) {
+                      // A locale the install has switched off is left where it
+                      // is on the way *up*: publishing into a language nothing
+                      // routes to is refused, and a translation written before
+                      // the switch-off must not turn that refusal into "this
+                      // record cannot be published at all". Coming back down it
+                      // is moved like any other - taking content off a disabled
+                      // language is exactly what should still work.
+                      const language = await translations.resolveLanguage(
+                        row.locale,
+                        { requireEnabled: false, tx },
+                      );
+                      if (operation === "publish" && !language.isEnabled) {
+                        continue;
+                      }
+
+                      const outcome = await editorial[operation](
+                        itemId,
+                        row.locale,
+                        { actor, tx },
+                      );
+                      if (outcome?.changed === true) moved += 1;
+                    }
+
+                    return moved;
+                  }
+                : null,
             columns,
             definition,
             pluginId,

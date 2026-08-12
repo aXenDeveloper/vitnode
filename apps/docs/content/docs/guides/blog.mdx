@@ -128,10 +128,10 @@ export const blogCategoryContentType = defineContentType({
   admin: {
     label: { plural: "Categories", singular: "Category" },
     permissionModule: "categories",
-    titleField: null,
+    titleField: "name",
     create: { mode: "dialog" },
     edit: { mode: "dialog" },
-    list: { columns: ["color", "updatedAt"] },
+    list: { columns: ["name", "color", "updatedAt"] },
   },
 });
 ```
@@ -140,16 +140,35 @@ The colour is the AdminCP's own picker through a
 [field override](/docs/dev/content-engine/admin-form-layouts#field-and-column-overrides),
 and the colour column is a swatch **plus** the value in words.
 
-<Callout type="warn" title="A localized category has no name the picker can read">
-  `titleField` is `null` because every text field on a category is localized -
-  left undefined, the engine would pick `color`, and "#3260c0 has been deleted"
-  is not a sentence anybody wants to read. The consequence is that the article's
-  category picker labels its options `#3` rather than "Engineering": a relation
-  label is resolved from a **shared** column on the target, and a localized
-  content type has none. Resolving one from the translation table is a Content
-  Engine change, not something a plugin should paper over - `config.tsx` is
-  loaded by the `vitnode` CLI, so a field override cannot reach a server action
-  to look the names up itself.
+`name` is localized and is still the list's first column and the content type's
+`titleField`. That is the split the engine draws: showing a localized value is a
+projection the AdminCP resolves in *your* language, while ordering and filtering
+stay on the base table. The list reads:
+
+```text
+Name              Color        Updated
+Aktualności       ● #3260c0    2 days ago
+Poradniki         ● #23a06b    a week ago
+```
+
+and the dialog is one form, with the switcher inside the field that needs one:
+
+```text
+Name           [ Aktualności ] [ PL ▾ ]
+
+Color          [ ● #3260c0   ]
+
+                       Cancel   Save
+```
+
+<Callout type="warn" title="The article's category picker still shows identifiers">
+  `titleField: "name"` fixes the list, the toasts and the page headings, because
+  the AdminCP resolves a localized title from the translation it already loaded.
+  The **relation picker** is a different query: a relation label is resolved from
+  a shared column on the target with a SQL join, and a localized content type has
+  none - so the article's category picker labels its options `#3` rather than
+  "Aktualności". Resolving one from the translation table is a Content Engine
+  change, not something a plugin should paper over.
 </Callout>
 
 ### Articles - the rich example
@@ -179,10 +198,24 @@ delivery:
 
 Below `lg` it is a single column: body first, then metadata, then the actions.
 
-Articles are localized, so the editor is the same layout on the shared tab and
-on each language tab - `ContentFormField` renders nothing for a field the
-current surface does not have, so `title` and `content` appear per language
-while `categoryId` and `authorId` appear once.
+Articles are localized, and the layout does not know it. `title`, `content` and
+`friendlyUrl` are stored per language and `categoryId` and `authorId` are not -
+so the first three render their own small language switchers and the last two do
+not, from one `ContentFormField` call each:
+
+```text
+Title          [ Tytuł artykułu ] [ PL ▾ ]
+Content        [ AutoFormEditor ] [ PL ▾ ]
+Friendly URL   [ tytul-artykulu ] [ PL ▾ ]
+Category         Aktualności
+Author           Maciej
+```
+
+Everything opens in the language you are reading VitNode in - not in
+`defaultLocale` - and switching `Title` to English leaves the editor in Polish.
+One Save writes the base row and every changed language in one transaction.
+Per-language publish, history and delete live in the list's **Languages** row
+action.
 
 ### Upgrading from an older blog
 

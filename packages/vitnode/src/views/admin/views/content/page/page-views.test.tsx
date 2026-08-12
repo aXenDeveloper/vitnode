@@ -3,7 +3,6 @@ import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { RegisteredFrontendContentType } from "@/content/admin/config";
-import type { AnyContentTypeDefinition } from "@/content/types";
 import type { ContentFormLayout } from "@/lib/plugin";
 
 import { defineContentType } from "@/content/define";
@@ -12,6 +11,14 @@ import { field } from "@/content/fields";
 vi.mock("server-only", () => ({}));
 
 vi.mock("next-intl/server", () => ({
+  // The language the person reads VitNode in. There is no locale control on the
+  // screen and nothing in the URL beyond the app's own `[locale]` segment - the
+  // form takes its display language from here.
+  getLocale: async () => {
+    await Promise.resolve();
+
+    return "en";
+  },
   getTranslations: async () => {
     await Promise.resolve();
 
@@ -282,11 +289,20 @@ describe("the generated edit page", () => {
       }),
     );
 
-    // The locale tabs are what a translator came for, so the translation spec
-    // has to reach the client half.
-    expect(props.translationSpec).toMatchObject({
-      fields: [{ name: "title" }],
-    });
+    // One form, with the localized fields in it and flagged as such - so each
+    // one renders its own language switcher. There is no second spec and no
+    // second surface for a translator to be sent to.
+    expect(props.spec).toMatchObject({ defaultLocale: "en" });
+    expect(
+      (props.spec as { fields: { localized?: boolean; name: string }[] })
+        .fields,
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ localized: true, name: "title" }),
+        // The shared field is in the same list, which is the whole point.
+        expect.objectContaining({ name: "featured" }),
+      ]),
+    );
   });
 
   it("uses the edit layout, not the create one", async () => {

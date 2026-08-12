@@ -172,36 +172,40 @@ belongs to wherever that input ended up.
 
 | Primitive | What it does |
 | --- | --- |
-| `ContentFormField` | One field, by name. Nothing if this surface has no such field |
+| `ContentFormField` | One field, by name. Nothing if the form has no such field |
 | `ContentFormRemainingFields` | Everything the layout did not name |
 | `ContentFormActions` | The submit row, with an optional `cancelHref` |
 | `ContentFormStatus` | The read-only publication line |
 | `ContentFormLayoutGrid` / `Main` / `Sidebar` / `Section` | AdminCP chrome: two columns above `lg`, one below |
-| `useContentForm()` | `mode`, `surface`, `fieldNames`, `publication` |
+| `useContentForm()` | `mode`, `fieldNames`, `localizedFieldNames`, `publication` |
 
-### Localized content types get one layout, not two
+### Localized content types get one layout, and one form
 
-A localized content type splits its fields across two surfaces - the shared tab
-and one tab per language - and the same layout is rendered in both.
-`ContentFormField` renders **nothing** for a name the current surface does not
-have, which is what lets a single file place `title` and `categoryId` without
-knowing which table either lives on:
+A layout places every field of the content type in one screen, localized or not:
 
-```text
-Shared tab      →  categoryId, authorId in the sidebar
-English tab     →  title, content in the main column; friendlyUrl in the sidebar
+```tsx
+<ContentFormField name="title" />        {/* translation table */}
+<ContentFormField name="content" />      {/* translation table */}
+<ContentFormField name="friendlyUrl" />  {/* translation table */}
+<ContentFormField name="categoryId" />   {/* base table */}
+<ContentFormField name="authorId" />     {/* base table */}
 ```
 
-`useContentForm().surface` is `"shared"` or `"translation"` when a layout wants
-to word something differently.
+Nothing here says which is which, and nothing needs to: **a localized field
+renders its own language control automatically**, and a shared one does not. The
+layout decides where a field appears; the Content Engine decides where its value
+goes.
+
+`useContentForm().localizedFieldNames` is there for a layout that wants to group
+or annotate them - it is never needed to *place* one.
 
 ### The server/client boundary
 
 `config.tsx` is a **server** module, so a layout referenced from it is a client
 reference crossing an RSC boundary. That decides the shape of the whole API:
 
-- The layout receives only **serialisable** props: `mode`, `surface`,
-  `contentTypeId`, `pluginId`, `itemId`, `singular`, `publication`, `title`.
+- The layout receives only **serialisable** props: `mode`, `contentTypeId`,
+  `pluginId`, `itemId`, `singular`, `publication`, `title`.
 - Field elements, the form instance and the submit action arrive through
   **client context** instead. A `renderField(name)` callback prop would read
   well and would be a server closure, which cannot cross the boundary at all.
@@ -210,7 +214,7 @@ So: `"use client"` at the top of the layout file, and no inline arrow in
 `config.tsx`.
 
 <Callout type="info" title="A forgotten field says so">
-  In development, a layout that never renders one of its surface's fields logs
+  In development, a layout that never renders one of the form's fields logs
   which ones - a field silently missing from the payload is the one failure mode
   this API has that the generated form does not.
 </Callout>

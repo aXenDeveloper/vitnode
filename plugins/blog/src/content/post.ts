@@ -162,15 +162,24 @@ export const blogPostContentType = defineContentType({
     // "Article" in the AdminCP, `blog.post` in the database and the API.
     label: { plural: "Articles", singular: "Article" },
     permissionModule: "posts",
-    // Same reason as the category: every text field here is localized, so there
-    // is no shared column that could honestly be the title.
-    titleField: null,
+    // The localized title, resolved in the reader's own language - the same
+    // display projection the category uses. It is not a base-table column and it
+    // never becomes one: `orderableFields` is untouched, and a list sorted by a
+    // per-language value would reshuffle itself per reader.
+    titleField: "title",
     // The page-mode reference. Both actions, so a create hands straight over to
     // the article's own edit page.
     create: { mode: "page" },
     edit: { mode: "page" },
     list: {
-      columns: ["status", "categoryId", "authorId", "publishedAt", "updatedAt"],
+      columns: [
+        "title",
+        "status",
+        "categoryId",
+        "authorId",
+        "publishedAt",
+        "updatedAt",
+      ],
     },
   },
 });

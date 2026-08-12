@@ -208,7 +208,11 @@ export const contentEditorialEffects = async (
               model,
               idOf(outcome.row),
             ),
-            changed: outcome.changed,
+            // The base row not moving is not the same as nothing moving. A
+            // record whose languages were still drafts publishes them without
+            // touching a base column, and those documents are exactly the ones
+            // that were missing from the index.
+            changed: outcome.changed || (outcome.movedTranslations ?? 0) > 0,
             changedFields: outcome.changedFields,
             operation: outcome.operation,
             pluginId,

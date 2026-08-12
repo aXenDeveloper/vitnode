@@ -95,6 +95,7 @@ const harness = ({ allow = true }: { allow?: boolean } = {}): Harness => {
     findByLanguageId: vi.fn(),
     findByLocale: vi.fn(),
     findManyForItem: vi.fn(),
+    findManyRowsForItem: vi.fn(),
     publish: vi.fn(),
     resolveDefaultLanguage: vi.fn(),
     resolveLanguage: vi.fn(),
@@ -166,28 +167,35 @@ describe("route registration", () => {
 });
 
 describe("GET /{id}/translations", () => {
-  it("returns metadata for every locale", async () => {
+  it("returns every locale with its values, in one read", async () => {
     const { app, translations } = harness();
-    translations.findManyForItem.mockResolvedValue([
-      { ...translationRow(), values: undefined },
-      { ...translationRow({ languageId: 2, locale: "pl", version: 3 }) },
+    translations.findManyRowsForItem.mockResolvedValue([
+      translationRow(),
+      translationRow({ languageId: 2, locale: "pl", version: 3 }),
     ]);
 
     const response = await app.request("/7/translations");
 
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
-      edges: { locale: string; version: number }[];
+      edges: {
+        locale: string;
+        values: Record<string, unknown>;
+        version: number;
+      }[];
     };
     expect(body.edges.map(edge => edge.locale)).toEqual(["en", "pl"]);
-    // The list schema has no `values`, so a body cannot leak into it even when
-    // the service hands one over.
-    expect(body.edges[0]).not.toHaveProperty("values");
+    // The AdminCP form opens on every language at once, so the values come with
+    // the metadata rather than one request per language behind them.
+    expect(body.edges[0].values).toBeDefined();
+    // One query for the whole set - never one per locale.
+    expect(translations.findManyRowsForItem).toHaveBeenCalledTimes(1);
+    expect(translations.findByLocale).not.toHaveBeenCalled();
   });
 
   it("needs `can_view`", async () => {
     const { app, translations } = harness();
-    translations.findManyForItem.mockResolvedValue([]);
+    translations.findManyRowsForItem.mockResolvedValue([]);
 
     await app.request("/7/translations");
 

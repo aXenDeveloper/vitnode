@@ -51,22 +51,24 @@ export const blogCategoryContentType = defineContentType({
     // every existing role keeps exactly the access it had.
     permissionModule: "categories",
     /**
-     * `null` rather than left out, and the difference matters here.
+     * The localized name, resolved in whichever language the reader is using.
      *
-     * Every text field on this content type is localized, so there is no shared
-     * column that could honestly be a title. Left undefined the engine would
-     * pick the first shared text field - which is `color`, and a toast reading
-     * "#3260c0 has been deleted" is worse than no name at all.
+     * A *display* projection rather than a column: `name` lives on the
+     * translation table, and the AdminCP reads the one translation it already
+     * loaded for the row. Nothing about ordering or filtering changes - those
+     * still address `blog_categories` - and a toast reading "Aktualności has
+     * been deleted" beats both "#7" and "#3260c0".
      */
-    titleField: null,
+    titleField: "name",
     // Dialogs, deliberately: a name and a colour do not need a page, and this is
     // the half of the blog that proves page mode is opt-in.
     create: { mode: "dialog" },
     edit: { mode: "dialog" },
     list: {
-      // Shared columns only - `name` lives on the translation table, and the
-      // list's locale selector is what shows it.
-      columns: ["color", "updatedAt"],
+      // `name` first, because it is what a category *is*. It comes off the
+      // translation the list resolved for the reader's own language, so there is
+      // nothing above the table to choose.
+      columns: ["name", "color", "updatedAt"],
     },
   },
 });

@@ -1,12 +1,12 @@
 ---
-title: Translation lifecycle
-description: Each language publishes on its own schedule - and a translation is never public before the record is.
+title: Localized editing
+description: One form, a language switcher inside each translated field, and a lifecycle each language runs on its own.
 icon: Languages
 ---
 
 [Localization](/docs/dev/content-engine/localization) gave a record one row per
 language. This page is about what those rows *do*: a status of their own, a
-publish button of their own, and a rule about how the two levels relate.
+history of their own, and a rule about how the two levels relate.
 
 ```ts title="src/content/article.ts"
 export const articleContentType = defineContentType({
@@ -51,11 +51,20 @@ That is the whole model. A translation's status is **subordinate**: publishing
 the Polish copy of a draft article puts nothing on the internet, and unpublishing
 the article takes every language down at once.
 
-<Callout title="Publishing the record does not publish its translations">
-  A record going live exposes the languages that were *already* marked published,
-  and no others. This is the difference between "we are ready to launch" and "the
-  Polish copy is finished", and they are rarely the same day. It also means
-  nobody can ship a half-finished translation by pressing one button.
+<Callout title="Publishing the record publishes its languages">
+  Publishing a record moves every translation it has with it, in the record's own
+  transaction - each through this service, so each takes its delivery address and
+  records the publish in its own history. Unpublishing takes them all back down.
+
+  Publication is a decision about the *record*, and there is one control for it.
+  Before this, a record's publish moved only the base row, so a localized article
+  read as `published` in the AdminCP while every language of it was still a draft:
+  no canonical URL, no search document, nothing public. Both rows were telling the
+  truth, about different things, and nobody could see which.
+
+  A language added to an already-published record is published as it is created,
+  for the same reason - otherwise it would be a language with nothing left to
+  publish it.
 </Callout>
 
 ## The states
@@ -63,8 +72,13 @@ the article takes every language down at once.
 | | What it means |
 | --- | --- |
 | **Missing** | No translation row for this language. Nothing to publish. |
-| **Draft** | A translation exists and is not public. Where every one starts. |
+| **Draft** | A translation exists and is not public. Where a language of a draft record starts. |
 | **Published** | Public - if the base record is published too. |
+
+The per-locale `publish` and `unpublish` below still exist, and are how a single
+language is held back from a record that is otherwise live. They are an override,
+not the ordinary route: the AdminCP's language dialog reports each language's
+status and offers no publish button of its own.
 
 There is deliberately no **Outdated**. Its honest definition is "the source
 language changed after this translation did", and comparing two `updatedAt`
@@ -178,9 +192,14 @@ if (outcome) {
 | Delete a non-default translation | `can_delete` |
 
 `can_translate` depends on `can_view` and **not** on `can_edit`, which is the
-whole point of having it: a translator gets every locale tab without gaining the
+whole point of having it: a translator can write any language without gaining the
 ability to touch a shared field, move the record's global publication state or
 delete it.
+
+The AdminCP's single Save button posts one composite request, and the split is
+enforced on the *server*: the route needs `can_translate`, and it additionally
+checks `can_edit` the moment the payload carries a shared field. Nothing is
+inferred from whether the browser disabled an input.
 
 <Callout title="No migration, and denied by default">
   Staff permissions are stored as JSON per role, so a new one simply is not on
@@ -204,7 +223,8 @@ a revision, without it they simply do not.
 Both take `{ "expectedVersion": 3 }` and answer
 `{ "changed": true, "row": { … } }`. A stale version comes back as the same
 structured 409 every translation route uses, with `locale` in every arm - which
-is what lets a tab strip point at the right tab rather than at the record.
+is what lets the AdminCP say *which language* moved rather than just "the record
+changed".
 
 Locales are canonical strings on the outside and numeric `core_languages.id`
 values on the inside. A client never sends an id, so it can never point one at a
@@ -212,37 +232,122 @@ language it was not shown.
 
 ## The AdminCP
 
-The edit dialog of a localized content type opens on a tab strip:
+There is **one form**. No `Shared | English | Polski` strip, no locale in the URL,
+and no form-global language state:
 
 ```text
-Shared | English ✓ | Polski ● | Deutsch ○
+Title          [ Tytuł artykułu              ] [ PL ▾ ]
+Content        [ Treść…                      ] [ PL ▾ ]
+Friendly URL   [ tytul-artykulu              ] [ PL ▾ ]
+Category         Aktualności
+Author           Maciej
 ```
 
-- **Shared** holds the fields that are not per-language, plus the record's global
-  publication, history and scheduling.
-- **Each locale tab** holds that language's fields, its status, its version, its
-  publish button, its history and - for anything but the default - its delete
-  button.
+Each **localized field** carries its own small language switcher - the same
+`multiLang` behaviour VitNode has always used for language-aware inputs. Shared
+fields sit beside them with no switcher, because there is nothing to switch.
 
-The strip loads metadata only, in one request. A language's values are fetched
-when its tab is opened, so opening the dialog on a record with nine languages
-costs one query rather than nine.
+### Two different languages
 
-Only languages the app actually serves get a tab: they come from the app config,
-already filtered to the enabled ones. And **opening a tab never creates a
-translation** - a missing language shows `Missing` and an explicit create button,
-because looking is not a decision to publish an empty page.
+Two things are called "the language" and they are not the same thing:
 
-### When somebody else got there first
+| | What it decides |
+| --- | --- |
+| **Your VitNode language** | What the AdminCP *shows you first*: the list's titles, and the language every localized input opens in |
+| **`localization.defaultLocale`** | Which translation a record cannot exist without, and what a public reader falls back to |
 
-A stale save keeps the form exactly as you left it and shows a banner naming the
-language that moved, with a **Reload this language** button. Nothing is retried
-and nothing is merged: reloading is a decision, and so is saving over what the
-reload reveals.
+Reading the AdminCP in Polish opens every localized field on Polish, whatever
+`defaultLocale` says. It is the language you are already in; being asked to pick
+it again would be a control with one sensible answer.
 
-English and Polish edits are two different rows with two different version
-counters, so they never conflict with each other - only with another edit of the
-*same* language.
+If your language is not one the install serves, the field falls back to the first
+enabled one rather than writing into a language nothing renders. On a
+one-language install no switcher is rendered at all.
+
+### Switching one field, not the screen
+
+Switching `Title` to English leaves the body and the URL in Polish. That is
+deliberate: comparing one heading against another should not move the whole page.
+
+```text
+Title          [ Article title               ] [ EN ▾ ]   ← switched
+Content        [ Treść…                      ] [ PL ▾ ]   ← unchanged
+Friendly URL   [ tytul-artykulu              ] [ PL ▾ ]   ← unchanged
+```
+
+Selecting a language whose translation does not exist shows an **empty box**, and
+saving writes nothing for it. Looking at a language is not a decision to create a
+translation in it.
+
+### One Save, one transaction
+
+The form holds every language at once - read in one request when it opens, not
+one request per language - and one Save writes all of it:
+
+```text
+BEGIN
+  update the base row      with its own expectedVersion
+  update the EN translation with its own expectedVersion
+  create the PL translation
+COMMIT
+```
+
+Only what actually changed is sent. A Polish-only edit sends no shared values and
+no English entry, so the base version, the English version, the English revision
+history and the English cache are all left exactly where they were.
+
+If any part is refused - somebody saved the English copy while you were typing -
+**nothing commits**, and the error names the language.
+
+### Per-language lifecycle
+
+Status, publication, history, restore and delete are genuinely per-language and
+genuinely not fields, so they live in their own row action rather than around the
+form: the language is a parameter of *that* decision, not a mode the whole screen
+is in.
+
+Only languages the app actually serves appear: they come from the app config,
+already filtered to the enabled ones. The default-locale translation has no
+delete button.
+
+### Field-local languages are not JSON storage
+
+Worth stating plainly, because the form makes it look otherwise: a field-local
+language switcher is a **UI** decision. Nothing about the storage model changed.
+
+```text
+Admin form                        Storage
+
+Title       [PL ▾]                blog_posts
+Content     [EN ▾]                  id, categoryId, authorId, status, version
+Friendly URL[PL ▾]        ──▶
+Category      (shared)            blog_posts_translations
+Author        (shared)              itemId, languageId, title, friendlyUrl,
+                                    content, status, version
+```
+
+One base row, one translation row per `(itemId, languageId)`, each with its own
+`version`, its own `status`, its own `publishedAt` and its own revision history.
+The form holds `[{ languageCode, value }]` per field only while you are editing;
+the save takes it apart again and writes rows.
+
+There is no JSON column, and the old `MultiLangValue` persistence model has not
+come back.
+
+### The list
+
+A localized list shows the record in the language you are reading, with nothing
+above the table to choose:
+
+```text
+Name              Color
+Aktualności       ● #3260c0
+Poradniki         ● #23a06b
+```
+
+A record with no translation in your language shows `Missing` rather than a
+blank - that is the row worth spotting. Sorting and searching still address the
+base table, so a localized column is displayed but not sortable.
 
 ## Stage 5B boundaries
 
@@ -261,5 +366,5 @@ both frozen revisions - see
 route that mints one landed with Stage 5C.
 
 Locale-specific *scheduling* stays outside Stage 5 entirely. A scheduled global
-publish exposes the languages already marked published and publishes no drafts; a
+publish moves every language the record has with it; a
 scheduled global unpublish hides every language at once.

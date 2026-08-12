@@ -1,5 +1,3 @@
-import type { ContentFormLayoutProps } from "@vitnode/core/lib/plugin";
-
 import { render, screen } from "@testing-library/react";
 import { ContentFormProvider } from "@vitnode/core/views/admin/views/content/form/context";
 import { FormProvider, useForm } from "react-hook-form";
@@ -22,7 +20,8 @@ vi.mock("@vitnode/core/lib/navigation", () => ({
  * Engine would have put real fields.
  *
  * That is exactly the contract under test: the layout must place whatever it is
- * handed, by name, and must not know or care what a field actually is.
+ * handed, by name, and must not know or care what a field actually is - or which
+ * table its value ends up on.
  */
 /** The submit button reads the surrounding form, exactly as it does for real. */
 const Harness = ({ children }: { children: React.ReactNode }) => {
@@ -37,10 +36,10 @@ const Harness = ({ children }: { children: React.ReactNode }) => {
 
 const renderLayout = ({
   fieldNames,
-  surface = "shared",
+  localizedFieldNames = ["title", "content", "friendlyUrl"],
 }: {
   fieldNames: string[];
-  surface?: ContentFormLayoutProps["surface"];
+  localizedFieldNames?: string[];
 }) =>
   render(
     <Harness>
@@ -53,20 +52,12 @@ const renderLayout = ({
               <span key={name}>field:{name}</span>,
             ]),
           ),
+          localizedFieldNames,
           mode: "edit",
           publication: { enabled: true, publishedAt: null, status: "draft" },
-          surface,
         }}
       >
-        <BlogArticleFormLayout
-          contentTypeId="blog.post"
-          itemId={7}
-          mode="edit"
-          pluginId="@vitnode/blog"
-          publication
-          singular="Article"
-          surface={surface}
-        />
+        <BlogArticleFormLayout />
       </ContentFormProvider>
     </Harness>,
   );
@@ -95,6 +86,27 @@ describe("BlogArticleFormLayout", () => {
     expect(sections[2].textContent).toContain("categoryId");
   });
 
+  it("renders localized and shared fields in the same layout", () => {
+    // The whole point of the new localization UX: `title` is on the translation
+    // table and `categoryId` is on the base row, and this layout - the screen a
+    // person actually looks at - cannot tell them apart.
+    renderLayout({
+      fieldNames: ["title", "content", "friendlyUrl", "categoryId", "authorId"],
+    });
+
+    expect(screen.getByText("field:title", { exact: false })).toBeTruthy();
+    expect(screen.getByText("field:categoryId", { exact: false })).toBeTruthy();
+  });
+
+  it("renders no locale tab strip of any kind", () => {
+    renderLayout({
+      fieldNames: ["title", "content", "friendlyUrl", "categoryId", "authorId"],
+    });
+
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.queryByRole("tab")).toBeNull();
+  });
+
   it("renders the publication state as a read-only line, with no publish control", () => {
     renderLayout({ fieldNames: ["title"] });
 
@@ -103,18 +115,10 @@ describe("BlogArticleFormLayout", () => {
     expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
-  it("places the same names on a locale tab, ignoring the ones that are not there", () => {
-    // A localized content type splits its fields in two. The shared surface has
-    // no `title`, and the layout has to cope without knowing that.
+  it("ignores a name the form does not have", () => {
     renderLayout({ fieldNames: ["categoryId", "authorId"] });
 
     expect(screen.getByText("field:categoryId", { exact: false })).toBeTruthy();
     expect(screen.queryByText("field:title", { exact: false })).toBeNull();
-  });
-
-  it("explains itself on a locale tab", () => {
-    renderLayout({ fieldNames: ["title"], surface: "translation" });
-
-    expect(screen.getByText("settings.locale_desc")).toBeTruthy();
   });
 });

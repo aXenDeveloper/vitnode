@@ -860,7 +860,16 @@ export const buildContentSchemas = <TDefinition>({
         ? { status: z.enum(CONTENT_PUBLICATION_STATUSES).optional() }
         : {}),
     }),
-    form: z.object(inputShape(writableFields, admin.form.fields)),
+    // The declared form fields, narrowed to the ones this schema describes. A
+    // localized name is not dropped by accident: `admin.form.fields` covers one
+    // form, and this half of it is the base row - the translation schemas below
+    // build the other half from the same list.
+    form: z.object(
+      inputShape(
+        writableFields,
+        admin.form.fields.filter(name => writableFields[name] !== undefined),
+      ),
+    ),
     order: z.object({
       order: z.enum(["asc", "desc"]).optional(),
       orderBy: z.enum(orderable as [string, ...string[]]).optional(),

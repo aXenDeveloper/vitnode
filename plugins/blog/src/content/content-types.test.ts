@@ -45,16 +45,34 @@ describe("blog content types", () => {
       expect(blogCategoryContentType.fields.name.localized).toBe(true);
     });
 
-    it("has no shared title to guess at", () => {
+    it("names itself by the localized name, in the reader's language", () => {
       // Left undefined the engine would pick `color`, and "#3260c0 has been
-      // deleted" is not a sentence anybody wants to read.
-      expect(blogCategoryContentType.admin.titleField).toBeNull();
+      // deleted" is not a sentence anybody wants to read. `name` lives on the
+      // translation table, and the AdminCP resolves it per reader.
+      expect(blogCategoryContentType.admin.titleField).toBe("name");
     });
 
-    it("shows only shared columns in the list", () => {
+    it("leads the list with the name, in the reader's language", () => {
       expect(blogCategoryContentType.admin.list.columns).toEqual([
+        "name",
         "color",
         "updatedAt",
+      ]);
+    });
+
+    it("keeps the list sortable by shared columns only", () => {
+      // A localized column is one column on the *translation* table. Showing it
+      // is fine; ordering by it would reshuffle the list per reader and make one
+      // cursor mean two positions.
+      expect(blogCategoryContentType.admin.list.orderableFields).not.toContain(
+        "name",
+      );
+    });
+
+    it("puts the name and the colour in one form", () => {
+      expect(blogCategoryContentType.admin.form.fields).toEqual([
+        "color",
+        "name",
       ]);
     });
   });
@@ -110,6 +128,43 @@ describe("blog content types", () => {
 
     it("never exposes the author publicly", () => {
       expect(blogPostContentType.publicApi.fields).not.toContain("authorId");
+    });
+
+    it("names itself by the localized title, in the reader's language", () => {
+      expect(blogPostContentType.admin.titleField).toBe("title");
+    });
+
+    it("leads the list with the title, in the reader's language", () => {
+      expect(blogPostContentType.admin.list.columns[0]).toBe("title");
+    });
+
+    it("keeps the list sortable by shared columns only", () => {
+      expect(blogPostContentType.admin.list.orderableFields).not.toContain(
+        "title",
+      );
+    });
+
+    it("puts the localized and the shared fields in one form", () => {
+      // One screen: the title, the body and the URL carry their own language
+      // switchers, and the category and the author do not. Nothing here says
+      // which is which, and the layout does not have to either.
+      expect(blogPostContentType.admin.form.fields).toEqual([
+        "categoryId",
+        "authorId",
+        "title",
+        "friendlyUrl",
+        "content",
+      ]);
+    });
+
+    it("keeps the storage model: a base row plus a translation table", () => {
+      // The field-level language switchers change how localization is *edited*.
+      // Where it lives has not moved.
+      expect(blogPostContentType.localization.translationTableName).toBe(
+        "blog_posts_translations",
+      );
+      expect(blogPostContentType.fields.categoryId.localized).toBeFalsy();
+      expect(blogPostContentType.fields.authorId.localized).toBeFalsy();
     });
   });
 });

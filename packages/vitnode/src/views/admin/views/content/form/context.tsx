@@ -1,16 +1,23 @@
 // No "use client" here on purpose: this module is only reached from
-// `content-form` / `translation-panel`, which are already client entries.
+// `content-form`, which is already a client entry.
 // Declaring it again would make it a nested client entry, and `next/dynamic`
 // cannot resolve one from inside a published package.
 import React from "react";
 
-import type { ContentFormSurface } from "@/lib/plugin";
-
 export interface ContentFormContextValue {
-  /** Names in this surface, in declaration order. */
+  /** Every field of the form, in declaration order. */
   fieldNames: string[];
-  /** Every field of this surface, already rendered and keyed by name. */
+  /** Every field, already rendered and keyed by name. */
   fields: Record<string, React.ReactNode>;
+  /**
+   * Which of them hold one value per language.
+   *
+   * Informational, for a layout that wants to group or annotate them. A layout
+   * does **not** need it to place a field: a localized input renders its own
+   * language switcher, so `<ContentFormField name="title" />` works wherever it
+   * is put, whichever table the value ends up on.
+   */
+  localizedFieldNames: string[];
   /** Records what a layout actually placed, so nothing goes missing silently. */
   markRendered?: (name: string) => void;
   mode: "create" | "edit";
@@ -25,7 +32,6 @@ export interface ContentFormContextValue {
     publishedAt?: unknown;
     status?: unknown;
   };
-  surface: ContentFormSurface;
 }
 
 const ContentFormContext = React.createContext<ContentFormContextValue | null>(

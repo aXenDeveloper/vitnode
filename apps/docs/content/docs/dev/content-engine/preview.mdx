@@ -60,12 +60,15 @@ the honest default: linking to a page nobody has written yet would just be a
   you cast past it.
 </Callout>
 
-## `CONTENT_PREVIEW_SECRET` is required
+## `CONTENT_PREVIEW_SECRET` is optional
 
-**Preview does not work without one.** This single value is the entire
-authorization story - there is no session to fall back on - so a missing or
-guessable secret is not a warning, it is every draft on the site readable by
-anyone who has read the VitNode source.
+**Nothing requires it except preview.** Leave it unset and the API boots exactly
+as it would otherwise - an install that never sends anyone a draft link has no
+reason to hold a signing key, so this is not a deployment prerequisite. Set one
+when you want the feature, and set a real one: this single value is the entire
+authorization story - there is no session to fall back on - so a guessable secret
+is not a warning, it is every draft on the site readable by anyone who has read
+the VitNode source.
 
 ```bash
 openssl rand -base64 32
@@ -87,24 +90,19 @@ Anything else and preview **fails closed**, everywhere:
 
 | Where | What happens |
 | --- | --- |
-| Boot, in production | The API refuses to start, naming the content types that made it mandatory |
-| Boot, in development | A warning on stdout. The app starts; preview does not |
+| Boot, in every environment | A warning on stdout naming the content types that wanted it. The app starts; preview does not |
 | `POST /{id}/preview` | **503**, with a message that names the variable |
 | `GET /content/{path}/preview/{token}` | **404** - the same answer a forged token gets, so an anonymous request learns nothing about the deployment |
 | AdminCP → System → Integrations | `contentPreview.secure: false`, next to the same flag for `CRON_SECRET` |
 
-<Callout type="warn" title="Why development is different, and why it is still off">
-  Refusing to start `pnpm dev` over a missing secret would be rude. Serving
-  drafts to anyone who guesses a URL would be worse. So a development install
-  boots and preview simply does not work until you set one - and the 503 says
-  exactly that, rather than failing somewhere unhelpful.
-</Callout>
-
-<Callout type="info" title="`next build` is exempt">
-  Next imports every route module while collecting page data, so the API's boot
-  check runs on the build machine too - which has no business holding a runtime
-  signing key. The build logs the warning and carries on; the process that
-  actually serves requests still refuses to start.
+<Callout type="warn" title="Off, never open">
+  A missing secret switches preview *off*; it never switches it to unsigned.
+  Refusing to boot would turn one content type's opt-in feature into a
+  prerequisite for the entire API - and for `next build`, which imports every
+  route module and so runs this check on a machine that has no business holding a
+  runtime signing key. Honouring unsigned tokens would serve drafts to anyone who
+  guesses a URL. So the process starts, the warning says what is missing, and the
+  503 says it again to whoever clicks the button.
 </Callout>
 
 <Callout type="info" title="Rotating it is how you revoke">
@@ -151,9 +149,9 @@ host. Which origin it resolves against depends on where the link actually points
 
 Two different origins, deliberately: the page is served by the web app and the
 endpoint by the API, and assuming they share a host is exactly the assumption a
-split deployment breaks. Both are validated at boot when preview is enabled, so
-a malformed `NEXT_PUBLIC_WEB_URL` is a startup error rather than a broken link
-handed to a reviewer.
+split deployment breaks. Both are checked at boot when preview is enabled, so a
+malformed `NEXT_PUBLIC_WEB_URL` is a startup warning and a 503 rather than a
+broken link handed to a reviewer.
 
 `url` is built on the server, because only the definition knows whether this
 install has a preview page or should link at the JSON endpoint. The token is

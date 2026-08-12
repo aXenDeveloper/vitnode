@@ -47,8 +47,8 @@ generated one without friction.
 
 [`localization`](/docs/dev/content-engine/localization) generates the tables, the
 types, the schemas, the services, the per-locale lifecycle, the per-locale history
-and the AdminCP locale tabs. What it deliberately refuses is every combination
-whose *reading* half is not built yet:
+and the AdminCP's per-field language switchers. What it deliberately refuses is
+every combination whose *reading* half is not built yet:
 
 Nothing is refused any more.
 [Locale-aware public reads](/docs/dev/content-engine/localized-public-api) landed
@@ -75,17 +75,21 @@ positions depending on the language. Order by a column the record has one of.
 `filterableFields` and `searchableFields` *may* name a localized field: both are
 evaluated against the single translation the reader is being served.
 
-## Localized field names cannot appear on base-table surfaces
+## A localized field can be shown, but not queried
 
 A localized field has no column on the base table, so it cannot be an
-`admin.list` column, an `orderableFields` or `searchableFields` entry, a
-`form.fields` entry, `admin.titleField`, or part of an `indexes` declaration. All
-six are compile errors and runtime errors.
+`orderableFields` or `searchableFields` entry, `admin.list.defaultOrderBy`, part
+of an `indexes` declaration, or a key in `schemas.create`/`update`/`select`. All
+of those are SQL over the base row, and every one of them is a compile error and
+a runtime error.
 
-`admin.titleField` therefore falls back to `null` on a content type whose only
-text fields are localized. The locale tabs show the localized title inside each
-tab, and the list's language selector adds a column showing each record's title
-in the language being viewed.
+It *may* be an `admin.list` column, `admin.titleField` and an `admin.form.fields`
+entry, because those are presentation: the AdminCP resolves the value from the
+one translation it already loaded for the reader's own language.
+
+The practical consequence is that a localized column is **displayed but not
+sortable**. Nothing about the base-table ordering guarantees changes; there is
+simply no header control on that column.
 
 ## Foreign key names on a long translation table are truncated by Postgres
 

@@ -39,6 +39,7 @@ import { contentEditorialEffects } from "./editorial-effects";
 import { emitContentEvent } from "./emit";
 import { withHttpErrors } from "./http-errors";
 import { findContentLanguage } from "./language-resolver";
+import { buildContentLocalizedAdminRoutes } from "./localized-admin-routes";
 import {
   assertContentPreviewIsServable,
   contentPreviewSecret,
@@ -122,6 +123,15 @@ export const buildContentRoutes = <
       publishedAt: z.date().nullable().optional(),
       status: z.string().optional(),
       title: z.string(),
+      /**
+       * Every localized value of that translation.
+       *
+       * The list shows localized columns in the reader's own language, so the
+       * row it renders is the base row joined to one translation. Loose in its
+       * value type because the shape is the content type's own and this schema
+       * is generic over all of them.
+       */
+      values: z.record(z.string(), z.unknown()),
       version: z.number(),
     })
     .nullable();
@@ -379,6 +389,7 @@ export const buildContentRoutes = <
                 : typeof values[titleField] === "string"
                   ? values[titleField]
                   : "",
+            values,
             version: translation.version,
           },
         };
@@ -1377,7 +1388,12 @@ export const buildContentRoutes = <
     // Mounted under the same module and the same permissions, so a localized
     // content type gets its translation routes without a second registration.
     ...(definition.localization.enabled
-      ? buildContentTranslationRoutes(model, { pluginId })
+      ? [
+          ...buildContentTranslationRoutes(model, { pluginId }),
+          // The composite pair the AdminCP's single Save button posts to: one
+          // transaction across the base row and every language it changed.
+          ...buildContentLocalizedAdminRoutes(model, { pluginId }),
+        ]
       : []),
   ];
 };

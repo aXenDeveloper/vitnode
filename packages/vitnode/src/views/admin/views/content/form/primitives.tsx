@@ -1,5 +1,5 @@
 // No "use client": reached only from a layout, which is reached only from
-// `content-form` / `translation-panel` - both already client entries.
+// `content-form`, which is already a client entry.
 import { useTranslations } from "next-intl";
 import React from "react";
 

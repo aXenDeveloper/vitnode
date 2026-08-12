@@ -225,16 +225,20 @@ export const buildContentTranslationRoutes = <
       request: { params: model.schemas.params },
       responses: {
         200: jsonResponse(
-          z.object({ edges: z.array(translationSchemas.selectMeta) }),
-          "One entry per existing translation, without its values",
+          z.object({ edges: z.array(translationSchemas.select) }),
+          "One entry per existing translation, with its values",
         ),
         400: invalidIdentifier,
       },
     },
     handler: async c => {
-      // Metadata only. A locale strip needs to know which languages exist and
-      // how stale each one is; the detail route loads a body when a tab opens.
-      const edges = await translations(c).findManyForItem(identifier(c));
+      // Every language of one record, in one query. The AdminCP edit form's
+      // localized inputs each carry their own language switcher, so they need the
+      // whole set up front - reading it locale by locale would be one round trip
+      // per language to open one record. Additive to the metadata this route has
+      // always returned, so a client that only reads `version` and `status` is
+      // unaffected.
+      const edges = await translations(c).findManyRowsForItem(identifier(c));
 
       return c.json({ edges }, 200);
     },

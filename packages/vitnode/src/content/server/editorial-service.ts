@@ -83,6 +83,17 @@ export interface ContentEditorialOutcome<TDefinition> {
    * one - so the outcome those produce is byte-identical to what it always was.
    */
   delivery?: ContentDeliveryOutcome;
+  /**
+   * How many of this record's languages this transition moved, or absent.
+   *
+   * Only a localized `publish`/`unpublish` sets it, and it is deliberately
+   * separate from `changed`, which describes the base row. The two disagree in
+   * the case worth naming: a record whose base row was already published but
+   * whose languages were not moves no base column and still puts pages on the
+   * internet, so an effects layer that read `changed` alone would skip the
+   * search and sitemap work that publish just created.
+   */
+  movedTranslations?: number;
   operation: ContentRevisionOperation;
   /** The slug the record answered to *before* this mutation, if it has one. */
   previousSlug: null | string;
@@ -269,6 +280,7 @@ export const createContentEditorialService = <
 >({
   advanced,
   c,
+  cascadeTranslations,
   columns,
   definition,
   pluginId,
@@ -278,6 +290,31 @@ export const createContentEditorialService = <
   /** The collection store, or nothing for a content type that declares none. */
   advanced?: ContentAdvancedStore;
   c: Context;
+  /**
+   * Moves every language of one record with the record, for a localized content
+   * type. Supplied by the model, which is the one place that can build the
+   * translation editorial layer without a circular construction.
+   *
+   * A callback rather than the translation table itself, because a language going
+   * live is not just two columns: it takes a revision and a delivery reservation,
+   * and the translation editorial service is what owns both. It is handed this
+   * transaction, so the record and its languages move together or not at all.
+   *
+   * Returns how many languages it actually moved, which the outcome reports as
+   * `movedTranslations`: an idempotent base transition can still move languages,
+   * and the effects layer has to know that.
+   *
+   * Absent for a content type without localization, which has no languages to
+   * move.
+   */
+  cascadeTranslations?:
+    | ((options: {
+        actor: ContentActor;
+        itemId: number;
+        operation: "publish" | "unpublish";
+        tx: ContentDatabase;
+      }) => Promise<number>)
+    | null;
   columns: Record<string, PgColumn>;
   definition: TDefinition;
   pluginId: string;
@@ -575,11 +612,43 @@ export const createContentEditorialService = <
   };
 
   /**
+   * Moves every language of one record with the record itself.
+   *
+   * Publishing an article means the article is published - in the languages it
+   * has. Before this, a record's publish moved only the base row, so a localized
+   * record stayed unreachable in every language and unindexed by search until each
+   * translation was published separately: the AdminCP said "published" and the
+   * canonical URL said "not published", and both were telling the truth about
+   * different rows.
+   *
+   * Each language goes through the translation editorial layer rather than through
+   * one bulk `UPDATE`, in this transaction. Two columns would be the wrong shortcut
+   * twice over: a published language needs its delivery address reserved, or it is
+   * marked published and still resolves nowhere, and its history should say when it
+   * went out. Those transitions are guarded on state, so a language already in the
+   * requested state is untouched and a republish stays a no-op for it.
+   */
+  const cascade = async (
+    tx: ContentDatabase,
+    itemId: number,
+    operation: "publish" | "unpublish",
+    actor: ContentActor,
+  ): Promise<number> => {
+    if (!cascadeTranslations) return 0;
+    if (!definition.publication.enabled) return 0;
+
+    return await cascadeTranslations({ actor, itemId, operation, tx });
+  };
+
+  /**
    * Publish and unpublish, which guard on the *state* rather than the version.
    *
    * The state guard is what makes them idempotent, and idempotency is what makes
    * a retried queue task harmless. An `expectedVersion`, when supplied, is
    * `AND`ed on top rather than replacing it.
+   *
+   * A localized record moves its translations with it - see
+   * `cascadeTranslations`.
    */
   const transition = async (
     id: number,
@@ -618,6 +687,15 @@ export const createContentEditorialService = <
           });
         }
 
+        // The base row was already where it was asked to be - but its languages
+        // may not be, and this is the only request that can say so. A record
+        // published before publishing meant "publish the languages too" has a
+        // published base row and draft translations, and nothing else would ever
+        // reconcile them: the transition is guarded on the base row, so it would
+        // short-circuit here for ever. Publishing means "make this published",
+        // and each language's own guard keeps it a no-op once it is.
+        const moved = await cascade(tx, id, operation, options.actor);
+
         return {
           changed: false,
           changedFields: [],
@@ -625,10 +703,20 @@ export const createContentEditorialService = <
           previousSlug: slugOf(current),
           restoredFromRevisionId: null,
           revisionId: null,
+          // `changed` describes the base row, which did not move. The languages
+          // that did are reported separately, so a caller can invalidate what it
+          // has to: an idempotent transition that nonetheless published three
+          // languages is not a no-op for search or for the sitemap.
+          ...(moved === 0 ? {} : { movedTranslations: moved }),
           row: toRow(current),
           version: versionOf(current),
         };
       }
+
+      // After the base row moves and before this record's own revision, so each
+      // language's delivery reservation is taken against a record that is already
+      // publicly visible: a localized address is only public when both halves are.
+      const moved = await cascade(tx, id, operation, options.actor);
 
       const version = versionOf(row);
       const revisionId = await capture(tx, {
@@ -653,6 +741,7 @@ export const createContentEditorialService = <
         changed: true,
         changedFields: [],
         ...(delivery === undefined ? {} : { delivery }),
+        ...(moved === 0 ? {} : { movedTranslations: moved }),
         operation,
         previousSlug: slugOf(row),
         restoredFromRevisionId: null,

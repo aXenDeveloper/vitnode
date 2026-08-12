@@ -153,16 +153,30 @@ describe("resolved localization defaults", () => {
     expect(columns).not.toContain("title");
   });
 
-  it("defaults the admin surfaces to the shared fields only", () => {
+  it("puts every field on one form, localized or not", () => {
     const { admin } = testLocalizedNoteContentType;
 
-    expect(admin.form.fields).toEqual(["pinned"]);
+    // One form, in declaration order. A localized input renders its own language
+    // switcher, so there is nothing for a second surface to hold.
+    expect(admin.form.fields).toEqual(["heading", "slug", "pinned"]);
+  });
+
+  it("defaults the list and the query surfaces to shared columns only", () => {
+    const { admin } = testLocalizedNoteContentType;
+
+    // A localized field is one column on the *translation* table. Showing it is
+    // a display decision the author opts into; ordering, filtering and searching
+    // are SQL on the base table and stay shared-only.
     expect(admin.list.columns).toEqual(["pinned", "updatedAt"]);
     expect(admin.list.searchableFields).toEqual([]);
-    // The only text field is localized, so there is no shared title to fall
-    // back to - and inventing one would make a toast depend on the reader's
-    // locale.
-    expect(admin.titleField).toBeNull();
+    expect(admin.list.orderableFields).toEqual([]);
+  });
+
+  it("falls back to a localized title rather than to none at all", () => {
+    // Every text field here is localized, so there is no shared title. The
+    // AdminCP resolves this one in whichever language the reader is using, which
+    // is a name where the alternative was `#123`.
+    expect(testLocalizedNoteContentType.admin.titleField).toBe("heading");
   });
 });
 
@@ -311,15 +325,42 @@ describe("localization validation", () => {
     ).toThrow(/which is not a field on this content type/);
   });
 
-  it("rejects a localized field named in the admin list", () => {
-    expect(() =>
+  it("shows a localized field in the admin list", () => {
+    // A cell renders a value; it does not order or filter by one. The list
+    // resolves the reader's own language for the whole page in one query, so a
+    // localized column costs nothing per row.
+    expect(
       localized({
         admin: {
           label: { plural: "Subjects", singular: "Subject" },
           list: { columns: ["title"] },
         },
+      }).admin.list.columns,
+    ).toEqual(["title"]);
+  });
+
+  it("still refuses to order by a localized field", () => {
+    // The line that has not moved: `orderBy` is SQL on the base table, and a
+    // list ordered per language would make one cursor mean two positions.
+    expect(() =>
+      localized({
+        admin: {
+          label: { plural: "Subjects", singular: "Subject" },
+          list: { orderableFields: ["title"] },
+        },
       }),
-    ).toThrow(/admin.list.columns names the localized field "title"/);
+    ).toThrow(/admin.list.orderableFields names the localized field "title"/);
+  });
+
+  it("still refuses to search a localized field from the admin list", () => {
+    expect(() =>
+      localized({
+        admin: {
+          label: { plural: "Subjects", singular: "Subject" },
+          list: { searchableFields: ["title"] },
+        },
+      }),
+    ).toThrow(/admin.list.searchableFields names the localized field "title"/);
   });
 
   it("rejects a localized field named in an index", () => {

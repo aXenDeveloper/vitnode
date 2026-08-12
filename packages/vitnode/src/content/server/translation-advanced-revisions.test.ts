@@ -111,6 +111,7 @@ const translations = () => {
     findByLanguageId: vi.fn(),
     findByLocale: vi.fn(),
     findManyForItem: vi.fn(),
+    findManyRowsForItem: vi.fn().mockResolvedValue([]),
     publish: vi.fn(),
     resolveDefaultLanguage: vi.fn(),
     resolveLanguage: vi.fn((locale: string) => ({

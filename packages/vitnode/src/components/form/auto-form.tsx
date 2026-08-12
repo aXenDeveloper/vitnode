@@ -65,6 +65,15 @@ export interface ItemAutoFormComponentProps {
   itemParams?: InputParams;
   label?: React.ReactNode;
   labelRight?: React.ReactNode;
+  /**
+   * Whether this field holds one value per language.
+   *
+   * Set by whoever builds the field list - the Content Engine reads it off
+   * `localized: true` - so a custom component can pass it straight through to
+   * `AutoFormInput`, `AutoFormTextarea` or `AutoFormEditor` and get the language
+   * switcher without knowing why the field has one.
+   */
+  multiLang?: boolean;
   otherProps: {
     ["aria-invalid"]?: boolean;
     enum?: string[];

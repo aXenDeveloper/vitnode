@@ -178,6 +178,19 @@ export interface ContentTranslationModel<TDefinition> {
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationMeta<TDefinition>[]>;
   /**
+   * Every translation of one record, values included, in **one** query.
+   *
+   * What the AdminCP edit form opens on. A form whose localized inputs each carry
+   * their own language switcher needs every language at once, and reading them
+   * one locale at a time would mean nine round trips to open one article. The
+   * language registry is read once for the whole set, exactly as
+   * {@link ContentTranslationModel.findManyForItem} does.
+   */
+  findManyRowsForItem: (
+    itemId: number,
+    options?: ContentTranslationOptions,
+  ) => Promise<ContentTranslationRow<TDefinition>[]>;
+  /**
    * Marks one translation published, idempotently.
    *
    * `null` when there is no such translation. `changed: false` when it was
@@ -694,6 +707,20 @@ export const createContentTranslationModel = <
 
       return rows.map(row =>
         toMeta(row, languages.get(row.languageId as number)?.locale ?? ""),
+      );
+    },
+
+    findManyRowsForItem: async (itemId, options) => {
+      const rows = await db(options)
+        .select(fullSelection())
+        .from(translationTable)
+        .where(eq(itemColumn, itemId))
+        .orderBy(asc(languageColumn));
+
+      const languages = await listContentLanguagesById(c, options?.tx);
+
+      return rows.map(row =>
+        toRow(row, languages.get(row.languageId as number)?.locale ?? ""),
       );
     },
 

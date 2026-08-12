@@ -34,8 +34,7 @@
         "form": {
           "publish": "Publish",
           "settings": {
-            "title": "Article settings",
-            "locale_desc": "The address and metadata of this language's version."
+            "title": "Article settings"
           }
         }
       },

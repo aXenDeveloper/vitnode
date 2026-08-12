@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 
 import { describe, expect, it, vi } from "vitest";
 
+import type { ContentColumnSpec } from "@/content/admin/spec";
 import type { AnyContentTypeDefinition } from "@/content/types";
 
 import {
@@ -11,10 +12,20 @@ import {
   testPostContentType,
 } from "@/tests/content-fixtures";
 
+import { contentCellValue } from "./cells";
+
 // Reached through the server actions the row buttons import.
 vi.mock("server-only", () => ({}));
 
 vi.mock("next-intl/server", () => ({
+  // The language this person reads VitNode in. The list takes its display
+  // language from here - there is no selector above the table and no
+  // `?locale=` for one to write.
+  getLocale: async () => {
+    await Promise.resolve();
+
+    return "pl";
+  },
   getTranslations: async () => {
     await Promise.resolve();
 
@@ -32,11 +43,16 @@ vi.mock("@/lib/navigation", () => ({
   useRouter: () => ({ push: () => undefined, refresh: () => undefined }),
 }));
 
-vi.mock("@/content/admin/fetch.server", () => ({
-  contentApiFetch: async () => {
-    await Promise.resolve();
+/** Every query the view sent, so the resolved locale can be asserted on. */
+const fetchCalls: { query?: Record<string, unknown> }[] = [];
+const fetchResult: unknown = { status: 200 };
 
-    return { status: 200 };
+vi.mock("@/content/admin/fetch.server", () => ({
+  contentApiFetch: async (args: { query?: Record<string, unknown> }) => {
+    await Promise.resolve();
+    fetchCalls.push(args);
+
+    return fetchResult;
   },
 }));
 
@@ -51,32 +67,24 @@ const { DeleteContentAction } = await import("../actions/delete-action");
  * button rather than as an error.
  */
 /**
- * The rendered `DataTable`, whichever wrapper it came back inside.
+ * The rendered `DataTable`.
  *
- * The view returns a fragment - a localized content type gets a locale selector
- * above the table - so the table is found rather than assumed to be the root.
+ * The view returns it directly now: there is nothing above the table for a
+ * localized content type, because the language is the one the reader is already
+ * using.
  */
-const dataTable = <TProps,>(element: ReactElement): ReactElement<TProps> => {
-  const children = (element.props as { children?: unknown }).children;
-  if (children === undefined) return element as ReactElement<TProps>;
-
-  const found = (Array.isArray(children) ? children : [children]).find(
-    child =>
-      child !== null &&
-      typeof child === "object" &&
-      "props" in child &&
-      "columns" in (child as ReactElement<Record<string, unknown>>).props,
-  );
-
-  return (found ?? element) as ReactElement<TProps>;
-};
+const dataTable = <TProps,>(element: ReactElement): ReactElement<TProps> =>
+  element as ReactElement<TProps>;
 
 const render = async (
   definition: AnyContentTypeDefinition,
   searchParams: Record<string, string | string[] | undefined> = {},
-) =>
-  (await ContentTableView({
-    columnSpecs: [],
+  columnSpecs: ContentColumnSpec[] = [],
+) => {
+  fetchCalls.length = 0;
+
+  return (await ContentTableView({
+    columnSpecs,
     entry: {
       definition,
       pluginId: "@vitnode/example",
@@ -84,8 +92,8 @@ const render = async (
     } as never,
     formSpec: {} as never,
     searchParams,
-    translationSpec: null,
   })) as ReactElement;
+};
 
 const orderProp = async (definition: AnyContentTypeDefinition) =>
   dataTable<{ order: { columns: string[]; defaultOrder: { column: string } } }>(
@@ -194,44 +202,84 @@ describe("sortable columns", () => {
   });
 });
 
-describe("the locale selector", () => {
+describe("the display language", () => {
   const columns = async (
     definition: AnyContentTypeDefinition,
     searchParams: Record<string, string | string[] | undefined> = {},
+    columnSpecs: ContentColumnSpec[] = [],
   ) =>
     dataTable<{ columns: { id?: string }[] }>(
-      await render(definition, searchParams),
+      await render(definition, searchParams, columnSpecs),
     ).props.columns;
 
-  it("adds no translation column without a language", async () => {
-    // The list is unchanged until somebody picks one. `Shared` is a real choice,
-    // not a fallback state.
+  it("reads the reader's own locale, with nothing above the table to pick it", async () => {
+    await render(testLocalizedPageContentType);
+
+    // `getLocale()` is `pl` in this suite. The list asks the API for Polish
+    // without anybody choosing it, because the person is already reading Polish.
+    expect(fetchCalls.at(-1)?.query).toMatchObject({ locale: "pl" });
+  });
+
+  it("keeps pagination and search working alongside it", async () => {
+    await render(testLocalizedPageContentType, {
+      cursor: "42",
+      search: "hello",
+    });
+
+    expect(fetchCalls.at(-1)?.query).toMatchObject({
+      cursor: "42",
+      locale: "pl",
+      search: "hello",
+    });
+  });
+
+  it("ignores a stale `?locale=` rather than letting it disagree with the page", async () => {
+    // A bookmark from the old selector must not put the table in one language
+    // while the rest of the AdminCP is in another.
+    await render(testLocalizedPageContentType, { locale: "en" });
+
+    expect(fetchCalls.at(-1)?.query).toMatchObject({ locale: "pl" });
+  });
+
+  it("asks for no locale at all when the content type has no translations", async () => {
+    await render(testEditorialPostContentType);
+
+    expect(fetchCalls.at(-1)?.query).not.toHaveProperty("locale");
+  });
+
+  it("adds no separate translation column", async () => {
+    // The old UX bolted a `Polish translation` column beside the shared ones.
+    // A localized value is now shown in its own column, in the reader's
+    // language, like any other.
     expect(
       (await columns(testLocalizedPageContentType)).map(column => column.id),
     ).not.toContain("translation");
   });
 
-  it("adds one when a language is selected", async () => {
-    expect(
-      (await columns(testLocalizedPageContentType, { locale: "pl" })).map(
-        column => column.id,
-      ),
-    ).toContain("translation");
-  });
-
-  it("puts it first, because it is what the person came to read", async () => {
-    const [first] = await columns(testLocalizedPageContentType, {
-      locale: "pl",
+  it("shows a localized column from the row's own translation", async () => {
+    const [first] = await columns(testLocalizedPageContentType, {}, [
+      { kind: "text", label: "Title", localized: true, name: "title" },
+    ]);
+    const cell = (
+      first as unknown as {
+        cell: (context: { row: Record<string, unknown> }) => ReactElement;
+      }
+    ).cell({
+      row: {
+        id: 3,
+        labels: {},
+        translation: { locale: "pl", values: { title: "Witaj" } },
+      },
     });
+    const props = cell.props as {
+      row: Record<string, unknown>;
+      spec: ContentColumnSpec;
+    };
 
-    expect(first.id).toBe("translation");
-  });
-
-  it("adds nothing to a content type that is not localized", async () => {
-    expect(
-      (await columns(testEditorialPostContentType, { locale: "pl" })).map(
-        column => column.id,
-      ),
-    ).not.toContain("translation");
+    // The cell is handed the row *and* the localized spec, and reads the value
+    // off the translation the list already resolved - one query for the page,
+    // not one per row.
+    expect(props.spec.localized).toBe(true);
+    expect(contentCellValue(props.row as never, props.spec)).toBe("Witaj");
   });
 });

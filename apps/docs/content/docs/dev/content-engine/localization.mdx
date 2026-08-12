@@ -144,20 +144,27 @@ What lands where:
 | Every shared field | Every localized field |
 | | `version`, `createdAt`, `updatedAt` |
 
-A localized field is **not** a column on the base table, which has consequences
-worth knowing up front:
+A localized field is **not** a column on the base table, and the engine draws a
+line between *showing* one and *querying* one.
 
-- it cannot appear in `admin.list.columns`, `orderableFields`, `searchableFields`
-  or `form.fields`,
-- it cannot be `admin.titleField`,
-- it cannot appear in `indexes`,
-- it is absent from `schemas.create`, `schemas.update` and `schemas.select`.
+**Showing is fine.** A localized field may appear in `admin.list.columns`, may be
+`admin.titleField`, and always appears in `admin.form.fields`. The AdminCP
+resolves it in the language the reader is already using VitNode in, and its form
+input carries its own language switcher - see
+[Localized editing](/docs/dev/content-engine/translation-editorial).
 
-All five are compile errors *and* runtime errors: there is nowhere on the base
-form or in a base-table query for them to go, and a silently-dropped title is
-worse than a refused definition. Localized values have their own AdminCP surface -
-the [locale tabs](/docs/dev/content-engine/translation-editorial) in the edit
-dialog, and the language selector on the list.
+**Querying is not.** A localized field cannot appear in:
+
+- `admin.list.orderableFields` or `admin.list.searchableFields`,
+- `admin.list.defaultOrderBy`,
+- `indexes`,
+- `schemas.create`, `schemas.update` or `schemas.select`.
+
+Those are all SQL over the base table, and the value is not there. A list ordered
+by a per-language title would reshuffle itself for every reader and make one
+cursor mean two positions at once. Each of them is a compile error *and* a
+runtime error, because a silently-dropped ordering is worse than a refused
+definition.
 
 ## Optimistic locking per locale
 
@@ -199,9 +206,14 @@ const { row, translation } = await localizedService.create({
 ```
 
 Either both exist or neither does. That invariant is what every later stage leans
-on - a record always resolves in at least one language, so a locale tab strip
-always has something to show and a public read always has something to fall back
-to.
+on - a record always resolves in at least one language, so the AdminCP always has
+something to show and a public read always has something to fall back to.
+
+`localization.defaultLocale` is a **storage and fallback** rule, not a display
+one. It decides which translation must exist, and which one a public reader falls
+back to. It does not decide which language an editor sees first: that is their
+own VitNode language. See [Localized
+editing](/docs/dev/content-engine/translation-editorial#two-different-languages).
 
 Two rules protect it:
 
@@ -313,9 +325,9 @@ answer to the same slug.
 | Stage | What it adds |
 | --- | --- |
 | **5A** | Tables, types, schemas, language resolution, translation service, per-locale locking, atomic create, routes, migrations |
-| **5B** | Per-locale publication, per-locale revisions and restore, locale-bound preview tokens, translation events, `can_translate`, AdminCP locale tabs |
+| **5B** | Per-locale publication, per-locale revisions and restore, locale-bound preview tokens, translation events, `can_translate`, per-field language switchers in the AdminCP |
 | **5C** | Locale-aware public API, locale precedence, fallback resolution, strict-locale slugs, locale-aware cache tags, locale preview links |
-| **5D** (this one) | Per-locale search documents, the localized rebuild, per-language diagnostics, the AdminCP list language selector |
+| **5D** (this one) | Per-locale search documents, the localized rebuild, per-language diagnostics, the AdminCP list in the reader's own language |
 
 Explicitly outside all four: locale-specific relations, localized media, AI
 translation, translation memory, external TMS integration, `hreflang` and sitemap
@@ -327,7 +339,7 @@ Content Engine.
 - [Localized fields](/docs/dev/content-engine/localized-fields) - which kinds, and why the others are refused
 - [Translation tables](/docs/dev/content-engine/translation-tables) - the generated schema, keys and indexes
 - [Translation service](/docs/dev/content-engine/translation-service) - every method, and every conflict it can raise
-- [Translation lifecycle](/docs/dev/content-engine/translation-editorial) - per-locale publish, the subordination rule, permissions and the locale tabs
+- [Localized editing](/docs/dev/content-engine/translation-editorial) - the AdminCP's per-field language switchers, per-locale publish, the subordination rule and permissions
 - [Translation revisions](/docs/dev/content-engine/translation-revisions) - one history per language, and what a restore may not cross
 - [Locale preview](/docs/dev/content-engine/translation-preview) - freezing one language, both halves of it
 - [Localization migrations](/docs/dev/content-engine/localization-migrations) - the generated migration, and how to localize an existing content type safely

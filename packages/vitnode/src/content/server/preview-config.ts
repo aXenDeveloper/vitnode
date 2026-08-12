@@ -6,7 +6,6 @@ import {
   INSECURE_DEFAULT_CONTENT_PREVIEW_SECRET,
   isSecureContentPreviewSecret,
 } from "../../lib/config";
-import { ContentEngineError } from "../errors";
 
 /**
  * The sentence a person needs to fix an unusable preview secret.
@@ -65,40 +64,29 @@ const HOW_TO_FIX =
   "Generate one with `openssl rand -base64 32` (or `node -e \"console.log(require('node:crypto').randomBytes(32).toString('base64'))\"`) and set it on every process that serves the API.";
 
 /**
- * Whether this process is `next build` collecting page data rather than a
- * server about to answer requests.
- *
- * Next imports every route module during a production build, so the API's boot
- * code runs there too - and a build machine has no business holding a runtime
- * signing secret. Failing the build would push every install to bake its
- * secrets into an image, which is a worse outcome than the one being prevented.
- * The serving process still refuses to start, which is where it matters.
- */
-const isBuildPhase = (): boolean =>
-  process.env.NEXT_PHASE === "phase-production-build";
-
-/**
- * Refuses to boot a production install whose preview links would be forgeable.
+ * Says, at boot, that this install has preview enabled but cannot serve it.
  *
  * Called once, after every plugin's content types are known, because "is
  * preview enabled anywhere" is not answerable before that. An install with no
- * previewable content type is unaffected - there is nothing to sign.
+ * previewable content type is silent - there is nothing to sign.
  *
- * **Production refuses to start; development starts with preview switched
- * off.** The reasoning is the same in both cases and only the blast radius
- * differs: a signature is the *entire* access control on a preview link, so a
- * well-known secret is not a warning, it is unpublished content served to
- * anyone who reads the VitNode source. Failing at deploy time is far kinder
- * than shipping a feature that quietly hands drafts out; failing at `pnpm dev`
- * time would be rude, so there the routes fail closed instead and say why.
+ * **A warning in every environment, fatal in none.**
+ * `CONTENT_PREVIEW_SECRET` is optional: an install that never sends anyone a
+ * preview link has no reason to hold a signing key, and refusing to boot would
+ * turn one content type's opt-in feature into a deployment prerequisite for the
+ * entire API - on the build machine too, which has no business holding a runtime
+ * secret. What switches off is preview, and it switches off completely: minting
+ * a link answers 503 naming the variable, reading one answers the same 404 a
+ * forged token gets, and the integrations panel flags the install as insecure.
+ *
+ * Loud rather than silent, though, because the alternative symptom is a 503 from
+ * a button somebody clicks three days later.
  */
-export const assertContentPreviewConfig = ({
+export const warnAboutContentPreviewConfig = ({
   contentTypes,
-  isProduction = process.env.NODE_ENV === "production" && !isBuildPhase(),
   secret,
 }: {
   contentTypes: RegisteredContentType[];
-  isProduction?: boolean;
   secret: null | string | undefined;
 }): void => {
   const previewable = contentTypes.filter(
@@ -110,15 +98,9 @@ export const assertContentPreviewConfig = ({
   if (problems.length === 0) return;
 
   const names = previewable.map(entry => entry.definition.id).join(", ");
-  const message = `${names} ${previewable.length === 1 ? "has" : "have"} \`editorial.preview\` enabled, but preview is not safe to serve: ${problems.join(" ")} ${HOW_TO_FIX}`;
 
-  if (isProduction) throw new ContentEngineError(message);
-
-  // Not fatal outside a serving production process, but not silent either:
-  // without this the only symptom is a 503 from a button somebody clicks three
-  // days later.
   // eslint-disable-next-line no-console
   console.warn(
-    `[Content Engine] ${message} Preview stays disabled until then.`,
+    `[Content Engine] ${names} ${previewable.length === 1 ? "has" : "have"} \`editorial.preview\` enabled, but preview is not safe to serve: ${problems.join(" ")} ${HOW_TO_FIX} Preview stays disabled until then.`,
   );
 };

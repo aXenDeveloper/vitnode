@@ -214,8 +214,8 @@ Five distinct outcomes, because a client that cannot tell them apart can only sh
 | Deleting the default translation | `409` | `CONTENT_DEFAULT_TRANSLATION_REQUIRED` |
 | A localized slug is taken **in this language** | `409` | `CONTENT_TRANSLATION_UNIQUE_CONFLICT` |
 
-The version conflict names the locale, which is the one thing a locale tab strip
-has to know to reload the right tab:
+The version conflict names the locale, which is the one thing the AdminCP needs to
+say *which language* somebody else saved:
 
 ```json
 {

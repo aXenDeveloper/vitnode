@@ -48,9 +48,9 @@ export const integrationsDebugAdminRoute = buildRoute({
                 // How many content types can mint preview links.
                 contentTypes: z.number(),
                 // `false` when `CONTENT_PREVIEW_SECRET` is missing, left at its
-                // well-known default, or too short to be a signing key. Preview
-                // does not merely warn in that state - it refuses to serve, and
-                // a production boot fails outright.
+                // well-known default, or too short to be a signing key. The
+                // variable is optional and the API boots without it, but preview
+                // does not merely warn in that state - it refuses to serve.
                 secure: z.boolean(),
               }),
               cron: z.object({

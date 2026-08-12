@@ -34,6 +34,9 @@ You get a nav item, a breadcrumb, and a screen at:
   ([below](#dialog-or-page))
 - **Delete** - a confirmation dialog
 - **History** - with [`editorial`](#editorial): every version, a diff, and restore
+- **Languages** - with [`localization`](/docs/dev/content-engine/translation-editorial):
+  the list and the form open in *your* VitNode language, and each translated
+  field carries its own switcher ([below](#localized-content-types))
 - **Empty, loading and error states** - out of the box
 
 ## What "lazy-loaded on open" actually means
@@ -359,3 +362,32 @@ type's own `can_view`.
 The page checks `can_view` server-side and 404s without it. The create, edit and
 delete controls check their own permissions client-side - and the routes behind
 them check again, which is the check that actually matters.
+
+## Localized content types
+
+A localized content type gets **no extra screen and no extra control**. There is
+no `Shared | English | Polish` strip and no locale in the URL:
+
+- the **list** shows each record in the language you are reading VitNode in, and
+  `Missing` where a translation does not exist yet;
+- the **form** shows every field at once, and each localized one carries its own
+  small language switcher:
+
+```text
+Title          [ Tytuł artykułu   ] [ PL ▾ ]
+Content        [ Treść…           ] [ PL ▾ ]
+Friendly URL   [ tytul-artykulu   ] [ PL ▾ ]
+Category         Aktualności
+Author           Maciej
+```
+
+Switching `Title` to English leaves the others in Polish - there is no
+form-global language. One Save writes the base row and every changed language in
+one transaction.
+
+Per-language status, publication, history and delete live in a separate
+**Languages** row action, because the language is part of *that* decision rather
+than a mode the whole screen is in.
+
+The whole thing is described in [Localized
+editing](/docs/dev/content-engine/translation-editorial#the-admincp).

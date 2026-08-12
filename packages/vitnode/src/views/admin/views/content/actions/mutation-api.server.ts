@@ -9,6 +9,7 @@ import type {
   ContentConflict,
   ContentDeliveryConflict,
   ContentScheduleRejection,
+  ContentTranslationConflict,
   ContentUnprocessable,
 } from "@/content/conflicts";
 import type { ContentInvalidationMode } from "@/content/next/revalidate.server";
@@ -29,10 +30,13 @@ import {
   parseContentConflict,
   parseContentDeliveryConflict,
   parseContentScheduleRejection,
+  parseContentTranslationConflict,
   parseContentUnprocessable,
 } from "@/content/conflicts";
 import { CONTENT_OPTIONS_LIMIT } from "@/content/const";
 import { revalidateContent } from "@/content/next/revalidate.server";
+
+import type { TranslationRow } from "./translation-api.server";
 
 import {
   invalidateContentLocales,
@@ -76,6 +80,22 @@ interface MutationResult {
   rejection?: ContentScheduleRejection;
   /** Lets the UI tell a restricted delete (409) from a generic failure. */
   status?: number;
+  /**
+   * The same, for the language half of a composite save.
+   *
+   * Its own field rather than a second arm of `conflict`, because the two need
+   * different words and point at different things: one says the record moved,
+   * the other says one language of it did - and names which.
+   */
+  translationConflict?: ContentTranslationConflict;
+  /**
+   * Every translation as it stands **after** a composite save.
+   *
+   * The form keeps editing after a page-mode save, and its next save needs each
+   * language's new version - reusing the ones it opened with would lose to the
+   * write it just made.
+   */
+  translations?: TranslationRow[];
   /** `CONTENT_REVISION_NOT_RESTORABLE`, naming the fields that no longer fit. */
   unprocessable?: ContentUnprocessable;
 }
@@ -90,6 +110,8 @@ const failure = (result: {
   error: result.error ?? "",
   rejection: parseContentScheduleRejection(result.error) ?? undefined,
   status: result.status,
+  translationConflict:
+    parseContentTranslationConflict(result.error) ?? undefined,
   unprocessable: parseContentUnprocessable(result.error) ?? undefined,
 });
 
@@ -354,6 +376,136 @@ export const editContentAction = async (
   });
 
   return {};
+};
+
+/** One language's half of a composite save, as the form assembled it. */
+export interface ContentTranslationInput {
+  /** Absent when this language had no translation when the form opened. */
+  expectedVersion?: number;
+  locale: string;
+  values: Record<string, unknown>;
+}
+
+/**
+ * Reads every translation back after a composite save.
+ *
+ * One request for the whole set, so a form that stays open (page mode) holds the
+ * versions the next save has to send. Failing quietly is right here: the write
+ * has committed, and a stale version only costs one conflict banner.
+ */
+const readTranslations = async (
+  definition: AnyContentTypeDefinition,
+  pluginId: string,
+  id: number,
+): Promise<TranslationRow[]> => {
+  const result = await contentApiFetch({
+    definition,
+    method: "get",
+    path: `/${id}/translations`,
+    pluginId,
+    schema: z.object({
+      edges: z.array(z.object({ locale: z.string() }).loose()),
+    }),
+  });
+
+  return (result.data?.edges ?? []) as unknown as TranslationRow[];
+};
+
+/**
+ * Creates a record **and** its translations, in one transaction.
+ *
+ * The AdminCP form has one Save button and no locale of its own, so the values
+ * of every language the editor typed into arrive together. The invariant the
+ * engine has always had is unchanged and enforced server-side: a record exists
+ * in at least its default language or it does not exist at all - which is why
+ * this is one route and not a create followed by N translation writes that could
+ * each fail on their own.
+ */
+export const createLocalizedContentAction = async (
+  contentTypeId: string,
+  values: Record<string, unknown>,
+  translations: ContentTranslationInput[],
+): Promise<MutationResult> => {
+  const { definition, pluginId } = resolve(contentTypeId);
+
+  const result = await contentApiFetch({
+    body: { translations, values },
+    definition,
+    method: "post",
+    path: "/localized",
+    pluginId,
+    schema: zodRow,
+  });
+
+  if (result.status !== 201) return failure(result);
+
+  revalidatePath(CONTENT_PAGE_PATH, "page");
+  const created = result.data?.id ?? 0;
+  invalidate(definition, created, undefined, result.data, {
+    after: await readContentPublicLocales(definition, pluginId, created),
+    before: [],
+  });
+
+  return {
+    id: created,
+    translations: await readTranslations(definition, pluginId, created),
+  };
+};
+
+/**
+ * Saves the shared fields and every changed language, in one transaction.
+ *
+ * `values` is `undefined` when no shared field moved, and a language appears
+ * only when something in it moved - so a Polish-only edit bumps the Polish
+ * version and nothing else: no base revision, no English event, no English cache
+ * expiry. Each entry carries the version it was loaded at, so two translators in
+ * two languages never contend, and a stale one is refused for that language
+ * *before anything commits*.
+ */
+export const editLocalizedContentAction = async (
+  contentTypeId: string,
+  id: number,
+  values: Record<string, unknown> | undefined,
+  translations: ContentTranslationInput[],
+  expectedVersion?: number,
+): Promise<MutationResult> => {
+  const { definition, pluginId } = resolve(contentTypeId);
+
+  if (values === undefined && translations.length === 0) {
+    // Nothing moved. Saying so costs one round trip less than proving it again
+    // on the server, and the toast is the same either way.
+    return {};
+  }
+
+  const before = await readRow(definition, pluginId, id);
+  const localesBefore = await readContentPublicLocales(
+    definition,
+    pluginId,
+    id,
+  );
+
+  const result = await contentApiFetch({
+    body: {
+      ...(expectedVersion === undefined ? {} : { expectedVersion }),
+      translations,
+      ...(values === undefined ? {} : { values }),
+    },
+    definition,
+    method: "put",
+    path: `/${id}/localized`,
+    pluginId,
+    schema: zodRow,
+  });
+
+  if (result.status !== 200) return failure(result);
+
+  revalidatePath(CONTENT_PAGE_PATH, "page");
+  invalidate(definition, id, before, result.data, {
+    after: await readContentPublicLocales(definition, pluginId, id),
+    before: localesBefore,
+  });
+
+  return { translations: await readTranslations(definition, pluginId, id) };
 };
 
 /**

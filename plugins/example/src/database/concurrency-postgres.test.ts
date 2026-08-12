@@ -775,6 +775,143 @@ describe.skipIf(!DATABASE_TEST_URL)("Content Engine concurrency", () => {
       // the update's value rather than a mixture.
       expect(polish?.title).toBe("Stale");
     });
+
+    /**
+     * The composite AdminCP save, against a real database.
+     *
+     * One form, one Save button, and underneath it a base row plus one
+     * translation row per language - each with its own version. The property
+     * that matters is all-or-nothing: a conflict in one language must not leave
+     * the shared fields and another language already written, because the
+     * person pressing the button was told the save failed.
+     */
+    describe("a composite save across shared fields and two locales", () => {
+      const sharedAndTwoLocales = async (
+        on: Context,
+        itemId: number,
+        versions: { en: number; pl: number },
+        titles: { en: string; pl: string },
+        polishConflicts = false,
+      ) =>
+        await h.db.transaction(async tx => {
+          await editorialFor(on).update(
+            itemId,
+            { featured: true },
+            { actor: ACTOR, expectedVersion: 1, tx },
+          );
+          await translationEditorial(on).update(
+            itemId,
+            "en",
+            { title: titles.en },
+            { actor: ACTOR, expectedVersion: versions.en, tx },
+          );
+          await translationEditorial(on).update(
+            itemId,
+            "pl",
+            { title: titles.pl },
+            {
+              actor: ACTOR,
+              // A deliberately stale precondition, standing in for a colleague
+              // who saved this language while the form was open.
+              expectedVersion: polishConflicts ? 99 : versions.pl,
+              tx,
+            },
+          );
+        });
+
+      const editorialFor = (on: Context) => {
+        const build = localizedArticleContent.editorialService;
+        if (!build) throw new Error("no localized editorial service");
+
+        return build(on, { pluginId: CONFIG_PLUGIN.pluginId });
+      };
+
+      const setup = async () => {
+        const itemId = await guide("Composite");
+        await translationEditorial(h.context).create(
+          itemId,
+          "pl",
+          { body: "Tresc", title: "Polski" },
+          { actor: ACTOR },
+        );
+
+        return itemId;
+      };
+
+      it("commits the base row and both languages together", async () => {
+        const itemId = await setup();
+
+        await sharedAndTwoLocales(
+          h.context,
+          itemId,
+          { en: 1, pl: 1 },
+          { en: "English v2", pl: "Polski v2" },
+        );
+
+        const [base] = await h.sql<{ featured: boolean; version: number }[]>`
+          SELECT "featured", "version" FROM "example_localized_articles"
+          WHERE "id" = ${itemId}
+        `;
+        expect(base.featured).toBe(true);
+        expect(base.version).toBe(2);
+        expect((await translationRows(itemId)).map(row => row.title)).toEqual([
+          "English v2",
+          "Polski v2",
+        ]);
+      });
+
+      it("rolls the shared write and the other language back on a conflict", async () => {
+        const itemId = await setup();
+
+        await expect(
+          sharedAndTwoLocales(
+            h.context,
+            itemId,
+            { en: 1, pl: 1 },
+            { en: "English v2", pl: "Polski v2" },
+            true,
+          ),
+        ).rejects.toBeInstanceOf(ContentTranslationVersionConflict);
+
+        // Nothing moved. "Shared saved, English saved, Polish conflicted" is
+        // exactly the state a single Save button must never leave behind.
+        const [base] = await h.sql<{ featured: boolean; version: number }[]>`
+          SELECT "featured", "version" FROM "example_localized_articles"
+          WHERE "id" = ${itemId}
+        `;
+        expect(base.featured).toBe(false);
+        expect(base.version).toBe(1);
+
+        const rows = await translationRows(itemId);
+        expect(rows.map(row => row.version)).toEqual([1, 1]);
+        expect(rows.map(row => row.title).sort()).toEqual([
+          "Composite",
+          "Polski",
+        ]);
+      });
+
+      it("leaves the other language alone when only one changed", async () => {
+        const itemId = await setup();
+
+        await translationEditorial(h.context).update(
+          itemId,
+          "pl",
+          { title: "Tylko polski" },
+          { actor: ACTOR, expectedVersion: 1 },
+        );
+
+        // The Polish-only save the AdminCP sends: no shared values, no English
+        // entry. So no base version bump and no English version bump.
+        const [base] = await h.sql<{ version: number }[]>`
+          SELECT "version" FROM "example_localized_articles" WHERE "id" = ${itemId}
+        `;
+        expect(base.version).toBe(1);
+
+        const rows = await translationRows(itemId);
+        expect(rows.find(row => row.languageId === 1)?.version).toBe(1);
+        expect(rows.find(row => row.languageId === 2)?.version).toBe(2);
+      });
+    });
   });
 
   // -------------------------------------------------------------------------

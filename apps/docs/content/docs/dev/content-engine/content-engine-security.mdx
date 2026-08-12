@@ -54,12 +54,14 @@ Two choices in there are worth the sentence they take:
 which is what makes "writes Polish and nothing else" expressible. Give a role
 `can_view + can_translate` and it can:
 
-- read the record, every locale tab and every locale's history;
+- read the record, every language and every language's history;
 - create and edit a translation in any enabled locale.
 
 It cannot:
 
-- edit a shared field (`PUT /{id}` is `can_edit`);
+- edit a shared field - `PUT /{id}` is `can_edit`, and the AdminCP's composite
+  `PUT /{id}/localized` re-checks `can_edit` in the handler the moment its payload
+  carries one, so reaching the form grants nothing;
 - publish or unpublish anything, record or translation (`can_publish`);
 - restore a shared revision *or* a locale's own (`can_restore`, which needs
   `can_edit`);

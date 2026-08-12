@@ -119,9 +119,9 @@ AdminCP is already allowed to see it. The link is the credential from there on.
 
 It freezes the record's newest **shared** revision and that locale's newest
 **translation** revision, and returns both ids alongside the link. A locale with
-no translation is a 404 rather than a link to the fallback - the button is on a
-language tab, and a link that quietly previewed a different language would be
-worse than no link.
+no translation is a 404 rather than a link to the fallback - the link names one
+language, and one that quietly previewed a different one would be worse than no
+link.
 
 `?locale=` is a query parameter rather than a second placeholder in
 `editorial.preview.pathTemplate`, and that is deliberate: a new placeholder would

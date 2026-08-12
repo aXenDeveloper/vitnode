@@ -601,27 +601,19 @@
         "slug_reserved": "That address is reserved: another record used it publicly and it still redirects there. Pick a different one."
       },
       "translations": {
-        "shared_tab": "Shared",
         "default_locale": "default",
-        "locale_column": "{name} translation",
-        "save": "Save translation",
-        "create": "Create translation",
+        "manage": "Languages of this {name}",
+        "missing_hint": "No translation yet. Switch a localized field to {name}, fill it in and save.",
         "publish": "Publish this language",
         "unpublish": "Unpublish this language",
         "delete": "Delete the {name} translation",
         "version": "Version {version}",
         "never_published": "Not published yet",
-        "missing_readonly": "There is no {name} translation yet. You need the translate permission to add one.",
         "default_locale_note": "{name} is the default language, so its translation cannot be deleted. Delete the record itself instead.",
         "states": {
           "missing": "Missing",
           "draft": "Draft",
           "published": "Published"
-        },
-        "conflict": {
-          "title": "The {name} translation changed",
-          "desc": "Someone else saved this language while you were editing. Your changes are still here. Reload to see theirs, then decide what to keep.",
-          "reload": "Reload this language"
         },
         "success": {
           "created": "Translation created",

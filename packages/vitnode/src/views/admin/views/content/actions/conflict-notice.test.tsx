@@ -15,6 +15,7 @@ const { ConflictNotice } = await import("./conflict-notice");
 
 const spec: ContentFormSpec = {
   contentTypeId: "test.editorial",
+  defaultLocale: null,
   fields: [
     {
       kind: "text",

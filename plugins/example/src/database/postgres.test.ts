@@ -2953,6 +2953,271 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
         expect(after.publishedAt).toBe(published.publishedAt);
       });
 
+      /**
+       * Publishing the record publishes the languages it has.
+       *
+       * The bug this replaces: a record's publish moved only the base row, so a
+       * localized article was `status: published` in the AdminCP and unreachable
+       * in every language - no canonical URL, no search document - until each
+       * translation was published separately. "Publish" now means published.
+       */
+      describe("publishing the record", () => {
+        const editorialFor = (handle = context) => {
+          const build = localizedArticleContent.editorialService;
+          if (!build) throw new Error("Expected an editorial service.");
+
+          return build(handle, { pluginId: CONFIG_PLUGIN.pluginId });
+        };
+
+        /** The layer the admin route adds a language through. */
+        const translationEditorial = (handle = context) => {
+          const build = localizedArticleContent.translationEditorialService;
+          if (!build)
+            throw new Error("Expected a translation editorial service.");
+
+          return build(handle, { pluginId: CONFIG_PLUGIN.pluginId });
+        };
+
+        it("publishes every translation with it", async () => {
+          const itemId = await twoLocales("Cascade Publish");
+
+          // Both languages start as drafts, which is what made the old
+          // behaviour invisible.
+          expect(await statusOf(itemId, 1)).toMatchObject({ status: "draft" });
+          expect(await statusOf(itemId, 2)).toMatchObject({ status: "draft" });
+
+          await editorialFor().publish(itemId, { actor: ACTOR });
+
+          for (const languageId of [1, 2]) {
+            const row = await statusOf(itemId, languageId);
+            expect(row.status).toBe("published");
+            // Each language records when it went out.
+            expect(row.publishedAt).not.toBeNull();
+            // The cascade moves the translation's version, exactly as a
+            // per-locale publish always did.
+            expect(row.version).toBe(2);
+          }
+        });
+
+        it("makes the record publicly readable in one step", async () => {
+          const itemId = await twoLocales("Cascade Readable");
+          await editorialFor().publish(itemId, { actor: ACTOR });
+
+          const build = localizedArticleContent.publicService;
+          if (!build) throw new Error("Expected a public service.");
+
+          // The two symptoms that started this: a public read and therefore a
+          // canonical URL, with no second action required.
+          await expect(
+            build(context).findById(itemId, { locale: "en" }),
+          ).resolves.toMatchObject({ locale: "en" });
+          await expect(
+            build(context).findById(itemId, { locale: "pl" }),
+          ).resolves.toMatchObject({ locale: "pl" });
+        });
+
+        it("unpublishes every translation with it", async () => {
+          const itemId = await twoLocales("Cascade Unpublish");
+          await editorialFor().publish(itemId, { actor: ACTOR });
+
+          const published = await statusOf(itemId, 1);
+
+          await editorialFor().unpublish(itemId, { actor: ACTOR });
+
+          for (const languageId of [1, 2]) {
+            expect(await statusOf(itemId, languageId)).toMatchObject({
+              status: "draft",
+            });
+          }
+          // "First published on" stays true after it is taken down again.
+          expect((await statusOf(itemId, 1)).publishedAt).toBe(
+            published.publishedAt,
+          );
+        });
+
+        it("leaves an already-published translation alone on a republish", async () => {
+          const itemId = await twoLocales("Cascade Idempotent");
+          await editorialFor().publish(itemId, { actor: ACTOR });
+          const first = await statusOf(itemId, 1);
+
+          await editorialFor().unpublish(itemId, { actor: ACTOR });
+          // Only `pl` is put back by hand, so the republish below finds one
+          // language already published and one not.
+          await translations().publish(itemId, "pl");
+          const plBefore = await statusOf(itemId, 2);
+
+          await editorialFor().publish(itemId, { actor: ACTOR });
+
+          // Untouched: the state guard means a language already in the requested
+          // state is not rewritten, so its version does not drift.
+          expect(await statusOf(itemId, 2)).toMatchObject({
+            publishedAt: plBefore.publishedAt,
+            version: plBefore.version,
+          });
+          // And the date `en` first went out survives the round trip.
+          expect((await statusOf(itemId, 1)).publishedAt).toBe(
+            first.publishedAt,
+          );
+        });
+
+        it("publishes a language added after the record went out", async () => {
+          const { row } = await localizedService().create({
+            shared: {},
+            translation: {
+              body: "Body of Late Language",
+              title: "Late Language",
+            },
+          });
+          await editorialFor().publish(row.id, { actor: ACTOR });
+
+          const created = await translationEditorial().create(
+            row.id,
+            "pl",
+            { body: "Tresc Late Language", title: "Late Language PL" },
+            { actor: ACTOR },
+          );
+
+          // With no per-language publish control left, a new language starting as
+          // a draft would be invisible with nothing able to publish it.
+          expect(await statusOf(row.id, 2)).toMatchObject({
+            status: "published",
+          });
+          expect((await statusOf(row.id, 2)).publishedAt).not.toBeNull();
+          // And publicly reachable, not merely marked published: the language
+          // takes its delivery address on the way out, like any other publish.
+          expect(created.row.status).toBe("published");
+          expect(
+            await contentPublicLocaleStates(
+              context,
+              localizedArticleContent,
+              row.id,
+            ),
+          ).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({
+                hasOwnTranslation: true,
+                isPublic: true,
+                locale: "pl",
+              }),
+            ]),
+          );
+        });
+
+        it("publishes the languages of a record that was already published", async () => {
+          const { row } = await localizedService().create({
+            shared: {},
+            translation: { body: "Body of Legacy", title: "Legacy" },
+          });
+
+          // Exactly the state a record published *before* publishing meant
+          // "publish the languages too" is left in: the base row says published
+          // and every language is still a draft. Written by hand, because the
+          // service can no longer produce it.
+          await sql`
+            UPDATE "example_localized_articles"
+            SET "status" = 'published', "publishedAt" = now()
+            WHERE "id" = ${row.id}
+          `;
+
+          const outcome = await editorialFor().publish(row.id, {
+            actor: ACTOR,
+          });
+
+          // The base row moved nothing, so this is not a change *of the record* -
+          // and it still put a page on the internet, which is what the count is
+          // for. Without it nothing would ever reconcile the two: the transition
+          // is guarded on the base row and would short-circuit here for ever.
+          expect(outcome).toMatchObject({
+            changed: false,
+            movedTranslations: 1,
+          });
+          expect(await statusOf(row.id, 1)).toMatchObject({
+            status: "published",
+          });
+        });
+
+        it("reports no moved languages when everything already agrees", async () => {
+          const itemId = await twoLocales("Cascade Idempotent");
+          await editorialFor().publish(itemId, { actor: ACTOR });
+
+          const again = await editorialFor().publish(itemId, { actor: ACTOR });
+
+          // A retried publish is a true no-op, which is what keeps a
+          // double-clicked button from re-indexing every language for nothing.
+          expect(again).toMatchObject({ changed: false });
+          expect(again?.movedTranslations).toBeUndefined();
+        });
+
+        it("publishes the record even when a language has been switched off", async () => {
+          const { row } = await localizedService().create({
+            shared: {},
+            translation: {
+              body: "Body of Switched Off",
+              title: "Switched Off",
+            },
+          });
+
+          // `de` is disabled in this app's config, so the model refuses to write
+          // it - which is exactly how a translation left over from before the
+          // switch-off looks. Inserted directly, because that is the only way to
+          // have one.
+          await sql`
+            INSERT INTO "example_localized_articles_translations"
+              ("itemId", "languageId", "title", "body", "slug", "version")
+            VALUES (${row.id}, 3, 'Ausgeschaltet', 'Text', 'ausgeschaltet', 1)
+          `;
+
+          // Publishing into a language nothing routes to is refused, and that
+          // refusal must not become "this record cannot be published at all".
+          await expect(
+            editorialFor().publish(row.id, { actor: ACTOR }),
+          ).resolves.toMatchObject({ changed: true });
+
+          expect(await statusOf(row.id, 1)).toMatchObject({
+            status: "published",
+          });
+          // The switched-off language stayed where it was.
+          expect(await statusOf(row.id, 3)).toMatchObject({ status: "draft" });
+        });
+
+        it("unpublishes a switched-off language with the record", async () => {
+          const { row } = await localizedService().create({
+            shared: {},
+            translation: { body: "Body of Taken Down", title: "Taken Down" },
+          });
+          await sql`
+            INSERT INTO "example_localized_articles_translations"
+              ("itemId", "languageId", "title", "body", "slug",
+               "version", "status", "publishedAt")
+            VALUES (${row.id}, 3, 'Runter', 'Text', 'runter', 1, 'published', now())
+          `;
+          await editorialFor().publish(row.id, { actor: ACTOR });
+
+          await editorialFor().unpublish(row.id, { actor: ACTOR });
+
+          // Taking content off a disabled language is the step *before* dropping
+          // the language, so it has to keep working in that direction.
+          expect(await statusOf(row.id, 3)).toMatchObject({ status: "draft" });
+        });
+
+        it("keeps a translation of a draft record a draft", async () => {
+          const { row } = await localizedService().create({
+            shared: {},
+            translation: { body: "Body of Still Draft", title: "Still Draft" },
+          });
+
+          // The record was never published, so neither is the language: the
+          // record is still the thing that decides.
+          await translations().create(row.id, "pl", {
+            body: "Tresc Still Draft",
+            title: "Still Draft PL",
+          });
+
+          expect(await statusOf(row.id, 1)).toMatchObject({ status: "draft" });
+          expect(await statusOf(row.id, 2)).toMatchObject({ status: "draft" });
+        });
+      });
+
       it("publishes one locale without touching the other", async () => {
         const itemId = await twoLocales("Lifecycle Independent");
 
@@ -4178,6 +4443,49 @@ describe.skipIf(!url)("Content Engine against Postgres", () => {
         // removed - it was not part of what moved.
         expect(deleted).toEqual([{ itemId, languageCode: "pl" }]);
         expect(indexed).toEqual([]);
+      });
+
+      /**
+       * The symptom that started this: an article published in the AdminCP that
+       * never appeared in search, because its languages were still drafts and a
+       * document is only written for a published translation.
+       */
+      it("indexes every language when the record is published", async () => {
+        const { row } = await localizedService().create({
+          shared: {},
+          translation: { body: "Body of One Publish", title: "One Publish" },
+        });
+        await translations().create(row.id, "pl", {
+          body: "Tresc Jeden Publish",
+          title: "Jeden Publish",
+        });
+        const { indexed, searchContext } = engine();
+
+        // The record's own publish, and nothing after it.
+        const build = localizedArticleContent.editorialService;
+        if (!build) throw new Error("Expected an editorial service.");
+        const outcome = await build(context, {
+          pluginId: CONFIG_PLUGIN.pluginId,
+        }).publish(row.id, { actor: ACTOR });
+        if (!outcome) throw new Error("Expected an outcome.");
+
+        await syncContentLocalizedSearch(
+          searchContext,
+          localizedArticleContent,
+          {
+            changed: outcome.changed,
+            changedFields: outcome.changedFields,
+            operation: "publish",
+            pluginId: CONFIG_PLUGIN.pluginId,
+            row: outcome.row,
+          },
+        );
+
+        expect(
+          indexed
+            .map(document => document.languageCode)
+            .sort((left, right) => (left ?? "").localeCompare(right ?? "")),
+        ).toEqual(["en", "pl"]);
       });
 
       it("removes every language when the record itself is unpublished", async () => {

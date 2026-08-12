@@ -2,14 +2,20 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { testArticleContentType } from "@/tests/content-fixtures";
+import {
+  testArticleContentType,
+  testLocalizedGuideContentType,
+} from "@/tests/content-fixtures";
 
 import { humanizeFieldName } from "./labels";
 import {
   buildContentColumnSpec,
   buildContentFormSpec,
   buildFormSchemaFromSpec,
+  contentFormInitialValues,
   contentFormValuesToPayload,
+  contentFormValuesToTranslations,
+  contentLocalizedFieldNames,
   contentTitleFromValues,
 } from "./spec";
 
@@ -281,5 +287,160 @@ describe("humanizeFieldName", () => {
     ["viewsCount", "Views count"],
   ])("turns %s into %s", (input, expected) => {
     expect(humanizeFieldName(input)).toBe(expected);
+  });
+});
+
+/**
+ * The AdminCP form adapter: translation rows in, per-field per-language values
+ * out, and back again.
+ *
+ * The one place where "how localization is stored" and "how localization is
+ * edited" meet. Storage does not move - a base row and one translation row per
+ * language, each with its own version - and neither does the form's shape: a
+ * localized field holds the `{ languageCode, value }[]` VitNode has always used
+ * for a language-aware input.
+ */
+describe("the localized form adapter", () => {
+  const localizedSpec = buildContentFormSpec({
+    definition: testLocalizedGuideContentType,
+    labelEnum,
+    labelField,
+    pluginId: "@vitnode/example",
+  });
+
+  const translations = [
+    { locale: "en", values: { body: "Body", slug: "hello", title: "Hello" } },
+    { locale: "pl", values: { body: "Treść", slug: "witaj", title: "Witaj" } },
+  ];
+
+  it("puts localized and shared fields in one form spec", () => {
+    const names = localizedSpec.fields.map(field => field.name);
+
+    expect(names).toContain("title");
+    expect(names).toContain("featured");
+  });
+
+  it("flags the localized ones, so their inputs grow a language switcher", () => {
+    expect(contentLocalizedFieldNames(localizedSpec)).toEqual([
+      "title",
+      "slug",
+      "body",
+      "summary",
+    ]);
+  });
+
+  it("carries the default locale without making it a display choice", () => {
+    // The language a record must exist in. Which language an editor *sees* is
+    // their own global locale, and this is not it.
+    expect(localizedSpec.defaultLocale).toBe("en");
+  });
+
+  it("folds translation rows into per-field, per-language values", () => {
+    const values = contentFormInitialValues(
+      localizedSpec,
+      { featured: true, id: 7 },
+      translations,
+    );
+
+    expect(values?.featured).toBe(true);
+    expect(values?.title).toEqual([
+      { languageCode: "en", value: "Hello" },
+      { languageCode: "pl", value: "Witaj" },
+    ]);
+  });
+
+  it("splits submitted values back into a base row and translation rows", () => {
+    const submitted = {
+      featured: true,
+      title: [
+        { languageCode: "en", value: "Hello" },
+        { languageCode: "pl", value: "Witaj" },
+      ],
+    };
+
+    expect(contentFormValuesToPayload(localizedSpec, submitted)).toEqual({
+      featured: true,
+    });
+    expect(contentFormValuesToTranslations(localizedSpec, submitted)).toEqual({
+      en: { title: "Hello" },
+      pl: { title: "Witaj" },
+    });
+  });
+
+  it("says nothing about a language nobody typed into", () => {
+    // Selecting a language to read what is there must not create a translation.
+    expect(
+      contentFormValuesToTranslations(localizedSpec, {
+        title: [
+          { languageCode: "en", value: "Hello" },
+          { languageCode: "pl", value: "" },
+        ],
+      }),
+    ).toEqual({ en: { title: "Hello" } });
+  });
+
+  it("treats an empty localized slug as 'derive it', not as an empty slug", () => {
+    expect(
+      contentFormValuesToTranslations(localizedSpec, {
+        slug: [{ languageCode: "en", value: "" }],
+        title: [{ languageCode: "en", value: "Hello" }],
+      }),
+    ).toEqual({ en: { title: "Hello" } });
+  });
+
+  it("clears a nullable localized field to null rather than to nothing", () => {
+    expect(
+      contentFormValuesToTranslations(localizedSpec, {
+        summary: [{ languageCode: "en", value: "" }],
+      }),
+    ).toEqual({ en: { summary: null } });
+  });
+
+  it("names the record in the language the editor is working in", () => {
+    const values = { title: [{ languageCode: "pl", value: "Witaj" }] };
+
+    expect(contentTitleFromValues(localizedSpec, values, "pl")).toBe("Witaj");
+    expect(contentTitleFromValues(localizedSpec, values, "en")).toBeUndefined();
+  });
+});
+
+describe("the localized form schema", () => {
+  const localizedSpec = buildContentFormSpec({
+    definition: testLocalizedGuideContentType,
+    labelEnum,
+    labelField,
+    pluginId: "@vitnode/example",
+  });
+  const schema = buildFormSchemaFromSpec(localizedSpec);
+
+  const parse = (title: { languageCode: string; value: string }[]) =>
+    schema.safeParse({ featured: false, title });
+
+  it("accepts a language nobody has written yet", () => {
+    // Absent, not "too short". A missing translation is a state, not an error.
+    expect(parse([{ languageCode: "en", value: "Hello" }]).success).toBe(true);
+  });
+
+  it("requires the default language of a required field", () => {
+    const result = parse([{ languageCode: "pl", value: "Witaj" }]);
+
+    expect(result.success).toBe(false);
+    // The message names the field *and* the language, because "required" on its
+    // own would leave an editor looking at a filled-in box.
+    expect(result.error?.issues[0].message).toContain("Title");
+    expect(result.error?.issues[0].message).toContain("en");
+  });
+
+  it("applies the field's own length rules to a language that was written", () => {
+    const result = schema.safeParse({
+      featured: false,
+      title: [
+        { languageCode: "en", value: "Hello" },
+        // 200 is `title`'s maxLength on this fixture.
+        { languageCode: "pl", value: "x".repeat(201) },
+      ],
+    });
+
+    expect(result.success).toBe(false);
   });
 });

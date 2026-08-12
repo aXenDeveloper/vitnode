@@ -620,6 +620,7 @@ describe("translation routes match their OpenAPI document", () => {
           version: 2,
         },
       ]),
+      findManyRowsForItem: vi.fn().mockResolvedValue([translationRow]),
       resolveDefaultLanguage: vi
         .fn()
         .mockResolvedValue({ id: 1, locale: "en" }),

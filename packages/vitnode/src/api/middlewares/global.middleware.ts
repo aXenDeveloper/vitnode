@@ -27,7 +27,7 @@ import { SessionAdminModel } from "@/api/models/session-admin";
 import { StorageModel } from "@/api/models/storage";
 import { validateContentTypes } from "@/content/registry";
 import { ensureContentLocalizationLanguages } from "@/content/server/language-resolver";
-import { assertContentPreviewConfig } from "@/content/server/preview-config";
+import { warnAboutContentPreviewConfig } from "@/content/server/preview-config";
 import { CONFIG } from "@/lib/config";
 import { collectLocaleCodes } from "@/lib/i18n/load-messages";
 import { buildApiMessagesSources } from "@/lib/i18n/sources";
@@ -260,9 +260,10 @@ export const globalMiddleware = ({
   );
 
   // Once, here, because "does anything have preview enabled" is only answerable
-  // after every plugin's content types are in. Throws in production rather than
-  // booting an install whose preview links anyone could forge.
-  assertContentPreviewConfig({
+  // after every plugin's content types are in. A warning, never a boot failure:
+  // `CONTENT_PREVIEW_SECRET` is optional and preview is what fails closed
+  // without it.
+  warnAboutContentPreviewConfig({
     contentTypes: contentTypesMetadata,
     secret: process.env.CONTENT_PREVIEW_SECRET,
   });

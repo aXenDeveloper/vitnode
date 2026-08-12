@@ -581,6 +581,20 @@ type ScalarColumnFieldKeys<TFields> = Exclude<
 >;
 
 /**
+ * Every field that is **one** column on *either* generated table.
+ *
+ * The same subtraction as {@link ScalarColumnFieldKeys}, minus the shared/localized
+ * split: a localized `text` is one column on the translation table, so it is
+ * something the AdminCP can *show*. It is still not something the AdminCP can
+ * *order or filter by* - that is a query over the base table - which is why the
+ * two types exist rather than one.
+ */
+type ScalarDisplayFieldKeys<TFields> = Exclude<
+  Exclude<keyof TFields, CollectionFieldKeys<TFields>>,
+  GroupFieldKeys<TFields>
+>;
+
+/**
  * The canonical dotted path of every group leaf: `"seo.title"`.
  *
  * One representation, used by `changedFields`, validation errors, index
@@ -704,9 +718,9 @@ type ContentEditorialColumn<TEditorial extends boolean> =
  * content type opted into.
  *
  * A localized field is absent on purpose. It is not a column on the base table,
- * so an index on it, a sort by it or a DataTable column showing it would all
- * address something that does not exist. Stage 5B adds the AdminCP locale tabs
- * that give localized values a place to appear.
+ * so an index on it, a sort by it or an equality filter would all address
+ * something that does not exist. {@link ContentDisplayColumn} is the wider set,
+ * for the surfaces that only ever *render* a value.
  */
 type ContentAddressableColumn<
   TFields,
@@ -718,13 +732,37 @@ type ContentAddressableColumn<
   | ContentSystemField
   | ScalarColumnFieldKeys<TFields>;
 
+/**
+ * Every column name an AdminCP **presentation** surface may address.
+ *
+ * The addressable set plus the localized scalars, because showing a value and
+ * ordering by one are different capabilities: a list cell renders whatever the
+ * record's translation in the reader's language holds, while `orderBy` is SQL on
+ * the base table and a localized column is not there to sort by.
+ */
+type ContentDisplayColumn<
+  TFields,
+  TPublication extends boolean,
+  TEditorial extends boolean,
+> =
+  | ContentEditorialColumn<TEditorial>
+  | ContentPublicationColumn<TPublication>
+  | ContentSystemField
+  | ScalarDisplayFieldKeys<TFields>;
+
 export interface ContentAdminListConfig<
   TFields = ContentFieldMap,
   TPublication extends boolean = boolean,
   TEditorial extends boolean = boolean,
 > {
-  /** Columns shown in the DataTable, in order. Defaults to every field. */
-  columns?: ContentAddressableColumn<TFields, TPublication, TEditorial>[];
+  /**
+   * Columns shown in the DataTable, in order. Defaults to every shared field.
+   *
+   * A localized field may be named here: its cell shows the value from the
+   * record's translation in the reader's own language. Ordering and filtering
+   * still address the base table, so `orderableFields` stays shared-only.
+   */
+  columns?: ContentDisplayColumn<TFields, TPublication, TEditorial>[];
   defaultOrder?: "asc" | "desc";
   defaultOrderBy?: ContentAddressableColumn<TFields, TPublication, TEditorial>;
   /**
@@ -764,7 +802,14 @@ export interface ContentAdminConfig<
   create?: ContentAdminActionConfig;
   /** Presentation of the edit form. Defaults to `{ mode: "dialog" }`. */
   edit?: ContentAdminActionConfig;
-  form?: { fields?: SharedFieldKeys<TFields>[] };
+  /**
+   * Which fields the generated form renders, in order. Defaults to every field.
+   *
+   * Shared and localized alike: there is one form, and a localized field renders
+   * with its own language switcher inside it. Where the value is *stored* is the
+   * engine's business, not the form's.
+   */
+  form?: { fields?: (keyof TFields)[] };
   label: ContentAdminLabel;
   list?: ContentAdminListConfig<TFields, TPublication, TEditorial>;
   navigation?: { enabled?: boolean };
@@ -776,16 +821,17 @@ export interface ContentAdminConfig<
   /**
    * Field used as the human-readable title in toasts and relation pickers.
    *
-   * Shared fields only. A localized title has a different value per language, so
-   * naming one here would make a toast depend on whose locale the reader is in;
-   * the AdminCP's locale tabs are where a localized value appears.
+   * A **display** projection rather than a storage or ordering concern, so a
+   * localized field is allowed: the AdminCP resolves it in the reader's own
+   * language, which is the honest answer for a record whose every text field is
+   * localized. Nothing about `orderBy`, filters or indexes changes - those still
+   * address the base table.
    *
-   * `null` says the content type genuinely has no shared title - which is the
-   * honest answer for one whose every text field is localized. Left `undefined`
-   * the first shared text field is picked, and that guess is wrong for, say, a
-   * category whose only shared column is a colour.
+   * `null` says the content type genuinely has no title. Left `undefined` the
+   * first shared text field is picked, falling back to the first localized one -
+   * which beats `#123` for a category whose only shared column is a colour.
    */
-  titleField?: null | ScalarColumnFieldKeys<TFields>;
+  titleField?: null | ScalarDisplayFieldKeys<TFields>;
 }
 
 /**

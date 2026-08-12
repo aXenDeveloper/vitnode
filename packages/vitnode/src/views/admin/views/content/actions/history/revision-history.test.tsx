@@ -68,6 +68,7 @@ const { RevisionHistory } = await import("./revision-history");
 
 const spec: ContentFormSpec = {
   contentTypeId: "test.editorial",
+  defaultLocale: null,
   fields: [
     {
       kind: "text",
