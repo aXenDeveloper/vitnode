@@ -90,12 +90,12 @@ editorial: {
 - [`scheduling`](/docs/dev/content-engine/scheduling) - publish or unpublish at
   a set time, on a one-minute tick.
 
-<Callout type="warn" title="`preview` needs `CONTENT_PREVIEW_SECRET`">
-  At least 32 random bytes - `openssl rand -base64 32`. The variable itself is
-  optional and the API boots without it, but the signature is the only access
-  control a preview link has, so until you set one preview fails closed: a
-  warning at boot, a 503 from the button. See
-  [Secure preview](/docs/dev/content-engine/preview#content_preview_secret-is-optional).
+<Callout type="info" title="`preview` needs no configuration">
+  The signature is the only access control a preview link has, and the install
+  generates the key that produces it - 32 random bytes, stored in `core_secrets`
+  the first time anything signs a link. There is no environment variable to set.
+  See
+  [The signing key configures itself](/docs/dev/content-engine/preview#the-signing-key-configures-itself).
 </Callout>
 
 ## `version` is generated, so you cannot declare it

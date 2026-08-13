@@ -131,11 +131,11 @@ part of it is written to fail rather than to be helpful.
 - **No fallback.** A `pl` link opened on the English URL is a 404, not the English
   copy. Falling back would hand a reviewer a different language from the one they
   were sent.
-- **A weak secret disables it entirely.** An install whose `CONTENT_PREVIEW_SECRET`
-  is missing, too short, or still the published placeholder can have its tokens
-  forged by anyone, so no token is honoured - and the answer is the same 404,
-  because "preview is misconfigured here" is not something an anonymous request
-  needs to learn.
+- **The signing key cannot be guessed or forgotten.** It is 32 random bytes the
+  install generates for itself and stores in `core_secrets`, not a value someone
+  has to remember to set - there is no published placeholder to forge against. A
+  `CONTENT_PREVIEW_SECRET` override shorter than that is ignored rather than
+  honoured, because a password is not a signing key.
 - **Nothing caches it.** `Cache-Control: private, no-store` and
   `X-Robots-Tag: noindex, nofollow`, and the response carries no cache tag at all.
 - **The projection is the public one.** The same function the detail route uses,

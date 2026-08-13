@@ -12,26 +12,17 @@ import { contentEditHref, orderableColumns } from "@/content/registry";
 
 import type { ContentRowData } from "./cells";
 
-import { DeleteContentAction } from "../actions/delete-action";
-import { DeliveryContentAction } from "../actions/delivery-action";
 import { EditContentAction } from "../actions/edit-action";
-import { HistoryContentAction } from "../actions/history-action";
-import { PreviewContentAction } from "../actions/preview-action";
 import { PublishContentAction } from "../actions/publish-action";
-import { ScheduleContentAction } from "../actions/schedule-action";
-import { TranslationsContentAction } from "../actions/translations-action";
+import { ContentRowActionsMenu } from "../actions/row-actions-menu";
 import { ContentCell } from "./cells";
 
-/** Width of the actions column, indexed by how many capability buttons it has. */
-const ACTION_WIDTHS = [
-  "w-20",
-  "w-28",
-  "w-36",
-  "w-44",
-  "w-52",
-  "w-60",
-  "w-68",
-] as const;
+/**
+ * Width of the actions column: Edit and the ⋯ menu, plus the publish toggle for a
+ * content type with `publication`. Three buttons is the ceiling now, whatever the
+ * content type opts into - everything else is listed inside the menu.
+ */
+const ACTION_WIDTHS = ["w-20", "w-28"] as const;
 
 const zodList = z.object({
   edges: z.array(
@@ -159,84 +150,15 @@ export const ContentTableView = async ({
       id: "actions",
       header: "",
       align: "right",
-      // Edit and delete are always there; every capability adds one more button.
-      // Written as a lookup rather than a template string, because Tailwind can
-      // only see class names it can read in the source.
-      className:
-        ACTION_WIDTHS[
-          Math.min(
-            [
-              definition.publication.enabled,
-              definition.editorial.enabled,
-              definition.editorial.preview.enabled,
-              definition.editorial.scheduling.enabled,
-              definition.delivery.enabled,
-              localized,
-            ].filter(Boolean).length,
-            ACTION_WIDTHS.length - 1,
-          )
-        ],
+      // Edit and the overflow menu are always there; publication adds the one
+      // more. Written as a lookup rather than a template string, because Tailwind
+      // can only see class names it can read in the source.
+      className: ACTION_WIDTHS[definition.publication.enabled ? 1 : 0],
       cell: ({ row }) => {
         const title = titleOf(row);
 
         return (
           <>
-            {localized ? (
-              <TranslationsContentAction
-                contentTypeId={definition.id}
-                defaultLocale={definition.localization.defaultLocale}
-                editorial={definition.editorial.enabled}
-                id={row.id}
-                permissionModule={definition.permissionModule}
-                pluginId={pluginId}
-                publication={definition.publication.enabled}
-                singular={definition.admin.label.singular}
-                title={title}
-              />
-            ) : null}
-            {definition.delivery.enabled ? (
-              <DeliveryContentAction
-                contentTypeId={definition.id}
-                id={row.id}
-                locale={localized ? locale : undefined}
-                permissionModule={definition.permissionModule}
-                pluginId={pluginId}
-                singular={definition.admin.label.singular}
-              />
-            ) : null}
-            {definition.editorial.preview.enabled ? (
-              <PreviewContentAction
-                contentTypeId={definition.id}
-                id={row.id}
-                permissionModule={definition.permissionModule}
-                pluginId={pluginId}
-                title={title}
-              />
-            ) : null}
-            {definition.editorial.scheduling.enabled ? (
-              <ScheduleContentAction
-                contentTypeId={definition.id}
-                id={row.id}
-                permissionModule={definition.permissionModule}
-                pluginId={pluginId}
-                singular={definition.admin.label.singular}
-                title={title}
-              />
-            ) : null}
-            {definition.editorial.enabled ? (
-              <HistoryContentAction
-                contentTypeId={definition.id}
-                currentVersion={
-                  typeof row.version === "number" ? row.version : 1
-                }
-                id={row.id}
-                permissionModule={definition.permissionModule}
-                pluginId={pluginId}
-                singular={definition.admin.label.singular}
-                spec={formSpec}
-                title={title}
-              />
-            ) : null}
             {definition.publication.enabled ? (
               <PublishContentAction
                 contentTypeId={definition.id}
@@ -270,16 +192,29 @@ export const ContentTableView = async ({
               spec={formSpec}
               title={title}
             />
-            <DeleteContentAction
+            {/* Last in the cell, and every remaining action is inside it -
+                including delete, which is the one thing here that cannot be
+                undone and has no business sitting next to the pencil. */}
+            <ContentRowActionsMenu
               contentTypeId={definition.id}
+              currentVersion={typeof row.version === "number" ? row.version : 1}
+              defaultLocale={definition.localization.defaultLocale}
+              delivery={definition.delivery.enabled}
+              editorial={definition.editorial.enabled}
               id={row.id}
+              locale={localized ? locale : undefined}
+              localized={localized}
               permissionModule={definition.permissionModule}
               pluginId={pluginId}
+              preview={definition.editorial.preview.enabled}
+              publication={definition.publication.enabled}
+              scheduling={definition.editorial.scheduling.enabled}
               singular={definition.admin.label.singular}
+              spec={formSpec}
               title={title}
-              // The precondition the delete route checks. Taken from the row
-              // the person is actually looking at, so a stale table cannot
-              // remove a newer record.
+              // The precondition the delete route checks. Taken from the row the
+              // person is actually looking at, so a stale table cannot remove a
+              // newer record.
               version={
                 definition.editorial.enabled && typeof row.version === "number"
                   ? row.version

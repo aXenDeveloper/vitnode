@@ -33,6 +33,7 @@ import {
   contentPreviewSecret,
   contentPreviewUrl,
 } from "./preview-link";
+import { resolveContentTranslationPreviewSlug } from "./preview-target";
 import { createContentPreviewToken } from "./preview-token";
 import { contentPublicLocaleStates } from "./public-locales";
 import { CONTENT_REVISIONS_MAX_PAGE_SIZE } from "./revisions-model";
@@ -532,6 +533,7 @@ export const buildContentTranslationRoutes = <
 
   const zodTranslationRevisionMeta = z.object({
     actorName: z.string().nullable(),
+    actorRoleColor: z.string().nullable(),
     actorType: z.enum(CONTENT_ACTOR_TYPES),
     actorUserId: z.number().nullable(),
     changedFields: z.array(z.string()),
@@ -752,14 +754,14 @@ export const buildContentTranslationRoutes = <
         404: notFound,
         503: {
           description:
-            "Preview is not configured securely on this deployment, so no link can be signed",
+            "This deployment has no usable web or API origin, so no link can be built",
         },
       },
     },
     handler: async c => {
       // Before the lookup, so a misconfigured install answers the same way for a
       // record that exists and one that does not.
-      assertContentPreviewIsServable(c);
+      assertContentPreviewIsServable();
 
       const id = identifier(c);
       const target = locale(c);
@@ -791,7 +793,7 @@ export const buildContentTranslationRoutes = <
         locale: translation.locale,
         pluginId,
         revisionId: sharedRevision?.id ?? 0,
-        secret: contentPreviewSecret(c),
+        secret: await contentPreviewSecret(c),
         translationRevisionId,
         version: translation.version,
       });
@@ -807,6 +809,10 @@ export const buildContentTranslationRoutes = <
             definition,
             locale: translation.locale,
             pluginId,
+            slug: await resolveContentTranslationPreviewSlug(c, model, {
+              id,
+              values: translation.values,
+            }),
             token,
           }),
           version: translation.version,

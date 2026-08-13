@@ -412,12 +412,14 @@ survives is an editorial judgement, and guessing at it is worse than asking.
 
 ### The history dialog
 
-A clock icon on every row, lazy-loaded like the edit form. One line per version
-with the operation as a badge, the author (or **System**), a localised date and
-the changed fields. Expanding one renders a field-level diff against the version
-before it - a badge for an enum, a formatted date for a `dateTime`, long
-`textarea` values collapsed, `null` as the same em-dash the table cells use, and
-no raw JSON anywhere. A relation shows the id the snapshot stores; see
+A **History** item in the row's ⋯ menu, lazy-loaded like the edit form. A
+timeline, newest first: one entry per version with a dot in the operation's colour, the operation
+as a badge, the author (or **System**) and a localised date. A version that
+moved no field - a publish, an unpublish, a delete - says so on the entry and
+offers nothing to open. Expanding any other renders a field-level diff against
+the version before it - a badge for an enum, a formatted date for a `dateTime`,
+long `textarea` values collapsed, `null` as the same em-dash the table cells
+use, and no raw JSON anywhere. A relation shows the id the snapshot stores; see
 [the AdminCP page](/docs/dev/content-engine/admincp#history).
 
 Restore asks for confirmation and states all four facts: which version, that it

@@ -6,10 +6,7 @@ import { core_cron } from "@/database/cron";
 import { core_queue } from "@/database/queue";
 import { getQueueStatus } from "@/lib/api/get-queue-status";
 import { isCronStale } from "@/lib/api/is-cron-stale";
-import {
-  INSECURE_DEFAULT_CRON_SECRET,
-  isSecureContentPreviewSecret,
-} from "@/lib/config";
+import { INSECURE_DEFAULT_CRON_SECRET } from "@/lib/config";
 import { isRealtimePubSubEnabled, isWebSocketEnabled } from "@/ws/registry";
 
 import { buildRoute } from "../../../../lib/route";
@@ -47,11 +44,6 @@ export const integrationsDebugAdminRoute = buildRoute({
                 active: z.boolean(),
                 // How many content types can mint preview links.
                 contentTypes: z.number(),
-                // `false` when `CONTENT_PREVIEW_SECRET` is missing, left at its
-                // well-known default, or too short to be a signing key. The
-                // variable is optional and the API boots without it, but preview
-                // does not merely warn in that state - it refuses to serve.
-                secure: z.boolean(),
               }),
               cron: z.object({
                 // `true` when a cron adapter is configured, i.e. an in-process
@@ -173,9 +165,6 @@ export const integrationsDebugAdminRoute = buildRoute({
         contentPreview: {
           active: previewContentTypes > 0,
           contentTypes: previewContentTypes,
-          // The same predicate the routes fail closed on, so the panel and the
-          // behaviour cannot disagree about what "secure" means.
-          secure: isSecureContentPreviewSecret(core.contentPreviewSecret),
         },
         cron: {
           active: cronActive,

@@ -7,6 +7,7 @@ import type { AnyContentTypeDefinition } from "@/content/types";
 
 import {
   testArticleContentType,
+  testDeliveredLocalizedContentType,
   testEditorialPostContentType,
   testLocalizedPageContentType,
   testPostContentType,
@@ -57,7 +58,9 @@ vi.mock("@/content/admin/fetch.server", () => ({
 }));
 
 const { ContentTableView } = await import("./content-table-view");
-const { DeleteContentAction } = await import("../actions/delete-action");
+const { EditContentAction } = await import("../actions/edit-action");
+const { PublishContentAction } = await import("../actions/publish-action");
+const { ContentRowActionsMenu } = await import("../actions/row-actions-menu");
 
 /**
  * The `order` prop the view hands `DataTable`.
@@ -100,48 +103,111 @@ const orderProp = async (definition: AnyContentTypeDefinition) =>
     await render(definition),
   ).props.order;
 
-/**
- * The props the actions cell hands `DeleteContentAction` for one row.
- *
- * The cell is a plain function returning a fragment, so it can be called and
- * walked without a DOM - which is the cheapest way to assert what a row action
- * is actually given.
- */
-const deleteProps = async (
-  definition: AnyContentTypeDefinition,
-  row: Record<string, unknown>,
-) => {
+/** The actions column, which carries both the cell and its width. */
+const actionsColumn = async (definition: AnyContentTypeDefinition) => {
   const element = dataTable<{
     columns: {
       cell?: (context: { row: Record<string, unknown> }) => ReactElement<{
         children: ReactElement<Record<string, unknown>>[];
       }>;
+      className?: string;
       id?: string;
     }[];
   }>(await render(definition));
 
-  const actions = element.props.columns.find(column => column.id === "actions");
-  const rendered = actions?.cell?.({ row });
-
-  return rendered?.props.children.find(
-    child => child?.type === DeleteContentAction,
-  )?.props;
+  return element.props.columns.find(column => column.id === "actions");
 };
+
+/**
+ * Every row action the actions cell renders for one row, in order.
+ *
+ * The cell is a plain function returning a fragment, so it can be called and
+ * walked without a DOM - which is the cheapest way to assert what a row action
+ * is actually given.
+ */
+const rowActions = async (
+  definition: AnyContentTypeDefinition,
+  row: Record<string, unknown>,
+) => {
+  const rendered = (await actionsColumn(definition))?.cell?.({ row });
+
+  return (rendered?.props.children ?? []).filter(Boolean);
+};
+
+/** The props the actions cell hands the ⋯ menu, which now owns delete. */
+const menuProps = async (
+  definition: AnyContentTypeDefinition,
+  row: Record<string, unknown>,
+) =>
+  (await rowActions(definition, row)).find(
+    child => child.type === ContentRowActionsMenu,
+  )?.props;
 
 describe("the delete row action", () => {
   it("is handed the version the row is showing", async () => {
     // The precondition the editorial delete route requires. Taken from the row
     // in front of the person, so a stale table cannot remove a newer record.
     expect(
-      await deleteProps(testEditorialPostContentType, { id: 7, version: 4 }),
+      await menuProps(testEditorialPostContentType, { id: 7, version: 4 }),
     ).toMatchObject({ id: 7, version: 4 });
   });
 
   it("is handed no version without editorial", async () => {
     // `test.post` has no `version` column and its delete route takes no body.
-    expect(await deleteProps(testPostContentType, { id: 7 })).toMatchObject({
+    expect(await menuProps(testPostContentType, { id: 7 })).toMatchObject({
       version: undefined,
     });
+  });
+});
+
+describe("the actions cell", () => {
+  it("stays at three buttons for a content type with every capability", async () => {
+    // Publish and edit are what people click all day; preview, scheduling,
+    // history, languages, delivery and delete are listed by name behind the ⋯
+    // button, which comes last. Eight icons in a cell is a row nobody can read.
+    expect(
+      (
+        await rowActions(testDeliveredLocalizedContentType, {
+          id: 7,
+          labels: {},
+          version: 2,
+        })
+      ).map(child => child.type),
+    ).toEqual([
+      PublishContentAction,
+      EditContentAction,
+      ContentRowActionsMenu,
+    ]);
+  });
+
+  it("keeps edit last before the menu for a plain content type", async () => {
+    // `test.article` has no publication, so the row is the pencil and the ⋯ -
+    // delete is inside the menu whatever the content type opted into.
+    expect(
+      (await rowActions(testArticleContentType, { id: 7, labels: {} })).map(
+        child => child.type,
+      ),
+    ).toEqual([EditContentAction, ContentRowActionsMenu]);
+  });
+
+  it("hands the menu the version the row is showing", async () => {
+    expect(
+      await menuProps(testDeliveredLocalizedContentType, {
+        id: 7,
+        labels: {},
+        version: 2,
+      }),
+    ).toMatchObject({ currentVersion: 2, id: 7 });
+  });
+
+  it("sizes the column to the buttons the row actually shows", async () => {
+    // Three buttons at most, so the widest the column ever gets is `w-28` - it
+    // used to run to `w-68` for a content type that opted into everything.
+    expect((await actionsColumn(testDeliveredLocalizedContentType))?.className)
+      .toBe("w-28");
+    expect((await actionsColumn(testArticleContentType))?.className).toBe(
+      "w-20",
+    );
   });
 });
 

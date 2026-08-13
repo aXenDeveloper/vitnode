@@ -10,6 +10,7 @@ import { useAdminStaffPermission } from "@/components/staff-permission/provider"
 import { Button } from "@/components/ui/button";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 
+import { RevisionActor } from "../history/revision-actor";
 import {
   listContentTranslationRevisionsAction,
   restoreContentTranslationRevisionAction,
@@ -146,9 +147,10 @@ export const TranslationHistory = ({
                 <span className="text-muted-foreground">
                   <DateFormat date={new Date(revision.createdAt)} />
                 </span>
-                <span className="text-muted-foreground">
-                  {revision.actorName ?? tHistory("system_actor")}
-                </span>
+                <RevisionActor
+                  className="text-muted-foreground"
+                  revision={revision}
+                />
               </span>
 
               {canRestore && revision.version !== currentVersion ? (

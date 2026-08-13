@@ -51,6 +51,7 @@ export const PublishContentAction = ({
 }) => {
   const tPublish = useTranslations("core.content.publish");
   const tUnpublish = useTranslations("core.content.unpublish");
+  const tActions = useTranslations("core.content.actions");
   const tErrors = useTranslations("core.global.errors");
   const tContentErrors = useTranslations("core.content.errors");
   const canPublish = useAdminStaffPermission({
@@ -63,7 +64,10 @@ export const PublishContentAction = ({
 
   const published = status === "published";
   const t = published ? tUnpublish : tPublish;
-  const label = t("title", { name: singular });
+  // The bare verb on the button, the full sentence on the dialog it opens: the
+  // tooltip is answering "what is this icon", and the row it sits in already says
+  // which record. The confirmation still names the record, where it matters.
+  const label = tActions(published ? "unpublish" : "publish");
   const Icon = published ? EyeOffIcon : SendIcon;
 
   return (
@@ -101,7 +105,7 @@ export const PublishContentAction = ({
           }}
           submitVariant={published ? "destructive" : "default"}
           textSubmit={t("confirm")}
-          title={label}
+          title={t("title", { name: singular })}
         >
           <TooltipTrigger
             render={

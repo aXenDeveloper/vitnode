@@ -56,6 +56,10 @@ export const EditContentAction = ({
   pluginId: string;
 }) => {
   const t = useTranslations("core.content.edit");
+  // The bare verb for the control, the full sentence for the heading the control
+  // opens. A tooltip on a pencil in a table row is answering "what is this
+  // button", and the row already says which record it belongs to.
+  const label = useTranslations("core.content.actions")("edit");
   const canEdit = useAdminStaffPermission({
     module: permissionModule,
     permission: CONTENT_PERMISSIONS.edit,
@@ -79,7 +83,7 @@ export const EditContentAction = ({
           <TooltipTrigger
             render={
               <Button
-                aria-label={t("title", { name: singular })}
+                aria-label={label}
                 nativeButton={false}
                 render={<Link href={href} />}
                 size="icon"
@@ -90,7 +94,7 @@ export const EditContentAction = ({
             }
           />
 
-          <TooltipContent>{t("title", { name: singular })}</TooltipContent>
+          <TooltipContent>{label}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
     );
@@ -104,11 +108,7 @@ export const EditContentAction = ({
             render={
               <DialogTrigger
                 render={
-                  <Button
-                    aria-label={t("title", { name: singular })}
-                    size="icon"
-                    variant="ghost"
-                  >
+                  <Button aria-label={label} size="icon" variant="ghost">
                     <PencilIcon className="size-4" />
                   </Button>
                 }
@@ -130,7 +130,7 @@ export const EditContentAction = ({
           </DialogContent>
         </Dialog>
 
-        <TooltipContent>{t("title", { name: singular })}</TooltipContent>
+        <TooltipContent>{label}</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );

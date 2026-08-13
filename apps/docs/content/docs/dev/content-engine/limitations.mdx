@@ -17,7 +17,7 @@ other 20%, so you find out here rather than halfway through building.
 | Rich text, media and file fields | Hand-build the field, or store an id and resolve it yourself |
 | To-the-second [scheduling](/docs/dev/content-engine/scheduling) | The queue drains on a one-minute tick, so a schedule fires within about a minute |
 | Scheduling a field edit, or a recurring schedule | Only `status` is scheduled. One row, one time, one action |
-| Revoking a single [preview link](/docs/dev/content-engine/preview) | Tokens are stateless. Rotate `CONTENT_PREVIEW_SECRET`, or wait out the expiry |
+| Revoking a single [preview link](/docs/dev/content-engine/preview) | Tokens are stateless. Rotate the install's signing key - which revokes all of them - or wait out the expiry |
 | Keeping a previewed revision from being pruned | A link is pinned to one revision, and retention can remove it before the link expires. The TTL is a maximum, not a promise |
 | A preview **list** of drafts | Only one record at a time, by signed link. There is no list route and there will not be one |
 | Approval workflows, reviewer assignment, per-locale revisions | [`editorial`](/docs/dev/content-engine/editorial) records what happened; it does not gate who may do it beyond the staff permissions |

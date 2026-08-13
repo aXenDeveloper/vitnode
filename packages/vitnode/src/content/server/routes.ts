@@ -10,6 +10,7 @@ import type {
   ContentReferenceFieldName,
 } from "../types";
 import type { AnyContentModel, ContentModel } from "./model";
+import type { ContentPreviewTarget } from "./preview-target";
 
 import { buildRoute } from "../../api/lib/route";
 import {
@@ -45,6 +46,7 @@ import {
   contentPreviewSecret,
   contentPreviewUrl,
 } from "./preview-link";
+import { resolveContentPreviewTarget } from "./preview-target";
 import { createContentPreviewToken } from "./preview-token";
 import { publicationMethods } from "./publication";
 import { CONTENT_REVISIONS_MAX_PAGE_SIZE } from "./revisions-model";
@@ -232,8 +234,14 @@ export const buildContentRoutes = <
   const previewEnabled = definition.editorial.preview.enabled;
 
   const previewSecret = contentPreviewSecret;
-  const previewUrl = (token: string): string =>
-    contentPreviewUrl({ definition, pluginId, token });
+  const previewUrl = (token: string, target: ContentPreviewTarget): string =>
+    contentPreviewUrl({
+      definition,
+      locale: target.locale,
+      pluginId,
+      slug: target.slug,
+      token,
+    });
   const assertPreviewIsServable = assertContentPreviewIsServable;
 
   const list = buildRoute({
@@ -719,6 +727,7 @@ export const buildContentRoutes = <
 
   const zodRevisionMeta = z.object({
     actorName: z.string().nullable(),
+    actorRoleColor: z.string().nullable(),
     actorType: z.enum(CONTENT_ACTOR_TYPES),
     actorUserId: z.number().nullable(),
     changedFields: z.array(z.string()),
@@ -1013,14 +1022,14 @@ export const buildContentRoutes = <
         404: { description: `${label.singular} not found` },
         503: {
           description:
-            "Preview is not configured securely on this deployment, so no link can be signed",
+            "This deployment has no usable web or API origin, so no link can be built",
         },
       },
     },
     handler: async c => {
       // Before the lookup, so a misconfigured install answers the same way for
       // a record that exists and one that does not.
-      assertPreviewIsServable(c);
+      assertPreviewIsServable();
 
       const id = identifier(c);
 
@@ -1033,12 +1042,35 @@ export const buildContentRoutes = <
       const latest = await editorialService(c).revisions.latest(id);
       const version = (row as Record<string, unknown>).version;
 
+      // Which page this previews, and - on a localized content type - which
+      // language it is bound to. A localized token *must* carry one: the public
+      // preview route resolves a locale for every localized read and refuses a
+      // token that names a different one, so a locale-less token would be a link
+      // that 404s wherever it pointed.
+      const target = await resolveContentPreviewTarget(c, model, { id, row });
+
+      // The translation's own newest revision, so both halves of a localized
+      // preview are frozen rather than only the shared one. `0` when there is
+      // nothing recorded for that language, which the reader treats as "read it
+      // live" - the same answer `revisionId: 0` gets for the base row.
+      const translationRevisionId =
+        target.locale !== undefined && model.translationEditorialService
+          ? ((
+              await model
+                .translationEditorialService(c, { pluginId })
+                .listRevisions(id, target.locale, { limit: 1 })
+            ).edges[0]?.id ?? 0)
+          : undefined;
+
       const { expiresAt, token } = createContentPreviewToken({
         definition,
         itemId: id,
+        languageId: target.languageId,
+        locale: target.locale,
         pluginId,
         revisionId: latest?.id ?? 0,
-        secret: previewSecret(c),
+        secret: await previewSecret(c),
+        translationRevisionId,
         version: latest?.version ?? (typeof version === "number" ? version : 1),
       });
 
@@ -1047,7 +1079,7 @@ export const buildContentRoutes = <
           expiresAt,
           revisionId: latest?.id ?? 0,
           token,
-          url: previewUrl(token),
+          url: previewUrl(token, target),
           version:
             latest?.version ?? (typeof version === "number" ? version : 1),
         },

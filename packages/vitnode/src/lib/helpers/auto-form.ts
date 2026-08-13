@@ -24,13 +24,11 @@ export function getDefaults<T extends z.ZodType>(
 
     // Case 2: The property is a nested object. Recurse into it.
     if (prop.type === "object" && prop.properties) {
-      const nestedDefaults = getDefaults(prop);
-
-      // Only add the nested object if it contains default values.
-      if (Object.keys(nestedDefaults).length > 0) {
-        defaultValues[key] = nestedDefaults;
-      }
+      defaultValues[key] = getDefaults(prop);
+      continue;
     }
+
+    defaultValues[key] = undefined;
   }
 
   return defaultValues as DefaultValues<z.input<T>>;

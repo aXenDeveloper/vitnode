@@ -412,7 +412,19 @@
         "updated_at": "Updated",
         "actions": "Actions",
         "empty_value": "—",
-        "published_at": "Published"
+        "published_at": "Published",
+        "more_actions": "More actions"
+      },
+      "actions": {
+        "edit": "Edit",
+        "publish": "Publish",
+        "unpublish": "Unpublish",
+        "preview": "Preview",
+        "schedule": "Schedule",
+        "history": "History",
+        "translations": "Languages",
+        "delivery": "Delivery",
+        "delete": "Delete"
       },
       "create": {
         "title": "Create {name}",
@@ -495,6 +507,7 @@
         "current": "Current",
         "system_actor": "System",
         "changed_fields": "Changed: {fields}",
+        "changed_to": "changed to",
         "show_changes": "Show changes",
         "hide_changes": "Hide changes",
         "no_changes": "No field values changed.",
@@ -526,8 +539,8 @@
         "copy": "Copy link",
         "open": "Open",
         "expires": "Expires <when></when>",
-        "warning": "Treat it like a password: it works for anyone until it expires, and the only way to revoke one early is to rotate CONTENT_PREVIEW_SECRET. It is pinned to this version, so heavy editing can age it out of the history before it expires.",
-        "unavailable": "Preview is not configured on this deployment. Set CONTENT_PREVIEW_SECRET to at least 32 random bytes and restart the API.",
+        "warning": "Treat it like a password: it works for anyone until it expires, and it cannot be revoked early. It is pinned to this version, so heavy editing can age it out of the history before it expires.",
+        "unavailable": "Preview links cannot be built on this deployment. Check that NEXT_PUBLIC_WEB_URL and NEXT_PUBLIC_API_URL are absolute URLs, then restart the API.",
         "live": "This record has no saved version yet, so the link shows it live - it will follow any edits made before the reviewer opens it."
       },
       "delivery": {
@@ -1110,7 +1123,6 @@
         "content_preview": {
           "title": "Content Preview",
           "desc": "Signed, expiring links that let a reviewer read an unpublished record without an account.",
-          "insecure": "Using the default CONTENT_PREVIEW_SECRET - anyone can forge a preview link. Set a real one.",
           "not_configured": "No content type has preview enabled.",
           "content_types": "{count, plural, =0 {No content types} one {# content type} other {# content types}}"
         },

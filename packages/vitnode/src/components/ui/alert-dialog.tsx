@@ -23,25 +23,34 @@ function AlertDialog({
   onOpenChange,
   open: openProp,
   ...props
-}: AlertDialogPrimitive.Root.Props) {
+}: Omit<AlertDialogPrimitive.Root.Props, "onOpenChange"> & {
+  onOpenChange?: (open: boolean) => void;
+}) {
   const [open, setOpen] = React.useState(false);
+  const isOpen = openProp ?? open;
 
-  const handleOpenChange: AlertDialogPrimitive.Root.Props["onOpenChange"] = (
-    newOpen,
-    eventDetails,
-  ) => {
-    onOpenChange?.(newOpen, eventDetails);
-    setOpen(newOpen);
-  };
+  // Opens/closes the dialog, from a Base UI interaction or from a
+  // `useAlertDialog()` caller - the confirm footer closes itself that way, and a
+  // dialog whose `open` comes from a prop would otherwise ignore it.
+  const changeOpen = React.useCallback(
+    (newOpen: boolean) => {
+      onOpenChange?.(newOpen);
+      setOpen(newOpen);
+    },
+    [onOpenChange],
+  );
 
-  const contextValue = React.useMemo(() => ({ open, setOpen }), [open]);
+  const contextValue = React.useMemo(
+    () => ({ open: isOpen, setOpen: changeOpen }),
+    [changeOpen, isOpen],
+  );
 
   return (
     <AlertDialogContext value={contextValue}>
       <AlertDialogPrimitive.Root
         data-slot="alert-dialog"
-        onOpenChange={handleOpenChange}
-        open={openProp ?? open}
+        onOpenChange={changeOpen}
+        open={isOpen}
         {...props}
       />
     </AlertDialogContext>

@@ -68,7 +68,7 @@ describe("PublishContentAction", () => {
     renderAction("draft");
 
     expect(
-      screen.getByRole("button", { name: "core.content.publish.title" }),
+      screen.getByRole("button", { name: "core.content.actions.publish" }),
     ).toBeDefined();
   });
 
@@ -76,7 +76,7 @@ describe("PublishContentAction", () => {
     renderAction("published");
 
     expect(
-      screen.getByRole("button", { name: "core.content.unpublish.title" }),
+      screen.getByRole("button", { name: "core.content.actions.unpublish" }),
     ).toBeDefined();
   });
 
@@ -95,9 +95,9 @@ describe("PublishContentAction", () => {
 
     expect(
       screen
-        .getByRole("button", { name: "core.content.publish.title" })
+        .getByRole("button", { name: "core.content.actions.publish" })
         .getAttribute("aria-label"),
-    ).toBe("core.content.publish.title");
+    ).toBe("core.content.actions.publish");
   });
 
   describe("confirmation", () => {
@@ -105,7 +105,7 @@ describe("PublishContentAction", () => {
       renderAction("draft");
 
       fireEvent.click(
-        screen.getByRole("button", { name: "core.content.publish.title" }),
+        screen.getByRole("button", { name: "core.content.actions.publish" }),
       );
 
       expect(
@@ -119,7 +119,7 @@ describe("PublishContentAction", () => {
       renderAction("draft");
 
       fireEvent.click(
-        screen.getByRole("button", { name: "core.content.publish.title" }),
+        screen.getByRole("button", { name: "core.content.actions.publish" }),
       );
       fireEvent.click(
         await screen.findByRole(
@@ -144,7 +144,7 @@ describe("PublishContentAction", () => {
       renderAction("published");
 
       fireEvent.click(
-        screen.getByRole("button", { name: "core.content.unpublish.title" }),
+        screen.getByRole("button", { name: "core.content.actions.unpublish" }),
       );
       fireEvent.click(
         await screen.findByRole(
@@ -165,7 +165,7 @@ describe("PublishContentAction", () => {
       renderAction("draft");
 
       fireEvent.click(
-        screen.getByRole("button", { name: "core.content.publish.title" }),
+        screen.getByRole("button", { name: "core.content.actions.publish" }),
       );
       fireEvent.click(
         await screen.findByRole(
@@ -188,7 +188,7 @@ describe("PublishContentAction", () => {
       renderAction("draft");
 
       fireEvent.click(
-        screen.getByRole("button", { name: "core.content.publish.title" }),
+        screen.getByRole("button", { name: "core.content.actions.publish" }),
       );
       fireEvent.click(
         await screen.findByRole(
@@ -210,7 +210,7 @@ describe("PublishContentAction", () => {
       renderAction("draft");
 
       fireEvent.click(
-        screen.getByRole("button", { name: "core.content.publish.title" }),
+        screen.getByRole("button", { name: "core.content.actions.publish" }),
       );
       fireEvent.click(
         await screen.findByRole(

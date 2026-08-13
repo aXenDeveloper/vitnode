@@ -1,28 +1,11 @@
 "use client";
 
-import { CalendarClockIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
-import React from "react";
 
-import { useAdminStaffPermission } from "@/components/staff-permission/provider";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Loader } from "@/components/ui/loader";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { CONTENT_PERMISSIONS } from "@/content/const";
+import type { ContentPanelProps } from "./content-panel";
+
+import { ContentPanel } from "./content-panel";
 
 // The panel carries a form and the whole schedule list, so it loads with the
 // dialog rather than with the table - the same treatment the edit form gets.
@@ -35,82 +18,42 @@ const SchedulePanel = dynamic(async () =>
 /**
  * The scheduling row action.
  *
- * Gated by `can_publish`, not `can_edit`. Booking a publication *is*
+ * Listed for `can_publish`, not `can_edit`. Booking a publication *is*
  * publishing, just later - a role trusted to write drafts is not automatically
  * trusted to put one on the internet at 9am on Monday, and the route says the
- * same thing whether or not this button was rendered.
+ * same thing whether or not this was ever offered.
  */
-export const ScheduleContentAction = ({
+export const ScheduleContentPanel = ({
   contentTypeId,
   id,
-  permissionModule,
-  pluginId,
   singular,
   title,
-}: {
+  ...panel
+}: ContentPanelProps & {
   contentTypeId: string;
   id: number;
-  permissionModule: string;
-  pluginId: string;
   singular: string;
   title: string;
 }) => {
   const t = useTranslations("core.content.schedule");
-  const canPublish = useAdminStaffPermission({
-    module: permissionModule,
-    permission: CONTENT_PERMISSIONS.publish,
-    plugin: pluginId,
-  });
-
-  if (!canPublish) return null;
-
-  const label = t("title", { name: singular });
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <Dialog>
-          <TooltipTrigger
-            render={
-              <DialogTrigger
-                render={
-                  <Button aria-label={label} size="icon" variant="ghost">
-                    <CalendarClockIcon className="size-4" />
-                  </Button>
-                }
-              />
-            }
-          />
-
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{label}</DialogTitle>
-              {/* `t.rich`, because the message names the record with a
-                  `<title>` tag - the same shape delete, publish and restore
-                  use. Passing a plain string for a tag is a formatting error
-                  at render time, not a compile one. */}
-              <DialogDescription>
-                {t.rich("desc", {
-                  title: () => (
-                    <span className="text-foreground font-bold">{title}</span>
-                  ),
-                })}
-              </DialogDescription>
-            </DialogHeader>
-
-            <React.Suspense fallback={<Loader />}>
-              <SchedulePanel
-                contentTypeId={contentTypeId}
-                id={id}
-                singular={singular}
-                title={title}
-              />
-            </React.Suspense>
-          </DialogContent>
-        </Dialog>
-
-        <TooltipContent>{label}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <ContentPanel
+      // `t.rich`, because the message names the record with a `<title>` tag -
+      // the same shape delete, publish and restore use. Passing a plain string
+      // for a tag is a formatting error at render time, not a compile one.
+      description={t.rich("desc", {
+        title: () => <span className="text-foreground font-bold">{title}</span>,
+      })}
+      title={t("title", { name: singular })}
+      {...panel}
+    >
+      <SchedulePanel
+        contentTypeId={contentTypeId}
+        id={id}
+        singular={singular}
+        title={title}
+      />
+    </ContentPanel>
   );
 };

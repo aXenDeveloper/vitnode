@@ -16,6 +16,10 @@ export const AutoFormCheckbox = ({
   className,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   itemParams,
+  // Only the language-aware inputs implement this - dropped here so it never
+  // lands on the DOM element the rest props spread into.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  multiLang,
   ...props
 }: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Checkbox>, "checked">) => {

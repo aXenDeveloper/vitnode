@@ -253,6 +253,13 @@
       "when": 1786350996229,
       "tag": "0035_migrate_blog_to_content_engine",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1786562844917,
+      "tag": "0036_add_core_secrets",
+      "breakpoints": true
     }
   ]
 }

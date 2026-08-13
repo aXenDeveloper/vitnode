@@ -25,6 +25,9 @@ vi.mock("@/components/date-format", () => ({
 
 const push = vi.fn();
 vi.mock("@/lib/navigation", () => ({
+  Link: ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
   usePathname: () => "/admin/content/test/editorial",
   useRouter: () => ({ push }),
 }));
@@ -84,6 +87,7 @@ const spec: ContentFormSpec = {
 
 const revision = (version: number): ContentRevisionMeta => ({
   actorName: "Ada",
+  actorRoleColor: null,
   actorType: "staff",
   actorUserId: 1,
   changedFields: ["title"],
@@ -218,6 +222,72 @@ describe("RevisionHistory", () => {
       expect(screen.getByText("v48")).not.toBeNull();
     });
     expect(screen.getAllByText("v49")).toHaveLength(1);
+  });
+
+  describe("the author", () => {
+    it("links to their admin page", async () => {
+      listContentRevisionsAction.mockResolvedValue(page([50]));
+
+      view();
+
+      const link = await screen.findByRole("link", { name: "Ada" });
+      expect(link.getAttribute("href")).toBe("/admin/core/users/1");
+    });
+
+    it("is plain text for a system revision", async () => {
+      listContentRevisionsAction.mockResolvedValue({
+        edges: [
+          {
+            ...revision(50),
+            actorName: null,
+            actorType: "system" as const,
+            actorUserId: null,
+          },
+        ],
+        pageInfo: { endCursor: 50, hasNextPage: false },
+      });
+
+      view();
+
+      expect(
+        await screen.findByText("core.content.history.system_actor"),
+      ).not.toBeNull();
+      expect(screen.queryByRole("link")).toBeNull();
+    });
+
+    it("is plain text once their account is gone", async () => {
+      // The revision keeps the id it was stamped with, and the join finds
+      // nothing. A link to a user page that answers 404 is worse than no link.
+      listContentRevisionsAction.mockResolvedValue({
+        edges: [{ ...revision(50), actorName: null }],
+        pageInfo: { endCursor: 50, hasNextPage: false },
+      });
+
+      view();
+
+      expect(
+        await screen.findByText("core.content.history.system_actor"),
+      ).not.toBeNull();
+      expect(screen.queryByRole("link")).toBeNull();
+    });
+  });
+
+  it("says so rather than offering an empty panel when no field moved", async () => {
+    // A publish moves no field value and the server records that, so the row
+    // states the fact instead of inviting somebody to open a diff with nothing
+    // in it - and to fetch two snapshots to find that out.
+    listContentRevisionsAction.mockResolvedValue({
+      edges: [{ ...revision(50), changedFields: [], operation: "publish" }],
+      pageInfo: { endCursor: 50, hasNextPage: false },
+    });
+
+    view();
+
+    expect(
+      await screen.findByText("core.content.history.no_changes"),
+    ).not.toBeNull();
+    expect(screen.queryByText("core.content.history.show_changes")).toBeNull();
+    expect(getContentRevisionAction).not.toHaveBeenCalled();
   });
 
   describe("the snapshot a row compares against", () => {

@@ -14,6 +14,7 @@ import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDatabase } from "./service";
 
 import { core_content_revisions } from "../../database/content";
+import { core_roles } from "../../database/roles";
 import { core_users } from "../../database/users";
 
 export interface ContentRevisionCaptureInput<
@@ -131,6 +132,7 @@ export const createContentRevisionsModel = <
 
   const metaSelection = {
     actorName: core_users.name,
+    actorRoleColor: core_roles.color,
     actorType: core_content_revisions.actorType,
     actorUserId: core_content_revisions.actorUserId,
     changedFields: core_content_revisions.changedFields,
@@ -187,6 +189,10 @@ export const createContentRevisionsModel = <
           core_users,
           eq(core_content_revisions.actorUserId, core_users.id),
         )
+        // Both joins are LEFT: a system revision has no actor, and an actor
+        // whose account has since been deleted has no name - neither is a reason
+        // to drop the revision itself from the history.
+        .leftJoin(core_roles, eq(core_users.roleId, core_roles.id))
         // The revision id is the *last* predicate, not the only one.
         .where(and(scope(itemId), eq(core_content_revisions.id, revisionId)))
         .limit(1);
@@ -205,6 +211,10 @@ export const createContentRevisionsModel = <
           core_users,
           eq(core_content_revisions.actorUserId, core_users.id),
         )
+        // Both joins are LEFT: a system revision has no actor, and an actor
+        // whose account has since been deleted has no name - neither is a reason
+        // to drop the revision itself from the history.
+        .leftJoin(core_roles, eq(core_users.roleId, core_roles.id))
         .where(scope(itemId))
         .orderBy(desc(core_content_revisions.version))
         .limit(1);
@@ -228,6 +238,10 @@ export const createContentRevisionsModel = <
           core_users,
           eq(core_content_revisions.actorUserId, core_users.id),
         )
+        // Both joins are LEFT: a system revision has no actor, and an actor
+        // whose account has since been deleted has no name - neither is a reason
+        // to drop the revision itself from the history.
+        .leftJoin(core_roles, eq(core_users.roleId, core_roles.id))
         .where(
           cursor === undefined
             ? scope(itemId)

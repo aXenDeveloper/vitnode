@@ -32,7 +32,7 @@ You get a nav item, a breadcrumb, and a screen at:
 - **Create / Edit** - `AutoForm` dialogs, lazy-loaded on open - or full pages,
   with `admin.create.mode` / `admin.edit.mode`
   ([below](#dialog-or-page))
-- **Delete** - a confirmation dialog
+- **Delete** - a confirmation dialog, in the ⋯ menu ([below](#the-actions-cell))
 - **History** - with [`editorial`](#editorial): every version, a diff, and restore
 - **Languages** - with [`localization`](/docs/dev/content-engine/translation-editorial):
   the list and the form open in *your* VitNode language, and each translated
@@ -154,8 +154,9 @@ its table with a **status** column, rendered as a badge rather than raw text:
 
 ### The publish action
 
-Each row gains a third icon button, before Edit and Delete. It flips with the
-row's state rather than showing two buttons with a dead one:
+Each row gains an icon button of its own, leading the
+[actions cell](#the-actions-cell). It flips with the row's state rather than
+showing two buttons with a dead one:
 
 | Row | Icon | Action |
 | --- | --- | --- |
@@ -183,22 +184,68 @@ publication date. It has no publish control of its own: `status` and
 `publishedAt` are not in the form schema, and two competing mutation paths in
 one dialog is how a form ends up fighting its own state.
 
+## The actions cell
+
+However much a content type opts into, the row holds at most **three** buttons,
+in this order:
+
+```text
+Publish/Unpublish · Edit · ⋯
+```
+
+Everything else is listed by name behind the **⋯** button, which is always last:
+
+```text
+Preview · Schedule · History · Languages · Delivery
+─────────────────────────────────────────────────────
+Delete
+```
+
+Publish and edit are what people click all day, so they stay in the row. The rest
+are capability actions somebody reaches for occasionally, and a name says which is
+which - *Languages of this Post* and *Delivery for this Post* were two adjacent
+icons before, in a cell that ran to eight of them.
+
+**Delete** is in the menu too, last and under a rule, in the destructive colour.
+It is the one action here that cannot be undone, and it has no business one pixel
+from the pencil. Nothing else about it changed: it still asks, still names the
+record, and still refuses to guess about a version nobody has seen.
+
+An item appears only when the content type has that capability **and** the role
+holds the permission behind it, so a role allowed none of them gets no ⋯ button at
+all rather than an empty menu. One panel is mounted at a time, and its body is
+fetched when it opens - a 25-row table is 25 buttons, not 150 dialogs.
+
+<Callout type="info" title="Where the permissions land">
+  `can_view` covers preview, history, languages and delivery - reading what
+  changed is part of seeing the record. Scheduling is `can_publish`, because
+  booking a publication is publishing, just later. Delete is `can_delete`. Every
+  route answers 403 whether or not its item was ever rendered.
+</Callout>
+
 ## Editorial
 
 A content type with [`editorial`](/docs/dev/content-engine/editorial) gains a
-**clock** row action, an **eye** one when preview is on, and changes how the
-edit dialog handles a failed save. The cell reads left to right:
-
-```text
-Preview · Schedule · History · Publish/Unpublish · Edit · Delete
-```
+**History** item, a **Preview** one when preview is on, and changes how the edit
+dialog handles a failed save.
 
 ### History
 
 The dialog body is lazy-loaded exactly like the form, and for the same reason.
-It lists one line per version - the operation as a badge, the author or
-**System**, a localised date, and which fields moved - with a **Current** badge
-on the newest.
+It reads as a timeline: one entry per version on a rail, each with a dot in its
+operation's colour - green for a create, blue for a publish, amber for an edit,
+violet for a restore, grey for an unpublish, red for a delete - then the
+operation as a badge, the author or **System**, and a localised date. The newest
+carries a **Current** badge and a ring on its dot.
+
+The author's name is coloured by their role and links to their admin page -
+except when there is nobody to link to: a system mutation, or an account deleted
+since. Both read **System**, because a link that answers 404 is worse than plain
+text.
+
+A version that moved no field value - a publish, an unpublish, a delete - says
+**No field values changed.** on the entry itself. There is nothing behind a
+toggle for those, so none is offered, and nothing is fetched to find that out.
 
 Twenty-five at a time, with **Load older versions** underneath when there are
 more. It appends rather than replaces, so scrolling back through a long history
@@ -212,7 +259,8 @@ and adopts the new current version, so a second restore in the same sitting does
 not conflict with the first.
 
 The list carries metadata only. Expanding a version fetches that one snapshot
-and renders a field-level diff against the version before it:
+and renders a field-level diff against the version before it, in a panel headed
+by the paths the revision recorded as changed:
 
 | Kind | Rendered as |
 | --- | --- |
@@ -224,6 +272,11 @@ and renders a field-level diff against the version before it:
 | `dateTime` | `<DateFormat>`, in the viewer's locale |
 | `relation`, `user` | the stored id, as `#3` |
 | `null` | the same em-dash the table cells use |
+
+Each row is the old value, an arrow, the new one. Short values - ids, numbers,
+dates, booleans - are set in a box so the pair either side of the arrow is easy
+to tell apart at a glance; prose is not, because a paragraph in a box is just a
+paragraph in a box.
 
 No raw JSON anywhere. Somebody comparing two versions of an article is looking
 for the sentence that changed, and `{"title":"..."}` makes them find it
@@ -242,31 +295,37 @@ publication state does not move. The button is absent without `can_restore`.
 
 ### Preview
 
-With [`editorial.preview`](/docs/dev/content-engine/preview), an eye icon leads
-the actions cell - present only for a content type that can be previewed, absent
+With [`editorial.preview`](/docs/dev/content-engine/preview), **Preview link**
+leads the ⋯ menu - present only for a content type that can be previewed, absent
 rather than disabled for anything else.
 
-The link is minted **when the popover opens**, never with the table payload. A
+The link is minted **when the panel opens**, never with the table payload. A
 page of 25 rows must not be 25 live bearer credentials for unpublished records
-sitting in a browser, most of them never used. Closing the popover throws the
+sitting in a browser, most of them never used. Closing the panel throws the
 link away, so opening it again mints a fresh one instead of showing you one that
 may already have expired.
 
 The URL is absolute - it is going on a clipboard and into somebody else's chat
-window - and it points at the web app when `preview.pathTemplate` is set, or at
-the API's JSON endpoint when it is not. The popover also says when the link
-expires, that it is pinned to one version, and, for a record with no history
-yet, that it reads live rather than frozen.
+window - and it points at a **page** wherever there is one to point at: the
+dedicated preview page when `preview.pathTemplate` names one, the record's own
+canonical page carrying `?preview=` when the content type has `delivery`, and
+the API's JSON endpoint only when it has neither. See [Where a preview link
+points](/docs/dev/content-engine/preview#where-a-preview-link-points). On a
+localized content type the link previews the default language. The panel also
+says when the link expires, that it is pinned to one version, and, for a record
+with no history yet, that it reads live rather than frozen.
 
-Without a usable `CONTENT_PREVIEW_SECRET` the server answers 503 and the toast
-names the variable, because the person clicking the button is usually the person
-who can set it.
+Nothing has to be configured for the button to work - the install signs with a key
+it generated for itself. If it cannot build an absolute URL because
+`NEXT_PUBLIC_WEB_URL` or `NEXT_PUBLIC_API_URL` is not a URL, the server answers
+503 and the toast names the variable, because the person clicking the button is
+usually the person who can set it.
 
 ### Scheduling
 
-With [`editorial.scheduling`](/docs/dev/content-engine/scheduling), a calendar
-icon opens a dialog showing what is booked, what already ran and who booked it,
-above a two-field form: what should happen, and when.
+With [`editorial.scheduling`](/docs/dev/content-engine/scheduling), a
+**Schedule** item opens a dialog showing what is booked, what already ran and who
+booked it, above a two-field form: what should happen, and when.
 
 - The date field names the timezone it is reading, because "9am" is a question
   otherwise.
@@ -385,9 +444,9 @@ Switching `Title` to English leaves the others in Polish - there is no
 form-global language. One Save writes the base row and every changed language in
 one transaction.
 
-Per-language status, publication, history and delete live in a separate
-**Languages** row action, because the language is part of *that* decision rather
-than a mode the whole screen is in.
+Per-language status, publication, history and delete live in their own
+**Languages** panel in the ⋯ menu, because the language is part of *that* decision
+rather than a mode the whole screen is in.
 
 The whole thing is described in [Localized
 editing](/docs/dev/content-engine/translation-editorial#the-admincp).

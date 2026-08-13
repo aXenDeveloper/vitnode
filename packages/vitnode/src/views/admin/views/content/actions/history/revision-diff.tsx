@@ -1,4 +1,5 @@
 // No "use client": reached only from `history-action`, which is a client entry.
+import { ArrowRightIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import React from "react";
 
@@ -11,9 +12,45 @@ import type {
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 import { contentRevisionDiff } from "@/content/revisions";
+import { cn } from "@/lib/utils";
 
 /** How many lines of a `textarea` diff are shown before it collapses. */
 const TEXTAREA_PREVIEW_LINES = 8;
+
+/**
+ * Kinds short enough to read as a token rather than as prose.
+ *
+ * The distinction is visual only: an id or a date is a value you compare at a
+ * glance, and a box around it makes the pair either side of the arrow easy to
+ * tell apart. A paragraph in a box is just a paragraph in a box.
+ */
+const TOKEN_KINDS = new Set([
+  "boolean",
+  "dateTime",
+  "number",
+  "relation",
+  "user",
+]);
+
+/**
+ * Whether a value is "nothing".
+ *
+ * One predicate, used both by the renderer and by the layout around it: an
+ * em-dash stands on its own, a real value is set in a box, and the two have to
+ * agree or a row shows an empty container.
+ */
+const isBlank = (value: ContentSnapshotValue | undefined): boolean => {
+  if (value === null || value === undefined || value === "") return true;
+  if (Array.isArray(value)) return value.length === 0;
+
+  if (typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).every(
+      leaf => leaf === null || leaf === "",
+    );
+  }
+
+  return false;
+};
 
 const Empty = ({ label }: { label: string }) => (
   <span aria-label={label} className="text-muted-foreground">
@@ -44,17 +81,13 @@ const Value = ({
 }) => {
   // Narrowed once, so the scalar branches below can use `String(...)` without
   // every one of them having to prove the value is not an object.
-  if (value === null || value === undefined || value === "") {
-    return <Empty label={emptyLabel} />;
-  }
+  if (isBlank(value)) return <Empty label={emptyLabel} />;
 
   // The three Stage 6 shapes reach here as objects and arrays rather than
   // scalars, and `String(...)` on any of them is `[object Object]`. Each gets a
   // summary a person can read: a group as its leaves, a to-many relation as its
   // targets, a repeatable as how many entries it holds.
   if (Array.isArray(value)) {
-    if (value.length === 0) return <Empty label={emptyLabel} />;
-
     if (typeof value[0] === "number") {
       return (
         <span>
@@ -73,15 +106,10 @@ const Value = ({
   }
 
   if (typeof value === "object") {
-    const leaves = Object.entries(value as Record<string, unknown>).filter(
-      ([, leaf]) => leaf !== null && leaf !== "",
-    );
-
-    if (leaves.length === 0) return <Empty label={emptyLabel} />;
-
     return (
       <span className="wrap-break-word">
-        {leaves
+        {Object.entries(value as Record<string, unknown>)
+          .filter(([, leaf]) => leaf !== null && leaf !== "")
           .map(([leaf, leafValue]) => `${leaf}: ${String(leafValue)}`)
           .join(", ")}
       </span>
@@ -131,6 +159,39 @@ const Value = ({
     default:
       return <span className="wrap-break-word">{String(value)}</span>;
   }
+};
+
+/** One side of a change: struck through on the left, plain on the right. */
+const Side = ({
+  before = false,
+  kind,
+  ...props
+}: {
+  before?: boolean;
+  emptyLabel: string;
+  kind: string;
+  labels: Record<string, string>;
+  options?: Record<string, string>;
+  value: ContentSnapshotValue | undefined;
+}) => {
+  // Nothing is left bare on purpose: a box drawn around an absence reads as a
+  // value that failed to render.
+  if (isBlank(props.value)) return <Empty label={props.emptyLabel} />;
+
+  return (
+    <span
+      className={cn(
+        "min-w-0 wrap-break-word",
+        // The enum branch brings its own badge, and a box around a badge is two
+        // boxes.
+        TOKEN_KINDS.has(kind) &&
+          "bg-background rounded-md border px-1.5 py-0.5",
+        before && "text-muted-foreground line-through",
+      )}
+    >
+      <Value kind={kind} {...props} />
+    </span>
+  );
 };
 
 /**
@@ -189,36 +250,30 @@ export const RevisionDiff = ({
   const emptyLabel = t("table.empty_value");
 
   return (
-    <dl className="flex flex-col gap-3">
+    <dl className="grid gap-x-4 gap-y-2.5 text-sm sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)]">
       {entries.map(entry => {
         const field = byName.get(entry.name);
         const kind = field?.kind ?? "text";
+        const shared = {
+          emptyLabel,
+          kind,
+          labels,
+          options: field?.options,
+        };
 
         return (
-          <div className="flex flex-col gap-1" key={entry.name}>
-            <dt className="text-sm font-medium">
-              {field?.label ?? entry.name}
-            </dt>
-            <dd className="flex flex-wrap items-baseline gap-2 text-sm">
-              <span className="text-muted-foreground line-through">
-                <Value
-                  emptyLabel={emptyLabel}
-                  kind={kind}
-                  labels={labels}
-                  options={field?.options}
-                  value={entry.before}
-                />
-              </span>
-              <span aria-hidden>→</span>
-              <Value
-                emptyLabel={emptyLabel}
-                kind={kind}
-                labels={labels}
-                options={field?.options}
-                value={entry.after}
+          <React.Fragment key={entry.name}>
+            <dt className="truncate sm:pt-0.5">{field?.label ?? entry.name}</dt>
+            <dd className="flex min-w-0 flex-wrap items-center gap-2">
+              <Side {...shared} before value={entry.before} />
+              <ArrowRightIcon
+                aria-hidden
+                className="text-muted-foreground/50 size-3.5 shrink-0"
               />
+              <span className="sr-only">{t("history.changed_to")}</span>
+              <Side {...shared} value={entry.after} />
             </dd>
-          </div>
+          </React.Fragment>
         );
       })}
     </dl>

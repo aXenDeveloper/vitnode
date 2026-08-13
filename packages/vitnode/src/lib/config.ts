@@ -7,18 +7,6 @@ export const INSECURE_DEFAULT_CRON_SECRET =
   "default-cron-secret-change-in-production";
 
 /**
- * Fallback used when `CONTENT_PREVIEW_SECRET` is not set, and well-known for
- * the same reason as the cron one: the integrations panel flags content preview
- * as insecure while it is in use.
- *
- * The stakes are higher here than for cron. This secret is the *only* thing
- * standing between an unpublished record and anyone who can guess a URL, so a
- * deployment left on the default is one search away from publishing its drafts.
- */
-export const INSECURE_DEFAULT_CONTENT_PREVIEW_SECRET =
-  "default-content-preview-secret-change-in-production";
-
-/**
  * How much entropy a preview secret has to carry.
  *
  * 32 bytes is the block size HMAC-SHA256 keys are compared against, and it is
@@ -30,11 +18,11 @@ export const CONTENT_PREVIEW_SECRET_MIN_BYTES = 32;
 /**
  * Whether a value is good enough to sign preview links with.
  *
- * `false` for a missing secret, for the well-known fallback, and for anything
- * too short to be worth attacking a hash with. Preview is the one feature in
- * the engine whose entire access control is a signature, so a weak secret is
- * not a warning - it is an unpublished record served to anyone who reads this
- * source file.
+ * Only ever asked of the optional `CONTENT_PREVIEW_SECRET` override - the key
+ * the install generates for itself is 32 random bytes by construction. Preview
+ * is the one feature in the engine whose entire access control is a signature,
+ * so an override too short to be worth attacking a hash with is ignored rather
+ * than honoured.
  *
  * `TextEncoder` rather than `Buffer`, so the check runs unchanged in a browser
  * bundle and in `drizzle-kit`.
@@ -43,7 +31,6 @@ export const isSecureContentPreviewSecret = (
   secret: null | string | undefined,
 ): boolean =>
   typeof secret === "string" &&
-  secret !== INSECURE_DEFAULT_CONTENT_PREVIEW_SECRET &&
   new TextEncoder().encode(secret).length >= CONTENT_PREVIEW_SECRET_MIN_BYTES;
 
 /**
@@ -55,12 +42,6 @@ export const isSecureContentPreviewSecret = (
 export const CONFIG = {
   get api(): URL {
     return new URL(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000");
-  },
-  get contentPreviewSecret(): string {
-    return (
-      process.env.CONTENT_PREVIEW_SECRET ??
-      INSECURE_DEFAULT_CONTENT_PREVIEW_SECRET
-    );
   },
   get cronJobSecret(): string {
     return process.env.CRON_SECRET ?? INSECURE_DEFAULT_CRON_SECRET;

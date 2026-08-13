@@ -47,9 +47,9 @@ editorial: {
 | `expiresInMinutes` | `number`, 1–1440 | `15` | How long a link stays valid |
 | `pathTemplate` | `string` | `null` | A page in your app. Exactly one `{token}`, leading `/`, no `..` |
 
-Without `pathTemplate` the AdminCP links straight at the JSON endpoint. That is
-the honest default: linking to a page nobody has written yet would just be a
-404 with extra steps.
+`pathTemplate` is for a page written *specifically* to render previews. Most
+content types do not need one - see [Where a preview link
+points](#where-a-preview-link-points) for what happens without it.
 
 <Callout type="warn" title="Preview requires a public API">
   `editorial.preview` needs
@@ -60,15 +60,44 @@ the honest default: linking to a page nobody has written yet would just be a
   you cast past it.
 </Callout>
 
-## `CONTENT_PREVIEW_SECRET` is optional
+## The signing key configures itself
 
-**Nothing requires it except preview.** Leave it unset and the API boots exactly
-as it would otherwise - an install that never sends anyone a draft link has no
-reason to hold a signing key, so this is not a deployment prerequisite. Set one
-when you want the feature, and set a real one: this single value is the entire
-authorization story - there is no session to fall back on - so a guessable secret
-is not a warning, it is every draft on the site readable by anyone who has read
-the VitNode source.
+**There is no environment variable to set.** The first process that needs to sign
+a link generates 32 random bytes and stores them in `core_secrets`, keyed by
+`content_preview`. Every other process reads the same row, so a link minted by one
+API instance verifies on all of them, and it survives restarts and redeploys the
+way an environment variable would.
+
+Setting one used to be a prerequisite for the feature, and a deployment that
+forgot got a 503 from a button somebody clicked three days later. Now `preview`
+is a property of the *content type* and nothing else: turn it on in `editorial`
+and it works.
+
+```text
+core_secrets
+  name   "content_preview"
+  value  32 random bytes, base64
+```
+
+The key is read once per process, on the first request, and only on installs where
+some content type has `editorial.preview` enabled. An install with nothing to
+preview never touches the table.
+
+<Callout type="info" title="Rotating it is how you revoke">
+  There is no revocation list, and no per-link kill switch. Deleting the
+  `content_preview` row invalidates every outstanding link at once - the next
+  process to need a key generates a fresh one - which is the blunt instrument you
+  want when a link leaks. Short expiries are what keep you from needing it.
+</Callout>
+
+### `CONTENT_PREVIEW_SECRET`, if you want it
+
+The variable still works, as an **override**. It is worth keeping for the two
+things a generated key cannot do:
+
+- **Rotating on a schedule**, without a database write.
+- **Sharing a key** between deployments that do not share a database, so a link
+  minted in one verifies in the other.
 
 ```bash
 openssl rand -base64 32
@@ -78,38 +107,12 @@ openssl rand -base64 32
 CONTENT_PREVIEW_SECRET=Q0hBTkdFLU1FLXRoaXMtaXMtYW4tZXhhbXBsZS12YWx1ZQ==
 ```
 
-A secret is acceptable when all three are true:
-
-```text
-CONTENT_PREVIEW_SECRET is set
-it is not the built-in placeholder
-it is at least 32 bytes
-```
-
-Anything else and preview **fails closed**, everywhere:
-
-| Where | What happens |
-| --- | --- |
-| Boot, in every environment | A warning on stdout naming the content types that wanted it. The app starts; preview does not |
-| `POST /{id}/preview` | **503**, with a message that names the variable |
-| `GET /content/{path}/preview/{token}` | **404** - the same answer a forged token gets, so an anonymous request learns nothing about the deployment |
-| AdminCP → System → Integrations | `contentPreview.secure: false`, next to the same flag for `CRON_SECRET` |
-
-<Callout type="warn" title="Off, never open">
-  A missing secret switches preview *off*; it never switches it to unsigned.
-  Refusing to boot would turn one content type's opt-in feature into a
-  prerequisite for the entire API - and for `next build`, which imports every
-  route module and so runs this check on a machine that has no business holding a
-  runtime signing key. Honouring unsigned tokens would serve drafts to anyone who
-  guesses a URL. So the process starts, the warning says what is missing, and the
-  503 says it again to whoever clicks the button.
-</Callout>
-
-<Callout type="info" title="Rotating it is how you revoke">
-  There is no revocation list, and no per-link kill switch. Changing the secret
-  invalidates every outstanding link at once, which is the blunt instrument you
-  want when one leaks. Short expiries are what keep you from needing it.
-</Callout>
+An override under 32 bytes is **ignored**, with a warning, and the generated key
+is used instead. A signature is the entire authorization story for these links -
+there is no session to fall back on - so signing with a password is not a
+degraded mode worth offering. Ignoring it is loud rather than silent, because
+silently substituting a different key would make a rotation that did not happen
+look like one that did.
 
 ## The routes
 
@@ -136,26 +139,49 @@ and it is asserted by a test rather than left to review.
 }
 ```
 
-### `url` is always absolute
+### Where a preview link points
 
-It goes on somebody's clipboard and into somebody else's chat window, so a path
-would be useless - and in a split deployment it would resolve against the wrong
-host. Which origin it resolves against depends on where the link actually points:
+A reviewer should land on a **page**. Three branches, in order, and the JSON
+endpoint is what is left when there is no page to land on:
 
-| `preview.pathTemplate` | Resolved against | Example |
+| # | When | Where the link goes |
 | --- | --- | --- |
-| set | `NEXT_PUBLIC_WEB_URL` - your app renders the page | `https://example.com/articles/preview/{token}` |
-| unset | `NEXT_PUBLIC_API_URL` - the generated JSON endpoint | `https://api.example.com/api/@vitnode/example/content/articles/preview/{token}` |
+| 1 | `preview.pathTemplate` is set | That page, on `NEXT_PUBLIC_WEB_URL`: `https://example.com/articles/preview/{token}` |
+| 2 | The content type has [`delivery`](/docs/dev/content-engine/delivery) | **The record's own canonical page**, carrying `?preview=`: `https://example.com/en/blog/my-post?preview={token}` |
+| 3 | Neither | The generated JSON endpoint, on `NEXT_PUBLIC_API_URL`: `https://api.example.com/api/@vitnode/example/content/articles/preview/{token}` |
 
-Two different origins, deliberately: the page is served by the web app and the
+**Branch 2 is the one most content types take.** A record with a delivery layer
+already has a public URL, and the page that renders the published record is the
+right place to render the draft: the reviewer sees the real layout rather than a
+preview-shaped copy of it, and nobody has to write a second page to get there.
+
+<Callout type="warn" title="The page has to read the parameter">
+  Branch 2 hands your delivery page a token and expects it to notice. A page that
+  ignores `?preview=` renders the *published* record - or 404s, for a draft that
+  has never been published - which looks like a broken link rather than a page
+  that was never wired up. See [Rendering a preview
+  page](#rendering-a-preview-page).
+</Callout>
+
+Two different origins, deliberately: a page is served by the web app and the
 endpoint by the API, and assuming they share a host is exactly the assumption a
 split deployment breaks. Both are checked at boot when preview is enabled, so a
 malformed `NEXT_PUBLIC_WEB_URL` is a startup warning and a 503 rather than a
 broken link handed to a reviewer.
 
-`url` is built on the server, because only the definition knows whether this
-install has a preview page or should link at the JSON endpoint. The token is
-percent-encoded into the path.
+`url` is absolute in every branch - it goes on somebody's clipboard and into
+somebody else's chat window, so a path would be useless. It is built on the
+server, because only the server knows which branch applies *and* holds the
+record's slug.
+
+<Callout type="info" title="A localized preview names its language">
+  On a localized content type the AdminCP button previews the **default locale**,
+  and the token is bound to it. That is not a detail: the public preview route
+  resolves a locale for every localized read and refuses a token that names a
+  different one, so a locale-less token would 404 wherever it pointed. The
+  language is in the path already (`/en/blog/...`), so the page reads it from its
+  own route parameter rather than a query string.
+</Callout>
 
 <Callout type="info" title="A slug of `preview` still works">
   `/preview/{token}` is two path segments and `/{slug}` is one, so they can never
@@ -204,8 +230,68 @@ is opened until it expires. It is a link, not a nonce.
 
 ## Rendering a preview page
 
-The API returns JSON. Turning that into a page is your app's job, and it is
-about fifteen lines:
+The API returns JSON. Turning that into a page is your app's job.
+
+### On the page you already have
+
+The default. Your delivery page reads `?preview=` and, when it is there, fetches
+the draft instead of the published record - same component, same layout, one
+branch:
+
+```tsx title="src/app/[locale]/blog/[slug]/page.tsx"
+import { postContentType } from "@/content/post";
+import { CONTENT_PREVIEW_QUERY_PARAM } from "@vitnode/core/content";
+import {
+  contentPreviewFetch,
+  contentPublicFetch,
+} from "@vitnode/core/content/next";
+import { notFound } from "next/navigation";
+
+export default async function PostPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const { locale, slug } = await params;
+  const token = (await searchParams)[CONTENT_PREVIEW_QUERY_PARAM];
+
+  // The locale comes off the route, not the query string: a preview URL carries
+  // its language in the path, and it has to match the token.
+  const { data } =
+    typeof token === "string"
+      ? await contentPreviewFetch({
+          definition: postContentType,
+          locale,
+          pluginId: "@vitnode/blog",
+          token,
+        })
+      : await contentPublicFetch({
+          definition: postContentType,
+          locale,
+          pluginId: "@vitnode/blog",
+          slug,
+        });
+
+  if (!data) notFound();
+
+  return <article>{/* one component, both states */}</article>;
+}
+```
+
+<Callout type="warn" title="Tell the reviewer it is a preview">
+  Nothing in the response says so - it is the same shape the public route
+  returns, which is exactly what makes reusing the page work. Render a banner
+  when the token is present, or somebody will forward a screenshot of what they
+  think is the live page.
+</Callout>
+
+### Or a page of its own
+
+When a preview should look different from the published page - a review banner,
+an annotation sidebar, a diff - give it `pathTemplate` and a route of its own.
+It takes the token from the path rather than the query string:
 
 ```tsx title="src/app/articles/preview/[token]/page.tsx"
 import { articleContentType } from "@/content/article";
@@ -241,42 +327,38 @@ export default async function ArticlePreviewPage({
 a draft readable after its token expired, and would hand one reviewer's link to
 the next visitor.
 
-Then point the AdminCP at it:
+Then point the AdminCP at it, which is what takes preview off branch 2 and onto
+branch 1:
 
 ```ts
 preview: { enabled: true, pathTemplate: "/articles/preview/{token}" }
 ```
 
-<Callout type="warn" title="Tell the reviewer it is a preview">
-  Nothing in the response says so - it is the same shape the public route
-  returns. Say it in your own markup, or somebody will forward a screenshot of
-  what they think is the live page.
-</Callout>
-
 ## What the AdminCP does
 
-An eye icon on every row, for a content type with preview and for nobody else -
-absent rather than disabled, because there is no way to enable it from the UI.
+**Preview link** leads the ⋯ menu on every row, for a content type with preview
+and for nobody else - absent rather than disabled, because there is no way to
+enable it from the UI.
 
-Clicking it mints the link **then**, not before. A table of 25 rows must not be
+Opening it mints the link **then**, not before. A table of 25 rows must not be
 25 live bearer credentials for unpublished records sitting in a browser, most of
-them never used. The popover shows the link, a copy button, an Open link and
+them never used. The panel shows the link, a copy button, an Open link and
 when it expires.
 
-Closing the popover throws the link away, so opening it again mints a fresh one
+Closing the panel throws the link away, so opening it again mints a fresh one
 rather than showing you one that may already have expired.
 
 ## What it does not do
 
 | Not supported | Why |
 | --- | --- |
-| Revoking one link | No table, no state. Rotate the secret, or wait out the expiry |
+| Revoking one link | No table, no state. Rotate the signing key - which revokes all of them - or wait out the expiry |
 | Previewing a **list** of drafts | There is no preview list route, and there will not be one |
 | Seeing who opened a link | It is an anonymous read. Nothing is logged per view |
 | Previewing a record with no public API | There would be nothing safe to render |
 | Keeping a previewed revision from being pruned | That needs persistent preview records. Retention wins, and the link 404s |
 | Comments or annotations on a preview | Read-only. A reviewer replies wherever they already talk to you |
-| Working without `CONTENT_PREVIEW_SECRET` | The signature *is* the access control. Missing means off, in every environment |
+| Signing with a short `CONTENT_PREVIEW_SECRET` | The signature *is* the access control. An override under 32 bytes is ignored for the generated key |
 
 ## Why it is safe
 
@@ -306,7 +388,7 @@ record in the signed token and still projected through the public allowlist.
 Only the frozen-snapshot guarantee is missing, because there is nothing to
 guarantee: such a link follows any edit made before the reviewer opens it.
 
-The AdminCP says so in the popover rather than letting "preview" imply something
+The AdminCP says so in the panel rather than letting "preview" imply something
 this one link cannot deliver, and the first edit fixes it permanently.
 
 Fabricating a snapshot at mint time was the alternative, and it was rejected:
@@ -326,7 +408,7 @@ That is accepted behaviour, not a bug to route around:
   pruned - so it takes many saves and a slow reviewer.
 - Raise `revisions.retention` if your editors work in bursts, or shorten
   `expiresInMinutes` so the two windows match.
-- The popover says the link is pinned to a version and can age out.
+- The panel says the link is pinned to a version and can age out.
 
 <Callout type="warn" title="The TTL is a maximum, not a promise">
   "Expires in 30 minutes" means *no later than* 30 minutes. Protecting the

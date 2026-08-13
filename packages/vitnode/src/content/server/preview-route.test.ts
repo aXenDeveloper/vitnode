@@ -6,15 +6,13 @@ import { testEditorialPostContentType } from "@/tests/content-fixtures";
 
 import type { ContentRevisionSnapshot } from "../revisions";
 
-import { INSECURE_DEFAULT_CONTENT_PREVIEW_SECRET } from "../../lib/config";
 import { createContentModel } from "./model";
 import { createContentPreviewToken } from "./preview-token";
 import { buildContentPublicRoutes } from "./public-routes";
 
 const PLUGIN_ID = "@vitnode/example";
-// Long enough to be a real signing key: the preview routes fail closed on a
-// secret that is missing, well-known or under 32 bytes, so a short one here
-// would test the guard rather than the route.
+// The shape of what an install generates for itself: 32-ish random bytes. See
+// `preview-secret.test.ts` for where that value comes from.
 const SECRET = "unit-test-content-preview-secret-0123456789";
 
 const posts = createContentModel(testEditorialPostContentType);
@@ -212,54 +210,28 @@ describe("the public preview route", () => {
     expect((await app.request(`/preview/${token}`)).status).toBe(404);
   });
 
-  describe("an install that cannot protect its links", () => {
-    const forged = (secret: string) =>
-      createContentPreviewToken({
-        definition: testEditorialPostContentType,
-        itemId: 7,
-        pluginId: PLUGIN_ID,
-        revisionId: 42,
-        secret,
-        version: 3,
-      }).token;
+  it("refuses a token forged with a guessable secret", async () => {
+    // The attack that used to need a fail-closed rule: while the fallback key
+    // shipped in the published source, an attacker could sign `{ i: 7, r: 0 }`
+    // themselves and walk the ids. There is no published key to guess any more -
+    // every install signs with 32 bytes it generated - so the forgery is just a
+    // wrong signature.
+    const { app, findById, liveRows } = harness();
+    findById.mockResolvedValue({ snapshot: snapshot() });
+    liveRows.push({ id: 7, title: "Hello world" });
 
-    it.each([
-      ["the published fallback", INSECURE_DEFAULT_CONTENT_PREVIEW_SECRET],
-      ["a secret short enough to attack", "hunter2"],
-      ["no secret at all", ""],
-    ])("refuses a token forged with %s", async (_name, secret) => {
-      // The attack the fail-closed rule exists for: the fallback is in the
-      // published source, so an attacker signs `{ i: 7, r: 0 }` themselves and
-      // reads unpublished rows by walking the ids. The route does not honour
-      // *any* token while the secret is unusable, so the forgery is worthless.
-      const { app, findById, liveRows } = harness({ secret });
-      findById.mockResolvedValue({ snapshot: snapshot() });
-      liveRows.push({ id: 7, title: "Hello world" });
+    const token = createContentPreviewToken({
+      definition: testEditorialPostContentType,
+      itemId: 7,
+      pluginId: PLUGIN_ID,
+      revisionId: 0,
+      secret: "default-content-preview-secret-change-in-production",
+      version: 3,
+    }).token;
 
-      const res = await app.request(`/preview/${forged(secret)}`);
-
-      expect(res.status).toBe(404);
-      // Nothing was even looked up: no oracle, and no wasted query.
-      expect(findById).not.toHaveBeenCalled();
-    });
-
-    it("answers exactly like a bad token, so the misconfiguration is invisible", async () => {
-      const broken = harness({
-        secret: INSECURE_DEFAULT_CONTENT_PREVIEW_SECRET,
-      });
-      const working = harness();
-
-      const bodies = await Promise.all([
-        (
-          await broken.app.request(
-            `/preview/${forged(INSECURE_DEFAULT_CONTENT_PREVIEW_SECRET)}`,
-          )
-        ).text(),
-        (await working.app.request("/preview/not-a-token")).text(),
-      ]);
-
-      expect(new Set(bodies).size).toBe(1);
-    });
+    expect((await app.request(`/preview/${token}`)).status).toBe(404);
+    // Nothing was even looked up: no oracle, and no wasted query.
+    expect(findById).not.toHaveBeenCalled();
   });
 
   it("says nothing different for any of them", async () => {

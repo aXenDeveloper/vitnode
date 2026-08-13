@@ -666,8 +666,10 @@ export interface ContentPreviewLink {
  * in a browser, most of them never used.
  *
  * The `url` comes back from the server rather than being assembled here,
- * because only the definition knows whether the install has a preview page
- * (`preview.pathTemplate`) or should link at the JSON endpoint.
+ * because only the server knows which of the three it should be: a dedicated
+ * preview page (`preview.pathTemplate`), the record's own canonical page
+ * carrying `?preview=`, or the JSON endpoint when there is no page at all. The
+ * middle one needs the record's slug, which is not on this side either.
  */
 export const createContentPreviewAction = async (
   contentTypeId: string,

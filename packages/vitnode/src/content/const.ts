@@ -379,6 +379,16 @@ export const CONTENT_PREVIEW_MAX_TTL_MINUTES = 1440;
 export const CONTENT_PREVIEW_TOKEN_PLACEHOLDER = "{token}";
 
 /**
+ * The query parameter a preview token travels in on a delivery page.
+ *
+ * Without an `editorial.preview.pathTemplate`, a preview link points at the
+ * record's own canonical page carrying `?preview=<token>` - the page that already
+ * renders the published record renders the draft instead. Both halves read this
+ * constant rather than the string, so the page and the link cannot drift apart.
+ */
+export const CONTENT_PREVIEW_QUERY_PARAM = "preview";
+
+/**
  * The preview token format.
  *
  * Carried inside the signed payload so a future change to the shape is a

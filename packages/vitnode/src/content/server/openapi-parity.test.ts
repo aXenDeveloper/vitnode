@@ -82,6 +82,7 @@ const row = {
 
 const revision = {
   actorName: null,
+  actorRoleColor: null,
   actorType: "staff" as const,
   actorUserId: null,
   changedFields: ["title"],

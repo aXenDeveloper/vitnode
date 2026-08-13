@@ -580,3 +580,36 @@ export const testDeliveredLocalizedContentType = defineContentType({
     list: { columns: ["status", "updatedAt"] },
   },
 });
+
+export const testDeliveredPreviewableContentType = defineContentType({
+  id: "test.delivered-previewable",
+  tableName: "test_delivered_previewable",
+  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  publication: { enabled: true },
+  editorial: {
+    enabled: true,
+    preview: { enabled: true, expiresInMinutes: 30 },
+  },
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+  },
+  publicApi: {
+    enabled: true,
+    path: "delivered-previewable",
+    fields: ["id", "title", "slug", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  delivery: {
+    enabled: true,
+    redirects: { enabled: true },
+    sitemap: { enabled: true },
+  },
+  admin: {
+    label: {
+      plural: "Test Delivered Previewable",
+      singular: "Test Delivered Previewable",
+    },
+    list: { columns: ["status", "updatedAt"] },
+  },
+});

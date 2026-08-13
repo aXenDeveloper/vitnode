@@ -131,6 +131,12 @@ export type ContentAnyRevisionSnapshot =
 export interface ContentRevisionMeta {
   /** Display name of the actor, or `null` for a system mutation. */
   actorName: null | string;
+  /**
+   * The actor's role colour, so their name reads the same here as it does in
+   * every other admin list. `null` for a system mutation, a deleted account or
+   * a role with no colour of its own.
+   */
+  actorRoleColor: null | string;
   actorType: ContentActorType;
   actorUserId: null | number;
   changedFields: string[];

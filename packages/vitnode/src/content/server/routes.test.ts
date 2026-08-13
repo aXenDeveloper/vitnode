@@ -750,8 +750,8 @@ describe("generated content routes", () => {
         } as unknown as Context["var"]["log"]);
         c.set("admin", allow ? { user: adminUser } : null);
         c.set("core", {
-          // A real one by default. Preview refuses to mint a link on a
-          // deployment whose secret is missing, well-known or under 32 bytes.
+          // Stands in for the key the install generates for itself, which the
+          // global middleware resolves once and puts here.
           contentPreviewSecret: previewSecret,
           hasCronAdapter: true,
         } as never);
@@ -1312,32 +1312,34 @@ describe("generated content routes", () => {
         );
       });
 
-      it("refuses to sign a link when the secret is not safe", async () => {
-        // 503 rather than 500: the request is fine, the deployment is missing a
-        // secret - and the message names the variable, because the person
-        // clicking the button is usually the person who can set it.
-        const { app, service } = editorialHarness({
-          previewSecret: "too-short",
-        });
+      it("refuses to sign a link the deployment cannot address", async () => {
+        // 503 rather than 500: the request is fine, the deployment has an origin
+        // it cannot parse - and the message names the variable, because the
+        // person clicking the button is usually the person who can set it.
+        vi.stubEnv("NEXT_PUBLIC_WEB_URL", "not a url");
+        const { app, service } = editorialHarness();
         service.findById.mockResolvedValue({ ...editorialRow, version: 5 });
 
         const res = await app.request("/7/preview", { method: "POST" });
 
         expect(res.status).toBe(503);
-        expect(await res.text()).toContain("CONTENT_PREVIEW_SECRET");
+        expect(await res.text()).toContain("NEXT_PUBLIC_WEB_URL");
+
+        vi.unstubAllEnvs();
       });
 
       it("refuses before saying whether the record exists", async () => {
         // A misconfigured install must answer the same way for a record that
         // is there and one that is not.
-        const { app, service } = editorialHarness({
-          previewSecret: "too-short",
-        });
+        vi.stubEnv("NEXT_PUBLIC_WEB_URL", "not a url");
+        const { app, service } = editorialHarness();
         service.findById.mockResolvedValue(null);
 
         expect(
           (await app.request("/7/preview", { method: "POST" })).status,
         ).toBe(503);
+
+        vi.unstubAllEnvs();
       });
 
       it("falls back to the live row when there is no revision", async () => {

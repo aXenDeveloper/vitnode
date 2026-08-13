@@ -130,7 +130,9 @@ const harness = ({ secret = SECRET }: { secret?: string } = {}) => {
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  process.env.CONTENT_PREVIEW_SECRET = SECRET;
+  // The harness puts the key on `core`, exactly as the global middleware does
+  // after resolving it once. No environment variable is involved.
+  vi.unstubAllEnvs();
 });
 
 describe("route registration", () => {
@@ -227,15 +229,17 @@ describe("minting a locale preview link", () => {
     expect(response.status).toBe(404);
   });
 
-  it("503s rather than signing with an unusable secret", async () => {
-    process.env.CONTENT_PREVIEW_SECRET = "short";
-    const { app } = harness({ secret: "short" });
+  it("503s rather than handing back a link it cannot address", async () => {
+    vi.stubEnv("NEXT_PUBLIC_WEB_URL", "not a url");
+    const { app } = harness();
 
     const response = await app.request("/7/translations/pl/preview", {
       method: "post",
     });
 
     expect(response.status).toBe(503);
+
+    vi.unstubAllEnvs();
   });
 
   it("freezes nothing when there is no revision to freeze", async () => {
