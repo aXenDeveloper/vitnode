@@ -54,11 +54,9 @@
   "@vitnode/blog:posts:can_delete": "Usuwanie artykułów",
   "@vitnode/blog:posts:can_publish": "Publikowanie i cofanie publikacji artykułów",
   "@vitnode/blog:posts:can_restore": "Przywracanie wcześniejszej wersji artykułu",
-  "@vitnode/blog:posts:can_translate": "Pisanie tłumaczeń artykułów",
   "@vitnode/blog:categories": "Kategorie",
   "@vitnode/blog:categories:can_view": "Wyświetlanie listy kategorii",
   "@vitnode/blog:categories:can_create": "Tworzenie kategorii",
   "@vitnode/blog:categories:can_edit": "Edytowanie kategorii",
-  "@vitnode/blog:categories:can_delete": "Usuwanie kategorii",
-  "@vitnode/blog:categories:can_translate": "Pisanie tłumaczeń kategorii"
+  "@vitnode/blog:categories:can_delete": "Usuwanie kategorii"
 }

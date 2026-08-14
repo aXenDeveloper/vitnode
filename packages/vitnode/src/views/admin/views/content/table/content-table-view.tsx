@@ -184,7 +184,6 @@ export const ContentTableView = async ({
                   ? contentEditHref(definition.id, row.id)
                   : undefined
               }
-              localized={localized}
               permissionModule={definition.permissionModule}
               pluginId={pluginId}
               publication={definition.publication.enabled}

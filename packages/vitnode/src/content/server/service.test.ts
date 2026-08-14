@@ -1,12 +1,16 @@
 // @vitest-environment node
+import type { PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
+import { getTableName, SQL } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
 
 import {
   testArticleContentType,
   testCategoryContentType,
+  testLocalizedCategoryContentType,
+  testLocalizedRelationArticleContentType,
   testPostContentType,
 } from "@/tests/content-fixtures";
 
@@ -30,6 +34,13 @@ const articles = createContentModel(testArticleContentType, {
 const posts = createContentModel(testPostContentType, {
   references: { category: () => categories.table.id },
 });
+const localizedCategories = createContentModel(
+  testLocalizedCategoryContentType,
+);
+const localizedRelationArticles = createContentModel(
+  testLocalizedRelationArticleContentType,
+  { references: { category: () => localizedCategories.table.id } },
+);
 
 interface RecordedCall {
   arg: unknown;
@@ -41,7 +52,15 @@ interface RecordedCall {
  * `insert`, `update` or `delete` shifts the next queued result, and every
  * builder call is recorded so tests can assert on the shape of the query.
  */
-const createDbMock = (results: unknown[][]) => {
+const createDbMock = (
+  results: unknown[][],
+  /**
+   * Anything else the service reads off the context - `i18n`, for the locale a
+   * relation label is resolved in. Everything the Stage 1-8 suites drive needs
+   * only `db`, so the default keeps them byte-identical.
+   */
+  variables: Record<string, unknown> = {},
+) => {
   const calls: RecordedCall[] = [];
   const queue = [...results];
 
@@ -83,7 +102,7 @@ const createDbMock = (results: unknown[][]) => {
   };
 
   const c = {
-    get: (key: string) => (key === "db" ? db : undefined),
+    get: (key: string) => (key === "db" ? db : variables[key]),
   } as Context;
 
   return { c, calls };
@@ -459,6 +478,198 @@ describe("content service", () => {
         // type up for the route, which reads the field name out of the URL.
         articles.service(c).options("title"),
       ).rejects.toThrow(/not a relation or user field/);
+    });
+
+    it("returns a face and a handle for a user field", async () => {
+      // What lets the author picker show people rather than a list of names. A
+      // `relation` gets neither, because its target has neither.
+      const { c } = createDbMock([
+        [{ avatarColor: "3b82f6", label: "Ada", nameCode: "ada", value: 4 }],
+      ]);
+
+      await expect(articles.service(c).options("author")).resolves.toEqual([
+        { avatarColor: "3b82f6", label: "Ada", nameCode: "ada", value: 4 },
+      ]);
+    });
+
+    it("leaves a relation's options as label and value alone", async () => {
+      const { c } = createDbMock([[{ label: "News", value: 3 }]]);
+
+      const options = await articles.service(c).options("category");
+
+      expect(Object.keys(options[0]).sort()).toEqual(["label", "value"]);
+    });
+  });
+
+  /**
+   * A relation whose target names a **localized** field as its title.
+   *
+   * `test.localized-category` keeps its `name` on `test_localized_categories_translations`,
+   * so the base table has nothing to join to and the id is all a plain label
+   * resolver could produce. What is asserted here is the generic fix: two joins
+   * onto the target's translation table - the reader's language and the
+   * target's own default - and a `coalesce` between them.
+   */
+  describe("a localized relation label", () => {
+    /** `core_languages`, as the registry query returns it. */
+    const LANGUAGES = [
+      { code: "en", id: 1, isDefault: true },
+      { code: "pl", id: 2, isDefault: false },
+    ];
+    const readingIn = (locale: string) => ({
+      i18n: { resolveLocale: () => locale },
+    });
+
+    /** The alias each `leftJoin` was given, in order. */
+    const joinedAliases = (calls: RecordedCall[]) =>
+      opsOf(calls, "leftJoin").map(value => getTableName(value as PgTable));
+
+    it("joins the reader's language and the target's default", async () => {
+      const { c, calls } = createDbMock(
+        [LANGUAGES, [{ id: 1, label__category: "Aktualności" }]],
+        readingIn("pl"),
+      );
+
+      const row = await localizedRelationArticles.service(c).findRowById(1);
+
+      expect(joinedAliases(calls)).toEqual([
+        "label__category",
+        "label__category__locale",
+        "label__category__default",
+      ]);
+      // Read off the same `label__` key the shared path uses, so nothing
+      // downstream of the service has to know where the value came from.
+      expect(row?.labels).toEqual({ category: "Aktualności" });
+    });
+
+    it("selects the label as an expression rather than a column", async () => {
+      const { c, calls } = createDbMock(
+        [LANGUAGES, [{ id: 1, label__category: "Aktualności" }]],
+        readingIn("pl"),
+      );
+
+      await localizedRelationArticles.service(c).findRowById(1);
+
+      const selection = opsOf(calls, "select")[1] as Record<string, unknown>;
+
+      expect(selection.label__category).toBeInstanceOf(SQL);
+    });
+
+    it("joins once when the reader is already in the target's language", async () => {
+      const { c, calls } = createDbMock(
+        [LANGUAGES, [{ id: 1, label__category: "News" }]],
+        // `en` *is* the category's `defaultLocale`, so the fallback would be the
+        // same row twice.
+        readingIn("en"),
+      );
+
+      await localizedRelationArticles.service(c).findRowById(1);
+
+      expect(joinedAliases(calls)).toEqual([
+        "label__category",
+        "label__category__locale",
+      ]);
+    });
+
+    it("falls back to the target's own language for a locale that has none", async () => {
+      const { c, calls } = createDbMock(
+        [LANGUAGES, [{ id: 1, label__category: "News" }]],
+        // Not a row in `core_languages`: the reader gets the default language's
+        // name rather than the numeric id.
+        readingIn("de"),
+      );
+
+      const row = await localizedRelationArticles.service(c).findRowById(1);
+
+      expect(joinedAliases(calls)).toEqual([
+        "label__category",
+        "label__category__default",
+      ]);
+      expect(row?.labels.category).toBe("News");
+    });
+
+    it("labels a list the same way, still without a per-row lookup", async () => {
+      const { c, calls } = createDbMock(
+        [
+          LANGUAGES,
+          [{ count: 2 }],
+          [
+            {
+              __cursorValue: "2026-01-02 00:00:00",
+              id: 1,
+              label__category: "Aktualności",
+            },
+            {
+              __cursorValue: "2026-01-01 00:00:00",
+              id: 2,
+              label__category: null,
+            },
+          ],
+        ],
+        readingIn("pl"),
+      );
+
+      const { edges } = await localizedRelationArticles.service(c).findMany();
+
+      expect(edges.map(edge => edge.labels.category)).toEqual([
+        "Aktualności",
+        null,
+      ]);
+      // The registry, the count and the page. No fourth read, and nothing per
+      // row.
+      expect(opsOf(calls, "select")).toHaveLength(3);
+      expect(joinedAliases(calls)).toEqual([
+        "label__category",
+        "label__category__locale",
+        "label__category__default",
+      ]);
+    });
+
+    it("resolves the picker's options in the reader's language", async () => {
+      const { c, calls } = createDbMock(
+        [LANGUAGES, [{ label: "Aktualności", value: 3 }]],
+        readingIn("pl"),
+      );
+
+      await expect(
+        localizedRelationArticles.service(c).options("category", "aktual"),
+      ).resolves.toEqual([{ label: "Aktualności", value: 3 }]);
+
+      // The picker reads *from* the category table and hangs both translation
+      // joins off it, so the option it offers is the one the reader will see in
+      // the table afterwards.
+      expect(joinedAliases(calls)).toEqual([
+        "label__category__locale",
+        "label__category__default",
+      ]);
+    });
+
+    it("still falls back to the identifier when no language has a name", async () => {
+      const { c } = createDbMock(
+        [LANGUAGES, [{ label: null, value: 3 }]],
+        readingIn("pl"),
+      );
+
+      await expect(
+        localizedRelationArticles.service(c).options("category"),
+      ).resolves.toEqual([{ label: "3", value: 3 }]);
+    });
+
+    it("reads no language registry for a target with a shared title", async () => {
+      const { c, calls } = createDbMock(
+        [[{ id: 1, label__author: "Ada", label__category: "News" }]],
+        readingIn("pl"),
+      );
+
+      await articles.service(c).findRowById(1);
+
+      // One query, and two joins - exactly what a Stage 1 content type has
+      // always produced.
+      expect(opsOf(calls, "select")).toHaveLength(1);
+      expect(joinedAliases(calls)).toEqual([
+        "label__author",
+        "label__category",
+      ]);
     });
   });
 

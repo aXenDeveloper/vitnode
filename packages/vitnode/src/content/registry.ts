@@ -379,21 +379,9 @@ export const contentPermissionEntries = (
         },
       ]
     : []),
-  // Writing a translation is a different job from editing the record, and often a
-  // different person's. `can_translate` depends on `can_view` and **not** on
-  // `can_edit`, which is the whole point: a translator can be given every locale
-  // tab without being able to touch a shared field, change the global publication
-  // state or delete the record. Existing roles simply do not have it - permissions
-  // are stored as JSON per role, so adding one denies by default and needs no
-  // migration.
-  ...(definition?.localization.enabled
-    ? [
-        {
-          dependsOn: [CONTENT_PERMISSIONS.view],
-          permission: CONTENT_PERMISSIONS.translate,
-        },
-      ]
-    : []),
+  // Localization adds no permission of its own. Writing a translation is
+  // editing the record in one language, so it is `can_edit` - and a role that
+  // may edit an article may edit every language of it.
 ];
 
 /**

@@ -18,12 +18,7 @@ import { buildContentLocalizedAdminRoutes } from "./localized-admin-routes";
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
 
-let granted = new Set<string>([
-  "can_create",
-  "can_edit",
-  "can_translate",
-  "can_view",
-]);
+let granted = new Set<string>(["can_create", "can_edit", "can_view"]);
 const permissionChecks: string[] = [];
 
 vi.mock("../../api/lib/check-staff-permission", () => ({
@@ -193,7 +188,7 @@ const post = async (
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  granted = new Set(["can_create", "can_edit", "can_translate", "can_view"]);
+  granted = new Set(["can_create", "can_edit", "can_view"]);
   permissionChecks.length = 0;
 });
 
@@ -491,9 +486,9 @@ describe("PUT /{id}/localized", () => {
     expect(response.status).toBe(400);
   });
 
-  it("lets a translator write a language without `can_edit`", async () => {
+  it("writes a language on `can_edit` alone", async () => {
     const { app, translationEditorial } = harness();
-    granted = new Set(["can_translate", "can_view"]);
+    granted = new Set(["can_edit", "can_view"]);
     translationEditorial.update.mockResolvedValue(
       translationOutcome({ locale: "pl" }),
     );
@@ -507,19 +502,23 @@ describe("PUT /{id}/localized", () => {
     expect(response.status).toBe(200);
   });
 
-  it("refuses a translator who tries to change a shared field", async () => {
-    const { app, editorial } = harness();
-    granted = new Set(["can_translate", "can_view"]);
+  it("refuses the whole save without `can_edit`", async () => {
+    const { app, editorial, translationEditorial } = harness();
+    granted = new Set(["can_view"]);
 
     const response = await post(app, "/7/localized", "PUT", {
       expectedVersion: 3,
-      translations: [],
+      translations: [
+        { expectedVersion: 5, locale: "pl", values: { title: "Witaj v2" } },
+      ],
       values: { featured: true },
     });
 
-    // Gated on the server, not on whether the browser disabled an input.
+    // Gated on the server, not on whether the browser disabled an input - and
+    // one check for the shared half and the languages alike.
     expect(response.status).toBe(403);
-    expect(permissionChecks).toContain("can_edit");
+    expect(permissionChecks).toEqual(["can_edit"]);
     expect(editorial.update).not.toHaveBeenCalled();
+    expect(translationEditorial.update).not.toHaveBeenCalled();
   });
 });

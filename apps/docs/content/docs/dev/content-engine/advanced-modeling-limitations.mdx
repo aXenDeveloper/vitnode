@@ -38,9 +38,8 @@ seo: field.group({
 ```
 
 Localization is a property of the whole group. Half a logical value on each
-table would mean two revision histories and two permissions for one box an
-editor sees as one thing - somebody with `can_translate` could rewrite a leaf
-only `can_edit` should touch.
+table would mean two revision histories for one box an editor sees as one thing -
+restoring a language would rewrite half of it and leave the other half alone.
 
 **Instead:** two groups, which also makes which-is-which a fact about the
 declaration:

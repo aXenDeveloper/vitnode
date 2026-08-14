@@ -18,6 +18,65 @@ export const testCategoryContentType = defineContentType({
 });
 
 /**
+ * A category whose name lives on its translation table, and which says so.
+ *
+ * The shape `blog.category` has: a shared `color`, a localized `name`, and
+ * `admin.titleField: "name"`. It exists for one question - what a *relation* to
+ * it is labelled with - because `name` is not a column on `test_localized_categories`
+ * at all, so a plain join can only ever produce the numeric id.
+ */
+export const testLocalizedCategoryContentType = defineContentType({
+  id: "test.localized-category",
+  tableName: "test_localized_categories",
+  localization: { enabled: true, defaultLocale: "en", fallback: "default" },
+  fields: {
+    color: field.text({ maxLength: 50, nullable: true }),
+    name: field.text({
+      localized: true,
+      required: true,
+      minLength: 1,
+      maxLength: 100,
+    }),
+  },
+  admin: {
+    label: {
+      plural: "Test Localized Categories",
+      singular: "Test Localized Category",
+    },
+    titleField: "name",
+    list: { columns: ["name", "color"] },
+  },
+});
+
+/**
+ * A plain, unlocalized record pointing at a **localized** category.
+ *
+ * Deliberately not localized itself: resolving a relation label in the reader's
+ * language is a property of the *target*, and nothing about the owner has to
+ * change for it to work.
+ */
+export const testLocalizedRelationArticleContentType = defineContentType({
+  id: "test.localized-relation",
+  tableName: "test_localized_relation_articles",
+  fields: {
+    title: field.text({ required: true, minLength: 1, maxLength: 200 }),
+    category: field.relation({
+      required: true,
+      onDelete: "restrict",
+      target: () => testLocalizedCategoryContentType,
+    }),
+  },
+  admin: {
+    label: {
+      plural: "Test Localized Relations",
+      singular: "Test Localized Relation",
+    },
+    titleField: "title",
+    list: { columns: ["title", "category"] },
+  },
+});
+
+/**
  * Stage 1 shape, kept deliberately unchanged: it declares its own `status` and
  * `publishedAt` fields, so it doubles as the backward-compatibility fixture.
  */

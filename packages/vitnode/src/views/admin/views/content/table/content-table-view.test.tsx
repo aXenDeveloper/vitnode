@@ -173,11 +173,7 @@ describe("the actions cell", () => {
           version: 2,
         })
       ).map(child => child.type),
-    ).toEqual([
-      PublishContentAction,
-      EditContentAction,
-      ContentRowActionsMenu,
-    ]);
+    ).toEqual([PublishContentAction, EditContentAction, ContentRowActionsMenu]);
   });
 
   it("keeps edit last before the menu for a plain content type", async () => {
@@ -203,8 +199,9 @@ describe("the actions cell", () => {
   it("sizes the column to the buttons the row actually shows", async () => {
     // Three buttons at most, so the widest the column ever gets is `w-28` - it
     // used to run to `w-68` for a content type that opted into everything.
-    expect((await actionsColumn(testDeliveredLocalizedContentType))?.className)
-      .toBe("w-28");
+    expect(
+      (await actionsColumn(testDeliveredLocalizedContentType))?.className,
+    ).toBe("w-28");
     expect((await actionsColumn(testArticleContentType))?.className).toBe(
       "w-20",
     );

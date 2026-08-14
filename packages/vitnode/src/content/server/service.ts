@@ -1,6 +1,7 @@
 import type { ColumnBaseConfig, SQL } from "drizzle-orm";
 import type {
   PgColumn,
+  PgTable,
   PgTableWithColumns,
   TableConfig,
 } from "drizzle-orm/pg-core";
@@ -28,6 +29,7 @@ import type {
   ContentValuesOf,
 } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
+import type { ReferenceTarget } from "./references";
 
 import { withPagination } from "../../api/lib/with-pagination";
 import {
@@ -46,6 +48,7 @@ import {
   buildContentRepeatableOperations,
   contentCollectionKinds,
 } from "./collection-api";
+import { findContentLanguage } from "./language-resolver";
 import {
   buildFilterCondition,
   buildOrderColumn,
@@ -449,6 +452,12 @@ export const createContentService = <
     ...Object.keys(storageColumns),
   ];
   const references = resolveReferenceTargets(definition, table, columns);
+  // The relations whose label is not on the target's base table at all. Empty
+  // for every content type that points at a shared title, which is what keeps
+  // the language registry out of their query plan entirely.
+  const localizedReferences = Object.entries(references).filter(
+    ([, target]) => target.localizedLabel !== undefined,
+  );
   const searchColumns = definition.admin.list.searchableFields.map(
     name => columns[name],
   );
@@ -519,6 +528,137 @@ export const createContentService = <
     }
 
     return { ...projectRow(values), labels } as ContentListRow<TDefinition>;
+  };
+
+  /**
+   * The locale the AdminCP is being *read* in, or nothing.
+   *
+   * `undefined` outside a request that carries the i18n model - a queue handler,
+   * a test harness - and the fallback then does the whole job, which is the
+   * honest answer when nobody has said what language they are in.
+   */
+  const viewerLocale = (): string | undefined => {
+    const i18n: undefined | { resolveLocale: () => string } = c.get("i18n");
+
+    return i18n?.resolveLocale();
+  };
+
+  /**
+   * `core_languages.id` for the reader's locale, and for each localized
+   * target's own default.
+   *
+   * One registry read for the whole request - `findContentLanguage` memoises it
+   * per context - and none at all for a content type with no localized relation
+   * target, which is every content type that existed before this.
+   */
+  const labelLanguages = async (): Promise<{
+    byDefaultLocale: Map<string, null | number>;
+    viewer: null | number;
+  }> => {
+    const byDefaultLocale = new Map<string, null | number>();
+    if (localizedReferences.length === 0) {
+      return { byDefaultLocale, viewer: null };
+    }
+
+    const locale = viewerLocale();
+    const viewer =
+      locale === undefined ? null : await findContentLanguage(c, locale);
+
+    for (const [, target] of localizedReferences) {
+      const defaultLocale = target.localizedLabel?.defaultLocale;
+      if (defaultLocale === undefined || byDefaultLocale.has(defaultLocale)) {
+        continue;
+      }
+
+      const language = await findContentLanguage(c, defaultLocale);
+      byDefaultLocale.set(defaultLocale, language?.id ?? null);
+    }
+
+    return { byDefaultLocale, viewer: viewer?.id ?? null };
+  };
+
+  /** A join the label of one reference field needs to be readable. */
+  interface ReferenceJoin {
+    on: SQL | undefined;
+    table: PgTable;
+  }
+
+  /** How one reference field's label is selected, searched and ordered. */
+  interface ReferenceLabel {
+    joins: ReferenceJoin[];
+    label: PgColumn | SQL<null | string>;
+    /** The real columns behind {@link ReferenceLabel.label}, for `ilike`. */
+    searchColumns: PgColumn[];
+  }
+
+  /**
+   * What a reference field's label is selected as, and the joins that make it
+   * so.
+   *
+   * A shared title is the column it always was. A **localized** one is
+   * `coalesce(reader's language, target's default language)` over two joins onto
+   * the target's translation table - each on `(itemId, languageId)`, which is
+   * that table's primary key, so neither can multiply the rows of the query it
+   * is added to. With neither language present in `core_languages` the id comes
+   * back, exactly as it did before.
+   */
+  const labelSelection = (
+    target: ReferenceTarget,
+    languages: {
+      byDefaultLocale: Map<string, null | number>;
+      viewer: null | number;
+    },
+  ): ReferenceLabel => {
+    const plain: ReferenceLabel = {
+      joins: [],
+      label: target.labelColumn,
+      searchColumns: [target.labelColumn],
+    };
+    const localized = target.localizedLabel;
+    if (!localized) return plain;
+
+    const fallbackId =
+      languages.byDefaultLocale.get(localized.defaultLocale) ?? null;
+    const wanted = [
+      { languageId: languages.viewer, source: localized.viewer },
+      // Skipped when the reader is already in the target's own language: one
+      // join, and a `coalesce` over one column.
+      ...(fallbackId !== null && fallbackId !== languages.viewer
+        ? [{ languageId: fallbackId, source: localized.fallback }]
+        : []),
+    ].filter(
+      (entry): entry is { languageId: number; source: typeof entry.source } =>
+        entry.languageId !== null,
+    );
+
+    if (wanted.length === 0) return plain;
+
+    return {
+      joins: wanted.map(({ languageId, source }) => ({
+        on: and(
+          eq(source.itemColumn, target.idColumn),
+          eq(source.languageColumn, languageId),
+        ),
+        table: source.aliased,
+      })),
+      label: sql<null | string>`coalesce(${sql.join(
+        wanted.map(({ source }) => source.labelColumn),
+        sql`, `,
+      )})`,
+      searchColumns: wanted.map(({ source }) => source.labelColumn),
+    };
+  };
+
+  /** {@link labelSelection} for every reference field, in one registry read. */
+  const referenceLabels = async (): Promise<Record<string, ReferenceLabel>> => {
+    const languages = await labelLanguages();
+
+    return Object.fromEntries(
+      Object.entries(references).map(([name, target]) => [
+        name,
+        labelSelection(target, languages),
+      ]),
+    );
   };
 
   const readOne = async (
@@ -712,23 +852,27 @@ export const createContentService = <
     },
 
     findRowById: async (id, options) => {
-      const selection: Record<string, PgColumn | SQL<string>> = {
+      const labels = await referenceLabels();
+      const selection: Record<string, PgColumn | SQL<null | string>> = {
         ...ownSelection(),
         ...Object.fromEntries(
-          Object.entries(references).map(([name, target]) => [
+          Object.entries(labels).map(([name, entry]) => [
             `${LABEL_PREFIX}${name}`,
-            target.labelColumn,
+            entry.label,
           ]),
         ),
       };
 
       let builder = db(options).select(selection).from(table).$dynamic();
 
-      for (const target of Object.values(references)) {
+      for (const [name, target] of Object.entries(references)) {
         builder = builder.leftJoin(
           target.aliased,
           eq(target.owner, target.idColumn),
         );
+        for (const join of labels[name].joins) {
+          builder = builder.leftJoin(join.table, join.on);
+        }
       }
 
       const [row] = await builder.where(eq(primaryCursor, id)).limit(1);
@@ -766,6 +910,10 @@ export const createContentService = <
       const combined =
         conditions.length > 1 ? and(...conditions) : conditions[0];
 
+      // Resolved before the page query rather than inside it, so the language
+      // registry is read once for the list instead of once per `query` call.
+      const labels = await referenceLabels();
+
       const data = await withPagination({
         c,
         // The search term is folded into `where` above so it can be escaped;
@@ -794,12 +942,12 @@ export const createContentService = <
           // round trip - there is no per-row lookup anywhere. The cursor value
           // rides along in the same statement, which is what makes the cursor a
           // record of where the row was rather than where it has since moved.
-          const selection: Record<string, PgColumn | SQL<string>> = {
+          const selection: Record<string, PgColumn | SQL<null | string>> = {
             ...ownSelection(),
             ...Object.fromEntries(
-              Object.entries(references).map(([name, target]) => [
+              Object.entries(labels).map(([name, entry]) => [
                 `${LABEL_PREFIX}${name}`,
-                target.labelColumn,
+                entry.label,
               ]),
             ),
             // Last, so a content field can never shadow it and leave the page
@@ -809,11 +957,17 @@ export const createContentService = <
 
           let builder = c.get("db").select(selection).from(table).$dynamic();
 
-          for (const target of Object.values(references)) {
+          for (const [name, target] of Object.entries(references)) {
             builder = builder.leftJoin(
               target.aliased,
               eq(target.owner, target.idColumn),
             );
+            // A localized title hangs off the target's translation table, on
+            // `(itemId, languageId)` - its primary key, so the page keeps
+            // exactly the rows the base query selected.
+            for (const join of labels[name].joins) {
+              builder = builder.leftJoin(join.table, join.on);
+            }
           }
 
           return await builder
@@ -840,18 +994,62 @@ export const createContentService = <
         );
       }
 
-      const rows = await c
+      // A `user` field selects two columns more, so its picker can show a face
+      // and a handle. Kept out of the projection for a `relation`, whose target
+      // is a content type with neither.
+      const user = target.userColumns;
+      // Searched and ordered by whatever the label is actually read from, so a
+      // localized target's picker matches what the reader sees rather than a
+      // base-table column that does not hold the name at all.
+      const {
+        joins,
+        label,
+        searchColumns: searchable,
+      } = labelSelection(target, await labelLanguages());
+
+      let builder = c
         .get("db")
-        .select({ label: target.labelColumn, value: target.idColumn })
+        .select({
+          label,
+          value: target.idColumn,
+          ...(user
+            ? { avatarColor: user.avatarColor, nameCode: user.nameCode }
+            : {}),
+        })
         .from(target.aliased)
-        .where(buildSearchCondition([target.labelColumn], search))
-        .orderBy(target.labelColumn)
+        .$dynamic();
+
+      for (const join of joins) {
+        builder = builder.leftJoin(join.table, join.on);
+      }
+
+      const rows = await builder
+        // A person is searched by handle as well as by name: `@ada` is how half
+        // the AdminCP refers to somebody, and a picker that only matched display
+        // names would find nothing for it.
+        .where(
+          buildSearchCondition(
+            user ? [...searchable, user.nameCode] : searchable,
+            search,
+          ),
+        )
+        .orderBy(label)
         .limit(CONTENT_OPTIONS_LIMIT);
 
       return rows.map(row => {
         const value = Number(row.value);
+        const entry = row as Record<string, unknown>;
 
-        return { label: toLabel(row.label) ?? String(value), value };
+        return {
+          label: toLabel(row.label) ?? String(value),
+          value,
+          ...(user
+            ? {
+                avatarColor: toLabel(entry.avatarColor) ?? "",
+                nameCode: toLabel(entry.nameCode) ?? "",
+              }
+            : {}),
+        };
       });
     },
 

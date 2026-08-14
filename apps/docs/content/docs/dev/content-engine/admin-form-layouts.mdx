@@ -58,10 +58,10 @@ is the point of checking permissions on the server rather than on the button.
 ### Permissions
 
 Page mode weakens nothing. The create page checks `can_view` **and**
-`can_create`; the edit page checks `can_view` and then `can_edit`, or
-`can_translate` on a localized content type - the same pair the edit dialog
-opens for. A missing permission is a 404, whether the button was rendered or
-not, and the generated route behind the form checks again.
+`can_create`; the edit page checks `can_view` and then `can_edit`, localized or
+not - the same pair the edit dialog opens for. A missing permission is a 404,
+whether the button was rendered or not, and the generated route behind the form
+checks again.
 
 ### After a successful save
 

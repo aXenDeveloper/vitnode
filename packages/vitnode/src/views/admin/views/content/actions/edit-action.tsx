@@ -42,7 +42,6 @@ const ContentForm = dynamic(async () =>
  */
 export const EditContentAction = ({
   href,
-  localized = false,
   permissionModule,
   pluginId,
   singular,
@@ -50,8 +49,6 @@ export const EditContentAction = ({
 }: ContentFormProps & {
   /** Set by `admin.edit.mode: "page"` - navigates instead of opening a dialog. */
   href?: string;
-  /** Whether the content type has translations, which `can_translate` covers. */
-  localized?: boolean;
   permissionModule: string;
   pluginId: string;
 }) => {
@@ -65,16 +62,11 @@ export const EditContentAction = ({
     permission: CONTENT_PERMISSIONS.edit,
     plugin: pluginId,
   });
-  const canTranslate = useAdminStaffPermission({
-    module: permissionModule,
-    permission: CONTENT_PERMISSIONS.translate,
-    plugin: pluginId,
-  });
 
-  // A translator who may not touch a shared field still needs somewhere to write
-  // the Polish copy. The composite save refuses the shared half server-side, so
-  // opening the form is not the thing that grants anything.
-  if (!canEdit && !(localized && canTranslate)) return null;
+  // One permission, localized or not: the composite save writes the shared
+  // fields and every language behind the same `can_edit` check server-side, so
+  // hiding the pencil is presentation rather than the gate.
+  if (!canEdit) return null;
 
   if (href) {
     return (

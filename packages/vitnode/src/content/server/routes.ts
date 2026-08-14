@@ -56,7 +56,19 @@ import { buildContentTranslationRoutes } from "./translation-routes";
 const zodLabels = z.record(z.string(), z.string().nullable());
 
 const zodOptions = z.object({
-  items: z.array(z.object({ label: z.string(), value: z.number() })),
+  items: z.array(
+    z.object({
+      /**
+       * Present only for a `user` field, where an option is a person rather than
+       * a row with a name. Optional rather than a second response shape, so a
+       * client written before this still parses every option it gets.
+       */
+      avatarColor: z.string().optional(),
+      label: z.string(),
+      nameCode: z.string().optional(),
+      value: z.number(),
+    }),
+  ),
 });
 
 const notFound = (definition: AnyContentTypeDefinition): HTTPException =>
@@ -361,16 +373,16 @@ export const buildContentRoutes = <
         partitionContentFields(definition.fields).localizedFields,
       ).find(([, fieldValue]) => fieldValue.kind === "text")?.[0] ?? null;
 
-    const rows = await Promise.all(
-      data.edges.map(
-        async row =>
-          [
-            row.id,
-            await translations.findByLanguageId(row.id, language.id),
-          ] as const,
-      ),
+    // One `WHERE itemId IN (...) AND languageId = ?` for the whole page. A
+    // translation is keyed by `(itemId, languageId)`, so this reads at most one
+    // row per record and needs no ordering to stay unambiguous.
+    const rows = await translations.findManyByLanguageId(
+      data.edges.map(row => row.id),
+      language.id,
     );
-    const byId = new Map(rows);
+    const byId = new Map<number, (typeof rows)[number]>(
+      rows.map(row => [row.itemId as number, row]),
+    );
 
     return {
       ...data,

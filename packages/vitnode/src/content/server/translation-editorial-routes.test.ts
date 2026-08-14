@@ -363,21 +363,25 @@ describe("restore", () => {
 });
 
 describe("permissions catalogue", () => {
-  it("adds `can_translate` for a localized content type", () => {
+  it("adds no translation permission for a localized content type", () => {
     const entries = contentPermissionEntries(testLocalizedGuideContentType);
 
+    // Writing a language is editing the record, so `can_edit` is the whole
+    // answer and there is nothing localization-specific to grant.
+    expect(
+      entries.some(
+        entry =>
+          typeof entry === "object" && entry.permission === "can_translate",
+      ),
+    ).toBe(false);
     expect(entries).toContainEqual({
-      // Depends on `can_view` and deliberately not on `can_edit`: a translator
-      // gets every locale tab without gaining the shared fields.
       dependsOn: ["can_view"],
-      permission: "can_translate",
+      permission: "can_edit",
     });
   });
 
-  it("adds nothing for a content type that is not localized", () => {
-    const permissions = contentPermissionEntries(
-      testLocalizedGuideContentType,
-    ).length;
+  it("produces the same catalogue with localization switched off", () => {
+    const entries = contentPermissionEntries(testLocalizedGuideContentType);
     const withoutLocalization = contentPermissionEntries({
       ...testLocalizedGuideContentType,
       localization: {
@@ -386,12 +390,6 @@ describe("permissions catalogue", () => {
       },
     });
 
-    expect(withoutLocalization).toHaveLength(permissions - 1);
-    expect(
-      withoutLocalization.some(
-        entry =>
-          typeof entry === "object" && entry.permission === "can_translate",
-      ),
-    ).toBe(false);
+    expect(withoutLocalization).toEqual(entries);
   });
 });

@@ -598,6 +598,34 @@ describe("reads", () => {
     expect(await translations(c).findByLocale(7, "de")).toBeNull();
   });
 
+  it("reads one language of many records in a single query", async () => {
+    const { c, calls } = createDbMock([
+      [
+        translationRow({ itemId: 7, languageId: 2, title: "Witaj" }),
+        translationRow({ itemId: 9, languageId: 2, title: "Cześć" }),
+      ],
+    ]);
+
+    const rows = await translations(c).findManyByLanguageId([7, 8, 9], 2);
+
+    expect(rows.map(row => [row.itemId, row.locale])).toEqual([
+      [7, "pl"],
+      [9, "pl"],
+    ]);
+    // One select for the rows and one for the language registry - never one per
+    // record, which is what an admin list would otherwise cost per page.
+    expect(opsOf(calls, "select")).toHaveLength(2);
+  });
+
+  it("issues no statement at all for an empty page", async () => {
+    const { c, calls } = createDbMock([]);
+
+    await expect(translations(c).findManyByLanguageId([], 2)).resolves.toEqual(
+      [],
+    );
+    expect(calls).toHaveLength(0);
+  });
+
   it("lists metadata without any localized value", async () => {
     const { c } = createDbMock([
       [

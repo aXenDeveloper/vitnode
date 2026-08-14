@@ -90,8 +90,8 @@ export interface ContentRevisionSnapshot {
  * nothing derived - restricted to one language. What is absent is the point:
  *
  * - **no shared fields.** They live on the base row and have their own history.
- *   A translation restore that carried them would let somebody with
- *   `can_translate` rewrite the record's shared values through the back door.
+ *   A translation restore that carried them would rewrite the record's shared
+ *   values as a side effect of restoring one language.
  * - **no other locale's values.** Restoring Polish must not touch English.
  * - **no public response object and no search document.** Both are derived, and
  *   both are shaped by configuration that may since have changed.

@@ -33,7 +33,7 @@ what stops a new endpoint joining the set without one.
 | `GET /{id}/schedules` | `can_view` |
 | `POST /{id}/schedule` · `/{scheduleId}/cancel` | `can_publish` |
 | `GET /{id}/translations` · `/{locale}` · `/public-locales` | `can_view` |
-| `POST` · `PUT /{id}/translations/{locale}` | `can_translate` |
+| `POST` · `PUT /{id}/translations/{locale}` | `can_edit` |
 | `DELETE /{id}/translations/{locale}` | `can_delete` |
 | `POST /{id}/translations/{locale}/publish` · `/unpublish` | `can_publish` |
 | `GET /{id}/translations/{locale}/revisions` · `/{revisionId}` | `can_view` |
@@ -48,27 +48,26 @@ Two choices in there are worth the sentence they take:
   from a source the editor did not type, so somebody who may not edit must not
   reach the same outcome through the history.
 
-## The translator
+## No translation permission
 
-`can_translate` depends on `can_view` and deliberately **not** on `can_edit`,
-which is what makes "writes Polish and nothing else" expressible. Give a role
-`can_view + can_translate` and it can:
+Writing a locale is editing the record in that language, so there is no
+`can_translate`: `can_edit` covers a shared field and a translation alike, and
+`can_create` covers a new record together with whatever languages it is born
+with. One Save button writes one record, and splitting the permission would mean
+a form that is half allowed.
 
-- read the record, every language and every language's history;
-- create and edit a translation in any enabled locale.
+`can_edit` still stops where editing stops. A role with `can_view + can_edit`:
+
+- reads the record, every language and every language's history;
+- writes a shared field, and creates or edits a translation in any enabled
+  locale.
 
 It cannot:
 
-- edit a shared field - `PUT /{id}` is `can_edit`, and the AdminCP's composite
-  `PUT /{id}/localized` re-checks `can_edit` in the handler the moment its payload
-  carries one, so reaching the form grants nothing;
 - publish or unpublish anything, record or translation (`can_publish`);
 - restore a shared revision *or* a locale's own (`can_restore`, which needs
   `can_edit`);
 - delete the record or a translation (`can_delete`).
-
-Existing roles simply do not have `can_translate` - permissions are stored as
-JSON per role, so a new one denies by default and needs no migration.
 
 ## Advanced collections have no second door
 

@@ -15,11 +15,28 @@ import { AutoFormTextarea } from "@/components/form/fields/textarea";
 import { ContentGroupField } from "./group-field";
 import { ContentRelationSetField } from "./relation-set-field";
 import { ContentRepeatableField } from "./repeatable-field";
+import { ContentUserField } from "./user-field";
+
+/**
+ * One option a picker can offer.
+ *
+ * Declared here rather than beside the server action that produces it: this is
+ * the *client* contract, and a component reaching into a `"use server"` module
+ * for a type drags `server-only` into the browser graph.
+ */
+export interface ContentOption {
+  /** `user` fields only - a `relation` target has no avatar. */
+  avatarColor?: string;
+  label: string;
+  /** `user` fields only. */
+  nameCode?: string;
+  value: string;
+}
 
 export type ContentOptionsLoader = (args: {
   field: string;
   search: string;
-}) => Promise<{ label: string; value: string }[]>;
+}) => Promise<ContentOption[]>;
 
 export interface ContentFieldProps extends ItemAutoFormComponentProps {
   loadOptions: ContentOptionsLoader;
@@ -29,9 +46,9 @@ export interface ContentFieldProps extends ItemAutoFormComponentProps {
 /**
  * Maps a field descriptor onto the AdminCP input that already exists for it.
  *
- * Nothing new is invented here - `relation` and `user` both reuse the async
- * combobox, and the loader behind them is a server action so the picker never
- * needs the API origin or a second permission.
+ * Nothing new is invented here - a `relation` reuses the async combobox, a
+ * `user` the people picker - and the loader behind both is a server action, so
+ * the picker never needs the API origin or a second permission.
  *
  * `localized: true` becomes `multiLang` on the input, which is the AdminCP's
  * existing language-aware behaviour and not a Content Engine invention: the
@@ -107,8 +124,6 @@ export const ContentField = ({
         );
       }
 
-    // eslint-disable-next-line no-fallthrough
-    case "user":
       return (
         <AutoFormCombobox
           fetchData={async ({ search }) =>
@@ -140,6 +155,14 @@ export const ContentField = ({
           rows={5}
           {...props}
         />
+      );
+
+    // Split from `relation`, which it used to share a combobox with: an author
+    // is a person, and a list of names in a dropdown is a worse way to find one
+    // than a list of faces and handles.
+    case "user":
+      return (
+        <ContentUserField loadOptions={loadOptions} spec={spec} {...props} />
       );
 
     // `text` and `slug`. A localized slug switches language with the rest, and

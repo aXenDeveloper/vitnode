@@ -14,6 +14,12 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, values?: Record<string, unknown>) =>
     values ? `${key}:${Object.values(values).join(",")}` : key,
 }));
+// The people picker ships a default lookup that reaches the server. Nothing here
+// uses it - every field is handed a `loadOptions` - but the import is real, and
+// `@/lib/fetcher` is `server-only`.
+vi.mock("@/components/form/fields/search-users.action.server", () => ({
+  searchUsers: vi.fn(),
+}));
 
 /**
  * The three Stage 6 editors, driven through the real AutoForm seam.

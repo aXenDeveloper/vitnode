@@ -134,9 +134,9 @@ export const ContentCreatePageView = async ({
 /**
  * The generated **edit page**.
  *
- * Reachable with `can_edit`, or with `can_translate` on a localized content type
- * - the same pair the edit dialog opens for, because a translator who may not
- * touch a shared field still needs somewhere to write the Polish copy.
+ * Reachable with `can_edit`, localized or not: one form writes the shared fields
+ * and every language of the record, and there is no separate permission for the
+ * half of it that lives on the translation table.
  *
  * A record that does not exist is a 404, and so is one whose content type the
  * session may not view: the read goes through the generated API, which enforces
@@ -153,7 +153,7 @@ export const ContentEditPageView = async ({
   const { definition, pluginId, registration } = entry;
   const localized = definition.localization.enabled;
 
-  const [t, tPage, locale, canView, canEdit, canTranslate] = await Promise.all([
+  const [t, tPage, locale, canView, canEdit] = await Promise.all([
     getTranslations("core.content.edit"),
     getTranslations("core.content.page"),
     // The language this person reads VitNode in, which is the language the
@@ -169,15 +169,10 @@ export const ContentEditPageView = async ({
       permission: CONTENT_PERMISSIONS.edit,
       plugin: pluginId,
     }),
-    checkAdminPermissionApi({
-      module: definition.permissionModule,
-      permission: CONTENT_PERMISSIONS.translate,
-      plugin: pluginId,
-    }),
   ]);
 
   if (!canView) notFound();
-  if (!canEdit && !(localized && canTranslate)) notFound();
+  if (!canEdit) notFound();
 
   const result = await contentApiFetch({
     definition,

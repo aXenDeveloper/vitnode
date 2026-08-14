@@ -141,9 +141,9 @@ become columns there, one row per language - and the value stays nested in every
 language.
 
 A `localized: true` leaf inside a group is a definition-time error. Half a
-logical value on each table would mean two revision histories and two
-permissions for one box an editor sees as one thing: somebody with
-`can_translate` could rewrite a leaf only `can_edit` should touch.
+logical value on each table would mean two revision histories for one box an
+editor sees as one thing: restoring a language would rewrite half of it and
+leave the other half alone.
 
 <Callout title="Mixed scope? Use two groups">
 If some of the values are per-language and some are not, that is two groups:

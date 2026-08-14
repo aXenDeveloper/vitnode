@@ -12,6 +12,12 @@ vi.mock("next-intl", () => ({
   useLocale: () => "en",
   useTranslations: () => (key: string) => key,
 }));
+// The people picker ships a default lookup that reaches the server. Nothing here
+// uses it - every field is handed a `loadOptions` - but the import is real, and
+// `@/lib/fetcher` is `server-only`.
+vi.mock("@/components/form/fields/search-users.action.server", () => ({
+  searchUsers: vi.fn(),
+}));
 
 const Harness = ({ spec }: { spec: ContentFormFieldSpec }) => {
   const form = useForm({ defaultValues: { value: undefined } as FieldValues });

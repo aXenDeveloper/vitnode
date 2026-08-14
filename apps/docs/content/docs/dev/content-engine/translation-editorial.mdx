@@ -186,25 +186,18 @@ if (outcome) {
 | Action | Permission |
 | --- | --- |
 | Read a translation, read its history | `can_view` |
-| Create or update a translation | `can_translate` |
+| Create or update a translation | `can_edit` |
 | Publish or unpublish a translation | `can_publish` |
 | Restore a translation revision | `can_restore` |
 | Delete a non-default translation | `can_delete` |
 
-`can_translate` depends on `can_view` and **not** on `can_edit`, which is the
-whole point of having it: a translator can write any language without gaining the
-ability to touch a shared field, move the record's global publication state or
-delete it.
+There is deliberately no translation permission. Writing a locale is editing the
+record in that language, so `can_edit` covers a shared field and a translation
+alike - and the AdminCP's single Save button, which posts one composite request
+for both halves, needs exactly one grant to answer for all of it.
 
-The AdminCP's single Save button posts one composite request, and the split is
-enforced on the *server*: the route needs `can_translate`, and it additionally
-checks `can_edit` the moment the payload carries a shared field. Nothing is
-inferred from whether the browser disabled an input.
-
-<Callout title="No migration, and denied by default">
-  Staff permissions are stored as JSON per role, so a new one simply is not on
-  any existing role. Grant it in AdminCP → Staff.
-</Callout>
+Publishing, restoring and deleting keep their own gates, so `can_edit` still
+cannot put an unfinished language on the internet or make one disappear.
 
 The default-locale translation stays undeletable **even with `can_delete`**. It
 is created with the record and is what makes "a record always resolves in some

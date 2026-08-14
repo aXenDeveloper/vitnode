@@ -64,9 +64,9 @@ distinct.
 **Localized fields only.** What is absent is the point:
 
 - **No shared fields.** They live on the base row and have their own history.
-  This is a security boundary as much as a modelling one: a translation snapshot
-  that carried shared values would let a restore performed with `can_translate`
-  rewrite fields only `can_edit` may touch.
+  This is a containment boundary as much as a modelling one: a translation
+  snapshot that carried shared values would rewrite the whole record on a restore
+  that asked for one language.
 - **No other locale's values.** Restoring Polish must not touch English.
 - **Nothing derived** - no public response object, no search document, no
   relation labels. All three are shaped by configuration that may since have

@@ -2,7 +2,7 @@ import type { SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { and, asc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 
 import type { ContentTranslationSchemas } from "../schemas";
 import type {
@@ -172,6 +172,19 @@ export interface ContentTranslationModel<TDefinition> {
     locale: string,
     options?: ContentTranslationOptions,
   ) => Promise<ContentTranslationRow<TDefinition> | null>;
+  /**
+   * One language's translation of **many** records, in a single query.
+   *
+   * What an admin list needs: a page of rows and the language it is being
+   * viewed in, resolved in one round trip rather than one per row. Records with
+   * no translation in that language are simply absent from the result - the
+   * caller pairs them back up by `itemId` and decides what a missing one means.
+   */
+  findManyByLanguageId: (
+    itemIds: readonly number[],
+    languageId: number,
+    options?: ContentTranslationOptions,
+  ) => Promise<ContentTranslationRow<TDefinition>[]>;
   /** Metadata for every translation of one record, without the values. */
   findManyForItem: (
     itemId: number,
@@ -690,6 +703,30 @@ export const createContentTranslationModel = <
       const row = await readOne(itemId, target.id, db(options));
 
       return row ? toRow(row, target.locale) : null;
+    },
+
+    findManyByLanguageId: async (itemIds, languageId, options) => {
+      // No ids, no statement: an empty page must not become `IN ()`, which
+      // Postgres reads as a syntax error rather than as "nothing".
+      if (itemIds.length === 0) return [];
+
+      const rows = await db(options)
+        .select(fullSelection())
+        .from(translationTable)
+        .where(
+          and(
+            inArray(itemColumn, [...itemIds]),
+            eq(languageColumn, languageId),
+          ),
+        );
+
+      // The canonical locale comes off the language registry rather than out of
+      // the rows, which only hold the id - and every row here is in the one
+      // language that was asked for.
+      const languages = await listContentLanguagesById(c, options?.tx);
+      const locale = languages.get(languageId)?.locale ?? "";
+
+      return rows.map(row => toRow(row, locale));
     },
 
     findManyForItem: async (itemId, options) => {

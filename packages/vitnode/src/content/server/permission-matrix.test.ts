@@ -144,8 +144,8 @@ const concretePath = (template: string): string =>
  * A body wide enough for every write route the builder produces.
  *
  * Never actually validated in the denial sweep - the permission middleware runs
- * first - but a `PUT` with no body would fail for the wrong reason in the
- * translator sweep, where some of these routes are allowed through.
+ * first - but a `PUT` with no body would fail for the wrong reason in the editor
+ * sweep, where some of these routes are allowed through.
  */
 const BODY = {
   action: "publish" as const,
@@ -253,7 +253,9 @@ describe("the generated permission matrix", () => {
       "POST /{id}/revisions/{revisionId}/restore": "can_restore",
       "POST /{id}/schedule": "can_publish",
       "POST /{id}/schedule/{scheduleId}/cancel": "can_publish",
-      "POST /{id}/translations/{locale}": "can_translate",
+      // Writing a language is editing the record, so it is the same permission
+      // the shared `PUT` asks for. There is no translation permission.
+      "POST /{id}/translations/{locale}": "can_edit",
       "POST /{id}/translations/{locale}/preview": "can_view",
       "POST /{id}/translations/{locale}/publish": "can_publish",
       "POST /{id}/translations/{locale}/revisions/{revisionId}/restore":
@@ -261,42 +263,40 @@ describe("the generated permission matrix", () => {
       "POST /{id}/translations/{locale}/unpublish": "can_publish",
       "POST /{id}/unpublish": "can_publish",
       "PUT /{id}": "can_edit",
-      // The composite save. Gated on `can_translate` at the route, and on
-      // `can_edit` in the handler the moment the payload carries a shared field -
-      // so a translator reaches it and still cannot touch the base row. The
-      // second check is covered by `translator isolation` below.
-      "PUT /{id}/localized": "can_translate",
-      "PUT /{id}/translations/{locale}": "can_translate",
+      // The composite save. One check for the shared half and every language,
+      // because one Save button writes one record.
+      "PUT /{id}/localized": "can_edit",
+      "PUT /{id}/translations/{locale}": "can_edit",
     });
   });
 
   /**
-   * The role Stage 5 exists for: somebody who writes Polish and nothing else.
+   * `can_edit` writes the record in every language it has, and stops there.
    *
-   * `can_translate` depends on `can_view` and deliberately **not** on
-   * `can_edit`, so this pair is expressible - and the point of the pair is that
-   * it stops at the language boundary. A translator who could reach `PUT /{id}`
-   * could rewrite a shared field; one who could reach the base publish routes
-   * could put an unfinished record on the internet.
+   * There is no translation permission: a language is not a second kind of
+   * field, it is the same record written in another locale, so the pair worth
+   * pinning is edit against everything edit is *not*. Somebody who could reach
+   * the publish routes on an edit permission could put an unfinished record on
+   * the internet, and one who could reach `restore` could rewrite a record from
+   * a version they never typed.
    */
-  describe("translator isolation", () => {
-    const TRANSLATOR = [`${MODULE}:can_view`, `${MODULE}:can_translate`];
+  describe("editor isolation", () => {
+    const EDITOR = [`${MODULE}:can_view`, `${MODULE}:can_edit`];
 
     const statusFor = async (method: string, path: string) => {
-      granted = new Set(TRANSLATOR);
+      granted = new Set(EDITOR);
 
       return (await request(method, path)).status;
     };
 
     it.each([
-      ["PUT", "/7"],
       ["POST", "/"],
       ["DELETE", "/7"],
       ["POST", "/7/publish"],
       ["POST", "/7/unpublish"],
       ["POST", "/7/revisions/3/restore"],
       // A shared revision *and* a locale's own: `can_restore` depends on
-      // `can_edit`, so a translator has neither.
+      // `can_edit` and is still its own grant on top of it.
       ["POST", "/7/translations/pl/revisions/3/restore"],
       ["POST", "/7/schedule"],
       ["POST", "/7/schedule/5/cancel"],
@@ -308,6 +308,8 @@ describe("the generated permission matrix", () => {
     });
 
     it.each([
+      ["PUT", "/7"],
+      ["PUT", "/7/localized"],
       ["POST", "/7/translations/pl"],
       ["PUT", "/7/translations/pl"],
     ])("reaches %s %s", async (method, path) => {

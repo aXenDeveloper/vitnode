@@ -277,10 +277,10 @@ const pickLeaves = (
 /**
  * Builds the snapshot stored on a *translation* revision.
  *
- * The localized half of {@link contentRevisionSnapshot}, and the split is the
- * security boundary as much as a modelling one: a translation snapshot that
- * carried shared values would let a restore performed with `can_translate`
- * rewrite fields only `can_edit` may touch.
+ * The localized half of {@link contentRevisionSnapshot}, and the split is a
+ * containment boundary as much as a modelling one: a translation snapshot that
+ * carried shared values would rewrite the whole record on a restore that asked
+ * for one language.
  *
  * `locale` is recorded alongside `languageId` because the revision row's language
  * reference has no foreign key - a language can be deleted, and the history has

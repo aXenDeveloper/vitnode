@@ -269,10 +269,10 @@ DELETE /api/{pluginId}/admin/content/{module}/{id}/translations/{locale}
 | `PUT /{id}/translations/{locale}` | `can_edit` | `{ expectedVersion, values }` |
 | `DELETE /{id}/translations/{locale}` | `can_delete` | `{ expectedVersion }` |
 
-Existing permissions on purpose. A dedicated `can_translate` means a migration for
-every role in every install, and doing that before the AdminCP has a translation
-screen to gate would ship a checkbox that governs nothing anybody can see. It
-arrives in Stage 5B, with the UI it belongs to.
+Existing permissions on purpose, and permanently: writing a locale is editing the
+record in that language, so `can_edit` is the whole answer. A dedicated
+translation permission would mean a migration for every role in every install, and
+a Save button that is half allowed.
 
 `PUT`, not `PATCH`: the Next.js API route handler exports no `PATCH`.
 

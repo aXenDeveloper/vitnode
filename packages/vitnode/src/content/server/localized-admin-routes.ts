@@ -16,7 +16,6 @@ import type { ContentModel } from "./model";
 import type { ContentDatabase } from "./service";
 import type { ContentTranslationEditorialOutcome } from "./translation-editorial-service";
 
-import { assertStaffPermission } from "../../api/lib/check-staff-permission";
 import { buildRoute } from "../../api/lib/route";
 import {
   zodContentConflict,
@@ -56,8 +55,8 @@ interface TranslationEntry {
  * its own revision, and every event still comes out of the same effects. What is
  * new is the boundary drawn around them.
  *
- * The per-locale routes stay exactly where they were, gated on `can_translate`,
- * and the AdminCP still uses them for per-language publication and history.
+ * The per-locale routes stay exactly where they were, gated on `can_edit`, and
+ * the AdminCP still uses them for per-language publication and history.
  */
 export const buildContentLocalizedAdminRoutes = <
   TDefinition extends AnyContentTypeDefinition,
@@ -409,12 +408,10 @@ export const buildContentLocalizedAdminRoutes = <
 
   const update = buildRoute({
     pluginId,
-    // `can_translate` to reach the route at all, and `can_edit` checked in the
-    // handler the moment the payload carries a shared field. That is exactly the
-    // pair the locale tabs enforced: a translator writes any language and cannot
-    // touch the base row, an editor with no translate permission cannot write a
-    // language. Neither is inferred from what the browser rendered.
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.translate },
+    // `can_edit`, for the shared half and every language alike: one Save button
+    // writes one record, and there is no second permission for the part of it
+    // that happens to live on the translation table.
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
     route: {
       method: "put",
       path: "/{id}/localized",
@@ -435,17 +432,6 @@ export const buildContentLocalizedAdminRoutes = <
       const body = await readJson(c, updateBody);
       const entries = body.translations as TranslationEntry[];
       const shared = body.values;
-
-      if (shared !== undefined) {
-        // Server-side, and never inferred from a disabled input: a translator
-        // whose form happened to include a shared field is refused here.
-        await assertStaffPermission(c, {
-          module,
-          permission: CONTENT_PERMISSIONS.edit,
-          plugin: pluginId,
-          type: "admin",
-        });
-      }
 
       if (
         editorial &&

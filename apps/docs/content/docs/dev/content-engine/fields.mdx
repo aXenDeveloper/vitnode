@@ -16,7 +16,7 @@ things: a column, a Zod rule, an AdminCP input and a table cell.
 | `boolean` | `boolean` | `boolean` | `AutoFormSwitch` | ✓ | ✓ | ✗ |
 | `enum` | `varchar(length ?? 64)` | literal union | select or radio | ✓ | ✓ | ✗ |
 | `dateTime` | `timestamp` | ISO string | `AutoFormDateTime` | ✓ | ✗ | ✗ |
-| `user` | `integer` → `core_users.id` | `number` | async combobox | ✓ | ✓ | ✗ |
+| `user` | `integer` → `core_users.id` | `number` | [people picker](/docs/ui/user) | ✓ | ✓ | ✗ |
 | `relation` | `integer` → target `id` | `number` | async combobox | ✓ | ✓ | ✗ |
 | `relation` (`multiple`) | junction table | `number[]` | multi picker | ✗ | membership | ✗ |
 | `group` | one column per leaf | nested object | labelled section | per leaf | per leaf | per leaf |

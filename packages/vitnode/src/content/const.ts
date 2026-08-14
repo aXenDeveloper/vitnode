@@ -589,9 +589,13 @@ export const CONTENT_ADMIN_EDIT_SEGMENT = "edit";
 
 /**
  * Every content type gets the first four staff permissions. `can_publish` is
- * generated only for content types with `publication: { enabled: true }`,
- * `can_restore` only for those with `editorial: { enabled: true }`, and
- * `can_translate` only for those with `localization: { enabled: true }`.
+ * generated only for content types with `publication: { enabled: true }`, and
+ * `can_restore` only for those with `editorial: { enabled: true }`.
+ *
+ * There is deliberately no separate translation permission: writing a locale is
+ * editing the record, so `can_edit` covers a shared field and a translation
+ * alike, and `can_create` covers a new record in whatever languages it is born
+ * with.
  */
 export const CONTENT_PERMISSIONS = {
   create: "can_create",
@@ -599,7 +603,6 @@ export const CONTENT_PERMISSIONS = {
   edit: "can_edit",
   publish: "can_publish",
   restore: "can_restore",
-  translate: "can_translate",
   view: "can_view",
 } as const;
 

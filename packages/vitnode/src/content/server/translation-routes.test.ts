@@ -282,14 +282,14 @@ describe("POST /{id}/translations/{locale}", () => {
     });
   });
 
-  it("needs `can_translate`, not `can_edit`", async () => {
+  it("needs `can_edit`, and no permission of its own", async () => {
     const { app, translations } = harness();
     translations.create.mockResolvedValue(translationRow());
 
     await post(app, { values: { title: "Witaj" } });
 
     expect(permissionChecks).toEqual([
-      { module: "test_localized", permission: "can_translate" },
+      { module: "test_localized", permission: "can_edit" },
     ]);
   });
 

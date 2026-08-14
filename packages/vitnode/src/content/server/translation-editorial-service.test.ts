@@ -270,7 +270,7 @@ describe("create", () => {
     );
 
     // `featured` is shared. A translation snapshot that carried it would let a
-    // restore performed with `can_translate` rewrite it.
+    // restore of one language rewrite it.
     expect(Object.keys(captured[0].snapshot.fields)).toEqual([
       "title",
       "slug",

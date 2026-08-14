@@ -955,7 +955,14 @@ export const unpublishContentAction = async (
   await publicationAction(contentTypeId, id, "unpublish");
 
 const zodOptions = z.object({
-  items: z.array(z.object({ label: z.string(), value: z.number() })),
+  items: z.array(
+    z.object({
+      avatarColor: z.string().optional(),
+      label: z.string(),
+      nameCode: z.string().optional(),
+      value: z.number(),
+    }),
+  ),
 });
 
 /**
@@ -963,13 +970,18 @@ const zodOptions = z.object({
  *
  * A server action rather than a client fetch, so the browser never needs the
  * API origin and the request is gated by the content type's own `can_view`
- * instead of a separate permission on the target table.
+ * instead of a separate permission on the target table. That gating is the
+ * reason a `user` field reads its people from here rather than from the users
+ * list: an editor who may write articles can pick an author without also being
+ * trusted to browse the member list.
  */
 export const loadContentOptionsAction = async (
   contentTypeId: string,
   field: string,
   search: string,
-): Promise<{ label: string; value: string }[]> => {
+): Promise<
+  { avatarColor?: string; label: string; nameCode?: string; value: string }[]
+> => {
   const { definition, pluginId } = resolve(contentTypeId);
 
   const result = await contentApiFetch({
@@ -983,5 +995,10 @@ export const loadContentOptionsAction = async (
 
   return (result.data?.items ?? [])
     .slice(0, CONTENT_OPTIONS_LIMIT)
-    .map(item => ({ label: item.label, value: String(item.value) }));
+    .map(item => ({
+      avatarColor: item.avatarColor,
+      label: item.label,
+      nameCode: item.nameCode,
+      value: String(item.value),
+    }));
 };

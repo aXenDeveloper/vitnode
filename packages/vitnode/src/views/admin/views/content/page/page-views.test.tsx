@@ -251,18 +251,17 @@ describe("the generated edit page", () => {
     ).rejects.toThrow("NEXT_NOT_FOUND");
   });
 
-  it("404s without can_edit on a content type with no translations", async () => {
+  it("404s without can_edit", async () => {
     permissions.add("can_view");
-    permissions.add("can_translate");
 
     await expect(
       ContentEditPageView({ entry: entryOf(), itemId: 7 }),
     ).rejects.toThrow("NEXT_NOT_FOUND");
   });
 
-  it("opens for a translator on a localized content type", async () => {
+  it("opens a localized content type on the same can_edit", async () => {
     permissions.add("can_view");
-    permissions.add("can_translate");
+    permissions.add("can_edit");
 
     const localized = defineContentType({
       id: "test.page-localized",
@@ -291,7 +290,7 @@ describe("the generated edit page", () => {
 
     // One form, with the localized fields in it and flagged as such - so each
     // one renders its own language switcher. There is no second spec and no
-    // second surface for a translator to be sent to.
+    // second surface a language has to be written on.
     expect(props.spec).toMatchObject({ defaultLocale: "en" });
     expect(
       (props.spec as { fields: { localized?: boolean; name: string }[] })

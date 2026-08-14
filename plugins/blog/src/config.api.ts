@@ -10,7 +10,7 @@ import { postContent } from "@/database/posts";
  * No `contentTypes` here: `buildApiPlugin` walks the module tree, so the content
  * types declared in `admin.module.ts` also drive the registry and the derived
  * `can_view` / `can_create` / `can_edit` / `can_delete` / `can_publish` /
- * `can_restore` / `can_translate` permissions.
+ * `can_restore` permissions.
  *
  * No `searchIndexers` either. The article's `search` block is the indexer now -
  * one document per published translation, written by the engine in the same

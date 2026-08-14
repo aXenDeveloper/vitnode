@@ -56,14 +56,16 @@ import { withTranslationHttpErrors } from "./translation-http-errors";
  * | Route | Permission |
  * | --- | --- |
  * | read, history | `can_view` |
- * | create, update | `can_translate` |
+ * | create, update | `can_edit` |
  * | publish, unpublish | `can_publish` |
  * | restore | `can_restore` |
  * | delete | `can_delete` |
  *
- * `can_translate` rather than `can_edit`, which is the point of having it: a
- * translator gets every locale tab without gaining the ability to touch a shared
- * field, move the global publication state or delete the record.
+ * `can_edit`, and no permission of its own: writing a locale is editing the
+ * record in that language, and a role that may edit an article may edit every
+ * language of it. Publishing, restoring and deleting keep their own gates, so a
+ * translation still cannot reach the internet or disappear on an edit
+ * permission alone.
  */
 export const buildContentTranslationRoutes = <
   TDefinition extends AnyContentTypeDefinition,
@@ -271,7 +273,7 @@ export const buildContentTranslationRoutes = <
 
   const create = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.translate },
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
     route: {
       method: "post",
       path: "/{id}/translations/{locale}",
@@ -317,7 +319,7 @@ export const buildContentTranslationRoutes = <
 
   const update = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.translate },
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
     route: {
       // PUT, not PATCH: the Next.js API route handler exports no PATCH.
       method: "put",
