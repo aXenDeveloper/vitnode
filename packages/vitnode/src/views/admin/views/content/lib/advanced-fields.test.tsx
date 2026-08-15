@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { type FieldValues, useForm } from "react-hook-form";
+import { useEffect } from "react";
+import { type FieldValues, useForm, useWatch } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ContentFormFieldSpec } from "@/content/admin/spec";
@@ -46,7 +47,14 @@ const Harness = ({
   spec: ContentFormFieldSpec;
 }) => {
   const form = useForm({ defaultValues: { value: initial } as FieldValues });
-  latest = form.watch();
+  const values = useWatch({ control: form.control });
+
+  // Published to the assertions from an effect rather than from the render
+  // body: the harness renders inside `act`, so by the time a `fireEvent` has
+  // returned the effect has run and `latest` is the value the form settled on.
+  useEffect(() => {
+    latest = values;
+  }, [values]);
 
   return (
     // The to-many picker wraps the async combobox, which fetches through

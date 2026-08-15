@@ -38,6 +38,14 @@ type AutoFormComboboxProps = ItemAutoFormComponentProps &
     labels?: { label: string; value: string }[];
     placeholder?: string;
     /**
+     * Where this field's results are cached, overriding the default of `[id]`.
+     *
+     * For a caller that needs to *expire* them from somewhere else: `id` names
+     * the field, and a key that says what the options are **of** can be matched
+     * by prefix from the screen that just changed them.
+     */
+    queryKey?: readonly unknown[];
+    /**
      * The chip one selected item becomes, for a `multiple` async field.
      *
      * Defaults to its label. The people picker passes a face and a handle, which
@@ -83,6 +91,7 @@ export const AutoFormCombobox = ({
   showClear,
   fetchData,
   id,
+  queryKey,
   searchPlaceholder,
   filter,
   renderChip,
@@ -99,7 +108,7 @@ export const AutoFormCombobox = ({
   const isMultiple = multiple;
   const [search, setSearch] = React.useState("");
   const { data, isLoading } = useQuery({
-    queryKey: [id ?? "combobox", { search }],
+    queryKey: [...(queryKey ?? [id ?? "combobox"]), { search }],
     queryFn: async () => {
       if (!fetchData) return [];
 

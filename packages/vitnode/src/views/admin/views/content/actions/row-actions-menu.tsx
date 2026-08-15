@@ -5,7 +5,6 @@ import {
   EllipsisIcon,
   EyeIcon,
   HistoryIcon,
-  LanguagesIcon,
   LinkIcon,
   Trash2Icon,
 } from "lucide-react";
@@ -23,6 +22,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 
 import { DeleteContentPanel } from "./delete-action";
@@ -30,11 +35,24 @@ import { DeliveryContentPanel } from "./delivery-action";
 import { HistoryContentPanel } from "./history-action";
 import { PreviewContentPanel } from "./preview-action";
 import { ScheduleContentPanel } from "./schedule-action";
-import { TranslationsContentPanel } from "./translations-action";
 
 /** The row actions that live behind the ⋯ button. */
-type PanelId =
-  "delete" | "delivery" | "history" | "preview" | "schedule" | "translations";
+type PanelId = "delete" | "delivery" | "history" | "preview" | "schedule";
+
+/**
+ * How many actions a row shows as buttons before they collapse into the menu.
+ *
+ * Three, because that is where the two costs cross over. Below it a menu is a
+ * click that buys nothing - a ⋯ hiding a single "Delete" is strictly worse than
+ * the delete button itself, since it costs an extra click *and* hides what the
+ * row can do. Above it a strip of icons stops being readable and becomes a
+ * puzzle, which is what the menu was introduced to fix.
+ *
+ * Counted **after** permissions, so what a role sees is what decides: an editor
+ * who may only delete gets one button, and an administrator on the same row gets
+ * the menu.
+ */
+const INLINE_ACTION_LIMIT = 3;
 
 /** One entry in the menu, in the order the list declares it. */
 interface RowAction {
@@ -54,13 +72,14 @@ interface RowAction {
 /**
  * Everything a row can do that is not Publish or Edit.
  *
- * Eight icon buttons in one cell is a row nobody can read: publish and edit are
- * what people click all day and stay in the row, and everything else - preview,
- * scheduling, history, languages, delivery, delete - is listed here by name,
- * because six icons in a strip is a puzzle rather than a menu.
+ * Two shapes, chosen by how many actions the role in front of the table actually
+ * has - see {@link INLINE_ACTION_LIMIT}. A few are buttons in the row, reachable
+ * in one click and visible without one. Many collapse into a ⋯ menu that lists
+ * them by name, because publish and edit are what people click all day and a
+ * strip of six icons beside them is a row nobody can read.
  *
- * Delete comes last, under a rule, because it is the one action here that cannot
- * be undone.
+ * Delete comes last either way, under a rule in the menu and in the destructive
+ * colour as a button, because it is the one action here that cannot be undone.
  *
  * Each panel is a dialog, and one is mounted at a time: a table of 25 rows costs
  * 25 buttons rather than 150 dialogs, and every panel body is behind a
@@ -69,16 +88,13 @@ interface RowAction {
 export const ContentRowActionsMenu = ({
   contentTypeId,
   currentVersion,
-  defaultLocale,
   delivery,
   editorial,
   id,
   locale,
-  localized,
   permissionModule,
   pluginId,
   preview,
-  publication,
   scheduling,
   singular,
   spec,
@@ -88,7 +104,6 @@ export const ContentRowActionsMenu = ({
   contentTypeId: string;
   /** The version the row is showing, which history opens at. */
   currentVersion: number;
-  defaultLocale: string;
   /** `delivery.enabled` - offers the URL panel. */
   delivery: boolean;
   /** `editorial.enabled` - offers the revision history. */
@@ -96,14 +111,10 @@ export const ContentRowActionsMenu = ({
   id: number;
   /** The language the list is being read in, for the URL panel. */
   locale?: string;
-  /** `localization.enabled` - offers the per-language panel. */
-  localized: boolean;
   permissionModule: string;
   pluginId: string;
   /** `editorial.preview.enabled` - offers the signed preview link. */
   preview: boolean;
-  /** `publication.enabled`, which the per-language panel needs to know. */
-  publication: boolean;
   /** `editorial.scheduling.enabled` - offers the schedule panel. */
   scheduling: boolean;
   singular: string;
@@ -132,9 +143,9 @@ export const ContentRowActionsMenu = ({
   }>(null);
 
   // The gates for the whole menu, read once per row instead of once per action:
-  // reading a record covers looking at its URLs, its languages and what changed,
-  // while booking a publication is publishing - just later - and deleting is its
-  // own permission entirely.
+  // reading a record covers looking at its URLs and what changed, while booking
+  // a publication is publishing - just later - and deleting is its own
+  // permission entirely.
   const canView = useAdminStaffPermission({
     module: permissionModule,
     permission: CONTENT_PERMISSIONS.view,
@@ -176,12 +187,6 @@ export const ContentRowActionsMenu = ({
       label: t("actions.history"),
     },
     {
-      available: localized && canView,
-      icon: <LanguagesIcon />,
-      id: "translations",
-      label: t("actions.translations"),
-    },
-    {
       available: delivery && canView,
       icon: <LinkIcon />,
       id: "delivery",
@@ -210,44 +215,83 @@ export const ContentRowActionsMenu = ({
     },
   };
 
+  /**
+   * Opens a panel, and records the control that opened it.
+   *
+   * Written on the click rather than bound to one element, because there is no
+   * single trigger any more: a closing dialog returns focus to the button that
+   * opened it, which is the ⋯ in one shape and one of several icons in the other.
+   */
+  const openPanel = (id: PanelId) => (event: React.MouseEvent<HTMLElement>) => {
+    triggerRef.current = event.currentTarget as HTMLButtonElement;
+    setPanel({ id, open: true });
+  };
+
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          ref={triggerRef}
-          render={
-            <Button
-              aria-label={t("table.more_actions")}
-              size="icon"
-              variant="ghost"
-            />
-          }
-        >
-          <EllipsisIcon className="size-4" />
-        </DropdownMenuTrigger>
+      {items.length <= INLINE_ACTION_LIMIT ? (
+        items.map(item => (
+          <TooltipProvider key={item.id}>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    aria-label={item.label}
+                    onClick={openPanel(item.id)}
+                    size="icon"
+                    variant={
+                      item.destructive === true ? "destructive" : "ghost"
+                    }
+                  >
+                    {item.icon}
+                  </Button>
+                }
+              />
 
-        <DropdownMenuContent align="end" className="w-64">
-          {items.map((item, index) => (
-            <React.Fragment key={item.id}>
-              {/* Nothing to separate when delete is the only thing a role may
-                  do. */}
-              {item.destructive === true && index > 0 ? (
-                <DropdownMenuSeparator />
-              ) : null}
+              <TooltipContent>{item.label}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ))
+      ) : (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            ref={triggerRef}
+            render={
+              <Button
+                aria-label={t("table.more_actions")}
+                size="icon"
+                variant="ghost"
+              />
+            }
+          >
+            <EllipsisIcon className="size-4" />
+          </DropdownMenuTrigger>
 
-              <DropdownMenuItem
-                onClick={() => {
-                  setPanel({ id: item.id, open: true });
-                }}
-                variant={item.destructive === true ? "destructive" : "default"}
-              >
-                {item.icon}
-                {item.label}
-              </DropdownMenuItem>
-            </React.Fragment>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+          <DropdownMenuContent align="end" className="w-64">
+            {items.map((item, index) => (
+              <React.Fragment key={item.id}>
+                {/* Nothing to separate when delete is the only thing a role may
+                    do. */}
+                {item.destructive === true && index > 0 ? (
+                  <DropdownMenuSeparator />
+                ) : null}
+
+                <DropdownMenuItem
+                  onClick={() => {
+                    setPanel({ id: item.id, open: true });
+                  }}
+                  variant={
+                    item.destructive === true ? "destructive" : "default"
+                  }
+                >
+                  {item.icon}
+                  {item.label}
+                </DropdownMenuItem>
+              </React.Fragment>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
 
       {panel?.id === "preview" ? (
         <PreviewContentPanel
@@ -280,22 +324,6 @@ export const ContentRowActionsMenu = ({
           pluginId={pluginId}
           singular={singular}
           spec={spec}
-          title={title}
-          {...panelProps}
-        />
-      ) : null}
-
-      {panel?.id === "translations" ? (
-        <TranslationsContentPanel
-          contentTypeId={contentTypeId}
-          defaultLocale={defaultLocale}
-          editorial={editorial}
-          id={id}
-          open={panel.open}
-          permissionModule={permissionModule}
-          pluginId={pluginId}
-          publication={publication}
-          singular={singular}
           title={title}
           {...panelProps}
         />

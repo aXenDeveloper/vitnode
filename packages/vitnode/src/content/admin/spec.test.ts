@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import {
   testArticleContentType,
+  testCategoryContentType,
   testLocalizedGuideContentType,
   testSectionedContentType,
 } from "@/tests/content-fixtures";
@@ -106,6 +107,19 @@ describe("buildContentFormSpec", () => {
   it("keeps nullability", () => {
     expect(specFor("excerpt").nullable).toBe(true);
     expect(specFor("title").nullable).toBe(false);
+  });
+
+  it("names the content type a relation points at", () => {
+    // Resolved from the `target` thunk here because a thunk cannot cross into a
+    // client component - and the browser needs it to know that the category
+    // picker on this form and the category screen show the same rows.
+    expect(specFor("category").targetContentTypeId).toBe(
+      testCategoryContentType.id,
+    );
+  });
+
+  it("leaves a user field without one, because people are not a content type", () => {
+    expect(specFor("author").targetContentTypeId).toBeUndefined();
   });
 
   describe("sections", () => {

@@ -49,7 +49,7 @@ const ContentFormContext = React.createContext<ContentFormContextValue | null>(
  * ordinary values on the client, where the provider and the layout both run.
  */
 export const useContentForm = (): ContentFormContextValue => {
-  const value = React.useContext(ContentFormContext);
+  const value = React.use(ContentFormContext);
 
   if (!value) {
     throw new Error(
@@ -67,7 +67,7 @@ export const useContentForm = (): ContentFormContextValue => {
  * by layouts only, but a field component may be reused in a plain dialog.
  */
 export const useContentFormOptional = (): ContentFormContextValue | null =>
-  React.useContext(ContentFormContext);
+  React.use(ContentFormContext);
 
 export const ContentFormProvider = ({
   children,
@@ -76,22 +76,25 @@ export const ContentFormProvider = ({
   children: React.ReactNode;
   value: Omit<ContentFormContextValue, "markRendered">;
 }) => {
-  const rendered = React.useRef<Set<string>>(new Set());
+  /**
+   * Every field a layout has placed, cumulative for the life of the form.
+   *
+   * Never emptied, and that is the point: the question this answers is "did the
+   * layout ever ask for this field", not "did it ask on this particular render".
+   * Clearing it per render is what the first version did, and it could not be
+   * made to work either way round - during render it is a write React forbids,
+   * and in the effect it depends on there being exactly one effect run per
+   * render. There is not: Strict Mode, which every Next dev server enables, runs
+   * them twice on mount, so the second pass always found an empty set and
+   * reported every field on the screen as missing.
+   */
+  const renderedRef = React.useRef<Set<string>>(new Set());
 
   const markRendered = React.useCallback((name: string) => {
-    rendered.current.add(name);
+    renderedRef.current.add(name);
   }, []);
 
   const { fieldNames } = value;
-
-  // Emptied here, during *this* render, rather than in the effect below: the
-  // children re-populate it while they render, which happens after this line
-  // and before any effect. Clearing it in the effect instead made the record
-  // depend on there being exactly one effect run per render - and there is not.
-  // React runs effects twice on mount in Strict Mode, which every Next dev
-  // server enables, so the second run always found an empty set and reported
-  // every field on the screen as missing.
-  rendered.current = new Set();
 
   /**
    * A layout that forgets a field silently drops it from the payload, which is
@@ -102,9 +105,13 @@ export const ContentFormProvider = ({
    * Runs after the children, which is what makes the set complete.
    */
   React.useEffect(() => {
-    const missing = fieldNames.filter(name => !rendered.current.has(name));
+    if (process.env.NODE_ENV === "production") return;
 
-    if (process.env.NODE_ENV === "production" || missing.length === 0) return;
+    // eslint-disable-next-line react-you-might-not-need-an-effect/no-pass-data-to-parent -- nothing leaves this component; the effect is where it has to be computed, because what it compares against is what the children recorded while rendering
+    const missing = fieldNames.filter(name => !renderedRef.current.has(name));
+
+    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler -- the only consumer of `missing` is the `console.warn` below
+    if (missing.length === 0) return;
 
     // eslint-disable-next-line no-console -- development-only diagnostic
     console.warn(

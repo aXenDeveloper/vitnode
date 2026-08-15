@@ -17,12 +17,7 @@ import { PublishContentAction } from "../actions/publish-action";
 import { ContentRowActionsMenu } from "../actions/row-actions-menu";
 import { ContentCell } from "./cells";
 
-/**
- * Width of the actions column: Edit and the ⋯ menu, plus the publish toggle for a
- * content type with `publication`. Three buttons is the ceiling now, whatever the
- * content type opts into - everything else is listed inside the menu.
- */
-const ACTION_WIDTHS = ["w-20", "w-28"] as const;
+const ACTION_WIDTH = "w-0 whitespace-nowrap";
 
 const zodList = z.object({
   edges: z.array(
@@ -30,7 +25,6 @@ const zodList = z.object({
       .object({
         id: z.number(),
         labels: z.record(z.string(), z.string().nullable()),
-        /** The record's translation in the reader's own language. */
         translation: z
           .object({
             locale: z.string(),
@@ -57,20 +51,10 @@ export const ContentTableView = async ({
   entry: RegisteredFrontendContentType;
   formSpec: ContentFormSpec;
   searchParams: Record<string, string | string[] | undefined>;
-  /**
-   * The record's noun in the reader's language, already resolved.
-   *
-   * Handed down rather than resolved here: every row action interpolates it
-   * into a translated frame ("Delete {name}"), and one resolution per screen is
-   * what keeps the rows, the toasts and the heading saying the same word.
-   */
   singular: string;
 }) => {
   const [t, locale] = await Promise.all([
     getTranslations("core.content"),
-    // The language this person is already using VitNode in. There is no locale
-    // control above the table, and there is nothing for one to add: somebody
-    // reading the AdminCP in Polish came to read Polish content.
     getLocale(),
   ]);
   const { definition, pluginId, registration } = entry;
@@ -80,8 +64,6 @@ export const ContentTableView = async ({
     definition,
     method: "get",
     pluginId,
-    // `locale` last, so a stale bookmark carrying `?locale=` cannot make the
-    // list disagree with the language the rest of the screen is in.
     query: localized ? { ...searchParams, locale } : searchParams,
     schema: zodList,
   });
@@ -108,13 +90,6 @@ export const ContentTableView = async ({
   const localizedTitle =
     titleField !== null && definition.fields[titleField]?.localized === true;
 
-  /**
-   * The record's human name, in the language this person is reading.
-   *
-   * A localized title comes off the translation the list already resolved, so a
-   * toast, a tooltip and a confirmation dialog all say the same thing the row
-   * above them says - and `#123` is the last resort rather than the normal one.
-   */
   const titleOf = (row: ContentRowData): string => {
     if (titleField === null) return `#${row.id}`;
 
@@ -146,9 +121,6 @@ export const ContentTableView = async ({
             );
           }
 
-          // Rendered as an element, not called as a function: an override is a
-          // client component, and invoking one directly from this server
-          // component would run its hooks on the server.
           const Cell = override.cell;
 
           return <Cell row={row as never} />;
@@ -159,10 +131,7 @@ export const ContentTableView = async ({
       id: "actions",
       header: "",
       align: "right",
-      // Edit and the overflow menu are always there; publication adds the one
-      // more. Written as a lookup rather than a template string, because Tailwind
-      // can only see class names it can read in the source.
-      className: ACTION_WIDTHS[definition.publication.enabled ? 1 : 0],
+      className: ACTION_WIDTH,
       cell: ({ row }) => {
         const title = titleOf(row);
 
@@ -186,8 +155,7 @@ export const ContentTableView = async ({
                   ([name, override]) => [name, override.component],
                 ),
               )}
-              // Page mode turns the pencil into a link. Nothing of the form is
-              // mounted, so a 25-row table stays 25 anchors.
+
               href={
                 definition.admin.edit.mode === "page"
                   ? contentEditHref(definition.id, row.id)
@@ -200,29 +168,21 @@ export const ContentTableView = async ({
               spec={formSpec}
               title={title}
             />
-            {/* Last in the cell, and every remaining action is inside it -
-                including delete, which is the one thing here that cannot be
-                undone and has no business sitting next to the pencil. */}
+
             <ContentRowActionsMenu
               contentTypeId={definition.id}
               currentVersion={typeof row.version === "number" ? row.version : 1}
-              defaultLocale={definition.localization.defaultLocale}
               delivery={definition.delivery.enabled}
               editorial={definition.editorial.enabled}
               id={row.id}
               locale={localized ? locale : undefined}
-              localized={localized}
               permissionModule={definition.permissionModule}
               pluginId={pluginId}
               preview={definition.editorial.preview.enabled}
-              publication={definition.publication.enabled}
               scheduling={definition.editorial.scheduling.enabled}
               singular={singular}
               spec={formSpec}
               title={title}
-              // The precondition the delete route checks. Taken from the row the
-              // person is actually looking at, so a stale table cannot remove a
-              // newer record.
               version={
                 definition.editorial.enabled && typeof row.version === "number"
                   ? row.version
@@ -245,14 +205,6 @@ export const ContentTableView = async ({
       edges={data.edges}
       id={`content-${definition.id}`}
       order={{
-        // The same allowlist the generated route builds its `orderBy` enum
-        // from, so a header the backend would accept is never left unsortable.
-        // `admin.list.orderableFields` alone would leave out `id`, `createdAt`,
-        // `updatedAt` and - when publication is on - `status` and
-        // `publishedAt`, all of which the API has always allowed. A localized
-        // column is deliberately absent: it is one column on the *translation*
-        // table, and a list ordered by it would reshuffle per language and make
-        // a cursor mean two positions at once.
         columns: orderableColumns(definition),
         defaultOrder: {
           column: definition.admin.list.defaultOrderBy,

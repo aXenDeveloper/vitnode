@@ -49,7 +49,7 @@ export const ContentUserField = ({
 }) => {
   const t = useTranslations("core.content.form");
   const { field } = props;
-  const seen = React.useRef<Record<number, UserOption>>({});
+  const seenRef = React.useRef<Record<number, UserOption>>({});
   /** The author, once looked up - the record arrives with a name and no face. */
   const [resolved, setResolved] = React.useState<null | UserOption>(null);
 
@@ -89,7 +89,7 @@ export const ContentUserField = ({
     // No reset when the author is cleared: `resolved` is only ever read when its
     // id still matches, so stale state cannot surface - and clearing it here
     // would be a `setState` in an effect for no visible gain.
-    if (currentId === null || seen.current[currentId]) return;
+    if (currentId === null || seenRef.current[currentId]) return;
 
     let active = true;
     void loadOptions({ field: spec.name, search: currentLabel })
@@ -99,7 +99,7 @@ export const ContentUserField = ({
         const match = options.map(toUser).find(user => user.id === currentId);
         if (!match) return;
 
-        seen.current[match.id] = match;
+        seenRef.current[match.id] = match;
         setResolved(match);
       })
       .catch((error: unknown) => {
@@ -127,7 +127,7 @@ export const ContentUserField = ({
             return;
           }
 
-          const option = seen.current[id];
+          const option = seenRef.current[id];
           field.onChange({
             label: option?.name ?? String(id),
             value: String(id),
@@ -142,7 +142,7 @@ export const ContentUserField = ({
 
         return options.map(option => {
           const user = toUser(option);
-          seen.current[user.id] = user;
+          seenRef.current[user.id] = user;
 
           return user;
         });

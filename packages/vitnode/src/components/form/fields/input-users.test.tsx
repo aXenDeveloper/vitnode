@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { type FieldValues, useForm } from "react-hook-form";
+import { type FieldValues, useForm, useWatch } from "react-hook-form";
 import { describe, expect, it, vi } from "vitest";
 
 import { Form, FormField } from "@/components/ui/form";
@@ -54,7 +54,9 @@ const Harness = ({
   const form = useForm({
     defaultValues: { authorId: defaultValue ?? null } as FieldValues,
   });
-  onValue?.(form.watch("authorId"));
+  const authorId = useWatch({ control: form.control, name: "authorId" });
+
+  onValue?.(authorId);
 
   return (
     <Form form={form} onSubmit={vi.fn()}>

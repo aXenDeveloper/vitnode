@@ -8,6 +8,7 @@ import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-ac
 import type { ContentPanelProps } from "./content-panel";
 
 import { contentErrorKey } from "../lib/mutation-feedback";
+import { useInvalidateContentOptions } from "../lib/options-query";
 import { deleteContentAction } from "./mutation-api.server";
 
 /**
@@ -43,6 +44,7 @@ export const DeleteContentPanel = ({
   const t = useTranslations("core.content.delete");
   const tErrors = useTranslations("core.global.errors");
   const tContentErrors = useTranslations("core.content.errors");
+  const invalidateOptions = useInvalidateContentOptions();
 
   return (
     <ConfirmActionAlertDialog
@@ -78,6 +80,11 @@ export const DeleteContentPanel = ({
 
           return;
         }
+
+        // A deleted record must stop being offered as somebody else's option -
+        // otherwise the article form keeps a category in its picker that the
+        // API would now refuse.
+        invalidateOptions(contentTypeId);
 
         toast.success(t("success", { name: singular }), { description: title });
         onClose();

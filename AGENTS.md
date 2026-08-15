@@ -85,3 +85,4 @@ npm i x
 - Don't write tests:
   - for trivial code unless they have complex logic or edge cases
   - for database queries
+  - how UI should be rendered (use playwright for that to write e2e tests)

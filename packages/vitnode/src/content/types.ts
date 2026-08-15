@@ -874,6 +874,17 @@ export interface ContentAdminConfig<
   TPublication extends boolean = boolean,
   TEditorial extends boolean = boolean,
 > {
+  /**
+   * Field holding a colour, shown as a swatch beside the title in pickers and
+   * cells.
+   *
+   * A **display** projection like {@link ContentAdminConfig.titleField}, and a
+   * shared column rather than a localized one: a colour is a property of the
+   * record, not of the language somebody reads it in. Left out, an option is its
+   * name alone - which is right for most content types and wrong for the handful
+   * whose whole point is that they are colour-coded.
+   */
+  colorField?: null | string;
   /** Presentation of the create form. Defaults to `{ mode: "dialog" }`. */
   create?: ContentAdminActionConfig;
   /** Presentation of the edit form. Defaults to `{ mode: "dialog" }`. */
@@ -908,17 +919,6 @@ export interface ContentAdminConfig<
    * with it.
    */
   permissionModule?: string;
-  /**
-   * Field holding a colour, shown as a swatch beside the title in pickers and
-   * cells.
-   *
-   * A **display** projection like {@link ContentAdminConfig.titleField}, and a
-   * shared column rather than a localized one: a colour is a property of the
-   * record, not of the language somebody reads it in. Left out, an option is its
-   * name alone - which is right for most content types and wrong for the handful
-   * whose whole point is that they are colour-coded.
-   */
-  colorField?: null | string;
   /**
    * Field used as the human-readable title in toasts and relation pickers.
    *

@@ -33,39 +33,18 @@ export const blogCategoryContentType = defineContentType({
   },
 
   fields: {
-    // The existing `varchar(50)` on `blog_categories`, unchanged. Rendered by
-    // the AdminCP's own colour picker through a frontend field override - the
-    // Content Engine has no `color` kind, and does not need one.
-    color: field.text({ maxLength: 50, nullable: true }),
     name: field.text({
       localized: true,
       required: true,
       minLength: 1,
       maxLength: 100,
     }),
+    color: field.text({ maxLength: 50, nullable: true }),
   },
 
   admin: {
-    // The module the blog's staff permissions have always been stored under, so
-    // every existing role keeps exactly the access it had.
     permissionModule: "categories",
-    /**
-     * The colour a picker draws beside the name.
-     *
-     * A category *is* its colour as much as its word - that is what the column
-     * has always been for - so an article's category chips carry the swatch
-     * rather than reducing a colour-coded taxonomy to a list of strings.
-     */
     colorField: "color",
-    /**
-     * The localized name, resolved in whichever language the reader is using.
-     *
-     * A *display* projection rather than a column: `name` lives on the
-     * translation table, and the AdminCP reads the one translation it already
-     * loaded for the row. Nothing about ordering or filtering changes - those
-     * still address `blog_categories` - and a toast reading "Aktualności has
-     * been deleted" beats both "#7" and "#3260c0".
-     */
     titleField: "name",
     // Dialogs, deliberately: a name and a colour do not need a page, and this is
     // the half of the blog that proves page mode is opt-in.

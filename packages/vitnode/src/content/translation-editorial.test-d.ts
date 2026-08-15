@@ -40,10 +40,12 @@ describe("translation lifecycle columns", () => {
   });
 
   it("withholds them from a localized content type without publication", () => {
-    // @ts-expect-error - no publication, so a translation has no status to read.
-    type _Status = ContentTranslationRow<LocalizedOnly>["status"];
-    // @ts-expect-error - same, for the timestamp.
-    type _PublishedAt = ContentTranslationRow<LocalizedOnly>["publishedAt"];
+    expectTypeOf<ContentTranslationRow<LocalizedOnly>>().not.toHaveProperty(
+      "status",
+    );
+    expectTypeOf<ContentTranslationRow<LocalizedOnly>>().not.toHaveProperty(
+      "publishedAt",
+    );
   });
 
   it("still narrows `values` to the localized fields only", () => {
@@ -74,24 +76,24 @@ describe("translation events", () => {
     expectTypeOf<GuideEvents>().toHaveProperty(
       "content.test.localized-guide.translation_published",
     );
-    type _Missing =
-      // @ts-expect-error - no publication, so no translation lifecycle event.
-      LocalizedOnlyEvents["content.test.localized.translation_published"];
+    expectTypeOf<LocalizedOnlyEvents>().not.toHaveProperty(
+      "content.test.localized.translation_published",
+    );
   });
 
   it("adds the restore event only with editorial", () => {
     expectTypeOf<GuideEvents>().toHaveProperty(
       "content.test.localized-guide.translation_restored",
     );
-    type _Missing =
-      // @ts-expect-error - no editorial, so no history to restore from.
-      LocalizedOnlyEvents["content.test.localized.translation_restored"];
+    expectTypeOf<LocalizedOnlyEvents>().not.toHaveProperty(
+      "content.test.localized.translation_restored",
+    );
   });
 
   it("adds none of them to a non-localized content type", () => {
-    type _Missing =
-      // @ts-expect-error - a Stage 1 content type gains no translation key.
-      ArticleEvents["content.test.article.translation_created"];
+    expectTypeOf<ArticleEvents>().not.toHaveProperty(
+      "content.test.article.translation_created",
+    );
   });
 
   it("narrows changedFields to the localized field names", () => {

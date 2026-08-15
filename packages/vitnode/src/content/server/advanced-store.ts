@@ -4,11 +4,7 @@ import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { and, asc, eq, getTableName, inArray, sql } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 
-import type {
-  AnyContentTypeDefinition,
-  ContentFieldMap,
-  ContentRelationFilter,
-} from "../types";
+import type { AnyContentTypeDefinition, ContentRelationFilter } from "../types";
 import type { ContentDatabase } from "./service";
 import type { ContentAdvancedTables } from "./types";
 

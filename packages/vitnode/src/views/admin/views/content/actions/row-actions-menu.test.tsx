@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -34,9 +35,6 @@ vi.mock("./delivery/delivery-panel", () => ({
 vi.mock("./schedule/schedule-panel", () => ({
   SchedulePanel: () => <div>schedule panel</div>,
 }));
-vi.mock("./translations/translation-manager", () => ({
-  TranslationManager: () => <div>translation manager</div>,
-}));
 vi.mock("./mutation-api.server", () => ({
   createContentPreviewAction: async () => {
     await Promise.resolve();
@@ -54,70 +52,126 @@ const renderMenu = (
   props: Partial<React.ComponentProps<typeof ContentRowActionsMenu>> = {},
 ) =>
   render(
-    <ContentRowActionsMenu
-      contentTypeId="test.post"
-      currentVersion={4}
-      defaultLocale="en"
-      delivery
-      editorial
-      id={7}
-      localized
-      permissionModule="posts"
-      pluginId="@vitnode/example"
-      preview
-      publication
-      scheduling
-      singular="Post"
-      spec={{} as never}
-      title="Hello world"
-      version={4}
-      {...props}
-    />,
+    // Delete drops the cached picker options of whatever it removed, so the menu
+    // needs the client the AdminCP layout provides around every screen.
+    <QueryClientProvider client={new QueryClient()}>
+      <ContentRowActionsMenu
+        contentTypeId="test.post"
+        currentVersion={4}
+        delivery
+        editorial
+        id={7}
+        permissionModule="posts"
+        pluginId="@vitnode/example"
+        preview
+        scheduling
+        singular="Post"
+        spec={{} as never}
+        title="Hello world"
+        version={4}
+        {...props}
+      />
+    </QueryClientProvider>,
   );
 
+const moreButton = () =>
+  screen.queryByRole("button", { name: "core.content.table.more_actions" });
+
+const inlineNames = () =>
+  screen
+    .getAllByRole("button")
+    .map(button => button.getAttribute("aria-label"));
+
+/** Opens the ⋯ menu, or leaves it open if it already is. */
 const openMenu = () => {
-  fireEvent.click(
-    screen.getByRole("button", { name: "core.content.table.more_actions" }),
-  );
+  const more = moreButton();
+  if (more && more.getAttribute("aria-expanded") !== "true") {
+    fireEvent.click(more);
+  }
 };
 
-const itemNames = () =>
-  screen.getAllByRole("menuitem").map(item => item.textContent);
+const actionNames = () => {
+  if (!moreButton()) return inlineNames();
+
+  openMenu();
+
+  return screen.getAllByRole("menuitem").map(item => item.textContent);
+};
 
 beforeEach(() => {
   permissions = { can_delete: true, can_publish: true, can_view: true };
 });
 
 describe("ContentRowActionsMenu", () => {
-  it("keeps the row to one button, whatever the content type opted into", () => {
-    // The point of the menu: six actions used to be six icons in a cell that also
-    // holds publish and edit.
+  it("keeps the row to one button once there are too many actions to show", () => {
     renderMenu();
 
     expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(moreButton()).toBeTruthy();
+  });
+
+  describe("below the inline threshold", () => {
+    const threeActions = { delivery: false, preview: false } as const;
+
+    it("shows the actions as buttons rather than hiding them behind a menu", () => {
+      renderMenu(threeActions);
+
+      expect(moreButton()).toBeNull();
+      expect(inlineNames()).toEqual([
+        "core.content.actions.schedule",
+        "core.content.actions.history",
+        "core.content.actions.delete",
+      ]);
+    });
+
+    it("collapses into the menu as soon as a fourth action appears", () => {
+      renderMenu({ preview: false });
+
+      expect(screen.getAllByRole("button")).toHaveLength(1);
+      expect(moreButton()).toBeTruthy();
+    });
+
+    it("gives a role with delete alone the delete button itself", () => {
+      permissions = { can_delete: true, can_view: true };
+      renderMenu({ delivery: false, editorial: false, preview: false });
+
+      const [button] = screen.getAllByRole("button");
+
+      expect(button.getAttribute("aria-label")).toBe(
+        "core.content.actions.delete",
+      );
+    });
+
+    it("opens the same panel a menu item would have", async () => {
+      renderMenu(threeActions);
+      fireEvent.click(
+        screen.getByRole("button", { name: "core.content.actions.delete" }),
+      );
+
+      const dialog = await screen.findByRole("alertdialog", undefined, {
+        timeout: 3000,
+      });
+
+      expect(dialog.textContent).toContain("core.content.delete.title");
+    });
   });
 
   it("lists every action by name, with delete last", () => {
     renderMenu();
-    openMenu();
 
-    // The bare action names, not the panel headings: a menu row says what it
-    // does, and the record it does it to is named by the panel that opens.
-    expect(itemNames()).toEqual([
+    expect(actionNames()).toEqual([
       "core.content.actions.preview",
       "core.content.actions.schedule",
       "core.content.actions.history",
-      "core.content.actions.translations",
       "core.content.actions.delivery",
       "core.content.actions.delete",
     ]);
   });
 
   it("leaves out what the content type has not opted into", () => {
-    renderMenu({ delivery: false, localized: false, preview: false });
-    openMenu();
+    renderMenu({ delivery: false, preview: false });
 
-    expect(itemNames()).toEqual([
+    expect(actionNames()).toEqual([
       "core.content.actions.schedule",
       "core.content.actions.history",
       "core.content.actions.delete",
@@ -125,17 +179,14 @@ describe("ContentRowActionsMenu", () => {
   });
 
   it("offers delete alone for a plain content type", () => {
-    // No capability actions at all, but the menu is still where delete lives.
     renderMenu({
       delivery: false,
       editorial: false,
-      localized: false,
       preview: false,
       scheduling: false,
     });
-    openMenu();
 
-    expect(itemNames()).toEqual(["core.content.actions.delete"]);
+    expect(actionNames()).toEqual(["core.content.actions.delete"]);
   });
 
   it("renders nothing for a role allowed none of them", () => {
@@ -148,29 +199,24 @@ describe("ContentRowActionsMenu", () => {
   it("hides delete from a role without can_delete, and keeps the rest", () => {
     permissions = { can_publish: true, can_view: true };
     renderMenu();
-    openMenu();
 
-    expect(itemNames()).not.toContain("core.content.actions.delete");
-    expect(itemNames()).toContain("core.content.actions.history");
+    expect(actionNames()).not.toContain("core.content.actions.delete");
+    expect(actionNames()).toContain("core.content.actions.history");
   });
 
   it("hides scheduling from a role without can_publish, and keeps the rest", () => {
-    // Booking a publication is publishing, just later. Reading what changed, or
-    // where the record lives, is covered by seeing the record at all.
     permissions = { can_view: true };
     renderMenu();
-    openMenu();
 
-    expect(itemNames()).not.toContain("core.content.actions.schedule");
-    expect(itemNames()).toContain("core.content.actions.history");
+    expect(actionNames()).not.toContain("core.content.actions.schedule");
+    expect(actionNames()).toContain("core.content.actions.history");
   });
 
   it("offers only history to a role that may read an editorial-only type", () => {
     permissions = { can_view: true };
-    renderMenu({ delivery: false, localized: false, preview: false });
-    openMenu();
+    renderMenu({ delivery: false, preview: false });
 
-    expect(itemNames()).toEqual(["core.content.actions.history"]);
+    expect(actionNames()).toEqual(["core.content.actions.history"]);
   });
 
   describe("opening a panel", () => {
@@ -181,14 +227,10 @@ describe("ContentRowActionsMenu", () => {
         screen.getByRole("menuitem", { name: "core.content.actions.history" }),
       );
 
-      // The item that opened it is unmounted with the menu, which is exactly why
-      // the open state lives on the menu component rather than inside the panel.
       const dialog = await screen.findByRole("dialog", undefined, {
         timeout: 3000,
       });
 
-      // The heading, not the menu label: "History" opens *History of this
-      // Article*, which is where the record gets named.
       expect(dialog.textContent).toContain("core.content.history.title");
       expect(screen.queryByRole("menuitem")).toBeNull();
     });
@@ -213,7 +255,6 @@ describe("ContentRowActionsMenu", () => {
         screen.getByRole("menuitem", { name: "core.content.actions.delete" }),
       );
 
-      // An alert dialog, not a plain one: nothing is deleted by opening it.
       const dialog = await screen.findByRole("alertdialog", undefined, {
         timeout: 3000,
       });

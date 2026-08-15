@@ -5,7 +5,6 @@ import { HTTPException } from "hono/http-exception";
 
 import type {
   AnyContentTypeDefinition,
-  ContentCreateInput,
   ContentLocalizedUpdateValues,
   ContentLocalizedValues,
   ContentSelect,

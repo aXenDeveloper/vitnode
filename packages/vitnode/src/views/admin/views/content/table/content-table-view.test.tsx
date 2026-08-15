@@ -198,22 +198,17 @@ describe("the actions cell", () => {
   });
 
   it("sizes the column to the buttons the row actually shows", async () => {
-    // Three buttons at most, so the widest the column ever gets is `w-28` - it
-    // used to run to `w-68` for a content type that opted into everything.
     expect(
       (await actionsColumn(testDeliveredLocalizedContentType))?.className,
-    ).toBe("w-28");
+    ).toBe("w-0 whitespace-nowrap");
     expect((await actionsColumn(testArticleContentType))?.className).toBe(
-      "w-20",
+      "w-0 whitespace-nowrap",
     );
   });
 });
 
 describe("sortable columns", () => {
   it("offers every column the generated route accepts", async () => {
-    // The route's `orderBy` enum is `orderableColumns(definition)`. Passing
-    // anything narrower here leaves a header unsortable that the backend would
-    // have answered.
     expect((await orderProp(testPostContentType)).columns).toEqual([
       "title",
       "id",

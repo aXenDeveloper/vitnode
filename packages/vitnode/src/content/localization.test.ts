@@ -14,21 +14,7 @@ import {
   contentTranslationTableName,
   isLocalizedContentField,
   partitionContentFields,
-  resolveContentLocalization,
 } from "./localization";
-
-/** `publicApi` as `defineContentType` resolves it when there is none. */
-const disabledPublicApi = {
-  defaultOrder: "desc" as const,
-  defaultOrderBy: "publishedAt",
-  enabled: false as const,
-  fields: [] as never[],
-  filterableFields: [] as never[],
-  orderableFields: [] as never[],
-  path: "",
-  searchableFields: [] as never[],
-  slugField: "",
-};
 
 /** Builds a localized content type with one thing swapped out. */
 const localized = (

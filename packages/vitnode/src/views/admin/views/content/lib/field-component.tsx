@@ -14,6 +14,7 @@ import { AutoFormTextarea } from "@/components/form/fields/textarea";
 
 import { ContentGroupField } from "./group-field";
 import { ContentOptionSwatch } from "./option-swatch";
+import { contentOptionsQueryKey } from "./options-query";
 import { ContentRelationSetField } from "./relation-set-field";
 import { ContentRepeatableField } from "./repeatable-field";
 import { ContentUserField } from "./user-field";
@@ -141,6 +142,7 @@ export const ContentField = ({
           id={`content-${spec.name}`}
           label={spec.label}
           placeholder={t("relation.placeholder")}
+          queryKey={contentOptionsQueryKey(spec)}
           renderItem={item => <ContentOptionSwatch option={item} />}
           searchPlaceholder={t("relation.search_placeholder")}
           showClear={spec.nullable}

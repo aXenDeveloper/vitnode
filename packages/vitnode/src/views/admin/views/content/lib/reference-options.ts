@@ -45,6 +45,7 @@ export const useReferenceOptions = ({
     if (missingKey === "") return;
 
     let active = true;
+    // eslint-disable-next-line react-you-might-not-need-an-effect/no-pass-live-state-to-parent -- `load` is a fetch, not a parent callback: it takes the ids nobody has looked up yet and answers with their labels. The state it reads is the record of what has already been asked for, which is exactly what keeps the fetch from repeating.
     const requested = missingKey.split(",").map(Number);
 
     void load({

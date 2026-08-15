@@ -57,6 +57,13 @@ export interface ReferenceLocalizedLabel {
 export interface ContentPickerTarget {
   /** Aliased, so two relations pointing at the same table can both be joined. */
   aliased: PgTable;
+  /**
+   * The target's colour column, when it declares `admin.colorField`.
+   *
+   * What lets a picker draw a swatch beside a name - a blog category is a colour
+   * as much as it is a word, and a list of names alone throws that away.
+   */
+  colorColumn?: PgColumn;
   idColumn: PgColumn;
   /**
    * The label on the target's **base** table, or its id when the label lives on
@@ -67,13 +74,6 @@ export interface ContentPickerTarget {
    * back to.
    */
   labelColumn: PgColumn;
-  /**
-   * The target's colour column, when it declares `admin.colorField`.
-   *
-   * What lets a picker draw a swatch beside a name - a blog category is a colour
-   * as much as it is a word, and a list of names alone throws that away.
-   */
-  colorColumn?: PgColumn;
   /** Present when the target names a localized field as its `admin.titleField`. */
   localizedLabel?: ReferenceLocalizedLabel;
   /**

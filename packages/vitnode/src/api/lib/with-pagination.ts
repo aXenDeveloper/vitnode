@@ -427,9 +427,10 @@ function withoutCursorField<QueryMin extends Record<string, unknown>>(
 ): Omit<QueryMin, typeof PAGINATION_CURSOR_FIELD> {
   if (!(PAGINATION_CURSOR_FIELD in row)) return row;
 
-  const { [PAGINATION_CURSOR_FIELD]: _cursorValue, ...rest } = row;
+  const rest: Partial<QueryMin> = { ...row };
+  delete rest[PAGINATION_CURSOR_FIELD];
 
-  return rest;
+  return rest as Omit<QueryMin, typeof PAGINATION_CURSOR_FIELD>;
 }
 
 /**

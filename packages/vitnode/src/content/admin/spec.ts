@@ -65,6 +65,16 @@ export interface ContentFormFieldSpec {
   /** Whether a to-many reference's order is the author's to choose. */
   ordered?: boolean;
   required: boolean;
+  /**
+   * The content type a `relation` points at.
+   *
+   * What lets the browser know that the category picker on an article and the
+   * category screen are looking at the same rows - so creating, renaming or
+   * deleting one expires the other's cached options instead of leaving an
+   * article form offering a category that is gone. Absent on a `user` field,
+   * whose targets are people rather than a content type.
+   */
+  targetContentTypeId?: string;
 }
 
 /**
@@ -224,6 +234,13 @@ const projectFormField = (
         ...(fieldValue.min === undefined ? {} : { minItems: fieldValue.min }),
         multiple: fieldValue.multiple,
         ordered: fieldValue.ordered,
+        // The thunk is resolved here rather than carried: a spec crosses into a
+        // client component, and a function cannot. Calling it is what
+        // `resolveReferenceTargets` already does per request, so a circular
+        // reference is as safe here as it is there.
+        ...(fieldValue.kind === "relation"
+          ? { targetContentTypeId: fieldValue.target().id }
+          : {}),
       };
     case "slug":
       // No default and no minimum: an empty slug input means "derive it",

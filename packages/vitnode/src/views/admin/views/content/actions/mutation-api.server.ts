@@ -81,15 +81,6 @@ interface MutationResult {
   /** Lets the UI tell a restricted delete (409) from a generic failure. */
   status?: number;
   /**
-   * Nothing moved, so nothing was sent.
-   *
-   * Its own field rather than silence, because "saved" and "there was nothing
-   * to save" are different things to the person who pressed the button - and
-   * reporting the first for the second is how a form that is quietly failing
-   * looks exactly like one that is working.
-   */
-  unchanged?: boolean;
-  /**
    * The same, for the language half of a composite save.
    *
    * Its own field rather than a second arm of `conflict`, because the two need
@@ -105,6 +96,15 @@ interface MutationResult {
    * write it just made.
    */
   translations?: TranslationRow[];
+  /**
+   * Nothing moved, so nothing was sent.
+   *
+   * Its own field rather than silence, because "saved" and "there was nothing
+   * to save" are different things to the person who pressed the button - and
+   * reporting the first for the second is how a form that is quietly failing
+   * looks exactly like one that is working.
+   */
+  unchanged?: boolean;
   /** `CONTENT_REVISION_NOT_RESTORABLE`, naming the fields that no longer fit. */
   unprocessable?: ContentUnprocessable;
 }

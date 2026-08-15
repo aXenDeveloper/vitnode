@@ -32,6 +32,7 @@ import { ContentFormPublication } from "../form/publication-status";
 import { ContentFormSections } from "../form/sections";
 import { ContentField } from "../lib/field-component";
 import { contentErrorKey } from "../lib/mutation-feedback";
+import { useInvalidateContentOptions } from "../lib/options-query";
 import { ConflictNotice } from "./conflict-notice";
 import {
   createContentAction,
@@ -225,6 +226,7 @@ const ContentFormFields = ({
   const { push } = useRouter();
   const pathname = usePathname();
   const locale = useLocale();
+  const invalidateOptions = useInvalidateContentOptions();
   const [conflict, setConflict] = React.useState<ContentConflictState | null>(
     null,
   );
@@ -419,6 +421,12 @@ const ContentFormFields = ({
 
       return;
     }
+
+    // This record is somebody else's picker option. A new category has to appear
+    // in the article form, and a renamed one has to read as its new name -
+    // neither happens on its own, because the query client outlives the
+    // navigation between the two screens.
+    invalidateOptions(spec.contentTypeId);
 
     toast.success(
       t(data ? "edit.success" : "create.success", { name: singular }),

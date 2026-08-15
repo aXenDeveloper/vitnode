@@ -26,7 +26,6 @@ import {
   contentLeafColumnName,
   contentLeafColumns,
   isContentLeafKind,
-  isContentReferenceCollection,
   partitionContentStorage,
 } from "./paths";
 

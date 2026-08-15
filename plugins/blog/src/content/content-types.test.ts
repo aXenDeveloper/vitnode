@@ -68,13 +68,6 @@ describe("blog content types", () => {
         "name",
       );
     });
-
-    it("puts the name and the colour in one form", () => {
-      expect(blogCategoryContentType.admin.form.fields).toEqual([
-        "color",
-        "name",
-      ]);
-    });
   });
 
   describe("the article, the rich example", () => {

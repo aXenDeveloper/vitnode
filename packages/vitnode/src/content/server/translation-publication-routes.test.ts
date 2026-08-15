@@ -21,10 +21,9 @@ import { buildContentTranslationRoutes } from "./translation-routes";
 const page = createContentModel(testStrictLocalizedPageContentType);
 const PLUGIN_ID = "@vitnode/example";
 
-const emitted = vi.fn((_name: string, _payload: unknown) => ({
-  failures: [],
-  listeners: 0,
-}));
+const emitted = vi.fn<
+  (name: string, payload: unknown) => { failures: never[]; listeners: number }
+>(() => ({ failures: [], listeners: 0 }));
 const permissionChecks: { module: string; permission: string }[] = [];
 
 vi.mock("../../api/lib/check-staff-permission", () => ({

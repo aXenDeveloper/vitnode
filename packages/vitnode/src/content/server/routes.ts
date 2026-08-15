@@ -35,7 +35,6 @@ import {
 } from "../const";
 import { partitionContentFields } from "../localization";
 import { orderableColumns } from "../registry";
-import { contentSearchIndexesCollections } from "../search";
 import { resolveContentActor } from "./actor";
 import { contentEditorialEffects } from "./editorial-effects";
 import { emitContentEvent } from "./emit";

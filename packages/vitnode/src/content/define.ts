@@ -705,10 +705,7 @@ const resolveAdmin = <TFields>(
   // A colour is drawn from the row itself, so - unlike the title - it has to be
   // a real column: a per-language swatch would be a different colour depending
   // on who is looking at it.
-  const colorField =
-    admin.colorField === undefined || admin.colorField === null
-      ? null
-      : String(admin.colorField);
+  const colorField = admin.colorField ?? null;
   if (colorField !== null && !columnFieldNames.includes(colorField)) {
     throw new ContentEngineError(
       `admin.colorField references "${colorField}", which is not a shared column. A colour is a property of the record rather than of a language.`,
@@ -1733,8 +1730,7 @@ export const defineContentType = <
   // The one partition every subsystem downstream of here reads. A localized
   // field is not a column on the base table, so it takes no part in the base
   // indexes, the admin surfaces or the base schemas.
-  const { collectionFields, localizedFields, sharedFields } =
-    partitionContentFields(fieldMap);
+  const { localizedFields, sharedFields } = partitionContentFields(fieldMap);
   // Groups flattened into the columns they generate, which is what an index and
   // a unique constraint actually address.
   const sharedColumns = contentStorageColumns(sharedFields);

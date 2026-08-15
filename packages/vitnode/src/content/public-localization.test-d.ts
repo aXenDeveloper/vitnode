@@ -27,18 +27,13 @@ describe("the public row of a localized content type", () => {
   });
 
   it("does not carry a field the allowlist leaves out", () => {
-    // @ts-expect-error - `status` is never exposable; every public row is
-    // published, so it would be a constant.
-    type _Missing = LocalizedRow["status"];
+    expectTypeOf<LocalizedRow>().not.toHaveProperty("status");
   });
 });
 
 describe("the public row of a content type that is not localized", () => {
   it("has no `locale` at all", () => {
-    // The key appears because of localization, so a Stage 1-4 content type's
-    // response shape is byte-identical to what it always was.
-    // @ts-expect-error - nothing resolved a language for this row.
-    type _Missing = PlainRow["locale"];
+    expectTypeOf<PlainRow>().not.toHaveProperty("locale");
   });
 
   it("keeps its allowlisted fields unchanged", () => {

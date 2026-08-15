@@ -37,7 +37,7 @@ const DEFAULT_ROWS: LanguageRow[] = [
  * A context whose `select().from()` returns the language rows and counts how
  * many times it was asked - which is the whole point of the per-request cache.
  */
-const createContext = ({
+const createRequestContext = ({
   locales,
   rows = DEFAULT_ROWS,
 }: {
@@ -79,7 +79,7 @@ beforeEach(() => {
 
 describe("listContentLanguages", () => {
   it("returns every language with its id and canonical locale", async () => {
-    const { c } = createContext();
+    const { c } = createRequestContext();
 
     expect(await listContentLanguages(c)).toEqual([
       { id: 1, isDefault: true, isEnabled: true, locale: "en" },
@@ -89,7 +89,7 @@ describe("listContentLanguages", () => {
   });
 
   it("queries once per request however often it is asked", async () => {
-    const { c, queries } = createContext();
+    const { c, queries } = createRequestContext();
 
     await listContentLanguages(c);
     await findContentLanguage(c, "pl");
@@ -124,7 +124,7 @@ describe("listContentLanguages", () => {
   });
 
   it("marks a locale the app config disables", async () => {
-    const { c } = createContext({
+    const { c } = createRequestContext({
       locales: [
         { code: "en", name: "English" },
         { code: "pl", enabled: false, name: "Polski" },
@@ -146,7 +146,7 @@ describe("listContentLanguages", () => {
 
 describe("findContentLanguage", () => {
   it("matches case-insensitively and returns the canonical locale", async () => {
-    const { c } = createContext();
+    const { c } = createRequestContext();
 
     // A locale travels in a URL, and `/PL/` naming the same language as `/pl/`
     // is what people expect - but what gets stored is the row's own code.
@@ -156,7 +156,7 @@ describe("findContentLanguage", () => {
   });
 
   it("returns null for an unknown or empty locale", async () => {
-    const { c } = createContext();
+    const { c } = createRequestContext();
 
     expect(await findContentLanguage(c, "de")).toBeNull();
     expect(await findContentLanguage(c, "")).toBeNull();
@@ -166,7 +166,7 @@ describe("findContentLanguage", () => {
 
 describe("resolveContentLanguage", () => {
   it("resolves an existing language", async () => {
-    const { c } = createContext();
+    const { c } = createRequestContext();
 
     expect(await resolveContentLanguage(c, { locale: "pl" })).toEqual({
       id: 2,
@@ -177,7 +177,7 @@ describe("resolveContentLanguage", () => {
   });
 
   it("throws `missing` for an unknown locale", async () => {
-    const { c } = createContext();
+    const { c } = createRequestContext();
 
     await expect(
       resolveContentLanguage(c, { locale: "de" }),
@@ -185,7 +185,7 @@ describe("resolveContentLanguage", () => {
   });
 
   it("reads a disabled language but refuses to write one", async () => {
-    const { c } = createContext({
+    const { c } = createRequestContext({
       locales: [{ code: "pl", enabled: false, name: "Polski" }],
     });
 
@@ -199,7 +199,7 @@ describe("resolveContentLanguage", () => {
   });
 
   it("distinguishes missing from disabled in its message", async () => {
-    const { c } = createContext({
+    const { c } = createRequestContext({
       locales: [{ code: "pl", enabled: false, name: "Polski" }],
     });
 
@@ -212,7 +212,7 @@ describe("resolveContentLanguage", () => {
   });
 
   it("names the content type in the error when it knows one", async () => {
-    const { c } = createContext();
+    const { c } = createRequestContext();
 
     await expect(
       resolveContentLanguage(c, {
@@ -225,7 +225,7 @@ describe("resolveContentLanguage", () => {
 
 describe("resolveDefaultContentLanguage", () => {
   it("resolves the configured default locale", async () => {
-    const { c } = createContext();
+    const { c } = createRequestContext();
 
     expect(
       await resolveDefaultContentLanguage(c, testLocalizedArticleContentType),
@@ -233,7 +233,7 @@ describe("resolveDefaultContentLanguage", () => {
   });
 
   it("matches the default locale case-insensitively too", async () => {
-    const { c } = createContext();
+    const { c } = createRequestContext();
 
     // The note fixture configures `EN`; the canonical code is `en`.
     expect(
@@ -242,7 +242,7 @@ describe("resolveDefaultContentLanguage", () => {
   });
 
   it("refuses a content type without localization", async () => {
-    const { c } = createContext();
+    const { c } = createRequestContext();
 
     await expect(
       resolveDefaultContentLanguage(c, testArticleContentType),
@@ -250,7 +250,7 @@ describe("resolveDefaultContentLanguage", () => {
   });
 
   it("throws when the default language is gone", async () => {
-    const { c } = createContext({
+    const { c } = createRequestContext({
       rows: [{ code: "pl", id: 2, isDefault: true }],
     });
 
@@ -270,7 +270,7 @@ describe("the boot guard", () => {
   ];
 
   it("passes when every default locale resolves", async () => {
-    const { c } = createContext();
+    const { c } = createRequestContext();
 
     await expect(
       assertContentLocalizationLanguages(c, entries),
@@ -278,7 +278,7 @@ describe("the boot guard", () => {
   });
 
   it("never touches the languages table with nothing localized", async () => {
-    const { c, queries } = createContext();
+    const { c, queries } = createRequestContext();
 
     await assertContentLocalizationLanguages(c, [
       { definition: testArticleContentType, pluginId: "@vitnode/example" },
@@ -289,7 +289,7 @@ describe("the boot guard", () => {
   });
 
   it("reports a missing default language", async () => {
-    const { c } = createContext({
+    const { c } = createRequestContext({
       rows: [{ code: "pl", id: 2, isDefault: true }],
     });
 
@@ -303,7 +303,7 @@ describe("the boot guard", () => {
   });
 
   it("reports a disabled default language", async () => {
-    const { c } = createContext({
+    const { c } = createRequestContext({
       locales: [{ code: "en", enabled: false, name: "English" }],
     });
 
@@ -317,7 +317,7 @@ describe("the boot guard", () => {
   });
 
   it("names every offender in one error rather than failing on the first", async () => {
-    const { c } = createContext({
+    const { c } = createRequestContext({
       rows: [{ code: "de", id: 9, isDefault: true }],
     });
 
@@ -333,7 +333,7 @@ describe("the boot guard", () => {
   });
 
   it("runs at most once per process", async () => {
-    const { c, queries } = createContext();
+    const { c, queries } = createRequestContext();
 
     await ensureContentLocalizationLanguages(c, entries);
     await ensureContentLocalizationLanguages(c, entries);
@@ -344,7 +344,7 @@ describe("the boot guard", () => {
   });
 
   it("does not memoise a failure", async () => {
-    const broken = createContext({
+    const broken = createRequestContext({
       rows: [{ code: "pl", id: 2, isDefault: true }],
     });
 
@@ -352,7 +352,7 @@ describe("the boot guard", () => {
       ensureContentLocalizationLanguages(broken.c, entries),
     ).rejects.toThrow();
 
-    const healthy = createContext();
+    const healthy = createRequestContext();
     // A database that was not up yet gets checked again rather than poisoning
     // the process.
     await expect(

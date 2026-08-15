@@ -17,12 +17,16 @@ import { contentTranslationEffects } from "./translation-effects";
  * event map would make the assertions depend on whether a plugin's `declare
  * module` block happens to be in the program.
  */
-const emit = vi.fn(
-  (_name: string, _payload: Record<string, unknown>, _options?: unknown) => ({
-    failures: [] as { error: string; listener: string }[],
-    listeners: 1,
-  }),
-);
+const emit = vi.fn<
+  (
+    name: string,
+    payload: Record<string, unknown>,
+    options?: unknown,
+  ) => {
+    failures: { error: string; listener: string }[];
+    listeners: number;
+  }
+>(() => ({ failures: [], listeners: 1 }));
 
 const context = () =>
   ({

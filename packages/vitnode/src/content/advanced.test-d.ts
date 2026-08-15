@@ -388,6 +388,6 @@ describe("variance", () => {
   });
 
   it("keeps the definition itself assignable", () => {
-    expectTypeOf<Article>().toExtend<AnyContentTypeDefinition>();
+    expectTypeOf(articleContentType).toExtend<AnyContentTypeDefinition>();
   });
 });
