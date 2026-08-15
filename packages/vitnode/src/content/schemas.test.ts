@@ -147,7 +147,6 @@ describe("generated schemas", () => {
       tableName: "test_schema_version",
       fields: { title: field.text({ required: true }) },
       editorial: { enabled: true },
-      admin: { label: { plural: "Versions", singular: "Version" } },
     });
 
     const row = {
@@ -271,7 +270,6 @@ describe("generated schemas", () => {
           internalNote: field.textarea({ nullable: true }),
         },
         admin: {
-          label: { plural: "Subsets", singular: "Subset" },
           form: { fields: ["title"] },
         },
       });
@@ -288,7 +286,6 @@ describe("generated schemas", () => {
         title: field.text({ required: true }),
         slug: field.slug({ maxLength: 20, source: "title" }),
       },
-      admin: { label: { plural: "Slugged", singular: "Slug" } },
     }).schemas;
 
     const withoutSource = defineContentType({
@@ -298,7 +295,6 @@ describe("generated schemas", () => {
         title: field.text({ required: true }),
         slug: field.slug(),
       },
-      admin: { label: { plural: "Manuals", singular: "Manual" } },
     }).schemas;
 
     it("may be omitted from create when it has a source", () => {

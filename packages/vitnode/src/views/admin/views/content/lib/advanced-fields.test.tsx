@@ -314,12 +314,12 @@ describe("repeatable editor", () => {
 describe("to-many relation picker", () => {
   const loadOptions = async () =>
     Promise.resolve([
-      { label: "News", value: "1" },
+      { color: "#3260c0", label: "News", value: "1" },
       { label: "Guides", value: "2" },
     ]);
 
-  it("holds identifiers rather than combobox options", () => {
-    render(
+  it("holds identifiers rather than combobox options", async () => {
+    const { container } = render(
       <Harness
         initial={[1, 2]}
         loadOptions={loadOptions}
@@ -330,8 +330,16 @@ describe("to-many relation picker", () => {
     // Exactly what the API takes - nothing to convert on submit, which is what
     // `contentFormValuesToPayload` skipping a `multiple` relation relies on.
     expect(latest.value).toStrictEqual([1, 2]);
-    // Falls back to the identifier until the picker has resolved a name for it.
-    expect(screen.getByText("1")).toBeTruthy();
+    // A chip whose label has not arrived is a skeleton rather than its
+    // identifier: `1` reads as data, and the field would look wrong rather than
+    // busy for as long as the lookup takes.
+    expect(container.querySelectorAll("[data-slot='skeleton']").length).toBe(2);
+    expect(screen.queryByText("1")).toBeNull();
+
+    await waitFor(() => {
+      expect(screen.getByText("News")).toBeTruthy();
+    });
+    expect(container.querySelector("[data-slot='skeleton']")).toBeNull();
   });
 
   it("removes a target without touching the others", async () => {
@@ -343,15 +351,18 @@ describe("to-many relation picker", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "list.remove:1" }));
+    // Each chip carries its own remove control - the multi-select combobox's
+    // own affordance, rather than a list of rows beside it.
+    const [first] = screen.getAllByRole("button", { name: "remove" });
+    fireEvent.click(first);
 
     await waitFor(() => {
       expect(latest.value).toStrictEqual([2]);
     });
   });
 
-  it("offers no reorder controls for an unordered relation", () => {
-    render(
+  it("keeps what is chosen as chips inside the control", () => {
+    const { container } = render(
       <Harness
         initial={[1, 2]}
         loadOptions={loadOptions}
@@ -359,24 +370,137 @@ describe("to-many relation picker", () => {
       />,
     );
 
-    // The engine stores an unordered set in ascending target-id order whatever
-    // the editor does, so buttons here would visibly do nothing.
-    expect(screen.queryByRole("button", { name: /list\.move_/ })).toBeNull();
+    expect(
+      container.querySelector("[data-slot='combobox-chips']"),
+    ).toBeTruthy();
+    expect(
+      container.querySelectorAll("[data-slot='combobox-chip']"),
+    ).toHaveLength(2);
   });
 
-  it("offers them for an ordered one", async () => {
-    render(
+  it("draws the colour a target declares, and nothing when it has none", async () => {
+    const { container } = render(
       <Harness
         initial={[1, 2]}
+        loadOptions={loadOptions}
+        spec={categoriesSpec}
+      />,
+    );
+
+    // A category is its colour as much as its word, so the chip carries the
+    // swatch the options route sent.
+    await waitFor(() => {
+      expect(screen.getByText("News")).toBeTruthy();
+    });
+
+    const swatches = container.querySelectorAll(
+      "[data-slot='combobox-chip'] span[style]",
+    );
+
+    expect(swatches).toHaveLength(1);
+    expect(swatches[0].getAttribute("style")).toContain("rgb(50, 96, 192)");
+  });
+
+  it("draws a single chip's colour, whatever CSS colour the target stores", async () => {
+    // The blog's own shape: one category, an `hsl()` colour rather than a hex
+    // one - the colour is written by a colour picker and stored verbatim, so
+    // the swatch has to take the string as it comes rather than parse it.
+    const { container } = render(
+      <Harness
+        initial={[1]}
+        loadOptions={async () =>
+          Promise.resolve([
+            { color: "hsl(200, 60%, 50%)", label: "ttt", value: "1" },
+          ])
+        }
+        spec={categoriesSpec}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("ttt")).toBeTruthy();
+    });
+
+    const swatch = container.querySelector(
+      "[data-slot='combobox-chip'] span[style]",
+    );
+
+    // jsdom normalises `hsl()` to `rgb()`, which is the browser's own
+    // behaviour - what matters is that the string reached the swatch unparsed.
+    expect(swatch?.getAttribute("style")).toContain("rgb(51, 153, 204)");
+  });
+
+  it("keeps an ordered relation in the order it holds", async () => {
+    const { container } = render(
+      <Harness
+        initial={[2, 1]}
         loadOptions={loadOptions}
         spec={{ ...categoriesSpec, ordered: true }}
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "list.move_down:1" }));
+    // The chip order *is* the stored order - there are no move buttons, and
+    // there is nothing for them to do that reordering the value does not.
+    // Asserted on the resolved names rather than the identifiers, because until
+    // the lookup lands every chip is a skeleton with nothing to compare.
+    await waitFor(() => {
+      const chips = [
+        ...container.querySelectorAll("[data-slot='combobox-chip']"),
+      ].map(chip => chip.textContent);
+
+      expect(chips).toStrictEqual(["Guides", "News"]);
+    });
+    expect(latest.value).toStrictEqual([2, 1]);
+  });
+});
+
+describe("to-many people picker", () => {
+  const authorsSpec: ContentFormFieldSpec = {
+    kind: "user",
+    label: "Authors",
+    multiple: true,
+    name: "authors",
+    nullable: false,
+    ordered: true,
+    required: false,
+  };
+
+  const loadPeople = async ({ ids }: { ids?: number[]; search: string }) =>
+    Promise.resolve(
+      [
+        { avatarColor: "3b82f6", label: "Ada", nameCode: "ada", value: "1" },
+        {
+          avatarColor: "ef4444",
+          label: "Grace",
+          nameCode: "grace",
+          value: "2",
+        },
+      ].filter(person => !ids || ids.includes(Number(person.value))),
+    );
+
+  it("labels the ids it opened with, rather than showing numbers", async () => {
+    render(
+      <Harness initial={[1, 2]} loadOptions={loadPeople} spec={authorsSpec} />,
+    );
+
+    // The whole reason the options route takes `ids`: a set has no label on the
+    // row it belongs to, so the names have to be asked for.
+    await waitFor(() => {
+      expect(screen.getByText("Ada")).toBeTruthy();
+    });
+    expect(screen.getByText("Grace")).toBeTruthy();
+  });
+
+  it("removes one person and keeps the rest, as identifiers", async () => {
+    render(
+      <Harness initial={[1, 2]} loadOptions={loadPeople} spec={authorsSpec} />,
+    );
+
+    const [first] = screen.getAllByRole("button", { name: "remove" });
+    fireEvent.click(first);
 
     await waitFor(() => {
-      expect(latest.value).toStrictEqual([2, 1]);
+      expect(latest.value).toStrictEqual([2]);
     });
   });
 });

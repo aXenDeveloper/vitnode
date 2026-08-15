@@ -23,7 +23,7 @@ import {
   contentStorageColumns,
   contentValuesToColumns,
   isContentCollectionField,
-  isContentRelationCollection,
+  isContentReferenceCollection,
   readContentLeaf,
   splitContentFieldPath,
 } from "../paths";
@@ -138,7 +138,7 @@ export const buildFilterCondition = ({
     // A to-many relation has no column, so it is answered before the column
     // lookup: `{ contains: 7 }` becomes an indexed `EXISTS` over the junction
     // table rather than an equality against something that does not exist.
-    if (fieldValue && isContentRelationCollection(fieldValue)) {
+    if (fieldValue && isContentReferenceCollection(fieldValue)) {
       const filter = raw as ContentRelationFilter;
       if (typeof filter?.contains !== "number") {
         throw new ContentEngineError(

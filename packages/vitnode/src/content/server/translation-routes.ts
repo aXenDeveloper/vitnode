@@ -16,6 +16,7 @@ import type {
 import type { ContentTranslationModel } from "./translation-model";
 
 import { buildRoute } from "../../api/lib/route";
+import { contentTypeName } from "../admin/labels";
 import {
   zodContentDeliveryConflict,
   zodContentTranslationConflict,
@@ -77,7 +78,7 @@ export const buildContentTranslationRoutes = <
   const { definition } = model;
   const schemas = model.translationSchemas;
   const module = definition.permissionModule;
-  const label = definition.admin.label;
+  const name = contentTypeName(definition.id);
 
   if (!schemas || !model.translationService) {
     throw new Error(
@@ -165,7 +166,7 @@ export const buildContentTranslationRoutes = <
   );
   const invalidIdentifier = { description: "Invalid identifier or locale" };
   const notFound = {
-    description: `${label.singular}, locale or translation not found`,
+    description: `${name}, locale or translation not found`,
   };
 
   /**
@@ -224,7 +225,7 @@ export const buildContentTranslationRoutes = <
     route: {
       method: "get",
       path: "/{id}/translations",
-      description: `Which languages one ${label.singular} exists in`,
+      description: `Which languages one ${name} exists in`,
       request: { params: model.schemas.params },
       responses: {
         200: jsonResponse(
@@ -253,7 +254,7 @@ export const buildContentTranslationRoutes = <
     route: {
       method: "get",
       path: "/{id}/translations/{locale}",
-      description: `One ${label.singular} translation`,
+      description: `One ${name} translation`,
       request: { params: translationSchemas.params },
       responses: {
         200: jsonResponse(translationSchemas.select, "Translation found"),
@@ -277,7 +278,7 @@ export const buildContentTranslationRoutes = <
     route: {
       method: "post",
       path: "/{id}/translations/{locale}",
-      description: `Add a ${label.singular} translation`,
+      description: `Add a ${name} translation`,
       request: {
         params: translationSchemas.params,
         body: jsonBody(translationSchemas.createEnvelope),
@@ -324,7 +325,7 @@ export const buildContentTranslationRoutes = <
       // PUT, not PATCH: the Next.js API route handler exports no PATCH.
       method: "put",
       path: "/{id}/translations/{locale}",
-      description: `Update a ${label.singular} translation`,
+      description: `Update a ${name} translation`,
       request: {
         params: translationSchemas.params,
         body: jsonBody(translationSchemas.updateEnvelope),
@@ -402,7 +403,7 @@ export const buildContentTranslationRoutes = <
     route: {
       method: "delete",
       path: "/{id}/translations/{locale}",
-      description: `Delete a ${label.singular} translation`,
+      description: `Delete a ${name} translation`,
       request: {
         params: translationSchemas.params,
         body: jsonBody(translationSchemas.versionEnvelope),
@@ -471,7 +472,7 @@ export const buildContentTranslationRoutes = <
       route: {
         method: "post",
         path: `/{id}/translations/{locale}/${action}`,
-        description: `${action === "publish" ? "Publish" : "Unpublish"} one ${label.singular} translation`,
+        description: `${action === "publish" ? "Publish" : "Unpublish"} one ${name} translation`,
         request: {
           params: translationSchemas.params,
           body: jsonBody(translationSchemas.versionEnvelope),
@@ -584,7 +585,7 @@ export const buildContentTranslationRoutes = <
     route: {
       method: "get",
       path: "/{id}/translations/{locale}/revisions",
-      description: `History of one ${label.singular} translation`,
+      description: `History of one ${name} translation`,
       request: { params: translationSchemas.params, query: revisionQuery },
       responses: {
         200: jsonResponse(
@@ -627,7 +628,7 @@ export const buildContentTranslationRoutes = <
     route: {
       method: "get",
       path: "/{id}/translations/{locale}/revisions/{revisionId}",
-      description: `One revision of a ${label.singular} translation`,
+      description: `One revision of a ${name} translation`,
       request: { params: revisionParams },
       responses: {
         200: jsonResponse(zodTranslationRevisionDetail, "Revision found"),
@@ -660,7 +661,7 @@ export const buildContentTranslationRoutes = <
     route: {
       method: "post",
       path: "/{id}/translations/{locale}/revisions/{revisionId}/restore",
-      description: `Restore one ${label.singular} translation to an earlier revision`,
+      description: `Restore one ${name} translation to an earlier revision`,
       request: {
         params: revisionParams,
         body: jsonBody(translationSchemas.versionEnvelope),
@@ -734,7 +735,7 @@ export const buildContentTranslationRoutes = <
     route: {
       method: "post",
       path: "/{id}/translations/{locale}/preview",
-      description: `Create a preview link for one ${label.singular} in one language`,
+      description: `Create a preview link for one ${name} in one language`,
       request: { params: translationSchemas.params },
       responses: {
         200: jsonResponse(
@@ -843,7 +844,7 @@ export const buildContentTranslationRoutes = <
     route: {
       method: "get",
       path: "/{id}/public-locales",
-      description: `Which languages one ${label.singular} is publicly reachable in`,
+      description: `Which languages one ${name} is publicly reachable in`,
       request: { params: model.schemas.params },
       responses: {
         200: jsonResponse(

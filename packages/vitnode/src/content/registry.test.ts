@@ -45,7 +45,6 @@ const widget = (
     id: "test.widget",
     tableName: "test_widgets",
     fields: { title: field.text({ required: true }) },
-    admin: { label: { plural: "Widgets", singular: "Widget" } },
     ...overrides,
   });
 
@@ -89,23 +88,27 @@ describe("validateContentTypes", () => {
     ).toThrow(/Table "test_widgets" is claimed by both/);
   });
 
+  // Two distinct ids can still land on one module: the entity key joins dotted
+  // segments with `_`, and a hyphen slugs to `_` as well.
+  const collidingIds = {
+    dotted: { id: "test.kb.article", tableName: "test_kb_articles" },
+    hyphenated: { id: "test.kb-article", tableName: "test_kb_article" },
+  };
+
   it("rejects two content types deriving the same permission module in one plugin", () => {
     expect(() =>
       validateContentTypes([
-        entry(widget()),
-        entry(widget({ id: "test.other", tableName: "test_others" })),
+        entry(widget(collidingIds.dotted)),
+        entry(widget(collidingIds.hyphenated)),
       ]),
-    ).toThrow(/Permission module "widgets" is derived by both/);
+    ).toThrow(/Permission module "kb_article" is derived by both/);
   });
 
   it("allows the same permission module in different plugins", () => {
     expect(() =>
       validateContentTypes([
-        entry(widget(), "@vitnode/a"),
-        entry(
-          widget({ id: "test.other", tableName: "test_others" }),
-          "@vitnode/b",
-        ),
+        entry(widget(collidingIds.dotted), "@vitnode/a"),
+        entry(widget(collidingIds.hyphenated), "@vitnode/b"),
       ]),
     ).not.toThrow();
   });
@@ -132,7 +135,6 @@ describe("global index names", () => {
     widget({
       id: "test.other",
       tableName: "test_others",
-      admin: { label: { plural: "Others", singular: "Other" } },
       ...overrides,
     });
 
@@ -238,7 +240,7 @@ describe("withContentPermissions", () => {
   it("derives the four permissions per content type", () => {
     const merged = withContentPermissions({}, [entry(testArticleContentType)]);
 
-    expect(merged?.admin?.test_articles).toEqual([
+    expect(merged?.admin?.article).toEqual([
       "can_view",
       { dependsOn: ["can_view"], permission: "can_create" },
       { dependsOn: ["can_view"], permission: "can_edit" },
@@ -248,11 +250,11 @@ describe("withContentPermissions", () => {
 
   it("keeps an explicitly declared module untouched", () => {
     const merged = withContentPermissions(
-      { admin: { test_articles: ["can_view"] } },
+      { admin: { article: ["can_view"] } },
       [entry(testArticleContentType)],
     );
 
-    expect(merged?.admin?.test_articles).toEqual(["can_view"]);
+    expect(merged?.admin?.article).toEqual(["can_view"]);
   });
 
   it("leaves other modules alone", () => {
@@ -262,7 +264,7 @@ describe("withContentPermissions", () => {
     );
 
     expect(merged?.admin?.posts).toEqual(["can_view", "can_edit"]);
-    expect(merged?.admin?.test_articles).toBeDefined();
+    expect(merged?.admin?.article).toBeDefined();
   });
 
   it("passes the config through untouched when there are no content types", () => {
@@ -348,7 +350,6 @@ describe("public paths", () => {
       publication: { enabled: true },
       publicApi: { enabled: true, path, fields: ["title", "slug"] },
       admin: {
-        label: { plural: "Widgets", singular: "Widget" },
         // Distinct, so the permission-module check does not fire first and mask
         // the one this block is about.
         permissionModule: tableName,
@@ -431,7 +432,6 @@ describe("generated database identifiers", () => {
       tableName,
       fields,
       admin: {
-        label: { plural: "Things", singular: "Thing" },
         permissionModule: tableName,
         form: { fields: Object.keys(fields) },
       },
@@ -550,7 +550,6 @@ describe("generated database identifiers", () => {
             fields: { title: field.text({ required: true }) },
             indexes: [{ name: "test_ones_faq_position_key", on: ["title"] }],
             admin: {
-              label: { plural: "Twos", singular: "Two" },
               permissionModule: "test_twos",
             },
           }),
@@ -575,7 +574,6 @@ describe("generated database identifiers", () => {
               fields: { title: field.text({ required: true }) },
               indexes: [{ name, on: ["title"] }],
               admin: {
-                label: { plural: "Twos", singular: "Two" },
                 permissionModule: "test_twos",
               },
             }),
@@ -642,7 +640,6 @@ describe("delivery paths", () => {
       },
       ...(delivery ? { delivery: { enabled: true } } : {}),
       admin: {
-        label: { plural: "Widgets", singular: "Widget" },
         // Distinct, so the permission-module check does not fire first and mask the
         // one this block is about.
         permissionModule: tableName,

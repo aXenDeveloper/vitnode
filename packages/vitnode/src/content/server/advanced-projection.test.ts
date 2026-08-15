@@ -27,7 +27,6 @@ import { contentSearchDocument } from "./search-document";
  */
 
 const categoryContentType = defineContentType({
-  admin: { label: { plural: "Categories", singular: "Category" } },
   fields: { name: field.text({ required: true }) },
   id: "test.proj-category",
   tableName: "test_proj_categories",
@@ -35,7 +34,6 @@ const categoryContentType = defineContentType({
 
 const articleContentType = defineContentType({
   admin: {
-    label: { plural: "Articles", singular: "Article" },
     list: { columns: ["title"] },
     titleField: "title",
   },

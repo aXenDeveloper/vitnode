@@ -123,7 +123,6 @@ describe("content type inference", () => {
           // @ts-expect-error - `id` is a reserved system column
           id: field.number({ integer: true, required: true }),
         },
-        admin: { label: { plural: "Reserved", singular: "Reserved" } },
       });
     });
   });
@@ -189,7 +188,6 @@ describe("content type inference", () => {
           admin: {
             create: { mode: "page" },
             edit: { mode: "dialog" },
-            label: { plural: "Modes", singular: "Mode" },
           },
         }).admin.create.mode,
       ).toEqualTypeOf<"dialog" | "page">();
@@ -203,7 +201,6 @@ describe("content type inference", () => {
         admin: {
           // @ts-expect-error - only "dialog" and "page" are presentation modes
           create: { mode: "drawer" },
-          label: { plural: "Modes", singular: "Mode" },
         },
       });
 
@@ -214,7 +211,6 @@ describe("content type inference", () => {
         admin: {
           // @ts-expect-error - only "dialog" and "page" are presentation modes
           edit: { mode: "sheet" },
-          label: { plural: "Modes", singular: "Mode" },
         },
       });
     });

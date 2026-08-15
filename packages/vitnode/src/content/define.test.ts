@@ -18,8 +18,6 @@ import { defineContentType } from "./define";
 import { ContentEngineError } from "./errors";
 import { field } from "./fields";
 
-const label = { plural: "Widgets", singular: "Widget" };
-
 const define = (
   overrides: Partial<Parameters<typeof defineContentType>[0]> = {},
 ) =>
@@ -27,7 +25,6 @@ const define = (
     id: "test.widget",
     tableName: "test_widgets",
     fields: { title: field.text({ required: true }) },
-    admin: { label },
     ...overrides,
   });
 
@@ -357,7 +354,7 @@ describe("defineContentType", () => {
             title: field.text({ required: true }),
             slug: field.slug({ source: "title" }),
           },
-          admin: { label, list: { searchableFields: ["title", "slug"] } },
+          admin: { list: { searchableFields: ["title", "slug"] } },
         }).admin.list.searchableFields,
       ).toEqual(["title", "slug"]);
     });
@@ -381,7 +378,7 @@ describe("defineContentType", () => {
             title: field.text({ required: true }),
             slug: field.slug({ source: "title" }),
           },
-          admin: { label, titleField: "slug" },
+          admin: { titleField: "slug" },
         }).admin.titleField,
       ).toBe("slug");
     });
@@ -445,19 +442,19 @@ describe("defineContentType", () => {
       expect(definition.admin.form.fields).toEqual(["title", "body", "views"]);
     });
 
-    it("derives the permission module from the plural label", () => {
-      expect(define({ admin: { label } }).permissionModule).toBe("widgets");
-      expect(
-        define({
-          admin: { label: { plural: "Knowledge Articles", singular: "x" } },
-        }).permissionModule,
-      ).toBe("knowledge_articles");
+    it("derives the permission module from the id", () => {
+      // The id, because a permission module is written into every role that
+      // grants it - a display name would move those grants when somebody
+      // reworded a heading, and a display name is a translation now anyway.
+      expect(define().permissionModule).toBe("widget");
+      expect(define({ id: "example.kb.article" }).permissionModule).toBe(
+        "kb_article",
+      );
     });
 
     it("prefers an explicit permission module", () => {
       expect(
-        define({ admin: { label, permissionModule: "kb_articles" } })
-          .permissionModule,
+        define({ admin: { permissionModule: "kb_articles" } }).permissionModule,
       ).toBe("kb_articles");
     });
   });
@@ -471,10 +468,8 @@ describe("defineContentType", () => {
     });
 
     it("takes page mode for create and edit independently", () => {
-      const pageCreate = define({
-        admin: { create: { mode: "page" }, label },
-      });
-      const pageEdit = define({ admin: { edit: { mode: "page" }, label } });
+      const pageCreate = define({ admin: { create: { mode: "page" } } });
+      const pageEdit = define({ admin: { edit: { mode: "page" } } });
 
       expect(pageCreate.admin.create.mode).toBe("page");
       expect(pageCreate.admin.edit.mode).toBe("dialog");
@@ -486,7 +481,6 @@ describe("defineContentType", () => {
       expect(() =>
         define({
           admin: {
-            label,
             // Only reachable from JavaScript, or from a value that widened
             // upstream - the type refuses it outright.
             [key]: { mode: "drawer" as unknown as "dialog" },
@@ -494,6 +488,97 @@ describe("defineContentType", () => {
         }),
       ).toThrow(ContentEngineError);
     });
+  });
+
+  describe("admin form sections", () => {
+    const sectioned = (
+      sections: { fields: string[]; name: string }[],
+      fields?: string[],
+    ) =>
+      define({
+        fields: {
+          title: field.text({ required: true }),
+          body: field.textarea({ nullable: true }),
+          views: field.number({ integer: true, defaultValue: 0 }),
+        },
+        admin: {
+          form: { sections, ...(fields ? { fields } : {}) },
+        },
+      });
+
+    it("defaults to no sections, which is one flat form", () => {
+      expect(define().admin.form.sections).toEqual([]);
+    });
+
+    it("keeps the sections, in order, with their fields", () => {
+      expect(
+        sectioned([
+          { fields: ["title"], name: "general" },
+          { fields: ["body", "views"], name: "details" },
+        ]).admin.form.sections,
+      ).toEqual([
+        { fields: ["title"], name: "general" },
+        { fields: ["body", "views"], name: "details" },
+      ]);
+    });
+
+    it("takes the field list from the sections, in their order", () => {
+      // The sections *are* the form, so a field in no section is not on it -
+      // and the order the sections give wins over the declaration order.
+      expect(
+        sectioned([
+          { fields: ["views"], name: "stats" },
+          { fields: ["title"], name: "general" },
+        ]).admin.form.fields,
+      ).toEqual(["views", "title"]);
+    });
+
+    it("rejects an unknown field", () => {
+      expect(() => sectioned([{ fields: ["nope"], name: "general" }])).toThrow(
+        /unknown field "nope"/,
+      );
+    });
+
+    it("rejects declaring fields and sections together", () => {
+      // Two answers to "which fields, in what order" that can disagree.
+      expect(() =>
+        sectioned([{ fields: ["title"], name: "general" }], ["body"]),
+      ).toThrow(/both `fields` and `sections`/);
+    });
+
+    it("rejects one field in two sections", () => {
+      // Rendered twice it would submit two values for one column.
+      expect(() =>
+        sectioned([
+          { fields: ["title"], name: "general" },
+          { fields: ["title"], name: "details" },
+        ]),
+      ).toThrow(/places "title" in both "general" and "details"/);
+    });
+
+    it("rejects two sections with one name", () => {
+      expect(() =>
+        sectioned([
+          { fields: ["title"], name: "general" },
+          { fields: ["body"], name: "general" },
+        ]),
+      ).toThrow(/declares "general" twice/);
+    });
+
+    it("rejects an empty section", () => {
+      expect(() => sectioned([{ fields: [], name: "general" }])).toThrow(
+        /lists no fields/,
+      );
+    });
+
+    it.each(["General", "1st", "general-info", "general.info", ""])(
+      "rejects the section name %s, which cannot be a message key",
+      name => {
+        expect(() => sectioned([{ fields: ["title"], name }])).toThrow(
+          ContentEngineError,
+        );
+      },
+    );
   });
 
   describe("admin validation", () => {
@@ -504,7 +589,7 @@ describe("defineContentType", () => {
             title: field.text({ required: true }),
             views: field.number({ integer: true, defaultValue: 0 }),
           },
-          admin: { label, list: { searchableFields: ["views"] } },
+          admin: { list: { searchableFields: ["views"] } },
         }),
       ).toThrow(/not a text, textarea or slug field/);
     });
@@ -515,7 +600,7 @@ describe("defineContentType", () => {
       ["form.fields", { form: { fields: ["nope"] } }],
       ["titleField", { titleField: "nope" }],
     ])("rejects an unknown field in admin.%s", (_name, adminOverrides) => {
-      expect(() => define({ admin: { label, ...adminOverrides } })).toThrow(
+      expect(() => define({ admin: { ...adminOverrides } })).toThrow(
         /unknown field "nope"/,
       );
     });
@@ -527,14 +612,14 @@ describe("defineContentType", () => {
             title: field.text({ required: true }),
             views: field.number({ integer: true, defaultValue: 0 }),
           },
-          admin: { label, list: { defaultOrderBy: "views" } },
+          admin: { list: { defaultOrderBy: "views" } },
         }),
       ).toThrow(/not in admin.list.orderableFields/);
     });
 
     it("allows a system column as defaultOrderBy without allowlisting it", () => {
       expect(() =>
-        define({ admin: { label, list: { defaultOrderBy: "createdAt" } } }),
+        define({ admin: { list: { defaultOrderBy: "createdAt" } } }),
       ).not.toThrow();
     });
 
@@ -727,14 +812,14 @@ describe("defineContentType", () => {
         expect(
           editorialDefine(
             { enabled: true },
-            { admin: { label, list: { columns: ["title", "version"] } } },
+            { admin: { list: { columns: ["title", "version"] } } },
           ).admin.list.columns,
         ).toEqual(["title", "version"]);
       });
 
       it("rejects it when editorial is off", () => {
         expect(() =>
-          define({ admin: { label, list: { columns: ["title", "version"] } } }),
+          define({ admin: { list: { columns: ["title", "version"] } } }),
         ).toThrow(/unknown field "version"/);
       });
 
@@ -751,7 +836,7 @@ describe("defineContentType", () => {
 
   describe("fixtures", () => {
     it("resolves the article fixture", () => {
-      expect(testArticleContentType.permissionModule).toBe("test_articles");
+      expect(testArticleContentType.permissionModule).toBe("article");
       expect(testArticleContentType.admin.list.searchableFields).toEqual([
         "title",
         "excerpt",

@@ -15,7 +15,7 @@ const define = (
     id,
     tableName: id.split(".").join("_"),
     fields: { title: field.text({ required: true }) },
-    admin: { label: { plural: "Posts", singular: "Post" }, ...admin },
+    admin: { ...admin },
   }) as AnyContentTypeDefinition;
 
 const dialogPost = define("blog.post");

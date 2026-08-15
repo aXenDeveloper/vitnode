@@ -24,6 +24,7 @@ import {
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "../../api/lib/with-pagination";
+import { contentTypeName } from "../admin/labels";
 import {
   CONTENT_LOCALE_MAX_LENGTH,
   CONTENT_PUBLIC_MAX_PAGE_SIZE,
@@ -75,7 +76,7 @@ export const buildContentPublicRoutes = <
   { pluginId }: { pluginId: P },
 ) => {
   const { definition, schemas } = model;
-  const label = definition.admin.label;
+  const name = contentTypeName(definition.id);
 
   const service = (c: Context): ContentPublicService<TDefinition> => {
     const build = model.publicService;
@@ -114,7 +115,7 @@ export const buildContentPublicRoutes = <
 
   const notFound = () =>
     new HTTPException(404, {
-      message: `${label.singular} not found.`,
+      message: `${name} not found.`,
     });
 
   const project = createContentPublicProjector(definition);
@@ -323,7 +324,7 @@ export const buildContentPublicRoutes = <
     route: {
       method: "get",
       path: "/",
-      description: `List published ${label.plural}`,
+      description: `List published ${name} records`,
       request: { query: listQuery },
       responses: {
         200: {
@@ -335,7 +336,7 @@ export const buildContentPublicRoutes = <
               }),
             },
           },
-          description: `Up to ${CONTENT_PUBLIC_MAX_PAGE_SIZE} published ${label.plural}`,
+          description: `Up to ${CONTENT_PUBLIC_MAX_PAGE_SIZE} published ${name} records`,
         },
         400: { description: "Invalid query parameters" },
       },
@@ -408,7 +409,7 @@ export const buildContentPublicRoutes = <
       // Two segments, so it can never shadow `/{slug}` - a record whose slug is
       // literally "preview" still resolves the ordinary way.
       path: "/preview/{token}",
-      description: `Read one ${label.singular} from a signed preview link`,
+      description: `Read one ${name} from a signed preview link`,
       request: {
         params: z.object({ token: z.string() }),
         ...(localized ? { query: localeOnlyQuery } : {}),
@@ -418,7 +419,7 @@ export const buildContentPublicRoutes = <
           content: {
             "application/json": { schema: schemas.publicSelectObject },
           },
-          description: `${label.singular} as the link's revision recorded it`,
+          description: `${name} as the link's revision recorded it`,
         },
         404: { description: "No such preview" },
       },
@@ -469,7 +470,7 @@ export const buildContentPublicRoutes = <
     route: {
       method: "get",
       path: "/{slug}",
-      description: `Get one published ${label.singular} by slug`,
+      description: `Get one published ${name} by slug`,
       request: {
         params: schemas.publicParams,
         ...(localized ? { query: localeOnlyQuery } : {}),
@@ -479,9 +480,9 @@ export const buildContentPublicRoutes = <
           content: {
             "application/json": { schema: schemas.publicSelectObject },
           },
-          description: `${label.singular} found`,
+          description: `${name} found`,
         },
-        404: { description: `${label.singular} not found` },
+        404: { description: `${name} not found` },
       },
     },
     handler: async c => {

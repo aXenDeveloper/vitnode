@@ -156,7 +156,7 @@ describe("route registration without editorial", () => {
     await post(app, "/7/translations/pl/publish");
 
     expect(permissionChecks).toEqual([
-      { module: "test_strict_localized_pages", permission: "can_publish" },
+      { module: "strict_localized_page", permission: "can_publish" },
     ]);
   });
 });

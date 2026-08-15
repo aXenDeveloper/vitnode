@@ -51,11 +51,20 @@ export const ContentTableView = async ({
   entry,
   formSpec,
   searchParams,
+  singular,
 }: {
   columnSpecs: ContentColumnSpec[];
   entry: RegisteredFrontendContentType;
   formSpec: ContentFormSpec;
   searchParams: Record<string, string | string[] | undefined>;
+  /**
+   * The record's noun in the reader's language, already resolved.
+   *
+   * Handed down rather than resolved here: every row action interpolates it
+   * into a translated frame ("Delete {name}"), and one resolution per screen is
+   * what keeps the rows, the toasts and the heading saying the same word.
+   */
+  singular: string;
 }) => {
   const [t, locale] = await Promise.all([
     getTranslations("core.content"),
@@ -165,7 +174,7 @@ export const ContentTableView = async ({
                 id={row.id}
                 permissionModule={definition.permissionModule}
                 pluginId={pluginId}
-                singular={definition.admin.label.singular}
+                singular={singular}
                 status={row.status}
                 title={title}
               />
@@ -187,7 +196,7 @@ export const ContentTableView = async ({
               permissionModule={definition.permissionModule}
               pluginId={pluginId}
               publication={definition.publication.enabled}
-              singular={definition.admin.label.singular}
+              singular={singular}
               spec={formSpec}
               title={title}
             />
@@ -208,7 +217,7 @@ export const ContentTableView = async ({
               preview={definition.editorial.preview.enabled}
               publication={definition.publication.enabled}
               scheduling={definition.editorial.scheduling.enabled}
-              singular={definition.admin.label.singular}
+              singular={singular}
               spec={formSpec}
               title={title}
               // The precondition the delete route checks. Taken from the row the

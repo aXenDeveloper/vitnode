@@ -149,6 +149,9 @@ const mount = (
   const app = new OpenAPIHono();
   const context: MiddlewareHandler = async (c, next) => {
     c.set("admin", { user: adminUser });
+    // The preview route signs with the key the global middleware resolved, so a
+    // suite with no database has to supply it here.
+    c.set("core", { contentPreviewSecret: "a".repeat(48) } as never);
     c.set("events", events as never);
     c.set("log", { error: async () => await Promise.resolve() } as never);
     await next();
@@ -561,16 +564,12 @@ describe("admin routes match their OpenAPI document", () => {
   });
 
   it("mints a preview link", async () => {
-    vi.stubEnv("CONTENT_PREVIEW_SECRET", "a".repeat(48));
-    const suite = editorialSuite();
-
-    await expectParity(suite, {
+    await expectParity(editorialSuite(), {
       expected: 200,
       method: "POST",
       path: "/7/preview",
       template: "/{id}/preview",
     });
-    vi.unstubAllEnvs();
   });
 });
 

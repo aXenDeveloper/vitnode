@@ -13,6 +13,7 @@ import {
 } from "../../lib/helpers/multi-lang";
 import { contentRepeatableMax, contentRepeatableMin } from "../advanced";
 import { contentFieldPath, contentInnerFields } from "../paths";
+import { humanizeFieldName } from "./labels";
 
 /**
  * A single form field, reduced to plain JSON.
@@ -55,15 +56,30 @@ export interface ContentFormFieldSpec {
   /** Lower bound on a repeatable's rows. */
   minItems?: number;
   minLength?: number;
-  /** A relation that holds many targets rather than one. */
+  /** A reference that holds many targets - or many people - rather than one. */
   multiple?: boolean;
   name: string;
   nullable: boolean;
   /** Enum choices, already translated. */
   options?: { label: string; value: string }[];
-  /** Whether an ordered relation's order is the author's to choose. */
+  /** Whether a to-many reference's order is the author's to choose. */
   ordered?: boolean;
   required: boolean;
+}
+
+/**
+ * One titled group of fields, with its heading already translated.
+ *
+ * Translated here for the same reason an enum's `options` are: the spec crosses
+ * into a client component, and the server is where the request's locale and the
+ * plugin's messages both are.
+ */
+export interface ContentFormSectionSpec {
+  desc?: string;
+  /** Field names, in order. Each one appears in exactly one section. */
+  fields: string[];
+  name: string;
+  title: string;
 }
 
 export interface ContentFormSpec {
@@ -79,6 +95,13 @@ export interface ContentFormSpec {
   defaultLocale: null | string;
   fields: ContentFormFieldSpec[];
   pluginId: string;
+  /**
+   * How to group the fields, or empty for one flat form.
+   *
+   * Empty is the default and the shape every content type written before
+   * sections existed keeps: `fields` alone is a complete form.
+   */
+  sections: ContentFormSectionSpec[];
   /** Field the toast describes a newly created row by, if there is one. */
   titleField: null | string;
 }
@@ -104,6 +127,11 @@ export type ContentFieldLabeller = (
 ) => string;
 
 export type ContentEnumLabeller = (name: string, value: string) => string;
+
+export type ContentSectionLabeller = (name: string) => {
+  desc?: string;
+  title: string;
+};
 
 /**
  * Generated columns have no field descriptor to read a kind from, so they are
@@ -184,9 +212,16 @@ const projectFormField = (
         max: fieldValue.max,
         min: fieldValue.min,
       };
+    // Both reference kinds carry the same two flags, because the form makes the
+    // same two decisions from them: one picker or a list of them, and whether
+    // that list has reorder controls.
     case "relation":
+    case "user":
       return {
         ...base,
+        // `minItems` is the same key a repeatable uses, so the form schema has
+        // one rule for "how few of these are allowed" rather than two.
+        ...(fieldValue.min === undefined ? {} : { minItems: fieldValue.min }),
         multiple: fieldValue.multiple,
         ordered: fieldValue.ordered,
       };
@@ -212,11 +247,14 @@ export const buildContentFormSpec = ({
   definition,
   labelEnum,
   labelField,
+  labelSection,
   pluginId,
 }: {
   definition: AnyContentTypeDefinition;
   labelEnum: ContentEnumLabeller;
   labelField: ContentFieldLabeller;
+  /** Optional so a caller that only needs fields - a test, a preview - can skip it. */
+  labelSection?: ContentSectionLabeller;
   pluginId: string;
 }): ContentFormSpec => {
   const fields = definition.fields;
@@ -234,6 +272,20 @@ export const buildContentFormSpec = ({
     fields: definition.admin.form.fields.map(name =>
       projectFormField(name, fields[name], labelEnum, labelField),
     ),
+    sections: definition.admin.form.sections.map(section => {
+      // Humanised from the name when nothing translates it, which is the same
+      // fallback a field label gets - a form is readable before it is localized.
+      const labels = labelSection?.(section.name) ?? {
+        title: humanizeFieldName(section.name),
+      };
+
+      return {
+        fields: section.fields,
+        name: section.name,
+        title: labels.title,
+        ...(labels.desc === undefined ? {} : { desc: labels.desc }),
+      };
+    }),
   };
 };
 
@@ -316,6 +368,19 @@ const leafObjectSchema = (
     ),
   );
 
+/**
+ * A to-many reference in the form: the identifiers, and the field's own floor.
+ *
+ * `minItems` is what makes "at least one category" fail in the *form* rather
+ * than only at the API - the submit button stays disabled and the message names
+ * the field, instead of a save that comes back 400 with everything still typed.
+ */
+const referenceSetSchema = (spec: ContentFormFieldSpec): z.ZodType => {
+  const schema = z.array(z.number());
+
+  return spec.minItems === undefined ? schema : schema.min(spec.minItems);
+};
+
 const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
   switch (spec.kind) {
     case "boolean":
@@ -345,7 +410,7 @@ const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
     case "relation":
       // A to-many relation holds identifiers, not combobox options: the picker
       // renders the labels it fetched and stores what the API takes.
-      if (spec.multiple) return z.array(z.number());
+      if (spec.multiple) return referenceSetSchema(spec);
 
       return referenceOptionSchema;
     case "repeatable": {
@@ -359,6 +424,11 @@ const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
         .max(spec.maxItems ?? Number.MAX_SAFE_INTEGER);
     }
     case "user":
+      // A to-many people field holds identifiers, exactly as a to-many relation
+      // does: the set picker renders the names it fetched and stores what the
+      // API takes.
+      if (spec.multiple) return referenceSetSchema(spec);
+
       // `AutoFormCombobox` holds the whole option, not the id - the same shape
       // the blog plugin models by hand. `contentFormValuesToPayload` turns it
       // back into an identifier on submit.
@@ -396,6 +466,10 @@ const toInitialValue = (
   labels: Record<string, null | string>,
 ): unknown => {
   if (!isReferenceKind(fieldSpec.kind)) return current;
+  // A to-many reference already holds what the API takes and what the set
+  // picker renders - a list of identifiers - and the names behind them are
+  // resolved by the picker itself rather than carried on the row.
+  if (fieldSpec.multiple === true) return current;
   if (current === null || current === undefined) return undefined;
 
   const id = typeof current === "number" ? current.toString() : "";
@@ -679,7 +753,14 @@ export const buildFormSchemaFromSpec = (
           labels,
         );
         const initial =
-          current === undefined ? fieldSpec.defaultValue : current;
+          current === undefined
+            ? // A to-many reference opens on the empty set rather than on
+              // nothing: the picker renders a list, and `undefined` would make
+              // its first render a different shape from every later one.
+              isReferenceKind(fieldSpec.kind) && fieldSpec.multiple === true
+              ? []
+              : fieldSpec.defaultValue
+            : current;
 
         let schema: z.ZodType;
         if (initial !== undefined) {

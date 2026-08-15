@@ -3,6 +3,7 @@ import type {
   ContentAdminActionConfig,
   ContentAdminConfig,
   ContentAdminFormMode,
+  ContentAdminFormSection,
   ContentDeliveryConfig,
   ContentDeliveryDescriptionField,
   ContentDeliveryEnabled,
@@ -35,6 +36,7 @@ import type {
   ResolvedContentSearchConfig,
 } from "./types";
 
+import { contentEntityKey } from "./admin/labels";
 import {
   assertContentRelationTargets,
   resolveContentAdvanced,
@@ -82,7 +84,7 @@ import {
 } from "./localization";
 import {
   contentStorageColumns,
-  isContentRelationCollection,
+  isContentReferenceCollection,
   splitContentFieldPath,
 } from "./paths";
 import { buildContentSchemas } from "./schemas";
@@ -126,8 +128,11 @@ const hasWritableFallback = (fieldValue: ContentFieldDescriptor): boolean => {
   if (fieldValue.kind === "group" || fieldValue.kind === "repeatable") {
     return true;
   }
-  if (fieldValue.kind === "relation") return fieldValue.multiple;
-  if (fieldValue.kind === "user") return false;
+  // A to-many reference of either kind is writable for the same reason a
+  // repeatable is: the empty set is its default.
+  if (fieldValue.kind === "relation" || fieldValue.kind === "user") {
+    return fieldValue.multiple;
+  }
   // A sourced slug has no column default and is not required, but it is always
   // writable: the service derives it from the source field.
   if (fieldValue.kind === "slug") return fieldValue.source !== undefined;
@@ -212,13 +217,13 @@ const assertField = (
     }
   }
 
-  // A to-many relation is checked by `resolveContentAdvanced` instead: it is
+  // A to-many reference is checked by `resolveContentAdvanced` instead: it is
   // never nullable by construction, and `"set null"` means something different
   // for a junction row than for a column - so the message has to be different
   // too, and there is only one place it can be.
   if (
-    (fieldValue.kind === "relation" && !fieldValue.multiple) ||
-    fieldValue.kind === "user"
+    (fieldValue.kind === "relation" || fieldValue.kind === "user") &&
+    !fieldValue.multiple
   ) {
     // Postgres would accept the definition and then fail at delete time, when
     // it tries to write NULL into a NOT NULL column.
@@ -404,7 +409,7 @@ const assertIndexable = (
       );
     }
 
-    if (isContentRelationCollection(fieldValue)) {
+    if (isContentReferenceCollection(fieldValue)) {
       throw new ContentEngineError(
         `indexes names the to-many relation "${owner}", which is not a column: its values live in a generated junction table, which already carries its own primary key and reverse index.`,
         { contentTypeId: id },
@@ -436,7 +441,7 @@ const NON_COLUMN_KINDS = new Set<ContentFieldDescriptor["kind"]>([
 
 const isAdminColumnField = (fieldValue: ContentFieldDescriptor): boolean =>
   !NON_COLUMN_KINDS.has(fieldValue.kind) &&
-  !isContentRelationCollection(fieldValue);
+  !isContentReferenceCollection(fieldValue);
 
 const adminFormModes: readonly string[] = CONTENT_ADMIN_FORM_MODES;
 
@@ -463,6 +468,68 @@ const resolveFormMode = (
   }
 
   return mode;
+};
+
+/** A section name has to survive being a message key segment. */
+const SECTION_NAME_PATTERN = /^[a-z][a-z0-9_]*$/;
+
+/**
+ * `admin.form.sections`, checked for the mistakes that would cost a field.
+ *
+ * Field *existence* is not checked here - the concatenated list goes through the
+ * same `assertKnownColumns` as `admin.form.fields`, so an unknown name reads the
+ * same either way. What is checked is what only sections can get wrong: a name
+ * that cannot be a translation key, a duplicated name (two headings reading one
+ * message), a section with nothing in it, and the same field in two sections -
+ * which would render one input twice into one payload.
+ */
+const resolveFormSections = <TFields>(
+  id: string,
+  sections: ContentAdminFormSection<TFields>[] | undefined,
+): { fields: string[]; name: string }[] => {
+  if (sections === undefined) return [];
+
+  const seenNames = new Set<string>();
+  const seenFields = new Map<string, string>();
+
+  return sections.map(section => {
+    const { name } = section;
+
+    if (!SECTION_NAME_PATTERN.test(name)) {
+      throw new ContentEngineError(
+        `admin.form.sections has a section named "${name}". A name is the i18n key segment its heading is read from, so it must start with a letter and hold only lowercase letters, digits and underscores.`,
+        { contentTypeId: id },
+      );
+    }
+    if (seenNames.has(name)) {
+      throw new ContentEngineError(
+        `admin.form.sections declares "${name}" twice. Two sections sharing a name would read one heading from one message; give each its own.`,
+        { contentTypeId: id },
+      );
+    }
+    seenNames.add(name);
+
+    const fields = section.fields.map(String);
+    if (fields.length === 0) {
+      throw new ContentEngineError(
+        `admin.form.sections section "${name}" lists no fields. A section with nothing in it renders an empty card; remove it, or move a field into it.`,
+        { contentTypeId: id },
+      );
+    }
+
+    for (const field of fields) {
+      const owner = seenFields.get(field);
+      if (owner !== undefined) {
+        throw new ContentEngineError(
+          `admin.form.sections places "${field}" in both "${owner}" and "${name}". One field belongs to one section - rendered twice it would submit two values for one column.`,
+          { contentTypeId: id },
+        );
+      }
+      seenFields.set(field, name);
+    }
+
+    return { fields, name };
+  });
 };
 
 const resolveAdmin = <TFields>(
@@ -578,10 +645,27 @@ const resolveAdmin = <TFields>(
   );
   assertKnownColumns(id, "admin.list.columns", columns, knownColumns);
 
-  const formFields = (admin.form?.fields?.map(String) ?? fieldNames).map(
-    String,
+  const sections = resolveFormSections(id, admin.form?.sections);
+  if (sections.length > 0 && admin.form?.fields !== undefined) {
+    throw new ContentEngineError(
+      "admin.form declares both `fields` and `sections`. Sections are the field list - keep the sections and drop `fields`.",
+      { contentTypeId: id },
+    );
+  }
+
+  // Sections *are* the order when they are used, so the flat list every other
+  // consumer reads is their concatenation rather than a second declaration that
+  // could disagree with them.
+  const formFields =
+    sections.length > 0
+      ? sections.flatMap(section => section.fields)
+      : (admin.form?.fields?.map(String) ?? fieldNames).map(String);
+  assertKnownColumns(
+    id,
+    sections.length > 0 ? "admin.form.sections" : "admin.form.fields",
+    formFields,
+    new Set(fieldNames),
   );
-  assertKnownColumns(id, "admin.form.fields", formFields, new Set(fieldNames));
 
   const defaultOrderBy = String(admin.list?.defaultOrderBy ?? "updatedAt");
   if (
@@ -618,11 +702,25 @@ const resolveAdmin = <TFields>(
     );
   }
 
+  // A colour is drawn from the row itself, so - unlike the title - it has to be
+  // a real column: a per-language swatch would be a different colour depending
+  // on who is looking at it.
+  const colorField =
+    admin.colorField === undefined || admin.colorField === null
+      ? null
+      : String(admin.colorField);
+  if (colorField !== null && !columnFieldNames.includes(colorField)) {
+    throw new ContentEngineError(
+      `admin.colorField references "${colorField}", which is not a shared column. A colour is a property of the record rather than of a language.`,
+      { contentTypeId: id },
+    );
+  }
+
   return {
+    colorField,
     create: { mode: resolveFormMode(id, "admin.create.mode", admin.create) },
     edit: { mode: resolveFormMode(id, "admin.edit.mode", admin.edit) },
-    form: { fields: formFields },
-    label: admin.label,
+    form: { fields: formFields, sections },
     list: {
       columns,
       defaultOrder: admin.list?.defaultOrder ?? "desc",
@@ -928,7 +1026,7 @@ const resolvePublicApi = <TField extends string>(
     return (
       target !== null &&
       (target.container === "repeatable" ||
-        isContentRelationCollection(target.descriptor))
+        isContentReferenceCollection(target.descriptor))
     );
   });
   if (notOrderable !== undefined) {
@@ -1491,7 +1589,7 @@ export const defineContentType = <
       >
     | { enabled: false } = { enabled: false },
 >({
-  admin,
+  admin = {},
   delivery,
   editorial,
   fields,
@@ -1503,7 +1601,12 @@ export const defineContentType = <
   search,
   tableName,
 }: {
-  admin: ContentAdminConfig<
+  /**
+   * How the AdminCP presents this content type. Every key has a default, so a
+   * content type that wants the generated screens as they come omits it - the
+   * record's name is a translation, not something declared here.
+   */
+  admin?: ContentAdminConfig<
     TFields,
     TPublication,
     ContentEditorialEnabled<TEditorial>
@@ -1680,12 +1783,14 @@ export const defineContentType = <
     publicationEnabled,
     editorialEnabled,
   );
+  // The id, not a display name: a permission module is written into every role
+  // that grants it, so it must not move when somebody rewords a heading.
   const permissionModule =
-    admin.permissionModule ?? slugifyModule(admin.label.plural);
+    admin.permissionModule ?? slugifyModule(contentEntityKey(id));
 
   if (!CONTENT_TABLE_NAME_PATTERN.test(permissionModule)) {
     throw new ContentEngineError(
-      `Could not derive a permission module name from label.plural "${admin.label.plural}". Set \`admin.permissionModule\` explicitly.`,
+      `Could not derive a permission module name from the id "${id}". Set \`admin.permissionModule\` explicitly.`,
       { contentTypeId: id },
     );
   }

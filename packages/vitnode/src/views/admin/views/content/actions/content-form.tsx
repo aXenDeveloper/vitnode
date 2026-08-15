@@ -20,6 +20,7 @@ import {
   contentFormValuesToTranslations,
   contentLocalizedFieldNames,
   contentTitleFromValues,
+  isReferenceKind,
 } from "@/content/admin/spec";
 import { usePathname, useRouter } from "@/lib/navigation";
 
@@ -28,6 +29,7 @@ import type { TranslationRow } from "./translation-api.server";
 
 import { ContentFormProvider } from "../form/context";
 import { ContentFormPublication } from "../form/publication-status";
+import { ContentFormSections } from "../form/sections";
 import { ContentField } from "../lib/field-component";
 import { contentErrorKey } from "../lib/mutation-feedback";
 import { ConflictNotice } from "./conflict-notice";
@@ -40,6 +42,31 @@ import {
   reloadContentRowAction,
 } from "./mutation-api.server";
 import { listContentTranslationsAction } from "./translation-api.server";
+
+/**
+ * The collection fields of a row that are not on it.
+ *
+ * A to-many reference and a repeatable are stored on their own tables, so the
+ * admin *list* deliberately leaves them off its rows - carrying them would cost
+ * queries per page for values no column renders. A dialog-mode form is handed
+ * one of those rows, and a form that opened on the empty set for each would show
+ * an article with no categories and then save it that way.
+ *
+ * Empty for a page-mode form, whose server component read the record's detail
+ * and already has them - so the common case costs no request at all.
+ */
+const missingCollections = (
+  spec: ContentFormSpec,
+  data: Record<string, unknown>,
+): string[] =>
+  spec.fields
+    .filter(
+      field =>
+        field.kind === "repeatable" ||
+        (isReferenceKind(field.kind) && field.multiple === true),
+    )
+    .map(field => field.name)
+    .filter(name => !Array.isArray(data[name]));
 
 export interface ContentFormProps {
   /** Existing values when editing; absent when creating. */
@@ -82,12 +109,14 @@ export interface ContentFormProps {
 }
 
 /**
- * Resolves the record's translations before the form is built.
+ * Resolves the record's translations and its collections before the form is
+ * built.
  *
  * The form's defaults are read from the schema exactly once, when `AutoForm`
- * mounts, so the values every language holds have to be in hand *before* that -
+ * mounts, so everything a field opens holding has to be in hand *before* that -
  * rendering an empty form and filling it in afterwards would fight
- * react-hook-form for the editor's first keystroke.
+ * react-hook-form for the editor's first keystroke, and a `min: 1` field that
+ * mounted on the empty set would leave Save disabled until it was re-picked.
  */
 export const ContentForm = ({
   data,
@@ -99,9 +128,17 @@ export const ContentForm = ({
   const [loaded, setLoaded] = React.useState<null | readonly TranslationRow[]>(
     translations ?? (localized && data ? null : []),
   );
+  // `undefined` while a row is still missing its collections, and the record
+  // itself while creating - which is the same thing the form is handed then.
+  const [row, setRow] = React.useState<ContentFormProps["data"]>(() =>
+    data === undefined || missingCollections(spec, data).length === 0
+      ? data
+      : undefined,
+  );
 
   const contentTypeId = spec.contentTypeId;
   const itemId = data?.id;
+  const pendingRow = data !== undefined && row === undefined;
 
   React.useEffect(() => {
     if (loaded !== null || itemId === undefined) return;
@@ -119,11 +156,30 @@ export const ContentForm = ({
     };
   }, [contentTypeId, itemId, loaded]);
 
-  if (loaded === null) return <Loader />;
+  React.useEffect(() => {
+    if (!pendingRow || data === undefined) return;
+
+    let active = true;
+
+    // The detail read, which is the one that carries collections. Merged over
+    // the list row rather than replacing it, so anything the table resolved for
+    // the row - its labels - survives.
+    void reloadContentRowAction(contentTypeId, data.id).then(
+      ({ row: fresh }) => {
+        if (active) setRow(fresh ? { ...data, ...fresh } : data);
+      },
+    );
+
+    return () => {
+      active = false;
+    };
+  }, [contentTypeId, data, pendingRow]);
+
+  if (loaded === null || pendingRow) return <Loader />;
 
   return (
     <ContentFormFields
-      data={data}
+      data={row}
       spec={spec}
       translations={loaded}
       {...props}
@@ -265,13 +321,31 @@ const ContentFormFields = ({
     return entries;
   };
 
-  /** `true` when a shared field actually moved, so a no-op sends nothing. */
+  /**
+   * `true` when a shared field actually moved, so a no-op sends nothing.
+   *
+   * A to-many field is compared **by its contents**: its value is an array, and
+   * the picker hands back a new one on every change - so reference equality
+   * would call an untouched form changed the moment anything else re-rendered,
+   * and would call a genuine reorder unchanged in neither direction reliably.
+   * The identifiers in order are exactly what the API stores, so they are
+   * exactly what "did this move?" should ask about.
+   */
   const sharedChanged = (payload: Record<string, unknown>): boolean => {
     if (!data) return true;
 
-    return Object.entries(payload).some(
-      ([name, value]) => data[name] !== value,
-    );
+    return Object.entries(payload).some(([name, value]) => {
+      const before = data[name];
+
+      if (Array.isArray(before) && Array.isArray(value)) {
+        return (
+          before.length !== value.length ||
+          before.some((item, index) => item !== value[index])
+        );
+      }
+
+      return before !== value;
+    });
   };
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async submitted => {
@@ -332,6 +406,16 @@ const ContentFormFields = ({
           ? tContentErrors(errorKey)
           : tErrors("internal_server_error"),
       });
+
+      return;
+    }
+
+    // A save with nothing in it never reached the API, and saying "saved" for it
+    // is how a form that is quietly dropping an edit looks identical to one that
+    // is working. The editor is told what actually happened and left where they
+    // are, with everything they typed still in front of them.
+    if (mutation.unchanged) {
+      toast.info(t("edit.unchanged"));
 
       return;
     }
@@ -400,8 +484,13 @@ const ContentFormFields = ({
 
         return (
           <ContentField
-            loadOptions={async ({ field, search }) =>
-              await loadContentOptionsAction(spec.contentTypeId, field, search)
+            loadOptions={async ({ field, ids, search }) =>
+              await loadContentOptionsAction(
+                spec.contentTypeId,
+                field,
+                search,
+                ids,
+              )
             }
             spec={fieldSpec}
             {...props}
@@ -412,6 +501,12 @@ const ContentFormFields = ({
   );
 
   const Layout = layout;
+  // A plugin's own layout wins: it was written against these exact fields, and
+  // `admin.form.sections` is the *generated* arrangement of them. Grouping is
+  // still one `AutoForm` either way - the layout decides placement and nothing
+  // else, so the submit path, the schema and the errors do not change with it.
+  const sections = Layout ? [] : spec.sections;
+  const grouped = sections.length > 0;
 
   return (
     <>
@@ -435,7 +530,7 @@ const ContentFormFields = ({
         fields={fields}
         formSchema={formSchema}
         layout={
-          Layout
+          Layout || grouped
             ? renderedFields => (
                 <ContentFormProvider
                   value={{
@@ -450,15 +545,19 @@ const ContentFormFields = ({
                     },
                   }}
                 >
-                  <Layout
-                    contentTypeId={spec.contentTypeId}
-                    itemId={data?.id}
-                    mode={data ? "edit" : "create"}
-                    pluginId={spec.pluginId}
-                    publication={publication}
-                    singular={singular}
-                    title={title}
-                  />
+                  {Layout ? (
+                    <Layout
+                      contentTypeId={spec.contentTypeId}
+                      itemId={data?.id}
+                      mode={data ? "edit" : "create"}
+                      pluginId={spec.pluginId}
+                      publication={publication}
+                      singular={singular}
+                      title={title}
+                    />
+                  ) : (
+                    <ContentFormSections sections={sections} />
+                  )}
                 </ContentFormProvider>
               )
             : undefined

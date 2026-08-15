@@ -38,7 +38,7 @@ import {
 } from "./localization";
 import {
   contentInnerFields,
-  isContentRelationCollection,
+  isContentReferenceCollection,
   splitContentFieldPath,
 } from "./paths";
 
@@ -256,7 +256,9 @@ const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
     case "textarea":
       return textSchema(fieldValue);
     case "user":
-      return referenceSchema();
+      return fieldValue.multiple
+        ? z.array(referenceSchema())
+        : referenceSchema();
   }
 };
 
@@ -306,13 +308,26 @@ const applyPresence = (
  * three categories, and quietly storing two would be the kind of "helpful"
  * behaviour that hides a bug in the caller's own list handling.
  */
-const relationSetSchema = (): z.ZodType =>
-  z
-    .array(referenceSchema())
-    .max(CONTENT_RELATION_COLLECTION_MAX)
-    .refine(value => new Set(value).size === value.length, {
-      message: "Relation targets must be distinct.",
-    });
+/**
+ * A set of references, with the field's own bounds on it.
+ *
+ * `min` is how a content type says "at least one" about something the *storage*
+ * cannot say it about: a to-many reference is never `required`, because the
+ * empty set is a legitimate value for a column that does not exist. A blog
+ * article that must be filed under a category is a rule about the article rather
+ * than about the junction table, so it is enforced here - in the generated
+ * schema, which the API and the AdminCP form both go through - rather than by a
+ * check somewhere one of the two would eventually skip.
+ */
+const relationSetSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
+  const min = (fieldValue as { min?: number }).min;
+  let schema = z.array(referenceSchema()).max(CONTENT_RELATION_COLLECTION_MAX);
+  if (min !== undefined) schema = schema.min(min);
+
+  return schema.refine(value => new Set(value).size === value.length, {
+    message: "Relation targets must be distinct.",
+  });
+};
 
 /**
  * One repeatable child, as it is written.
@@ -416,8 +431,8 @@ const inputShape = (
         // `faq` means "no entries", and the empty array is what that is.
         return [name, repeatableSchema(fieldValue).default([])];
       }
-      if (isContentRelationCollection(fieldValue)) {
-        return [name, relationSetSchema().default([])];
+      if (isContentReferenceCollection(fieldValue)) {
+        return [name, relationSetSchema(fieldValue).default([])];
       }
 
       return [
@@ -449,8 +464,8 @@ const updateShape = (
       if (fieldValue.kind === "repeatable") {
         return [name, repeatableSchema(fieldValue).optional()];
       }
-      if (isContentRelationCollection(fieldValue)) {
-        return [name, relationSetSchema().optional()];
+      if (isContentReferenceCollection(fieldValue)) {
+        return [name, relationSetSchema(fieldValue).optional()];
       }
 
       return [
@@ -486,10 +501,10 @@ const filterShape = (fields: ContentFieldMap): z.ZodRawShape =>
           case "enum":
             return [name, z.enum(fieldValue.values).optional()];
           case "number":
-          case "user":
             return [name, z.coerce.number().optional()];
           case "relation":
-            // A to-many relation filters by membership, and it arrives from a
+          case "user":
+            // A to-many reference filters by membership, and it arrives from a
             // query string as one identifier: `?categories=7`. The transform is
             // what turns it into the `{ contains }` object the query builder
             // branches on, so the wire format stays as flat as every other

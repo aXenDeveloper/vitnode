@@ -200,27 +200,68 @@ const dateTime = <
 /**
  * A reference to a VitNode user.
  *
+ * ```ts
+ * author:  field.user()
+ * authors: field.user({ multiple: true, ordered: true })
+ * ```
+ *
  * The only field builder whose `nullable` defaults to `true`, matching how
  * every hand-written VitNode table stores an author (`blog_posts.authorId` is
  * nullable with `ON DELETE SET NULL`): accounts get deleted, and their content
  * should outlive them rather than disappear or block the deletion. Pass
  * `nullable: false` and the `onDelete` default moves to `"restrict"`, because
  * `"set null"` on a `NOT NULL` column is rejected at definition time.
+ *
+ * `multiple: true` moves the reference off the row into a generated junction
+ * table, exactly as it does for a `relation` - so a to-many people field is
+ * never `required` and never `nullable` (the empty set is what "nobody" looks
+ * like), and its `onDelete` may not be `"set null"`: a junction row has no
+ * column to null, and forgetting a deleted person's authorship is a deleted
+ * row. `defineContentType` rejects all three.
+ *
+ * `ordered: true` keeps the order the editor put them in, which for authors is
+ * usually the point - the first author of a piece is not an arbitrary member of
+ * a set. Without it the people come back in ascending id order.
  */
 const user = <
   TRequired extends boolean = false,
-  TNullable extends boolean = true,
+  TMultiple extends boolean = false,
+  // Declared after `TMultiple` so its default can read it: a to-many field has
+  // no column to be null, so the `nullable: true` that lets a single author
+  // survive a deleted account would be a definition-time error here.
+  TNullable extends boolean = TMultiple extends true ? false : true,
+  TOrdered extends boolean = false,
 >(
-  args: SharedArgs<TRequired, TNullable> & { onDelete?: ContentOnDelete } = {},
-): ContentUserField<TRequired, TNullable> => {
-  const nullable = (args.nullable ?? true) as TNullable;
+  args: SharedArgs<TRequired, TNullable> & {
+    /** The fewest people to accept. `multiple: true` only. */
+    min?: number;
+    multiple?: TMultiple;
+    onDelete?: ContentOnDelete;
+    ordered?: TOrdered;
+  } = {},
+): ContentUserField<TRequired, TNullable, TMultiple, TOrdered> => {
+  const multiple = (args.multiple ?? false) as TMultiple;
+  const nullable = (args.nullable ?? !multiple) as TNullable;
+  // `cascade` is the to-many analogue of `set null`: the reference is a row, so
+  // forgetting a deleted person's authorship means deleting it. A to-one field
+  // keeps the nullable column it always had.
+  const onDeleteDefault = multiple
+    ? "cascade"
+    : nullable
+      ? "set null"
+      : "restrict";
 
   return {
     ...args,
     nullable,
     required: (args.required ?? false) as TRequired,
     kind: "user",
-    onDelete: args.onDelete ?? (nullable ? "set null" : "restrict"),
+    // The assertions keep the literal the caller inferred, exactly as `shared`
+    // does: `?? false` alone widens back to `boolean`, and every
+    // `multiple extends true` partition would resolve to the to-one branch.
+    multiple,
+    onDelete: args.onDelete ?? onDeleteDefault,
+    ordered: (args.ordered ?? false) as TOrdered,
   };
 };
 
@@ -276,6 +317,13 @@ const relation = <
   TSelf extends boolean = false,
 >(
   args: SharedArgs<TRequired, TNullable> & {
+    /**
+     * The fewest targets to accept - `min: 1` is "at least one category".
+     *
+     * `multiple: true` only. A to-many reference can never be `required`, so
+     * this is the shape a "you must choose something" rule actually takes.
+     */
+    min?: number;
     multiple?: TMultiple;
     onDelete?: ContentOnDelete;
     ordered?: TOrdered;

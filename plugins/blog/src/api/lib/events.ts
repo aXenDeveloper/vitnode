@@ -4,12 +4,11 @@ import type { Context } from "hono";
 
 import { buildEventListener } from "@vitnode/core/api/lib/events";
 import { contentEventName } from "@vitnode/core/content";
-import { eq } from "drizzle-orm";
 
 import type { blogCategoryContentType } from "@/content/category";
 
 import { blogPostContentType } from "@/content/post";
-import { blog_posts } from "@/database/posts";
+import { postContent } from "@/database/posts";
 
 /**
  * The blog's own event names, kept as **adapters** over the Content Engine's.
@@ -48,6 +47,15 @@ declare module "@vitnode/core/api/models/events" {
       categoryId: number;
     };
     "blog.post.created": {
+      /**
+       * The article's **first** category.
+       *
+       * An article is in many categories now, and this payload has room for one.
+       * The first is the honest answer to "which category is this in?" for a
+       * listener written when there could only be one - and a listener that
+       * needs all of them should watch `content.blog.post.created`, which
+       * carries the whole set.
+       */
       categoryId: number;
       postId: number;
     };
@@ -72,19 +80,20 @@ declare module "@vitnode/core/api/models/events" {
 const POST = blogPostContentType.id;
 const CATEGORY = "blog.category";
 
-/** The category an article is in, read back for the legacy payload. */
+/**
+ * The first category an article is in, read back for the legacy payload.
+ *
+ * A junction read rather than a column read: an article's categories are a set
+ * now, and `null` covers both "no such article" and "no categories yet" - the
+ * two cases where the legacy event has nothing true to say and is not emitted.
+ */
 const categoryOf = async (
   c: Context<EnvVitNode>,
   postId: number,
 ): Promise<null | number> => {
-  const [post] = await c
-    .get("db")
-    .select({ categoryId: blog_posts.categoryId })
-    .from(blog_posts)
-    .where(eq(blog_posts.id, postId))
-    .limit(1);
+  const [first] = await postContent.service(c).relations.categoryId.get(postId);
 
-  return post?.categoryId ?? null;
+  return first ?? null;
 };
 
 export const legacyPostCreatedListener = buildEventListener({

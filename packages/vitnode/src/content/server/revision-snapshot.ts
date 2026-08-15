@@ -10,7 +10,7 @@ import { CONTENT_REVISION_SNAPSHOT_VERSION } from "../const";
 import { partitionContentFields } from "../localization";
 import {
   contentInnerFields,
-  isContentRelationCollection,
+  isContentReferenceCollection,
   readContentLeaf,
 } from "../paths";
 
@@ -85,7 +85,7 @@ const toFieldSnapshot = (
     return fieldValue.nullable && allNull ? null : nested;
   }
 
-  if (isContentRelationCollection(fieldValue)) {
+  if (isContentReferenceCollection(fieldValue)) {
     const value = values[name];
 
     return Array.isArray(value)

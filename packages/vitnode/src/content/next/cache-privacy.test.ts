@@ -110,10 +110,11 @@ describe("a private response is never cached and never tagged", () => {
     expect(call.prefixPath).toBe("/admin");
   });
 
-  it("keeps the admin module out of the public tag namespace", async () => {
-    // Belt and braces: even if an admin read were cached one day, it addresses
-    // `content/{permissionModule}` under `/admin`, and the public tags are
-    // built from `publicApi.path`. The two cannot be confused for each other.
+  it("keeps the admin read out of the public tag namespace", async () => {
+    // What separates the two is the `/admin` prefix and the tags, not the two
+    // strings: a permission module is derived from the content type's id and a
+    // public tag from `publicApi.path`, so a content type where they read the
+    // same is ordinary rather than a collision.
     await contentApiFetch({
       definition: testEditorialPostContentType,
       method: "get",
@@ -127,7 +128,9 @@ describe("a private response is never cached and never tagged", () => {
     });
     const publicCall = lastCall();
 
-    expect(adminCall.module).not.toBe(publicCall.module);
+    expect(adminCall.prefixPath).toBe("/admin");
+    expect(adminCall.options?.next?.tags).toBeUndefined();
+    expect(publicCall.prefixPath).not.toBe("/admin");
     expect(publicCall.options?.next?.tags).toContain(
       contentPublicListTag(testEditorialPostContentType.id),
     );

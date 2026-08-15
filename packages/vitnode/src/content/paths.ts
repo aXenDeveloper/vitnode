@@ -2,7 +2,7 @@ import type {
   ContentFieldDescriptor,
   ContentFieldMap,
   ContentLeafColumn,
-  ContentRelationField,
+  ContentReferenceField,
   ContentRepeatableField,
 } from "./types";
 
@@ -69,26 +69,36 @@ export const isContentRepeatableField = (
 ): boolean => fieldValue.kind === "repeatable";
 
 /**
- * Whether a relation holds many targets.
+ * Whether a reference field holds many targets - a to-many `relation`, or a
+ * to-many `user`.
  *
  * A function rather than `fieldValue.multiple === true` at each call site, for
  * the same reason `isLocalizedContentField` is one: it is the rule that decides
  * whether a field is a column or a junction table, and two copies of a rule like
  * that is the pair that drifts.
  *
+ * Both reference kinds, deliberately. A set of people is stored exactly like a
+ * set of categories - a junction table with two foreign keys - and every caller
+ * of this predicate is asking "is this a column?", which has the same answer for
+ * both.
+ *
  * Deliberately **not** a type guard. Narrowing the argument would also narrow
- * every `else` branch to "not a relation at all", and the to-one branch is
+ * every `else` branch to "not a reference at all", and the to-one branch is
  * exactly what those branches are usually about.
  */
-export const isContentRelationCollection = (
+export const isContentReferenceCollection = (
   fieldValue: ContentFieldDescriptor,
-): boolean => fieldValue.kind === "relation" && fieldValue.multiple;
+): boolean =>
+  (fieldValue.kind === "relation" || fieldValue.kind === "user") &&
+  fieldValue.multiple;
 
-/** The to-many relation descriptor, or `null` when the field is not one. */
-export const asContentRelationCollection = (
+/** The to-many reference descriptor, or `null` when the field is not one. */
+export const asContentReferenceCollection = (
   fieldValue: ContentFieldDescriptor,
-): ContentRelationField | null =>
-  fieldValue.kind === "relation" && fieldValue.multiple ? fieldValue : null;
+): ContentReferenceField | null =>
+  isContentReferenceCollection(fieldValue)
+    ? (fieldValue as ContentReferenceField)
+    : null;
 
 /** The repeatable descriptor, or `null` when the field is not one. */
 export const asContentRepeatableField = (
@@ -105,7 +115,7 @@ export const isContentCollectionField = (
   fieldValue: ContentFieldDescriptor,
 ): boolean =>
   isContentRepeatableField(fieldValue) ||
-  isContentRelationCollection(fieldValue);
+  isContentReferenceCollection(fieldValue);
 
 /** The inner field map of a group or a repeatable, or an empty one. */
 export const contentInnerFields = (
@@ -189,8 +199,8 @@ export const contentStorageColumns = (
 export interface ContentAdvancedPartition {
   /** Group descriptors, by field name. */
   groups: ContentFieldMap;
-  /** To-many relation descriptors, by field name. */
-  relationCollections: ContentFieldMap;
+  /** To-many reference descriptors (`relation` and `user`), by field name. */
+  referenceCollections: ContentFieldMap;
   /** Repeatable descriptors, by field name. */
   repeatables: ContentFieldMap;
   /** Everything that is one column on the row: scalars only. */
@@ -202,13 +212,13 @@ export const partitionContentStorage = (
   fields: ContentFieldMap,
 ): ContentAdvancedPartition => {
   const groups: ContentFieldMap = {};
-  const relationCollections: ContentFieldMap = {};
+  const referenceCollections: ContentFieldMap = {};
   const repeatables: ContentFieldMap = {};
   const scalars: ContentFieldMap = {};
 
   for (const [name, fieldValue] of Object.entries(fields)) {
-    if (isContentRelationCollection(fieldValue)) {
-      relationCollections[name] = fieldValue;
+    if (isContentReferenceCollection(fieldValue)) {
+      referenceCollections[name] = fieldValue;
       continue;
     }
     if (fieldValue.kind === "repeatable") {
@@ -222,7 +232,7 @@ export const partitionContentStorage = (
     scalars[name] = fieldValue;
   }
 
-  return { groups, relationCollections, repeatables, scalars };
+  return { groups, referenceCollections, repeatables, scalars };
 };
 
 /**

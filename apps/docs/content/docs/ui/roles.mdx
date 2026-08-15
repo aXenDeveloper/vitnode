@@ -128,17 +128,17 @@ roleOptionName(role, "pl"); // "Administrator PL", or the first name it has
 
 ## Props
 
-| Prop | Type | Default | What it does |
-| --- | --- | --- | --- |
-| `multiple` | `boolean` | `false` | `number[]` instead of `number`, with chips |
-| `label` | `ReactNode` | — | Field label |
-| `description` | `ReactNode` | — | Help text under the control |
-| `placeholder` | `string` | `Select an option` | Shown while nothing is chosen |
-| `searchPlaceholder` | `string` | `Search...` | Placeholder inside the search box |
-| `selected` | `RoleOption[]` | `[]` | Roles the field opens on |
-| `excludeIds` | `number[]` | `[]` | Roles the picker must not offer |
-| `search` | `(value: string) => Promise<RoleOption[]>` | AdminCP roles list | Replaces the lookup |
-| `disabled` | `boolean` | `false` | Blocks opening the picker and removing chips |
+| Prop                | Type                                       | Default            | What it does                                 |
+| ------------------- | ------------------------------------------ | ------------------ | -------------------------------------------- |
+| `multiple`          | `boolean`                                  | `false`            | `number[]` instead of `number`, with chips   |
+| `label`             | `ReactNode`                                | -                  | Field label                                  |
+| `description`       | `ReactNode`                                | -                  | Help text under the control                  |
+| `placeholder`       | `string`                                   | `Select an option` | Shown while nothing is chosen                |
+| `searchPlaceholder` | `string`                                   | `Search...`        | Placeholder inside the search box            |
+| `selected`          | `RoleOption[]`                             | `[]`               | Roles the field opens on                     |
+| `excludeIds`        | `number[]`                                 | `[]`               | Roles the picker must not offer              |
+| `search`            | `(value: string) => Promise<RoleOption[]>` | AdminCP roles list | Replaces the lookup                          |
+| `disabled`          | `boolean`                                  | `false`            | Blocks opening the picker and removing chips |
 
 `RoleOption` is `{ id, color, name }`, where `name` is the raw
 `{ languageCode, name }[]` - the server has no business deciding which language

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -96,6 +97,59 @@ const Harness = ({
     onSubmit={onSubmit}
   />
 );
+
+describe("layout diagnostic", () => {
+  it("does not cry wolf when every field was placed", () => {
+    // React runs an effect twice on mount in Strict Mode, which every Next dev
+    // server turns on. The diagnostic cleared its record *inside* that effect,
+    // so the second run found an empty set and reported every field as missing -
+    // a warning naming fields that are on the screen, on every single mount.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    render(
+      <StrictMode>
+        <ContentFormProvider
+          value={{
+            fieldNames: ["title", "categoryId"],
+            fields: { categoryId: <span>c</span>, title: <span>t</span> },
+            localizedFieldNames: [],
+            mode: "edit",
+            publication: { enabled: false },
+          }}
+        >
+          <ContentFormField name="title" />
+          <ContentFormField name="categoryId" />
+        </ContentFormProvider>
+      </StrictMode>,
+    );
+
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("still names a field the layout genuinely forgot", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    render(
+      <StrictMode>
+        <ContentFormProvider
+          value={{
+            fieldNames: ["title", "categoryId"],
+            fields: { categoryId: <span>c</span>, title: <span>t</span> },
+            localizedFieldNames: [],
+            mode: "edit",
+            publication: { enabled: false },
+          }}
+        >
+          <ContentFormField name="title" />
+        </ContentFormProvider>
+      </StrictMode>,
+    );
+
+    expect(String(warn.mock.calls[0]?.[0])).toContain("categoryId");
+    warn.mockRestore();
+  });
+});
 
 describe("content form layouts", () => {
   it("places named fields wherever the layout puts them", () => {

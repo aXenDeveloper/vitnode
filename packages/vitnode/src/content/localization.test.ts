@@ -43,7 +43,6 @@ const localized = (
     fields: {
       title: field.text({ localized: true, required: true }),
     },
-    admin: { label: { plural: "Subjects", singular: "Subject" } },
     ...overrides,
   } as never);
 
@@ -187,7 +186,6 @@ describe("localization validation", () => {
         id: "test.stray",
         tableName: "test_strays",
         fields: { title: field.text({ localized: true, required: true }) },
-        admin: { label: { plural: "Strays", singular: "Stray" } },
       }),
     ).toThrow(/no `localization: \{ enabled: true, defaultLocale \}` block/);
   });
@@ -199,7 +197,6 @@ describe("localization validation", () => {
         tableName: "test_empties",
         localization: { enabled: true, defaultLocale: "en" },
         fields: { featured: field.boolean({ defaultValue: false }) },
-        admin: { label: { plural: "Empties", singular: "Empty" } },
       }),
     ).toThrow(/no field is marked `localized: true`/);
   });
@@ -259,7 +256,6 @@ describe("localization validation", () => {
           title: field.text({ localized: true, required: true }),
           other: { ...fieldValue, localized: true } as never,
         },
-        admin: { label: { plural: "Bad", singular: "Bad" } },
       }),
     ).toThrow(/Only slug, text, textarea fields and `field.group`/);
   });
@@ -273,7 +269,6 @@ describe("localization validation", () => {
         fields: {
           itemId: field.text({ localized: true, required: true }),
         },
-        admin: { label: { plural: "Collides", singular: "Collide" } },
       }),
     ).toThrow(/collides with a generated translation column/);
   });
@@ -289,7 +284,6 @@ describe("localization validation", () => {
           heading: field.text({ localized: true, required: true }),
           slug: field.slug({ localized: true, source: "name" }),
         },
-        admin: { label: { plural: "Shared", singular: "Shared" } },
       }),
     ).toThrow(/Every language would derive the same URL/);
   });
@@ -304,7 +298,6 @@ describe("localization validation", () => {
           title: field.text({ localized: true, required: true }),
           slug: field.slug({ source: "title" }),
         },
-        admin: { label: { plural: "Localized", singular: "Localized" } },
       }),
     ).toThrow(/there is no single value to derive from/);
   });
@@ -320,7 +313,6 @@ describe("localization validation", () => {
           title: field.text({ localized: true, required: true }),
           slug: field.slug({ localized: true, source: "headline" }),
         },
-        admin: { label: { plural: "None", singular: "None" } },
       }),
     ).toThrow(/which is not a field on this content type/);
   });
@@ -332,7 +324,6 @@ describe("localization validation", () => {
     expect(
       localized({
         admin: {
-          label: { plural: "Subjects", singular: "Subject" },
           list: { columns: ["title"] },
         },
       }).admin.list.columns,
@@ -345,7 +336,6 @@ describe("localization validation", () => {
     expect(() =>
       localized({
         admin: {
-          label: { plural: "Subjects", singular: "Subject" },
           list: { orderableFields: ["title"] },
         },
       }),
@@ -356,7 +346,6 @@ describe("localization validation", () => {
     expect(() =>
       localized({
         admin: {
-          label: { plural: "Subjects", singular: "Subject" },
           list: { searchableFields: ["title"] },
         },
       }),
@@ -380,7 +369,6 @@ describe("capability combinations", () => {
         title: field.text({ localized: true, required: true }),
         slug: field.slug({ localized: true, source: "title" }),
       },
-      admin: { label: { plural: "Boundaries", singular: "Boundary" } },
       ...extra,
     } as never);
 

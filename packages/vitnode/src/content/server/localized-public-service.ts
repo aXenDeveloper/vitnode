@@ -23,7 +23,7 @@ import {
 } from "../const";
 import { ContentEngineError } from "../errors";
 import { partitionContentFields } from "../localization";
-import { isContentRelationCollection, splitContentFieldPath } from "../paths";
+import { isContentReferenceCollection, splitContentFieldPath } from "../paths";
 import { publicOrderableColumns } from "../registry";
 import { findContentLanguage } from "./language-resolver";
 import {
@@ -175,7 +175,7 @@ export const createContentLocalizedPublicService = <
     if (!fieldValue) return true;
     if (fieldValue.kind === "repeatable") return false;
 
-    return !isContentRelationCollection(fieldValue);
+    return !isContentReferenceCollection(fieldValue);
   };
   const exposedColumns = publicApi.fields.filter(isColumnField);
   const exposedShared = exposedColumns.filter(

@@ -73,7 +73,6 @@ const pageArticle = defineContentType({
     excerpt: field.textarea({ nullable: true }),
   },
   admin: {
-    label: { plural: "Page Articles", singular: "Page Article" },
     create: { mode: "page" },
     edit: { mode: "page" },
   },
@@ -163,7 +162,6 @@ describe("the generated create page", () => {
       tableName: "test_page_articles",
       fields: { title: field.text({ required: true }) },
       admin: {
-        label: { plural: "Page Articles", singular: "Page Article" },
         create: { mode: "page" },
       },
     });
@@ -272,7 +270,6 @@ describe("the generated edit page", () => {
         title: field.text({ localized: true, required: true }),
       },
       admin: {
-        label: { plural: "Pages", singular: "Page" },
         create: { mode: "page" },
         edit: { mode: "page" },
       },

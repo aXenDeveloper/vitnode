@@ -16,7 +16,10 @@ import type { VitNodeConfig } from "@/vitnode.config";
 
 import { hasStaffPermission } from "@/api/lib/staff-permission";
 import { CONFIG_PLUGIN } from "@/config";
-import { contentI18nKeys } from "@/content/admin/labels";
+import {
+  type ContentLabelTranslator,
+  contentNouns,
+} from "@/content/admin/labels";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 import { contentAdminHref } from "@/content/registry";
 import { getSessionAdminApi } from "@/lib/api/get-session-admin-api";
@@ -247,22 +250,22 @@ export const getAdminNav = async ({
   ): NavItemConfig[] =>
     (plugin.contentTypes ?? [])
       .filter(({ definition }) => definition.admin.navigation.enabled)
-      .map(({ definition, icon }) => {
-        const titleKey = contentI18nKeys(definition, plugin.pluginId).title;
-
-        return {
-          href: contentAdminHref(definition.id),
-          icon: icon ?? <FileTextIcon />,
-          permission: {
-            module: definition.permissionModule,
-            permission: CONTENT_PERMISSIONS.view,
-            plugin: plugin.pluginId,
-          },
-          title: t.has(titleKey as Parameters<typeof t.has>[0])
-            ? t(titleKey as Parameters<typeof t>[0])
-            : definition.admin.label.plural,
-        };
-      });
+      .map(({ definition, icon }) => ({
+        href: contentAdminHref(definition.id),
+        icon: icon ?? <FileTextIcon />,
+        permission: {
+          module: definition.permissionModule,
+          permission: CONTENT_PERMISSIONS.view,
+          plugin: plugin.pluginId,
+        },
+        // The same resolution the screen's own heading uses, so the sidebar and
+        // the page it opens cannot disagree about what the records are called.
+        title: contentNouns(
+          definition,
+          plugin.pluginId,
+          t as unknown as ContentLabelTranslator,
+        ).title,
+      }));
 
   const declaredNavItems = (
     plugin: (typeof vitNodeConfig.plugins)[number],

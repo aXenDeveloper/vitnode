@@ -1,0 +1,122 @@
+---
+title: Content Delivery & SEO
+description: Step-by-step guide to integrating content types with Next.js App Router, managing slug redirect history, auto-generating SEO metadata, canonical links, hreflang tags, and XML sitemaps.
+icon: Compass
+---
+
+Content Engine provides frontend content delivery abstractions (`delivery: true`) to streamline routing, automatic 308 redirects, SEO meta generation, and XML sitemap creation.
+
+## Prerequisites & Context
+
+Frontend content delivery maps a client definition (e.g. `articleContentType`) and server model (`articleContent`) directly into Next.js App Router dynamic routes:
+
+- **`delivery: { basePath: "/articles", ... }`**: Configures route bases, automatic slug 308 redirects, SEO meta fields, and sitemap frequency.
+- **`resolveContentDelivery(articleContent, { slug, locale })`**: A Next.js server utility from `@vitnode/core/content/next` that fetches content, resolves slug redirects, generates SEO metadata, and handles 404 fallbacks.
+
+---
+
+## Step-by-Step Delivery Setup
+
+<Steps>
+
+<Step>
+### Step 1: Enable Content Delivery in Definition
+
+Add `delivery` settings to `src/content/article.ts`:
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  publication: true,
+  editorial: true,
+  delivery: { // [!code ++]
+    basePath: "/articles", // [!code ++]
+    redirects: true, // Auto 308 redirects on slug rename // [!code ++]
+    seo: { // [!code ++]
+      titleField: "title", // [!code ++]
+      descriptionField: "excerpt", // [!code ++]
+    }, // [!code ++]
+    sitemap: { // [!code ++]
+      changefreq: "weekly", // [!code ++]
+      priority: 0.8, // [!code ++]
+    }, // [!code ++]
+  }, // [!code ++]
+  fields: {
+    title: field.text({ required: true }),
+    slug: field.slug({ from: "title" }),
+    excerpt: field.textarea({ nullable: true }),
+  },
+});
+```
+</Step>
+
+<Step>
+### Step 2: Implement Next.js Dynamic Route with i18n & Metadata
+
+Create `app/[locale]/articles/[slug]/page.tsx`. Use `useTranslations` from `next-intl` to localize UI labels instead of hardcoding plain text strings:
+
+```tsx title="app/[locale]/articles/[slug]/page.tsx"
+import { notFound, redirect } from "next/navigation";
+import { useTranslations } from "next-intl"; // [!code ++]
+import { resolveContentDelivery } from "@vitnode/core/content/next";
+import { articleContent } from "@/database/articles";
+
+interface Props {
+  params: Promise<{ locale: string; slug: string }>;
+}
+
+export async function generateMetadata({ params }: Props) {
+  const { locale, slug } = await params;
+  const delivery = await resolveContentDelivery(articleContent, { slug, locale });
+
+  if (delivery.type !== "found") return {};
+
+  return delivery.seo; // Generates title, description, openGraph, canonical URLs
+}
+
+export default async function ArticlePage({ params }: Props) {
+  const { locale, slug } = await params;
+  const delivery = await resolveContentDelivery(articleContent, { slug, locale });
+
+  if (delivery.type === "redirect") {
+    redirect(delivery.destination, delivery.status); // 308 permanent redirect
+  }
+
+  if (delivery.type === "not_found") {
+    notFound();
+  }
+
+  const t = useTranslations("@vitnode/example"); // [!code ++]
+  const { item } = delivery;
+
+  return (
+    <article className="container py-8">
+      <header className="mb-6">
+        <h1 className="text-3xl font-bold">{item.title}</h1>
+        <p className="text-muted-foreground">{t("articles.published_on", { date: item.publishedAt })}</p> {/* [!code ++] */}
+      </header>
+
+      <div className="prose">
+        <p>{item.excerpt}</p>
+      </div>
+
+      <footer className="mt-8 border-t pt-4">
+        <p>{t("articles.author_label", { name: item.author.name })}</p> {/* [!code ++] */}
+      </footer>
+    </article>
+  );
+}
+```
+</Step>
+
+</Steps>
+
+---
+
+## Automatic SEO Capabilities
+
+- **308 Permanent Redirects**: Renaming an item's slug preserves historical URLs, issuing automatic 308 redirects to preserve SEO rank.
+- **Canonical URLs**: Constructed using the application's base URL and current slug.
+- **Hreflang Tags**: Outputs `<link rel="alternate" hreflang="..." />` tags for active translations.
+- **XML Sitemaps**: Serves paginated XML sitemaps at `/sitemap-articles.xml`.

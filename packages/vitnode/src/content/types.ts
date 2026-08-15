@@ -183,12 +183,55 @@ export interface ContentDateTimeField<
   kind: "dateTime";
 }
 
+/**
+ * A reference to a VitNode user.
+ *
+ * `multiple: true` is the same move a to-many `relation` makes, and for the same
+ * reason: a column cannot hold a set, so the references move into a generated
+ * junction table whose second foreign key points at `core_users`. An article
+ * with two authors is two junction rows, not a comma-separated column - so
+ * `ON DELETE` still means something, and "which articles did this person write"
+ * is an indexed lookup rather than a `LIKE`.
+ */
 export interface ContentUserField<
   TRequired extends boolean = boolean,
   TNullable extends boolean = boolean,
+  TMultiple extends boolean = boolean,
+  TOrdered extends boolean = boolean,
 > extends ContentFieldShared<TRequired, TNullable> {
   kind: "user";
+  /** The fewest people the field will accept. See {@link ContentRelationField.min}. */
+  min?: number;
+  /**
+   * Many people instead of one.
+   *
+   * Literal rather than optional-boolean for the same reason
+   * {@link ContentRelationField.multiple} is: every partition keys off
+   * `{ multiple: true }`, and a widened `boolean` resolves a to-many field to
+   * the to-one branch - a foreign-key column that does not exist.
+   */
+  multiple: TMultiple;
   onDelete: ContentOnDelete;
+  /**
+   * The author's order is the order the people come back in.
+   *
+   * Only meaningful with `multiple: true`, and it usually is meaningful: the
+   * first author of a piece is not an arbitrary member of a set.
+   */
+  ordered: TOrdered;
+}
+
+/**
+ * Structural match for a field whose values live in a junction table.
+ *
+ * Written once and reused, because "is this a set of references?" is the rule
+ * that decides whether a field is a column or a table - and the version of that
+ * rule that forgets `user` is a column the engine never generates and a value
+ * that silently disappears.
+ */
+interface ContentReferenceCollection {
+  kind: "relation" | "user";
+  multiple: true;
 }
 
 /**
@@ -212,6 +255,15 @@ export interface ContentRelationField<
   TSelf extends boolean = boolean,
 > extends ContentFieldShared<TRequired, TNullable> {
   kind: "relation";
+  /**
+   * The fewest targets the field will accept, enforced by the generated schema.
+   *
+   * How a content type says "at least one" about something `required` cannot
+   * say it about: a to-many reference has no column, so the empty set is always
+   * a storable value and requiredness is a rule about the *record* instead. Only
+   * meaningful with `multiple: true`.
+   */
+  min?: number;
   /**
    * Many targets instead of one.
    *
@@ -463,7 +515,7 @@ export type ContentFieldValue<TField> = TField extends {
   ? ApplyNullable<ContentGroupValue<TInner>, TField>
   : TField extends { fields: infer TInner; kind: "repeatable" }
     ? ContentRepeatableRow<TInner>[]
-    : TField extends { kind: "relation"; multiple: true }
+    : TField extends ContentReferenceCollection
       ? number[]
       : ApplyNullable<ScalarFieldValue<TField>, TField>;
 
@@ -479,7 +531,7 @@ export type ContentFieldInput<TField> = TField extends {
   ? ApplyNullable<CreateValuesOf<TInner, keyof TInner>, TField>
   : TField extends { fields: infer TInner; kind: "repeatable" }
     ? ContentRepeatableInputRow<TInner>[]
-    : TField extends { kind: "relation"; multiple: true }
+    : TField extends ContentReferenceCollection
       ? number[]
       : ApplyNullable<ScalarFieldInput<TField>, TField>;
 
@@ -553,7 +605,7 @@ type SharedFieldKeys<TFields> = Exclude<
 type CollectionFieldKeys<TFields> = {
   [K in keyof TFields]: TFields[K] extends { kind: "repeatable" }
     ? K
-    : TFields[K] extends { kind: "relation"; multiple: true }
+    : TFields[K] extends ContentReferenceCollection
       ? K
       : never;
 }[keyof TFields];
@@ -636,15 +688,18 @@ export type ContentChangedPath<TDefinition> =
   | ContentLeafPath<ContentFieldsOf<TDefinition>>
   | (ScalarColumnFieldKeys<ContentFieldsOf<TDefinition>> & string);
 
-/** Field names of a to-many relation. */
+/**
+ * Field names of a to-many reference - a `relation` or a `user`.
+ *
+ * One name for both, because the collection API they key is one API: `add`,
+ * `remove`, `reorder` and `set` are the same four operations over the same
+ * junction rows whether the target is a category or a person.
+ */
 export type ContentRelationCollectionName<TDefinition> = string &
   {
     [
       K in keyof ContentFieldsOf<TDefinition>
-    ]: ContentFieldsOf<TDefinition>[K] extends {
-      kind: "relation";
-      multiple: true;
-    }
+    ]: ContentFieldsOf<TDefinition>[K] extends ContentReferenceCollection
       ? K
       : never;
   }[keyof ContentFieldsOf<TDefinition>];
@@ -695,11 +750,6 @@ type CreateValuesOf<TFields, TKeys extends keyof TFields> = Prettify<
 // ---------------------------------------------------------------------------
 // Admin metadata
 // ---------------------------------------------------------------------------
-
-export interface ContentAdminLabel {
-  plural: string;
-  singular: string;
-}
 
 /**
  * `status` and `publishedAt` are addressable in the admin config only once the
@@ -793,6 +843,32 @@ export interface ContentAdminActionConfig {
   mode?: ContentAdminFormMode;
 }
 
+/**
+ * One titled group of fields in the generated form.
+ *
+ * Carries a `name`, never a heading: the heading is a translation, looked up at
+ * `{pluginId}.content.{entity}.form.{name}.title` with `.desc` beside it. A
+ * literal string here would be one English heading for every reader, in the one
+ * file where the content type is defined once and read in every language.
+ */
+export interface ContentAdminFormSection<TFields = ContentFieldMap> {
+  /**
+   * Fields placed in this section, in order.
+   *
+   * Every field of the form belongs to exactly one section, so a name repeated
+   * across two sections is a define-time error rather than a field rendered
+   * twice into one payload.
+   */
+  fields: (keyof TFields)[];
+  /**
+   * Stable identifier, and the i18n key segment. Lowercase, `a-z0-9_`.
+   *
+   * Renaming it changes which message the heading reads, exactly as renaming a
+   * field changes which message labels it.
+   */
+  name: string;
+}
+
 export interface ContentAdminConfig<
   TFields = ContentFieldMap,
   TPublication extends boolean = boolean,
@@ -803,21 +879,46 @@ export interface ContentAdminConfig<
   /** Presentation of the edit form. Defaults to `{ mode: "dialog" }`. */
   edit?: ContentAdminActionConfig;
   /**
-   * Which fields the generated form renders, in order. Defaults to every field.
+   * Which fields the generated form renders, in order, and how they are grouped.
    *
    * Shared and localized alike: there is one form, and a localized field renders
    * with its own language switcher inside it. Where the value is *stored* is the
    * engine's business, not the form's.
+   *
+   * `sections` groups them into titled cards and *is* the field list when
+   * present, so `fields` alongside it would be a second, disagreeing answer to
+   * the same question - declaring both is a define-time error. Neither is
+   * required: without them the form renders every field, flat, as it always has.
    */
-  form?: { fields?: (keyof TFields)[] };
-  label: ContentAdminLabel;
+  form?: {
+    fields?: (keyof TFields)[];
+    sections?: ContentAdminFormSection<TFields>[];
+  };
   list?: ContentAdminListConfig<TFields, TPublication, TEditorial>;
   navigation?: { enabled?: boolean };
   /**
-   * Staff permission module name. Defaults to a slug of `label.plural`, e.g.
-   * "Articles" -> `articles`.
+   * Staff permission module name. Defaults to the content type's own id without
+   * its plugin segment: `blog.post` -> `post`, `example.kb.article` ->
+   * `kb_article`.
+   *
+   * Derived from the id rather than from a display name, because the id is the
+   * one thing about a content type that is never rewritten for how it reads. A
+   * permission module is stored on every role that grants it, so a name that
+   * moves when somebody improves the wording of a heading moves those grants
+   * with it.
    */
   permissionModule?: string;
+  /**
+   * Field holding a colour, shown as a swatch beside the title in pickers and
+   * cells.
+   *
+   * A **display** projection like {@link ContentAdminConfig.titleField}, and a
+   * shared column rather than a localized one: a colour is a property of the
+   * record, not of the language somebody reads it in. Left out, an option is its
+   * name alone - which is right for most content types and wrong for the handful
+   * whose whole point is that they are colour-coded.
+   */
+  colorField?: null | string;
   /**
    * Field used as the human-readable title in toasts and relation pickers.
    *
@@ -844,10 +945,19 @@ export interface ContentAdminConfig<
  * the narrower type bought nothing.
  */
 export interface ResolvedContentAdminConfig {
+  /** Shared column holding a colour swatch for pickers, or `null`. */
+  colorField: null | string;
   create: { mode: ContentAdminFormMode };
   edit: { mode: ContentAdminFormMode };
-  form: { fields: string[] };
-  label: ContentAdminLabel;
+  /**
+   * `fields` is always the flat list the form renders, sections or not - so
+   * every consumer that only asks "which fields" keeps one place to ask. An
+   * empty `sections` says "render them flat", which is the default.
+   */
+  form: {
+    fields: string[];
+    sections: { fields: string[]; name: string }[];
+  };
   list: {
     columns: string[];
     defaultOrder: "asc" | "desc";
@@ -1932,7 +2042,7 @@ export interface ContentTypeDefinition<
    * omitted.
    */
   localization: ResolvedContentLocalizationConfig<TLocalizationEnabled>;
-  /** Derived from `admin.permissionModule` or `admin.label.plural`. */
+  /** Derived from `admin.permissionModule`, or the id without its plugin segment. */
   permissionModule: string;
   publicApi: ResolvedContentPublicApiConfig<TPublicField, TPublicEnabled>;
   publication: ResolvedContentPublicationConfig<TPublication>;

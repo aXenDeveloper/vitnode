@@ -43,7 +43,7 @@ export const postsRoute = buildRoute({
       .get("db")
       .select({
         id: blog_posts.id,
-        categoryId: blog_posts.categoryId
+        status: blog_posts.status
       })
       .from(blog_posts);
 

@@ -3,6 +3,7 @@
     "title": "Example",
     "content": {
       "article": {
+        "label": "{count, plural, one {Article} other {Articles}}",
         "title": "Articles",
         "desc": "Everything the Content Engine generates, from one definition.",
         "fields": {
@@ -17,6 +18,7 @@
         }
       },
       "category": {
+        "label": "{count, plural, one {Category} other {Categories}}",
         "title": "Categories",
         "desc": "Group articles together.",
         "fields": {
@@ -26,16 +28,16 @@
       }
     }
   },
-  "@vitnode/example:example_articles": "Articles",
-  "@vitnode/example:example_articles:can_view": "View articles",
-  "@vitnode/example:example_articles:can_create": "Create articles",
-  "@vitnode/example:example_articles:can_edit": "Edit articles",
-  "@vitnode/example:example_articles:can_delete": "Delete articles",
-  "@vitnode/example:example_articles:can_publish": "Publish and unpublish articles",
-  "@vitnode/example:example_articles:can_restore": "Restore an earlier version of an article",
-  "@vitnode/example:example_categories": "Categories",
-  "@vitnode/example:example_categories:can_view": "View categories",
-  "@vitnode/example:example_categories:can_create": "Create categories",
-  "@vitnode/example:example_categories:can_edit": "Edit categories",
-  "@vitnode/example:example_categories:can_delete": "Delete categories"
+  "@vitnode/example:article": "Articles",
+  "@vitnode/example:article:can_view": "View articles",
+  "@vitnode/example:article:can_create": "Create articles",
+  "@vitnode/example:article:can_edit": "Edit articles",
+  "@vitnode/example:article:can_delete": "Delete articles",
+  "@vitnode/example:article:can_publish": "Publish and unpublish articles",
+  "@vitnode/example:article:can_restore": "Restore an earlier version of an article",
+  "@vitnode/example:category": "Categories",
+  "@vitnode/example:category:can_view": "View categories",
+  "@vitnode/example:category:can_create": "Create categories",
+  "@vitnode/example:category:can_edit": "Edit categories",
+  "@vitnode/example:category:can_delete": "Delete categories"
 }

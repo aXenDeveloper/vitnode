@@ -1,15 +1,12 @@
 ---
 title: Content Engine
-description: Declare a content type once in TypeScript and get a real Postgres table, Zod schemas, a typed service, CRUD routes, staff permissions, an AdminCP screen and typed events.
+description: Declare a content type once in TypeScript and get a real Postgres table, Zod schemas, a typed service, CRUD routes, staff permissions, an AdminCP screen, and typed events.
 icon: Boxes
 ---
 
-Every plugin that stores structured data ends up writing the same things: a
-Drizzle table, a handful of Zod schemas, five routes, a permission block, a
-DataTable, an AutoForm dialog, a delete confirmation and a few events. It is a
-lot of typing for not much thinking.
+Writing CRUD boilerplate for plugins — Drizzle tables, Zod schemas, Hono routes, permissions, data tables, auto-forms, and events — takes a lot of time.
 
-The Content Engine writes all of it from one declaration.
+The **Content Engine** generates all of it from a single client-safe declaration:
 
 ```ts title="src/content/article.ts"
 import { defineContentType, field } from "@vitnode/core/content";
@@ -25,108 +22,88 @@ export const articleContentType = defineContentType({
     author: field.user(),
   },
   admin: {
-    label: { plural: "Articles", singular: "Article" },
   },
 });
 ```
 
-That gives you:
+## What You Get
 
-- a dedicated `example_articles` table with a `serial` primary key, timestamps,
-  indexes and RLS, migrated by the normal `drizzle-kit` flow
-- Zod schemas for create, update, select, filters, ordering and the form
-- a typed, self-validating service (`findById`, `findMany`, `create`, `update`,
-  `delete`)
-- five CRUD routes plus a relation-picker route, each behind a staff permission
-- an AdminCP list with search, pagination, sorting, and create/edit/delete
-  dialogs - with **no Next.js file to write**
-- `can_view` / `can_create` / `can_edit` / `can_delete` in the staff editor
-  (plus `can_publish` with [publication](/docs/dev/content-engine/publication))
-- `content.example.article.created` / `.updated` / `.deleted` events
+A single definition gives you:
+- **Database Table**: Dedicated `example_articles` Postgres table with primary keys, indexes, and standard Drizzle migrations.
+- **Zod Schemas**: Pre-built schemas for create, update, select, filters, ordering, and forms.
+- **Typed Service**: Self-validating service methods (`findById`, `findMany`, `create`, `update`, `delete`).
+- **Staff Permissions**: Automatic staff permission checks (`can_view`, `can_create`, `can_edit`, `can_delete`, `can_publish`).
+- **Zero-Code AdminCP**: Fully interactive list, search, sorting, and form dialogs without writing Next.js pages.
+- **Typed Events**: `content.example.article.created`, `.updated`, and `.deleted` event hooks.
 
-Four more declarations, each opt-in:
+## How the Three Files Fit Together
 
-- [`publication`](/docs/dev/content-engine/publication) adds a draft/published
-  lifecycle, a `can_publish` permission and a badge in the AdminCP
-- [`publicApi`](/docs/dev/content-engine/public-api) adds two read-only public
-  routes, a strict field allowlist and
-  [cache tags](/docs/dev/content-engine/caching)
-- [`editorial`](/docs/dev/content-engine/editorial) adds a `version` column,
-  optimistic locking so two editors cannot silently overwrite each other, and a
-  [revision history](/docs/dev/content-engine/revisions) you can restore from
-- [`localization`](/docs/dev/content-engine/localization) moves the text fields
-  you mark into a generated per-language table, with its own version, its own
-  [publish button](/docs/dev/content-engine/translation-editorial), its own
-  [history](/docs/dev/content-engine/translation-revisions), a
-  [URL per locale](/docs/dev/content-engine/localized-public-api) and a
-  [search document per language](/docs/dev/content-engine/localized-search)
+Content Engine keeps definitions separate from database and UI logic so your browser bundle stays lightweight while backend APIs gain full access to Drizzle ORM:
 
-Publication alone exposes nothing. Public exposure requires both of the first
-two; `editorial` works with or without either. `localization` combines with all
-four - a public read
-[resolves one language](/docs/dev/content-engine/localized-public-api) and search
-[indexes one document per translation](/docs/dev/content-engine/localized-search).
+| File | Purpose | Why It's Separate |
+| :--- | :--- | :--- |
+| **`src/content/article.ts`** | Definition | **Client-Safe**. Imports `zod` only. Shared between browser and server without dragging Drizzle ORM to the client. |
+| **`src/database/articles.ts`** | Database Model | **Server-Only**. Calls `createContentModel` to generate raw Drizzle tables (`.table`) and typed CRUD service methods (`.service(c)`). |
+| **`src/config.tsx` & `src/api/`** | Integration | **App Registration**. Registers zero-code AdminCP management screens (`contentTypeAdmin`) and secure backend routes (`buildContentAdminModule`). |
 
-## What it is not
+---
 
-<Callout type="info" title="Code-first, not a no-code CMS">
-  Content types live in TypeScript and are migrated from source control. There
-  is no admin UI for creating one, no JSONB blob, and no runtime `CREATE TABLE`.
-  One content type is one real Postgres table, and you can always drop down to
-  Drizzle and write the query yourself.
-</Callout>
-
-## How the pieces fit
-
-```text
-  src/content/article.ts          defineContentType(...)      ← client-safe
-        │                          zod + plain objects
-        ├──────────────┬──────────────────────────────┐
-        ▼              ▼                              ▼
-  src/config.tsx   src/database/articles.ts    src/api/.../admin.module.ts
-  buildPlugin      createContentModel(...)     buildContentAdminModule(...)
-  (AdminCP)          ├─ .table  → migrations     └─ 6 routes + permissions
-                     ├─ .columns
-                     └─ .service(c)
-```
-
-The definition sits in the middle because it is *client-safe by construction*:
-it imports nothing but `zod`. That is what lets the AdminCP and the API share
-one object instead of two that drift apart.
-
-## Getting started
+## Explore Content Engine
 
 <Cards>
   <Card
     href="/docs/dev/content-engine/defining-a-content-type"
-    title="Defining a content type"
-    description="The three files a content type needs, and where each one goes."
+    title="Defining a Content Type"
+    description="The three-file rule, model setup, plugin registration, and i18n."
   />
   <Card
     href="/docs/dev/content-engine/fields"
-    title="Supported fields"
-    description="Every field kind, and what it becomes in the database, the API and the AdminCP."
+    title="Field Reference"
+    description="Text, numbers, enums, dates, users, slugs, relations, and structured fields."
   />
   <Card
     href="/docs/dev/content-engine/database-and-migrations"
-    title="Database & migrations"
-    description="How Drizzle Kit finds generated tables - and what happens when you rename a field."
+    title="Database & Migrations"
+    description="How Drizzle Kit compiles models and manages schema migrations."
   />
   <Card
-    href="/docs/dev/content-engine/production-hardening"
-    title="Production hardening"
-    description="What the engine guarantees under concurrency, partial failure and scale - and what it does not."
+    href="/docs/dev/content-engine/services-and-api"
+    title="Services & API"
+    description="Typed CRUD service methods, Zod schemas, permissions, and events."
   />
   <Card
-    href="/docs/dev/content-engine/limitations"
-    title="Limitations"
-    description="What the first version deliberately leaves out."
+    href="/docs/dev/content-engine/publication-and-editorial"
+    title="Publication & Editorial"
+    description="Draft/published states, versioning, optimistic locks, revisions, and scheduling."
+  />
+  <Card
+    href="/docs/dev/content-engine/public-api-and-caching"
+    title="Public API & Caching"
+    description="Read-only public endpoints, search indexing, and SWR tag invalidation."
+  />
+  <Card
+    href="/docs/dev/content-engine/localization"
+    title="Localization & Translations"
+    description="Multi-language support, per-locale tables, translation services, and public routes."
+  />
+  <Card
+    href="/docs/dev/content-engine/relations-and-advanced-modeling"
+    title="Relations & Advanced Modeling"
+    description="1:N & N:M relations, relation pickers, JSON objects, and arrays."
+  />
+  <Card
+    href="/docs/dev/content-engine/content-delivery-and-seo"
+    title="Content Delivery & SEO"
+    description="Next.js App Router integration, slug history, 308 redirects, SEO meta, and sitemaps."
+  />
+  <Card
+    href="/docs/dev/content-engine/admincp"
+    title="AdminCP Integration"
+    description="DataTable controls, form layout customization, and screen overrides."
+  />
+  <Card
+    href="/docs/dev/content-engine/production-and-security"
+    title="Production & Security"
+    description="Concurrency handling, failure retries, security, performance, and limitations."
   />
 </Cards>
-
-## A complete example
-
-The `@vitnode/example` plugin in the VitNode repository is a working reference:
-two content types, every field kind, generated routes, generated AdminCP and
-typed events - in about 120 lines of plugin code. Every page in this section
-quotes from it.

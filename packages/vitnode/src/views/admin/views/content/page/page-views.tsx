@@ -50,6 +50,7 @@ const buildPageSpecs = async (entry: RegisteredFrontendContentType) => {
       definition,
       labelEnum: labels.labelEnum,
       labelField: labels.labelField,
+      labelSection: labels.labelSection,
       pluginId,
     }),
   };
@@ -92,8 +93,8 @@ export const ContentCreatePageView = async ({
 
   if (!canView || !canCreate) notFound();
 
-  const { spec } = await buildPageSpecs(entry);
-  const singular = definition.admin.label.singular;
+  const { labels, spec } = await buildPageSpecs(entry);
+  const singular = labels.singular;
   const backHref = contentAdminHref(definition.id);
 
   return (
@@ -108,7 +109,7 @@ export const ContentCreatePageView = async ({
           variant="outline"
         >
           <ArrowLeftIcon />
-          {tPage("back", { name: definition.admin.label.plural })}
+          {tPage("back", { name: labels.plural })}
         </Button>
       </HeaderContent>
 
@@ -197,9 +198,9 @@ export const ContentEditPageView = async ({
       })
     : undefined;
 
-  const { spec } = await buildPageSpecs(entry);
+  const { labels, spec } = await buildPageSpecs(entry);
   const backHref = contentAdminHref(definition.id);
-  const singular = definition.admin.label.singular;
+  const singular = labels.singular;
   const data = result.data as Record<string, unknown> & { id: number };
   const titleField = definition.admin.titleField;
   const localizedValues = (
@@ -228,7 +229,7 @@ export const ContentEditPageView = async ({
           variant="outline"
         >
           <ArrowLeftIcon />
-          {tPage("back", { name: definition.admin.label.plural })}
+          {tPage("back", { name: labels.plural })}
         </Button>
       </HeaderContent>
 

@@ -1,452 +1,290 @@
 ---
-title: Generated AdminCP
-description: The list, form and delete screens you get for free - and the one route that serves all of them.
-icon: LayoutDashboard
+title: AdminCP Integration
+description: Step-by-step guide to zero-code AdminCP management screens, custom form layouts, AutoForm dialogs, and screen overrides.
+icon: Layout
 ---
 
-Registering a content type in `buildPlugin` is the entire frontend integration.
-There is no page to write.
+Content Engine automatically builds interactive management screens in the VitNode AdminCP without requiring you to write Next.js page components or custom form components.
+
+## Prerequisites & Context
+
+AdminCP UI generation requires registering your content definition in `src/config.tsx` using `contentTypeAdmin`:
 
 ```tsx title="src/config.tsx"
-contentTypes: [
-  contentTypeAdmin({
-    definition: articleContentType,
-    icon: <NotebookPenIcon />,
-  }),
-],
+import { buildPlugin, contentTypeAdmin } from "@vitnode/core/lib/plugin";
+import { NotebookPenIcon } from "lucide-react";
+import { articleContentType } from "@/content/article";
+
+export const examplePlugin = () =>
+  buildPlugin({
+    pluginId: "@vitnode/example",
+    messages,
+    contentTypes: [
+      contentTypeAdmin({
+        definition: articleContentType,
+        icon: <NotebookPenIcon />,
+      }),
+    ],
+  });
 ```
 
-You get a nav item, a breadcrumb, and a screen at:
+- **Zero-Code Navigation**: Generates `/admin/content/{plugin}/{entity}` automatically.
+- **i18n Localization**: The screen title, the record's own noun, table headers, form
+  labels, enum values and form section headings all resolve from your plugin's locale
+  JSON (`src/locales/en.json`). Every key is optional, and every one has a readable
+  fallback - so a screen works before it is translated, and no string in it is stuck
+  in English afterwards.
 
-```text
-/admin/content/example/article
+---
+
+## Step-by-Step Customization
+
+<Steps>
+
+<Step>
+### Step 1: Name the Record & Configure the List
+
+In `src/content/article.ts`, define the record's name, columns, search, and sorting
+behavior:
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+    code: field.text({ required: true }),
+    status: field.enum({ values: ["draft", "published"], defaultValue: "draft" }),
+    author: field.user(),
+  },
+  admin: { // [!code ++]
+    titleField: "title", // [!code ++]
+    list: { // [!code ++]
+      columns: ["title", "code", "status", "author", "updatedAt"], // [!code ++]
+      searchableFields: ["title", "code"], // [!code ++]
+      orderableFields: ["title", "code", "status"], // [!code ++]
+      defaultOrderBy: "updatedAt", // [!code ++]
+      defaultOrder: "desc", // [!code ++]
+    }, // [!code ++]
+  }, // [!code ++]
+});
 ```
 
-## What the screen does
+#### The record's noun is a translation, and only a translation
 
-- **List** - a `DataTable` with the columns from `admin.list.columns`
-- **Search** - across `admin.list.searchableFields`, wildcards escaped
-- **Sorting** - `admin.list.orderableFields`, plus the system columns and the
-  publication ones ([below](#what-is-sortable))
-- **Pagination** - the standard cursor pagination, capped at 100 per page
-- **Create / Edit** - `AutoForm` dialogs, lazy-loaded on open - or full pages,
-  with `admin.create.mode` / `admin.edit.mode`
-  ([below](#dialog-or-page))
-- **Delete** - a confirmation dialog, in the ⋯ menu ([below](#the-actions-cell))
-- **History** - with [`editorial`](#editorial): every version, a diff, and restore
-- **Languages** - with [`localization`](/docs/dev/content-engine/translation-editorial):
-  the list and the form open in *your* VitNode language, and each translated
-  field carries its own switcher ([below](#localized-content-types))
-- **Empty, loading and error states** - out of the box
+There is **no display name in the definition**. A name written there would be one
+language's answer, in the one file that is read in every language - so the noun lives
+in your messages, written as an [ICU cardinal
+plural](https://next-intl.dev/docs/usage/translations#cardinal-pluralization):
 
-## What "lazy-loaded on open" actually means
-
-The dialog body is only in the tree while that dialog is open. A 25-row table
-renders 25 edit buttons and, at most, **one** form - Base UI's portal mounts the
-body on open and unmounts it on close, so no other row's form, and none of its
-`react-hook-form` state, exists.
-
-The form itself is one `next/dynamic` boundary shared by the create and the edit
-dialog, because they render the same component. That is worth about 465 KB of
-chunks, so it is downloaded once:
-
-- the **first** dialog you open shows the `<Loader />` while those chunks arrive,
-- every dialog after that opens instantly, with no loader.
-
-<Callout type="info" title="A missing loader is the good outcome">
-  No spinner on the second dialog means the code was already there. Splitting
-  create and edit into separate lazy modules would either download the same form
-  twice or land back on a shared chunk anyway - so the loader would be a few
-  milliseconds of theatre either way.
-</Callout>
-
-## Dialog or page
-
-The forms open in a dialog by default. A content type people spend an hour
-inside can ask for a page instead, and a plugin can rearrange either without
-giving up any of the generated behaviour:
-
-```ts
-admin: {
-  create: { mode: "page" },
-  edit: { mode: "page" },
+```json title="src/locales/en.json"
+{
+  "@vitnode/example": {
+    "content": {
+      "article": {
+        "label": "{count, plural, one {Article} other {Articles}}", // [!code ++]
+        "title": "Articles",
+        "desc": "Write and manage articles."
+      }
+    }
+  }
 }
 ```
 
-`"dialog"` is the default and stays the default. See
-[Dialog or page, and custom layouts](/docs/dev/content-engine/admin-form-layouts).
+The AdminCP asks this message for the form it needs - the singular for
+`Create {name}`, `{name} has been updated` and every confirmation dialog, the
+plural for `Back to {name}` and the screen heading.
 
-## What is sortable
+<Callout type="info" title="Why one plural message instead of two strings">
+  A `{ singular, plural }` pair can only hold two forms, and plenty of languages
+  have more. Polish needs three for one noun, and ICU is what knows which one a
+  number selects:
 
-The table header offers a sort control for every column the generated route
-would accept - the two lists come from one helper, so a header is never dead
-because the frontend forgot something the backend allows:
+  ```json title="src/locales/pl.json"
+  {
+    "label": "{count, plural, one {Artykuł} few {Artykuły} many {Artykułów} other {Artykułu}}"
+  }
+  ```
 
-```ts
-[
-  ...definition.admin.list.orderableFields,
-  "id",
-  "createdAt",
-  "updatedAt",
-  ...(definition.publication.enabled ? ["status", "publishedAt"] : []),
-  ...(definition.editorial.enabled ? ["version"] : []),
-];
-```
-
-System columns need no entry in `orderableFields`, and neither do `status`,
-`publishedAt` or `version` - but those three appear **only** when their block is
-enabled. A Stage 1 content type with a hand-rolled `status` field sorts by it
-the ordinary way, through the allowlist.
-
-A column that is orderable but not displayed simply has no header to click.
-
-## Mutation feedback
-
-Every mutation closes its dialog, refreshes the list and raises a `sonner` toast
-with a description. On create there is no row to name yet, so the description is
-the title that was just typed.
-
-Failures get an error toast, and the description depends on what actually went
-wrong - a delete blocked by a foreign key does not read like a crashed server:
-
-| Status | The person is told |
-| --- | --- |
-| 400 | some of these values are not valid |
-| 403 | you do not have permission to do this |
-| 404 | this record no longer exists |
-| 409 | this record is still referenced by other content |
-| anything else | the generic server error |
-
-An [editorial](/docs/dev/content-engine/editorial) content type answers those
-two ambiguous statuses with a JSON `code`, so the wording follows what actually
-happened rather than the number:
-
-| Code | The person is told |
-| --- | --- |
-| `CONTENT_VERSION_CONFLICT` | someone else saved this while you were editing - your changes are still here |
-| `CONTENT_UNIQUE_CONFLICT` | a record with these values already exists |
-| `CONTENT_REVISION_NOT_RESTORABLE` | this version cannot be restored: *fields* no longer fit this content type |
-
-A **delete** that hits `CONTENT_VERSION_CONFLICT` gets its own wording, because
-the situation is different: nothing of yours is at stake, the record simply
-moved. It reads *"someone saved it after this page loaded, so it was not
-deleted - refresh and check what changed"*, and it deliberately does **not**
-retry with the new version. A confirmation dialog cannot ask about a change
-nobody has seen.
-
-<Callout type="info" title="The database never speaks to the user">
-  The generated routes translate Postgres error codes into a status and a generic
-  sentence. Constraint names, column names and values stay on the server; the
-  detail goes to `core_logs`.
+  `one` → *Artykuł*, `few` → *Artykuły*. A pair of strings in the definition could
+  not express that, and no amount of translating the frames around it would fix a
+  Polish screen reading "Utwórz Article".
 </Callout>
 
-## Publication
-
-A content type with [`publication`](/docs/dev/content-engine/publication) leads
-its table with a **status** column, rendered as a badge rather than raw text:
-
-| Status | Badge |
+| Key | Falls back to |
 | --- | --- |
-| `draft` | secondary, clock icon |
-| `published` | default, tick icon |
+| `content.{entity}.label` | a name derived from the id ("Article"), in every number |
+| `content.{entity}.title` | the translated plural, then that derived name |
+| `content.{entity}.desc` | nothing - the screen simply has no lead-in |
+| `content.{entity}.fields.{field}` | the humanised field name ("Published at") |
+| `content.{entity}.enums.{field}.{value}` | the humanised value |
 
-`status` is also a generated filter, so `?status=draft` narrows the list.
+`{entity}` is the content type id without its plugin segment: `example.article` →
+`article`, `example.kb.article` → `kb_article`.
+</Step>
 
-### The publish action
+<Step>
+### Step 2: Organize Form Fields into Sections
 
-Each row gains an icon button of its own, leading the
-[actions cell](#the-actions-cell). It flips with the row's state rather than
-showing two buttons with a dead one:
+`admin.form.sections` groups the generated form - dialog or page - into titled cards.
+A section carries a **`name`**, not a heading: the heading is a translation, so the
+same form reads correctly in every language the AdminCP is installed in.
 
-| Row | Icon | Action |
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+    code: field.text({ required: true }),
+    excerpt: field.textarea({ nullable: true }),
+    status: field.enum({ values: ["draft", "published"] }),
+    author: field.user(),
+  },
+  admin: {
+    form: { // [!code ++]
+      sections: [ // [!code ++]
+        { name: "general", fields: ["title", "code", "excerpt"] }, // [!code ++]
+        { name: "publishing", fields: ["status", "author"] }, // [!code ++]
+      ], // [!code ++]
+    }, // [!code ++]
+  },
+});
+```
+
+The headings come from your plugin's messages, under the content type's own key:
+
+```json title="src/locales/en.json"
+{
+  "@vitnode/example": {
+    "content": {
+      "article": {
+        "form": {
+          "general": { // [!code ++]
+            "title": "General information", // [!code ++]
+            "desc": "Main content details" // [!code ++]
+          }, // [!code ++]
+          "publishing": { // [!code ++]
+            "title": "Publishing settings", // [!code ++]
+            "desc": "Status and author options" // [!code ++]
+          } // [!code ++]
+        }
+      }
+    }
+  }
+}
+```
+
+| Key | Required | What it does |
 | --- | --- | --- |
-| draft | paper plane | Publish |
-| published | crossed-out eye | Unpublish |
+| `name` | yes | Stable id and i18n key segment. Lowercase letters, digits, `_` |
+| `fields` | yes | The fields in this section, in order |
+| `…form.{name}.title` | no | The heading. Falls back to the humanised `name` ("General") |
+| `…form.{name}.desc` | no | A line under the heading. Omitted entirely when absent |
 
-It opens a confirmation dialog - publishing is outward-facing, and unpublishing
-takes something away from people who can currently see it - then shows a success
-toast with the row's title, or an error toast with the mapped reason. The table
-refreshes either way, and the dialog stays open on failure so the reason is
-still on screen next to the thing that failed.
+<Callout type="info" title="Sections are the field list">
+  When `sections` are declared they replace `admin.form.fields` - the concatenation
+  of their `fields`, in section order, *is* the form. Declaring both is an error,
+  because they are two answers to one question. A field in no section is not on the
+  form, exactly as it would be if left out of `admin.form.fields`.
 
-Both routes are idempotent, so a double click is a 200 that changed nothing
-rather than an error.
-
-<Callout type="warn" title="Gated by can_publish, never by can_edit">
-  The button is absent for a role without `can_publish`, and the route answers
-  403 whether or not it was rendered. That separation is the point of the
-  permission: a role can be trusted to write drafts without being trusted to put
-  them on the internet.
+  Each field belongs to one section, each `name` is used once, and no section is
+  empty. All three are checked when the content type is defined, not when the form
+  is opened.
 </Callout>
 
-The **edit dialog** shows the same badge as a read-only line, with the
-publication date. It has no publish control of its own: `status` and
-`publishedAt` are not in the form schema, and two competing mutation paths in
-one dialog is how a form ends up fighting its own state.
+A plugin that registers its own `forms.layout` component keeps full control: an
+explicit layout wins over declared sections. Sections are the shorthand - they are
+rendered with the very same `ContentFormSection` primitive a hand-written layout
+uses, so the two look identical.
+</Step>
 
-## The actions cell
+<Step>
+### Step 3: Take Over the Layout, With i18n Hooks
 
-However much a content type opts into, the row holds at most **three** buttons,
-in this order:
+When declared sections are not enough - a wide writing column beside a metadata
+sidebar, say - register a **layout**. It decides where fields go and nothing else:
+the schema, validation, defaults, mutation, version precondition, structured errors,
+toast and cache invalidation all stay with the Content Engine.
 
-```text
-Publish/Unpublish · Edit · ⋯
+Any text the layout adds itself is yours to translate, so reach for
+`useTranslations` rather than a literal:
+
+```tsx title="src/views/admin/article/form-layout.tsx"
+"use client";
+
+import {
+  ContentFormActions,
+  ContentFormField,
+  ContentFormLayoutGrid,
+  ContentFormMain,
+  ContentFormSection,
+  ContentFormSidebar,
+  ContentFormStatus,
+} from "@vitnode/core/content/admin-form";
+import { useTranslations } from "next-intl"; // [!code ++]
+
+export const ArticleFormLayout = () => {
+  const t = useTranslations("@vitnode/example.admin.article.form"); // [!code ++]
+
+  return (
+    <ContentFormLayoutGrid>
+      <ContentFormMain>
+        <ContentFormSection>
+          <ContentFormField name="title" />
+          <ContentFormField name="content" />
+        </ContentFormSection>
+      </ContentFormMain>
+
+      <ContentFormSidebar>
+        <ContentFormSection title={t("publish")}> {/* [!code ++] */}
+          <ContentFormStatus />
+          <ContentFormActions className="justify-end" />
+        </ContentFormSection>
+
+        <ContentFormSection title={t("settings")}> {/* [!code ++] */}
+          <ContentFormField name="status" />
+          <ContentFormField name="author" />
+        </ContentFormSection>
+      </ContentFormSidebar>
+    </ContentFormLayoutGrid>
+  );
+};
 ```
 
-Everything else is listed by name behind the **⋯** button, which is always last:
+Register it under `forms` in `src/config.tsx`:
 
-```text
-Preview · Schedule · History · Languages · Delivery
-─────────────────────────────────────────────────────
-Delete
+```tsx title="src/config.tsx"
+import { buildPlugin, contentTypeAdmin } from "@vitnode/core/lib/plugin";
+import { NotebookPenIcon } from "lucide-react";
+import { articleContentType } from "@/content/article";
+import { ArticleFormLayout } from "@/views/admin/article/form-layout"; // [!code ++]
+
+export const examplePlugin = () =>
+  buildPlugin({
+    pluginId: "@vitnode/example",
+    messages,
+    contentTypes: [
+      contentTypeAdmin({
+        definition: articleContentType,
+        icon: <NotebookPenIcon />,
+        // One layout for create and edit. Pass `{ create: { layout }, edit: { layout } }`
+        // instead to give each its own.
+        forms: { layout: ArticleFormLayout }, // [!code ++]
+      }),
+    ],
+  });
 ```
 
-Publish and edit are what people click all day, so they stay in the row. The rest
-are capability actions somebody reaches for occasionally, and a name says which is
-which - *Languages of this Post* and *Delivery for this Post* were two adjacent
-icons before, in a cell that ran to eight of them.
-
-**Delete** is in the menu too, last and under a rule, in the destructive colour.
-It is the one action here that cannot be undone, and it has no business one pixel
-from the pencil. Nothing else about it changed: it still asks, still names the
-record, and still refuses to guess about a version nobody has seen.
-
-An item appears only when the content type has that capability **and** the role
-holds the permission behind it, so a role allowed none of them gets no ⋯ button at
-all rather than an empty menu. One panel is mounted at a time, and its body is
-fetched when it opens - a 25-row table is 25 buttons, not 150 dialogs.
-
-<Callout type="info" title="Where the permissions land">
-  `can_view` covers preview, history, languages and delivery - reading what
-  changed is part of seeing the record. Scheduling is `can_publish`, because
-  booking a publication is publishing, just later. Delete is `can_delete`. Every
-  route answers 403 whether or not its item was ever rendered.
+<Callout type="warn" title="A layout must place every field">
+  A field the layout never names is dropped from the payload. `ContentFormRemainingFields`
+  places whatever is left, and in development the engine logs the names of any fields a
+  layout forgot.
 </Callout>
 
-## Editorial
+Field *components* are a separate override, and they compose with either arrangement -
+`fields: { content: { component: MyEditor } }` keeps the engine's label, validation and
+language switcher and swaps only the input.
+</Step>
 
-A content type with [`editorial`](/docs/dev/content-engine/editorial) gains a
-**History** item, a **Preview** one when preview is on, and changes how the edit
-dialog handles a failed save.
-
-### History
-
-The dialog body is lazy-loaded exactly like the form, and for the same reason.
-It reads as a timeline: one entry per version on a rail, each with a dot in its
-operation's colour - green for a create, blue for a publish, amber for an edit,
-violet for a restore, grey for an unpublish, red for a delete - then the
-operation as a badge, the author or **System**, and a localised date. The newest
-carries a **Current** badge and a ring on its dot.
-
-The author's name is coloured by their role and links to their admin page -
-except when there is nobody to link to: a system mutation, or an account deleted
-since. Both read **System**, because a link that answers 404 is worse than plain
-text.
-
-A version that moved no field value - a publish, an unpublish, a delete - says
-**No field values changed.** on the entry itself. There is nothing behind a
-toggle for those, so none is offered, and nothing is fetched to find that out.
-
-Twenty-five at a time, with **Load older versions** underneath when there are
-more. It appends rather than replaces, so scrolling back through a long history
-never loses what you already read, and the button disappears once the last page
-arrives. Retention defaults to 50 and a page to 25, so this is the ordinary case
-rather than an edge one.
-
-Restoring reloads the list in place - the restore writes a revision of its own,
-and it should appear where it happened - refreshes the table behind the dialog,
-and adopts the new current version, so a second restore in the same sitting does
-not conflict with the first.
-
-The list carries metadata only. Expanding a version fetches that one snapshot
-and renders a field-level diff against the version before it, in a panel headed
-by the paths the revision recorded as changed:
-
-| Kind | Rendered as |
-| --- | --- |
-| `text`, `slug` | inline, old value struck through |
-| `textarea` | inline, collapsed behind a disclosure past eight lines |
-| `boolean` | a tick or an em-dash |
-| `enum` | a badge with the option's label |
-| `number` | `tabular-nums` |
-| `dateTime` | `<DateFormat>`, in the viewer's locale |
-| `relation`, `user` | the stored id, as `#3` |
-| `null` | the same em-dash the table cells use |
-
-Each row is the old value, an arrow, the new one. Short values - ids, numbers,
-dates, booleans - are set in a box so the pair either side of the arrow is easy
-to tell apart at a glance; prose is not, because a paragraph in a box is just a
-paragraph in a box.
-
-No raw JSON anywhere. Somebody comparing two versions of an article is looking
-for the sentence that changed, and `{"title":"..."}` makes them find it
-themselves.
-
-<Callout type="info" title="A relation diff shows an id, not a name">
-  A [snapshot](/docs/dev/content-engine/revisions#the-snapshot) stores the
-  foreign key, deliberately - the display name belongs to another content type,
-  which may not publish it. Resolving those ids back to names at display time is
-  not wired up yet, so a changed category currently reads `#3 → #7`.
-</Callout>
-
-Restoring asks for confirmation and states all four facts: which version, that
-it creates a **new** one, that nothing in between is deleted, and that the
-publication state does not move. The button is absent without `can_restore`.
-
-### Preview
-
-With [`editorial.preview`](/docs/dev/content-engine/preview), **Preview link**
-leads the ⋯ menu - present only for a content type that can be previewed, absent
-rather than disabled for anything else.
-
-The link is minted **when the panel opens**, never with the table payload. A
-page of 25 rows must not be 25 live bearer credentials for unpublished records
-sitting in a browser, most of them never used. Closing the panel throws the
-link away, so opening it again mints a fresh one instead of showing you one that
-may already have expired.
-
-The URL is absolute - it is going on a clipboard and into somebody else's chat
-window - and it points at a **page** wherever there is one to point at: the
-dedicated preview page when `preview.pathTemplate` names one, the record's own
-canonical page carrying `?preview=` when the content type has `delivery`, and
-the API's JSON endpoint only when it has neither. See [Where a preview link
-points](/docs/dev/content-engine/preview#where-a-preview-link-points). On a
-localized content type the link previews the default language. The panel also
-says when the link expires, that it is pinned to one version, and, for a record
-with no history yet, that it reads live rather than frozen.
-
-Nothing has to be configured for the button to work - the install signs with a key
-it generated for itself. If it cannot build an absolute URL because
-`NEXT_PUBLIC_WEB_URL` or `NEXT_PUBLIC_API_URL` is not a URL, the server answers
-503 and the toast names the variable, because the person clicking the button is
-usually the person who can set it.
-
-### Scheduling
-
-With [`editorial.scheduling`](/docs/dev/content-engine/scheduling), a
-**Schedule** item opens a dialog showing what is booked, what already ran and who
-booked it, above a two-field form: what should happen, and when.
-
-- The date field names the timezone it is reading, because "9am" is a question
-  otherwise.
-- An impossible date is refused before the round trip, by the same pure function
-  the server uses - so the two cannot drift into disagreeing.
-- A pending schedule whose time has passed reads **overdue**, with the last error
-  if there was one.
-- A completed schedule whose announcements have not landed says so in different
-  words and a different colour: the record *is* published, and the event, search
-  write and cache expiry are being retried.
-- Cancelling works until the worker claims the row. After that the request
-  answers 404, because the schedule already ran - the dialog never claims to
-  have stopped something it did not.
-- Without a cron adapter, a warning sits above everything: schedules will be
-  saved and will never fire.
-
-Gated by `can_publish`, like the publish button - booking a publication is
-publishing, just later.
-
-### The conflict
-
-When another session saved first, the edit dialog **stays open and keeps
-everything you typed.** A banner appears above the fields; nothing is merged,
-overwritten or reloaded until you say so.
-
-1. The banner names the version the record moved to.
-2. **Show what changed** loads it and lists only the fields that actually moved
-   remotely - compared against the values the dialog *opened* with, not against
-   what you have typed since, because the question being answered is "what did I
-   not see".
-3. Saving again is a second, deliberate click, and it posts the new version.
-
-<Callout type="info" title="Why it does not merge for you">
-  Deciding which half of a rewritten paragraph survives is an editorial
-  judgement. A field-level automatic merge would silently pick one, and be wrong
-  often enough that nobody could trust the result.
-</Callout>
-
-## One route, every content type
-
-Core ships a single catch-all page that is synced into your app like any other
-plugin route:
-
-```text
-packages/vitnode/src/routes/admin/content/[...slug]/page.tsx
-packages/vitnode/src/routes/breadcrumb/admin/content/[...slug]/page.tsx
-```
-
-The slug maps back onto a content type id - `/admin/content/example/article`
-resolves `example.article` from the registered plugins at request time. Add a
-tenth content type and the file count stays at two.
-
-## Field to component
-
-| Kind | Component |
-| --- | --- |
-| `text` | `AutoFormInput` |
-| `textarea` | `AutoFormTextarea` |
-| `number` | number input, or `AutoFormNullableNumber` when nullable |
-| `boolean` | `AutoFormSwitch` |
-| `enum` | `AutoFormSelect`, or `AutoFormRadioGroup` with `display: "radio"` |
-| `dateTime` | `AutoFormDateTime` |
-| `user` | `AutoFormCombobox`, async |
-| `relation` | `AutoFormCombobox`, async |
-
-These are the components every other VitNode admin screen uses. The engine adds
-no second form system - `AutoForm` does the work, exactly as it does in the blog
-plugin.
-
-## The server/client boundary
-
-The page is a server component; the form is a client one. A definition cannot
-cross that boundary - it holds `target` thunks and Zod schemas, neither of which
-serialise.
-
-So the server projects the definition into a plain JSON **spec** - field kinds,
-resolved labels, enum options, validation bounds - and the client rebuilds the
-form schema from it:
-
-```text
-server                                  client
-──────                                  ──────
-definition ──► buildContentFormSpec ──► buildFormSchemaFromSpec ──► AutoForm
-               (plain JSON)
-```
-
-The relation pickers go through a server action rather than a client fetch, so
-the browser never needs the API origin and the request is gated by the content
-type's own `can_view`.
-
-## Permissions
-
-The page checks `can_view` server-side and 404s without it. The create, edit and
-delete controls check their own permissions client-side - and the routes behind
-them check again, which is the check that actually matters.
-
-## Localized content types
-
-A localized content type gets **no extra screen and no extra control**. There is
-no `Shared | English | Polish` strip and no locale in the URL:
-
-- the **list** shows each record in the language you are reading VitNode in, and
-  `Missing` where a translation does not exist yet;
-- the **form** shows every field at once, and each localized one carries its own
-  small language switcher:
-
-```text
-Title          [ Tytuł artykułu   ] [ PL ▾ ]
-Content        [ Treść…           ] [ PL ▾ ]
-Friendly URL   [ tytul-artykulu   ] [ PL ▾ ]
-Category         Aktualności
-Author           Maciej
-```
-
-Switching `Title` to English leaves the others in Polish - there is no
-form-global language. One Save writes the base row and every changed language in
-one transaction.
-
-Per-language status, publication, history and delete live in their own
-**Languages** panel in the ⋯ menu, because the language is part of *that* decision
-rather than a mode the whole screen is in.
-
-The whole thing is described in [Localized
-editing](/docs/dev/content-engine/translation-editorial#the-admincp).
+</Steps>

@@ -55,7 +55,6 @@ const referenceType = defineContentType({
       target: () => testCategoryContentType,
     }),
   },
-  admin: { label: { plural: "References", singular: "Reference" } },
 });
 
 const referenceTable = createContentTable(referenceType, {

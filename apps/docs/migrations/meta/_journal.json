@@ -260,6 +260,13 @@
       "when": 1786562844917,
       "tag": "0036_add_core_secrets",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1786804383682,
+      "tag": "0037_migrate_blog_to_many_categories_and_authors",
+      "breakpoints": true
     }
   ]
 }

@@ -25,7 +25,6 @@ const fields = {
 };
 
 const admin = {
-  label: { plural: "Articles", singular: "Article" },
   titleField: "title",
 } as const;
 

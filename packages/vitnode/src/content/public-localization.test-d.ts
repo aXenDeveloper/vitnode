@@ -65,7 +65,6 @@ describe("definition-time rules", () => {
         fields: ["title", "slug", "locale"],
         path: "clash",
       },
-      admin: { label: { plural: "Clash", singular: "Clash" } },
     });
   });
 

@@ -83,12 +83,26 @@ describe("blog content types", () => {
       expect(blogPostContentType.admin.edit.mode).toBe("page");
     });
 
-    it("relates to the category, and refuses to orphan an article", () => {
+    it("holds many categories, and refuses to orphan an article", () => {
       const relation = blogPostContentType.fields.categoryId;
 
       expect(relation.kind).toBe("relation");
-      expect(relation.required).toBe(true);
-      expect(relation).toMatchObject({ onDelete: "restrict" });
+      // Never `required` - a to-many reference cannot be, because the empty set
+      // is what "no categories" looks like. "At least one" is the plugin's own
+      // rule, enforced on write; see `assertPostHasCategory`.
+      expect(relation.required).toBe(false);
+      expect(relation).toMatchObject({ multiple: true, onDelete: "restrict" });
+    });
+
+    it("holds many authors, in the order of the byline", () => {
+      const author = blogPostContentType.fields.authorId;
+
+      expect(author.kind).toBe("user");
+      expect(author).toMatchObject({ multiple: true, ordered: true });
+      // `cascade`, not the `set null` a single author had: a junction row has no
+      // column to null, so a deleted account loses its membership and the
+      // article survives - which is what the nullable column was protecting.
+      expect(author).toMatchObject({ nullable: false, onDelete: "cascade" });
     });
 
     it("keeps the three translated fields per language", () => {

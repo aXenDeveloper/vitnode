@@ -13,13 +13,11 @@ import { field } from "./fields";
  */
 
 const base = {
-  admin: { label: { plural: "Things", singular: "Thing" } },
   id: "test.advanced",
   tableName: "test_advanced",
 } as const;
 
 const target = defineContentType({
-  admin: { label: { plural: "Targets", singular: "Target" } },
   fields: { name: field.text({ required: true }) },
   id: "test.target",
   tableName: "test_targets",
@@ -181,6 +179,160 @@ describe("relations", () => {
         },
       }),
     ).toThrow(/needs a `target`/);
+  });
+
+  it("generates a junction table for a to-many user field", () => {
+    const definition = defineContentType({
+      ...base,
+      fields: {
+        name: field.text({ required: true }),
+        authors: field.user({ multiple: true, ordered: true }),
+      },
+    });
+
+    // A set of people is stored exactly like a set of anything else: the far
+    // side of the junction happens to be `core_users`.
+    expect(definition.advanced.junctions).toStrictEqual([
+      {
+        field: "authors",
+        positionIndexName: "test_advanced_authors_position_key",
+        primaryKeyName: "test_advanced_authors_pk",
+        relatedIndexName: "test_advanced_authors_related_item_id_idx",
+        tableName: "test_advanced_authors",
+      },
+    ]);
+  });
+
+  it("rejects `required` on a to-many user field", () => {
+    expect(() =>
+      defineContentType({
+        ...base,
+        fields: {
+          name: field.text({ required: true }),
+          authors: field.user({ multiple: true, required: true }),
+        },
+      }),
+    ).toThrow(/the empty set is what "no people" looks like/);
+  });
+
+  it("rejects `nullable` on a to-many user field", () => {
+    expect(() =>
+      defineContentType({
+        ...base,
+        fields: {
+          name: field.text({ required: true }),
+          authors: field.user({ multiple: true, nullable: true }),
+        },
+      }),
+    ).toThrow(/the empty set is what "no people" looks like/);
+  });
+
+  it('rejects `onDelete: "set null"` on a to-many user field', () => {
+    expect(() =>
+      defineContentType({
+        ...base,
+        fields: {
+          name: field.text({ required: true }),
+          authors: field.user({ multiple: true, onDelete: "set null" }),
+        },
+      }),
+    ).toThrow(/nothing to null/);
+  });
+
+  it("rejects `ordered` on a to-one user field", () => {
+    expect(() =>
+      defineContentType({
+        ...base,
+        fields: {
+          name: field.text({ required: true }),
+          author: field.user({ ordered: true }),
+        },
+      }),
+    ).toThrow(/One person has no order/);
+  });
+
+  it("keeps `min` on a to-many reference, and refuses it on a to-one", () => {
+    const definition = defineContentType({
+      ...base,
+      fields: {
+        name: field.text({ required: true }),
+        many: field.relation({ min: 1, multiple: true, target: () => target }),
+      },
+    });
+
+    expect(definition.fields.many.min).toBe(1);
+
+    expect(() =>
+      defineContentType({
+        ...base,
+        fields: {
+          name: field.text({ required: true }),
+          one: field.relation({ min: 1, nullable: true, target: () => target }),
+        },
+      }),
+    ).toThrow(/is not `multiple: true`/);
+  });
+
+  it("rejects a `min` that is not a whole number of at least one", () => {
+    expect(() =>
+      defineContentType({
+        ...base,
+        fields: {
+          name: field.text({ required: true }),
+          many: field.relation({
+            min: 0,
+            multiple: true,
+            target: () => target,
+          }),
+        },
+      }),
+    ).toThrow(/must be a whole number between 1 and/);
+  });
+
+  it("enforces `min` on the create and update payloads", () => {
+    const definition = defineContentType({
+      ...base,
+      fields: {
+        name: field.text({ required: true }),
+        many: field.relation({ min: 1, multiple: true, target: () => target }),
+      },
+    });
+
+    // The empty set is storable and refused - which is the whole point of `min`:
+    // "at least one" is a rule about the record, not about the junction table.
+    expect(
+      definition.schemas.create.safeParse({ name: "x", many: [] }).success,
+    ).toBe(false);
+    expect(
+      definition.schemas.create.safeParse({ name: "x", many: [7] }).success,
+    ).toBe(true);
+    expect(definition.schemas.update.safeParse({ many: [] }).success).toBe(
+      false,
+    );
+  });
+
+  it("takes a set of people as a list of user ids", () => {
+    const definition = defineContentType({
+      ...base,
+      fields: {
+        name: field.text({ required: true }),
+        authors: field.user({ multiple: true, ordered: true }),
+      },
+    });
+
+    expect(
+      definition.schemas.create.safeParse({ name: "x", authors: [3, 9] })
+        .success,
+    ).toBe(true);
+    // Saying nothing about a set means the empty one, exactly as it does for a
+    // to-many relation.
+    expect(definition.schemas.create.parse({ name: "x" })).toMatchObject({
+      authors: [],
+    });
+    expect(
+      definition.schemas.create.safeParse({ name: "x", authors: [3, 3] })
+        .success,
+    ).toBe(false);
   });
 
   it("rejects a localized to-many relation", () => {

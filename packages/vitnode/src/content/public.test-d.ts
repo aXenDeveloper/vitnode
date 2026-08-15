@@ -53,7 +53,6 @@ describe("publicApi types", () => {
         id: "test.private-type",
         tableName: "test_private_types",
         fields: { title: field.text({ required: true }) },
-        admin: { label: { plural: "Privates", singular: "Private" } },
       });
 
       expectTypeOf(private_.publicApi.enabled).toEqualTypeOf<false>();

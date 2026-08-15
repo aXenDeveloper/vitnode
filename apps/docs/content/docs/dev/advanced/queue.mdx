@@ -160,7 +160,7 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
 />
 
 <Callout type="info" title="Both exist because of scheduled publishing">
-  The [Content Engine](/docs/dev/content-engine/scheduling) books a schedule row
+  The [Content Engine](/docs/dev/content-engine/publication-and-editorial#4-scheduled-publishing) books a schedule row
   and its queue task in one transaction, from a plugin's route, against a task
   core registers. That needs `tx` for atomicity and `pluginId` so the worker can
   find the handler - and it is a shape any plugin can reuse.
@@ -171,8 +171,8 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
 | Task | Attempts | What it does |
 | --- | --- | --- |
 | `send-email` | 3 | Delivers a rendered email through the configured provider |
-| `rebuild-search-index` | 3 | Clears and rebuilds the [search](/docs/dev/content-engine/search) index, whole or per collection |
-| `content-schedule` | 3 | Runs one [scheduled publication](/docs/dev/content-engine/scheduling). A cancelled, rescheduled or already-executed schedule is a no-op |
+| `rebuild-search-index` | 3 | Clears and rebuilds the [search](/docs/dev/content-engine/public-api-and-caching#2-full-text-search-indexing) index, whole or per collection |
+| `content-schedule` | 3 | Runs one [scheduled publication](/docs/dev/content-engine/publication-and-editorial#4-scheduled-publishing). A cancelled, rescheduled or already-executed schedule is a no-op |
 | `content-schedule-effects` | 5 | Emits the event, syncs search and expires the cache for a scheduled transition that has **already committed**. Never republishes |
 
 `content-schedule` is worth reading as a pattern: its payload is

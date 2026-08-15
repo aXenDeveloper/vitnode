@@ -83,7 +83,7 @@ export const SearchAdminView = async ({
   // Content Engine collections use the content type id as their item type, which
   // the renderer registry has no entry for - resolve their labels here, where the
   // frontend content type registry is readable.
-  const labels = getContentCollectionLabels();
+  const labels = await getContentCollectionLabels();
 
   return (
     <div className="flex flex-col gap-6">

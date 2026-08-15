@@ -436,7 +436,8 @@
         "title": "Edit {name}",
         "desc": "Change the details of this {name}.",
         "submit": "Save changes",
-        "success": "{name} has been updated."
+        "success": "{name} has been updated.",
+        "unchanged": "No changes to save."
       },
       "page": {
         "back": "Back to {name}"

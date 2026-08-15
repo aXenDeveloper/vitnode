@@ -17,6 +17,7 @@ import type { ContentDatabase } from "./service";
 import type { ContentTranslationEditorialOutcome } from "./translation-editorial-service";
 
 import { buildRoute } from "../../api/lib/route";
+import { contentTypeName } from "../admin/labels";
 import {
   zodContentConflict,
   zodContentDeliveryConflict,
@@ -76,7 +77,7 @@ export const buildContentLocalizedAdminRoutes = <
   }
 
   const module = definition.permissionModule;
-  const label = definition.admin.label;
+  const name = contentTypeName(definition.id);
   const editorial = definition.editorial.enabled;
   const { defaultLocale } = definition.localization;
 
@@ -324,13 +325,10 @@ export const buildContentLocalizedAdminRoutes = <
     route: {
       method: "post",
       path: "/localized",
-      description: `Create a ${label.singular} with its translations`,
+      description: `Create a ${name} with its translations`,
       request: { body: jsonBody(createBody) },
       responses: {
-        201: jsonResponse(
-          schemas.selectObject,
-          `${label.singular} created successfully`,
-        ),
+        201: jsonResponse(schemas.selectObject, `${name} created successfully`),
         400: { description: "Invalid input data" },
         409: conflict,
       },
@@ -345,7 +343,7 @@ export const buildContentLocalizedAdminRoutes = <
         // left to a foreign key, so the message names the language instead of
         // quoting a constraint.
         throw new HTTPException(400, {
-          message: `A ${label.singular} is created in its default language "${defaultLocale}". Fill in its required fields in that language.`,
+          message: `A ${name} is created in its default language "${defaultLocale}". Fill in its required fields in that language.`,
         });
       }
 
@@ -415,15 +413,12 @@ export const buildContentLocalizedAdminRoutes = <
     route: {
       method: "put",
       path: "/{id}/localized",
-      description: `Update a ${label.singular} and its translations`,
+      description: `Update a ${name} and its translations`,
       request: { params: schemas.params, body: jsonBody(updateBody) },
       responses: {
-        200: jsonResponse(
-          schemas.selectObject,
-          `${label.singular} updated successfully`,
-        ),
+        200: jsonResponse(schemas.selectObject, `${name} updated successfully`),
         400: { description: "Invalid or empty payload" },
-        404: { description: `${label.singular} not found` },
+        404: { description: `${name} not found` },
         409: conflict,
       },
     },
@@ -496,7 +491,7 @@ export const buildContentLocalizedAdminRoutes = <
 
       if (!result) {
         throw new HTTPException(404, {
-          message: `${label.singular} not found.`,
+          message: `${name} not found.`,
         });
       }
 

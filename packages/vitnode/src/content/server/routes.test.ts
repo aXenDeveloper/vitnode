@@ -66,12 +66,38 @@ const noTemplateContentType = defineContentType({
   publicApi: { enabled: true, fields: ["title", "slug"], path: "no-template" },
   editorial: { enabled: true, preview: { enabled: true } },
   admin: {
-    label: { plural: "No Templates", singular: "No Template" },
     titleField: "title",
     list: { columns: ["title"] },
   },
 });
 const noTemplatePosts = createContentModel(noTemplateContentType);
+
+/**
+ * A content type whose fields are not all on its row.
+ *
+ * A to-many reference lives on a junction table and a repeatable on a child
+ * table, so neither is in the selection `findRowById` builds - and the AdminCP
+ * form that edits them opens on this route.
+ */
+const collectionContentType = defineContentType({
+  id: "test.collections",
+  tableName: "test_collections",
+  fields: {
+    categoryId: field.relation({
+      min: 1,
+      multiple: true,
+      target: () => testCategoryContentType,
+    }),
+    faq: field.repeatable({
+      fields: { question: field.text({ required: true }) },
+    }),
+    title: field.text({ required: true }),
+  },
+  admin: { titleField: "title", list: { columns: ["title"] } },
+});
+const collectionPosts = createContentModel(collectionContentType, {
+  references: { categoryId: () => categories.table.id },
+});
 
 const adminUser = {
   avatarColor: "000000",
@@ -313,6 +339,49 @@ describe("generated content routes", () => {
       expect((await app.request("/7")).status).toBe(404);
     });
 
+    // The read an edit form makes. Without the collections it opens on the empty
+    // set for each, which for a `min: 1` field means the schema is unsatisfied
+    // the moment it mounts - the Save button never enables, and a save that got
+    // through would store an emptied collection.
+    it("returns the record's collections alongside the row", async () => {
+      permissionGranted = true;
+      const service = {
+        advanced: vi.fn().mockResolvedValue({
+          categoryId: [3, 8],
+          faq: [{ id: 1, question: "Why?" }],
+        }),
+        findRowById: vi.fn().mockResolvedValue({
+          createdAt: new Date("2026-01-01T00:00:00.000Z"),
+          id: 7,
+          labels: {},
+          title: "Hello world",
+          updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+        }),
+      };
+      vi.spyOn(collectionPosts, "service").mockReturnValue(service as never);
+
+      const app = new OpenAPIHono();
+      app.use("*", async (c, next) => {
+        c.set("admin", { user: adminUser });
+        await next();
+      });
+      for (const { handler, route } of buildContentRoutes(collectionPosts, {
+        pluginId: PLUGIN_ID,
+      })) {
+        app.openapi(route, handler);
+      }
+
+      const res = await app.request("/7");
+
+      expect(res.status).toBe(200);
+      await expect(res.json()).resolves.toMatchObject({
+        categoryId: [3, 8],
+        faq: [{ id: 1, question: "Why?" }],
+        id: 7,
+      });
+      expect(service.advanced).toHaveBeenCalledWith(7);
+    });
+
     it("rejects a non-numeric identifier", async () => {
       const { app } = harness();
 
@@ -499,7 +568,35 @@ describe("generated content routes", () => {
       await expect(res.json()).resolves.toEqual({
         items: [{ label: "News", value: 3 }],
       });
-      expect(service.options).toHaveBeenCalledWith("category", "ne");
+      expect(service.options).toHaveBeenCalledWith("category", "ne", undefined);
+    });
+
+    it("labels the identifiers a form already holds", async () => {
+      // What a to-many picker opens with: it has ids and no names, and there is
+      // no column on the row to have joined one from.
+      const { app, service } = harness();
+      service.options.mockResolvedValue([
+        { label: "News", value: 3 },
+        { label: "Releases", value: 9 },
+      ]);
+
+      const res = await app.request("/options/category?ids=3,9");
+
+      expect(res.status).toBe(200);
+      expect(service.options).toHaveBeenCalledWith(
+        "category",
+        undefined,
+        [3, 9],
+      );
+    });
+
+    it("drops an identifier that is not a number", async () => {
+      const { app, service } = harness();
+      service.options.mockResolvedValue([{ label: "News", value: 3 }]);
+
+      await app.request("/options/category?ids=3,nonsense");
+
+      expect(service.options).toHaveBeenCalledWith("category", undefined, [3]);
     });
   });
 

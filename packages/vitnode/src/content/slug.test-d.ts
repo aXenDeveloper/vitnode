@@ -87,7 +87,6 @@ describe("field.slug", () => {
           title: field.text({ required: true }),
           slug: field.slug(),
         },
-        admin: { label: { plural: "Manuals", singular: "Manual" } },
       });
 
       expectTypeOf(manual.fields.slug.required).toEqualTypeOf<true>();

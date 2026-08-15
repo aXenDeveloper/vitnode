@@ -15,15 +15,6 @@ vi.mock("@vitnode/core/lib/navigation", () => ({
   ),
 }));
 
-/**
- * The layout is rendered on its own, with stand-in elements where the Content
- * Engine would have put real fields.
- *
- * That is exactly the contract under test: the layout must place whatever it is
- * handed, by name, and must not know or care what a field actually is - or which
- * table its value ends up on.
- */
-/** The submit button reads the surrounding form, exactly as it does for real. */
 const Harness = ({ children }: { children: React.ReactNode }) => {
   const form = useForm();
 
@@ -79,10 +70,11 @@ describe("BlogArticleFormLayout", () => {
     }
 
     const sections = container.querySelectorAll("section");
-    // Body, publish, article settings.
     expect(sections).toHaveLength(3);
     expect(sections[0].textContent).toContain("title");
     expect(sections[0].textContent).toContain("content");
+    expect(sections[0].textContent).toContain("friendlyUrl");
+    expect(sections[2].textContent).not.toContain("friendlyUrl");
     expect(sections[2].textContent).toContain("categoryId");
   });
 

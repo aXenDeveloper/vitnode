@@ -91,6 +91,7 @@ const SPEC: ContentFormSpec = {
     },
   ],
   pluginId: "@vitnode/blog",
+  sections: [],
   titleField: "title",
 };
 

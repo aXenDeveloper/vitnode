@@ -62,7 +62,7 @@ export const ContentLeafField = ({
     <ContentField
       field={controller}
       loadOptions={loadOptions}
-      otherProps={{ ...otherProps, isOptional: !spec.required }}
+      otherProps={otherProps}
       spec={spec}
     />
   );

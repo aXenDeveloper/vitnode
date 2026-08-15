@@ -40,6 +40,7 @@ const spec: ContentFormSpec = {
   defaultLocale: null,
   fields: [],
   pluginId: "@vitnode/blog",
+  sections: [],
   titleField: null,
 };
 

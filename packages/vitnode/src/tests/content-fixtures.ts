@@ -12,9 +12,6 @@ export const testCategoryContentType = defineContentType({
   fields: {
     title: field.text({ required: true, minLength: 1, maxLength: 100 }),
   },
-  admin: {
-    label: { plural: "Test Categories", singular: "Test Category" },
-  },
 });
 
 /**
@@ -39,10 +36,6 @@ export const testLocalizedCategoryContentType = defineContentType({
     }),
   },
   admin: {
-    label: {
-      plural: "Test Localized Categories",
-      singular: "Test Localized Category",
-    },
     titleField: "name",
     list: { columns: ["name", "color"] },
   },
@@ -67,10 +60,6 @@ export const testLocalizedRelationArticleContentType = defineContentType({
     }),
   },
   admin: {
-    label: {
-      plural: "Test Localized Relations",
-      singular: "Test Localized Relation",
-    },
     titleField: "title",
     list: { columns: ["title", "category"] },
   },
@@ -102,7 +91,6 @@ export const testArticleContentType = defineContentType({
   },
   indexes: [{ on: ["status", "createdAt"] }],
   admin: {
-    label: { plural: "Test Articles", singular: "Test Article" },
     titleField: "title",
     list: {
       columns: ["title", "status", "author", "updatedAt"],
@@ -147,7 +135,6 @@ export const testPostContentType = defineContentType({
     defaultOrder: "desc",
   },
   admin: {
-    label: { plural: "Test Posts", singular: "Test Post" },
     titleField: "title",
     list: {
       searchableFields: ["title", "excerpt"],
@@ -191,7 +178,6 @@ export const testEditorialPostContentType = defineContentType({
     scheduling: { enabled: true },
   },
   admin: {
-    label: { plural: "Test Editorials", singular: "Test Editorial" },
     titleField: "title",
     list: {
       columns: ["status", "title", "version"],
@@ -213,7 +199,6 @@ export const testEditorialNoteContentType = defineContentType({
     body: field.textarea({ nullable: true }),
   },
   editorial: { enabled: true },
-  admin: { label: { plural: "Test Notes", singular: "Test Note" } },
 });
 
 /**
@@ -251,7 +236,6 @@ export const testSearchablePostContentType = defineContentType({
     pathTemplate: "/searchable/{slug}",
   },
   admin: {
-    label: { plural: "Test Searchables", singular: "Test Searchable" },
     titleField: "title",
     list: { defaultOrderBy: "publishedAt" },
   },
@@ -288,7 +272,6 @@ export const testLocalizedArticleContentType = defineContentType({
     views: field.number({ integer: true, min: 0, defaultValue: 0 }),
   },
   admin: {
-    label: { plural: "Test Localized", singular: "Test Localized" },
     list: { columns: ["featured", "views"], orderableFields: ["views"] },
   },
 });
@@ -307,9 +290,6 @@ export const testLocalizedNoteContentType = defineContentType({
     heading: field.text({ localized: true, required: true }),
     slug: field.slug({ localized: true }),
     pinned: field.boolean({ defaultValue: false }),
-  },
-  admin: {
-    label: { plural: "Test Localized Notes", singular: "Test Localized Note" },
   },
 });
 
@@ -339,10 +319,6 @@ export const testLocalizedGuideContentType = defineContentType({
     featured: field.boolean({ defaultValue: false }),
   },
   admin: {
-    label: {
-      plural: "Test Localized Guides",
-      singular: "Test Localized Guide",
-    },
     list: { columns: ["featured", "status"] },
   },
 });
@@ -390,7 +366,6 @@ export const testLocalizedPageContentType = defineContentType({
     defaultOrder: "desc",
   },
   admin: {
-    label: { plural: "Test Localized Pages", singular: "Test Localized Page" },
     list: { columns: ["featured", "status"] },
   },
 });
@@ -415,10 +390,6 @@ export const testStrictLocalizedPageContentType = defineContentType({
     filterableFields: ["featured"],
   },
   admin: {
-    label: {
-      plural: "Test Strict Localized Pages",
-      singular: "Test Strict Localized Page",
-    },
     list: { columns: ["featured", "status"] },
   },
 });
@@ -461,10 +432,6 @@ export const testLocalizedSearchPageContentType = defineContentType({
     pathTemplate: "/{locale}/pages/{slug}",
   },
   admin: {
-    label: {
-      plural: "Test Localized Search Pages",
-      singular: "Test Localized Search Page",
-    },
     list: { columns: ["featured", "status"] },
   },
 });
@@ -535,10 +502,6 @@ export const testAdvancedLocalizedContentType = defineContentType({
     pathTemplate: "/{locale}/advanced-localized/{slug}",
   },
   admin: {
-    label: {
-      plural: "Test Advanced Localized",
-      singular: "Test Advanced Localized",
-    },
     list: { columns: ["featured", "status"] },
   },
 });
@@ -579,7 +542,6 @@ export const testDeliveredPostContentType = defineContentType({
     },
     sitemap: { enabled: true, changeFrequency: "weekly", priority: 0.7 },
   },
-  admin: { label: { plural: "Test Delivered", singular: "Test Delivered" } },
 });
 
 /**
@@ -632,10 +594,6 @@ export const testDeliveredLocalizedContentType = defineContentType({
     sitemap: { enabled: true, changeFrequency: "daily", priority: 0.5 },
   },
   admin: {
-    label: {
-      plural: "Test Delivered Localized",
-      singular: "Test Delivered Localized",
-    },
     list: { columns: ["status", "updatedAt"] },
   },
 });
@@ -665,10 +623,34 @@ export const testDeliveredPreviewableContentType = defineContentType({
     sitemap: { enabled: true },
   },
   admin: {
-    label: {
-      plural: "Test Delivered Previewable",
-      singular: "Test Delivered Previewable",
-    },
     list: { columns: ["status", "updatedAt"] },
+  },
+});
+
+/**
+ * A content type whose form is grouped with `admin.form.sections`.
+ *
+ * Deliberately covers the two things grouping has to keep straight: a field left
+ * out of every section is left out of the form, and the sections' order is the
+ * form's order rather than the declaration order of `fields`.
+ */
+export const testSectionedContentType = defineContentType({
+  id: "test.sectioned",
+  tableName: "test_sectioned",
+  fields: {
+    title: field.text({ required: true, maxLength: 200 }),
+    excerpt: field.textarea({ nullable: true }),
+    featured: field.boolean({ defaultValue: false }),
+    views: field.number({ integer: true, defaultValue: 0 }),
+  },
+  admin: {
+    titleField: "title",
+    form: {
+      sections: [
+        { name: "general", fields: ["title", "excerpt"] },
+        // `views` is in no section, so the form does not have it at all.
+        { name: "visibility", fields: ["featured"] },
+      ],
+    },
   },
 });

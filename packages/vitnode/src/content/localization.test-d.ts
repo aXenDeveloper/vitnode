@@ -72,7 +72,6 @@ describe("localization", () => {
         tableName: "test_explicits",
         localization: { enabled: false },
         fields: { title: field.text({ required: true }) },
-        admin: { label: { plural: "Explicits", singular: "Explicit" } },
       });
 
       expectTypeOf(explicit.localization.enabled).toEqualTypeOf<false>();
@@ -269,7 +268,6 @@ describe("localization", () => {
           featured: field.boolean({ defaultValue: false }),
         },
         admin: {
-          label: { plural: "Fine", singular: "Fine" },
           list: { columns: ["title"] },
         },
       });
@@ -285,7 +283,6 @@ describe("localization", () => {
           featured: field.boolean({ defaultValue: false }),
         },
         admin: {
-          label: { plural: "Fine", singular: "Fine" },
           titleField: "title",
         },
       });
@@ -301,7 +298,6 @@ describe("localization", () => {
           featured: field.boolean({ defaultValue: false }),
         },
         admin: {
-          label: { plural: "Bad", singular: "Bad" },
           // @ts-expect-error - `orderBy` is SQL on the base table.
           list: { orderableFields: ["title"] },
         },
@@ -318,7 +314,6 @@ describe("localization", () => {
           featured: field.boolean({ defaultValue: false }),
         },
         admin: {
-          label: { plural: "Bad", singular: "Bad" },
           // @ts-expect-error - an admin list search is a predicate on the row.
           list: { searchableFields: ["title"] },
         },
@@ -336,7 +331,6 @@ describe("localization", () => {
         },
         // @ts-expect-error - the base table has no `title` column to index.
         indexes: [{ on: ["title"] }],
-        admin: { label: { plural: "Bad", singular: "Bad" } },
       });
     });
 

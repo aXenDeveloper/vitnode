@@ -51,19 +51,17 @@ const fakeDb = ({ rows = new Map<string, string>() } = {}) => {
 
 beforeEach(() => {
   resetContentPreviewSecret();
-  vi.stubEnv("CONTENT_PREVIEW_SECRET", "");
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
-  vi.unstubAllEnvs();
   resetContentPreviewSecret();
 });
 
 describe("ensureContentPreviewSecret", () => {
   it("generates a signing key when nothing is configured", async () => {
-    // The whole point: an install that set no environment variable still gets a
-    // key strong enough to sign links with.
+    // The whole point: an install configures nothing and still gets a key
+    // strong enough to sign links with.
     const { db, rows } = fakeDb();
 
     const secret = await ensureContentPreviewSecret(db);
@@ -121,37 +119,5 @@ describe("ensureContentPreviewSecret", () => {
 
     const { db } = fakeDb();
     await expect(ensureContentPreviewSecret(db)).resolves.toBeTypeOf("string");
-  });
-
-  describe("the CONTENT_PREVIEW_SECRET override", () => {
-    it("wins over the generated key when it is usable", async () => {
-      // Still the way to rotate every outstanding link at once, and the way two
-      // deployments that share no database share a key.
-      const override = "an-override-long-enough-to-be-a-signing-key";
-      vi.stubEnv("CONTENT_PREVIEW_SECRET", override);
-      const { db, selects } = fakeDb();
-
-      expect(await ensureContentPreviewSecret(db)).toBe(override);
-      // Never even asked: the override answers the question on its own.
-      expect(selects).not.toHaveBeenCalled();
-    });
-
-    it("is ignored, loudly, when it is too short to sign with", async () => {
-      const warn = vi
-        .spyOn(console, "warn")
-        .mockImplementation(() => undefined);
-      vi.stubEnv("CONTENT_PREVIEW_SECRET", "hunter2");
-      const { db } = fakeDb();
-
-      const secret = await ensureContentPreviewSecret(db);
-
-      expect(secret).not.toBe("hunter2");
-      expect(Buffer.from(secret, "utf8").length).toBeGreaterThanOrEqual(32);
-      // Silently substituting a different key would make a rotation that did
-      // not happen look like one that did.
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining("CONTENT_PREVIEW_SECRET"),
-      );
-    });
   });
 });

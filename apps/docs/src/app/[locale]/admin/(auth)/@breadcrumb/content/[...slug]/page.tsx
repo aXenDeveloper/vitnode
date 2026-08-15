@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { contentTypeName } from "@vitnode/core/content/admin/labels";
 import {
   CONTENT_ADMIN_CREATE_SEGMENT,
   CONTENT_ADMIN_EDIT_SEGMENT,
@@ -54,7 +55,9 @@ export default async function BreadcrumbSlot({
       }
       overrideLastLabel={t(
         route.action === "create" ? "create.title" : "edit.title",
-        { name: definition.admin.label.singular },
+        // The translated noun, like every other "Create {name}" in the AdminCP -
+        // the definition's English is only its fallback.
+        { name: labels?.singular ?? contentTypeName(definition.id) },
       )}
       segments={[
         "content",

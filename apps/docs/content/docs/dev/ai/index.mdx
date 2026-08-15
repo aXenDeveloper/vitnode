@@ -7,7 +7,7 @@ description: Easily configure and resolve AI models in VitNode using the native 
 
 VitNode brings AI powers straight into your backend via the built-in [Vercel AI SDK](https://ai-sdk.dev/). Configure your models once in `buildApiConfig`, grab them in any route handler using `c.get("ai")`, and call native AI SDK functions directly. Zero wrappers, zero hassle! 🚀
 
-AI is completely **optional** — if you don't configure any models, VitNode won't touch any external services.
+AI is completely **optional** - if you don't configure any models, VitNode won't touch any external services.
 
 ## Quick Setup
 
@@ -59,11 +59,23 @@ Define your model registry in `buildApiConfig`. The **first model** listed acts 
 export const vitNodeApiConfig = buildApiConfig({
   ai: {
     models: [
-      { id: "default", name: "Claude Sonnet 5", model: "anthropic/claude-sonnet-5" },
-      { id: "fast", name: "Claude Haiku 4.5", model: "anthropic/claude-haiku-4.5" },
+      {
+        id: "default",
+        name: "Claude Sonnet 5",
+        model: "anthropic/claude-sonnet-5",
+      },
+      {
+        id: "fast",
+        name: "Claude Haiku 4.5",
+        model: "anthropic/claude-haiku-4.5",
+      },
     ],
     embeddingModels: [
-      { id: "default", name: "Text Embedding 3 Small", model: "openai/text-embedding-3-small" },
+      {
+        id: "default",
+        name: "Text Embedding 3 Small",
+        model: "openai/text-embedding-3-small",
+      },
     ],
     imageModels: [
       { id: "default", name: "GPT Image 1", model: "openai/gpt-image-1" },
@@ -78,8 +90,16 @@ import { anthropic } from "@ai-sdk/anthropic";
 export const vitNodeApiConfig = buildApiConfig({
   ai: {
     models: [
-      { id: "default", name: "Claude Sonnet 5", model: anthropic("claude-sonnet-5") },
-      { id: "fast", name: "Claude Haiku 4.5", model: anthropic("claude-haiku-4.5") },
+      {
+        id: "default",
+        name: "Claude Sonnet 5",
+        model: anthropic("claude-sonnet-5"),
+      },
+      {
+        id: "fast",
+        name: "Claude Haiku 4.5",
+        model: anthropic("claude-haiku-4.5"),
+      },
     ],
   },
 });
@@ -115,4 +135,3 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
 />
 
 Ready to generate text or create embeddings? Check out the [Usage](/docs/dev/ai/usage) guide!
-

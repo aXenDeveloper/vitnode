@@ -42,7 +42,6 @@ const fields = {
 };
 
 const shared = {
-  admin: { label: { plural: "Articles", singular: "Article" } },
   fields,
   publication: { enabled: true },
   publicApi: {
@@ -120,7 +119,6 @@ describe("delivery configuration", () => {
 describe("delivery requires a public API", () => {
   it("refuses `enabled: true` without one", () => {
     defineContentType({
-      admin: { label: { plural: "Articles", singular: "Article" } },
       id: "typed.no-public",
       // @ts-expect-error - delivery needs `publicApi: { enabled: true }`: without a
       // public allowlist there is no canonical URL for delivery to be about.
@@ -133,7 +131,6 @@ describe("delivery requires a public API", () => {
 
   it("still accepts an explicit `enabled: false`", () => {
     const off = defineContentType({
-      admin: { label: { plural: "Articles", singular: "Article" } },
       id: "typed.off",
       delivery: { enabled: false },
       fields,

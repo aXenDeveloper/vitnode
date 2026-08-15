@@ -8,6 +8,7 @@ import type { ContentDeliveryService } from "./delivery-service";
 import type { ContentModel } from "./model";
 
 import { buildRoute } from "../../api/lib/route";
+import { contentTypeName } from "../admin/labels";
 import {
   CONTENT_DELIVERY_REDIRECT_STATUS,
   CONTENT_LOCALE_MAX_LENGTH,
@@ -50,7 +51,7 @@ export const buildContentDeliveryRoutes = <
   { pluginId }: { pluginId: P },
 ) => {
   const { definition } = model;
-  const label = definition.admin.label;
+  const name = contentTypeName(definition.id);
   const localized = definition.localization.enabled;
 
   const service = (c: Context): ContentDeliveryService => {
@@ -167,7 +168,7 @@ export const buildContentDeliveryRoutes = <
     route: {
       method: "get",
       path: "/delivery/resolve/{slug}",
-      description: `Resolve one ${label.singular} URL to its canonical form, a redirect, or nothing`,
+      description: `Resolve one ${name} URL to its canonical form, a redirect, or nothing`,
       request: {
         params: z.object({ slug: z.string() }),
         ...(localized ? { query: z.object(localeQuery) } : {}),
@@ -200,7 +201,7 @@ export const buildContentDeliveryRoutes = <
     route: {
       method: "get",
       path: "/delivery/item/{id}",
-      description: `Delivery metadata for one published ${label.singular}`,
+      description: `Delivery metadata for one published ${name}`,
       request: {
         params: z.object({ id: z.coerce.number().int().positive() }),
         ...(localized ? { query: z.object(localeQuery) } : {}),
@@ -210,18 +211,18 @@ export const buildContentDeliveryRoutes = <
           content: { "application/json": { schema: zodMetadata } },
           description: `Canonical URL, alternates and SEO metadata`,
         },
-        404: { description: `${label.singular} not found` },
+        404: { description: `${name} not found` },
       },
     },
     handler: async c => {
       const resolved = await localeFor(c);
-      if (!resolved) throw notFound(label.singular);
+      if (!resolved) throw notFound(name);
 
       const id = Number(c.req.param("id"));
       const metadata = await service(c).findById(id, {
         locale: resolved.locale,
       });
-      if (!metadata) throw notFound(label.singular);
+      if (!metadata) throw notFound(name);
 
       return c.json(metadata, 200);
     },
@@ -232,7 +233,7 @@ export const buildContentDeliveryRoutes = <
     route: {
       method: "get",
       path: "/delivery/sitemap",
-      description: `One page of the ${label.plural} sitemap`,
+      description: `One page of the ${name} sitemap`,
       request: { query: sitemapQuery },
       responses: {
         200: {

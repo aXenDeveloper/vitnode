@@ -29,7 +29,6 @@ import { field } from "./fields";
  */
 
 const categoryContentType = defineContentType({
-  admin: { label: { plural: "Categories", singular: "Category" } },
   fields: { name: field.text({ required: true }) },
   id: "test.d-category",
   tableName: "test_d_categories",
@@ -45,7 +44,6 @@ const seoGroup = field.group({
 
 const articleContentType = defineContentType({
   admin: {
-    label: { plural: "Articles", singular: "Article" },
     list: { columns: ["title"] },
     titleField: "title",
   },
@@ -277,7 +275,6 @@ describe("admin surfaces", () => {
   it("refuse a collection as a list column", () => {
     defineContentType({
       admin: {
-        label: { plural: "Bad", singular: "Bad" },
         // @ts-expect-error a to-many relation is not a column.
         list: { columns: ["tags"] },
       },

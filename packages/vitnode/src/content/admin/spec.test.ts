@@ -5,9 +5,12 @@ import { z } from "zod";
 import {
   testArticleContentType,
   testLocalizedGuideContentType,
+  testSectionedContentType,
 } from "@/tests/content-fixtures";
 
-import { humanizeFieldName } from "./labels";
+import type { ContentSectionLabeller } from "./spec";
+
+import { contentTypeName, humanizeFieldName } from "./labels";
 import {
   buildContentColumnSpec,
   buildContentFormSpec,
@@ -103,6 +106,68 @@ describe("buildContentFormSpec", () => {
   it("keeps nullability", () => {
     expect(specFor("excerpt").nullable).toBe(true);
     expect(specFor("title").nullable).toBe(false);
+  });
+
+  describe("sections", () => {
+    const sectioned = (labelSection?: ContentSectionLabeller) =>
+      buildContentFormSpec({
+        definition: testSectionedContentType,
+        labelEnum,
+        labelField,
+        labelSection,
+        pluginId: "@vitnode/example",
+      });
+
+    it("is empty for a content type that declares none", () => {
+      expect(formSpec.sections).toEqual([]);
+    });
+
+    it("carries the groups, in order, with their fields", () => {
+      expect(
+        sectioned().sections.map(section => [section.name, section.fields]),
+      ).toEqual([
+        ["general", ["title", "excerpt"]],
+        ["visibility", ["featured"]],
+      ]);
+    });
+
+    it("carries headings already translated", () => {
+      // Resolved on the server, like an enum's options: the client half of the
+      // form has neither the plugin's messages nor the request's locale.
+      const [general] = sectioned(name => ({
+        desc: `${name} desc`,
+        title: `${name} title`,
+      })).sections;
+
+      expect(general).toMatchObject({
+        desc: "general desc",
+        title: "general title",
+      });
+    });
+
+    it("humanises a heading the plugin has not translated", () => {
+      expect(sectioned().sections[1]).toEqual({
+        fields: ["featured"],
+        name: "visibility",
+        title: "Visibility",
+      });
+    });
+
+    it("omits a field no section names", () => {
+      // `views` is in no section, so it is not on the form - the same contract
+      // `admin.form.fields` has.
+      expect(sectioned().fields.map(item => item.name)).toEqual([
+        "title",
+        "excerpt",
+        "featured",
+      ]);
+    });
+
+    it("stays plain JSON", () => {
+      const spec = sectioned();
+
+      expect(JSON.parse(JSON.stringify(spec))).toEqual(spec);
+    });
   });
 });
 
@@ -287,6 +352,24 @@ describe("humanizeFieldName", () => {
     ["viewsCount", "Views count"],
   ])("turns %s into %s", (input, expected) => {
     expect(humanizeFieldName(input)).toBe(expected);
+  });
+});
+
+describe("contentTypeName", () => {
+  // What an OpenAPI description, an API error and an untranslated AdminCP all
+  // read now that no definition carries a display name.
+  it.each([
+    ["blog.post", "Post"],
+    ["example.kb.article", "Kb article"],
+    ["example.stock-item", "Stock item"],
+  ])("names %s %s", (id, expected) => {
+    expect(contentTypeName(id)).toBe(expected);
+  });
+
+  it("drops the plugin segment rather than reading it back", () => {
+    // The plugin already names itself everywhere this appears - in the route
+    // path, in the message namespace and in the AdminCP's own navigation.
+    expect(contentTypeName("blog.post")).not.toContain("blog");
   });
 });
 

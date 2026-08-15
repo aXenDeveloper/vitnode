@@ -1,9 +1,6 @@
 name: Build, Lint & Test
 
 on:
-  # No `branches` filter: every pull request runs, whatever it targets. The old
-  # `"*"` glob matched a single path segment, so a PR into `perf/improve_errors`
-  # silently ran nothing at all.
   pull_request:
     types:
       - opened
@@ -16,9 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
-    # A throwaway database for the Content Engine's Postgres smoke test. The
-    # suite skips itself when `DATABASE_TEST_URL` is unset, and refuses to run
-    # against a database whose name does not contain "test".
     services:
       postgres:
         image: postgres:18

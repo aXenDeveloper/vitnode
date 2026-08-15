@@ -216,7 +216,7 @@ describe("publish and unpublish", () => {
     await post(app, "/7/translations/pl/unpublish");
 
     expect(permissionChecks).toEqual([
-      { module: "test_localized_guides", permission: "can_publish" },
+      { module: "localized_guide", permission: "can_publish" },
     ]);
   });
 
@@ -297,7 +297,7 @@ describe("history", () => {
     await app.request("/7/translations/pl/revisions");
 
     expect(permissionChecks).toEqual([
-      { module: "test_localized_guides", permission: "can_view" },
+      { module: "localized_guide", permission: "can_view" },
     ]);
   });
 
@@ -319,7 +319,7 @@ describe("restore", () => {
     await post(app, "/7/translations/pl/revisions/42/restore");
 
     expect(permissionChecks).toEqual([
-      { module: "test_localized_guides", permission: "can_restore" },
+      { module: "localized_guide", permission: "can_restore" },
     ]);
   });
 

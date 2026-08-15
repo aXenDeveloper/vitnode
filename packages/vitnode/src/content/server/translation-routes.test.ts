@@ -200,7 +200,7 @@ describe("GET /{id}/translations", () => {
     await app.request("/7/translations");
 
     expect(permissionChecks).toEqual([
-      { module: "test_localized", permission: "can_view" },
+      { module: "localized", permission: "can_view" },
     ]);
   });
 
@@ -289,7 +289,7 @@ describe("POST /{id}/translations/{locale}", () => {
     await post(app, { values: { title: "Witaj" } });
 
     expect(permissionChecks).toEqual([
-      { module: "test_localized", permission: "can_edit" },
+      { module: "localized", permission: "can_edit" },
     ]);
   });
 
@@ -535,7 +535,7 @@ describe("DELETE /{id}/translations/{locale}", () => {
     await remove(app, { expectedVersion: 1 });
 
     expect(permissionChecks).toEqual([
-      { module: "test_localized", permission: "can_delete" },
+      { module: "localized", permission: "can_delete" },
     ]);
   });
 

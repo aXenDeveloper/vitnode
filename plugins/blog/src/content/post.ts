@@ -59,17 +59,47 @@ export const blogPostContentType = defineContentType({
   },
 
   fields: {
-    // Shared: which category an article is in, and who wrote it, are properties
-    // of the article rather than of a language.
+    /**
+     * Which categories an article is in - **many**, and the field name stays
+     * singular because it is the API key, the event key and the message key
+     * every existing client already reads. Its column is gone either way: a set
+     * lives in `blog_posts_category_id`, one row per membership.
+     *
+     * Unordered: an article filed under both "Releases" and "Engineering" is not
+     * more one than the other, so the engine stores the set in ascending id
+     * order and nobody has to maintain an order that means nothing.
+     *
+     * **Not `required`, and it cannot be** - a to-many reference is never
+     * required, because the empty set is what "no categories" looks like to a
+     * junction table. `min: 1` is the rule the blog actually wants, and it is a
+     * rule about the *article*: an article has to be filed somewhere. It is
+     * enforced by the generated schema, so the API answers 400 and the AdminCP
+     * form refuses to submit - rather than by a check one of the two would skip.
+     */
     categoryId: field.relation({
-      required: true,
+      min: 1,
+      multiple: true,
       // Postgres itself refuses to delete a category that still has articles,
       // which is what the plugin's own delete route was trying to be careful
       // about with a `SELECT` first.
       onDelete: "restrict",
       target: () => blogCategoryContentType,
     }),
-    authorId: field.user(),
+    /**
+     * Who wrote it - **many**, and ordered, because a byline is a sentence: "by
+     * Ada and Grace" is not the same as "by Grace and Ada", and the first name
+     * on a piece is a thing people care about.
+     *
+     * `min: 1`, for the same reason the categories have it: an article with no
+     * byline is not a state the blog wants, and a to-many field cannot say that
+     * with `required`.
+     *
+     * `onDelete` defaults to `cascade` here rather than the `set null` a single
+     * author had: a junction row has no column to null, so forgetting a deleted
+     * account's authorship means deleting the membership. The article survives
+     * either way, which is what the nullable column was protecting.
+     */
+    authorId: field.user({ min: 1, multiple: true, ordered: true }),
 
     // Localized: exactly the three variables the plugin kept in
     // `core_languages_words`.
@@ -159,8 +189,9 @@ export const blogPostContentType = defineContentType({
   indexes: [{ on: ["status", "createdAt"] }],
 
   admin: {
-    // "Article" in the AdminCP, `blog.post` in the database and the API.
-    label: { plural: "Articles", singular: "Article" },
+    // "Article" in the AdminCP - the noun is `@vitnode/blog.content.post.label`,
+    // an ICU plural resolved per language. `blog.post` in the database and the
+    // API, which is what this module name would have been derived from.
     permissionModule: "posts",
     // The localized title, resolved in the reader's own language - the same
     // display projection the category uses. It is not a base-table column and it
@@ -172,14 +203,11 @@ export const blogPostContentType = defineContentType({
     create: { mode: "page" },
     edit: { mode: "page" },
     list: {
-      columns: [
-        "title",
-        "status",
-        "categoryId",
-        "authorId",
-        "publishedAt",
-        "updatedAt",
-      ],
+      // Scalar columns only, which is why neither the categories nor the
+      // authors are here: both are sets on generated junction tables, and a
+      // list that loaded them would issue a query per row. The form carries
+      // them, which is where they are edited anyway.
+      columns: ["title", "status", "publishedAt", "updatedAt"],
     },
   },
 });

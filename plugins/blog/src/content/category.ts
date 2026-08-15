@@ -46,10 +46,17 @@ export const blogCategoryContentType = defineContentType({
   },
 
   admin: {
-    label: { plural: "Categories", singular: "Category" },
     // The module the blog's staff permissions have always been stored under, so
     // every existing role keeps exactly the access it had.
     permissionModule: "categories",
+    /**
+     * The colour a picker draws beside the name.
+     *
+     * A category *is* its colour as much as its word - that is what the column
+     * has always been for - so an article's category chips carry the swatch
+     * rather than reducing a colour-coded taxonomy to a list of strings.
+     */
+    colorField: "color",
     /**
      * The localized name, resolved in whichever language the reader is using.
      *

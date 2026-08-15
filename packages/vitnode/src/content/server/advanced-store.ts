@@ -18,7 +18,7 @@ import {
 } from "../const";
 import { ContentAdvancedInputError, ContentEngineError } from "../errors";
 import {
-  asContentRelationCollection,
+  asContentReferenceCollection,
   contentInnerFields,
   isContentCollectionField,
 } from "../paths";
@@ -124,6 +124,16 @@ export interface ContentAdvancedStore {
     missingRelations: { field: string; ids: number[] }[];
     patch: Record<string, unknown>;
   }>;
+  /**
+   * The table one to-many field points at, read off its junction's foreign key.
+   *
+   * The picker's way in: a to-many reference has no column on this row, so
+   * "which table holds the things this field can choose from" is a question only
+   * the generated junction can answer. Read from the constraint rather than from
+   * the descriptor's `target()` thunk, so the table the picker offers rows from
+   * is by construction the table Postgres will check on write.
+   */
+  targetTable: (field: string) => null | PgTable;
   /** Applies a patch's collection half. Returns the fields that moved. */
   write: (
     tx: ContentDatabase,
@@ -541,7 +551,7 @@ export const createContentAdvancedStore = <
       const value = patch[field];
       if (value === undefined) continue;
 
-      const relation = asContentRelationCollection(fields[field]);
+      const relation = asContentReferenceCollection(fields[field]);
       if (relation) {
         if (!Array.isArray(value)) continue;
 
@@ -608,6 +618,7 @@ export const createContentAdvancedStore = <
     membershipCondition: () => undefined,
     prepareRestore: async (_tx, _itemId, patch) =>
       Promise.resolve({ missingRelations: [], patch }),
+    targetTable: () => null,
     write: async () => Promise.resolve([]),
   };
 
@@ -736,6 +747,8 @@ export const createContentAdvancedStore = <
       // one record from appearing once per matching target.
       return sql`exists (select 1 from ${junction.table} where ${junction.columns.itemId} = ${baseColumns.id} and ${junction.columns.relatedItemId} = ${filter.contains})`;
     },
+
+    targetTable: field => relationTargetColumn(field)?.table ?? null,
 
     write: async (tx, itemId, patch) => {
       const changes = await plan(tx, itemId, patch);

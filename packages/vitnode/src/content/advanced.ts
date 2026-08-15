@@ -2,7 +2,7 @@ import type {
   ContentFieldDescriptor,
   ContentFieldMap,
   ContentLeafColumn,
-  ContentRelationField,
+  ContentReferenceField,
   ContentRelationJunction,
   ContentRepeatableTable,
   ResolvedContentAdvancedConfig,
@@ -26,7 +26,7 @@ import {
   contentLeafColumnName,
   contentLeafColumns,
   isContentLeafKind,
-  isContentRelationCollection,
+  isContentReferenceCollection,
   partitionContentStorage,
 } from "./paths";
 
@@ -247,21 +247,44 @@ const assertRepeatable = (
   }
 };
 
-const assertRelationCollection = (
+/**
+ * The rules a to-many reference obeys, whatever it points at.
+ *
+ * One function for `relation` and `user` because the three things it refuses are
+ * properties of the *storage* rather than of the target: a junction row is not a
+ * column, so it cannot be null, cannot be per-language, and has nothing for
+ * `"set null"` to null. The noun changes so the message reads like the field the
+ * author actually wrote.
+ */
+const assertReferenceCollection = (
   id: string,
   name: string,
-  fieldValue: ContentRelationField,
+  fieldValue: ContentReferenceField,
 ): void => {
+  const noun = fieldValue.kind === "user" ? "User" : "Relation";
+  const targets = fieldValue.kind === "user" ? "no people" : "no targets";
+
   if (fieldValue.required || fieldValue.nullable) {
     throw new ContentEngineError(
-      `Relation field "${name}" is \`multiple: true\`, so it is neither required nor nullable - the empty set is what "no targets" looks like. Remove \`${fieldValue.required ? "required" : "nullable"}\` from it.`,
+      `${noun} field "${name}" is \`multiple: true\`, so it is neither required nor nullable - the empty set is what "${targets}" looks like. Remove \`${fieldValue.required ? "required" : "nullable"}\` from it.`,
       { contentTypeId: id },
     );
   }
 
   if (fieldValue.localized === true) {
     throw new ContentEngineError(
-      `Relation field "${name}" is \`localized: true\`. A relation is a foreign key, and per-locale references are out of scope - the targets a record points at are the same in every language.`,
+      `${noun} field "${name}" is \`localized: true\`. A reference is a foreign key, and per-locale references are out of scope - the ${fieldValue.kind === "user" ? "people" : "targets"} a record points at are the same in every language.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const min = fieldValue.min;
+  if (
+    min !== undefined &&
+    (!Number.isInteger(min) || min < 1 || min > CONTENT_RELATION_COLLECTION_MAX)
+  ) {
+    throw new ContentEngineError(
+      `${noun} field "${name}" has min ${min}; it must be a whole number between 1 and ${CONTENT_RELATION_COLLECTION_MAX}. \`min: 0\` is what leaving it out already means.`,
       { contentTypeId: id },
     );
   }
@@ -271,27 +294,39 @@ const assertRelationCollection = (
   // row, which is `cascade`.
   if (fieldValue.onDelete === "set null") {
     throw new ContentEngineError(
-      `Relation field "${name}" is \`multiple: true\` with \`onDelete: "set null"\`, which has nothing to null: a to-many reference is a junction row, not a nullable column. Use \`"cascade"\` to drop the reference when the target goes, or \`"restrict"\` to refuse the delete.`,
+      `${noun} field "${name}" is \`multiple: true\` with \`onDelete: "set null"\`, which has nothing to null: a to-many reference is a junction row, not a nullable column. Use \`"cascade"\` to drop the reference when the target goes, or \`"restrict"\` to refuse the delete.`,
       { contentTypeId: id },
     );
   }
 };
 
-/** A to-one relation may not carry `ordered`, which would mean nothing. */
-const assertRelation = (
+/**
+ * A to-one reference may not carry `ordered`, which would mean nothing.
+ *
+ * Applied to `user` as well as `relation`: `field.user({ ordered: true })`
+ * without `multiple` is the same mistake, and one person has no order either.
+ */
+const assertReference = (
   id: string,
   name: string,
-  fieldValue: ContentRelationField,
+  fieldValue: ContentReferenceField,
 ): void => {
   if (fieldValue.multiple) {
-    assertRelationCollection(id, name, fieldValue);
+    assertReferenceCollection(id, name, fieldValue);
 
     return;
   }
 
+  if (fieldValue.min !== undefined) {
+    throw new ContentEngineError(
+      `${fieldValue.kind === "user" ? "User" : "Relation"} field "${name}" has \`min\` but is not \`multiple: true\`. One reference is one or none, which is what \`required\` says. Add \`multiple: true\`, or use \`required: true\`.`,
+      { contentTypeId: id },
+    );
+  }
+
   if (fieldValue.ordered) {
     throw new ContentEngineError(
-      `Relation field "${name}" is \`ordered: true\` but not \`multiple: true\`. One target has no order. Add \`multiple: true\`, or drop \`ordered\`.`,
+      `${fieldValue.kind === "user" ? "User" : "Relation"} field "${name}" is \`ordered: true\` but not \`multiple: true\`. One ${fieldValue.kind === "user" ? "person" : "target"} has no order. Add \`multiple: true\`, or drop \`ordered\`.`,
       { contentTypeId: id },
     );
   }
@@ -313,11 +348,13 @@ export const resolveContentAdvanced = ({
   id: string;
   tableName: string;
 }): ResolvedContentAdvancedConfig => {
-  const { groups, relationCollections, repeatables } =
+  const { groups, referenceCollections, repeatables } =
     partitionContentStorage(fields);
 
   for (const [name, fieldValue] of Object.entries(fields)) {
-    if (fieldValue.kind === "relation") assertRelation(id, name, fieldValue);
+    if (fieldValue.kind === "relation" || fieldValue.kind === "user") {
+      assertReference(id, name, fieldValue);
+    }
     if (fieldValue.kind === "group") assertGroup(id, name, fieldValue);
     if (fieldValue.kind === "repeatable")
       assertRepeatable(id, name, fieldValue);
@@ -327,7 +364,7 @@ export const resolveContentAdvanced = ({
   assertLeafColumnsAreFree(id, fields, groups, leaves);
 
   const junctions: ContentRelationJunction[] = Object.keys(
-    relationCollections,
+    referenceCollections,
   ).map(field => {
     const junctionTable = contentCollectionTableName(tableName, field);
 

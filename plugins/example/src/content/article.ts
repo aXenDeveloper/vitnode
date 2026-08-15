@@ -113,7 +113,6 @@ export const articleContentType = defineContentType({
   indexes: [{ on: ["status", "createdAt"] }],
 
   admin: {
-    label: { plural: "Example Articles", singular: "Example Article" },
     titleField: "title",
     list: {
       columns: [

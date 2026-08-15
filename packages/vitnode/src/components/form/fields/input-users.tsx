@@ -7,6 +7,7 @@ import React from "react";
 import { Avatar } from "@/components/avatar";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form";
+import { cn } from "@/lib/utils";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
 import type { UserOption } from "./search-users.action.server";
@@ -67,6 +68,32 @@ const UserAvatar = ({
       <UserIcon style={{ height: size * 0.6, width: size * 0.6 }} />
     </span>
   );
+
+/**
+ * One person as a picker row: a face, a name, and the handle behind it.
+ *
+ * Exported because "what a person looks like in a list" is a decision, and the
+ * to-many people picker in the Content Engine has to make the same one - a set
+ * of authors that rendered them differently from the list they were chosen from
+ * would read as two different controls.
+ */
+export const UserOptionRow = ({
+  size = 24,
+  user,
+}: {
+  size?: number;
+  user: PartialUserOption;
+}) => (
+  <div className="flex min-w-0 items-center gap-2">
+    <UserAvatar size={size} user={user} />
+    <span className="truncate font-medium">{user.name}</span>
+    {!!user.nameCode && (
+      <span className="text-muted-foreground truncate text-sm">
+        @{user.nameCode}
+      </span>
+    )}
+  </div>
+);
 
 /**
  * Picks one person, by name, for an `AutoForm` field.
@@ -156,30 +183,24 @@ export const AutoFormUser = ({
           edge, ahead of the chevron. */}
       <div className="relative w-full">
         <AsyncPicker<UserOption>
-          className={clearButton ? "pe-14" : undefined}
           disabled={disabled}
           invalid={otherProps["aria-invalid"]}
           onSelect={option => {
             setKnown(seen => ({ ...seen, [option.id]: option }));
             field.onChange(option.id);
           }}
-          renderOption={option => (
-            <div className="flex min-w-0 items-center gap-2">
-              <UserAvatar size={24} user={option} />
-              <span className="truncate font-medium">{option.name}</span>
-              {!!option.nameCode && (
-                <span className="text-muted-foreground truncate text-sm">
-                  @{option.nameCode}
-                </span>
-              )}
-            </div>
-          )}
+          renderOption={option => <UserOptionRow user={option} />}
           search={search}
           searchPlaceholder={searchPlaceholder}
           selectedIds={value === null ? [] : [value]}
           trigger={
             current ? (
-              <span className="flex min-w-0 items-center gap-2">
+              <span
+                className={cn(
+                  "flex min-w-0 items-center gap-2",
+                  clearButton && "me-8",
+                )}
+              >
                 <UserAvatar size={20} user={current} />
                 <span className="truncate">{current.name}</span>
               </span>

@@ -7,7 +7,7 @@ import type {
 } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 
 import type { ContentSchemas } from "../schemas";
 import type {
@@ -29,7 +29,7 @@ import type {
   ContentValuesOf,
 } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
-import type { ReferenceTarget } from "./references";
+import type { ContentPickerTarget } from "./references";
 
 import { withPagination } from "../../api/lib/with-pagination";
 import {
@@ -57,7 +57,12 @@ import {
   diffChangedPaths,
   toInsertColumns,
 } from "./query";
-import { LABEL_PREFIX, resolveReferenceTargets, toLabel } from "./references";
+import {
+  LABEL_PREFIX,
+  resolveCollectionPickerTargets,
+  resolveReferenceTargets,
+  toLabel,
+} from "./references";
 import { createSlugNormalizer } from "./slugs";
 
 /** Display labels for `user` and `relation` values, keyed by field name. */
@@ -354,11 +359,20 @@ export interface ContentServiceBase<TDefinition> {
     id: number,
     options?: ContentServiceOptions,
   ) => Promise<ContentListRow<TDefinition> | null>;
-  /** Options for a `user` or `relation` picker, filtered by a search term. */
+  /**
+   * Options for a `user` or `relation` picker, to-one and to-many alike.
+   *
+   * `search` filters by whatever the label is actually read from. `ids` asks for
+   * exactly those rows instead, which is how a form that opens holding
+   * identifiers turns them into names: without it a to-many picker could only
+   * label what somebody had just searched for, and everything already stored
+   * would read as a number.
+   */
   options: (
     field: ContentReferenceFieldName<TDefinition>,
     search?: string,
-  ) => Promise<{ label: string; value: number }[]>;
+    ids?: readonly number[],
+  ) => Promise<{ color?: string; label: string; value: number }[]>;
   /**
    * Typed to-many relation operations, keyed by the content type's **actual**
    * relation collection names.
@@ -452,12 +466,25 @@ export const createContentService = <
     ...Object.keys(storageColumns),
   ];
   const references = resolveReferenceTargets(definition, table, columns);
-  // The relations whose label is not on the target's base table at all. Empty
+  // The to-many half of the same question. Kept in its own map because these
+  // targets are never joined into the list query - a to-many field has no
+  // column on this row to join through - and are only ever read by the picker.
+  const collectionReferences = resolveCollectionPickerTargets(
+    definition,
+    field => store?.targetTable(field) ?? null,
+  );
+  // The references whose label is not on the target's base table at all. Empty
   // for every content type that points at a shared title, which is what keeps
   // the language registry out of their query plan entirely.
-  const localizedReferences = Object.entries(references).filter(
-    ([, target]) => target.localizedLabel !== undefined,
-  );
+  //
+  // **Both** maps, and the to-many half is not optional: a picker whose target
+  // has a localized title has no label column to fall back on - the value is on
+  // the translation table and nowhere else - so leaving collections out of this
+  // is what makes such a field offer bare identifiers.
+  const localizedReferences = [
+    ...Object.entries(references),
+    ...Object.entries(collectionReferences),
+  ].filter(([, target]) => target.localizedLabel !== undefined);
   const searchColumns = definition.admin.list.searchableFields.map(
     name => columns[name],
   );
@@ -603,7 +630,7 @@ export const createContentService = <
    * back, exactly as it did before.
    */
   const labelSelection = (
-    target: ReferenceTarget,
+    target: ContentPickerTarget,
     languages: {
       byDefaultLocale: Map<string, null | number>;
       viewer: null | number;
@@ -985,14 +1012,21 @@ export const createContentService = <
       };
     },
 
-    options: async (fieldName, search) => {
-      const target = references[fieldName];
+    options: async (fieldName, search, ids) => {
+      // A to-many field's target is resolved through its junction rather than
+      // through a column on this row - see `collectionReferences`.
+      const target = references[fieldName] ?? collectionReferences[fieldName];
       if (!target) {
         throw new ContentEngineError(
           `Field "${fieldName}" is not a relation or user field.`,
           { contentTypeId },
         );
       }
+
+      // An empty `ids` is a question with an empty answer, not "no filter":
+      // a form holding no references must not be handed the first 50 rows as
+      // though it had chosen them.
+      if (ids?.length === 0) return [];
 
       // A `user` field selects two columns more, so its picker can show a face
       // and a handle. Kept out of the projection for a `relation`, whose target
@@ -1015,6 +1049,9 @@ export const createContentService = <
           ...(user
             ? { avatarColor: user.avatarColor, nameCode: user.nameCode }
             : {}),
+          // A target that declares `admin.colorField` sends its swatch along, so
+          // a colour-coded record reads as one in the picker too.
+          ...(target.colorColumn ? { color: target.colorColumn } : {}),
         })
         .from(target.aliased)
         .$dynamic();
@@ -1028,17 +1065,23 @@ export const createContentService = <
         // the AdminCP refers to somebody, and a picker that only matched display
         // names would find nothing for it.
         .where(
-          buildSearchCondition(
-            user ? [...searchable, user.nameCode] : searchable,
-            search,
-          ),
+          ids
+            ? inArray(target.idColumn, [...ids])
+            : buildSearchCondition(
+                user ? [...searchable, user.nameCode] : searchable,
+                search,
+              ),
         )
         .orderBy(label)
-        .limit(CONTENT_OPTIONS_LIMIT);
+        // A label lookup is bounded by what the caller already holds, and a
+        // record may hold more references than a picker would ever list.
+        .limit(ids ? ids.length : CONTENT_OPTIONS_LIMIT);
 
       return rows.map(row => {
         const value = Number(row.value);
         const entry = row as Record<string, unknown>;
+
+        const color = target.colorColumn ? toLabel(entry.color) : null;
 
         return {
           label: toLabel(row.label) ?? String(value),
@@ -1049,6 +1092,10 @@ export const createContentService = <
                 nameCode: toLabel(entry.nameCode) ?? "",
               }
             : {}),
+          // Omitted rather than sent empty when the row's colour is null: an
+          // option with no colour and one whose colour is blank are the same
+          // thing to a swatch, and only one of them needs a key.
+          ...(color === null || color === "" ? {} : { color }),
         };
       });
     },

@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
+import { ChevronsUpDownIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import React from "react";
 import { useDebouncedCallback } from "use-debounce";
@@ -143,6 +143,7 @@ export function AsyncPicker<TOption extends AsyncPickerOption>({
                 <CommandGroup>
                   {options.map(option => (
                     <CommandItem
+                      data-checked={selected.has(option.id)}
                       key={option.id}
                       onSelect={() => {
                         onSelect(option);
@@ -151,9 +152,6 @@ export function AsyncPicker<TOption extends AsyncPickerOption>({
                       value={String(option.id)}
                     >
                       {renderOption(option)}
-                      {selected.has(option.id) && (
-                        <CheckIcon className="ms-auto size-4" />
-                      )}
                     </CommandItem>
                   ))}
                 </CommandGroup>

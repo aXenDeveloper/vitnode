@@ -33,12 +33,6 @@ describe("contentPreviewConfigProblems", () => {
     expect(contentPreviewConfigProblems()).toEqual([]);
   });
 
-  it("says nothing about a missing CONTENT_PREVIEW_SECRET", () => {
-    vi.stubEnv("CONTENT_PREVIEW_SECRET", "");
-
-    expect(contentPreviewConfigProblems()).toEqual([]);
-  });
-
   it("reports an unparseable web origin", () => {
     // A preview link resolved against this would not be a link.
     vi.stubEnv("NEXT_PUBLIC_WEB_URL", "not a url");
@@ -71,11 +65,10 @@ describe("warnAboutContentPreviewConfig", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it("says nothing when the origins are parseable and no secret is set", () => {
+  it("says nothing when the origins are parseable", () => {
     // The case that used to warn, and the one this whole change is about: an
     // install that configured nothing is a working install.
     const warn = spyOnWarn();
-    vi.stubEnv("CONTENT_PREVIEW_SECRET", "");
 
     warnAboutContentPreviewConfig({ contentTypes: previewable });
 

@@ -234,14 +234,14 @@ describe("AutoFormCombobox", () => {
     expect(onValueChange).toHaveBeenCalledWith("option-one", expect.anything());
   });
 
-  it("loads async options and ignores multiple", async () => {
+  it("renders an async multi-select as chips", async () => {
     const fetchData = vi
       .fn()
       .mockResolvedValue([{ label: "Category", value: "1" }]);
     const { container } = renderWithClient(
       <AutoFormCombobox
         fetchData={fetchData}
-        field={createField()}
+        field={createField([{ label: "Category", value: "1" }])}
         id="categoryId"
         label="Category"
         multiple
@@ -257,8 +257,36 @@ describe("AutoFormCombobox", () => {
       expect(fetchData).toHaveBeenCalledWith({ search: "" });
     });
 
+    // Both halves of the `multiple` composition: the chips box holds what is
+    // chosen, and the input inside it searches for the next one.
+    expect(
+      container.querySelector("[data-slot='combobox-chips']"),
+    ).toBeTruthy();
+    expect(
+      container.querySelector("[data-slot='combobox-chip']")?.textContent,
+    ).toContain("Category");
+  });
+
+  it("prompts only while an async multi-select is empty", async () => {
+    const fetchData = vi.fn().mockResolvedValue([]);
+    renderWithClient(
+      <AutoFormCombobox
+        fetchData={fetchData}
+        field={createField([])}
+        id="categoryId"
+        label="Category"
+        multiple
+        otherProps={{ isOptional: false, "aria-invalid": false }}
+        searchPlaceholder="Search categories"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(fetchData).toHaveBeenCalled();
+    });
+
+    // A prompt beside two chips is a prompt for something already done.
     expect(screen.getByPlaceholderText("Search categories")).toBeTruthy();
-    expect(container.querySelector("[data-slot='combobox-chips']")).toBeNull();
   });
 
   it("uses placeholder as async search placeholder fallback", async () => {

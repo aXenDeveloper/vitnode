@@ -24,7 +24,6 @@ import { field } from "./fields";
  */
 
 const base = {
-  admin: { label: { plural: "Articles", singular: "Article" } },
   publication: { enabled: true } as const,
   tableName: "delivery_articles",
 } as const;

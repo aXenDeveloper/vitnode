@@ -10,8 +10,11 @@
 export {
   contentEntityKey,
   contentI18nKeys,
+  contentNouns,
+  contentTypeName,
   humanizeFieldName,
 } from "./admin/labels";
+export type { ContentLabelTranslator } from "./admin/labels";
 export {
   buildContentColumnSpec,
   buildContentFormSpec,
@@ -27,7 +30,9 @@ export type {
   ContentEnumLabeller,
   ContentFieldLabeller,
   ContentFormFieldSpec,
+  ContentFormSectionSpec,
   ContentFormSpec,
+  ContentSectionLabeller,
 } from "./admin/spec";
 export {
   contentDeliveryRedirectTag,
@@ -279,7 +284,7 @@ export type {
   ContentAdminActionConfig,
   ContentAdminConfig,
   ContentAdminFormMode,
-  ContentAdminLabel,
+  ContentAdminFormSection,
   ContentAdminListConfig,
   ContentBooleanField,
   ContentCreateInput,

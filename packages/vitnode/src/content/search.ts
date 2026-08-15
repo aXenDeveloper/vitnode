@@ -4,7 +4,7 @@ import {
   CONTENT_SEARCH_LOCALE_PLACEHOLDER,
   CONTENT_SEARCH_SLUG_PLACEHOLDER,
 } from "./const";
-import { isContentRelationCollection, splitContentFieldPath } from "./paths";
+import { isContentReferenceCollection, splitContentFieldPath } from "./paths";
 
 /**
  * The public URL of one record, for a search hit.
@@ -136,7 +136,7 @@ export const contentSearchIndexedCollections = (
     if (!fieldValue) continue;
     if (
       fieldValue.kind !== "repeatable" &&
-      !isContentRelationCollection(fieldValue)
+      !isContentReferenceCollection(fieldValue)
     ) {
       continue;
     }

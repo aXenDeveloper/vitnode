@@ -24,7 +24,6 @@ import { applyContentDeliveryWrite } from "./delivery-writes";
  */
 
 const articleType = defineContentType({
-  admin: { label: { plural: "Articles", singular: "Article" } },
   id: "writes.article",
   editorial: { enabled: true },
   delivery: { enabled: true, redirects: { enabled: true } },
@@ -42,7 +41,6 @@ const articleType = defineContentType({
 });
 
 const localizedType = defineContentType({
-  admin: { label: { plural: "Articles", singular: "Article" } },
   id: "writes.localized",
   editorial: { enabled: true },
   delivery: { enabled: true, redirects: { enabled: true } },
@@ -668,7 +666,6 @@ describe("a record that predates slug history", () => {
 describe("delivery without redirects", () => {
   it("reports the paths and writes no history at all", async () => {
     const withoutRedirects = defineContentType({
-      admin: { label: { plural: "A", singular: "A" } },
       id: "writes.no-redirects",
       delivery: { enabled: true, sitemap: { enabled: true } },
       fields: {

@@ -45,13 +45,13 @@ describe("buildApiPlugin content types", () => {
       modules: [adminModule],
     });
 
-    expect(plugin.permissionStaff?.admin?.test_articles).toEqual([
+    expect(plugin.permissionStaff?.admin?.article).toEqual([
       "can_view",
       { dependsOn: ["can_view"], permission: "can_create" },
       { dependsOn: ["can_view"], permission: "can_edit" },
       { dependsOn: ["can_view"], permission: "can_delete" },
     ]);
-    expect(plugin.permissionStaff?.admin?.test_categories).toBeDefined();
+    expect(plugin.permissionStaff?.admin?.category).toBeDefined();
   });
 
   it("keeps hand-declared permissions and other modules intact", () => {
@@ -59,12 +59,12 @@ describe("buildApiPlugin content types", () => {
       pluginId: "@vitnode/example",
       modules: [adminModule],
       permissionStaff: {
-        admin: { posts: ["can_view"], test_articles: ["can_view"] },
+        admin: { article: ["can_view"], posts: ["can_view"] },
         moderator: { posts: ["can_edit"] },
       },
     });
 
-    expect(plugin.permissionStaff?.admin?.test_articles).toEqual(["can_view"]);
+    expect(plugin.permissionStaff?.admin?.article).toEqual(["can_view"]);
     expect(plugin.permissionStaff?.admin?.posts).toEqual(["can_view"]);
     expect(plugin.permissionStaff?.moderator?.posts).toEqual(["can_edit"]);
   });

@@ -121,7 +121,7 @@ describe("partitionContentStorage", () => {
 
     expect(Object.keys(partition.scalars)).toStrictEqual(["title"]);
     expect(Object.keys(partition.groups)).toStrictEqual(["seo", "syndication"]);
-    expect(Object.keys(partition.relationCollections)).toStrictEqual([
+    expect(Object.keys(partition.referenceCollections)).toStrictEqual([
       "categories",
     ]);
     expect(Object.keys(partition.repeatables)).toStrictEqual(["faq"]);

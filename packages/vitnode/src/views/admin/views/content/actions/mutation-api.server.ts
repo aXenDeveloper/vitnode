@@ -81,6 +81,15 @@ interface MutationResult {
   /** Lets the UI tell a restricted delete (409) from a generic failure. */
   status?: number;
   /**
+   * Nothing moved, so nothing was sent.
+   *
+   * Its own field rather than silence, because "saved" and "there was nothing
+   * to save" are different things to the person who pressed the button - and
+   * reporting the first for the second is how a form that is quietly failing
+   * looks exactly like one that is working.
+   */
+  unchanged?: boolean;
+  /**
    * The same, for the language half of a composite save.
    *
    * Its own field rather than a second arm of `conflict`, because the two need
@@ -473,8 +482,9 @@ export const editLocalizedContentAction = async (
 
   if (values === undefined && translations.length === 0) {
     // Nothing moved. Saying so costs one round trip less than proving it again
-    // on the server, and the toast is the same either way.
-    return {};
+    // on the server - but the caller is told, so the screen can say "no changes"
+    // rather than "saved".
+    return { unchanged: true };
   }
 
   const before = await readRow(definition, pluginId, id);
@@ -958,6 +968,7 @@ const zodOptions = z.object({
   items: z.array(
     z.object({
       avatarColor: z.string().optional(),
+      color: z.string().optional(),
       label: z.string(),
       nameCode: z.string().optional(),
       value: z.number(),
@@ -979,8 +990,21 @@ export const loadContentOptionsAction = async (
   contentTypeId: string,
   field: string,
   search: string,
+  /**
+   * Label exactly these identifiers instead of searching.
+   *
+   * How a to-many picker turns the ids a form opened with into names: there is
+   * no label on the row for a set, so it has to ask.
+   */
+  ids?: number[],
 ): Promise<
-  { avatarColor?: string; label: string; nameCode?: string; value: string }[]
+  {
+    avatarColor?: string;
+    color?: string;
+    label: string;
+    nameCode?: string;
+    value: string;
+  }[]
 > => {
   const { definition, pluginId } = resolve(contentTypeId);
 
@@ -989,16 +1013,20 @@ export const loadContentOptionsAction = async (
     method: "get",
     path: `/options/${field}`,
     pluginId,
-    query: { search },
+    query: ids ? { ids: ids.join(",") } : { search },
     schema: zodOptions,
   });
 
-  return (result.data?.items ?? [])
-    .slice(0, CONTENT_OPTIONS_LIMIT)
-    .map(item => ({
-      avatarColor: item.avatarColor,
-      label: item.label,
-      nameCode: item.nameCode,
-      value: String(item.value),
-    }));
+  return (
+    (result.data?.items ?? [])
+      // A label lookup is bounded by the identifiers the caller sent, which is
+      // already a number the form is holding - the limit is for a search.
+      .slice(0, ids ? ids.length : CONTENT_OPTIONS_LIMIT)
+      // Spread rather than rebuilt key by key: the only thing this mapping is
+      // for is turning the identifier into a string, and a hand-listed object
+      // silently drops whatever the option grows next - which is exactly how
+      // `color` reached the browser as `undefined` while its label came
+      // through fine.
+      .map(item => ({ ...item, value: String(item.value) }))
+  );
 };

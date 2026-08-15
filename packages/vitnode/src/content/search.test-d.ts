@@ -45,7 +45,6 @@ const publicApi = {
 } as const;
 
 const admin = {
-  label: { plural: "Articles", singular: "Article" },
   titleField: "title",
 } as const;
 

@@ -193,9 +193,12 @@ export const buildContentColumn = ({
     );
   }
 
-  if (fieldValue.kind === "relation" && fieldValue.multiple) {
+  if (
+    (fieldValue.kind === "relation" || fieldValue.kind === "user") &&
+    fieldValue.multiple
+  ) {
     throw new ContentEngineError(
-      `Field "${name}" is a to-many relation, whose values live in a generated junction table rather than in a column.`,
+      `Field "${name}" is a to-many ${fieldValue.kind === "user" ? "user field" : "relation"}, whose values live in a generated junction table rather than in a column.`,
       { contentTypeId },
     );
   }

@@ -95,6 +95,7 @@ const render = async (
     } as never,
     formSpec: {} as never,
     searchParams,
+    singular: "Example",
   })) as ReactElement;
 };
 

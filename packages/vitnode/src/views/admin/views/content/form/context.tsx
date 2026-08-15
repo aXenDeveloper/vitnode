@@ -84,19 +84,25 @@ export const ContentFormProvider = ({
 
   const { fieldNames } = value;
 
+  // Emptied here, during *this* render, rather than in the effect below: the
+  // children re-populate it while they render, which happens after this line
+  // and before any effect. Clearing it in the effect instead made the record
+  // depend on there being exactly one effect run per render - and there is not.
+  // React runs effects twice on mount in Strict Mode, which every Next dev
+  // server enables, so the second run always found an empty set and reported
+  // every field on the screen as missing.
+  rendered.current = new Set();
+
   /**
    * A layout that forgets a field silently drops it from the payload, which is
    * the one failure mode this API has that the generated form does not. Saying
    * so in development costs nothing and turns a data-loss bug into a console
    * line naming the field.
    *
-   * Runs after the children, which is what makes the set complete - and clears
-   * it afterwards, so a layout that *stops* placing a field is noticed on the
-   * very next render rather than remembered as still placing it.
+   * Runs after the children, which is what makes the set complete.
    */
   React.useEffect(() => {
     const missing = fieldNames.filter(name => !rendered.current.has(name));
-    rendered.current.clear();
 
     if (process.env.NODE_ENV === "production" || missing.length === 0) return;
 

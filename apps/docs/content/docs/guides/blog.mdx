@@ -126,7 +126,6 @@ export const blogCategoryContentType = defineContentType({
   },
 
   admin: {
-    label: { plural: "Categories", singular: "Category" },
     permissionModule: "categories",
     titleField: "name",
     create: { mode: "dialog" },
@@ -137,7 +136,7 @@ export const blogCategoryContentType = defineContentType({
 ```
 
 The colour is the AdminCP's own picker through a
-[field override](/docs/dev/content-engine/admin-form-layouts#field-and-column-overrides),
+[field override](/docs/dev/content-engine/admincp#form-layout-customization),
 and the colour column is a swatch **plus** the value in words.
 
 `name` is localized and is still the list's first column and the content type's

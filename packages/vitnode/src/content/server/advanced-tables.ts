@@ -27,9 +27,10 @@ import type {
   ContentRepeatableChildTable,
 } from "./types";
 
+import { core_users } from "../../database/users";
 import { ContentEngineError } from "../errors";
 import {
-  asContentRelationCollection,
+  asContentReferenceCollection,
   contentInnerFields,
   contentStorageColumns,
 } from "../paths";
@@ -232,15 +233,23 @@ export const createContentAdvancedTables = <
 
   const junctions: Record<string, ContentJunctionTable> = {};
   for (const entry of advanced.junctions) {
-    const fieldValue = asContentRelationCollection(fields[entry.field]);
+    const fieldValue = asContentReferenceCollection(fields[entry.field]);
     if (!fieldValue) continue;
 
-    // A self-relation resolves from the table being built. Requiring it in
-    // `references` would mean writing `() => thisContent.table.id` inside the
-    // model's own initializer, which widens the whole model to `any`.
-    const relatedReference: ColumnReferenceThunk | undefined = fieldValue.self
-      ? itemReference
-      : referenceThunks[entry.field];
+    // Three ways the far side of a junction is known, and only one of them is
+    // the plugin's to supply:
+    //
+    // - a **user** collection points at `core_users`, which the engine owns;
+    // - a **self**-relation resolves from the table being built (requiring it in
+    //   `references` would mean writing `() => thisContent.table.id` inside the
+    //   model's own initializer, which widens the whole model to `any`);
+    // - everything else names its target table in `references`.
+    const relatedReference: ColumnReferenceThunk | undefined =
+      fieldValue.kind === "user"
+        ? () => core_users.id
+        : fieldValue.self
+          ? itemReference
+          : referenceThunks[entry.field];
     if (!relatedReference) {
       throw new ContentEngineError(
         `To-many relation "${entry.field}" has no entry in \`references\`. Add \`${entry.field}: () => <target_table>.id\` - the junction table's foreign key needs a target just as much as a column would.`,

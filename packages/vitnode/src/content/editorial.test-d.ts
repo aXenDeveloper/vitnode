@@ -99,7 +99,6 @@ describe("editorial", () => {
           // @ts-expect-error - preview projects through `publicApi.fields`
           preview: { enabled: true },
         },
-        admin: { label: { plural: "Nopes", singular: "Nope" } },
       });
     });
 
@@ -113,7 +112,6 @@ describe("editorial", () => {
           // @ts-expect-error - a schedule moves `status`
           scheduling: { enabled: true },
         },
-        admin: { label: { plural: "Nopes", singular: "Nope" } },
       });
     });
   });
@@ -185,7 +183,6 @@ describe("editorial", () => {
           version: field.number({ integer: true, defaultValue: 0 }),
         },
         editorial: { enabled: true },
-        admin: { label: { plural: "Clashes", singular: "Clash" } },
       });
     });
 
@@ -197,7 +194,6 @@ describe("editorial", () => {
           title: field.text({ required: true }),
           version: field.number({ integer: true, defaultValue: 0 }),
         },
-        admin: { label: { plural: "Fine", singular: "Fine" } },
       });
 
       expectTypeOf(withOwnVersion.editorial.enabled).toEqualTypeOf<false>();
@@ -216,7 +212,6 @@ describe("editorial", () => {
         fields: { title: field.text({ required: true }) },
         editorial: { enabled: true },
         admin: {
-          label: { plural: "Columns", singular: "Column" },
           list: { columns: ["title", "version"], defaultOrderBy: "version" },
         },
       });
@@ -228,7 +223,6 @@ describe("editorial", () => {
         tableName: "test_no_version_column",
         fields: { title: field.text({ required: true }) },
         admin: {
-          label: { plural: "Columns", singular: "Column" },
           // @ts-expect-error - `version` is not a column of this content type
           list: { columns: ["title", "version"] },
         },

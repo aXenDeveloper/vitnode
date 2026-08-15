@@ -1,55 +1,53 @@
 ---
-title: Defining a content type
-description: The three files a content type needs, why they are separate, and how to register it with the API and the AdminCP.
+title: Defining a Content Type
+description: Learn the three-file architecture, how to declare content models, register them step-by-step, generate database migrations, and configure i18n keys.
 icon: FilePlus2
 ---
 
-A content type is three small files. They are separate on purpose - see
-[the boundary](#why-three-files) below.
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+Every content type in VitNode consists of three compact, dedicated files. This strict division keeps your client bundle lightweight while giving server APIs full access to Drizzle ORM.
+
+## The Three-File Architecture
+
+| File Path | Role | Allowed Dependencies |
+| :--- | :--- | :--- |
+| `src/content/*.ts` | **Client-Safe Definition** | `zod`, `@vitnode/core/content` |
+| `src/database/*.ts` | **Database Model** | Drizzle ORM, `@vitnode/core/content/server` |
+| `src/config.tsx` | **AdminCP Frontend** | React, Lucide Icons, `@vitnode/core/lib/plugin` |
+
+---
+
+## Step-by-Step Implementation Guide
 
 <Steps>
 
 <Step>
-### Declare the content type
+### Step 1: Declare the Content Definition
 
-This file is imported by both the AdminCP and the API, so it must stay free of
-Drizzle, Hono and React. Only `zod` and plain objects.
+Create a new file `src/content/article.ts`. Import `defineContentType` and `field` from `@vitnode/core/content`. Do **not** import Drizzle, React, or server utilities here to keep it client-safe.
 
 ```ts title="src/content/article.ts"
 import { defineContentType, field } from "@vitnode/core/content";
 
-import { categoryContentType } from "./category";
-
 export const articleContentType = defineContentType({
   id: "example.article",
   tableName: "example_articles",
-
   fields: {
     title: field.text({ required: true, minLength: 3, maxLength: 200 }),
     code: field.text({ required: true, maxLength: 100, unique: true }),
     excerpt: field.textarea({ maxLength: 500, nullable: true }),
-    views: field.number({ integer: true, min: 0, defaultValue: 0 }),
-    featured: field.boolean({ defaultValue: false }),
     status: field.enum({
-      values: ["draft", "published", "archived"],
+      values: ["draft", "published"],
       defaultValue: "draft",
     }),
     publishedAt: field.dateTime({ nullable: true }),
     author: field.user(),
-    category: field.relation({
-      required: true,
-      onDelete: "restrict",
-      target: () => categoryContentType,
-    }),
   },
-
-  indexes: [{ on: ["status", "createdAt"] }],
-
   admin: {
-    label: { plural: "Articles", singular: "Article" },
     titleField: "title",
     list: {
-      columns: ["title", "code", "status", "category", "author", "updatedAt"],
+      columns: ["title", "code", "status", "author", "updatedAt"],
       searchableFields: ["title", "code", "excerpt"],
       orderableFields: ["title", "code", "status"],
       defaultOrderBy: "updatedAt",
@@ -58,56 +56,33 @@ export const articleContentType = defineContentType({
   },
 });
 ```
-
-`id` is `plugin.entity`, lowercase and dot-separated. It becomes the AdminCP
-URL (`/admin/content/example/article`) and the event names, so pick it once and
-leave it alone.
 </Step>
 
 <Step>
-### Build the table
+### Step 2: Build the Database Table Model
 
-This is the file Drizzle Kit reads. It must live directly in `src/database/`
-(the glob is flat, not recursive).
+Create `src/database/articles.ts`. Pass the definition to `createContentModel` to compile the database table representation.
 
 ```ts title="src/database/articles.ts"
 import { createContentModel } from "@vitnode/core/content/server";
-
 import { articleContentType } from "@/content/article";
 
-import { example_categories } from "./categories";
+export const articleContent = createContentModel(articleContentType);
 
-export const articleContent = createContentModel(articleContentType, {
-  references: { category: () => example_categories.id },
-});
-
+// Export the table directly so Drizzle Kit discovers it during migrations
 export const example_articles = articleContent.table;
 ```
-
-`references` needs exactly one thunk per `relation` field - a missing or extra
-key is a compile error. `user` fields need no entry; they always point at
-`core_users`. The thunk is what keeps two content types that reference each
-other from deadlocking on imports, and the engine
-[checks it against the descriptor's `target`](/docs/dev/content-engine/fields#the-target-is-checked-against-the-real-foreign-key)
-so the two cannot drift apart.
-
-<Callout type="warn" title="Export the table">
-  Drizzle Kit finds tables by looking at what a module exports. If you keep the
-  table on the model and never export it, no migration is generated for it.
-</Callout>
 </Step>
 
 <Step>
-### Register it
+### Step 3: Register Content Types in API & Frontend
 
-On the API side, nest the generated module inside your plugin's own `admin`
-module:
+First, attach the content module to your plugin's admin module on the API side:
 
 ```ts title="src/api/modules/admin/admin.module.ts"
 import { buildModule } from "@vitnode/core/api/lib/module";
-import { buildContentAdminModule } from "@vitnode/core/content/server";
-
-import { articleContent } from "@/database/articles";
+import { buildContentAdminModule } from "@vitnode/core/content/server"; // [!code ++]
+import { articleContent } from "@/database/articles"; // [!code ++]
 import { CONFIG_PLUGIN } from "@/const";
 
 export const adminModule = buildModule({
@@ -115,74 +90,39 @@ export const adminModule = buildModule({
   name: "admin",
   routes: [],
   modules: [
-    buildContentAdminModule({
-      pluginId: CONFIG_PLUGIN.pluginId,
-      contentTypes: [articleContent],
-    }),
+    buildContentAdminModule({ // [!code ++]
+      pluginId: CONFIG_PLUGIN.pluginId, // [!code ++]
+      contentTypes: [articleContent], // [!code ++]
+    }), // [!code ++]
   ],
 });
 ```
 
-```ts title="src/config.api.ts"
-export const exampleApiPlugin = () =>
-  buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
-    modules: [adminModule],
-  });
-```
-
-A content type with [`publicApi`](/docs/dev/content-engine/public-api) needs one
-more module, and this one is **top-level** - its paths must stay out of
-`/admin/`, which the global admin gate matches as a substring:
-
-```ts title="src/config.api.ts"
-import { buildContentPublicModule } from "@vitnode/core/content/server";
-
-export const exampleApiPlugin = () =>
-  buildApiPlugin({
-    pluginId: CONFIG_PLUGIN.pluginId,
-    modules: [
-      adminModule,
-      buildContentPublicModule({
-        pluginId: CONFIG_PLUGIN.pluginId,
-        contentTypes: [articleContent],
-      }),
-    ],
-  });
-```
-
-It skips any content type without `publicApi`, and it registers no content types
-of its own - that is the admin module's job, and doing it twice throws.
-
-There is no `contentTypes` on `buildApiPlugin`: it walks the module tree, so
-the content types you listed above already drive the registry **and** the
-derived staff permissions. Declare once.
-
-On the frontend side, register the definition to get the AdminCP screen, the
-nav item and the breadcrumb:
+Second, register `contentTypeAdmin` in your plugin's frontend configuration:
 
 ```tsx title="src/config.tsx"
 import { buildPlugin, contentTypeAdmin } from "@vitnode/core/lib/plugin";
 import { NotebookPenIcon } from "lucide-react";
-
-import { articleContentType } from "@/content/article";
+import { articleContentType } from "@/content/article"; // [!code ++]
 
 export const examplePlugin = () =>
   buildPlugin({
     pluginId: "@vitnode/example",
     messages,
     contentTypes: [
-      contentTypeAdmin({
-        definition: articleContentType,
-        icon: <NotebookPenIcon />,
-      }),
+      contentTypeAdmin({ // [!code ++]
+        definition: articleContentType, // [!code ++]
+        icon: <NotebookPenIcon />, // [!code ++]
+      }), // [!code ++]
     ],
   });
 ```
 </Step>
 
 <Step>
-### Generate the migration
+### Step 4: Build Plugins and Run Database Migrations
+
+Generate Drizzle Kit migrations and apply schema updates to your database:
 
 <Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
 
@@ -199,55 +139,57 @@ npm run build:plugins && npm run db:migrate
 ```
 
 </Tabs>
-
-The build step matters: Drizzle Kit reads your plugin's **compiled**
-`dist/src/database/*.js`, not its source.
 </Step>
 
 </Steps>
 
-## Why three files
+---
 
-The AdminCP screen is a server component, but the create/edit form is a client
-one - and `src/database/articles.ts` is executed by Drizzle Kit during
-migration generation. One file cannot be all three:
+## Internationalization (i18n) Configuration
 
-| File | Imported by | May import |
-| --- | --- | --- |
-| `src/content/*.ts` | everything | `zod`, plain objects |
-| `src/database/*.ts` | the API, Drizzle Kit | Drizzle, the definition |
-| `src/config.tsx` | Next.js (server) | React, the definition |
+Instead of relying on hardcoded plain text strings in UI components, VitNode humanizes field names automatically and resolves translation keys from your plugin's locale files.
 
-Keeping the definition in the first row is what lets the AdminCP and the API
-share one object. Put a Drizzle import in there and you drag the whole ORM into
-the browser bundle.
-
-<Callout type="warn" title="Never add `server-only` to a database file">
-  The `server-only` package throws when it is loaded outside a React Server
-  Component - and both `apps/api` and `drizzle-kit` are plain Node. Use the
-  directory convention instead.
-</Callout>
-
-## i18n
-
-Every label falls back to something readable, so translations are optional. When
-you want them, they live under your plugin's namespace:
+Add i18n translation keys under your plugin namespace in `src/locales/en.json`:
 
 ```json title="src/locales/en.json"
 {
   "@vitnode/example": {
     "content": {
       "article": {
+        "label": "{count, plural, one {Article} other {Articles}}",
         "title": "Articles",
-        "desc": "Everything the Content Engine generates, from one definition.",
-        "fields": { "title": "Title", "publishedAt": "Published at" },
-        "enums": { "status": { "draft": "Draft", "published": "Published" } }
+        "desc": "Manage blog articles and news releases.",
+        "fields": {
+          "title": "Article Title",
+          "code": "Article Code",
+          "excerpt": "Short Excerpt",
+          "publishedAt": "Publication Date"
+        },
+        "enums": {
+          "status": {
+            "draft": "Draft Copy",
+            "published": "Live"
+          }
+        },
+        "form": {
+          "general": { "title": "General information" }
+        }
       }
     }
   }
 }
 ```
 
-The key is `{pluginId}.content.{entity}` where `entity` is your content type id
-with the plugin segment removed. Without it, `publishedAt` still renders as
-"Published at" - the engine humanises field names.
+The translation key convention follows `{pluginId}.content.{entity}` where `entity` corresponds to your content type ID without the plugin prefix (e.g. `example.article` → `article`).
+
+`label` is the record's own noun, written as an [ICU cardinal
+plural](https://next-intl.dev/docs/usage/translations#cardinal-pluralization) so a
+language with more than two number forms can supply all of them. It is what the
+AdminCP interpolates into `Create {name}`, `{name} has been deleted` and every
+confirmation, and it is the **only** place that noun is written - a definition
+declares no display name. Untranslated, the screens fall back to a name derived from
+the id (`example.article` → "Article"). Keys
+under `form` title the sections declared in
+[`admin.form.sections`](/docs/dev/content-engine/admincp). See [AdminCP
+Integration](/docs/dev/content-engine/admincp) for the full key list and its
+fallbacks.

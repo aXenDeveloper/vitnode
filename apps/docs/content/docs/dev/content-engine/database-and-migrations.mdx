@@ -1,468 +1,119 @@
 ---
-title: Database & migrations
-description: How Drizzle Kit discovers generated tables, what the migration looks like, and what happens when you rename a field.
+title: Database & Migrations
+description: How the Content Engine maps content models to PostgreSQL tables using createContentModel, handles system columns, and executes Drizzle Kit migrations.
 icon: Database
 ---
 
-A content type is one real Postgres table. Nothing about migrations changes -
-the same `drizzle-kit generate`, the same committed SQL, the same journal.
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
-## What gets generated
+Content Engine content types compile directly into standard PostgreSQL database tables via Drizzle ORM.
 
-Every content table gets three system columns, matching the conventions used by
-every hand-written VitNode table:
+## Prerequisites & Context
 
-```ts
-id:        serial primary key
-createdAt: timestamp not null default now()
-updatedAt: timestamp not null default now()   // refreshed via $onUpdate
+Before setting up database tables, you must have a content type definition (e.g. `articleContentType`) created using `defineContentType` in `src/content/article.ts`:
+
+```ts title="src/content/article.ts"
+import { defineContentType, field } from "@vitnode/core/content";
+
+// 1. Client-safe definition (imported by both API and AdminCP)
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+    code: field.text({ required: true }),
+  },
+});
 ```
 
-plus one column per field, the indexes described [below](#indexes), and
-`ENABLE ROW LEVEL SECURITY`.
+- **`createContentModel(definition, options)`**: A backend utility from `@vitnode/core/content/server` that converts a client-safe content definition into a server-side Drizzle ORM model.
+- **`articleContent`**: The compiled model object containing `.table` (raw Drizzle table), `.service(c)` (CRUD helper), and `.schemas` (Zod schemas).
 
-A content type with [`publication`](/docs/dev/content-engine/publication) gets
-two more generated columns:
+---
 
-```ts
-status:      varchar(32) not null default 'draft'
-publishedAt: timestamp                      // "first published at", nullable
+## Step-by-Step Database Setup
+
+<Steps>
+
+<Step>
+### Step 1: Create Database Model File
+
+Create your model file under `src/database/articles.ts`. Import `createContentModel` from `@vitnode/core/content/server` and your definition `articleContentType`:
+
+```ts title="src/database/articles.ts"
+import { createContentModel } from "@vitnode/core/content/server";
+import { articleContentType } from "@/content/article";
+import { example_categories } from "./categories";
+
+// Compile client definition into a server Drizzle model
+export const articleContent = createContentModel(articleContentType, {
+  references: {
+    category: () => example_categories.id,
+  },
+});
+
+// Export raw Drizzle table for migration discovery
+export const example_articles = articleContent.table;
 ```
+</Step>
 
-and one with [`editorial`](/docs/dev/content-engine/editorial) gets one more:
+<Step>
+### Step 2: Add Database Indexes
 
-```ts
-version: integer not null default 1
+Add single or composite indexes inside your content definition file `src/content/article.ts`:
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+    code: field.text({ required: true }),
+    status: field.enum({ values: ["draft", "published"] }),
+  },
+  indexes: [ // [!code ++]
+    { on: ["status", "createdAt"] }, // Composite index // [!code ++]
+    { on: ["code"], unique: true }, // Unique constraint // [!code ++]
+  ], // [!code ++]
+});
 ```
+</Step>
 
-Here is the real migration for the example plugin:
+<Step>
+### Step 3: Run Database Migrations
 
-```sql title="apps/docs/migrations/0022_add_example_content.sql"
-CREATE TABLE "example_articles" (
-  "id" serial PRIMARY KEY NOT NULL,
-  "createdAt" timestamp DEFAULT now() NOT NULL,
-  "updatedAt" timestamp DEFAULT now() NOT NULL,
-  "title" varchar(200) NOT NULL,
-  "code" varchar(100) NOT NULL,
-  "excerpt" text,
-  "views" integer DEFAULT 0 NOT NULL,
-  "featured" boolean DEFAULT false NOT NULL,
-  "status" varchar(64) DEFAULT 'draft' NOT NULL,
-  "publishedAt" timestamp,
-  "author" integer,
-  "category" integer NOT NULL
-);
-ALTER TABLE "example_articles" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "example_articles" ADD CONSTRAINT "example_articles_author_core_users_id_fk"
-  FOREIGN KEY ("author") REFERENCES "public"."core_users"("id")
-  ON DELETE set null ON UPDATE cascade;
-ALTER TABLE "example_articles" ADD CONSTRAINT "example_articles_category_example_categories_id_fk"
-  FOREIGN KEY ("category") REFERENCES "public"."example_categories"("id")
-  ON DELETE restrict ON UPDATE cascade;
-CREATE INDEX "example_articles_status_created_at_idx"
-  ON "example_articles" USING btree ("status","createdAt");
-CREATE UNIQUE INDEX "example_articles_code_key"
-  ON "example_articles" USING btree ("code");
-CREATE INDEX "example_articles_author_idx" ON "example_articles" USING btree ("author");
-CREATE INDEX "example_articles_category_idx" ON "example_articles" USING btree ("category");
-CREATE INDEX "example_articles_created_at_idx" ON "example_articles" USING btree ("createdAt");
-CREATE INDEX "example_articles_updated_at_idx" ON "example_articles" USING btree ("updatedAt");
-```
-
-Ordinary SQL. Nothing about it says "generated", which is the point.
-
-<Callout type="info" title="That snippet predates publication">
-  `status` and `publishedAt` are declared *fields* in `0022`. The article later
-  moved onto the generated publication columns, which is what `0023` does - and
-  it is worth reading as a worked example of migrating an existing table:
-
-```sql title="apps/docs/migrations/0023_add_publication_to_example_articles.sql"
-UPDATE "example_articles" SET "status" = 'draft'
-  WHERE "status" NOT IN ('draft', 'published');
-ALTER TABLE "example_articles" ALTER COLUMN "status" SET DATA TYPE varchar(32);
-ALTER TABLE "example_articles" ALTER COLUMN "status" SET DEFAULT 'draft';
-CREATE INDEX "example_articles_status_published_at_idx"
-  ON "example_articles" USING btree ("status","publishedAt");
-```
-
-  Drizzle Kit generated everything except the two `UPDATE`s. It cannot know
-  that `archived` has nowhere to go once the generated status only has two
-  values - that judgement is yours, and hand-editing the generated SQL is the
-  normal way to record it.
-</Callout>
-
-## Indexes
-
-Five things put an index on a content table, and they are listed here in
-precedence order:
-
-1. anything you declared in `indexes`,
-2. `field.text({ unique: true })`, and every
-   [`field.slug`](/docs/dev/content-engine/slug-field) - a slug is a URL, so it
-   is unique whether or not you ask,
-3. every foreign key - `relation` and `user` fields,
-4. `createdAt` and `updatedAt`, which back the default ordering,
-5. `(status, publishedAt)` when
-   [`publication`](/docs/dev/content-engine/publication) is enabled - one
-   composite index serving both the published predicate and the ordering.
-
-```ts
-indexes: [
-  { on: ["status", "createdAt"] },
-  { on: ["category", "code"], unique: true },
-  { name: "example_articles_hot_idx", on: ["featured"] },
-],
-```
-
-### Naming
-
-Generated names are `<table>_<columns>_idx`, or `_key` when the index is
-unique - the suffix Postgres uses for its own unique constraints. Column names
-are converted to snake_case, so `createdAt` becomes `created_at` and the name
-matches the SQL you read in the migration.
-
-Names are capped at Postgres' 63-character limit. When a name would overflow it
-is shortened and a short fingerprint of the *full* name is appended, so two long
-tables that differ only in their last few characters never collide:
-
-```text
-a_very_long_content_table_name_with_a_long_col_idx      // fits, used as is
-a_very_long_content_table_name_wit..._some_column_1x9k4m2 // shortened + hashed
-```
-
-The result is deterministic: the same definition always produces the same
-migration.
-
-<Callout type="warn" title="Index names are schema-wide, not table-wide">
-  Postgres keeps index names in the schema, so *every* content type installed in
-  one app has to have distinct ones - even across two plugins that know nothing
-  about each other. The registry checks that when it validates the installed set,
-  which means a clash fails at plugin build and at app boot rather than halfway
-  through a migration:
-
-```text
-[Content Engine] blog.post: Index name "shared_code_idx" is used by both
-@vitnode/example -> example.article (table "example_articles", columns [code])
-and @vitnode/blog -> blog.post (table "blog_posts", columns [slug]).
-Postgres index names are unique per schema, so rename one of them.
-```
-
-  Generated names carry the table name, so they cannot collide on their own -
-  this only bites when two content types pick the same explicit `name`.
-</Callout>
-
-### Deduplication
-
-Two index definitions covering **the same columns in the same order** collapse
-into one. The first name wins, and the index is unique if any of them asked for
-uniqueness. In practice:
-
-| You wrote | You get |
-| --- | --- |
-| `field.text({ unique: true })` on `code` | one unique index, `<table>_code_key` |
-| that, plus `{ on: ["code"], unique: true }` | still one index |
-| that, plus `{ name: "my_code_idx", on: ["code"] }` | one index named `my_code_idx`, **and still unique** |
-| `{ on: ["category"] }` on a relation field | one index, yours - not a second copy of the automatic one |
-
-Column order is part of the identity: `(status, createdAt)` and
-`(createdAt, status)` are two different indexes, because they are.
-
-### What is rejected
-
-`defineContentType` throws a `ContentEngineError` for an index that could not
-work, rather than letting Postgres find out later:
-
-- an empty column list, or a column the content type does not declare,
-- the same column listed twice inside one index,
-- two declared indexes on the same columns,
-- a duplicated explicit `name`,
-- an explicit `name` that is not snake_case, or is over 63 characters,
-- two indexes that resolve to the same name.
-
-The registry adds one more, because it is the only thing that sees every content
-type at once:
-
-- two **different content types** resolving to the same index name.
-
-## How Drizzle Kit finds it
-
-`defineVitNodeDrizzleConfig` globs every registered plugin's compiled
-`node_modules/<pluginId>/dist/src/database/*.js` and collects anything that is a
-Drizzle table at runtime. A table produced by `createContentModel` is a real
-`pgTable`, so it is picked up exactly like a hand-written one.
-
-Two rules follow from that:
-
-<Callout type="warn" title="Build before you generate">
-  The glob reads `dist`, not `src`. Run `build:plugins` before `db:migrate`, or
-  your new table simply will not appear.
-</Callout>
-
-- **Keep database files flat.** The glob is `*.js`, not `**/*.js` -
-  `src/database/blog/posts.ts` is invisible.
-- **Keep them cheap to import.** Drizzle Kit *executes* these modules. No Hono
-  context, no React, no `server-only`, no top-level side effects.
-
-## Naming and clean installs
-
-Migrations are named by `drizzle-kit` and then renamed to something descriptive
-when the change is worth recognising - `0022_add_example_content.sql` rather
-than `0022_dry_hercules.sql`. Update the matching `tag` in
-`migrations/meta/_journal.json` when you do.
-
-A clean database just runs the journal in order. Content tables are plain
-`CREATE TABLE` statements; there is no bootstrap step and no ordering subtlety
-beyond the foreign keys Drizzle already sorts out.
-
-## The shared revisions table
-
-[`editorial`](/docs/dev/content-engine/editorial) does **not** generate a
-revisions table per content type. There is one, in core, shared by every
-editorial content type in the install:
-
-```sql title="apps/docs/migrations/0025_add_content_revisions.sql"
-CREATE TABLE "core_content_revisions" (
-  "id" serial PRIMARY KEY NOT NULL,
-  "pluginId" varchar(255) NOT NULL,
-  "contentTypeId" varchar(100) NOT NULL,
-  "itemId" integer NOT NULL,
-  "version" integer NOT NULL,
-  "operation" varchar(20) NOT NULL,
-  "snapshot" jsonb DEFAULT '{}'::jsonb NOT NULL,
-  "changedFields" jsonb DEFAULT '[]'::jsonb NOT NULL,
-  "actorType" varchar(16) DEFAULT 'system' NOT NULL,
-  "actorUserId" integer,
-  "restoredFromRevisionId" integer,
-  "createdAt" timestamp DEFAULT now() NOT NULL
-);
-ALTER TABLE "core_content_revisions" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "core_content_revisions" ADD CONSTRAINT "core_content_revisions_actorUserId_core_users_id_fk"
-  FOREIGN KEY ("actorUserId") REFERENCES "public"."core_users"("id")
-  ON DELETE set null ON UPDATE cascade;
-CREATE UNIQUE INDEX "core_content_revisions_item_version_unique"
-  ON "core_content_revisions" USING btree ("contentTypeId","itemId","version");
-CREATE INDEX "core_content_revisions_plugin_id_idx"
-  ON "core_content_revisions" USING btree ("pluginId");
-CREATE INDEX "core_content_revisions_actor_user_id_idx"
-  ON "core_content_revisions" USING btree ("actorUserId");
-```
-
-Two things about it are worth knowing before you go looking for them.
-
-**There is no foreign key to the content row.** There cannot be: content tables
-are produced at runtime from a descriptor, and core's static schema has no name
-to point at. `core_search_index` models the same relationship the same way, with
-`itemType` and `itemId` and no constraint. So deleting a record leaves its
-history behind - deliberately, that being what an audit trail is - and every
-query is scoped by `(pluginId, contentTypeId, itemId)` instead of relying on
-the database to police ownership.
-
-**The unique index is the real invariant.** `(contentTypeId, itemId, version)`
-is what makes "one revision per version" true even if two writes race, rather
-than true because the code is careful. It is also the history index: newest-first
-is a backwards scan of it.
-
-`restoredFromRevisionId` is a plain integer with no constraint on purpose. It
-points at a revision that retention will eventually prune, and a foreign key
-would either block that prune or null out the reference - both of which lose the
-one fact the column exists to record.
-
-Adding `editorial` to an existing content type is one statement against the
-content table itself, and no backfill:
-
-```sql title="apps/docs/migrations/0026_add_example_article_editorial.sql"
-ALTER TABLE "example_articles" ADD COLUMN "version" integer DEFAULT 1 NOT NULL;
-```
-
-### The schedules table
-
-[`editorial.scheduling`](/docs/dev/content-engine/scheduling) adds a second
-shared core table, `core_content_schedules`, on the same terms: no foreign key
-to the record, every query scoped by `(pluginId, contentTypeId, itemId)`, and no
-per-plugin migration.
-
-Its one interesting index is partial:
-
-```sql
-CREATE UNIQUE INDEX "core_content_schedules_active_unique"
-  ON "core_content_schedules" USING btree ("contentTypeId","itemId","action")
-  WHERE status = 'pending';
-```
-
-At most one *pending* schedule per record and action, enforced by the database.
-That is what makes "cancel the old row, then insert a new one" safe when two
-requests arrive together - and it still allows any number of settled rows, which
-are the audit trail.
-
-Completed and cancelled rows are kept and swept by a daily cron rather than
-deleted on success. "Who scheduled this, and when did it go out" is the question
-the feature exists to answer.
-
-It carries two error columns rather than one, because a scheduled publication is
-two units of work:
-
-| Column | Means |
-| --- | --- |
-| `lastError` | The **transition** failed. The row is still `pending` and the queue is retrying the publish |
-| `effectsError` | The transition committed and the row is `completed`, but its event, search write or cache expiry has not landed yet |
-
-A completed schedule is never moved back to `pending` because an announcement
-bounced - the record really did publish, and only the telling is outstanding.
-
-### When a plugin or content type is renamed
-
-Revisions are keyed by `pluginId` and `contentTypeId` as strings, so renaming
-either one orphans the rows - the same as it does for the
-[search index](/docs/dev/content-engine/search). One statement fixes it, and it
-belongs in the migration that does the rename:
-
-```sql
-UPDATE "core_content_revisions"
-SET "contentTypeId" = 'example.post'
-WHERE "contentTypeId" = 'example.article';
-
-UPDATE "core_content_schedules"
-SET "contentTypeId" = 'example.post'
-WHERE "contentTypeId" = 'example.article';
-```
-
-Removing a content type for good needs no statement at all: the daily
-`content-editorial-cleanup` cron deletes rows whose content type is no longer
-registered, on both tables. A rename looks exactly like a removal to it, which
-is why the `UPDATE` belongs in the same migration rather than the next release.
-
-## A localized Content Type generates two tables
-
-Marking a field `localized: true` moves its column onto a generated
-`<tableName>_translations` table, and the plugin's database module exports both:
-
-```ts
-export const example_localized_articles = localizedArticleContent.table;
-export const example_localized_articles_translations =
-  localizedArticleContent.translationTable;
-```
-
-`translationTable` is `null` without localization, so nothing about an existing
-module changes. The generated schema, its keys and its indexes are covered in
-[Translation tables](/docs/dev/content-engine/translation-tables); localizing a
-table that already has rows in it needs [a hand-written
-copy-verify-drop migration](/docs/dev/content-engine/localization-migrations#localizing-a-content-type-that-already-has-rows).
-
-## Renaming or removing a field
-
-<Callout type="warn" title="Renaming a field drops the column">
-  The engine has no rename detection. Changing `excerpt` to `summary` generates
-  `DROP COLUMN "excerpt"` and `ADD COLUMN "summary"` - **the data is gone**.
-</Callout>
-
-The safe path is the same one you would use for a hand-written table:
-
-1. Add the new field, keep the old one.
-2. Generate and run that migration.
-3. Backfill with a hand-written migration.
-4. Remove the old field in a later release.
-
-Other destructive changes to watch: lowering a `text` field's `maxLength` can
-fail on existing rows, and flipping `number.integer` changes the column type.
-
-## Adding a slug to a populated table
-
-Drizzle Kit generates one statement for a new
-[`field.slug`](/docs/dev/content-engine/slug-field):
-
-```sql
-ALTER TABLE "example_articles" ADD COLUMN "slug" varchar(160) NOT NULL;
-```
-
-That fails outright on a table with rows in it - there is no default to backfill
-them with. Split it by hand into add, backfill, tighten, index. The
-[slug field page](/docs/dev/content-engine/slug-field#migrations) has the exact
-SQL, and the example plugin's
-[`0024` migration](https://github.com/aXenDeveloper/vitnode/blob/canary/apps/docs/migrations/0024_add_example_article_slug.sql)
-is that file, replayed by the Postgres integration test.
-
-<Callout type="warn" title="Suffix every row, not just the duplicates">
-  Two rows can normalise to the same slug, and the fix is to append the row id.
-  Append it to **all** of them. A rescue value is itself a slug, so suffixing
-  only the ambiguous rows can land one on a natural slug that was left alone -
-  `"Foo 2"`, `"Foo"`, `"Foo"` become `foo-2`, `foo-2`, `foo-3` - and that only
-  surfaces when `CREATE UNIQUE INDEX` fails at the end of the migration.
-
-  With the id on every row, two values can only match if their ids do.
-
-  Truncate **before** appending, too: a backfilled slug can already be the full
-  `varchar(160)`, and `slug || '-' || id` on top of that overflows the column.
-
-```sql
-left(coalesce(a."slug", ''), 160 - 1 - length(a."id"::text)) -- then '-' || id
-```
-
-  The suffix is a deterministic, one-off backfill device: a migration must give
-  every pre-existing row a unique value with no author to ask. Runtime
-  collisions are a 409 instead, because the engine never rewrites a URL an
-  author did choose.
-</Callout>
-
-Adding `publication` to a populated table is the easier case: `status` carries
-`DEFAULT 'draft' NOT NULL`, so one statement backfills it - and takes everything
-out of circulation. See
-[Migrations](/docs/dev/content-engine/publication#migrations) for the one-line
-remediation.
-
-Rollback works the way it does everywhere else in VitNode: there are no down
-migrations, so you restore from a backup or write a forward migration.
-
-## Checking it against a real database
-
-The unit tests assert on Drizzle's table metadata, which is fast but cannot prove
-that Postgres accepted the DDL. So the example plugin also carries a smoke test
-that applies the committed migration to a throwaway database and drives the
-service through create, read, list, update and delete - including the unique
-index, the foreign keys and a restricted delete.
-
-It skips itself unless `DATABASE_TEST_URL` is set, and it refuses to run against
-a database whose name does not contain `test`, because it drops the schema first:
+Compile your plugins and apply schema changes:
 
 <Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
 
 ```bash tab="bun"
-DATABASE_TEST_URL=postgres://root:root@localhost:5432/vitnode_test \
-  bun run --filter @vitnode/example test
+bun run build:plugins && bun run db:migrate
 ```
 
 ```bash tab="pnpm"
-DATABASE_TEST_URL=postgres://root:root@localhost:5432/vitnode_test \
-  pnpm --filter @vitnode/example test
+pnpm build:plugins && pnpm db:migrate
 ```
 
 ```bash tab="npm"
-DATABASE_TEST_URL=postgres://root:root@localhost:5432/vitnode_test \
-  npm test --workspace @vitnode/example
+npm run build:plugins && npm run db:migrate
 ```
 
 </Tabs>
+</Step>
 
-CI provides that database as a service container, so every pull request runs it.
+</Steps>
 
-## Row level security
+---
 
-Generated tables get `.enableRLS()` with no policies, matching all 22 core
-tables. The application connects as the table owner, which bypasses non-forced
-RLS, so this changes no behaviour today - it just means a content table is never
-the loose one if policies arrive later.
+## Automatic System Columns
 
-## Dropping down to Drizzle
+When `createContentModel` compiles a model, it automatically includes standard system columns:
 
-The model exposes everything the generated code uses, so nothing is a dead end:
+| Column | Postgres Type | Description |
+| :--- | :--- | :--- |
+| `id` | `serial` / `integer` | Primary key identifier |
+| `createdAt` | `timestamp` | Auto-populated creation timestamp |
+| `updatedAt` | `timestamp` | Auto-updated modification timestamp |
 
-```ts
-import { eq } from "drizzle-orm";
-
-import { articleContent, example_articles } from "@/database/articles";
-
-const rows = await c
-  .get("db")
-  .select()
-  .from(example_articles)
-  .where(eq(articleContent.columns.status, "published"));
-```
+If [`publication`](/docs/dev/content-engine/publication-and-editorial) is enabled, `status` and `publishedAt` columns are added.  
+If [`editorial`](/docs/dev/content-engine/publication-and-editorial) is enabled, a `version` column is added for optimistic concurrency control.

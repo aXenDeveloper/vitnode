@@ -3,20 +3,22 @@
     "title": "Blog",
     "content": {
       "post": {
+        "label": "{count, plural, one {Article} other {Articles}}",
         "title": "Articles",
         "desc": "Write and manage your blog articles.",
         "fields": {
           "title": "Title",
           "friendlyUrl": "Friendly URL",
           "content": "Content",
-          "categoryId": "Category",
-          "authorId": "Author",
+          "categoryId": "Categories",
+          "authorId": "Authors",
           "status": "Status",
           "publishedAt": "Published",
           "updatedAt": "Updated"
         }
       },
       "category": {
+        "label": "{count, plural, one {Category} other {Categories}}",
         "title": "Categories",
         "desc": "Group articles together.",
         "fields": {

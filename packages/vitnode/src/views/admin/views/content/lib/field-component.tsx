@@ -13,9 +13,11 @@ import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { AutoFormTextarea } from "@/components/form/fields/textarea";
 
 import { ContentGroupField } from "./group-field";
+import { ContentOptionSwatch } from "./option-swatch";
 import { ContentRelationSetField } from "./relation-set-field";
 import { ContentRepeatableField } from "./repeatable-field";
 import { ContentUserField } from "./user-field";
+import { ContentUserSetField } from "./user-set-field";
 
 /**
  * One option a picker can offer.
@@ -27,6 +29,8 @@ import { ContentUserField } from "./user-field";
 export interface ContentOption {
   /** `user` fields only - a `relation` target has no avatar. */
   avatarColor?: string;
+  /** A swatch, when the target content type declares `admin.colorField`. */
+  color?: string;
   label: string;
   /** `user` fields only. */
   nameCode?: string;
@@ -35,6 +39,14 @@ export interface ContentOption {
 
 export type ContentOptionsLoader = (args: {
   field: string;
+  /**
+   * Label exactly these identifiers instead of searching.
+   *
+   * What a to-many picker opens with. Its value is a list of ids and there is no
+   * label on the row to have joined a name from, so the names are asked for
+   * directly.
+   */
+  ids?: number[];
   search: string;
 }) => Promise<ContentOption[]>;
 
@@ -43,25 +55,22 @@ export interface ContentFieldProps extends ItemAutoFormComponentProps {
   spec: ContentFormFieldSpec;
 }
 
-/**
- * Maps a field descriptor onto the AdminCP input that already exists for it.
- *
- * Nothing new is invented here - a `relation` reuses the async combobox, a
- * `user` the people picker - and the loader behind both is a server action, so
- * the picker never needs the API origin or a second permission.
- *
- * `localized: true` becomes `multiLang` on the input, which is the AdminCP's
- * existing language-aware behaviour and not a Content Engine invention: the
- * field grows its own small language switcher and holds one value per language.
- * A plugin never writes a field override just because a field is translated.
- */
 export const ContentField = ({
   loadOptions,
   spec,
-  ...props
+  ...rest
 }: ContentFieldProps) => {
   const t = useTranslations("core.content.form");
   const multiLang = spec.localized === true;
+  // A collection cannot be `required` - the empty set is always storable - so a
+  // minimum of one is the *other* way a field says "you have to choose
+  // something", and a field that says it is not optional. Covers a to-many
+  // reference with `min: 1` and a repeatable with `min: 1` alike.
+  const isOptional = !spec.required && (spec.minItems ?? 0) === 0;
+  const props = {
+    ...rest,
+    otherProps: { ...rest.otherProps, isOptional },
+  };
 
   switch (spec.kind) {
     case "boolean":
@@ -132,6 +141,7 @@ export const ContentField = ({
           id={`content-${spec.name}`}
           label={spec.label}
           placeholder={t("relation.placeholder")}
+          renderItem={item => <ContentOptionSwatch option={item} />}
           searchPlaceholder={t("relation.search_placeholder")}
           showClear={spec.nullable}
           {...props}
@@ -161,7 +171,9 @@ export const ContentField = ({
     // is a person, and a list of names in a dropdown is a worse way to find one
     // than a list of faces and handles.
     case "user":
-      return (
+      return spec.multiple ? (
+        <ContentUserSetField loadOptions={loadOptions} spec={spec} {...props} />
+      ) : (
         <ContentUserField loadOptions={loadOptions} spec={spec} {...props} />
       );
 

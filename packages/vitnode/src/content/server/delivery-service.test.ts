@@ -27,7 +27,6 @@ import { createContentDeliveryService } from "./delivery-service";
 const PLUGIN = "@vitnode/test";
 
 const articleType = defineContentType({
-  admin: { label: { plural: "Articles", singular: "Article" } },
   id: "delivery.article",
   editorial: { enabled: true },
   delivery: {
@@ -51,7 +50,6 @@ const articleType = defineContentType({
 });
 
 const withoutRedirects = defineContentType({
-  admin: { label: { plural: "Articles", singular: "Article" } },
   id: "delivery.no-redirects",
   delivery: { enabled: true, sitemap: { enabled: true } },
   fields: {
@@ -68,7 +66,6 @@ const withoutRedirects = defineContentType({
 });
 
 const localizedType = defineContentType({
-  admin: { label: { plural: "Articles", singular: "Article" } },
   id: "delivery.localized",
   editorial: { enabled: true },
   delivery: {
@@ -267,7 +264,6 @@ const translation = (locale: string, slug: string, id = 7): PublicRow => ({
 describe("createContentDeliveryService", () => {
   it("refuses a content type with no delivery block", () => {
     const plain = defineContentType({
-      admin: { label: { plural: "P", singular: "P" } },
       id: "delivery.none",
       fields: {
         slug: field.slug({ source: "title" }),
@@ -639,7 +635,6 @@ describe("resolvePath", () => {
 describe("sitemap", () => {
   it("is an empty page for a content type that lists nothing", async () => {
     const noSitemap = defineContentType({
-      admin: { label: { plural: "A", singular: "A" } },
       id: "delivery.no-sitemap",
       delivery: { enabled: true },
       fields: {

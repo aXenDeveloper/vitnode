@@ -21,7 +21,6 @@ import {
  */
 
 const articleType = defineContentType({
-  admin: { label: { plural: "Articles", singular: "Article" } },
   id: "effects.article",
   editorial: { enabled: true },
   delivery: { enabled: true, redirects: { enabled: true } },
@@ -39,7 +38,6 @@ const articleType = defineContentType({
 });
 
 const plainType = defineContentType({
-  admin: { label: { plural: "Articles", singular: "Article" } },
   id: "effects.plain",
   fields: {
     slug: field.slug({ source: "title" }),

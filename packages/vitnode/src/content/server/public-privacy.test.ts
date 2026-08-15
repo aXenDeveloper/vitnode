@@ -81,7 +81,6 @@ const contentType = defineContentType({
     orderableFields: ["publishedAt"],
   },
   admin: {
-    label: { plural: "Privacies", singular: "Privacy" },
     list: { columns: ["featured", "status"] },
     form: { fields: ["faq", "tags", "hiddenLinks", "syndication"] },
   },

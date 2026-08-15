@@ -871,7 +871,6 @@ describe("content service", () => {
               title: field.text({ required: true }),
               slug: field.slug({ maxLength: 8, source: "title" }),
             },
-            admin: { label: { plural: "Shorts", singular: "Short" } },
           }),
         );
         const { c, calls } = createDbMock([[{ id: 1 }]]);

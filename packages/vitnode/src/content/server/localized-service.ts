@@ -12,6 +12,7 @@ import type { ContentDatabase, ContentService } from "./service";
 import type { ContentTranslationEditorialService } from "./translation-editorial-service";
 import type { ContentTranslationModel } from "./translation-model";
 
+import { contentTypeName } from "../admin/labels";
 import { ContentEngineError } from "../errors";
 
 export interface ContentLocalizedCreateInput<TDefinition> {
@@ -112,7 +113,7 @@ export const createContentLocalizedService = <
       // would need a "unless it was created in another locale" branch.
       if (locale.toLowerCase() !== defaultLocale.toLowerCase()) {
         throw new ContentEngineError(
-          `A ${definition.admin.label.singular} is created in its default locale "${defaultLocale}", not "${locale}". Create it first, then add the "${locale}" translation.`,
+          `A ${contentTypeName(definition.id)} is created in its default locale "${defaultLocale}", not "${locale}". Create it first, then add the "${locale}" translation.`,
           { contentTypeId },
         );
       }

@@ -6,8 +6,6 @@ import { testPostContentType } from "@/tests/content-fixtures";
 import { defineContentType } from "./define";
 import { field } from "./fields";
 
-const label = { plural: "Widgets", singular: "Widget" };
-
 const baseFields = {
   title: field.text({ required: true }),
   slug: field.slug({ source: "title" }),
@@ -36,7 +34,6 @@ const define = ({
       fields: ["title", "slug"],
       ...publicApi,
     } as never,
-    admin: { label },
   });
 
 describe("publicApi", () => {
@@ -70,7 +67,6 @@ describe("publicApi", () => {
       id: "test.private",
       tableName: "test_privates",
       fields: { title: field.text({ required: true }) },
-      admin: { label },
     });
 
     expect(private_.publicApi.enabled).toBe(false);
@@ -357,7 +353,6 @@ describe("publicApi on a localized content type", () => {
         slug: field.slug({ localized: true, source: "title" }),
         featured: field.boolean({ defaultValue: false }),
       },
-      admin: { label: { plural: "Localized", singular: "Localized" } },
       publicApi,
     } as never);
 
@@ -424,7 +419,6 @@ describe("publicApi on a localized content type", () => {
           slug: field.slug({ localized: true, source: "title" }),
           locale: field.text({ nullable: true }),
         },
-        admin: { label: { plural: "Clash", singular: "Clash" } },
         publicApi: {
           enabled: true,
           fields: ["title", "slug", "locale"],
@@ -446,7 +440,6 @@ describe("publicApi on a localized content type", () => {
             slug: field.slug({}),
             locale: field.text({ nullable: true }),
           },
-          admin: { label: { plural: "Plain", singular: "Plain" } },
           publicApi: {
             enabled: true,
             fields: ["slug", "locale"],

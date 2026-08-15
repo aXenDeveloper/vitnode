@@ -107,10 +107,6 @@ export const localizedArticleContentType = defineContentType({
   },
 
   admin: {
-    label: {
-      plural: "Example Localized Articles",
-      singular: "Example Localized Article",
-    },
     list: {
       // Shared columns only. A localized field is not a column on the base
       // table, so naming one here is a compile error as well as a runtime one.

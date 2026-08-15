@@ -97,7 +97,6 @@ const kitchenSink = defineContentType({
     sitemap: { enabled: true },
   },
   admin: {
-    label: { plural: "Everythings", singular: "Everything" },
     list: { columns: ["featured", "status"] },
     form: { fields: ["faq"] },
   },

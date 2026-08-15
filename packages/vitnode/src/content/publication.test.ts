@@ -25,7 +25,6 @@ const define = (
     id: "test.thing",
     tableName: "test_things",
     fields: { title: field.text({ required: true }) },
-    admin: { label: { plural: "Things", singular: "Thing" } },
     ...overrides,
   }) as AnyContentTypeDefinition;
 
@@ -101,7 +100,6 @@ describe("publication config", () => {
     it("accepts the generated columns in an explicit list", () => {
       const definition = define({
         admin: {
-          label: { plural: "Things", singular: "Thing" },
           list: { columns: ["publishedAt", "title"] },
         },
         publication: { enabled: true },
@@ -114,7 +112,6 @@ describe("publication config", () => {
       expect(() =>
         define({
           admin: {
-            label: { plural: "Things", singular: "Thing" },
             list: { columns: ["status", "title"] },
           },
         }),
@@ -124,7 +121,6 @@ describe("publication config", () => {
     it("allows ordering by a generated column without an allowlist entry", () => {
       const definition = define({
         admin: {
-          label: { plural: "Things", singular: "Thing" },
           list: { defaultOrderBy: "publishedAt" },
         },
         publication: { enabled: true },
@@ -137,7 +133,6 @@ describe("publication config", () => {
       expect(() =>
         define({
           admin: {
-            label: { plural: "Things", singular: "Thing" },
             list: { defaultOrderBy: "title" },
           },
           publication: { enabled: true },

@@ -196,7 +196,7 @@ sync, or notify an external CMS/feed of taxonomy changes.
 
 Re-emitted after `content.blog.post.created` / `.updated`. The listener reads
 the article back to fill in `categoryId`, so a record deleted in between is
-simply not announced.
+simply not announced - and so is one with no categories yet.
 
 <TypeTable
   type={{
@@ -205,7 +205,8 @@ simply not announced.
       type: "number",
     },
     categoryId: {
-      description: "Category the post belongs to.",
+      description:
+        "The post's first category. An article is in many categories now and this payload has room for one - watch `content.blog.post.created` for the whole set.",
       type: "number",
     },
   }}
@@ -248,7 +249,7 @@ Re-emitted after `content.blog.category.deleted`.
     },
     postIds: {
       description:
-        "Always empty. `blog_posts.categoryId` is ON DELETE RESTRICT, so a category with articles cannot be deleted at all - the field is kept so existing listeners still compile.",
+        "Always empty. The junction to `blog_categories` is ON DELETE RESTRICT, so a category with articles cannot be deleted at all - the field is kept so existing listeners still compile.",
       type: "number[]",
     },
   }}
@@ -267,7 +268,7 @@ content.example.article.deleted
 ```
 
 A content type that opts into
-[publication](/docs/dev/content-engine/publication) emits two more:
+[publication](/docs/dev/content-engine/publication-and-editorial) emits two more:
 
 ```text
 content.example.article.published
@@ -275,8 +276,8 @@ content.example.article.unpublished
 ```
 
 And one that opts into
-[`editorial`](/docs/dev/content-engine/editorial) emits one more, plus two with
-[`editorial.scheduling`](/docs/dev/content-engine/scheduling):
+[`editorial`](/docs/dev/content-engine/publication-and-editorial) emits one more, plus two with
+[`editorial.scheduling`](/docs/dev/content-engine/publication-and-editorial#4-scheduled-publishing):
 
 ```text
 content.example.article.restored
@@ -300,7 +301,7 @@ content.example.article.translation_restored      (with editorial)
 ```
 
 And one that opts into
-[`delivery`](/docs/dev/content-engine/content-delivery) emits two more:
+[`delivery`](/docs/dev/content-engine/content-delivery-and-seo) emits two more:
 
 ```text
 content.example.article.delivery_slug_changed
@@ -496,14 +497,14 @@ update, a no-op publish and a restore that changes nothing all emit nothing, and
 `published`, `unpublished` and `restored` never come with an `updated` alongside
 them. Calling `service.publish()` or any other service method directly changes
 the database and emits nothing; that code owns its own follow-up. See
-[Generated events](/docs/dev/content-engine/events#calling-the-service-directly).
+[Generated events](/docs/dev/content-engine/services-and-api#event-system).
 
 `restored` carries `changedFields` exactly like `updated`, so a listener written
 for one ports to the other in a line - which is why a restore does not emit both.
 
 **Use cases:** reindex the row for search, invalidate a CDN entry, or mirror the
 change into a plugin-owned projection. See
-[Generated events](/docs/dev/content-engine/events).
+[Generated events](/docs/dev/content-engine/services-and-api#event-system).
 
 ## Deliberately not emitted (yet)
 

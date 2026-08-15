@@ -17,6 +17,7 @@ import {
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "../../api/lib/with-pagination";
+import { contentTypeName } from "../admin/labels";
 import {
   zodContentConflict,
   zodContentDeliveryConflict,
@@ -64,6 +65,11 @@ const zodOptions = z.object({
        * client written before this still parses every option it gets.
        */
       avatarColor: z.string().optional(),
+      /**
+       * Present when the target declares `admin.colorField` - a blog category
+       * is a colour as much as it is a word, and the picker draws it.
+       */
+      color: z.string().optional(),
       label: z.string(),
       nameCode: z.string().optional(),
       value: z.number(),
@@ -73,7 +79,7 @@ const zodOptions = z.object({
 
 const notFound = (definition: AnyContentTypeDefinition): HTTPException =>
   new HTTPException(404, {
-    message: `${definition.admin.label.singular} not found.`,
+    message: `${contentTypeName(definition.id)} not found.`,
   });
 
 const identifier = (c: Context): number => {
@@ -120,7 +126,7 @@ export const buildContentRoutes = <
 ) => {
   const { definition, schemas } = model;
   const module = definition.permissionModule;
-  const label = definition.admin.label;
+  const name = contentTypeName(definition.id);
 
   const localized = definition.localization.enabled;
 
@@ -150,7 +156,25 @@ export const buildContentRoutes = <
     })
     .nullable();
 
-  const detailRow = schemas.selectObject.extend({ labels: zodLabels });
+  /**
+   * One record, as the form that edits it needs it: the base row, the labels
+   * behind its to-one references, **and** its collections.
+   *
+   * The collections are the part a list response deliberately leaves out - two
+   * queries per collection field is one page of the table's worth of round trips
+   * - but a detail read is one record, and the form editing it holds every
+   * to-many reference and every repeatable it has. Without them the edit form
+   * opens on the empty set for each: a `min: 1` field is then invalid the moment
+   * it loads, so the Save button never enables, and one that saves anyway saves
+   * an emptied collection.
+   *
+   * `schemas.advancedSelect` is empty for a content type that declares neither,
+   * so this stays byte-identical to what it was for every other one.
+   */
+  const detailRow = schemas.selectObject.extend({
+    labels: zodLabels,
+    ...schemas.advancedSelect.shape,
+  });
   const listRow = schemas.selectObject.extend({
     labels: zodLabels,
     ...(localized ? { translation: zodRowTranslation.optional() } : {}),
@@ -262,7 +286,7 @@ export const buildContentRoutes = <
     route: {
       method: "get",
       path: "/",
-      description: `List ${label.plural}`,
+      description: `List ${name} records`,
       request: {
         query: paginationQuery.extend({
           ...schemas.filters.shape,
@@ -286,7 +310,7 @@ export const buildContentRoutes = <
             edges: z.array(listRow),
             pageInfo: zodPaginationPageInfo,
           }),
-          `${label.plural} retrieved successfully`,
+          `${name} records retrieved successfully`,
         ),
         400: { description: "Invalid query parameters" },
       },
@@ -423,10 +447,22 @@ export const buildContentRoutes = <
     route: {
       method: "get",
       path: "/options/{field}",
-      description: `Picker options for a ${label.singular} relation`,
+      description: `Picker options for a ${name} relation`,
       request: {
         params: z.object({ field: z.string() }),
-        query: z.object({ search: z.string().optional() }),
+        query: z.object({
+          /**
+           * Label these identifiers instead of searching - a comma-separated
+           * list, because a query string is where this arrives from.
+           *
+           * How a form that opens holding references shows names for them. A
+           * to-many field has no label on the row it belongs to, so without this
+           * an editor would open their article and find their co-authors listed
+           * as `7` and `12`.
+           */
+          ids: z.string().optional(),
+          search: z.string().optional(),
+        }),
       },
       responses: {
         200: jsonResponse(zodOptions, `Up to ${CONTENT_OPTIONS_LIMIT} options`),
@@ -441,9 +477,21 @@ export const buildContentRoutes = <
         });
       }
 
+      const raw = c.req.query("ids");
+      // Anything that is not a whole number is dropped rather than refused: the
+      // list is a lookup key, and one malformed entry should cost that entry
+      // rather than the whole form's labels.
+      const ids =
+        raw === undefined
+          ? undefined
+          : raw
+              .split(",")
+              .map(value => Number(value.trim()))
+              .filter(value => Number.isInteger(value));
+
       const items = await model
         .service(c)
-        .options(field, c.req.query("search"));
+        .options(field, c.req.query("search"), ids);
 
       return c.json({ items }, 200);
     },
@@ -455,23 +503,28 @@ export const buildContentRoutes = <
     route: {
       method: "get",
       path: "/{id}",
-      description: `Get one ${label.singular}`,
+      description: `Get one ${name}`,
       request: { params: schemas.params },
       responses: {
         // `labels` alongside the record, the same way the list returns them:
         // a `relation` holds an identifier, and the form that edits it has to
         // show the name behind it. Additive to the row every earlier client
         // already parses.
-        200: jsonResponse(detailRow, `${label.singular} found`),
+        200: jsonResponse(detailRow, `${name} found`),
         400: invalidIdentifier,
-        404: { description: `${label.singular} not found` },
+        404: { description: `${name} not found` },
       },
     },
     handler: async c => {
-      const row = await model.service(c).findRowById(identifier(c));
+      const id = identifier(c);
+      const service = model.service(c);
+      const row = await service.findRowById(id);
       if (!row) throw notFound(definition);
 
-      return c.json(row, 200);
+      // Two queries per collection field, and none at all for a content type
+      // that declares none - `advanced` is the no-op store then. Spread after
+      // the row because a collection is never one of its columns.
+      return c.json({ ...row, ...(await service.advanced(id)) }, 200);
     },
   });
 
@@ -481,13 +534,10 @@ export const buildContentRoutes = <
     route: {
       method: "post",
       path: "/",
-      description: `Create a ${label.singular}`,
+      description: `Create a ${name}`,
       request: { body: jsonBody(schemas.create) },
       responses: {
-        201: jsonResponse(
-          schemas.selectObject,
-          `${label.singular} created successfully`,
-        ),
+        201: jsonResponse(schemas.selectObject, `${name} created successfully`),
         400: { description: "Invalid input data" },
         409: uniqueConflict,
       },
@@ -561,18 +611,15 @@ export const buildContentRoutes = <
     route: {
       method: "put",
       path: "/{id}",
-      description: `Update a ${label.singular}`,
+      description: `Update a ${name}`,
       request: {
         params: schemas.params,
         body: jsonBody(schemas.updateEnvelope),
       },
       responses: {
-        200: jsonResponse(
-          schemas.selectObject,
-          `${label.singular} updated successfully`,
-        ),
+        200: jsonResponse(schemas.selectObject, `${name} updated successfully`),
         400: { description: "Invalid or empty payload" },
-        404: { description: `${label.singular} not found` },
+        404: { description: `${name} not found` },
         409: uniqueConflict,
       },
     },
@@ -610,15 +657,12 @@ export const buildContentRoutes = <
       // PUT, not PATCH: the Next.js API route handler exports no PATCH.
       method: "put",
       path: "/{id}",
-      description: `Update a ${label.singular}`,
+      description: `Update a ${name}`,
       request: { params: schemas.params, body: jsonBody(schemas.update) },
       responses: {
-        200: jsonResponse(
-          schemas.selectObject,
-          `${label.singular} updated successfully`,
-        ),
+        200: jsonResponse(schemas.selectObject, `${name} updated successfully`),
         400: { description: "Invalid or empty payload" },
-        404: { description: `${label.singular} not found` },
+        404: { description: `${name} not found` },
         409: uniqueConflict,
       },
     },
@@ -668,15 +712,15 @@ export const buildContentRoutes = <
       route: {
         method: "post",
         path: `/{id}/${action}` as const,
-        description: `${action === "publish" ? "Publish" : "Unpublish"} a ${label.singular}`,
+        description: `${action === "publish" ? "Publish" : "Unpublish"} a ${name}`,
         request: { params: schemas.params },
         responses: {
           200: jsonResponse(
             publicationResponse,
-            `${label.singular} ${action}ed, or already in that state`,
+            `${name} ${action}ed, or already in that state`,
           ),
           400: invalidIdentifier,
-          404: { description: `${label.singular} not found` },
+          404: { description: `${name} not found` },
         },
       },
       handler: async c => {
@@ -792,7 +836,7 @@ export const buildContentRoutes = <
     route: {
       method: "get",
       path: "/{id}/revisions",
-      description: `History of one ${label.singular}`,
+      description: `History of one ${name}`,
       request: { params: schemas.params, query: revisionQuery },
       responses: {
         200: jsonResponse(
@@ -833,7 +877,7 @@ export const buildContentRoutes = <
     route: {
       method: "get",
       path: "/{id}/revisions/{revisionId}",
-      description: `One revision of a ${label.singular}, with its snapshot`,
+      description: `One revision of a ${name}, with its snapshot`,
       request: { params: revisionParams },
       responses: {
         200: jsonResponse(zodRevisionDetail, "Revision found"),
@@ -863,7 +907,7 @@ export const buildContentRoutes = <
     route: {
       method: "post",
       path: "/{id}/revisions/{revisionId}/restore",
-      description: `Restore a ${label.singular} to an earlier revision`,
+      description: `Restore a ${name} to an earlier revision`,
       request: {
         params: revisionParams,
         body: jsonBody(
@@ -873,7 +917,7 @@ export const buildContentRoutes = <
       responses: {
         200: jsonResponse(
           z.object({ changed: z.boolean(), row: schemas.selectObject }),
-          `${label.singular} restored, or already at those values`,
+          `${name} restored, or already at those values`,
         ),
         400: invalidIdentifier,
         404: { description: "Revision not found" },
@@ -929,7 +973,7 @@ export const buildContentRoutes = <
     route: {
       method: "get",
       path: "/{id}/delivery",
-      description: `Canonical URL and historical URLs of one ${label.singular}`,
+      description: `Canonical URL and historical URLs of one ${name}`,
       request: {
         params: schemas.params,
         query: z.object({
@@ -961,10 +1005,10 @@ export const buildContentRoutes = <
             isPublic: z.boolean(),
             locale: z.string().nullable(),
           }),
-          `Delivery state of one ${label.singular}`,
+          `Delivery state of one ${name}`,
         ),
         400: invalidIdentifier,
-        404: { description: `${label.singular} not found` },
+        404: { description: `${name} not found` },
       },
     },
     handler: async c => {
@@ -1015,7 +1059,7 @@ export const buildContentRoutes = <
     route: {
       method: "post",
       path: "/{id}/preview",
-      description: `Create a preview link for one ${label.singular}`,
+      description: `Create a preview link for one ${name}`,
       request: { params: schemas.params },
       responses: {
         200: jsonResponse(
@@ -1031,7 +1075,7 @@ export const buildContentRoutes = <
           "Preview link created",
         ),
         400: invalidIdentifier,
-        404: { description: `${label.singular} not found` },
+        404: { description: `${name} not found` },
         503: {
           description:
             "This deployment has no usable web or API origin, so no link can be built",
@@ -1132,7 +1176,7 @@ export const buildContentRoutes = <
     route: {
       method: "get",
       path: "/{id}/schedules",
-      description: `Pending and recent schedules for one ${label.singular}`,
+      description: `Pending and recent schedules for one ${name}`,
       request: { params: schemas.params },
       responses: {
         200: jsonResponse(
@@ -1172,7 +1216,7 @@ export const buildContentRoutes = <
     route: {
       method: "post",
       path: "/{id}/schedule",
-      description: `Schedule a ${label.singular} to publish or unpublish later`,
+      description: `Schedule a ${name} to publish or unpublish later`,
       request: {
         params: schemas.params,
         body: jsonBody(
@@ -1195,7 +1239,7 @@ export const buildContentRoutes = <
           zodContentScheduleRejection,
           "That time will not work",
         ),
-        404: { description: `${label.singular} not found` },
+        404: { description: `${name} not found` },
       },
     },
     handler: async c => {
@@ -1253,7 +1297,7 @@ export const buildContentRoutes = <
     route: {
       method: "post",
       path: "/{id}/schedule/{scheduleId}/cancel",
-      description: `Cancel a pending schedule for one ${label.singular}`,
+      description: `Cancel a pending schedule for one ${name}`,
       request: {
         params: z.object({
           id: z.coerce.number(),
@@ -1326,15 +1370,12 @@ export const buildContentRoutes = <
     route: {
       method: "delete",
       path: "/{id}",
-      description: `Delete a ${label.singular}`,
+      description: `Delete a ${name}`,
       request: { params: schemas.params, body: jsonBody(deleteEnvelope) },
       responses: {
-        200: jsonResponse(
-          schemas.selectObject,
-          `${label.singular} deleted successfully`,
-        ),
+        200: jsonResponse(schemas.selectObject, `${name} deleted successfully`),
         400: invalidIdentifier,
-        404: { description: `${label.singular} not found` },
+        404: { description: `${name} not found` },
         409: jsonResponse(
           zodContentConflict,
           "Still referenced by other content, or the version moved",
@@ -1370,15 +1411,12 @@ export const buildContentRoutes = <
     route: {
       method: "delete",
       path: "/{id}",
-      description: `Delete a ${label.singular}`,
+      description: `Delete a ${name}`,
       request: { params: schemas.params },
       responses: {
-        200: jsonResponse(
-          schemas.selectObject,
-          `${label.singular} deleted successfully`,
-        ),
+        200: jsonResponse(schemas.selectObject, `${name} deleted successfully`),
         400: invalidIdentifier,
-        404: { description: `${label.singular} not found` },
+        404: { description: `${name} not found` },
         409: { description: "Still referenced by other content" },
       },
     },

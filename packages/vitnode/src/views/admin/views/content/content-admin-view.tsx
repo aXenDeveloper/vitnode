@@ -9,7 +9,12 @@ import { I18nProvider } from "@/components/i18n-provider";
 import { DataTableSkeleton } from "@/components/table/data-table";
 import { HeaderContent } from "@/components/ui/header-content";
 import { findFrontendContentType } from "@/content/admin/config";
-import { contentI18nKeys, humanizeFieldName } from "@/content/admin/labels";
+import {
+  contentI18nKeys,
+  type ContentLabelTranslator,
+  contentNouns,
+  humanizeFieldName,
+} from "@/content/admin/labels";
 import { resolveContentAdminRoute } from "@/content/admin/route";
 import {
   buildContentColumnSpec,
@@ -74,24 +79,35 @@ export const getContentLabels = async (
 ) => {
   const { definition, pluginId } = entry;
   const keys = contentI18nKeys(definition, pluginId);
-  const t = await getTranslations();
-  const has = (key: string): boolean =>
-    t.has(key as Parameters<typeof t.has>[0]);
-  const read = (key: string): string => t(key as Parameters<typeof t>[0]);
+  // Cast once, here, where the translator enters: every key below is assembled
+  // from the content type id at runtime, which the generated key union cannot
+  // describe. Nothing is read without `has` first.
+  const t = (await getTranslations()) as unknown as ContentLabelTranslator;
 
   return {
-    desc: has(keys.desc) ? read(keys.desc) : undefined,
+    desc: t.has(keys.desc) ? t(keys.desc) : undefined,
     labelEnum: (field: string, value: string) => {
       const key = keys.enumValue(field, value);
 
-      return has(key) ? read(key) : humanizeFieldName(value);
+      return t.has(key) ? t(key) : humanizeFieldName(value);
     },
     labelField: (name: string) => {
       const key = keys.field(name);
 
-      return has(key) ? read(key) : humanizeFieldName(name);
+      return t.has(key) ? t(key) : humanizeFieldName(name);
     },
-    title: has(keys.title) ? read(keys.title) : definition.admin.label.plural,
+    /** A generated form section's heading, humanised from its name if untranslated. */
+    labelSection: (name: string) => {
+      const section = keys.section(name);
+
+      return {
+        desc: t.has(section.desc) ? t(section.desc) : undefined,
+        title: t.has(section.title)
+          ? t(section.title)
+          : humanizeFieldName(name),
+      };
+    },
+    ...contentNouns(definition, pluginId, t),
   };
 };
 
@@ -131,6 +147,7 @@ const ContentListView = async ({
     definition,
     labelEnum: labels.labelEnum,
     labelField: labels.labelField,
+    labelSection: labels.labelSection,
     pluginId,
   });
   const columnSpecs = buildContentColumnSpec({
@@ -156,7 +173,7 @@ const ContentListView = async ({
                 ? contentCreateHref(definition.id)
                 : undefined
             }
-            singular={definition.admin.label.singular}
+            singular={labels.singular}
             spec={formSpec}
           />
         )}
@@ -170,6 +187,7 @@ const ContentListView = async ({
           entry={entry}
           formSpec={formSpec}
           searchParams={query}
+          singular={labels.singular}
         />
       </React.Suspense>
     </div>

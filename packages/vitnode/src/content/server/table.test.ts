@@ -82,7 +82,6 @@ describe("createContentTable", () => {
         tableName: "test_versioned",
         fields: { title: field.text({ required: true }) },
         editorial: { enabled: true },
-        admin: { label: { plural: "Versioned", singular: "Versioned" } },
       }),
     );
     const versionColumn = getTableConfig(editorialTable).columns.find(
@@ -118,7 +117,6 @@ describe("createContentTable", () => {
             title: field.text({ required: true }),
             version: field.text({ defaultValue: "v1" }),
           },
-          admin: { label: { plural: "Owns", singular: "Own" } },
         }),
       );
 
@@ -171,7 +169,6 @@ describe("createContentTable", () => {
           id: "test.metric",
           tableName: "test_metrics",
           fields: { score: field.number({ integer: false, required: true }) },
-          admin: { label: { plural: "Metrics", singular: "Metric" } },
         }),
       );
 
@@ -217,7 +214,6 @@ describe("createContentTable", () => {
             target: () => bookType,
           }),
         },
-        admin: { label: { plural: "Shelves", singular: "Shelf" } },
       });
       const bookType: AnyContentTypeDefinition = defineContentType({
         id: "test.book",
@@ -226,7 +222,6 @@ describe("createContentTable", () => {
           title: field.text({ required: true }),
           shelf: field.relation({ required: true, target: () => shelfType }),
         },
-        admin: { label: { plural: "Books", singular: "Book" } },
       });
 
       const shelves = createContentTable(shelfType, {
@@ -268,7 +263,6 @@ describe("createContentTable", () => {
           id: "test.decoy",
           tableName: "test_decoys",
           fields: { title: field.text({ required: true }) },
-          admin: { label: { plural: "Decoys", singular: "Decoy" } },
         }),
       );
 
@@ -295,7 +289,6 @@ describe("createContentTable", () => {
             },
           }),
         },
-        admin: { label: { plural: "Lazies", singular: "Lazy" } },
       });
 
       expect(() =>
@@ -353,7 +346,6 @@ describe("createContentTable", () => {
           indexes: [
             { name: "test_codes_code_key", on: ["code"], unique: true },
           ],
-          admin: { label: { plural: "Codes", singular: "Code" } },
         }),
       );
       const codeIndex = getTableConfig(table).indexes.find(
@@ -372,7 +364,6 @@ describe("createContentTable", () => {
             code: field.text({ required: true, unique: true }),
             label: field.text({ required: true }),
           },
-          admin: { label: { plural: "Uniques", singular: "Unique" } },
         }),
       );
       const indexes = getTableConfig(table).indexes;

@@ -24,7 +24,7 @@ import {
   CONTENT_PUBLIC_MAX_PAGE_SIZE,
 } from "../const";
 import { ContentEngineError } from "../errors";
-import { isContentRelationCollection, splitContentFieldPath } from "../paths";
+import { isContentReferenceCollection, splitContentFieldPath } from "../paths";
 import { publicOrderableColumns } from "../registry";
 import { groupPublicLeafPaths } from "../schemas";
 import { publicationColumns, publishedCondition } from "./publication";
@@ -137,14 +137,14 @@ export const createContentPublicProjector = <
     flat.filter(
       name =>
         definition.fields[name]?.kind === "relation" &&
-        !isContentRelationCollection(definition.fields[name]),
+        !isContentReferenceCollection(definition.fields[name]),
     ),
   );
   const exposedToMany = new Set(
     flat.filter(
       name =>
         definition.fields[name] !== undefined &&
-        isContentRelationCollection(definition.fields[name]),
+        isContentReferenceCollection(definition.fields[name]),
     ),
   );
   // Leaf-level privacy, resolved once: `seo` carries only the leaves the
@@ -233,7 +233,7 @@ export const contentPublicSelection = (
         if (!fieldValue) return true;
         if (fieldValue.kind === "repeatable") return false;
 
-        return !isContentRelationCollection(fieldValue);
+        return !isContentReferenceCollection(fieldValue);
       })
       .map(name => [name, columns[name]]),
   ),
@@ -262,7 +262,7 @@ export const contentPublicCollectionFields = (
     return (
       fieldValue !== undefined &&
       (fieldValue.kind === "repeatable" ||
-        isContentRelationCollection(fieldValue))
+        isContentReferenceCollection(fieldValue))
     );
   });
 };

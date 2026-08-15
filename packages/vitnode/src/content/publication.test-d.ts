@@ -81,7 +81,6 @@ describe("publication", () => {
         id: "test.plain",
         tableName: "test_plain",
         fields: { title: field.text({ required: true }) },
-        admin: { label: { plural: "Plains", singular: "Plain" } },
       });
 
       expectTypeOf(plain.publication.enabled).toEqualTypeOf<false>();
@@ -122,7 +121,6 @@ describe("publication", () => {
           status: field.enum({ values: ["a", "b"], defaultValue: "a" }),
         },
         publication: { enabled: true },
-        admin: { label: { plural: "Clashes", singular: "Clash" } },
       });
     });
 
@@ -135,7 +133,6 @@ describe("publication", () => {
           status: field.enum({ values: ["a", "b"], defaultValue: "a" }),
           publishedAt: field.dateTime({ nullable: true }),
         },
-        admin: { label: { plural: "Fine", singular: "Fine" } },
       });
     });
   });
@@ -148,7 +145,6 @@ describe("publication", () => {
         fields: { title: field.text({ required: true }) },
         publication: { enabled: true },
         admin: {
-          label: { plural: "Columns", singular: "Column" },
           list: {
             columns: ["status", "title", "publishedAt"],
             defaultOrderBy: "publishedAt",
@@ -163,7 +159,6 @@ describe("publication", () => {
         tableName: "test_no_columns",
         fields: { title: field.text({ required: true }) },
         admin: {
-          label: { plural: "Columns", singular: "Column" },
           // @ts-expect-error - `status` is not a column of this content type
           list: { columns: ["status", "title"] },
         },
