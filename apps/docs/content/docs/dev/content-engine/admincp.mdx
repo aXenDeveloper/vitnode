@@ -28,7 +28,9 @@ export const examplePlugin = () =>
   });
 ```
 
-- **Zero-Code Navigation**: Generates `/admin/content/{plugin}/{entity}` automatically.
+- **Zero-Code Navigation**: Generates `/admin/content/{admin.path}` automatically,
+  defaulting to the id with its dots as slashes (`example.article` →
+  `example/article`).
 - **i18n Localization**: The screen title, the record's own noun, table headers, form
   labels, enum values and form section headings all resolve from your plugin's locale
   JSON (`src/locales/en.json`). Every key is optional, and every one has a readable
@@ -121,6 +123,49 @@ plural for `Back to {name}` and the screen heading.
 
 `{entity}` is the content type id without its plugin segment: `example.article` →
 `article`, `example.kb.article` → `kb_article`.
+
+#### The URL says what the screen says
+
+The screens live at `/admin/content/{admin.path}`, and the default path is the id
+with its dots as slashes. That is right until the id and the screen disagree - a
+content type called `blog.post` whose every heading reads "Articles" should not be
+opened at an address that says `post`. `admin.path` is where the URL is written
+down:
+
+```ts title="src/content/post.ts"
+export const blogPostContentType = defineContentType({
+  id: "blog.post",
+  tableName: "blog_posts",
+  admin: {
+    path: "blog/articles", // [!code ++]
+  },
+});
+```
+
+```text
+/admin/content/blog/articles            list
+/admin/content/blog/articles/create     create
+/admin/content/blog/articles/42/edit    edit
+```
+
+The id does **not** move with it, and that is the point: `blog.post` is the event
+name, the permission key and the message key - contracts written into roles, into
+listeners and into every locale file - while the path is the only part of a content
+type a person ever types. Renaming one to improve the other is churn with no payer.
+
+| Rule | Why |
+| --- | --- |
+| Lowercase segments of letters, digits and dashes, split by `/` | It is a URL, and a `[...slug]` route matches it segment by segment |
+| Cannot end in `create` or `edit` | Those two words are what tells a list screen from a generated form page |
+| Site-wide unique | `/admin/content/{path}` carries no plugin id, so two content types claiming one path would leave one of them with no screen at all. The app refuses to boot instead |
+
+<Callout type="warn" title="A path is an address people have bookmarked">
+  Changing `admin.path` on a content type that has shipped breaks every link to it -
+  there is no redirect, because the old path is simply not registered any more. If
+  the old address is worth keeping, a one-line page that redirects to
+  `contentAdminHref(definition)` is what the blog plugin does with
+  `/admin/blog/posts`.
+</Callout>
 </Step>
 
 <Step>

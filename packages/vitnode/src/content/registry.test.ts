@@ -21,7 +21,6 @@ import {
   contentTypeToPath,
   findContentTypeById,
   orderableColumns,
-  pathToContentTypeId,
   publicOrderableColumns,
   validateContentTypes,
   withContentPermissions,
@@ -109,6 +108,39 @@ describe("validateContentTypes", () => {
       validateContentTypes([
         entry(widget(collidingIds.dotted), "@vitnode/a"),
         entry(widget(collidingIds.hyphenated), "@vitnode/b"),
+      ]),
+    ).not.toThrow();
+  });
+
+  // `/admin/content/{path}` has no plugin id in it, so two plugins pointing at
+  // one path is the one AdminCP clash the id-derived default cannot rule out.
+  it("rejects two plugins claiming the same admin path", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(widget({ admin: { path: "blog/articles" } }), "@vitnode/a"),
+        entry(
+          widget({
+            admin: { path: "blog/articles" },
+            id: "test.other",
+            tableName: "test_others",
+          }),
+          "@vitnode/b",
+        ),
+      ]),
+    ).toThrow(/AdminCP path "blog\/articles" is claimed by both/);
+  });
+
+  it("allows an admin path that only looks like another type's id", () => {
+    expect(() =>
+      validateContentTypes([
+        entry(widget({ id: "test.article", tableName: "test_articles" })),
+        entry(
+          widget({
+            admin: { path: "test/articles" },
+            id: "test.post",
+            tableName: "test_posts",
+          }),
+        ),
       ]),
     ).not.toThrow();
   });
@@ -275,27 +307,37 @@ describe("withContentPermissions", () => {
 });
 
 describe("routing helpers", () => {
-  it("maps a content type id onto the catch-all path", () => {
+  it("maps a content type id onto the default catch-all path", () => {
     expect(contentTypeToPath("example.article")).toBe("example/article");
-    expect(contentAdminHref("example.article")).toBe(
+    expect(contentAdminHref(widget({ id: "example.article" }))).toBe(
       "/admin/content/example/article",
     );
   });
 
-  it("builds the generated form page URLs off the list one", () => {
-    expect(contentCreateHref("example.article")).toBe(
-      "/admin/content/example/article/create",
+  it("addresses a content type by its own admin path", () => {
+    const renamed = widget({ admin: { path: "blog/articles" } });
+
+    expect(contentAdminHref(renamed)).toBe("/admin/content/blog/articles");
+    expect(contentCreateHref(renamed)).toBe(
+      "/admin/content/blog/articles/create",
     );
-    expect(contentEditHref("example.article", 42)).toBe(
-      "/admin/content/example/article/42/edit",
-    );
-    expect(contentEditHrefTemplate("example.article")).toBe(
-      `/admin/content/example/article/${CONTENT_EDIT_HREF_PLACEHOLDER}/edit`,
+    expect(contentEditHref(renamed, 42)).toBe(
+      "/admin/content/blog/articles/42/edit",
     );
   });
 
-  it("round-trips the catch-all slug", () => {
-    expect(pathToContentTypeId(["example", "article"])).toBe("example.article");
+  it("builds the generated form page URLs off the list one", () => {
+    const article = widget({ id: "example.article" });
+
+    expect(contentCreateHref(article)).toBe(
+      "/admin/content/example/article/create",
+    );
+    expect(contentEditHref(article, 42)).toBe(
+      "/admin/content/example/article/42/edit",
+    );
+    expect(contentEditHrefTemplate(article)).toBe(
+      `/admin/content/example/article/${CONTENT_EDIT_HREF_PLACEHOLDER}/edit`,
+    );
   });
 
   it("finds a registered content type by id", () => {

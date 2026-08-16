@@ -45,3 +45,11 @@ export const findFrontendContentType = (
   getFrontendContentTypes(vitNodeConfig).find(
     entry => entry.definition.id === contentTypeId,
   );
+
+export const findFrontendContentTypeByAdminPath = (
+  adminPath: string,
+  vitNodeConfig?: VitNodeConfig,
+): RegisteredFrontendContentType | undefined =>
+  getFrontendContentTypes(vitNodeConfig).find(
+    entry => entry.definition.admin.path === adminPath,
+  );

@@ -237,12 +237,14 @@ export {
   contentTypeToPath,
   findContentTypeById,
   orderableColumns,
-  pathToContentTypeId,
   publicOrderableColumns,
   validateContentTypes,
   withContentPermissions,
 } from "./registry";
-export type { RegisteredContentType } from "./registry";
+export type {
+  ContentAdminAddressable,
+  RegisteredContentType,
+} from "./registry";
 export { contentRevisionDiff } from "./revisions";
 export type {
   ContentActor,

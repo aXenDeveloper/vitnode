@@ -95,7 +95,7 @@ export const ContentCreatePageView = async ({
 
   const { labels, spec } = await buildPageSpecs(entry);
   const singular = labels.singular;
-  const backHref = contentAdminHref(definition.id);
+  const backHref = contentAdminHref(definition);
 
   return (
     <div className="p-4">
@@ -119,7 +119,7 @@ export const ContentCreatePageView = async ({
         // so the author lands where its history and its languages are.
         createdHrefTemplate={
           definition.admin.edit.mode === "page"
-            ? contentEditHrefTemplate(definition.id)
+            ? contentEditHrefTemplate(definition)
             : undefined
         }
         fieldOverrides={fieldOverridesOf(entry)}
@@ -199,7 +199,7 @@ export const ContentEditPageView = async ({
     : undefined;
 
   const { labels, spec } = await buildPageSpecs(entry);
-  const backHref = contentAdminHref(definition.id);
+  const backHref = contentAdminHref(definition);
   const singular = labels.singular;
   const data = result.data as Record<string, unknown> & { id: number };
   const titleField = definition.admin.titleField;

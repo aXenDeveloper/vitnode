@@ -15,6 +15,7 @@ export const categoryContentType = defineContentType({
   },
 
   admin: {
+    path: "example/categories",
     list: {
       columns: ["name", "createdAt"],
       orderableFields: ["name"],

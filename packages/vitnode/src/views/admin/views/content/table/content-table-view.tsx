@@ -158,7 +158,7 @@ export const ContentTableView = async ({
 
               href={
                 definition.admin.edit.mode === "page"
-                  ? contentEditHref(definition.id, row.id)
+                  ? contentEditHref(definition, row.id)
                   : undefined
               }
               permissionModule={definition.permissionModule}

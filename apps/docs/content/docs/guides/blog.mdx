@@ -127,6 +127,7 @@ export const blogCategoryContentType = defineContentType({
 
   admin: {
     permissionModule: "categories",
+    path: "blog/categories",
     titleField: "name",
     create: { mode: "dialog" },
     edit: { mode: "dialog" },
@@ -177,10 +178,15 @@ relation to the category, an author, publication, editorial history, search and
 delivery:
 
 ```text
-/admin/content/blog/post            list
-/admin/content/blog/post/create     create
-/admin/content/blog/post/42/edit    edit
+/admin/content/blog/articles            list
+/admin/content/blog/articles/create     create
+/admin/content/blog/articles/42/edit    edit
 ```
+
+The id is still `blog.post` - the URL is `blog/articles` because
+[`admin.path`](/docs/dev/content-engine/admincp#the-url-says-what-the-screen-says)
+says so, and a screen called "Articles" should not live at an address that says
+`post`.
 
 ```text
 ┌───────────────────────────────────────────────────────┐

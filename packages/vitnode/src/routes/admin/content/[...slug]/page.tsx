@@ -18,11 +18,6 @@ export const generateMetadata = async ({
   return { description: labels.desc, title: labels.title };
 };
 
-/**
- * One route serves every registered content type - the slug maps onto a content
- * type id (`/admin/content/example/article` -> `example.article`), so a plugin
- * adds a content type without adding a single Next.js file.
- */
 export default function ContentAdminPage(props: ContentAdminViewProps) {
   return <ContentAdminView {...props} />;
 }

@@ -908,6 +908,21 @@ export interface ContentAdminConfig<
   list?: ContentAdminListConfig<TFields, TPublication, TEditorial>;
   navigation?: { enabled?: boolean };
   /**
+   * Where the generated screens live under `/admin/content/`. Defaults to the id
+   * with its dots as slashes: `blog.post` -> `blog/post`.
+   *
+   * The one part of a content type that is **read by people rather than by code**,
+   * which is why it is the one part allowed to disagree with the id. `blog.post`
+   * stays the event name, the permission key and the message key - none of which
+   * anybody types - while the screen it opens is called "Articles" everywhere else
+   * in the AdminCP, so `blog/articles` is what its address should say.
+   *
+   * Lowercase segments of letters, digits and dashes, separated by `/`. Site-wide
+   * unique: `/admin/content/{path}` carries no plugin id, so two content types
+   * sharing a path would claim one URL - see `validateContentTypes`.
+   */
+  path?: string;
+  /**
    * Staff permission module name. Defaults to the content type's own id without
    * its plugin segment: `blog.post` -> `post`, `example.kb.article` ->
    * `kb_article`.
@@ -966,6 +981,8 @@ export interface ResolvedContentAdminConfig {
     searchableFields: string[];
   };
   navigation: { enabled: boolean };
+  /** The path under `/admin/content/`, e.g. `blog/articles`. Never empty. */
+  path: string;
   titleField: null | string;
 }
 

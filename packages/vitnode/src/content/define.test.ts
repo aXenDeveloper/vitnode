@@ -457,6 +457,46 @@ describe("defineContentType", () => {
         define({ admin: { permissionModule: "kb_articles" } }).permissionModule,
       ).toBe("kb_articles");
     });
+
+    it("derives the admin path from the id", () => {
+      expect(define().admin.path).toBe("test/widget");
+      expect(define({ id: "example.kb.article" }).admin.path).toBe(
+        "example/kb/article",
+      );
+    });
+
+    it("prefers an explicit admin path", () => {
+      expect(define({ admin: { path: "blog/articles" } }).admin.path).toBe(
+        "blog/articles",
+      );
+    });
+
+    it.each([
+      ["a leading slash", "/blog/articles"],
+      ["a trailing slash", "blog/articles/"],
+      ["an empty segment", "blog//articles"],
+      ["an uppercase segment", "blog/Articles"],
+      ["an underscore", "blog/blog_articles"],
+      ["a dotted segment", "blog.articles"],
+      ["a segment opening with a digit", "blog/2articles"],
+    ])("rejects an admin path with %s", (_name, path) => {
+      expect(() => define({ admin: { path } })).toThrow(/admin\.path/);
+    });
+
+    it.each(["blog/create", "blog/edit"])(
+      "rejects the admin path %s, which a form page already answers to",
+      path => {
+        expect(() => define({ admin: { path } })).toThrow(/admin\.path/);
+      },
+    );
+
+    it("still allows an id whose derived path ends in a form segment", () => {
+      // The default is exempt: `blog.post.create` is a legal id, and the route
+      // resolver already prefers such an exact match over a create page.
+      expect(define({ id: "blog.post.create" }).admin.path).toBe(
+        "blog/post/create",
+      );
+    });
   });
 
   describe("admin form presentation", () => {

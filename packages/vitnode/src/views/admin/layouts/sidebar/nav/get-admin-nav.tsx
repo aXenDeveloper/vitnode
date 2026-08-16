@@ -251,7 +251,7 @@ export const getAdminNav = async ({
     (plugin.contentTypes ?? [])
       .filter(({ definition }) => definition.admin.navigation.enabled)
       .map(({ definition, icon }) => ({
-        href: contentAdminHref(definition.id),
+        href: contentAdminHref(definition),
         icon: icon ?? <FileTextIcon />,
         permission: {
           module: definition.permissionModule,

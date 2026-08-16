@@ -44,6 +44,8 @@ export const blogCategoryContentType = defineContentType({
 
   admin: {
     permissionModule: "categories",
+    // Plural, like the list it opens - and like every other AdminCP address.
+    path: "blog/categories",
     colorField: "color",
     titleField: "name",
     // Dialogs, deliberately: a name and a colour do not need a page, and this is

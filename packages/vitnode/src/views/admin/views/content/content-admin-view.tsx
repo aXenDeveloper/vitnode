@@ -8,7 +8,10 @@ import type { ContentAdminRoute } from "@/content/admin/route";
 import { I18nProvider } from "@/components/i18n-provider";
 import { DataTableSkeleton } from "@/components/table/data-table";
 import { HeaderContent } from "@/components/ui/header-content";
-import { findFrontendContentType } from "@/content/admin/config";
+import {
+  findFrontendContentType,
+  findFrontendContentTypeByAdminPath,
+} from "@/content/admin/config";
 import {
   contentI18nKeys,
   type ContentLabelTranslator,
@@ -48,7 +51,7 @@ export const resolveContentRoute = async (
   const { slug } = await params;
   const route = resolveContentAdminRoute(
     slug,
-    contentTypeId => findFrontendContentType(contentTypeId)?.definition,
+    adminPath => findFrontendContentTypeByAdminPath(adminPath)?.definition,
   );
   if (!route) return undefined;
 
@@ -170,7 +173,7 @@ const ContentListView = async ({
             // so none of the form's chunks are downloaded until the page is.
             href={
               definition.admin.create.mode === "page"
-                ? contentCreateHref(definition.id)
+                ? contentCreateHref(definition)
                 : undefined
             }
             singular={labels.singular}
@@ -197,7 +200,7 @@ const ContentListView = async ({
 /**
  * One route, three screens.
  *
- * `/admin/content/blog/post` is the list, `.../create` and `.../42/edit` are the
+ * `/admin/content/blog/articles` is the list, `.../create` and `.../42/edit` are the
  * generated form pages - and the last two exist only for a content type that
  * opted into `admin.create.mode` / `admin.edit.mode` of `page`, so nothing about
  * an existing content type moves.

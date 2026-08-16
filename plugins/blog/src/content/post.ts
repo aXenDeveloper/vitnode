@@ -193,6 +193,10 @@ export const blogPostContentType = defineContentType({
     // an ICU plural resolved per language. `blog.post` in the database and the
     // API, which is what this module name would have been derived from.
     permissionModule: "posts",
+    // The URL says what the screen says: `/admin/content/blog/articles`, plural,
+    // because it is a list of them. The id it would otherwise be derived from
+    // stays `blog.post`, which is the half nobody types.
+    path: "blog/articles",
     // The localized title, resolved in the reader's own language - the same
     // display projection the category uses. It is not a base-table column and it
     // never becomes one: `orderableFields` is untouched, and a list sorted by a

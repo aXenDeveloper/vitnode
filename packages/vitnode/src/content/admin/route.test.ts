@@ -27,8 +27,8 @@ const createOnly = define("blog.post", { create: { mode: "page" } });
 
 const lookupOf =
   (...definitions: AnyContentTypeDefinition[]) =>
-  (id: string) =>
-    definitions.find(definition => definition.id === id);
+  (adminPath: string) =>
+    definitions.find(definition => definition.admin.path === adminPath);
 
 describe("resolveContentAdminRoute", () => {
   it("resolves the list of a registered content type", () => {
@@ -109,9 +109,9 @@ describe("resolveContentAdminRoute", () => {
       ).toBeUndefined();
     });
 
-    it("prefers an exact content type id over a create page", () => {
-      // `blog.post.create` is a legal id, so the content type that really is
-      // called that keeps its own list screen.
+    it("prefers an exact content type path over a create page", () => {
+      // `blog/post/create` is a legal address, so the content type that really
+      // lives there keeps its own list screen.
       const literal = define("blog.post.create");
 
       expect(
@@ -120,6 +120,40 @@ describe("resolveContentAdminRoute", () => {
           lookupOf(pagePost, literal),
         ),
       ).toEqual({ action: "list", contentTypeId: "blog.post.create" });
+    });
+  });
+
+  // The whole point of `admin.path`: the URL is the content type's own name for
+  // itself, and nothing about it can be derived from the id any more.
+  describe("admin.path", () => {
+    const renamed = define("blog.post", {
+      create: { mode: "page" },
+      edit: { mode: "page" },
+      path: "blog/articles",
+    });
+
+    it("resolves the list, the create page and the edit page under it", () => {
+      expect(
+        resolveContentAdminRoute(["blog", "articles"], lookupOf(renamed)),
+      ).toEqual({ action: "list", contentTypeId: "blog.post" });
+      expect(
+        resolveContentAdminRoute(
+          ["blog", "articles", "create"],
+          lookupOf(renamed),
+        ),
+      ).toEqual({ action: "create", contentTypeId: "blog.post" });
+      expect(
+        resolveContentAdminRoute(
+          ["blog", "articles", "42", "edit"],
+          lookupOf(renamed),
+        ),
+      ).toEqual({ action: "edit", contentTypeId: "blog.post", itemId: 42 });
+    });
+
+    it("leaves the id-derived path unrouted", () => {
+      expect(
+        resolveContentAdminRoute(["blog", "post"], lookupOf(renamed)),
+      ).toBeUndefined();
     });
   });
 });

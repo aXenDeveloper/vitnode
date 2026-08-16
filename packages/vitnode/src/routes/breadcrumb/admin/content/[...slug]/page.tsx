@@ -5,7 +5,7 @@ import {
   CONTENT_ADMIN_CREATE_SEGMENT,
   CONTENT_ADMIN_EDIT_SEGMENT,
 } from "@/content/const";
-import { contentAdminHref, contentTypeToPath } from "@/content/registry";
+import { contentAdminHref } from "@/content/registry";
 import { BreadcrumbAdmin } from "@/views/admin/layouts/breadcrumb/breadcrumb-admin";
 import {
   getContentLabels,
@@ -51,7 +51,7 @@ export default async function BreadcrumbSlot({
       // by `overrideLastLabel` - which is also what turns it into a link back to
       // where the person came from.
       labels={
-        labels?.title ? { [contentAdminHref(definition.id)]: labels.title } : {}
+        labels?.title ? { [contentAdminHref(definition)]: labels.title } : {}
       }
       overrideLastLabel={t(
         route.action === "create" ? "create.title" : "edit.title",
@@ -61,7 +61,7 @@ export default async function BreadcrumbSlot({
       )}
       segments={[
         "content",
-        ...contentTypeToPath(definition.id).split("/"),
+        ...definition.admin.path.split("/"),
         route.action === "create"
           ? CONTENT_ADMIN_CREATE_SEGMENT
           : CONTENT_ADMIN_EDIT_SEGMENT,

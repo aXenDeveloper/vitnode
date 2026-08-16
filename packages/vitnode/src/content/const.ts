@@ -578,14 +578,23 @@ export const CONTENT_ADMIN_FORM_MODES = ["dialog", "page"] as const;
 /**
  * The last URL segment of a generated create page, and of an edit one.
  *
- * Reserved rather than free-form: `/admin/content/[...slug]` resolves a content
- * type id from the same slug, so these two words are what tells
- * `/admin/content/blog/post` from `/admin/content/blog/post/create`. A content
- * type that genuinely wants to be called `blog.post.create` still wins - the
+ * Reserved rather than free-form: `/admin/content/[...slug]` resolves an
+ * `admin.path` from the same slug, so these two words are what tells
+ * `/admin/content/blog/articles` from `/admin/content/blog/articles/create`. A
+ * content type that genuinely lives at `blog/articles/create` still wins - the
  * exact match is tried first.
  */
 export const CONTENT_ADMIN_CREATE_SEGMENT = "create";
 export const CONTENT_ADMIN_EDIT_SEGMENT = "edit";
+
+/**
+ * One segment of `admin.path`, the address of a content type's AdminCP screens.
+ *
+ * The same shape as {@link CONTENT_PUBLIC_PATH_PATTERN}, checked a segment at a
+ * time: an admin path is allowed several of them, because the URL keeps the
+ * plugin's own namespace in front of the entity - `blog/articles`.
+ */
+export const CONTENT_ADMIN_PATH_SEGMENT_PATTERN = /^[a-z][a-z0-9-]*$/;
 
 /**
  * Every content type gets the first four staff permissions. `can_publish` is

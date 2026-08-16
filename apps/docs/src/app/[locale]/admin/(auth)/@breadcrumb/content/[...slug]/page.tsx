@@ -5,25 +5,13 @@ import {
   CONTENT_ADMIN_CREATE_SEGMENT,
   CONTENT_ADMIN_EDIT_SEGMENT,
 } from "@vitnode/core/content/const";
-import { contentAdminHref, contentTypeToPath } from "@vitnode/core/content/registry";
+import { contentAdminHref } from "@vitnode/core/content/registry";
 import { BreadcrumbAdmin } from "@vitnode/core/views/admin/layouts/breadcrumb/breadcrumb-admin";
 import {
   getContentLabels,
   resolveContentRoute,
 } from "@vitnode/core/views/admin/views/content/content-admin-view";
 
-/**
- * The breadcrumb of every generated Content Engine screen.
- *
- * The list keeps the trail it always had. A create or an edit **page** appends
- * one more crumb, labelled from `core.content` with the content type's own
- * singular - so it reads "Blog / Articles / Create article" in whatever language
- * the AdminCP is in, and "Articles" becomes a link back to the list.
- *
- * The record id is deliberately **not** a crumb of its own: `/42/` would render
- * as a dead "42" between two words, and the page it would point at is the one
- * being read.
- */
 export default async function BreadcrumbSlot({
   params,
 }: {
@@ -47,11 +35,8 @@ export default async function BreadcrumbSlot({
 
   return (
     <BreadcrumbAdmin
-      // The list crumb sits mid-trail now, so it is labelled by href rather than
-      // by `overrideLastLabel` - which is also what turns it into a link back to
-      // where the person came from.
       labels={
-        labels?.title ? { [contentAdminHref(definition.id)]: labels.title } : {}
+        labels?.title ? { [contentAdminHref(definition)]: labels.title } : {}
       }
       overrideLastLabel={t(
         route.action === "create" ? "create.title" : "edit.title",
@@ -61,7 +46,7 @@ export default async function BreadcrumbSlot({
       )}
       segments={[
         "content",
-        ...contentTypeToPath(definition.id).split("/"),
+        ...definition.admin.path.split("/"),
         route.action === "create"
           ? CONTENT_ADMIN_CREATE_SEGMENT
           : CONTENT_ADMIN_EDIT_SEGMENT,

@@ -113,6 +113,9 @@ export const articleContentType = defineContentType({
   indexes: [{ on: ["status", "createdAt"] }],
 
   admin: {
+    // `/admin/content/example/articles` - plural, like the list it opens. The id
+    // stays singular because it names one record, and nobody types it.
+    path: "example/articles",
     titleField: "title",
     list: {
       columns: [

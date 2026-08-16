@@ -136,9 +136,10 @@ const physicalIndexes = (
  * Permission modules and public paths are checked per plugin, because the
  * plugin id is part of the key each one is addressed by.
  *
- * **Delivery paths are the one exception**, and the asymmetry is deliberate: an API
- * route carries the plugin id and a canonical delivery URL does not, so the second is
- * a site-wide namespace where the first is not. See `byDeliveryPath` below.
+ * **Delivery paths and admin paths are the exceptions**, and the asymmetry is
+ * deliberate: an API route carries the plugin id and a browser URL does not, so the
+ * second is a site-wide namespace where the first is not. See `byDeliveryPath` and
+ * `byAdminPath` below.
  */
 export const validateContentTypes = (
   entries: RegisteredContentType[],
@@ -159,6 +160,18 @@ export const validateContentTypes = (
    * namespace and `/articles/example` would have two owners.
    */
   const byDeliveryPath = new Map<string, RegisteredContentType>();
+  /**
+   * AdminCP paths, keyed by the path alone - a site-wide namespace, like delivery
+   * and for the same reason.
+   *
+   * `/admin/content/{admin.path}` has no plugin id in it, and one catch-all route
+   * serves every content type: two of them answering to one path would give the
+   * screen a first-registered-wins owner, and the other content type would simply
+   * have no AdminCP at all. The id-derived default makes that nearly impossible;
+   * `admin.path` is what makes it worth checking, because two plugins are each
+   * free to think `blog/articles` is theirs.
+   */
+  const byAdminPath = new Map<string, RegisteredContentType>();
   const byIndexName = new Map<string, IndexOwner>();
 
   for (const entry of entries) {
@@ -202,6 +215,16 @@ export const validateContentTypes = (
       );
     }
     byPermission.set(permissionKey, entry);
+
+    const adminPath = definition.admin.path;
+    const duplicateAdminPath = byAdminPath.get(adminPath);
+    if (duplicateAdminPath) {
+      throw new ContentEngineError(
+        `AdminCP path "${adminPath}" is claimed by both ${describe(duplicateAdminPath)} and ${describe(entry)}. One catch-all route serves /admin/content/${adminPath}, so only one of them would have a screen - give one a different \`admin.path\`.`,
+        { contentTypeId: definition.id },
+      );
+    }
+    byAdminPath.set(adminPath, entry);
 
     assertFilterKeys(definition);
 
@@ -294,31 +317,47 @@ export const findContentTypeById = (
 ): RegisteredContentType | undefined =>
   entries.find(entry => entry.definition.id === id);
 
-/** `example.article` -> `example/article`, for `/admin/content/[...slug]`. */
+/**
+ * The **default** `admin.path`: `example.article` -> `example/article`.
+ *
+ * A default and nothing more - a content type is free to be addressed by a name
+ * of its own (`blog.post` -> `blog/articles`), so nothing that builds a URL may
+ * call this. They all read `admin.path`, which is what the href helpers below
+ * take a whole definition for.
+ */
 export const contentTypeToPath = (id: string): string =>
   id.split(".").join("/");
 
-/** `["example", "article"]` -> `example.article`. */
-export const pathToContentTypeId = (slug: readonly string[]): string =>
-  slug.join(".");
+/**
+ * Enough of a definition to address its AdminCP screens.
+ *
+ * The href helpers take this rather than an id, because the two are allowed to
+ * disagree: `blog.post` lives at `/admin/content/blog/articles`, and an id is no
+ * longer something a URL can be derived from.
+ */
+export type ContentAdminAddressable = Pick<AnyContentTypeDefinition, "admin">;
 
-/** `/admin/content/example/article` */
-export const contentAdminHref = (id: string): string =>
-  `/admin/content/${contentTypeToPath(id)}`;
+/** `/admin/content/blog/articles` */
+export const contentAdminHref = (definition: ContentAdminAddressable): string =>
+  `/admin/content/${definition.admin.path}`;
 
 /**
- * `/admin/content/example/article/create` - the generated create **page**.
+ * `/admin/content/blog/articles/create` - the generated create **page**.
  *
  * Built off `contentAdminHref` rather than spelled out again, so the list URL
  * and the two form URLs cannot drift apart. Only meaningful for a content type
  * whose `admin.create.mode` is `page`; the resolver refuses it otherwise.
  */
-export const contentCreateHref = (id: string): string =>
-  `${contentAdminHref(id)}/${CONTENT_ADMIN_CREATE_SEGMENT}`;
+export const contentCreateHref = (
+  definition: ContentAdminAddressable,
+): string => `${contentAdminHref(definition)}/${CONTENT_ADMIN_CREATE_SEGMENT}`;
 
-/** `/admin/content/example/article/42/edit` - the generated edit **page**. */
-export const contentEditHref = (id: string, itemId: number): string =>
-  `${contentAdminHref(id)}/${itemId}/${CONTENT_ADMIN_EDIT_SEGMENT}`;
+/** `/admin/content/blog/articles/42/edit` - the generated edit **page**. */
+export const contentEditHref = (
+  definition: ContentAdminAddressable,
+  itemId: number,
+): string =>
+  `${contentAdminHref(definition)}/${itemId}/${CONTENT_ADMIN_EDIT_SEGMENT}`;
 
 /**
  * The edit URL with `{id}` still in it.
@@ -328,8 +367,13 @@ export const contentEditHref = (id: string, itemId: number): string =>
  * callback - a function cannot cross an RSC boundary, and a second copy of the
  * URL shape would be free to drift from {@link contentEditHref}.
  */
-export const contentEditHrefTemplate = (id: string): string =>
-  contentEditHref(id, CONTENT_EDIT_HREF_PLACEHOLDER as unknown as number);
+export const contentEditHrefTemplate = (
+  definition: ContentAdminAddressable,
+): string =>
+  contentEditHref(
+    definition,
+    CONTENT_EDIT_HREF_PLACEHOLDER as unknown as number,
+  );
 
 /** The token {@link contentEditHrefTemplate} leaves behind for the client. */
 export const CONTENT_EDIT_HREF_PLACEHOLDER = "{id}";
