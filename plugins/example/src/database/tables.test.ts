@@ -302,9 +302,8 @@ describe("the generated migration", () => {
 
     it("suffixes every row rather than only the ambiguous ones", () => {
       // A conditional rescue can produce a value that collides with a natural
-      // slug it left alone, and that only fails at `CREATE UNIQUE INDEX`. The
-      // behaviour is asserted for real in `postgres.test.ts`; this catches the
-      // predicate coming back.
+      // slug it left alone, and that only fails at `CREATE UNIQUE INDEX`. This
+      // catches the predicate coming back.
       expect(migration).not.toMatch(/WHERE\s+a\."slug"\s+IS\s+NULL/);
     });
 

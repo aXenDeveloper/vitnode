@@ -4,8 +4,7 @@
   "tasks": {
     "test": {
       "dependsOn": ["^test"],
-      "cache": false,
-      "env": ["DATABASE_TEST_URL"]
+      "cache": false
     },
     "test:types": {
       "dependsOn": ["^test:types"],

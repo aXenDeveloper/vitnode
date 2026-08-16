@@ -84,5 +84,5 @@ npm i x
 - Write and run vitest unit tests for all new features and bug fixes - skip only if vitest isn't configured.
 - Don't write tests:
   - for trivial code unless they have complex logic or edge cases
-  - for database queries
+  - for tests where it uses a database or external API
   - how UI should be rendered (use playwright for that to write e2e tests)
