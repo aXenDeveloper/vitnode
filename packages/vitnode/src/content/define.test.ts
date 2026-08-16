@@ -491,8 +491,6 @@ describe("defineContentType", () => {
     );
 
     it("still allows an id whose derived path ends in a form segment", () => {
-      // The default is exempt: `blog.post.create` is a legal id, and the route
-      // resolver already prefers such an exact match over a create page.
       expect(define({ id: "blog.post.create" }).admin.path).toBe(
         "blog/post/create",
       );
