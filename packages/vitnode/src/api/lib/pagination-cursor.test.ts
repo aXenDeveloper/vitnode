@@ -14,7 +14,6 @@ import {
   isCursorSortableColumn,
 } from "./pagination-cursor";
 
-/** The column shapes core itself has no example of, but a plugin may. */
 const probes = pgTable("cursor_probes", {
   big: bigint({ mode: "bigint" }),
   clock: time(),
@@ -22,15 +21,6 @@ const probes = pgTable("cursor_probes", {
   day: date(),
   moment: timestamp(),
 });
-
-/**
- * The cursor is the ordered tuple, or it is nothing.
- *
- * An identifier on its own only describes a position when the list is ordered
- * by the identifier. For any other column it names a row whose place in the
- * sequence nobody knows - which is how a list ordered by `updatedAt` used to
- * skip every row whose id happened to fall on the wrong side of it.
- */
 
 const statusOf = (error: unknown): number =>
   error instanceof HTTPException ? error.status : 0;
@@ -58,7 +48,6 @@ describe("encoding", () => {
       value: "2026-08-08T12:00:00.000Z",
     });
 
-    // base64url: URL-safe, and not a number somebody will be tempted to read.
     expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/);
     expect(Number.isNaN(Number(encoded))).toBe(true);
   });
@@ -139,8 +128,6 @@ describe("decoding refuses what it cannot trust", () => {
   });
 
   it("refuses a cursor minted for another ordering", () => {
-    // The two describe different sequences, so the position means nothing -
-    // and using it anyway is exactly how rows get skipped.
     const encoded = encodePaginationCursor({
       column: "updatedAt",
       id: 42,
@@ -153,17 +140,12 @@ describe("decoding refuses what it cannot trust", () => {
 
 describe("legacy numeric cursors", () => {
   it("still works when the list is ordered by its identifier", () => {
-    // There the identifier really is the whole ordered tuple, so an old
-    // bookmark keeps working.
     expect(
       decodePaginationCursor("42", { column: "id", primaryKey: "id" }),
     ).toEqual({ column: "id", id: 42, value: 42 });
   });
 
   it("is refused for any other ordering rather than guessed at", () => {
-    // The regression this whole change exists for: a bare number says nothing
-    // about where `updatedAt` was, so interpreting it as one would silently
-    // skip rows.
     expect(() =>
       decodePaginationCursor("42", { column: "updatedAt", primaryKey: "id" }),
     ).toThrow(/cannot be used with the "updatedAt" ordering/);
@@ -172,11 +154,6 @@ describe("legacy numeric cursors", () => {
 
 describe("column values", () => {
   it("keeps a timestamp as text on both sides", () => {
-    // Deliberately *not* a `Date` round trip. A `Date` holds milliseconds and
-    // Postgres holds microseconds, so turning the text back into one would
-    // truncate the value the next comparison is parsed from - and exclude the
-    // whole millisecond the cursor came from. The predicate casts this text
-    // back to the column's type instead, and lets Postgres do the parsing.
     const flattened = cursorValueOf(
       core_users.createdAt,
       "2026-08-08 12:00:00.123456",
@@ -218,15 +195,6 @@ describe("column values", () => {
   });
 });
 
-/**
- * A cursor is opaque, not signed. A client can edit it.
- *
- * So every field is hostile input, checked against the column it claims to
- * describe. Coercion is the failure mode to avoid, not just an inelegance:
- * `Boolean("false")` is `true`, `Number("")` is `0`, and `BigInt("nonsense")`
- * throws a `SyntaxError` that would leave the route as a 500. Each of those is
- * a wrong page or a wrong status code handed to somebody who asked for neither.
- */
 describe("a tampered cursor value is refused, never coerced", () => {
   const refuses = (
     column: Parameters<typeof cursorValueForColumn>[0],
@@ -280,8 +248,6 @@ describe("a tampered cursor value is refused, never coerced", () => {
 
   describe("bigint", () => {
     it("refuses a value that would make BigInt() throw", () => {
-      // The one that used to escape as a native `SyntaxError`, and therefore
-      // as a 500.
       refuses(probes.big, "not-a-bigint");
     });
 
@@ -312,9 +278,6 @@ describe("a tampered cursor value is refused, never coerced", () => {
       ["a half-written date", "2026-08"],
       ["an injection attempt", "2026-08-09'; DROP TABLE users; --"],
     ])("refuses %s", (_why, value) => {
-      // Reaching Postgres with any of these would be an invalid-cast 500
-      // rather than a 400 - and the last one has no business getting near a
-      // cast at all.
       refuses(core_users.createdAt, value);
     });
 
@@ -324,8 +287,6 @@ describe("a tampered cursor value is refused, never coerced", () => {
       ["a plain date", "2026-08-09"],
       ["an ISO string", "2026-08-09T10:00:00.123Z"],
     ])("accepts %s, unchanged", (_why, value) => {
-      // Unchanged is the point: the predicate casts this text back to the
-      // column's type, so Postgres parses it at the precision it stored.
       expect(cursorValueForColumn(core_users.createdAt, value)).toBe(value);
     });
 
@@ -335,14 +296,6 @@ describe("a tampered cursor value is refused, never coerced", () => {
       expect(cursorValueIsCanonicalText(core_users.name)).toBe(false);
     });
 
-    /**
-     * The gap a pattern alone leaves open.
-     *
-     * Every one of these has the shape of a timestamp and is not a moment, so a
-     * shape check waves it through and Postgres answers the cast with
-     * `invalid input syntax` - a 500 produced by a query string, on a route
-     * whose whole promise is that it does not do that.
-     */
     describe("impossible values that still look like timestamps", () => {
       it.each([
         ["month 13", "2026-13-01"],
@@ -392,8 +345,6 @@ describe("a tampered cursor value is refused, never coerced", () => {
       });
 
       it("preserves microseconds through validation, digit for digit", () => {
-        // The reason the value is kept as text at all. Anything that reformats
-        // it here is a truncation the next comparison inherits.
         const value = "2026-08-09 10:00:00.000001";
 
         expect(cursorValueForColumn(core_users.createdAt, value)).toBe(value);
@@ -401,11 +352,6 @@ describe("a tampered cursor value is refused, never coerced", () => {
     });
   });
 
-  /**
-   * A `date` and a `time` column look like strings to Drizzle - `dataType` says
-   * `"string"` - but Postgres still has to parse them. Classifying from the SQL
-   * type is what stops `'nonsense'::date` being a 500.
-   */
   describe("other temporal columns", () => {
     it("holds a date column to a date, and nothing more", () => {
       expect(cursorValueForColumn(probes.day, "2026-08-09")).toBe("2026-08-09");
@@ -454,8 +400,6 @@ describe("a tampered cursor value is refused, never coerced", () => {
   });
 
   it("never lets a native parser error escape", () => {
-    // Whatever is thrown, it is an `HTTPException` - not a `SyntaxError`, a
-    // `RangeError`, or anything else that would surface as a 500.
     const hostile = [
       [probes.big, "nope"],
       [core_users.createdAt, "nope"],
@@ -476,18 +420,12 @@ describe("a tampered cursor value is refused, never coerced", () => {
 
 describe("minting keeps the database's own representation", () => {
   it("keeps a Postgres timestamp string exactly as it was read", () => {
-    // Microseconds and all: this is the value the next comparison is parsed
-    // from, so anything lost here is lost from the ordering.
     expect(
       cursorValueOf(core_users.createdAt, "2026-08-09 10:00:00.123456"),
     ).toBe("2026-08-09 10:00:00.123456");
   });
 
   it("rewrites a Date into the form the column would have been read in", () => {
-    // A `Date` only arrives when a caller mints from a value it is holding -
-    // the paginated path reads `::text`. Writing it the way Postgres writes a
-    // `timestamp` keeps minting and validation speaking one grammar, so a
-    // cursor this module produced can never be one it later refuses.
     expect(
       cursorValueOf(core_users.createdAt, new Date("2026-08-09T10:00:00.123Z")),
     ).toBe("2026-08-09 10:00:00.123");

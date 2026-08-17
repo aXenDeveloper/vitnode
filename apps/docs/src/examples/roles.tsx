@@ -11,10 +11,6 @@ const formSchema = z.object({
   roleIds: z.array(z.number()),
 });
 
-/**
- * The docs preview has no admin session, so the default lookup would answer with
- * an empty list. A `search` of our own keeps the example clickable.
- */
 const ROLES: RoleOption[] = [
   {
     color: "#ef4444",

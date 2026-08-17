@@ -80,6 +80,7 @@ const harness = () => {
       .mockResolvedValue({ publishedAt: new Date(0), status: "published" }),
     findByLanguageId: vi.fn(),
     findByLocale: vi.fn(),
+    findManyByLanguageId: vi.fn().mockResolvedValue([]),
     findManyForItem: vi.fn(),
     findManyRowsForItem: vi.fn().mockResolvedValue([]),
     publish: vi.fn(),

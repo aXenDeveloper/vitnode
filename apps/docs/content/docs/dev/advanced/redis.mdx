@@ -88,8 +88,8 @@ export const vitNodeApiConfig = buildApiConfig({
 
 ### Options
 
-The `redis` object accepts a `url` plus any
-[ioredis](https://github.com/redis/ioredis) `RedisOptions`.
+The `redis` object is a
+[node-redis](https://github.com/redis/node-redis) `RedisClientOptions`.
 
 import { TypeTable } from "fumadocs-ui/components/type-table";
 
@@ -97,16 +97,33 @@ import { TypeTable } from "fumadocs-ui/components/type-table";
   type={{
     url: {
       description:
-        "The Redis connection string (redis:// or rediss://). When omitted, ioredis connects to localhost:6379 using the other options.",
+        "The Redis connection string (redis:// or rediss://). When omitted, node-redis connects to localhost:6379 using the other options.",
       type: "string",
     },
-    "...RedisOptions": {
+    password: {
       description:
-        "Any ioredis option, e.g. host, port, password, db, tls. enableOfflineQueue defaults to false so cache commands fail fast (and fall through) when Redis is unreachable - override it if you prefer queuing.",
-      type: "RedisOptions",
+        "Password used to authenticate. Pair it with username when your Redis uses ACL users.",
+      type: "string",
+    },
+    socket: {
+      description:
+        "Connection-level options: host, port, tls, connectTimeout, reconnectStrategy.",
+      type: "RedisSocketOptions",
+    },
+    "...RedisClientOptions": {
+      description:
+        "Any other node-redis option, e.g. database or name. disableOfflineQueue defaults to true so cache commands fail fast (and fall through) when Redis is unreachable - override it if you prefer queuing.",
+      type: "RedisClientOptions",
     },
   }}
 />
+
+<Callout type="info" title="Connecting happens in the background">
+  VitNode opens the connection at boot without blocking startup, and node-redis
+  keeps retrying with an exponential backoff if Redis is unreachable. Requests
+  that land before the socket is ready behave exactly like a Redis outage: the
+  cache reports a miss and the request goes to the database.
+</Callout>
 
 ## Using the cache
 

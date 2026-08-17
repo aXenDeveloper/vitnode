@@ -8,6 +8,6 @@ export const vitNodeNextConfig = (config: NextConfig): NextConfig =>
     ...config,
     serverExternalPackages: [
       ...(config.serverExternalPackages ?? []),
-      "ioredis",
+      "redis",
     ],
   });

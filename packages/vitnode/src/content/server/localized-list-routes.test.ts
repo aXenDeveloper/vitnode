@@ -95,9 +95,9 @@ const harness = () => {
     relations: {},
     repeatable: {},
   } as never);
-  vi.spyOn(guides, "translationService").mockReturnValue({
-    findManyByLanguageId,
-  } as never);
+  vi.spyOn(guides, "translationService", "get").mockReturnValue(
+    () => ({ findManyByLanguageId }) as never,
+  );
 
   const app = new OpenAPIHono();
   const context: MiddlewareHandler = async (c, next) => {

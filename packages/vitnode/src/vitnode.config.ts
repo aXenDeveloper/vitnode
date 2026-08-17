@@ -1,9 +1,9 @@
 import type { ProgressProvider } from "@bprogress/next/app";
 import type { drizzle } from "drizzle-orm/postgres-js";
-import type { RedisOptions } from "ioredis";
 import type { IRateLimiterOptions } from "rate-limiter-flexible";
 import type React from "react";
 
+import type { CacheConfig } from "./api/lib/cache";
 import type { CronAdapter } from "./api/lib/cron";
 import type { BuildPluginApiReturn } from "./api/lib/plugin";
 import type { AIConfig } from "./api/models/ai";
@@ -117,7 +117,7 @@ export interface VitNodeApiConfig {
    * without Redis - the cache degrades to no-ops and the rate limiter falls
    * back to in-memory storage.
    */
-  redis?: RedisOptions & { url?: string };
+  redis?: CacheConfig;
   /**
    * Search engine backing content discovery (`c.get("search")`). Ships a
    * zero-config Postgres full-text provider used when `adapter` is omitted; an

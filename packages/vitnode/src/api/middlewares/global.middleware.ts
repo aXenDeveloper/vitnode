@@ -1,8 +1,8 @@
 import type { Context, Env, Next } from "hono";
-import type { Redis } from "ioredis";
 
 import { HTTPException } from "hono/http-exception";
 
+import type { CacheClient } from "@/api/lib/cache";
 import type { RegisteredContentType } from "@/content/registry";
 import type { RegisteredContentModel } from "@/content/server/model";
 import type { LocaleConfig, MessagesSource } from "@/lib/i18n/types";
@@ -195,7 +195,7 @@ export const globalMiddleware = ({
   | "search"
   | "storage"
 > &
-  Pick<VitNodeConfig, "metadata"> & { cacheClient: null | Redis }) => {
+  Pick<VitNodeConfig, "metadata"> & { cacheClient: CacheClient | null }) => {
   const pluginsMetadata = plugins.map(plugin => ({
     id: plugin.pluginId,
   }));

@@ -11,10 +11,6 @@ const formSchema = z.object({
   authorId: z.number(),
 });
 
-/**
- * The docs preview has no admin session, so the default lookup would answer with
- * an empty list. A `search` of our own keeps the example clickable.
- */
 const PEOPLE: UserOption[] = [
   { avatarColor: "3b82f6", id: 1, name: "Ada Lovelace", nameCode: "ada" },
   { avatarColor: "ef4444", id: 2, name: "Grace Hopper", nameCode: "grace" },

@@ -1,5 +1,4 @@
 import type { Context, Next } from "hono";
-import type { Redis } from "ioredis";
 
 import {
   type IRateLimiterOptions,
@@ -9,6 +8,8 @@ import {
   type RateLimiterRes,
 } from "rate-limiter-flexible";
 
+import type { CacheClient } from "@/api/lib/cache";
+
 import { CONFIG } from "../../lib/config";
 
 const createRateLimiter = ({
@@ -17,7 +18,7 @@ const createRateLimiter = ({
   ...options
 }: Omit<IRateLimiterOptions, "keyPrefix"> & {
   keyPrefix: string;
-  storeClient?: null | Redis;
+  storeClient?: CacheClient | null;
 }): RateLimiterAbstract => {
   // With a Redis client the counters are shared across all instances, so rate
   // limits hold up behind a load balancer. `insuranceLimiter` falls back to
@@ -25,6 +26,10 @@ const createRateLimiter = ({
   if (storeClient) {
     return new RateLimiterRedis({
       storeClient,
+      // `rate-limiter-flexible` sniffs the client library from the store
+      // client's constructor name, which node-redis does not expose. Without
+      // this it assumes ioredis and calls a command that doesn't exist.
+      useRedisPackage: true,
       keyPrefix,
       ...options,
       insuranceLimiter: new RateLimiterMemory({ keyPrefix, ...options }),
@@ -39,7 +44,7 @@ const createRateLimiter = ({
 
 export const rateLimiterMiddleware = (
   options?: Omit<IRateLimiterOptions, "keyPrefix">,
-  storeClient?: null | Redis,
+  storeClient?: CacheClient | null,
 ) => {
   if (CONFIG.node_development) {
     // In development, we disable the rate limiter for easier testing

@@ -40,8 +40,6 @@ export default async function BreadcrumbSlot({
       }
       overrideLastLabel={t(
         route.action === "create" ? "create.title" : "edit.title",
-        // The translated noun, like every other "Create {name}" in the AdminCP -
-        // the definition's English is only its fallback.
         { name: labels?.singular ?? contentTypeName(definition.id) },
       )}
       segments={[

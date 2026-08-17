@@ -73,7 +73,6 @@ export default function DataTableExample() {
       pageInfo={{
         hasNextPage: false,
         hasPreviousPage: false,
-        // Opaque cursors, as the API mints them - never row identifiers.
         startCursor: null,
         endCursor: null,
         count: 1,

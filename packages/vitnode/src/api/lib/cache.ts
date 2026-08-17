@@ -1,7 +1,11 @@
 import type { Context } from "hono";
-import type { Redis, RedisOptions } from "ioredis";
+import type { RedisClientOptions, RedisClientType } from "redis";
 
-export type CacheConfig = RedisOptions & { url?: string };
+/** Connection options accepted by `redis` - `url` plus any client option. */
+export type CacheConfig = RedisClientOptions;
+
+/** The connected `node-redis` client shared by the cache, rate limiter and ws. */
+export type CacheClient = RedisClientType;
 
 /**
  * Root prefix applied to every key VitNode writes, so the cache can be flushed
@@ -21,13 +25,13 @@ const SYSTEM_NAMESPACE = "__system__";
  * never break a request.
  */
 export class CacheModel {
-  constructor(client: null | Redis, c: Context) {
+  constructor(client: CacheClient | null, c: Context) {
     this.c = c;
     this.client = client;
   }
 
   protected readonly c: Context;
-  protected readonly client: null | Redis;
+  protected readonly client: CacheClient | null;
 
   private key(key: string): string {
     return `${this.prefix()}${key}`;
@@ -61,7 +65,7 @@ export class CacheModel {
     if (!this.client) return;
 
     try {
-      if (fullKeys.length > 0) await this.client.del(...fullKeys);
+      if (fullKeys.length > 0) await this.client.del(fullKeys);
     } catch {
       /* swallow */
     }
@@ -81,7 +85,9 @@ export class CacheModel {
     try {
       const raw = JSON.stringify(value);
       if (ttlSeconds && ttlSeconds > 0) {
-        await this.client.set(fullKey, raw, "EX", ttlSeconds);
+        await this.client.set(fullKey, raw, {
+          expiration: { type: "EX", value: ttlSeconds },
+        });
       } else {
         await this.client.set(fullKey, raw);
       }
@@ -102,13 +108,10 @@ export class CacheModel {
     if (!this.client) return true;
 
     try {
-      const result = await this.client.set(
-        this.systemKey(`lock:${key}`),
-        "1",
-        "EX",
-        ttlSeconds,
-        "NX",
-      );
+      const result = await this.client.set(this.systemKey(`lock:${key}`), "1", {
+        condition: "NX",
+        expiration: { type: "EX", value: ttlSeconds },
+      });
 
       return result === "OK";
     } catch {
@@ -140,14 +143,14 @@ export class CacheModel {
     if (!this.client) return;
 
     try {
-      const stream = this.client.scanStream({
-        match: `${this.prefix()}*`,
-        count: 100,
+      // `scanIterator` yields a batch of keys per SCAN round-trip.
+      const scan = this.client.scanIterator({
+        MATCH: `${this.prefix()}*`,
+        COUNT: 100,
       });
 
-      for await (const keys of stream) {
-        const batch = keys as string[];
-        if (batch.length > 0) await this.client.del(...batch);
+      for await (const keys of scan) {
+        if (keys.length > 0) await this.client.del(keys);
       }
     } catch {
       /* swallow */
