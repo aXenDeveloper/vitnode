@@ -22,9 +22,11 @@
     "input-group",
     "nullable-number",
     "radio-group",
+    "roles",
     "select",
     "switch",
     "textarea",
+    "user",
     "---UI---",
     "..."
   ]

@@ -1,0 +1,1 @@
+ALTER TABLE "example_advanced_articles" ADD COLUMN "syndicationNoIndex" boolean DEFAULT false NOT NULL;

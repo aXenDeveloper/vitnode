@@ -83,6 +83,10 @@
         "rebuildError": "Could not queue the rebuild.",
         "reindex": "Reindex",
         "reindexQueued": "Reindex queued for {collection}.",
+        "syncErrors": {
+          "title": "Recent sync failures",
+          "desc": "These records were saved, but their search documents weren't updated. Rebuild the index to repair them."
+        },
         "cron": {
           "title": "Background jobs require a configured cron adapter",
           "desc": "A rebuild won't run until cron is active. Configure an adapter in Integrations to enable scheduled reindexing.",
@@ -113,8 +117,17 @@
           "status": {
             "indexed": "Indexed",
             "stale": "Stale",
-            "empty": "Not indexed"
+            "empty": "Not indexed",
+            "unmanaged": "Unmanaged"
           },
+          "noIndexer": "No rebuild indexer",
+          "noIndexerDesc": "No rebuild indexer is registered. Documents may still be maintained by live plugin writes.",
+          "removeDocuments": "Remove documents",
+          "removeConfirmTitle": "Remove indexed documents for “{collection}”?",
+          "removeConfirmDescription": "No rebuild indexer is registered for this collection. Its documents may still be maintained by live plugin writes. This removes their current indexed state, and future writes may add them again.",
+          "removeSuccess": "Removed the indexed documents for {collection}.",
+          "removeSuccessDesc": "Live plugin writes may recreate them.",
+          "removeError": "Could not remove the indexed documents.",
           "empty": "No collections found",
           "emptyDesc": "No collection matches your search. Try a different term."
         }
@@ -220,6 +233,8 @@
           "desc": "Sorry, we're experiencing technical difficulties on our server."
         },
         "title": "Oops! Something went wrong.",
+        "try_again": "Try again",
+        "reference": "Error reference: {digest}",
         "internal_server_error": "Internal server error.",
         "field_required": "This field is required.",
         "field_min_length": "This field must be at least {min} characters.",
@@ -385,6 +400,227 @@
           }
         }
       }
+    },
+    "content": {
+      "empty": {
+        "title": "Nothing here yet",
+        "desc": "Create your first entry to get started."
+      },
+      "table": {
+        "id": "ID",
+        "created_at": "Created",
+        "updated_at": "Updated",
+        "actions": "Actions",
+        "empty_value": "—",
+        "published_at": "Published",
+        "more_actions": "More actions"
+      },
+      "actions": {
+        "edit": "Edit",
+        "publish": "Publish",
+        "unpublish": "Unpublish",
+        "preview": "Preview",
+        "schedule": "Schedule",
+        "history": "History",
+        "delivery": "Delivery",
+        "delete": "Delete"
+      },
+      "create": {
+        "title": "Create {name}",
+        "desc": "Add a new {name}.",
+        "submit": "Create",
+        "success": "{name} has been created."
+      },
+      "edit": {
+        "title": "Edit {name}",
+        "desc": "Change the details of this {name}.",
+        "submit": "Save changes",
+        "success": "{name} has been updated.",
+        "unchanged": "No changes to save."
+      },
+      "page": {
+        "back": "Back to {name}"
+      },
+      "delete": {
+        "title": "Delete {name}",
+        "desc": "Are you sure you want to delete <title></title>? This action cannot be undone.",
+        "confirm": "Yes, delete it",
+        "success": "{name} has been deleted.",
+        "conflict": {
+          "title": "This record changed",
+          "desc": "Someone saved it after this page loaded, so it was not deleted. Refresh the list, check what changed, and delete it again if you still want to."
+        }
+      },
+      "publish": {
+        "title": "Publish {name}",
+        "desc": "Publish <title></title>? It becomes visible to everyone.",
+        "confirm": "Yes, publish it",
+        "success": "{name} has been published.",
+        "action": "Publish"
+      },
+      "unpublish": {
+        "title": "Unpublish {name}",
+        "desc": "Unpublish <title></title>? It disappears from public pages but is not deleted.",
+        "confirm": "Yes, unpublish it",
+        "success": "{name} has been unpublished.",
+        "action": "Unpublish"
+      },
+      "status": {
+        "label": "Status",
+        "draft": "Draft",
+        "published": "Published",
+        "published_on": "Published on {date}",
+        "never_published": "Not published yet"
+      },
+      "form": {
+        "relation": {
+          "placeholder": "Select…",
+          "search_placeholder": "Search…",
+          "empty": "No matches."
+        },
+        "boolean": {
+          "on": "Yes",
+          "off": "No"
+        },
+        "group": {
+          "enabled": "Has a value"
+        },
+        "list": {
+          "add": "Add {label}",
+          "empty": "Nothing here yet.",
+          "move_down": "Move entry {position} down",
+          "move_up": "Move entry {position} up",
+          "position": "{label} {position} of {total}",
+          "remove": "Remove entry {position}"
+        }
+      },
+      "conflict": {
+        "title": "Someone else saved this first",
+        "desc": "This {name, select, other {record}} moved to version {version} while you were editing. Nothing you typed has been lost.",
+        "reload": "Show what changed",
+        "reloaded": "Now at version {version}. Saving replaces the changes below with yours."
+      },
+      "history": {
+        "title": "History of this {name}",
+        "desc": "Every version of this record, newest first.",
+        "empty": "No versions yet. The first edit will show up here.",
+        "current": "Current",
+        "system_actor": "System",
+        "changed_fields": "Changed: {fields}",
+        "changed_to": "changed to",
+        "show_changes": "Show changes",
+        "hide_changes": "Hide changes",
+        "no_changes": "No field values changed.",
+        "load_failed": "This version could not be loaded.",
+        "load_more": "Load older versions",
+        "loading_more": "Loading…",
+        "operations": {
+          "create": "Created",
+          "update": "Edited",
+          "publish": "Published",
+          "unpublish": "Unpublished",
+          "restore": "Restored",
+          "delete": "Deleted"
+        },
+        "restore": {
+          "action": "Restore",
+          "title": "Restore version {version}?",
+          "desc": "This puts the field values of version {version} back on <title></title> as a new version {nextVersion}. Nothing is deleted - every version in between stays in the history - and the publication state does not change.",
+          "confirm": "Restore this version",
+          "success": "{name} restored",
+          "success_desc": "Restored from version {version}."
+        }
+      },
+      "preview": {
+        "title": "Preview link",
+        "desc": "A signed link to {title} as it is right now, including unpublished changes. Anyone who has the link can open it - no account needed.",
+        "loading": "Creating a link…",
+        "link": "Preview link",
+        "copy": "Copy link",
+        "open": "Open",
+        "expires": "Expires <when></when>",
+        "warning": "Treat it like a password: it works for anyone until it expires, and it cannot be revoked early. It is pinned to this version, so heavy editing can age it out of the history before it expires.",
+        "unavailable": "Preview links cannot be built on this deployment. Check that NEXT_PUBLIC_WEB_URL and NEXT_PUBLIC_API_URL are absolute URLs, then restart the API.",
+        "live": "This record has no saved version yet, so the link shows it live - it will follow any edits made before the reviewer opens it."
+      },
+      "delivery": {
+        "title": "Delivery for this {name}",
+        "desc": "Where this record lives on the public site, and where it used to.",
+        "canonical": "Canonical URL",
+        "no_canonical": "This record has no public URL yet. It gets one when it is published.",
+        "historical": "Historical URLs",
+        "no_history": "No previous URLs. Changing the address of a published record adds one here.",
+        "redirect_active": "redirects to the current URL",
+        "redirect_inactive": "not redirecting while this is unpublished",
+        "retired_at": "Replaced",
+        "inactive_note": "These URLs start redirecting again as soon as this record is published.",
+        "load_failed": "This record's delivery state could not be read.",
+        "states": {
+          "published": "Published",
+          "not_published": "Not published"
+        }
+      },
+      "schedule": {
+        "title": "Schedule this {name}",
+        "desc": "Publish or unpublish <title></title> at a set time. Scheduling changes nothing now.",
+        "empty": "Nothing scheduled yet.",
+        "submit": "Schedule it",
+        "cancel": "Cancel",
+        "cancelled": "Schedule cancelled",
+        "success": "{name} scheduled",
+        "overdue": "Overdue - it has not run",
+        "precision": "Scheduled work runs on a one-minute tick, so expect up to a minute of delay. It publishes whatever the record says at that time, not what it says now.",
+        "actions": {
+          "publish": "Publish",
+          "unpublish": "Unpublish"
+        },
+        "status": {
+          "pending": "Pending",
+          "completed": "Done",
+          "cancelled": "Cancelled"
+        },
+        "field": {
+          "action": "What should happen",
+          "when": "When",
+          "when_desc": "In your timezone ({zone})."
+        },
+        "no_cron": {
+          "title": "No scheduler is running",
+          "desc": "Schedules will be saved but will never fire, because this install has no cron adapter configured. Set one up, or trigger the cron endpoint from outside."
+        },
+        "errors": {
+          "in_past": "That time has already passed. Pick a moment in the future.",
+          "order": "An unpublish has to come after the publish that is already scheduled.",
+          "unsupported": "This content type cannot be scheduled."
+        },
+        "effects_failed": "Published, but the announcements did not go out yet - retrying."
+      },
+      "permissions": {
+        "can_view": "View list",
+        "can_create": "Create",
+        "can_edit": "Edit",
+        "can_delete": "Delete",
+        "can_publish": "Publish and unpublish",
+        "can_restore": "Restore an earlier version"
+      },
+      "errors": {
+        "not_found": "This record no longer exists. Refresh the list and try again.",
+        "validation": "Some of these values are not valid. Check the form and try again.",
+        "conflict": "This record is still referenced by other content.",
+        "forbidden": "You do not have permission to do this.",
+        "version_conflict": "Someone else saved this while you were editing. Your changes are still here.",
+        "unique_conflict": "A record with these values already exists.",
+        "not_restorable": "This version cannot be restored: {fields} no longer fit this content type.",
+        "slug_reserved": "That address is reserved: another record used it publicly and it still redirects there. Pick a different one."
+      },
+      "translations": {
+        "states": {
+          "missing": "Missing"
+        },
+        "errors": {
+          "version_conflict": "Someone else saved this language while you were editing."
+        }
+      }
     }
   },
   "admin": {
@@ -398,8 +634,6 @@
         "drop_here": "Drop a widget here",
         "empty_title": "Your dashboard is empty",
         "empty_desc": "Add widgets to keep the numbers you care about one glance away.",
-        "saved_title": "Dashboard saved",
-        "saved_desc": "Your layout is yours alone - other admins keep theirs.",
         "error_title": "Could not save your dashboard",
         "error_desc": "Something went wrong on the way to the server. Please try again.",
         "refresh_error": "Could not reload this widget. Reload the page to see your changes.",
@@ -422,8 +656,6 @@
           "open": "Configure {title}",
           "title": "Configure {title}",
           "desc": "These settings apply to this card only - other admins keep their own.",
-          "saved_title": "Settings saved",
-          "saved_desc": "The card picks them up once you are done arranging the board.",
           "error_title": "Could not save the settings",
           "error_desc": "Something went wrong on the way to the server. Please try again.",
           "load_error": "Could not load these settings. Close this and try again."
@@ -855,6 +1087,12 @@
           "not_configured": "No cron adapter configured - jobs won't run automatically.",
           "stale": "No job has run in over 6 hours - cron may be misconfigured or stopped. Check your cron setup.",
           "jobs": "{count, plural, =0 {No jobs scheduled} one {# job scheduled} other {# jobs scheduled}}"
+        },
+        "content_preview": {
+          "title": "Content Preview",
+          "desc": "Signed, expiring links that let a reviewer read an unpublished record without an account.",
+          "not_configured": "No content type has preview enabled.",
+          "content_types": "{count, plural, =0 {No content types} one {# content type} other {# content types}}"
         },
         "queue": {
           "title": "Queue Tasks",

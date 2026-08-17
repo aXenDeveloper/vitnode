@@ -12,6 +12,7 @@
     "---Framework---",
     "plugins",
     "database",
+    "content-engine",
     "fetcher",
     "working-with-users",
     "i18n",

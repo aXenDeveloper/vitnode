@@ -60,7 +60,10 @@ const isIndexAlreadyExistsError = (error: unknown): boolean =>
     "resource_already_exists_exception";
 
 const toSource = (doc: SearchDocument): EsSource => ({
-  pluginId: "core",
+  // `SearchModel` resolves ownership before any provider sees the document, so
+  // this fallback is only for a provider called directly - it must never be the
+  // reason a mirrored document disagrees with the canonical row.
+  pluginId: doc.pluginId ?? "core",
   itemType: doc.itemType,
   itemId: doc.itemId,
   languageCode: doc.languageCode ?? "",
@@ -281,7 +284,48 @@ export const ElasticsearchSearchAdapter = (
 
   return {
     name: "elasticsearch",
-    capabilities: { facets: true, timeDecay: true, authorBoost: true },
+    // `languageScopedDelete`: `delete` below filters the delete-by-query on
+    // `languageCode` when it is given one, so taking the Polish translation down
+    // leaves the English document in place.
+    capabilities: {
+      facets: true,
+      timeDecay: true,
+      authorBoost: true,
+      languageScopedDelete: true,
+    },
+
+    /**
+     * How many documents this index holds for one collection.
+     *
+     * `_count` rather than a search: it returns a number without fetching a
+     * single document, so a diagnostic over a large index costs the same as one
+     * over an empty one. `languageCode` narrows it to a single translation,
+     * which is what makes per-locale drift visible - "Polish is missing forty
+     * documents" is not something a total can say.
+     *
+     * A missing index means zero rather than an error: an install that has never
+     * rebuilt has no index yet, and that is drift to report, not a crash.
+     */
+    count: async (_c, { itemType, languageCode }) => {
+      const response = await getClient().count(
+        {
+          index,
+          query: {
+            bool: {
+              filter: [
+                { term: { itemType } },
+                ...(languageCode === undefined
+                  ? []
+                  : [{ term: { languageCode } }]),
+              ],
+            },
+          },
+        },
+        { ignore: [404] },
+      );
+
+      return response.count ?? 0;
+    },
 
     index: async (_c, doc) => {
       await ensureIndex();
@@ -310,13 +354,23 @@ export const ElasticsearchSearchAdapter = (
     },
 
     // One document per language shares an (itemType, itemId), so remove every
-    // language variant with a query rather than a single id.
-    delete: async (_c, itemType, itemId) => {
+    // language variant with a query rather than a single id - unless the caller
+    // named one, which is how a single translation is taken down without
+    // touching the others.
+    delete: async (_c, itemType, itemId, languageCode) => {
       await getClient().deleteByQuery(
         {
           index,
           query: {
-            bool: { filter: [{ term: { itemType } }, { term: { itemId } }] },
+            bool: {
+              filter: [
+                { term: { itemType } },
+                { term: { itemId } },
+                ...(languageCode === undefined
+                  ? []
+                  : [{ term: { languageCode } }]),
+              ],
+            },
           },
         },
         { ignore: [404] },

@@ -121,14 +121,6 @@ export const WidgetSettingsDialog = ({
             }
 
             setOpen(false);
-            toast.success(t("settings.saved_title"), {
-              description: t("settings.saved_desc"),
-            });
-
-            // Left until the dialog has finished closing. The card suspends
-            // while it is re-rendered, and a suspended render mid-animation
-            // strands the overlay on screen - batched into this transition it
-            // would also hold the close back until the new card was ready.
             setTimeout(onSaved, 300);
           } finally {
             resolve();

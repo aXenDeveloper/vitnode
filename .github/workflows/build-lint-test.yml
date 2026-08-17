@@ -2,11 +2,11 @@ name: Build, Lint & Test
 
 on:
   pull_request:
-    branches: "*"
     types:
       - opened
       - edited
       - synchronize
+      - reopened
 
 jobs:
   build:
@@ -47,3 +47,6 @@ jobs:
 
       - name: Run tests
         run: pnpm test
+
+      - name: Run type tests
+        run: pnpm test:types

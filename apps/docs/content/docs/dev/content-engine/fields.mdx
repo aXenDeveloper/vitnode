@@ -1,0 +1,145 @@
+---
+title: Field Reference
+description: Complete step-by-step guide to adding and configuring field types in Content Engine, including Postgres column mappings, Zod validation, and AdminCP controls.
+icon: LayoutGrid
+---
+
+Content Engine provides field descriptors exported from `@vitnode/core/content` via the `field` helper.
+
+## Supported Field Types Summary
+
+| Field Method | Postgres Column | Zod Schema Type | AdminCP Form Control |
+| :--- | :--- | :--- | :--- |
+| `field.text()` | `varchar(length)` | `z.string()` | Text Input |
+| `field.textarea()` | `text()` | `z.string()` | Textarea |
+| `field.number()` | `integer()` or `numeric()` | `z.number()` | Number Input |
+| `field.boolean()` | `boolean()` | `z.boolean()` | Switch Toggle |
+| `field.enum()` | `varchar(length)` | `z.enum([...])` | Select Dropdown |
+| `field.dateTime()` | `timestamp({ mode: 'date' })` | `z.date()` | Date Picker |
+| `field.user()` | `integer()` (FK to `core_users`) | `z.number()` | User Picker Combobox |
+| `field.user({ multiple: true })` | Junction table (FK to `core_users`) | `z.array(z.number())` | Multi-select People Combobox |
+| `field.slug()` | `varchar(length)` | `z.string()` | Slug Input + Auto-Generator |
+
+---
+
+## Step-by-Step Field Configuration
+
+<Steps>
+
+<Step>
+### Step 1: Add Text and Textarea Fields
+
+Start by defining basic text fields using `field.text()` for short text inputs and `field.textarea()` for multi-line content:
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    code: field.text({ required: true, maxLength: 100, unique: true }),
+    summary: field.textarea({ maxLength: 1000, nullable: true }),
+  },
+});
+```
+</Step>
+
+<Step>
+### Step 2: Add Numbers, Booleans, and Enums
+
+Extend your content fields by adding numeric metrics, switch toggles, and dropdown select options:
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    code: field.text({ required: true, maxLength: 100, unique: true }),
+    summary: field.textarea({ maxLength: 1000, nullable: true }),
+    views: field.number({ integer: true, min: 0, defaultValue: 0 }), // [!code ++]
+    isFeatured: field.boolean({ defaultValue: false }), // [!code ++]
+    status: field.enum({ // [!code ++]
+      values: ["draft", "published", "archived"], // [!code ++]
+      defaultValue: "draft", // [!code ++]
+    }), // [!code ++]
+  },
+});
+```
+</Step>
+
+<Step>
+### Step 3: Add Dates, Users, and Auto-Slugs
+
+Add date pickers, user reference fields, and automatic URL slug generators:
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+    slug: field.slug({ from: "title", maxLength: 120 }), // [!code ++]
+    publishedAt: field.dateTime({ nullable: true }), // [!code ++]
+    author: field.user({ required: true }), // [!code ++]
+  },
+});
+```
+</Step>
+
+<Step>
+### Step 4: Let a Field Hold Many People
+
+`field.user({ multiple: true })` turns one author into a byline. The value moves
+off the row into a generated junction table pointing at `core_users`, exactly as
+a to-many `field.relation()` does, and the AdminCP renders a multi-select
+combobox - chosen people as removable chips, with the same input searching for
+the next one - instead of a single picker:
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+    authors: field.user({ multiple: true, ordered: true }), // [!code ++]
+  },
+});
+```
+
+The value is a list of user ids - `create({ authors: [3, 9] })` - and the
+collection API works on it like any other set:
+
+```ts
+await articleContent.service(c).relations.authors.add(articleId, userId);
+await articleContent.service(c).relations.authors.reorder(articleId, [9, 3]);
+```
+
+<Callout type="warn">
+A to-many field is never `required` and never `nullable`: the empty set is what
+"nobody" looks like, and there is no column to be null. `defineContentType`
+rejects both, along with `onDelete: "set null"` - a junction row has nothing to
+null, so a deleted account's membership is deleted (`cascade`) or the deletion is
+refused (`restrict`).
+
+Use `min: 1` when a record must have at least one. It is enforced by the
+generated schema, so the API answers 400 and the AdminCP form refuses to submit:
+
+```ts
+categories: field.relation({ min: 1, multiple: true, target: () => categoryType }),
+```
+</Callout>
+</Step>
+
+</Steps>
+
+---
+
+## Complex & Advanced Field Types
+
+For nested structures, arrays, relationships, and multi-language support:
+
+- **`field.relation()`**: Connects content types together. See [Relations & Advanced Modeling](/docs/dev/content-engine/relations-and-advanced-modeling).
+- **`field.structured()`**: Stores nested Zod objects in a Postgres `jsonb` column.
+- **`field.repeatable()`**: Stores arrays of items in a Postgres `jsonb` column.
+- **`localized: true`**: Marks text or textarea fields for translation. See [Localization](/docs/dev/content-engine/localization).

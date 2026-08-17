@@ -66,10 +66,11 @@ export const logsDebugAdminRoute = buildRoute({
         query,
       },
       primaryCursor: core_logs.id,
-      query: async ({ limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, where, orderBy }) =>
         await c
           .get("db")
           .select({
+            ...cursorSelection,
             id: core_logs.id,
             pluginId: core_logs.pluginId,
             type: core_logs.type,

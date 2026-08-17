@@ -1,3 +1,4 @@
+import { getTableColumns } from "drizzle-orm";
 import z from "zod";
 
 import { buildRoute } from "@/api/lib/route";
@@ -56,10 +57,10 @@ export const getCronsRoute = buildRoute({
       },
       c,
       primaryCursor: core_cron.id,
-      query: async ({ limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, where, orderBy }) =>
         await c
           .get("db")
-          .select()
+          .select({ ...getTableColumns(core_cron), ...cursorSelection })
           .from(core_cron)
           .where(where)
           .orderBy(orderBy)

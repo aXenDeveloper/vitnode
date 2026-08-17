@@ -7,8 +7,26 @@ export interface QueueDispatchArgs {
   maxAttempts?: number;
   name: string;
   payload?: Record<string, unknown>;
+  /**
+   * Who owns the handler, when that is not the plugin handling the request.
+   *
+   * The worker resolves a handler by `` `${pluginId}:${name}` ``, so a task
+   * registered by core but dispatched from a plugin's route needs to say so -
+   * otherwise the row is stamped with the plugin's id and nothing will ever
+   * claim it. Defaults to the requesting plugin, which is right for the
+   * ordinary case where a plugin dispatches its own task.
+   */
+  pluginId?: string;
   priority?: number;
   queue?: string;
+  /**
+   * Join an existing transaction instead of using the request handle.
+   *
+   * Needed whenever the row that the task refers to is written in the same
+   * unit of work: without it, the queue row can commit while the row it points
+   * at rolls back, and the task wakes up to find nothing there.
+   */
+  tx?: Omit<Context["var"]["db"], "$client">;
 }
 
 /**
@@ -27,19 +45,21 @@ export class QueueModel {
   async dispatch({
     name,
     payload = {},
+    pluginId: explicitPluginId,
     queue = "default",
     priority = 0,
     maxAttempts,
     availableAt,
+    tx,
   }: QueueDispatchArgs): Promise<{ id: number }> {
-    const pluginId = this.c.get("plugin")?.id ?? "@vitnode/core";
+    const pluginId =
+      explicitPluginId ?? this.c.get("plugin")?.id ?? "@vitnode/core";
 
     const registeredTask = this.c
       .get("core")
       .queue.find(task => task.pluginId === pluginId && task.name === name);
 
-    const [row] = await this.c
-      .get("db")
+    const [row] = await (tx ?? this.c.get("db"))
       .insert(core_queue)
       .values({
         pluginId,

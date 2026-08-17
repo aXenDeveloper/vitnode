@@ -6,6 +6,10 @@
       "dependsOn": ["^test"],
       "cache": false
     },
+    "test:types": {
+      "dependsOn": ["^test:types"],
+      "cache": false
+    },
     "docker:dev": {
       "dependsOn": ["^docker:dev"],
       "cache": false,

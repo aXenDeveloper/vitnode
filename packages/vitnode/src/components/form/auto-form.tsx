@@ -10,7 +10,9 @@ import {
   type FieldValues,
   type Mode,
   useForm,
+  useFormContext,
   type UseFormReturn,
+  useFormState,
 } from "react-hook-form";
 import z from "zod";
 
@@ -63,6 +65,15 @@ export interface ItemAutoFormComponentProps {
   itemParams?: InputParams;
   label?: React.ReactNode;
   labelRight?: React.ReactNode;
+  /**
+   * Whether this field holds one value per language.
+   *
+   * Set by whoever builds the field list - the Content Engine reads it off
+   * `localized: true` - so a custom component can pass it straight through to
+   * `AutoFormInput`, `AutoFormTextarea` or `AutoFormEditor` and get the language
+   * switcher without knowing why the field has one.
+   */
+  multiLang?: boolean;
   otherProps: {
     ["aria-invalid"]?: boolean;
     enum?: string[];
@@ -98,6 +109,40 @@ function AutoFormField({
   return <Field data-invalid={invalid} ref={scope} {...props} />;
 }
 
+/**
+ * The submit button of the surrounding `AutoForm`, for a `layout` that has to
+ * place it itself.
+ *
+ * Reads the form through context rather than taking props, so it stays in step
+ * with validity and submission exactly like the built-in one - and so a layout
+ * cannot wire up a button that submits a different form.
+ */
+export const AutoFormSubmitButton = ({
+  children,
+  className,
+  variant,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+  variant?: React.ComponentProps<typeof Button>["variant"];
+}) => {
+  const t = useTranslations("core.global");
+  const { control } = useFormContext();
+  const { isSubmitting, isValid } = useFormState({ control });
+
+  return (
+    <Button
+      className={className}
+      disabled={!isValid || isSubmitting}
+      isLoading={isSubmitting}
+      type="submit"
+      variant={variant}
+    >
+      {children ?? t("submit")}
+    </Button>
+  );
+};
+
 export type AutoFormOnSubmit<
   T extends z.ZodObject<z.ZodRawShape>,
   TContext = unknown,
@@ -118,6 +163,7 @@ export function AutoForm<
   onSubmit: onSubmitProp,
   captcha,
   fields,
+  layout,
   tabs,
   submitButtonProps,
   children,
@@ -126,6 +172,19 @@ export function AutoForm<
   captcha?: z.infer<typeof routeMiddlewareSchema>["captcha"];
   fields: ItemAutoFormProps<T>[];
   formSchema: T;
+  /**
+   * Places the fields yourself instead of stacking them in declaration order.
+   *
+   * Called with every field already rendered and keyed by its `id`, so a layout
+   * puts an element where it wants it and each one stays wired into this form's
+   * validation, dirty state and error display. One `<form>`, one schema, one
+   * submit - a layout cannot accidentally create a second of any of them.
+   *
+   * The automatic submit button is **not** rendered in this mode: a layout that
+   * decides where the fields go has to decide where the button goes too.
+   * Mutually exclusive with `tabs`.
+   */
+  layout?: (renderedFields: Record<string, React.ReactNode>) => React.ReactNode;
   mode?: Mode;
   onSubmit?: AutoFormOnSubmit<T, TContext>;
   submitButtonProps?: Omit<
@@ -271,6 +330,24 @@ export function AutoForm<
       {submitButtonProps?.children ?? t("submit")}
     </Button>
   );
+
+  if (layout) {
+    return (
+      <Form form={form} onSubmit={onSubmit} {...props}>
+        {layout(
+          Object.fromEntries(
+            fields
+              .filter(isFieldVisible)
+              .map(item => [item.id, renderField(item)]),
+          ),
+        )}
+
+        {children}
+
+        {captcha && <div id="vitnode_captcha" />}
+      </Form>
+    );
+  }
 
   return (
     <Form form={form} onSubmit={onSubmit} {...props}>

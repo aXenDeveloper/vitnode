@@ -1,9 +1,9 @@
 import type { ProgressProvider } from "@bprogress/next/app";
 import type { drizzle } from "drizzle-orm/postgres-js";
-import type { RedisOptions } from "ioredis";
 import type { IRateLimiterOptions } from "rate-limiter-flexible";
 import type React from "react";
 
+import type { CacheConfig } from "./api/lib/cache";
 import type { CronAdapter } from "./api/lib/cron";
 import type { BuildPluginApiReturn } from "./api/lib/plugin";
 import type { AIConfig } from "./api/models/ai";
@@ -68,6 +68,17 @@ export interface VitNodeApiConfig {
     siteKey: string | undefined;
     type: "cloudflare_turnstile" | "recaptcha_v3";
   };
+  /** Content Engine settings that are deployment-shaped rather than per type. */
+  content?: {
+    /**
+     * Web origins to notify when background work changes what is public.
+     *
+     * Defaults to `[NEXT_PUBLIC_WEB_URL]`, which is right for the usual one-web
+     * app install. Set it when one API serves several front ends: each origin
+     * owns its own Next cache, and each is posted independently.
+     */
+    revalidateOrigins?: string[];
+  };
   cron?: CronAdapter;
   dbProvider: ReturnType<typeof drizzle>;
   email?: {
@@ -106,7 +117,7 @@ export interface VitNodeApiConfig {
    * without Redis - the cache degrades to no-ops and the rate limiter falls
    * back to in-memory storage.
    */
-  redis?: RedisOptions & { url?: string };
+  redis?: CacheConfig;
   /**
    * Search engine backing content discovery (`c.get("search")`). Ships a
    * zero-config Postgres full-text provider used when `adapter` is omitted; an

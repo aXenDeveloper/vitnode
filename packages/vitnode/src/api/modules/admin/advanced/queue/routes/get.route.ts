@@ -1,4 +1,4 @@
-import { inArray } from "drizzle-orm";
+import { getTableColumns, inArray } from "drizzle-orm";
 import z from "zod";
 
 import { buildRoute } from "@/api/lib/route";
@@ -73,10 +73,10 @@ export const getQueueTasksRoute = buildRoute({
       c,
       primaryCursor: core_queue.id,
       where: statuses.length ? inArray(core_queue.status, statuses) : undefined,
-      query: async ({ limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, where, orderBy }) =>
         await c
           .get("db")
-          .select()
+          .select({ ...getTableColumns(core_queue), ...cursorSelection })
           .from(core_queue)
           .where(where)
           .orderBy(orderBy)

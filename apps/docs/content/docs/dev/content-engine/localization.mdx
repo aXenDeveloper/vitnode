@@ -1,0 +1,105 @@
+---
+title: Localization & Translations
+description: Step-by-step guide to building multi-language content models with localized fields, translation tables, independent workflows, and localized public APIs.
+icon: Languages
+---
+
+Content Engine supports localized fields, storing translatable text in dedicated per-language tables (`{tableName}_translations`) while keeping shared fields in the main table.
+
+## Prerequisites & Context
+
+Multi-language support is configured in your client-safe definition file `src/content/article.ts`.
+
+When `createContentModel` compiles a localized model, it automatically generates a separate secondary database table (`{tableName}_translations`) to hold per-language strings without altering the schema of the main table.
+
+---
+
+## Step-by-Step Multi-Language Setup
+
+<Steps>
+
+<Step>
+### Step 1: Mark Localized Fields in Definition
+
+Set `localization` settings and add `localized: true` to translatable fields in `src/content/article.ts`:
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  localization: { // [!code ++]
+    defaultLanguage: "en", // [!code ++]
+  }, // [!code ++]
+  fields: {
+    code: field.text({ required: true }), // Shared field in main table
+    title: field.text({ required: true, localized: true }), // Translatable field // [!code ++]
+    content: field.textarea({ localized: true }), // Translatable field // [!code ++]
+  },
+});
+```
+</Step>
+
+<Step>
+### Step 2: Understand the Database Tables
+
+Compiling this model automatically builds two PostgreSQL tables:
+
+1. **Main Table** (`example_articles`): Stores `id`, `code`, timestamps, and shared non-localized columns.
+2. **Translation Table** (`example_articles_translations`): Stores `id`, foreign key `article_id`, `locale` (`varchar(10)`), `title`, and `content`.
+
+```text
+  example_articles                  example_articles_translations
+  ┌─────┬────────┬──────────┐       ┌─────┬────────────┬────────┬────────┬─────────┐
+  │ id  │  code  │ author   │ ◄───┐ │ id  │ article_id │ locale │ title  │ content │
+  ├─────┼────────┼──────────┤     │ ├─────┼────────────┼────────┼────────┼─────────┤
+  │  1  │ ART-01 │  User #5 │     └─│ 101 │     1      │   en   │ Hello  │ World   │
+  └─────┴────────┴──────────┘       │ 102 │     1      │   fr   │ Bonjour│ Monde   │
+                                    └─────┴────────────┴────────┴────────┴─────────┘
+```
+</Step>
+
+<Step>
+### Step 3: Render Localized Content with i18n Fallbacks
+
+When fetching localized content via public API or `resolveContentDelivery`, translatable fields (`title`, `content`) resolve in the active locale.
+
+For UI wrapper elements (e.g. status badges, section headers), use `useTranslations` from `next-intl`:
+
+```tsx title="src/components/article-card.tsx"
+import { useTranslations } from "next-intl"; // [!code ++]
+
+interface Props {
+  article: {
+    title: string; // Already resolved to current locale by Content Engine
+    content: string;
+  };
+}
+
+export const ArticleCard = ({ article }: Props) => {
+  const t = useTranslations("@vitnode/example"); // [!code ++]
+
+  return (
+    <div className="card">
+      <span className="badge">{t("content.article.badge_label")}</span> {/* [!code ++] */}
+      <h3>{article.title}</h3>
+      <p>{article.content}</p>
+    </div>
+  );
+};
+```
+
+**Fallback Flow**:
+1. Returns `fr` translation if published.
+2. Falls back to `defaultLanguage` (`en`) if published.
+3. Returns `404 Not Found` if no published translation exists.
+</Step>
+
+</Steps>
+
+---
+
+## AdminCP Translation Features
+
+- **Language Selector Tabs**: Automatically rendered in AdminCP form dialogs.
+- **Independent Status**: Each translation language manages its own draft/published lifecycle.
+- **Independent Revisions**: Rollbacks can be performed per-locale without impacting other languages.

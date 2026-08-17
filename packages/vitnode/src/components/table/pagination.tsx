@@ -24,10 +24,10 @@ export const PaginationDataTable = ({
 }: {
   pageInfo: {
     count: number;
-    endCursor: null | number;
+    endCursor: null | string;
     hasNextPage: boolean;
     hasPreviousPage: boolean;
-    startCursor: null | number;
+    startCursor: null | string;
     totalCount: number;
   };
 }) => {
@@ -93,7 +93,7 @@ export const PaginationDataTable = ({
                   const params = new URLSearchParams(searchParams.toString());
                   params.set("last", `${Number(pageSize)}`);
                   if (startCursor) {
-                    params.set("cursor", `${startCursor}`);
+                    params.set("cursor", startCursor);
                   } else {
                     params.delete("cursor");
                   }
@@ -122,7 +122,7 @@ export const PaginationDataTable = ({
                   const params = new URLSearchParams(searchParams.toString());
                   params.set("first", `${Number(pageSize)}`);
                   if (endCursor) {
-                    params.set("cursor", `${endCursor}`);
+                    params.set("cursor", endCursor);
                   } else {
                     params.delete("cursor");
                   }

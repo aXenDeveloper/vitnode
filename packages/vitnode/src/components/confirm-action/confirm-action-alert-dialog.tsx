@@ -24,22 +24,33 @@ export const ConfirmActionAlertDialog = ({
   children,
   title,
   description,
+  finalFocus,
+  submitVariant,
   textSubmit,
   onSubmit,
   ...props
 }: Omit<React.ComponentProps<typeof AlertDialog>, "children"> &
   React.ComponentProps<typeof ContentConfirmAction> & {
-    children: React.ReactElement;
+    /**
+     * The element that opens the dialog.
+     *
+     * Optional, for a caller that owns `open` itself - a confirmation opened from
+     * a menu item has no trigger to render, because the item is gone by the time
+     * the dialog is on screen.
+     */
+    children?: React.ReactElement;
     description?: React.ReactNode;
+    /** Where focus goes on close, for a dialog whose trigger no longer exists. */
+    finalFocus?: React.ComponentProps<typeof AlertDialogContent>["finalFocus"];
     title?: React.ReactNode;
   }) => {
   const t = useTranslations("core.global.confirm_action");
 
   return (
     <AlertDialog {...props}>
-      <AlertDialogTrigger render={children} />
+      {children ? <AlertDialogTrigger render={children} /> : null}
 
-      <AlertDialogContent>
+      <AlertDialogContent finalFocus={finalFocus}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title ?? t("title")}</AlertDialogTitle>
           <AlertDialogDescription>
@@ -48,7 +59,11 @@ export const ConfirmActionAlertDialog = ({
         </AlertDialogHeader>
 
         <React.Suspense fallback={<AlertDialogFooterSkeleton />}>
-          <ContentConfirmAction onSubmit={onSubmit} textSubmit={textSubmit} />
+          <ContentConfirmAction
+            onSubmit={onSubmit}
+            submitVariant={submitVariant}
+            textSubmit={textSubmit}
+          />
         </React.Suspense>
       </AlertDialogContent>
     </AlertDialog>

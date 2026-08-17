@@ -1,3 +1,4 @@
+import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/lib/route";
@@ -35,10 +36,23 @@ export const rebuildSearchDebugAdminRoute = buildRoute({
         },
         description: "Rebuild queued",
       },
+      404: { description: "No indexer is registered for that collection" },
     },
   },
   handler: async c => {
     const { itemType } = c.req.valid("json") ?? {};
+
+    // A rebuild of a collection with no indexer would clear it and refill
+    // nothing, so it is refused here rather than queued and discovered later.
+    // The task repeats the check for callers that bypass this route.
+    if (
+      itemType &&
+      !c.get("core").searchIndexers.some(i => i.itemType === itemType)
+    ) {
+      throw new HTTPException(404, {
+        message: `No search indexer is registered for "${itemType}".`,
+      });
+    }
 
     await c.get("queue").dispatch({
       name: "rebuild-search-index",

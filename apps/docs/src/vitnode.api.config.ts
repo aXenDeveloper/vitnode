@@ -4,6 +4,7 @@ import { DiscordSSOApiPlugin } from "@vitnode/core/api/adapters/sso/discord";
 import { FacebookSSOApiPlugin } from "@vitnode/core/api/adapters/sso/facebook";
 import { GoogleSSOApiPlugin } from "@vitnode/core/api/adapters/sso/google";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
+import { exampleApiPlugin } from "@vitnode/example/config.api";
 import { NodeCronAdapter } from "@vitnode/node-cron";
 import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
 // import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";
@@ -29,7 +30,7 @@ export const vitNodeApiConfig = buildApiConfig({
     title: "VitNode API",
     shortTitle: "VitNode",
   },
-  plugins: [blogApiPlugin()],
+  plugins: [blogApiPlugin(), exampleApiPlugin()],
   dbProvider: drizzle({
     connection: POSTGRES_URL,
     casing: "camelCase",

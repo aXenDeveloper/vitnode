@@ -10,20 +10,28 @@ VitNode plugins seamlessly integrate with databases using [Drizzle ORM](https://
 Create your database schema in the `database` directory of your plugin. Each table should be defined in its own file for better organization.
 
 ```ts title="plugins/{plugin_name}/src/database/categories.ts"
-import { pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { pgTable } from "drizzle-orm/pg-core";
 
-export const blog_categories = pgTable("blog_categories", {
-  id: serial().primaryKey(),
-  createdAt: timestamp().notNull().defaultNow(),
-  updatedAt: timestamp()
+export const blog_categories = pgTable("blog_categories", t => ({
+  id: t.serial().primaryKey(),
+  createdAt: t.timestamp().notNull().defaultNow(),
+  updatedAt: t
+    .timestamp()
     .notNull()
-    .$onUpdate(() => new Date())
-});
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+})).enableRLS();
 ```
+
+<Callout type="info" title="Let the Content Engine write this for you">
+  Hand-writing the table, its schemas, its routes and its AdminCP screen is a
+  lot of repetition. The [Content Engine](/docs/dev/content-engine) generates all
+  of it from one declaration - and produces exactly this kind of table.
+</Callout>
 
 ## Accessing Database
 
-Access the database in your plugin handlers using `c.get('database')` from the Hono context. This provides a Drizzle ORM instance for all your database operations.
+Access the database in your plugin handlers using `c.get("db")` from the Hono context. This provides a Drizzle ORM instance for all your database operations.
 
 ```ts title="plugins/{plugin_name}/src/routes/posts.ts"
 export const postsRoute = buildRoute({
@@ -32,10 +40,10 @@ export const postsRoute = buildRoute({
   handler: async (c) => {
     // [!code ++:7]
     const data = await c
-      .get("database")
+      .get("db")
       .select({
         id: blog_posts.id,
-        categoryId: blog_posts.categoryId
+        status: blog_posts.status
       })
       .from(blog_posts);
 

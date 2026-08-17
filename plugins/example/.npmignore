@@ -1,0 +1,17 @@
+/src/*
+!/src/routes
+!/src/routes/**
+!/src/locales
+!/src/locales/**
+
+/node_modules
+/.turbo
+/tsconfig.json
+/.swcrc
+/components.json
+/global.d.ts
+/tsup.config.ts
+/vitest.config.ts
+/tsconfig.json
+/scripts
+/config

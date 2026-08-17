@@ -75,7 +75,19 @@ const buildFilters = (params: SearchQueryParams): SQL | undefined => {
 
 export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
   name: "postgres",
-  capabilities: { authorBoost: false, facets: false, timeDecay: false },
+  // Two capabilities that are both true for the same reason: this provider's
+  // store *is* `core_search_index`. `languageScopedDelete` because
+  // `SearchModel.delete` already narrows that table by `languageCode` before it
+  // gets here, and `canonicalStorage` because there is no second copy to drift
+  // from - so diagnostics can report the canonical count as the provider count
+  // rather than asking the same table twice.
+  capabilities: {
+    authorBoost: false,
+    canonicalStorage: true,
+    facets: false,
+    languageScopedDelete: true,
+    timeDecay: false,
+  },
 
   // The SearchModel owns the canonical `core_search_index` table, which is this
   // provider's store, so the write methods are intentionally no-ops.

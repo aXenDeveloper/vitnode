@@ -272,7 +272,6 @@ export const DashboardBoardProvider = ({
       }
 
       setIsEditing(false);
-      toast.success(t("saved_title"), { description: t("saved_desc") });
       router.refresh();
     });
   };

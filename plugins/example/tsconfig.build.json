@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    "vitest.config.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.test-d.ts"
+  ]
+}

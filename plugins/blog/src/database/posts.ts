@@ -1,21 +1,17 @@
-import { core_users } from "@vitnode/core/database/users";
-import { pgTable } from "drizzle-orm/pg-core";
+import { createContentModel } from "@vitnode/core/content/server";
+
+import { blogPostContentType } from "@/content/post";
 
 import { blog_categories } from "./categories";
 
-export const blog_posts = pgTable("blog_posts", t => ({
-  id: t.serial().primaryKey(),
-  categoryId: t
-    .integer()
-    .references(() => blog_categories.id)
-    .notNull(),
-  authorId: t.integer().references(() => core_users.id, {
-    onDelete: "set null",
-    onUpdate: "cascade",
-  }),
-  createdAt: t.timestamp().notNull().defaultNow(),
-  updatedAt: t
-    .timestamp()
-    .notNull()
-    .$onUpdate(() => new Date()),
-})).enableRLS();
+export const postContent = createContentModel(blogPostContentType, {
+  references: { categoryId: () => blog_categories.id },
+});
+
+export const blog_posts = postContent.table;
+export const blog_posts_translations = postContent.translationTable;
+
+export const blog_posts_category_id =
+  postContent.advancedTables.junctions.categoryId;
+export const blog_posts_author_id =
+  postContent.advancedTables.junctions.authorId;

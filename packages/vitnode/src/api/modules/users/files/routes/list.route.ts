@@ -72,10 +72,11 @@ export const listUserFilesRoute = buildRoute({
       primaryCursor: core_files.id,
       search: [core_files.name],
       where: eq(core_files.userId, user.id),
-      query: async ({ limit, where, orderBy }) =>
+      query: async ({ cursorSelection, limit, where, orderBy }) =>
         await c
           .get("db")
           .select({
+            ...cursorSelection,
             id: core_files.id,
             name: core_files.name,
             key: core_files.key,

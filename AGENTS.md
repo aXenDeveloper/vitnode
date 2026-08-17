@@ -4,7 +4,7 @@ You are VitNode, an expert AI coding assistant. Follow repository conventions an
 
 # React / Next.js
 
-- Arrow functions for components — never `React.FC`.
+- Arrow functions for components - never `React.FC`.
 - No `any`; use `unknown` as rarely as possible.
 - Use `AutoForm` for forms instead of hand-built form components.
 - `React.lazy` + `Suspense` for content-heavy dialogs (e.g. dialogs in forms).
@@ -25,16 +25,16 @@ import { Activity } from "react";
 
 ### Caching APIs
 
-- `revalidateTag(tag, profile)` — profile is required for SWR: `revalidateTag("blog-posts", "max")` (prefer `'max'`; also `'days'`, `'hours'`) or inline `{ revalidate: 3600 }`.
-- `updateTag(\`user-${userId}\`)` — Server Actions only, read-your-writes semantics.
-- `refresh()` — Server Actions only, refreshes uncached data, never touches the cache.
+- `revalidateTag(tag, profile)` - profile is required for SWR: `revalidateTag("blog-posts", "max")` (prefer `'max'`; also `'days'`, `'hours'`) or inline `{ revalidate: 3600 }`.
+- `updateTag(\`user-${userId}\`)` - Server Actions only, read-your-writes semantics.
+- `refresh()` - Server Actions only, refreshes uncached data, never touches the cache.
 
 # Coding Guidelines
 
 - Always implement best practices for performance, security, and accessibility.
 - Semantic HTML (`main`, `header`) with correct ARIA roles/attributes, `sr-only` for screen-reader-only text, and alt text on all images unless decorative or repetitive.
 - Emit events for important actions (create, update, delete) so other components can react; use events instead of prop drilling or context. Document them in `apps/docs/content/docs/dev/events/built-in-events.mdx`.
-- AI features use the Vercel AI SDK only — resolve models via the `c.get("ai")` registry and call native SDK functions.
+- AI features use the Vercel AI SDK only - resolve models via the `c.get("ai")` registry and call native SDK functions.
 
 # Design
 
@@ -43,7 +43,7 @@ import { Activity } from "react";
 - Exactly 3–5 colors total. Never use purple or violet prominently.
 - If you override a background color, you MUST override its text color for contrast.
 - Prefer semantic design tokens (`bg-background`, `text-foreground`).
-- Use the Tailwind spacing scale (`p-4`, `mx-2`) — never arbitrary values (`p-[16px]`).
+- Use the Tailwind spacing scale (`p-4`, `mx-2`) - never arbitrary values (`p-[16px]`).
 - Use `gap-*` classes for spacing. Never use `space-*`, and never mix margin/padding with gap on the same element.
 - Use semantic (`items-center`, `justify-between`) and responsive (`md:grid-cols-2`) classes.
 - No floats or absolute positioning unless absolutely necessary.
@@ -53,7 +53,7 @@ import { Activity } from "react";
 # Documentation
 
 - Document every new feature. Keep it simple, SEO-friendly, and understandable at any skill level.
-- Friendly and lightly funny tone — don't overdo it.
+- Friendly and lightly funny tone - don't overdo it.
 - Skip big comments; code is self-documenting.
 - Request images with a comment: `// Image prompt: {here_prompt_to_generate_image}`
 - Put install commands in tabbed code blocks with correct syntax highlighting:
@@ -81,5 +81,8 @@ npm i x
 # Testing
 
 - Admin login: `test@test.com` / `Test123!`
-- Write and run vitest unit tests for all new features and bug fixes — skip only if vitest isn't configured.
-- Don't write tests for trivial code unless they have complex logic or edge cases.
+- Write and run vitest unit tests for all new features and bug fixes - skip only if vitest isn't configured.
+- Don't write tests:
+  - for trivial code unless they have complex logic or edge cases
+  - for tests where it uses a database or external API
+  - how UI should be rendered (use playwright for that to write e2e tests)

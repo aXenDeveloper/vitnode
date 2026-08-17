@@ -3,10 +3,24 @@ import { z } from "@hono/zod-openapi";
 import { CONFIG_PLUGIN } from "@/config";
 
 import { buildRoute } from "../../../lib/route";
-import {
-  zodPaginationPageInfo,
-  zodPaginationQuery,
-} from "../../../lib/with-pagination";
+import { zodPaginationQuery } from "../../../lib/with-pagination";
+
+/**
+ * The search index's own page info.
+ *
+ * Deliberately not `zodPaginationPageInfo`: that one describes a keyset walk
+ * over a table and hands out an opaque cursor for the ordered tuple. A search
+ * page is not that - a relevance-sorted one walks by offset and an ordinary one
+ * by row id - so it keeps the numeric cursors it has always had.
+ */
+const zodSearchPageInfo = z.object({
+  totalCount: z.number(),
+  count: z.number(),
+  hasNextPage: z.boolean(),
+  hasPreviousPage: z.boolean(),
+  startCursor: z.number().nullable(),
+  endCursor: z.number().nullable(),
+});
 
 export const zodSearchHitSchema = z.object({
   id: z.number(),
@@ -57,7 +71,11 @@ export const searchRoute = buildRoute({
           "application/json": {
             schema: z.object({
               edges: z.array(zodSearchHitSchema),
-              pageInfo: zodPaginationPageInfo,
+              // The search index has its own pagination - a relevance-sorted
+              // page walks by offset, and an ordinary one by row id - so it
+              // keeps the numeric cursors it has always had rather than the
+              // opaque keyset cursor `withPagination` mints for a table.
+              pageInfo: zodSearchPageInfo,
             }),
           },
         },

@@ -1,5 +1,6 @@
 import type { WSContext } from "hono/ws";
-import type { Redis } from "ioredis";
+
+import type { CacheClient } from "@/api/lib/cache";
 
 import type { VitNodeWSChannel, VitNodeWSMessage } from "./types";
 
@@ -72,7 +73,7 @@ const REALTIME_PUBSUB_CHANNEL = "vitnode:ws";
  */
 const instanceId = crypto.randomUUID();
 
-let publisher: null | Redis = null;
+let publisher: CacheClient | null = null;
 
 /**
  * Whether the Redis pub/sub bridge for cross-instance realtime is active. When
@@ -119,36 +120,38 @@ const publish = (message: Omit<RealtimePubSubMessage, "origin">): void => {
  * not configured) keeps realtime in single-process mode - messages then only
  * reach clients connected to the current instance.
  */
-export const initRealtimePubSub = (client: null | Redis): void => {
+export const initRealtimePubSub = (client: CacheClient | null): void => {
   // No-op without Redis, or if already initialized.
   if (!client || publisher) return;
 
   publisher = client;
 
   // A connection in subscribe mode can't run other commands, so use a
-  // dedicated duplicate for receiving. Subscribing on "ready" (re)subscribes on
-  // the first connect and after every reconnect.
+  // dedicated duplicate for receiving. `duplicate()` returns a disconnected
+  // client, hence the explicit `connect()`; node-redis restores the
+  // subscription itself after every reconnect, so this only runs once.
   const subscriber = client.duplicate();
   subscriber.on("error", () => {
     // Connection errors are non-fatal; local delivery still works.
   });
-  subscriber.on("ready", () => {
-    void subscriber.subscribe(REALTIME_PUBSUB_CHANNEL).catch(() => {
-      // Will retry on the next reconnect.
-    });
-  });
-  subscriber.on("message", (channel, raw) => {
-    if (channel !== REALTIME_PUBSUB_CHANNEL) return;
 
-    try {
-      const message = JSON.parse(raw) as RealtimePubSubMessage;
-      // Skip our own echo - the publishing instance already delivered locally.
-      if (message.origin === instanceId) return;
-      deliverLocally(message);
-    } catch {
-      // Ignore malformed payloads.
-    }
-  });
+  void subscriber
+    .connect()
+    .then(async () =>
+      subscriber.subscribe(REALTIME_PUBSUB_CHANNEL, raw => {
+        try {
+          const message = JSON.parse(raw) as RealtimePubSubMessage;
+          // Skip our own echo - the publisher already delivered locally.
+          if (message.origin === instanceId) return;
+          deliverLocally(message);
+        } catch {
+          // Ignore malformed payloads.
+        }
+      }),
+    )
+    .catch(() => {
+      // Realtime stays single-instance; local clients still get their messages.
+    });
 };
 
 export interface VitNodeRealtime {

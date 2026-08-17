@@ -43,8 +43,11 @@ const MultiLangInput = ({
         </AutoFormLabel>
       )}
 
-      <FormControl>
-        <InputGroup>
+      {/* `FormControl` on the input itself, not on the group: it is what hands
+          the field its id, and a label pointing at the wrapping div labels
+          nothing a screen reader can use. */}
+      <InputGroup>
+        <FormControl>
           <InputGroupInput
             {...field}
             {...props}
@@ -62,17 +65,17 @@ const MultiLangInput = ({
             type={type ?? "text"}
             value={currentValue}
           />
-          {languages.length > 1 && (
-            <InputGroupAddon align="inline-end">
-              <MultiLangSelect
-                languages={languages}
-                onSelect={setSelected}
-                selected={selected}
-              />
-            </InputGroupAddon>
-          )}
-        </InputGroup>
-      </FormControl>
+        </FormControl>
+        {languages.length > 1 && (
+          <InputGroupAddon align="inline-end">
+            <MultiLangSelect
+              languages={languages}
+              onSelect={setSelected}
+              selected={selected}
+            />
+          </InputGroupAddon>
+        )}
+      </InputGroup>
 
       {!!description && <AutoFormDesc>{description}</AutoFormDesc>}
       <FormMessage />

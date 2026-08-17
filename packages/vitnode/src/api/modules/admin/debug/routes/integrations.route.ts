@@ -38,6 +38,13 @@ export const integrationsDebugAdminRoute = buildRoute({
                   .enum(["cloudflare_turnstile", "recaptcha_v3"])
                   .nullable(),
               }),
+              contentPreview: z.object({
+                // `true` when at least one content type has
+                // `editorial.preview.enabled`, i.e. the preview routes exist.
+                active: z.boolean(),
+                // How many content types can mint preview links.
+                contentTypes: z.number(),
+              }),
               cron: z.object({
                 // `true` when a cron adapter is configured, i.e. an in-process
                 // scheduler is running the registered jobs automatically.
@@ -133,6 +140,9 @@ export const integrationsDebugAdminRoute = buildRoute({
       cronActivity?.lastActivity ? new Date(cronActivity.lastActivity) : null,
     );
     const cronActive = core.hasCronAdapter;
+    const previewContentTypes = core.contentTypes.filter(
+      entry => entry.definition.editorial.preview.enabled,
+    ).length;
     const queueStatus = getQueueStatus({
       cronActive,
       cronStale,
@@ -151,6 +161,10 @@ export const integrationsDebugAdminRoute = buildRoute({
         captcha: {
           active: !!(captcha?.secretKey && captcha.siteKey),
           type: captcha?.type ?? null,
+        },
+        contentPreview: {
+          active: previewContentTypes > 0,
+          contentTypes: previewContentTypes,
         },
         cron: {
           active: cronActive,

@@ -15,8 +15,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { fetcher } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
 
+import { getContentCollectionLabels } from "./collection-label";
 import { CollectionsTable } from "./collections-table";
 import { CronWarning } from "./cron-warning";
+import { SyncErrorsCard } from "./sync-errors-card";
 
 const getStatus = async () => {
   const res = await fetcher(debugAdminModule, {
@@ -78,6 +80,11 @@ export const SearchAdminView = async ({
     searchParams,
   ]);
 
+  // Content Engine collections use the content type id as their item type, which
+  // the renderer registry has no entry for - resolve their labels here, where the
+  // frontend content type registry is readable.
+  const labels = await getContentCollectionLabels();
+
   return (
     <div className="flex flex-col gap-6">
       {!data.hasCronAdapter && <CronWarning />}
@@ -138,7 +145,13 @@ export const SearchAdminView = async ({
         />
       </div>
 
-      <CollectionsTable collections={data.collections} search={query.search} />
+      <SyncErrorsCard errors={data.syncErrors} labels={labels} />
+
+      <CollectionsTable
+        collections={data.collections}
+        labels={labels}
+        search={query.search}
+      />
     </div>
   );
 };

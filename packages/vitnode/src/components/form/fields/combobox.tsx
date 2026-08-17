@@ -24,7 +24,7 @@ import type { ItemAutoFormComponentProps } from "../auto-form";
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
 
-interface ComboboxAsyncItem {
+export interface ComboboxAsyncItem {
   label: string;
   value: string;
 }
@@ -37,6 +37,24 @@ type AutoFormComboboxProps = ItemAutoFormComponentProps &
     className?: string;
     labels?: { label: string; value: string }[];
     placeholder?: string;
+    /**
+     * Where this field's results are cached, overriding the default of `[id]`.
+     *
+     * For a caller that needs to *expire* them from somewhere else: `id` names
+     * the field, and a key that says what the options are **of** can be matched
+     * by prefix from the screen that just changed them.
+     */
+    queryKey?: readonly unknown[];
+    /**
+     * The chip one selected item becomes, for a `multiple` async field.
+     *
+     * Defaults to its label. The people picker passes a face and a handle, which
+     * is the whole difference between a chip that says "Ada Lovelace" and one
+     * you can recognise at a glance.
+     */
+    renderChip?: (item: ComboboxAsyncItem) => React.ReactNode;
+    /** The row one item becomes in the list. Defaults to its label. */
+    renderItem?: (item: ComboboxAsyncItem) => React.ReactNode;
     showClear?: boolean;
   } & (
     | {
@@ -56,6 +74,10 @@ export const AutoFormCombobox = ({
   field,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   itemParams,
+  // Only the language-aware inputs implement this - dropped here so it never
+  // lands on the DOM element the rest props spread into.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  multiLang,
   description,
   placeholder,
   otherProps,
@@ -69,17 +91,24 @@ export const AutoFormCombobox = ({
   showClear,
   fetchData,
   id,
+  queryKey,
   searchPlaceholder,
   filter,
+  renderChip,
+  renderItem,
   ...props
 }: AutoFormComboboxProps) => {
   const t = useTranslations("core.global");
   const anchor = useComboboxAnchor();
   const isAsync = typeof fetchData === "function";
-  const isMultiple = !isAsync && multiple;
+  // Async **and** multiple: the value is then a list of `{ label, value }`
+  // items rather than a list of strings, because a server-searched option
+  // carries its own label - the list it came from is a search result, not a
+  // fixed set the chips could look a name up in.
+  const isMultiple = multiple;
   const [search, setSearch] = React.useState("");
   const { data, isLoading } = useQuery({
-    queryKey: [id ?? "combobox", { search }],
+    queryKey: [...(queryKey ?? [id ?? "combobox"]), { search }],
     queryFn: async () => {
       if (!fetchData) return [];
 
@@ -97,10 +126,6 @@ export const AutoFormCombobox = ({
     ? (searchPlaceholder ?? placeholder ?? t("select_option"))
     : (placeholder ?? t("select_option"));
   const getComboboxValue = () => {
-    if (isAsync) {
-      return field.value ?? null;
-    }
-
     if (isMultiple) {
       return field.value ?? [];
     }
@@ -149,7 +174,7 @@ export const AutoFormCombobox = ({
         <ComboboxList>
           {(item: ComboboxAsyncItem) => (
             <ComboboxItem key={item.value} value={item}>
-              {item.label}
+              {renderItem ? renderItem(item) : item.label}
             </ComboboxItem>
           )}
         </ComboboxList>
@@ -213,14 +238,40 @@ export const AutoFormCombobox = ({
           <>
             <ComboboxChips className={className} ref={anchor}>
               <ComboboxValue>
-                {values => (
+                {(values: (ComboboxAsyncItem | string)[]) => (
                   <>
-                    {values.map((value: string) => (
-                      <ComboboxChip key={value}>
-                        {labels.find(l => l.value === value)?.label ?? value}
-                      </ComboboxChip>
-                    ))}
-                    <ComboboxChipsInput />
+                    {values.map(value => {
+                      // A sync field's value is the option string and its label
+                      // is looked up; an async one carries its own.
+                      const item =
+                        typeof value === "string"
+                          ? {
+                              label:
+                                labels.find(l => l.value === value)?.label ??
+                                value,
+                              value,
+                            }
+                          : value;
+
+                      return (
+                        <ComboboxChip key={item.value}>
+                          {renderChip ? renderChip(item) : item.label}
+                        </ComboboxChip>
+                      );
+                    })}
+                    <ComboboxChipsInput
+                      // The container styles react to `aria-invalid` on a
+                      // descendant (`has-aria-invalid:`), so it belongs on the
+                      // input rather than on the chips box.
+                      aria-invalid={otherProps?.["aria-invalid"] ?? false}
+                      disabled={disabled}
+                      // Only while the field is empty: once there are chips,
+                      // "Select…" beside them is a prompt for something already
+                      // done.
+                      placeholder={
+                        values.length === 0 ? inputPlaceholder : undefined
+                      }
+                    />
                   </>
                 )}
               </ComboboxValue>

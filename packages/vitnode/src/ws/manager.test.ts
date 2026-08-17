@@ -3,21 +3,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createWebSocketManager } from "./manager";
 
 class FakeWebSocket {
-  constructor(public url: string) {
+  constructor(url: string) {
+    this.url = url;
     wsInstances.push(this);
   }
+
   static readonly CLOSED = 3;
   static readonly CLOSING = 2;
   static readonly CONNECTING = 0;
-
   static readonly OPEN = 1;
+
   onclose: (() => void) | null = null;
   onerror: (() => void) | null = null;
   onmessage: ((event: { data: unknown }) => void) | null = null;
   onopen: (() => void) | null = null;
   readyState = FakeWebSocket.CONNECTING;
-
   sent: string[] = [];
+
+  // Written out rather than declared as a constructor parameter property:
+  // `erasableSyntaxOnly` rules those out, and `pnpm test:types` type-checks
+  // this file.
+  readonly url: string;
 
   // Real browsers deliver the close event asynchronously, so `close()`
   // deliberately does not invoke `onclose` here.
@@ -42,10 +48,13 @@ class FakeWebSocket {
 }
 
 class FakeBroadcastChannel {
-  constructor(public name: string) {
+  constructor(name: string) {
+    this.name = name;
     bcInstances.push(this);
   }
+
   closed = false;
+  readonly name: string;
   onmessage: ((event: { data: unknown }) => void) | null = null;
 
   posted: unknown[] = [];

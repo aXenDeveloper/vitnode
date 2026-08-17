@@ -2,7 +2,6 @@
 
 import type { ControllerRenderProps, FieldValues } from "react-hook-form";
 
-import { LanguagesIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import React from "react";
 
@@ -77,7 +76,7 @@ export const MultiLangSelect = ({
         className="h-7 border-none bg-transparent px-2 shadow-none dark:bg-transparent"
         size="sm"
       >
-        <LanguagesIcon /> <SelectValue />
+        <SelectValue />
       </SelectTrigger>
       <SelectContent align="end">
         {languages.map(language => (

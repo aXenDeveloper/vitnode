@@ -1,0 +1,122 @@
+---
+title: Publication, Editorial & Scheduling
+description: Step-by-step guide to configuring draft/published states, version control, optimistic locking, preview tokens, and scheduled publishing.
+icon: Clock
+---
+
+Content Engine provides four opt-in capabilities for managing content lifecycles: **Publication**, **Editorial Controls**, **Preview Tokens**, and **Scheduled Publishing**.
+
+## Prerequisites & Context
+
+Lifecycle features are configured inside your client-safe definition file (e.g. `src/content/article.ts`) using `defineContentType`:
+
+```ts title="src/content/article.ts"
+import { defineContentType, field } from "@vitnode/core/content";
+
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+  },
+});
+```
+
+Enabling these flags automatically alters the database table structure compiled by `createContentModel` and adds new capabilities to the AdminCP interface and API service methods.
+
+---
+
+## Step-by-Step Configuration
+
+<Steps>
+
+<Step>
+### Step 1: Enable Publication Lifecycle
+
+Add `publication: true` to your content definition file to enable draft/published states:
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  publication: true, // [!code ++]
+  fields: {
+    title: field.text({ required: true }),
+  },
+});
+```
+
+This adds `status` (`"draft"` \| `"published"`) and `publishedAt` columns to your table, enables `can_publish` permissions, and renders status filters in AdminCP.
+</Step>
+
+<Step>
+### Step 2: Enable Editorial Revisions & Optimistic Locking
+
+Add `editorial` settings to track revision history and prevent race conditions:
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  publication: true,
+  editorial: { // [!code ++]
+    revisions: { retention: 30 }, // Retain last 30 revisions // [!code ++]
+  }, // [!code ++]
+  fields: {
+    title: field.text({ required: true }),
+  },
+});
+```
+
+Updates will automatically check and increment a `version` column. If concurrent edits occur, Content Engine throws `ContentVersionConflict`.
+</Step>
+
+<Step>
+### Step 3: Configure Draft Preview Tokens
+
+Add `preview` configurations to generate secure, temporary preview links for reviewers:
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  publication: true,
+  editorial: {
+    revisions: { retention: 30 },
+    preview: { // [!code ++]
+      url: ({ id, token }) => `/articles/${id}?previewToken=${token}`, // [!code ++]
+      ttlMinutes: 60, // [!code ++]
+    }, // [!code ++]
+  },
+  fields: {
+    title: field.text({ required: true }),
+  },
+});
+```
+</Step>
+
+<Step>
+### Step 4: Enable Scheduled Publishing
+
+Add `scheduling: true` under `editorial` to publish content at future dates via the background queue:
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  publication: true,
+  editorial: {
+    revisions: { retention: 30 },
+    preview: {
+      url: ({ id, token }) => `/articles/${id}?previewToken=${token}`,
+    },
+    scheduling: true, // [!code ++]
+  },
+  fields: {
+    title: field.text({ required: true }),
+  },
+});
+```
+</Step>
+
+</Steps>

@@ -1,0 +1,1 @@
+ALTER TABLE "core_content_schedules" ADD COLUMN "effectsError" text;

@@ -56,7 +56,7 @@ describe("auto-form helpers", () => {
       });
     });
 
-    it("should skip nested objects with no default values", () => {
+    it("keeps nested objects with no default values", () => {
       const zodSchema = z.object({
         user: z.object({
           name: z.string(),
@@ -69,6 +69,26 @@ describe("auto-form helpers", () => {
       const result = getDefaults(jsonSchema);
       expect(result).toEqual({
         title: "Hello",
+        user: { email: undefined, name: undefined },
+      });
+      expect(Object.keys(result)).toEqual(["user", "title"]);
+    });
+
+    it("gives every field a key, so an untouched form is not dirty", () => {
+      // The whole point. `isDirty` is a deep comparison against these defaults,
+      // and a missing key is a difference - which surfaces as "are you sure you
+      // want to leave this form?" on a dialog nobody typed into.
+      const zodSchema = z.object({
+        action: z.enum(["publish", "unpublish"]),
+        scheduledFor: z.iso.datetime(),
+      });
+
+      const result = getDefaults(z.toJSONSchema(zodSchema));
+
+      expect(Object.keys(result).sort()).toEqual(["action", "scheduledFor"]);
+      expect(result).toStrictEqual({
+        action: undefined,
+        scheduledFor: undefined,
       });
     });
 

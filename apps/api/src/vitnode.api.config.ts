@@ -2,6 +2,7 @@ import { google } from "@ai-sdk/google";
 import { blogApiPlugin } from "@vitnode/blog/config.api";
 // import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
+import { exampleApiPlugin } from "@vitnode/example/config.api";
 import { NodeCronAdapter } from "@vitnode/node-cron";
 import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
 // import { S3StorageAdapter } from "@vitnode/s3";
@@ -17,7 +18,7 @@ export const POSTGRES_URL =
   process.env.POSTGRES_URL ?? "postgresql://root:root@localhost:5432/vitnode";
 
 export const vitNodeApiConfig = buildApiConfig({
-  plugins: [blogApiPlugin()],
+  plugins: [blogApiPlugin(), exampleApiPlugin()],
   ai: {
     models: [
       {

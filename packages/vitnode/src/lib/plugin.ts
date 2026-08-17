@@ -1,4 +1,10 @@
 import type { PermissionsStaffArgs } from "../api/lib/permission-staff";
+import type { ItemAutoFormComponentProps } from "../components/form/auto-form";
+import type {
+  AnyContentTypeDefinition,
+  ContentSelect,
+  ContentSystemField,
+} from "../content/types";
 import type { ItemNavAdmin } from "../views/admin/layouts/sidebar/nav/item";
 import type { LocaleMessagesMap } from "./i18n/types";
 
@@ -35,6 +41,135 @@ export interface AdminDashboardWidget {
   settingsComponent?: React.ComponentType<AdminDashboardWidgetProps>;
 }
 
+export interface ContentCellProps<
+  TDefinition extends AnyContentTypeDefinition = AnyContentTypeDefinition,
+> {
+  row: ContentSelect<TDefinition>;
+}
+
+/**
+ * Everything a custom form layout is handed, and nothing more.
+ *
+ * Deliberately all serialisable: a layout is a client component referenced from
+ * `config.tsx`, which is a **server** module, so React props cross an RSC
+ * boundary to reach it. Field elements, the form instance and the submit action
+ * are not here for exactly that reason - they come from
+ * `useContentForm()`/`ContentFormField`, which are client context and therefore
+ * never cross anything.
+ *
+ * There is no database handle, Drizzle table, Hono context or mutation model in
+ * this shape, and there is not going to be: a layout decides where a field
+ * appears, and the Content Engine decides what happens when it is submitted.
+ */
+export interface ContentFormLayoutProps {
+  contentTypeId: string;
+  /** `undefined` while creating - the record does not exist yet. */
+  itemId?: number;
+  mode: "create" | "edit";
+  pluginId: string;
+  /** Whether the content type has the draft/published lifecycle. */
+  publication: boolean;
+  singular: string;
+  /** The record's resolved title while editing, for headings. */
+  title?: string;
+}
+
+export type ContentFormLayout = (
+  props: ContentFormLayoutProps,
+) => React.ReactNode;
+
+/**
+ * Layout overrides for the generated create and edit forms.
+ *
+ * `layout` alone covers the common case - one editor screen used for both - and
+ * `create`/`edit` override it when they genuinely differ. Normalised by
+ * `resolveContentFormLayout`, so nothing downstream has to know about the
+ * fallback.
+ */
+export interface ContentTypeFormsRegistration {
+  create?: { layout?: ContentFormLayout };
+  edit?: { layout?: ContentFormLayout };
+  /** Used by both create and edit unless one of them overrides it. */
+  layout?: ContentFormLayout;
+}
+
+/** The layout for one action, or `undefined` for the generated one. */
+export const resolveContentFormLayout = (
+  forms: ContentTypeFormsRegistration | undefined,
+  mode: "create" | "edit",
+): ContentFormLayout | undefined =>
+  forms?.[mode]?.layout ?? forms?.layout ?? undefined;
+
+/**
+ * A content type registration once its definition generic has been erased, so
+ * one plugin can list content types with different field maps in one array.
+ */
+export interface ContentTypeFrontendRegistration {
+  columns?: Record<
+    string,
+    { cell: (props: ContentCellProps) => React.ReactNode }
+  >;
+  definition: AnyContentTypeDefinition;
+  fields?: Record<
+    string,
+    { component: (props: ItemAutoFormComponentProps) => React.ReactNode }
+  >;
+  /** Custom create/edit form layouts. Presentation only - see `forms`. */
+  forms?: ContentTypeFormsRegistration;
+  icon?: React.ReactNode;
+}
+
+interface TypedContentTypeRegistration<
+  TDefinition extends AnyContentTypeDefinition,
+> {
+  /** Replace the generated DataTable cell for a column. */
+  columns?: Partial<
+    Record<
+      ContentSystemField | (keyof TDefinition["fields"] & string),
+      { cell: (props: ContentCellProps<TDefinition>) => React.ReactNode }
+    >
+  >;
+  definition: TDefinition;
+  /** Replace the generated AutoForm component for a field. */
+  fields?: Partial<
+    Record<
+      keyof TDefinition["fields"] & string,
+      { component: (props: ItemAutoFormComponentProps) => React.ReactNode }
+    >
+  >;
+  /**
+   * Replace the generated form **layout** - where the fields are, not what they
+   * do.
+   *
+   * The Content Engine still owns the form schema, the validation, the defaults,
+   * the mutation, the version precondition, the structured errors, the toast and
+   * the cache invalidation. A layout places `<ContentFormField name="..." />`
+   * and `<ContentFormActions />` inside one shared form instance.
+   */
+  forms?: ContentTypeFormsRegistration;
+  /** Sidebar icon. Defaults to a generic document icon. */
+  icon?: React.ReactNode;
+}
+
+/**
+ * Registers a content type with the AdminCP.
+ *
+ * The `definition` is the *same object* the API plugin registers - it is
+ * client-safe by construction (zod and plain data, no Drizzle), so the two
+ * sides cannot drift. Component overrides live here rather than on the
+ * definition, because the definition is also imported by `src/database/*.ts`,
+ * which Drizzle Kit executes.
+ *
+ * The wrapper exists to type-check `fields` and `columns` against the
+ * definition's own field names before erasing the generic - the same shape as
+ * `buildEventListener`.
+ */
+export function contentTypeAdmin<TDefinition extends AnyContentTypeDefinition>(
+  registration: TypedContentTypeRegistration<TDefinition>,
+): ContentTypeFrontendRegistration {
+  return registration as ContentTypeFrontendRegistration;
+}
+
 export interface BuildPluginReturn<P extends string = string> {
   admin?: {
     dashboard?: {
@@ -44,6 +179,7 @@ export interface BuildPluginReturn<P extends string = string> {
       items?: Omit<AdminNavItem, "icon">[];
     })[];
   };
+  contentTypes?: ContentTypeFrontendRegistration[];
   messages?: LocaleMessagesMap;
   pluginId: P;
 }
