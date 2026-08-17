@@ -133,12 +133,14 @@ export const vitNodeConfig = buildConfig({
 ```
 
 ```ts title="src/vitnode.api.config.ts"
+import { coreRelations } from "@vitnode/core/database/relations";
+
 import { i18n } from "./i18n"; // [!code ++]
 
 export const vitNodeApiConfig = buildApiConfig({
   i18n, // [!code ++]
   plugins: [blogApiPlugin()],
-  dbProvider: drizzle({ connection: POSTGRES_URL, casing: "camelCase" }),
+  dbProvider: drizzle({ connection: POSTGRES_URL, relations: coreRelations }),
 });
 ```
 
@@ -310,9 +312,11 @@ field) and it returns exactly as it was.
 An API-only app needs no `i18n` block at all. The languages the installed packages ship are picked up on their own, and `defaultLocale` is `en`:
 
 ```ts title="src/vitnode.api.config.ts"
+import { coreRelations } from "@vitnode/core/database/relations";
+
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [blogApiPlugin()],
-  dbProvider: drizzle({ connection: POSTGRES_URL, casing: "camelCase" }),
+  dbProvider: drizzle({ connection: POSTGRES_URL, relations: coreRelations }),
 });
 ```
 

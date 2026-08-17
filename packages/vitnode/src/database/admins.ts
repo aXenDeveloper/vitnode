@@ -1,5 +1,4 @@
-import { relations } from "drizzle-orm";
-import { index, pgTable } from "drizzle-orm/pg-core";
+import { camelCase, index } from "drizzle-orm/pg-core";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 
@@ -7,7 +6,7 @@ import { core_roles } from "./roles";
 import { core_sessions_known_devices } from "./sessions";
 import { core_users } from "./users";
 
-export const core_admin_permissions = pgTable(
+export const core_admin_permissions = camelCase.table.withRLS(
   "core_admin_permissions",
   t => ({
     id: t.serial().primaryKey(),
@@ -35,23 +34,9 @@ export const core_admin_permissions = pgTable(
     index("core_admin_permissions_role_id_idx").on(t.roleId),
     index("core_admin_permissions_user_id_idx").on(t.userId),
   ],
-).enableRLS();
-
-export const core_admin_permissions_relations = relations(
-  core_admin_permissions,
-  ({ one }) => ({
-    group: one(core_roles, {
-      fields: [core_admin_permissions.roleId],
-      references: [core_roles.id],
-    }),
-    user: one(core_users, {
-      fields: [core_admin_permissions.userId],
-      references: [core_users.id],
-    }),
-  }),
 );
 
-export const core_admin_sessions = pgTable(
+export const core_admin_sessions = camelCase.table.withRLS(
   "core_admin_sessions",
   t => ({
     id: t.serial().primaryKey(),
@@ -76,18 +61,4 @@ export const core_admin_sessions = pgTable(
     index("core_admin_sessions_token_idx").on(t.token),
     index("core_admin_sessions_user_id_idx").on(t.userId),
   ],
-).enableRLS();
-
-export const core_admin_sessions_relations = relations(
-  core_admin_sessions,
-  ({ one }) => ({
-    user: one(core_users, {
-      fields: [core_admin_sessions.userId],
-      references: [core_users.id],
-    }),
-    device: one(core_sessions_known_devices, {
-      fields: [core_admin_sessions.deviceId],
-      references: [core_sessions_known_devices.id],
-    }),
-  }),
 );

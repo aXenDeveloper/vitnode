@@ -10,18 +10,32 @@ VitNode plugins seamlessly integrate with databases using [Drizzle ORM](https://
 Create your database schema in the `database` directory of your plugin. Each table should be defined in its own file for better organization.
 
 ```ts title="plugins/{plugin_name}/src/database/categories.ts"
-import { pgTable } from "drizzle-orm/pg-core";
+import { camelCase } from "drizzle-orm/pg-core";
 
-export const blog_categories = pgTable("blog_categories", t => ({
-  id: t.serial().primaryKey(),
-  createdAt: t.timestamp().notNull().defaultNow(),
-  updatedAt: t
-    .timestamp()
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-})).enableRLS();
+export const blog_categories = camelCase.table.withRLS(
+  "blog_categories",
+  t => ({
+    id: t.serial().primaryKey(),
+    createdAt: t.timestamp().notNull().defaultNow(),
+    updatedAt: t
+      .timestamp()
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  }),
+);
 ```
+
+Two pieces of that are worth naming, because both moved in Drizzle v1:
+
+- **`camelCase.table`** rather than `pgTable`. Column names are derived from the
+  object keys, so `createdAt` is `"createdAt"` in Postgres rather than
+  `created_at`. This used to be a client-wide `casing: "camelCase"` option; it is
+  now chosen per table, and every VitNode table uses `camelCase` - so match it,
+  or your columns will not line up with the rest of the schema.
+- **`.withRLS(...)`** rather than a trailing `.enableRLS()`. Row level security
+  is now part of building the table. The old method still exists and still works,
+  but it is deprecated.
 
 <Callout type="info" title="Let the Content Engine write this for you">
   Hand-writing the table, its schemas, its routes and its AdminCP screen is a
@@ -51,6 +65,48 @@ export const postsRoute = buildRoute({
   }
 });
 ```
+
+## Relational Queries
+
+`c.get("db")` is built with the core schema's relations, so `db.query` can load a
+record together with what it points at - one round trip, and no join to write:
+
+```ts
+const user = await c.get("db").query.core_users.findFirst({
+  where: { id: 1 },
+  with: { group: true, secondary_roles: true },
+});
+```
+
+Filters and ordering are plain objects rather than callbacks:
+
+```ts
+await c.get("db").query.core_users.findMany({
+  where: { emailVerified: true, name: { like: "A%" } },
+  orderBy: { createdAt: "desc" },
+  limit: 20,
+});
+```
+
+Relations live in one place - `@vitnode/core/database/relations` - rather than
+beside each table, and a relation is named on the side that reads it:
+
+```ts title="src/database/relations.ts"
+import { defineRelations } from "drizzle-orm";
+
+export const coreRelations = defineRelations(schema, r => ({
+  core_users: {
+    group: r.one.core_roles({ from: r.core_users.roleId, to: r.core_roles.id }),
+    secondary_roles: r.many.core_users_secondary_roles(),
+  },
+}));
+```
+
+<Callout type="warn" title="A relation cannot reuse a column name">
+  Relations and columns share one namespace. `core_users` already has a
+  `language` column, so its relation to `core_languages` is called
+  `language_ref` - naming it `language` is an error, not a shadow.
+</Callout>
 
 ## Database Operations
 

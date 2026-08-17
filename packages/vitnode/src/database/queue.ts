@@ -1,6 +1,6 @@
-import { index, pgTable } from "drizzle-orm/pg-core";
+import { camelCase, index } from "drizzle-orm/pg-core";
 
-export const core_queue = pgTable(
+export const core_queue = camelCase.table.withRLS(
   "core_queue",
   t => ({
     id: t.serial().primaryKey(),
@@ -32,4 +32,4 @@ export const core_queue = pgTable(
   t => [
     index("core_queue_status_available_at_idx").on(t.status, t.availableAt),
   ],
-).enableRLS();
+);

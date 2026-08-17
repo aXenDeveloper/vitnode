@@ -1,7 +1,6 @@
-import { relations } from "drizzle-orm";
-import { index, pgTable } from "drizzle-orm/pg-core";
+import { camelCase, index } from "drizzle-orm/pg-core";
 
-export const core_languages = pgTable(
+export const core_languages = camelCase.table.withRLS(
   "core_languages",
   t => ({
     id: t.serial().primaryKey(),
@@ -22,9 +21,9 @@ export const core_languages = pgTable(
     index("core_languages_code_idx").on(t.code),
     index("core_languages_name_idx").on(t.name),
   ],
-).enableRLS();
+);
 
-export const core_languages_words = pgTable(
+export const core_languages_words = camelCase.table.withRLS(
   "core_languages_words",
   t => ({
     id: t.serial().primaryKey(),
@@ -41,14 +40,4 @@ export const core_languages_words = pgTable(
     variable: t.varchar({ length: 255 }).notNull(),
   }),
   t => [index("core_languages_words_lang_code_idx").on(t.languageCode)],
-).enableRLS();
-
-export const core_languages_words_relations = relations(
-  core_languages_words,
-  ({ one }) => ({
-    language: one(core_languages, {
-      fields: [core_languages_words.languageCode],
-      references: [core_languages.code],
-    }),
-  }),
 );

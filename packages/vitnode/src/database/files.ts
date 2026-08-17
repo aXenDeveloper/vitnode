@@ -1,9 +1,8 @@
-import { relations } from "drizzle-orm";
-import { index, pgTable } from "drizzle-orm/pg-core";
+import { camelCase, index } from "drizzle-orm/pg-core";
 
 import { core_users } from "./users";
 
-export const core_files = pgTable(
+export const core_files = camelCase.table.withRLS(
   "core_files",
   t => ({
     id: t.serial().primaryKey(),
@@ -20,11 +19,4 @@ export const core_files = pgTable(
     createdAt: t.timestamp().notNull().defaultNow(),
   }),
   t => [index("core_files_user_id_idx").on(t.userId)],
-).enableRLS();
-
-export const core_files_relations = relations(core_files, ({ one }) => ({
-  user: one(core_users, {
-    fields: [core_files.userId],
-    references: [core_users.id],
-  }),
-}));
+);

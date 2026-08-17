@@ -86,7 +86,7 @@ export const CONTENT_ID_PATTERN = /^[a-z0-9]+(?:\.[a-z0-9-]+)+$/;
 /** Postgres identifier: snake_case, starts with a letter. */
 export const CONTENT_TABLE_NAME_PATTERN = /^[a-z][a-z0-9_]*$/;
 
-/** camelCase, matching `casing: "camelCase"` on the Drizzle client. */
+/** camelCase, matching the `camelCase.table` factory every VitNode table uses. */
 export const CONTENT_FIELD_NAME_PATTERN = /^[a-z][a-zA-Z0-9]*$/;
 
 /** Explicit index names follow the same snake_case rule as table names. */

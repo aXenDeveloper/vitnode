@@ -24,8 +24,8 @@
   "dependencies": {
     "@hono/zod-openapi": "^1.5.1",
     "@vitnode/core": "workspace:*",
-    "drizzle-kit": "^0.31.10",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-kit": "1.0.0-rc.4",
+    "drizzle-orm": "1.0.0-rc.4",
     "hono": "^4.12.31",
     "lucide-react": "^1.25.0",
     "next": "16.3.0-preview.9",

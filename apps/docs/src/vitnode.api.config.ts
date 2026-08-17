@@ -9,6 +9,7 @@ import { NodeCronAdapter } from "@vitnode/node-cron";
 import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
 // import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";
 import { SupabaseStorageAdapter } from "@vitnode/supabase-storage";
+import { coreRelations } from "@vitnode/core/database/relations";
 import { drizzle } from "drizzle-orm/postgres-js";
 
 import { i18n } from "./i18n";
@@ -33,7 +34,7 @@ export const vitNodeApiConfig = buildApiConfig({
   plugins: [blogApiPlugin(), exampleApiPlugin()],
   dbProvider: drizzle({
     connection: POSTGRES_URL,
-    casing: "camelCase",
+    relations: coreRelations,
   }),
   cron: NodeCronAdapter(),
   rateLimiter: {

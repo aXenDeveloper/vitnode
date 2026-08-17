@@ -1,6 +1,6 @@
 import type { BuildModuleReturn } from "../../api/lib/module";
 import type { AnyContentTypeDefinition } from "../types";
-import type { ContentModel } from "./model";
+import type { AnyContentModel } from "./model";
 
 import { buildModule } from "../../api/lib/module";
 import { buildContentRoutes } from "./routes";
@@ -36,7 +36,7 @@ export const buildContentAdminModule = <P extends string>({
   contentTypes,
   pluginId,
 }: {
-  contentTypes: ContentModel<AnyContentTypeDefinition>[];
+  contentTypes: AnyContentModel[];
   pluginId: P;
 }): BuildModuleReturn<P, "content"> => {
   const modules = contentTypes.map(model => {

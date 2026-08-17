@@ -26,8 +26,8 @@ export const versionsPackageJson = {
   sonner: "^2.0.7",
   dotenv: "^17.4",
 
-  drizzleKit: "^0.31.10",
-  drizzleOrm: "^0.45.2",
+  drizzleKit: "1.0.0-rc.4",
+  drizzleOrm: "1.0.0-rc.4",
 
   hono: "^4.12",
   honoZodOpenapi: "^1.5",

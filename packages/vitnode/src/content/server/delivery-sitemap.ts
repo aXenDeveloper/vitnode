@@ -1,9 +1,5 @@
 import type { SQL } from "drizzle-orm";
-import type {
-  PgColumn,
-  PgTableWithColumns,
-  TableConfig,
-} from "drizzle-orm/pg-core";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
 import { and, asc, eq, gt, sql } from "drizzle-orm";
@@ -125,9 +121,8 @@ export const readContentDeliverySitemapPage = async <
   const localized = definition.localization.enabled;
   // Widened, not cast - see `readDeliveryAlternatesMany` for why. The translation
   // table needs the same treatment for the join below.
-  const baseTable: PgTableWithColumns<TableConfig> = model.table;
-  const joinedTranslations: null | PgTableWithColumns<TableConfig> =
-    model.translationTable;
+  const baseTable: PgTable = model.table;
+  const joinedTranslations: null | PgTable = model.translationTable;
 
   const conditions: (SQL | undefined)[] = [
     publishedCondition(base),

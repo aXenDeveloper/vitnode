@@ -145,7 +145,7 @@ describe("buildFilterCondition", () => {
     const { params, sql } = compile(filter({ category: 3, status: "draft" }));
 
     expect(sql).toBe(
-      '("test_articles"."category" = $1 and "test_articles"."status" = $2)',
+      '(("test_articles"."category" = $1) and ("test_articles"."status" = $2))',
     );
     expect(params).toEqual([3, "draft"]);
   });
@@ -204,13 +204,13 @@ describe("buildFilterCondition", () => {
     it("builds IS NULL for a nullable user field", () => {
       const { params, sql } = compile(filter({ author: null }));
 
-      expect(sql).toBe('"test_articles"."author" is null');
+      expect(sql).toBe('("test_articles"."author" is null)');
       expect(params).toEqual([]);
     });
 
     it("builds IS NULL for a nullable relation field", () => {
       expect(compile(referenceFilter({ parent: null })).sql).toBe(
-        '"test_references"."parent" is null',
+        '("test_references"."parent" is null)',
       );
     });
 
@@ -230,7 +230,7 @@ describe("buildFilterCondition", () => {
 
     it("mixes IS NULL with an equality condition", () => {
       expect(compile(referenceFilter({ parent: null, root: 2 })).sql).toBe(
-        '("test_references"."parent" is null and "test_references"."root" = $1)',
+        '((("test_references"."parent" is null)) and ("test_references"."root" = $1))',
       );
     });
   });
@@ -268,7 +268,7 @@ describe("buildFilterCondition", () => {
       );
 
       expect(sql).toBe(
-        '("test_posts"."category" = $1 and "test_posts"."status" = $2)',
+        '(("test_posts"."category" = $1) and ("test_posts"."status" = $2))',
       );
       expect(params).toEqual([3, "published"]);
     });

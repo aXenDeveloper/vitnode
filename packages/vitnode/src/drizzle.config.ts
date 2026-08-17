@@ -1,7 +1,7 @@
 import type { Config } from "drizzle-kit";
 
 import { defineConfig } from "drizzle-kit";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import type { VitNodeApiConfig } from "./vitnode.config";
@@ -49,8 +49,10 @@ export const defineVitNodeDrizzleConfig = ({
       const hasSchemaFiles = files.some(file => file.endsWith(".js"));
       if (!hasSchemaFiles) return null;
 
-      // Return glob pattern for schema files
-      return join(pluginPath, "*.js").replace(/\\/g, "/");
+      // Resolve symlinks before returning: in a workspace the app's own
+      // `node_modules/<plugin>` and the root's are two links onto one
+      // directory, and the caller dedupes on this path.
+      return realpathSync(pluginPath);
     } catch {
       return null;
     }
@@ -59,23 +61,27 @@ export const defineVitNodeDrizzleConfig = ({
   const cwd = process.cwd();
   const monorepoRoot = findMonorepoRoot(cwd);
 
-  const pluginPaths = ["@vitnode/core", ...pluginId]
-    .flatMap(itemId => {
-      const paths: string[] = [];
+  // Deduplicated by real path. Both candidates below usually resolve to the
+  // same workspace directory, and handing Drizzle Kit the same schema twice
+  // makes it report every table, column, index and constraint as a duplicate -
+  // dozens of warnings that bury the ones worth reading.
+  const pluginDirs = new Set<string>();
 
-      // Check in current working directory
-      const cwdPath = checkPluginPath(cwd, itemId);
-      if (cwdPath) paths.push(cwdPath);
+  for (const itemId of ["@vitnode/core", ...pluginId]) {
+    // Check in current working directory
+    const cwdPath = checkPluginPath(cwd, itemId);
+    if (cwdPath) pluginDirs.add(cwdPath);
 
-      // Check in monorepo root if it exists and is different from cwd
-      if (monorepoRoot && monorepoRoot !== cwd) {
-        const rootPath = checkPluginPath(monorepoRoot, itemId);
-        if (rootPath) paths.push(rootPath);
-      }
+    // Check in monorepo root if it exists and is different from cwd
+    if (monorepoRoot && monorepoRoot !== cwd) {
+      const rootPath = checkPluginPath(monorepoRoot, itemId);
+      if (rootPath) pluginDirs.add(rootPath);
+    }
+  }
 
-      return paths;
-    })
-    .filter((pluginPath): pluginPath is string => pluginPath !== null);
+  const pluginPaths = [...pluginDirs].map(dir =>
+    join(dir, "*.js").replace(/\\/g, "/"),
+  );
 
   // Normalize args.schema into an array without nested ternary expressions
   let baseSchemas: string[] = [];

@@ -5,6 +5,8 @@ import { and, count, eq, inArray, sql } from "drizzle-orm";
 
 import type { RegisteredContentModel } from "./model";
 
+import { contentDefinitionOf } from "./model";
+
 import { core_content_schedules } from "../../database/content";
 import { core_search_index } from "../../database/search";
 import { normalizeContentLocale } from "../locale";
@@ -150,7 +152,7 @@ export const contentSearchDrift = async (
   c: Context,
   { model }: Pick<RegisteredContentModel, "model">,
 ): Promise<ContentSearchDrift> => {
-  const { definition } = model;
+  const definition = contentDefinitionOf(model);
   const contentTypeId = definition.id;
 
   const indexedRows = await c
@@ -364,7 +366,7 @@ const expectedDocuments = async (
   c: Context,
   model: RegisteredContentModel["model"],
 ): Promise<Map<string, number>> => {
-  const { definition } = model;
+  const definition = contentDefinitionOf(model);
   const columns = model.columns;
 
   if (!definition.publication.enabled) return new Map();
@@ -542,7 +544,7 @@ export const contentEngineDiagnostics = async (
 
   const contentTypes: ContentTypeDiagnostic[] = [];
   for (const entry of registered) {
-    const { definition } = entry.model;
+    const definition = contentDefinitionOf(entry.model);
 
     contentTypes.push({
       contentTypeId: definition.id,
