@@ -1,6 +1,6 @@
-import { pgTable } from "drizzle-orm/pg-core";
+import { camelCase } from "drizzle-orm/pg-core";
 
-export const core_roles = pgTable("core_roles", t => ({
+export const core_roles = camelCase.table.withRLS("core_roles", t => ({
   id: t.serial().primaryKey(),
   createdAt: t.timestamp().notNull().defaultNow(),
   updatedAt: t
@@ -15,4 +15,4 @@ export const core_roles = pgTable("core_roles", t => ({
   allowUploadFiles: t.boolean().notNull().default(false),
   totalMaxStorage: t.integer(),
   maxStorageForSubmit: t.integer(),
-})).enableRLS();
+}));

@@ -1,6 +1,6 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import type { ContentModel } from "./server";
+import type { AnyContentModel, ContentModel } from "./server";
 import type {
   AnyContentTypeDefinition,
   ContentAdvancedValues,
@@ -377,14 +377,19 @@ describe("variance", () => {
    *
    * Load-bearing, and easy to break by accident: every route builder, every
    * registry and every piece of background work is written against
-   * `ContentModel<AnyContentTypeDefinition>`. A type helper that puts
-   * `TDefinition` in a contravariant position - a `UnionToIntersection`, say -
-   * makes the parameter invariant and quietly breaks all of them at once.
+   * {@link AnyContentModel}.
+   *
+   * Asserted against that alias rather than against
+   * `ContentModel<AnyContentTypeDefinition>`, because `ContentModel` is
+   * genuinely invariant in its definition - `create` takes it, `findMany`
+   * returns it. Spelling the erased side `ContentModel<AnyContentTypeDefinition>`
+   * only ever passed because TypeScript measured the parameter's variance and
+   * skipped the structural check; `AnyContentModel` erases outright, so this
+   * asserts the property the codebase actually depends on instead of a compiler
+   * heuristic that can stop applying.
    */
   it("keeps a concrete model assignable to the erased one", () => {
-    expectTypeOf<ContentModel<Article>>().toExtend<
-      ContentModel<AnyContentTypeDefinition>
-    >();
+    expectTypeOf<ContentModel<Article>>().toExtend<AnyContentModel>();
   });
 
   it("keeps the definition itself assignable", () => {

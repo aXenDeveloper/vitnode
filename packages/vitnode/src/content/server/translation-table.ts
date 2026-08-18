@@ -1,10 +1,10 @@
 import type {
+  AnyPgColumnBuilder,
   PgColumn,
-  PgColumnBuilderBase,
   PgTable,
 } from "drizzle-orm/pg-core";
 
-import { index, pgTable, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
+import { camelCase, index, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
 
 import type { AnyContentTypeDefinition, ResolvedContentIndex } from "../types";
 import type {
@@ -66,7 +66,7 @@ export const createContentTranslationTable = <
   );
   const baseColumns = table as unknown as Record<string, PgColumn>;
 
-  const columns: Record<string, PgColumnBuilderBase> = {
+  const columns: Record<string, AnyPgColumnBuilder> = {
     ...buildTranslationSystemColumns({
       itemReference: () => baseColumns.id,
       languageReference: () => core_languages.id,
@@ -85,7 +85,7 @@ export const createContentTranslationTable = <
 
   const { translationIndexes, translationTableName } = localization;
 
-  return pgTable(
+  return camelCase.table.withRLS(
     translationTableName,
     () => columns,
     translationTable => {
@@ -108,7 +108,7 @@ export const createContentTranslationTable = <
         }),
       ];
     },
-  ).enableRLS() as unknown as ContentTranslationTableFor<TDefinition>;
+  ) as unknown as ContentTranslationTableFor<TDefinition>;
 };
 
 /** Column name -> Drizzle column on the translation table. */

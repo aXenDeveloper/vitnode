@@ -1,14 +1,14 @@
 import type {
+  AnyPgColumnBuilder,
   PgColumn,
-  PgColumnBuilderBase,
   PgTable,
 } from "drizzle-orm/pg-core";
 
-import { getTableName } from "drizzle-orm";
+import { getColumnTable, getTableName } from "drizzle-orm";
 import {
+  camelCase,
   getTableConfig,
   index,
-  pgTable,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
@@ -55,14 +55,14 @@ const checkedReference = (
 ): ColumnReferenceThunk => {
   return () => {
     const column = thunk();
-    if (!column?.table) {
+    if (!column) {
       throw new ContentEngineError(
         `\`references.${name}\` resolved to nothing. Rebuild the plugin (\`build:plugins\`), and make sure the target table is exported from its \`src/database\` module.`,
         { contentTypeId },
       );
     }
 
-    const actual = getTableName(column.table);
+    const actual = getTableName(getColumnTable(column));
     const expected = expectedTableName();
 
     if (actual !== expected) {
@@ -155,7 +155,7 @@ export const createContentTable = <
   );
   const referenceThunks = references as Record<string, ColumnReferenceThunk>;
 
-  const columns: Record<string, PgColumnBuilderBase> = {
+  const columns: Record<string, AnyPgColumnBuilder> = {
     ...buildSystemColumns(),
     ...(definition.publication.enabled ? buildPublicationColumns() : {}),
     ...(definition.editorial.enabled ? buildEditorialColumns() : {}),
@@ -200,11 +200,11 @@ export const createContentTable = <
   // in a loop, so the descriptor-derived `ContentTableFor` is re-attached here.
   // It is built from Drizzle's own `BuildColumns`, so `$inferSelect` and
   // `$inferInsert` stay accurate - see `table.test-d.ts`.
-  return pgTable(
+  return camelCase.table.withRLS(
     tableName,
     () => columns,
     table => buildIndexes(table as unknown as Record<string, PgColumn>),
-  ).enableRLS() as unknown as ContentTableFor<TDefinition>;
+  ) as unknown as ContentTableFor<TDefinition>;
 };
 
 /**

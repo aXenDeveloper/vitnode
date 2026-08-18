@@ -1,4 +1,4 @@
-import type { ColumnBaseConfig, SQL } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type {
   PgColumn,
   PgTableWithColumns,
@@ -8,6 +8,7 @@ import type { Context } from "hono";
 
 import { and, eq } from "drizzle-orm";
 
+import type { PaginationCursorColumn } from "../../api/lib/with-pagination";
 import type {
   AnyContentTypeDefinition,
   ContentPublicFilterInput,
@@ -357,9 +358,7 @@ export const createContentPublicService = <
   // here - it is what turns the erased column map into the two columns the
   // predicate needs.
   const published = publicationColumns(definition, columns);
-  const primaryCursor = columns.id as PgColumn<
-    ColumnBaseConfig<"number", string>
-  >;
+  const primaryCursor = columns.id as PaginationCursorColumn;
   const searchColumns = publicApi.searchableFields.map(name => columns[name]);
   const orderable = publicOrderableColumns(definition);
 

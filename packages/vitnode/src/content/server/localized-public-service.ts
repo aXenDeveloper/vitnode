@@ -1,4 +1,4 @@
-import type { ColumnBaseConfig, SQL } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type {
   PgColumn,
   PgTable,
@@ -10,7 +10,10 @@ import type { Context } from "hono";
 import { and, eq, exists, not, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
-import type { PaginationCursorSelection } from "../../api/lib/with-pagination";
+import type {
+  PaginationCursorColumn,
+  PaginationCursorSelection,
+} from "../../api/lib/with-pagination";
 import type { AnyContentTypeDefinition, ContentPublicSelect } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentLanguage } from "./language-resolver";
@@ -150,9 +153,7 @@ export const createContentLocalizedPublicService = <
     translationColumns,
   );
 
-  const primaryCursor = columns.id as PgColumn<
-    ColumnBaseConfig<"number", string>
-  >;
+  const primaryCursor = columns.id as PaginationCursorColumn;
   const orderable = publicOrderableColumns(definition);
   const project = createContentPublicProjector(definition);
 

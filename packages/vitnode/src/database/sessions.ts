@@ -1,9 +1,8 @@
-import { relations } from "drizzle-orm";
-import { index, pgTable } from "drizzle-orm/pg-core";
+import { camelCase, index } from "drizzle-orm/pg-core";
 
 import { core_users } from "./users";
 
-export const core_sessions = pgTable(
+export const core_sessions = camelCase.table.withRLS(
   "core_sessions",
   t => ({
     id: t.serial().primaryKey(),
@@ -24,20 +23,9 @@ export const core_sessions = pgTable(
       .notNull(),
   }),
   t => [index("core_sessions_user_id_idx").on(t.userId)],
-).enableRLS();
+);
 
-export const core_sessions_relations = relations(core_sessions, ({ one }) => ({
-  user: one(core_users, {
-    fields: [core_sessions.userId],
-    references: [core_users.id],
-  }),
-  device: one(core_sessions_known_devices, {
-    fields: [core_sessions.deviceId],
-    references: [core_sessions_known_devices.id],
-  }),
-}));
-
-export const core_sessions_known_devices = pgTable(
+export const core_sessions_known_devices = camelCase.table.withRLS(
   "core_sessions_known_devices",
   t => ({
     id: t.serial().primaryKey(),
@@ -47,14 +35,4 @@ export const core_sessions_known_devices = pgTable(
     lastSeen: t.timestamp().notNull().defaultNow(),
   }),
   t => [index("core_sessions_known_devices_ip_address_idx").on(t.ipAddress)],
-).enableRLS();
-
-export const core_sessions_known_devices_relations = relations(
-  core_sessions_known_devices,
-  ({ one }) => ({
-    session: one(core_sessions, {
-      fields: [core_sessions_known_devices.id],
-      references: [core_sessions.deviceId],
-    }),
-  }),
 );

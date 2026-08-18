@@ -1,5 +1,6 @@
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
 import { config } from "dotenv";
+import { coreRelations } from "@vitnode/core/database/relations";
 import { drizzle } from "drizzle-orm/postgres-js";
 
 config({
@@ -13,7 +14,7 @@ export const vitNodeApiConfig = buildApiConfig({
   plugins: [],
   dbProvider: drizzle({
     connection: POSTGRES_URL,
-    casing: "camelCase",
+    relations: coreRelations,
   }),
   // Redis is opt-in: only enabled when REDIS_URL is set. Without it the cache
   // is a no-op, the rate limiter uses in-memory storage, and WebSockets run in

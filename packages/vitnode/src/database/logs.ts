@@ -1,8 +1,8 @@
-import { pgTable } from "drizzle-orm/pg-core";
+import { camelCase } from "drizzle-orm/pg-core";
 
 import { core_users } from "./users";
 
-export const core_logs = pgTable("core_logs", t => ({
+export const core_logs = camelCase.table.withRLS("core_logs", t => ({
   id: t.serial().primaryKey(),
   pluginId: t.varchar({ length: 255 }).notNull(),
   type: t.varchar({ enum: ["warn", "error", "debug"], length: 10 }).notNull(),
@@ -18,4 +18,4 @@ export const core_logs = pgTable("core_logs", t => ({
     onUpdate: "cascade",
   }),
   test123: t.boolean().notNull().default(false),
-})).enableRLS();
+}));

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, pgTable, uniqueIndex } from "drizzle-orm/pg-core";
+import { camelCase, index, uniqueIndex } from "drizzle-orm/pg-core";
 
 import type {
   ContentAnyRevisionSnapshot,
@@ -33,7 +33,7 @@ import { core_users } from "./users";
  * revision behind, and rows whose content type is no longer registered are
  * swept up by the editorial cleanup job.
  */
-export const core_content_revisions = pgTable(
+export const core_content_revisions = camelCase.table.withRLS(
   "core_content_revisions",
   t => ({
     id: t.serial().primaryKey(),
@@ -128,7 +128,7 @@ export const core_content_revisions = pgTable(
     // `ON DELETE SET NULL` scans it on every user deletion.
     index("core_content_revisions_actor_user_id_idx").on(t.actorUserId),
   ],
-).enableRLS();
+);
 
 export type ContentRevisionRow = typeof core_content_revisions.$inferSelect;
 
@@ -145,7 +145,7 @@ export type ContentRevisionRow = typeof core_content_revisions.$inferSelect;
  * the moment it succeeds would answer that question with silence. A daily core
  * cron sweeps them past `CONTENT_SCHEDULE_RETENTION_DAYS`.
  */
-export const core_content_schedules = pgTable(
+export const core_content_schedules = camelCase.table.withRLS(
   "core_content_schedules",
   t => ({
     id: t.serial().primaryKey(),
@@ -206,7 +206,7 @@ export const core_content_schedules = pgTable(
     index("core_content_schedules_plugin_id_idx").on(t.pluginId),
     index("core_content_schedules_created_by_idx").on(t.createdBy),
   ],
-).enableRLS();
+);
 
 export type ContentScheduleRow = typeof core_content_schedules.$inferSelect;
 
@@ -235,7 +235,7 @@ export type ContentScheduleRow = typeof core_content_schedules.$inferSelect;
  * be claimed by unrelated content, so nobody's incoming links quietly change
  * meaning.
  */
-export const core_content_slug_history = pgTable(
+export const core_content_slug_history = camelCase.table.withRLS(
   "core_content_slug_history",
   t => ({
     id: t.serial().primaryKey(),
@@ -289,7 +289,7 @@ export const core_content_slug_history = pgTable(
     ),
     index("core_content_slug_history_plugin_id_idx").on(t.pluginId),
   ],
-).enableRLS();
+);
 
 export type ContentSlugHistoryRow =
   typeof core_content_slug_history.$inferSelect;

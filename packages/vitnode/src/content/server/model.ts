@@ -188,7 +188,46 @@ export interface ContentModel<TDefinition extends AnyContentTypeDefinition> {
  * the cleanup cron - looks a model up by content type id and cannot know which
  * concrete one it will get.
  */
-export type AnyContentModel = ContentModel<AnyContentTypeDefinition>;
+export type AnyContentModel = ContentModel<
+  // Deliberately `any` rather than `AnyContentTypeDefinition`, and
+  // load-bearing. `ContentModel` mentions its definition in both directions -
+  // `create` takes `ContentCreateInput<TDefinition>`, `findMany` returns
+  // `ContentListRow<TDefinition>` - so it is genuinely invariant. It only ever
+  // looked covariant because TypeScript measured the parameter's variance and
+  // took the fast path; Drizzle v1 types its columns through a conditional
+  // `infer`, which makes that measurement unreliable and forces the full
+  // structural comparison the fast path used to skip.
+  //
+  // `any` states the erasure outright instead of leaning on a compiler
+  // heuristic, and it is the same escape hatch Drizzle uses for `AnyPgTable`
+  // and `AnyPgColumn`.
+  //
+  // It has to stay exactly this and nothing more. Narrowing a member - even
+  // just `definition` - makes it a distinct type rather than an alias, and
+  // TypeScript then structurally compares every concrete `ContentModel<T>`
+  // against it, which is the comparison being avoided. Read the definition
+  // back through `contentDefinitionOf` instead.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  any
+>;
+
+/**
+ * One erased model's definition, read back with its real type.
+ *
+ * `AnyContentModel` erases the whole parameter, so `model.definition` comes out
+ * as `any`. Everything that reads it - the id, the fields, the localization
+ * block - wants the ordinary type, and passing `any` straight into those calls
+ * would spread untyped values well past this boundary. Narrowing it here keeps
+ * the erasure confined to the members that need it.
+ *
+ * A plain annotation rather than an override on `AnyContentModel`: adding any
+ * member to that alias turns it into a distinct type, and TypeScript then
+ * structurally compares a concrete `ContentModel<T>` against it - which is the
+ * comparison the erasure exists to avoid.
+ */
+export const contentDefinitionOf = (
+  model: AnyContentModel,
+): AnyContentTypeDefinition => model.definition as AnyContentTypeDefinition;
 
 /**
  * A model plus the plugin that registered it.

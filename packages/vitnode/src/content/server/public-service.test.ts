@@ -127,7 +127,7 @@ describe("model.publicService", () => {
 
 describe("the published invariant", () => {
   const PREDICATE =
-    '"test_posts"."status" = $1 and "test_posts"."publishedAt" is not null and "test_posts"."publishedAt" <= now()';
+    '(("test_posts"."status" = $1) and (("test_posts"."publishedAt" is not null)) and ("test_posts"."publishedAt" <= now()))';
 
   it("is applied by findBySlug", async () => {
     const { calls, service } = publicService([[storedRow]]);

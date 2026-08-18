@@ -58,6 +58,29 @@ const KIND_BY_DATA_TYPE: Record<string, CursorKind> = {
   string: "string",
 };
 
+/**
+ * The column's data type with Drizzle's refinement dropped.
+ *
+ * Drizzle v1 reports a `ColumnType` as `"<base> <constraint>"` - a `serial` is
+ * `number int32`, a `bigint` is `bigint int64`, an enum `varchar` is
+ * `string enum`. The cursor only cares which of the five kinds above it is
+ * dealing with, and the constraint is exactly the part that does not change
+ * that, so it is cut off rather than enumerated.
+ */
+const baseDataTypeOf = (column: PgColumn): string =>
+  column.dataType.split(" ")[0];
+
+/**
+ * Whether the column holds an array.
+ *
+ * Checked explicitly because v1 reports an array by its **element** type plus a
+ * dimension count - a `text[]` column is `string` with `dimensions: 1`, not the
+ * `array` v0 reported. Without this the element type would look perfectly
+ * sortable, and a cursor would be minted from a value Postgres cannot compare
+ * with `>`.
+ */
+const isArrayColumn = (column: PgColumn): boolean => column.dimensions > 0;
+
 const badRequest = (message: string): HTTPException =>
   new HTTPException(400, { message });
 
@@ -97,12 +120,16 @@ const hasTimeZone = (column: PgColumn): boolean =>
  * against. Refused rather than approximated.
  */
 export const isCursorSortableColumn = (column: PgColumn): boolean =>
-  temporalTypeOf(column) !== null || column.dataType in KIND_BY_DATA_TYPE;
+  !isArrayColumn(column) &&
+  (temporalTypeOf(column) !== null ||
+    baseDataTypeOf(column) in KIND_BY_DATA_TYPE);
 
 const kindOf = (column: PgColumn): CursorKind => {
-  if (temporalTypeOf(column)) return "temporal";
+  if (!isArrayColumn(column) && temporalTypeOf(column)) return "temporal";
 
-  const kind = KIND_BY_DATA_TYPE[column.dataType];
+  const kind = isArrayColumn(column)
+    ? undefined
+    : KIND_BY_DATA_TYPE[baseDataTypeOf(column)];
   if (!kind) {
     throw badRequest(
       `The "${column.name}" column cannot be used as a pagination cursor.`,

@@ -1,4 +1,11 @@
-import { bigint, date, pgTable, time, timestamp } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  camelCase,
+  date,
+  text,
+  time,
+  timestamp,
+} from "drizzle-orm/pg-core";
 // @vitest-environment node
 import { HTTPException } from "hono/http-exception";
 import { describe, expect, it } from "vitest";
@@ -14,12 +21,13 @@ import {
   isCursorSortableColumn,
 } from "./pagination-cursor";
 
-const probes = pgTable("cursor_probes", {
+const probes = camelCase.table("cursor_probes", {
   big: bigint({ mode: "bigint" }),
   clock: time(),
   clockTz: time({ withTimezone: true }),
   day: date(),
   moment: timestamp(),
+  tags: text().array("[]"),
 });
 
 const statusOf = (error: unknown): number =>
@@ -192,6 +200,14 @@ describe("column values", () => {
     expect(isCursorSortableColumn(core_users.createdAt)).toBe(true);
     expect(isCursorSortableColumn(core_users.newsletter)).toBe(true);
     expect(isCursorSortableColumn(probes.big)).toBe(true);
+  });
+
+  // Drizzle v1 describes an array by its *element* type plus a dimension count,
+  // where v0 reported the type as `array`. Reading only the data type would make
+  // `text[]` look like an ordinary sortable string.
+  it("refuses an array column, which has no order to page along", () => {
+    expect(isCursorSortableColumn(probes.tags)).toBe(false);
+    expect(() => cursorValueForColumn(probes.tags, "a")).toThrow(HTTPException);
   });
 });
 

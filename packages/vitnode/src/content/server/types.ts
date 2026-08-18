@@ -1,18 +1,16 @@
 import type {
-  BuildColumns,
-  ColumnBuilderBase,
-  HasDefault,
-  NotNull,
-} from "drizzle-orm";
-import type {
-  PgBooleanBuilderInitial,
-  PgDoublePrecisionBuilderInitial,
-  PgIntegerBuilderInitial,
-  PgSerialBuilderInitial,
+  AnyPgColumnBuilder,
+  PgBooleanBuilder,
+  PgBuildColumns,
+  PgDoublePrecisionBuilder,
+  PgIntegerBuilder,
+  PgSerialBuilder,
   PgTableWithColumns,
-  PgTextBuilderInitial,
-  PgTimestampBuilderInitial,
-  PgVarcharBuilderInitial,
+  PgTextBuilder,
+  PgTimestampBuilder,
+  PgVarcharBuilder,
+  SetHasDefault,
+  SetNotNull,
 } from "drizzle-orm/pg-core";
 
 import type {
@@ -27,13 +25,6 @@ import type {
   HasColumnDefault,
 } from "../types";
 
-/**
- * Columns are declared with the `pgTable(name, t => ({ ... }))` callback form
- * used across the repo, so the builder-level name is always empty and Drizzle
- * derives the real one from the object key.
- */
-type ColumnName = "";
-
 type EnumValuesOf<TField> = TField extends {
   values: readonly [
     infer THead extends string,
@@ -43,57 +34,55 @@ type EnumValuesOf<TField> = TField extends {
   ? [THead, ...TRest]
   : [string, ...string[]];
 
-/** The Drizzle builder a single field descriptor compiles to. */
+/**
+ * The Drizzle builder a single field descriptor compiles to.
+ *
+ * Builders carry no column-name generic: columns are declared with the
+ * `camelCase.table(name, t => ({ ... }))` callback form used across the repo,
+ * so Drizzle derives the name from the object key.
+ */
 type BaseBuilderFor<TField> = TField extends { kind: "boolean" }
-  ? PgBooleanBuilderInitial<ColumnName>
+  ? PgBooleanBuilder
   : TField extends { kind: "dateTime" }
-    ? PgTimestampBuilderInitial<ColumnName>
+    ? PgTimestampBuilder
     : TField extends { kind: "enum" }
-      ? PgVarcharBuilderInitial<ColumnName, EnumValuesOf<TField>, number>
+      ? PgVarcharBuilder<EnumValuesOf<TField>>
       : TField extends { integer: false; kind: "number" }
-        ? PgDoublePrecisionBuilderInitial<ColumnName>
+        ? PgDoublePrecisionBuilder
         : TField extends { kind: "number" | "relation" | "user" }
-          ? PgIntegerBuilderInitial<ColumnName>
+          ? PgIntegerBuilder
           : TField extends { kind: "textarea" }
-            ? PgTextBuilderInitial<ColumnName, [string, ...string[]]>
-            : PgVarcharBuilderInitial<
-                ColumnName,
-                [string, ...string[]],
-                number
-              >;
+            ? PgTextBuilder
+            : PgVarcharBuilder;
 
-type ApplyDefault<TBuilder extends ColumnBuilderBase, TField> =
-  HasColumnDefault<TField> extends true ? HasDefault<TBuilder> : TBuilder;
+type ApplyDefault<TBuilder extends AnyPgColumnBuilder, TField> =
+  HasColumnDefault<TField> extends true ? SetHasDefault<TBuilder> : TBuilder;
 
 type ApplyModifiers<
-  TBuilder extends ColumnBuilderBase,
+  TBuilder extends AnyPgColumnBuilder,
   TField,
 > = TField extends { nullable: true }
   ? ApplyDefault<TBuilder, TField>
-  : NotNull<ApplyDefault<TBuilder, TField>>;
+  : SetNotNull<ApplyDefault<TBuilder, TField>>;
 
-// `infer TBuilder extends ColumnBuilderBase` is what proves to TypeScript that
+// `infer TBuilder extends AnyPgColumnBuilder` is what proves to TypeScript that
 // the conditional above resolves to a builder, so `NotNull`/`HasDefault` apply.
 export type ContentColumnBuilder<TField> =
-  BaseBuilderFor<TField> extends infer TBuilder extends ColumnBuilderBase
+  BaseBuilderFor<TField> extends infer TBuilder extends AnyPgColumnBuilder
     ? ApplyModifiers<TBuilder, TField>
     : never;
 
 /** `id`, `createdAt` and `updatedAt` - added to every content table. */
 export interface ContentSystemColumnBuilders {
-  createdAt: NotNull<HasDefault<PgTimestampBuilderInitial<ColumnName>>>;
-  id: PgSerialBuilderInitial<ColumnName>;
-  updatedAt: NotNull<HasDefault<PgTimestampBuilderInitial<ColumnName>>>;
+  createdAt: SetNotNull<SetHasDefault<PgTimestampBuilder>>;
+  id: PgSerialBuilder;
+  updatedAt: SetNotNull<SetHasDefault<PgTimestampBuilder>>;
 }
 
 /** `status` and `publishedAt` - added only when publication is enabled. */
 export interface ContentPublicationColumnBuilders {
-  publishedAt: PgTimestampBuilderInitial<ColumnName>;
-  status: NotNull<
-    HasDefault<
-      PgVarcharBuilderInitial<ColumnName, ["draft", "published"], number>
-    >
-  >;
+  publishedAt: PgTimestampBuilder;
+  status: SetNotNull<SetHasDefault<PgVarcharBuilder<["draft", "published"]>>>;
 }
 
 type PublicationColumnBuilders<TPublication extends boolean> =
@@ -103,7 +92,7 @@ type PublicationColumnBuilders<TPublication extends boolean> =
 
 /** `version` - added only when the editorial workflow is enabled. */
 export interface ContentEditorialColumnBuilders {
-  version: NotNull<HasDefault<PgIntegerBuilderInitial<ColumnName>>>;
+  version: SetNotNull<SetHasDefault<PgIntegerBuilder>>;
 }
 
 type EditorialColumnBuilders<TEditorial extends boolean> =
@@ -123,11 +112,11 @@ export type ContentColumnBuilders<
 
 /** `itemId`, `languageId`, `version` and the timestamps. */
 export interface ContentTranslationSystemColumnBuilders {
-  createdAt: NotNull<HasDefault<PgTimestampBuilderInitial<ColumnName>>>;
-  itemId: NotNull<PgIntegerBuilderInitial<ColumnName>>;
-  languageId: NotNull<PgIntegerBuilderInitial<ColumnName>>;
-  updatedAt: NotNull<HasDefault<PgTimestampBuilderInitial<ColumnName>>>;
-  version: NotNull<HasDefault<PgIntegerBuilderInitial<ColumnName>>>;
+  createdAt: SetNotNull<SetHasDefault<PgTimestampBuilder>>;
+  itemId: SetNotNull<PgIntegerBuilder>;
+  languageId: SetNotNull<PgIntegerBuilder>;
+  updatedAt: SetNotNull<SetHasDefault<PgTimestampBuilder>>;
+  version: SetNotNull<SetHasDefault<PgIntegerBuilder>>;
 }
 
 export type ContentTranslationColumnBuilders<
@@ -150,10 +139,9 @@ export type ContentTranslationTable<
   TFields,
   TPublication extends boolean = false,
 > = PgTableWithColumns<{
-  columns: BuildColumns<
+  columns: PgBuildColumns<
     TName,
-    ContentTranslationColumnBuilders<TFields, TPublication>,
-    "pg"
+    ContentTranslationColumnBuilders<TFields, TPublication>
   >;
   dialect: "pg";
   name: TName;
@@ -219,10 +207,9 @@ export type ContentTable<
   TPublication extends boolean = false,
   TEditorial extends boolean = false,
 > = PgTableWithColumns<{
-  columns: BuildColumns<
+  columns: PgBuildColumns<
     TName,
-    ContentColumnBuilders<TFields, TPublication, TEditorial>,
-    "pg"
+    ContentColumnBuilders<TFields, TPublication, TEditorial>
   >;
   dialect: "pg";
   name: TName;
@@ -382,15 +369,14 @@ export type ContentReferences<TFields> = {
  * would be a second implementation of it.
  */
 export type ContentJunctionTable = PgTableWithColumns<{
-  columns: BuildColumns<
+  columns: PgBuildColumns<
     string,
     {
-      createdAt: NotNull<HasDefault<PgTimestampBuilderInitial<ColumnName>>>;
-      itemId: NotNull<PgIntegerBuilderInitial<ColumnName>>;
-      position: NotNull<PgIntegerBuilderInitial<ColumnName>>;
-      relatedItemId: NotNull<PgIntegerBuilderInitial<ColumnName>>;
-    },
-    "pg"
+      createdAt: SetNotNull<SetHasDefault<PgTimestampBuilder>>;
+      itemId: SetNotNull<PgIntegerBuilder>;
+      position: SetNotNull<PgIntegerBuilder>;
+      relatedItemId: SetNotNull<PgIntegerBuilder>;
+    }
   >;
   dialect: "pg";
   name: string;
@@ -399,18 +385,17 @@ export type ContentJunctionTable = PgTableWithColumns<{
 
 /** The generated child table for one repeatable field. */
 export type ContentRepeatableChildTable<TFields> = PgTableWithColumns<{
-  columns: BuildColumns<
+  columns: PgBuildColumns<
     string,
     {
       [K in keyof TFields]: ContentColumnBuilder<TFields[K]>;
     } & {
-      createdAt: NotNull<HasDefault<PgTimestampBuilderInitial<ColumnName>>>;
-      id: PgSerialBuilderInitial<ColumnName>;
-      itemId: NotNull<PgIntegerBuilderInitial<ColumnName>>;
-      position: NotNull<PgIntegerBuilderInitial<ColumnName>>;
-      updatedAt: NotNull<HasDefault<PgTimestampBuilderInitial<ColumnName>>>;
-    },
-    "pg"
+      createdAt: SetNotNull<SetHasDefault<PgTimestampBuilder>>;
+      id: PgSerialBuilder;
+      itemId: SetNotNull<PgIntegerBuilder>;
+      position: SetNotNull<PgIntegerBuilder>;
+      updatedAt: SetNotNull<SetHasDefault<PgTimestampBuilder>>;
+    }
   >;
   dialect: "pg";
   name: string;
@@ -426,7 +411,7 @@ export interface ContentAdvancedTables {
 // Loosest shape a foreign key target can take; the FK itself is validated by
 // Postgres, and by `getTableConfig` in the table tests.
 type AnyIdColumn = Parameters<
-  PgIntegerBuilderInitial<ColumnName>["references"]
+  PgIntegerBuilder["references"]
 >[0] extends () => infer TColumn
   ? TColumn
   : never;

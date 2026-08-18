@@ -1,13 +1,13 @@
 import type {
+  AnyPgColumnBuilder,
   PgColumn,
-  PgColumnBuilderBase,
   PgTable,
 } from "drizzle-orm/pg-core";
 
 import {
+  camelCase,
   index,
   integer,
-  pgTable,
   primaryKey,
   serial,
   timestamp,
@@ -103,7 +103,7 @@ export const createContentJunctionTable = ({
     );
   }
 
-  const columns: Record<string, PgColumnBuilderBase> = {
+  const columns: Record<string, AnyPgColumnBuilder> = {
     itemId: integer()
       .notNull()
       .references(itemReference, { onDelete: "cascade", onUpdate: "cascade" }),
@@ -114,7 +114,7 @@ export const createContentJunctionTable = ({
     createdAt: timestamp().notNull().defaultNow(),
   };
 
-  return pgTable(
+  return camelCase.table.withRLS(
     tableName,
     () => columns,
     table => {
@@ -134,7 +134,7 @@ export const createContentJunctionTable = ({
         index(relatedIndexName).on(columnMap.relatedItemId),
       ];
     },
-  ).enableRLS() as unknown as ContentJunctionTable;
+  ) as unknown as ContentJunctionTable;
 };
 
 /**
@@ -177,7 +177,7 @@ export const createContentRepeatableTable = ({
   positionIndexName: string;
   tableName: string;
 }): ContentRepeatableChildTable<unknown> => {
-  const columns: Record<string, PgColumnBuilderBase> = {
+  const columns: Record<string, AnyPgColumnBuilder> = {
     id: serial().primaryKey(),
     itemId: integer()
       .notNull()
@@ -194,7 +194,7 @@ export const createContentRepeatableTable = ({
     columns[name] = buildContentColumn({ contentTypeId, fieldValue, name });
   }
 
-  return pgTable(
+  return camelCase.table.withRLS(
     tableName,
     () => columns,
     table => {
@@ -204,7 +204,7 @@ export const createContentRepeatableTable = ({
         uniqueIndex(positionIndexName).on(columnMap.itemId, columnMap.position),
       ];
     },
-  ).enableRLS() as unknown as ContentRepeatableChildTable<unknown>;
+  ) as unknown as ContentRepeatableChildTable<unknown>;
 };
 
 /**

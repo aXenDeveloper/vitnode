@@ -1,7 +1,15 @@
 import type { SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 
-import { and, asc, eq, getTableName, inArray, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  getColumnTable,
+  getTableName,
+  inArray,
+  sql,
+} from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 
 import type { AnyContentTypeDefinition, ContentRelationFilter } from "../types";
@@ -287,7 +295,7 @@ export const createContentAdvancedStore = <
 
     const rows = await tx
       .select({ id: target })
-      .from(target.table)
+      .from(getColumnTable(target))
       .where(inArray(target, [...ids]));
 
     const found = new Set(rows.map(row => Number(row.id)));
@@ -696,7 +704,7 @@ export const createContentAdvancedStore = <
 
           const rows = await tx
             .select({ id: target })
-            .from(target.table)
+            .from(getColumnTable(target))
             .where(inArray(target, ids));
           const found = new Set(rows.map(row => Number(row.id)));
           const missing = ids.filter(id => !found.has(id));
@@ -744,7 +752,11 @@ export const createContentAdvancedStore = <
       return sql`exists (select 1 from ${junction.table} where ${junction.columns.itemId} = ${baseColumns.id} and ${junction.columns.relatedItemId} = ${filter.contains})`;
     },
 
-    targetTable: field => relationTargetColumn(field)?.table ?? null,
+    targetTable: field => {
+      const column = relationTargetColumn(field);
+
+      return column ? getColumnTable(column) : null;
+    },
 
     write: async (tx, itemId, patch) => {
       const changes = await plan(tx, itemId, patch);

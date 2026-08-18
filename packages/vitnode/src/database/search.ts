@@ -1,7 +1,7 @@
 import type { SQL } from "drizzle-orm";
 
 import { sql } from "drizzle-orm";
-import { customType, index, pgTable, unique } from "drizzle-orm/pg-core";
+import { camelCase, customType, index, unique } from "drizzle-orm/pg-core";
 
 import { core_users } from "./users";
 
@@ -64,7 +64,7 @@ const SEARCH_CONFIG_CASE = `CASE lower(split_part("core_search_index"."languageC
 // One row per (itemType, itemId, languageCode): multi-language content is
 // indexed once per language so search and discovery can be scoped to the
 // viewer's locale.
-export const core_search_index = pgTable(
+export const core_search_index = camelCase.table.withRLS(
   "core_search_index",
   t => ({
     id: t.serial().primaryKey(),
@@ -109,4 +109,4 @@ export const core_search_index = pgTable(
     index("core_search_index_language_code_idx").on(t.languageCode),
     index("core_search_index_is_public_idx").on(t.isPublic),
   ],
-).enableRLS();
+);

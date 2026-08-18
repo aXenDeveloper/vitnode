@@ -1,4 +1,4 @@
-import type { ColumnBaseConfig, SQL } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type {
   PgColumn,
   PgTable,
@@ -9,6 +9,7 @@ import type { Context } from "hono";
 
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
 
+import type { PaginationCursorColumn } from "../../api/lib/with-pagination";
 import type { ContentSchemas } from "../schemas";
 import type {
   AnyContentTypeDefinition,
@@ -451,9 +452,7 @@ export const createContentService = <
   const contentTypeId = definition.id;
   // `buildSystemColumns` always makes `id` a `serial`, which is what
   // `withPagination` needs to type its cursor.
-  const primaryCursor = columns.id as PgColumn<
-    ColumnBaseConfig<"number", string>
-  >;
+  const primaryCursor = columns.id as PaginationCursorColumn;
   const orderable = orderableColumns(definition);
   const publication = definition.publication.enabled;
   const generatedColumnNames = [

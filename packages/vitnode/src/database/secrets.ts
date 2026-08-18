@@ -1,4 +1,4 @@
-import { pgTable } from "drizzle-orm/pg-core";
+import { camelCase } from "drizzle-orm/pg-core";
 
 /**
  * Signing keys the install generates for itself.
@@ -16,8 +16,8 @@ import { pgTable } from "drizzle-orm/pg-core";
  * Deleting a row rotates that secret - the next process to need it generates a
  * fresh one, and every token signed with the old value stops verifying.
  */
-export const core_secrets = pgTable("core_secrets", t => ({
+export const core_secrets = camelCase.table.withRLS("core_secrets", t => ({
   name: t.varchar({ length: 100 }).primaryKey(),
   value: t.text().notNull(),
   createdAt: t.timestamp().notNull().defaultNow(),
-})).enableRLS();
+}));

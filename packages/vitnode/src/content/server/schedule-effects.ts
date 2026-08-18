@@ -13,7 +13,7 @@ import {
 } from "../cache";
 import { CONTENT_SCHEDULE_ACTIONS } from "../const";
 import { contentEditorialEffects } from "./editorial-effects";
-import { findContentModel } from "./model";
+import { contentDefinitionOf, findContentModel } from "./model";
 import { contentPublicLocaleStates } from "./public-locales";
 import { dispatchContentRevalidation } from "./revalidate-bridge";
 import { recordContentScheduleEffectsError } from "./schedules-model";
@@ -171,7 +171,7 @@ export const runContentScheduleEffects = async (
     return { status: "unregistered" };
   }
 
-  const { definition } = entry.model;
+  const definition = contentDefinitionOf(entry.model);
   const row = reviveDates(definition, payload.row);
 
   const outcome: ContentEditorialOutcome<AnyContentTypeDefinition> = {

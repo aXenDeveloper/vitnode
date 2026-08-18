@@ -1,4 +1,4 @@
-import type { AnyPgColumn, PgColumnBuilderBase } from "drizzle-orm/pg-core";
+import type { AnyPgColumn, AnyPgColumnBuilder } from "drizzle-orm/pg-core";
 
 import {
   boolean,
@@ -28,7 +28,7 @@ export type ColumnReferenceThunk = () => AnyPgColumn;
  * all 22 core tables: a `serial` primary key, `defaultNow()` on `createdAt`,
  * and `defaultNow().$onUpdate(...)` on `updatedAt`.
  */
-export const buildSystemColumns = (): Record<string, PgColumnBuilderBase> => ({
+export const buildSystemColumns = (): Record<string, AnyPgColumnBuilder> => ({
   id: serial().primaryKey(),
   createdAt: timestamp().notNull().defaultNow(),
   updatedAt: timestamp()
@@ -50,7 +50,7 @@ export const buildSystemColumns = (): Record<string, PgColumnBuilderBase> => ({
  */
 export const buildPublicationColumns = (): Record<
   string,
-  PgColumnBuilderBase
+  AnyPgColumnBuilder
 > => ({
   publishedAt: timestamp(),
   status: varchar({
@@ -74,7 +74,7 @@ export const buildPublicationColumns = (): Record<
  */
 export const buildEditorialColumns = (): Record<
   string,
-  PgColumnBuilderBase
+  AnyPgColumnBuilder
 > => ({
   version: integer().notNull().default(1),
 });
@@ -100,7 +100,7 @@ export const buildTranslationSystemColumns = ({
   itemReference: ColumnReferenceThunk;
   languageReference: ColumnReferenceThunk;
   onItemDelete?: "cascade";
-}): Record<string, PgColumnBuilderBase> => ({
+}): Record<string, AnyPgColumnBuilder> => ({
   itemId: integer()
     .notNull()
     // Cascade: a record's translations are part of the record, so removing it
@@ -137,7 +137,7 @@ export const buildTranslationSystemColumns = ({
  */
 export const buildTranslationPublicationColumns = (): Record<
   string,
-  PgColumnBuilderBase
+  AnyPgColumnBuilder
 > => buildPublicationColumns();
 
 /**
@@ -178,7 +178,7 @@ export const buildContentColumn = ({
   fieldValue: ContentFieldDescriptor;
   name: string;
   reference?: ColumnReferenceThunk;
-}): PgColumnBuilderBase => {
+}): AnyPgColumnBuilder => {
   const { nullable } = fieldValue;
 
   // A group is several columns and a repeatable is a table, so neither reaches

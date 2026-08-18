@@ -1,6 +1,6 @@
 import { getTableName } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -66,21 +66,38 @@ const uniqueIndexNames = (config: typeof articles) =>
     .filter(item => item.config.unique)
     .map(item => item.config.name);
 
+const MIGRATIONS_DIR = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../../../apps/docs/migrations",
+);
+
+/**
+ * Resolves one migration tag to its `migration.sql`.
+ *
+ * Drizzle Kit v3 puts every migration in its own `<timestamp>_<tag>/` directory,
+ * and the timestamp is assigned when the migration is generated - so the tag is
+ * matched as a suffix rather than the whole name being written down.
+ */
+const migrationSql = (tag: string): string => {
+  const dir = readdirSync(MIGRATIONS_DIR).find(name =>
+    name.endsWith(`_${tag}`),
+  );
+
+  if (!dir) {
+    throw new Error(
+      `No migration directory for "${tag}" in ${MIGRATIONS_DIR}. If it was renamed, update EXAMPLE_MIGRATIONS.`,
+    );
+  }
+
+  return readFileSync(resolve(MIGRATIONS_DIR, dir, "migration.sql"), "utf8");
+};
+
 /**
  * The committed migrations, concatenated in apply order. Read as text on
  * purpose: this is the artefact a fresh database actually runs, so asserting on
  * the Drizzle objects alone would not prove the DDL landed.
  */
-const migration = EXAMPLE_MIGRATIONS.map(file =>
-  readFileSync(
-    resolve(
-      dirname(fileURLToPath(import.meta.url)),
-      "../../../../apps/docs/migrations",
-      file,
-    ),
-    "utf8",
-  ),
-).join("\n");
+const migration = EXAMPLE_MIGRATIONS.map(migrationSql).join("\n");
 
 describe("example_articles", () => {
   it("is a real table with the expected name", () => {
@@ -519,14 +536,7 @@ describe("example_localized_articles", () => {
   });
 
   it("drops no column and no data in the Stage 5B migration", () => {
-    const stage5b = readFileSync(
-      resolve(
-        dirname(fileURLToPath(import.meta.url)),
-        "../../../../apps/docs/migrations",
-        "0030_add_translation_editorial.sql",
-      ),
-      "utf8",
-    );
+    const stage5b = migrationSql("add_translation_editorial");
 
     expect(stage5b).not.toMatch(/DROP COLUMN/);
     expect(stage5b).not.toMatch(/DROP TABLE/);

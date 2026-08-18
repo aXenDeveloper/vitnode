@@ -39,7 +39,7 @@ describe("publishedCondition", () => {
     // row whose timestamp was cleared by hand, which is the whole reason this
     // is exported rather than written out at each call site.
     expect(sql).toBe(
-      '("test_posts"."status" = $1 and "test_posts"."publishedAt" is not null and "test_posts"."publishedAt" <= now())',
+      '(("test_posts"."status" = $1) and (("test_posts"."publishedAt" is not null)) and ("test_posts"."publishedAt" <= now()))',
     );
     expect(params).toEqual(["published"]);
   });

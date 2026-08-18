@@ -1,6 +1,7 @@
-import type { ColumnBaseConfig, Placeholder, SQL } from "drizzle-orm";
+import type { ColumnDataNumberConstraint, Placeholder, SQL } from "drizzle-orm";
 import type {
   PgColumn,
+  PgColumnBaseConfig,
   PgTable,
   PgTableWithColumns,
   TableConfig,
@@ -250,10 +251,24 @@ async function fetchTotalCount(
   return totalCount;
 }
 
+/**
+ * A column that can carry the cursor: any numeric one.
+ *
+ * Drizzle refines numeric column types (a `serial` is `number int32`, a
+ * `doublePrecision` is `number double`), so the bound admits the whole
+ * `number ...` family rather than the bare `number`. The data type is asserted
+ * through the config - Drizzle leaves `PgColumn`'s first argument as `any` on
+ * built columns, exactly as its own `AnyPgColumn` does.
+ */
+export type PaginationCursorColumn = PgColumn<
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  any,
+  PgColumnBaseConfig<"number" | `number ${ColumnDataNumberConstraint}`>
+>;
+
 export async function withPagination<
   QueryMin extends Record<string, unknown>,
   T extends TableConfig,
-  Primary extends ColumnBaseConfig<"number", string>,
 >({
   query,
   table,
@@ -277,7 +292,7 @@ export async function withPagination<
       search?: string;
     };
   };
-  primaryCursor: PgColumn<Primary>;
+  primaryCursor: PaginationCursorColumn;
   query: (args: {
     /**
      * Spread this into the projection: `.select({ ...fields, ...cursorSelection })`.

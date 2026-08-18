@@ -8,6 +8,7 @@ import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
 // import { S3StorageAdapter } from "@vitnode/s3";
 import { SupabaseStorageAdapter } from "@vitnode/supabase-storage";
 import { config } from "dotenv";
+import { coreRelations } from "@vitnode/core/database/relations";
 import { drizzle } from "drizzle-orm/postgres-js";
 
 config({
@@ -45,7 +46,7 @@ export const vitNodeApiConfig = buildApiConfig({
   // override strings from `src/locales/<pluginId>/<locale>.json`.
   dbProvider: drizzle({
     connection: POSTGRES_URL,
-    casing: "camelCase",
+    relations: coreRelations,
   }),
   cron: NodeCronAdapter(),
   redis: process.env.REDIS_URL

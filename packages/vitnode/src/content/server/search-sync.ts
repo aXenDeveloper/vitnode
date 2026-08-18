@@ -6,6 +6,8 @@ import { eq } from "drizzle-orm";
 import type { AnyContentTypeDefinition } from "../types";
 import type { AnyContentModel } from "./model";
 
+import { contentDefinitionOf } from "./model";
+
 import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
 import {
@@ -262,7 +264,9 @@ const readTranslations = async (
   const table: null | PgTable = model.translationTable;
   if (!columns || !table) return [];
 
-  const { localizedFields } = partitionContentFields(model.definition.fields);
+  const { localizedFields } = partitionContentFields(
+    contentDefinitionOf(model).fields,
+  );
   // Flattened, so a localized group is selected as its leaf columns - and then
   // folded back below, so the document builder sees the same nested shape a
   // public read would.
@@ -311,7 +315,7 @@ export const syncContentLocalizedSearch = async (
   model: AnyContentModel,
   input: ContentLocalizedSearchSyncInput,
 ): Promise<ContentSearchSyncOutcome[]> => {
-  const { definition } = model;
+  const definition = contentDefinitionOf(model);
   const values = input.row as Record<string, unknown>;
   const itemId = typeof values.id === "number" ? values.id : 0;
 
@@ -439,7 +443,7 @@ export const contentSearchAdvancedValues = async (
   model: AnyContentModel,
   itemId: number,
 ): Promise<Record<string, unknown> | undefined> => {
-  const wanted = contentSearchIndexedCollections(model.definition);
+  const wanted = contentSearchIndexedCollections(contentDefinitionOf(model));
   if (wanted.length === 0 || itemId === 0) return undefined;
 
   return await model.service(c).advancedFields(itemId, wanted);

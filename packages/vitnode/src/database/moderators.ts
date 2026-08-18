@@ -1,12 +1,11 @@
-import { relations } from "drizzle-orm";
-import { index, pgTable } from "drizzle-orm/pg-core";
+import { camelCase, index } from "drizzle-orm/pg-core";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 
 import { core_roles } from "./roles";
 import { core_users } from "./users";
 
-export const core_moderators_permissions = pgTable(
+export const core_moderators_permissions = camelCase.table.withRLS(
   "core_moderators_permissions",
   t => ({
     id: t.serial().primaryKey(),
@@ -34,18 +33,4 @@ export const core_moderators_permissions = pgTable(
     index("core_moderators_permissions_role_id_idx").on(t.roleId),
     index("core_moderators_permissions_user_id_idx").on(t.userId),
   ],
-).enableRLS();
-
-export const core_moderators_permissions_relations = relations(
-  core_moderators_permissions,
-  ({ one }) => ({
-    group: one(core_roles, {
-      fields: [core_moderators_permissions.roleId],
-      references: [core_roles.id],
-    }),
-    user: one(core_users, {
-      fields: [core_moderators_permissions.userId],
-      references: [core_users.id],
-    }),
-  }),
 );
