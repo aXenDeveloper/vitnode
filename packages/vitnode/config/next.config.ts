@@ -5,6 +5,8 @@ const withNextIntl = createNextIntlPlugin("./src/vitnode.config.ts");
 
 export const vitNodeNextConfig = (config: NextConfig): NextConfig =>
   withNextIntl({
+    cacheComponents: true,
+    partialPrefetching: true,
     ...config,
     serverExternalPackages: [
       ...(config.serverExternalPackages ?? []),

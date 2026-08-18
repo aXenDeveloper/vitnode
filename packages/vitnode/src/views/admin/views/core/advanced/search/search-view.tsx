@@ -165,7 +165,7 @@ export const SearchAdminViewSkeleton = () => (
     </div>
     <Card>
       <CardContent>
-        <DataTableSkeleton columns={5} />
+        <DataTableSkeleton columns={5} toolbar />
       </CardContent>
     </Card>
   </div>

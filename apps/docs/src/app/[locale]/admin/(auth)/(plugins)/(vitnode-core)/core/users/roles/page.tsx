@@ -48,7 +48,7 @@ export default async function Page(
           {canCreate && <ActionsRolesAdmin />}
         </HeaderContent>
 
-        <React.Suspense fallback={<DataTableSkeleton columns={2} />}>
+        <React.Suspense fallback={<DataTableSkeleton columns={2} toolbar />}>
           <RolesAdminView {...props} />
         </React.Suspense>
       </div>

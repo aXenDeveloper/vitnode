@@ -4,11 +4,13 @@ import type { FilterDataTable } from "./filters";
 import type { PaginationDataTable } from "./pagination";
 import type { SearchDataTable } from "./search";
 
+import { cn } from "../../lib/utils";
 import { ErrorView } from "../../views/error/error-view";
 import { Skeleton } from "../ui/skeleton";
 import {
   Table,
   TableBody,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -49,58 +51,90 @@ interface DisplayColumnDef<T extends DataTableTMin> extends ColumnDefBase<T> {
 export type ColumnDef<T extends DataTableTMin> =
   AccessorColumnDef<T> | DisplayColumnDef<T>;
 
-export const DataTableSkeleton = ({ columns }: { columns: number }) => {
-  const headerIds = React.useMemo(
-    () =>
-      Array.from({ length: columns }).map(
-        // eslint-disable-next-line react-hooks/purity
-        () => `s-head-${Math.random().toString(36).slice(2, 9)}`,
-      ),
-    [columns],
-  );
+/** Widths the placeholder cells cycle through, so a loading table does not read as one grey block. */
+const SKELETON_HEAD_WIDTHS = ["w-24", "w-16", "w-20", "w-14"];
+const SKELETON_CELL_WIDTHS = ["w-full", "w-3/4", "w-1/2", "w-5/6", "w-2/3"];
 
-  const rowIds = React.useMemo(
-    () =>
-      Array.from({ length: 6 }).map(
-        // eslint-disable-next-line react-hooks/purity
-        () => `s-row-${Math.random().toString(36).slice(2, 9)}`,
-      ),
-    [],
-  );
+/**
+ * Placeholder for a `DataTable` that has not streamed in yet.
+ *
+ * Mirrors `ContentDataTable`'s markup - the same toolbar row, the same bordered
+ * table with a `bg-card` head, the same pagination footer - so the real table
+ * replaces it in place instead of shifting the page around it.
+ */
+export const DataTableSkeleton = ({
+  columns,
+  rows = 6,
+  toolbar = false,
+}: {
+  columns: number;
+  /** Rows to draw. Defaults to a page that is neither empty nor full. */
+  rows?: number;
+  /** Draw the search / filters row, for the tables that render one. */
+  toolbar?: boolean;
+}) => {
+  const headerIds = Array.from({ length: columns }, (_, i) => `s-head-${i}`);
+  const rowIds = Array.from({ length: rows }, (_, i) => `s-row-${i}`);
 
   return (
     <div className="space-y-4">
+      {toolbar && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex-1">
+            <Skeleton className="h-9 w-full" />
+          </div>
+        </div>
+      )}
+
       <div className="[&>div]:rounded-md [&>div]:border">
         <Table className="min-w-full">
-          <TableHeader>
+          <TableHeader className="bg-card">
             <TableRow>
-              {headerIds.map(hid => (
-                <TableHead className="px-4 py-3" key={hid}>
-                  <Skeleton className="h-4 w-24" />
+              {headerIds.map((hid, i) => (
+                <TableHead key={hid}>
+                  <Skeleton
+                    className={cn(
+                      "h-4",
+                      SKELETON_HEAD_WIDTHS[i % SKELETON_HEAD_WIDTHS.length],
+                    )}
+                  />
                 </TableHead>
               ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rowIds.map(rid => (
-              <TableRow key={rid}>
-                {headerIds.map((_, j) => {
-                  const cellId = `s-cell-${rid}-${j}`;
-
-                  return (
-                    <td className="px-4 py-3" key={cellId}>
-                      <Skeleton className="h-4 w-full" />
-                    </td>
-                  );
-                })}
+            {rowIds.map((rid, i) => (
+              // `h-9` is a floor, not a cap: it holds the row at the height a
+              // row of text-sm cells settles on once the data arrives.
+              <TableRow className="h-9" key={rid}>
+                {headerIds.map((hid, j) => (
+                  <TableCell key={`${rid}-${hid}`}>
+                    <Skeleton
+                      className={cn(
+                        "h-4",
+                        SKELETON_CELL_WIDTHS[
+                          (i + j) % SKELETON_CELL_WIDTHS.length
+                        ],
+                      )}
+                    />
+                  </TableCell>
+                ))}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
 
-      <div className="flex justify-end">
-        <Skeleton className="h-8 w-32" />
+      {/* The shape `PaginationDataTable` takes: page size, then prev / next. */}
+      <div className="flex w-full flex-col-reverse items-center justify-end gap-4 overflow-auto p-1 sm:flex-row sm:gap-8">
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 lg:gap-8">
+          <Skeleton className="h-8 w-[4.5rem]" />
+
+          <div className="flex items-center space-x-2">
+            <Skeleton className="size-8" />
+            <Skeleton className="size-8" />
+          </div>
+        </div>
       </div>
     </div>
   );

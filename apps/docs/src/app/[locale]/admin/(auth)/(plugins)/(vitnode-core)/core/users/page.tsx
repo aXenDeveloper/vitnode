@@ -46,7 +46,7 @@ export default async function Page(
           {canCreate && <CreateUserAdmin />}
         </HeaderContent>
 
-        <React.Suspense fallback={<DataTableSkeleton columns={2} />}>
+        <React.Suspense fallback={<DataTableSkeleton columns={2} toolbar />}>
           <UsersAdminView {...props} />
         </React.Suspense>
       </div>

@@ -3,13 +3,13 @@ import { DiscordSSOApiPlugin } from "@vitnode/core/api/adapters/sso/discord";
 // import { ResendEmailAdapter } from "@vitnode/resend";
 import { FacebookSSOApiPlugin } from "@vitnode/core/api/adapters/sso/facebook";
 import { GoogleSSOApiPlugin } from "@vitnode/core/api/adapters/sso/google";
+import { coreRelations } from "@vitnode/core/database/relations";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
 import { exampleApiPlugin } from "@vitnode/example/config.api";
 import { NodeCronAdapter } from "@vitnode/node-cron";
 import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
 // import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";
 import { SupabaseStorageAdapter } from "@vitnode/supabase-storage";
-import { coreRelations } from "@vitnode/core/database/relations";
 import { drizzle } from "drizzle-orm/postgres-js";
 
 import { i18n } from "./i18n";

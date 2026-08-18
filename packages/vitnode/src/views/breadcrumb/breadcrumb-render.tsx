@@ -8,6 +8,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
@@ -56,3 +57,25 @@ export const BreadcrumbRender = ({
     </Breadcrumb>
   );
 };
+
+/**
+ * Placeholder trail for a breadcrumb that resolves its labels from the URL.
+ *
+ * Built from the same list and separators as {@link BreadcrumbRender} so the
+ * crumbs land on the row they will occupy once they arrive, rather than moving
+ * the header's contents when the boundary resolves.
+ */
+export const BreadcrumbSkeleton = ({ crumbs = 2 }: { crumbs?: number }) => (
+  <Breadcrumb>
+    <BreadcrumbList className="flex-nowrap whitespace-nowrap">
+      {Array.from({ length: crumbs }, (_, index) => (
+        <Fragment key={`skeleton-crumb-${index}`}>
+          {index > 0 && <BreadcrumbSeparator />}
+          <BreadcrumbItem>
+            <Skeleton className="h-4 w-20" />
+          </BreadcrumbItem>
+        </Fragment>
+      ))}
+    </BreadcrumbList>
+  </Breadcrumb>
+);

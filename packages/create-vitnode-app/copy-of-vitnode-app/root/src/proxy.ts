@@ -1,12 +1,8 @@
-import createMiddleware from "next-intl/middleware";
+import { createVitNodeProxy } from "@vitnode/core/lib/i18n/proxy";
 
-import { vitNodeConfig } from "./vitnode.config";
+import { i18n } from "./i18n";
 
-export default createMiddleware({
-  locales: vitNodeConfig.i18n.locales.map(locale => locale.code),
-  defaultLocale: vitNodeConfig.i18n.defaultLocale,
-  localePrefix: vitNodeConfig.i18n.localePrefix,
-});
+export default createVitNodeProxy(i18n);
 
 export const config = {
   matcher: [

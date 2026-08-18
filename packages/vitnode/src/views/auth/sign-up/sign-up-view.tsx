@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import React from "react";
 
 import { Card, CardDescription } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getMiddlewareApi } from "@/lib/api/get-middleware-api";
 import { Link } from "@/lib/navigation";
 
@@ -10,11 +11,34 @@ import { SSOButtons, SSOButtonsSkeleton } from "../sso/buttons/sso-buttons";
 import { FormSignUp } from "./form/form";
 import { WrapperSignUp } from "./wrapper";
 
+const SignUpForm = async () => {
+  const { isEmail, captcha } = await getMiddlewareApi();
+
+  return <FormSignUp captcha={captcha} isEmail={isEmail} />;
+};
+
+const SignUpFormSkeleton = () => (
+  <div className="space-y-8">
+    {[0, 1, 2].map(field => (
+      <div className="space-y-2" key={field}>
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-9 w-full" />
+      </div>
+    ))}
+
+    <div className="flex gap-2">
+      <Skeleton className="size-4 shrink-0" />
+      <Skeleton className="h-4 w-48" />
+    </div>
+
+    <Skeleton className="h-9 w-full" />
+  </div>
+);
+
 export const SignUpView = async () => {
-  const [t, tGlobal, { isEmail, captcha }] = await Promise.all([
+  const [t, tGlobal] = await Promise.all([
     getTranslations("core.auth.sign_up"),
     getTranslations("core.global"),
-    getMiddlewareApi(),
   ]);
 
   return (
@@ -29,7 +53,10 @@ export const SignUpView = async () => {
                 </h1>
                 <CardDescription>{t("desc")}</CardDescription>
               </div>
-              <FormSignUp captcha={captcha} isEmail={isEmail} />
+
+              <React.Suspense fallback={<SignUpFormSkeleton />}>
+                <SignUpForm />
+              </React.Suspense>
 
               <React.Suspense fallback={<SSOButtonsSkeleton />}>
                 <SSOButtons />

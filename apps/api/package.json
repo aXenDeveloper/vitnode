@@ -29,7 +29,7 @@
     "drizzle-kit": "1.0.0-rc.4",
     "drizzle-orm": "1.0.0-rc.4",
     "hono": "^4.12.31",
-    "next-intl": "^4.13.3",
+    "next-intl": "^4.13.7",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "ws": "^8.21.1",

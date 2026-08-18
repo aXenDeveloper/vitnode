@@ -21,10 +21,6 @@ import type {
 } from "./lib/i18n/types";
 import type { BuildPluginReturn } from "./lib/plugin";
 
-import { CONFIG_PLUGIN } from "./config";
-import { loadMessages } from "./lib/i18n/load-messages";
-import { buildMessagesSources } from "./lib/i18n/sources";
-
 export type { LocaleConfig };
 
 export interface VitNodeConfig<
@@ -191,37 +187,3 @@ export const getVitNodeConfig = (): VitNodeConfig => {
 export function buildApiConfig(args: VitNodeApiConfig): VitNodeApiConfig {
   return args;
 }
-
-export const handleRequestConfig = async ({
-  requestLocale,
-  vitNodeConfig,
-}: {
-  requestLocale: Promise<string | undefined>;
-  vitNodeConfig: VitNodeConfig;
-}) => {
-  const reqLocale = await requestLocale;
-  const localeCodes = vitNodeConfig.i18n.locales.map(locale => locale.code);
-  const locale =
-    reqLocale && localeCodes.includes(reqLocale)
-      ? reqLocale
-      : vitNodeConfig.i18n.defaultLocale;
-
-  const sources = buildMessagesSources({
-    appMessages: vitNodeConfig.i18n.messages,
-    plugins: vitNodeConfig.plugins,
-  });
-
-  return {
-    locale,
-    messages: await loadMessages({
-      defaultLocale: vitNodeConfig.i18n.defaultLocale,
-      locale,
-      sources,
-    }),
-    pluginIds: [
-      CONFIG_PLUGIN.pluginId,
-      ...vitNodeConfig.plugins.map(plugin => plugin.pluginId),
-    ],
-    timeZone: vitNodeConfig.i18n.timeZone,
-  };
-};

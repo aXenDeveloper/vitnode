@@ -5,12 +5,11 @@ import { and, count, eq, inArray, sql } from "drizzle-orm";
 
 import type { RegisteredContentModel } from "./model";
 
-import { contentDefinitionOf } from "./model";
-
 import { core_content_schedules } from "../../database/content";
 import { core_search_index } from "../../database/search";
 import { normalizeContentLocale } from "../locale";
 import { listContentLanguages } from "./language-resolver";
+import { contentDefinitionOf } from "./model";
 import {
   contentTranslationPublicationColumns,
   publicationColumns,

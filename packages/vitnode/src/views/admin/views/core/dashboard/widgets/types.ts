@@ -21,6 +21,17 @@ export interface DashboardLayoutItem extends AdminDashboardWidgetLayoutItem {
 }
 
 /**
+ * The dashboard's own heading, resolved above the board's `<Suspense>`
+ * boundary so the fallback and the board render the same one. The board cannot
+ * own it: `DashboardEditActions` sits in its action slot and reads the board's
+ * context, so a fallback rendering the header alone would throw.
+ */
+export interface DashboardHeaderContent {
+  desc: React.ReactNode;
+  h1: React.ReactNode;
+}
+
+/**
  * The heading a widget sits under in the panel: either a category its own
  * plugin defined, or - by default - the plugin itself.
  */

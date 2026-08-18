@@ -90,6 +90,7 @@ export const SearchAdminDialog = ({
 
   const [query, setQuery] = React.useState("");
   const [usersQuery, setUsersQuery] = React.useState("");
+  const isOpen = React.useDeferredValue(open, false);
 
   const debounceUsersQuery = useDebouncedCallback(
     setUsersQuery,
@@ -106,7 +107,9 @@ export const SearchAdminDialog = ({
 
   const trimmedUsersQuery = usersQuery.trim();
   const canSearchUsers =
-    open && canViewUsers && trimmedUsersQuery.length >= MIN_USERS_QUERY_LENGTH;
+    isOpen &&
+    canViewUsers &&
+    trimmedUsersQuery.length >= MIN_USERS_QUERY_LENGTH;
 
   const { data: users, isFetching: isFetchingUsers } = useQuery({
     queryKey: ["admin-search-users", trimmedUsersQuery],
@@ -185,7 +188,7 @@ export const SearchAdminDialog = ({
           push(href);
         }
       }}
-      open={open}
+      open={isOpen}
       title={t("search.title")}
     >
       <Command label={t("search.title")} shouldFilter={false}>

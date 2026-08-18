@@ -1,8 +1,11 @@
 import type { Metadata } from "next/dist/types";
 
+import React from "react";
+
 import {
   ContentAdminView,
   type ContentAdminViewProps,
+  ContentAdminViewSkeleton,
   getContentLabels,
   resolveContentType,
 } from "@vitnode/core/views/admin/views/content/content-admin-view";
@@ -19,5 +22,9 @@ export const generateMetadata = async ({
 };
 
 export default function ContentAdminPage(props: ContentAdminViewProps) {
-  return <ContentAdminView {...props} />;
+  return (
+    <React.Suspense fallback={<ContentAdminViewSkeleton />}>
+      <ContentAdminView {...props} />
+    </React.Suspense>
+  );
 }
