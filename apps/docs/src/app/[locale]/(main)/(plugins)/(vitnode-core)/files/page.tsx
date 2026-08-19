@@ -14,6 +14,8 @@ const MyFilesTableView = dynamic(async () =>
   })),
 );
 
+export const instant = false;
+
 export const generateMetadata = async () => {
   const t = await getTranslations("core.files");
 
@@ -41,7 +43,7 @@ export default async function Page(
       <div className="container mx-auto space-y-6 p-4">
         <HeaderContent desc={t("desc")} h1={t("title")} />
 
-        <React.Suspense fallback={<DataTableSkeleton columns={7} />}>
+        <React.Suspense fallback={<DataTableSkeleton columns={7} toolbar />}>
           <MyFilesTableView {...props} />
         </React.Suspense>
       </div>

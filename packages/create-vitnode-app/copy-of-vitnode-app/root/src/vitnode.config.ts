@@ -1,5 +1,8 @@
-import { buildConfig, handleRequestConfig } from "@vitnode/core/vitnode.config";
+import { handleRequestConfig } from "@vitnode/core/lib/i18n/request-config";
+import { buildConfig } from "@vitnode/core/vitnode.config";
 import { getRequestConfig } from "next-intl/server";
+
+import { i18n } from "./i18n";
 
 export const vitNodeConfig = buildConfig({
   metadata: {
@@ -7,15 +10,7 @@ export const vitNodeConfig = buildConfig({
     shortTitle: "VitNode",
   },
   plugins: [],
-  i18n: {
-    locales: [
-      {
-        code: "en",
-        name: "English",
-      },
-    ],
-    defaultLocale: "en",
-  },
+  i18n,
   theme: {
     defaultTheme: "light",
   },
@@ -23,9 +18,9 @@ export const vitNodeConfig = buildConfig({
 
 // This is the request config for the app. It will be used in the app router.
 export default getRequestConfig(
-  async ({ requestLocale }) =>
+  async params =>
     await handleRequestConfig({
-      requestLocale,
+      params,
       vitNodeConfig,
     }),
 );

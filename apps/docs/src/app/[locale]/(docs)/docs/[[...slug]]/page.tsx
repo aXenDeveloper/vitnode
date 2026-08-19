@@ -1,25 +1,31 @@
 import type { Metadata } from "next";
 
-import { redirect } from "@vitnode/core/lib/navigation";
+import { Skeleton } from "@vitnode/core/components/ui/skeleton";
 import { getBreadcrumbItems } from "fumadocs-core/breadcrumb";
 import { Step, Steps } from "fumadocs-ui/components/steps";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import { DocsBody, DocsPage } from "fumadocs-ui/page";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 import { Preview } from "@/components/fumadocs/preview";
 import { source } from "@/lib/source";
 
 import { ViewOptions } from "./page.client";
 
-export default async function Page(
-  props: PageProps<"/[locale]/docs/[[...slug]]">,
-) {
-  const params = await props.params;
-  if (!params.slug) {
-    await redirect("/docs/dev");
-  }
-  const page = source.getPage(params.slug);
+/**
+ * Everything on a docs page comes from the slug - title, description, table of
+ * contents and body - so this is where `params` is read.
+ *
+ * Reading it here instead of in the page body is what keeps the fumadocs
+ * sidebar and nav in the App Shell: they are identical for every docs URL, so
+ * one prefetch is shared across every link and only this region streams.
+ */
+async function DocsArticle({
+  params,
+}: Pick<PageProps<"/[locale]/docs/[[...slug]]">, "params">) {
+  const { slug } = await params;
+  const page = source.getPage(slug);
   if (!page) notFound();
   const MDX = page.data.body;
 
@@ -53,9 +59,44 @@ export default async function Page(
   );
 }
 
-// export function generateStaticParams() {
-//   return source.generateParams();
-// }
+/**
+ * Mirrors the article's own layout - heading, description, then body copy - so
+ * the swap to real content doesn't shift the page.
+ */
+const DocsArticleSkeleton = () => (
+  <DocsPage tableOfContent={{ style: "clerk", single: false }} toc={[]}>
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <Skeleton className="h-10 w-2/3" />
+        <Skeleton className="h-9 w-28" />
+      </div>
+      <Skeleton className="h-6 w-full max-w-lg" />
+    </div>
+
+    <DocsBody>
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="mt-8 h-6 w-1/3" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-11/12" />
+      </div>
+    </DocsBody>
+  </DocsPage>
+);
+
+export default function Page(props: PageProps<"/[locale]/docs/[[...slug]]">) {
+  return (
+    <Suspense fallback={<DocsArticleSkeleton />}>
+      <DocsArticle params={props.params} />
+    </Suspense>
+  );
+}
+
+export function generateStaticParams() {
+  return source.generateParams();
+}
 
 export async function generateMetadata(props: {
   params: Promise<{ slug?: string[] }>;

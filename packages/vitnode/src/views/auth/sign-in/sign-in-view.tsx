@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import React from "react";
 
 import { Card, CardDescription } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getMiddlewareApi } from "@/lib/api/get-middleware-api";
 import { Link } from "@/lib/navigation";
 
@@ -9,11 +10,32 @@ import { I18nProvider } from "../../../components/i18n-provider";
 import { SSOButtons, SSOButtonsSkeleton } from "../sso/buttons/sso-buttons";
 import { FormSignIn } from "./form/form";
 
+const SignInForm = async () => {
+  const { isEmail } = await getMiddlewareApi();
+
+  return <FormSignIn isEmail={isEmail} />;
+};
+
+const SignInFormSkeleton = () => (
+  <div className="space-y-8">
+    <div className="space-y-2">
+      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-9 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Skeleton className="h-4 w-24" />
+      <Skeleton className="h-9 w-full" />
+    </div>
+
+    <Skeleton className="h-9 w-full" />
+  </div>
+);
+
 export const SignInView = async () => {
-  const [t, tGlobal, { isEmail }] = await Promise.all([
+  const [t, tGlobal] = await Promise.all([
     getTranslations("core.auth.sign_in"),
     getTranslations("core.global"),
-    getMiddlewareApi(),
   ]);
 
   return (
@@ -27,7 +49,10 @@ export const SignInView = async () => {
               </h1>
               <CardDescription>{t("desc")}</CardDescription>
             </div>
-            <FormSignIn isEmail={isEmail} />
+
+            <React.Suspense fallback={<SignInFormSkeleton />}>
+              <SignInForm />
+            </React.Suspense>
 
             <React.Suspense fallback={<SSOButtonsSkeleton />}>
               <SSOButtons />

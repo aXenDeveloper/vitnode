@@ -5,6 +5,8 @@ import {
 
 import { vitNodeConfig } from "@/vitnode.config";
 
+export const instant = false;
+
 export default function Layout(props: AdminLayoutProps) {
   return <AdminLayout vitNodeConfig={vitNodeConfig} {...props} />;
 }

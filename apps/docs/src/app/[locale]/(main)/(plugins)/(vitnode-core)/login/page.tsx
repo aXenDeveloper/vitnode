@@ -4,13 +4,8 @@ import { getTranslations } from "next-intl/server";
 
 import { SignInView } from "@vitnode/core/views/auth/sign-in/sign-in-view";
 
-export const generateMetadata = async ({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}): Promise<Metadata> => {
-  const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "core.global" });
+export const generateMetadata = async (): Promise<Metadata> => {
+  const t = await getTranslations("core.global");
 
   return {
     title: t("login"),

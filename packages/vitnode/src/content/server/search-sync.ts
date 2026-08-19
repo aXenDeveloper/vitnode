@@ -6,8 +6,6 @@ import { eq } from "drizzle-orm";
 import type { AnyContentTypeDefinition } from "../types";
 import type { AnyContentModel } from "./model";
 
-import { contentDefinitionOf } from "./model";
-
 import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
 import {
@@ -16,6 +14,7 @@ import {
   contentSearchIndexedPaths,
 } from "../search";
 import { listContentLanguages } from "./language-resolver";
+import { contentDefinitionOf } from "./model";
 import {
   contentSearchDocument,
   contentTranslationSearchDocument,

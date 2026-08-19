@@ -8,6 +8,7 @@ import type { ContentAdminRoute } from "@/content/admin/route";
 import { I18nProvider } from "@/components/i18n-provider";
 import { DataTableSkeleton } from "@/components/table/data-table";
 import { HeaderContent } from "@/components/ui/header-content";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   findFrontendContentType,
   findFrontendContentTypeByAdminPath,
@@ -36,13 +37,6 @@ export interface ContentAdminViewProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-/**
- * Resolves what the catch-all slug was asking for: which content type, and
- * whether it wants the list, the create page or an edit page.
- *
- * Shared with `generateMetadata` and the breadcrumb slot, so all three agree
- * about a URL rather than each parsing it their own way.
- */
 export const resolveContentRoute = async (
   params: ContentAdminViewProps["params"],
 ): Promise<
@@ -183,7 +177,12 @@ const ContentListView = async ({
       </HeaderContent>
 
       <React.Suspense
-        fallback={<DataTableSkeleton columns={columnSpecs.length + 1} />}
+        fallback={
+          <DataTableSkeleton
+            columns={columnSpecs.length + 1}
+            toolbar={definition.admin.list.searchableFields.length > 0}
+          />
+        }
       >
         <ContentTableView
           columnSpecs={columnSpecs}
@@ -197,14 +196,6 @@ const ContentListView = async ({
   );
 };
 
-/**
- * One route, three screens.
- *
- * `/admin/content/blog/articles` is the list, `.../create` and `.../42/edit` are the
- * generated form pages - and the last two exist only for a content type that
- * opted into `admin.create.mode` / `admin.edit.mode` of `page`, so nothing about
- * an existing content type moves.
- */
 export const ContentAdminView = async ({
   params,
   searchParams,
@@ -213,13 +204,6 @@ export const ContentAdminView = async ({
   if (!route) notFound();
 
   return (
-    // The owning plugin's namespace travels with `core.content`, because a
-    // plugin's overrides are client components that translate themselves: a
-    // `forms.layout`, a field component and a column cell each call
-    // `useTranslations("@vitnode/blog.…")`, and `I18nProvider` ships only the
-    // namespaces it is handed. Without this every one of them is a
-    // `MISSING_MESSAGE` the moment it renders - and the plugin id *is* the
-    // top-level messages key, so there is nothing for an author to declare.
     <I18nProvider
       namespaces={["core.content"]}
       runtimeNamespaces={[route.entry.pluginId]}
@@ -234,3 +218,24 @@ export const ContentAdminView = async ({
     </I18nProvider>
   );
 };
+
+export const ContentAdminViewSkeleton = () => (
+  <div className="p-4">
+    <HeaderContent
+      desc={
+        <span className="flex h-6 items-center">
+          <Skeleton className="h-4 w-80 max-w-full" />
+        </span>
+      }
+      h1={
+        <span className="flex h-8 items-center sm:h-9">
+          <Skeleton className="h-5 w-56 max-w-full sm:h-6" />
+        </span>
+      }
+    >
+      <Skeleton className="h-9 w-full sm:w-36" />
+    </HeaderContent>
+
+    <DataTableSkeleton columns={4} />
+  </div>
+);

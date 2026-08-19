@@ -1,5 +1,4 @@
 import type { BuildModuleReturn } from "../../api/lib/module";
-import type { AnyContentTypeDefinition } from "../types";
 import type { AnyContentModel } from "./model";
 
 import { buildModule } from "../../api/lib/module";

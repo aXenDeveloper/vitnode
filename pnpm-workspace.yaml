@@ -62,3 +62,7 @@ minimumReleaseAgeExclude:
   - '@next/swc-win32-arm64-msvc@16.3.0-preview.9'
   - '@next/swc-win32-x64-msvc@16.3.0-preview.9'
   - next@16.3.0-preview.9
+  - icu-minify@4.13.7
+  - next-intl-swc-plugin-extractor@4.13.7
+  - next-intl@4.13.7
+  - use-intl@4.13.7

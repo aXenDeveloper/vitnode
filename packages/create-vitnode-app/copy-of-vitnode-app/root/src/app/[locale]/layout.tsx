@@ -7,6 +7,7 @@ import {
   RootLayout,
   type RootLayoutProps,
 } from "@vitnode/core/views/layouts/root-layout";
+import { getLocale } from "next-intl/server";
 import { Geist } from "next/font/google";
 
 import { vitNodeConfig } from "@/vitnode.config";
@@ -22,7 +23,7 @@ const geist = Geist({
 });
 
 export default async function Layout(props: RootLayoutProps) {
-  const { locale } = await props.params;
+  const locale = await getLocale();
 
   return (
     <html lang={locale} suppressHydrationWarning>

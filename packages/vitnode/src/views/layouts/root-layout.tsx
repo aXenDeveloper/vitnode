@@ -1,8 +1,6 @@
 import type { Metadata } from "next/dist/types";
 import type React from "react";
 
-import { setRequestLocale } from "next-intl/server";
-
 import type { VitNodeConfig } from "@/vitnode.config";
 
 import { I18nProvider } from "@/components/i18n-provider";
@@ -12,7 +10,13 @@ import { RootProvider } from "./provider";
 
 export interface RootLayoutProps {
   children: React.ReactNode;
-  params: Promise<{
+  /**
+   * Still handed over by Next, and still spread through by app layouts, but no
+   * longer read here: the locale now comes from `next/root-params` via the
+   * next-intl request config. Optional so a layout that has stopped destructuring
+   * it type-checks.
+   */
+  params?: Promise<{
     locale: string;
   }>;
 }
@@ -28,16 +32,12 @@ export const generateMetadataRootLayout = ({
   };
 };
 
-export const RootLayout = async ({
+export const RootLayout = ({
   children,
-  params,
   config,
 }: RootLayoutProps & {
   config: VitNodeConfig;
 }) => {
-  const { locale } = await params;
-  setRequestLocale(locale);
-
   return (
     <I18nProvider namespaces={[]}>
       <RootProvider
