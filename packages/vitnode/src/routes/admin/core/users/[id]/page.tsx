@@ -59,13 +59,17 @@ const DynamicMarker = async () => {
   return null;
 };
 
-export default async function Page({
+const ShowUserAdmin = async ({
   params,
 }: {
   params: Promise<{ id: string }>;
-}) {
+}) => {
   const { id } = await params;
 
+  return <ShowUserAdminView id={id} />;
+};
+
+export default function Page({ params }: { params: Promise<{ id: string }> }) {
   return (
     <I18nProvider namespaces={["admin.user", "core.search"]}>
       <div className="p-4">
@@ -74,7 +78,7 @@ export default async function Page({
         </React.Suspense>
 
         <React.Suspense fallback={<Loader />}>
-          <ShowUserAdminView id={id} />
+          <ShowUserAdmin params={params} />
         </React.Suspense>
       </div>
     </I18nProvider>
