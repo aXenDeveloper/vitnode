@@ -1,5 +1,8 @@
+import { Suspense } from "react";
+
 import type { VitNodeConfig } from "@/vitnode.config";
 
+import { Skeleton } from "@/components/ui/skeleton";
 import { BreadcrumbRender } from "@/views/breadcrumb/breadcrumb-render";
 
 import type { NavAdminParent } from "../sidebar/nav/get-admin-nav";
@@ -24,7 +27,7 @@ export interface BreadcrumbAdminProps {
   vitNodeConfig?: VitNodeConfig;
 }
 
-export const BreadcrumbAdmin = async ({
+const BreadcrumbAdminResolved = async ({
   segments,
   vitNodeConfig,
   overrideLastLabel,
@@ -53,3 +56,15 @@ export const BreadcrumbAdmin = async ({
 
   return <BreadcrumbRender crumbs={crumbs} scrollable />;
 };
+
+/**
+ * The nav the crumbs are resolved from is permission-filtered, so building it
+ * reads the admin session. That read is kept behind this boundary rather than
+ * one in the layout: `@breadcrumb` is its own route segment, and a boundary
+ * above the segment does not make a navigation into it instant.
+ */
+export const BreadcrumbAdmin = (props: BreadcrumbAdminProps) => (
+  <Suspense fallback={<Skeleton className="h-4 w-40" />}>
+    <BreadcrumbAdminResolved {...props} />
+  </Suspense>
+);

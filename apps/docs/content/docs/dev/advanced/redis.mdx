@@ -55,6 +55,12 @@ REDIS_URL=redis://localhost:6379
 REDIS_PASSWORD=root
 ```
 
+<Callout type="info" title="Both processes read these">
+  The API takes its connection from `vitnode.api.config.ts`, but the [Next.js cache
+  handlers](#caching-nextjs-output) read these variables directly. If you run the
+  web app and the API as separate services, set them on both.
+</Callout>
+
 <Callout type="warn" title="Change the password in production">
   `root` is a convenience default for local development. Set a strong
   `REDIS_PASSWORD` in production.
@@ -189,6 +195,12 @@ export const postsRoute = buildRoute({
 
 ## Caching database queries
 
+<Callout type="info" title="Two caches, one request">
+  This page covers the cache *inside* the API. The Next.js cache in front of it
+  stores whole responses and is expired differently. [Cache](/docs/dev/cache)
+  covers both and how to choose between them.
+</Callout>
+
 The most useful method is `remember` - it runs your loader only on a cache
 miss, which is perfect for hot, rarely-changing data. Good candidates are
 reference data such as role-name translations or resolved staff permissions.
@@ -242,6 +254,109 @@ revoking an admin takes effect immediately - not when the cache expires.
   Without Redis - or if it becomes unreachable - every request falls back to the
   database exactly as before. Session caching only ever removes database load;
   it never changes what a request can see beyond the short TTL above.
+</Callout>
+
+## Staff permission caching
+
+Resolving what an admin or a moderator is allowed to do takes three queries: the
+user's roles, whether any of them is `root`, and the staff entries attached to
+that user or those roles. Every gated request runs it, and an AdminCP page that
+renders a dozen gated elements runs it a dozen times.
+
+**When `redis` is configured, VitNode caches the resolved set for you** - keyed
+per user and per kind, in the shared framework namespace, for at most 60 seconds.
+
+The TTL is a backstop rather than the mechanism: the routes that can change the
+answer expire the cache themselves, so a permission change is live immediately.
+
+- Editing a **staff entry attached to a user** clears that user's entry.
+- Editing a **role**, deleting one, or editing a **staff entry attached to a
+  role** moves a generation stamp that every key is built from, which expires
+  every user's cached set in a single write - the members of a role are not a set
+  a mutation can cheaply enumerate.
+- Changing a user's **primary or secondary roles** clears that user's entry.
+
+<Callout type="info" title="Safe without Redis">
+  Without Redis the read misses, the write is a no-op, and every request resolves
+  permissions from the database exactly as before.
+</Callout>
+
+## Caching Next.js output
+
+Everything above is the cache *inside* the API. Redis also backs the **Next.js**
+caches in the web process, so a cached page or `fetch` response is shared by
+every instance instead of being rebuilt once per container.
+
+**There is nothing to add to `next.config.ts`.** `vitNodeNextConfig` wires the
+handlers up when `REDIS_URL` is set - the same variable that turns Redis on for
+the API - because Next takes a cache handler as a module *path* and cannot be
+handed a config object:
+
+```ts title="src/next.config.ts"
+// Already all it takes - the handlers follow REDIS_URL.
+export default vitNodeNextConfig(nextConfig);
+```
+
+<Callout type="warn" title="The web process reads the environment directly">
+  The API gets its connection from `vitnode.api.config.ts`; the cache handlers
+  cannot - they are loaded by Next itself, outside your app's module graph. They
+  read `REDIS_URL` and `REDIS_PASSWORD` from the environment, so both must be set
+  wherever the **web** process runs, not only where the API runs. In a split
+  deployment that means adding them to the frontend service too.
+</Callout>
+
+### What each handler covers
+
+VitNode registers two, because Next has two caches and they are not the same one:
+
+<TypeTable
+  type={{
+    "cacheHandlers.default": {
+      description:
+        'Backs the `use cache` directive. Entries are stored whole in Redis, so they survive a restart and every instance reads the same one.',
+      type: "use cache",
+    },
+    cacheHandler: {
+      description:
+        "Backs the fetch Data Cache and the prerender store. `fetch` responses go to Redis; prerendered pages stay on each instance's disk, where the build put them.",
+      type: "Data Cache + ISR",
+    },
+  }}
+/>
+
+Prerendered pages are deliberately left on disk. A custom handler *replaces*
+Next's filesystem cache outright, and the pages `next build` produced only exist
+there - putting them in Redis would mean serving one deploy's HTML from another
+deploy's cache. Their payloads are also Next-internal structures that would need
+re-checking on every upgrade. The build output is identical on every instance
+anyway, so there is nothing to gain by sharing it.
+
+### Why it matters: shared invalidation
+
+The part that is genuinely broken without this is not speed, it is correctness.
+`updateTag` runs on whichever instance handled the Server Action. With per-process
+caches the other instances never hear about it and keep serving the old page until
+their own copies age out.
+
+Both handlers record every revalidation in Redis and check it on read, so an
+invalidation raised anywhere is seen everywhere - including for the prerendered
+pages that still live on local disk, which each instance then rebuilds for itself.
+
+### Behaviour and limits
+
+- **A cold start misses.** The connection is opened in the background and commands
+  fail fast until it is ready, so the first requests after a boot render normally.
+- **A Redis outage is a miss, never an error.** Reads fall through and writes are
+  dropped; pages render as if nothing were cached.
+- **Entries carry a TTL** so abandoned keys cannot accumulate: `use cache` entries
+  expire at their `cacheLife` `expire`, stored `fetch` responses after 7 days, and
+  revalidation markers after 30 days.
+- **Everything lives under `vitnode:next:`**, separate from the API's
+  `vitnode:cache:` namespace, so neither side can clear the other by accident.
+
+<Callout type="info" title="Opting out">
+  To use Redis for the API but keep Next on its built-in caches, override the two
+  keys after the wrapper: `vitNodeNextConfig({ cacheHandler: undefined, cacheHandlers: undefined })`.
 </Callout>
 
 ## Rate limiting with Redis

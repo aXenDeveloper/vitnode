@@ -15,7 +15,7 @@ import { Suspense } from "react";
 import { vitNodeConfig } from "@/vitnode.config";
 
 import SearchDialogFumadocs from "../../components/fumadocs/search-dialog";
-import { DocsModeSync } from "./layout.client";
+import { DocsModeScript, DocsModeSync } from "./layout.client";
 
 export const generateMetadata = (): Metadata =>
   generateMetadataRootLayout(vitNodeConfig);
@@ -27,16 +27,6 @@ const geist = Geist({
   subsets: ["latin"],
 });
 
-/**
- * Paints the docs section class on `<body>` before first paint.
- *
- * `<body>` cannot be wrapped in `<Suspense>`, so the class cannot come from a
- * `useParams()` read during prerendering without making every route block.
- * Deriving it from `location.pathname` here keeps the shell static; the
- * `DocsModeSync` component below takes over for client navigations.
- */
-const docsModeScript = `(function(){var p=location.pathname.split("/"),i=p.indexOf("docs"),m=i<0?"":p[i+1];if(m)document.body.classList.add(m)})()`;
-
 export default async function Layout(props: RootLayoutProps) {
   const locale = await getLocale();
 
@@ -46,8 +36,7 @@ export default async function Layout(props: RootLayoutProps) {
         className={`${geist.className} antialiased`}
         suppressHydrationWarning
       >
-        {/* eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml */}
-        <script dangerouslySetInnerHTML={{ __html: docsModeScript }} />
+        <DocsModeScript />
         <Suspense>
           <DocsModeSync />
         </Suspense>

@@ -10,6 +10,7 @@ import {
 } from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
 import { staffPermissionKey } from "@/api/lib/staff-permission";
+import { invalidateStaffEntry } from "@/api/lib/staff-permission-cache";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
@@ -193,6 +194,8 @@ export const updatePermissionsStaffAdminRoute = buildRoute({
     if (!updated) {
       return c.json({ error: "Staff entry not found" }, 404);
     }
+
+    await invalidateStaffEntry(c, entry);
 
     return c.json({ unrestricted, permissions: sanitized }, 200);
   },

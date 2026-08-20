@@ -63,19 +63,41 @@ const response = await fetcher(categoriesAdminModule, {
 
 ### Caching Responses
 
-You can leverage Next.js caching by passing cache options:
+`fetcher()` forwards the incoming request's cookies and headers, which means two
+things at once: the API knows who is asking, and the call can never sit inside a
+`"use cache"` function. For a response that is the same for every visitor, reach
+for `coreFetcher` - the same typed interface without the request-bound headers -
+and cache that:
 
 ```ts
-const response = await fetcher(usersModule, {
-  path: '/session',
-  method: 'get',
-  module: 'users',
-  options: {
-    // [!code ++]
-    cache: 'force-cache', // Uses Next.js cache
-  },
-});
+import { coreFetcher } from '@vitnode/core/lib/fetcher/core';
+import { cacheLife, cacheTag } from 'next/cache';
+
+const getAnnouncements = async () => {
+  // [!code ++:3]
+  'use cache';
+  cacheLife('minutes');
+  cacheTag('announcements');
+
+  const response = await coreFetcher(announcementsModule, {
+    path: '/',
+    method: 'get',
+    module: 'announcements',
+  });
+
+  return await response.json();
+};
 ```
+
+<Callout type="warn" title="Not for per-visitor responses">
+  Do not reach for `options: { cache: 'force-cache' }` on a `fetcher()` call. It
+  stores the response in the Next.js Data Cache keyed by the request - cookie
+  included - with no expiry, so the visitor keeps being served their own data
+  from whenever it was first fetched. Use React's `cache()` for those instead.
+</Callout>
+
+See [Cache](/docs/dev/cache) for how to decide which of the two a given route is,
+and how to expire what you store.
 
 ### Cookie Management
 

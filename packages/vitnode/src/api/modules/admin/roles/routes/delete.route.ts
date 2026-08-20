@@ -2,6 +2,7 @@ import { z } from "@hono/zod-openapi";
 import { and, count, eq, inArray } from "drizzle-orm";
 
 import { buildRoute } from "@/api/lib/route";
+import { invalidateAllStaffPermissions } from "@/api/lib/staff-permission-cache";
 import { assertCanAssignPrimaryRole } from "@/api/modules/admin/users/lib/assert-edit-user-permission";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_languages_words } from "@/database/languages";
@@ -170,6 +171,10 @@ export const deleteRoleAdminRoute = buildRoute({
 
       await tx.delete(core_roles).where(eq(core_roles.id, roleId));
     });
+
+    // Every member of the deleted role was just reassigned, and the staff
+    // entries that pointed at it are gone with it.
+    await invalidateAllStaffPermissions(c);
 
     await c.get("events").emit("role.deleted", { roleId });
 

@@ -2,6 +2,7 @@ import { z } from "@hono/zod-openapi";
 import { and, eq, inArray, ne } from "drizzle-orm";
 
 import { buildRoute } from "@/api/lib/route";
+import { invalidateStaffPermissionsForUser } from "@/api/lib/staff-permission-cache";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
@@ -226,6 +227,12 @@ export const updateUserAdminRoute = buildRoute({
       }
     }
 
+    // A role change moves which staff entries apply to this user, so their
+    // cached permission set has to go. Only this user's - the roles themselves
+    // are untouched, so everyone else's stays warm.
+    const rolesChanged =
+      body.roleId !== undefined || secondaryRoleIds !== undefined;
+
     if (Object.keys(values).length > 0) {
       const [updated] = await db
         .update(core_users)
@@ -237,6 +244,10 @@ export const updateUserAdminRoute = buildRoute({
           email: core_users.email,
           nameCode: core_users.nameCode,
         });
+
+      if (rolesChanged) {
+        await invalidateStaffPermissionsForUser(c, user.id);
+      }
 
       await c.get("events").emit("user.updated", {
         userId: updated.id,
@@ -258,6 +269,10 @@ export const updateUserAdminRoute = buildRoute({
       .from(core_users)
       .where(eq(core_users.id, user.id))
       .limit(1);
+
+    if (rolesChanged) {
+      await invalidateStaffPermissionsForUser(c, user.id);
+    }
 
     await c.get("events").emit("user.updated", {
       userId: current.id,

@@ -7,6 +7,7 @@ import {
   getUserRoleIds,
 } from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
+import { invalidateStaffEntry } from "@/api/lib/staff-permission-cache";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
@@ -98,6 +99,8 @@ export const deleteStaffAdminRoute = buildRoute({
     }
 
     await c.get("db").delete(table).where(eq(table.id, entryId));
+
+    await invalidateStaffEntry(c, entry);
 
     return c.body(null, 200);
   },

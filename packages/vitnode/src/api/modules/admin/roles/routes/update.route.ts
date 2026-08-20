@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/lib/route";
 import { saveLanguageWords } from "@/api/lib/save-language-words";
+import { invalidateAllStaffPermissions } from "@/api/lib/staff-permission-cache";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_roles } from "@/database/roles";
 
@@ -115,6 +116,10 @@ export const updateRoleAdminRoute = buildRoute({
         values: body.name,
       });
     }
+
+    // `root` is part of every permission resolution, so an edit here can change
+    // the answer for every member of this role at once.
+    await invalidateAllStaffPermissions(c);
 
     await c.get("events").emit("role.updated", { roleId });
 

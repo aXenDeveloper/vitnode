@@ -3,6 +3,7 @@ import { eq, or } from "drizzle-orm";
 
 import { assertStaffPermission } from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
+import { invalidateStaffEntry } from "@/api/lib/staff-permission-cache";
 import { CONFIG_PLUGIN } from "@/config";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
@@ -100,6 +101,8 @@ export const createStaffAdminRoute = buildRoute({
         userId: userId ?? null,
       })
       .returning({ id: table.id });
+
+    await invalidateStaffEntry(c, { roleId, userId });
 
     return c.json({ id: created.id }, 201);
   },

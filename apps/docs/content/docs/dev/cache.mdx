@@ -1,0 +1,183 @@
+---
+title: Cache
+description: Learn how caching works in VitNode across Next.js and Redis.
+---
+
+VitNode uses a simple two-layer caching model:
+
+1. **Next.js Cache (App)**: Caches rendered UI and public API responses.
+2. **Redis Cache (API)**: Caches database queries and heavy computations inside Hono route handlers.
+
+Caching is **opt-in**. Dynamic data stays fresh by default.
+
+---
+
+## App Caching (Next.js)
+
+### Public Data (`"use cache"`)
+
+For public data shared by all visitors (e.g. blog posts, site configuration), use Next.js `"use cache"`.
+
+Always use `coreFetcher` (which skips request cookies) and call `await connection()` so Next.js can prerender safely:
+
+```ts title="services/announcements.ts"
+import { coreFetcher } from '@vitnode/core/lib/fetcher/core';
+import { cacheLife, cacheTag } from 'next/cache';
+import { connection } from 'next/server';
+
+export const getAnnouncements = async (locale: string) => {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('announcements');
+  await connection();
+
+  const res = await coreFetcher(announcementsModule, {
+    module: 'announcements',
+    path: '/',
+    method: 'get',
+    args: { query: { lang: locale } },
+  });
+
+  return await res.json();
+};
+```
+
+Render cached data inside a `<Suspense>` boundary in your page:
+
+```tsx title="page.tsx"
+<React.Suspense fallback={<Skeleton className="h-64 w-full" />}>
+  <Announcements />
+</React.Suspense>
+```
+
+<Callout type="info" title="cacheLife Presets">
+  Common presets: `'seconds'`, `'minutes'`, `'hours'`, `'days'`, `'weeks'`, `'max'`, or custom `{ stale, revalidate, expire }`.
+</Callout>
+
+### Per-User Data (`React.cache`)
+
+Never cache user-specific data (such as sessions or permissions) with `"use cache"`.
+
+Instead, use React's `cache()` to deduplicate calls within a single render pass without sharing data between visitors:
+
+```ts title="services/profile.ts"
+import { fetcher } from '@vitnode/core/lib/fetcher';
+import { cache } from 'react';
+
+export const getMyProfile = cache(async () => {
+  const res = await fetcher(usersModule, {
+    module: 'users',
+    path: '/me',
+    method: 'get',
+  });
+
+  return await res.json();
+});
+```
+
+---
+
+## Invalidation APIs
+
+When data changes, expire the cached entries using the appropriate helper:
+
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+<TypeTable
+  type={{
+    "updateTag(tag)": {
+      description:
+        "Server Actions only. Instantly purges the tag and refreshes the current page (read-your-writes semantics).",
+      type: "void",
+    },
+    "revalidateTag(tag, profile)": {
+      description:
+        "Route Handlers, webhooks, or background jobs. Profile is required for SWR: revalidateTag('posts', 'max') or inline { revalidate: 3600 }.",
+      type: "void",
+    },
+    "refresh()": {
+      description:
+        "Server Actions only. Refreshes uncached dynamic data on the page without touching the cache.",
+      type: "void",
+    },
+  }}
+/>
+
+### Invalidation Example
+
+Call `updateTag` inside a Server Action after mutating data:
+
+```ts title="mutation-api.server.ts"
+'use server';
+
+import { fetcher } from '@vitnode/core/lib/fetcher';
+import { updateTag } from 'next/cache';
+
+export const publishAnnouncement = async (id: number) => {
+  const res = await fetcher(announcementsModule, {
+    module: 'announcements',
+    path: '/{id}/publish',
+    method: 'post',
+    args: { params: { id } },
+  });
+
+  // Purge the cache immediately
+  updateTag('announcements');
+
+  return await res.json();
+};
+```
+
+<Callout type="info" title="Content Engine">
+  Content Engine entries are automatically tagged and revalidated for you via `revalidateContent`. See [Content Engine Caching](/docs/dev/content-engine/public-api-and-caching).
+</Callout>
+
+---
+
+## Where the App cache is stored
+
+By default Next.js keeps `"use cache"` entries in a per-process memory cache and everything else on local disk. That is fine for one instance and wrong for several: an `updateTag` runs on whichever instance handled the Server Action, and the others keep serving what they already had.
+
+**Set `REDIS_URL` and VitNode swaps both Next.js cache handlers for Redis-backed ones.** No `next.config.ts` change is required - `vitNodeNextConfig` registers them:
+
+```ts title="src/next.config.ts"
+// Unchanged. The handlers follow REDIS_URL.
+export default vitNodeNextConfig(nextConfig);
+```
+
+What that buys you:
+
+- `"use cache"` entries are stored in Redis, so they survive restarts and rolling deploys and are shared between instances.
+- `fetch` Data Cache responses are shared too.
+- **Every tag revalidation is shared**, so `updateTag` on one instance invalidates all of them - including for prerendered pages, which stay on each instance's own disk and are rebuilt individually.
+
+<Callout type="warn" title="The web process needs the env vars">
+  The handlers are loaded by Next.js itself and read `REDIS_URL` / `REDIS_PASSWORD` straight from the environment - they cannot see `vitnode.api.config.ts`. In a split deployment, set them on the **frontend** service as well as the API.
+</Callout>
+
+See [Redis](/docs/dev/advanced/redis#caching-nextjs-output) for what each handler covers, TTLs, and how to opt out.
+
+## API Caching (Redis)
+
+Inside your Hono API route handlers, use `c.get("cache")` to store expensive query results in Redis:
+
+```ts title="plugins/stats/src/routes/stats.ts"
+// Cache result on miss for 5 minutes
+const stats = await c.get('cache').remember(
+  `stats:${containerId}`,
+  60 * 5, // TTL in seconds
+  async () => await calculateHeavyStats(c, containerId),
+);
+```
+
+### Invalidation
+
+Delete the key whenever the underlying record changes:
+
+```ts title="plugins/stats/src/routes/update.ts"
+await c.get('cache').delete(`stats:${containerId}`);
+```
+
+<Callout type="info" title="Optional Redis">
+  Redis is optional. If not configured, `c.get("cache")` gracefully acts as a no-op and runs the callback directly. See [Redis Setup](/docs/dev/advanced/redis).
+</Callout>

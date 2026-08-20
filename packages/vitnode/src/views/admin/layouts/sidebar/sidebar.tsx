@@ -10,15 +10,16 @@ import {
 } from "@/components/ui/sidebar";
 import { Link } from "@/lib/navigation";
 
-import type { NavAdminParent } from "./nav/nav";
-
-import { NavSidebarAdmin } from "./nav/nav";
-
+/**
+ * The sidebar frame. Takes the nav as `children` rather than building it, so the
+ * logo and the switchers can be prerendered while the permission-filtered nav
+ * streams into its own boundary.
+ */
 export const SidebarAdmin = ({
-  nav,
+  children,
   vitNodeConfig,
 }: {
-  nav: NavAdminParent[];
+  children: React.ReactNode;
   vitNodeConfig: VitNodeConfig;
 }) => {
   return (
@@ -34,9 +35,7 @@ export const SidebarAdmin = ({
         <ThemeSwitcher />
       </SidebarHeader>
 
-      <SidebarContent>
-        <NavSidebarAdmin nav={nav} />
-      </SidebarContent>
+      <SidebarContent>{children}</SidebarContent>
     </Sidebar>
   );
 };

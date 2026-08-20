@@ -145,18 +145,18 @@
   }
 }
 
-.dev {
+html.dev {
   --color-fd-primary: var(--dev-color);
 }
 
-.guides {
+html.guides {
   --color-fd-primary: var(--guides-color);
 }
 
-.plugins {
+html.plugins {
   --color-fd-primary: var(--plugins-color);
 }
 
-.ui {
+html.ui {
   --color-fd-primary: var(--ui-color);
 }
