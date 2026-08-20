@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { cronAdminModule } from "@/api/modules/admin/advanced/cron/cron.admin.module";
+import { expireCachePath } from "@/framework/cache";
 import { fetcher } from "@/lib/fetcher";
 
 export const mutationApi = async (id: number) => {
@@ -20,7 +19,7 @@ export const mutationApi = async (id: number) => {
     return { error: "Failed to run cron job" };
   }
 
-  revalidatePath(
+  expireCachePath(
     "[locale]/admin/(auth)/(plugins)/(vitnode-core)/core/advanced/cron",
   );
 };

@@ -1,8 +1,8 @@
 import "server-only";
-import { cacheLife, cacheTag } from "next/cache";
-import { connection } from "next/server";
 
 import { searchModule } from "@/api/modules/search/search.module";
+import { setCacheEntryLife, tagCacheEntry } from "@/framework/cache";
+import { awaitRequest } from "@/framework/request";
 import { SEARCH_FEED_TAG } from "@/lib/cache-tags";
 import { fetcher } from "@/lib/fetcher";
 import { coreFetcher } from "@/lib/fetcher/core";
@@ -31,8 +31,8 @@ const FEED_PAGE_SIZE = "20";
  */
 const fetchCachedFeed = async (locale: string): Promise<SearchFeedPage> => {
   "use cache";
-  cacheLife("minutes");
-  cacheTag(SEARCH_FEED_TAG);
+  setCacheEntryLife("minutes");
+  tagCacheEntry(SEARCH_FEED_TAG);
 
   const res = await coreFetcher(searchModule, {
     module: "search",
@@ -81,7 +81,7 @@ export const fetchSearchFeed = async ({
     return await fetchLiveFeed({ locale, search });
   }
 
-  await connection();
+  await awaitRequest();
 
   return await fetchCachedFeed(locale);
 };

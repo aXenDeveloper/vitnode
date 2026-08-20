@@ -2,11 +2,10 @@
 
 import type { z } from "zod";
 
-import { revalidatePath } from "next/cache";
-
 import type { zodCreateRoleAdminSchema } from "@/api/modules/admin/roles/routes/create.route";
 
 import { adminModule } from "@/api/modules/admin/admin.module";
+import { expireCachePath } from "@/framework/cache";
 import { fetcher } from "@/lib/fetcher";
 
 export const createRole = async (
@@ -25,7 +24,7 @@ export const createRole = async (
     return { error: await res.text() };
   }
 
-  revalidatePath("/[locale]/admin", "layout");
+  expireCachePath("/[locale]/admin", "layout");
 };
 
 export const editRole = async ({
@@ -46,5 +45,5 @@ export const editRole = async ({
     return { error: await res.text() };
   }
 
-  revalidatePath("/[locale]/admin", "layout");
+  expireCachePath("/[locale]/admin", "layout");
 };

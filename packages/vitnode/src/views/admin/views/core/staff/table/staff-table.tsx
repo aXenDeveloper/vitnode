@@ -1,6 +1,5 @@
 import { ShieldUserIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
 
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { staffPermissionModuleByType } from "@/api/modules/admin/staff/lib/schema";
@@ -8,6 +7,7 @@ import { DateFormat } from "@/components/date-format";
 import { RoleFormat } from "@/components/role-format";
 import { DataTable } from "@/components/table/data-table";
 import { Badge } from "@/components/ui/badge";
+import { notFound } from "@/framework/navigation";
 import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
 import { fetcher } from "@/lib/fetcher";
 

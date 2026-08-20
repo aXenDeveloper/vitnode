@@ -2,11 +2,10 @@
 
 import type { z } from "zod";
 
-import { revalidatePath } from "next/cache";
-
 import type { zodSignInSchema } from "@/api/modules/users/routes/sign-in.route";
 
 import { usersModule } from "@/api/modules/users/users.module";
+import { expireCachePath } from "@/framework/cache";
 import { fetcher } from "@/lib/fetcher";
 import { redirect } from "@/lib/navigation";
 
@@ -34,12 +33,12 @@ export const mutationApi = async (
   }
 
   if (input.isAdmin) {
-    revalidatePath("/[locale]/admin", "layout");
+    expireCachePath("/[locale]/admin", "layout");
     await redirect("/admin/core");
 
     return;
   }
 
-  revalidatePath("/[locale]/(main)", "layout");
+  expireCachePath("/[locale]/(main)", "layout");
   await redirect("/");
 };

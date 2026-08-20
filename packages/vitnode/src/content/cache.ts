@@ -1,3 +1,4 @@
+import type { CacheExpiryMode } from "../framework/cache/types";
 import type { ContentLocalizationFallback } from "./types";
 
 import { CONTENT_CACHE_TAG_MAX_LENGTH } from "./const";
@@ -127,12 +128,17 @@ export const contentDeliverySitemapTag = (
 /**
  * How hard a mutation expires the tags it touched.
  *
- * Lives here, in the client-safe layer, because the background
- * [bridge](./server/revalidate-bridge.ts) has to name a mode from a process
- * where `next/cache` cannot even be imported. `content/next` re-exports it, so
- * the public name has not moved.
+ * An alias of the framework-independent {@link CacheExpiryMode} rather than a
+ * union of its own, so the Content Engine and the cache API cannot drift into
+ * disagreeing about what a mode means - the bridge serialises this value into an
+ * HTTP body and the adapter on the other side switches on it.
+ *
+ * The name stays because it is public: `content/next` re-exports it, and the
+ * background [bridge](./server/revalidate-bridge.ts) names a mode from a process
+ * where `next/cache` cannot even be imported. Both still work, because the type
+ * it now points at is equally free of `next/*`.
  */
-export type ContentInvalidationMode = "immediate" | "stale-while-revalidate";
+export type ContentInvalidationMode = CacheExpiryMode;
 
 /**
  * One locale's share of a mutation.

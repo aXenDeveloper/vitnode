@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { filesAdminModule } from "@/api/modules/admin/files/files.admin.module";
+import { expireCachePath } from "@/framework/cache";
 import { fetcher } from "@/lib/fetcher";
 
 export const deleteFileAction = async ({
@@ -24,7 +23,7 @@ export const deleteFileAction = async ({
     return { error: { status: res.status } };
   }
 
-  revalidatePath("/[locale]/admin", "layout");
+  expireCachePath("/[locale]/admin", "layout");
 
   return { data: true };
 };

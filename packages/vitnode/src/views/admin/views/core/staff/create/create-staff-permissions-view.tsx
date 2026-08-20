@@ -1,12 +1,12 @@
 import { ArrowLeftIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
 
 import type { PermissionStaffType } from "@/api/lib/permission-staff";
 
 import { staffPermissionModuleByType } from "@/api/modules/admin/staff/lib/schema";
 import { Button } from "@/components/ui/button";
 import { HeaderContent } from "@/components/ui/header-content";
+import { notFound } from "@/framework/navigation";
 import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
 import { Link } from "@/lib/navigation";
 

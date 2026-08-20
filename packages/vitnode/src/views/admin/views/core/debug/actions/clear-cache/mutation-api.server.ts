@@ -1,7 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
+import { expireCachePath } from "@/framework/cache";
 import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
 
 export const clearCacheMutation = async () => {
@@ -14,5 +13,5 @@ export const clearCacheMutation = async () => {
     throw new Error("Forbidden");
   }
 
-  await Promise.resolve(revalidatePath("/", "layout"));
+  await Promise.resolve(expireCachePath("/", "layout"));
 };

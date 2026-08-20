@@ -1,6 +1,5 @@
 import { ExternalLinkIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
 
 import { hasStaffPermission } from "@/api/lib/staff-permission";
 import { adminModule } from "@/api/modules/admin/admin.module";
@@ -9,6 +8,7 @@ import { DateFormat } from "@/components/date-format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CONFIG_PLUGIN } from "@/config";
+import { notFound } from "@/framework/navigation";
 import { getSessionAdminApi } from "@/lib/api/get-session-admin-api";
 import { fetcher } from "@/lib/fetcher";
 import { Link } from "@/lib/navigation";

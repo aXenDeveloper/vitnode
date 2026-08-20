@@ -3,14 +3,17 @@
 import type { Metadata } from "next/dist/types";
 
 import { HomeIcon, RefreshCwIcon } from "lucide-react";
-// eslint-disable-next-line no-restricted-imports
-import Link from "next/link";
 import { useTransition } from "react";
 
 import { LogoVitNode } from "@/components/logo-vitnode";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+// `global-error` renders above the root layout, so it renders above the i18n
+// provider too - the locale-aware `Link` would throw looking for a context that
+// does not exist this high up. The unlocalized one renders the href verbatim,
+// and "/" is the only href on the page.
+import { UnlocalizedLink as Link } from "@/framework/navigation";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {

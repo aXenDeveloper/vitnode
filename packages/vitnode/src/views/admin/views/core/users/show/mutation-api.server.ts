@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { adminModule } from "@/api/modules/admin/admin.module";
+import { expireCachePath } from "@/framework/cache";
 import { fetcher } from "@/lib/fetcher";
 
 type MutationResult =
@@ -28,7 +27,7 @@ export const mutationApi = async (
   }
 
   const data = await res.json();
-  revalidatePath("/[locale]/admin", "layout");
+  expireCachePath("/[locale]/admin", "layout");
 
   return { data };
 };

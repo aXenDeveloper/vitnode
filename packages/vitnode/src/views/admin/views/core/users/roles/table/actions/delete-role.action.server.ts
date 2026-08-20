@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { adminModule } from "@/api/modules/admin/admin.module";
+import { expireCachePath } from "@/framework/cache";
 import { fetcher } from "@/lib/fetcher";
 
 export const deleteRole = async ({
@@ -29,7 +28,7 @@ export const deleteRole = async ({
     return { error: { status: res.status } };
   }
 
-  revalidatePath("/[locale]/admin", "layout");
+  expireCachePath("/[locale]/admin", "layout");
 
   return {};
 };

@@ -34,9 +34,16 @@ interface FetchArgs {
 const calls = vi.hoisted(() => [] as FetchArgs[]);
 
 vi.mock("server-only", () => ({}));
-vi.mock("next/headers", () => ({
-  cookies: async () => await Promise.resolve({ toString: () => "session=x" }),
-  headers: async () => await Promise.resolve(new Headers()),
+// The AdminCP fetcher reads the request through `framework/request`, whose
+// barrel installs the Next adapter on import. Stubbing the one helper it calls
+// keeps `next/headers` out of this suite entirely.
+vi.mock("@/framework/request", () => ({
+  forwardApiRequestHeaders: async () =>
+    await Promise.resolve({
+      Cookie: "session=x",
+      "user-agent": "node",
+      "x-forwarded-for": "0.0.0.0",
+    }),
 }));
 
 vi.mock("../../lib/fetcher/raw", () => ({

@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import type { ContentPublicLocaleState } from "@/content/cache";
@@ -35,6 +34,7 @@ import {
 } from "@/content/conflicts";
 import { CONTENT_OPTIONS_LIMIT } from "@/content/const";
 import { revalidateContent } from "@/content/next/revalidate.server";
+import { expireCachePath } from "@/framework/cache";
 
 import type { TranslationRow } from "./translation-api.server";
 
@@ -334,7 +334,7 @@ export const createContentAction = async (
 
   if (result.status !== 201) return failure(result);
 
-  revalidatePath(CONTENT_PAGE_PATH, "page");
+  expireCachePath(CONTENT_PAGE_PATH, "page");
   const created = result.data?.id ?? 0;
   // A new row starts as a draft, so this normally invalidates nothing at all -
   // it is computed rather than assumed, so the rule holds if that changes. The
@@ -378,7 +378,7 @@ export const editContentAction = async (
 
   if (result.status !== 200) return failure(result);
 
-  revalidatePath(CONTENT_PAGE_PATH, "page");
+  expireCachePath(CONTENT_PAGE_PATH, "page");
   invalidate(definition, id, before, result.data, {
     after: await readContentPublicLocales(definition, pluginId, id),
     before: localesBefore,
@@ -448,7 +448,7 @@ export const createLocalizedContentAction = async (
 
   if (result.status !== 201) return failure(result);
 
-  revalidatePath(CONTENT_PAGE_PATH, "page");
+  expireCachePath(CONTENT_PAGE_PATH, "page");
   const created = result.data?.id ?? 0;
   invalidate(definition, created, undefined, result.data, {
     after: await readContentPublicLocales(definition, pluginId, created),
@@ -509,7 +509,7 @@ export const editLocalizedContentAction = async (
 
   if (result.status !== 200) return failure(result);
 
-  revalidatePath(CONTENT_PAGE_PATH, "page");
+  expireCachePath(CONTENT_PAGE_PATH, "page");
   invalidate(definition, id, before, result.data, {
     after: await readContentPublicLocales(definition, pluginId, id),
     before: localesBefore,
@@ -647,7 +647,7 @@ export const restoreContentRevisionAction = async (
 
   if (result.status !== 200) return failure(result);
 
-  revalidatePath(CONTENT_PAGE_PATH, "page");
+  expireCachePath(CONTENT_PAGE_PATH, "page");
   // A restore never moves `status`, so visibility is unchanged - but the slug
   // may have, and `invalidate` compares both rows to work out which.
   invalidate(definition, id, before, result.data?.row, {
@@ -774,7 +774,7 @@ export const scheduleContentAction = async (
 
   if (result.status !== 200) return failure(result);
 
-  revalidatePath(CONTENT_PAGE_PATH, "page");
+  expireCachePath(CONTENT_PAGE_PATH, "page");
 
   return {};
 };
@@ -796,7 +796,7 @@ export const cancelContentScheduleAction = async (
 
   if (result.status !== 200) return failure(result);
 
-  revalidatePath(CONTENT_PAGE_PATH, "page");
+  expireCachePath(CONTENT_PAGE_PATH, "page");
 
   return {};
 };
@@ -835,7 +835,7 @@ export const deleteContentAction = async (
 
   if (result.status !== 200) return failure(result);
 
-  revalidatePath(CONTENT_PAGE_PATH, "page");
+  expireCachePath(CONTENT_PAGE_PATH, "page");
 
   // Every language loses its page at once, so the "after" side is empty rather
   // than re-read - there is nothing left to read.
@@ -910,7 +910,7 @@ const publicationAction = async (
 
   if (result.status !== 200) return failure(result);
 
-  revalidatePath(CONTENT_PAGE_PATH, "page");
+  expireCachePath(CONTENT_PAGE_PATH, "page");
 
   // A no-op transitioned nothing, so nothing public went stale. Expiring a tag
   // on every button press would throw away a warm cache for free.

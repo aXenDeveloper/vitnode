@@ -1,10 +1,13 @@
 "use client";
 
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 import React from "react";
 
-import { usePathname, useRouter } from "@/lib/navigation";
+import {
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "@/framework/navigation";
 
 import type { DataTable, DataTableTMin } from "./data-table";
 

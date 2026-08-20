@@ -1,11 +1,12 @@
 import "server-only";
-import { cookies, headers } from "next/headers";
 
 import type {
   BaseBuildModuleReturn,
   BuildModuleReturn,
 } from "@/api/lib/module";
 import type { Route } from "@/api/lib/route";
+
+import { forwardApiRequestHeaders } from "@/framework/request";
 
 import type {
   FetcherParams,
@@ -53,17 +54,7 @@ export async function fetcher<
 ): Promise<
   InferResponseType<M, Routes, Modules, ModuleName, SelectedPath, Method>
 > {
-  const [nextInternalHeaders, cookie] = await Promise.all([
-    headers(),
-    cookies(),
-  ]);
-
-  const additionalHeaders: Record<string, string> = {
-    Cookie: cookie.toString(),
-    ["user-agent"]: nextInternalHeaders.get("user-agent") ?? "node",
-    ["x-forwarded-for"]:
-      nextInternalHeaders.get("x-forwarded-for") ?? "0.0.0.0",
-  };
+  const additionalHeaders = await forwardApiRequestHeaders();
 
   if (captchaToken) {
     additionalHeaders["x-vitnode-captcha-token"] = captchaToken;

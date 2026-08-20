@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { usersModule } from "@/api/modules/users/users.module";
+import { expireCachePath } from "@/framework/cache";
 import { fetcher } from "@/lib/fetcher";
 import { redirect } from "@/lib/navigation";
 
@@ -23,12 +22,12 @@ export const logOutMutationApi = async ({
 
   if (res.status === 200) {
     if (isAdmin) {
-      revalidatePath("/admin/(main)", "layout");
+      expireCachePath("/admin/(main)", "layout");
       await redirect("/admin");
 
       return;
     }
-    revalidatePath("/[locale]/(main)", "layout");
+    expireCachePath("/[locale]/(main)", "layout");
     await redirect("/");
   }
 };

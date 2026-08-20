@@ -1,11 +1,11 @@
 import { PlusIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
 import React from "react";
 
 import { DataTableSkeleton } from "@/components/table/data-table";
 import { Button } from "@/components/ui/button";
 import { HeaderContent } from "@/components/ui/header-content";
+import { notFound } from "@/framework/navigation";
 import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
 import { Link } from "@/lib/navigation";
 

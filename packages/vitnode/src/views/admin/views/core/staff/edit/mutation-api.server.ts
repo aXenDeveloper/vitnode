@@ -1,13 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import type {
   PermissionsStaffArgs,
   PermissionStaffType,
 } from "@/api/lib/permission-staff";
 
 import { adminModule } from "@/api/modules/admin/admin.module";
+import { expireCachePath } from "@/framework/cache";
 import { fetcher } from "@/lib/fetcher";
 
 export const updateStaffPermissions = async ({
@@ -35,7 +34,7 @@ export const updateStaffPermissions = async ({
     return { error: { status: res.status } };
   }
 
-  revalidatePath("/[locale]/admin", "layout");
+  expireCachePath("/[locale]/admin", "layout");
 
   return { data: true };
 };

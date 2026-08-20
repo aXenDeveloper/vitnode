@@ -1,6 +1,5 @@
 import type z from "zod";
 
-import { notFound } from "next/navigation";
 import React from "react";
 
 import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
@@ -8,6 +7,7 @@ import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
 import { I18nProvider } from "@/components/i18n-provider";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { notFound } from "@/framework/navigation";
 import { getMiddlewareApi } from "@/lib/api/get-middleware-api";
 
 import { ChangePasswordForm } from "./change-password-form/form";

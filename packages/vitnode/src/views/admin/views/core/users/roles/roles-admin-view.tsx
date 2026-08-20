@@ -1,12 +1,12 @@
 import { ExternalLink, ShieldIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
 
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { DateFormat } from "@/components/date-format";
 import { RoleFormat } from "@/components/role-format";
 import { DataTable } from "@/components/table/data-table";
 import { TooltipWithContent } from "@/components/ui/tooltip";
+import { notFound } from "@/framework/navigation";
 import { fetcher } from "@/lib/fetcher";
 import { Link } from "@/lib/navigation";
 

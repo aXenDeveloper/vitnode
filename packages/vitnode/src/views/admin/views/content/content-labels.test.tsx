@@ -54,12 +54,20 @@ vi.mock("next-intl/server", () => ({
     ),
 }));
 
-vi.mock("@/lib/navigation", () => ({
+// One mock covers `@/lib/navigation` too - the shim re-exports this module, so
+// stubbing the framework layer stubs both import paths at once.
+vi.mock("@/framework/navigation", () => ({
   Link: () => null,
+  UnlocalizedLink: () => null,
   getPathname: () => "",
+  notFound: () => {
+    throw new Error("NEXT_NOT_FOUND");
+  },
   redirect: () => undefined,
+  unlocalizedPermanentRedirect: () => undefined,
   usePathname: () => "",
   useRouter: () => ({ push: () => undefined, refresh: () => undefined }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 vi.mock("@/lib/api/get-session-admin-api", () => ({
@@ -69,12 +77,6 @@ vi.mock("@/lib/api/get-session-admin-api", () => ({
 vi.mock("@/content/admin/fetch.server", () => ({
   contentApiFetch: async () =>
     await Promise.resolve({ data: undefined, status: 200 }),
-}));
-
-vi.mock("next/navigation", () => ({
-  notFound: () => {
-    throw new Error("NEXT_NOT_FOUND");
-  },
 }));
 
 const { getContentLabels } = await import("./content-admin-view");

@@ -1,7 +1,7 @@
 import "server-only";
 import type { z } from "zod";
 
-import { cookies, headers } from "next/headers";
+import { forwardApiRequestHeaders } from "@/framework/request";
 
 import type { AnyContentTypeDefinition } from "../types";
 
@@ -39,14 +39,8 @@ export const contentApiFetch = async <TSchema extends z.ZodType>({
   query?: Record<string, string | string[] | undefined>;
   schema?: TSchema;
 }): Promise<ContentFetchResult<z.infer<TSchema>>> => {
-  const [nextHeaders, cookieStore] = await Promise.all([headers(), cookies()]);
-
   const response = await rawApiFetch({
-    additionalHeaders: {
-      Cookie: cookieStore.toString(),
-      ["user-agent"]: nextHeaders.get("user-agent") ?? "node",
-      ["x-forwarded-for"]: nextHeaders.get("x-forwarded-for") ?? "0.0.0.0",
-    },
+    additionalHeaders: await forwardApiRequestHeaders(),
     body,
     method,
     module: `content/${definition.permissionModule}`,

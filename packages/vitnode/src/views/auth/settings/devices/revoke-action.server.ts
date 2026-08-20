@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { usersModule } from "@/api/modules/users/users.module";
+import { expireCachePath } from "@/framework/cache";
 import { fetcher } from "@/lib/fetcher";
 
 export const revokeDeviceAction = async ({
@@ -23,7 +22,7 @@ export const revokeDeviceAction = async ({
     return { error: { status: res.status } };
   }
 
-  revalidatePath("/[locale]/(main)", "layout");
+  expireCachePath("/[locale]/(main)", "layout");
 
   return { data: true };
 };

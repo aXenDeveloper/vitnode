@@ -2,11 +2,10 @@
 
 import type { z } from "zod";
 
-import { revalidatePath } from "next/cache";
-
 import type { zodCreateUserAdminSchema } from "@/api/modules/admin/users/routes/create.route";
 
 import { adminModule } from "@/api/modules/admin/admin.module";
+import { expireCachePath } from "@/framework/cache";
 import { fetcher } from "@/lib/fetcher";
 
 export const mutationApi = async (
@@ -26,7 +25,7 @@ export const mutationApi = async (
   }
 
   const data = await res.json();
-  revalidatePath("/[locale]/admin", "layout");
+  expireCachePath("/[locale]/admin", "layout");
 
   return { data };
 };

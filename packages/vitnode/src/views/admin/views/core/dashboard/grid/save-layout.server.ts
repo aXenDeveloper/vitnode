@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { adminModule } from "@/api/modules/admin/admin.module";
+import { expireCachePath } from "@/framework/cache";
 import { fetcher } from "@/lib/fetcher";
 
 import type { DashboardLayoutItem } from "../widgets/types";
@@ -31,5 +30,5 @@ export const saveDashboardLayoutMutation = async ({
     return { error: await res.text() };
   }
 
-  revalidatePath("/[locale]/admin", "layout");
+  expireCachePath("/[locale]/admin", "layout");
 };

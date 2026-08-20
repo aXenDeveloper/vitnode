@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { userFilesModule } from "@/api/modules/users/files/files.module";
+import { expireCachePath } from "@/framework/cache";
 import { fetcher } from "@/lib/fetcher";
 
 export const deleteMyFileAction = async ({
@@ -24,7 +23,7 @@ export const deleteMyFileAction = async ({
     return { error: { status: res.status } };
   }
 
-  revalidatePath("/[locale]/(main)", "layout");
+  expireCachePath("/[locale]/(main)", "layout");
 
   return { data: true };
 };

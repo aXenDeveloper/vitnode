@@ -79,13 +79,30 @@ describe("layer boundaries", () => {
     expect(offenders.map(path => relative(here, path))).toEqual([]);
   });
 
-  it("is where the Next imports actually live", () => {
+  it("is where the framework-bound imports actually live", () => {
     // The other half of the rule: `content/next/` exists precisely so those
-    // imports have somewhere legal to be.
-    const nextFiles = filesUnder(resolve(here, "next"));
-    const specifiers = nextFiles.flatMap(importsFrom);
+    // imports have somewhere legal to be. What lives there has moved on,
+    // though - no `next/*` specifier is left in the layer at all. Cache
+    // invalidation goes through `framework/cache` and routing through
+    // `framework/navigation`, each of which owns the single file in the package
+    // that imports the Next API behind it.
+    //
+    // So the layer is still the boundary, and the pair below is what makes it
+    // one: it is the only part of the engine that carries `server-only` and
+    // reaches a framework adapter, and it no longer names a framework to do it.
+    const specifiers = filesUnder(resolve(here, "next")).flatMap(importsFrom);
 
-    expect(specifiers).toContain("next/cache");
     expect(specifiers).toContain("server-only");
+    expect(
+      specifiers.filter(specifier => specifier.startsWith("next/")),
+    ).toEqual([]);
+
+    for (const layer of ["cache", "navigation"]) {
+      expect(
+        specifiers.some(specifier =>
+          new RegExp(`framework/${layer}$`).test(specifier),
+        ),
+      ).toBe(true);
+    }
   });
 });

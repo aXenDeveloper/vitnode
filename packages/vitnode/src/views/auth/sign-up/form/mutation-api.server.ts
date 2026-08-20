@@ -2,11 +2,10 @@
 
 import type { z } from "zod";
 
-import { revalidatePath } from "next/cache";
-
 import type { zodSignUpSchema } from "@/api/modules/users/routes/sign-up.route";
 
 import { usersModule } from "@/api/modules/users/users.module";
+import { expireCachePath } from "@/framework/cache";
 import { fetcher } from "@/lib/fetcher";
 import { redirect } from "@/lib/navigation";
 
@@ -31,7 +30,7 @@ export const mutationApi = async ({
 
   const data = await res.json();
   if (data.emailVerified) {
-    revalidatePath("/[locale]/(main)", "layout");
+    expireCachePath("/[locale]/(main)", "layout");
     await redirect("/");
   }
 

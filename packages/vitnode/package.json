@@ -99,10 +99,25 @@
       "types": "./dist/src/content/next/revalidate-route.server.d.ts",
       "default": "./dist/src/content/next/revalidate-route.server.js"
     },
+    "./framework/request": {
+      "import": "./dist/src/framework/request/index.js",
+      "types": "./dist/src/framework/request/index.d.ts",
+      "default": "./dist/src/framework/request/index.js"
+    },
+    "./framework/cache": {
+      "import": "./dist/src/framework/cache/index.js",
+      "types": "./dist/src/framework/cache/index.d.ts",
+      "default": "./dist/src/framework/cache/index.js"
+    },
     "./content/admin-form": {
       "import": "./dist/src/views/admin/views/content/form/index.js",
       "types": "./dist/src/views/admin/views/content/form/index.d.ts",
       "default": "./dist/src/views/admin/views/content/form/index.js"
+    },
+    "./framework/navigation": {
+      "import": "./dist/src/framework/navigation/index.js",
+      "types": "./dist/src/framework/navigation/index.d.ts",
+      "default": "./dist/src/framework/navigation/index.js"
     },
     "./api/config": {
       "import": "./dist/src/api/config.js",

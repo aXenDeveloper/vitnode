@@ -2,11 +2,14 @@
 
 import { CheckIcon, PlusCircleIcon, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
 import React from "react";
 import { useDebouncedCallback } from "use-debounce";
 
-import { usePathname, useRouter } from "@/lib/navigation";
+import {
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "@/framework/navigation";
 import { cn } from "@/lib/utils";
 
 import { Badge } from "../ui/badge";

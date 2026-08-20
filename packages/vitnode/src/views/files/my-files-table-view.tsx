@@ -1,6 +1,5 @@
 import { FileIcon, FolderIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
 
 import { userFilesModule } from "@/api/modules/users/files/files.module";
 import { DateFormat } from "@/components/date-format";
@@ -10,6 +9,7 @@ import {
   DataTable,
   type SearchParamsDataTable,
 } from "@/components/table/data-table";
+import { notFound } from "@/framework/navigation";
 import { fetcher } from "@/lib/fetcher";
 import { formatBytes } from "@/lib/format-bytes";
 

@@ -12,6 +12,10 @@ import { describe, expect, it, vi } from "vitest";
  */
 const fetchMock = vi.fn();
 
+// The action expires a cache path, and cache invalidation now runs through
+// `framework/cache` - whose Next adapter carries `server-only`. Mocking
+// `next/cache` alone would still fail on that import.
+vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/content/admin/config", () => ({
   findFrontendContentType: () => ({

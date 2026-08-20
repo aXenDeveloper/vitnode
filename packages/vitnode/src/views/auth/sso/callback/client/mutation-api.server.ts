@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-
 import { usersModule } from "@/api/modules/users/users.module";
+import { expireCachePath } from "@/framework/cache";
 import { fetcher } from "@/lib/fetcher";
 
 export const mutationApi = async ({
@@ -38,5 +37,5 @@ export const mutationApi = async ({
     return { error: "Something went wrong" };
   }
 
-  revalidatePath("/[locale]/(main)", "layout");
+  expireCachePath("/[locale]/(main)", "layout");
 };

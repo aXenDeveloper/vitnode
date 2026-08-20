@@ -2,12 +2,12 @@ import type { Metadata } from "next/dist/types";
 
 import { getTranslations } from "next-intl/server";
 import dynamic from "next/dynamic";
-import { connection } from "next/server";
 import React from "react";
 
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { I18nProvider } from "@/components/i18n-provider";
 import { Loader } from "@/components/ui/loader";
+import { awaitRequest } from "@/framework/request";
 import { fetcher } from "@/lib/fetcher";
 
 const ShowUserAdminView = dynamic(async () =>
@@ -54,7 +54,7 @@ export const generateMetadata = async ({
  * dynamic so the metadata is allowed to be, while the body still prerenders.
  */
 const DynamicMarker = async () => {
-  await connection();
+  await awaitRequest();
 
   return null;
 };

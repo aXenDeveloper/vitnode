@@ -1,6 +1,5 @@
 import { ArrowLeftIcon } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
 import { z } from "zod";
 
 import type { RegisteredFrontendContentType } from "@/content/admin/config";
@@ -11,6 +10,7 @@ import { contentApiFetch } from "@/content/admin/fetch.server";
 import { buildContentFormSpec } from "@/content/admin/spec";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 import { contentAdminHref, contentEditHrefTemplate } from "@/content/registry";
+import { notFound } from "@/framework/navigation";
 import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
 import { Link } from "@/lib/navigation";
 import { resolveContentFormLayout } from "@/lib/plugin";

@@ -1,5 +1,4 @@
 import { getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
 import React from "react";
 
 import type { RegisteredFrontendContentType } from "@/content/admin/config";
@@ -26,6 +25,7 @@ import {
 } from "@/content/admin/spec";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 import { contentCreateHref } from "@/content/registry";
+import { notFound } from "@/framework/navigation";
 import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
 
 import { CreateContentAction } from "./actions/create-action";

@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import type {
@@ -21,6 +20,7 @@ import {
   parseContentTranslationConflict,
   parseContentUnprocessable,
 } from "@/content/conflicts";
+import { expireCachePath } from "@/framework/cache";
 
 import {
   invalidateContentLocales,
@@ -250,7 +250,7 @@ export const createContentTranslationAction = async (
 
     if (result.status !== 201) return failure(result);
 
-    revalidatePath(CONTENT_PAGE_PATH, "page");
+    expireCachePath(CONTENT_PAGE_PATH, "page");
 
     return {};
   });
@@ -276,7 +276,7 @@ export const editContentTranslationAction = async (
 
     if (result.status !== 200) return failure(result);
 
-    revalidatePath(CONTENT_PAGE_PATH, "page");
+    expireCachePath(CONTENT_PAGE_PATH, "page");
 
     return {};
   });
@@ -301,7 +301,7 @@ export const deleteContentTranslationAction = async (
 
     if (result.status !== 200) return failure(result);
 
-    revalidatePath(CONTENT_PAGE_PATH, "page");
+    expireCachePath(CONTENT_PAGE_PATH, "page");
 
     return {};
   });
@@ -392,7 +392,7 @@ export const restoreContentTranslationRevisionAction = async (
 
     if (result.status !== 200) return failure(result);
 
-    revalidatePath(CONTENT_PAGE_PATH, "page");
+    expireCachePath(CONTENT_PAGE_PATH, "page");
 
     return {};
   });

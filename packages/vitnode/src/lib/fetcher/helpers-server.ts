@@ -1,5 +1,6 @@
 import "server-only";
-import { cookies } from "next/headers";
+
+import { requestCookies } from "@/framework/request";
 
 import { cookieFromStringToObject } from "./cookie-from-string-to-object";
 
@@ -11,7 +12,7 @@ export const handleSetCookiesFetcher = async (res: Response) => {
 
       if (typeof value !== "string" || typeof key !== "string") return;
 
-      (await cookies()).set(key, value, {
+      (await requestCookies()).set(key, value, {
         domain: cookie.Domain,
         path: cookie.Path,
         expires: new Date(cookie.Expires),

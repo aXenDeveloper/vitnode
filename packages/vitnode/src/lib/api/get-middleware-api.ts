@@ -1,7 +1,6 @@
-import { cacheLife } from "next/cache";
-import { connection } from "next/server";
-
 import { middlewareModule } from "@/api/modules/middleware/middleware.module";
+import { setCacheEntryLife } from "@/framework/cache";
+import { awaitRequest } from "@/framework/request";
 import { coreFetcher } from "@/lib/fetcher/core";
 
 /**
@@ -9,7 +8,7 @@ import { coreFetcher } from "@/lib/fetcher/core";
  * registered, whether an email adapter exists, and the public captcha key.
  *
  * Every field is derived from `vitnode.api.config.ts`, so the response is the
- * same for every visitor and only changes on deploy - hence `cacheLife("max")`.
+ * same for every visitor and only changes on deploy - hence `setCacheEntryLife("max")`.
  *
  * Goes through `coreFetcher` rather than `fetcher` deliberately: `fetcher`
  * forwards the request's cookies and headers, and `use cache` cannot enclose a
@@ -18,7 +17,7 @@ import { coreFetcher } from "@/lib/fetcher/core";
  */
 const fetchMiddlewareApi = async () => {
   "use cache";
-  cacheLife("max");
+  setCacheEntryLife("max");
 
   const res = await coreFetcher(middlewareModule, {
     path: "/",
@@ -30,7 +29,7 @@ const fetchMiddlewareApi = async () => {
 };
 
 /**
- * `connection()` first, so the entry above is filled by the first real request
+ * `awaitRequest()` first, so the entry above is filled by the first real request
  * instead of during `next build`.
  *
  * Cache Components fills a `use cache` entry while prerendering, and filling
@@ -47,7 +46,7 @@ const fetchMiddlewareApi = async () => {
  * `instant = false`.
  */
 export const getMiddlewareApi = async () => {
-  await connection();
+  await awaitRequest();
 
   return await fetchMiddlewareApi();
 };

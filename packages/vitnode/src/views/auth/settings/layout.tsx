@@ -1,6 +1,5 @@
-import { notFound } from "next/navigation";
-
 import { I18nProvider } from "@/components/i18n-provider";
+import { notFound } from "@/framework/navigation";
 import { getSessionApi } from "@/lib/api/get-session-api";
 
 import { SettingsShell } from "./shell";
