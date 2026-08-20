@@ -1,12 +1,11 @@
 import { getTranslations } from "next-intl/server";
 import dynamic from "next/dynamic";
-import { notFound } from "next/navigation";
 import React from "react";
 
 import { I18nProvider } from "@/components/i18n-provider";
+import { AdminPermissionRequired } from "@/components/staff-permission/required";
 import { DataTableSkeleton } from "@/components/table/data-table";
 import { HeaderContent } from "@/components/ui/header-content";
-import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
 
 const CronTableView = dynamic(async () =>
   import("@/views/admin/views/core/advanced/cron/cron-table-view").then(
@@ -28,14 +27,7 @@ export const generateMetadata = async () => {
 export default async function Page(
   props: React.ComponentProps<typeof CronTableView>,
 ) {
-  const [t, canView] = await Promise.all([
-    getTranslations("admin.advanced.cron"),
-    checkAdminPermissionApi({ module: "cron", permission: "can_view" }),
-  ]);
-
-  if (!canView) {
-    notFound();
-  }
+  const t = await getTranslations("admin.advanced.cron");
 
   return (
     <I18nProvider namespaces={["admin.advanced.cron"]}>
@@ -43,7 +35,9 @@ export default async function Page(
         <HeaderContent desc={t("desc")} h1={t("title")} />
 
         <React.Suspense fallback={<DataTableSkeleton columns={6} />}>
-          <CronTableView {...props} />
+          <AdminPermissionRequired module="cron" permission="can_view">
+            <CronTableView {...props} />
+          </AdminPermissionRequired>
         </React.Suspense>
       </div>
     </I18nProvider>

@@ -58,8 +58,9 @@ export const vitNodeNextConfig = (config: NextConfig): NextConfig =>
     partialPrefetching: true,
     ...redisCacheHandlers(),
     ...config,
-    serverExternalPackages: [
-      ...(config.serverExternalPackages ?? []),
-      "redis",
-    ],
+    experimental: {
+      turbopackMemoryEviction: "full",
+      ...config.experimental,
+    },
+    serverExternalPackages: [...(config.serverExternalPackages ?? []), "redis"],
   });

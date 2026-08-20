@@ -1,5 +1,7 @@
 import { Suspense } from "react";
 
+import type { StaffPermissionSet } from "@/api/lib/permission-staff";
+
 import { AdminStaffPermissionProvider } from "@/components/staff-permission/provider";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -27,20 +29,15 @@ export interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-const AdminStaffPermissionScope = async ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
+/**
+ * Handed to {@link AdminStaffPermissionProvider} unawaited. Awaiting it here
+ * would put the session read above `{children}`, so every admin page's own
+ * header and skeleton sat behind this layout's placeholder on a full page load.
+ */
+const getAdminPermissions = async (): Promise<StaffPermissionSet> => {
   const session = await getSessionAdminApi();
 
-  return (
-    <AdminStaffPermissionProvider
-      value={session?.permissions ?? { root: false, permissions: [] }}
-    >
-      {children}
-    </AdminStaffPermissionProvider>
-  );
+  return session?.permissions ?? { root: false, permissions: [] };
 };
 
 const NavSidebarAdminSession = async ({
@@ -68,16 +65,6 @@ const UserBarAdminSession = async () => {
   return <UserBarAdmin user={session.user} />;
 };
 
-const ContentAdminSkeleton = () => (
-  <div className="space-y-6 p-4">
-    <div className="space-y-2">
-      <Skeleton className="h-7 w-56" />
-      <Skeleton className="h-4 w-80 max-w-full" />
-    </div>
-    <Skeleton className="h-72 w-full" />
-  </div>
-);
-
 export const AdminLayout = ({
   children,
   breadcrumb,
@@ -87,52 +74,48 @@ export const AdminLayout = ({
 }) => {
   return (
     <I18nProvider namespaces={["admin.global"]}>
-      <SidebarProvider>
-        <SidebarAdmin vitNodeConfig={vitNodeConfig}>
-          <Suspense fallback={<NavSidebarAdminSkeleton />}>
-            <NavSidebarAdminSession vitNodeConfig={vitNodeConfig} />
-          </Suspense>
-        </SidebarAdmin>
-        <SidebarInset>
-          <header className="bg-background sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b px-4">
-            <SidebarTrigger className="-ml-1 shrink-0" />
-            {breadcrumb != null && (
-              <>
-                <Separator
-                  className="mr-1 h-4 shrink-0"
-                  orientation="vertical"
-                />
-                <div className="min-w-0 flex-1">{breadcrumb}</div>
-              </>
-            )}
+      <AdminStaffPermissionProvider value={getAdminPermissions()}>
+        <SidebarProvider>
+          <SidebarAdmin vitNodeConfig={vitNodeConfig}>
+            <Suspense fallback={<NavSidebarAdminSkeleton />}>
+              <NavSidebarAdminSession vitNodeConfig={vitNodeConfig} />
+            </Suspense>
+          </SidebarAdmin>
+          <SidebarInset>
+            <header className="bg-background sticky top-0 z-20 flex h-16 shrink-0 items-center gap-2 border-b px-4">
+              <SidebarTrigger className="-ml-1 shrink-0" />
+              {breadcrumb != null && (
+                <>
+                  <Separator
+                    className="mr-1 h-4 shrink-0"
+                    orientation="vertical"
+                  />
+                  <div className="min-w-0 flex-1">{breadcrumb}</div>
+                </>
+              )}
 
-            <div className="ml-auto flex shrink-0 items-center justify-center gap-2 px-2">
-              <Suspense
-                fallback={
-                  <>
-                    <Skeleton className="size-8 sm:hidden" />
-                    <Skeleton className="hidden h-9 w-42 sm:block xl:w-64" />
-                  </>
-                }
-              >
-                <AdminStaffPermissionScope>
+              <div className="ml-auto flex shrink-0 items-center justify-center gap-2 px-2">
+                <Suspense
+                  fallback={
+                    <>
+                      <Skeleton className="size-8 sm:hidden" />
+                      <Skeleton className="hidden h-9 w-42 sm:block xl:w-64" />
+                    </>
+                  }
+                >
                   <SearchAdminSession vitNodeConfig={vitNodeConfig} />
-                </AdminStaffPermissionScope>
-              </Suspense>
+                </Suspense>
 
-              <Suspense fallback={<Skeleton className="size-9" />}>
-                <AdminStaffPermissionScope>
+                <Suspense fallback={<Skeleton className="size-9" />}>
                   <UserBarAdminSession />
-                </AdminStaffPermissionScope>
-              </Suspense>
-            </div>
-          </header>
+                </Suspense>
+              </div>
+            </header>
 
-          <Suspense fallback={<ContentAdminSkeleton />}>
-            <AdminStaffPermissionScope>{children}</AdminStaffPermissionScope>
-          </Suspense>
-        </SidebarInset>
-      </SidebarProvider>
+            {children}
+          </SidebarInset>
+        </SidebarProvider>
+      </AdminStaffPermissionProvider>
     </I18nProvider>
   );
 };

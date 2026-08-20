@@ -1,10 +1,9 @@
 import { getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
 import React from "react";
 
 import { I18nProvider } from "@vitnode/core/components/i18n-provider";
+import { AdminPermissionRequired } from "@vitnode/core/components/staff-permission/required";
 import { HeaderContent } from "@vitnode/core/components/ui/header-content";
-import { checkAdminPermissionApi } from "@vitnode/core/lib/api/get-session-admin-api";
 import {
   IntegrationsView,
   IntegrationsViewSkeleton,
@@ -20,14 +19,7 @@ export const generateMetadata = async () => {
 };
 
 export default async function Page() {
-  const [t, canView] = await Promise.all([
-    getTranslations("admin.system.integrations"),
-    checkAdminPermissionApi({ module: "system", permission: "can_view" }),
-  ]);
-
-  if (!canView) {
-    notFound();
-  }
+  const t = await getTranslations("admin.system.integrations");
 
   return (
     <I18nProvider namespaces="admin.system.integrations">
@@ -35,7 +27,9 @@ export default async function Page() {
         <HeaderContent desc={t("desc")} h1={t("title")} />
 
         <React.Suspense fallback={<IntegrationsViewSkeleton />}>
-          <IntegrationsView />
+          <AdminPermissionRequired module="system" permission="can_view">
+            <IntegrationsView />
+          </AdminPermissionRequired>
         </React.Suspense>
       </div>
     </I18nProvider>

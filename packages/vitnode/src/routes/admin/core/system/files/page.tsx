@@ -1,12 +1,11 @@
 import { getTranslations } from "next-intl/server";
 import dynamic from "next/dynamic";
-import { notFound } from "next/navigation";
 import React from "react";
 
 import { I18nProvider } from "@/components/i18n-provider";
+import { AdminPermissionRequired } from "@/components/staff-permission/required";
 import { DataTableSkeleton } from "@/components/table/data-table";
 import { HeaderContent } from "@/components/ui/header-content";
-import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
 
 const FilesTableView = dynamic(async () =>
   import("@/views/admin/views/core/system/files/files-table-view").then(
@@ -28,14 +27,7 @@ export const generateMetadata = async () => {
 export default async function Page(
   props: React.ComponentProps<typeof FilesTableView>,
 ) {
-  const [t, canView] = await Promise.all([
-    getTranslations("admin.system.files"),
-    checkAdminPermissionApi({ module: "files", permission: "can_view" }),
-  ]);
-
-  if (!canView) {
-    notFound();
-  }
+  const t = await getTranslations("admin.system.files");
 
   return (
     <I18nProvider namespaces={["admin.system.files"]}>
@@ -43,7 +35,9 @@ export default async function Page(
         <HeaderContent desc={t("desc")} h1={t("title")} />
 
         <React.Suspense fallback={<DataTableSkeleton columns={8} toolbar />}>
-          <FilesTableView {...props} />
+          <AdminPermissionRequired module="files" permission="can_view">
+            <FilesTableView {...props} />
+          </AdminPermissionRequired>
         </React.Suspense>
       </div>
     </I18nProvider>

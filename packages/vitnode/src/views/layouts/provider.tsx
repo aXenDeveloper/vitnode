@@ -3,7 +3,6 @@
 import { ProgressProvider } from "@bprogress/next/app";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
-import { scan } from "react-scan";
 
 import type { LocaleConfig } from "@/lib/i18n/types";
 import type { VitNodeConfig } from "@/vitnode.config";
@@ -41,9 +40,7 @@ export const RootProvider = ({
     // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
     if (!(debug && CONFIG.node_development)) return;
 
-    scan({
-      enabled: true,
-    });
+    void import("react-scan").then(({ scan }) => scan({ enabled: true }));
   }, [debug]);
 
   const [queryClient] = React.useState(

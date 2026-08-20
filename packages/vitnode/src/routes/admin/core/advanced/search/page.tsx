@@ -1,10 +1,9 @@
 import { getTranslations } from "next-intl/server";
-import { notFound } from "next/navigation";
 import React from "react";
 
 import { I18nProvider } from "@/components/i18n-provider";
+import { AdminPermissionRequired } from "@/components/staff-permission/required";
 import { HeaderContent } from "@/components/ui/header-content";
-import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
 import { SearchHeaderActions } from "@/views/admin/views/core/advanced/search/search-header-actions";
 import {
   SearchAdminView,
@@ -25,14 +24,7 @@ export default async function Page({
 }: {
   searchParams: Promise<{ search?: string }>;
 }) {
-  const [t, canView] = await Promise.all([
-    getTranslations("core.search"),
-    checkAdminPermissionApi({ module: "system", permission: "can_view" }),
-  ]);
-
-  if (!canView) {
-    notFound();
-  }
+  const t = await getTranslations("core.search");
 
   return (
     <I18nProvider namespaces="core.search">
@@ -42,7 +34,9 @@ export default async function Page({
         </HeaderContent>
 
         <React.Suspense fallback={<SearchAdminViewSkeleton />}>
-          <SearchAdminView searchParams={searchParams} />
+          <AdminPermissionRequired module="system" permission="can_view">
+            <SearchAdminView searchParams={searchParams} />
+          </AdminPermissionRequired>
         </React.Suspense>
       </div>
     </I18nProvider>

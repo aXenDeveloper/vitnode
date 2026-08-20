@@ -139,6 +139,10 @@ export const ContentCell = ({
       );
 
     default:
-      return <span className="line-clamp-2">{asText(value)}</span>;
+      return (
+        <span className="line-clamp-2 max-w-sm whitespace-normal">
+          {asText(value)}
+        </span>
+      );
   }
 };

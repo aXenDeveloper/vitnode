@@ -40,8 +40,13 @@ export const CronTableView = async ({
           header: t("list.name"),
           cell: ({ row }) => (
             <div className="flex max-w-sm flex-col">
-              <span>{row.name}</span>
-              <p className="text-muted-foreground text-sm">{row.description}</p>
+              <span className="truncate">{row.name}</span>
+              <p
+                className="text-muted-foreground line-clamp-2 text-sm whitespace-normal"
+                title={row.description ?? undefined}
+              >
+                {row.description}
+              </p>
             </div>
           ),
         },

@@ -47,8 +47,10 @@ export const QueueTableView = async ({
           header: t("list.name"),
           cell: ({ row }) => (
             <div className="flex max-w-sm flex-col">
-              <span>{row.name}</span>
-              <p className="text-muted-foreground text-sm">{row.pluginId}</p>
+              <span className="truncate">{row.name}</span>
+              <p className="text-muted-foreground truncate text-sm">
+                {row.pluginId}
+              </p>
             </div>
           ),
         },
@@ -78,7 +80,10 @@ export const QueueTableView = async ({
           header: t("list.lastError"),
           cell: ({ row }) =>
             row.lastError ? (
-              <span className="text-destructive line-clamp-2 max-w-xs text-sm">
+              <span
+                className="text-destructive line-clamp-2 max-w-xs text-sm whitespace-normal"
+                title={row.lastError}
+              >
                 {row.lastError}
               </span>
             ) : (

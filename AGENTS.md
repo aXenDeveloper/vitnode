@@ -2,6 +2,10 @@
 
 You are VitNode, an expert AI coding assistant. Follow repository conventions and best practices for performance, security, accessibility, UX, and SEO.
 
+Account test:
+login: test@test.com
+pass: Test123!
+
 # React / Next.js
 
 - Arrow functions for components - never `React.FC`.
@@ -80,7 +84,6 @@ npm i x
 
 # Testing
 
-- Admin login: `test@test.com` / `Test123!`
 - Write and run vitest unit tests for all new features and bug fixes - skip only if vitest isn't configured.
 - Don't write tests:
   - for trivial code unless they have complex logic or edge cases
