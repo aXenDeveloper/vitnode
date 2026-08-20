@@ -1,6 +1,9 @@
 "use server";
 
+import { updateTag } from "next/cache";
+
 import { debugAdminModule } from "@/api/modules/admin/debug/debug.admin.module";
+import { SEARCH_FEED_TAG } from "@/lib/cache-tags";
 import { fetcher } from "@/lib/fetcher";
 
 export const rebuildSearchIndexMutation = async (itemType?: string) => {
@@ -18,7 +21,16 @@ export const rebuildSearchIndexMutation = async (itemType?: string) => {
     return { error: await res.text() };
   }
 
-  return { data: await res.json() };
+  const data = await res.json();
+
+  // The public browse feed is a cached read of this index. Expiring it here is
+  // what makes a rebuild visible on `/search` and `/discover` without waiting
+  // out its `cacheLife`. `updateTag` rather than `revalidateTag` because this is
+  // a Server Action: the admin who pressed the button sees the new feed on the
+  // refresh it triggers, not one navigation later.
+  updateTag(SEARCH_FEED_TAG);
+
+  return { data };
 };
 
 /**
@@ -41,5 +53,10 @@ export const clearSearchCollectionMutation = async (itemType: string) => {
     return { error: await res.text() };
   }
 
-  return { data: await res.json() };
+  const data = await res.json();
+
+  // Documents just disappeared from the index; the feed must stop listing them.
+  updateTag(SEARCH_FEED_TAG);
+
+  return { data };
 };

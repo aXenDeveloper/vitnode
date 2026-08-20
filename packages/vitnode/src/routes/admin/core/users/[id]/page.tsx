@@ -2,6 +2,7 @@ import type { Metadata } from "next/dist/types";
 
 import { getTranslations } from "next-intl/server";
 import dynamic from "next/dynamic";
+import { connection } from "next/server";
 import React from "react";
 
 import { adminModule } from "@/api/modules/admin/admin.module";
@@ -46,18 +47,38 @@ export const generateMetadata = async ({
   };
 };
 
-export default async function Page({
+/**
+ * `generateMetadata` puts the user's name in the title, which needs a fetch that
+ * cannot be cached - `fetcher` forwards the request's cookies and `use cache`
+ * cannot enclose a runtime read. This marks the route as intentionally partly
+ * dynamic so the metadata is allowed to be, while the body still prerenders.
+ */
+const DynamicMarker = async () => {
+  await connection();
+
+  return null;
+};
+
+const ShowUserAdmin = async ({
   params,
 }: {
   params: Promise<{ id: string }>;
-}) {
+}) => {
   const { id } = await params;
 
+  return <ShowUserAdminView id={id} />;
+};
+
+export default function Page({ params }: { params: Promise<{ id: string }> }) {
   return (
     <I18nProvider namespaces={["admin.user", "core.search"]}>
       <div className="p-4">
+        <React.Suspense fallback={null}>
+          <DynamicMarker />
+        </React.Suspense>
+
         <React.Suspense fallback={<Loader />}>
-          <ShowUserAdminView id={id} />
+          <ShowUserAdmin params={params} />
         </React.Suspense>
       </div>
     </I18nProvider>

@@ -15,6 +15,10 @@ import type {
 } from "./permission-staff";
 
 import { hasStaffPermission, staffPermissionKey } from "./staff-permission";
+import {
+  readStaffPermissions,
+  writeStaffPermissions,
+} from "./staff-permission-cache";
 
 const tableByType = {
   admin: core_admin_permissions,
@@ -34,7 +38,14 @@ export const getUserRoleIds = async (
   return [...new Set([user.roleId, ...secondary.map(row => row.roleId)])];
 };
 
-export const resolveStaffPermissions = async (
+/**
+ * The three queries behind a permission set: the user's roles, whether any of
+ * them is `root`, and the staff entries attached to the user or those roles.
+ *
+ * Split out from {@link resolveStaffPermissions} so the cache in front of it has
+ * something to be a cache *of* - and so the uncached path stays readable.
+ */
+const loadStaffPermissions = async (
   c: Context,
   {
     type,
@@ -80,6 +91,37 @@ export const resolveStaffPermissions = async (
   }
 
   return { root: false, permissions };
+};
+
+/**
+ * A user's effective staff permissions, read through the shared cache.
+ *
+ * This is the hottest read on an authenticated request: `GET /session` resolves
+ * it, and so does every `assertStaffPermission` an AdminCP route runs. Three
+ * database queries each time adds up on a page that renders a dozen gated
+ * elements, and the answer only moves when an admin edits a role or a staff
+ * entry - each of which expires the cache explicitly, so its 60-second lifetime
+ * is only a backstop.
+ *
+ * Without Redis the read misses, the write is a no-op, and this is exactly the
+ * uncached function it wraps. `remember` is not used because the key depends on
+ * a value that has to be read from the cache first - see
+ * [the epoch](./staff-permission-cache.ts).
+ */
+export const resolveStaffPermissions = async (
+  c: Context,
+  {
+    type,
+    user,
+  }: { type: PermissionStaffType; user: { id: number; roleId: number } },
+): Promise<StaffPermissionSet> => {
+  const cached = await readStaffPermissions(c, { type, userId: user.id });
+  if (cached) return cached;
+
+  const resolved = await loadStaffPermissions(c, { type, user });
+  await writeStaffPermissions(c, { type, userId: user.id }, resolved);
+
+  return resolved;
 };
 
 export const checkStaffPermission = async (

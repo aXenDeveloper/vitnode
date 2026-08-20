@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import type {
   PermissionsStaffArgs,
   StaffPermissionSet,
@@ -7,7 +9,16 @@ import { hasStaffPermission } from "@/api/lib/staff-permission";
 import { usersModule } from "@/api/modules/users/users.module";
 import { fetcher } from "@/lib/fetcher";
 
-export const getModeratorPermissionsApi =
+/**
+ * The visitor's effective moderator permissions on the public site.
+ *
+ * Memoised per render pass for the same reason
+ * [the admin session](./get-session-admin-api.ts) is: a page gates several
+ * elements on several different permissions, and every
+ * {@link checkModeratorPermissionApi} call resolves the whole set. One render
+ * pass makes one request whatever it asks about.
+ */
+export const getModeratorPermissionsApi = cache(
   async (): Promise<StaffPermissionSet> => {
     const res = await fetcher(usersModule, {
       path: "/permissions",
@@ -20,7 +31,8 @@ export const getModeratorPermissionsApi =
     }
 
     return await res.json();
-  };
+  },
+);
 
 export const checkModeratorPermissionApi = async (
   args: PermissionsStaffArgs,

@@ -4,14 +4,22 @@ import type { PermissionStaffType } from "@/api/lib/permission-staff";
 
 import { BreadcrumbAdmin } from "./breadcrumb-admin";
 
+/**
+ * Takes `params` as the promise the slot was handed rather than the resolved
+ * id: awaiting it above the slot's `<Suspense>` would pull the URL back into
+ * the AdminCP's shared App Shell.
+ */
 export const BreadcrumbStaffEditAdmin = async ({
   type,
-  id,
+  params,
 }: {
-  id: string;
+  params: Promise<{ id: string }>;
   type: PermissionStaffType;
 }) => {
-  const t = await getTranslations("admin.staff");
+  const [{ id }, t] = await Promise.all([
+    params,
+    getTranslations("admin.staff"),
+  ]);
   const tab = type === "admin" ? "admins" : "moderators";
 
   return (

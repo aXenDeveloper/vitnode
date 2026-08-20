@@ -1,11 +1,16 @@
-import { BreadcrumbUserAdmin } from "@vitnode/core/views/admin/layouts/breadcrumb/breadcrumb-user-admin";
+import React from "react";
 
-export default async function BreadcrumbSlot({
+import { BreadcrumbUserAdmin } from "@vitnode/core/views/admin/layouts/breadcrumb/breadcrumb-user-admin";
+import { BreadcrumbSkeleton } from "@vitnode/core/views/breadcrumb/breadcrumb-render";
+
+export default function BreadcrumbSlot({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-
-  return <BreadcrumbUserAdmin id={id} />;
+  return (
+    <React.Suspense fallback={<BreadcrumbSkeleton crumbs={3} />}>
+      <BreadcrumbUserAdmin params={params} />
+    </React.Suspense>
+  );
 }
