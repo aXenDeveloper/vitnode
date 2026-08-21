@@ -114,7 +114,11 @@ export const rawApiFetch = async ({
   if (response.status === 500) {
     const errorText = await response.text();
     throw new Error(
-      `${response.status} - ${url.toString()}\n${response.statusText ?? errorText}`,
+      // The body first, `statusText` only as a fallback. It used to be
+      // `statusText ?? errorText`, which never fell through - `statusText` is
+      // essentially always a non-empty string - so the one part that says *what*
+      // went wrong was discarded on every 500.
+      `${response.status} - ${url.toString()}\n${errorText.trim() === "" ? response.statusText : errorText}`,
     );
   }
 

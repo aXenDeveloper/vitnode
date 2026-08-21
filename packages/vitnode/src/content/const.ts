@@ -163,9 +163,23 @@ export const CONTENT_FILE_FOLDER = "content";
  */
 export const CONTENT_FILE_CODES = {
   extension: "CONTENT_FILE_EXTENSION_NOT_ALLOWED",
+  /** The role may view this content type but not write it. */
+  forbidden: "CONTENT_FILE_FORBIDDEN",
+  /** The bytes were unreadable - a truncated or corrupt image. */
+  invalid: "CONTENT_FILE_INVALID",
   mimeType: "CONTENT_FILE_MIME_TYPE_NOT_ALLOWED",
   missing: "CONTENT_FILE_NOT_FOUND",
   size: "CONTENT_FILE_TOO_LARGE",
+  /**
+   * The install cannot store anything: no adapter configured, or the image
+   * pipeline failed to load.
+   *
+   * A configuration fault rather than a bad file, and the person uploading needs
+   * to be told which - "please try again" would have them try for ever.
+   */
+  storage: "CONTENT_FILE_STORAGE_UNAVAILABLE",
+  /** The URL named a field this content type does not have, or that is not a file. */
+  unknownField: "CONTENT_FILE_FIELD_UNKNOWN",
 } as const;
 
 /** Appended to the base table name to get the generated translation table. */

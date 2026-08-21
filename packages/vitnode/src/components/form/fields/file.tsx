@@ -12,6 +12,8 @@ import {
 import { useTranslations } from "next-intl";
 import React from "react";
 
+import type { FileRejectionReason } from "@/lib/file-constraints";
+
 import {
   Attachment,
   AttachmentAction,
@@ -82,6 +84,21 @@ export interface AutoFormFileProps extends ItemAutoFormComponentProps {
   onUpload: (file: File) => Promise<AutoFormFileValue>;
 }
 
+/**
+ * An upload failure that knows which rule refused it.
+ *
+ * A structural check rather than an `instanceof`: whoever owns `onUpload` builds
+ * the error, and this component must not have to know about their error class to
+ * read the one field it can act on.
+ */
+const rejectionReasonOf = (error: unknown): FileRejectionReason | undefined => {
+  const reason = (error as null | { reason?: unknown })?.reason;
+
+  return reason === "extension" || reason === "mimeType" || reason === "size"
+    ? reason
+    : undefined;
+};
+
 const isImage = (file: AutoFormFileValue): boolean =>
   (file.mimeType ?? "").startsWith("image/");
 
@@ -145,8 +162,47 @@ export const AutoFormFile = ({
     },
   });
 
-  const errorMessage =
-    rejected ?? (upload.error instanceof Error ? upload.error.message : null);
+  /**
+   * What went wrong, in the most specific words available.
+   *
+   * Three sources, in order of how much they know:
+   *
+   * 1. `rejected` - the pre-flight check, already translated;
+   * 2. a server rejection that named a rule this component can restate in the
+   *    reader's own language, using the field's own limits and the file they
+   *    actually picked;
+   * 3. the server's own message, verbatim.
+   *
+   * The last one matters more than it looks. "Storage provider not found" and
+   * "Invalid or corrupt image file" are exactly what somebody needs to read, and
+   * replacing either with "the upload failed, please try again" is how an editor
+   * ends up retrying a misconfiguration for ten minutes.
+   */
+  const errorMessage = React.useMemo(() => {
+    if (rejected !== null) return rejected;
+    if (!(upload.error instanceof Error)) return null;
+
+    const reason = rejectionReasonOf(upload.error);
+    const attempted = upload.variables;
+
+    if (reason === "size" && attempted) {
+      return t("errors.too_large", {
+        max: formatBytes(maxBytes),
+        size: formatBytes(attempted.size),
+      });
+    }
+    if (reason !== undefined && attempted) {
+      return t("errors.wrong_format", {
+        formats: formats.join(", "),
+        value:
+          reason === "mimeType" && attempted.type !== ""
+            ? attempted.type
+            : attempted.name,
+      });
+    }
+
+    return upload.error.message;
+  }, [formats, maxBytes, rejected, t, upload.error, upload.variables]);
 
   const pick = (chosen: File | undefined) => {
     if (!chosen) return;

@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-import type { FileCandidate, FileConstraints } from "../lib/file-constraints";
+import type {
+  FileCandidate,
+  FileConstraints,
+  FileRejectionReason,
+} from "../lib/file-constraints";
 import type { ContentFileField } from "./types";
 
 import {
@@ -219,6 +223,33 @@ export const contentFileAccept = fileAcceptAttribute;
  * which the AdminCP constraint line reads through the very same function.
  */
 export const contentFileFormatLabels = fileFormatLabels;
+
+/**
+ * The rule a rejection code came from, or `undefined`.
+ *
+ * The inverse of the mapping in {@link validateContentFile}, and it exists for
+ * the browser: a rejection that arrives over the wire is a code and an English
+ * sentence, and the uploader would rather render its *own* translated sentence -
+ * built from the field's own limits, which it already has.
+ *
+ * Anything the client cannot improve on comes back `undefined`, and the server's
+ * message is shown verbatim. That is the right default: "Storage provider not
+ * found" is far more use to an admin than any sentence this side could invent.
+ */
+export const contentFileRejectionReason = (
+  code: string,
+): FileRejectionReason | undefined => {
+  switch (code) {
+    case CONTENT_FILE_CODES.extension:
+      return "extension";
+    case CONTENT_FILE_CODES.mimeType:
+      return "mimeType";
+    case CONTENT_FILE_CODES.size:
+      return "size";
+    default:
+      return undefined;
+  }
+};
 
 /** The constraints of one descriptor, without the rest of it. */
 export const contentFileConstraints = (

@@ -5,6 +5,7 @@
 import type { Context, MiddlewareHandler } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { HTTPException } from "hono/http-exception";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -52,26 +53,30 @@ const PLUGIN_ID = "@vitnode/example";
  * to catch before the identifier ever reaches a content row.
  */
 const harness = ({
+  storageThrows,
   storedAs,
   storedMimeType,
   storedSize,
 }: {
+  /** Mimics `StorageModel`, which speaks in `HTTPException`s. */
+  storageThrows?: HTTPException;
   storedAs?: string;
   storedMimeType?: string;
   storedSize?: number;
 } = {}) => {
-  const upload = vi.fn(
-    async ({ file }: { file: File }) =>
-      await Promise.resolve({
-        dimensions: { height: 900, width: 1600 },
-        id: 42,
-        key: "month_8_2026/content/42",
-        mimeType: storedMimeType ?? (file.type === "" ? null : file.type),
-        name: storedAs ?? file.name,
-        size: storedSize ?? file.size,
-        url: "https://cdn.test/month_8_2026/content/42",
-      }),
-  );
+  const upload = vi.fn(async ({ file }: { file: File }) => {
+    if (storageThrows) throw storageThrows;
+
+    return await Promise.resolve({
+      dimensions: { height: 900, width: 1600 },
+      id: 42,
+      key: "month_8_2026/content/42",
+      mimeType: storedMimeType ?? (file.type === "" ? null : file.type),
+      name: storedAs ?? file.name,
+      size: storedSize ?? file.size,
+      url: "https://cdn.test/month_8_2026/content/42",
+    });
+  });
   const deleteFile = vi.fn().mockResolvedValue(undefined);
 
   const app = new OpenAPIHono();
@@ -291,6 +296,110 @@ describe("the generated upload route", () => {
 
     expect(res.status).toBe(400);
     expect(deleteFile).toHaveBeenCalledWith(42);
+  });
+
+  /**
+   * Every refusal has to arrive as JSON.
+   *
+   * Hono renders an `HTTPException`'s message as plain text, and the browser
+   * cannot tell that from a proxy's HTML error page - so a bare exception here
+   * became "The upload failed. Please try again." in the AdminCP, which told the
+   * editor nothing and invited them to retry a misconfiguration.
+   */
+  describe("the shape of a refusal", () => {
+    const bodyOf = async (res: Response) =>
+      (await res.json()) as { code?: string; message?: string };
+
+    it("names the field when the URL does not name a file field", async () => {
+      const { app } = harness();
+
+      const res = await post(app, "title", fileOf("x.gif", "image/gif"));
+      const body = await bodyOf(res);
+
+      expect(res.status).toBe(400);
+      expect(body.code).toBe("CONTENT_FILE_FIELD_UNKNOWN");
+      expect(body.message).toContain("title");
+    });
+
+    it("says which permission is missing rather than just Forbidden", async () => {
+      permissions.create = false;
+      permissions.edit = false;
+      const { app } = harness();
+
+      const res = await post(app, "animation", fileOf("a.gif", "image/gif"));
+      const body = await bodyOf(res);
+
+      expect(res.status).toBe(403);
+      expect(body.code).toBe("CONTENT_FILE_FORBIDDEN");
+      expect(body.message).toMatch(/permission/i);
+    });
+
+    it("passes a corrupt-image failure through with its own words", async () => {
+      const { app } = harness({
+        storageThrows: new HTTPException(400, {
+          message: "Invalid or corrupt image file",
+        }),
+      });
+
+      const res = await post(app, "cover", fileOf("hero.jpg", "image/jpeg"));
+      const body = await bodyOf(res);
+
+      expect(res.status).toBe(400);
+      expect(body.code).toBe("CONTENT_FILE_INVALID");
+      expect(body.message).toBe("Invalid or corrupt image file");
+    });
+
+    it("says the install cannot store anything, and which way", async () => {
+      // The case an editor would otherwise retry for ever: nothing is wrong with
+      // their file.
+      for (const message of [
+        "Storage provider not found",
+        "Image optimization library (sharp) failed to load",
+      ]) {
+        const { app } = harness({
+          storageThrows: new HTTPException(500, { message }),
+        });
+
+        const res = await post(app, "cover", fileOf("hero.jpg", "image/jpeg"));
+        const body = await bodyOf(res);
+
+        expect(res.status).toBe(500);
+        expect(body.code).toBe("CONTENT_FILE_STORAGE_UNAVAILABLE");
+        expect(body.message).toBe(message);
+      }
+    });
+
+    it("answers JSON for every refusal, never bare text", async () => {
+      const cases: (() => Promise<Response>)[] = [
+        async () =>
+          await post(harness().app, "title", fileOf("a.gif", "image/gif")),
+        async () =>
+          await post(
+            harness().app,
+            "cover",
+            fileOf("spec.pdf", "application/pdf"),
+          ),
+        async () =>
+          await post(
+            harness({
+              storageThrows: new HTTPException(500, { message: "nope" }),
+            }).app,
+            "cover",
+            fileOf("hero.jpg", "image/jpeg"),
+          ),
+      ];
+
+      for (const run of cases) {
+        const res = await run();
+
+        expect(res.ok).toBe(false);
+        // `.json()` rejecting is exactly what produced the generic message.
+        await expect(res.json()).resolves.toMatchObject({
+          code: expect.any(String),
+          message: expect.any(String),
+        });
+      }
+    });
   });
 
   describe("permissions", () => {

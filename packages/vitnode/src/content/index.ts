@@ -218,6 +218,7 @@ export {
   contentFileAccept,
   contentFileConstraints,
   contentFileFormatLabels,
+  contentFileRejectionReason,
   normalizeContentFileExtension,
   normalizeContentFileExtensions,
   normalizeContentFileMimeType,

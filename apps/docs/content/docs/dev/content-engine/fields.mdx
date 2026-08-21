@@ -307,6 +307,41 @@ The content mutation that follows is ordinary JSON:
 No base64, no binary through a Server Action, and the form value is the same size
 whether the image is 4 KB or 4 MB.
 
+#### What a refused upload says
+
+Every refusal comes back as JSON with a machine-readable `code` and a sentence
+written for the person who picked the file:
+
+```json
+{
+  "code": "CONTENT_FILE_TOO_LARGE",
+  "message": "This file is 9 MB. The maximum is 5 MB."
+}
+```
+
+| Code | Means |
+| :--- | :--- |
+| `CONTENT_FILE_TOO_LARGE` | Over the field's `maxBytes`. |
+| `CONTENT_FILE_MIME_TYPE_NOT_ALLOWED` | The declared media type is not in `allowedMimeTypes`. |
+| `CONTENT_FILE_EXTENSION_NOT_ALLOWED` | The file name's extension is not in `allowedExtensions`. |
+| `CONTENT_FILE_INVALID` | The bytes could not be read - a truncated or corrupt image. |
+| `CONTENT_FILE_STORAGE_UNAVAILABLE` | No storage adapter configured, or the image pipeline failed to load. **A configuration fault, not a bad file.** |
+| `CONTENT_FILE_FIELD_UNKNOWN` | The URL named a field this content type has not got, or one that is not a `file`. |
+| `CONTENT_FILE_FORBIDDEN` | The role may view this content type but not write it. |
+
+The uploader restates the first three in the reader's own language, using the
+field's own limits. Everything else is shown **verbatim**, and deliberately:
+"Storage provider not found" is what an admin needs to read, and replacing it
+with "please try again" is how somebody retries a misconfiguration for ten
+minutes.
+
+<Callout type="info" title="A 413 never reaches the route">
+  If your hosting platform or proxy rejects the request body before it arrives,
+  no `maxBytes` check runs and there is no JSON to read - the uploader says the
+  file was refused as too large *before* it reached the server, so the limit to
+  raise is the platform's rather than the field's.
+</Callout>
+
 #### Uploading is not the same as assigning
 
 A successful upload proves the file was valid **for the field it was uploaded

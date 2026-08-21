@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
+import type { StorageFileUploadResult } from "../../api/models/storage";
 import type {
   AnyContentTypeDefinition,
   ContentFilterInput,
@@ -27,6 +28,7 @@ import {
 } from "../conflicts";
 import {
   CONTENT_ACTOR_TYPES,
+  CONTENT_FILE_CODES,
   CONTENT_FILE_FOLDER,
   CONTENT_LOCALE_MAX_LENGTH,
   CONTENT_OPTIONS_LIMIT,
@@ -599,16 +601,32 @@ export const buildContentRoutes = <
           zodFileRejection,
           "Not a file field, or the file failed the field's own rules",
         ),
-        403: { description: "Not allowed to write this content type" },
+        403: jsonResponse(
+          zodFileRejection,
+          "Not allowed to write this content type",
+        ),
+        500: jsonResponse(
+          zodFileRejection,
+          "The install cannot store files - no adapter, or the image pipeline failed",
+        ),
       },
     },
     handler: async c => {
       const field = c.req.param("field");
       const fieldValue = fileFields[field];
+      // Every rejection below is a JSON `{ code, message }`, never a bare
+      // `HTTPException`. Hono renders an exception's message as *plain text*, and
+      // the browser cannot tell that apart from an HTML error page - so the
+      // uploader falls back to "the upload failed", which is the one thing an
+      // editor cannot act on. A code and a sentence can both be acted on.
       if (!fieldValue) {
-        throw new HTTPException(400, {
-          message: `"${field}" is not a file field on this content type.`,
-        });
+        return c.json(
+          {
+            code: CONTENT_FILE_CODES.unknownField,
+            message: `"${field}" is not a file field on this content type.`,
+          },
+          400,
+        );
       }
 
       // Either write permission is enough - see the doc comment.
@@ -624,7 +642,13 @@ export const buildContentRoutes = <
         ),
       );
       if (!allowed.some(Boolean)) {
-        throw new HTTPException(403, { message: "Forbidden" });
+        return c.json(
+          {
+            code: CONTENT_FILE_CODES.forbidden,
+            message: `You do not have permission to upload a ${name}.`,
+          },
+          403,
+        );
       }
 
       // Re-parsed rather than read through `c.req.valid("form")`, which cannot
@@ -643,18 +667,40 @@ export const buildContentRoutes = <
       });
       if (rejected) return c.json(rejected, 400);
 
-      const stored = await c.get("storage").upload({
-        file,
-        folder: CONTENT_FILE_FOLDER,
-        // Handed to the adapter too, as defence in depth: a direct
-        // `storage.upload` from somewhere else should not be able to exceed what
-        // this field declares.
-        ...(constraints.allowedMimeTypes
-          ? { allowedMimeTypes: [...constraints.allowedMimeTypes] }
-          : {}),
-        maxBytes: constraints.maxBytes,
-        metadata: { contentTypeId: definition.id, field },
-      });
+      let stored: StorageFileUploadResult;
+      try {
+        stored = await c.get("storage").upload({
+          file,
+          folder: CONTENT_FILE_FOLDER,
+          // Handed to the adapter too, as defence in depth: a direct
+          // `storage.upload` from somewhere else should not be able to exceed
+          // what this field declares.
+          ...(constraints.allowedMimeTypes
+            ? { allowedMimeTypes: [...constraints.allowedMimeTypes] }
+            : {}),
+          maxBytes: constraints.maxBytes,
+          metadata: { contentTypeId: definition.id, field },
+        });
+      } catch (error) {
+        // `StorageModel` speaks in `HTTPException`s, whose messages are exactly
+        // what the person needs to read: "Storage provider not found",
+        // "Invalid or corrupt image file", "Image optimization library (sharp)
+        // failed to load". Re-shaped rather than rethrown so they arrive as JSON
+        // instead of as text the uploader has to guess at - a misconfigured
+        // install must say so, not say "please try again" for ever.
+        if (!(error instanceof HTTPException)) throw error;
+
+        return c.json(
+          {
+            code:
+              error.status === 400
+                ? CONTENT_FILE_CODES.invalid
+                : CONTENT_FILE_CODES.storage,
+            message: error.message,
+          },
+          error.status === 400 ? 400 : 500,
+        );
+      }
 
       const descriptor = contentFileDescriptorFromUpload(stored);
 
