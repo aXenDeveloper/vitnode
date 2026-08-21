@@ -19,6 +19,7 @@ import {
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "../../api/lib/with-pagination";
+import { StorageImageUnprocessableError } from "../../api/models/storage";
 import { contentTypeName } from "../admin/labels";
 import {
   zodContentConflict,
@@ -683,21 +684,27 @@ export const buildContentRoutes = <
         });
       } catch (error) {
         // `StorageModel` speaks in `HTTPException`s, whose messages are exactly
-        // what the person needs to read: "Storage provider not found",
-        // "Invalid or corrupt image file", "Image optimization library (sharp)
-        // failed to load". Re-shaped rather than rethrown so they arrive as JSON
-        // instead of as text the uploader has to guess at - a misconfigured
-        // install must say so, not say "please try again" for ever.
+        // what the person needs to read: which limit the image exceeded, what
+        // libvips said about the bytes, which adapter is missing from the config.
+        // Re-shaped rather than rethrown so they arrive as JSON instead of as
+        // text the uploader has to guess at - a misconfigured install must say
+        // so, not say "please try again" for ever.
+        //
+        // `StorageImageUnprocessableError` is picked out because it is the one
+        // 400 that is *not* a bad file: the image read fine and only the
+        // conversion refused it, so calling it `invalid` would have somebody
+        // re-exporting a PNG that was never broken.
         if (!(error instanceof HTTPException)) throw error;
 
+        const code =
+          error instanceof StorageImageUnprocessableError
+            ? CONTENT_FILE_CODES.unprocessable
+            : error.status === 400
+              ? CONTENT_FILE_CODES.invalid
+              : CONTENT_FILE_CODES.storage;
+
         return c.json(
-          {
-            code:
-              error.status === 400
-                ? CONTENT_FILE_CODES.invalid
-                : CONTENT_FILE_CODES.storage,
-            message: error.message,
-          },
+          { code, message: error.message },
           error.status === 400 ? 400 : 500,
         );
       }
@@ -707,7 +714,9 @@ export const buildContentRoutes = <
       // The same rules again, against what was actually **stored**. An install
       // with `storage.image.webp` re-encodes a PNG to WebP, so the stored name
       // ends `.webp` - and a field that allows only `.png` has to say so now,
-      // loudly, rather than accepting the upload and refusing the save. The file
+      // loudly, rather than accepting the upload and refusing the save. It cuts
+      // the other way too: an image over WebP's 16383px per side is stored in the
+      // format it arrived in, so a `.webp`-only field refuses that one. The file
       // is removed because this request created it and nothing else refers to it.
       const stale = validateContentFile(constraints, descriptor);
       if (stale) {
@@ -716,7 +725,7 @@ export const buildContentRoutes = <
         return c.json(
           {
             code: stale.code,
-            message: `${stale.message} The stored file is "${descriptor.name}" (${descriptor.mimeType ?? "unknown type"}) - image processing may have re-encoded it, in which case this field's allowlist has to include the converted format.`,
+            message: `${stale.message} The stored file is "${descriptor.name}" (${descriptor.mimeType ?? "unknown type"}). Image processing re-encodes uploads to WebP, and keeps an image too large for WebP in its original format - so this field's allowlist has to accept both.`,
           },
           400,
         );

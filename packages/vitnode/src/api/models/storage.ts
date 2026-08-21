@@ -10,6 +10,7 @@ import {
   generateStorageFileName,
   replaceFileExtension,
 } from "@/lib/api/upload";
+import { formatBytes } from "@/lib/format-bytes";
 
 const DEFAULT_IMAGE_QUALITY = 85;
 
@@ -101,7 +102,127 @@ interface ProcessedImage {
   // New extension (incl. leading dot) when the format changed, else null.
   extension: null | string;
   mimeType: string;
+  /**
+   * Why the configured WebP conversion did not happen, when it was configured
+   * and did not - otherwise null.
+   *
+   * Recorded on the `core_files` row because the decision is otherwise invisible:
+   * an install with `storage.image.webp` whose library has one stray PNG among
+   * the WebPs looks like a bug until this says which rule spared it.
+   */
+  skippedConversion: null | string;
 }
+
+/**
+ * The image decoded, and then could not be re-encoded because of a **format
+ * limit rather than the bytes**: WebP allows at most 16383 pixels per side, and
+ * a 20000px-wide PNG is a perfectly valid PNG.
+ *
+ * Its own class so a caller can tell this apart from a broken file - the upload
+ * route answers `CONTENT_FILE_UNPROCESSABLE` for it instead of
+ * `CONTENT_FILE_INVALID`. The distinction is the whole point: "corrupt" sends
+ * somebody off to re-export an image that was never damaged, while naming the
+ * pixel limit sends them to resize it, which is the thing that works.
+ */
+export class StorageImageUnprocessableError extends HTTPException {
+  constructor(message: string) {
+    super(400, { message });
+
+    this.name = "StorageImageUnprocessableError";
+  }
+}
+
+/** The largest side libwebp will encode. Anything over it is refused outright. */
+const WEBP_MAX_SIDE = 16383;
+
+/** Marks a row whose WebP conversion was skipped for the reason below. */
+const SKIPPED_WEBP_DIMENSIONS = "webp-dimension-limit";
+
+/**
+ * Whether WebP can hold an image this size at all.
+ *
+ * Unmeasured dimensions answer `false`: an image libvips could not size up is
+ * not one to pre-emptively give up converting, so the encoder stays the thing
+ * that decides.
+ */
+const exceedsWebpLimit = (
+  dimensions: null | { height: number; width: number },
+): boolean =>
+  dimensions !== null &&
+  (dimensions.width > WEBP_MAX_SIDE || dimensions.height > WEBP_MAX_SIDE);
+
+/** `image/png` -> `PNG`, for a sentence somebody reads rather than a header. */
+const imageFormatName = (mimeType: string): string =>
+  (mimeType.split("/")[1] ?? mimeType).toUpperCase();
+
+/**
+ * What sharp itself said, as a suffix - or nothing when it said nothing useful.
+ *
+ * libvips writes the actionable part of these ("Input buffer contains
+ * unsupported image format", "vipspng: libpng read error", "Input Buffer is
+ * empty"), and dropping it is what left an admin with a sentence that named no
+ * cause. Only the first line is kept, and it is capped, because the rest is a
+ * stack trace and this ends up in a form field.
+ */
+const reasonSuffix = (error: unknown): string => {
+  const first =
+    error instanceof Error
+      ? (error.message
+          .split("\n")[0]
+          ?.trim()
+          .replace(/[.:]+$/, "") ?? "")
+      : "";
+
+  return first === "" ? "" : `: ${first.slice(0, 160)}`;
+};
+
+/**
+ * Turns a failed re-encode into the most specific thing that can be said.
+ *
+ * Two outcomes, and both were previously "Invalid or corrupt image file":
+ *
+ * - **over the format's pixel limit** - sharp says "too large for the WebP
+ *   format" and the file itself is fine. `exceedsWebpLimit` heads this off for
+ *   every image libvips could measure, so reaching it means an unmeasured image
+ *   or a limit of some other target format - a backstop, and it still has to say
+ *   which limit rather than "corrupt";
+ * - **anything else** - the header read but the pixel data did not, which is a
+ *   genuinely damaged or truncated file.
+ */
+const imageEncodeFailure = ({
+  dimensions,
+  error,
+  mimeType,
+  targetFormat,
+}: {
+  dimensions: null | { height: number; width: number };
+  error: unknown;
+  mimeType: string;
+  targetFormat: string;
+}): HTTPException => {
+  const size = dimensions
+    ? `${dimensions.width}\u00d7${dimensions.height} pixels`
+    : "this size";
+  const target = targetFormat.toUpperCase();
+  const tooLarge =
+    error instanceof Error &&
+    /too large for the .* format/i.test(error.message);
+
+  if (tooLarge) {
+    const limit =
+      targetFormat === "webp"
+        ? ` ${target} allows at most ${WEBP_MAX_SIDE} pixels per side.`
+        : "";
+
+    return new StorageImageUnprocessableError(
+      `This image is ${size}, which is too large to convert to ${target}.${limit} Resize it and upload it again.`,
+    );
+  }
+
+  return new HTTPException(400, {
+    message: `This ${imageFormatName(mimeType)} file is damaged${reasonSuffix(error)}. Its header reads as ${size}, but the image data could not be decoded - the file is most likely truncated or was cut short in transfer.`,
+  });
+};
 
 export class StorageModel {
   constructor(c: Context) {
@@ -120,7 +241,13 @@ export class StorageModel {
   ): Promise<ProcessedImage> {
     const image = this.c.get("core")?.storage?.image;
     if (!image || !PROCESSABLE_IMAGE_MIME_TYPES.has(mimeType)) {
-      return { body, mimeType, extension: null, dimensions: null };
+      return {
+        body,
+        mimeType,
+        extension: null,
+        dimensions: null,
+        skippedConversion: null,
+      };
     }
 
     const quality = image.quality ?? DEFAULT_IMAGE_QUALITY;
@@ -133,42 +260,80 @@ export class StorageModel {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       throw new HTTPException(500, {
-        message: "Image optimization library (sharp) failed to load",
+        message:
+          "The image optimization library (sharp) failed to load, so images cannot be processed. Install `sharp` on the API server, or remove `storage.image` from the API config to store images as they are uploaded.",
       });
     }
 
+    // Reading and re-encoding are caught separately because they fail for
+    // different reasons and only one of them means "bad file". A PNG that will
+    // not decode at all is broken; a PNG that decodes and then will not
+    // re-encode is usually too big for the target format, which is a limit
+    // rather than a fault. Collapsing both into "Invalid or corrupt image file"
+    // sent people off to re-export an image that was never corrupt.
+    let metadata;
     try {
-      const metadata = await sharp(body).metadata();
-      if (!metadata.format) {
-        return { body, mimeType, extension: null, dimensions: null };
-      }
-
-      const targetFormat = toWebp ? "webp" : metadata.format;
-      const output = await sharp(body)
-        .toFormat(targetFormat, { quality })
-        .toBuffer();
-
-      return {
-        body: output,
-        mimeType: toWebp ? "image/webp" : mimeType,
-        extension: toWebp ? ".webp" : null,
-        dimensions:
-          metadata.width && metadata.height
-            ? { width: metadata.width, height: metadata.height }
-            : null,
-      };
-    } catch {
+      metadata = await sharp(body).metadata();
+    } catch (error) {
       throw new HTTPException(400, {
-        message: "Invalid or corrupt image file",
+        message: `Could not read this ${imageFormatName(mimeType)} file${reasonSuffix(error)}. It may be truncated, or another format saved under the wrong extension.`,
       });
     }
+
+    if (!metadata.format) {
+      return {
+        body,
+        mimeType,
+        extension: null,
+        dimensions: null,
+        skippedConversion: null,
+      };
+    }
+
+    const dimensions =
+      metadata.width && metadata.height
+        ? { width: metadata.width, height: metadata.height }
+        : null;
+
+    // A 2944x16384 PNG is one pixel too tall for WebP and an entirely valid PNG,
+    // so it is stored as a PNG. Checked here rather than caught from the encoder
+    // because the right answer is not to refuse the upload: `storage.image.webp`
+    // asks for smaller files, and it does not follow from that that an image the
+    // format cannot hold should be rejected instead of kept as it arrived.
+    //
+    // Only the *format* is given up - never pixels. Downscaling to fit would be
+    // the other way to keep WebP, and it is not this function's call to make:
+    // nothing in the config asked for the image to be altered.
+    const asWebp = toWebp && !exceedsWebpLimit(dimensions);
+    const targetFormat = asWebp ? "webp" : metadata.format;
+
+    let output: Buffer;
+    try {
+      output = await sharp(body).toFormat(targetFormat, { quality }).toBuffer();
+    } catch (error) {
+      throw imageEncodeFailure({
+        dimensions,
+        error,
+        mimeType,
+        targetFormat,
+      });
+    }
+
+    return {
+      body: output,
+      mimeType: asWebp ? "image/webp" : mimeType,
+      extension: asWebp ? ".webp" : null,
+      dimensions,
+      skippedConversion: toWebp && !asWebp ? SKIPPED_WEBP_DIMENSIONS : null,
+    };
   }
 
   private requireProvider(): StorageApiPlugin {
     const provider = this.c.get("core").storage?.adapter;
     if (!provider) {
       throw new HTTPException(500, {
-        message: "Storage provider not found",
+        message:
+          "No storage adapter is configured, so there is nowhere to put this file. Set `storage.adapter` in the API config.",
       });
     }
 
@@ -255,12 +420,12 @@ export class StorageModel {
 
     if (maxBytes !== undefined && file.size > maxBytes) {
       throw new HTTPException(400, {
-        message: `File exceeds the maximum size of ${maxBytes} bytes`,
+        message: `This file is ${formatBytes(file.size)}. The maximum is ${formatBytes(maxBytes)}.`,
       });
     }
     if (allowedMimeTypes && !allowedMimeTypes.includes(file.type)) {
       throw new HTTPException(400, {
-        message: `Unsupported file type: ${file.type || "unknown"}`,
+        message: `"${file.type || "unknown"}" is not an accepted file type here. Accepted: ${allowedMimeTypes.join(", ")}.`,
       });
     }
 
@@ -317,6 +482,9 @@ export class StorageModel {
             ...(processed.dimensions
               ? { dimensions: processed.dimensions }
               : {}),
+            ...(processed.skippedConversion
+              ? { skippedConversion: processed.skippedConversion }
+              : {}),
           },
         })
         .returning({ id: core_files.id });
@@ -328,7 +496,8 @@ export class StorageModel {
     if (!created) {
       await provider.delete(result.key).catch(() => undefined);
       throw new HTTPException(500, {
-        message: "The uploaded file could not be recorded",
+        message:
+          "The file was stored but could not be recorded in the database, so it cannot be referenced. Nothing was kept - try again.",
       });
     }
 

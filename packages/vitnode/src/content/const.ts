@@ -180,6 +180,17 @@ export const CONTENT_FILE_CODES = {
   storage: "CONTENT_FILE_STORAGE_UNAVAILABLE",
   /** The URL named a field this content type does not have, or that is not a file. */
   unknownField: "CONTENT_FILE_FIELD_UNKNOWN",
+  /**
+   * The image was read, and then could not be re-encoded - a limit of the target
+   * format rather than anything wrong with the file.
+   *
+   * WebP allows at most 16383 pixels per side, so an install with
+   * `storage.image.webp` refuses a 20000px-wide PNG here - a PNG that is
+   * entirely valid, and that resizing fixes. Separate from `invalid` because
+   * that one says "corrupt", and telling somebody their good file is corrupt
+   * sends them to re-export it instead of to resize it.
+   */
+  unprocessable: "CONTENT_FILE_UNPROCESSABLE",
 } as const;
 
 /** Appended to the base table name to get the generated translation table. */

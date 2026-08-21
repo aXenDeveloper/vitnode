@@ -8,6 +8,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { StorageImageUnprocessableError } from "@/api/models/storage";
 import {
   testFilePostContentType,
   testPostContentType,
@@ -273,7 +274,8 @@ describe("the generated upload route", () => {
     const body = (await res.json()) as { code: string; message: string };
     expect(body.code).toBe("CONTENT_FILE_MIME_TYPE_NOT_ALLOWED");
     expect(body.message).toContain("banner.webp");
-    expect(body.message).toContain("re-encoded");
+    expect(body.message).toContain("re-encodes");
+    expect(body.message).toContain("original format");
     expect(deleteFile).toHaveBeenCalledWith(42);
   });
 
@@ -347,6 +349,21 @@ describe("the generated upload route", () => {
       expect(res.status).toBe(400);
       expect(body.code).toBe("CONTENT_FILE_INVALID");
       expect(body.message).toBe("Invalid or corrupt image file");
+    });
+
+    it("separates an unconvertible image from a corrupt one", async () => {
+      const { app } = harness({
+        storageThrows: new StorageImageUnprocessableError(
+          "This image is 20000\u00d7400 pixels, which is too large to convert to WEBP. WEBP allows at most 16383 pixels per side. Resize it and upload it again.",
+        ),
+      });
+
+      const res = await post(app, "cover", fileOf("hero.jpg", "image/jpeg"));
+      const body = await bodyOf(res);
+
+      expect(res.status).toBe(400);
+      expect(body.code).toBe("CONTENT_FILE_UNPROCESSABLE");
+      expect(body.message).toContain("16383");
     });
 
     it("says the install cannot store anything, and which way", async () => {

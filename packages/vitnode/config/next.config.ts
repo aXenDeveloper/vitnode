@@ -54,6 +54,7 @@ const redisCacheHandlers = (): NextConfig => {
 
 export const vitNodeNextConfig = (config: NextConfig): NextConfig =>
   withNextIntl({
+    reactCompiler: true,
     cacheComponents: true,
     partialPrefetching: true,
     ...redisCacheHandlers(),
