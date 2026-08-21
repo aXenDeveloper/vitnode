@@ -105,12 +105,22 @@ const RemoteChanges = ({
  */
 export const ConflictNotice = ({
   conflict,
+  name,
   onDismiss,
   onReload,
   opened,
   spec,
 }: {
   conflict: ContentConflictState;
+  /**
+   * The content type's singular label - "Article", not "record".
+   *
+   * Required rather than optional, and that is deliberate: `desc` is an ICU
+   * message with a `{name}` placeholder, and a missing argument is not a blank in
+   * next-intl - it is a formatting error, and the reader gets the literal string
+   * `core.content.conflict.desc` where the sentence should be.
+   */
+  name: string;
   /**
    * Clears the conflict, so the next one can raise the dialog again.
    *
@@ -149,7 +159,7 @@ export const ConflictNotice = ({
           <AlertDialogDescription>
             {reloaded
               ? t("reloaded", { version: conflict.currentVersion })
-              : t("desc", { version: conflict.currentVersion })}
+              : t("desc", { name, version: conflict.currentVersion })}
           </AlertDialogDescription>
         </AlertDialogHeader>
 

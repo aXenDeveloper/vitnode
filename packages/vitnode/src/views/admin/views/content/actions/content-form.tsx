@@ -586,6 +586,7 @@ const ContentFormFields = ({
       {conflict && data ? (
         <ConflictNotice
           conflict={conflict}
+          name={singular}
           onDismiss={() => setConflict(null)}
           onReload={onReload}
           opened={data}

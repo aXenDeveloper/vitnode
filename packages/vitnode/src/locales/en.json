@@ -512,7 +512,7 @@
       },
       "conflict": {
         "title": "Someone else saved this first",
-        "desc": "This {name, select, other {record}} moved to version {version} while you were editing. Nothing you typed has been lost.",
+        "desc": "{name} moved to version {version} while you were editing, so your save did not go through. Nothing you typed has been lost.",
         "reload": "Show what changed",
         "reloaded": "Now at version {version}. Saving replaces the changes below with yours."
       },
