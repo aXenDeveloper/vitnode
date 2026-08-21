@@ -3,6 +3,7 @@
 import eslintReact from "@eslint-react/eslint-plugin";
 import hooksPlugin from "eslint-plugin-react-hooks";
 import reactYouMightNotNeedAnEffect from "eslint-plugin-react-you-might-not-need-an-effect";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 
 export default [
   reactYouMightNotNeedAnEffect.configs.recommended,
@@ -25,6 +26,7 @@ export default [
   {
     plugins: {
       "react-hooks": hooksPlugin,
+      "jsx-a11y": jsxA11y,
     },
     rules: {
       "react/react-in-jsx-scope": "off",

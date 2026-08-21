@@ -250,12 +250,42 @@ const ContentFormFields = ({
   );
   const localized = localizedFields.length > 0;
 
-  // The version this form opened with, and the one every save is checked
-  // against - until a conflict is resolved, which replaces it with the version
-  // the editor has now actually seen.
+  /**
+   * The version every save is checked against.
+   *
+   * It starts as the version the form opened with and then has to **keep up**,
+   * which is the whole subtlety here: a page-mode form stays mounted across its
+   * own saves, so holding the opening version for the life of the component
+   * means the second save of a session guards on a version the record has
+   * already left behind - and gets a conflict banner naming an editor who does
+   * not exist.
+   *
+   * Two things move it, and each covers what the other misses:
+   *
+   * - the mutation result, immediately, which closes the window between a save
+   *   returning and fresh server data arriving;
+   * - a newer `data.version` from the server, which covers every *other* way the
+   *   version moves while this form is open - a publish, an unpublish, a restore
+   *   from the history dialog.
+   *
+   * Only ever forwards. A stale row - a dialog opened from a list rendered
+   * before the last write - must not drag the precondition backwards, and a
+   * conflict that has been reloaded must not be un-resolved by one.
+   */
   const [expectedVersion, setExpectedVersion] = React.useState(() =>
     typeof data?.version === "number" ? data.version : undefined,
   );
+  const serverVersion =
+    typeof data?.version === "number" ? data.version : undefined;
+  if (
+    serverVersion !== undefined &&
+    expectedVersion !== undefined &&
+    serverVersion > expectedVersion
+  ) {
+    // Derived from a prop during render on purpose: an effect would leave one
+    // render - and therefore one possible submit - guarding on the old version.
+    setExpectedVersion(serverVersion);
+  }
 
   /**
    * What every language held when the form opened.
@@ -435,6 +465,12 @@ const ContentFormFields = ({
       return;
     }
 
+    // The record just moved forward a version, and this form is still mounted -
+    // so the next save has to guard on the version this one produced. Set before
+    // the `push` below, because the fresh server row arrives asynchronously and a
+    // second submit in between would otherwise send the version we just spent.
+    if (mutation.version !== undefined) setExpectedVersion(mutation.version);
+
     // This record is somebody else's picker option. A new category has to appear
     // in the article form, and a renamed one has to read as its new name -
     // neither happens on its own, because the query client outlives the
@@ -550,6 +586,7 @@ const ContentFormFields = ({
       {conflict && data ? (
         <ConflictNotice
           conflict={conflict}
+          onDismiss={() => setConflict(null)}
           onReload={onReload}
           opened={data}
           spec={spec}

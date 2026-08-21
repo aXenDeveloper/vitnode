@@ -7,7 +7,16 @@ import React from "react";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 
 export interface ContentConflictState {
@@ -35,9 +44,9 @@ const asText = (value: unknown): string => {
 };
 
 /**
- * What another session changed while this dialog was open.
+ * What another session changed while this form was open.
  *
- * Compared against the values the dialog *opened* with, not against what the
+ * Compared against the values the form *opened* with, not against what the
  * editor has typed since - the question being answered is "what did I not see",
  * and mixing in unsaved edits would answer a different one.
  */
@@ -57,7 +66,7 @@ const RemoteChanges = ({
   if (changed.length === 0) return null;
 
   return (
-    <ul className="mt-2 flex flex-col gap-1">
+    <ul className="mt-3 flex flex-col gap-1 text-sm">
       {changed.map(field => (
         <li className="flex flex-wrap items-baseline gap-2" key={field.name}>
           <span className="font-medium">{field.label}</span>
@@ -73,51 +82,89 @@ const RemoteChanges = ({
 };
 
 /**
- * The lost-update banner.
+ * The lost-update dialog.
  *
- * Three rules, and the reason this is a banner rather than a toast:
+ * A **modal** rather than a banner above the form, and that is the point: a save
+ * that did not happen is not something to notice later. A notice inline with the
+ * fields competes with the fields, and on a page-mode form long enough to scroll
+ * it can be off screen entirely - so the one outcome the editor must not get is
+ * exactly the one they got: pressing Save, seeing nothing change, and pressing it
+ * again.
  *
- * 1. **Nothing the editor typed is discarded.** The form stays mounted; only
- *    this notice appears above it.
+ * Three rules survive the change, and they are why this is a dialog rather than a
+ * toast:
+ *
+ * 1. **Nothing the editor typed is discarded.** The form stays mounted behind
+ *    the overlay; this is a portal, and closing it returns them to every value
+ *    they had.
  * 2. **Nothing is overwritten automatically.** Reloading shows what changed and
- *    arms the submit button with the *new* version - saving again is then a
+ *    arms the next save with the *new* version - saving again is then a
  *    deliberate second click, not a silent clobber.
  * 3. **No field merging.** Deciding which side of a conflicting paragraph wins
  *    is the editor's call, and guessing it is worse than asking.
  */
 export const ConflictNotice = ({
   conflict,
+  onDismiss,
   onReload,
   opened,
   spec,
 }: {
   conflict: ContentConflictState;
+  /**
+   * Clears the conflict, so the next one can raise the dialog again.
+   *
+   * Closing is not "resolved": the editor still holds unsaved values, and
+   * whether to overwrite is a decision they make with the Save button.
+   */
+  onDismiss: () => void;
   onReload: () => Promise<void>;
   opened: Record<string, unknown>;
   spec: ContentFormSpec;
 }) => {
   const t = useTranslations("core.content.conflict");
+  const tGlobal = useTranslations("core.global");
   const [loading, setLoading] = React.useState(false);
+  const reloaded = conflict.latest !== undefined;
 
   return (
-    <Alert variant="warning">
-      <TriangleAlertIcon aria-hidden />
-      <AlertTitle>{t("title")}</AlertTitle>
-      <AlertDescription>
-        {conflict.latest ? (
-          <>
-            <p>{t("reloaded", { version: conflict.currentVersion })}</p>
-            <RemoteChanges
-              latest={conflict.latest}
-              opened={opened}
-              spec={spec}
+    <AlertDialog
+      onOpenChange={open => {
+        if (!open) onDismiss();
+      }}
+      open
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          {/* Amber rather than destructive: nothing was lost, and nothing is
+              about to be - the save simply did not happen. The same palette the
+              `warning` alert variant uses, since there is no token for it. */}
+          <AlertDialogMedia className="bg-amber-500/10">
+            <TriangleAlertIcon
+              aria-hidden
+              className="text-amber-700 dark:text-amber-300"
             />
-          </>
-        ) : (
-          <>
-            <p>{t("desc", { version: conflict.currentVersion })}</p>
+          </AlertDialogMedia>
+          <AlertDialogTitle>{t("title")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {reloaded
+              ? t("reloaded", { version: conflict.currentVersion })
+              : t("desc", { version: conflict.currentVersion })}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        {conflict.latest ? (
+          <RemoteChanges latest={conflict.latest} opened={opened} spec={spec} />
+        ) : null}
+
+        <AlertDialogFooter>
+          {/*
+            Not an `AlertDialogAction`: that one closes the dialog, and this
+            button's whole job is to replace the dialog's contents with what
+            changed. Only the acknowledgement below closes.
+          */}
+          {!reloaded && (
             <Button
-              className="mt-2"
               disabled={loading}
               isLoading={loading}
               onClick={() => {
@@ -126,15 +173,17 @@ export const ConflictNotice = ({
                   setLoading(false);
                 });
               }}
-              size="sm"
               type="button"
               variant="outline"
             >
               {t("reload")}
             </Button>
-          </>
-        )}
-      </AlertDescription>
-    </Alert>
+          )}
+          <AlertDialogAction onClick={onDismiss}>
+            {tGlobal("close")}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 };
