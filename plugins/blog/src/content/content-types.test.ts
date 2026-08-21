@@ -161,7 +161,86 @@ describe("blog content types", () => {
         "title",
         "friendlyUrl",
         "content",
+        "coverImage",
+        "coverImageAlt",
       ]);
+    });
+
+    /**
+     * The cover image, as a pair: one **shared** file and one **localized**
+     * description of it. That split is the whole point - the image is the same
+     * image in every language, and the alt text is not.
+     */
+    describe("the cover image", () => {
+      const cover = blogPostContentType.fields.coverImage;
+
+      it("is one shared file, never per language", () => {
+        expect(cover.kind).toBe("file");
+        expect(cover.localized).toBeFalsy();
+      });
+
+      it("states a ceiling, because every file field has to", () => {
+        expect(cover).toMatchObject({ maxBytes: 5 * 1024 * 1024 });
+      });
+
+      it("constrains the extension and the media type independently", () => {
+        // Both, so a `hero.png` declared `image/gif` is refused - which an
+        // extension-only check would store.
+        expect(cover).toMatchObject({
+          allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+          allowedMimeTypes: [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/avif",
+          ],
+        });
+      });
+
+      it("allows the format the image pipeline converts to", () => {
+        // With `storage.image` on, an upload is stored as WebP whatever was
+        // chosen - so a field that left `.webp` out would accept the upload and
+        // then refuse the save.
+        expect(cover).toMatchObject({
+          allowedExtensions: expect.arrayContaining([".webp"]),
+          allowedMimeTypes: expect.arrayContaining(["image/webp"]),
+        });
+      });
+
+      it("is optional, so an article can exist before its image does", () => {
+        expect(cover.nullable).toBe(true);
+        expect(cover.required).toBe(false);
+      });
+
+      it("describes itself per language", () => {
+        const alt = blogPostContentType.fields.coverImageAlt;
+
+        expect(alt.kind).toBe("text");
+        expect(alt.localized).toBe(true);
+        expect(alt.nullable).toBe(true);
+      });
+
+      it("is publicly readable, alt text included", () => {
+        expect(blogPostContentType.publicApi.fields).toContain("coverImage");
+        expect(blogPostContentType.publicApi.fields).toContain("coverImageAlt");
+      });
+
+      it("is neither sortable nor filterable", () => {
+        expect(blogPostContentType.admin.list.orderableFields).not.toContain(
+          "coverImage",
+        );
+        expect(blogPostContentType.publicApi.filterableFields).not.toContain(
+          "coverImage",
+        );
+        expect(blogPostContentType.publicApi.orderableFields).not.toContain(
+          "coverImage",
+        );
+      });
+
+      it("shows in the list beside the title, not instead of it", () => {
+        expect(blogPostContentType.admin.list.columns).toContain("coverImage");
+        expect(blogPostContentType.admin.list.columns[0]).toBe("title");
+      });
     });
 
     it("keeps the storage model: a base row plus a translation table", () => {

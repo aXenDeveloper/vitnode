@@ -288,6 +288,18 @@ export const resolvePublicApi = <TField extends string>(
       { contentTypeId: id },
     );
   }
+  // A file column holds a `core_files.id`, so ordering by one orders by upload
+  // order - a fact about the files table rather than about the records, and one
+  // that changes meaning the moment a file is replaced. Order by `publishedAt`.
+  const fileOrderable = declaredOrderable.find(
+    name => resolveFieldTarget(fields, name)?.descriptor.kind === "file",
+  );
+  if (fileOrderable !== undefined) {
+    throw new ContentEngineError(
+      `publicApi.orderableFields includes the file field "${fileOrderable}". Its column holds a \`core_files.id\`, so ordering by it orders by when the file happened to be uploaded - which says nothing about the records and changes when a file is replaced.`,
+      { contentTypeId: id },
+    );
+  }
   // A localized column is not on the base table, and ordering by one would not
   // just be awkward to generate - it would be wrong. The list a reader pages
   // through would reshuffle itself for every language, and a fallback set would

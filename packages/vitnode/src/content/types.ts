@@ -16,6 +16,7 @@ import type {
   CONTENT_SYSTEM_FIELDS,
   CONTENT_TRANSLATION_SYSTEM_FIELDS,
 } from "./const";
+import type { ContentFileDescriptor } from "./files";
 import type { ContentSchemas } from "./schemas";
 
 export type ContentSystemField = (typeof CONTENT_SYSTEM_FIELDS)[number];
@@ -172,6 +173,44 @@ export interface ContentEnumField<
   /** `varchar` length; defaults to 64. */
   length?: number;
   values: TValues;
+}
+
+/**
+ * A reference to one stored file in `core_files`.
+ *
+ * The column is an `integer` foreign key with `ON DELETE RESTRICT`, and that is
+ * the whole storage model: the row holds an identifier, `core_files` holds the
+ * name, the size, the media type and the storage key, and the storage adapter
+ * holds the bytes. Nothing about the file is copied onto the content row, so a
+ * renamed or re-encoded object is not two facts that can disagree.
+ *
+ * `maxBytes` is **not** optional. A file field with no ceiling is a form that
+ * accepts a disk image, and a default here would be a number nobody chose
+ * applied to every field in every plugin.
+ *
+ * `allowedMimeTypes` and `allowedExtensions` are two rules rather than one
+ * spelled twice: the first is what the client *declared* the bytes are, the
+ * second is what the file is *called*. A `picture.gif` carrying `image/png`
+ * passes an extension-only check, which is why a strict field states both and
+ * both have to match.
+ */
+export interface ContentFileField<
+  TRequired extends boolean = boolean,
+  TNullable extends boolean = boolean,
+> extends ContentFieldShared<TRequired, TNullable> {
+  /**
+   * Accepted file-name extensions, normalised to lowercase with a leading dot.
+   *
+   * Normalised by `field.file`, so `GIF`, `.gif` and `.Gif` are one rule.
+   * Omitted, any extension is accepted - the MIME list, the size and the storage
+   * adapter are still in force.
+   */
+  allowedExtensions?: string[];
+  /** Accepted media types, lowercased. Omitted, any type is accepted. */
+  allowedMimeTypes?: string[];
+  kind: "file";
+  /** Largest accepted upload, in bytes. Required, finite, and greater than zero. */
+  maxBytes: number;
 }
 
 export interface ContentDateTimeField<
@@ -359,6 +398,7 @@ export type ContentFieldDescriptor =
   | ContentBooleanField
   | ContentDateTimeField
   | ContentEnumField
+  | ContentFileField
   | ContentGroupField
   | ContentNumberField
   | ContentRelationField
@@ -436,7 +476,7 @@ type ScalarFieldValue<TField> = TField extends { kind: "boolean" }
     ? Date
     : TField extends { values: readonly (infer TValue)[] }
       ? TValue
-      : TField extends { kind: "number" | "relation" | "user" }
+      : TField extends { kind: "file" | "number" | "relation" | "user" }
         ? number
         : string;
 
@@ -447,7 +487,7 @@ type ScalarFieldInput<TField> = TField extends { kind: "boolean" }
     ? string
     : TField extends { values: readonly (infer TValue)[] }
       ? TValue
-      : TField extends { kind: "number" | "relation" | "user" }
+      : TField extends { kind: "file" | "number" | "relation" | "user" }
         ? number
         : string;
 
@@ -2314,7 +2354,16 @@ type ContentPublicValue<TFields, TName extends string> = TName extends "id"
             ? TFields[TName] extends { nullable: true }
               ? ContentPublicRelation | null
               : ContentPublicRelation
-            : ContentFieldValue<TFields[TName]>
+            : // A file crosses as the normalised descriptor rather than as the
+              // `core_files.id` the column holds: an identifier is useless to an
+              // anonymous reader, who has no route to resolve it through, and the
+              // descriptor is already the allowlisted shape - no key, no uploader,
+              // no metadata bag.
+              TFields[TName] extends { kind: "file" }
+              ? TFields[TName] extends { nullable: true }
+                ? ContentFileDescriptor | null
+                : ContentFileDescriptor
+              : ContentFieldValue<TFields[TName]>
         : never;
 
 /** The dotted paths in an allowlist, grouped by the field they belong to. */

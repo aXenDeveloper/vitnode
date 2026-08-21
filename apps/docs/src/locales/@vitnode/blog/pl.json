@@ -12,6 +12,8 @@
           "content": "Treść",
           "categoryId": "Kategoria",
           "authorId": "Autor",
+          "coverImage": "Obraz wyróżniający",
+          "coverImageAlt": "Tekst alternatywny obrazu",
           "status": "Status",
           "publishedAt": "Opublikowano",
           "updatedAt": "Zaktualizowano"
@@ -35,6 +37,9 @@
         },
         "form": {
           "publish": "Publikacja",
+          "cover": {
+            "title": "Obraz wyróżniający"
+          },
           "settings": {
             "title": "Ustawienia artykułu"
           }

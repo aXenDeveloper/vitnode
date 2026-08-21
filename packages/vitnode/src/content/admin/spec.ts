@@ -25,6 +25,17 @@ import { humanizeFieldName } from "./labels";
  * schema from it with {@link buildFormSchemaFromSpec}.
  */
 export interface ContentFormFieldSpec {
+  /**
+   * `file` fields only: the extensions the field accepts, normalised.
+   *
+   * Carried on the spec rather than re-derived in the browser, so the constraint
+   * line the uploader always shows, the `accept` attribute it sets and the check
+   * the upload route runs are three readings of **one** descriptor. There is no
+   * second place for them to disagree.
+   */
+  allowedExtensions?: string[];
+  /** `file` fields only: the media types the field accepts, lowercased. */
+  allowedMimeTypes?: string[];
   defaultValue?: boolean | null | number | string;
   description?: string;
   display?: "radio" | "select";
@@ -49,6 +60,8 @@ export interface ContentFormFieldSpec {
    */
   localized?: boolean;
   max?: number;
+  /** `file` fields only: the largest upload the field accepts, in bytes. */
+  maxBytes?: number;
   /** Upper bound on a repeatable's rows. */
   maxItems?: number;
   maxLength?: number;
@@ -104,6 +117,15 @@ export interface ContentFormSpec {
    */
   defaultLocale: null | string;
   fields: ContentFormFieldSpec[];
+  /**
+   * The content type's AdminCP module segment, e.g. `posts`.
+   *
+   * The form needs it to address the generated upload route from the browser -
+   * `/api/{pluginId}/admin/content/{permissionModule}/uploads/{field}` - and it is
+   * already the path segment every admin content request goes through, so this
+   * publishes nothing new.
+   */
+  permissionModule: string;
   pluginId: string;
   /**
    * How to group the fields, or empty for one flat form.
@@ -189,6 +211,17 @@ const projectFormField = (
           label: labelEnum(name, value),
           value,
         })),
+      };
+    case "file":
+      return {
+        ...base,
+        ...(fieldValue.allowedExtensions
+          ? { allowedExtensions: fieldValue.allowedExtensions }
+          : {}),
+        ...(fieldValue.allowedMimeTypes
+          ? { allowedMimeTypes: fieldValue.allowedMimeTypes }
+          : {}),
+        maxBytes: fieldValue.maxBytes,
       };
     case "group":
     case "repeatable":
@@ -281,6 +314,7 @@ export const buildContentFormSpec = ({
     defaultLocale: definition.localization.enabled
       ? definition.localization.defaultLocale
       : null,
+    permissionModule: definition.permissionModule,
     pluginId,
     titleField: definition.admin.titleField,
     // One form, shared and localized fields alike, in the order they were
@@ -413,6 +447,12 @@ const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
         ? z.enum(values as [string, ...string[]])
         : z.string();
     }
+    // What the form holds for a file is the `core_files.id` the API takes, which
+    // is also what the mutation sends: the upload happens through its own
+    // multipart route and hands the identifier back, so nothing binary is ever
+    // part of this schema or of the JSON body built from it.
+    case "file":
+      return z.number().int().positive();
     case "group":
       return leafObjectSchema(spec);
     case "number": {

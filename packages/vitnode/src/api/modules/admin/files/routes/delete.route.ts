@@ -27,6 +27,15 @@ export const deleteFileAdminRoute = buildRoute({
         },
         description: "File not found",
       },
+      409: {
+        content: {
+          "application/json": {
+            schema: z.object({ code: z.string(), id: z.number() }),
+          },
+        },
+        description:
+          "Still referenced by content or by a retained revision, so the file was kept",
+      },
     },
   },
   handler: async c => {

@@ -222,6 +222,27 @@ export const buildContentColumn = ({
         }),
         { defaultValue: fieldValue.defaultValue, nullable },
       );
+    case "file": {
+      if (!reference) {
+        throw new ContentEngineError(
+          `Field "${name}" is a file reference but the \`core_files\` column was not resolved. This is an internal error.`,
+          { contentTypeId },
+        );
+      }
+
+      // RESTRICT, always, and not a per-field choice. `cascade` would delete an
+      // article because somebody tidied up the Files screen, and `set null`
+      // would blank a cover image with nothing to show it ever had one. Refusing
+      // the *file* deletion is the only outcome that loses nothing - and it is
+      // what makes `StorageModel.deleteFile` able to answer 409 rather than
+      // leaving a content row pointing at bytes that are gone.
+      const column = integer().references(reference, {
+        onDelete: "restrict",
+        onUpdate: "cascade",
+      });
+
+      return nullable ? column : column.notNull();
+    }
     case "number":
       return withModifiers(fieldValue.integer ? integer() : doublePrecision(), {
         defaultValue: fieldValue.defaultValue,

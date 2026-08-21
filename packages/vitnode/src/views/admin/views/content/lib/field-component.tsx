@@ -2,9 +2,11 @@ import { useTranslations } from "next-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormFieldSpec } from "@/content/admin/spec";
+import type { ContentFileDescriptor } from "@/content/files";
 
 import { AutoFormCombobox } from "@/components/form/fields/combobox";
 import { AutoFormDateTime } from "@/components/form/fields/date-time";
+import { AutoFormFile } from "@/components/form/fields/file";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { AutoFormNullableNumber } from "@/components/form/fields/nullable-number";
 import { AutoFormRadioGroup } from "@/components/form/fields/radio-group";
@@ -52,13 +54,34 @@ export type ContentOptionsLoader = (args: {
 }) => Promise<ContentOption[]>;
 
 export interface ContentFieldProps extends ItemAutoFormComponentProps {
+  /**
+   * The resolved descriptors of the record's file fields, keyed by field name.
+   *
+   * Read off the row's `files` sibling, which is what lets an edit form open
+   * showing the cover image it already has rather than an empty drop zone. Absent
+   * while creating, and absent for a content type with no file fields.
+   */
+  files?: Record<string, ContentFileDescriptor | null>;
   loadOptions: ContentOptionsLoader;
   spec: ContentFormFieldSpec;
+  /**
+   * Sends one file to the content type's generated multipart route.
+   *
+   * Supplied by the form rather than built here, so this component stays a
+   * renderer: the upload is a `POST` of `multipart/form-data` driven by TanStack
+   * Query, and never a Server Action.
+   */
+  uploadFile?: (args: {
+    field: string;
+    file: File;
+  }) => Promise<ContentFileDescriptor>;
 }
 
 export const ContentField = ({
+  files,
   loadOptions,
   spec,
+  uploadFile,
   ...rest
 }: ContentFieldProps) => {
   const t = useTranslations("core.content.form");
@@ -94,6 +117,26 @@ export const ContentField = ({
         />
       );
     }
+
+    // The uploader. `maxBytes` is not optional on a `file` descriptor, so the
+    // fallback is unreachable - it exists because the *spec* type is shared by
+    // every kind and cannot say that.
+    case "file":
+      return (
+        <AutoFormFile
+          allowedExtensions={spec.allowedExtensions}
+          allowedMimeTypes={spec.allowedMimeTypes}
+          file={files?.[spec.name] ?? null}
+          label={spec.label}
+          maxBytes={spec.maxBytes ?? 0}
+          onUpload={async file =>
+            uploadFile
+              ? await uploadFile({ field: spec.name, file })
+              : Promise.reject(new Error(t("file.unavailable")))
+          }
+          {...props}
+        />
+      );
 
     // The three Stage 6 editors. Each one controls the nested value the API
     // takes, so nothing is flattened on submit and nothing re-nested on load.

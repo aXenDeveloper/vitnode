@@ -28,6 +28,7 @@ import { ContentEngineError } from "../errors";
 import { isContentReferenceCollection, splitContentFieldPath } from "../paths";
 import { publicOrderableColumns } from "../registry";
 import { groupPublicLeafPaths } from "../schemas";
+import { resolveContentPublicRowFiles } from "./files";
 import { publicationColumns, publishedCondition } from "./publication";
 import {
   buildFilterCondition,
@@ -380,9 +381,16 @@ export const createContentPublicService = <
     rows: readonly Record<string, unknown>[],
   ): Promise<Record<string, unknown>[]> => {
     const nested = rows.map(nestContentPublicRow);
-    if (publicCollections.length === 0 || nested.length === 0) return nested;
+    if (nested.length === 0) return nested;
 
-    const ids = nested
+    // One batch for the whole page, and only for the file fields the allowlist
+    // exposes. The identifier is replaced by the descriptor here rather than in
+    // the projector, so the projector stays the one place that decides *what* is
+    // public and this stays the one place that decides what it looks like.
+    const withFiles = await resolveContentPublicRowFiles(c, definition, nested);
+    if (publicCollections.length === 0) return withFiles;
+
+    const ids = withFiles
       .map(row => row.id)
       .filter((id): id is number => typeof id === "number");
     // Only the collections the allowlist actually exposes: querying a private
@@ -394,7 +402,7 @@ export const createContentPublicService = <
       publicCollections,
     );
 
-    return nested.map(row => ({
+    return withFiles.map(row => ({
       ...row,
       ...(typeof row.id === "number" ? loaded?.get(row.id) : undefined),
     }));

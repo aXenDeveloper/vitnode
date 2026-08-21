@@ -654,3 +654,50 @@ export const testSectionedContentType = defineContentType({
     },
   },
 });
+
+/**
+ * The file-field reference fixture: one image field and one strict GIF field.
+ *
+ * Two of them on purpose. `cover` is the ordinary case - several formats, both
+ * allowlists stated - and `animation` is the strict one, where a single
+ * extension and a single media type both have to match, so a PNG renamed to
+ * `.gif` is refused. Between them every branch of `validateContentFile` is
+ * reachable from a real definition rather than from a hand-built descriptor.
+ *
+ * `publicApi` exposes `cover` and withholds `animation`, which is what proves a
+ * file field is allowlisted like every other kind: the descriptor for one is in
+ * the public response and the other is not fetched at all.
+ */
+export const testFilePostContentType = defineContentType({
+  id: "test.file-post",
+  tableName: "test_file_posts",
+  fields: {
+    title: field.text({ required: true, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    cover: field.file({
+      maxBytes: 5 * 1024 * 1024,
+      allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+    }),
+    animation: field.file({
+      maxBytes: 10 * 1024 * 1024,
+      allowedExtensions: [".gif"],
+      allowedMimeTypes: ["image/gif"],
+    }),
+    document: field.file({
+      maxBytes: 20 * 1024 * 1024,
+      allowedExtensions: [".pdf"],
+      allowedMimeTypes: ["application/pdf"],
+    }),
+  },
+  publication: { enabled: true },
+  publicApi: {
+    enabled: true,
+    path: "file-posts",
+    fields: ["title", "slug", "cover", "publishedAt"],
+  },
+  admin: {
+    titleField: "title",
+    list: { columns: ["cover", "title", "status", "updatedAt"] },
+  },
+});

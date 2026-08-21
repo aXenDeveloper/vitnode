@@ -52,6 +52,11 @@ import {
   contentSlugHistoryFor,
 } from "./delivery-writes";
 import {
+  assertContentFileReferences,
+  ContentFileReferenceError,
+  contentSnapshotFileIds,
+} from "./files";
+import {
   changedPathsToColumns,
   diffChangedPaths,
   toInsertColumns,
@@ -530,19 +535,26 @@ export const createContentEditorialService = <
         ? ((row.__collections as Record<string, unknown> | undefined) ?? {})
         : ((await store?.load(itemId, tx)) ?? {});
 
+    const snapshot = contentRevisionSnapshot(definition, {
+      ...row,
+      ...collections,
+      version,
+    });
+
     return await revisions.capture(tx, {
       actor,
       changedFields,
+      // Pinned in the same statement batch as the revision: a snapshot naming a
+      // file has to keep that file undeletable for as long as it is retained, or
+      // "restore version 3" restores a broken image. Empty for every content
+      // type with no file fields.
+      fileIds: contentSnapshotFileIds(definition, snapshot),
       itemId,
       operation,
       restoredFromRevisionId,
       // Stamped with the version the record now holds, which for a delete is the
       // one it would have had - see `remove` below.
-      snapshot: contentRevisionSnapshot(definition, {
-        ...row,
-        ...collections,
-        version,
-      }),
+      snapshot,
       version,
     });
   };
@@ -876,6 +888,11 @@ export const createContentEditorialService = <
       await transact(options, async tx => {
         const parsed = schemas.create.parse(values) as Record<string, unknown>;
 
+        // The same re-check the plain service runs: a file id in a payload is an
+        // assignment, and an upload that succeeded for one field proves nothing
+        // about another.
+        await assertContentFileReferences(c, definition, parsed, tx);
+
         const [row] = await tx
           .insert(table)
           .values(toInsertColumns(fields, withCreateSlugs(parsed)))
@@ -1062,6 +1079,25 @@ export const createContentEditorialService = <
         }
 
         const patch = withUpdateSlugs(prepared.patch);
+
+        // A restore is the one write whose file ids come from the past, so a
+        // rejection means the field's rules changed after the snapshot was taken -
+        // "this version no longer fits", not "your payload is wrong". The pin on
+        // the revision guarantees the file still *exists*; whether it still
+        // satisfies a `maxBytes` somebody has since lowered is a different
+        // question, and the answer is the same 422 a dropped column gets.
+        try {
+          await assertContentFileReferences(c, definition, patch, tx);
+        } catch (error) {
+          if (!(error instanceof ContentFileReferenceError)) throw error;
+
+          throw new ContentRevisionNotRestorable({
+            contentTypeId,
+            fields: [error.field],
+            revisionId,
+          });
+        }
+
         const changedPaths = diffChangedPaths(fields, current, patch);
         const changedCollections = (await store?.diff(tx, id, patch)) ?? [];
         const changedFields = [
@@ -1190,6 +1226,8 @@ export const createContentEditorialService = <
             version: versionOf(current),
           };
         }
+
+        await assertContentFileReferences(c, definition, patch, tx);
 
         // The version guard runs **first**, before a single junction or child
         // row is touched. That ordering is the whole concurrency story: a writer

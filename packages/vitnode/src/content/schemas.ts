@@ -32,6 +32,7 @@ import {
   CONTENT_SYSTEM_FIELDS,
   isFilterableFieldKind,
 } from "./const";
+import { zodContentFileDescriptor } from "./files";
 import {
   contentLocalizationDisabled,
   partitionContentFields,
@@ -212,6 +213,11 @@ const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
       return z.date();
     case "enum":
       return z.enum(fieldValue.values);
+    // The `core_files.id` the column holds. The admin surfaces resolve the
+    // descriptor beside the row (`files`), and the public projection replaces the
+    // identifier with it - neither is what is *stored*, which is one integer.
+    case "file":
+      return referenceSchema();
     case "group": {
       const inner = contentInnerFields(fieldValue);
 
@@ -287,6 +293,9 @@ const applyPresence = (
 
   if (
     fieldValue.kind !== "dateTime" &&
+    // A file field has no default and cannot have one: a `core_files.id` in a
+    // definition would name a different row on every installation.
+    fieldValue.kind !== "file" &&
     fieldValue.kind !== "group" &&
     fieldValue.kind !== "relation" &&
     fieldValue.kind !== "repeatable" &&
@@ -624,6 +633,18 @@ const publicSelectShape = (
         if (name === "publishedAt") return [name, z.date().nullable()];
 
         const fieldValue = fields[name];
+        // A public reader has no route to resolve a `core_files.id` through, so
+        // exposing one would be exposing nothing. The descriptor is the
+        // allowlisted shape - no storage key, no uploader, no metadata bag - and
+        // `resolveContentRowFiles` puts it on the row before the projector runs.
+        if (fieldValue.kind === "file") {
+          return [
+            name,
+            fieldValue.nullable
+              ? zodContentFileDescriptor.nullable()
+              : zodContentFileDescriptor,
+          ];
+        }
         if (fieldValue.kind === "relation") {
           // A to-many relation is a list of identifiers rather than a list of
           // `{ id }` objects: the single-relation wrapper exists so a `null`

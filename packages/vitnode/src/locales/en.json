@@ -204,6 +204,19 @@
       "select_options": "Select options",
       "select_language": "Select language",
       "pick_color": "Pick a color",
+      "file": {
+        "any_format": "Any file type",
+        "max_size": "Maximum file size: {size}",
+        "drop": "Drop a file here",
+        "choose": "Choose file",
+        "replace": "Replace file",
+        "remove": "Remove file",
+        "uploading": "Uploading...",
+        "errors": {
+          "too_large": "That file is {size}. The maximum is {max}.",
+          "wrong_format": "\"{value}\" is not an accepted format. Accepted: {formats}."
+        }
+      },
       "go_to_prev_page": "Go to previous page",
       "go_to_next_page": "Go to next page",
       "errors": {
@@ -484,6 +497,9 @@
         },
         "group": {
           "enabled": "Has a value"
+        },
+        "file": {
+          "unavailable": "Uploads are not available on this form."
         },
         "list": {
           "add": "Add {label}",

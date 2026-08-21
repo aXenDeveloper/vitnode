@@ -15,7 +15,15 @@ const makeCtx = (image?: { quality?: number; webp?: boolean }) => {
       url: `https://cdn.test/${key}`,
     }),
   );
-  const insertValues = vi.fn().mockResolvedValue(undefined);
+  // `upload` returns the created `core_files` row now, so the insert has to
+  // resolve to something with an id - that identifier is what a file reference
+  // is made of.
+  // The argument is typed only so `insertValues.mock.calls[0][0]` is the recorded
+  // row rather than `never`; the body has no use for it.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const insertValues = vi.fn((_values: Record<string, unknown>) => ({
+    returning: vi.fn().mockResolvedValue([{ id: 1 }]),
+  }));
   const store: Record<string, unknown> = {
     core: {
       storage: {

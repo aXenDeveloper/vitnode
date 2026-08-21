@@ -1,6 +1,15 @@
 import { getMonth, getYear } from "date-fns";
 import { randomUUID } from "node:crypto";
 
+import { getFileExtension, replaceFileExtension } from "../file-extension";
+
+/**
+ * Re-exported rather than defined here: `AutoFormFile` runs the same extension
+ * check in the browser, and this module cannot cross that boundary - it imports
+ * `node:crypto` at the top level.
+ */
+export { getFileExtension, replaceFileExtension };
+
 const FOLDER_PATTERN = /^[a-z0-9][a-z0-9_-]*$/i;
 
 /**
@@ -25,15 +34,6 @@ export const sanitizeFolder = (folder: string): string => {
   return folder;
 };
 
-export const getFileExtension = (fileName: string): string => {
-  const lastDot = fileName.lastIndexOf(".");
-  if (lastDot <= 0 || lastDot === fileName.length - 1) {
-    return "";
-  }
-
-  return fileName.slice(lastDot).toLowerCase();
-};
-
 /**
  * Collision-free stored file name: a random UUID keeps the original extension
  * but discards the user-provided name, so no lookups or races are needed. Pass
@@ -45,16 +45,6 @@ export const generateStorageFileName = (
   extension?: string,
 ): string => {
   return `${randomUUID()}${extension ?? getFileExtension(originalName)}`;
-};
-
-export const replaceFileExtension = (
-  fileName: string,
-  extension: string,
-): string => {
-  const current = getFileExtension(fileName);
-  const base = current ? fileName.slice(0, -current.length) : fileName;
-
-  return `${base}${extension}`;
 };
 
 export const buildStorageKey = ({

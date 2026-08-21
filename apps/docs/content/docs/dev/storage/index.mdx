@@ -10,7 +10,13 @@ and every upload returns a public URL.
 VitNode does **not** ship a generic upload endpoint - you build your own route
 (in your app or plugin) so you control auth, validation, and where files go. The
 `c.get("storage").upload()` helper does the heavy lifting: it builds the dated
-key, validates the file, and returns the URL.
+key, validates the file, records it in `core_files`, and returns the new row's id
+alongside the URL.
+
+The one exception is the [Content Engine](/docs/dev/content-engine): declare a
+`field.file()` and the upload route, the validation and the AdminCP uploader are
+generated for you - see [Content Engine file
+fields](#content-engine-file-fields).
 
 Storage is **optional**. Without an adapter configured, `c.get("storage")` throws
 and the AdminCP → System → Integrations "Storage" card shows as inactive.
@@ -62,6 +68,138 @@ export const vitNodeApiConfig = buildApiConfig({
     },
   },
 });
+```
+
+## Content Engine file fields
+
+If your content lives in a [Content Engine](/docs/dev/content-engine) content
+type, you do **not** write an upload endpoint at all. Declare a
+[`field.file()`](/docs/dev/content-engine/fields) and the engine generates one:
+
+```ts title="plugins/blog/src/content/post.ts"
+coverImage: field.file({
+  maxBytes: 5 * 1024 * 1024,
+  allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+  allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+}),
+coverImageAlt: field.text({ localized: true, nullable: true, maxLength: 255 }),
+```
+
+That is the blog's real cover image, and it is worth reading as a pair: the
+**file is shared** and the **alt text is per language**. One image, one storage
+key, one row in `core_files` - and a description of it in every language somebody
+reads the article in.
+
+### Three layers, one fact each
+
+```text
+Content row            blog_posts.coverImage = 42
+                       └─ an integer foreign key, ON DELETE RESTRICT
+                          ↓
+core_files             id 42 · name · key · mimeType · size · metadata
+                       └─ the record of the object
+                          ↓
+Storage adapter        month_8_2026/content/<uuid>.webp
+                       └─ the bytes
+```
+
+Nothing is duplicated between the layers. The content row does not hold a URL, a
+storage key or a copy of the size, so replacing the image is one write and there
+is no second copy to go stale. The URL is built on read, from the adapter that is
+configured *now*.
+
+### Deleting a file that is in use
+
+`ON DELETE RESTRICT` is what makes that safe, and
+`c.get("storage").deleteFile(id)` is written to take advantage of it: it deletes
+the **database row first** and only then the object.
+
+| Situation | Result |
+| :--- | :--- |
+| Still referenced by content or by a retained revision | `409 FILE_IN_USE`, and the object is untouched |
+| Row removed | The object is deleted (best-effort) |
+| No such file | `404` |
+
+The order matters. Deleting the object first would mean a referenced file loses
+its bytes and *then* has its removal refused - the article survives, pointing at
+a 404. VitNode prefers an orphaned storage object to a content record pointing at
+missing bytes: one costs disk, the other costs a broken page nobody can repair
+from the AdminCP.
+
+### Revisions keep old files alive
+
+A revision's snapshot is JSONB, so `{ "coverImage": 42 }` inside it is a number
+Postgres knows nothing about. Change an article's cover and the row's own foreign
+key stops guarding the old image - which would make it deletable while every
+retained revision still names it, and "restore version 3" would restore a broken
+image.
+
+So each revision pins the files its snapshot names, in
+`core_content_file_refs`:
+
+```text
+article → file A     revision v1 pins A
+article → file B     revision v2 pins B; the column no longer guards A
+delete A             refused — the v1 pin references core_files ON DELETE RESTRICT
+v1 pruned            the pin cascades away with the revision
+delete A             succeeds — nothing references it any more
+```
+
+There is no unpinning code: the pin references the revision `ON DELETE CASCADE`,
+so retention pruning releases it in the same statement that removes the revision.
+
+### Uploads are multipart, never a Server Action
+
+<Callout type="warn" title="Binary data does not go through Server Actions">
+Content Engine binary uploads use TanStack Query and multipart API routes.
+Next.js Server Actions must **not** be used for file transfer - a Server Action
+body is a serialised RSC payload, so an image crosses as a string, buffered
+whole, under a platform body limit that has nothing to do with the field's
+`maxBytes`.
+</Callout>
+
+```text
+POST /api/{pluginId}/admin/content/{module}/uploads/{field}
+```
+
+One route per content type, addressed by field name. It requires `can_create` or
+`can_edit`, enforces the field's `maxBytes`, `allowedMimeTypes` and
+`allowedExtensions`, calls the same `c.get("storage").upload()` every hand-written
+route uses, and returns a descriptor the form drops straight into its value:
+
+```json
+{
+  "id": 42,
+  "name": "cover.webp",
+  "url": "https://…",
+  "mimeType": "image/webp",
+  "size": 245123,
+  "width": 1600,
+  "height": 900
+}
+```
+
+`key`, `userId`, `pluginId` and the raw `metadata` bag are never in it - not on
+the admin side and not in a public response.
+
+<Callout type="info" title="Image processing and the allowlists">
+  With `image` enabled above, a PNG is stored as WebP - so `.webp` and
+  `image/webp` have to be in the field's allowlists, which is why the blog's cover
+  image lists them. If the converted format is not allowed, the upload route
+  refuses the file it just created, removes it, and says so.
+</Callout>
+
+### The AdminCP shows the limits
+
+Every generated file field renders its allowed formats and its maximum size above
+the drop zone, always - read from the field descriptor, which is the same object
+the server validates against:
+
+```text
+Cover image
+
+JPG, JPEG, PNG, WEBP, AVIF
+Maximum file size: 5 MB
 ```
 
 ## Create your own upload endpoint
@@ -129,9 +267,17 @@ export const uploadAvatarRoute = buildRoute({
 });
 ```
 
+`upload()` returns more than the URL: `{ id, key, url, name, mimeType, size,
+dimensions }`. `id` is the new `core_files` row - the identifier a
+[`field.file()`](/docs/dev/content-engine/fields) column holds, and the one to
+store if you are modelling a reference yourself. `name` is the *stored* name,
+which a WebP conversion may have changed.
+
 Register it in a module with `buildModule` and add that module to your plugin —
-see [Plugins](/docs/dev/plugins). You can also `c.get("storage").delete(key)` and
-`c.get("storage").getUrl(key)`.
+see [Plugins](/docs/dev/plugins). You can also `c.get("storage").delete(key)`,
+`c.get("storage").getUrl(key)` and `c.get("storage").deleteFile(id)` - the last
+of which refuses with `409 FILE_IN_USE` rather than orphaning whatever still
+points at the file.
 
 </Step>
 <Step>

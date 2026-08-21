@@ -12,6 +12,7 @@
           "excerpt": "Excerpt",
           "views": "Views",
           "featured": "Featured",
+          "animation": "Animation",
           "author": "Author",
           "category": "Category",
           "updatedAt": "Updated"

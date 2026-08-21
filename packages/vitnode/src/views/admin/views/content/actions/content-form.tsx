@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
+import type { ContentFileDescriptor } from "@/content/files";
 import type { ContentFormLayout } from "@/lib/plugin";
 
 import { AutoForm, type AutoFormOnSubmit } from "@/components/form/auto-form";
@@ -22,6 +23,7 @@ import {
   contentTitleFromValues,
   isReferenceKind,
 } from "@/content/admin/spec";
+import { uploadContentFile } from "@/content/admin/upload";
 import { usePathname, useRouter } from "@/lib/navigation";
 
 import type { ContentConflictState } from "./conflict-notice";
@@ -230,6 +232,17 @@ const ContentFormFields = ({
   const [conflict, setConflict] = React.useState<ContentConflictState | null>(
     null,
   );
+
+  /**
+   * The record's already-stored file descriptors, keyed by field name.
+   *
+   * Carried beside the row by the generated detail and list responses rather
+   * than folded into the column, so the form's *value* stays the identifier it
+   * will submit while the uploader still has a name, a size and a URL to
+   * preview. Empty while creating.
+   */
+  const files = data?.files as
+    Record<string, ContentFileDescriptor | null> | undefined;
 
   const localizedFields = React.useMemo(
     () => contentLocalizedFieldNames(spec),
@@ -492,6 +505,7 @@ const ContentFormFields = ({
 
         return (
           <ContentField
+            files={files}
             loadOptions={async ({ field, ids, search }) =>
               await loadContentOptionsAction(
                 spec.contentTypeId,
@@ -501,6 +515,14 @@ const ContentFormFields = ({
               )
             }
             spec={fieldSpec}
+            // A plain client-side `fetch` of `multipart/form-data`, driven by
+            // TanStack Query inside `AutoFormFile`. Deliberately **not** a Server
+            // Action: a Server Action body is a serialised RSC payload, so an
+            // image would cross as a string, buffered whole, under a platform
+            // body limit that is not the field's `maxBytes`.
+            uploadFile={async ({ field, file }) =>
+              await uploadContentFile({ field, file, spec })
+            }
             {...props}
           />
         );

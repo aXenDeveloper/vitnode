@@ -29,6 +29,33 @@ export const articleContentType = defineContentType({
      */
     noIndex: field.boolean({ nullable: true }),
     author: field.user(),
+    /**
+     * The **extension-only** reference: a GIF, and nothing else.
+     *
+     * Both allowlists name exactly one thing, and both have to match, which is
+     * what makes this the interesting case:
+     *
+     * - `banner.gif` declared `image/gif` -> accepted;
+     * - `banner.png` declared `image/png` -> refused, wrong extension *and* wrong
+     *   type;
+     * - a PNG **renamed** to `banner.gif` -> refused, because the browser still
+     *   declares `image/png`. An extension-only check would store it;
+     * - a real GIF over 10 MB -> refused, before a byte reaches the adapter.
+     *
+     * A GIF is also the format that proves the storage pipeline is not quietly
+     * rewriting the rules: `sharp` deliberately does not re-encode GIF, so the
+     * stored file keeps its extension and its animation. An allowlist of `.png`
+     * would *not* be safe in the same way - with `storage.image` on, a PNG is
+     * converted to WebP, and the field would have to allow `.webp` too.
+     *
+     * Nullable, which is `field.file`'s default: an article without an animation
+     * is the ordinary case.
+     */
+    animation: field.file({
+      maxBytes: 10 * 1024 * 1024,
+      allowedExtensions: [".gif"],
+      allowedMimeTypes: ["image/gif"],
+    }),
     category: field.relation({
       required: true,
       onDelete: "restrict",
@@ -47,6 +74,10 @@ export const articleContentType = defineContentType({
       "excerpt",
       "featured",
       "category",
+      // Publicly exposed as the normalised descriptor - `{ id, name, url,
+      // mimeType, size, width, height }` - never as the `core_files.id` the
+      // column holds, and never with the storage key or the uploader.
+      "animation",
       // Public because delivery projects it: `robots: { index: false }` is
       // rendered into the page, so the field behind it has to be one the public
       // API would already have said out loud.
@@ -125,6 +156,9 @@ export const articleContentType = defineContentType({
         "code",
         "category",
         "author",
+        // Rendered as a thumbnail and the stored file name, not as the
+        // identifier the column holds.
+        "animation",
         "publishedAt",
         "updatedAt",
       ],

@@ -2,6 +2,7 @@ import type {
   AnyContentTypeDefinition,
   ContentFieldDescriptor,
   ContentFieldMap,
+  ContentFileField,
 } from "./types";
 
 import {
@@ -14,6 +15,11 @@ import {
   systemFields,
 } from "./define-shared";
 import { ContentEngineError } from "./errors";
+import {
+  assertContentFileMaxBytes,
+  normalizeContentFileExtensions,
+  normalizeContentFileMimeTypes,
+} from "./files";
 
 /** A slug can only be derived from a field that holds a single line of text. */
 const SLUG_SOURCE_KINDS = new Set<ContentFieldDescriptor["kind"]>(["text"]);
@@ -35,6 +41,10 @@ const hasWritableFallback = (fieldValue: ContentFieldDescriptor): boolean => {
   // A sourced slug has no column default and is not required, but it is always
   // writable: the service derives it from the source field.
   if (fieldValue.kind === "slug") return fieldValue.source !== undefined;
+  // A file has no default and cannot have one: a column default would be a
+  // `core_files.id` written into the definition, pointing at a row that exists on
+  // one installation and not on the next. `assertField` says so in words.
+  if (fieldValue.kind === "file") return false;
 
   return fieldValue.defaultValue !== undefined;
 };
@@ -78,6 +88,7 @@ const FIELD_KINDS = new Set<string>([
   "boolean",
   "dateTime",
   "enum",
+  "file",
   "group",
   "number",
   "relation",
@@ -102,11 +113,93 @@ export const assertFieldKind = (
   }
 };
 
+/**
+ * Everything a `field.file()` descriptor has to satisfy, re-checked here.
+ *
+ * `field.file` already normalises and validates - this is the same rules applied
+ * to a descriptor that skipped the builder, and the only place the error carries
+ * the content type id. The normalisers are idempotent, so running them twice
+ * costs nothing and proves the stored arrays really are normalised: a hand-built
+ * `{ kind: "file", allowedExtensions: ["GIF"] }` would otherwise be compared
+ * against `.gif` and match nothing.
+ */
+const assertFileField = (
+  id: string,
+  name: string,
+  fieldValue: ContentFileField,
+): void => {
+  const withField = (run: () => void): void => {
+    try {
+      run();
+    } catch (error) {
+      throw new ContentEngineError(
+        `Field "${name}": ${error instanceof Error ? error.message.replace("[Content Engine] ", "") : String(error)}`,
+        { contentTypeId: id },
+      );
+    }
+  };
+
+  withField(() => {
+    assertContentFileMaxBytes(fieldValue.maxBytes);
+  });
+
+  if (fieldValue.allowedExtensions !== undefined) {
+    withField(() => {
+      const normalized = normalizeContentFileExtensions(
+        fieldValue.allowedExtensions ?? [],
+      );
+      if (normalized.join(",") !== fieldValue.allowedExtensions?.join(",")) {
+        throw new ContentEngineError(
+          `allowedExtensions is not normalised (${fieldValue.allowedExtensions?.join(", ")}). Build the field with \`field.file()\`, which lowercases and dot-prefixes every entry.`,
+        );
+      }
+    });
+  }
+
+  if (fieldValue.allowedMimeTypes !== undefined) {
+    withField(() => {
+      const normalized = normalizeContentFileMimeTypes(
+        fieldValue.allowedMimeTypes ?? [],
+      );
+      if (normalized.join(",") !== fieldValue.allowedMimeTypes?.join(",")) {
+        throw new ContentEngineError(
+          `allowedMimeTypes is not normalised (${fieldValue.allowedMimeTypes?.join(", ")}). Build the field with \`field.file()\`, which lowercases every entry.`,
+        );
+      }
+    });
+  }
+
+  // Refused here rather than only by `resolveContentLocalization`, so the message
+  // names the reason instead of listing the kinds that may be localized: one file
+  // per language would need a translation column holding a foreign key, a
+  // per-locale upload route and a per-locale deletion rule - and a cover image is
+  // one image whatever language the caption is in. Translate the *alt text*.
+  if (fieldValue.localized === true) {
+    throw new ContentEngineError(
+      `File field "${name}" is \`localized: true\`, which is not supported. A file is one object with one storage key; pair it with a localized text field for the alt text or caption instead.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (!fieldValue.required && !fieldValue.nullable) {
+    throw new ContentEngineError(
+      `File field "${name}" is neither required nor nullable, and a file field can have no default - a \`core_files.id\` baked into a definition would point at a different row on every installation. Add \`nullable: true\` (the builder's default) or \`required: true\`.`,
+      { contentTypeId: id },
+    );
+  }
+};
+
 export const assertField = (
   id: string,
   name: string,
   fieldValue: ContentFieldDescriptor,
 ): void => {
+  // Before the generic writability check below, which would otherwise tell the
+  // author to add a default value a file field structurally cannot have.
+  if (fieldValue.kind === "file") {
+    assertFileField(id, name, fieldValue);
+  }
+
   if (!fieldValue.required && !fieldValue.nullable) {
     if (!hasWritableFallback(fieldValue)) {
       throw new ContentEngineError(

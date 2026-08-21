@@ -191,6 +191,19 @@
       "select_options": "Wybierz opcje",
       "select_language": "Wybierz język",
       "pick_color": "Wybierz kolor",
+      "file": {
+        "any_format": "Dowolny typ pliku",
+        "max_size": "Maksymalny rozmiar pliku: {size}",
+        "drop": "Przeciągnij plik tutaj",
+        "choose": "Wybierz plik",
+        "replace": "Zmień plik",
+        "remove": "Usuń plik",
+        "uploading": "Przesyłanie...",
+        "errors": {
+          "too_large": "Ten plik ma {size}. Maksimum to {max}.",
+          "wrong_format": "\"{value}\" nie jest akceptowanym formatem. Akceptowane: {formats}."
+        }
+      },
       "go_to_prev_page": "Przejdź do poprzedniej strony",
       "go_to_next_page": "Przejdź do następnej strony",
       "errors": {

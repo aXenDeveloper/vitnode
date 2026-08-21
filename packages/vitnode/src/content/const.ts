@@ -126,6 +126,48 @@ const localizedFieldKinds: ReadonlySet<string> = new Set(
 export const isLocalizableFieldKind = (kind: string): boolean =>
   localizedFieldKinds.has(kind);
 
+// ---------------------------------------------------------------------------
+// File fields
+// ---------------------------------------------------------------------------
+
+/**
+ * A normalised extension rule: a leading dot, then lowercase letters or digits.
+ *
+ * One segment only, because `getFileExtension` reads one - a rule spelled
+ * `.tar.gz` would never match a file called `archive.tar.gz`, which is a silent
+ * "nothing is allowed" rather than the strict allowlist somebody wrote.
+ */
+export const CONTENT_FILE_EXTENSION_PATTERN = /^\.[a-z0-9]+$/;
+
+/** `type/subtype`, lowercased. Parameters (`; charset=`) are not a file type. */
+export const CONTENT_FILE_MIME_PATTERN =
+  /^[a-z0-9][a-z0-9!#$&^_+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/;
+
+/**
+ * The storage folder every Content Engine upload lands in.
+ *
+ * One folder rather than one per content type: the folder is a path segment in
+ * the object key, and a content type id holds a dot - which `sanitizeFolder`
+ * refuses, for good reason. Ownership is already recorded on the `core_files`
+ * row, so the key does not have to carry it.
+ */
+export const CONTENT_FILE_FOLDER = "content";
+
+/**
+ * Machine-readable reasons a file was refused - at upload, and again on save.
+ *
+ * One list for both, because they are the same four questions asked twice: the
+ * upload route asks them of the file in the request, and a content mutation asks
+ * them of the `core_files` row an identifier names. A client that can act on
+ * "too big" at upload time can act on it either way.
+ */
+export const CONTENT_FILE_CODES = {
+  extension: "CONTENT_FILE_EXTENSION_NOT_ALLOWED",
+  mimeType: "CONTENT_FILE_MIME_TYPE_NOT_ALLOWED",
+  missing: "CONTENT_FILE_NOT_FOUND",
+  size: "CONTENT_FILE_TOO_LARGE",
+} as const;
+
 /** Appended to the base table name to get the generated translation table. */
 export const CONTENT_TRANSLATION_TABLE_SUFFIX = "_translations";
 
@@ -250,6 +292,12 @@ export const CONTENT_PUBLIC_EXPOSABLE_KINDS = [
   "boolean",
   "dateTime",
   "enum",
+  // A file is exposable, and what crosses is the normalised descriptor rather
+  // than the `core_files.id` the column holds: an identifier is useless to a
+  // reader with no route to resolve it, while the descriptor is already the
+  // allowlisted shape. `user` stays absent - publishing a person is a decision
+  // `core_users` gets to make, not a side effect of an article having an author.
+  "file",
   "number",
   "relation",
   "slug",

@@ -13,7 +13,10 @@ import type {
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDatabase } from "./service";
 
-import { core_content_revisions } from "../../database/content";
+import {
+  core_content_file_refs,
+  core_content_revisions,
+} from "../../database/content";
 import { core_roles } from "../../database/roles";
 import { core_users } from "../../database/users";
 
@@ -22,6 +25,20 @@ export interface ContentRevisionCaptureInput<
 > {
   actor: ContentActor;
   changedFields: readonly string[];
+  /**
+   * `core_files` ids this snapshot names, pinned alongside the revision.
+   *
+   * The snapshot is JSONB, so the ids inside it are numbers Postgres knows
+   * nothing about: without a pin, pointing the field at a different file would
+   * make the old one deletable and every retained revision naming it a broken
+   * restore. The pin's own foreign key refuses the deletion instead, and
+   * cascades away when retention prunes the revision - see
+   * `core_content_file_refs`.
+   *
+   * Empty or absent for every content type with no file fields, which is what
+   * keeps this one statement rather than one per capture.
+   */
+  fileIds?: readonly number[];
   itemId: number;
   operation: ContentRevisionOperation;
   restoredFromRevisionId?: number;
@@ -162,10 +179,25 @@ export const createContentRevisionsModel = <
         })
         .returning({ id: core_content_revisions.id });
 
+      // Before the prune, and in the same transaction: the pins are what stop a
+      // file this snapshot names from being deleted, and a window in which the
+      // revision exists unpinned is a window in which it can be broken.
+      const fileIds = [...new Set(input.fileIds ?? [])];
+      if (fileIds.length > 0) {
+        await tx
+          .insert(core_content_file_refs)
+          .values(fileIds.map(fileId => ({ fileId, revisionId: row.id })));
+      }
+
       // Versions are strictly increasing and unique per record, so "everything
       // at or below `newVersion - retention`" is exactly the set outside the
       // window - one indexed range delete, in the same transaction, with no
       // background job to depend on.
+      //
+      // The pruned revisions' file pins go with them: the pin references the
+      // revision `ON DELETE CASCADE`, so the last pin on a file disappearing is
+      // exactly the moment that file becomes deletable again. There is no
+      // unpinning code to forget to run.
       const keepFrom = input.version - retention;
       if (keepFrom > 0) {
         await tx

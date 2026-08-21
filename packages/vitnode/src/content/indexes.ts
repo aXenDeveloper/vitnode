@@ -171,7 +171,7 @@ const named = (
  * 1. `indexes` declared on the content type,
  * 2. `field.text({ unique: true })` and every `field.slug()`, which is always
  *    unique - a slug is a URL, and two rows cannot share one,
- * 3. every foreign key (`relation` and `user` fields),
+ * 3. every foreign key (`relation`, `user` and `file` fields),
  * 4. `createdAt` and `updatedAt`, which back the default ordering,
  * 5. `(status, publishedAt)` when publication is enabled - one composite index
  *    serving both the published predicate and the default public ordering.
@@ -238,7 +238,12 @@ export const resolveContentIndexes = ({
     ...fieldEntries
       .filter(
         ([, fieldValue]) =>
-          fieldValue.kind === "relation" || fieldValue.kind === "user",
+          // A `file` is here for the same reason the other two are: Postgres does
+          // not index the child side of a foreign key by itself, and
+          // `ON DELETE RESTRICT` scans it on every attempt to delete a file.
+          fieldValue.kind === "file" ||
+          fieldValue.kind === "relation" ||
+          fieldValue.kind === "user",
       )
       .map(([name]) => named(tableName, { on: [name] })),
     ...CONTENT_SYSTEM_FIELDS.filter(name => name !== "id").map(name =>

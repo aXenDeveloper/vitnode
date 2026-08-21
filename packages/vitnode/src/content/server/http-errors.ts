@@ -8,6 +8,7 @@ import type {
 } from "../conflicts";
 import type { ContentScheduleCode } from "../schedules";
 
+import { PG_ERROR_CODES, pgErrorCode } from "../../lib/api/pg-error";
 import {
   CONTENT_CONFLICT_CODES,
   CONTENT_DELIVERY_CODES,
@@ -21,28 +22,12 @@ import {
   ContentVersionConflict,
 } from "../errors";
 
-/** Postgres error codes the engine translates into a useful HTTP status. */
-const FOREIGN_KEY_VIOLATION = "23503";
-const UNIQUE_VIOLATION = "23505";
-const NOT_NULL_VIOLATION = "23502";
-const RESTRICT_VIOLATION = "23001";
-
-/**
- * Digs the Postgres error code out of whatever the driver threw.
- *
- * Drizzle wraps driver failures in a `DrizzleQueryError` whose own `code` is
- * undefined and whose `cause` holds the real error, so reading `error.code`
- * alone would turn every constraint violation into a 500.
- */
-const errorCode = (error: unknown, depth = 0): string | undefined => {
-  if (typeof error !== "object" || error === null || depth > 3)
-    return undefined;
-
-  const { cause, code } = error as { cause?: unknown; code?: unknown };
-  if (typeof code === "string" && code !== "") return code;
-
-  return errorCode(cause, depth + 1);
-};
+const {
+  foreignKeyViolation: FOREIGN_KEY_VIOLATION,
+  notNullViolation: NOT_NULL_VIOLATION,
+  restrictViolation: RESTRICT_VIOLATION,
+  uniqueViolation: UNIQUE_VIOLATION,
+} = PG_ERROR_CODES;
 
 /**
  * A JSON error body, carried on the exception itself.
@@ -169,7 +154,7 @@ export const rethrowAsHttpError = (
     throw new HTTPException(400, { message: error.message });
   }
 
-  switch (errorCode(error)) {
+  switch (pgErrorCode(error)) {
     case FOREIGN_KEY_VIOLATION:
       throw new HTTPException(action === "delete" ? 409 : 400, {
         message:

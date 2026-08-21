@@ -49,6 +49,7 @@ import {
   buildContentRepeatableOperations,
   contentCollectionKinds,
 } from "./collection-api";
+import { assertContentFileReferences } from "./files";
 import { findContentLanguage } from "./language-resolver";
 import {
   buildFilterCondition,
@@ -847,6 +848,12 @@ export const createContentService = <
         // untrusted object and Drizzle. Only the parsed result is written.
         const parsed = schemas.create.parse(values) as Record<string, unknown>;
 
+        // A successful upload is not a valid assignment: the file this id names
+        // was checked against the field it was uploaded for, and this checks it
+        // against the field it is being written to. No statement at all for a
+        // content type with no file fields.
+        await assertContentFileReferences(c, definition, parsed, tx);
+
         const [row] = await tx
           .insert(table)
           .values(toInsertColumns(fields, withCreateSlugs(parsed)))
@@ -1149,6 +1156,8 @@ export const createContentService = <
           row: toRow(current),
         };
       }
+
+      await assertContentFileReferences(c, definition, patch, tx);
 
       if (changedCollections.length > 0) await store?.write(tx, id, patch);
 

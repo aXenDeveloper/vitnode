@@ -30,6 +30,19 @@ export const BlogArticleFormLayout = () => {
           <ContentFormActions className="justify-end" />
         </ContentFormSection>
 
+        {/*
+          The cover image and its alt text, together and in that order: the file
+          is shared and the description of it is per language, and writing the
+          second before choosing the first is not how anybody works. The
+          uploader's own constraint line - "JPG, PNG, WEBP, AVIF" and "Maximum
+          file size: 5 MB" - comes from the field descriptor, so this layout
+          neither states nor can contradict it.
+        */}
+        <ContentFormSection title={t("cover.title")}>
+          <ContentFormField name="coverImage" />
+          <ContentFormField name="coverImageAlt" />
+        </ContentFormSection>
+
         <ContentFormSection title={t("settings.title")}>
           <ContentFormField name="categoryId" />
           <ContentFormField name="authorId" />

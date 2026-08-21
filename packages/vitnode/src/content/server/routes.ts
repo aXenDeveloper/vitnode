@@ -12,6 +12,7 @@ import type {
 import type { AnyContentModel, ContentModel } from "./model";
 import type { ContentPreviewTarget } from "./preview-target";
 
+import { checkStaffPermission } from "../../api/lib/check-staff-permission";
 import { buildRoute } from "../../api/lib/route";
 import {
   zodPaginationPageInfo,
@@ -26,6 +27,7 @@ import {
 } from "../conflicts";
 import {
   CONTENT_ACTOR_TYPES,
+  CONTENT_FILE_FOLDER,
   CONTENT_LOCALE_MAX_LENGTH,
   CONTENT_OPTIONS_LIMIT,
   CONTENT_PERMISSIONS,
@@ -33,11 +35,21 @@ import {
   CONTENT_SCHEDULE_ACTIONS,
   CONTENT_SCHEDULE_STATUSES,
 } from "../const";
+import {
+  contentFileConstraints,
+  validateContentFile,
+  zodContentFileDescriptor,
+} from "../files";
 import { partitionContentFields } from "../localization";
 import { orderableColumns } from "../registry";
 import { resolveContentActor } from "./actor";
 import { contentEditorialEffects } from "./editorial-effects";
 import { emitContentEvent } from "./emit";
+import {
+  contentFileDescriptorFromUpload,
+  contentFileFields,
+  withContentRowFiles,
+} from "./files";
 import { withHttpErrors } from "./http-errors";
 import { findContentLanguage } from "./language-resolver";
 import { buildContentLocalizedAdminRoutes } from "./localized-admin-routes";
@@ -130,6 +142,29 @@ export const buildContentRoutes = <
   const localized = definition.localization.enabled;
 
   /**
+   * The file fields, by name. Empty for every content type without one - which is
+   * exactly when the upload route is not mounted and no `files` key is added to
+   * any response, so every existing content type's API is untouched.
+   */
+  const fileFields = contentFileFields(definition);
+  const hasFileFields = Object.keys(fileFields).length > 0;
+
+  /**
+   * The resolved descriptor of each file field, keyed by field name.
+   *
+   * Beside the row rather than replacing the column: the form's value is the
+   * identifier it will submit back, and the descriptor is what the uploader
+   * previews and the list cell renders. `null` for a field holding no file.
+   */
+  const zodFiles = z.record(z.string(), zodContentFileDescriptor.nullable());
+
+  const withFiles = async <TRow extends object>(
+    c: Context,
+    rows: readonly TRow[],
+  ): Promise<TRow[]> =>
+    hasFileFields ? await withContentRowFiles(c, definition, rows) : [...rows];
+
+  /**
    * One row's state in the language the list is being viewed in.
    *
    * `null` when that language has no translation, which is a state the table
@@ -172,10 +207,12 @@ export const buildContentRoutes = <
    */
   const detailRow = schemas.selectObject.extend({
     labels: zodLabels,
+    ...(hasFileFields ? { files: zodFiles } : {}),
     ...schemas.advancedSelect.shape,
   });
   const listRow = schemas.selectObject.extend({
     labels: zodLabels,
+    ...(hasFileFields ? { files: zodFiles } : {}),
     ...(localized ? { translation: zodRowTranslation.optional() } : {}),
   });
   const publicationResponse = z.object({
@@ -349,7 +386,18 @@ export const buildContentRoutes = <
         query: { cursor, first, last, search },
       });
 
-      return c.json(await withRowTranslations(c, data, raw.locale), 200);
+      const withTranslations = await withRowTranslations(c, data, raw.locale);
+
+      // One `WHERE id IN (...)` for the whole page, never one per row - the same
+      // shape the translation join above uses, and skipped entirely by a content
+      // type with no file fields.
+      return c.json(
+        {
+          ...withTranslations,
+          edges: await withFiles(c, withTranslations.edges),
+        },
+        200,
+      );
     },
   });
 
@@ -496,6 +544,142 @@ export const buildContentRoutes = <
     },
   });
 
+  /**
+   * The generated binary endpoint: one `multipart/form-data` upload per `file`
+   * field.
+   *
+   * It exists because a Content Engine mutation is JSON - `{ "coverImage": 42 }`
+   * - and always will be. Bytes travel here, once, and the mutation carries an
+   * identifier. Nothing is base64-encoded and no binary goes through a Next.js
+   * Server Action: a Server Action body is a serialised RSC payload, so a
+   * five-megabyte image becomes a five-megabyte string that is buffered whole,
+   * with no progress, no streaming and a platform body limit that is not the
+   * field's `maxBytes`.
+   *
+   * The field is resolved from the URL, so there is exactly one upload route per
+   * content type rather than one per field, and its **descriptor is the
+   * authority**: `maxBytes`, `allowedMimeTypes` and `allowedExtensions` are read
+   * off the same object the save-time check and the AdminCP constraint line read.
+   * They cannot drift, because there is only one of them.
+   *
+   * Gated on `can_view` by the middleware and on `can_create` **or** `can_edit`
+   * in the handler. One permission would be wrong either way: a create-only role
+   * could not upload a cover for the article it is allowed to create, and an
+   * edit-only role could not replace one.
+   */
+  const uploadForm = z.object({
+    file: z.instanceof(File).openapi({ format: "binary", type: "string" }),
+  });
+
+  const zodFileRejection = z.object({
+    code: z.string(),
+    message: z.string(),
+  });
+
+  const upload = buildRoute({
+    pluginId,
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    route: {
+      method: "post",
+      path: "/uploads/{field}",
+      description: `Upload a file for one ${name} file field`,
+      request: {
+        params: z.object({ field: z.string() }),
+        body: {
+          required: true,
+          content: { "multipart/form-data": { schema: uploadForm } },
+        },
+      },
+      responses: {
+        200: jsonResponse(
+          zodContentFileDescriptor,
+          "File stored and recorded in core_files",
+        ),
+        400: jsonResponse(
+          zodFileRejection,
+          "Not a file field, or the file failed the field's own rules",
+        ),
+        403: { description: "Not allowed to write this content type" },
+      },
+    },
+    handler: async c => {
+      const field = c.req.param("field");
+      const fieldValue = fileFields[field];
+      if (!fieldValue) {
+        throw new HTTPException(400, {
+          message: `"${field}" is not a file field on this content type.`,
+        });
+      }
+
+      // Either write permission is enough - see the doc comment.
+      const allowed = await Promise.all(
+        [CONTENT_PERMISSIONS.create, CONTENT_PERMISSIONS.edit].map(
+          async permission =>
+            await checkStaffPermission(c, {
+              module,
+              permission,
+              plugin: pluginId,
+              type: "admin",
+            }),
+        ),
+      );
+      if (!allowed.some(Boolean)) {
+        throw new HTTPException(403, { message: "Forbidden" });
+      }
+
+      // Re-parsed rather than read through `c.req.valid("form")`, which cannot
+      // infer through a generic route config - the same reason `readJson` exists.
+      // Hono caches the parsed body, so this is not a second read of the stream.
+      const { file } = uploadForm.parse(await c.req.parseBody());
+
+      const constraints = contentFileConstraints(fieldValue);
+
+      // Before a single byte reaches the storage adapter: size, then media type,
+      // then extension, every configured rule having to pass.
+      const rejected = validateContentFile(constraints, {
+        mimeType: file.type === "" ? null : file.type,
+        name: file.name,
+        size: file.size,
+      });
+      if (rejected) return c.json(rejected, 400);
+
+      const stored = await c.get("storage").upload({
+        file,
+        folder: CONTENT_FILE_FOLDER,
+        // Handed to the adapter too, as defence in depth: a direct
+        // `storage.upload` from somewhere else should not be able to exceed what
+        // this field declares.
+        ...(constraints.allowedMimeTypes
+          ? { allowedMimeTypes: [...constraints.allowedMimeTypes] }
+          : {}),
+        maxBytes: constraints.maxBytes,
+        metadata: { contentTypeId: definition.id, field },
+      });
+
+      const descriptor = contentFileDescriptorFromUpload(stored);
+
+      // The same rules again, against what was actually **stored**. An install
+      // with `storage.image.webp` re-encodes a PNG to WebP, so the stored name
+      // ends `.webp` - and a field that allows only `.png` has to say so now,
+      // loudly, rather than accepting the upload and refusing the save. The file
+      // is removed because this request created it and nothing else refers to it.
+      const stale = validateContentFile(constraints, descriptor);
+      if (stale) {
+        await c.get("storage").deleteFile(stored.id);
+
+        return c.json(
+          {
+            code: stale.code,
+            message: `${stale.message} The stored file is "${descriptor.name}" (${descriptor.mimeType ?? "unknown type"}) - image processing may have re-encoded it, in which case this field's allowlist has to include the converted format.`,
+          },
+          400,
+        );
+      }
+
+      return c.json(descriptor, 200);
+    },
+  });
+
   const detail = buildRoute({
     pluginId,
     adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
@@ -523,7 +707,11 @@ export const buildContentRoutes = <
       // Two queries per collection field, and none at all for a content type
       // that declares none - `advanced` is the no-op store then. Spread after
       // the row because a collection is never one of its columns.
-      return c.json({ ...row, ...(await service.advanced(id)) }, 200);
+      const [withFileDescriptors] = await withFiles(c, [
+        { ...row, ...(await service.advanced(id)) },
+      ]);
+
+      return c.json(withFileDescriptors, 200);
     },
   });
 
@@ -1461,6 +1649,9 @@ export const buildContentRoutes = <
       ? [publicationRoute("publish"), publicationRoute("unpublish")]
       : []),
     ...(editorial ? [revisionList, revisionDetail, restore] : []),
+    // Mounted only for a content type that declares a file field, so nothing
+    // else gains a binary endpoint it has no use for.
+    ...(hasFileFields ? [upload] : []),
     ...(previewEnabled ? [previewToken] : []),
     ...(definition.delivery.enabled ? [deliveryDetail] : []),
     ...(definition.editorial.scheduling.enabled

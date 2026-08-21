@@ -3,6 +3,7 @@ import type {
   ContentBooleanField,
   ContentDateTimeField,
   ContentEnumField,
+  ContentFileField,
   ContentGroupField,
   ContentNumberField,
   ContentOnDelete,
@@ -16,6 +17,11 @@ import type {
 } from "./types";
 
 import { ContentEngineError } from "./errors";
+import {
+  assertContentFileMaxBytes,
+  normalizeContentFileExtensions,
+  normalizeContentFileMimeTypes,
+} from "./files";
 
 interface SharedArgs<
   TRequired extends boolean = false,
@@ -196,6 +202,74 @@ const dateTime = <
   defaultNow: (args.defaultNow ?? false) as TDefaultNow,
   kind: "dateTime",
 });
+
+/**
+ * One stored file, referenced by its `core_files` row.
+ *
+ * ```ts
+ * coverImage: field.file({
+ *   maxBytes: 5 * 1024 * 1024,
+ *   allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+ *   allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+ * })
+ * ```
+ *
+ * The column is an `integer` foreign key with `ON DELETE RESTRICT`, so Postgres
+ * itself refuses to delete a file an article still points at. Nothing about the
+ * file - not the name, not the URL, not the storage key - is copied onto the
+ * content row: one fact, in one place.
+ *
+ * **`maxBytes` is required.** There is no unlimited Content Engine file field:
+ * the ceiling is the only thing between a form and an upload that fills the
+ * disk, and a default would be a number nobody chose applied to every field in
+ * every plugin. It is checked here, at definition time, so a bad value is an
+ * import-time error rather than a request that succeeds until it does not.
+ *
+ * `allowedExtensions` and `allowedMimeTypes` are **two** rules, and a strict
+ * field states both: the first is what the file is *called*, the second is what
+ * the client *declared* the bytes are. Both have to match, so `picture.gif`
+ * carrying `image/png` is refused by a GIF-only field - which is precisely the
+ * case an extension-only check waves through. Extensions are normalised, so
+ * `GIF`, `.gif` and `.Gif` are one rule.
+ *
+ * `nullable` defaults to **true**, like `field.user`: a cover image is something
+ * a record may not have yet, and a `NOT NULL` file column would mean no article
+ * can exist before somebody uploads one. Pass `nullable: false` with
+ * `required: true` for a field that genuinely must carry a file.
+ *
+ * There is no `localized` argument and no `multiple` one. A per-language file is
+ * out of scope (`localized: true` is refused at definition time); a gallery is a
+ * different feature with its own ordering and its own deletion rules.
+ */
+const file = <
+  TRequired extends boolean = false,
+  TNullable extends boolean = true,
+>(
+  args: SharedArgs<TRequired, TNullable> & {
+    allowedExtensions?: readonly string[];
+    allowedMimeTypes?: readonly string[];
+    maxBytes: number;
+  },
+): ContentFileField<TRequired, TNullable> => {
+  // Destructured rather than spread: the arguments accept `readonly string[]` so
+  // an `as const` list is ergonomic, and the descriptor stores the normalised
+  // mutable copy. Spreading `args` would carry the readonly originals through.
+  const { allowedExtensions, allowedMimeTypes, maxBytes, ...rest } = args;
+
+  return {
+    ...rest,
+    nullable: (args.nullable ?? true) as TNullable,
+    required: (args.required ?? false) as TRequired,
+    ...(allowedExtensions
+      ? { allowedExtensions: normalizeContentFileExtensions(allowedExtensions) }
+      : {}),
+    ...(allowedMimeTypes
+      ? { allowedMimeTypes: normalizeContentFileMimeTypes(allowedMimeTypes) }
+      : {}),
+    kind: "file",
+    maxBytes: assertContentFileMaxBytes(maxBytes),
+  };
+};
 
 /**
  * A reference to a VitNode user.
@@ -431,6 +505,7 @@ export const field = {
   boolean,
   dateTime,
   enum: enumField,
+  file,
   group,
   number,
   relation,

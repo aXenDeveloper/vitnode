@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { core_files } from "@/database/files";
+import { isPgReferenceViolation } from "@/lib/api/pg-error";
 import {
   buildStorageKey,
   generateStorageFileName,
@@ -32,6 +33,31 @@ export interface StorageUploadResult {
   key: string;
   url: string;
 }
+
+/**
+ * What {@link StorageModel.upload} returns: the adapter's result plus the
+ * `core_files` row it just created.
+ *
+ * The adapter still returns only `{ key, url }` - it stores bytes and knows
+ * nothing about the database - so this is a separate type rather than a widened
+ * one. `id` is what a caller needs to *reference* the file: a Content Engine
+ * file column holds it, and without it every upload route would have to look the
+ * row back up by key.
+ *
+ * `dimensions` is `null` for a non-image and for an image the pipeline did not
+ * measure (SVG and GIF are deliberately not re-encoded).
+ */
+export interface StorageFileUploadResult extends StorageUploadResult {
+  dimensions: null | { height: number; width: number };
+  id: number;
+  mimeType: null | string;
+  /** The display name as stored, which a format conversion may have changed. */
+  name: string;
+  size: number;
+}
+
+/** Why {@link StorageModel.deleteFile} refused. */
+export const STORAGE_FILE_IN_USE = "FILE_IN_USE";
 
 /**
  * Present only on disk-backed adapters (e.g. Local). The Node entry point reads
@@ -154,11 +180,28 @@ export class StorageModel {
   }
 
   /**
-   * Removes a stored file by its `core_files` id: deletes the underlying object
-   * from the storage provider (best-effort - a missing object doesn't block the
-   * record removal), then deletes the database row. Throws a 404 when no file
-   * with that id exists. Pass `ownerId` to scope the delete to that user's files
-   * (so a user can only remove their own uploads).
+   * Removes a stored file by its `core_files` id.
+   *
+   * **Database first, blob second**, and the order is the whole point. A Content
+   * Engine file column references this table with `ON DELETE RESTRICT`, and so
+   * does every retained revision's file pin - so the `DELETE` is what asks
+   * Postgres "is anything still using this?", and it is the only thing that can
+   * answer correctly under concurrency. Deleting the object first, as this used
+   * to, meant a referenced file lost its bytes and *then* had its removal
+   * refused: the article survived, pointing at a 404.
+   *
+   * So:
+   *
+   * - still referenced -> **409 `FILE_IN_USE`**, and the object is untouched;
+   * - row removed -> the object is deleted, best-effort (a missing object must
+   *   not fail a delete that already committed);
+   * - no such row -> 404.
+   *
+   * An orphaned storage object is the failure this prefers. It costs disk; a
+   * content record pointing at bytes that are gone costs a broken page nobody
+   * can repair from the AdminCP.
+   *
+   * Pass `ownerId` to scope the delete to that user's own uploads.
    */
   async deleteFile(id: number, ownerId?: number): Promise<void> {
     const db = this.c.get("db");
@@ -167,22 +210,33 @@ export class StorageModel {
         ? eq(core_files.id, id)
         : and(eq(core_files.id, id), eq(core_files.userId, ownerId));
 
-    const [row] = await db
-      .select({ key: core_files.key })
-      .from(core_files)
-      .where(where)
-      .limit(1);
+    let deleted: undefined | { key: string };
+    try {
+      [deleted] = await db
+        .delete(core_files)
+        .where(where)
+        .returning({ key: core_files.key });
+    } catch (error) {
+      if (!isPgReferenceViolation(error)) throw error;
 
-    if (!row) {
+      // The bytes are still there, which is the point: whoever is using this
+      // file still has a working file.
+      throw new HTTPException(409, {
+        res: Response.json({ code: STORAGE_FILE_IN_USE, id }, { status: 409 }),
+      });
+    }
+
+    if (!deleted) {
       throw new HTTPException(404, { message: "File not found" });
     }
 
+    // After the commit, and best-effort: the row is gone either way, so a
+    // provider that is down leaves an orphaned object rather than a file record
+    // nobody can remove.
     const provider = this.c.get("core").storage?.adapter;
     if (provider) {
-      await provider.delete(row.key).catch(() => undefined);
+      await provider.delete(deleted.key).catch(() => undefined);
     }
-
-    await db.delete(core_files).where(where);
   }
 
   getUrl(key: string): string {
@@ -196,7 +250,7 @@ export class StorageModel {
     maxBytes,
     metadata,
     userId,
-  }: StorageUploadOptions): Promise<StorageUploadResult> {
+  }: StorageUploadOptions): Promise<StorageFileUploadResult> {
     const provider = this.requireProvider();
 
     if (maxBytes !== undefined && file.size > maxBytes) {
@@ -239,16 +293,23 @@ export class StorageModel {
         ? userId
         : (this.c.get("admin")?.user.id ?? this.c.get("user")?.id ?? null);
 
+    const mimeType = processed.mimeType || null;
+    const size = processed.body.length;
+
+    let created: undefined | { id: number };
     try {
-      await this.c
+      // `.returning()` so the caller gets the identifier a reference is made of.
+      // Looking the row back up by key would be a second statement answering a
+      // question this one already knows.
+      [created] = await this.c
         .get("db")
         .insert(core_files)
         .values({
           name: displayName,
           key: result.key,
           folder,
-          mimeType: processed.mimeType || null,
-          size: processed.body.length,
+          mimeType,
+          size,
           userId: ownerId,
           pluginId: this.c.get("plugin")?.id ?? null,
           metadata: {
@@ -257,12 +318,27 @@ export class StorageModel {
               ? { dimensions: processed.dimensions }
               : {}),
           },
-        });
+        })
+        .returning({ id: core_files.id });
     } catch (error) {
       await provider.delete(result.key).catch(() => undefined);
       throw error;
     }
 
-    return result;
+    if (!created) {
+      await provider.delete(result.key).catch(() => undefined);
+      throw new HTTPException(500, {
+        message: "The uploaded file could not be recorded",
+      });
+    }
+
+    return {
+      ...result,
+      dimensions: processed.dimensions,
+      id: created.id,
+      mimeType,
+      name: displayName,
+      size,
+    };
   }
 }

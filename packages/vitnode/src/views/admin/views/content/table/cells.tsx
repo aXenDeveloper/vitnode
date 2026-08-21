@@ -2,16 +2,26 @@ import {
   CheckIcon,
   CircleCheckIcon,
   FileClockIcon,
+  FileIcon,
   MinusIcon,
 } from "lucide-react";
 
 import type { ContentColumnSpec } from "@/content/admin/spec";
+import type { ContentFileDescriptor } from "@/content/files";
 import type { ContentLabels } from "@/content/server/service";
 
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 
 export interface ContentRowData extends Record<string, unknown> {
+  /**
+   * The resolved descriptor of each file field, keyed by field name.
+   *
+   * Carried beside the row by the generated list response, which is why a file
+   * cell can show a thumbnail and a name rather than the `core_files.id` the
+   * column actually holds. Absent for a content type with no file fields.
+   */
+  files?: Record<string, ContentFileDescriptor | null>;
   id: number;
   labels: ContentLabels;
   /**
@@ -76,6 +86,40 @@ export const ContentCell = ({
   statusLabels: { draft: string; published: string };
 }) => {
   const value = contentCellValue(row, spec);
+
+  // Before the generic emptiness check: what the column holds is an identifier,
+  // and a raw `42` in a list is worse than useless - it is the one thing an
+  // editor cannot recognise. An image gets its own thumbnail; everything else
+  // gets an icon and its file name.
+  if (spec.kind === "file") {
+    const file = row.files?.[spec.name] ?? null;
+    if (!file) return <Empty label={emptyLabel} />;
+
+    const image = (file.mimeType ?? "").startsWith("image/");
+
+    return (
+      <span className="flex min-w-0 items-center gap-2">
+        <span
+          aria-hidden
+          className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md"
+        >
+          {image ? (
+            // Decorative: the file name is right beside it as real text, so an
+            // alt would repeat it to a screen reader for no gain.
+            <img
+              alt=""
+              className="size-full object-cover"
+              loading="lazy"
+              src={file.url}
+            />
+          ) : (
+            <FileIcon className="size-4" />
+          )}
+        </span>
+        <span className="truncate">{file.name}</span>
+      </span>
+    );
+  }
 
   if (spec.kind === "relation" || spec.kind === "user") {
     const label = row.labels[spec.name];

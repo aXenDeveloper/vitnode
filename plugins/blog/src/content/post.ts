@@ -118,6 +118,47 @@ export const blogPostContentType = defineContentType({
       source: "title",
     }),
     content: field.textarea({ localized: true, required: true }),
+
+    /**
+     * The article's cover image - **shared**, and one file.
+     *
+     * The column is a `core_files.id` with `ON DELETE RESTRICT`, so Postgres
+     * itself refuses to delete an image an article is still using, and nothing
+     * about the file is copied onto the row: no URL, no storage key, no size. One
+     * fact in one place, which is what makes replacing the image a single write.
+     *
+     * `maxBytes` is mandatory on every file field and this one says five
+     * megabytes. Both allowlists are stated, and they have to *both* match: a
+     * `hero.png` declared `image/gif` is refused, which an extension-only check
+     * would wave through.
+     *
+     * `.webp` is in the extension list for a reason worth knowing: with
+     * `storage.image` configured, VitNode re-encodes uploaded images to WebP, so
+     * the stored file is `hero.webp` whatever was chosen. A field that allowed
+     * only `.png` would accept the upload and then refuse the save.
+     *
+     * Not localized, and it cannot be: a cover image is one image whatever
+     * language somebody reads the article in. The *alt text* is the part that
+     * differs, and that is the field below.
+     */
+    coverImage: field.file({
+      maxBytes: 5 * 1024 * 1024,
+      allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+    }),
+    /**
+     * What a screen reader says instead of the cover image - **per language**.
+     *
+     * The pairing is the point: one shared file, one localized description of it.
+     * `nullable: true` because an article with no cover has nothing to describe,
+     * and because alt text is written after the image is chosen rather than at
+     * the same moment.
+     */
+    coverImageAlt: field.text({
+      localized: true,
+      nullable: true,
+      maxLength: 255,
+    }),
   },
 
   /**
@@ -143,6 +184,13 @@ export const blogPostContentType = defineContentType({
       "friendlyUrl",
       "content",
       "categoryId",
+      // A file crosses the public boundary as the normalised descriptor - `{ id,
+      // name, url, mimeType, size, width, height }` - and never as the
+      // `core_files.id` the column holds: a reader has no route to resolve an
+      // identifier through, and the storage key, the uploader and the metadata
+      // bag are not part of the shape.
+      "coverImage",
+      "coverImageAlt",
       "publishedAt",
     ],
     searchableFields: ["title", "content"],
@@ -211,7 +259,11 @@ export const blogPostContentType = defineContentType({
       // authors are here: both are sets on generated junction tables, and a
       // list that loaded them would issue a query per row. The form carries
       // them, which is where they are edited anyway.
-      columns: ["title", "status", "publishedAt", "updatedAt"],
+      // The title still leads - it is what somebody scans a list by. `coverImage`
+      // sits beside it and renders as a thumbnail plus the stored file name,
+      // never as the identifier the column holds: a raw `42` is the one thing an
+      // editor cannot recognise.
+      columns: ["title", "coverImage", "status", "publishedAt", "updatedAt"],
     },
   },
 });
