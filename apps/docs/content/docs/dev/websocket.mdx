@@ -81,7 +81,7 @@ const wss = new WebSocketServer({ noServer: true });
 
 serve({
   fetch: app.fetch,
-  port: 8080,
+  port: 8000,
   websocket: { server: wss }, // [!code ++]
 });
 ```

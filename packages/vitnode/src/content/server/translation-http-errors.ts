@@ -18,8 +18,10 @@ import {
   ContentTranslationItemMissing,
   ContentTranslationVersionConflict,
 } from "../errors";
+import { ContentFileReferenceError } from "./files";
 import {
   contentDeliveryConflict,
+  contentFileRejected,
   contentUnprocessable,
   rethrowAsHttpError,
 } from "./http-errors";
@@ -144,6 +146,19 @@ export const withTranslationHttpErrors = async <TResult>(
         contentTypeId,
         locale: error.locale,
         slug: error.slug,
+      });
+    }
+
+    // Ahead of the generic `ContentInputError` branch for the same reason as in
+    // the shared mapper: the code and the field are what let a form point at the
+    // input that was refused. A file field is always shared, so this is reached
+    // by a composite write rather than by a translation-only one - and it has to
+    // answer identically whichever mapper saw it.
+    if (error instanceof ContentFileReferenceError) {
+      throw contentFileRejected({
+        code: error.code,
+        field: error.field,
+        message: error.detail,
       });
     }
 

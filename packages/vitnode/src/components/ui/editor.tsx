@@ -1,8 +1,7 @@
 "use client";
 
-import type React from "react";
-
 import { EditorContent, useEditor } from "@tiptap/react";
+import React from "react";
 
 import { tiptapExtensions } from "@/components/tiptap/extension";
 import { TipTapToolbar } from "@/components/tiptap/toolbar/tiptap-toolbar";
@@ -10,18 +9,20 @@ import { cn } from "@/lib/utils";
 
 import { Loader } from "./loader";
 
-export const Editor = ({
+type EditorProps = Omit<React.ComponentProps<"div">, "onChange"> & {
+  disableScroll?: boolean;
+  onChange?: (value: string) => void;
+  value?: string;
+};
+
+const TipTapEditor = ({
   className,
   disableScroll,
   value = "",
   onChange,
   onBlur,
   ...props
-}: Omit<React.ComponentProps<"div">, "onChange"> & {
-  disableScroll?: boolean;
-  onChange?: (value: string) => void;
-  value?: string;
-}) => {
+}: EditorProps) => {
   const editor = useEditor({
     extensions: tiptapExtensions,
     editorProps: {
@@ -55,4 +56,27 @@ export const Editor = ({
       />
     </div>
   );
+};
+
+const subscribeNever = () => () => {};
+const getIsHydrated = () => true;
+const getIsHydratedOnServer = () => false;
+
+/**
+ * `useEditor` tags every instance with an id derived from `Math.random()` as it
+ * renders, and a prerender cannot evaluate that - Next refuses to bake an
+ * unstable value into a route's static shell. `immediatelyRender: false` means
+ * the editor has no instance on the server anyway, so hold the hook back until
+ * the browser has hydrated and let the shell keep the loader.
+ */
+export const Editor = (props: EditorProps) => {
+  const isHydrated = React.useSyncExternalStore(
+    subscribeNever,
+    getIsHydrated,
+    getIsHydratedOnServer,
+  );
+
+  if (!isHydrated) return <Loader />;
+
+  return <TipTapEditor {...props} />;
 };

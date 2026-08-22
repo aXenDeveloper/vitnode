@@ -11,6 +11,6 @@ VitNodeAPI({
 });
 
 export default {
-  port: 8080,
+  port: 8000,
   fetch: app.fetch,
 };

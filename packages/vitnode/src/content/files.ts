@@ -65,6 +65,26 @@ export interface ContentFileRejection {
 }
 
 /**
+ * The 400 body a **content write** answers when a file identifier is refused.
+ *
+ * `field` is what the upload route's own rejection does not need and this one
+ * cannot do without: an upload is for one named field already in the URL, while
+ * a save carries every field at once, so without it a form knows a file was
+ * refused but not which input to say so under.
+ *
+ * `code` is a plain string rather than an enum of the four a reference check can
+ * produce - `CONTENT_FILE_NOT_FOUND`, `CONTENT_FILE_TOO_LARGE`,
+ * `CONTENT_FILE_MIME_TYPE_NOT_ALLOWED`, `CONTENT_FILE_EXTENSION_NOT_ALLOWED` -
+ * for the same reason the upload route's is: a client that does not recognise a
+ * code shows `message`, so a new one must not break the parse it arrives in.
+ */
+export const zodContentFileReferenceRejection = z.strictObject({
+  code: z.string(),
+  field: z.string(),
+  message: z.string(),
+});
+
+/**
  * One extension rule, normalised.
  *
  * `GIF`, `.gif` and `.Gif` all become `.gif`, so the rule an author writes and

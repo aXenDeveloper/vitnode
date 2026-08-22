@@ -21,6 +21,7 @@ import {
   ContentScheduleError,
   ContentVersionConflict,
 } from "../errors";
+import { ContentFileReferenceError } from "./files";
 
 const {
   foreignKeyViolation: FOREIGN_KEY_VIOLATION,
@@ -63,6 +64,21 @@ export const contentDeliveryConflict = (
 export const contentUnprocessable = (
   body: ContentUnprocessable,
 ): HTTPException => jsonError(422, body);
+
+/**
+ * A structured 400, for a file identifier a field may not hold.
+ *
+ * The only 400 in this module that carries a body, and it does so because the
+ * two parts beside the sentence are the actionable ones: `code` says which rule
+ * refused the file, and `field` says which input to put the message under. A
+ * save carries every field at once, so a client with only prose to go on can
+ * report a refusal but not where.
+ */
+export const contentFileRejected = (body: {
+  code: string;
+  field: string;
+  message: string;
+}): HTTPException => jsonError(400, body);
 
 /**
  * A structured 400, for a schedule the rules refuse.
@@ -146,6 +162,18 @@ export const rethrowAsHttpError = (
   // contract in OpenAPI.
   if (error instanceof ZodError) {
     throw new HTTPException(400, { message: "Invalid input data." });
+  }
+
+  // Before the generic `ContentInputError` branch below, which is what this used
+  // to fall through to: that keeps the sentence and drops `code` and `field`,
+  // the two parts a form can act on. A `ContentFileReferenceError` is the same
+  // 400 either way - it just says which field and which rule.
+  if (error instanceof ContentFileReferenceError) {
+    throw contentFileRejected({
+      code: error.code,
+      field: error.field,
+      message: error.detail,
+    });
   }
 
   // Written for the client on purpose - "provide the slug explicitly" is

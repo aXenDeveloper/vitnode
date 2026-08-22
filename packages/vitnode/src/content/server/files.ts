@@ -282,10 +282,10 @@ export const assertContentFileReferences = async (
 /**
  * A file identifier a content write may not store.
  *
- * A `ContentInputError`, so the generated routes already answer 400 with the
- * message - which names the field and the reason and nothing internal. `code` is
- * carried so a caller that wants to point at the field can, exactly as
- * `ContentAdvancedInputError` does for a missing relation target.
+ * A `ContentInputError`, so a route that knows nothing about files still answers
+ * 400. `code` and `field` are carried so one that does can say which rule refused
+ * which input, exactly as `ContentAdvancedInputError` does for a missing relation
+ * target - and `rethrowAsHttpError` answers with all three.
  */
 export class ContentFileReferenceError extends ContentInputError {
   constructor({
@@ -303,10 +303,21 @@ export class ContentFileReferenceError extends ContentInputError {
 
     this.name = "ContentFileReferenceError";
     this.code = code;
+    this.detail = message;
     this.field = field;
   }
 
   readonly code: ContentFileRejection["code"];
+  /**
+   * The sentence as it was written, for the response body.
+   *
+   * `Error.message` is not it: `ContentEngineError` prefixes every message with
+   * `[Content Engine] <contentTypeId>: ` so a misconfigured plugin is obvious in
+   * a log, and that prefix is exactly the internal detail a form must not show
+   * an editor. Kept beside it rather than by stripping it back off, which would
+   * be string surgery on a format that exists for the log's benefit.
+   */
+  readonly detail: string;
   readonly field: string;
 }
 
