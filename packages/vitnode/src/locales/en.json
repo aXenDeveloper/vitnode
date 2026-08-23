@@ -214,6 +214,7 @@
         "choose_many": "Choose files",
         "replace": "Replace file",
         "remove": "Remove file",
+        "stored": "Stored file",
         "full": "This field holds at most {max} files. Remove one to add another.",
         "uploading": "Uploading...",
         "errors": {

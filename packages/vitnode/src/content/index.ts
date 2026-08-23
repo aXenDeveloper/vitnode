@@ -24,6 +24,7 @@ export {
   contentFormValuesToTranslations,
   contentLocalizedFieldNames,
   contentTitleFromValues,
+  isCollectionFieldSpec,
 } from "./admin/spec";
 export type {
   ContentColumnSpec,

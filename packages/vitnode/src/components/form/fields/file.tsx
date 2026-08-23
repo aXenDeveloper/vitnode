@@ -24,6 +24,7 @@ import {
   FileConstraintsLine,
   FileDropzone,
   FileError,
+  resolveFormFiles,
   useUploadFailureMessage,
 } from "./file-shared";
 
@@ -64,6 +65,11 @@ export interface AutoFormFileProps extends ItemAutoFormComponentProps {
  * lands in `field.value` is what the surrounding JSON mutation will send. So a
  * form holding an image is the same size as one holding a number.
  *
+ * What it shows is derived from `field.value`, never held beside it: see
+ * {@link resolveFormFiles}. That is what makes Remove-then-abandon behave - the
+ * value goes back to the identifier the record still holds and the preview comes
+ * back with it, because nothing was thrown away.
+ *
  * For a field that holds several files, use `AutoFormFiles` - same descriptor,
  * same rules, a list instead of a value.
  */
@@ -87,10 +93,21 @@ export const AutoFormFile = ({
 }: AutoFormFileProps) => {
   const t = useTranslations("core.global.file");
   const failureMessage = useUploadFailureMessage();
-  const [file, setFile] = React.useState<AutoFormFileValue | null>(
-    initialFile ?? null,
-  );
   const [rejected, setRejected] = React.useState<null | string>(null);
+  /**
+   * Everything this session has uploaded, kept for its descriptors alone.
+   *
+   * Append-only and never pruned: a file the person removed and then got back -
+   * by abandoning the form, or by a save being rolled back - has to be
+   * describable again, and re-fetching a name and a URL we already had would be
+   * a request to learn something we were told.
+   */
+  const [uploaded, setUploaded] = React.useState<AutoFormFileValue[]>([]);
+
+  // The value decides; `initialFile` and the uploads are only the lookup behind
+  // it. `initialFile` is listed second so a re-upload of the same id wins.
+  const [resolved] = resolveFormFiles(field.value, [initialFile, ...uploaded]);
+  const file = resolved?.file ?? null;
 
   // One object, read by all three: the constraint line, the `accept` attribute
   // and the pre-flight check. It is the same shape the server validates against,
@@ -105,10 +122,10 @@ export const AutoFormFile = ({
     // a silent second attempt spends their bandwidth again and can leave two
     // stored objects where they asked for one.
     retry: false,
-    onSuccess: uploaded => {
-      setFile(uploaded);
+    onSuccess: stored => {
+      setUploaded(current => [...current, stored]);
       setRejected(null);
-      field.onChange(uploaded.id);
+      field.onChange(stored.id);
     },
   });
 
@@ -157,10 +174,13 @@ export const AutoFormFile = ({
   const remove = () => {
     upload.reset();
     setRejected(null);
-    setFile(null);
     // `null` rather than `undefined`: a nullable file column is blanked by
     // sending `null`, and `undefined` would be dropped from the payload and
     // leave the stored value in place.
+    //
+    // Nothing else is cleared. Removing is a change to the *form*, and it is
+    // undone by whatever restores the form - so the descriptor stays in the
+    // lookup above and the preview returns with the value.
     field.onChange(null);
   };
 
@@ -168,7 +188,7 @@ export const AutoFormFile = ({
     ? "uploading"
     : errorMessage !== null
       ? "error"
-      : file
+      : resolved
         ? "done"
         : "idle";
 
@@ -188,8 +208,16 @@ export const AutoFormFile = ({
 
       <FormControl>
         <div className="flex flex-col gap-2">
-          {file && !upload.isPending ? (
-            <FileCard file={file} state={state}>
+          {resolved && !upload.isPending ? (
+            // A value with no descriptor still gets a card: "there is a file
+            // here and I cannot describe it" must not look like "there is no
+            // file here", which would invite replacing something unseen.
+            <FileCard
+              file={
+                file ?? { id: resolved.id, name: t("stored"), size: 0, url: "" }
+              }
+              state={state}
+            >
               <ReplaceAction accept={accept} onPick={pick} />
               <AttachmentAction
                 aria-label={t("remove")}

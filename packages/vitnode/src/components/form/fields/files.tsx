@@ -25,6 +25,7 @@ import {
   FileConstraintsLine,
   FileDropzone,
   FileError,
+  resolveFormFiles,
   useUploadFailureMessage,
 } from "./file-shared";
 
@@ -98,6 +99,11 @@ interface PendingUpload {
  * The stored order is the order files were **added**, and there are no reorder
  * controls: dragging an image to the front and dragging it back is not an edit
  * anybody wants to spend a version on. To rearrange, remove and re-add.
+ *
+ * What it shows is derived from `field.value`, never held beside it: see
+ * {@link resolveFormFiles}. That is what makes Remove-then-abandon behave - the
+ * value goes back to the identifiers the record still holds and the cards come
+ * back with it, because nothing was thrown away.
  */
 export const AutoFormFiles = ({
   allowedExtensions,
@@ -121,11 +127,17 @@ export const AutoFormFiles = ({
 }: AutoFormFilesProps) => {
   const t = useTranslations("core.global.file");
   const failureMessage = useUploadFailureMessage();
-  const [files, setFiles] = React.useState<AutoFormFileValue[]>(
-    initialFiles ?? [],
-  );
   const [pending, setPending] = React.useState<PendingUpload[]>([]);
   const [rejections, setRejections] = React.useState<string[]>([]);
+  /**
+   * Everything this session has uploaded, kept for its descriptors alone.
+   *
+   * Append-only and never pruned: a file the person removed and then got back -
+   * by abandoning the form, or by a save being rolled back - has to be
+   * describable again, and re-fetching a name and a URL we already had would be
+   * a request to learn something we were told.
+   */
+  const [uploaded, setUploaded] = React.useState<AutoFormFileValue[]>([]);
   // Monotonic, so a queued upload that finished and another that starts with the
   // same name never share a React key.
   const nextKeyRef = React.useRef(0);
@@ -137,28 +149,32 @@ export const AutoFormFiles = ({
   const formats = fileFormatLabels(constraints);
   const accept = fileAcceptAttribute(constraints);
 
-  /**
-   * The list as it stands, readable synchronously.
-   *
-   * A ref beside the state, because several uploads land independently and each
-   * one has to append to what the *others* already added. Reading `files` from a
-   * closure would give the last one to settle a view of the list from before the
-   * first one did, and it would win.
-   */
-  const filesRef = React.useRef(files);
+  // The value decides what is shown and in what order; the descriptors are only
+  // the lookup behind it. So removing an entry is a change to the form and
+  // nothing else, and whatever restores the form restores the gallery.
+  const resolved = resolveFormFiles(field.value, [
+    ...(initialFiles ?? []),
+    ...uploaded,
+  ]);
 
   /**
-   * Commits a new list to the ref, the local state and the form.
+   * The identifiers as they stand, readable synchronously.
    *
-   * One function rather than three calls at every site, because they must never
-   * disagree: the cards are rendered from the state and the payload is built
-   * from `field.value`, and a place that updated only one of them would show a
-   * gallery that saves as something else.
+   * A ref beside the derived value, because several uploads land independently
+   * and each has to append to what the *others* already added: reading the
+   * render-time value from a closure would give the last one to settle a view of
+   * the list from before the first one did, and it would win. Synced from the
+   * form after every render, so an external reset is picked up too.
    */
-  const commit = (next: AutoFormFileValue[]) => {
-    filesRef.current = next;
-    setFiles(next);
-    field.onChange(next.map(file => file.id));
+  const idsRef = React.useRef<number[]>([]);
+  const ids = resolved.map(entry => entry.id);
+  React.useEffect(() => {
+    idsRef.current = ids;
+  });
+
+  const commit = (next: readonly number[]) => {
+    idsRef.current = [...next];
+    field.onChange([...next]);
   };
 
   const upload = useMutation({
@@ -173,13 +189,18 @@ export const AutoFormFiles = ({
         current.filter(entry => entry.key !== variables.key),
       );
     },
-    onSuccess: uploaded => {
-      // Already there - a file the person picked twice in two selections. The API
-      // would refuse the duplicate anyway; not adding it is the quieter and more
-      // honest answer.
-      if (filesRef.current.some(file => file.id === uploaded.id)) return;
+    onSuccess: stored => {
+      // Remembered whether or not it joins the list, because the descriptor is
+      // worth having either way - a duplicate pick is still a file this session
+      // now knows how to describe.
+      setUploaded(current => [...current, stored]);
 
-      commit([...filesRef.current, uploaded]);
+      // Already in the list - a file the person picked twice in two selections.
+      // The API would refuse the duplicate anyway; not adding it is the quieter
+      // and more honest answer.
+      if (idsRef.current.includes(stored.id)) return;
+
+      commit([...idsRef.current, stored.id]);
     },
     onError: (error, variables) => {
       const message = failureMessage({
@@ -199,7 +220,7 @@ export const AutoFormFiles = ({
     },
   });
 
-  const remaining = maxItems - files.length - pending.length;
+  const remaining = maxItems - ids.length - pending.length;
 
   const pick = (chosen: File[]) => {
     setRejections([]);
@@ -267,7 +288,9 @@ export const AutoFormFiles = ({
 
   const remove = (id: number) => {
     setRejections([]);
-    commit(filesRef.current.filter(file => file.id !== id));
+    // Only the value moves. The descriptor stays in the lookup, so an entry that
+    // comes back - the form abandoned, a save rolled back - comes back described.
+    commit(ids.filter(current => current !== id));
   };
 
   const state =
@@ -275,7 +298,7 @@ export const AutoFormFiles = ({
       ? "uploading"
       : rejections.length > 0
         ? "error"
-        : files.length > 0
+        : ids.length > 0
           ? "done"
           : "idle";
 
@@ -290,24 +313,51 @@ export const AutoFormFiles = ({
       <FileConstraintsLine
         allowedExtensions={allowedExtensions}
         allowedMimeTypes={allowedMimeTypes}
-        count={{ max: maxItems, used: files.length }}
+        count={{ max: maxItems, used: ids.length }}
         maxBytes={maxBytes}
       />
 
       <FormControl>
         <div className="flex flex-col gap-2">
-          {files.length > 0 && (
+          {/*
+            The picker leads and the files follow it, which is the order somebody
+            uses them in: on an empty field there is nothing above the control to
+            scroll past, and on a full one the button stays where it was instead
+            of being pushed down the page by every file added to it.
+          */}
+          <FileDropzone
+            accept={accept}
+            disabled={remaining <= 0}
+            disabledLabel={t("full", { max: maxItems })}
+            multiple
+            onPick={pick}
+            // The zone itself never spins: the pending cards below already say
+            // which files are in flight, and a spinner over the picker would stop
+            // somebody adding an eleventh while the first ten upload.
+            pending={false}
+            promptLabel={t("drop_many")}
+            state={state}
+          />
+
+          {resolved.length > 0 && (
             <ul className="flex flex-col gap-2" data-slot="file-list">
-              {files.map(file => (
-                <li key={file.id}>
-                  <FileCard file={file}>
+              {resolved.map(({ file, id }) => (
+                <li key={id}>
+                  {/*
+                    An entry with no descriptor still gets a card: "there is a
+                    file here and I cannot describe it" must not look like the
+                    gallery being one shorter than it is.
+                  */}
+                  <FileCard
+                    file={file ?? { id, name: t("stored"), size: 0, url: "" }}
+                  >
                     <AttachmentAction
                       aria-label={t("remove")}
                       // A field with `min: 2` cannot be taken to one by clicking:
                       // the save would be refused, and refusing the click says so
                       // before the bandwidth and the version are spent.
-                      disabled={files.length <= minItems}
-                      onClick={() => remove(file.id)}
+                      disabled={ids.length <= minItems}
+                      onClick={() => remove(id)}
                       type="button"
                     >
                       <XIcon />
@@ -320,9 +370,9 @@ export const AutoFormFiles = ({
 
           {/*
             The in-flight files, one skeleton card each, in the order they were
-            queued - and in the same list position they will settle into, so
-            nothing shifts as they land. A single spinner would say "something is
-            uploading" where a selection of ten needs to say which ones are left.
+            queued - and **after** the settled ones, which is where they will
+            land, since an upload appends. So nothing shifts as they arrive: the
+            skeleton is replaced in place by the card it was standing in for.
           */}
           {pending.length > 0 && (
             <ul className="flex flex-col gap-2" data-slot="file-pending">
@@ -333,20 +383,6 @@ export const AutoFormFiles = ({
               ))}
             </ul>
           )}
-
-          <FileDropzone
-            accept={accept}
-            disabled={remaining <= 0}
-            disabledLabel={t("full", { max: maxItems })}
-            multiple
-            onPick={pick}
-            // The zone itself never spins: the pending cards above already say
-            // which files are in flight, and a spinner over the picker would stop
-            // somebody adding an eleventh while the first ten upload.
-            pending={false}
-            promptLabel={t("drop_many")}
-            state={state}
-          />
 
           {rejections.map(message => (
             <FileError key={message}>{message}</FileError>

@@ -1,8 +1,10 @@
 // @vitest-environment node
 import {
+  buildContentFormSpec,
   contentFileAccept,
   contentFileConstraints,
   contentFileFormatLabels,
+  isCollectionFieldSpec,
   validateContentFile,
 } from "@vitnode/core/content";
 import { describe, expect, it } from "vitest";
@@ -161,5 +163,26 @@ describe("example.article.gallery - the ordered many-files field", () => {
   it("is exposed publicly, and is not a list column", () => {
     expect(articleContentType.publicApi.fields).toContain("gallery");
     expect(articleContentType.admin.list.columns).not.toContain("gallery");
+  });
+
+  it("is a collection the AdminCP form has to fetch before it opens", () => {
+    // `example.article` edits in a **dialog**, which is handed a *list* row - and
+    // a list row carries no junction table. So the form has to be told this
+    // field's value is somewhere else and go and read the record's detail first.
+    // Without that it would open on the empty set and save it, wiping the
+    // gallery of every article somebody merely clicked the pencil on.
+    const collections = buildContentFormSpec({
+      definition: articleContentType,
+      labelEnum: (_name, value) => value,
+      labelField: name => name,
+      labelSection: name => ({ title: name }),
+      pluginId: "@vitnode/example",
+    })
+      .fields.filter(isCollectionFieldSpec)
+      .map(field => field.name);
+
+    expect(collections).toContain("gallery");
+    // The single-file field is one column and arrives with the row.
+    expect(collections).not.toContain("animation");
   });
 });

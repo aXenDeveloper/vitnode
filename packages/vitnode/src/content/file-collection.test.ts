@@ -7,7 +7,11 @@ import { z } from "zod";
 import { core_files } from "@/database/files";
 import { testFileGalleryContentType } from "@/tests/content-fixtures";
 
-import { buildContentFormSpec, buildFormSchemaFromSpec } from "./admin/spec";
+import {
+  buildContentFormSpec,
+  buildFormSchemaFromSpec,
+  isCollectionFieldSpec,
+} from "./admin/spec";
 import { findContentJunction } from "./advanced";
 import { defineContentType } from "./define";
 import { field } from "./fields";
@@ -245,6 +249,20 @@ describe("the AdminCP form spec", () => {
     expect(coverField?.multiple).toBe(false);
     expect(coverField?.maxItems).toBeUndefined();
     expect(coverField?.minItems).toBeUndefined();
+  });
+
+  it("is a collection, so a dialog form knows to go and read it", () => {
+    // The load-bearing consequence: an admin *list* row carries no junction
+    // table, so a dialog-mode form opened on one has to fetch the record's
+    // detail before it builds itself. A gallery that was not counted here would
+    // open on the empty set and then save it, wiping the gallery of every record
+    // somebody merely opened.
+    expect(galleryField && isCollectionFieldSpec(galleryField)).toBe(true);
+    expect(
+      spec.fields.filter(isCollectionFieldSpec).map(field => field.name),
+    ).toEqual(["gallery", "attachments"]);
+    // A single file is one column on the row and arrives with it.
+    expect(coverField && isCollectionFieldSpec(coverField)).toBe(false);
   });
 
   it("opens a create form on the empty list, so `min` is enforced there", () => {

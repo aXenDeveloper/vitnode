@@ -417,6 +417,19 @@ export const isReferenceKind = (kind: ContentFieldKind): boolean =>
   kind === "relation" || kind === "user";
 
 /**
+ * Whether a field's value lives on a table of its own rather than on the row.
+ *
+ * A repeatable, a to-many `relation`, a to-many `user`, and a `multiple: true`
+ * `file` - four kinds, one question, and the question is not "which kind is
+ * this?" but "will this value be absent from a list row?". Keyed off `multiple`
+ * rather than off a list of kinds for exactly that reason: the next collection
+ * kind is covered the day it exists, and the version of this rule that forgot
+ * one is a form that opens on the empty set and then saves it.
+ */
+export const isCollectionFieldSpec = (field: ContentFormFieldSpec): boolean =>
+  field.kind === "repeatable" || field.multiple === true;
+
+/**
  * One group's or repeatable row's leaves, as a nested object schema.
  *
  * Nested rather than flattened into `seo.title` keys: react-hook-form would

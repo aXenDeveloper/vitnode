@@ -21,7 +21,7 @@ import {
   contentFormValuesToTranslations,
   contentLocalizedFieldNames,
   contentTitleFromValues,
-  isReferenceKind,
+  isCollectionFieldSpec,
 } from "@/content/admin/spec";
 import { uploadContentFile } from "@/content/admin/upload";
 import { usePathname, useRouter } from "@/lib/navigation";
@@ -49,11 +49,12 @@ import { listContentTranslationsAction } from "./translation-api.server";
 /**
  * The collection fields of a row that are not on it.
  *
- * A to-many reference and a repeatable are stored on their own tables, so the
- * admin *list* deliberately leaves them off its rows - carrying them would cost
- * queries per page for values no column renders. A dialog-mode form is handed
- * one of those rows, and a form that opened on the empty set for each would show
- * an article with no categories and then save it that way.
+ * A repeatable, a to-many reference and a gallery are all stored on tables of
+ * their own, so the admin *list* deliberately leaves them off its rows -
+ * carrying them would cost queries per page for values no column renders. A
+ * dialog-mode form is handed one of those rows, and a form that opened on the
+ * empty set for each would show an article with no categories, no gallery, and
+ * then **save it that way**.
  *
  * Empty for a page-mode form, whose server component read the record's detail
  * and already has them - so the common case costs no request at all.
@@ -63,11 +64,7 @@ const missingCollections = (
   data: Record<string, unknown>,
 ): string[] =>
   spec.fields
-    .filter(
-      field =>
-        field.kind === "repeatable" ||
-        (isReferenceKind(field.kind) && field.multiple === true),
-    )
+    .filter(isCollectionFieldSpec)
     .map(field => field.name)
     .filter(name => !Array.isArray(data[name]));
 

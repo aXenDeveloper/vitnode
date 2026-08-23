@@ -482,8 +482,9 @@ no useful shape for that.
 
 #### What the AdminCP renders
 
-A list of cards - thumbnail, name, size, remove - above the drop zone, and the
-same always-visible constraint line the single-file uploader has, plus a count:
+The drop zone first, then the files under it - thumbnail, name, size, remove -
+and the same always-visible constraint line the single-file uploader has, plus a
+count:
 
 ```text
 Gallery
@@ -492,22 +493,27 @@ JPG, JPEG, PNG, WEBP, AVIF
 Maximum file size: 5 MB · 3 of 8 files
 
 ┌──────────────────────────────────┐
+│  Drop files here                 │
+│  [ Choose files ]                │
+└──────────────────────────────────┘
+┌──────────────────────────────────┐
 │ [img] beach.webp        412 KB   │  ✕
 │ [img] harbour.webp      388 KB   │  ✕
 │ [▓▓▓] sunset.png                 │  ◌
 │       Uploading... · 1.2 MB      │
 └──────────────────────────────────┘
-┌──────────────────────────────────┐
-│  Drop files here                 │
-│  [ Choose files ]                │
-└──────────────────────────────────┘
 ```
 
-Each in-flight file gets its **own card**, in the position it will settle into -
-a skeleton where the thumbnail is not known yet, and the real name and size,
-which the browser has to hand. So a selection of ten says which ones are left
-rather than "something is uploading", and nothing shifts under the cursor as
-they land.
+The picker leads because that is the order somebody uses it in: an empty field
+has nothing above the control to scroll past, and a full one keeps the button
+where it was instead of pushing it down the page with every file added.
+
+Each in-flight file gets its **own card**, at the end of the list - which is
+where it will land, since an upload appends - with a skeleton for the thumbnail
+that does not exist yet and the real name and size, which the browser has to
+hand. So a selection of ten says which ones are left rather than "something is
+uploading", and nothing shifts as they arrive: each skeleton is replaced in place
+by the card it was standing in for.
 
 The drop zone stays live while they upload, so an eleventh file can be queued
 without waiting. Choosing again **appends** rather than replaces, and the ceiling

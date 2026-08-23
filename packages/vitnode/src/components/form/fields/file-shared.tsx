@@ -77,6 +77,76 @@ export const fileRejectionReasonOf = (
 export const isImageFile = (file: AutoFormFileValue): boolean =>
   (file.mimeType ?? "").startsWith("image/");
 
+/** One entry of what a file control should show: the id, and what is known of it. */
+export interface ResolvedFormFile {
+  /** The descriptor, or `null` when only the identifier is known. */
+  file: AutoFormFileValue | null;
+  id: number;
+}
+
+/** One positive integer, or `null` - the only thing a file value can be. */
+const asFileId = (value: unknown): null | number =>
+  typeof value === "number" && Number.isInteger(value) && value > 0
+    ? value
+    : null;
+
+/**
+ * The identifiers a form value names, whatever its arity.
+ *
+ * `null`, `undefined`, `""` and a list with rubbish in it all reduce to the ids
+ * that are actually there - a file control's value is only ever an identifier or
+ * a list of them, and everything else is a form that has not been filled in.
+ */
+export const fileIdsOfFormValue = (value: unknown): number[] => {
+  if (Array.isArray(value)) {
+    return value.map(asFileId).filter((id): id is number => id !== null);
+  }
+
+  const id = asFileId(value);
+
+  return id === null ? [] : [id];
+};
+
+/**
+ * What a file control should show, derived **entirely** from the form value.
+ *
+ * This is the rule that keeps a file control honest, and it used to be broken:
+ * the previous version held the chosen file in local state, so pressing Remove
+ * and then abandoning the form - closing the dialog, navigating away, letting a
+ * refresh replace the row - left the control showing an empty drop zone for a
+ * record whose column still held the file. The value said one thing and the
+ * screen said another, and the screen is what somebody acts on.
+ *
+ * So the value decides, and the descriptors are only a **lookup**: they come
+ * from the row the form opened on plus whatever this session uploaded, and they
+ * are never removed. Restoring the value therefore restores the preview, without
+ * anything having to re-fetch or re-sync.
+ *
+ * `file` is `null` when the value names an identifier nothing has a descriptor
+ * for. The caller still renders a card for it, because "there is a file here and
+ * I cannot describe it" and "there is no file here" must not look the same - the
+ * second one invites an editor to replace something they cannot see.
+ *
+ * Order follows the **value**, not the lookup: for a gallery the value is the
+ * stored order, and sorting by anything else would show a different gallery from
+ * the one that would be saved.
+ */
+export const resolveFormFiles = (
+  value: unknown,
+  known: readonly (AutoFormFileValue | null | undefined)[],
+): ResolvedFormFile[] => {
+  const byId = new Map(
+    known
+      .filter((file): file is AutoFormFileValue => !!file)
+      .map(file => [file.id, file]),
+  );
+
+  return fileIdsOfFormValue(value).map(id => ({
+    file: byId.get(id) ?? null,
+    id,
+  }));
+};
+
 /**
  * What went wrong with one upload, in the most specific words available.
  *
@@ -300,7 +370,14 @@ export const FileCard = ({
     </AttachmentMedia>
     <AttachmentContent>
       <AttachmentTitle>{file.name}</AttachmentTitle>
-      <AttachmentDescription>{formatBytes(file.size)}</AttachmentDescription>
+      {/*
+        Omitted rather than shown as "0 B" when the size is not known - which is
+        the placeholder case, where the value names a file no descriptor was
+        loaded for. A made-up zero would read as an empty file.
+      */}
+      {file.size > 0 && (
+        <AttachmentDescription>{formatBytes(file.size)}</AttachmentDescription>
+      )}
     </AttachmentContent>
     {!!children && <AttachmentActions>{children}</AttachmentActions>}
   </Attachment>

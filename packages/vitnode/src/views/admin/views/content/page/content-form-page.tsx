@@ -6,7 +6,7 @@ import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
 import type { ContentFormLayout } from "@/lib/plugin";
 
-import { useRouter } from "@/lib/navigation";
+import { usePathname, useRouter } from "@/lib/navigation";
 
 import type { TranslationRow } from "../actions/translation-api.server";
 
@@ -56,6 +56,7 @@ export const ContentFormPage = ({
   ...props
 }: ContentFormPageProps) => {
   const { push } = useRouter();
+  const pathname = usePathname();
 
   const onCreated = (id: number) => {
     push(
@@ -67,6 +68,7 @@ export const ContentFormPage = ({
 
   return (
     <ContentForm
+      key={`${pathname}#${data?.id ?? "new"}`}
       {...props}
       data={data}
       onCreated={onCreated}
