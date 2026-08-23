@@ -7,7 +7,13 @@ import type { AutoFormOnSubmit } from "@/components/form/auto-form";
 
 import { mutationApi } from "./mutation-api.server";
 
-export const useFormSignIn = ({ isAdmin = false }: { isAdmin?: boolean }) => {
+export const useFormSignIn = ({
+  isAdmin = false,
+  redirectTo,
+}: {
+  isAdmin?: boolean;
+  redirectTo?: string;
+}) => {
   const [error, setError] = React.useState<"" | "access_denied">("");
   const t = useTranslations<"core.auth.sign_in">("core.auth.sign_in");
   const tErrors = useTranslations("core.global.errors");
@@ -21,7 +27,7 @@ export const useFormSignIn = ({ isAdmin = false }: { isAdmin?: boolean }) => {
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
     setError("");
-    const mutation = await mutationApi({ ...values, isAdmin });
+    const mutation = await mutationApi({ ...values, isAdmin, redirectTo });
 
     if (!mutation?.message) return;
     if (mutation?.message !== "Internal Server Error") {

@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { cache } from "react";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
@@ -5,7 +6,9 @@ import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 import { hasStaffPermission } from "@/api/lib/staff-permission";
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { CONFIG_PLUGIN } from "@/config";
+import { getAdminSignInHref } from "@/lib/admin-redirect";
 import { fetcher } from "@/lib/fetcher";
+import { VITNODE_PATHNAME_HEADER } from "@/lib/request-pathname";
 
 import { redirect } from "../navigation";
 
@@ -33,7 +36,10 @@ export const getSessionAdminApi = cache(async () => {
   });
 
   if (res.status !== 200) {
-    await redirect("/admin");
+    // Remembered as `?redirect=`, so signing back in returns the admin to the
+    // page they were on instead of dropping them on the dashboard.
+    const pathname = (await headers()).get(VITNODE_PATHNAME_HEADER);
+    await redirect(getAdminSignInHref(pathname));
 
     return;
   }

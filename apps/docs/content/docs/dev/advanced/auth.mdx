@@ -75,3 +75,44 @@ import { TypeTable } from 'fumadocs-ui/components/type-table';
     },
   }}
 />
+
+## Back to where you were
+
+The admin cookie is short-lived by design (a day, by default), so an admin's
+session tends to run out mid-task. When it does, VitNode remembers the page they
+were on in the sign-in URL:
+
+```txt
+/admin?redirect=%2Fadmin%2Fcore%2Fusers%3Fpage%3D2
+```
+
+Sign in, and you land back on that page - query string and all - instead of the
+dashboard. With nothing to return to, sign-in goes to `/admin/core` as before.
+
+The path comes from the Proxy, which stamps every request with an
+`x-vitnode-pathname` header (locale prefix already removed) because a Server
+Component only ever sees the rewritten, internal URL. You get this for free with
+`createVitNodeProxy`.
+
+The `?redirect=` value is untrusted - it is in the URL, after all - so it is
+validated twice: once when the sign-in page reads it, and again in the Server
+Action that signs you in. Only paths inside `/admin` survive; an absolute URL, a
+protocol-relative `//somewhere-else.example`, a `..` segment or the sign-in page
+itself are all thrown away in favour of `/admin/core`.
+
+<Callout title="Upgrading an existing app">
+  Your `src/app/[locale]/admin/page.tsx` has to forward the page props for the
+  sign-in view to see the query:
+
+```tsx title="src/app/[locale]/admin/page.tsx"
+import { SignInAdminView } from "@vitnode/core/views/admin/sign-in/sign-in-admin-view";
+import React from "react";
+
+export default function Page(
+  props: React.ComponentProps<typeof SignInAdminView>,
+) {
+  return <SignInAdminView {...props} />;
+}
+```
+
+</Callout>

@@ -15,13 +15,19 @@ import { useFormSignIn } from "./use-form";
 export const FormSignIn = ({
   isAdmin,
   isEmail,
+  redirectTo,
 }: {
   isAdmin?: boolean;
   isEmail: boolean;
+  /** AdminCP path to return to after signing in, from `?redirect=`. */
+  redirectTo?: string;
 }) => {
   const t = useTranslations("core.auth.sign_in");
   const shouldReduceMotion = useReducedMotion();
-  const { onSubmit, error, formSchema } = useFormSignIn({ isAdmin });
+  const { onSubmit, error, formSchema } = useFormSignIn({
+    isAdmin,
+    redirectTo,
+  });
 
   return (
     <div className="space-y-4">
