@@ -8,6 +8,7 @@ import {
   testPostContentType,
 } from "@/tests/content-fixtures";
 
+import type { ContentFileDescriptor, ContentFileFieldValue } from "../files";
 import type { ContentFileReferenceError } from "./files";
 
 import { ContentInputError } from "../errors";
@@ -147,6 +148,18 @@ describe("resolveContentFileDescriptors", () => {
   });
 });
 
+/**
+ * One field's descriptor, refusing a list.
+ *
+ * `files` carries every file field of the row, so its value type is the union of
+ * both arities. A single field can never hold a list, and reading one as if it
+ * might would hide exactly the bug this narrowing catches.
+ */
+const one = (
+  value: ContentFileFieldValue | undefined,
+): ContentFileDescriptor | null =>
+  value === undefined || Array.isArray(value) ? null : value;
+
 describe("withContentRowFiles", () => {
   it("attaches the descriptors beside the row, keeping the identifier", async () => {
     const { ctx, select } = makeCtx([fileRow(1), fileRow(2)]);
@@ -157,8 +170,8 @@ describe("withContentRowFiles", () => {
 
     // The form's value stays the identifier it will submit back.
     expect(row.cover).toBe(1);
-    expect(row.files.cover?.name).toBe("cover-1.webp");
-    expect(row.files.animation?.id).toBe(2);
+    expect(one(row.files.cover)?.name).toBe("cover-1.webp");
+    expect(one(row.files.animation)?.id).toBe(2);
     expect(row.files.document).toBeNull();
     expect(select).toHaveBeenCalledTimes(1);
   });

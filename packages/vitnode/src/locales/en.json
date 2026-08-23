@@ -207,14 +207,20 @@
       "file": {
         "any_format": "Any file type",
         "max_size": "Maximum file size: {size}",
+        "count": "{used} of {max} files",
         "drop": "Drop a file here",
+        "drop_many": "Drop files here",
         "choose": "Choose file",
+        "choose_many": "Choose files",
         "replace": "Replace file",
         "remove": "Remove file",
+        "full": "This field holds at most {max} files. Remove one to add another.",
         "uploading": "Uploading...",
         "errors": {
           "too_large": "That file is {size}. The maximum is {max}.",
-          "wrong_format": "\"{value}\" is not an accepted format. Accepted: {formats}."
+          "wrong_format": "\"{value}\" is not an accepted format. Accepted: {formats}.",
+          "named": "{name}: {message}",
+          "too_many": "\"{name}\" was not added - this field holds at most {max} files."
         }
       },
       "go_to_prev_page": "Go to previous page",

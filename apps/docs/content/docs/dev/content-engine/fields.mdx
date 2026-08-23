@@ -20,6 +20,7 @@ Content Engine provides field descriptors exported from `@vitnode/core/content` 
 | `field.user({ multiple: true })` | Junction table (FK to `core_users`) | `z.array(z.number())` | Multi-select People Combobox |
 | `field.slug()` | `varchar(length)` | `z.string()` | Slug Input + Auto-Generator |
 | `field.file()` | `integer()` (FK to `core_files`, `ON DELETE RESTRICT`) | `z.number()` | Uploader (drag & drop + picker) |
+| `field.file({ multiple: true })` | Junction table (FK to `core_files`, `ON DELETE RESTRICT`) | `z.array(z.number())` | Multi-file uploader (list + per-file progress) |
 
 ---
 
@@ -366,9 +367,9 @@ animation: field.file({
 | | |
 | :--- | :--- |
 | `localized: true` | ❌ refused - a file is one object with one storage key. Pair it with a localized `field.text()` for the alt text. |
-| `multiple` | Not in this release. One file per field. |
-| orderable / `titleField` / `colorField` | ❌ refused - the column holds an upload order, which is not something anybody chose. |
+| orderable / `titleField` / `colorField` | ❌ refused - a file reference is an upload order, which is not something anybody chose. |
 | filterable / searchable | ❌ refused by kind. |
+| `min` / `max` / `ordered` without `multiple: true` | ❌ refused - one file has no count and no order. |
 | `publicApi.fields` | ✅ allowed - it crosses as the descriptor above, never as the identifier, and never with the storage key, the uploader or the metadata bag. |
 
 #### List columns
@@ -376,6 +377,187 @@ animation: field.file({
 A file field named in `admin.list.columns` renders a thumbnail (for an image) or a
 file icon, plus the stored file name - never the raw identifier. A
 `columns.<name>.cell` override in `buildPlugin` still wins.
+
+</Step>
+
+<Step>
+### Step 6: Attach Many Files
+
+`multiple: true` moves the reference off the row and into a generated **junction
+table**, exactly as it does for [`field.relation`](/docs/dev/content-engine/relations-and-advanced-modeling):
+one row per file, with a `position`. There is no comma-separated column and no
+JSON array anywhere in it, so `ON DELETE RESTRICT` still means something per
+image.
+
+```ts title="plugins/example/src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+    gallery: field.file({ // [!code ++:8]
+      multiple: true,
+      min: 1,
+      max: 8,
+      maxBytes: 5 * 1024 * 1024, // per file
+      allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+    }),
+  },
+});
+```
+
+```text
+example_articles_gallery
+  itemId        -> example_articles.id  ON DELETE CASCADE
+  relatedItemId -> core_files.id        ON DELETE RESTRICT
+  position      integer NOT NULL
+  createdAt     timestamp NOT NULL DEFAULT now()
+
+  PRIMARY KEY (itemId, relatedItemId)
+  UNIQUE      (itemId, position)
+  INDEX       (relatedItemId)
+```
+
+You still need no `references` entry, and you still get the deletion guarantee -
+`restrict` is not a per-field choice here. `cascade` would silently drop an image
+from a published gallery because somebody tidied up the Files screen, and a
+junction row has nothing for `set null` to null.
+
+Export the junction table from your database module, or `drizzle-kit` will not
+see it:
+
+```ts title="plugins/example/src/database/articles.ts"
+export const example_articles = articleContent.table;
+export const example_articles_gallery = // [!code ++:2]
+  articleContent.advancedTables.junctions.gallery;
+```
+
+#### `maxBytes` is per file, not a budget for the list
+
+Eight images at 5 MB is eight uploads, not one 40 MB one. Every entry is checked
+against the field's **own** rules - the ceiling and both allowlists - at upload
+time and again on save, so one good image says nothing about the next.
+
+Arity is a separate question, and `min` / `max` are how it is asked:
+
+| | |
+| :--- | :--- |
+| `required` / `nullable` | ❌ refused - the empty list is what "no files" looks like |
+| `min: 1` | "at least one image", which is what `required` would have meant |
+| `max` | defaults to **20**, and may not exceed **200** |
+| `ordered` | defaults to **`true`** - the order files were added |
+
+`ordered` defaults to `true` here and to `false` for a relation, and the
+difference is not an oversight: the order an editor built a gallery in is the
+order they meant it to read in, while "ascending id" for a set of categories is
+at least something nobody chose. Pass `ordered: false` and the engine stores the
+entries by ascending `core_files.id`, which makes `set([9, 2, 5])` and
+`set([2, 5, 9])` the same state rather than two writes.
+
+<Callout type="info" title="There are no reorder controls">
+The stored order is the order files were **added**. Rearranging is remove and
+re-add: dragging an image to the front and back again is not an edit worth
+spending a version, a revision and a cache invalidation on. Order the uploads,
+or model the caption as a `field.repeatable` if the sequence is the content.
+</Callout>
+
+The ceiling exists because each entry is a stored object the record pins against
+deletion, and the whole list is read and rewritten as one. For a media library,
+model a content type and relate to it.
+
+#### One request per file
+
+The upload route does not change: it is still `POST .../uploads/{field}`, still
+one file per request. A selection of ten becomes ten concurrent requests, and
+that is the point - each has its own progress, its own outcome and its own
+error, so nine images are stored and the tenth says why it was refused:
+
+```text
+photo-7.tiff: "image/tiff" is not an accepted file type. Accepted: image/jpeg, …
+```
+
+A single request carrying ten files would have to answer "partly", and there is
+no useful shape for that.
+
+#### What the AdminCP renders
+
+A list of cards - thumbnail, name, size, remove - above the drop zone, and the
+same always-visible constraint line the single-file uploader has, plus a count:
+
+```text
+Gallery
+
+JPG, JPEG, PNG, WEBP, AVIF
+Maximum file size: 5 MB · 3 of 8 files
+
+┌──────────────────────────────────┐
+│ [img] beach.webp        412 KB   │  ✕
+│ [img] harbour.webp      388 KB   │  ✕
+│ [▓▓▓] sunset.png                 │  ◌
+│       Uploading... · 1.2 MB      │
+└──────────────────────────────────┘
+┌──────────────────────────────────┐
+│  Drop files here                 │
+│  [ Choose files ]                │
+└──────────────────────────────────┘
+```
+
+Each in-flight file gets its **own card**, in the position it will settle into -
+a skeleton where the thumbnail is not known yet, and the real name and size,
+which the browser has to hand. So a selection of ten says which ones are left
+rather than "something is uploading", and nothing shifts under the cursor as
+they land.
+
+The drop zone stays live while they upload, so an eleventh file can be queued
+without waiting. Choosing again **appends** rather than replaces, and the ceiling
+is enforced at pick time - the ninth file of an eight-file field is refused
+before its bandwidth is spent rather than by a save that fails afterwards. Remove
+is disabled at `min`.
+
+#### Reading and writing it
+
+The form's value, the API payload and the service argument are all the same
+thing: a list of identifiers, in the order shown.
+
+```json
+{ "gallery": [7, 3, 9] }
+```
+
+It is also on the collection API, exactly as a to-many relation is:
+
+```ts
+const service = articleContent.service(c);
+
+await service.relations.gallery.set(articleId, [7, 3, 9]);
+await service.relations.gallery.add(articleId, fileId);
+await service.relations.gallery.remove(articleId, fileId);
+await service.relations.gallery.reorder(articleId, [3, 9, 7]);
+await service.relations.gallery.get(articleId); // [3, 9, 7]
+```
+
+`reorder` is there for a caller that has an order in mind - the AdminCP does not
+use it. Every one of these re-checks each file against the field, and a write
+that computes the state already stored is a no-op: no `updatedAt`, no version
+bump, no revision, no event.
+
+#### Public reads, revisions and list columns
+
+| | |
+| :--- | :--- |
+| `publicApi.fields` | ✅ allowed - a **list of descriptors**, in stored order, never the identifiers |
+| Revisions | Every entry is pinned individually in `core_content_file_refs`, so removing one image from the gallery does not make it deletable while an older version still shows it |
+| `admin.list.columns` | ❌ refused - a gallery is a set on another table, and a list that loaded one would issue a query per row. It belongs on the form |
+| `orderBy` / `titleField` / `colorField` / `indexes` | ❌ refused - it is not one column |
+
+```json
+{
+  "gallery": [
+    { "id": 7, "name": "beach.webp", "url": "https://…", "mimeType": "image/webp", "size": 421888, "width": 1600, "height": 900 },
+    { "id": 3, "name": "harbour.webp", "url": "https://…", "mimeType": "image/webp", "size": 397312, "width": 1600, "height": 900 }
+  ]
+}
+```
 
 </Step>
 
@@ -391,4 +573,4 @@ For nested structures, arrays, relationships, and multi-language support:
 - **`field.structured()`**: Stores nested Zod objects in a Postgres `jsonb` column.
 - **`field.repeatable()`**: Stores arrays of items in a Postgres `jsonb` column.
 - **`localized: true`**: Marks text or textarea fields for translation. See [Localization](/docs/dev/content-engine/localization).
-- **`field.file()`**: References one stored file. See [Storage](/docs/dev/storage#content-engine-file-fields) for how the row, `core_files` and the adapter fit together.
+- **`field.file()`**: References one stored file, or many with `multiple: true`. See [Storage](/docs/dev/storage#content-engine-file-fields) for how the row, `core_files` and the adapter fit together.

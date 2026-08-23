@@ -11,7 +11,12 @@ import {
   type MultiLangValue,
   upsertLangValue,
 } from "../../lib/helpers/multi-lang";
-import { contentRepeatableMax, contentRepeatableMin } from "../advanced";
+import {
+  contentFileCollectionMax,
+  contentFileCollectionMin,
+  contentRepeatableMax,
+  contentRepeatableMin,
+} from "../advanced";
 import { contentFieldPath, contentInnerFields } from "../paths";
 import { humanizeFieldName } from "./labels";
 
@@ -70,12 +75,22 @@ export interface ContentFormFieldSpec {
   minItems?: number;
   minLength?: number;
   /** A reference that holds many targets - or many people - rather than one. */
+  /**
+   * Whether the field holds many values: a to-many reference, or a `file` field
+   * with `multiple: true`.
+   *
+   * One key for both, because the form makes the same decision from it - one
+   * control or a list of them.
+   */
   multiple?: boolean;
   name: string;
   nullable: boolean;
   /** Enum choices, already translated. */
   options?: { label: string; value: string }[];
-  /** Whether a to-many reference's order is the author's to choose. */
+  /**
+   * Whether a to-many field's order is the author's to choose - and therefore
+   * whether the list renders reorder controls.
+   */
   ordered?: boolean;
   required: boolean;
   /**
@@ -222,6 +237,19 @@ const projectFormField = (
           ? { allowedMimeTypes: fieldValue.allowedMimeTypes }
           : {}),
         maxBytes: fieldValue.maxBytes,
+        multiple: fieldValue.multiple,
+        ordered: fieldValue.ordered,
+        // `minItems` / `maxItems` are the same two keys a repeatable uses, so the
+        // form schema has one rule for "how many of these are allowed" rather
+        // than a third spelling of it. Only for a collection: one file has no
+        // count, and `resolveContentAdvanced` refuses `min`/`max` without
+        // `multiple: true`.
+        ...(fieldValue.multiple
+          ? {
+              maxItems: contentFileCollectionMax(fieldValue),
+              minItems: contentFileCollectionMin(fieldValue),
+            }
+          : {}),
       };
     case "group":
     case "repeatable":
@@ -450,8 +478,16 @@ const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
     // What the form holds for a file is the `core_files.id` the API takes, which
     // is also what the mutation sends: the upload happens through its own
     // multipart route and hands the identifier back, so nothing binary is ever
-    // part of this schema or of the JSON body built from it.
+    // part of this schema or of the JSON body built from it. A gallery holds the
+    // list of them, in the order the editor arranged.
     case "file":
+      if (spec.multiple) {
+        return z
+          .array(z.number().int().positive())
+          .min(spec.minItems ?? 0)
+          .max(spec.maxItems ?? Number.MAX_SAFE_INTEGER);
+      }
+
       return z.number().int().positive();
     case "group":
       return leafObjectSchema(spec);
@@ -811,10 +847,14 @@ export const buildFormSchemaFromSpec = (
         );
         const initial =
           current === undefined
-            ? // A to-many reference opens on the empty set rather than on
-              // nothing: the picker renders a list, and `undefined` would make
-              // its first render a different shape from every later one.
-              isReferenceKind(fieldSpec.kind) && fieldSpec.multiple === true
+            ? // Any to-many field opens on the empty set rather than on nothing -
+              // a reference picker, a gallery, all of them. Two reasons, and the
+              // second is the load-bearing one: the control renders a list, so
+              // `undefined` would make its first render a different shape from
+              // every later one; and `min` is enforced on the *form* schema, so a
+              // `min: 1` field left as `undefined` would satisfy `.optional()`
+              // and let a save through that the API then refuses.
+              fieldSpec.multiple === true
               ? []
               : fieldSpec.defaultValue
             : current;

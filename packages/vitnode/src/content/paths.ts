@@ -1,6 +1,7 @@
 import type {
   ContentFieldDescriptor,
   ContentFieldMap,
+  ContentFileField,
   ContentLeafColumn,
   ContentReferenceField,
   ContentRepeatableField,
@@ -69,18 +70,18 @@ export const isContentRepeatableField = (
 ): boolean => fieldValue.kind === "repeatable";
 
 /**
- * Whether a reference field holds many targets - a to-many `relation`, or a
- * to-many `user`.
+ * Whether a reference field holds many targets - a to-many `relation`, a
+ * to-many `user`, or a to-many `file`.
  *
  * A function rather than `fieldValue.multiple === true` at each call site, for
  * the same reason `isLocalizedContentField` is one: it is the rule that decides
  * whether a field is a column or a junction table, and two copies of a rule like
  * that is the pair that drifts.
  *
- * Both reference kinds, deliberately. A set of people is stored exactly like a
- * set of categories - a junction table with two foreign keys - and every caller
- * of this predicate is asking "is this a column?", which has the same answer for
- * both.
+ * All three reference kinds, deliberately. A gallery and a set of people are
+ * stored exactly like a set of categories - a junction table with two foreign
+ * keys and a `position` - and every caller of this predicate is asking "is this
+ * a column?", which has the same answer for all three.
  *
  * Deliberately **not** a type guard. Narrowing the argument would also narrow
  * every `else` branch to "not a reference at all", and the to-one branch is
@@ -89,15 +90,33 @@ export const isContentRepeatableField = (
 export const isContentReferenceCollection = (
   fieldValue: ContentFieldDescriptor,
 ): boolean =>
-  (fieldValue.kind === "relation" || fieldValue.kind === "user") &&
+  (fieldValue.kind === "file" ||
+    fieldValue.kind === "relation" ||
+    fieldValue.kind === "user") &&
   fieldValue.multiple;
+
+/**
+ * Whether a field is a to-many **file** field.
+ *
+ * Its own predicate rather than `isContentReferenceCollection` plus a kind
+ * check, because the two questions have different answers in different places:
+ * "is this a column?" covers all three collection kinds, while "does the far
+ * side of this junction point at `core_files`?" covers exactly one.
+ */
+export const isContentFileCollection = (
+  fieldValue: ContentFieldDescriptor,
+): boolean => fieldValue.kind === "file" && fieldValue.multiple;
+
+/** Every descriptor that can be the near side of a generated junction table. */
+export type ContentCollectionReference =
+  ContentFileField | ContentReferenceField;
 
 /** The to-many reference descriptor, or `null` when the field is not one. */
 export const asContentReferenceCollection = (
   fieldValue: ContentFieldDescriptor,
-): ContentReferenceField | null =>
+): ContentCollectionReference | null =>
   isContentReferenceCollection(fieldValue)
-    ? (fieldValue as ContentReferenceField)
+    ? (fieldValue as ContentCollectionReference)
     : null;
 
 /** The repeatable descriptor, or `null` when the field is not one. */
@@ -199,7 +218,10 @@ export const contentStorageColumns = (
 export interface ContentAdvancedPartition {
   /** Group descriptors, by field name. */
   groups: ContentFieldMap;
-  /** To-many reference descriptors (`relation` and `user`), by field name. */
+  /**
+   * To-many reference descriptors (`relation`, `user` and `file`), by field
+   * name - everything that generates a junction table.
+   */
   referenceCollections: ContentFieldMap;
   /** Repeatable descriptors, by field name. */
   repeatables: ContentFieldMap;

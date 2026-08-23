@@ -701,3 +701,66 @@ export const testFilePostContentType = defineContentType({
     list: { columns: ["cover", "title", "status", "updatedAt"] },
   },
 });
+
+/**
+ * The **many-files** fixture: one gallery, on its own junction table.
+ *
+ * A separate content type rather than a fourth field on `testFilePostContentType`,
+ * for the reason every other fixture here is separate: leaving the single-file
+ * one exactly as it was is what proves a `multiple: true` field changes nothing
+ * for a content type that has none - no extra table, no extra key in `files`, no
+ * extra query.
+ *
+ * `min: 1` and `max: 4` are both stated, because they are the two halves of what
+ * a collection can say about arity that the storage cannot: a junction table has
+ * no `NOT NULL` to be required by, and no ceiling of its own.
+ *
+ * `editorial` is on so the revision pins have something to pin, and `publicApi`
+ * exposes the gallery so "an identifier never crosses the public boundary" has a
+ * list to be true of rather than a single value.
+ */
+export const testFileGalleryContentType = defineContentType({
+  id: "test.file-gallery",
+  tableName: "test_file_galleries",
+  fields: {
+    title: field.text({ required: true, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    // The single-file field, kept beside the gallery: every rule that has to hold
+    // "per field rather than per row" needs both arities in one content type.
+    cover: field.file({
+      maxBytes: 5 * 1024 * 1024,
+      allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+    }),
+    gallery: field.file({
+      multiple: true,
+      min: 1,
+      max: 4,
+      maxBytes: 5 * 1024 * 1024,
+      allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+    }),
+    // Unordered on purpose, so "the stored order is ascending file id" has
+    // something to be true of - the gallery above proves the other branch.
+    attachments: field.file({
+      multiple: true,
+      ordered: false,
+      maxBytes: 20 * 1024 * 1024,
+      allowedExtensions: [".pdf"],
+      allowedMimeTypes: ["application/pdf"],
+    }),
+  },
+  publication: { enabled: true },
+  editorial: { enabled: true, revisions: { retention: 5 } },
+  publicApi: {
+    enabled: true,
+    path: "file-galleries",
+    fields: ["title", "slug", "cover", "gallery", "publishedAt"],
+  },
+  admin: {
+    titleField: "title",
+    // The gallery is deliberately absent: it is not one column, so
+    // `admin.list.columns` refuses it and the list response loads no junction.
+    list: { columns: ["cover", "title", "status", "updatedAt"] },
+  },
+});

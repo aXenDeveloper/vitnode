@@ -41,10 +41,12 @@ const hasWritableFallback = (fieldValue: ContentFieldDescriptor): boolean => {
   // A sourced slug has no column default and is not required, but it is always
   // writable: the service derives it from the source field.
   if (fieldValue.kind === "slug") return fieldValue.source !== undefined;
-  // A file has no default and cannot have one: a column default would be a
-  // `core_files.id` written into the definition, pointing at a row that exists on
-  // one installation and not on the next. `assertField` says so in words.
-  if (fieldValue.kind === "file") return false;
+  // A single file has no default and cannot have one: a column default would be
+  // a `core_files.id` written into the definition, pointing at a row that exists
+  // on one installation and not on the next. `assertField` says so in words. A
+  // to-many file field *is* writable, for the same reason a to-many relation is:
+  // the empty set is its default, and it has no column to default at all.
+  if (fieldValue.kind === "file") return fieldValue.multiple;
 
   return fieldValue.defaultValue !== undefined;
 };
@@ -180,6 +182,11 @@ const assertFileField = (
       { contentTypeId: id },
     );
   }
+
+  // A to-many file field is neither, and must not be: `resolveContentAdvanced`
+  // refuses `required` and `nullable` on one, because the empty set is what "no
+  // files" looks like and a junction row has no column to be null.
+  if (fieldValue.multiple) return;
 
   if (!fieldValue.required && !fieldValue.nullable) {
     throw new ContentEngineError(

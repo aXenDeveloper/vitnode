@@ -18,6 +18,7 @@ import type {
 
 import {
   contentAdvancedDisabled,
+  contentFileCollectionMax,
   contentRepeatableMax,
   contentRepeatableMin,
 } from "./advanced";
@@ -213,11 +214,14 @@ const baseSelectSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
       return z.date();
     case "enum":
       return z.enum(fieldValue.values);
-    // The `core_files.id` the column holds. The admin surfaces resolve the
-    // descriptor beside the row (`files`), and the public projection replaces the
-    // identifier with it - neither is what is *stored*, which is one integer.
+    // The `core_files.id` the column holds, or the list of them a gallery's
+    // junction table holds. The admin surfaces resolve the descriptors beside the
+    // row (`files`), and the public projection replaces the identifiers with
+    // them - neither is what is *stored*, which is integers.
     case "file":
-      return referenceSchema();
+      return fieldValue.multiple
+        ? z.array(referenceSchema())
+        : referenceSchema();
     case "group": {
       const inner = contentInnerFields(fieldValue);
 
@@ -330,11 +334,21 @@ const applyPresence = (
  */
 const relationSetSchema = (fieldValue: ContentFieldDescriptor): z.ZodType => {
   const min = (fieldValue as { min?: number }).min;
-  let schema = z.array(referenceSchema()).max(CONTENT_RELATION_COLLECTION_MAX);
+  // A file collection carries its own ceiling and defaults to a much lower one:
+  // every entry is a stored object the record pins against deletion, where a
+  // relation target is a row that already exists either way.
+  const max =
+    fieldValue.kind === "file"
+      ? contentFileCollectionMax(fieldValue)
+      : CONTENT_RELATION_COLLECTION_MAX;
+  let schema = z.array(referenceSchema()).max(max);
   if (min !== undefined) schema = schema.min(min);
 
   return schema.refine(value => new Set(value).size === value.length, {
-    message: "Relation targets must be distinct.",
+    message:
+      fieldValue.kind === "file"
+        ? "The same file cannot appear twice in one field."
+        : "Relation targets must be distinct.",
   });
 };
 
@@ -636,8 +650,14 @@ const publicSelectShape = (
         // A public reader has no route to resolve a `core_files.id` through, so
         // exposing one would be exposing nothing. The descriptor is the
         // allowlisted shape - no storage key, no uploader, no metadata bag - and
-        // `resolveContentRowFiles` puts it on the row before the projector runs.
+        // `resolveContentPublicRowFiles` puts it on the row before the projector
+        // runs. A gallery is the same shape once per entry, in stored order; it
+        // is never nullable, because the empty list is what "no files" is.
         if (fieldValue.kind === "file") {
+          if (fieldValue.multiple) {
+            return [name, z.array(zodContentFileDescriptor)];
+          }
+
           return [
             name,
             fieldValue.nullable

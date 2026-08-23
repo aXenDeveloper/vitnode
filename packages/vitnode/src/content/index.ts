@@ -98,6 +98,8 @@ export {
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_ENUM_DEFAULT_LENGTH,
   CONTENT_FILE_CODES,
+  CONTENT_FILE_COLLECTION_ABSOLUTE_MAX,
+  CONTENT_FILE_COLLECTION_DEFAULT_MAX,
   CONTENT_FILE_EXTENSION_PATTERN,
   CONTENT_FILE_FOLDER,
   CONTENT_FILE_MIME_PATTERN,
@@ -225,12 +227,14 @@ export {
   normalizeContentFileMimeTypes,
   validateContentFile,
   zodContentFileDescriptor,
+  zodContentFileFieldValue,
 } from "./files";
 export type {
   ContentFileCandidate,
   ContentFileCode,
   ContentFileConstraints,
   ContentFileDescriptor,
+  ContentFileFieldValue,
   ContentFileRejection,
 } from "./files";
 export { clampWithFingerprint, fingerprint } from "./fingerprint";

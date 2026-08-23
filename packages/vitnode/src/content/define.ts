@@ -118,7 +118,7 @@ const assertIndexable = (
 
     if (isContentReferenceCollection(fieldValue)) {
       throw new ContentEngineError(
-        `indexes names the to-many relation "${owner}", which is not a column: its values live in a generated junction table, which already carries its own primary key and reverse index.`,
+        `indexes names the to-many ${fieldValue.kind === "file" ? "file field" : "relation"} "${owner}", which is not a column: its values live in a generated junction table, which already carries its own primary key and reverse index.`,
         { contentTypeId: id },
       );
     }

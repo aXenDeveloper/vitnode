@@ -54,6 +54,24 @@ export const zodContentFileDescriptor = z.strictObject({
   width: z.number().int().positive().optional(),
 });
 
+/**
+ * What one field's entry in a row's `files` sibling holds.
+ *
+ * A union rather than two keys, because the field name is the same either way
+ * and its arity is a property of the *field*: a single file field is a descriptor
+ * or `null`, and a `multiple: true` one is a list in stored order - empty when
+ * the record has no files, absent when the response did not load the collection
+ * at all (an admin list does not, by design).
+ */
+export type ContentFileFieldValue =
+  ContentFileDescriptor | ContentFileDescriptor[] | null;
+
+/** The response schema for {@link ContentFileFieldValue}. */
+export const zodContentFileFieldValue = z.union([
+  zodContentFileDescriptor.nullable(),
+  z.array(zodContentFileDescriptor),
+]);
+
 export type ContentFileCode =
   (typeof CONTENT_FILE_CODES)[keyof typeof CONTENT_FILE_CODES];
 

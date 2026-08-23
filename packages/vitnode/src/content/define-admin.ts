@@ -211,8 +211,10 @@ export const resolveAdmin = <TFields>(
     );
     if (advanced === undefined) return;
 
+    const descriptor = fields[advanced];
+
     throw new ContentEngineError(
-      `${label} names "${advanced}", a "${fields[advanced].kind}" field. It is not one column on the base table, so it cannot be shown as a cell, ordered by, or used as a title. List it in \`admin.form.fields\` instead${fields[advanced].kind === "group" ? `, or name one of its leaves` : ""}.`,
+      `${label} names "${advanced}", a "${descriptor.kind}" field${descriptor.kind === "file" ? " with `multiple: true`" : ""}. It is not one column on the base table, so it cannot be shown as a cell, ordered by, or used as a title. List it in \`admin.form.fields\` instead${descriptor.kind === "group" ? `, or name one of its leaves` : ""}${descriptor.kind === "file" ? " - a gallery is a set of files on a generated junction table, and a list that loaded one would issue a query per row" : ""}.`,
       { contentTypeId: id },
     );
   };
@@ -293,8 +295,11 @@ export const resolveAdmin = <TFields>(
     const found = names.find(name => fields[name]?.kind === "file");
     if (found === undefined) return;
 
+    const descriptor = fields[found];
+    const many = descriptor.kind === "file" && descriptor.multiple;
+
     throw new ContentEngineError(
-      `${label} names the file field "${found}". Its column holds a \`core_files.id\`, which is an upload order rather than anything anybody chose - it can be shown as a cell, but not ordered by, titled by or coloured by.`,
+      `${label} names the file field "${found}". A file reference is a \`core_files.id\`, which is an upload order rather than anything anybody chose${many ? " - and a `multiple: true` one is a set rather than a value" : " - it can be shown as a cell, but not ordered by, titled by or coloured by"}.`,
       { contentTypeId: id },
     );
   };

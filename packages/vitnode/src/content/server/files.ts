@@ -6,6 +6,7 @@ import type { StorageFileUploadResult } from "../../api/models/storage";
 import type {
   ContentFileConstraints,
   ContentFileDescriptor,
+  ContentFileFieldValue,
   ContentFileRejection,
 } from "../files";
 import type { AnyContentTypeDefinition, ContentFileField } from "../types";
@@ -19,25 +20,53 @@ import { contentFileConstraints, validateContentFile } from "../files";
 import { partitionContentFields } from "../localization";
 
 /**
- * The file fields of a content type, by name.
+ * The file fields of a content type, by name - single and `multiple: true` alike.
  *
- * Always shared - `localized: true` is refused on a file field - so this reads
- * the shared half of the partition and nothing else. An empty object for every
- * content type that declares none, which is what lets every caller below be a
- * cheap early return rather than a conditional at the call site.
+ * Both halves of the partition, and that is the point: a single file is a column
+ * on the base row and so lands in `sharedFields`, while a gallery is a junction
+ * table and so lands in `collectionFields`. Every caller below asks "which fields
+ * of this content type hold files?", which is a question about the *field*, not
+ * about where its rows live. The localized half is never read: `localized: true`
+ * is refused on a file field at definition time.
+ *
+ * An empty object for every content type that declares none, which is what lets
+ * every caller below be a cheap early return rather than a conditional at the
+ * call site.
  */
 export const contentFileFields = (
   definition: AnyContentTypeDefinition,
 ): Record<string, ContentFileField> => {
-  const { sharedFields } = partitionContentFields(definition.fields);
+  const { collectionFields, sharedFields } = partitionContentFields(
+    definition.fields,
+  );
   const files: Record<string, ContentFileField> = {};
 
-  for (const [name, fieldValue] of Object.entries(sharedFields)) {
+  for (const [name, fieldValue] of [
+    ...Object.entries(sharedFields),
+    ...Object.entries(collectionFields),
+  ]) {
     if (fieldValue.kind === "file") files[name] = fieldValue;
   }
 
   return files;
 };
+
+/**
+ * The `multiple: true` file fields, by name.
+ *
+ * Its own view because the two arities are read differently everywhere: a single
+ * field's value is a number on the row, and a collection's is an array the
+ * advanced store loads from a junction table - which an admin list deliberately
+ * does not load at all.
+ */
+export const contentFileCollectionFields = (
+  definition: AnyContentTypeDefinition,
+): Record<string, ContentFileField> =>
+  Object.fromEntries(
+    Object.entries(contentFileFields(definition)).filter(
+      ([, fieldValue]) => fieldValue.multiple,
+    ),
+  );
 
 /** The columns a descriptor is built from. Never `key`, and never `metadata`. */
 const fileSelection = {
@@ -119,14 +148,52 @@ export const resolveContentFileDescriptors = async (
   );
 };
 
+/** One positive integer, or `null` - the only thing a file reference can be. */
+const asFileId = (value: unknown): null | number =>
+  typeof value === "number" && Number.isInteger(value) && value > 0
+    ? value
+    : null;
+
+/**
+ * The file ids one field's value names, whatever its arity.
+ *
+ * A single field is one id or none; a collection is however many its array
+ * holds, in order, with anything that is not an identifier dropped. `undefined`
+ * - the collection was not loaded - and `null` both come back empty, which is
+ * what lets the callers below treat "no files" and "not asked for" the same way
+ * when all they need is a list of ids to resolve.
+ */
+const fileIdsOfValue = (value: unknown): number[] => {
+  if (Array.isArray(value)) {
+    return value.map(asFileId).filter((id): id is number => id !== null);
+  }
+
+  const id = asFileId(value);
+
+  return id === null ? [] : [id];
+};
+
 /** The file ids one set of values actually names, ignoring absent and null. */
 const fileIdsOf = (
   names: readonly string[],
   values: Record<string, unknown>,
-): number[] =>
-  names
-    .map(name => values[name])
-    .filter((value): value is number => typeof value === "number" && value > 0);
+): number[] => names.flatMap(name => fileIdsOfValue(values[name]));
+
+/**
+ * One collection value's descriptors, in stored order, skipping what is gone.
+ *
+ * A hole is dropped rather than emitted as `null`, because a gallery with gaps in
+ * it is not something any surface can render - and a file a record still points
+ * at cannot be deleted, so the only way to get one is a snapshot naming a file
+ * that outlived its last pin.
+ */
+const descriptorsOf = (
+  byId: Map<number, ContentFileDescriptor>,
+  value: unknown,
+): ContentFileDescriptor[] =>
+  fileIdsOfValue(value)
+    .map(id => byId.get(id))
+    .filter((file): file is ContentFileDescriptor => file !== undefined);
 
 /**
  * Attaches each row's resolved file descriptors under `files`.
@@ -137,6 +204,12 @@ const fileIdsOf = (
  * the identifier as the value and the descriptor beside it means the form has both
  * without converting either way.
  *
+ * A `multiple: true` field is a **list** under the same key, in stored order, and
+ * it is present only when the row carries its ids: a detail response merges the
+ * advanced collections in first, while an admin list deliberately loads no
+ * junction table at all. Omitting the key there is the honest answer - an empty
+ * array would say "this gallery has no files", which is a different claim.
+ *
  * `files` is `{}` for a content type with no file fields, so every generated list
  * and detail response that had no files before is byte-identical.
  */
@@ -144,10 +217,9 @@ export const withContentRowFiles = async <TRow extends object>(
   c: Context,
   definition: AnyContentTypeDefinition,
   rows: readonly TRow[],
-): Promise<
-  (TRow & { files: Record<string, ContentFileDescriptor | null> })[]
-> => {
-  const names = Object.keys(contentFileFields(definition));
+): Promise<(TRow & { files: Record<string, ContentFileFieldValue> })[]> => {
+  const fields = contentFileFields(definition);
+  const names = Object.keys(fields);
   if (names.length === 0) {
     return rows.map(row => ({ ...row, files: {} }));
   }
@@ -163,10 +235,18 @@ export const withContentRowFiles = async <TRow extends object>(
     return {
       ...row,
       files: Object.fromEntries(
-        names.map(name => {
-          const id = values[name];
+        names.flatMap((name): [string, ContentFileFieldValue][] => {
+          if (fields[name].multiple) {
+            const ids = values[name];
+            // Not loaded: say nothing rather than say "empty".
+            if (!Array.isArray(ids)) return [];
 
-          return [name, typeof id === "number" ? (byId.get(id) ?? null) : null];
+            return [[name, descriptorsOf(byId, ids)]];
+          }
+
+          const id = asFileId(values[name]);
+
+          return [[name, id === null ? null : (byId.get(id) ?? null)]];
         }),
       ),
     };
@@ -184,6 +264,12 @@ export const withContentRowFiles = async <TRow extends object>(
  *
  * Only the fields `publicApi.fields` names. A file field the allowlist leaves out
  * is not selected in the first place, so there is nothing here to resolve.
+ *
+ * A `multiple: true` field becomes a list of descriptors in stored order, so it
+ * has to run **after** the collections are loaded onto the row - which is why the
+ * public services call it last rather than first. An id whose row has vanished is
+ * dropped from the list rather than emitted as `null`: a public reader gets a
+ * gallery of the files that exist, not one with holes in it.
  */
 export const resolveContentPublicRowFiles = async (
   c: Context,
@@ -207,9 +293,13 @@ export const resolveContentPublicRowFiles = async (
     ...row,
     ...Object.fromEntries(
       names.map(name => {
-        const id = row[name];
+        if (files[name].multiple) {
+          return [name, descriptorsOf(byId, row[name])];
+        }
 
-        return [name, typeof id === "number" ? (byId.get(id) ?? null) : null];
+        const id = asFileId(row[name]);
+
+        return [name, id === null ? null : (byId.get(id) ?? null)];
       }),
     ),
   }));
@@ -230,6 +320,11 @@ export const resolveContentPublicRowFiles = async (
  * `validateContentFile` is the one implementation of the last three, so the
  * answers cannot differ between the two moments.
  *
+ * A **gallery** is the same four questions once per entry, and deliberately so:
+ * ten files are ten uploads, and `maxBytes` is a per-file ceiling rather than a
+ * budget for the list. The first entry that fails names itself, so an editor is
+ * told which image is the problem rather than that "the gallery" is.
+ *
  * A no-op - not one statement - for a content type with no file fields, and for a
  * payload that mentions none of them.
  */
@@ -240,19 +335,26 @@ export const assertContentFileReferences = async (
   tx?: ContentDatabase,
 ): Promise<void> => {
   const files = contentFileFields(definition);
-  const named = Object.keys(files).filter(
-    name => typeof values[name] === "number",
+  // One entry per (field, id) pair, in payload order, so a gallery contributes
+  // as many checks as it has entries and a field the payload says nothing about
+  // contributes none.
+  const named = Object.keys(files).flatMap(name =>
+    (files[name].multiple
+      ? Array.isArray(values[name])
+        ? fileIdsOfValue(values[name])
+        : []
+      : fileIdsOfValue(asFileId(values[name]))
+    ).map(id => ({ id, name })),
   );
   if (named.length === 0) return;
 
   const byId = await resolveContentFileDescriptors(
     c,
-    named.map(name => values[name] as number),
+    named.map(entry => entry.id),
     tx,
   );
 
-  for (const name of named) {
-    const id = values[name] as number;
+  for (const { id, name } of named) {
     const descriptor = byId.get(id);
 
     if (!descriptor) {
@@ -328,6 +430,12 @@ export class ContentFileReferenceError extends ContentInputError {
  * `{ coverImage: 42 }`, and 42 has to stay deletable-refusing for as long as that
  * snapshot is retained - the content row's own foreign key stops protecting it the
  * moment the field is pointed somewhere else.
+ *
+ * A gallery is recorded as `{ gallery: [7, 3, 9] }`, so every entry is pinned
+ * individually. That matters more here than for a single field: removing one
+ * image from a gallery drops exactly one junction row, and without a pin that
+ * one file becomes deletable while every retained revision still shows it.
+ * Deduplicated, so a file used by two fields of the same record is one pin.
  */
 export const contentSnapshotFileIds = (
   definition: AnyContentTypeDefinition,

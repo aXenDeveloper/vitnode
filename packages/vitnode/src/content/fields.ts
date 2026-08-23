@@ -237,28 +237,60 @@ const dateTime = <
  * can exist before somebody uploads one. Pass `nullable: false` with
  * `required: true` for a field that genuinely must carry a file.
  *
- * There is no `localized` argument and no `multiple` one. A per-language file is
- * out of scope (`localized: true` is refused at definition time); a gallery is a
- * different feature with its own ordering and its own deletion rules.
+ * `multiple: true` moves the reference off the row into a generated junction
+ * table, exactly as it does for a `relation`:
+ *
+ * ```ts
+ * gallery: field.file({
+ *   multiple: true,
+ *   min: 1,
+ *   max: 12,
+ *   maxBytes: 5 * 1024 * 1024,
+ *   allowedExtensions: [".jpg", ".jpeg", ".png", ".webp"],
+ *   allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+ * })
+ * ```
+ *
+ * A gallery is therefore never `required` and never `nullable` - the empty set
+ * is what "no files" looks like - and `min` is how a content type says "at least
+ * one". Every entry is checked against the *same* per-file rules: `maxBytes` and
+ * both allowlists apply once per file, because ten images are ten uploads rather
+ * than one bigger one. `ordered` defaults to **true**, which keeps the order the
+ * files were added in; pass `false` to store them by ascending `core_files.id`.
+ *
+ * There is still no `localized` argument. A per-language file is out of scope
+ * (`localized: true` is refused at definition time) - translate the alt text.
  */
 const file = <
   TRequired extends boolean = false,
-  TNullable extends boolean = true,
+  TMultiple extends boolean = false,
+  // Declared after `TMultiple` so its default can read it: a gallery has no
+  // column to be null, so the `nullable: true` that lets a record exist before
+  // anybody uploads a cover would be a definition-time error here.
+  TNullable extends boolean = TMultiple extends true ? false : true,
+  TOrdered extends boolean = TMultiple,
 >(
   args: SharedArgs<TRequired, TNullable> & {
     allowedExtensions?: readonly string[];
     allowedMimeTypes?: readonly string[];
+    /** The most files to accept. `multiple: true` only. */
+    max?: number;
     maxBytes: number;
+    /** The fewest files to accept. `multiple: true` only. */
+    min?: number;
+    multiple?: TMultiple;
+    ordered?: TOrdered;
   },
-): ContentFileField<TRequired, TNullable> => {
+): ContentFileField<TRequired, TNullable, TMultiple, TOrdered> => {
   // Destructured rather than spread: the arguments accept `readonly string[]` so
   // an `as const` list is ergonomic, and the descriptor stores the normalised
   // mutable copy. Spreading `args` would carry the readonly originals through.
   const { allowedExtensions, allowedMimeTypes, maxBytes, ...rest } = args;
+  const multiple = (args.multiple ?? false) as TMultiple;
 
   return {
     ...rest,
-    nullable: (args.nullable ?? true) as TNullable,
+    nullable: (args.nullable ?? !multiple) as TNullable,
     required: (args.required ?? false) as TRequired,
     ...(allowedExtensions
       ? { allowedExtensions: normalizeContentFileExtensions(allowedExtensions) }
@@ -268,6 +300,11 @@ const file = <
       : {}),
     kind: "file",
     maxBytes: assertContentFileMaxBytes(maxBytes),
+    // The assertions keep the literal the caller inferred, exactly as `shared`
+    // does: `?? false` alone widens back to `boolean`, and every
+    // `multiple extends true` partition would resolve to the single-file branch.
+    multiple,
+    ordered: (args.ordered ?? multiple) as TOrdered,
   };
 };
 

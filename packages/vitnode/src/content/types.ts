@@ -193,10 +193,18 @@ export interface ContentEnumField<
  * second is what the file is *called*. A `picture.gif` carrying `image/png`
  * passes an extension-only check, which is why a strict field states both and
  * both have to match.
+ *
+ * `multiple: true` moves the reference off the row into a generated junction
+ * table, exactly as it does for a `relation` - one row per file, with a
+ * `position`. The per-file rules do not change: `maxBytes` and both allowlists
+ * are checked against *each* entry, because a gallery of ten images is ten
+ * uploads rather than one bigger one.
  */
 export interface ContentFileField<
   TRequired extends boolean = boolean,
   TNullable extends boolean = boolean,
+  TMultiple extends boolean = boolean,
+  TOrdered extends boolean = boolean,
 > extends ContentFieldShared<TRequired, TNullable> {
   /**
    * Accepted file-name extensions, normalised to lowercase with a leading dot.
@@ -209,8 +217,46 @@ export interface ContentFileField<
   /** Accepted media types, lowercased. Omitted, any type is accepted. */
   allowedMimeTypes?: string[];
   kind: "file";
+  /**
+   * The most files the field will hold. `multiple: true` only.
+   *
+   * Defaults to {@link CONTENT_FILE_COLLECTION_DEFAULT_MAX} and may not exceed
+   * {@link CONTENT_FILE_COLLECTION_ABSOLUTE_MAX}: every entry is a stored object
+   * that the record pins against deletion, and the whole list is read and
+   * rewritten as one.
+   */
+  max?: number;
   /** Largest accepted upload, in bytes. Required, finite, and greater than zero. */
   maxBytes: number;
+  /**
+   * The fewest files to accept - `min: 1` is "at least one image".
+   *
+   * `multiple: true` only. A file collection can never be `required`, because
+   * the empty set is a legitimate value for a column that does not exist, so
+   * this is the shape a "you must upload something" rule actually takes.
+   */
+  min?: number;
+  /**
+   * Store many files in a generated junction table instead of one on the row.
+   *
+   * Literal for the same reason {@link ContentRelationField.multiple} is: every
+   * partition keys off `{ multiple: true }`, and a widened `boolean` resolves a
+   * gallery back to the single-file branch.
+   */
+  multiple: TMultiple;
+  /**
+   * Keep the order the files were added in.
+   *
+   * Defaults to **true** with `multiple: true`, unlike a relation: the order an
+   * editor built a gallery in is the order they meant it to read in. There are
+   * deliberately no reorder controls - rearranging is remove-and-re-add - so
+   * this is insertion order rather than a position anybody drags.
+   *
+   * `false` sorts by `core_files.id` instead, which makes `set([9, 2, 5])` and
+   * `set([2, 5, 9])` the same state rather than two writes that differ only in a
+   * column nobody declared.
+   */
+  ordered: TOrdered;
 }
 
 export interface ContentDateTimeField<
@@ -267,9 +313,14 @@ export interface ContentUserField<
  * that decides whether a field is a column or a table - and the version of that
  * rule that forgets `user` is a column the engine never generates and a value
  * that silently disappears.
+ *
+ * All three reference kinds, deliberately. A gallery is stored exactly like a
+ * set of categories - a junction table with two foreign keys and a `position` -
+ * and every caller of this rule is asking "is this a column?", which has the
+ * same answer for a file, a category and a person.
  */
 interface ContentReferenceCollection {
-  kind: "relation" | "user";
+  kind: "file" | "relation" | "user";
   multiple: true;
 }
 
@@ -2348,22 +2399,25 @@ type ContentPublicValue<TFields, TName extends string> = TName extends "id"
     : TName extends "publishedAt"
       ? Date | null
       : TName extends keyof TFields
-        ? TFields[TName] extends { kind: "relation"; multiple: true }
-          ? number[]
-          : TFields[TName] extends { kind: "relation" }
+        ? // A file crosses as the normalised descriptor rather than as the
+          // `core_files.id` the column holds: an identifier is useless to an
+          // anonymous reader, who has no route to resolve it through, and the
+          // descriptor is already the allowlisted shape - no key, no uploader,
+          // no metadata bag. A gallery is the same answer, once per entry, in
+          // the stored order.
+          TFields[TName] extends { kind: "file"; multiple: true }
+          ? ContentFileDescriptor[]
+          : TFields[TName] extends { kind: "file" }
             ? TFields[TName] extends { nullable: true }
-              ? ContentPublicRelation | null
-              : ContentPublicRelation
-            : // A file crosses as the normalised descriptor rather than as the
-              // `core_files.id` the column holds: an identifier is useless to an
-              // anonymous reader, who has no route to resolve it through, and the
-              // descriptor is already the allowlisted shape - no key, no uploader,
-              // no metadata bag.
-              TFields[TName] extends { kind: "file" }
-              ? TFields[TName] extends { nullable: true }
-                ? ContentFileDescriptor | null
-                : ContentFileDescriptor
-              : ContentFieldValue<TFields[TName]>
+              ? ContentFileDescriptor | null
+              : ContentFileDescriptor
+            : TFields[TName] extends { kind: "relation"; multiple: true }
+              ? number[]
+              : TFields[TName] extends { kind: "relation" }
+                ? TFields[TName] extends { nullable: true }
+                  ? ContentPublicRelation | null
+                  : ContentPublicRelation
+                : ContentFieldValue<TFields[TName]>
         : never;
 
 /** The dotted paths in an allowlist, grouped by the field they belong to. */

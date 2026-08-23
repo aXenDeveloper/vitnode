@@ -76,6 +76,7 @@ export {
 export { emitContentEvent } from "./emit";
 export {
   assertContentFileReferences,
+  contentFileCollectionFields,
   contentFileDescriptorFromUpload,
   contentFileFields,
   ContentFileReferenceError,

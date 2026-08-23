@@ -56,6 +56,42 @@ export const articleContentType = defineContentType({
       allowedExtensions: [".gif"],
       allowedMimeTypes: ["image/gif"],
     }),
+    /**
+     * The **many-files** reference: an ordered gallery, on its own junction table.
+     *
+     * `multiple: true` is the whole difference from `animation` above, and it
+     * moves the value off the row entirely - `example_articles_gallery` holds one
+     * row per image with `(itemId, relatedItemId, position)`, exactly as a to-many
+     * relation does. So:
+     *
+     * - it is neither `required` nor `nullable` - the empty gallery is what "no
+     *   images" looks like, and `min: 1` is how "at least one" is actually said;
+     * - `max: 8` is the ceiling the AdminCP enforces at pick time and the API
+     *   enforces again on save, so nobody discovers it after spending the upload;
+     * - `maxBytes` is still **per file**. Eight images at 5 MB is eight uploads,
+     *   not one 40 MB budget;
+     * - the order is the editor's, because `ordered` defaults to `true` for a file
+     *   collection. Without it the API would sort by `core_files.id`, which is
+     *   upload order rather than anything anybody chose.
+     *
+     * The extension list names `.webp` alongside the formats a person picks: with
+     * `storage.image` configured every upload is re-encoded, so the *stored* file
+     * is `photo.webp` whatever was chosen - and a field that allowed only `.png`
+     * would refuse the file it had just created.
+     *
+     * Every image is pinned by each retained revision that names it, so removing
+     * one from the gallery does not make it deletable while an older version still
+     * shows it. `field.file` with `multiple: true` gets that for free: the pin
+     * table is keyed by (revision, file), not by field.
+     */
+    gallery: field.file({
+      multiple: true,
+      min: 1,
+      max: 8,
+      maxBytes: 5 * 1024 * 1024,
+      allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+    }),
     category: field.relation({
       required: true,
       onDelete: "restrict",
@@ -78,6 +114,10 @@ export const articleContentType = defineContentType({
       // mimeType, size, width, height }` - never as the `core_files.id` the
       // column holds, and never with the storage key or the uploader.
       "animation",
+      // The same descriptor, once per image, in the order the editor arranged -
+      // so a reader gets a gallery it can render rather than a list of integers
+      // it has no route to resolve.
+      "gallery",
       // Public because delivery projects it: `robots: { index: false }` is
       // rendered into the page, so the field behind it has to be one the public
       // API would already have said out loud.

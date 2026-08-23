@@ -102,3 +102,64 @@ describe("example.article.animation - the GIF-only field", () => {
     expect(articleContentType.admin.list.columns).toContain("animation");
   });
 });
+
+const gallery = articleContentType.fields.gallery;
+const galleryConstraints = contentFileConstraints(gallery);
+
+describe("example.article.gallery - the ordered many-files field", () => {
+  it("is a collection with its own bounds and the editor's order", () => {
+    expect(gallery).toMatchObject({
+      kind: "file",
+      max: 8,
+      maxBytes: 5 * 1024 * 1024,
+      min: 1,
+      multiple: true,
+      ordered: true,
+    });
+  });
+
+  it("is neither required nor nullable - the empty gallery is the empty state", () => {
+    expect(gallery.required).toBe(false);
+    expect(gallery.nullable).toBe(false);
+  });
+
+  it("applies maxBytes per file, not as a budget for the list", () => {
+    const under = validateContentFile(galleryConstraints, {
+      mimeType: "image/webp",
+      name: "photo.webp",
+      size: 5 * 1024 * 1024,
+    });
+    const over = validateContentFile(galleryConstraints, {
+      mimeType: "image/webp",
+      name: "photo.webp",
+      size: 5 * 1024 * 1024 + 1,
+    });
+
+    expect(under).toBeNull();
+    expect(over?.code).toBe("CONTENT_FILE_TOO_LARGE");
+  });
+
+  it("allows the format the image pipeline actually stores", () => {
+    // With `storage.image` configured a `photo.png` is re-encoded and *stored* as
+    // `photo.webp`, so a field that allowed only the formats a person picks would
+    // refuse the file it had just created.
+    expect(gallery.allowedExtensions).toContain(".webp");
+    expect(gallery.allowedMimeTypes).toContain("image/webp");
+  });
+
+  it("generates a junction table rather than a column", () => {
+    expect(articleContentType.advanced.junctions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "gallery",
+          tableName: "example_articles_gallery",
+        }),
+      ]),
+    );
+  });
+
+  it("is exposed publicly, and is not a list column", () => {
+    expect(articleContentType.publicApi.fields).toContain("gallery");
+    expect(articleContentType.admin.list.columns).not.toContain("gallery");
+  });
+});

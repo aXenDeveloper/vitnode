@@ -206,29 +206,37 @@ export const createContentLocalizedPublicService = <
     const nested = rows.map(nestContentPublicRow);
     if (nested.length === 0) return nested;
 
-    // One batch for the whole page, and only for the file fields the allowlist
-    // exposes. The identifier is replaced by the descriptor here rather than in
-    // the projector, so the projector stays the one place that decides *what* is
-    // public and this stays the one place that decides what it looks like.
-    const withFiles = await resolveContentPublicRowFiles(c, definition, nested);
-    if (publicCollections.length === 0) return withFiles;
-
-    const ids = withFiles
+    const ids = nested
       .map(row => row.id)
       .filter((id): id is number => typeof id === "number");
     // Only the collections the allowlist actually exposes: querying a private
     // junction table to discard its rows afterwards is work with no answer
     // attached, and `publicCollections` is already exactly that list.
-    const loaded = await advanced?.loadMany(
-      ids,
-      c.get("db"),
-      publicCollections,
-    );
+    const loaded =
+      publicCollections.length === 0
+        ? undefined
+        : await advanced?.loadMany(ids, c.get("db"), publicCollections);
 
-    return withFiles.map(row => ({
-      ...row,
-      ...(typeof row.id === "number" ? loaded?.get(row.id) : undefined),
-    }));
+    const withCollectionValues =
+      loaded === undefined
+        ? nested
+        : nested.map(row => ({
+            ...row,
+            ...(typeof row.id === "number" ? loaded.get(row.id) : undefined),
+          }));
+
+    // **After** the collections, not before: a `multiple: true` file field has no
+    // column, so its identifiers only exist on the row once `loadMany` has put
+    // them there. One batch for the whole page either way, and only for the file
+    // fields the allowlist exposes. The identifier is replaced by the descriptor
+    // here rather than in the projector, so the projector stays the one place
+    // that decides *what* is public and this stays the one place that decides
+    // what it looks like.
+    return await resolveContentPublicRowFiles(
+      c,
+      definition,
+      withCollectionValues,
+    );
   };
   const sharedSearchable = publicApi.searchableFields.filter(
     name => !isLocalized(ownerOf(name)),

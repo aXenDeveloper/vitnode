@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 
 import type { ContentColumnSpec } from "@/content/admin/spec";
-import type { ContentFileDescriptor } from "@/content/files";
+import type { ContentFileFieldValue } from "@/content/files";
 import type { ContentLabels } from "@/content/server/service";
 
 import { DateFormat } from "@/components/date-format";
@@ -20,8 +20,13 @@ export interface ContentRowData extends Record<string, unknown> {
    * Carried beside the row by the generated list response, which is why a file
    * cell can show a thumbnail and a name rather than the `core_files.id` the
    * column actually holds. Absent for a content type with no file fields.
+   *
+   * A `multiple: true` field's entry is a list - and never reaches a cell: a
+   * gallery is not one column, so `admin.list.columns` refuses it and the list
+   * response loads no junction table. The union is here because one `files` bag
+   * carries every file field of the row, whatever its arity.
    */
-  files?: Record<string, ContentFileDescriptor | null>;
+  files?: Record<string, ContentFileFieldValue>;
   id: number;
   labels: ContentLabels;
   /**
@@ -92,7 +97,11 @@ export const ContentCell = ({
   // editor cannot recognise. An image gets its own thumbnail; everything else
   // gets an icon and its file name.
   if (spec.kind === "file") {
-    const file = row.files?.[spec.name] ?? null;
+    const entry = row.files?.[spec.name];
+    // A list means a gallery, which `resolveAdmin` refuses as a column - so this
+    // is unreachable rather than merely unusual, and falling through to "empty"
+    // is the right answer if it ever is not.
+    const file = entry === undefined || Array.isArray(entry) ? null : entry;
     if (!file) return <Empty label={emptyLabel} />;
 
     const image = (file.mimeType ?? "").startsWith("image/");

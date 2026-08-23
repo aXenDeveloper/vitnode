@@ -27,6 +27,7 @@ import type {
   ContentRepeatableChildTable,
 } from "./types";
 
+import { core_files } from "../../database/files";
 import { core_users } from "../../database/users";
 import { ContentEngineError } from "../errors";
 import {
@@ -67,7 +68,9 @@ import { buildContentColumn } from "./column-builders";
  * nothing. The other side takes the field's own `onDelete`, which is what makes
  * `restrict` mean "you cannot delete a category that is still in use" and have
  * Postgres be the thing that enforces it - not a check in service code that a
- * direct SQL delete would walk straight past.
+ * direct SQL delete would walk straight past. A **file** collection is always
+ * `restrict`: the engine, not the author, decides that deleting a file a gallery
+ * still shows has to be refused.
  *
  * `position` is always stored, ordered relation or not, and is always contiguous
  * from zero. That is what lets one `UNIQUE (item_id, position)` serve both: an
@@ -236,20 +239,23 @@ export const createContentAdvancedTables = <
     const fieldValue = asContentReferenceCollection(fields[entry.field]);
     if (!fieldValue) continue;
 
-    // Three ways the far side of a junction is known, and only one of them is
+    // Four ways the far side of a junction is known, and only one of them is
     // the plugin's to supply:
     //
-    // - a **user** collection points at `core_users`, which the engine owns;
+    // - a **file** collection points at `core_files`, which the engine owns;
+    // - a **user** collection points at `core_users`, likewise;
     // - a **self**-relation resolves from the table being built (requiring it in
     //   `references` would mean writing `() => thisContent.table.id` inside the
     //   model's own initializer, which widens the whole model to `any`);
     // - everything else names its target table in `references`.
     const relatedReference: ColumnReferenceThunk | undefined =
-      fieldValue.kind === "user"
-        ? () => core_users.id
-        : fieldValue.self
-          ? itemReference
-          : referenceThunks[entry.field];
+      fieldValue.kind === "file"
+        ? () => core_files.id
+        : fieldValue.kind === "user"
+          ? () => core_users.id
+          : fieldValue.self
+            ? itemReference
+            : referenceThunks[entry.field];
     if (!relatedReference) {
       throw new ContentEngineError(
         `To-many relation "${entry.field}" has no entry in \`references\`. Add \`${entry.field}: () => <target_table>.id\` - the junction table's foreign key needs a target just as much as a column would.`,
@@ -261,7 +267,14 @@ export const createContentAdvancedTables = <
       contentTypeId,
       field: entry.field,
       itemReference,
-      onDelete: fieldValue.onDelete,
+      // A gallery entry is `restrict`, always, and not a per-field choice - the
+      // same rule the single-file column follows. `cascade` would delete the
+      // junction row because somebody tidied up the Files screen, silently
+      // removing an image from a published gallery, and there is nothing here
+      // for `set null` to null. Refusing the *file* deletion is the only outcome
+      // that loses nothing, and it is what lets `StorageModel.deleteFile` answer
+      // 409 instead of leaving a gallery pointing at bytes that are gone.
+      onDelete: fieldValue.kind === "file" ? "restrict" : fieldValue.onDelete,
       positionIndexName: entry.positionIndexName,
       primaryKeyName: entry.primaryKeyName,
       relatedIndexName: entry.relatedIndexName,

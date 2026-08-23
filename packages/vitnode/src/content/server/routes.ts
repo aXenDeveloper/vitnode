@@ -42,6 +42,7 @@ import {
   contentFileConstraints,
   validateContentFile,
   zodContentFileDescriptor,
+  zodContentFileFieldValue,
   zodContentFileReferenceRejection,
 } from "../files";
 import { partitionContentFields } from "../localization";
@@ -158,9 +159,11 @@ export const buildContentRoutes = <
    *
    * Beside the row rather than replacing the column: the form's value is the
    * identifier it will submit back, and the descriptor is what the uploader
-   * previews and the list cell renders. `null` for a field holding no file.
+   * previews and the list cell renders. `null` for a field holding no file, and a
+   * **list** in stored order for a `multiple: true` one - absent entirely on the
+   * list route, which loads no junction table by design.
    */
-  const zodFiles = z.record(z.string(), zodContentFileDescriptor.nullable());
+  const zodFiles = z.record(z.string(), zodContentFileFieldValue);
 
   const withFiles = async <TRow extends object>(
     c: Context,
@@ -585,6 +588,13 @@ export const buildContentRoutes = <
    * authority**: `maxBytes`, `allowedMimeTypes` and `allowedExtensions` are read
    * off the same object the save-time check and the AdminCP constraint line read.
    * They cannot drift, because there is only one of them.
+   *
+   * **One file per request, `multiple: true` or not.** A gallery of ten images is
+   * ten requests, which the AdminCP issues concurrently - and that is the point:
+   * each one has its own progress, its own outcome and its own error, so nine
+   * good images are stored and the tenth says why it was refused. A single
+   * request carrying ten files would have to answer "partly", and there is no
+   * useful shape for that.
    *
    * Gated on `can_view` by the middleware and on `can_create` **or** `can_edit`
    * in the handler. One permission would be wrong either way: a create-only role

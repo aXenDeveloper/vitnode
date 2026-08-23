@@ -154,6 +154,20 @@ export const CONTENT_FILE_MIME_PATTERN =
 export const CONTENT_FILE_FOLDER = "content";
 
 /**
+ * How many files one `field.file({ multiple: true })` may hold, unless it says
+ * otherwise, and the ceiling no `max` may exceed.
+ *
+ * A default ceiling exists for the same reason `maxBytes` is mandatory: every
+ * entry is a real stored object, every write replaces the whole list in one
+ * statement, and every entry pins its file against deletion for as long as the
+ * record - or a retained revision naming it - lives. Twenty is a generous
+ * gallery; an author who needs a media library should model a content type and
+ * relate to it.
+ */
+export const CONTENT_FILE_COLLECTION_DEFAULT_MAX = 20;
+export const CONTENT_FILE_COLLECTION_ABSOLUTE_MAX = 200;
+
+/**
  * Machine-readable reasons a file was refused - at upload, and again on save.
  *
  * One list for both, because they are the same four questions asked twice: the

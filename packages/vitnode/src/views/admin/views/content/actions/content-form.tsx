@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
-import type { ContentFileDescriptor } from "@/content/files";
+import type { ContentFileFieldValue } from "@/content/files";
 import type { ContentFormLayout } from "@/lib/plugin";
 
 import { AutoForm, type AutoFormOnSubmit } from "@/components/form/auto-form";
@@ -242,7 +242,7 @@ const ContentFormFields = ({
    * preview. Empty while creating.
    */
   const files = data?.files as
-    Record<string, ContentFileDescriptor | null> | undefined;
+    Record<string, ContentFileFieldValue> | undefined;
 
   const localizedFields = React.useMemo(
     () => contentLocalizedFieldNames(spec),
