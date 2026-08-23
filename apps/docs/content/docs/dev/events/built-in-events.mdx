@@ -8,20 +8,21 @@ to any of them from your own plugin with
 [`buildEventListener`](/docs/dev/events#listening-to-an-event) - no imports from
 the emitting plugin are needed, the event map is global.
 
-| Event                   | Payload                                  | Emitted when                                            |
-| ----------------------- | ---------------------------------------- | ------------------------------------------------------- |
-| `user.created`          | `{ userId, email, name, emailVerified }` | A user is created - sign-up, AdminCP, or SSO first sign-in |
-| `user.updated`          | `{ userId, email, name }`                | A user is edited in the AdminCP (profile or roles)      |
-| `user.deleted`          | `{ userId, email }`                      | _Declared only_ - core has no user deletion flow yet    |
-| `role.created`          | `{ roleId }`                             | A role is created in the AdminCP                        |
-| `role.updated`          | `{ roleId }`                             | A role is edited in the AdminCP                         |
-| `role.deleted`          | `{ roleId }`                             | A role is deleted in the AdminCP                        |
-| `blog.post.created`     | `{ postId, categoryId }`                 | A blog post is created                                  |
-| `blog.post.updated`     | `{ postId, categoryId }`                 | A blog post is edited                                   |
-| `blog.post.deleted`     | `{ postId }`                             | A blog post is deleted                                  |
-| `blog.category.created` | `{ categoryId }`                         | A blog category is created                              |
-| `blog.category.updated` | `{ categoryId }`                         | A blog category is edited                               |
-| `blog.category.deleted` | `{ categoryId, postIds }`                | A blog category is deleted (`postIds` is always empty)  |
+| Event                   | Payload                                            | Emitted when                                               |
+| ----------------------- | -------------------------------------------------- | ---------------------------------------------------------- |
+| `user.created`          | `{ userId, email, name, emailVerified }`           | A user is created - sign-up, AdminCP, or SSO first sign-in |
+| `user.updated`          | `{ userId, email, name }`                          | A user is edited in the AdminCP (profile or roles)         |
+| `user.deleted`          | `{ userId, email }`                                | _Declared only_ - core has no user deletion flow yet       |
+| `role.created`          | `{ roleId }`                                       | A role is created in the AdminCP                           |
+| `role.updated`          | `{ roleId }`                                       | A role is edited in the AdminCP                            |
+| `role.deleted`          | `{ roleId }`                                       | A role is deleted in the AdminCP                           |
+| `file.uploaded`         | `{ fileId, userId, name, size, mimeType, folder }` | A user uploads a file through the built-in upload endpoint |
+| `blog.post.created`     | `{ postId, categoryId }`                           | A blog post is created                                     |
+| `blog.post.updated`     | `{ postId, categoryId }`                           | A blog post is edited                                      |
+| `blog.post.deleted`     | `{ postId }`                                       | A blog post is deleted                                     |
+| `blog.category.created` | `{ categoryId }`                                   | A blog category is created                                 |
+| `blog.category.updated` | `{ categoryId }`                                   | A blog category is edited                                  |
+| `blog.category.deleted` | `{ categoryId, postIds }`                          | A blog category is deleted (`postIds` is always empty)     |
 
 ## Core
 
@@ -157,6 +158,48 @@ export const roleCleanupListener = buildEventListener({
 });
 ```
 
+### file.uploaded
+
+Emitted once per stored file after a
+[user upload](/docs/dev/storage#user-uploads) commits - so a batch of five files
+fires five times, and a batch that was rejected or rolled back fires not at all.
+Your own upload routes don't emit it; emit it yourself if you want listeners to
+treat those files the same way.
+
+<TypeTable
+  type={{
+    fileId: {
+      description: "Id of the new `core_files` row.",
+      type: "number",
+    },
+    userId: {
+      description: "Owner of the file - the uploader.",
+      type: "number",
+    },
+    name: {
+      description:
+        "Stored display name, which differs from the original when image processing changed the format.",
+      type: "string",
+    },
+    size: {
+      description: "Size in bytes after image processing.",
+      type: "number",
+    },
+    mimeType: {
+      description: "Stored content type, `null` when the browser sent none.",
+      type: "string | null",
+    },
+    folder: {
+      description: "Sub-folder the file landed in, e.g. `uploads`.",
+      type: "string",
+    },
+  }}
+/>
+
+**Use cases:** index the file for search, kick off a
+[queue task](/docs/dev/advanced/queue) for thumbnails or virus scanning, or
+audit-log who uploaded what.
+
 ### user.deleted (declared only)
 
 This event exists in the `VitNodeEvents` map so listeners and payloads are
@@ -167,13 +210,12 @@ themselves, and core will emit it once deletion lands.
 ## Blog (`@vitnode/blog`)
 
 <Callout type="warn" title="These are compatibility adapters now">
-  The blog runs on the [Content
-  Engine](/docs/dev/content-engine), so the events that describe what actually
-  happened are `content.blog.post.*` and `content.blog.category.*` - they carry
-  changed fields, revision ids, publication transitions, per-locale translation
-  events and slug history. The four names below are re-emitted from those by
-  listeners in the plugin, so existing consumers keep working. Prefer the
-  `content.*` ones for anything new.
+  The blog runs on the [Content Engine](/docs/dev/content-engine), so the events
+  that describe what actually happened are `content.blog.post.*` and
+  `content.blog.category.*` - they carry changed fields, revision ids,
+  publication transitions, per-locale translation events and slug history. The
+  four names below are re-emitted from those by listeners in the plugin, so
+  existing consumers keep working. Prefer the `content.*` ones for anything new.
 </Callout>
 
 ### blog.category.created / blog.category.updated

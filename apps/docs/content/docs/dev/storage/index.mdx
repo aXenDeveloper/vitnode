@@ -7,10 +7,13 @@ VitNode gives you a pluggable **storage adapter**, exposed on every request as
 `c.get("storage")`. Files are always stored under `month_{month}_{year}/{folder}/…`
 and every upload returns a public URL.
 
-VitNode does **not** ship a generic upload endpoint - you build your own route
+For **signed-in users uploading their own files** there is a ready-made endpoint
+and a form field - see [user uploads](#user-uploads). For everything else -
+an avatar, a plugin's import, anything with its own rules - you build the route
 (in your app or plugin) so you control auth, validation, and where files go. The
 `c.get("storage").upload()` helper does the heavy lifting: it builds the dated
-key, validates the file, and returns the URL.
+key, validates the file, and returns the URL plus the `core_files` row it
+created.
 
 Storage is **optional**. Without an adapter configured, `c.get("storage")` throws
 and the AdminCP → System → Integrations "Storage" card shows as inactive.
@@ -63,6 +66,55 @@ export const vitNodeApiConfig = buildApiConfig({
   },
 });
 ```
+
+## User uploads
+
+Users uploading their **own** files is common enough that core ships it: a
+`POST /users/files` endpoint that takes any number of files at once, and the
+[`AutoFormFiles`](/docs/ui/files) field that talks to it.
+
+```tsx
+const formSchema = z.object({
+  attachments: uploadedFilesSchema({ max: 3 }),
+});
+
+<AutoFormFiles {...props} label="Attachments" />;
+```
+
+**How much** a user may upload is a role setting (AdminCP → Roles → _Content_):
+whether they may upload at all, their total quota, and how much one submit may
+weigh. Several roles merge into the most generous of them, and `null` -
+"unlimited" - beats every number.
+
+**What** they may upload is app configuration:
+
+```ts title="vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  storage: {
+    adapter: LocalStorageAdapter(),
+    // [!code ++:5]
+    uploads: {
+      allowedMimeTypes: ["image/*", "application/pdf"], // wildcards welcome
+      maxFiles: 5, // per submit
+      folder: "attachments", // -> month_7_2026/attachments/…
+    },
+  },
+});
+```
+
+Defaults: raster images, PDF and plain text, up to 10 files, in `uploads`. SVG
+is **not** in the default allowlist - it can carry script and stored files are
+served from the API origin - so add `image/svg+xml` yourself if you need it.
+
+The batch is validated as a whole _before_ anything is stored, and if an upload
+fails halfway the files that already landed are removed again - so a rejected
+batch never leaves a half-finished set of attachments behind. Two more routes
+round it off: `GET /users/files/upload-limits` (what this user may upload right
+now, which is what lets the field refuse a file without spending an upload) and
+`DELETE /users/files/{id}`.
+
+Every stored file emits [`file.uploaded`](/docs/dev/events/built-in-events#fileuploaded),
+so a plugin can index it, notify someone, or run its own processing.
 
 ## Create your own upload endpoint
 
@@ -185,8 +237,10 @@ export const useUploadAvatar = () =>
 
 ## Uploading multiple files in one endpoint
 
-Read the raw form and loop `upload()` over every file. `formData.getAll("files")`
-returns each entry for the repeated `files` field:
+If the files belong to the signed-in user, [user uploads](#user-uploads) already
+does this. For your own route, read the raw form and loop `upload()` over every
+file. `formData.getAll("files")` returns each entry for the repeated `files`
+field:
 
 ```ts title="upload-gallery.route.ts"
 handler: async c => {

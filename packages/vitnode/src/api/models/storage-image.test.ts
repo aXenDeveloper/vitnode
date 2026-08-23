@@ -15,7 +15,9 @@ const makeCtx = (image?: { quality?: number; webp?: boolean }) => {
       url: `https://cdn.test/${key}`,
     }),
   );
-  const insertValues = vi.fn().mockResolvedValue(undefined);
+  const insertValues = vi.fn(() => ({
+    returning: vi.fn().mockResolvedValue([{ id: 11 }]),
+  }));
   const store: Record<string, unknown> = {
     core: {
       storage: {

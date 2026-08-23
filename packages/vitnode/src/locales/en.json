@@ -164,6 +164,28 @@
           "justify": "Justify align"
         }
       },
+      "files": {
+        "browse": "Choose files",
+        "full": "Limit reached",
+        "drop": "…or drop them here.",
+        "not_allowed": "Uploading files isn't available for your account.",
+        "uploading": "Uploading…",
+        "remove": "Remove {name}",
+        "hint": {
+          "types": "Accepted: {types}",
+          "files": "{count, plural, one {# file} other {up to # files}}",
+          "space": "{size} of space left"
+        },
+        "errors": {
+          "empty": "No files selected.",
+          "mime": "“{name}” is not a supported file type.",
+          "not_allowed": "Uploading files isn't available for your account.",
+          "quota": "Not enough space left - {remaining} free of {limit}.",
+          "submit_limit": "That is {total}, and you can upload {limit} at a time.",
+          "too_many": "{count, plural, one {Only # file can be attached here.} other {Only # files can be attached here.}}",
+          "upload_failed": "The upload failed. Please try again."
+        }
+      },
       "theme_switcher": "Toggle Theme",
       "language_switcher": "Switch Language",
       "toggle_sidebar": "Toggle Sidebar",
@@ -281,6 +303,14 @@
       "noResults": {
         "title": "No files yet",
         "description": "Files you upload will appear here."
+      },
+      "upload": {
+        "trigger": "Upload files",
+        "title": "Upload files",
+        "desc": "Add files to your account. Pick several at once, or drop them on the field.",
+        "field": "Files",
+        "submit": "Save",
+        "success": "{count, plural, one {# file uploaded.} other {# files uploaded.}}"
       }
     },
     "auth": {

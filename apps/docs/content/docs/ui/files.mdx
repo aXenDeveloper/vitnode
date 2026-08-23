@@ -1,0 +1,187 @@
+---
+title: Files
+description: Upload several files at once - by picking them or dropping them on the field - and keep the stored ones as the form value.
+---
+
+## Preview
+
+<Preview name="files" />
+
+## Usage
+
+```ts
+import { z } from "zod";
+import { AutoForm } from "@vitnode/core/components/form/auto-form";
+import { AutoFormFiles } from "@vitnode/core/components/form/fields/files";
+import { uploadedFilesSchema } from "@vitnode/core/lib/helpers/files";
+```
+
+```ts
+const formSchema = z.object({
+  attachments: uploadedFilesSchema({ max: 3 }),
+});
+```
+
+```tsx
+<AutoForm
+  formSchema={formSchema}
+  fields={[
+    {
+      id: "attachments",
+      component: props => (
+        <AutoFormFiles {...props} label="Attachments" />
+      ),
+    },
+  ]}
+/>
+```
+
+That is the whole setup: the field uploads to the built-in
+[user upload endpoint](/docs/dev/storage#user-uploads), so you don't write a
+route, and it reads the signed-in user's limits from the same place the route
+enforces them.
+
+<Callout type="info" title="Value shape">
+  The value is the list of files that are **already stored** - `{ id, name,
+  size, mimeType, url }` each - not the browser's `File` objects. Every
+  selection is uploaded as it is picked, so a submit handler only ever sees ids
+  that exist. Save those ids; the bytes are already safe.
+</Callout>
+
+## What the user is allowed to upload
+
+Nothing here is configured on the field. Uploading is a **role** setting, in
+AdminCP → Roles → *Content*:
+
+- **Allow uploading files** - off by default, so a fresh role uploads nothing.
+- **Total storage** - the quota across all of the user's files.
+- **Storage per submit** - how much one batch may weigh.
+
+A user with several roles gets the most generous of them, and "unlimited" on any
+one role wins. *What* may be uploaded - which types, how many files per batch,
+which folder - is app configuration:
+
+```ts title="vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  storage: {
+    adapter: LocalStorageAdapter(),
+    // [!code ++:5]
+    uploads: {
+      allowedMimeTypes: ["image/*", "application/pdf"],
+      maxFiles: 5,
+      folder: "attachments",
+    },
+  },
+});
+```
+
+The field reads all of it, so it refuses an oversized batch or an unsupported
+type **before** uploading, with the same rule the route applies - and shows what
+is left as a hint under the button. Files the field uploaded are deleted again
+when they are removed from it; a file the form was *opened* with is only
+detached, so cancelling an edit never destroys someone's upload.
+
+## Capping the field itself
+
+`maxFiles` narrows the endpoint's limit for one field - useful when a form wants
+a single logo even though the role may upload ten:
+
+```tsx
+<AutoFormFiles {...props} label="Logo" maxFiles={1} accept="image/*" />
+```
+
+A `max()` on the schema does the same, and also fails validation if the value is
+tampered with:
+
+```ts
+z.object({ logo: uploadedFilesSchema({ max: 1, min: 1 }) });
+```
+
+## Pointing it at your own endpoint
+
+Pass `upload`, `remove` and `limits` to use a route of your own - the field then
+never calls the core one. Handy for a plugin that stores files somewhere
+specific, or for a preview like the one at the top of this page:
+
+```tsx
+<AutoFormFiles
+  {...props}
+  label="Attachments"
+  limits={{
+    allowUpload: true,
+    allowedMimeTypes: ["image/*"],
+    maxBytesPerSubmit: 5 * 1024 * 1024,
+    maxFiles: 3,
+    maxTotalBytes: null, // unlimited
+    remainingBytes: null,
+    usedBytes: 0,
+  }}
+  upload={async files => await uploadToMyRoute(files)}
+  remove={async file => await deleteFromMyRoute(file.id)}
+/>
+```
+
+## Props
+
+import { TypeTable } from "fumadocs-ui/components/type-table";
+
+<TypeTable
+  type={{
+    label: {
+      description: "The label displayed above the field.",
+      type: "React.ReactNode",
+      default: "",
+    },
+    description: {
+      description: "A short description displayed below the field.",
+      type: "React.ReactNode",
+      default: "",
+    },
+    accept: {
+      description:
+        "`accept` for the file input. Defaults to the MIME types the endpoint allows.",
+      type: "string",
+      default: "",
+    },
+    maxFiles: {
+      description:
+        "Caps this field on top of whatever the role and the endpoint allow.",
+      type: "number",
+      default: "",
+    },
+    disabled: {
+      description: "Blocks picking and removing files.",
+      type: "boolean",
+      default: "false",
+    },
+    limits: {
+      description:
+        "Skips the request for the user's limits - for previews and custom endpoints.",
+      type: "UploadFieldLimits",
+      default: "",
+    },
+    upload: {
+      description:
+        "Stores a batch and returns the stored files. Defaults to the core upload endpoint.",
+      type: "(files: File[]) => Promise<UploadedFile[]>",
+      default: "",
+    },
+    remove: {
+      description:
+        "Deletes a file this field uploaded. Defaults to the core delete endpoint.",
+      type: "(file: UploadedFile) => Promise<void>",
+      default: "",
+    },
+    onUploaded: {
+      description:
+        "A batch landed - for refreshing whatever else lists the user's files.",
+      type: "(files: UploadedFile[]) => void",
+      default: "",
+    },
+    onRemoved: {
+      description: "A file the field uploaded was deleted again.",
+      type: "(file: UploadedFile) => void",
+      default: "",
+    },
+  }}
+/>

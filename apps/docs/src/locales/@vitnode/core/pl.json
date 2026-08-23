@@ -151,6 +151,28 @@
           "justify": "Wyjustuj"
         }
       },
+      "files": {
+        "browse": "Wybierz pliki",
+        "full": "Osiągnięto limit",
+        "drop": "…lub przeciągnij je tutaj.",
+        "not_allowed": "Przesyłanie plików nie jest dostępne dla Twojego konta.",
+        "uploading": "Przesyłanie…",
+        "remove": "Usuń {name}",
+        "hint": {
+          "types": "Dozwolone: {types}",
+          "files": "{count, plural, one {# plik} other {do # plików}}",
+          "space": "Pozostało {size} miejsca"
+        },
+        "errors": {
+          "empty": "Nie wybrano żadnych plików.",
+          "mime": "„{name}” to nieobsługiwany typ pliku.",
+          "not_allowed": "Przesyłanie plików nie jest dostępne dla Twojego konta.",
+          "quota": "Za mało miejsca - wolne {remaining} z {limit}.",
+          "submit_limit": "To {total}, a jednorazowo możesz przesłać {limit}.",
+          "too_many": "{count, plural, one {Można dołączyć tylko # plik.} few {Można dołączyć tylko # pliki.} other {Można dołączyć tylko # plików.}}",
+          "upload_failed": "Przesyłanie nie udało się. Spróbuj ponownie."
+        }
+      },
       "theme_switcher": "Przełącz motyw",
       "language_switcher": "Zmień język",
       "toggle_sidebar": "Przełącz pasek boczny",
@@ -268,6 +290,14 @@
       "noResults": {
         "title": "Brak plików",
         "description": "Przesłane pliki pojawią się tutaj."
+      },
+      "upload": {
+        "trigger": "Prześlij pliki",
+        "title": "Prześlij pliki",
+        "desc": "Dodaj pliki do swojego konta. Wybierz kilka naraz lub przeciągnij je na pole.",
+        "field": "Pliki",
+        "submit": "Zapisz",
+        "success": "{count, plural, one {Przesłano # plik.} few {Przesłano # pliki.} other {Przesłano # plików.}}"
       }
     },
     "auth": {

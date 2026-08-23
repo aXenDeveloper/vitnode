@@ -146,6 +146,25 @@ export interface VitNodeApiConfig {
       quality?: number;
       webp?: boolean;
     };
+    /**
+     * Rules for the built-in user upload endpoint (`POST /users/files`) that
+     * backs the `AutoFormFiles` field. *How much* a user may upload comes from
+     * their roles (AdminCP -> Roles -> Content); this is *what* may be uploaded
+     * and where it lands. Your own upload routes are unaffected - they validate
+     * per call with `upload()`.
+     */
+    uploads?: {
+      /**
+       * Accepted MIME types, `image/*` wildcards included. Defaults to raster
+       * images, PDF and plain text - SVG is left out on purpose, since it can
+       * carry script and stored files are served from the API origin.
+       */
+      allowedMimeTypes?: string[];
+      /** Sub-folder under the dated prefix. Defaults to `uploads`. */
+      folder?: string;
+      /** Files accepted in one submit. Defaults to 10. */
+      maxFiles?: number;
+    };
   };
 }
 

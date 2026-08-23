@@ -9,6 +9,7 @@ import {
   generateStorageFileName,
   replaceFileExtension,
 } from "@/lib/api/upload";
+import { isMimeTypeAllowed } from "@/lib/upload-limits";
 
 const DEFAULT_IMAGE_QUALITY = 85;
 
@@ -34,6 +35,19 @@ export interface StorageUploadResult {
 }
 
 /**
+ * An upload plus the `core_files` row it created - what a route hands back to a
+ * form so it can render the file and, later, delete it by id.
+ */
+export interface StorageFileResult extends StorageUploadResult {
+  id: number;
+  mimeType: null | string;
+  /** Stored display name, which differs from the original when a conversion changed the format. */
+  name: string;
+  /** Size after image processing, i.e. what counts against the user's quota. */
+  size: number;
+}
+
+/**
  * Present only on disk-backed adapters (e.g. Local). The Node entry point reads
  * it to mount `serveStatic` for the stored files. Cloud adapters omit it.
  */
@@ -51,7 +65,10 @@ export interface StorageApiPlugin {
 }
 
 export interface StorageUploadOptions {
-  /** Allowed MIME types (e.g. `["image/png", "image/jpeg"]`). Omit to allow any. */
+  /**
+   * Allowed MIME types (e.g. `["image/png", "image/jpeg"]`), `image/*` wildcards
+   * included. Omit to allow any.
+   */
   allowedMimeTypes?: string[];
   file: File;
   /** Sub-folder under the dated prefix, e.g. `avatars` -> `month_7_2026/avatars/…`. */
@@ -196,7 +213,7 @@ export class StorageModel {
     maxBytes,
     metadata,
     userId,
-  }: StorageUploadOptions): Promise<StorageUploadResult> {
+  }: StorageUploadOptions): Promise<StorageFileResult> {
     const provider = this.requireProvider();
 
     if (maxBytes !== undefined && file.size > maxBytes) {
@@ -204,7 +221,7 @@ export class StorageModel {
         message: `File exceeds the maximum size of ${maxBytes} bytes`,
       });
     }
-    if (allowedMimeTypes && !allowedMimeTypes.includes(file.type)) {
+    if (!isMimeTypeAllowed(file.type, allowedMimeTypes)) {
       throw new HTTPException(400, {
         message: `Unsupported file type: ${file.type || "unknown"}`,
       });
@@ -240,7 +257,7 @@ export class StorageModel {
         : (this.c.get("admin")?.user.id ?? this.c.get("user")?.id ?? null);
 
     try {
-      await this.c
+      const [row] = await this.c
         .get("db")
         .insert(core_files)
         .values({
@@ -257,12 +274,19 @@ export class StorageModel {
               ? { dimensions: processed.dimensions }
               : {}),
           },
-        });
+        })
+        .returning({ id: core_files.id });
+
+      return {
+        ...result,
+        id: row.id,
+        mimeType: processed.mimeType || null,
+        name: displayName,
+        size: processed.body.length,
+      };
     } catch (error) {
       await provider.delete(result.key).catch(() => undefined);
       throw error;
     }
-
-    return result;
   }
 }

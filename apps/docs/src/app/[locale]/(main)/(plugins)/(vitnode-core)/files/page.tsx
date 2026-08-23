@@ -7,6 +7,7 @@ import { I18nProvider } from "@vitnode/core/components/i18n-provider";
 import { DataTableSkeleton } from "@vitnode/core/components/table/data-table";
 import { HeaderContent } from "@vitnode/core/components/ui/header-content";
 import { getSessionApi } from "@vitnode/core/lib/api/get-session-api";
+import { UploadMyFiles } from "@vitnode/core/views/files/actions/upload-files";
 
 const MyFilesTableView = dynamic(async () =>
   import("@vitnode/core/views/files/my-files-table-view").then(module => ({
@@ -41,7 +42,9 @@ export default async function Page(
   return (
     <I18nProvider namespaces={["core.files"]}>
       <div className="container mx-auto space-y-6 p-4">
-        <HeaderContent desc={t("desc")} h1={t("title")} />
+        <HeaderContent desc={t("desc")} h1={t("title")}>
+          <UploadMyFiles />
+        </HeaderContent>
 
         <React.Suspense fallback={<DataTableSkeleton columns={7} toolbar />}>
           <MyFilesTableView {...props} />

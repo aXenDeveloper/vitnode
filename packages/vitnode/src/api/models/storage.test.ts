@@ -18,7 +18,9 @@ const makeCtx = (
       Promise.resolve({ key, url: `https://cdn.test/${key}` }),
     );
   const del = vi.fn().mockResolvedValue(undefined);
-  const insertValues = vi.fn().mockResolvedValue(undefined);
+  const insertValues = vi.fn(() => ({
+    returning: vi.fn().mockResolvedValue([{ id: 11 }]),
+  }));
   const store: Record<string, unknown> = {
     admin: "admin" in overrides ? overrides.admin : null,
     core: {
@@ -187,6 +189,37 @@ describe("StorageModel.upload", () => {
     });
 
     expect(upload).toHaveBeenCalledTimes(1);
+  });
+
+  it("accepts a wildcard mime allowlist", async () => {
+    const { ctx, upload } = makeCtx();
+    const file = new File(["ok"], "photo.gif", { type: "image/gif" });
+
+    await new StorageModel(ctx).upload({
+      file,
+      folder: "avatars",
+      allowedMimeTypes: ["image/*"],
+    });
+
+    expect(upload).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns the created core_files row alongside the key and url", async () => {
+    const { ctx } = makeCtx();
+    const file = new File(["ok"], "photo.png", { type: "image/png" });
+
+    const result = await new StorageModel(ctx).upload({
+      file,
+      folder: "avatars",
+    });
+
+    expect(result).toMatchObject({
+      id: 11,
+      mimeType: "image/png",
+      name: "photo.png",
+      size: 2,
+    });
+    expect(result.url).toContain(result.key);
   });
 });
 

@@ -20,6 +20,14 @@ import type { EventListenerConfig } from "../lib/events";
  * NATS, ...) serializes the envelope to move it between processes.
  */
 export interface VitNodeEvents {
+  "file.uploaded": {
+    fileId: number;
+    folder: string;
+    mimeType: null | string;
+    name: string;
+    size: number;
+    userId: number;
+  };
   "role.created": {
     roleId: number;
   };
