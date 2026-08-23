@@ -16,8 +16,10 @@
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-router": "1.170.31",
     "@tanstack/react-start": "1.168.48",
+    "@vitnode/i18n": "workspace:*",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "use-intl": "^4.13.7"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
