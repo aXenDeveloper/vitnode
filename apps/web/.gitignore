@@ -1,0 +1,5 @@
+.output
+.nitro
+.tanstack
+.vite
+*.tsbuildinfo
