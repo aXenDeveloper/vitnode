@@ -1,0 +1,58 @@
+{
+  "name": "@vitnode/i18n",
+  "version": "1.2.0-canary.78",
+  "description": "Locale routing and translations for VitNode on TanStack Start.",
+  "author": "VitNode Team",
+  "license": "MIT",
+  "homepage": "https://vitnode.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aXenDeveloper/vitnode.git",
+    "directory": "packages/i18n"
+  },
+  "keywords": [
+    "vitnode",
+    "i18n",
+    "tanstack-start",
+    "use-intl"
+  ],
+  "type": "module",
+  "exports": {
+    "./client": {
+      "import": "./src/entry-client.tsx",
+      "default": "./src/entry-client.tsx"
+    },
+    "./server": {
+      "import": "./src/entry-server.ts",
+      "default": "./src/entry-server.ts"
+    },
+    "./messages": {
+      "import": "./src/messages/index.ts",
+      "default": "./src/messages/index.ts"
+    }
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "use-intl": "^4.13.7"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.101.4",
+    "@tanstack/react-router": "1.170.31",
+    "@tanstack/react-start": "1.168.48",
+    "@types/react": "^19.2.17",
+    "@vitnode/config": "workspace:*",
+    "eslint": "^10.7.0",
+    "react": "^19.2.8",
+    "typescript": "^6.0.3"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.x.x",
+    "@tanstack/react-router": "^1.x.x",
+    "@tanstack/react-start": "^1.x.x",
+    "react": "^19.2.x"
+  }
+}
