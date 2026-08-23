@@ -144,14 +144,16 @@ export const CONTENT_FILE_MIME_PATTERN =
   /^[a-z0-9][a-z0-9!#$&^_+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/;
 
 /**
- * The storage folder every Content Engine upload lands in.
+ * How a `pluginId` is written into a storage key: `@vitnode/blog` -> `vitnode-blog`.
  *
- * One folder rather than one per content type: the folder is a path segment in
- * the object key, and a content type id holds a dot - which `sanitizeFolder`
- * refuses, for good reason. Ownership is already recorded on the `core_files`
- * row, so the key does not have to carry it.
+ * A plugin id is a package name, so it carries the two characters a folder
+ * segment may not: the scope's `@` and the `/` between scope and name. Neither
+ * can simply be dropped - `@vitnode/blog` and `vitnodeblog` would collide with a
+ * plugin actually called that - so the scope separator becomes a hyphen and the
+ * leading `@` goes, which is both readable and reversible enough to recognise in
+ * a bucket listing.
  */
-export const CONTENT_FILE_FOLDER = "content";
+export const CONTENT_FILE_PLUGIN_SEPARATOR = "-";
 
 /**
  * How many files one `field.file({ multiple: true })` may hold, unless it says

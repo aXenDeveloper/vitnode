@@ -26,12 +26,31 @@ describe("sanitizeFolder", () => {
     expect(sanitizeFolder("blog-images_2")).toBe("blog-images_2");
   });
 
-  it.each(["../etc", "a/b", "", " ", "foo/", "/foo", "."])(
-    "rejects unsafe folder %j",
-    invalid => {
-      expect(() => sanitizeFolder(invalid)).toThrow();
-    },
-  );
+  it("accepts nesting, so uploads can be grouped by owner", () => {
+    // What the Content Engine's generated route uses: `{plugin}/{module}`, so a
+    // bucket reads as the plugins in it rather than as one flat pile.
+    expect(sanitizeFolder("vitnode-blog/posts")).toBe("vitnode-blog/posts");
+    expect(sanitizeFolder("a/b/c")).toBe("a/b/c");
+  });
+
+  it.each([
+    "../etc",
+    "a/../b",
+    "..",
+    "a/..",
+    "",
+    " ",
+    "foo/",
+    "/foo",
+    "a//b",
+    ".",
+    "a/.hidden",
+    "a\\..\\b",
+  ])("rejects unsafe folder %j", invalid => {
+    // Every one of these is refused by the *segment* rule rather than by a list
+    // of known tricks: climbing out needs a segment that is not a plain name.
+    expect(() => sanitizeFolder(invalid)).toThrow();
+  });
 });
 
 describe("getFileExtension", () => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { sanitizeFolder } from "../lib/api/upload";
 import {
   fileAcceptAttribute,
   fileFormatLabels,
@@ -12,6 +13,7 @@ import {
   assertContentFileMaxBytes,
   contentFileAccept,
   contentFileConstraints,
+  contentFileFolder,
   contentFileFormatLabels,
   normalizeContentFileExtension,
   normalizeContentFileExtensions,
@@ -296,6 +298,48 @@ describe("validateContentFile", () => {
         size: 101,
       })?.code,
     ).toBe("CONTENT_FILE_TOO_LARGE");
+  });
+});
+
+describe("contentFileFolder", () => {
+  it("groups uploads by plugin and module", () => {
+    expect(
+      contentFileFolder({ module: "posts", pluginId: "@vitnode/blog" }),
+    ).toBe("vitnode-blog/posts");
+  });
+
+  it("turns a package name into one folder segment", () => {
+    // A plugin id is a package name, so it carries the two characters a segment
+    // may not: the scope's `@` and the `/` after it.
+    for (const [pluginId, expected] of [
+      ["@vitnode/blog", "vitnode-blog"],
+      ["@My-Org/Some.Plugin", "my-org-some-plugin"],
+      ["plain", "plain"],
+      ["@scope/", "scope"],
+    ] as const) {
+      expect(contentFileFolder({ module: "m", pluginId })).toBe(
+        `${expected}/m`,
+      );
+    }
+  });
+
+  it("is a folder `sanitizeFolder` accepts", () => {
+    // The two have to agree or every upload fails at the adapter: this is the
+    // caller, and that is the guard the storage model runs on what it is handed.
+    expect(
+      sanitizeFolder(
+        contentFileFolder({
+          module: "file_post",
+          pluginId: "@vitnode/example",
+        }),
+      ),
+    ).toBe("vitnode-example/file_post");
+  });
+
+  it("refuses a plugin id that cannot name anything", () => {
+    expect(() => contentFileFolder({ module: "m", pluginId: "@/" })).toThrow(
+      /cannot name a storage folder/,
+    );
   });
 });
 

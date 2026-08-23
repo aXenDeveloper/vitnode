@@ -30,7 +30,6 @@ import {
 import {
   CONTENT_ACTOR_TYPES,
   CONTENT_FILE_CODES,
-  CONTENT_FILE_FOLDER,
   CONTENT_LOCALE_MAX_LENGTH,
   CONTENT_OPTIONS_LIMIT,
   CONTENT_PERMISSIONS,
@@ -40,6 +39,7 @@ import {
 } from "../const";
 import {
   contentFileConstraints,
+  contentFileFolder,
   validateContentFile,
   zodContentFileDescriptor,
   zodContentFileFieldValue,
@@ -703,7 +703,7 @@ export const buildContentRoutes = <
       try {
         stored = await c.get("storage").upload({
           file,
-          folder: CONTENT_FILE_FOLDER,
+          folder: contentFileFolder({ module, pluginId }),
           // Handed to the adapter too, as defence in depth: a direct
           // `storage.upload` from somewhere else should not be able to exceed
           // what this field declares.

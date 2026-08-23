@@ -16,6 +16,7 @@ import {
   CONTENT_FILE_CODES,
   CONTENT_FILE_EXTENSION_PATTERN,
   CONTENT_FILE_MIME_PATTERN,
+  CONTENT_FILE_PLUGIN_SEPARATOR,
 } from "./const";
 import { ContentEngineError } from "./errors";
 
@@ -287,6 +288,55 @@ export const contentFileRejectionReason = (
     default:
       return undefined;
   }
+};
+
+/**
+ * The storage folder one content type's uploads land in: `{plugin}/{module}`.
+ *
+ * `@vitnode/blog` + `posts` -> `vitnode-blog/posts`, so the object key reads
+ * `month_8_2026/vitnode-blog/posts/<uuid>.webp`. Grouping by owner rather than
+ * dropping everything in one `content/` folder is what makes a bucket listing
+ * answer "what is this?" - and it is the only place that question can be
+ * answered cheaply, since a storage provider has no join back to `core_files`.
+ *
+ * The **module**, not the content type id: an id holds a dot (`blog.post`), which
+ * a folder segment may not, and the module is already the path segment every
+ * admin request for this content type goes through - including the upload itself
+ * (`/admin/content/{module}/uploads/{field}`). So the key and the route agree by
+ * construction rather than by two slugifiers happening to match.
+ *
+ * Nothing else is in it. The field name would put a second fact in the key that
+ * `core_files.metadata` already records, and a record id would make moving a file
+ * between records a copy.
+ *
+ * The result is always a folder `sanitizeFolder` accepts, and neither half of
+ * that is luck: the plugin half is reduced to one segment and refused if nothing
+ * is left, and the module half is checked against `CONTENT_TABLE_NAME_PATTERN` at
+ * definition time - a stricter rule than the storage guard's. So a misconfigured
+ * plugin fails at import rather than on somebody's first upload.
+ */
+export const contentFileFolder = ({
+  module,
+  pluginId,
+}: {
+  module: string;
+  pluginId: string;
+}): string => {
+  const plugin = pluginId
+    .toLowerCase()
+    // The scope separator becomes a hyphen; the leading `@` and anything else a
+    // segment may not hold go the same way, collapsed and trimmed so a package
+    // name can never produce an empty segment or a double hyphen.
+    .replace(/[^a-z0-9]+/g, CONTENT_FILE_PLUGIN_SEPARATOR)
+    .replace(/^-+|-+$/g, "");
+
+  if (plugin === "") {
+    throw new ContentEngineError(
+      `Plugin id "${pluginId}" has no letters or digits in it, so it cannot name a storage folder.`,
+    );
+  }
+
+  return `${plugin}/${module}`;
 };
 
 /** The constraints of one descriptor, without the rest of it. */

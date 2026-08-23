@@ -154,10 +154,13 @@ describe("the generated upload route", () => {
       url: "https://cdn.test/month_8_2026/content/42",
       width: 1600,
     });
-    // The field's own ceiling and allowlist reach the adapter too.
+    // The field's own ceiling and allowlist reach the adapter too, and the file
+    // lands under its owner rather than in one flat pile: `{plugin}/{module}`, so
+    // a bucket listing says which plugin and which content type an object
+    // belongs to without a join back to `core_files`.
     expect(upload.mock.calls[0][0]).toMatchObject({
       allowedMimeTypes: ["image/gif"],
-      folder: "content",
+      folder: "vitnode-example/file_post",
       maxBytes: 10 * 1024 * 1024,
     });
   });

@@ -99,7 +99,7 @@ Content row            blog_posts.coverImage = 42
 core_files             id 42 · name · key · mimeType · size · metadata
                        └─ the record of the object
                           ↓
-Storage adapter        month_8_2026/content/<uuid>.webp
+Storage adapter        month_8_2026/vitnode-blog/posts/<uuid>.webp
                        └─ the bytes
 ```
 
@@ -107,6 +107,35 @@ Nothing is duplicated between the layers. The content row does not hold a URL, a
 storage key or a copy of the size, so replacing the image is one write and there
 is no second copy to go stale. The URL is built on read, from the adapter that is
 configured *now*.
+
+### The key says who the file belongs to
+
+Generated uploads land under **`{plugin}/{module}`**, beneath the usual dated
+prefix:
+
+```text
+month_8_2026/vitnode-blog/posts/<uuid>.webp
+             └────┬─────┘ └─┬─┘
+        the plugin id     the content type's AdminCP module
+```
+
+The plugin id is a package name, so the scope separator becomes a hyphen and the
+leading `@` goes: `@vitnode/blog` → `vitnode-blog`. The second segment is the
+`permissionModule` - the same segment the upload request itself goes through
+(`/admin/content/posts/uploads/coverImage`), so the key and the route agree by
+construction rather than by two slugifiers happening to match.
+
+Grouping by owner is the point. A storage provider has no join back to
+`core_files`, so a bucket listing is the *only* cheap answer to "what is this
+object?" - and one flat `content/` folder gives no answer at all. Nothing else is
+in the key: the field name would repeat what `core_files.metadata` already
+records, and a record id would make moving a file between records a copy.
+
+<Callout type="warn" title="Existing files do not move">
+A key is stored on the `core_files` row and read back verbatim, so files uploaded
+before this lived under whatever folder was in force then and keep working
+exactly as they did. Nothing rewrites old keys, and nothing needs to.
+</Callout>
 
 ### Many files on one field
 
@@ -315,6 +344,11 @@ export const uploadAvatarRoute = buildRoute({
   },
 });
 ```
+
+`folder` may nest - `"blog/gallery"` becomes `month_7_2026/blog/gallery/<uuid>.png`
+- and each segment has to be letters, numbers, hyphens or underscores. That rule
+is per segment on purpose: `..`, `//`, a leading `/` and a trailing `/` are all
+refused by it, so there is no way to climb out of the dated prefix.
 
 `upload()` returns more than the URL: `{ id, key, url, name, mimeType, size,
 dimensions }`. `id` is the new `core_files` row - the identifier a
