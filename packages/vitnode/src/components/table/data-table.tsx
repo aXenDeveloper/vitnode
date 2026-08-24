@@ -144,6 +144,15 @@ export function DataTable<T extends DataTableTMin>(
   props: Omit<React.ComponentProps<typeof Table>, "columns"> &
     React.ComponentProps<typeof PaginationDataTable> &
     React.ComponentProps<typeof SearchDataTable> & {
+      /**
+       * Actions for the rows a person ticked, rendered in a bar that floats at
+       * the bottom centre of the viewport for as long as anything is selected.
+       *
+       * Passing this is what turns selection on: the table grows a leading
+       * checkbox column, and the nodes here read the ticked ids with
+       * `useDataTableSelection()`.
+       */
+      bulkActions?: React.ReactNode;
       columns: ColumnDef<T>[];
       customNoResults?: {
         description?: string;

@@ -187,7 +187,8 @@ the **database row first** and only then the object.
 
 | Situation | Result |
 | :--- | :--- |
-| Still referenced by content (a column **or** a gallery's junction row) or by a retained revision | `409 FILE_IN_USE`, and the object is untouched |
+| Still referenced by content (a column **or** a gallery's junction row) | `409 FILE_IN_USE` with `content: true`, and the object is untouched |
+| Held only by retained revisions | `409 FILE_IN_USE` with `content: false` and `revisions: n` - releasable with `force` |
 | Row removed | The object is deleted (best-effort) |
 | No such file | `404` |
 
@@ -196,6 +197,20 @@ its bytes and *then* has its removal refused - the article survives, pointing at
 a 404. VitNode prefers an orphaned storage object to a content record pointing at
 missing bytes: one costs disk, the other costs a broken page nobody can repair
 from the AdminCP.
+
+The refusal says **which** of the two held the file, because a person acts on
+them differently. Content that would break is final. History is not:
+`deleteFile(id, { force: true })` drops the retained revisions' pins and deletes
+the file, and the Files screen offers exactly that as a second confirmation once
+the first one has said how many revisions it costs. `force` never gets past a
+live content reference - there is no version of "delete anyway" that leaves a
+published page unbroken.
+
+Both answers come out of one transaction, and the un-forced refusal is a
+deliberate rollback: the pins are removed first either way, so the `DELETE`
+still being refused is what proves something *live* holds the file. Reading
+`core_content_file_refs` could count the pins, but nothing could answer the live
+side - that is one foreign key per content type in the install.
 
 ### Revisions keep old files alive
 
@@ -221,6 +236,13 @@ delete A             succeeds â€” nothing references it any more
 
 There is no unpinning code: the pin references the revision `ON DELETE CASCADE`,
 so retention pruning releases it in the same statement that removes the revision.
+
+Retention only prunes when that **same record** is written again, so an image a
+record stopped using is held for its next 50 edits - which, for a record nobody
+touches again, is for ever. That is what `force` is for: it removes the pins and
+nothing else, so the snapshot still records which file the field held, and only
+restoring that revision changes behaviour - it now fails with "file does not
+exist" instead of restoring a file that is gone.
 
 ### Uploads are multipart, never a Server Action
 
@@ -360,7 +382,9 @@ Register it in a module with `buildModule` and add that module to your plugin â€
 see [Plugins](/docs/dev/plugins). You can also `c.get("storage").delete(key)`,
 `c.get("storage").getUrl(key)` and `c.get("storage").deleteFile(id)` - the last
 of which refuses with `409 FILE_IN_USE` rather than orphaning whatever still
-points at the file.
+points at the file, and takes `{ force: true }` to get past retained revisions
+(never past live content) and `{ ownerId }` to scope the delete to one user's
+own uploads.
 
 </Step>
 <Step>

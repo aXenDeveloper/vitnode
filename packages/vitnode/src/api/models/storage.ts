@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
+import { core_content_file_refs } from "@/database/content";
 import { core_files } from "@/database/files";
 import { isPgReferenceViolation } from "@/lib/api/pg-error";
 import {
@@ -59,6 +60,45 @@ export interface StorageFileUploadResult extends StorageUploadResult {
 
 /** Why {@link StorageModel.deleteFile} refused. */
 export const STORAGE_FILE_IN_USE = "FILE_IN_USE";
+
+/**
+ * The body of that refusal, and the reason it is not just a code.
+ *
+ * "In use" covers two situations a person has to act on differently: content
+ * that would break, and history that would merely lose a restore. `content` is
+ * the one that is final; `revisions` is how many retained revisions hold the
+ * file, so a client can offer to force past them and say how much it is giving
+ * up.
+ */
+export interface StorageFileInUseBody {
+  code: typeof STORAGE_FILE_IN_USE;
+  /** A live content column or gallery row still points at this file. */
+  content: boolean;
+  id: number;
+  /** Retained revisions pinning it - releasable with `force`. */
+  revisions: number;
+}
+
+export interface StorageDeleteFileOptions {
+  /**
+   * Drop the retained revisions' pins and delete the file anyway.
+   *
+   * Only ever gets past *history*. A live content reference is refused with or
+   * without it, because there is no version of "delete anyway" that leaves a
+   * published page unbroken.
+   */
+  force?: boolean;
+  /** Scopes the delete to one user's own uploads. */
+  ownerId?: number;
+}
+
+const storageFileInUse = (body: Omit<StorageFileInUseBody, "code">) =>
+  new HTTPException(409, {
+    res: Response.json(
+      { code: STORAGE_FILE_IN_USE, ...body } satisfies StorageFileInUseBody,
+      { status: 409 },
+    ),
+  });
 
 /**
  * Present only on disk-backed adapters (e.g. Local). The Node entry point reads
@@ -355,12 +395,24 @@ export class StorageModel {
    * to, meant a referenced file lost its bytes and *then* had its removal
    * refused: the article survived, pointing at a 404.
    *
-   * So:
+   * The two things that can hold a file are **not** the same thing, and this
+   * says which one did:
    *
-   * - still referenced -> **409 `FILE_IN_USE`**, and the object is untouched;
-   * - row removed -> the object is deleted, best-effort (a missing object must
-   *   not fail a delete that already committed);
-   * - no such row -> 404.
+   * - a **live** reference - a content column, or a gallery's junction row - is
+   *   a page that would break. Refused, always: `409 FILE_IN_USE` with
+   *   `content: true`, and no `force` gets past it.
+   * - a **retained revision's pin** is history. Refused by default too, but with
+   *   `content: false` and the number of revisions holding it, so the caller can
+   *   ask again with `force` - which drops those pins and lets the file go.
+   *
+   * Without that second door the Files screen is a dead end: a cover image
+   * swapped once is pinned by the revision that recorded the swap, and retention
+   * only prunes when that *same record* is written again - so a file nothing
+   * displays any more stays undeletable, quite possibly for ever.
+   *
+   * Everything else is unchanged: row removed -> the object is deleted,
+   * best-effort (a missing object must not fail a delete that already
+   * committed); no such row -> 404.
    *
    * An orphaned storage object is the failure this prefers. It costs disk; a
    * content record pointing at bytes that are gone costs a broken page nobody
@@ -368,32 +420,56 @@ export class StorageModel {
    *
    * Pass `ownerId` to scope the delete to that user's own uploads.
    */
-  async deleteFile(id: number, ownerId?: number): Promise<void> {
+  async deleteFile(
+    id: number,
+    { force = false, ownerId }: StorageDeleteFileOptions = {},
+  ): Promise<void> {
     const db = this.c.get("db");
     const where =
       ownerId === undefined
         ? eq(core_files.id, id)
         : and(eq(core_files.id, id), eq(core_files.userId, ownerId));
 
-    let deleted: undefined | { key: string };
-    try {
-      [deleted] = await db
-        .delete(core_files)
-        .where(where)
-        .returning({ key: core_files.key });
-    } catch (error) {
-      if (!isPgReferenceViolation(error)) throw error;
+    // One transaction, whichever way it ends. The pins come out first *even when
+    // `force` is false*, because that is what makes the answer exact: with them
+    // gone, the `DELETE` still being refused means something live holds the file,
+    // and it succeeding means only history did. A read of
+    // `core_content_file_refs` could count the pins but never answer the first
+    // question - the live side is one foreign key per content type in the
+    // install, and enumerating them would be a guess that goes stale.
+    //
+    // Nothing is committed unless the caller asked for it: the un-forced refusal
+    // throws, which rolls the pin delete back with it.
+    const deleted = await db.transaction(async tx => {
+      const pins = await tx
+        .delete(core_content_file_refs)
+        .where(eq(core_content_file_refs.fileId, id))
+        .returning({ id: core_content_file_refs.id });
 
-      // The bytes are still there, which is the point: whoever is using this
-      // file still has a working file.
-      throw new HTTPException(409, {
-        res: Response.json({ code: STORAGE_FILE_IN_USE, id }, { status: 409 }),
-      });
-    }
+      let row: undefined | { key: string };
+      try {
+        [row] = await tx
+          .delete(core_files)
+          .where(where)
+          .returning({ key: core_files.key });
+      } catch (error) {
+        if (!isPgReferenceViolation(error)) throw error;
 
-    if (!deleted) {
-      throw new HTTPException(404, { message: "File not found" });
-    }
+        // The bytes are still there, which is the point: whoever is using this
+        // file still has a working file.
+        throw storageFileInUse({ content: true, id, revisions: pins.length });
+      }
+
+      if (!row) {
+        throw new HTTPException(404, { message: "File not found" });
+      }
+
+      if (!force && pins.length > 0) {
+        throw storageFileInUse({ content: false, id, revisions: pins.length });
+      }
+
+      return row;
+    });
 
     // After the commit, and best-effort: the row is gone either way, so a
     // provider that is down leaves an orphaned object rather than a file record
