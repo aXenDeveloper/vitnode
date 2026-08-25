@@ -83,6 +83,6 @@ describe("buildRoute", () => {
       handler: c => c.json({ plugin: c.get("plugin").id }, 200),
     });
 
-    expect(route.tags).toEqual(["@vitnode/test Plugin", "Articles"]);
+    expect(route.tags).toEqual(["Test Plugin", "Articles"]);
   });
 });
