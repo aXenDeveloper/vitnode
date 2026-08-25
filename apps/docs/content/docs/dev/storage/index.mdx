@@ -172,9 +172,10 @@ somebody tidied up the Files screen, and a junction row has nothing for
 exactly as it does for a cover image.
 
 The upload route is unchanged - still one file per request. A selection of ten
-becomes ten concurrent requests, so each gets its own skeleton card in the
-AdminCP, its own outcome and its own error message. The mutation that follows is
-still JSON: `{ "gallery": [7, 3, 9] }`.
+becomes ten requests, six of them in flight at a time, so each gets its own
+skeleton card in the AdminCP, its own outcome and its own error message. The
+mutation that follows is still JSON: `{ "gallery": [7, 3, 9] }`, in the order the
+files were picked in rather than the order their uploads happened to finish.
 
 See [`field.file({ multiple: true })`](/docs/dev/content-engine/fields) for the
 arity rules, the AdminCP control and the public response shape.
@@ -300,7 +301,9 @@ Maximum file size: 5 MB
 
 A `multiple: true` field adds the count to the same line (`· 3 of 8 files`) and
 renders the stored files as a list **below** the drop zone - one card each, and a
-skeleton card per upload still in flight.
+skeleton card per upload still in flight, sitting in the place that upload is
+going to land. When the field is `ordered` (the default), each stored card also
+gets a drag handle for rearranging the list by pointer or keyboard.
 
 ## Create your own upload endpoint
 

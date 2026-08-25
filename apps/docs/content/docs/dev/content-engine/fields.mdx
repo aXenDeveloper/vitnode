@@ -20,7 +20,7 @@ Content Engine provides field descriptors exported from `@vitnode/core/content` 
 | `field.user({ multiple: true })` | Junction table (FK to `core_users`) | `z.array(z.number())` | Multi-select People Combobox |
 | `field.slug()` | `varchar(length)` | `z.string()` | Slug Input + Auto-Generator |
 | `field.file()` | `integer()` (FK to `core_files`, `ON DELETE RESTRICT`) | `z.number()` | Uploader (drag & drop + picker) |
-| `field.file({ multiple: true })` | Junction table (FK to `core_files`, `ON DELETE RESTRICT`) | `z.array(z.number())` | Multi-file uploader (list + per-file progress) |
+| `field.file({ multiple: true })` | Junction table (FK to `core_files`, `ON DELETE RESTRICT`) | `z.array(z.number())` | Multi-file uploader (list, per-file progress, drag-to-reorder) |
 
 ---
 
@@ -446,31 +446,77 @@ Arity is a separate question, and `min` / `max` are how it is asked:
 | `required` / `nullable` | ❌ refused - the empty list is what "no files" looks like |
 | `min: 1` | "at least one image", which is what `required` would have meant |
 | `max` | defaults to **20**, and may not exceed **200** |
-| `ordered` | defaults to **`true`** - the order files were added |
+| `ordered` | defaults to **`true`** - the order the editor put them in, drag handles and all |
 
 `ordered` defaults to `true` here and to `false` for a relation, and the
 difference is not an oversight: the order an editor built a gallery in is the
 order they meant it to read in, while "ascending id" for a set of categories is
 at least something nobody chose. Pass `ordered: false` and the engine stores the
 entries by ascending `core_files.id`, which makes `set([9, 2, 5])` and
-`set([2, 5, 9])` the same state rather than two writes.
-
-<Callout type="info" title="There are no reorder controls">
-The stored order is the order files were **added**. Rearranging is remove and
-re-add: dragging an image to the front and back again is not an edit worth
-spending a version, a revision and a cache invalidation on. Order the uploads,
-or model the caption as a `field.repeatable` if the sequence is the content.
-</Callout>
+`set([2, 5, 9])` the same state rather than two writes - and takes the drag
+handles out of the AdminCP with it, because a control that appears to set an
+order the save then normalises away is worse than no control.
 
 The ceiling exists because each entry is a stored object the record pins against
 deletion, and the whole list is read and rewritten as one. For a media library,
 model a content type and relate to it.
 
+#### An ordered collection is a gallery
+
+`ordered: true` is what makes the list somebody's rather than the network's, and
+it decides three things at once:
+
+```ts title="plugins/example/src/content/article.ts"
+gallery: field.file({
+  multiple: true,
+  ordered: true,
+  max: 12,
+  maxBytes: 5 * 1024 * 1024, // per file
+  allowedExtensions: [".jpg", ".jpeg", ".png", ".webp"],
+  allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+}),
+```
+
+| | |
+| :--- | :--- |
+| The **initial** order | the order the files were chosen in - the order of the selection in the dialog, or of the drop |
+| Upload **completion** order | irrelevant. A 40 KB thumbnail beating a 4 MB photograph does not move either of them |
+| **Manual** reordering | drag handles in the AdminCP, keyboard included, using [dnd-kit](https://dndkit.com) |
+| What is **stored** | `position` on the junction row, `0`-based and contiguous, written by the save |
+
+The whole lifecycle, for a selection of three:
+
+```text
+pick:                    A, B, C
+uploads finish:          B, C, A     ← whatever the network decides
+the list still reads:    A, B, C
+
+editor drags C to the front:
+
+                         C, A, B
+
+save:                    { "gallery": [C.id, A.id, B.id] }
+Content Engine writes:   position = 0, 1, 2
+```
+
+Nothing about that order is stored anywhere but `field.value`, which is the
+point: a drag rewrites the form value and nothing else, so abandoning the form or
+rolling a save back puts the previous order back with it. There is no second copy
+to disagree with the one that would be saved.
+
+<Callout type="info" title="`ordered: false` has no handles">
+The API sorts an unordered collection by ascending `core_files.id` on every read
+and normalises it on every write, so there is nothing for a drag to do. The
+AdminCP renders the list without handles, and the server-side normalisation stays
+the authority.
+</Callout>
+
 #### One request per file
 
 The upload route does not change: it is still `POST .../uploads/{field}`, still
-one file per request. A selection of ten becomes ten concurrent requests, and
-that is the point - each has its own progress, its own outcome and its own
+one file per request, still `multipart/form-data` driven by TanStack Query from
+the browser and never a Server Action. A selection of ten becomes ten requests,
+and that is the point - each has its own progress, its own outcome and its own
 error, so nine images are stored and the tenth says why it was refused:
 
 ```text
@@ -479,6 +525,23 @@ photo-7.tiff: "image/tiff" is not an accepted file type. Accepted: image/jpeg, �
 
 A single request carrying ten files would have to answer "partly", and there is
 no useful shape for that.
+
+They are not all sent at once, though. **Six upload at a time**, and the seventh
+starts the moment one of the six finishes:
+
+```text
+200 files chosen
+
+  6 requests in flight
+  194 queued
+
+one finishes → the next one starts
+```
+
+A field may hold up to two hundred files, and two hundred simultaneous requests
+are two hundred connections the browser queues anyway - racing one timeout, and
+none of them attributable to a file while they are stuck. Six keeps the pipe full
+and keeps every failure attached to the file that caused it.
 
 #### What the AdminCP renders
 
@@ -497,10 +560,10 @@ Maximum file size: 5 MB · 3 of 8 files
 │  [ Choose files ]                │
 └──────────────────────────────────┘
 ┌──────────────────────────────────┐
-│ [img] beach.webp        412 KB   │  ✕
-│ [img] harbour.webp      388 KB   │  ✕
-│ [▓▓▓] sunset.png                 │  ◌
-│       Uploading... · 1.2 MB      │
+│ ⠿ [img] beach.webp      412 KB ✕ │
+│ ⠿ [▓▓▓] sunset.png               │
+│         Uploading... · 1.2 MB  ◌ │
+│ ⠿ [img] harbour.webp    388 KB ✕ │
 └──────────────────────────────────┘
 ```
 
@@ -508,18 +571,28 @@ The picker leads because that is the order somebody uses it in: an empty field
 has nothing above the control to scroll past, and a full one keeps the button
 where it was instead of pushing it down the page with every file added.
 
-Each in-flight file gets its **own card**, at the end of the list - which is
-where it will land, since an upload appends - with a skeleton for the thumbnail
-that does not exist yet and the real name and size, which the browser has to
-hand. So a selection of ten says which ones are left rather than "something is
-uploading", and nothing shifts as they arrive: each skeleton is replaced in place
-by the card it was standing in for.
+Each in-flight file gets its **own card**, in the place it is going to land - not
+at the bottom of the list - with a skeleton for the thumbnail that does not exist
+yet and the real name and size, which the browser has to hand. So a selection of
+ten says which ones are left rather than "something is uploading", and nothing
+shifts as they arrive: each skeleton is replaced, in its own row, by the card it
+was standing in for. A card that is still uploading has no `core_files.id` and is
+not in the form value, so it cannot be dragged and cannot be saved.
+
+The handle (`⠿`) appears on an `ordered` field holding two or more files. It is
+a real button: <kbd>Tab</kbd> reaches it, <kbd>Space</kbd> picks the row up, the
+arrow keys move it, <kbd>Space</kbd> drops it and <kbd>Esc</kbd> puts it back -
+and every one of those is announced by name and position. Dragging is confined to
+the handle on purpose: a card that is one big grab target has no keyboard
+affordance, and its Remove button stops being clickable.
 
 The drop zone stays live while they upload, so an eleventh file can be queued
-without waiting. Choosing again **appends** rather than replaces, and the ceiling
-is enforced at pick time - the ninth file of an eight-file field is refused
-before its bandwidth is spent rather than by a save that fails afterwards. Remove
-is disabled at `min`.
+without waiting. Choosing again **appends** rather than replaces - behind
+anything still uploading, not in the middle of it - and the ceiling is enforced
+at pick time, so the ninth file of an eight-file field is refused before its
+bandwidth is spent rather than by a save that fails afterwards. Remove is
+disabled at `min`, and removing from the middle leaves everything else exactly
+where it was.
 
 #### Reading and writing it
 
@@ -542,8 +615,9 @@ await service.relations.gallery.reorder(articleId, [3, 9, 7]);
 await service.relations.gallery.get(articleId); // [3, 9, 7]
 ```
 
-`reorder` is there for a caller that has an order in mind - the AdminCP does not
-use it. Every one of these re-checks each file against the field, and a write
+`reorder` is there for a caller that has an order in mind. The AdminCP does not
+use it: a drag rewrites the form value, and the ordinary save writes the whole
+list - and therefore every `position` - in one transaction. Every one of these re-checks each file against the field, and a write
 that computes the state already stored is a no-op: no `updatedAt`, no version
 bump, no revision, no event.
 

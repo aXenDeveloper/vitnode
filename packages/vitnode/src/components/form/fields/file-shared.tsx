@@ -348,17 +348,49 @@ export const FileDropzone = ({
   );
 };
 
+/**
+ * The slot at the head of a card, wrapped rather than rendered bare.
+ *
+ * A `<button>` as a *direct* child of `Attachment` turns the whole card into a
+ * hover target - the component styles itself that way for the cards that really
+ * are one big link - and only the handle is grabbable here.
+ *
+ * Omitted entirely rather than left empty when there is nothing to put in it:
+ * the card is a flex row with a gap, so an empty slot would indent every
+ * single-file card by one gap it does not have today. A card that needs the
+ * *space* without the control - one still uploading, in a list that has handles -
+ * passes a spacer and gets the slot.
+ */
+const FileCardLeading = ({ children }: { children?: React.ReactNode }) => (
+  <div
+    className="flex shrink-0 items-center self-center"
+    data-slot="attachment-leading"
+  >
+    {children}
+  </div>
+);
+
 /** One stored file as a card: thumbnail or icon, name, size, and its actions. */
 export const FileCard = ({
   children,
   file,
+  leading,
   state = "done",
 }: {
   children?: React.ReactNode;
   file: AutoFormFileValue;
+  /**
+   * Rendered before the thumbnail - the drag handle, on an ordered collection.
+   *
+   * A slot rather than a `draggable` flag: the card knows how to lay a control
+   * out at its head, and nothing about dragging. Whoever owns the order owns the
+   * handle.
+   */
+  leading?: React.ReactNode;
   state?: "done" | "error" | "idle" | "uploading";
 }) => (
   <Attachment className="w-full" state={state}>
+    {!!leading && <FileCardLeading>{leading}</FileCardLeading>}
     <AttachmentMedia variant={isImageFile(file) ? "image" : "icon"}>
       {isImageFile(file) ? (
         // Decorative: the file name is right beside it as real text, so an alt
@@ -401,9 +433,12 @@ export const FileCard = ({
  * tenth's remove button.
  */
 export const FileCardSkeleton = ({
+  leading,
   name,
   size,
 }: {
+  /** Held open, never filled: a card in flight has nothing to drag. */
+  leading?: React.ReactNode;
   name: string;
   size: number;
 }) => {
@@ -411,6 +446,7 @@ export const FileCardSkeleton = ({
 
   return (
     <Attachment className="w-full" state="uploading">
+      {!!leading && <FileCardLeading>{leading}</FileCardLeading>}
       <AttachmentMedia variant="image">
         <Skeleton className="size-full rounded-none" />
       </AttachmentMedia>

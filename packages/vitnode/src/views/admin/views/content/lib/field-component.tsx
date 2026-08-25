@@ -167,6 +167,7 @@ export const ContentField = ({
             maxItems={spec.maxItems ?? 0}
             minItems={spec.minItems}
             onUpload={upload}
+            ordered={spec.ordered !== false}
             {...props}
           />
         );

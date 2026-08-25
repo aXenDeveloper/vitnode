@@ -1,11 +1,9 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { XIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import React from "react";
 
-import { AttachmentAction } from "@/components/ui/attachment";
 import { FormControl, FormMessage } from "@/components/ui/form";
 import {
   fileAcceptAttribute,
@@ -15,19 +13,25 @@ import {
 import { formatBytes } from "@/lib/format-bytes";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
+import type { FileGalleryRow } from "./file-gallery";
 import type { AutoFormFileValue } from "./file-shared";
+import type { FileUploadQueue } from "./file-upload-queue";
 
 import { AutoFormDesc } from "../common/desc";
 import { AutoFormLabel } from "../common/label";
+import { FileGallery } from "./file-gallery";
+import { planFileGallery, removeFileId } from "./file-order";
 import {
-  FileCard,
-  FileCardSkeleton,
   FileConstraintsLine,
   FileDropzone,
   FileError,
   resolveFormFiles,
   useUploadFailureMessage,
 } from "./file-shared";
+import {
+  createFileUploadQueue,
+  EMPTY_FILE_UPLOAD_QUEUE_STATE,
+} from "./file-upload-queue";
 
 export interface AutoFormFilesProps extends ItemAutoFormComponentProps {
   /**
@@ -59,19 +63,16 @@ export interface AutoFormFilesProps extends ItemAutoFormComponentProps {
    * and the tenth says why it was refused.
    */
   onUpload: (file: File) => Promise<AutoFormFileValue>;
-}
-
-/**
- * One queued upload, so the list can show what is still in flight.
- *
- * The name and the size come off the local `File`, which means an in-flight card
- * shows both before the server has said anything - the skeleton is only for the
- * thumbnail, which genuinely does not exist yet.
- */
-interface PendingUpload {
-  key: number;
-  name: string;
-  size: number;
+  /**
+   * Whether the order is the author's to choose.
+   *
+   * `field.file({ multiple: true })` defaults it to `true`, which is why this
+   * does too: a gallery is read in the order it was built. Pass `false` for a
+   * field the API stores by ascending `core_files.id`, and the drag handles go
+   * away with it - a control that appears to set an order the save then
+   * normalises is worse than no control.
+   */
+  ordered?: boolean;
 }
 
 /**
@@ -82,28 +83,29 @@ interface PendingUpload {
  * JSON mutation sends, so a gallery of twelve photographs is twelve numbers in
  * the payload.
  *
- * Two decisions are worth stating, because both are about what a person can
- * recover from:
+ * Three decisions are worth stating, because all three are about what a person
+ * can recover from:
  *
- * - **Each file uploads on its own.** A selection of ten becomes ten concurrent
- *   requests, and one refusal does not discard the other nine. The failures are
- *   listed by file name rather than collapsed into "the upload failed", because
- *   "photo-7.tiff is not an accepted format" is the only version somebody can
- *   act on.
- * - **The list is append-only until the person removes something.** A second
- *   selection adds to what is there rather than replacing it, which is what
- *   "choose files" does everywhere else - and it is why the ceiling is enforced
- *   here, at pick time, instead of by a save that fails after the bandwidth is
- *   already spent.
- *
- * The stored order is the order files were **added**, and there are no reorder
- * controls: dragging an image to the front and dragging it back is not an edit
- * anybody wants to spend a version on. To rearrange, remove and re-add.
+ * - **Each file uploads on its own.** A selection of ten becomes ten requests,
+ *   at most `FILE_UPLOAD_CONCURRENCY` of them at a time, and one refusal
+ *   does not discard the other nine. The failures are listed by file name rather
+ *   than collapsed into "the upload failed", because "photo-7.tiff is not an
+ *   accepted format" is the only version somebody can act on.
+ * - **The order is the order they were picked**, not the order they arrived.
+ *   Uploads finish out of order - a thumbnail beats a photograph however they
+ *   were listed - so each one is queued with a slot that decides where it lands
+ *   whenever it lands. See {@link createFileUploadQueue}.
+ * - **The list is append-only until the person moves or removes something.** A
+ *   second selection adds to what is there rather than replacing it, which is
+ *   what "choose files" does everywhere else - and it is why the ceiling is
+ *   enforced here, at pick time, instead of by a save that fails after the
+ *   bandwidth is already spent.
  *
  * What it shows is derived from `field.value`, never held beside it: see
- * {@link resolveFormFiles}. That is what makes Remove-then-abandon behave - the
- * value goes back to the identifiers the record still holds and the cards come
- * back with it, because nothing was thrown away.
+ * {@link resolveFormFiles}. That is what makes Remove-then-abandon behave, and it
+ * is also what makes a drag a one-line change - the drop rewrites the value, and
+ * the gallery follows it, so a form reset puts the old order back without a
+ * reload.
  */
 export const AutoFormFiles = ({
   allowedExtensions,
@@ -117,6 +119,7 @@ export const AutoFormFiles = ({
   maxItems,
   minItems = 0,
   onUpload,
+  ordered = true,
   otherProps: { isOptional },
   // Only the language-aware inputs implement this - dropped here so it never
   // lands on the DOM element below. A file is never localized.
@@ -127,7 +130,7 @@ export const AutoFormFiles = ({
 }: AutoFormFilesProps) => {
   const t = useTranslations("core.global.file");
   const failureMessage = useUploadFailureMessage();
-  const [pending, setPending] = React.useState<PendingUpload[]>([]);
+  const [queued, setQueued] = React.useState(EMPTY_FILE_UPLOAD_QUEUE_STATE);
   const [rejections, setRejections] = React.useState<string[]>([]);
   /**
    * Everything this session has uploaded, kept for its descriptors alone.
@@ -138,9 +141,6 @@ export const AutoFormFiles = ({
    * a request to learn something we were told.
    */
   const [uploaded, setUploaded] = React.useState<AutoFormFileValue[]>([]);
-  // Monotonic, so a queued upload that finished and another that starts with the
-  // same name never share a React key.
-  const nextKeyRef = React.useRef(0);
 
   // One object, read by all three: the constraint line, the `accept` attribute
   // and the pre-flight check. It is the same shape the server validates against,
@@ -150,24 +150,25 @@ export const AutoFormFiles = ({
   const accept = fileAcceptAttribute(constraints);
 
   // The value decides what is shown and in what order; the descriptors are only
-  // the lookup behind it. So removing an entry is a change to the form and
-  // nothing else, and whatever restores the form restores the gallery.
+  // the lookup behind it. So removing an entry - or dragging one - is a change to
+  // the form and nothing else, and whatever restores the form restores the
+  // gallery.
   const resolved = resolveFormFiles(field.value, [
     ...(initialFiles ?? []),
     ...uploaded,
   ]);
+  const ids = resolved.map(entry => entry.id);
 
   /**
    * The identifiers as they stand, readable synchronously.
    *
    * A ref beside the derived value, because several uploads land independently
-   * and each has to append to what the *others* already added: reading the
+   * and each has to slot into what the *others* already added: reading the
    * render-time value from a closure would give the last one to settle a view of
    * the list from before the first one did, and it would win. Synced from the
    * form after every render, so an external reset is picked up too.
    */
   const idsRef = React.useRef<number[]>([]);
-  const ids = resolved.map(entry => entry.id);
   React.useEffect(() => {
     idsRef.current = ids;
   });
@@ -177,49 +178,78 @@ export const AutoFormFiles = ({
     field.onChange([...next]);
   };
 
+  // One mutation, one file, one outcome - however many are chosen. Still a
+  // `multipart/form-data` request per file and never a Server Action, and still
+  // no retry: an upload is not idempotent from the person's point of view, so a
+  // silent second attempt spends their bandwidth again and can leave two stored
+  // objects where they asked for one.
   const upload = useMutation({
-    mutationFn: async ({ file }: { file: File; key: number }) =>
-      await onUpload(file),
-    // No retry: an upload is not idempotent from the person's point of view -
-    // a silent second attempt spends their bandwidth again and can leave two
-    // stored objects where they asked for one.
+    mutationFn: async (file: File) => await onUpload(file),
     retry: false,
-    onSettled: (_data, _error, variables) => {
-      setPending(current =>
-        current.filter(entry => entry.key !== variables.key),
-      );
-    },
-    onSuccess: stored => {
+  });
+
+  const settle = ({
+    error,
+    file,
+    stored,
+  }: {
+    error?: unknown;
+    file: File;
+    stored?: AutoFormFileValue;
+  }) => {
+    if (stored) {
       // Remembered whether or not it joins the list, because the descriptor is
       // worth having either way - a duplicate pick is still a file this session
       // now knows how to describe.
       setUploaded(current => [...current, stored]);
 
-      // Already in the list - a file the person picked twice in two selections.
-      // The API would refuse the duplicate anyway; not adding it is the quieter
-      // and more honest answer.
-      if (idsRef.current.includes(stored.id)) return;
+      return;
+    }
 
-      commit([...idsRef.current, stored.id]);
-    },
-    onError: (error, variables) => {
-      const message = failureMessage({
-        attempted: variables.file,
-        error,
-        formats,
-        maxBytes,
-      });
-      if (message === null) return;
+    const message = failureMessage({
+      attempted: file,
+      error,
+      formats,
+      maxBytes,
+    });
+    if (message === null) return;
 
-      // Prefixed with the file name, because a selection of ten produces up to
-      // ten of these and an unattributed sentence names none of them.
-      setRejections(current => [
-        ...current,
-        t("errors.named", { message, name: variables.file.name }),
-      ]);
-    },
+    // Prefixed with the file name, because a selection of ten produces up to ten
+    // of these and an unattributed sentence names none of them.
+    setRejections(current => [
+      ...current,
+      t("errors.named", { message, name: file.name }),
+    ]);
+  };
+
+  /**
+   * The collaborators the queue calls, always the current ones.
+   *
+   * The queue is built once and outlives every render - it has to, or a second
+   * selection would start a second queue and the ceiling would mean nothing - so
+   * it reaches its callbacks through a ref rather than closing over the first
+   * render's copies of them.
+   */
+  const latestRef = React.useRef({ commit, settle, upload });
+  React.useEffect(() => {
+    latestRef.current = { commit, settle, upload };
   });
 
+  const queueRef = React.useRef<FileUploadQueue | null>(null);
+  queueRef.current ??= createFileUploadQueue({
+    ids: () => idsRef.current,
+    onChange: next => {
+      latestRef.current.commit(next);
+    },
+    onSettled: result => {
+      latestRef.current.settle(result);
+    },
+    onStateChange: setQueued,
+    upload: async file => await latestRef.current.upload.mutateAsync(file),
+  });
+  const queue = queueRef.current;
+
+  const pending = queued.pending;
   const remaining = maxItems - ids.length - pending.length;
 
   const pick = (chosen: File[]) => {
@@ -267,31 +297,51 @@ export const AutoFormFiles = ({
 
     if (refused.length > 0) setRejections(refused);
 
-    const queued = accepted.map(file => ({
-      file,
-      key: nextKeyRef.current++,
-    }));
-    if (queued.length === 0) return;
-
-    setPending(current => [
-      ...current,
-      ...queued.map(entry => ({
-        key: entry.key,
-        name: entry.file.name,
-        size: entry.file.size,
-      })),
-    ]);
-    // Concurrently, and one request each: the whole reason each file has its own
-    // outcome rather than the selection having one.
-    for (const entry of queued) upload.mutate(entry);
+    // In pick order, bounded, one request each: the whole reason each file has
+    // its own outcome rather than the selection having one.
+    queue.enqueue(accepted);
   };
 
   const remove = (id: number) => {
     setRejections([]);
-    // Only the value moves. The descriptor stays in the lookup, so an entry that
-    // comes back - the form abandoned, a save rolled back - comes back described.
-    commit(ids.filter(current => current !== id));
+    // Only the value moves, and everything it does not name stays exactly where
+    // it was. The descriptor stays in the lookup too, so an entry that comes back
+    // - the form abandoned, a save rolled back - comes back described.
+    commit(removeFileId(ids, id));
   };
+
+  /*
+    The rows to draw: the stored files, with each in-flight upload standing in
+    the place it is going to land rather than at the bottom. So the skeleton is
+    replaced by its card without the list rearranging itself under the cursor.
+  */
+  const descriptors = new Map(resolved.map(entry => [entry.id, entry.file]));
+  const pendingByOrder = new Map(pending.map(entry => [entry.order, entry]));
+  const rows = planFileGallery({
+    anchorId: queued.anchorId,
+    ids,
+    pending,
+    placed: queued.placed,
+  }).flatMap<FileGalleryRow>(token => {
+    if (token.kind === "file") {
+      return [
+        { file: descriptors.get(token.id) ?? null, id: token.id, kind: "file" },
+      ];
+    }
+
+    const entry = pendingByOrder.get(token.order);
+
+    return entry
+      ? [
+          {
+            kind: "pending" as const,
+            name: entry.name,
+            order: entry.order,
+            size: entry.size,
+          },
+        ]
+      : [];
+  });
 
   const state =
     pending.length > 0
@@ -339,49 +389,14 @@ export const AutoFormFiles = ({
             state={state}
           />
 
-          {resolved.length > 0 && (
-            <ul className="flex flex-col gap-2" data-slot="file-list">
-              {resolved.map(({ file, id }) => (
-                <li key={id}>
-                  {/*
-                    An entry with no descriptor still gets a card: "there is a
-                    file here and I cannot describe it" must not look like the
-                    gallery being one shorter than it is.
-                  */}
-                  <FileCard
-                    file={file ?? { id, name: t("stored"), size: 0, url: "" }}
-                  >
-                    <AttachmentAction
-                      aria-label={t("remove")}
-                      // A field with `min: 2` cannot be taken to one by clicking:
-                      // the save would be refused, and refusing the click says so
-                      // before the bandwidth and the version are spent.
-                      disabled={ids.length <= minItems}
-                      onClick={() => remove(id)}
-                      type="button"
-                    >
-                      <XIcon />
-                    </AttachmentAction>
-                  </FileCard>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {/*
-            The in-flight files, one skeleton card each, in the order they were
-            queued - and **after** the settled ones, which is where they will
-            land, since an upload appends. So nothing shifts as they arrive: the
-            skeleton is replaced in place by the card it was standing in for.
-          */}
-          {pending.length > 0 && (
-            <ul className="flex flex-col gap-2" data-slot="file-pending">
-              {pending.map(entry => (
-                <li key={entry.key}>
-                  <FileCardSkeleton name={entry.name} size={entry.size} />
-                </li>
-              ))}
-            </ul>
+          {rows.length > 0 && (
+            <FileGallery
+              canRemove={ids.length > minItems}
+              onRemove={remove}
+              onReorder={commit}
+              ordered={ordered}
+              rows={rows}
+            />
           )}
 
           {rejections.map(message => (
