@@ -20,6 +20,7 @@ import type { WebSocketConfig } from "./websocket";
 
 import { validateSearchIndexers } from "../models/search";
 import { checkPluginId } from "./check-plugin-id";
+import { applyModuleTags } from "./openapi-tags";
 
 export interface BuildPluginApiReturn {
   contentModels?: AnyContentModel[];
@@ -28,6 +29,7 @@ export interface BuildPluginApiReturn {
   events?: Omit<EventListenerConfig, "pluginId">[];
   hono: OpenAPIHono;
   messages?: LocaleMessagesMap;
+  openApiTags?: string[];
   permissionStaff?: PermissionStaffConfig;
   pluginId: string;
   queueTasks?: Omit<QueueTaskConfig, "pluginId">[];
@@ -63,9 +65,12 @@ export function buildApiPlugin<P extends string>({
   const cronJobs: BuildPluginApiReturn["cronJobs"] = [];
   const events: BuildPluginApiReturn["events"] = [];
   const indexers: SearchIndexer[] = [...(searchIndexers ?? [])];
+  const openApiTags: string[] = [];
   const queueTasks: BuildPluginApiReturn["queueTasks"] = [];
   const webSockets: BuildPluginApiReturn["webSockets"] = [];
   modules.forEach(handler => {
+    openApiTags.push(...applyModuleTags(handler, pluginId));
+
     hono.route(`/${handler.name}`, handler.hono);
 
     contentModels.push(...collectContentModels(handler));
@@ -99,6 +104,7 @@ export function buildApiPlugin<P extends string>({
     pluginId,
     messages,
     hono,
+    openApiTags: [...new Set(openApiTags)],
     contentModels,
     contentTypes: registered.map(entry => entry.definition),
     cronJobs,

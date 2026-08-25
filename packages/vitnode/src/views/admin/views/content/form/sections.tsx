@@ -5,7 +5,6 @@ import React from "react";
 
 import type { ContentFormSectionSpec } from "@/content/admin/spec";
 
-import { AutoFormSubmitButton } from "@/components/form/auto-form";
 import { Button } from "@/components/ui/button";
 import { DialogClose, DialogFooter, useDialog } from "@/components/ui/dialog";
 
@@ -14,6 +13,7 @@ import {
   ContentFormField,
   ContentFormRemainingFields,
   ContentFormSection,
+  ContentFormSubmit,
 } from "./primitives";
 
 /**
@@ -26,27 +26,27 @@ import {
  */
 const ContentFormSectionsFooter = () => {
   const t = useTranslations("core.global");
-  const tContent = useTranslations("core.content");
   const { setIsDirty } = useDialog();
-  const { mode } = useContentForm();
-  const submit = (
-    <AutoFormSubmitButton>
-      {tContent(mode === "create" ? "create.submit" : "edit.submit")}
-    </AutoFormSubmitButton>
-  );
 
-  if (!setIsDirty) return submit;
+  if (!setIsDirty) {
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <ContentFormSubmit />
+      </div>
+    );
+  }
 
   return (
     <DialogFooter>
       <DialogClose render={<Button variant="ghost">{t("cancel")}</Button>} />
-      {submit}
+      <ContentFormSubmit />
     </DialogFooter>
   );
 };
 
 /**
- * The layout `admin.form.sections` generates: one titled card per section.
+ * The generated arrangement: one titled card per `admin.form.sections` entry,
+ * or the fields stacked in declaration order when none are declared.
  *
  * Built from the very primitives a plugin's own layout uses, so a declared
  * section and a hand-written one are the same card - the declarative form is a
@@ -61,7 +61,9 @@ export const ContentFormSections = ({
 }: {
   sections: readonly ContentFormSectionSpec[];
 }) => {
-  const placed = sections.flatMap(section => section.fields);
+  const { fieldNames } = useContentForm();
+  const placed = new Set(sections.flatMap(section => section.fields));
+  const hasRemaining = fieldNames.some(name => !placed.has(name));
 
   return (
     <div className="flex flex-col gap-4">
@@ -78,12 +80,17 @@ export const ContentFormSections = ({
       ))}
 
       {/*
-        Nothing, in the normal case: `admin.form.sections` *is* the field list,
-        checked at define time. It is here because the alternative failure is
-        silent - a field the spec carries but no section names would be dropped
-        from the payload rather than merely misplaced.
+        Every field, when there are no sections; nothing, when there are -
+        `admin.form.sections` *is* the field list, checked at define time. Still
+        rendered in that case because the alternative failure is silent: a field
+        the spec carries but no section names would be dropped from the payload
+        rather than merely misplaced.
       */}
-      <ContentFormRemainingFields exclude={placed} />
+      {hasRemaining ? (
+        <div className="flex flex-col gap-6">
+          <ContentFormRemainingFields exclude={[...placed]} />
+        </div>
+      ) : null}
 
       <ContentFormSectionsFooter />
     </div>
