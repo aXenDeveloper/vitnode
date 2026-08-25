@@ -14,6 +14,7 @@ import { fetcher } from "@/lib/fetcher";
 import { formatBytes } from "@/lib/format-bytes";
 
 import { MyFileRowActions } from "./actions/file-row-actions";
+import { MyFilesBulkActions } from "./actions/files-bulk-actions";
 
 export const MyFilesTableView = async ({
   searchParams,
@@ -41,6 +42,7 @@ export const MyFilesTableView = async ({
 
   return (
     <DataTable
+      bulkActions={<MyFilesBulkActions />}
       columns={[
         {
           accessorKey: "url",

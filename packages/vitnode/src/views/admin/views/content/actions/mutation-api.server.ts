@@ -971,7 +971,9 @@ const publicationAction = async (
     );
   }
 
-  return {};
+  const version = result.data?.row.version;
+
+  return { version: typeof version === "number" ? version : undefined };
 };
 
 export const publishContentAction = async (

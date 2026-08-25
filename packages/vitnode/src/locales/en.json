@@ -187,6 +187,11 @@
       "results_not_found": "No results found",
       "selected_count": "{count} selected",
       "clear_filters": "Clear filters",
+      "data_table": {
+        "select_all": "Select all rows",
+        "select_row": "Select row",
+        "clear_selection": "Clear selection"
+      },
       "date": "{date, date}",
       "date_medium": "{date, date, medium}",
       "date_short": "{date, date, short}",
@@ -296,7 +301,27 @@
         "title": "Delete file",
         "desc": "Are you sure you want to delete this file? This permanently removes it and cannot be undone.",
         "confirm": "Delete",
-        "success": "File deleted."
+        "success": "File deleted.",
+        "in_use": {
+          "content": "This file is still used by content, so deleting it would leave that content pointing at nothing. Remove it there first.",
+          "revisions": {
+            "desc": "Nothing displays this file any more, but {count, plural, one {# saved revision still keeps it} other {# saved revisions still keep it}}. Delete it and restoring those revisions will no longer bring the file back. This cannot be undone.",
+            "confirm": "Delete anyway"
+          }
+        }
+      },
+      "bulk_delete": {
+        "title": "Delete {count, plural, one {# file} other {# files}}",
+        "desc": "Are you sure you want to delete {count, plural, one {this file} other {these # files}}? This permanently removes {count, plural, one {it} other {them}} and cannot be undone.",
+        "confirm": "Delete",
+        "success": "{count, plural, one {# file deleted} other {# files deleted}}.",
+        "in_use": {
+          "content": "{count, plural, one {# file is} other {# files are}} still used by content, so {count, plural, one {it was} other {they were}} kept. Remove {count, plural, one {it} other {them}} there first.",
+          "revisions": {
+            "desc": "{count, plural, one {# file is} other {# files are}} no longer displayed anywhere, but saved revisions still keep {count, plural, one {it} other {them}}. Delete {count, plural, one {it} other {them}} and restoring those revisions will no longer bring {count, plural, one {the file} other {the files}} back. This cannot be undone.",
+            "confirm": "Delete anyway"
+          }
+        }
       },
       "noResults": {
         "title": "No files yet",
@@ -449,12 +474,16 @@
         "title": "Create {name}",
         "desc": "Add a new {name}.",
         "submit": "Create",
+        "save_draft": "Save as draft",
+        "publish": "Publish",
         "success": "{name} has been created."
       },
       "edit": {
         "title": "Edit {name}",
         "desc": "Change the details of this {name}.",
         "submit": "Save changes",
+        "publish": "Publish",
+        "unpublish": "Convert to draft",
         "success": "{name} has been updated.",
         "unchanged": "No changes to save."
       },
@@ -1155,7 +1184,27 @@
           "title": "Delete file",
           "desc": "Are you sure you want to delete this file? This permanently removes it from storage and cannot be undone.",
           "confirm": "Delete",
-          "success": "File deleted."
+          "success": "File deleted.",
+          "in_use": {
+            "content": "This file is still used by content, so deleting it would leave that content pointing at nothing. Remove it there first.",
+            "revisions": {
+              "desc": "Nothing displays this file any more, but {count, plural, one {# saved revision still keeps it} other {# saved revisions still keep it}}. Delete it and restoring those revisions will no longer bring the file back. This cannot be undone.",
+              "confirm": "Delete anyway"
+            }
+          }
+        },
+        "bulk_delete": {
+          "title": "Delete {count, plural, one {# file} other {# files}}",
+          "desc": "Are you sure you want to delete {count, plural, one {this file} other {these # files}}? This permanently removes {count, plural, one {it} other {them}} from storage and cannot be undone.",
+          "confirm": "Delete",
+          "success": "{count, plural, one {# file deleted} other {# files deleted}}.",
+          "in_use": {
+            "content": "{count, plural, one {# file is} other {# files are}} still used by content, so {count, plural, one {it was} other {they were}} kept. Remove {count, plural, one {it} other {them}} there first.",
+            "revisions": {
+              "desc": "{count, plural, one {# file is} other {# files are}} no longer displayed anywhere, but saved revisions still keep {count, plural, one {it} other {them}}. Delete {count, plural, one {it} other {them}} and restoring those revisions will no longer bring {count, plural, one {the file} other {the files}} back. This cannot be undone.",
+              "confirm": "Delete anyway"
+            }
+          }
         },
         "noResults": {
           "title": "No files uploaded",

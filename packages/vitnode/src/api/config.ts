@@ -59,12 +59,17 @@ export function VitNodeAPI({
   // `broadcast`/`sendToUser` reach clients on every instance. No-op without Redis.
   initRealtimePubSub(redisClient);
 
+  const plugins = [newBuildPluginApiCore, ...vitNodeApiConfig.plugins];
+
   app.doc("/swagger/doc", {
     openapi: "3.0.0",
     info: {
       version: CONFIG_PLUGIN.version,
       title: "VitNode API",
     },
+    tags: plugins.flatMap(
+      plugin => plugin.openApiTags?.map(name => ({ name })) ?? [],
+    ),
   });
   app.use(cors(corsOptions));
   app.use(csrf(csrfOptions));
@@ -88,7 +93,7 @@ export function VitNodeAPI({
       events: vitNodeApiConfig.events,
       search: vitNodeApiConfig.search,
       storage: vitNodeApiConfig.storage,
-      plugins: [newBuildPluginApiCore, ...vitNodeApiConfig.plugins],
+      plugins,
       cacheClient: redisClient,
     }),
   );
@@ -103,8 +108,6 @@ export function VitNodeAPI({
   if (vitNodeApiConfig.cron) {
     vitNodeApiConfig.cron.schedule();
   }
-
-  const plugins = [newBuildPluginApiCore, ...vitNodeApiConfig.plugins];
 
   plugins.map(root => {
     app.route(`/${root.pluginId}`, root.hono);

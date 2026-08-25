@@ -10,12 +10,14 @@
  */
 export {
   type ContentFormContextValue,
+  type ContentFormHeaderValue,
   useContentForm,
   useContentFormOptional,
 } from "./context";
 export {
   ContentFormActions,
   ContentFormField,
+  ContentFormHeader,
   ContentFormLayoutGrid,
   ContentFormMain,
   ContentFormRemainingFields,

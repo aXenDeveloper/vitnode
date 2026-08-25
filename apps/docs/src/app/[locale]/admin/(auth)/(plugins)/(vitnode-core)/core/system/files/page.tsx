@@ -34,7 +34,7 @@ export default async function Page(
       <div className="p-4">
         <HeaderContent desc={t("desc")} h1={t("title")} />
 
-        <React.Suspense fallback={<DataTableSkeleton columns={8} toolbar />}>
+        <React.Suspense fallback={<DataTableSkeleton columns={9} toolbar />}>
           <AdminPermissionRequired module="files" permission="can_view">
             <FilesTableView {...props} />
           </AdminPermissionRequired>

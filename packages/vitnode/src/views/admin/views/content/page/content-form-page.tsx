@@ -9,6 +9,7 @@ import type { ContentFormLayout } from "@/lib/plugin";
 import { usePathname, useRouter } from "@/lib/navigation";
 
 import type { TranslationRow } from "../actions/translation-api.server";
+import type { ContentFormHeaderValue } from "../form/context";
 
 import { ContentForm } from "../actions/content-form";
 
@@ -29,6 +30,12 @@ export interface ContentFormPageProps {
     string,
     (props: ItemAutoFormComponentProps) => React.ReactNode
   >;
+  /**
+   * The heading, its description and the back link. Rendered inside the form
+   * rather than above it, so a layout can seat the submit buttons beside the
+   * back link - see `ContentFormHeader`.
+   */
+  header: ContentFormHeaderValue;
   layout?: ContentFormLayout;
   publication?: boolean;
   singular: string;

@@ -16,6 +16,7 @@ import { fetcher } from "@/lib/fetcher";
 import { formatBytes } from "@/lib/format-bytes";
 
 import { FileRowActions } from "./actions/file-row-actions";
+import { FilesBulkActions } from "./actions/files-bulk-actions";
 
 export const FilesTableView = async ({
   searchParams,
@@ -45,6 +46,7 @@ export const FilesTableView = async ({
 
   return (
     <DataTable
+      bulkActions={canDelete ? <FilesBulkActions /> : undefined}
       columns={[
         {
           accessorKey: "url",

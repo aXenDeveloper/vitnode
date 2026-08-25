@@ -3,6 +3,8 @@ import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { describe, expect, it, vi } from "vitest";
 
+import { core_content_file_refs } from "@/database/content";
+
 import { STORAGE_FILE_IN_USE, StorageModel } from "./storage";
 
 const makeCtx = (
@@ -49,27 +51,55 @@ const makeCtx = (
 };
 
 /**
- * A context whose `DELETE FROM core_files` behaves like the real one.
+ * A context whose delete transaction behaves like the real one.
  *
- * `row` is what the delete returns - `undefined` for "no such file" - and
- * `referenceError` makes the statement fail the way Postgres does when a content
- * row or a revision pin still points at the file. The order the model does things
- * in is what these tests are about, so `deleteReturning` is the spy that proves
- * the database was asked *before* the blob was touched.
+ * `row` is what the `core_files` delete returns - `undefined` for "no such file"
+ * - and `referenceError` makes that statement fail the way Postgres does when a
+ * live content row still points at the file. `pins` is how many retained
+ * revisions hold it, which is the *other* way a delete is refused and the only
+ * one `force` can get past.
+ *
+ * `transaction` propagates a throw the way Drizzle does, and records it: the
+ * un-forced refusal relies on the rollback to put the pins back, so a test that
+ * checks the file survived has to be able to check that too. The order the model
+ * does things in is what these tests are about, so `deleteReturning` is the spy
+ * that proves the database was asked *before* the blob was touched.
  */
 const makeDeleteCtx = (
   row: undefined | { key: string },
-  overrides: { referenceError?: unknown; storage?: unknown } = {},
+  overrides: {
+    pins?: number;
+    referenceError?: unknown;
+    storage?: unknown;
+  } = {},
 ): {
   ctx: Context;
   del: ReturnType<typeof vi.fn>;
   deleteReturning: ReturnType<typeof vi.fn>;
+  pinsReturning: ReturnType<typeof vi.fn>;
+  rolledBack: () => boolean;
 } => {
   const del = vi.fn().mockResolvedValue(undefined);
   const deleteReturning =
     "referenceError" in overrides
       ? vi.fn().mockRejectedValue(overrides.referenceError)
       : vi.fn().mockResolvedValue(row ? [row] : []);
+  const pinsReturning = vi.fn().mockResolvedValue(
+    Array.from({ length: overrides.pins ?? 0 }, (_, index) => ({
+      id: index + 1,
+    })),
+  );
+
+  let rolledBack = false;
+  const tx = {
+    delete: vi.fn((table: unknown) => ({
+      where: vi.fn(() => ({
+        returning:
+          table === core_content_file_refs ? pinsReturning : deleteReturning,
+      })),
+    })),
+  };
+
   const store: Record<string, unknown> = {
     core: {
       storage:
@@ -84,9 +114,14 @@ const makeDeleteCtx = (
             },
     },
     db: {
-      delete: vi.fn(() => ({
-        where: vi.fn(() => ({ returning: deleteReturning })),
-      })),
+      transaction: async (body: (handle: typeof tx) => Promise<unknown>) => {
+        try {
+          return await body(tx);
+        } catch (error) {
+          rolledBack = true;
+          throw error;
+        }
+      },
     },
   };
 
@@ -94,6 +129,8 @@ const makeDeleteCtx = (
     ctx: { get: (k: string) => store[k] } as unknown as Context,
     del,
     deleteReturning,
+    pinsReturning,
+    rolledBack: () => rolledBack,
   };
 };
 
@@ -254,7 +291,7 @@ describe("StorageModel.deleteFile", () => {
   it("deletes when scoped to the owning user", async () => {
     const { ctx, del } = makeDeleteCtx({ key: "a/b.png" });
 
-    await new StorageModel(ctx).deleteFile(1, 7);
+    await new StorageModel(ctx).deleteFile(1, { ownerId: 7 });
 
     expect(del).toHaveBeenCalledWith("a/b.png");
   });
@@ -263,7 +300,9 @@ describe("StorageModel.deleteFile", () => {
     // The scoped delete matches nothing, mirroring a row owned by someone else.
     const { ctx, del } = makeDeleteCtx(undefined);
 
-    await expect(new StorageModel(ctx).deleteFile(1, 7)).rejects.toThrow();
+    await expect(
+      new StorageModel(ctx).deleteFile(1, { ownerId: 7 }),
+    ).rejects.toThrow();
     expect(del).not.toHaveBeenCalled();
   });
 
@@ -285,8 +324,83 @@ describe("StorageModel.deleteFile", () => {
     expect((error as HTTPException).status).toBe(409);
     await expect(
       (error as HTTPException).getResponse().json(),
-    ).resolves.toEqual({ code: STORAGE_FILE_IN_USE, id: 1 });
+    ).resolves.toEqual({
+      code: STORAGE_FILE_IN_USE,
+      content: true,
+      id: 1,
+      revisions: 0,
+    });
     // The whole point: whoever is using this file still has a working file.
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  it("refuses a file only retained revisions hold, and says how many", async () => {
+    // Nothing displays this file any more - the pins are all that is left, and
+    // they are exactly what `force` exists to release. Refusing is still the
+    // default: the number is what a client needs to say what forcing costs.
+    const { ctx, del, rolledBack } = makeDeleteCtx(
+      { key: "a/b.png" },
+      { pins: 3 },
+    );
+
+    const error = await new StorageModel(ctx)
+      .deleteFile(1)
+      .catch((thrown: unknown) => thrown);
+
+    expect((error as HTTPException).status).toBe(409);
+    await expect(
+      (error as HTTPException).getResponse().json(),
+    ).resolves.toEqual({
+      code: STORAGE_FILE_IN_USE,
+      content: false,
+      id: 1,
+      revisions: 3,
+    });
+    // Rolled back, so the pins the refusal counted are still there.
+    expect(rolledBack()).toBe(true);
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  it("releases the revision pins and deletes the file when forced", async () => {
+    const { ctx, del, pinsReturning, rolledBack } = makeDeleteCtx(
+      { key: "a/b.png" },
+      { pins: 3 },
+    );
+
+    await new StorageModel(ctx).deleteFile(1, { force: true });
+
+    expect(pinsReturning).toHaveBeenCalledTimes(1);
+    expect(del).toHaveBeenCalledWith("a/b.png");
+    expect(rolledBack()).toBe(false);
+  });
+
+  it("refuses a live content reference even when forced", async () => {
+    // There is no version of "delete anyway" that leaves a published page
+    // unbroken, so `force` gets past history and nothing else.
+    const { ctx, del, rolledBack } = makeDeleteCtx(
+      { key: "a/b.png" },
+      {
+        pins: 2,
+        referenceError: Object.assign(new Error("still referenced"), {
+          code: "23503",
+        }),
+      },
+    );
+
+    const error = await new StorageModel(ctx)
+      .deleteFile(1, { force: true })
+      .catch((thrown: unknown) => thrown);
+
+    expect((error as HTTPException).status).toBe(409);
+    await expect(
+      (error as HTTPException).getResponse().json(),
+    ).resolves.toEqual({
+      code: STORAGE_FILE_IN_USE,
+      content: true,
+      id: 1,
+      revisions: 2,
+    });
+    expect(rolledBack()).toBe(true);
     expect(del).not.toHaveBeenCalled();
   });
 
