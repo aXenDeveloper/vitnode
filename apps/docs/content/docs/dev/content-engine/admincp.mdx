@@ -261,41 +261,68 @@ Any text the layout adds itself is yours to translate, so reach for
 import {
   ContentFormActions,
   ContentFormField,
+  ContentFormHeader,
   ContentFormLayoutGrid,
   ContentFormMain,
   ContentFormSection,
   ContentFormSidebar,
   ContentFormStatus,
 } from "@vitnode/core/content/admin-form";
+import type { ContentFormLayoutProps } from "@vitnode/core/lib/plugin";
 import { useTranslations } from "next-intl"; // [!code ++]
 
-export const ArticleFormLayout = () => {
+export const ArticleFormLayout = ({ mode }: ContentFormLayoutProps) => {
   const t = useTranslations("@vitnode/example.admin.article.form"); // [!code ++]
 
   return (
-    <ContentFormLayoutGrid>
-      <ContentFormMain>
-        <ContentFormSection>
-          <ContentFormField name="title" />
-          <ContentFormField name="content" />
-        </ContentFormSection>
-      </ContentFormMain>
+    <>
+      <ContentFormHeader>
+        <ContentFormActions />
+      </ContentFormHeader>
 
-      <ContentFormSidebar>
-        <ContentFormSection title={t("publish")}> {/* [!code ++] */}
-          <ContentFormStatus />
-          <ContentFormActions className="justify-end" />
-        </ContentFormSection>
+      <ContentFormLayoutGrid>
+        <ContentFormMain>
+          <ContentFormSection>
+            <ContentFormField name="title" />
+            <ContentFormField name="content" />
+          </ContentFormSection>
+        </ContentFormMain>
 
-        <ContentFormSection title={t("settings")}> {/* [!code ++] */}
-          <ContentFormField name="status" />
-          <ContentFormField name="author" />
-        </ContentFormSection>
-      </ContentFormSidebar>
-    </ContentFormLayoutGrid>
+        <ContentFormSidebar>
+          {mode === "edit" ? (
+            <ContentFormSection title={t("publish")}> {/* [!code ++] */}
+              <ContentFormStatus />
+            </ContentFormSection>
+          ) : null}
+
+          <ContentFormSection title={t("settings")}> {/* [!code ++] */}
+            <ContentFormField name="status" />
+            <ContentFormField name="author" />
+          </ContentFormSection>
+        </ContentFormSidebar>
+      </ContentFormLayoutGrid>
+    </>
   );
 };
 ```
+
+`ContentFormHeader` is the page heading - the title, the description and the
+**Back to …** link - rendered inside the form so a layout can seat the submit row
+beside the back link. It renders nothing in a dialog, so one layout serves both
+surfaces. `ContentFormActions` holds the submit buttons: **Save changes** while
+editing, **Create** while creating, and for a content type with `publication`,
+**Save as draft** and **Publish** - the second only for a role holding
+`can_publish`, and it runs the very same publish action the list's button does,
+right after the create. While editing such a record, the same role also gets
+**Publish** / **Convert to draft** beside **Save changes**: it moves the lifecycle
+behind the usual confirmation and leaves whatever is typed in the form untouched.
+
+<Callout type="warn" title="A page-mode layout places the header itself">
+  Just as it places every field, a layout used on a create or edit *page* has to
+  render `ContentFormHeader` - without it the page has no heading, no way back and,
+  unless `ContentFormActions` sits somewhere else, no way to save. In development
+  the engine logs a warning when a layout forgets it.
+</Callout>
 
 Register it under `forms` in `src/config.tsx`:
 

@@ -474,12 +474,16 @@
         "title": "Create {name}",
         "desc": "Add a new {name}.",
         "submit": "Create",
+        "save_draft": "Save as draft",
+        "publish": "Publish",
         "success": "{name} has been created."
       },
       "edit": {
         "title": "Edit {name}",
         "desc": "Change the details of this {name}.",
         "submit": "Save changes",
+        "publish": "Publish",
+        "unpublish": "Convert to draft",
         "success": "{name} has been updated.",
         "unchanged": "No changes to save."
       },

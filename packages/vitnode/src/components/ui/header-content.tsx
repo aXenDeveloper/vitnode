@@ -1,4 +1,9 @@
+import { ArrowLeftIcon } from "lucide-react";
+
+import { Link } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
+
+import { Button } from "./button";
 
 interface HeaderContentH1Props extends HeaderContentProps {
   h1: React.ReactNode | string;
@@ -10,7 +15,18 @@ interface HeaderContentH2Props extends HeaderContentProps {
   h2: React.ReactNode | string;
 }
 
+export interface HeaderContentBack {
+  href: string;
+  label: React.ReactNode;
+}
+
 interface HeaderContentProps {
+  /**
+   * A "back to the list" link, rendered as the first item of the actions row -
+   * before `children` - so the way out always sits in the same place, whatever
+   * else a screen puts beside it.
+   */
+  back?: HeaderContentBack;
   children?: React.ReactNode;
   className?: string;
   desc?: React.ReactNode;
@@ -18,6 +34,7 @@ interface HeaderContentProps {
 }
 
 export const HeaderContent = ({
+  back,
   children,
   className,
   desc,
@@ -46,11 +63,21 @@ export const HeaderContent = ({
         {!!desc && <div className="text-muted-foreground">{desc}</div>}
       </div>
 
-      {!!children && (
+      {!!back || !!children ? (
         <div className="flex w-full flex-col flex-wrap items-center justify-center gap-2 sm:w-auto sm:flex-row [&>*]:w-full [&>*]:sm:w-auto">
+          {back ? (
+            <Button
+              nativeButton={false}
+              render={<Link href={back.href} />}
+              variant="outline"
+            >
+              <ArrowLeftIcon />
+              {back.label}
+            </Button>
+          ) : null}
           {children}
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

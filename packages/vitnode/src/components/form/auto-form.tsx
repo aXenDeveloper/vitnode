@@ -120,10 +120,20 @@ function AutoFormField({
 export const AutoFormSubmitButton = ({
   children,
   className,
+  intent,
   variant,
 }: {
   children?: React.ReactNode;
   className?: string;
+  /**
+   * Which of several submit buttons this one is.
+   *
+   * Handed to `onSubmit` as `options.intent` when this button is the one that
+   * submitted the form - so a layout can offer "Save as draft" and "Publish" on
+   * one form without a second `<form>`, a hidden field or a ref that goes stale
+   * when Enter submits through the default button instead.
+   */
+  intent?: string;
   variant?: React.ComponentProps<typeof Button>["variant"];
 }) => {
   const t = useTranslations("core.global");
@@ -136,11 +146,33 @@ export const AutoFormSubmitButton = ({
       disabled={!isValid || isSubmitting}
       isLoading={isSubmitting}
       type="submit"
+      value={intent}
       variant={variant}
     >
       {children ?? t("submit")}
     </Button>
   );
+};
+
+/**
+ * The `intent` of the submit button that fired this submission, if any.
+ *
+ * Read from the native `SubmitEvent.submitter`, which is the browser's own
+ * answer to "which button was it" - it is right for a click, for Enter in a
+ * field (the form's first submit button) and for a button that received focus
+ * and Space.
+ */
+const submitIntentOf = (
+  event: React.BaseSyntheticEvent | undefined,
+): string | undefined => {
+  const native = event?.nativeEvent;
+  if (!native || !("submitter" in native)) return undefined;
+
+  const { submitter } = native as SubmitEvent;
+
+  return submitter instanceof HTMLButtonElement && submitter.value !== ""
+    ? submitter.value
+    : undefined;
 };
 
 export type AutoFormOnSubmit<
@@ -151,6 +183,8 @@ export type AutoFormOnSubmit<
   form: UseFormReturn<z.input<T>, TContext, z.output<T>>,
   options: {
     captchaToken: string;
+    /** The `intent` of the `AutoFormSubmitButton` that was pressed, if any. */
+    intent?: string;
   },
 ) => Promise<void> | void;
 
@@ -208,11 +242,15 @@ export function AutoForm<
     mode,
   });
 
-  const onSubmit = async (values: z.infer<T>) => {
+  const onSubmit = async (
+    values: z.infer<T>,
+    event?: React.BaseSyntheticEvent,
+  ) => {
     const parsedValues = formSchema.safeParse(values);
     if (parsedValues.success) {
       await onSubmitProp?.(parsedValues.data, form, {
         captchaToken: captcha ? await getTokenCaptcha() : "",
+        intent: submitIntentOf(event),
       });
 
       if (captcha) {

@@ -170,6 +170,7 @@ const ContentListView = async ({
                 ? contentCreateHref(definition)
                 : undefined
             }
+            publication={definition.publication.enabled}
             singular={labels.singular}
             spec={formSpec}
           />
