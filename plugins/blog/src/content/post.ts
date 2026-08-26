@@ -27,8 +27,7 @@ export const blogPostContentType = defineContentType({
   localization: {
     enabled: true,
     defaultLocale: "en",
-    // A locale with no translation of its own is served the default language's,
-    // which is what the plugin's own `resolveLangValue` did by hand.
+    // A locale with no translation of its own is served the default language's.
     fallback: "default",
   },
 
@@ -109,9 +108,8 @@ export const blogPostContentType = defineContentType({
       minLength: 3,
       maxLength: 255,
     }),
-    // Derived from the localized title, per language - which is what
-    // `TitleField` did in the browser, except the engine also keeps it unique
-    // per language and remembers the addresses it has retired.
+    // Derived from the localized title, per language. Kept unique per language,
+    // and the addresses it has retired are remembered.
     friendlyUrl: field.slug({
       localized: true,
       maxLength: 255,

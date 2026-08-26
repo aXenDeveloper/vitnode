@@ -67,8 +67,8 @@ export const installDependencies = async ({
      * Spawn the installation process.
      */
     const child = spawn(packageManager, args, {
-      stdio: "pipe", // Change to 'pipe' to capture output
-      cwd, // Set the working directory
+      stdio: "pipe",
+      cwd,
       shell: true, // Use shell to properly handle Windows batch files
       env: {
         ...process.env,
@@ -80,13 +80,11 @@ export const installDependencies = async ({
       },
     });
 
-    // Capture stdout
     child.stdout?.on("data", (data: Buffer) => {
       const output = data.toString();
       stdout += output;
     });
 
-    // Capture stderr
     child.stderr?.on("data", (data: Buffer) => {
       const output = data.toString();
       stderr += output;
@@ -108,7 +106,6 @@ export const installDependencies = async ({
           console.log(stdout);
         }
 
-        // Provide helpful suggestions based on common errors
         printInstallErrorSuggestions(stderr, consoleColor);
 
         reject(
@@ -123,7 +120,6 @@ export const installDependencies = async ({
       resolve();
     });
 
-    // Handle process errors
     child.on("error", error => {
       console.error(
         consoleColor.red(`❌ Failed to start ${packageManager}:`),

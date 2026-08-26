@@ -12,16 +12,6 @@ import type { ContentDeliveryPanelData } from "../delivery-api.server";
 
 import { readContentDeliveryAction } from "../delivery-api.server";
 
-/**
- * The read-only delivery panel: where a record lives, and where it used to.
- *
- * Read-only on purpose, and it is the deliberate scope of Stage 8. A redirect is
- * somebody else's incoming link, so deleting one silently breaks traffic nobody in
- * this dialog can see - that is a destructive action, and a destructive action needs
- * a permission of its own, a confirmation that explains the consequence, and an
- * audit trail. Displaying the history is useful today; managing it is a product,
- * not a button.
- */
 export const DeliveryPanel = ({
   contentTypeId,
   id,
@@ -29,7 +19,6 @@ export const DeliveryPanel = ({
 }: {
   contentTypeId: string;
   id: number;
-  /** The language whose URLs to show, on a content type with localized slugs. */
   locale?: string;
 }) => {
   const t = useTranslations("core.content.delivery");
@@ -133,9 +122,6 @@ export const DeliveryPanel = ({
           </ul>
         )}
 
-        {/* Said out loud, because it is the one thing about this screen somebody
-            will assume is wrong: an unpublished record's old URLs stop redirecting
-            and start again when it comes back. */}
         {historical.length > 0 && canonicalPath === null ? (
           <p className="text-muted-foreground text-xs leading-relaxed text-pretty">
             {t("inactive_note")}

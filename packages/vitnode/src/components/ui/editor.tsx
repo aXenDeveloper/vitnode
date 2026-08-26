@@ -62,13 +62,6 @@ const subscribeNever = () => () => {};
 const getIsHydrated = () => true;
 const getIsHydratedOnServer = () => false;
 
-/**
- * `useEditor` tags every instance with an id derived from `Math.random()` as it
- * renders, and a prerender cannot evaluate that - Next refuses to bake an
- * unstable value into a route's static shell. `immediatelyRender: false` means
- * the editor has no instance on the server anyway, so hold the hook back until
- * the browser has hydrated and let the shell keep the loader.
- */
 export const Editor = (props: EditorProps) => {
   const isHydrated = React.useSyncExternalStore(
     subscribeNever,

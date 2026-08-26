@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 
 export interface ContentConflictState {
   currentVersion: number;
-  /** The record as it is now, once the editor asked for it. */
   latest?: Record<string, unknown>;
 }
 
@@ -43,13 +42,6 @@ const asText = (value: unknown): string => {
   }
 };
 
-/**
- * What another session changed while this form was open.
- *
- * Compared against the values the form *opened* with, not against what the
- * editor has typed since - the question being answered is "what did I not see",
- * and mixing in unsaved edits would answer a different one.
- */
 const RemoteChanges = ({
   latest,
   opened,
@@ -81,28 +73,6 @@ const RemoteChanges = ({
   );
 };
 
-/**
- * The lost-update dialog.
- *
- * A **modal** rather than a banner above the form, and that is the point: a save
- * that did not happen is not something to notice later. A notice inline with the
- * fields competes with the fields, and on a page-mode form long enough to scroll
- * it can be off screen entirely - so the one outcome the editor must not get is
- * exactly the one they got: pressing Save, seeing nothing change, and pressing it
- * again.
- *
- * Three rules survive the change, and they are why this is a dialog rather than a
- * toast:
- *
- * 1. **Nothing the editor typed is discarded.** The form stays mounted behind
- *    the overlay; this is a portal, and closing it returns them to every value
- *    they had.
- * 2. **Nothing is overwritten automatically.** Reloading shows what changed and
- *    arms the next save with the *new* version - saving again is then a
- *    deliberate second click, not a silent clobber.
- * 3. **No field merging.** Deciding which side of a conflicting paragraph wins
- *    is the editor's call, and guessing it is worse than asking.
- */
 export const ConflictNotice = ({
   conflict,
   name,
@@ -112,21 +82,7 @@ export const ConflictNotice = ({
   spec,
 }: {
   conflict: ContentConflictState;
-  /**
-   * The content type's singular label - "Article", not "record".
-   *
-   * Required rather than optional, and that is deliberate: `desc` is an ICU
-   * message with a `{name}` placeholder, and a missing argument is not a blank in
-   * next-intl - it is a formatting error, and the reader gets the literal string
-   * `core.content.conflict.desc` where the sentence should be.
-   */
   name: string;
-  /**
-   * Clears the conflict, so the next one can raise the dialog again.
-   *
-   * Closing is not "resolved": the editor still holds unsaved values, and
-   * whether to overwrite is a decision they make with the Save button.
-   */
   onDismiss: () => void;
   onReload: () => Promise<void>;
   opened: Record<string, unknown>;
@@ -146,9 +102,6 @@ export const ConflictNotice = ({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          {/* Amber rather than destructive: nothing was lost, and nothing is
-              about to be - the save simply did not happen. The same palette the
-              `warning` alert variant uses, since there is no token for it. */}
           <AlertDialogMedia className="bg-amber-500/10">
             <TriangleAlertIcon
               aria-hidden
@@ -168,11 +121,6 @@ export const ConflictNotice = ({
         ) : null}
 
         <AlertDialogFooter>
-          {/*
-            Not an `AlertDialogAction`: that one closes the dialog, and this
-            button's whole job is to replace the dialog's contents with what
-            changed. Only the acknowledgement below closes.
-          */}
           {!reloaded && (
             <Button
               disabled={loading}

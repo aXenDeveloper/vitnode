@@ -183,8 +183,6 @@ const FormEditRoles = ({
   const [secondaryIds, setSecondaryIds] =
     React.useState<number[]>(initialSecondaryIds);
 
-  // Cache every role we know about (initial + search results) so selected
-  // values can render their colored name without re-fetching.
   const [knownRoles, setKnownRoles] = React.useState<Map<number, Role>>(
     () =>
       new Map(
@@ -212,8 +210,6 @@ const FormEditRoles = ({
 
   const selectPrimary = (role: Role) => {
     setPrimaryId(role.id);
-    // A role can only sit in one slot, so drop it from the secondary set if it
-    // was there.
     const nextSecondary = secondaryIds.filter(id => id !== role.id);
     setSecondaryIds(nextSecondary);
     markDirty(role.id, nextSecondary);

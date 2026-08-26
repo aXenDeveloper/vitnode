@@ -49,8 +49,6 @@ export function ContentDataTable<T extends DataTableTMin>({
 }: React.ComponentProps<typeof DataTable<T>>) {
   const t = useTranslations("core.global");
   const hasToolbar = Boolean(search) || Boolean(filters?.length);
-  // The checkbox column is not the caller's to declare: it only exists when
-  // there is something to do with a selection, and it always goes first.
   const allColumns: ColumnDef<T>[] = bulkActions
     ? [
         {

@@ -21,7 +21,6 @@ export const DashboardEditActions = () => {
   );
 };
 
-/** Ends edit mode, one way or the other. Sits in the widget panel's footer. */
 export const DashboardPanelActions = () => {
   const t = useTranslations("core.global");
   const { isDirty, isPending, onCancel, onSave } = useDashboardBoard();

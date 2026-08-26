@@ -25,13 +25,6 @@ const ContentForm = dynamic(async () =>
   import("./content-form").then(mod => ({ default: mod.ContentForm })),
 );
 
-/**
- * The Create button.
- *
- * With `admin.create.mode: "page"` the content type is given `href`, and this is
- * an ordinary link - not a dialog that mounts and immediately redirects. Nothing
- * of the form is downloaded until the page it points at is actually requested.
- */
 export const CreateContentAction = ({
   href,
   singular,

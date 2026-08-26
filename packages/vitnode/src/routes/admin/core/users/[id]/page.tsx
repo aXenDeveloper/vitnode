@@ -47,12 +47,6 @@ export const generateMetadata = async ({
   };
 };
 
-/**
- * `generateMetadata` puts the user's name in the title, which needs a fetch that
- * cannot be cached - `fetcher` forwards the request's cookies and `use cache`
- * cannot enclose a runtime read. This marks the route as intentionally partly
- * dynamic so the metadata is allowed to be, while the body still prerenders.
- */
 const DynamicMarker = async () => {
   await connection();
 

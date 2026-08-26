@@ -10,15 +10,6 @@ import { useRouter } from "@/lib/navigation";
 
 import { clearSearchCollectionMutation } from "./mutation-api.server";
 
-/**
- * The only way to clear a collection with no rebuild indexer, and deliberately
- * not called "reindex": nothing *rebuilds* these documents afterwards.
- *
- * They may still come back. Registering an indexer is optional, so the owning
- * plugin may be writing them live through `search.index()` - which is why the
- * confirmation says the current indexed state is what goes, and not that the
- * documents are gone for good.
- */
 export const RemoveCollectionDocumentsAction = ({
   itemType,
   label,

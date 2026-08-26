@@ -23,8 +23,6 @@ function Checkbox({
         className="grid place-content-center text-current transition-none [&>svg]:size-3.5"
         data-slot="checkbox-indicator"
       >
-        {/* Base UI renders the indicator for `indeterminate` too, and a tick
-            there would claim every row is selected when only some are. */}
         {props.indeterminate ? <MinusIcon /> : <CheckIcon />}
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>

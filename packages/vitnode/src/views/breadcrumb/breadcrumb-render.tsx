@@ -19,10 +19,6 @@ export const BreadcrumbRender = ({
   scrollable,
 }: {
   crumbs: BreadcrumbCrumb[];
-  /**
-   * Keeps every crumb on a single line and scrolls them horizontally instead
-   * of wrapping - for fixed-height bars like the AdminCP header.
-   */
   scrollable?: boolean;
 }) => {
   if (crumbs.length === 0) return null;
@@ -58,13 +54,6 @@ export const BreadcrumbRender = ({
   );
 };
 
-/**
- * Placeholder trail for a breadcrumb that resolves its labels from the URL.
- *
- * Built from the same list and separators as {@link BreadcrumbRender} so the
- * crumbs land on the row they will occupy once they arrive, rather than moving
- * the header's contents when the boundary resolves.
- */
 export const BreadcrumbSkeleton = ({ crumbs = 2 }: { crumbs?: number }) => (
   <Breadcrumb>
     <BreadcrumbList className="flex-nowrap whitespace-nowrap">

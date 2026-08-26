@@ -49,7 +49,6 @@ export const createVitNode = async ({
     process.exit(1);
   }
 
-  // Create the folder
   await mkdir(root, { recursive: true });
   if (!isFolderEmpty(root, appName)) {
     process.exit(1);
@@ -209,7 +208,6 @@ export const createVitNode = async ({
       join(root, "docker-compose.yml"),
     );
 
-    // Update docker-compose.yml with app name
     const dockerComposePath = join(root, "docker-compose.yml");
     const dockerComposeContent = await readFile(dockerComposePath, "utf-8");
     const updatedContent = dockerComposeContent.replace(
@@ -278,13 +276,10 @@ export const createVitNode = async ({
     }
 
     spinner.text = "Preparing README...";
-    // Copy README.md
     await copyFile(join(templatePath, "README.md"), join(root, "README.md"));
-    // Update README.md with package manager
     let readmeContent = await readFile(join(root, "README.md"), "utf-8");
     readmeContent = readmeContent.replaceAll("pnpm", packageManager);
 
-    // Update README.md with start URLs
     let startUrlsText = "[http://localhost:3000](http://localhost:3000)";
     if (mode === "onlyApi") {
       startUrlsText = "[http://localhost:8000](http://localhost:8000)";

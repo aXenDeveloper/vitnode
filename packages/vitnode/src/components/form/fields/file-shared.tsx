@@ -79,7 +79,6 @@ export const isImageFile = (file: AutoFormFileValue): boolean =>
 
 /** One entry of what a file control should show: the id, and what is known of it. */
 export interface ResolvedFormFile {
-  /** The descriptor, or `null` when only the identifier is known. */
   file: AutoFormFileValue | null;
   id: number;
 }
@@ -198,14 +197,6 @@ export const useUploadFailureMessage = (): ((args: {
   );
 };
 
-/**
- * The formats and the ceiling, always shown.
- *
- * Rendered above the control rather than as help text underneath it, and **not**
- * conditional on anything having gone wrong: "5 MB" is information somebody
- * needs *before* choosing a file, and a validation error that says it afterwards
- * is a worse version of the same sentence.
- */
 export const FileConstraintsLine = ({
   allowedExtensions,
   allowedMimeTypes,
@@ -214,7 +205,6 @@ export const FileConstraintsLine = ({
 }: {
   allowedExtensions?: readonly string[];
   allowedMimeTypes?: readonly string[];
-  /** `{ max, used }` for a collection; omitted for a single file. */
   count?: { max: number; used: number };
   maxBytes: number;
 }) => {
@@ -240,15 +230,6 @@ export const FileConstraintsLine = ({
   );
 };
 
-/**
- * The drop zone: a dashed target, a button, and the spinner while it works.
- *
- * `onPick` receives **every** file the person chose, so the multi-file caller
- * gets a whole selection from one dialog and the single-file caller takes the
- * first. The `accept` attribute is UX only - it filters a dialog, it checks
- * nothing, and a drag-and-drop bypasses it entirely - which is why both callers
- * run the real rules on what comes back.
- */
 export const FileDropzone = ({
   accept,
   disabled,
@@ -309,7 +290,6 @@ export const FileDropzone = ({
         multiple={multiple}
         onChange={event => {
           pick(event.target.files);
-          // Cleared so choosing the same file twice still fires `change`.
           event.target.value = "";
         }}
         ref={inputRef}
@@ -348,19 +328,6 @@ export const FileDropzone = ({
   );
 };
 
-/**
- * The slot at the head of a card, wrapped rather than rendered bare.
- *
- * A `<button>` as a *direct* child of `Attachment` turns the whole card into a
- * hover target - the component styles itself that way for the cards that really
- * are one big link - and only the handle is grabbable here.
- *
- * Omitted entirely rather than left empty when there is nothing to put in it:
- * the card is a flex row with a gap, so an empty slot would indent every
- * single-file card by one gap it does not have today. A card that needs the
- * *space* without the control - one still uploading, in a list that has handles -
- * passes a spacer and gets the slot.
- */
 const FileCardLeading = ({ children }: { children?: React.ReactNode }) => (
   <div
     className="flex shrink-0 items-center self-center"
@@ -370,7 +337,6 @@ const FileCardLeading = ({ children }: { children?: React.ReactNode }) => (
   </div>
 );
 
-/** One stored file as a card: thumbnail or icon, name, size, and its actions. */
 export const FileCard = ({
   children,
   file,
@@ -379,34 +345,16 @@ export const FileCard = ({
 }: {
   children?: React.ReactNode;
   file: AutoFormFileValue;
-  /**
-   * Rendered before the thumbnail - the drag handle, on an ordered collection.
-   *
-   * A slot rather than a `draggable` flag: the card knows how to lay a control
-   * out at its head, and nothing about dragging. Whoever owns the order owns the
-   * handle.
-   */
   leading?: React.ReactNode;
   state?: "done" | "error" | "idle" | "uploading";
 }) => (
   <Attachment className="w-full" state={state}>
     {!!leading && <FileCardLeading>{leading}</FileCardLeading>}
     <AttachmentMedia variant={isImageFile(file) ? "image" : "icon"}>
-      {isImageFile(file) ? (
-        // Decorative: the file name is right beside it as real text, so an alt
-        // would repeat it to a screen reader for no gain.
-        <img alt="" src={file.url} />
-      ) : (
-        <FileIcon />
-      )}
+      {isImageFile(file) ? <img alt="" src={file.url} /> : <FileIcon />}
     </AttachmentMedia>
     <AttachmentContent>
       <AttachmentTitle>{file.name}</AttachmentTitle>
-      {/*
-        Omitted rather than shown as "0 B" when the size is not known - which is
-        the placeholder case, where the value names a file no descriptor was
-        loaded for. A made-up zero would read as an empty file.
-      */}
       {file.size > 0 && (
         <AttachmentDescription>{formatBytes(file.size)}</AttachmentDescription>
       )}
@@ -415,29 +363,11 @@ export const FileCard = ({
   </Attachment>
 );
 
-/**
- * One in-flight upload, as a card the same size as the one it becomes.
- *
- * A skeleton where the data genuinely is not known yet - the thumbnail, which
- * only exists once the bytes are stored and (with image processing on) re-encoded
- * - and **real text** where it is: the file name and the local `File.size` are
- * both to hand, and replacing them with grey bars would hide the one thing
- * somebody watching several uploads needs, which is *which* file this is.
- *
- * `Skeleton` rather than `AttachmentTitle`'s own `shimmer` class: that utility is
- * declared in a stylesheet no app imports, so it renders as nothing at all.
- *
- * Matching the settled card's height is the point of it being a card. A spinner
- * in a row of its own would push the list down as each upload landed, so the
- * eleventh file's card would arrive under the cursor that was aiming at the
- * tenth's remove button.
- */
 export const FileCardSkeleton = ({
   leading,
   name,
   size,
 }: {
-  /** Held open, never filled: a card in flight has nothing to drag. */
   leading?: React.ReactNode;
   name: string;
   size: number;
@@ -463,7 +393,6 @@ export const FileCardSkeleton = ({
   );
 };
 
-/** One refusal, as an alert beneath the control. */
 export const FileError = ({ children }: { children: React.ReactNode }) => (
   <p
     className="text-destructive flex items-start gap-1.5 text-sm"

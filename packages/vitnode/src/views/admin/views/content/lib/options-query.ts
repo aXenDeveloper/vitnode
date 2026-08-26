@@ -18,7 +18,7 @@ const NAMESPACE = "content-options";
  * People are not a content type, so a `user` field has no `targetContentTypeId`
  * - and giving it a token of its own rather than falling back to the field name
  * is what keeps a content mutation from ever matching one: no content type is
- * called this, so `invalidateContentOptions` cannot reach it.
+ * called this, so `useInvalidateContentOptions` cannot reach it.
  */
 const USERS = "core.users";
 

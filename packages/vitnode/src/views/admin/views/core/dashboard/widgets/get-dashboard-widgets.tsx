@@ -28,7 +28,6 @@ export const getDashboardWidgets = async ({
   const sources: {
     keyPrefix: string;
     pluginId: string;
-    /** What the panel calls this plugin when a widget names no category. */
     pluginTitle: string;
     widgets: AdminDashboardWidget[];
   }[] = [

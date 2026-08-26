@@ -24,7 +24,6 @@ import { SidebarAdmin } from "./sidebar/sidebar";
 import { UserBarAdmin } from "./user-bar/user-bar";
 
 export interface AdminLayoutProps {
-  /** `@breadcrumb` parallel-route slot rendered in the header. */
   breadcrumb?: React.ReactNode;
   children: React.ReactNode;
 }

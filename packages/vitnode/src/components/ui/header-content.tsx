@@ -21,11 +21,6 @@ export interface HeaderContentBack {
 }
 
 interface HeaderContentProps {
-  /**
-   * A "back to the list" link, rendered as the first item of the actions row -
-   * before `children` - so the way out always sits in the same place, whatever
-   * else a screen puts beside it.
-   */
   back?: HeaderContentBack;
   children?: React.ReactNode;
   className?: string;

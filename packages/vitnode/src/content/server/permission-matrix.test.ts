@@ -9,20 +9,6 @@ import { field } from "../fields";
 import { createContentModel } from "./model";
 import { buildContentRoutes } from "./routes";
 
-/**
- * Every generated route, against the permission it actually demands.
- *
- * The existing route suites check permissions one endpoint at a time, which is
- * fine until somebody adds an endpoint. This one **enumerates** the routes the
- * builder produced and drives each of them, so a new route cannot join the set
- * without appearing in the matrix below - and a route with no
- * `adminStaffPermission` at all cannot join it silently, because it would answer
- * something other than 403 with every permission denied.
- *
- * The permission check itself is stubbed: it reads roles out of the database,
- * and what is under test is which `(module, permission)` each route asks for.
- */
-
 /** Grants for the request currently in flight. `"module:permission"`. */
 let granted = new Set<string>();
 /** What each request was asked for, in order. */
@@ -195,6 +181,19 @@ beforeEach(() => {
   asked = [];
 });
 
+/**
+ * Every generated route, against the permission it actually demands.
+ *
+ * The existing route suites check permissions one endpoint at a time, which is
+ * fine until somebody adds an endpoint. This one **enumerates** the routes the
+ * builder produced and drives each of them, so a new route cannot join the set
+ * without appearing in the matrix below - and a route with no
+ * `adminStaffPermission` at all cannot join it silently, because it would answer
+ * something other than 403 with every permission denied.
+ *
+ * The permission check itself is stubbed: it reads roles out of the database,
+ * and what is under test is which `(module, permission)` each route asks for.
+ */
 describe("the generated permission matrix", () => {
   it("gates every route on a staff permission", async () => {
     // Nothing granted, so a route with a permission answers 403 and a route

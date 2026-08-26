@@ -61,8 +61,6 @@ export const GlobalErrorView = ({
                     <Button
                       isLoading={isRetrying}
                       onClick={() => {
-                        // `retry` runs its own transition; wrapping it keeps
-                        // the button in a pending state until it settles.
                         startRetry(() => {
                           retry();
                         });

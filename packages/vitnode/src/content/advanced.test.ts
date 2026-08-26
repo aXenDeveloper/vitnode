@@ -585,7 +585,7 @@ describe("repeatables", () => {
         },
         localization: { defaultLocale: "en", enabled: true },
       }),
-    ).toThrow(/Repeatable fields are shared in Stage 6/);
+    ).toThrow(/Repeatable fields are shared/);
   });
 
   it("rejects a localized leaf inside a repeatable", () => {
@@ -602,7 +602,7 @@ describe("repeatables", () => {
         },
         localization: { defaultLocale: "en", enabled: true },
       }),
-    ).toThrow(/repeatable fields are shared in Stage 6/);
+    ).toThrow(/repeatable fields are shared/);
   });
 
   it("rejects a leaf that shadows a generated child column", () => {

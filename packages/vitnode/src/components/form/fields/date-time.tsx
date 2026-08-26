@@ -19,13 +19,6 @@ const toInputValue = (value: unknown): string => {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
-/**
- * A date and time field backed by the platform's `datetime-local` input.
- *
- * The form value is an ISO 8601 string (or `null` for a nullable field), which
- * is exactly what the generated API accepts - Zod v4 cannot turn `z.date()`
- * into JSON Schema, and `AutoForm` runs `z.toJSONSchema` on every schema.
- */
 export const AutoFormDateTime = ({
   label,
   labelRight,
@@ -57,8 +50,6 @@ export const AutoFormDateTime = ({
           }}
           onChange={event => {
             const { value } = event.target;
-            // An emptied input means "no value" - `null` when the field allows
-            // it, otherwise an empty string so validation reports it.
             field.onChange(value === "" ? null : new Date(value).toISOString());
             props.onChange?.(event);
           }}

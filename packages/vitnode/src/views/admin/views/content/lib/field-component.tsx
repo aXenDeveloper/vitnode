@@ -34,48 +34,23 @@ import { ContentUserSetField } from "./user-set-field";
  * for a type drags `server-only` into the browser graph.
  */
 export interface ContentOption {
-  /** `user` fields only - a `relation` target has no avatar. */
   avatarColor?: string;
-  /** A swatch, when the target content type declares `admin.colorField`. */
   color?: string;
   label: string;
-  /** `user` fields only. */
   nameCode?: string;
   value: string;
 }
 
 export type ContentOptionsLoader = (args: {
   field: string;
-  /**
-   * Label exactly these identifiers instead of searching.
-   *
-   * What a to-many picker opens with. Its value is a list of ids and there is no
-   * label on the row to have joined a name from, so the names are asked for
-   * directly.
-   */
   ids?: number[];
   search: string;
 }) => Promise<ContentOption[]>;
 
 export interface ContentFieldProps extends ItemAutoFormComponentProps {
-  /**
-   * The resolved descriptors of the record's file fields, keyed by field name.
-   *
-   * Read off the row's `files` sibling, which is what lets an edit form open
-   * showing the cover image it already has rather than an empty drop zone - and,
-   * for a `multiple: true` field, the gallery in its stored order. Absent while
-   * creating, and absent for a content type with no file fields.
-   */
   files?: Record<string, ContentFileFieldValue>;
   loadOptions: ContentOptionsLoader;
   spec: ContentFormFieldSpec;
-  /**
-   * Sends one file to the content type's generated multipart route.
-   *
-   * Supplied by the form rather than built here, so this component stays a
-   * renderer: the upload is a `POST` of `multipart/form-data` driven by TanStack
-   * Query, and never a Server Action.
-   */
   uploadFile?: (args: {
     field: string;
     file: File;
@@ -110,10 +85,6 @@ export const ContentField = ({
 }: ContentFieldProps) => {
   const t = useTranslations("core.content.form");
   const multiLang = spec.localized === true;
-  // A collection cannot be `required` - the empty set is always storable - so a
-  // minimum of one is the *other* way a field says "you have to choose
-  // something", and a field that says it is not optional. Covers a to-many
-  // reference with `min: 1` and a repeatable with `min: 1` alike.
   const isOptional = !spec.required && (spec.minItems ?? 0) === 0;
   const props = {
     ...rest,
@@ -142,14 +113,6 @@ export const ContentField = ({
       );
     }
 
-    // The uploader. `maxBytes` is not optional on a `file` descriptor, so the
-    // fallback is unreachable - it exists because the *spec* type is shared by
-    // every kind and cannot say that.
-    //
-    // One component per arity rather than one with a branch: a gallery appends,
-    // reorders and reports one failure per file, and a cover image replaces. The
-    // per-file rules are the same object either way, which is what keeps the two
-    // controls honest about the same field.
     case "file": {
       const upload = async (file: File) =>
         uploadFile
@@ -186,15 +149,12 @@ export const ContentField = ({
       );
     }
 
-    // The three Stage 6 editors. Each one controls the nested value the API
-    // takes, so nothing is flattened on submit and nothing re-nested on load.
     case "group":
       return (
         <ContentGroupField loadOptions={loadOptions} spec={spec} {...props} />
       );
 
     case "number":
-      // A nullable number needs the "no value" toggle; a plain one does not.
       return spec.nullable ? (
         <AutoFormNullableNumber
           label={spec.label}
@@ -260,9 +220,6 @@ export const ContentField = ({
         />
       );
 
-    // Split from `relation`, which it used to share a combobox with: an author
-    // is a person, and a list of names in a dropdown is a worse way to find one
-    // than a list of faces and handles.
     case "user":
       return spec.multiple ? (
         <ContentUserSetField loadOptions={loadOptions} spec={spec} {...props} />
@@ -270,8 +227,6 @@ export const ContentField = ({
         <ContentUserField loadOptions={loadOptions} spec={spec} {...props} />
       );
 
-    // `text` and `slug`. A localized slug switches language with the rest, and
-    // the server still derives an empty one from *that* language's source field.
     default:
       return (
         <AutoFormInput label={spec.label} multiLang={multiLang} {...props} />

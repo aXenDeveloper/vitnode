@@ -15,10 +15,6 @@ const AdminStaffPermissionContext = React.createContext<
   Promise<StaffPermissionSet>
 >(Promise.resolve(NO_PERMISSIONS));
 
-/**
- * Makes the current **admin's** effective permissions available to client
- * components. Rendered once near the top of the admin layout.
- */
 export const AdminStaffPermissionProvider = ({
   value,
   children,
@@ -59,13 +55,6 @@ const AdminStaffPermissionGateResolved = ({
   return <>{allowed ? children : fallback}</>;
 };
 
-/**
- * Renders `children` only when the current admin holds the given permission,
- * otherwise `fallback` (defaults to nothing).
- *
- * `fallback` also covers the moment before the permission set has arrived, so
- * the gate is safe to use anywhere - including above a page's own boundary.
- */
 export const AdminStaffPermissionGate = ({
   children,
   fallback = null,

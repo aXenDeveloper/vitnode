@@ -70,10 +70,8 @@ export const useCaptcha = (
         language: locale,
         callback: (token: string) => {
           setToken(token);
-          // ✅ Set isReady to true ONLY when the token is received
           setIsReady(true);
         },
-        // Optional: Add more callbacks for a better user experience
         "expired-callback": () => {
           onReset();
         },
@@ -98,8 +96,6 @@ export const useCaptcha = (
 
       return;
     }
-    // Reset state on captcha type change
-
     setIsReady(false);
 
     setToken("");
@@ -128,7 +124,6 @@ export const useCaptcha = (
       if (document.body.contains(script)) {
         document.body.removeChild(script);
       }
-      // Clean up the captcha widget if it exists
       const widget = document.getElementById("vitnode_captcha");
       if (widget) {
         widget.innerHTML = "";

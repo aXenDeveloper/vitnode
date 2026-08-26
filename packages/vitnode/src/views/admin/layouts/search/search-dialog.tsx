@@ -115,9 +115,6 @@ export const SearchAdminDialog = ({
     queryKey: ["admin-search-users", trimmedUsersQuery],
     queryFn: async () => await searchUsersForAdminPalette(trimmedUsersQuery),
     enabled: canSearchUsers,
-    // Retained users must not outlive the threshold: dropping back under
-    // `MIN_USERS_QUERY_LENGTH` only disables the query, so an unconditional
-    // `keepPreviousData` would keep unmatched people listed and selectable.
     placeholderData: canSearchUsers ? keepPreviousData : undefined,
     staleTime: 30_000,
   });

@@ -133,7 +133,6 @@ export default function ResetPasswordEmailTemplate({
         </EmailCardFooter>
       </EmailCard>
 
-      {/* Fallback URL section for email clients that don't support buttons */}
       <Section className="mt-6">
         <Text className="text-muted-foreground text-sm">
           {t("core.auth.reset_password.email.help")}

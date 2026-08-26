@@ -82,7 +82,7 @@ describe("blog content types", () => {
       expect(relation.kind).toBe("relation");
       // Never `required` - a to-many reference cannot be, because the empty set
       // is what "no categories" looks like. "At least one" is the plugin's own
-      // rule, enforced on write; see `assertPostHasCategory`.
+      // rule, and `min: 1` on the field is where it is enforced.
       expect(relation.required).toBe(false);
       expect(relation).toMatchObject({ multiple: true, onDelete: "restrict" });
     });

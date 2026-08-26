@@ -39,24 +39,14 @@ import { saveDashboardLayoutMutation } from "./save-layout.server";
 import { WidgetCardContent } from "./widget-card";
 
 interface DashboardBoardContextProps {
-  /** Widgets the admin owns but has not placed - the panel's contents. */
   available: DashboardWidgetOption[];
   dispatch: React.Dispatch<DashboardLayoutAction>;
-  /** True once the admin has changed something worth saving. */
   isDirty: boolean;
   isEditing: boolean;
-  /** A save is in flight. */
   isPending: boolean;
-  /** Drops the admin's edits and leaves edit mode. */
   onCancel: () => void;
   onSave: () => void;
-  /** Widgets on the board, in order, each with its rendered content. */
   placed: DashboardWidgetView[];
-  /**
-   * Sends one card back to the server to be rendered again - what a settings
-   * dialog calls once its write lands. Only that card goes: reloading the whole
-   * board mid-edit would throw away whatever the admin has arranged.
-   */
   refreshWidget: (instanceId: string) => void;
   setIsEditing: (isEditing: boolean) => void;
 }
@@ -75,10 +65,6 @@ export const useDashboardBoard = () => {
   return context;
 };
 
-/**
- * Unwraps a card the server has re-rendered, so the boundary around it in
- * `WidgetCardContent` shows its skeleton until the new output arrives.
- */
 const RefreshedWidgetContent = ({
   content,
 }: {
@@ -86,13 +72,10 @@ const RefreshedWidgetContent = ({
 }): React.ReactNode => React.use(content);
 
 interface DashboardBoardProviderProps {
-  /** Every widget this admin may see, already rendered on the server. */
   catalog: DashboardWidgetCatalogEntry[];
   children: React.ReactNode;
-  /** Server-rendered output per placed copy, keyed by its instance id. */
   content: Record<string, React.ReactNode>;
   layout: DashboardLayoutItem[];
-  /** Stored ids this board speaks for - see `zodDashboardLayout`. */
   managedIds: string[];
 }
 
@@ -114,7 +97,6 @@ export const DashboardBoardProvider = ({
     Record<string, { content: Promise<React.ReactNode>; revision: number }>
   >({});
 
-  // The server owns the layout; re-sync whenever it hands us a new one.
   const [syncedLayout, setSyncedLayout] = React.useState(layout);
   if (syncedLayout !== layout) {
     setSyncedLayout(layout);
@@ -148,8 +130,6 @@ export const DashboardBoardProvider = ({
             content: refresh ? (
               <RefreshedWidgetContent content={refresh.content} />
             ) : (
-              // A copy dragged in during this edit has no output of its own yet
-              // - the catalog's stand-in carries it until the next save.
               (content[item.id] ?? widget.content)
             ),
           },
@@ -161,28 +141,23 @@ export const DashboardBoardProvider = ({
   const available = React.useMemo<DashboardWidgetOption[]>(() => {
     const used = new Set(items.map(item => widgetIdOf(item.id)));
 
-    return (
-      catalog
-        // A widget that may be placed repeatedly never leaves the panel.
-        .filter(widget => !!widget.allowMultiple || !used.has(widget.id))
-        .map(widget => ({
-          id: widget.id,
-          title: widget.title,
-          desc: widget.desc,
-          icon: widget.icon,
-          category: widget.category,
-          allowMultiple: widget.allowMultiple,
-          minSpan: widget.minSpan,
-          defaultSpan: widget.defaultSpan,
-          defaultRows: widget.defaultRows,
-        }))
-    );
+    return catalog
+      .filter(widget => !!widget.allowMultiple || !used.has(widget.id))
+      .map(widget => ({
+        id: widget.id,
+        title: widget.title,
+        desc: widget.desc,
+        icon: widget.icon,
+        category: widget.category,
+        allowMultiple: widget.allowMultiple,
+        minSpan: widget.minSpan,
+        defaultSpan: widget.defaultSpan,
+        defaultRows: widget.defaultRows,
+      }));
   }, [catalog, items]);
 
   const sensors = useSensors(
-    // A short threshold keeps clicks inside a widget working as clicks.
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    // Hold-to-drag on touch, so the page still scrolls normally.
     useSensor(TouchSensor, {
       activationConstraint: { delay: 200, tolerance: 8 },
     }),
@@ -191,8 +166,6 @@ export const DashboardBoardProvider = ({
     }),
   );
 
-  // What the drag overlay shows. A card being rearranged is a placed copy; a
-  // row dragged out of the panel is only a catalog entry so far.
   const activeView = placed.find(widget => widget.instanceId === activeId);
   const activeCatalogEntry =
     activeView ??
@@ -251,9 +224,6 @@ export const DashboardBoardProvider = ({
   );
 
   const onCancel = () => {
-    // Settings were written the moment their dialog saved them, so the cards
-    // that picked them up keep what they are showing - only the arrangement,
-    // which was never sent anywhere, goes back to what the server has.
     dispatch({ type: "reset", state: layout });
     setIsEditing(false);
   };

@@ -75,62 +75,22 @@ const missingCollections = (
     .filter(name => !Array.isArray(data[name]));
 
 export interface ContentFormProps {
-  /** Existing values when editing; absent when creating. */
   data?: Record<string, unknown> & { id: number };
-  /** Per-field component overrides declared in `buildPlugin`. */
   fieldOverrides?: Record<
     string,
     (props: ItemAutoFormComponentProps) => React.ReactNode
   >;
-  /**
-   * The page heading and its back link, rendered **inside** the form by
-   * `ContentFormHeader` - the generated form places it itself, a custom layout
-   * places it where it wants, and either can put the submit row beside the back
-   * link. Absent in a dialog, which has a title of its own.
-   */
   header?: ContentFormHeaderValue;
-  /** Custom layout declared in `buildPlugin`. Presentation only. */
   layout?: ContentFormLayout;
-  /**
-   * Where a page-mode create hands the new record over. Ignored in a dialog,
-   * which closes and refreshes the list instead.
-   */
   onCreated?: (id: number) => void;
-  /**
-   * Where the form is. A dialog closes itself and refreshes the list behind it;
-   * a page navigates instead, because there is nothing behind it to refresh.
-   */
   presentation?: "dialog" | "page";
-  /** Whether the content type has the draft/published lifecycle. */
   publication?: boolean;
-  /** The content type's singular label, used in the success toast. */
   singular: string;
   spec: ContentFormSpec;
-  /** Resolved title of the row, shown as the toast description. */
   title?: string;
-  /**
-   * Every translation the record already has, values included.
-   *
-   * Read once, in one query - so opening an article that exists in nine
-   * languages costs one request rather than nine. Supplied by a page-mode form,
-   * whose server component already did the read; a dialog loads it itself, since
-   * there is no server render between the click and the form.
-   *
-   * Empty while creating, and empty for a content type that is not localized.
-   */
   translations?: readonly TranslationRow[];
 }
 
-/**
- * Resolves the record's translations and its collections before the form is
- * built.
- *
- * The form's defaults are read from the schema exactly once, when `AutoForm`
- * mounts, so everything a field opens holding has to be in hand *before* that -
- * rendering an empty form and filling it in afterwards would fight
- * react-hook-form for the editor's first keystroke, and a `min: 1` field that
- * mounted on the empty set would leave Save disabled until it was re-picked.
- */
 export const ContentForm = ({
   data,
   spec,
@@ -177,9 +137,6 @@ export const ContentForm = ({
 
     let active = true;
 
-    // The detail read, which is the one that carries collections. Merged over
-    // the list row rather than replacing it, so anything the table resolved for
-    // the row - its labels - survives.
     void reloadContentRowAction(contentTypeId, data.id).then(
       ({ row: fresh }) => {
         if (active) {
@@ -205,25 +162,6 @@ export const ContentForm = ({
   );
 };
 
-/**
- * The generated create/edit form - one form, whatever a field is stored in.
- *
- * A localized field holds every language at once and renders its own small
- * language switcher, so the screen has no locale of its own: there is no
- * `Shared | English | Polish` strip, no locale in the URL, and no form-global
- * language state. Switching `Title` to English leaves the editor and the slug
- * exactly where they were, which is the point - a translator comparing one
- * heading against another should not have to move the whole page to do it.
- *
- * Every localized input starts in the language the person is already using
- * VitNode in, through `useMultiLangField`, which is the AdminCP's existing
- * behaviour and not a Content Engine invention.
- *
- * Saving is one request. Underneath it is still the Content Engine's
- * localization model - a base row, one translation row per language, each with
- * its own version - and the composite route writes all of them in one
- * transaction so a conflict in one language cannot leave another half-saved.
- */
 const ContentFormFields = ({
   data,
   fieldOverrides = {},
@@ -254,14 +192,6 @@ const ContentFormFields = ({
     null,
   );
 
-  /**
-   * The record's already-stored file descriptors, keyed by field name.
-   *
-   * Carried beside the row by the generated detail and list responses rather
-   * than folded into the column, so the form's *value* stays the identifier it
-   * will submit while the uploader still has a name, a size and a URL to
-   * preview. Empty while creating.
-   */
   const files = data?.files as
     Record<string, ContentFileFieldValue> | undefined;
 
@@ -271,28 +201,6 @@ const ContentFormFields = ({
   );
   const localized = localizedFields.length > 0;
 
-  /**
-   * The version every save is checked against.
-   *
-   * It starts as the version the form opened with and then has to **keep up**,
-   * which is the whole subtlety here: a page-mode form stays mounted across its
-   * own saves, so holding the opening version for the life of the component
-   * means the second save of a session guards on a version the record has
-   * already left behind - and gets a conflict banner naming an editor who does
-   * not exist.
-   *
-   * Two things move it, and each covers what the other misses:
-   *
-   * - the mutation result, immediately, which closes the window between a save
-   *   returning and fresh server data arriving;
-   * - a newer `data.version` from the server, which covers every *other* way the
-   *   version moves while this form is open - a publish, an unpublish, a restore
-   *   from the history dialog.
-   *
-   * Only ever forwards. A stale row - a dialog opened from a list rendered
-   * before the last write - must not drag the precondition backwards, and a
-   * conflict that has been reloaded must not be un-resolved by one.
-   */
   const [expectedVersion, setExpectedVersion] = React.useState(() =>
     typeof data?.version === "number" ? data.version : undefined,
   );
@@ -303,19 +211,9 @@ const ContentFormFields = ({
     expectedVersion !== undefined &&
     serverVersion > expectedVersion
   ) {
-    // Derived from a prop during render on purpose: an effect would leave one
-    // render - and therefore one possible submit - guarding on the old version.
     setExpectedVersion(serverVersion);
   }
 
-  /**
-   * What every language held when the form opened.
-   *
-   * Kept so the save can send **only** what moved: a Polish-only edit must not
-   * bump the English translation's version, write an English revision or expire
-   * the English cache. And each locale's own `version` travels with it, so two
-   * translators editing two languages of the same record never contend.
-   */
   const [opened, setOpened] = React.useState(() => translations);
 
   const values = React.useMemo(
@@ -339,19 +237,9 @@ const ContentFormFields = ({
       currentVersion: typeof row.version === "number" ? row.version : 0,
       latest: row,
     });
-    // Saving again now overwrites what the editor has just been shown, which is
-    // a decision they make by pressing the button a second time.
     if (typeof row.version === "number") setExpectedVersion(row.version);
   };
 
-  /**
-   * The per-language halves of this submit, each carrying the version it was
-   * loaded at.
-   *
-   * A language is included only when something in it actually changed, and a
-   * language nobody typed into is never included at all - selecting one to read
-   * what is there must not create an empty translation.
-   */
   const translationPayload = (submitted: Record<string, unknown>) => {
     const byLocale = contentFormValuesToTranslations(spec, submitted);
     const entries: {
@@ -387,16 +275,6 @@ const ContentFormFields = ({
     return entries;
   };
 
-  /**
-   * `true` when a shared field actually moved, so a no-op sends nothing.
-   *
-   * A to-many field is compared **by its contents**: its value is an array, and
-   * the picker hands back a new one on every change - so reference equality
-   * would call an untouched form changed the moment anything else re-rendered,
-   * and would call a genuine reorder unchanged in neither direction reliably.
-   * The identifiers in order are exactly what the API stores, so they are
-   * exactly what "did this move?" should ask about.
-   */
   const sharedChanged = (payload: Record<string, unknown>): boolean => {
     if (!data) return true;
 
@@ -414,14 +292,6 @@ const ContentFormFields = ({
     });
   };
 
-  /**
-   * Publish or unpublish the record being edited, from inside the form.
-   *
-   * The same action the list's row button runs, so there is one write path for
-   * the lifecycle. Nothing typed in the form is sent or lost: the transition
-   * moves `status` and `publishedAt`, the version it produced becomes the next
-   * save's precondition, and the refresh brings the new status line in.
-   */
   const transition = async (action: "publish" | "unpublish") => {
     if (!data) return false;
 
@@ -457,9 +327,6 @@ const ContentFormFields = ({
     _form,
     { intent },
   ) => {
-    // Relation and user fields hold the whole combobox option; the API wants
-    // the identifier. Localized fields are split off here rather than in the
-    // form, which is why a layout never has to know which table a field is on.
     const payload = contentFormValuesToPayload(spec, submitted);
 
     const mutation = localized
@@ -486,17 +353,12 @@ const ContentFormFields = ({
         : await createContentAction(spec.contentTypeId, payload);
 
     if (mutation.error !== undefined) {
-      // A lost update is the one failure with somewhere to go: the form stays
-      // open with everything the editor typed, and the banner offers to show
-      // what changed underneath them.
       if (mutation.conflict?.code === "CONTENT_VERSION_CONFLICT") {
         setConflict({ currentVersion: mutation.conflict.currentVersion });
 
         return;
       }
 
-      // A translation conflict names the language it happened in, so the toast
-      // can say which one rather than "something went wrong".
       if (mutation.translationConflict) {
         toast.error(tErrors("title"), {
           description: t("translations.errors.version_conflict"),
@@ -505,8 +367,6 @@ const ContentFormFields = ({
         return;
       }
 
-      // A validation failure, a conflicting row and a server fault all need
-      // different words - and none of them may quote the database.
       const errorKey = contentErrorKey(mutation.status, mutation);
 
       toast.error(tErrors("title"), {
@@ -518,40 +378,21 @@ const ContentFormFields = ({
       return;
     }
 
-    // A save with nothing in it never reached the API, and saying "saved" for it
-    // is how a form that is quietly dropping an edit looks identical to one that
-    // is working. The editor is told what actually happened and left where they
-    // are, with everything they typed still in front of them.
     if (mutation.unchanged) {
       toast.info(t("edit.unchanged"));
 
       return;
     }
 
-    // The record just moved forward a version, and this form is still mounted -
-    // so the next save has to guard on the version this one produced. Set before
-    // the `push` below, because the fresh server row arrives asynchronously and a
-    // second submit in between would otherwise send the version we just spent.
     if (mutation.version !== undefined) setExpectedVersion(mutation.version);
 
-    // This record is somebody else's picker option. A new category has to appear
-    // in the article form, and a renamed one has to read as its new name -
-    // neither happens on its own, because the query client outlives the
-    // navigation between the two screens.
     invalidateOptions(spec.contentTypeId);
 
-    // On create there is no row yet, so the toast names what was typed - in
-    // the language the editor is working in.
     const toastTitle =
       contentTitleFromValues(spec, submitted, locale) ??
       title ??
       t("create.desc", { name: singular });
 
-    // "Publish" on the create form: the record now exists as a draft, and the
-    // very same action the list's publish button runs moves it - one write
-    // path for the lifecycle, whichever button asked for it. The row is created
-    // either way, so a refused publish leaves a draft and says so rather than
-    // pretending nothing happened.
     const published =
       !data &&
       intent === "publish" &&
@@ -587,26 +428,18 @@ const ContentFormFields = ({
     }
 
     if (presentation === "page") {
-      // A page has nothing behind it to refresh, so a create hands over to
-      // whoever knows where the record should be opened next, and an edit stays
-      // put with fresh server data.
       if (!data && mutation.id !== undefined) {
         onCreated?.(mutation.id);
 
         return;
       }
 
-      // Every language just moved forward a version, and the next save has to
-      // send the new ones. The page reload replaces `translations`, and this
-      // keeps the form honest until it arrives.
       setOpened(mutation.translations ?? opened);
       push(pathname);
 
       return;
     }
 
-    // Close first, then navigate: a refresh fired while the dialog is still
-    // animating out leaves its overlay stranded over the page.
     setOpen?.(false);
     push(pathname);
   };
@@ -626,9 +459,6 @@ const ContentFormFields = ({
       // eslint-disable-next-line @typescript-eslint/promise-function-async -- see above
       component: props => {
         const override = fieldOverrides[fieldSpec.name];
-        // The override gets the same language-aware flag the generated input
-        // would have, so a plugin that swaps in its own editor keeps the
-        // switcher without re-deriving where the value is stored.
         if (override) {
           return override({
             ...props,
@@ -648,11 +478,6 @@ const ContentFormFields = ({
               )
             }
             spec={fieldSpec}
-            // A plain client-side `fetch` of `multipart/form-data`, driven by
-            // TanStack Query inside `AutoFormFile`. Deliberately **not** a Server
-            // Action: a Server Action body is a serialised RSC payload, so an
-            // image would cross as a string, buffered whole, under a platform
-            // body limit that is not the field's `maxBytes`.
             uploadFile={async ({ field, file }) =>
               await uploadContentFile({ field, file, spec })
             }
@@ -664,10 +489,6 @@ const ContentFormFields = ({
   );
 
   const Layout = layout;
-  // A plugin's own layout wins: it was written against these exact fields, and
-  // `admin.form.sections` is the *generated* arrangement of them. Grouping is
-  // still one `AutoForm` either way - the layout decides placement and nothing
-  // else, so the submit path, the schema and the errors do not change with it.
   const sections = Layout ? [] : spec.sections;
 
   return (
@@ -683,12 +504,6 @@ const ContentFormFields = ({
         />
       ) : null}
 
-      {/*
-        Always through `layout`, even for the plainest dialog: it is the one
-        place the submit row can be "Save as draft" and "Publish" rather than a
-        single button, and the one place a page's heading can sit inside the
-        form so that row can be beside the back link.
-      */}
       <AutoForm
         fields={fields}
         formSchema={formSchema}

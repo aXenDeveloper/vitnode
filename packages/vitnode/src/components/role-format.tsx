@@ -14,9 +14,6 @@ export const RoleFormat = async ({
     name: { languageCode: string; name: string }[];
   };
 }) => {
-  // `getLocale()` resolves to the active locale (the config's `defaultLocale`
-  // when the request has none), so match it against the translations and fall
-  // back to whatever translation exists.
   const locale = await getLocale();
   const name =
     role.name.find(item => item.languageCode === locale)?.name ??

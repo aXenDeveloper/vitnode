@@ -36,7 +36,6 @@ export const DateFormat = ({
     return fullDate;
   }
 
-  // When date is < 7 days
   if (now.getTime() - dateToFormat.getTime() < 604800000) {
     return (
       <TooltipWithContent text={fullDate}>

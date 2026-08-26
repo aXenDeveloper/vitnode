@@ -17,7 +17,6 @@ import { RevisionRow } from "./revision-row";
 
 interface RevisionHistoryProps {
   contentTypeId: string;
-  /** The record's current version, for the restore precondition. */
   currentVersion: number;
   id: number;
   permissionModule: string;
@@ -43,7 +42,6 @@ const EMPTY: HistoryState = {
   loaded: false,
 };
 
-/** The same centred block for "still loading", "nothing here" and "it broke". */
 const HistoryNotice = ({ children }: { children: React.ReactNode }) => (
   <div className="flex flex-col items-center gap-3 py-10 text-center">
     {children}
@@ -65,9 +63,6 @@ export const RevisionHistory = ({
   const pathname = usePathname();
   const [state, setState] = React.useState<HistoryState>(EMPTY);
   const [loadingMore, setLoadingMore] = React.useState(false);
-  // The version the record holds *now*, which stops being the prop the moment
-  // a restore succeeds - the dialog stays open, and the next restore needs the
-  // new precondition or it conflicts with the one just performed.
   const [version, setVersion] = React.useState(currentVersion);
   const canRestore = useAdminStaffPermission({
     module: permissionModule,
@@ -95,7 +90,6 @@ export const RevisionHistory = ({
     };
   }, [contentTypeId, id]);
 
-  /** Appends the next page. The cursor is exclusive, so nothing repeats. */
   const loadMore = async () => {
     if (state.endCursor === null) return;
     setLoadingMore(true);
@@ -109,9 +103,6 @@ export const RevisionHistory = ({
     setState(previous => {
       if (result.error) return { ...previous, error: result.error };
 
-      // Belt and braces against a revision arriving between two page requests:
-      // the exclusive cursor already prevents a repeat, and this makes the list
-      // provably duplicate-free whatever the server sent.
       const seen = new Set(previous.edges.map(edge => edge.id));
 
       return {
@@ -128,7 +119,6 @@ export const RevisionHistory = ({
     setLoadingMore(false);
   };
 
-  /** Reloads the first page, so the restore's own revision shows up. */
   const reload = async (nextVersion?: number) => {
     if (nextVersion !== undefined) setVersion(nextVersion);
 
@@ -142,7 +132,6 @@ export const RevisionHistory = ({
       loaded: true,
     });
 
-    // The table behind the dialog is now wrong too.
     push(pathname);
   };
 
@@ -181,9 +170,6 @@ export const RevisionHistory = ({
             onRestored={nextVersion => {
               void reload(nextVersion);
             }}
-            // The list is newest first, so the previous version is the next
-            // entry - except at the end of a page that has more behind it,
-            // where the diff has nothing to compare against yet.
             previousId={state.edges[index + 1]?.id ?? null}
             revision={revision}
             singular={singular}

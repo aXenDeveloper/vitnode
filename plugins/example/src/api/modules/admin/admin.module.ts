@@ -25,8 +25,8 @@ export const adminModule = buildModule({
       // generated CRUD *and* translation routes exist and its staff permissions
       // are derived - but it gets no AdminCP screen yet, because a form that
       // could not edit `title` in any language would be a worse thing to ship
-      // than no form at all. Stage 5B adds the locale tabs and registers it in
-      // `config.tsx` alongside the others.
+      // than no form at all. Registering it in `config.tsx` alongside the
+      // others is what would give it one.
       contentTypes: [
         advancedArticleContent,
         articleContent,

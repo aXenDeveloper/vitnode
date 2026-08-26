@@ -6,10 +6,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-/**
- * Widths are fixed rather than randomised. `SidebarMenuSkeleton` picks its own
- * with `Math.random()`, which a prerendered fallback cannot do.
- */
 const ITEM_WIDTHS = ["w-24", "w-20", "w-28", "w-16", "w-22"];
 
 export const NavSidebarAdminSkeleton = () => (

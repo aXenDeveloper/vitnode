@@ -43,9 +43,6 @@ const MultiLangInput = ({
         </AutoFormLabel>
       )}
 
-      {/* `FormControl` on the input itself, not on the group: it is what hands
-          the field its id, and a label pointing at the wrapping div labels
-          nothing a screen reader can use. */}
       <InputGroup>
         <FormControl>
           <InputGroupInput

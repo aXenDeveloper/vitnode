@@ -36,12 +36,12 @@ export default defineConfig({
         "**/.next/**",
         "**/.turbo/**",
         "**/coverage/**",
-        "**/src/tests/**", // Exclude test setup files
-        "**/src/emails/**", // Exclude email templates
-        "**/config/**", // Exclude config files
-        "**/scripts/**", // Exclude scripts
-        "**/*.config.*", // Exclude config files (e.g., vitest.config.ts)
-        "**/*.d.ts", // Exclude type definition files
+        "**/src/tests/**",
+        "**/src/emails/**",
+        "**/config/**",
+        "**/scripts/**",
+        "**/*.config.*",
+        "**/*.d.ts",
       ],
     },
   },

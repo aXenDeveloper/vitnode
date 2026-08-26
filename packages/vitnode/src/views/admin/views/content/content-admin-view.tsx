@@ -93,7 +93,6 @@ export const getContentLabels = async (
 
       return t.has(key) ? t(key) : humanizeFieldName(name);
     },
-    /** A generated form section's heading, humanised from its name if untranslated. */
     labelSection: (name: string) => {
       const section = keys.section(name);
 
@@ -108,12 +107,6 @@ export const getContentLabels = async (
   };
 };
 
-/**
- * The generated list screen.
- *
- * Split out from `ContentAdminView` so the dispatcher below reads as the three
- * screens it serves rather than as one function with a mode flag in it.
- */
 const ContentListView = async ({
   entry,
   searchParams,
@@ -163,8 +156,6 @@ const ContentListView = async ({
                 ([name, override]) => [name, override.component],
               ),
             )}
-            // Page mode makes this a link. The dialog is not mounted at all,
-            // so none of the form's chunks are downloaded until the page is.
             href={
               definition.admin.create.mode === "page"
                 ? contentCreateHref(definition)

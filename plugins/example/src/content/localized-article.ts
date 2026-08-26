@@ -14,9 +14,8 @@ import { defineContentType, field } from "@vitnode/core/content";
  * From Stage 5C it is public as well: `publicApi` exposes the localized `title`,
  * `slug` and `body` alongside the shared `featured`, and a public read resolves one
  * language - explicitly, negotiated or the default - with `fallback: "default"`
- * serving English to a locale that has no translation of its own. Stage 5D adds
- * `search`, which indexes one document per published translation rather than one
- * per record.
+ * serving English to a locale that has no translation of its own. `search`
+ * indexes one document per published translation rather than one per record.
  */
 export const localizedArticleContentType = defineContentType({
   id: "example.localized-article",

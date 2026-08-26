@@ -11,7 +11,6 @@ import { isWriteable } from "../helpers/is-writeable.js";
 import { validateNpmName } from "../helpers/validate-pkg.js";
 
 export const validationProjectForPlugin = async (projectPath: string) => {
-  // Verify the project path is provided
   if (!projectPath) {
     console.log(
       "\nPlease specify the plugin directory:\n" +
@@ -28,7 +27,6 @@ export const validationProjectForPlugin = async (projectPath: string) => {
   const turboJsonPath = join(cwd, "turbo.json");
   const packageJsonPath = join(cwd, "package.json");
 
-  // Check if turbo.json exists
   if (!existsSync(turboJsonPath)) {
     console.error(
       `${color.red("Error:")} Could not find ${color.cyan("turbo.json")} in the current directory.`,
@@ -42,7 +40,6 @@ export const validationProjectForPlugin = async (projectPath: string) => {
     process.exit(1);
   }
 
-  // Check if package.json exists and has packageManager defined
   if (!existsSync(packageJsonPath)) {
     console.error(
       `${color.red("Error:")} Could not find ${color.cyan("package.json")} in the current directory.`,
@@ -86,7 +83,6 @@ export const validationProjectForPlugin = async (projectPath: string) => {
     process.exit(1);
   }
 
-  // Verify the project name is valid
   const projectName = basename(resolve(projectPath));
   const validation = validateNpmName({ name: projectName });
   if (!validation.valid) {
@@ -102,12 +98,10 @@ export const validationProjectForPlugin = async (projectPath: string) => {
     process.exit(1);
   }
 
-  // Create plugin path inside plugins folder
   const pluginsDir = join(cwd, "plugins");
   const pluginPath = join(pluginsDir, projectName);
   const pluginName = basename(pluginPath);
 
-  // Verify the plugin dir is empty or doesn't exist
   const folderExists = existsSync(pluginPath);
   if (folderExists && !isFolderEmpty(pluginPath, pluginName)) {
     console.error(
@@ -116,12 +110,10 @@ export const validationProjectForPlugin = async (projectPath: string) => {
     process.exit(1);
   }
 
-  // Check that plugins directory exists
   if (!existsSync(pluginsDir)) {
     await mkdir(pluginsDir, { recursive: true });
   }
 
-  // Verify the plugins dir is writeable
   if (!(await isWriteable(pluginsDir))) {
     console.error(
       `The plugins directory is not writable, please check folder permissions and try again.`,

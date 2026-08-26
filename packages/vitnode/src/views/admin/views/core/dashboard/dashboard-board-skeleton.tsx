@@ -8,11 +8,6 @@ import type { DashboardHeaderContent } from "./widgets/types";
 import { gridClasses, rowsClasses, spanClasses } from "./grid/span-classes";
 import { WidgetContentSkeleton } from "./grid/widget-skeleton";
 
-/**
- * Sized after the widgets core ships enabled, so the board that streams in
- * lands close to the placeholder on the common first load. An admin who has
- * arranged their own is the case this cannot predict.
- */
 const PLACEHOLDER_CARDS = [
   { id: "s-wide", rows: 2, span: 2 },
   { id: "s-short", rows: 1, span: 2 },

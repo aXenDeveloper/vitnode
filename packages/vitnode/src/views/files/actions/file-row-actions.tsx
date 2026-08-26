@@ -26,9 +26,6 @@ export const MyFileRowActions = ({
   const t = useTranslations("core.files");
   const tGlobal = useTranslations("core.global.errors");
   const [isDownloading, setIsDownloading] = React.useState(false);
-  // What the first refusal said, when it was one this dialog can offer to get
-  // past. Held here rather than acted on silently: forcing costs the revisions
-  // their copy of the file, so the person has to be told the number first.
   const [heldByRevisions, setHeldByRevisions] =
     React.useState<FileInUse | null>(null);
 
@@ -93,9 +90,6 @@ export const MyFileRowActions = ({
             : t("delete.desc")
         }
         onOpenChange={open => {
-          // A dialog that opens again starts from the plain confirmation: the
-          // file may have been freed in the meantime, and asking to force
-          // something that is no longer held is a lie about what is happening.
           if (!open) setHeldByRevisions(null);
         }}
         onSubmit={async ({ onClose }) => {
@@ -106,8 +100,6 @@ export const MyFileRowActions = ({
           if (result.error) {
             const { inUse } = result.error;
 
-            // Only history is holding it: keep the dialog open, say what
-            // forcing gives up, and let the same button do it.
             if (inUse && !inUse.content && inUse.revisions > 0) {
               setHeldByRevisions(inUse);
 

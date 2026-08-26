@@ -74,7 +74,6 @@ export interface ContentFormFieldSpec {
   /** Lower bound on a repeatable's rows. */
   minItems?: number;
   minLength?: number;
-  /** A reference that holds many targets - or many people - rather than one. */
   /**
    * Whether the field holds many values: a to-many reference, or a `file` field
    * with `multiple: true`.

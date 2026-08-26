@@ -16,14 +16,6 @@ const DeliveryPanel = dynamic(async () =>
   })),
 );
 
-/**
- * The delivery row action: canonical URL, publication state, historical URLs.
- *
- * Listed for `can_view`, and for nothing else. It reports what the slug mutations
- * already did, so the permission that allowed the mutation is the only one it
- * needs - a `can_manage_redirects` for a read-only screen would be a permission
- * every install has to configure for no decision it can make.
- */
 export const DeliveryContentPanel = ({
   contentTypeId,
   id,
@@ -33,7 +25,6 @@ export const DeliveryContentPanel = ({
 }: ContentPanelProps & {
   contentTypeId: string;
   id: number;
-  /** The language whose URLs to show, when the list is viewed in one. */
   locale?: string;
   singular: string;
 }) => {

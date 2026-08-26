@@ -51,26 +51,16 @@ interface DisplayColumnDef<T extends DataTableTMin> extends ColumnDefBase<T> {
 export type ColumnDef<T extends DataTableTMin> =
   AccessorColumnDef<T> | DisplayColumnDef<T>;
 
-/** Widths the placeholder cells cycle through, so a loading table does not read as one grey block. */
 const SKELETON_HEAD_WIDTHS = ["w-24", "w-16", "w-20", "w-14"];
 const SKELETON_CELL_WIDTHS = ["w-full", "w-3/4", "w-1/2", "w-5/6", "w-2/3"];
 
-/**
- * Placeholder for a `DataTable` that has not streamed in yet.
- *
- * Mirrors `ContentDataTable`'s markup - the same toolbar row, the same bordered
- * table with a `bg-card` head, the same pagination footer - so the real table
- * replaces it in place instead of shifting the page around it.
- */
 export const DataTableSkeleton = ({
   columns,
   rows = 6,
   toolbar = false,
 }: {
   columns: number;
-  /** Rows to draw. Defaults to a page that is neither empty nor full. */
   rows?: number;
-  /** Draw the search / filters row, for the tables that render one. */
   toolbar?: boolean;
 }) => {
   const headerIds = Array.from({ length: columns }, (_, i) => `s-head-${i}`);
@@ -104,8 +94,6 @@ export const DataTableSkeleton = ({
           </TableHeader>
           <TableBody>
             {rowIds.map((rid, i) => (
-              // `h-9` is a floor, not a cap: it holds the row at the height a
-              // row of text-sm cells settles on once the data arrives.
               <TableRow className="h-9" key={rid}>
                 {headerIds.map((hid, j) => (
                   <TableCell key={`${rid}-${hid}`}>
@@ -125,7 +113,6 @@ export const DataTableSkeleton = ({
         </Table>
       </div>
 
-      {/* The shape `PaginationDataTable` takes: page size, then prev / next. */}
       <div className="flex w-full flex-col-reverse items-center justify-end gap-4 overflow-auto p-1 sm:flex-row sm:gap-8">
         <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 lg:gap-8">
           <Skeleton className="h-8 w-[4.5rem]" />
@@ -144,14 +131,6 @@ export function DataTable<T extends DataTableTMin>(
   props: Omit<React.ComponentProps<typeof Table>, "columns"> &
     React.ComponentProps<typeof PaginationDataTable> &
     React.ComponentProps<typeof SearchDataTable> & {
-      /**
-       * Actions for the rows a person ticked, rendered in a bar that floats at
-       * the bottom centre of the viewport for as long as anything is selected.
-       *
-       * Passing this is what turns selection on: the table grows a leading
-       * checkbox column, and the nodes here read the ticked ids with
-       * `useDataTableSelection()`.
-       */
       bulkActions?: React.ReactNode;
       columns: ColumnDef<T>[];
       customNoResults?: {

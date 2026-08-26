@@ -560,15 +560,6 @@ export const createContentEditorialService = <
   };
 
   /**
-   * The conditional write every editorial mutation goes through.
-   *
-   * `WHERE id = $id AND version = $expected` is the whole locking mechanism:
-   * two editors racing produce one `UPDATE` that matches and one that does not,
-   * with no read-then-write window in between. The follow-up `SELECT` runs only
-   * when nothing matched, to tell a deleted record (404) from a moved one (409)
-   * - the same shape `transition` in the plain service already uses.
-   */
-  /**
    * Takes the source row's write lock.
    *
    * Only for a content type with collections: an ordinary editorial update is
@@ -593,6 +584,15 @@ export const createContentEditorialService = <
     return row !== undefined;
   };
 
+  /**
+   * The conditional write every editorial mutation goes through.
+   *
+   * `WHERE id = $id AND version = $expected` is the whole locking mechanism:
+   * two editors racing produce one `UPDATE` that matches and one that does not,
+   * with no read-then-write window in between. The follow-up `SELECT` runs only
+   * when nothing matched, to tell a deleted record (404) from a moved one (409)
+   * - the same shape `transition` in the plain service already uses.
+   */
   const guardedWrite = async (
     tx: ContentDatabase,
     id: number,
@@ -764,19 +764,6 @@ export const createContentEditorialService = <
     });
 
   /**
-   * Locks the source record, reads one collection and applies what `compute`
-   * makes of it - all inside the transaction that will write it.
-   *
-   * Two guarantees at once, and the order is what produces both:
-   *
-   * 1. `SELECT ... FOR UPDATE` before the read, so the next state is computed
-   *    from the committed collection rather than from one a concurrent writer has
-   *    since replaced;
-   * 2. the ordinary `update` afterwards, so the caller's `expectedVersion` still
-   *    decides the winner. A loser waits for the lock, then finds the version has
-   *    moved, and is told so - it never merges silently and never overwrites.
-   */
-  /**
    * Every editorial collection mutation needs an actor and an expected version.
    *
    * Checked rather than defaulted: a collection mutation is an edit of the record,
@@ -797,6 +784,19 @@ export const createContentEditorialService = <
     );
   };
 
+  /**
+   * Locks the source record, reads one collection and applies what `compute`
+   * makes of it - all inside the transaction that will write it.
+   *
+   * Two guarantees at once, and the order is what produces both:
+   *
+   * 1. `SELECT ... FOR UPDATE` before the read, so the next state is computed
+   *    from the committed collection rather than from one a concurrent writer has
+   *    since replaced;
+   * 2. the ordinary `update` afterwards, so the caller's `expectedVersion` still
+   *    decides the winner. A loser waits for the lock, then finds the version has
+   *    moved, and is told so - it never merges silently and never overwrites.
+   */
   const runCollection = async (
     itemId: number,
     field: string,

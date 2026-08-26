@@ -6,9 +6,7 @@ import { z } from "zod";
 
 export default function NullableNumberExample() {
   const formSchema = z.object({
-    // A concrete number by default -> the input is editable.
     max_members: z.number().int().min(1).nullable().default(10),
-    // `null` by default -> the checkbox is checked and the input disabled.
     auto_logout: z.number().int().min(1).nullable().default(null),
   });
 

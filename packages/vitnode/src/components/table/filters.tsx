@@ -25,22 +25,15 @@ import { Separator } from "../ui/separator";
 import { Spinner } from "../ui/spinner";
 
 export interface FilterOption {
-  // Plain text used for type-to-search in static mode, since cmdk can't search
-  // a `label` node.
   keywords?: string[];
   label: React.ReactNode;
   value: string;
 }
 
 export interface FilterDataTable {
-  // URL search param this filter controls. Multiple selections are stored as a
-  // comma-separated value, e.g. `roleId=1,3`.
   id: string;
   label: string;
-  // Async source: called (debounced) as the user types. The API is expected to
-  // return results already filtered and capped (e.g. 20 per request).
   onSearch?: (search: string) => Promise<FilterOption[]>;
-  // Static options, filtered on the client.
   options?: FilterOption[];
 }
 
@@ -110,9 +103,6 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
     applySelection([...next]);
   };
 
-  // In static mode every label is known up front, so selected values render as
-  // chips. In async mode the selected labels may not be loaded, so we show a
-  // count instead.
   const selectedStaticOptions = isAsync
     ? []
     : (filter.options ?? []).filter(option => selectedSet.has(option.value));

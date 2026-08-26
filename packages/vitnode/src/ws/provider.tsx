@@ -43,14 +43,6 @@ const shouldConnectWebSocket = (): boolean =>
   CONFIG.api.pathname !== CONFIG.web.pathname ||
   CONFIG.api.port !== CONFIG.web.port;
 
-/**
- * Opens a single, always-on WebSocket connection to `/api/ws` and multiplexes
- * it across every {@link useVitNodeWebSocket} subscriber by message id.
- *
- * The connection is shared across all tabs of the same origin (one leader tab
- * owns the socket, the rest relay through it), so messages are delivered to
- * every tab. See {@link createWebSocketManager}.
- */
 export const VitNodeWebSocketProvider = ({
   children,
 }: {
@@ -80,7 +72,6 @@ export const VitNodeWebSocketProvider = ({
       onReadyStateChange: setReadyState,
     });
     managerRef.current = manager;
-    // Flush anything sent before the manager was ready.
     pendingSendRef.current.splice(0).forEach(message => manager.send(message));
 
     return () => {

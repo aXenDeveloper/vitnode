@@ -35,13 +35,11 @@ const formSchema = z.object({
   scheduledFor: z.iso.datetime(),
 });
 
-/** One row in the list of what is booked and what already ran. */
 const ScheduleRow = ({
   now,
   onCancel,
   schedule,
 }: {
-  /** Passed in rather than read here: render must not call the clock. */
   now: number;
   onCancel: (scheduleId: number) => Promise<void>;
   schedule: ContentSchedule;
@@ -78,9 +76,6 @@ const ScheduleRow = ({
         </span>
       ) : null}
 
-      {/* A different thing from `lastError`, and it reads as one: the record
-          really did publish, and what is still being retried is the event, the
-          search write and the cache invalidation. */}
       {schedule.effectsError ? (
         <span className="w-full text-xs wrap-break-word text-amber-600 dark:text-amber-400">
           {t("effects_failed")}
@@ -116,12 +111,6 @@ const ScheduleRow = ({
   );
 };
 
-/**
- * Everything scheduled for one record, and the form that adds another.
- *
- * Lazy-loaded like the edit form and the history dialog, and for the same
- * reason: it is only ever in the tree while its own dialog is open.
- */
 export const SchedulePanel = ({
   contentTypeId,
   id,
@@ -139,7 +128,6 @@ export const SchedulePanel = ({
   const [state, setState] = React.useState<null | {
     edges: ContentSchedule[];
     hasCronAdapter: boolean;
-    /** When the list was fetched, so "overdue" is decided outside render. */
     loadedAt: number;
   }>(null);
 
@@ -178,9 +166,6 @@ export const SchedulePanel = ({
   const pending = state.edges.filter(entry => entry.status === "pending");
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
-    // The same pure rule the server enforces, run before the round trip so an
-    // impossible date is refused where the editor is looking. The server stays
-    // the authority; this is only faster.
     const timing = contentScheduleTimingError({
       action: values.action,
       now: new Date(),
@@ -208,8 +193,6 @@ export const SchedulePanel = ({
     );
 
     if (mutation.error !== undefined) {
-      // A refused schedule has its own words - "that time has passed" is
-      // actionable, "something went wrong" is not.
       const key = contentErrorKey(mutation.status);
       const description = mutation.rejection
         ? t(
@@ -285,8 +268,6 @@ export const SchedulePanel = ({
             component: props => (
               <AutoFormSelect
                 label={t("field.action")}
-                // The values come from the schema's enum; this only translates
-                // them for display.
                 labels={[
                   { label: t("actions.publish"), value: "publish" },
                   { label: t("actions.unpublish"), value: "unpublish" },

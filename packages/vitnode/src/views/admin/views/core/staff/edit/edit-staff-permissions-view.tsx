@@ -67,8 +67,6 @@ export const EditStaffPermissionsView = async ({
     entry.permissions.map(permission => staffPermissionKey(permission)),
   );
 
-  // Resolve every label on the server so the client form only deals with
-  // ready-to-render strings.
   const plugins = catalog
     .map(plugin => {
       const modules = Object.entries(plugin[type])
@@ -90,8 +88,6 @@ export const EditStaffPermissionsView = async ({
               key,
               checked: granted.has(key),
               label: tRoot.has(key) ? tRoot(key) : entry.permission,
-              // The keys of the permissions this one depends on - the form
-              // keeps it hidden until every one of them is enabled.
               dependsOn: entry.dependsOn.map(dependency =>
                 staffPermissionKey({
                   plugin: plugin.pluginId,

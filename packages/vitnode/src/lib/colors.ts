@@ -43,7 +43,6 @@ export const convertColor = {
       return undefined;
     }
 
-    // Check if any of the parsed values are NaN
     if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) {
       return undefined;
     }

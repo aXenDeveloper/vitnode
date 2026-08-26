@@ -57,14 +57,6 @@ const zodTranslations = z.object({
   edges: z.array(z.object({ locale: z.string() }).loose()),
 });
 
-/**
- * The generated **create page**.
- *
- * Reachable only with `can_view` *and* `can_create`, checked here rather than
- * inferred from whether a button was rendered - a URL typed into the address bar
- * has to answer the same way the button would have. The generated `POST` checks
- * again, which is the check that actually stops the write.
- */
 export const ContentCreatePageView = async ({
   entry,
 }: {
@@ -97,8 +89,6 @@ export const ContentCreatePageView = async ({
     <div className="p-4">
       <ContentFormPage
         backHref={backHref}
-        // A create hands over to the record's own edit page when there is one,
-        // so the author lands where its history and its languages are.
         createdHrefTemplate={
           definition.admin.edit.mode === "page"
             ? contentEditHrefTemplate(definition)
@@ -122,18 +112,6 @@ export const ContentCreatePageView = async ({
   );
 };
 
-/**
- * The generated **edit page**.
- *
- * Reachable with `can_edit`, localized or not: one form writes the shared fields
- * and every language of the record, and there is no separate permission for the
- * half of it that lives on the translation table.
- *
- * A record that does not exist is a 404, and so is one whose content type the
- * session may not view: the read goes through the generated API, which enforces
- * `can_view` itself, so a missing permission and a missing row are the same
- * answer from here.
- */
 export const ContentEditPageView = async ({
   entry,
   itemId,
@@ -147,8 +125,6 @@ export const ContentEditPageView = async ({
   const [t, tPage, locale, canView, canEdit] = await Promise.all([
     getTranslations("core.content.edit"),
     getTranslations("core.content.page"),
-    // The language this person reads VitNode in, which is the language the
-    // heading and every localized input open in.
     getLocale(),
     checkAdminPermissionApi({
       module: definition.permissionModule,
@@ -175,9 +151,6 @@ export const ContentEditPageView = async ({
 
   if (result.status !== 200 || !result.data) notFound();
 
-  // Every language of this record, in one request, before the form is rendered:
-  // its localized inputs each hold every language at once, and a form that had
-  // to fetch them after mounting would fight react-hook-form for the defaults.
   const translations = localized
     ? await contentApiFetch({
         definition,
@@ -199,8 +172,6 @@ export const ContentEditPageView = async ({
       values?: Record<string, unknown>;
     }[]
   ).find(row => row.locale.toLowerCase() === locale.toLowerCase())?.values;
-  // The heading reads in the language this person is already using, exactly as
-  // the list's rows do - a localized title has no single value to print.
   const rawTitle =
     titleField === null
       ? undefined

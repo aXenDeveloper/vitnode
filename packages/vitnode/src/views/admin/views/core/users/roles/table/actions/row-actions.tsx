@@ -43,13 +43,8 @@ export const RowActions = ({ data }: { data: RoleRowData }) => {
     permission: "can_delete_admin",
   });
 
-  // System roles (root/guest access and the default role for new sign-ups, plus
-  // anything flagged protected) are required by the platform and cannot be
-  // removed - only edited.
   const isSystem = data.protected || data.default || data.root || data.guest;
 
-  // A role that grants admin access needs the elevated permission on top of the
-  // base one - mirroring the backend guard in the update/delete routes.
   const showEdit = canEdit && (!data.grantsAdmin || canEditAdmin);
   const showDelete =
     canDelete && !isSystem && (!data.grantsAdmin || canDeleteAdmin);

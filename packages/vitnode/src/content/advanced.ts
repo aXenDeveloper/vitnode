@@ -131,7 +131,7 @@ const assertLeafFields = ({
       throw new ContentEngineError(
         kind === "group"
           ? `Leaf "${container}.${leaf}" is \`localized: true\`. Localization is a property of the whole group - put \`localized: true\` on "${container}" itself, so all of its leaves live on the same table with one revision history and one permission.`
-          : `Leaf "${container}.${leaf}" is \`localized: true\`, but repeatable fields are shared in Stage 6. A per-language list of different lengths has no defensible reorder or restore semantics; see the Advanced Modeling limitations page.`,
+          : `Leaf "${container}.${leaf}" is \`localized: true\`, but repeatable fields are shared. A per-language list of different lengths has no defensible reorder or restore semantics; see the Advanced Modeling limitations page.`,
         { contentTypeId: id },
       );
     }
@@ -209,7 +209,7 @@ const assertRepeatable = (
 ): void => {
   if (fieldValue.localized === true) {
     throw new ContentEngineError(
-      `Repeatable field "${name}" is \`localized: true\`. Repeatable fields are shared in Stage 6 - a per-language list of different lengths has no defensible reorder or restore semantics. See the Advanced Modeling limitations page.`,
+      `Repeatable field "${name}" is \`localized: true\`. Repeatable fields are shared - a per-language list of different lengths has no defensible reorder or restore semantics. See the Advanced Modeling limitations page.`,
       { contentTypeId: id },
     );
   }

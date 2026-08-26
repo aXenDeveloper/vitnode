@@ -244,7 +244,6 @@ export const initialDataForDatabase = async () => {
       },
     ]);
 
-    // Insert default permissions
     await dbClient.insert(core_moderators_permissions).values([
       {
         roleId: roles[2].id,
@@ -258,7 +257,6 @@ export const initialDataForDatabase = async () => {
       },
     ]);
 
-    // Insert default admin permissions
     await dbClient.insert(core_admin_permissions).values({
       roleId: roles[3].id,
       protected: true,

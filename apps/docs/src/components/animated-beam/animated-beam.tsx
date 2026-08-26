@@ -11,7 +11,7 @@ export const AnimatedBeam = ({
   fromRef,
   toRef,
   curvature = 0,
-  reverse = false, // Include the reverse prop
+  reverse = false,
   // eslint-disable-next-line react-hooks/purity, @eslint-react/purity
   duration = Math.random() * 3 + 4,
   delay = 0,
@@ -26,7 +26,7 @@ export const AnimatedBeam = ({
   endYOffset = 0,
 }: {
   className?: string;
-  containerRef: RefObject<HTMLElement | null>; // Container ref
+  containerRef: RefObject<HTMLElement | null>;
   curvature?: number;
   delay?: number;
   duration?: number;
@@ -47,7 +47,6 @@ export const AnimatedBeam = ({
   const [pathD, setPathD] = useState("");
   const [svgDimensions, setSvgDimensions] = useState({ width: 0, height: 0 });
 
-  // Calculate the gradient coordinates based on the reverse prop
   const gradientCoordinates = reverse
     ? {
         x1: ["90%", "-10%"],
@@ -90,25 +89,19 @@ export const AnimatedBeam = ({
       }
     };
 
-    // Initialize ResizeObserver
     const resizeObserver = new ResizeObserver(entries => {
-      // For all entries, recalculate the path
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for (const _entry of entries) {
         updatePath();
       }
     });
 
-    // Observe the container element
     if (containerRef.current) {
       resizeObserver.observe(containerRef.current);
     }
 
-    // Call the updatePath initially to set the initial path
-
     updatePath();
 
-    // Clean up the observer on component unmount
     return () => {
       resizeObserver.disconnect();
     };

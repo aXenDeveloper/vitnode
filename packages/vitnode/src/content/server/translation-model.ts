@@ -368,19 +368,11 @@ export const createContentTranslationModel = <
     });
 
   /**
-   * Splits a raw row into metadata and `values`.
-   *
-   * The nesting is not decoration: it keeps a localized field called `version` or
-   * `locale` from being confused with the metadata of the row that holds it, and
-   * it means the update request body (`{ expectedVersion, values }`) and the
-   * response have the same shape.
-   */
-  /**
    * The publication half of a row, or nothing.
    *
    * Read off the row rather than defaulted, so a content type without publication
    * has no `status` key at all - a `"draft"` invented here would make
-   * `isTranslationPublic` answer a question this content type never asked.
+   * `isContentRowPublic` answer a question this content type never asked.
    */
   const publicationOf = (row: Record<string, unknown>): object =>
     publication
@@ -404,6 +396,14 @@ export const createContentTranslationModel = <
       version: row.version as number,
     }) as ContentTranslationMeta<TDefinition>;
 
+  /**
+   * Splits a raw row into metadata and `values`.
+   *
+   * The nesting is not decoration: it keeps a localized field called `version` or
+   * `locale` from being confused with the metadata of the row that holds it, and
+   * it means the update request body (`{ expectedVersion, values }`) and the
+   * response have the same shape.
+   */
   const toRow = (
     row: Record<string, unknown>,
     locale: string,

@@ -14,10 +14,6 @@ export const ContentConfirmAction = ({
   textSubmit,
 }: {
   onSubmit: (props: { onClose: () => void }) => Promise<void> | void;
-  /**
-   * Defaults to `destructive`, which is right for the deletes this dialog was
-   * built for - and wrong for a confirmation that publishes something.
-   */
   submitVariant?: React.ComponentProps<typeof Button>["variant"];
   textSubmit?: string;
 }) => {
@@ -30,10 +26,6 @@ export const ContentConfirmAction = ({
   }, null);
 
   return (
-    // The dialog is portalled out of the DOM, but React still bubbles its
-    // submit event up the *component* tree - and a confirmation opened from
-    // inside another form would submit that one too. Stopping here leaves the
-    // action itself untouched: `stopPropagation` is not `preventDefault`.
     <form action={formAction} onSubmit={event => event.stopPropagation()}>
       <AlertDialogFooter>
         <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>

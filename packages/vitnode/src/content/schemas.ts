@@ -314,15 +314,12 @@ const applyPresence = (
 };
 
 /**
- * The set of target identifiers a to-many relation accepts.
+ * A set of references, with the field's own bounds on it.
  *
  * Positive integers, distinct, and bounded. Distinctness is enforced here rather
  * than deduplicated silently: `[2, 2, 5]` is a caller that thinks it is setting
  * three categories, and quietly storing two would be the kind of "helpful"
  * behaviour that hides a bug in the caller's own list handling.
- */
-/**
- * A set of references, with the field's own bounds on it.
  *
  * `min` is how a content type says "at least one" about something the *storage*
  * cannot say it about: a to-many reference is never `required`, because the
@@ -561,17 +558,6 @@ const publicRelationSchema = (): z.ZodObject<z.ZodRawShape> =>
   z.object({ id: z.number() });
 
 /**
- * The public response shape, built from the allowlist and nothing else.
- *
- * This is also what the public service's `SELECT` map is derived from, so a
- * field missing here is a field that never leaves Postgres - not one that is
- * fetched and then deleted.
- *
- * Takes **every** declared field, shared and localized alike: a public localized
- * response is one base row joined to one translation, so where a value is stored
- * is a fact about the query rather than about the response.
- */
-/**
  * Groups an allowlist's leaf paths by the container they belong to.
  *
  * `["title", "seo.title", "seo.description"]` becomes `{ seo: ["title",
@@ -627,6 +613,17 @@ const publicContainerSchema = (
   return applyNullable(z.object(shape), fieldValue);
 };
 
+/**
+ * The public response shape, built from the allowlist and nothing else.
+ *
+ * This is also what the public service's `SELECT` map is derived from, so a
+ * field missing here is a field that never leaves Postgres - not one that is
+ * fetched and then deleted.
+ *
+ * Takes **every** declared field, shared and localized alike: a public localized
+ * response is one base row joined to one translation, so where a value is stored
+ * is a fact about the query rather than about the response.
+ */
 const publicSelectShape = (
   fields: ContentFieldMap,
   publicApi: ResolvedContentPublicApiConfig,
@@ -689,12 +686,11 @@ const publicSelectShape = (
 });
 
 /**
+ * The translation schemas for one content type, or `null` when it has none.
+ *
  * Takes only the pieces it needs rather than a whole definition, so
  * `defineContentType` can call it before the definition object exists and
  * without re-widening its field map.
- */
-/**
- * The translation schemas for one content type, or `null` when it has none.
  *
  * Localized fields only, and never a metadata key: `itemId` and `languageId`
  * identify the row rather than describing it, and `version` is assigned by the
@@ -760,8 +756,8 @@ const buildTranslationSchemas = <TDefinition>({
       values: ContentLocalizedValues<TDefinition>;
     }>,
     createObject: create,
-    // The declared form fields, narrowed to the localized ones: a locale tab
-    // edits one language's values and nothing else.
+    // The declared form fields, narrowed to the localized ones: one language's
+    // values, validated on their own.
     form: z.object(
       inputShape(
         localizedFields,

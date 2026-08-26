@@ -14,10 +14,8 @@ interface AddPluginToWorkspaceArgs {
 }
 
 /**
- * Recursively find all package.json files in a directory
- * @param dir - The directory to search in
- * @param results - Array to accumulate results (used internally)
- * @returns Array of absolute paths to package.json files
+ * Recursively find all package.json files in a directory.
+ * `results` accumulates across the recursion; callers pass nothing.
  */
 const findPackageJsonFiles = async (
   dir: string,
@@ -29,7 +27,6 @@ const findPackageJsonFiles = async (
     for (const entry of entries) {
       const fullPath = join(dir, entry.name);
 
-      // Skip node_modules and dist folders
       if (entry.name === "node_modules" || entry.name === "dist") {
         continue;
       }
@@ -69,21 +66,18 @@ export const addPluginToWorkspace = async ({
   pluginPath,
   rootPath,
 }: AddPluginToWorkspaceArgs) => {
-  // Find all package.json files in the workspace
   const packageJsonFiles = await findPackageJsonFiles(rootPath);
 
-  // Get the parent directory of the plugin (e.g., "plugins", "packages", etc.)
   const pluginParentDir = dirname(pluginPath);
 
   for (const packageJsonPath of packageJsonFiles) {
-    // Skip if this is the plugin's own package.json
     if (packageJsonPath === join(pluginPath, "package.json")) {
       continue;
     }
 
     // Skip other packages in the same parent directory as the plugin
     // (e.g., if plugin is in "plugins/my-plugin", skip "plugins/other-plugin")
-    const packageDir = dirname(dirname(packageJsonPath)); // Get parent of package folder
+    const packageDir = dirname(dirname(packageJsonPath));
     if (packageDir === pluginParentDir) {
       continue;
     }
@@ -92,7 +86,6 @@ export const addPluginToWorkspace = async ({
       const content = await readFile(packageJsonPath, "utf-8");
       const pkg: PackageJSON = JSON.parse(content);
 
-      // Check if this package has @vitnode/core
       const hasVitnodeCore =
         pkg.dependencies?.["@vitnode/core"] ??
         pkg.devDependencies?.["@vitnode/core"];
@@ -101,7 +94,6 @@ export const addPluginToWorkspace = async ({
         continue;
       }
 
-      // Determine the workspace reference based on package manager
       let workspaceReference: string;
 
       switch (packageManager) {
@@ -121,12 +113,10 @@ export const addPluginToWorkspace = async ({
           workspaceReference = "workspace:*";
       }
 
-      // Add the plugin to dependencies
       pkg.dependencies ??= {};
 
       pkg.dependencies[pluginName] = workspaceReference;
 
-      // Sort dependencies alphabetically
       pkg.dependencies = Object.keys(pkg.dependencies)
         .sort()
         .reduce<Record<string, string>>((acc, key) => {

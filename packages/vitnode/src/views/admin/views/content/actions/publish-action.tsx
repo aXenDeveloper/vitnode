@@ -21,17 +21,6 @@ import {
   unpublishContentAction,
 } from "./mutation-api.server";
 
-/**
- * The publish/unpublish row action.
- *
- * One button that flips with the row's state, rather than two that are half
- * disabled: a draft can only be published and a published row can only be
- * unpublished, so showing both would be showing a dead one.
- *
- * Gated by `can_publish`, never by `can_edit`. That separation is the whole
- * point of the permission: a role can be trusted to write drafts without being
- * trusted to put them on the internet.
- */
 export const PublishContentAction = ({
   contentTypeId,
   id,
@@ -64,9 +53,6 @@ export const PublishContentAction = ({
 
   const published = status === "published";
   const t = published ? tUnpublish : tPublish;
-  // The bare verb on the button, the full sentence on the dialog it opens: the
-  // tooltip is answering "what is this icon", and the row it sits in already says
-  // which record. The confirmation still names the record, where it matters.
   const label = tActions(published ? "unpublish" : "publish");
   const Icon = published ? EyeOffIcon : SendIcon;
 
@@ -93,8 +79,6 @@ export const PublishContentAction = ({
                   : tErrors("internal_server_error"),
               });
 
-              // Left open on failure, so the reason is still on screen next to
-              // the thing that failed - the same behaviour as the delete dialog.
               return;
             }
 

@@ -59,10 +59,6 @@ async function DocsArticle({
   );
 }
 
-/**
- * Mirrors the article's own layout - heading, description, then body copy - so
- * the swap to real content doesn't shift the page.
- */
 const DocsArticleSkeleton = () => (
   <DocsPage tableOfContent={{ style: "clerk", single: false }} toc={[]}>
     <div className="space-y-2">
