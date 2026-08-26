@@ -4,6 +4,7 @@ import type { AnyContentModel } from "@/content/server/model";
 import type { AnyContentTypeDefinition } from "@/content/types";
 
 import type { SearchIndexer } from "../models/search";
+import type { AnyWorkflowDefinition } from "../workflows/types";
 import type { BuildCronReturn } from "./cron";
 import type { BuildEventListenerReturn } from "./events";
 import type { BuildQueueTaskReturn } from "./queue";
@@ -47,6 +48,19 @@ export interface BaseBuildModuleReturn<
   routes: Routes;
   searchIndexers?: SearchIndexer[];
   webSockets: BuildWebSocketReturn[];
+  /**
+   * Durable workflows this module owns.
+   *
+   * Collected recursively by `buildApiPlugin`, like `contentTypes` and
+   * `searchIndexers`, because a workflow usually reads best next to the domain
+   * module it orchestrates - which is often nested inside the plugin's `admin`
+   * tree.
+   *
+   * Registration is what makes a definition addressable: the runner resolves a
+   * queued step by `pluginId + workflowId + version` from the execution row, so
+   * a definition no module registers can never be picked up again.
+   */
+  workflows?: AnyWorkflowDefinition[];
 }
 
 export interface BuildModuleReturn<
@@ -75,6 +89,7 @@ export function buildModule<
   queueTasks = [],
   searchIndexers,
   webSockets = [],
+  workflows,
 }: {
   contentModels?: AnyContentModel[];
   contentTypes?: AnyContentTypeDefinition[];
@@ -87,6 +102,7 @@ export function buildModule<
   routes: Routes;
   searchIndexers?: SearchIndexer[];
   webSockets?: BuildWebSocketReturn[];
+  workflows?: AnyWorkflowDefinition[];
 }): BuildModuleReturn<P, M, Routes, Modules> {
   const hono = new OpenAPIHono();
 
@@ -115,5 +131,6 @@ export function buildModule<
     queueTasks,
     searchIndexers,
     webSockets,
+    workflows,
   };
 }

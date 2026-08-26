@@ -11,6 +11,7 @@ import {
 } from "@/content/registry";
 
 import type { SearchIndexer } from "../models/search";
+import type { RegisteredWorkflowDefinition } from "../workflows/types";
 import type { CronJobConfig } from "./cron";
 import type { EventListenerConfig } from "./events";
 import type { BaseBuildModuleReturn, BuildModuleReturn } from "./module";
@@ -19,6 +20,7 @@ import type { QueueTaskConfig } from "./queue";
 import type { WebSocketConfig } from "./websocket";
 
 import { validateSearchIndexers } from "../models/search";
+import { validateWorkflowDefinitions } from "../workflows/registry";
 import { checkPluginId } from "./check-plugin-id";
 import { applyModuleTags } from "./openapi-tags";
 
@@ -35,6 +37,7 @@ export interface BuildPluginApiReturn {
   queueTasks?: Omit<QueueTaskConfig, "pluginId">[];
   searchIndexers?: SearchIndexer[];
   webSockets?: Omit<WebSocketConfig, "pluginId">[];
+  workflows?: Omit<RegisteredWorkflowDefinition, "pluginId">[];
 }
 
 export function buildApiPlugin<P extends string>({
@@ -68,6 +71,7 @@ export function buildApiPlugin<P extends string>({
   const openApiTags: string[] = [];
   const queueTasks: BuildPluginApiReturn["queueTasks"] = [];
   const webSockets: BuildPluginApiReturn["webSockets"] = [];
+  const workflows: BuildPluginApiReturn["workflows"] = [];
   modules.forEach(handler => {
     openApiTags.push(...applyModuleTags(handler, pluginId));
 
@@ -76,6 +80,7 @@ export function buildApiPlugin<P extends string>({
     contentModels.push(...collectContentModels(handler));
     contentTypes.push(...collectContentTypes(handler));
     indexers.push(...collectSearchIndexers(handler));
+    workflows.push(...collectWorkflows(handler));
 
     handler.cronJobs?.forEach(cron => {
       cronJobs.push({ ...cron, module: handler.name });
@@ -100,6 +105,13 @@ export function buildApiPlugin<P extends string>({
 
   validateSearchIndexers(indexers.map(indexer => ({ ...indexer, pluginId })));
 
+  // Collisions inside one plugin. The global middleware repeats the check
+  // across every installed plugin, which is the only place two plugins can be
+  // seen at once.
+  validateWorkflowDefinitions(
+    workflows.map(workflow => ({ ...workflow, pluginId })),
+  );
+
   return {
     pluginId,
     messages,
@@ -112,6 +124,7 @@ export function buildApiPlugin<P extends string>({
     queueTasks,
     searchIndexers: indexers,
     webSockets,
+    workflows,
     // Every content type contributes can_view/can_create/can_edit/can_delete
     // unless the plugin declared that module itself.
     permissionStaff: withContentPermissions(permissionStaff, registered),
@@ -147,5 +160,22 @@ function collectSearchIndexers(module: BaseBuildModuleReturn): SearchIndexer[] {
   return [
     ...(module.searchIndexers ?? []),
     ...(module.modules ?? []).flatMap(collectSearchIndexers),
+  ];
+}
+
+/**
+ * Same recursive walk, and it also keeps the *owning* module's name rather than
+ * the top-level one - a workflow nested three modules deep should say where it
+ * actually lives when the AdminCP lists it.
+ */
+function collectWorkflows(
+  module: BaseBuildModuleReturn,
+): Omit<RegisteredWorkflowDefinition, "pluginId">[] {
+  return [
+    ...(module.workflows ?? []).map(definition => ({
+      definition,
+      module: module.name,
+    })),
+    ...(module.modules ?? []).flatMap(collectWorkflows),
   ];
 }
