@@ -9,7 +9,17 @@ export default [
   ...eslintVitNode,
   ...eslintVitNodeReact,
   {
-    ignores: [".source"],
+    // Build output, not source. `eslint .` walks these otherwise and every file
+    // in them fails to parse: they are outside `tsconfig.json`'s `include`.
+    ignores: [
+      ".source",
+      ".nitro/**",
+      ".output/**",
+      ".tanstack/**",
+      "dist/**",
+      "src/routeTree.gen.ts",
+      "prettier.config.js",
+    ],
   },
   {
     languageOptions: {

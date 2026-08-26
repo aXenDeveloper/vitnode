@@ -10,6 +10,14 @@
       "dependsOn": ["^test:types"],
       "cache": false
     },
+    "web#test": {
+      "dependsOn": ["^build:plugins"],
+      "cache": false
+    },
+    "web#test:types": {
+      "dependsOn": ["^build:plugins"],
+      "cache": false
+    },
     "docker:dev": {
       "dependsOn": ["^docker:dev"],
       "cache": false,
@@ -31,7 +39,13 @@
     "build": {
       "dependsOn": ["^build:plugins", "^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**", "dist/**"],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "!.next/dev/**",
+        ".output/**",
+        "dist/**"
+      ],
       "env": ["POSTGRES_URL", "NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_WEB_URL"]
     },
     "build:scripts": {

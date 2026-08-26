@@ -6,24 +6,39 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "vite dev --port 3000",
+    "dev": "vite dev --port 3001",
     "generate-routes": "tsr generate",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint",
+    "test": "vitest run",
+    "lint": "eslint .",
     "format": "prettier --write . && eslint --fix",
-    "check": "prettier --check ."
+    "check": "prettier --check .",
+    "start": "node .output/server/index.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:types": "tsc --noEmit",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
+    "@hono/zod-openapi": "^1.5.1",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-router": "latest",
     "@tanstack/react-router-devtools": "latest",
     "@tanstack/react-start": "latest",
+    "@vitnode/blog": "workspace:*",
+    "@vitnode/core": "workspace:*",
+    "@vitnode/example": "workspace:*",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "1.0.0-rc.4",
+    "drizzle-orm": "1.0.0-rc.4",
+    "hono": "^4.12.31",
+    "next-intl": "^4.13.7",
     "nitro": "3.0.260610-beta",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "tailwindcss": "^4.1.18"
+    "tailwindcss": "^4.1.18",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tanstack/devtools-vite": "latest",
@@ -36,7 +51,8 @@
     "@vitnode/config": "workspace:*",
     "eslint": "^10.7.0",
     "typescript": "^6.0.2",
-    "vite": "^8.0.0"
+    "vite": "^8.0.0",
+    "vitest": "^4.1.10"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

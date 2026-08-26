@@ -17,6 +17,7 @@ import type {
 
 import { coreFetcher } from "./fetcher/core";
 import { handleSetCookiesFetcher } from "./fetcher/helpers-server";
+import { buildForwardedHeaders } from "./fetcher/request-context";
 
 export async function fetcher<
   M extends string,
@@ -58,16 +59,12 @@ export async function fetcher<
     cookies(),
   ]);
 
-  const additionalHeaders: Record<string, string> = {
-    Cookie: cookie.toString(),
-    ["user-agent"]: nextInternalHeaders.get("user-agent") ?? "node",
-    ["x-forwarded-for"]:
-      nextInternalHeaders.get("x-forwarded-for") ?? "0.0.0.0",
-  };
-
-  if (captchaToken) {
-    additionalHeaders["x-vitnode-captcha-token"] = captchaToken;
-  }
+  const additionalHeaders = buildForwardedHeaders({
+    captchaToken,
+    cookie: cookie.toString(),
+    forwardedFor: nextInternalHeaders.get("x-forwarded-for"),
+    userAgent: nextInternalHeaders.get("user-agent"),
+  });
 
   const response = await coreFetcher(moduleReturn, {
     path,
