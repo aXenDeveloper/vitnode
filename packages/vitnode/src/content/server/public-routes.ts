@@ -39,6 +39,7 @@ import {
 } from "../paths";
 import { publicOrderableColumns } from "../registry";
 import { buildContentDeliveryRoutes } from "./delivery-routes";
+import { resolveContentPublicRowFiles } from "./files";
 import { findContentLanguage, listContentLanguages } from "./language-resolver";
 import { contentPreviewSecret } from "./preview-link";
 import { verifyContentPreviewToken } from "./preview-token";
@@ -450,9 +451,16 @@ export const buildContentPublicRoutes = <
         : null;
       if (localized && !translated) throw notFound();
 
+      // The same file resolution the published reads do, through the same
+      // function: a preview that showed a bare `core_files.id` where the live
+      // page shows a descriptor would be previewing a different response.
+      const [withFiles] = await resolveContentPublicRowFiles(c, definition, [
+        { ...row, ...translated },
+      ]);
+
       return c.json(
         {
-          ...project({ ...row, ...translated }),
+          ...project(withFiles),
           ...(localized ? { locale: resolved.locale } : {}),
         },
         200,

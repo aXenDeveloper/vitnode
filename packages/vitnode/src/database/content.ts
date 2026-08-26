@@ -16,6 +16,7 @@ import {
   CONTENT_SCHEDULE_STATUSES,
   CONTENT_SLUG_DEFAULT_LENGTH,
 } from "../content/const";
+import { core_files } from "./files";
 import { core_users } from "./users";
 
 /**
@@ -131,6 +132,63 @@ export const core_content_revisions = camelCase.table.withRLS(
 );
 
 export type ContentRevisionRow = typeof core_content_revisions.$inferSelect;
+
+/**
+ * Which stored files a retained revision still needs.
+ *
+ * The problem it solves: a revision's snapshot is JSONB, so `{ coverImage: 42 }`
+ * inside it is a *number* as far as Postgres is concerned - no foreign key, no
+ * protection. The moment an editor points the article at a different image, the
+ * content row's own key stops guarding the old one, and deleting it would leave
+ * every retained revision naming bytes that are gone. "Restore version 3" would
+ * then restore a broken image.
+ *
+ * One row per (revision, file), and the two references do all the work:
+ *
+ * - **to `core_files`, `ON DELETE RESTRICT`** - Postgres itself refuses to delete
+ *   a file a revision still names, which is what lets `StorageModel.deleteFile`
+ *   answer 409 rather than orphaning a content record.
+ * - **to `core_content_revisions`, `ON DELETE CASCADE`** - retention pruning is a
+ *   single range `DELETE` in the write's own transaction, and the pins go with it.
+ *   Nothing has to remember to unpin, and the last pin disappearing is exactly
+ *   the moment the file becomes deletable again.
+ *
+ * Deliberately **narrow**: two integers and a timestamp. No metadata is copied
+ * from the file, no content type id is repeated - the revision it hangs off
+ * already knows all of that, and a second copy is a second thing that can be
+ * wrong.
+ */
+export const core_content_file_refs = camelCase.table.withRLS(
+  "core_content_file_refs",
+  t => ({
+    id: t.serial().primaryKey(),
+    revisionId: t
+      .integer()
+      .notNull()
+      .references(() => core_content_revisions.id, {
+        onDelete: "cascade",
+        onUpdate: "cascade",
+      }),
+    fileId: t
+      .integer()
+      .notNull()
+      .references(() => core_files.id, {
+        onDelete: "restrict",
+        onUpdate: "cascade",
+      }),
+    createdAt: t.timestamp().notNull().defaultNow(),
+  }),
+  t => [
+    // One pin per pair, so re-capturing the same state twice cannot double-count
+    // - and so "is this file still needed?" is an index lookup rather than a scan.
+    uniqueIndex("core_content_file_refs_unique").on(t.revisionId, t.fileId),
+    // Postgres does not index the child side of a foreign key on its own, and
+    // `ON DELETE RESTRICT` scans this one on every attempt to delete a file.
+    index("core_content_file_refs_file_id_idx").on(t.fileId),
+  ],
+);
+
+export type ContentFileRefRow = typeof core_content_file_refs.$inferSelect;
 
 /**
  * Pending and past scheduled transitions, for content types with

@@ -11,7 +11,12 @@ import {
   type MultiLangValue,
   upsertLangValue,
 } from "../../lib/helpers/multi-lang";
-import { contentRepeatableMax, contentRepeatableMin } from "../advanced";
+import {
+  contentFileCollectionMax,
+  contentFileCollectionMin,
+  contentRepeatableMax,
+  contentRepeatableMin,
+} from "../advanced";
 import { contentFieldPath, contentInnerFields } from "../paths";
 import { humanizeFieldName } from "./labels";
 
@@ -25,6 +30,17 @@ import { humanizeFieldName } from "./labels";
  * schema from it with {@link buildFormSchemaFromSpec}.
  */
 export interface ContentFormFieldSpec {
+  /**
+   * `file` fields only: the extensions the field accepts, normalised.
+   *
+   * Carried on the spec rather than re-derived in the browser, so the constraint
+   * line the uploader always shows, the `accept` attribute it sets and the check
+   * the upload route runs are three readings of **one** descriptor. There is no
+   * second place for them to disagree.
+   */
+  allowedExtensions?: string[];
+  /** `file` fields only: the media types the field accepts, lowercased. */
+  allowedMimeTypes?: string[];
   defaultValue?: boolean | null | number | string;
   description?: string;
   display?: "radio" | "select";
@@ -49,6 +65,8 @@ export interface ContentFormFieldSpec {
    */
   localized?: boolean;
   max?: number;
+  /** `file` fields only: the largest upload the field accepts, in bytes. */
+  maxBytes?: number;
   /** Upper bound on a repeatable's rows. */
   maxItems?: number;
   maxLength?: number;
@@ -57,12 +75,22 @@ export interface ContentFormFieldSpec {
   minItems?: number;
   minLength?: number;
   /** A reference that holds many targets - or many people - rather than one. */
+  /**
+   * Whether the field holds many values: a to-many reference, or a `file` field
+   * with `multiple: true`.
+   *
+   * One key for both, because the form makes the same decision from it - one
+   * control or a list of them.
+   */
   multiple?: boolean;
   name: string;
   nullable: boolean;
   /** Enum choices, already translated. */
   options?: { label: string; value: string }[];
-  /** Whether a to-many reference's order is the author's to choose. */
+  /**
+   * Whether a to-many field's order is the author's to choose - and therefore
+   * whether the list renders reorder controls.
+   */
   ordered?: boolean;
   required: boolean;
   /**
@@ -104,6 +132,15 @@ export interface ContentFormSpec {
    */
   defaultLocale: null | string;
   fields: ContentFormFieldSpec[];
+  /**
+   * The content type's AdminCP module segment, e.g. `posts`.
+   *
+   * The form needs it to address the generated upload route from the browser -
+   * `/api/{pluginId}/admin/content/{permissionModule}/uploads/{field}` - and it is
+   * already the path segment every admin content request goes through, so this
+   * publishes nothing new.
+   */
+  permissionModule: string;
   pluginId: string;
   /**
    * How to group the fields, or empty for one flat form.
@@ -189,6 +226,30 @@ const projectFormField = (
           label: labelEnum(name, value),
           value,
         })),
+      };
+    case "file":
+      return {
+        ...base,
+        ...(fieldValue.allowedExtensions
+          ? { allowedExtensions: fieldValue.allowedExtensions }
+          : {}),
+        ...(fieldValue.allowedMimeTypes
+          ? { allowedMimeTypes: fieldValue.allowedMimeTypes }
+          : {}),
+        maxBytes: fieldValue.maxBytes,
+        multiple: fieldValue.multiple,
+        ordered: fieldValue.ordered,
+        // `minItems` / `maxItems` are the same two keys a repeatable uses, so the
+        // form schema has one rule for "how many of these are allowed" rather
+        // than a third spelling of it. Only for a collection: one file has no
+        // count, and `resolveContentAdvanced` refuses `min`/`max` without
+        // `multiple: true`.
+        ...(fieldValue.multiple
+          ? {
+              maxItems: contentFileCollectionMax(fieldValue),
+              minItems: contentFileCollectionMin(fieldValue),
+            }
+          : {}),
       };
     case "group":
     case "repeatable":
@@ -281,6 +342,7 @@ export const buildContentFormSpec = ({
     defaultLocale: definition.localization.enabled
       ? definition.localization.defaultLocale
       : null,
+    permissionModule: definition.permissionModule,
     pluginId,
     titleField: definition.admin.titleField,
     // One form, shared and localized fields alike, in the order they were
@@ -355,6 +417,19 @@ export const isReferenceKind = (kind: ContentFieldKind): boolean =>
   kind === "relation" || kind === "user";
 
 /**
+ * Whether a field's value lives on a table of its own rather than on the row.
+ *
+ * A repeatable, a to-many `relation`, a to-many `user`, and a `multiple: true`
+ * `file` - four kinds, one question, and the question is not "which kind is
+ * this?" but "will this value be absent from a list row?". Keyed off `multiple`
+ * rather than off a list of kinds for exactly that reason: the next collection
+ * kind is covered the day it exists, and the version of this rule that forgot
+ * one is a form that opens on the empty set and then saves it.
+ */
+export const isCollectionFieldSpec = (field: ContentFormFieldSpec): boolean =>
+  field.kind === "repeatable" || field.multiple === true;
+
+/**
  * One group's or repeatable row's leaves, as a nested object schema.
  *
  * Nested rather than flattened into `seo.title` keys: react-hook-form would
@@ -413,6 +488,20 @@ const baseFieldSchema = (spec: ContentFormFieldSpec): z.ZodType => {
         ? z.enum(values as [string, ...string[]])
         : z.string();
     }
+    // What the form holds for a file is the `core_files.id` the API takes, which
+    // is also what the mutation sends: the upload happens through its own
+    // multipart route and hands the identifier back, so nothing binary is ever
+    // part of this schema or of the JSON body built from it. A gallery holds the
+    // list of them, in the order the editor arranged.
+    case "file":
+      if (spec.multiple) {
+        return z
+          .array(z.number().int().positive())
+          .min(spec.minItems ?? 0)
+          .max(spec.maxItems ?? Number.MAX_SAFE_INTEGER);
+      }
+
+      return z.number().int().positive();
     case "group":
       return leafObjectSchema(spec);
     case "number": {
@@ -771,10 +860,14 @@ export const buildFormSchemaFromSpec = (
         );
         const initial =
           current === undefined
-            ? // A to-many reference opens on the empty set rather than on
-              // nothing: the picker renders a list, and `undefined` would make
-              // its first render a different shape from every later one.
-              isReferenceKind(fieldSpec.kind) && fieldSpec.multiple === true
+            ? // Any to-many field opens on the empty set rather than on nothing -
+              // a reference picker, a gallery, all of them. Two reasons, and the
+              // second is the load-bearing one: the control renders a list, so
+              // `undefined` would make its first render a different shape from
+              // every later one; and `min` is enforced on the *form* schema, so a
+              // `min: 1` field left as `undefined` would satisfy `.optional()`
+              // and let a save through that the API then refuses.
+              fieldSpec.multiple === true
               ? []
               : fieldSpec.defaultValue
             : current;

@@ -2,9 +2,15 @@ import { useTranslations } from "next-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormFieldSpec } from "@/content/admin/spec";
+import type {
+  ContentFileDescriptor,
+  ContentFileFieldValue,
+} from "@/content/files";
 
 import { AutoFormCombobox } from "@/components/form/fields/combobox";
 import { AutoFormDateTime } from "@/components/form/fields/date-time";
+import { AutoFormFile } from "@/components/form/fields/file";
+import { AutoFormFiles } from "@/components/form/fields/files";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { AutoFormNullableNumber } from "@/components/form/fields/nullable-number";
 import { AutoFormRadioGroup } from "@/components/form/fields/radio-group";
@@ -52,13 +58,54 @@ export type ContentOptionsLoader = (args: {
 }) => Promise<ContentOption[]>;
 
 export interface ContentFieldProps extends ItemAutoFormComponentProps {
+  /**
+   * The resolved descriptors of the record's file fields, keyed by field name.
+   *
+   * Read off the row's `files` sibling, which is what lets an edit form open
+   * showing the cover image it already has rather than an empty drop zone - and,
+   * for a `multiple: true` field, the gallery in its stored order. Absent while
+   * creating, and absent for a content type with no file fields.
+   */
+  files?: Record<string, ContentFileFieldValue>;
   loadOptions: ContentOptionsLoader;
   spec: ContentFormFieldSpec;
+  /**
+   * Sends one file to the content type's generated multipart route.
+   *
+   * Supplied by the form rather than built here, so this component stays a
+   * renderer: the upload is a `POST` of `multipart/form-data` driven by TanStack
+   * Query, and never a Server Action.
+   */
+  uploadFile?: (args: {
+    field: string;
+    file: File;
+  }) => Promise<ContentFileDescriptor>;
 }
 
+/** The `files` entry of one field, narrowed to the arity that field has. */
+const fileValue = (
+  files: Record<string, ContentFileFieldValue> | undefined,
+  name: string,
+): ContentFileDescriptor | null => {
+  const value = files?.[name];
+
+  return value === undefined || Array.isArray(value) ? null : value;
+};
+
+const fileList = (
+  files: Record<string, ContentFileFieldValue> | undefined,
+  name: string,
+): ContentFileDescriptor[] => {
+  const value = files?.[name];
+
+  return Array.isArray(value) ? value : [];
+};
+
 export const ContentField = ({
+  files,
   loadOptions,
   spec,
+  uploadFile,
   ...rest
 }: ContentFieldProps) => {
   const t = useTranslations("core.content.form");
@@ -90,6 +137,50 @@ export const ContentField = ({
           label={spec.label}
           labels={labels}
           placeholder={t("relation.placeholder")}
+          {...props}
+        />
+      );
+    }
+
+    // The uploader. `maxBytes` is not optional on a `file` descriptor, so the
+    // fallback is unreachable - it exists because the *spec* type is shared by
+    // every kind and cannot say that.
+    //
+    // One component per arity rather than one with a branch: a gallery appends,
+    // reorders and reports one failure per file, and a cover image replaces. The
+    // per-file rules are the same object either way, which is what keeps the two
+    // controls honest about the same field.
+    case "file": {
+      const upload = async (file: File) =>
+        uploadFile
+          ? await uploadFile({ field: spec.name, file })
+          : Promise.reject(new Error(t("file.unavailable")));
+
+      if (spec.multiple) {
+        return (
+          <AutoFormFiles
+            allowedExtensions={spec.allowedExtensions}
+            allowedMimeTypes={spec.allowedMimeTypes}
+            files={fileList(files, spec.name)}
+            label={spec.label}
+            maxBytes={spec.maxBytes ?? 0}
+            maxItems={spec.maxItems ?? 0}
+            minItems={spec.minItems}
+            onUpload={upload}
+            ordered={spec.ordered !== false}
+            {...props}
+          />
+        );
+      }
+
+      return (
+        <AutoFormFile
+          allowedExtensions={spec.allowedExtensions}
+          allowedMimeTypes={spec.allowedMimeTypes}
+          file={fileValue(files, spec.name)}
+          label={spec.label}
+          maxBytes={spec.maxBytes ?? 0}
+          onUpload={upload}
           {...props}
         />
       );

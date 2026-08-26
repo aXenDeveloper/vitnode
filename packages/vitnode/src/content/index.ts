@@ -24,6 +24,7 @@ export {
   contentFormValuesToTranslations,
   contentLocalizedFieldNames,
   contentTitleFromValues,
+  isCollectionFieldSpec,
 } from "./admin/spec";
 export type {
   ContentColumnSpec,
@@ -34,6 +35,12 @@ export type {
   ContentFormSpec,
   ContentSectionLabeller,
 } from "./admin/spec";
+export {
+  ContentUploadError,
+  contentUploadPath,
+  uploadContentFile,
+} from "./admin/upload";
+export type { ContentUploadRejection } from "./admin/upload";
 export {
   contentDeliveryRedirectTag,
   contentDeliverySitemapTag,
@@ -91,6 +98,12 @@ export {
   CONTENT_DELIVERY_TITLE_KINDS,
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_ENUM_DEFAULT_LENGTH,
+  CONTENT_FILE_CODES,
+  CONTENT_FILE_COLLECTION_ABSOLUTE_MAX,
+  CONTENT_FILE_COLLECTION_DEFAULT_MAX,
+  CONTENT_FILE_EXTENSION_PATTERN,
+  CONTENT_FILE_MIME_PATTERN,
+  CONTENT_FILE_PLUGIN_SEPARATOR,
   CONTENT_FILTERABLE_FIELD_KINDS,
   CONTENT_LOCALE_MAX_LENGTH,
   CONTENT_LOCALE_PATTERN,
@@ -203,6 +216,29 @@ export type {
   ContentUpdatedPayload,
 } from "./events";
 export { field } from "./fields";
+export {
+  assertContentFileMaxBytes,
+  contentFileAccept,
+  contentFileConstraints,
+  contentFileFolder,
+  contentFileFormatLabels,
+  contentFileRejectionReason,
+  normalizeContentFileExtension,
+  normalizeContentFileExtensions,
+  normalizeContentFileMimeType,
+  normalizeContentFileMimeTypes,
+  validateContentFile,
+  zodContentFileDescriptor,
+  zodContentFileFieldValue,
+} from "./files";
+export type {
+  ContentFileCandidate,
+  ContentFileCode,
+  ContentFileConstraints,
+  ContentFileDescriptor,
+  ContentFileFieldValue,
+  ContentFileRejection,
+} from "./files";
 export { clampWithFingerprint, fingerprint } from "./fingerprint";
 export {
   contentIndexName,

@@ -8,9 +8,11 @@ import { toast } from "sonner";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
+import type { ContentFileFieldValue } from "@/content/files";
 import type { ContentFormLayout } from "@/lib/plugin";
 
 import { AutoForm, type AutoFormOnSubmit } from "@/components/form/auto-form";
+import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { useDialog } from "@/components/ui/dialog";
 import { Loader } from "@/components/ui/loader";
 import {
@@ -20,14 +22,18 @@ import {
   contentFormValuesToTranslations,
   contentLocalizedFieldNames,
   contentTitleFromValues,
-  isReferenceKind,
+  isCollectionFieldSpec,
 } from "@/content/admin/spec";
+import { uploadContentFile } from "@/content/admin/upload";
+import { CONTENT_PERMISSIONS } from "@/content/const";
 import { usePathname, useRouter } from "@/lib/navigation";
 
+import type { ContentFormHeaderValue } from "../form/context";
 import type { ContentConflictState } from "./conflict-notice";
 import type { TranslationRow } from "./translation-api.server";
 
 import { ContentFormProvider } from "../form/context";
+import { ContentFormHeader } from "../form/primitives";
 import { ContentFormPublication } from "../form/publication-status";
 import { ContentFormSections } from "../form/sections";
 import { ContentField } from "../lib/field-component";
@@ -40,18 +46,21 @@ import {
   editContentAction,
   editLocalizedContentAction,
   loadContentOptionsAction,
+  publishContentAction,
   reloadContentRowAction,
+  unpublishContentAction,
 } from "./mutation-api.server";
 import { listContentTranslationsAction } from "./translation-api.server";
 
 /**
  * The collection fields of a row that are not on it.
  *
- * A to-many reference and a repeatable are stored on their own tables, so the
- * admin *list* deliberately leaves them off its rows - carrying them would cost
- * queries per page for values no column renders. A dialog-mode form is handed
- * one of those rows, and a form that opened on the empty set for each would show
- * an article with no categories and then save it that way.
+ * A repeatable, a to-many reference and a gallery are all stored on tables of
+ * their own, so the admin *list* deliberately leaves them off its rows -
+ * carrying them would cost queries per page for values no column renders. A
+ * dialog-mode form is handed one of those rows, and a form that opened on the
+ * empty set for each would show an article with no categories, no gallery, and
+ * then **save it that way**.
  *
  * Empty for a page-mode form, whose server component read the record's detail
  * and already has them - so the common case costs no request at all.
@@ -61,11 +70,7 @@ const missingCollections = (
   data: Record<string, unknown>,
 ): string[] =>
   spec.fields
-    .filter(
-      field =>
-        field.kind === "repeatable" ||
-        (isReferenceKind(field.kind) && field.multiple === true),
-    )
+    .filter(isCollectionFieldSpec)
     .map(field => field.name)
     .filter(name => !Array.isArray(data[name]));
 
@@ -77,6 +82,13 @@ export interface ContentFormProps {
     string,
     (props: ItemAutoFormComponentProps) => React.ReactNode
   >;
+  /**
+   * The page heading and its back link, rendered **inside** the form by
+   * `ContentFormHeader` - the generated form places it itself, a custom layout
+   * places it where it wants, and either can put the submit row beside the back
+   * link. Absent in a dialog, which has a title of its own.
+   */
+  header?: ContentFormHeaderValue;
   /** Custom layout declared in `buildPlugin`. Presentation only. */
   layout?: ContentFormLayout;
   /**
@@ -129,13 +141,16 @@ export const ContentForm = ({
   const [loaded, setLoaded] = React.useState<null | readonly TranslationRow[]>(
     translations ?? (localized && data ? null : []),
   );
-  // `undefined` while a row is still missing its collections, and the record
-  // itself while creating - which is the same thing the form is handed then.
-  const [row, setRow] = React.useState<ContentFormProps["data"]>(() =>
+  const [reloaded, setReloaded] = React.useState<null | {
+    for: NonNullable<ContentFormProps["data"]>;
+    row: NonNullable<ContentFormProps["data"]>;
+  }>(null);
+  const row: ContentFormProps["data"] =
     data === undefined || missingCollections(spec, data).length === 0
       ? data
-      : undefined,
-  );
+      : reloaded?.for === data
+        ? reloaded.row
+        : undefined;
 
   const contentTypeId = spec.contentTypeId;
   const itemId = data?.id;
@@ -167,7 +182,9 @@ export const ContentForm = ({
     // the row - its labels - survives.
     void reloadContentRowAction(contentTypeId, data.id).then(
       ({ row: fresh }) => {
-        if (active) setRow(fresh ? { ...data, ...fresh } : data);
+        if (active) {
+          setReloaded({ for: data, row: fresh ? { ...data, ...fresh } : data });
+        }
       },
     );
 
@@ -210,6 +227,7 @@ export const ContentForm = ({
 const ContentFormFields = ({
   data,
   fieldOverrides = {},
+  header,
   layout,
   onCreated,
   presentation = "dialog",
@@ -227,9 +245,25 @@ const ContentFormFields = ({
   const pathname = usePathname();
   const locale = useLocale();
   const invalidateOptions = useInvalidateContentOptions();
+  const canPublish = useAdminStaffPermission({
+    module: spec.permissionModule,
+    permission: CONTENT_PERMISSIONS.publish,
+    plugin: spec.pluginId,
+  });
   const [conflict, setConflict] = React.useState<ContentConflictState | null>(
     null,
   );
+
+  /**
+   * The record's already-stored file descriptors, keyed by field name.
+   *
+   * Carried beside the row by the generated detail and list responses rather
+   * than folded into the column, so the form's *value* stays the identifier it
+   * will submit while the uploader still has a name, a size and a URL to
+   * preview. Empty while creating.
+   */
+  const files = data?.files as
+    Record<string, ContentFileFieldValue> | undefined;
 
   const localizedFields = React.useMemo(
     () => contentLocalizedFieldNames(spec),
@@ -237,12 +271,42 @@ const ContentFormFields = ({
   );
   const localized = localizedFields.length > 0;
 
-  // The version this form opened with, and the one every save is checked
-  // against - until a conflict is resolved, which replaces it with the version
-  // the editor has now actually seen.
+  /**
+   * The version every save is checked against.
+   *
+   * It starts as the version the form opened with and then has to **keep up**,
+   * which is the whole subtlety here: a page-mode form stays mounted across its
+   * own saves, so holding the opening version for the life of the component
+   * means the second save of a session guards on a version the record has
+   * already left behind - and gets a conflict banner naming an editor who does
+   * not exist.
+   *
+   * Two things move it, and each covers what the other misses:
+   *
+   * - the mutation result, immediately, which closes the window between a save
+   *   returning and fresh server data arriving;
+   * - a newer `data.version` from the server, which covers every *other* way the
+   *   version moves while this form is open - a publish, an unpublish, a restore
+   *   from the history dialog.
+   *
+   * Only ever forwards. A stale row - a dialog opened from a list rendered
+   * before the last write - must not drag the precondition backwards, and a
+   * conflict that has been reloaded must not be un-resolved by one.
+   */
   const [expectedVersion, setExpectedVersion] = React.useState(() =>
     typeof data?.version === "number" ? data.version : undefined,
   );
+  const serverVersion =
+    typeof data?.version === "number" ? data.version : undefined;
+  if (
+    serverVersion !== undefined &&
+    expectedVersion !== undefined &&
+    serverVersion > expectedVersion
+  ) {
+    // Derived from a prop during render on purpose: an effect would leave one
+    // render - and therefore one possible submit - guarding on the old version.
+    setExpectedVersion(serverVersion);
+  }
 
   /**
    * What every language held when the form opened.
@@ -350,7 +414,49 @@ const ContentFormFields = ({
     });
   };
 
-  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async submitted => {
+  /**
+   * Publish or unpublish the record being edited, from inside the form.
+   *
+   * The same action the list's row button runs, so there is one write path for
+   * the lifecycle. Nothing typed in the form is sent or lost: the transition
+   * moves `status` and `publishedAt`, the version it produced becomes the next
+   * save's precondition, and the refresh brings the new status line in.
+   */
+  const transition = async (action: "publish" | "unpublish") => {
+    if (!data) return false;
+
+    const mutation =
+      action === "publish"
+        ? await publishContentAction(spec.contentTypeId, data.id)
+        : await unpublishContentAction(spec.contentTypeId, data.id);
+
+    if (mutation.error !== undefined) {
+      const errorKey = contentErrorKey(mutation.status, mutation);
+
+      toast.error(tErrors("title"), {
+        description: errorKey
+          ? tContentErrors(errorKey)
+          : tErrors("internal_server_error"),
+      });
+
+      return false;
+    }
+
+    if (mutation.version !== undefined) setExpectedVersion(mutation.version);
+
+    toast.success(t(`${action}.success`, { name: singular }), {
+      description: title,
+    });
+    push(pathname);
+
+    return true;
+  };
+
+  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (
+    submitted,
+    _form,
+    { intent },
+  ) => {
     // Relation and user fields hold the whole combobox option; the API wants
     // the identifier. Localized fields are split off here rather than in the
     // form, which is why a layout never has to know which table a field is on.
@@ -422,23 +528,63 @@ const ContentFormFields = ({
       return;
     }
 
+    // The record just moved forward a version, and this form is still mounted -
+    // so the next save has to guard on the version this one produced. Set before
+    // the `push` below, because the fresh server row arrives asynchronously and a
+    // second submit in between would otherwise send the version we just spent.
+    if (mutation.version !== undefined) setExpectedVersion(mutation.version);
+
     // This record is somebody else's picker option. A new category has to appear
     // in the article form, and a renamed one has to read as its new name -
     // neither happens on its own, because the query client outlives the
     // navigation between the two screens.
     invalidateOptions(spec.contentTypeId);
 
-    toast.success(
-      t(data ? "edit.success" : "create.success", { name: singular }),
-      {
-        // On create there is no row yet, so the toast names what was typed - in
-        // the language the editor is working in.
-        description:
-          contentTitleFromValues(spec, submitted, locale) ??
-          title ??
-          t("create.desc", { name: singular }),
-      },
-    );
+    // On create there is no row yet, so the toast names what was typed - in
+    // the language the editor is working in.
+    const toastTitle =
+      contentTitleFromValues(spec, submitted, locale) ??
+      title ??
+      t("create.desc", { name: singular });
+
+    // "Publish" on the create form: the record now exists as a draft, and the
+    // very same action the list's publish button runs moves it - one write
+    // path for the lifecycle, whichever button asked for it. The row is created
+    // either way, so a refused publish leaves a draft and says so rather than
+    // pretending nothing happened.
+    const published =
+      !data &&
+      intent === "publish" &&
+      publication &&
+      canPublish &&
+      mutation.id !== undefined
+        ? await publishContentAction(spec.contentTypeId, mutation.id)
+        : null;
+
+    if (published?.error !== undefined) {
+      const errorKey = contentErrorKey(published.status, published);
+
+      toast.success(t("create.success", { name: singular }), {
+        description: toastTitle,
+      });
+      toast.error(tErrors("title"), {
+        description: errorKey
+          ? tContentErrors(errorKey)
+          : tErrors("internal_server_error"),
+      });
+    } else {
+      toast.success(
+        t(
+          published
+            ? "publish.success"
+            : data
+              ? "edit.success"
+              : "create.success",
+          { name: singular },
+        ),
+        { description: toastTitle },
+      );
+    }
 
     if (presentation === "page") {
       // A page has nothing behind it to refresh, so a create hands over to
@@ -492,6 +638,7 @@ const ContentFormFields = ({
 
         return (
           <ContentField
+            files={files}
             loadOptions={async ({ field, ids, search }) =>
               await loadContentOptionsAction(
                 spec.contentTypeId,
@@ -501,6 +648,14 @@ const ContentFormFields = ({
               )
             }
             spec={fieldSpec}
+            // A plain client-side `fetch` of `multipart/form-data`, driven by
+            // TanStack Query inside `AutoFormFile`. Deliberately **not** a Server
+            // Action: a Server Action body is a serialised RSC payload, so an
+            // image would cross as a string, buffered whole, under a platform
+            // body limit that is not the field's `maxBytes`.
+            uploadFile={async ({ field, file }) =>
+              await uploadContentFile({ field, file, spec })
+            }
             {...props}
           />
         );
@@ -514,66 +669,75 @@ const ContentFormFields = ({
   // still one `AutoForm` either way - the layout decides placement and nothing
   // else, so the submit path, the schema and the errors do not change with it.
   const sections = Layout ? [] : spec.sections;
-  const grouped = sections.length > 0;
 
   return (
     <>
-      {publication && data && !Layout ? (
-        <ContentFormPublication
-          publishedAt={data.publishedAt}
-          status={data.status}
-        />
-      ) : null}
-
       {conflict && data ? (
         <ConflictNotice
           conflict={conflict}
+          name={singular}
+          onDismiss={() => setConflict(null)}
           onReload={onReload}
           opened={data}
           spec={spec}
         />
       ) : null}
 
+      {/*
+        Always through `layout`, even for the plainest dialog: it is the one
+        place the submit row can be "Save as draft" and "Publish" rather than a
+        single button, and the one place a page's heading can sit inside the
+        form so that row can be beside the back link.
+      */}
       <AutoForm
         fields={fields}
         formSchema={formSchema}
-        layout={
-          Layout || grouped
-            ? renderedFields => (
-                <ContentFormProvider
-                  value={{
-                    fieldNames: spec.fields.map(field => field.name),
-                    fields: renderedFields,
-                    localizedFieldNames: localizedFields,
-                    mode: data ? "edit" : "create",
-                    publication: {
-                      enabled: publication,
-                      publishedAt: data?.publishedAt,
-                      status: data?.status,
-                    },
-                  }}
-                >
-                  {Layout ? (
-                    <Layout
-                      contentTypeId={spec.contentTypeId}
-                      itemId={data?.id}
-                      mode={data ? "edit" : "create"}
-                      pluginId={spec.pluginId}
-                      publication={publication}
-                      singular={singular}
-                      title={title}
-                    />
-                  ) : (
-                    <ContentFormSections sections={sections} />
-                  )}
-                </ContentFormProvider>
-              )
-            : undefined
-        }
+        layout={renderedFields => (
+          <ContentFormProvider
+            value={{
+              fieldNames: spec.fields.map(field => field.name),
+              fields: renderedFields,
+              header: presentation === "page" ? header : undefined,
+              localizedFieldNames: localizedFields,
+              mode: data ? "edit" : "create",
+              publication: {
+                canPublish,
+                enabled: publication,
+                publishedAt: data?.publishedAt,
+                status: data?.status,
+                transition: data ? transition : undefined,
+              },
+              singular,
+              title,
+            }}
+          >
+            {Layout ? (
+              <Layout
+                contentTypeId={spec.contentTypeId}
+                itemId={data?.id}
+                mode={data ? "edit" : "create"}
+                pluginId={spec.pluginId}
+                publication={publication}
+                singular={singular}
+                title={title}
+              />
+            ) : (
+              <>
+                <ContentFormHeader />
+
+                {publication && data ? (
+                  <ContentFormPublication
+                    publishedAt={data.publishedAt}
+                    status={data.status}
+                  />
+                ) : null}
+
+                <ContentFormSections sections={sections} />
+              </>
+            )}
+          </ContentFormProvider>
+        )}
         onSubmit={onSubmit}
-        submitButtonProps={{
-          children: t(data ? "edit.submit" : "create.submit"),
-        }}
       />
     </>
   );

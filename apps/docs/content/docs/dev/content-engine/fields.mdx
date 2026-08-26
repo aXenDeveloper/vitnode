@@ -19,6 +19,8 @@ Content Engine provides field descriptors exported from `@vitnode/core/content` 
 | `field.user()` | `integer()` (FK to `core_users`) | `z.number()` | User Picker Combobox |
 | `field.user({ multiple: true })` | Junction table (FK to `core_users`) | `z.array(z.number())` | Multi-select People Combobox |
 | `field.slug()` | `varchar(length)` | `z.string()` | Slug Input + Auto-Generator |
+| `field.file()` | `integer()` (FK to `core_files`, `ON DELETE RESTRICT`) | `z.number()` | Uploader (drag & drop + picker) |
+| `field.file({ multiple: true })` | Junction table (FK to `core_files`, `ON DELETE RESTRICT`) | `z.array(z.number())` | Multi-file uploader (list, per-file progress, drag-to-reorder) |
 
 ---
 
@@ -131,6 +133,514 @@ categories: field.relation({ min: 1, multiple: true, target: () => categoryType 
 </Callout>
 </Step>
 
+<Step>
+### Step 5: Attach a File
+
+`field.file()` stores **one** file, by reference: the column is an `integer`
+foreign key into `core_files` with `ON DELETE RESTRICT`, and nothing about the
+file - not the name, not the URL, not the storage key - is copied onto the
+content row.
+
+```ts title="src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+    coverImage: field.file({ // [!code ++:9]
+      maxBytes: 5 * 1024 * 1024, // 5 MB - required
+      allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+      allowedMimeTypes: [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/avif",
+      ],
+    }),
+  },
+});
+```
+
+You need no `references` entry for it. There is one files table in an
+installation, so the engine resolves it for you - exactly as it does for
+`field.user()`.
+
+#### `maxBytes` - mandatory, always
+
+<Callout type="warn" title="There is intentionally no unlimited upload">
+Every file field must state its ceiling. `field.file({})` does not compile, and a
+value that is zero, negative, fractional or infinite is refused at **definition
+time** - when your plugin is imported, not when somebody uploads:
+
+```ts
+field.file({ maxBytes: 0 });      // ✗ must be greater than zero
+field.file({ maxBytes: 1.5 });    // ✗ not a whole number of bytes
+field.file({ maxBytes: 5 * 1024 * 1024 }); // ✓
+```
+
+A default here would be a number nobody chose, applied to every field in every
+plugin - and the ceiling is the only thing between a form and an upload that
+fills your disk.
+</Callout>
+
+#### `allowedExtensions` - what the file is *called*
+
+Extensions are case-insensitive and normalised to lowercase with a leading dot,
+so `GIF`, `.gif` and `.Gif` are **one** rule:
+
+```ts
+animation: field.file({
+  maxBytes: 10 * 1024 * 1024,
+  allowedExtensions: [".gif"],
+  allowedMimeTypes: ["image/gif"],
+})
+```
+
+An empty array, an empty string, a bare `"."` and a compound `".tar.gz"` are all
+definition-time errors. (`.tar.gz` because only the last segment is ever read, so
+the rule would silently match nothing.)
+
+#### `allowedMimeTypes` - what the bytes are *declared* to be
+
+A separate rule, not the same one spelled twice. **If both are configured, both
+must match:**
+
+| File name | Declared type | GIF-only field |
+| :--- | :--- | :--- |
+| `banner.gif` | `image/gif` | ✅ accepted |
+| `banner.png` | `image/png` | ❌ wrong extension *and* wrong type |
+| `banner.gif` | `image/png` | ❌ a PNG renamed to `.gif` |
+| `banner.png` | `image/gif` | ❌ right bytes, wrong name |
+
+That third row is the whole point. **Never rely on the extension alone** - it is
+a string somebody chose. For a strict field, state both.
+
+```ts
+document: field.file({
+  maxBytes: 20 * 1024 * 1024,
+  allowedExtensions: [".pdf"],
+  allowedMimeTypes: ["application/pdf"],
+})
+```
+
+#### Image processing changes the stored format
+
+With [`storage.image`](/docs/dev/storage#image-optimization) configured, VitNode
+re-encodes uploaded images to WebP - so a `hero.png` is *stored* as `hero.webp`.
+Include the converted format in both allowlists, or the upload route will refuse
+the file it just created and tell you why:
+
+```ts
+allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+```
+
+GIF and SVG are never re-encoded, which is why a GIF-only field needs no extra
+entries.
+
+#### The AdminCP shows the constraints, always
+
+Every generated file field renders its allowed formats and its maximum size
+above the drop zone - not only when something goes wrong:
+
+```text
+Cover image
+
+JPG, JPEG, PNG, WEBP, AVIF
+Maximum file size: 5 MB
+
+┌──────────────────────────────┐
+│  Drop a file here            │
+│  or                          │
+│  [ Choose file ]             │
+└──────────────────────────────┘
+```
+
+The formats and the size come **from the field descriptor** - the same object the
+API validates against - so the screen cannot advertise a rule the server does not
+enforce. Extensions are preferred over media types in that line, because
+`JPG, PNG, WEBP` is what a person recognises and `image/jpeg, image/png` is not.
+The native picker's `accept` gets both (`.gif,image/gif`), which is UX only: the
+server checks everything again.
+
+#### Uploads never go through a Server Action
+
+<Callout type="warn" title="Binary data uses multipart, not Server Actions">
+Content Engine binary uploads use TanStack Query and multipart API routes.
+Next.js Server Actions must **not** be used for file transfer.
+</Callout>
+
+The flow is:
+
+```text
+AutoFormFile
+  → TanStack Query useMutation()
+  → FormData
+  → POST /api/{pluginId}/admin/content/{module}/uploads/{field}
+  → StorageModel.upload()
+  → core_files
+  → field.onChange(file.id)
+```
+
+The upload route is generated for you, once per content type, addressed by field
+name. It resolves the field, requires `can_create` **or** `can_edit`, enforces
+`maxBytes`, `allowedMimeTypes` and `allowedExtensions`, stores the file through
+the ordinary storage adapter, and returns a normalised descriptor:
+
+```json
+{
+  "id": 42,
+  "name": "cover.webp",
+  "url": "https://…",
+  "mimeType": "image/webp",
+  "size": 245123,
+  "width": 1600,
+  "height": 900
+}
+```
+
+The content mutation that follows is ordinary JSON:
+
+```json
+{ "coverImage": 42 }
+```
+
+No base64, no binary through a Server Action, and the form value is the same size
+whether the image is 4 KB or 4 MB.
+
+#### What a refused upload says
+
+Every refusal comes back as JSON with a machine-readable `code` and a sentence
+written for the person who picked the file:
+
+```json
+{
+  "code": "CONTENT_FILE_TOO_LARGE",
+  "message": "This file is 9 MB. The maximum is 5 MB."
+}
+```
+
+| Code | Means |
+| :--- | :--- |
+| `CONTENT_FILE_TOO_LARGE` | Over the field's `maxBytes`. |
+| `CONTENT_FILE_MIME_TYPE_NOT_ALLOWED` | The declared media type is not in `allowedMimeTypes`. |
+| `CONTENT_FILE_EXTENSION_NOT_ALLOWED` | The file name's extension is not in `allowedExtensions`. |
+| `CONTENT_FILE_INVALID` | The bytes could not be read - a truncated or corrupt image. |
+| `CONTENT_FILE_STORAGE_UNAVAILABLE` | No storage adapter configured, or the image pipeline failed to load. **A configuration fault, not a bad file.** |
+| `CONTENT_FILE_FIELD_UNKNOWN` | The URL named a field this content type has not got, or one that is not a `file`. |
+| `CONTENT_FILE_FORBIDDEN` | The role may view this content type but not write it. |
+
+The uploader restates the first three in the reader's own language, using the
+field's own limits. Everything else is shown **verbatim**, and deliberately:
+"Storage provider not found" is what an admin needs to read, and replacing it
+with "please try again" is how somebody retries a misconfiguration for ten
+minutes.
+
+<Callout type="info" title="A 413 never reaches the route">
+  If your hosting platform or proxy rejects the request body before it arrives,
+  no `maxBytes` check runs and there is no JSON to read - the uploader says the
+  file was refused as too large *before* it reached the server, so the limit to
+  raise is the platform's rather than the field's.
+</Callout>
+
+#### Uploading is not the same as assigning
+
+A successful upload proves the file was valid **for the field it was uploaded
+for**. When a mutation arrives carrying `{ "coverImage": 42 }`, the engine reads
+that `core_files` row and checks it again - it exists, it is within `maxBytes`,
+its media type is allowed, its extension is allowed. So this is refused:
+
+```ts
+animation: field.file({
+  maxBytes: 10 * 1024 * 1024,
+  allowedExtensions: [".gif"],
+  allowedMimeTypes: ["image/gif"],
+})
+```
+
+```json
+{ "animation": 42 }   // 42 is the PDF you uploaded for `document` → 400
+```
+
+#### What a file field may not be
+
+| | |
+| :--- | :--- |
+| `localized: true` | ❌ refused - a file is one object with one storage key. Pair it with a localized `field.text()` for the alt text. |
+| orderable / `titleField` / `colorField` | ❌ refused - a file reference is an upload order, which is not something anybody chose. |
+| filterable / searchable | ❌ refused by kind. |
+| `min` / `max` / `ordered` without `multiple: true` | ❌ refused - one file has no count and no order. |
+| `publicApi.fields` | ✅ allowed - it crosses as the descriptor above, never as the identifier, and never with the storage key, the uploader or the metadata bag. |
+
+#### List columns
+
+A file field named in `admin.list.columns` renders a thumbnail (for an image) or a
+file icon, plus the stored file name - never the raw identifier. A
+`columns.<name>.cell` override in `buildPlugin` still wins.
+
+</Step>
+
+<Step>
+### Step 6: Attach Many Files
+
+`multiple: true` moves the reference off the row and into a generated **junction
+table**, exactly as it does for [`field.relation`](/docs/dev/content-engine/relations-and-advanced-modeling):
+one row per file, with a `position`. There is no comma-separated column and no
+JSON array anywhere in it, so `ON DELETE RESTRICT` still means something per
+image.
+
+```ts title="plugins/example/src/content/article.ts"
+export const articleContentType = defineContentType({
+  id: "example.article",
+  tableName: "example_articles",
+  fields: {
+    title: field.text({ required: true }),
+    gallery: field.file({ // [!code ++:8]
+      multiple: true,
+      min: 1,
+      max: 8,
+      maxBytes: 5 * 1024 * 1024, // per file
+      allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+    }),
+  },
+});
+```
+
+```text
+example_articles_gallery
+  itemId        -> example_articles.id  ON DELETE CASCADE
+  relatedItemId -> core_files.id        ON DELETE RESTRICT
+  position      integer NOT NULL
+  createdAt     timestamp NOT NULL DEFAULT now()
+
+  PRIMARY KEY (itemId, relatedItemId)
+  UNIQUE      (itemId, position)
+  INDEX       (relatedItemId)
+```
+
+You still need no `references` entry, and you still get the deletion guarantee -
+`restrict` is not a per-field choice here. `cascade` would silently drop an image
+from a published gallery because somebody tidied up the Files screen, and a
+junction row has nothing for `set null` to null.
+
+Export the junction table from your database module, or `drizzle-kit` will not
+see it:
+
+```ts title="plugins/example/src/database/articles.ts"
+export const example_articles = articleContent.table;
+export const example_articles_gallery = // [!code ++:2]
+  articleContent.advancedTables.junctions.gallery;
+```
+
+#### `maxBytes` is per file, not a budget for the list
+
+Eight images at 5 MB is eight uploads, not one 40 MB one. Every entry is checked
+against the field's **own** rules - the ceiling and both allowlists - at upload
+time and again on save, so one good image says nothing about the next.
+
+Arity is a separate question, and `min` / `max` are how it is asked:
+
+| | |
+| :--- | :--- |
+| `required` / `nullable` | ❌ refused - the empty list is what "no files" looks like |
+| `min: 1` | "at least one image", which is what `required` would have meant |
+| `max` | defaults to **20**, and may not exceed **200** |
+| `ordered` | defaults to **`true`** - the order the editor put them in, drag handles and all |
+
+`ordered` defaults to `true` here and to `false` for a relation, and the
+difference is not an oversight: the order an editor built a gallery in is the
+order they meant it to read in, while "ascending id" for a set of categories is
+at least something nobody chose. Pass `ordered: false` and the engine stores the
+entries by ascending `core_files.id`, which makes `set([9, 2, 5])` and
+`set([2, 5, 9])` the same state rather than two writes - and takes the drag
+handles out of the AdminCP with it, because a control that appears to set an
+order the save then normalises away is worse than no control.
+
+The ceiling exists because each entry is a stored object the record pins against
+deletion, and the whole list is read and rewritten as one. For a media library,
+model a content type and relate to it.
+
+#### An ordered collection is a gallery
+
+`ordered: true` is what makes the list somebody's rather than the network's, and
+it decides three things at once:
+
+```ts title="plugins/example/src/content/article.ts"
+gallery: field.file({
+  multiple: true,
+  ordered: true,
+  max: 12,
+  maxBytes: 5 * 1024 * 1024, // per file
+  allowedExtensions: [".jpg", ".jpeg", ".png", ".webp"],
+  allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+}),
+```
+
+| | |
+| :--- | :--- |
+| The **initial** order | the order the files were chosen in - the order of the selection in the dialog, or of the drop |
+| Upload **completion** order | irrelevant. A 40 KB thumbnail beating a 4 MB photograph does not move either of them |
+| **Manual** reordering | drag handles in the AdminCP, keyboard included, using [dnd-kit](https://dndkit.com) |
+| What is **stored** | `position` on the junction row, `0`-based and contiguous, written by the save |
+
+The whole lifecycle, for a selection of three:
+
+```text
+pick:                    A, B, C
+uploads finish:          B, C, A     ← whatever the network decides
+the list still reads:    A, B, C
+
+editor drags C to the front:
+
+                         C, A, B
+
+save:                    { "gallery": [C.id, A.id, B.id] }
+Content Engine writes:   position = 0, 1, 2
+```
+
+Nothing about that order is stored anywhere but `field.value`, which is the
+point: a drag rewrites the form value and nothing else, so abandoning the form or
+rolling a save back puts the previous order back with it. There is no second copy
+to disagree with the one that would be saved.
+
+<Callout type="info" title="`ordered: false` has no handles">
+The API sorts an unordered collection by ascending `core_files.id` on every read
+and normalises it on every write, so there is nothing for a drag to do. The
+AdminCP renders the list without handles, and the server-side normalisation stays
+the authority.
+</Callout>
+
+#### One request per file
+
+The upload route does not change: it is still `POST .../uploads/{field}`, still
+one file per request, still `multipart/form-data` driven by TanStack Query from
+the browser and never a Server Action. A selection of ten becomes ten requests,
+and that is the point - each has its own progress, its own outcome and its own
+error, so nine images are stored and the tenth says why it was refused:
+
+```text
+photo-7.tiff: "image/tiff" is not an accepted file type. Accepted: image/jpeg, …
+```
+
+A single request carrying ten files would have to answer "partly", and there is
+no useful shape for that.
+
+They are not all sent at once, though. **Six upload at a time**, and the seventh
+starts the moment one of the six finishes:
+
+```text
+200 files chosen
+
+  6 requests in flight
+  194 queued
+
+one finishes → the next one starts
+```
+
+A field may hold up to two hundred files, and two hundred simultaneous requests
+are two hundred connections the browser queues anyway - racing one timeout, and
+none of them attributable to a file while they are stuck. Six keeps the pipe full
+and keeps every failure attached to the file that caused it.
+
+#### What the AdminCP renders
+
+The drop zone first, then the files under it - thumbnail, name, size, remove -
+and the same always-visible constraint line the single-file uploader has, plus a
+count:
+
+```text
+Gallery
+
+JPG, JPEG, PNG, WEBP, AVIF
+Maximum file size: 5 MB · 3 of 8 files
+
+┌──────────────────────────────────┐
+│  Drop files here                 │
+│  [ Choose files ]                │
+└──────────────────────────────────┘
+┌──────────────────────────────────┐
+│ ⠿ [img] beach.webp      412 KB ✕ │
+│ ⠿ [▓▓▓] sunset.png               │
+│         Uploading... · 1.2 MB  ◌ │
+│ ⠿ [img] harbour.webp    388 KB ✕ │
+└──────────────────────────────────┘
+```
+
+The picker leads because that is the order somebody uses it in: an empty field
+has nothing above the control to scroll past, and a full one keeps the button
+where it was instead of pushing it down the page with every file added.
+
+Each in-flight file gets its **own card**, in the place it is going to land - not
+at the bottom of the list - with a skeleton for the thumbnail that does not exist
+yet and the real name and size, which the browser has to hand. So a selection of
+ten says which ones are left rather than "something is uploading", and nothing
+shifts as they arrive: each skeleton is replaced, in its own row, by the card it
+was standing in for. A card that is still uploading has no `core_files.id` and is
+not in the form value, so it cannot be dragged and cannot be saved.
+
+The handle (`⠿`) appears on an `ordered` field holding two or more files. It is
+a real button: <kbd>Tab</kbd> reaches it, <kbd>Space</kbd> picks the row up, the
+arrow keys move it, <kbd>Space</kbd> drops it and <kbd>Esc</kbd> puts it back -
+and every one of those is announced by name and position. Dragging is confined to
+the handle on purpose: a card that is one big grab target has no keyboard
+affordance, and its Remove button stops being clickable.
+
+The drop zone stays live while they upload, so an eleventh file can be queued
+without waiting. Choosing again **appends** rather than replaces - behind
+anything still uploading, not in the middle of it - and the ceiling is enforced
+at pick time, so the ninth file of an eight-file field is refused before its
+bandwidth is spent rather than by a save that fails afterwards. Remove is
+disabled at `min`, and removing from the middle leaves everything else exactly
+where it was.
+
+#### Reading and writing it
+
+The form's value, the API payload and the service argument are all the same
+thing: a list of identifiers, in the order shown.
+
+```json
+{ "gallery": [7, 3, 9] }
+```
+
+It is also on the collection API, exactly as a to-many relation is:
+
+```ts
+const service = articleContent.service(c);
+
+await service.relations.gallery.set(articleId, [7, 3, 9]);
+await service.relations.gallery.add(articleId, fileId);
+await service.relations.gallery.remove(articleId, fileId);
+await service.relations.gallery.reorder(articleId, [3, 9, 7]);
+await service.relations.gallery.get(articleId); // [3, 9, 7]
+```
+
+`reorder` is there for a caller that has an order in mind. The AdminCP does not
+use it: a drag rewrites the form value, and the ordinary save writes the whole
+list - and therefore every `position` - in one transaction. Every one of these re-checks each file against the field, and a write
+that computes the state already stored is a no-op: no `updatedAt`, no version
+bump, no revision, no event.
+
+#### Public reads, revisions and list columns
+
+| | |
+| :--- | :--- |
+| `publicApi.fields` | ✅ allowed - a **list of descriptors**, in stored order, never the identifiers |
+| Revisions | Every entry is pinned individually in `core_content_file_refs`, so removing one image from the gallery does not make it deletable while an older version still shows it |
+| `admin.list.columns` | ❌ refused - a gallery is a set on another table, and a list that loaded one would issue a query per row. It belongs on the form |
+| `orderBy` / `titleField` / `colorField` / `indexes` | ❌ refused - it is not one column |
+
+```json
+{
+  "gallery": [
+    { "id": 7, "name": "beach.webp", "url": "https://…", "mimeType": "image/webp", "size": 421888, "width": 1600, "height": 900 },
+    { "id": 3, "name": "harbour.webp", "url": "https://…", "mimeType": "image/webp", "size": 397312, "width": 1600, "height": 900 }
+  ]
+}
+```
+
+</Step>
+
 </Steps>
 
 ---
@@ -143,3 +653,4 @@ For nested structures, arrays, relationships, and multi-language support:
 - **`field.structured()`**: Stores nested Zod objects in a Postgres `jsonb` column.
 - **`field.repeatable()`**: Stores arrays of items in a Postgres `jsonb` column.
 - **`localized: true`**: Marks text or textarea fields for translation. See [Localization](/docs/dev/content-engine/localization).
+- **`field.file()`**: References one stored file, or many with `multiple: true`. See [Storage](/docs/dev/storage#content-engine-file-fields) for how the row, `core_files` and the adapter fit together.

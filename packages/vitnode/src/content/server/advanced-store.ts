@@ -118,7 +118,10 @@ export interface ContentAdvancedStore {
    *   in the snapshot and never were: the row belongs to another content type
    *   with its own history, so there is nothing here to recreate it from.
    *   `missingRelations` names the fields, and the caller turns that into a
-   *   structured not-restorable answer rather than a partial restore.
+   *   structured not-restorable answer rather than a partial restore. A missing
+   *   **gallery entry** is the same answer for the same reason - the bytes are
+   *   gone and a snapshot holds an identifier, not a file - though the revision's
+   *   own file pins mean it should not be reachable.
    */
   prepareRestore: (
     tx: ContentDatabase,
@@ -302,12 +305,26 @@ export const createContentAdvancedStore = <
     const missing = ids.filter(id => !found.has(id));
     if (missing.length === 0) return;
 
+    // The noun follows the kind, because the two mean different things to
+    // whoever reads the message: a missing relation target is another record
+    // somebody deleted, and a missing gallery entry is a stored file that is
+    // gone. `assertContentFileReferences` normally answers first for a file
+    // field - this is the net under it, and under a direct service call.
+    const isFile = fields[field].kind === "file";
+    const noun = isFile
+      ? missing.length === 1
+        ? "a file"
+        : "files"
+      : missing.length === 1
+        ? "a record"
+        : "records";
+
     throw new ContentAdvancedInputError({
       code: CONTENT_ADVANCED_CODES.missingTarget,
       contentTypeId,
       field,
       ids: missing,
-      message: `Relation "${field}" references ${missing.length === 1 ? "a record" : "records"} that no longer exist: ${missing.join(", ")}.`,
+      message: `${isFile ? "File field" : "Relation"} "${field}" references ${noun} that no longer exist: ${missing.join(", ")}.`,
     });
   };
 

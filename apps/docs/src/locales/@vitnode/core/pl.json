@@ -174,6 +174,11 @@
       "results_not_found": "Nie znaleziono wyników",
       "selected_count": "Wybrano: {count}",
       "clear_filters": "Wyczyść filtry",
+      "data_table": {
+        "select_all": "Zaznacz wszystkie wiersze",
+        "select_row": "Zaznacz wiersz",
+        "clear_selection": "Wyczyść zaznaczenie"
+      },
       "date": "{date, date}",
       "date_medium": "{date, date, medium}",
       "date_short": "{date, date, short}",
@@ -191,6 +196,19 @@
       "select_options": "Wybierz opcje",
       "select_language": "Wybierz język",
       "pick_color": "Wybierz kolor",
+      "file": {
+        "any_format": "Dowolny typ pliku",
+        "max_size": "Maksymalny rozmiar pliku: {size}",
+        "drop": "Przeciągnij plik tutaj",
+        "choose": "Wybierz plik",
+        "replace": "Zmień plik",
+        "remove": "Usuń plik",
+        "uploading": "Przesyłanie...",
+        "errors": {
+          "too_large": "Ten plik ma {size}. Maksimum to {max}.",
+          "wrong_format": "\"{value}\" nie jest akceptowanym formatem. Akceptowane: {formats}."
+        }
+      },
       "go_to_prev_page": "Przejdź do poprzedniej strony",
       "go_to_next_page": "Przejdź do następnej strony",
       "errors": {
@@ -263,7 +281,27 @@
         "title": "Usuń plik",
         "desc": "Czy na pewno chcesz usunąć ten plik? Spowoduje to jego trwałe usunięcie i nie można tego cofnąć.",
         "confirm": "Usuń",
-        "success": "Plik został usunięty."
+        "success": "Plik został usunięty.",
+        "in_use": {
+          "content": "Ten plik jest nadal używany przez treść, więc jego usunięcie sprawiłoby, że ta treść wskazywałaby na nic. Najpierw usuń go z treści.",
+          "revisions": {
+            "desc": "Nic już nie wyświetla tego pliku, ale {count, plural, one {# zapisana wersja nadal go przechowuje} few {# zapisane wersje nadal go przechowują} many {# zapisanych wersji nadal go przechowuje} other {# zapisanych wersji nadal go przechowuje}}. Po usunięciu przywrócenie tych wersji nie odzyska już tego pliku. Tej operacji nie można cofnąć.",
+            "confirm": "Usuń mimo to"
+          }
+        }
+      },
+      "bulk_delete": {
+        "title": "Usuń {count, plural, one {# plik} few {# pliki} many {# plików} other {# plików}}",
+        "desc": "{count, plural, one {Czy na pewno chcesz usunąć ten plik? Spowoduje to jego trwałe usunięcie} few {Czy na pewno chcesz usunąć te # pliki? Spowoduje to ich trwałe usunięcie} many {Czy na pewno chcesz usunąć tych # plików? Spowoduje to ich trwałe usunięcie} other {Czy na pewno chcesz usunąć tych # plików? Spowoduje to ich trwałe usunięcie}} i nie można tego cofnąć.",
+        "confirm": "Usuń",
+        "success": "Usunięto {count, plural, one {# plik} few {# pliki} many {# plików} other {# plików}}.",
+        "in_use": {
+          "content": "{count, plural, one {# plik jest nadal używany przez treść, więc został zachowany. Najpierw usuń go z treści.} few {# pliki są nadal używane przez treść, więc zostały zachowane. Najpierw usuń je z treści.} many {# plików jest nadal używanych przez treść, więc zostały zachowane. Najpierw usuń je z treści.} other {# plików jest nadal używanych przez treść, więc zostały zachowane. Najpierw usuń je z treści.}}",
+          "revisions": {
+            "desc": "{count, plural, one {# plik nie jest już nigdzie wyświetlany, ale zapisane wersje nadal go przechowują. Po usunięciu przywrócenie tych wersji nie odzyska już tego pliku.} few {# pliki nie są już nigdzie wyświetlane, ale zapisane wersje nadal je przechowują. Po usunięciu przywrócenie tych wersji nie odzyska już tych plików.} many {# plików nie jest już nigdzie wyświetlanych, ale zapisane wersje nadal je przechowują. Po usunięciu przywrócenie tych wersji nie odzyska już tych plików.} other {# plików nie jest już nigdzie wyświetlanych, ale zapisane wersje nadal je przechowują. Po usunięciu przywrócenie tych wersji nie odzyska już tych plików.}} Tej operacji nie można cofnąć.",
+            "confirm": "Usuń mimo to"
+          }
+        }
       },
       "noResults": {
         "title": "Brak plików",
@@ -903,7 +941,27 @@
           "title": "Usuń plik",
           "desc": "Czy na pewno chcesz usunąć ten plik? Spowoduje to jego trwałe usunięcie z magazynu i nie można tego cofnąć.",
           "confirm": "Usuń",
-          "success": "Plik został usunięty."
+          "success": "Plik został usunięty.",
+          "in_use": {
+            "content": "Ten plik jest nadal używany przez treść, więc jego usunięcie sprawiłoby, że ta treść wskazywałaby na nic. Najpierw usuń go z treści.",
+            "revisions": {
+              "desc": "Nic już nie wyświetla tego pliku, ale {count, plural, one {# zapisana wersja nadal go przechowuje} few {# zapisane wersje nadal go przechowują} many {# zapisanych wersji nadal go przechowuje} other {# zapisanych wersji nadal go przechowuje}}. Po usunięciu przywrócenie tych wersji nie odzyska już tego pliku. Tej operacji nie można cofnąć.",
+              "confirm": "Usuń mimo to"
+            }
+          }
+        },
+        "bulk_delete": {
+          "title": "Usuń {count, plural, one {# plik} few {# pliki} many {# plików} other {# plików}}",
+          "desc": "{count, plural, one {Czy na pewno chcesz usunąć ten plik? Spowoduje to jego trwałe usunięcie} few {Czy na pewno chcesz usunąć te # pliki? Spowoduje to ich trwałe usunięcie} many {Czy na pewno chcesz usunąć tych # plików? Spowoduje to ich trwałe usunięcie} other {Czy na pewno chcesz usunąć tych # plików? Spowoduje to ich trwałe usunięcie}} z magazynu i nie można tego cofnąć.",
+          "confirm": "Usuń",
+          "success": "Usunięto {count, plural, one {# plik} few {# pliki} many {# plików} other {# plików}}.",
+          "in_use": {
+            "content": "{count, plural, one {# plik jest nadal używany przez treść, więc został zachowany. Najpierw usuń go z treści.} few {# pliki są nadal używane przez treść, więc zostały zachowane. Najpierw usuń je z treści.} many {# plików jest nadal używanych przez treść, więc zostały zachowane. Najpierw usuń je z treści.} other {# plików jest nadal używanych przez treść, więc zostały zachowane. Najpierw usuń je z treści.}}",
+            "revisions": {
+              "desc": "{count, plural, one {# plik nie jest już nigdzie wyświetlany, ale zapisane wersje nadal go przechowują. Po usunięciu przywrócenie tych wersji nie odzyska już tego pliku.} few {# pliki nie są już nigdzie wyświetlane, ale zapisane wersje nadal je przechowują. Po usunięciu przywrócenie tych wersji nie odzyska już tych plików.} many {# plików nie jest już nigdzie wyświetlanych, ale zapisane wersje nadal je przechowują. Po usunięciu przywrócenie tych wersji nie odzyska już tych plików.} other {# plików nie jest już nigdzie wyświetlanych, ale zapisane wersje nadal je przechowują. Po usunięciu przywrócenie tych wersji nie odzyska już tych plików.}} Tej operacji nie można cofnąć.",
+              "confirm": "Usuń mimo to"
+            }
+          }
         },
         "noResults": {
           "title": "Nie przesłano żadnych plików",

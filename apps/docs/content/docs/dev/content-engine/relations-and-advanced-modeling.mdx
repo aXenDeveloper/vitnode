@@ -109,6 +109,16 @@ await service.relations.authors.add(articleId, userId);
 await service.relations.authors.get(articleId); // [9, 3] - the byline order
 ```
 
+<Callout type="info" title="A gallery is stored the same way">
+[`field.file({ multiple: true })`](/docs/dev/content-engine/fields) generates the
+same junction table with the same `position`, points its far side at `core_files`,
+and appears on the same `service.relations.<field>` API. What differs is the
+control the AdminCP renders - a multi-file uploader rather than a picker - and
+that `ordered` defaults to `true`, so the stored order is the order the files
+were **picked** in, whatever order their uploads finish in, and the editor can
+drag them into a different one.
+</Callout>
+
 <Callout type="info">
 A to-many reference cannot be a column in the AdminCP list (`admin.list.columns`)
 or an `orderBy` - it is on another table, and a list that loaded it would issue a

@@ -14,6 +14,14 @@ export const deleteFileAdminRoute = buildRoute({
       params: z.object({
         id: z.string().openapi({ example: "1" }),
       }),
+      /**
+       * Opt-in, and asked for only after a refusal has said what would be lost:
+       * `force` releases the retained revisions' pins, never a live content
+       * reference.
+       */
+      query: z.object({
+        force: z.enum(["true", "false"]).optional(),
+      }),
     },
     responses: {
       200: {
@@ -27,6 +35,23 @@ export const deleteFileAdminRoute = buildRoute({
         },
         description: "File not found",
       },
+      409: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              code: z.string(),
+              // `true` means live content points at it, which `force` cannot
+              // get past; otherwise `revisions` is what is holding it and
+              // `force` releases them.
+              content: z.boolean(),
+              id: z.number(),
+              revisions: z.number(),
+            }),
+          },
+        },
+        description:
+          "Still referenced by content or by a retained revision, so the file was kept",
+      },
     },
   },
   handler: async c => {
@@ -36,7 +61,9 @@ export const deleteFileAdminRoute = buildRoute({
       return c.json({ error: "File not found" }, 404);
     }
 
-    await c.get("storage").deleteFile(fileId);
+    await c.get("storage").deleteFile(fileId, {
+      force: c.req.query("force") === "true",
+    });
 
     return c.body(null, 200);
   },

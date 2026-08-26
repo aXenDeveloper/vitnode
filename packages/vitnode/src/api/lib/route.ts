@@ -8,6 +8,7 @@ import type { EnvVitNode } from "../middlewares/global.middleware";
 import { captchaMiddleware } from "../middlewares/captcha.middleware";
 import { pluginMiddleware } from "../middlewares/plugin.middleware";
 import { assertStaffPermission } from "./check-staff-permission";
+import { pluginTag } from "./openapi-tags";
 
 export interface AdminStaffPermission {
   module: string;
@@ -33,12 +34,7 @@ export const buildRoute = <
   pluginId: Plugin;
   route: R;
 }): Route<Plugin, R & { path: P }> => {
-  const pluginTag = pluginId
-    .split(/[-_]/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-
-  const tags = [pluginTag, ...(route.tags ?? [])];
+  const tags = [pluginTag(pluginId), ...(route.tags ?? [])];
 
   const middleware: MiddlewareHandler[] = [pluginMiddleware(pluginId)];
 

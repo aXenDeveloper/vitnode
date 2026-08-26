@@ -107,7 +107,28 @@ interface MutationResult {
   unchanged?: boolean;
   /** `CONTENT_REVISION_NOT_RESTORABLE`, naming the fields that no longer fit. */
   unprocessable?: ContentUnprocessable;
+  /**
+   * The version the record holds **after** this write.
+   *
+   * Read back so a form that stays open - page mode - can guard its next save on
+   * the version it just created rather than on the one it opened with. Without
+   * it, the second save of a session sends a version the record left behind and
+   * gets a conflict banner naming an editor who does not exist.
+   *
+   * The translation half of the same problem was already handled by
+   * `translations`; this is the base row's.
+   */
+  version?: number;
 }
+
+/**
+ * The version off a mutation response, when the row carries one.
+ *
+ * `undefined` for a content type with no `editorial`, which has no version to
+ * send and no conflict to have.
+ */
+const versionOf = (row?: Record<string, unknown>): number | undefined =>
+  typeof row?.version === "number" ? row.version : undefined;
 
 /** Reads whatever structured error the API sent, if any. */
 const failure = (result: {
@@ -384,7 +405,7 @@ export const editContentAction = async (
     before: localesBefore,
   });
 
-  return {};
+  return { version: versionOf(result.data) };
 };
 
 /** One language's half of a composite save, as the form assembled it. */
@@ -515,7 +536,10 @@ export const editLocalizedContentAction = async (
     before: localesBefore,
   });
 
-  return { translations: await readTranslations(definition, pluginId, id) };
+  return {
+    translations: await readTranslations(definition, pluginId, id),
+    version: versionOf(result.data),
+  };
 };
 
 /**
@@ -624,7 +648,7 @@ export const restoreContentRevisionAction = async (
   id: number,
   revisionId: number,
   expectedVersion: number,
-): Promise<MutationResult & { version?: number }> => {
+): Promise<MutationResult> => {
   const { definition, pluginId } = resolve(contentTypeId);
 
   // Same as an edit: the old slug has to be known before the write, or a
@@ -655,9 +679,7 @@ export const restoreContentRevisionAction = async (
     before: localesBefore,
   });
 
-  const version = result.data?.row.version;
-
-  return { version: typeof version === "number" ? version : undefined };
+  return { version: versionOf(result.data?.row) };
 };
 
 export interface ContentPreviewLink {
@@ -949,7 +971,9 @@ const publicationAction = async (
     );
   }
 
-  return {};
+  const version = result.data?.row.version;
+
+  return { version: typeof version === "number" ? version : undefined };
 };
 
 export const publishContentAction = async (

@@ -171,6 +171,10 @@ describe("example_articles", () => {
 
   it("indexes the foreign keys, the timestamps, the declared composite and publication", () => {
     expect([...indexNames(articles)].sort(byName)).toEqual([
+      // `field.file` is a foreign key like the other two, and Postgres does not
+      // index the child side on its own - `ON DELETE RESTRICT` scans it on every
+      // attempt to delete a file.
+      "example_articles_animation_idx",
       "example_articles_author_idx",
       "example_articles_category_idx",
       "example_articles_code_key",

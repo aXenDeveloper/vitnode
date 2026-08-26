@@ -1,7 +1,17 @@
 import { getMonth, getYear } from "date-fns";
 import { randomUUID } from "node:crypto";
 
-const FOLDER_PATTERN = /^[a-z0-9][a-z0-9_-]*$/i;
+import { getFileExtension, replaceFileExtension } from "../file-extension";
+
+/**
+ * Re-exported rather than defined here: `AutoFormFile` runs the same extension
+ * check in the browser, and this module cannot cross that boundary - it imports
+ * `node:crypto` at the top level.
+ */
+export { getFileExtension, replaceFileExtension };
+
+/** One path segment: letters, numbers, hyphens and underscores, never leading. */
+const FOLDER_SEGMENT_PATTERN = /^[a-z0-9][a-z0-9_-]*$/i;
 
 /**
  * Time-based prefix every upload is grouped under, e.g. `month_7_2026`.
@@ -12,26 +22,29 @@ export const buildMonthFolder = (now: Date = new Date()): string => {
 };
 
 /**
- * Guards the caller-provided folder against path traversal - only a single
- * path segment of letters, numbers, hyphens and underscores is allowed.
+ * Guards the caller-provided folder against path traversal.
+ *
+ * Nesting is allowed - `blog/posts` groups a plugin's uploads the way anybody
+ * browsing a bucket would expect - and every **segment** has to satisfy the same
+ * rule a single folder always did: it starts with a letter or a digit, and holds
+ * nothing but letters, digits, hyphens and underscores.
+ *
+ * Checking per segment rather than with one relaxed pattern is what keeps this a
+ * guard. `..` fails because it starts with a dot, `a//b` and `/a` and `a/` fail
+ * on their empty segment, and a backslash fails inside its own segment - so
+ * every way of climbing out of the prefix is refused by the same rule, rather
+ * than by a list of the tricks somebody thought of.
  */
 export const sanitizeFolder = (folder: string): string => {
-  if (!FOLDER_PATTERN.test(folder)) {
+  const segments = folder.split("/");
+
+  if (!segments.every(segment => FOLDER_SEGMENT_PATTERN.test(segment))) {
     throw new Error(
-      `Invalid storage folder name: "${folder}". Use only letters, numbers, hyphens and underscores.`,
+      `Invalid storage folder name: "${folder}". Use only letters, numbers, hyphens and underscores, with "/" between segments.`,
     );
   }
 
   return folder;
-};
-
-export const getFileExtension = (fileName: string): string => {
-  const lastDot = fileName.lastIndexOf(".");
-  if (lastDot <= 0 || lastDot === fileName.length - 1) {
-    return "";
-  }
-
-  return fileName.slice(lastDot).toLowerCase();
 };
 
 /**
@@ -45,16 +58,6 @@ export const generateStorageFileName = (
   extension?: string,
 ): string => {
   return `${randomUUID()}${extension ?? getFileExtension(originalName)}`;
-};
-
-export const replaceFileExtension = (
-  fileName: string,
-  extension: string,
-): string => {
-  const current = getFileExtension(fileName);
-  const base = current ? fileName.slice(0, -current.length) : fileName;
-
-  return `${base}${extension}`;
 };
 
 export const buildStorageKey = ({

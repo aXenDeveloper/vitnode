@@ -589,6 +589,45 @@ describe("editorial", () => {
     });
   });
 
+  /**
+   * The precondition a page-mode form's *next* save has to guard on.
+   *
+   * A page-mode form stays mounted across its own saves, so if the write does not
+   * report the version it produced, the second save sends the version the record
+   * has already left behind - and the editor gets "someone else saved this first"
+   * about their own previous click. Nobody else is involved.
+   */
+  it("reports the version the record holds after the write", async () => {
+    responses = [
+      { data: editorialRow, status: 200 },
+      { data: { ...editorialRow, version: 5 }, status: 200 },
+    ];
+
+    const result = await editContentAction(
+      "test.editorial",
+      7,
+      { title: "Changed" },
+      4,
+    );
+
+    expect(result.version).toBe(5);
+    expect(result.error).toBeUndefined();
+  });
+
+  it("reports no version for a content type that has none", async () => {
+    definition = testPostContentType;
+    responses = [
+      { data: { id: 7, slug: "hello", status: "draft" }, status: 200 },
+      { data: { id: 7, slug: "hello", status: "draft" }, status: 200 },
+    ];
+
+    const result = await editContentAction("test.post", 7, {
+      title: "Changed",
+    });
+
+    expect(result.version).toBeUndefined();
+  });
+
   it("sends a bare body for a content type without the workflow", async () => {
     definition = testPostContentType;
     responses = [

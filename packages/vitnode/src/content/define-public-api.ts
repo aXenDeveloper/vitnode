@@ -273,6 +273,20 @@ export const resolvePublicApi = <TField extends string>(
 
   const declaredOrderable = (publicApi.orderableFields ?? []).map(String);
   assertExposed("publicApi.orderableFields", declaredOrderable);
+  // Before the generic collection check below, so a file field hears why *it* is
+  // not orderable rather than being told it is a set. A file column holds a
+  // `core_files.id`, so ordering by one orders by upload order - a fact about the
+  // files table rather than about the records, and one that changes meaning the
+  // moment a file is replaced. Order by `publishedAt`.
+  const fileOrderable = declaredOrderable.find(
+    name => resolveFieldTarget(fields, name)?.descriptor.kind === "file",
+  );
+  if (fileOrderable !== undefined) {
+    throw new ContentEngineError(
+      `publicApi.orderableFields includes the file field "${fileOrderable}". A file reference is a \`core_files.id\`, so ordering by it orders by when the file happened to be uploaded - which says nothing about the records and changes when a file is replaced. A \`multiple: true\` one is not even one value.`,
+      { contentTypeId: id },
+    );
+  }
   const notOrderable = declaredOrderable.find(name => {
     const target = resolveFieldTarget(fields, name);
 

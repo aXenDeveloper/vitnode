@@ -6,6 +6,7 @@ import React from "react";
 import { toast } from "sonner";
 
 import type { filesAdminModule } from "@/api/modules/admin/files/files.admin.module";
+import type { FileInUse } from "@/lib/files/in-use";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,11 @@ export const FileRowActions = ({
   const t = useTranslations("admin.system.files");
   const tGlobal = useTranslations("core.global.errors");
   const [isDownloading, setIsDownloading] = React.useState(false);
+  // What the first refusal said, when it was one this dialog can offer to get
+  // past. Held here rather than acted on silently: forcing costs the revisions
+  // their copy of the file, so the person has to be told the number first.
+  const [heldByRevisions, setHeldByRevisions] =
+    React.useState<FileInUse | null>(null);
 
   const handleDownload = async () => {
     setIsDownloading(true);
@@ -90,12 +96,39 @@ export const FileRowActions = ({
 
       {canDelete && (
         <ConfirmActionAlertDialog
-          description={t("delete.desc")}
+          description={
+            heldByRevisions
+              ? t("delete.in_use.revisions.desc", {
+                  count: heldByRevisions.revisions,
+                })
+              : t("delete.desc")
+          }
+          onOpenChange={open => {
+            // A dialog that opens again starts from the plain confirmation: the
+            // file may have been freed in the meantime, and asking to force
+            // something that is no longer held is a lie about what is happening.
+            if (!open) setHeldByRevisions(null);
+          }}
           onSubmit={async ({ onClose }) => {
-            const result = await deleteFileAction({ id });
+            const result = await deleteFileAction({
+              force: heldByRevisions !== null,
+              id,
+            });
             if (result.error) {
+              const { inUse } = result.error;
+
+              // Only history is holding it: keep the dialog open, say what
+              // forcing gives up, and let the same button do it.
+              if (inUse && !inUse.content && inUse.revisions > 0) {
+                setHeldByRevisions(inUse);
+
+                return;
+              }
+
               toast.error(tGlobal("title"), {
-                description: tGlobal("internal_server_error"),
+                description: inUse
+                  ? t("delete.in_use.content")
+                  : tGlobal("internal_server_error"),
               });
 
               return;
@@ -104,7 +137,11 @@ export const FileRowActions = ({
             toast.success(t("delete.success"));
             onClose();
           }}
-          textSubmit={t("delete.confirm")}
+          textSubmit={
+            heldByRevisions
+              ? t("delete.in_use.revisions.confirm")
+              : t("delete.confirm")
+          }
           title={t("delete.title")}
         >
           <Button

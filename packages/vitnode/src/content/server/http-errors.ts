@@ -8,6 +8,7 @@ import type {
 } from "../conflicts";
 import type { ContentScheduleCode } from "../schedules";
 
+import { PG_ERROR_CODES, pgErrorCode } from "../../lib/api/pg-error";
 import {
   CONTENT_CONFLICT_CODES,
   CONTENT_DELIVERY_CODES,
@@ -20,29 +21,14 @@ import {
   ContentScheduleError,
   ContentVersionConflict,
 } from "../errors";
+import { ContentFileReferenceError } from "./files";
 
-/** Postgres error codes the engine translates into a useful HTTP status. */
-const FOREIGN_KEY_VIOLATION = "23503";
-const UNIQUE_VIOLATION = "23505";
-const NOT_NULL_VIOLATION = "23502";
-const RESTRICT_VIOLATION = "23001";
-
-/**
- * Digs the Postgres error code out of whatever the driver threw.
- *
- * Drizzle wraps driver failures in a `DrizzleQueryError` whose own `code` is
- * undefined and whose `cause` holds the real error, so reading `error.code`
- * alone would turn every constraint violation into a 500.
- */
-const errorCode = (error: unknown, depth = 0): string | undefined => {
-  if (typeof error !== "object" || error === null || depth > 3)
-    return undefined;
-
-  const { cause, code } = error as { cause?: unknown; code?: unknown };
-  if (typeof code === "string" && code !== "") return code;
-
-  return errorCode(cause, depth + 1);
-};
+const {
+  foreignKeyViolation: FOREIGN_KEY_VIOLATION,
+  notNullViolation: NOT_NULL_VIOLATION,
+  restrictViolation: RESTRICT_VIOLATION,
+  uniqueViolation: UNIQUE_VIOLATION,
+} = PG_ERROR_CODES;
 
 /**
  * A JSON error body, carried on the exception itself.
@@ -78,6 +64,21 @@ export const contentDeliveryConflict = (
 export const contentUnprocessable = (
   body: ContentUnprocessable,
 ): HTTPException => jsonError(422, body);
+
+/**
+ * A structured 400, for a file identifier a field may not hold.
+ *
+ * The only 400 in this module that carries a body, and it does so because the
+ * two parts beside the sentence are the actionable ones: `code` says which rule
+ * refused the file, and `field` says which input to put the message under. A
+ * save carries every field at once, so a client with only prose to go on can
+ * report a refusal but not where.
+ */
+export const contentFileRejected = (body: {
+  code: string;
+  field: string;
+  message: string;
+}): HTTPException => jsonError(400, body);
 
 /**
  * A structured 400, for a schedule the rules refuse.
@@ -163,13 +164,25 @@ export const rethrowAsHttpError = (
     throw new HTTPException(400, { message: "Invalid input data." });
   }
 
+  // Before the generic `ContentInputError` branch below, which is what this used
+  // to fall through to: that keeps the sentence and drops `code` and `field`,
+  // the two parts a form can act on. A `ContentFileReferenceError` is the same
+  // 400 either way - it just says which field and which rule.
+  if (error instanceof ContentFileReferenceError) {
+    throw contentFileRejected({
+      code: error.code,
+      field: error.field,
+      message: error.detail,
+    });
+  }
+
   // Written for the client on purpose - "provide the slug explicitly" is
   // useless if it never leaves the server.
   if (error instanceof ContentInputError) {
     throw new HTTPException(400, { message: error.message });
   }
 
-  switch (errorCode(error)) {
+  switch (pgErrorCode(error)) {
     case FOREIGN_KEY_VIOLATION:
       throw new HTTPException(action === "delete" ? 409 : 400, {
         message:

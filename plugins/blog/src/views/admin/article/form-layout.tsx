@@ -1,8 +1,11 @@
 "use client";
 
+import type { ContentFormLayoutProps } from "@vitnode/core/lib/plugin";
+
 import {
   ContentFormActions,
   ContentFormField,
+  ContentFormHeader,
   ContentFormLayoutGrid,
   ContentFormMain,
   ContentFormSection,
@@ -11,30 +14,42 @@ import {
 } from "@vitnode/core/content/admin-form";
 import { useTranslations } from "next-intl";
 
-export const BlogArticleFormLayout = () => {
+export const BlogArticleFormLayout = ({ mode }: ContentFormLayoutProps) => {
   const t = useTranslations("@vitnode/blog.admin.article.form");
 
   return (
-    <ContentFormLayoutGrid>
-      <ContentFormMain>
-        <ContentFormSection>
-          <ContentFormField name="title" />
-          <ContentFormField name="friendlyUrl" />
-          <ContentFormField name="content" />
-        </ContentFormSection>
-      </ContentFormMain>
+    <>
+      <ContentFormHeader>
+        <ContentFormActions />
+      </ContentFormHeader>
 
-      <ContentFormSidebar>
-        <ContentFormSection title={t("publish")}>
-          <ContentFormStatus />
-          <ContentFormActions className="justify-end" />
-        </ContentFormSection>
+      <ContentFormLayoutGrid>
+        <ContentFormMain>
+          <ContentFormSection>
+            <ContentFormField name="title" />
+            <ContentFormField name="friendlyUrl" />
+            <ContentFormField name="content" />
+          </ContentFormSection>
+        </ContentFormMain>
 
-        <ContentFormSection title={t("settings.title")}>
-          <ContentFormField name="categoryId" />
-          <ContentFormField name="authorId" />
-        </ContentFormSection>
-      </ContentFormSidebar>
-    </ContentFormLayoutGrid>
+        <ContentFormSidebar>
+          {mode === "edit" ? (
+            <ContentFormSection title={t("publish")}>
+              <ContentFormStatus />
+            </ContentFormSection>
+          ) : null}
+
+          <ContentFormSection title={t("cover.title")}>
+            <ContentFormField name="coverImage" />
+            <ContentFormField name="coverImageAlt" />
+          </ContentFormSection>
+
+          <ContentFormSection title={t("settings.title")}>
+            <ContentFormField name="categoryId" />
+            <ContentFormField name="authorId" />
+          </ContentFormSection>
+        </ContentFormSidebar>
+      </ContentFormLayoutGrid>
+    </>
   );
 };

@@ -14,6 +14,10 @@ export const deleteUserFileRoute = buildRoute({
       params: z.object({
         id: z.string().openapi({ example: "1" }),
       }),
+      /** See the admin route: history can be forced past, live content cannot. */
+      query: z.object({
+        force: z.enum(["true", "false"]).optional(),
+      }),
     },
     responses: {
       200: {
@@ -30,6 +34,20 @@ export const deleteUserFileRoute = buildRoute({
         },
         description: "File not found",
       },
+      409: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              code: z.string(),
+              content: z.boolean(),
+              id: z.number(),
+              revisions: z.number(),
+            }),
+          },
+        },
+        description:
+          "Still referenced by content or by a retained revision, so the file was kept",
+      },
     },
   },
   handler: async c => {
@@ -44,7 +62,10 @@ export const deleteUserFileRoute = buildRoute({
       return c.json({ error: "File not found" }, 404);
     }
 
-    await c.get("storage").deleteFile(fileId, user.id);
+    await c.get("storage").deleteFile(fileId, {
+      force: c.req.query("force") === "true",
+      ownerId: user.id,
+    });
 
     return c.body(null, 200);
   },

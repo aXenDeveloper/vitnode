@@ -6,9 +6,10 @@ import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
 import type { ContentFormLayout } from "@/lib/plugin";
 
-import { useRouter } from "@/lib/navigation";
+import { usePathname, useRouter } from "@/lib/navigation";
 
 import type { TranslationRow } from "../actions/translation-api.server";
+import type { ContentFormHeaderValue } from "../form/context";
 
 import { ContentForm } from "../actions/content-form";
 
@@ -29,6 +30,12 @@ export interface ContentFormPageProps {
     string,
     (props: ItemAutoFormComponentProps) => React.ReactNode
   >;
+  /**
+   * The heading, its description and the back link. Rendered inside the form
+   * rather than above it, so a layout can seat the submit buttons beside the
+   * back link - see `ContentFormHeader`.
+   */
+  header: ContentFormHeaderValue;
   layout?: ContentFormLayout;
   publication?: boolean;
   singular: string;
@@ -56,6 +63,7 @@ export const ContentFormPage = ({
   ...props
 }: ContentFormPageProps) => {
   const { push } = useRouter();
+  const pathname = usePathname();
 
   const onCreated = (id: number) => {
     push(
@@ -67,6 +75,7 @@ export const ContentFormPage = ({
 
   return (
     <ContentForm
+      key={`${pathname}#${data?.id ?? "new"}`}
       {...props}
       data={data}
       onCreated={onCreated}

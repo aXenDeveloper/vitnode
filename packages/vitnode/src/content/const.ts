@@ -126,6 +126,89 @@ const localizedFieldKinds: ReadonlySet<string> = new Set(
 export const isLocalizableFieldKind = (kind: string): boolean =>
   localizedFieldKinds.has(kind);
 
+// ---------------------------------------------------------------------------
+// File fields
+// ---------------------------------------------------------------------------
+
+/**
+ * A normalised extension rule: a leading dot, then lowercase letters or digits.
+ *
+ * One segment only, because `getFileExtension` reads one - a rule spelled
+ * `.tar.gz` would never match a file called `archive.tar.gz`, which is a silent
+ * "nothing is allowed" rather than the strict allowlist somebody wrote.
+ */
+export const CONTENT_FILE_EXTENSION_PATTERN = /^\.[a-z0-9]+$/;
+
+/** `type/subtype`, lowercased. Parameters (`; charset=`) are not a file type. */
+export const CONTENT_FILE_MIME_PATTERN =
+  /^[a-z0-9][a-z0-9!#$&^_+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/;
+
+/**
+ * How a `pluginId` is written into a storage key: `@vitnode/blog` -> `vitnode-blog`.
+ *
+ * A plugin id is a package name, so it carries the two characters a folder
+ * segment may not: the scope's `@` and the `/` between scope and name. Neither
+ * can simply be dropped - `@vitnode/blog` and `vitnodeblog` would collide with a
+ * plugin actually called that - so the scope separator becomes a hyphen and the
+ * leading `@` goes, which is both readable and reversible enough to recognise in
+ * a bucket listing.
+ */
+export const CONTENT_FILE_PLUGIN_SEPARATOR = "-";
+
+/**
+ * How many files one `field.file({ multiple: true })` may hold, unless it says
+ * otherwise, and the ceiling no `max` may exceed.
+ *
+ * A default ceiling exists for the same reason `maxBytes` is mandatory: every
+ * entry is a real stored object, every write replaces the whole list in one
+ * statement, and every entry pins its file against deletion for as long as the
+ * record - or a retained revision naming it - lives. Twenty is a generous
+ * gallery; an author who needs a media library should model a content type and
+ * relate to it.
+ */
+export const CONTENT_FILE_COLLECTION_DEFAULT_MAX = 20;
+export const CONTENT_FILE_COLLECTION_ABSOLUTE_MAX = 200;
+
+/**
+ * Machine-readable reasons a file was refused - at upload, and again on save.
+ *
+ * One list for both, because they are the same four questions asked twice: the
+ * upload route asks them of the file in the request, and a content mutation asks
+ * them of the `core_files` row an identifier names. A client that can act on
+ * "too big" at upload time can act on it either way.
+ */
+export const CONTENT_FILE_CODES = {
+  extension: "CONTENT_FILE_EXTENSION_NOT_ALLOWED",
+  /** The role may view this content type but not write it. */
+  forbidden: "CONTENT_FILE_FORBIDDEN",
+  /** The bytes were unreadable - a truncated or corrupt image. */
+  invalid: "CONTENT_FILE_INVALID",
+  mimeType: "CONTENT_FILE_MIME_TYPE_NOT_ALLOWED",
+  missing: "CONTENT_FILE_NOT_FOUND",
+  size: "CONTENT_FILE_TOO_LARGE",
+  /**
+   * The install cannot store anything: no adapter configured, or the image
+   * pipeline failed to load.
+   *
+   * A configuration fault rather than a bad file, and the person uploading needs
+   * to be told which - "please try again" would have them try for ever.
+   */
+  storage: "CONTENT_FILE_STORAGE_UNAVAILABLE",
+  /** The URL named a field this content type does not have, or that is not a file. */
+  unknownField: "CONTENT_FILE_FIELD_UNKNOWN",
+  /**
+   * The image was read, and then could not be re-encoded - a limit of the target
+   * format rather than anything wrong with the file.
+   *
+   * WebP allows at most 16383 pixels per side, so an install with
+   * `storage.image.webp` refuses a 20000px-wide PNG here - a PNG that is
+   * entirely valid, and that resizing fixes. Separate from `invalid` because
+   * that one says "corrupt", and telling somebody their good file is corrupt
+   * sends them to re-export it instead of to resize it.
+   */
+  unprocessable: "CONTENT_FILE_UNPROCESSABLE",
+} as const;
+
 /** Appended to the base table name to get the generated translation table. */
 export const CONTENT_TRANSLATION_TABLE_SUFFIX = "_translations";
 
@@ -250,6 +333,12 @@ export const CONTENT_PUBLIC_EXPOSABLE_KINDS = [
   "boolean",
   "dateTime",
   "enum",
+  // A file is exposable, and what crosses is the normalised descriptor rather
+  // than the `core_files.id` the column holds: an identifier is useless to a
+  // reader with no route to resolve it, while the descriptor is already the
+  // allowlisted shape. `user` stays absent - publishing a person is a decision
+  // `core_users` gets to make, not a side effect of an article having an author.
+  "file",
   "number",
   "relation",
   "slug",

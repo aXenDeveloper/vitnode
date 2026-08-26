@@ -31,7 +31,6 @@ const docsIndexRedirects = [
 }));
 
 const nextConfig: NextConfig = {
-  reactCompiler: true,
   redirects: async () => docsIndexRedirects,
 };
 

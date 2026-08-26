@@ -287,10 +287,10 @@ export const createVitNode = async ({
     // Update README.md with start URLs
     let startUrlsText = "[http://localhost:3000](http://localhost:3000)";
     if (mode === "onlyApi") {
-      startUrlsText = "[http://localhost:8080](http://localhost:8080)";
+      startUrlsText = "[http://localhost:8000](http://localhost:8000)";
     } else if (mode === "apiMonorepo") {
       startUrlsText =
-        "[http://localhost:3000](http://localhost:3000) for the Web app and [http://localhost:8080](http://localhost:8080) for the API";
+        "[http://localhost:3000](http://localhost:3000) for the Web app and [http://localhost:8000](http://localhost:8000) for the API";
     }
 
     readmeContent = readmeContent.replace("{{START_URLS}}", startUrlsText);

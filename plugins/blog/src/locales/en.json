@@ -12,6 +12,8 @@
           "content": "Content",
           "categoryId": "Categories",
           "authorId": "Authors",
+          "coverImage": "Cover image",
+          "coverImageAlt": "Cover image alt text",
           "status": "Status",
           "publishedAt": "Published",
           "updatedAt": "Updated"
@@ -35,6 +37,9 @@
         },
         "form": {
           "publish": "Publish",
+          "cover": {
+            "title": "Cover image"
+          },
           "settings": {
             "title": "Article settings"
           }

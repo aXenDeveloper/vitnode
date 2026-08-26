@@ -1,10 +1,10 @@
-import { serve } from '@hono/node-server';
-import { OpenAPIHono } from '@hono/zod-openapi';
-import { VitNodeAPI } from '@vitnode/core/api/config';
+import { serve } from "@hono/node-server";
+import { OpenAPIHono } from "@hono/zod-openapi";
+import { VitNodeAPI } from "@vitnode/core/api/config";
 
-import { vitNodeApiConfig } from './vitnode.api.config.js';
+import { vitNodeApiConfig } from "./vitnode.api.config.js";
 
-const app = new OpenAPIHono().basePath('/api');
+const app = new OpenAPIHono().basePath("/api");
 
 VitNodeAPI({
   app,
@@ -14,10 +14,10 @@ VitNodeAPI({
 serve(
   {
     fetch: app.fetch,
-    port: 8080,
+    port: 8000,
   },
   info => {
-    const initMessage = '\x1b[34m[VitNode]\x1b[0m';
+    const initMessage = "\x1b[34m[VitNode]\x1b[0m";
 
     // eslint-disable-next-line no-console
     console.log(

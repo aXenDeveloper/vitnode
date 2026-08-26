@@ -151,11 +151,6 @@ export const getAdminNav = async ({
         ],
       },
       {
-        title: "test",
-        icon: <LayoutDashboardIcon />,
-        href: "/admin/core/test",
-      },
-      {
         href: "/admin/core/users",
         title: t("admin.global.nav.users.title"),
         icon: <UsersRoundIcon />,

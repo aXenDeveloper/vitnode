@@ -24,6 +24,7 @@ import type {
   ContentTableFor,
 } from "./types";
 
+import { core_files } from "../../database/files";
 import { core_users } from "../../database/users";
 import { CONTENT_EDITORIAL_FIELDS, CONTENT_PUBLICATION_FIELDS } from "../const";
 import { ContentEngineError } from "../errors";
@@ -90,6 +91,17 @@ const resolveReference = (
       name,
       () => getTableName(core_users),
       () => core_users.id,
+    );
+  }
+  // Resolved by the engine, exactly like a `user` field: there is one files
+  // table in an installation, so asking a plugin to name it in `references`
+  // would be a line of boilerplate with one correct value.
+  if (fieldValue.kind === "file") {
+    return checkedReference(
+      contentTypeId,
+      name,
+      () => getTableName(core_files),
+      () => core_files.id,
     );
   }
   if (fieldValue.kind !== "relation") return undefined;

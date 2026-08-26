@@ -75,6 +75,17 @@ export {
 } from "./effects-log";
 export { emitContentEvent } from "./emit";
 export {
+  assertContentFileReferences,
+  contentFileCollectionFields,
+  contentFileDescriptorFromUpload,
+  contentFileFields,
+  ContentFileReferenceError,
+  contentSnapshotFileIds,
+  resolveContentFileDescriptors,
+  resolveContentPublicRowFiles,
+  withContentRowFiles,
+} from "./files";
+export {
   contentConflict,
   contentUnprocessable,
   rethrowAsHttpError,

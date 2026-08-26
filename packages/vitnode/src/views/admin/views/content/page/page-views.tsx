@@ -1,18 +1,14 @@
-import { ArrowLeftIcon } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
 import type { RegisteredFrontendContentType } from "@/content/admin/config";
 
-import { Button } from "@/components/ui/button";
-import { HeaderContent } from "@/components/ui/header-content";
 import { contentApiFetch } from "@/content/admin/fetch.server";
 import { buildContentFormSpec } from "@/content/admin/spec";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 import { contentAdminHref, contentEditHrefTemplate } from "@/content/registry";
 import { checkAdminPermissionApi } from "@/lib/api/get-session-admin-api";
-import { Link } from "@/lib/navigation";
 import { resolveContentFormLayout } from "@/lib/plugin";
 
 import { getContentLabels } from "../content-admin-view";
@@ -99,20 +95,6 @@ export const ContentCreatePageView = async ({
 
   return (
     <div className="p-4">
-      <HeaderContent
-        desc={t("desc", { name: singular })}
-        h1={t("title", { name: singular })}
-      >
-        <Button
-          nativeButton={false}
-          render={<Link href={backHref} />}
-          variant="outline"
-        >
-          <ArrowLeftIcon />
-          {tPage("back", { name: labels.plural })}
-        </Button>
-      </HeaderContent>
-
       <ContentFormPage
         backHref={backHref}
         // A create hands over to the record's own edit page when there is one,
@@ -123,6 +105,14 @@ export const ContentCreatePageView = async ({
             : undefined
         }
         fieldOverrides={fieldOverridesOf(entry)}
+        header={{
+          back: {
+            href: backHref,
+            label: tPage("back", { name: labels.plural }),
+          },
+          desc: t("desc", { name: singular }),
+          title: t("title", { name: singular }),
+        }}
         layout={resolveContentFormLayout(registration.forms, "create")}
         publication={definition.publication.enabled}
         singular={singular}
@@ -222,21 +212,18 @@ export const ContentEditPageView = async ({
 
   return (
     <div className="p-4">
-      <HeaderContent desc={title} h1={t("title", { name: singular })}>
-        <Button
-          nativeButton={false}
-          render={<Link href={backHref} />}
-          variant="outline"
-        >
-          <ArrowLeftIcon />
-          {tPage("back", { name: labels.plural })}
-        </Button>
-      </HeaderContent>
-
       <ContentFormPage
         backHref={backHref}
         data={data}
         fieldOverrides={fieldOverridesOf(entry)}
+        header={{
+          back: {
+            href: backHref,
+            label: tPage("back", { name: labels.plural }),
+          },
+          desc: title,
+          title: t("title", { name: singular }),
+        }}
         layout={resolveContentFormLayout(registration.forms, "edit")}
         publication={definition.publication.enabled}
         singular={singular}

@@ -23,9 +23,11 @@ import {
   zodContentTranslationConflict,
 } from "../conflicts";
 import { CONTENT_LOCALE_MAX_LENGTH, CONTENT_PERMISSIONS } from "../const";
+import { zodContentFileReferenceRejection } from "../files";
 import { resolveContentActor } from "./actor";
 import { contentEditorialEffects } from "./editorial-effects";
 import { emitContentEvent } from "./emit";
+import { contentFileFields } from "./files";
 import { withHttpErrors } from "./http-errors";
 import { contentSearchAdvancedValues, syncContentSearch } from "./search-sync";
 import { contentTranslationEffects } from "./translation-effects";
@@ -87,6 +89,22 @@ export const buildContentLocalizedAdminRoutes = <
     content: { "application/json": { schema } },
     description,
   });
+
+  /**
+   * The 400 a composite save answers when a file identifier is refused.
+   *
+   * Composite writes go through the same `withHttpErrors` as the plain ones, so
+   * the body is identical - and a file field is always shared, which is why one
+   * shape covers a route that writes the base row and every translation at once.
+   * Declared only when there is a file field to refuse.
+   */
+  const writeRejection = (description: string) =>
+    Object.keys(contentFileFields(definition)).length > 0
+      ? jsonResponse(
+          zodContentFileReferenceRejection,
+          `${description}, or a file this field may not hold`,
+        )
+      : { description };
 
   // Every arm a composite save can be refused with, in one union: the base row's
   // (version, unique), the translations' (version, exists, disabled language,
@@ -328,7 +346,7 @@ export const buildContentLocalizedAdminRoutes = <
       request: { body: jsonBody(createBody) },
       responses: {
         201: jsonResponse(schemas.selectObject, `${name} created successfully`),
-        400: { description: "Invalid input data" },
+        400: writeRejection("Invalid input data"),
         409: conflict,
       },
     },
@@ -416,7 +434,7 @@ export const buildContentLocalizedAdminRoutes = <
       request: { params: schemas.params, body: jsonBody(updateBody) },
       responses: {
         200: jsonResponse(schemas.selectObject, `${name} updated successfully`),
-        400: { description: "Invalid or empty payload" },
+        400: writeRejection("Invalid or empty payload"),
         404: { description: `${name} not found` },
         409: conflict,
       },

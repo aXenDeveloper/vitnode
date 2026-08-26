@@ -1,6 +1,7 @@
 import type {
   ContentFieldDescriptor,
   ContentFieldMap,
+  ContentFileField,
   ContentLeafColumn,
   ContentReferenceField,
   ContentRelationJunction,
@@ -11,6 +12,8 @@ import type {
 import {
   CONTENT_ADVANCED_LEAF_KINDS,
   CONTENT_FIELD_NAME_PATTERN,
+  CONTENT_FILE_COLLECTION_ABSOLUTE_MAX,
+  CONTENT_FILE_COLLECTION_DEFAULT_MAX,
   CONTENT_IDENTIFIER_MAX_LENGTH,
   CONTENT_JUNCTION_SYSTEM_FIELDS,
   CONTENT_RELATION_COLLECTION_MAX,
@@ -300,6 +303,80 @@ const assertReferenceCollection = (
 };
 
 /**
+ * Every rule a to-many **file** field obeys.
+ *
+ * Its own function rather than a branch in {@link assertReferenceCollection},
+ * because the two differ in what they are allowed to say: a relation carries an
+ * `onDelete` the author chooses, while a gallery's is fixed at `restrict` by the
+ * engine - Postgres refusing to delete a file a record still shows is the whole
+ * point - and a gallery carries a `max`, which a relation does not.
+ *
+ * The three refusals are properties of the *storage*, exactly as they are for a
+ * relation: a junction row is not a column, so it cannot be null, cannot be
+ * per-language, and the empty set is what "no files" looks like.
+ */
+const assertFileCollection = (
+  id: string,
+  name: string,
+  fieldValue: ContentFileField,
+): void => {
+  if (fieldValue.required || fieldValue.nullable) {
+    throw new ContentEngineError(
+      `File field "${name}" is \`multiple: true\`, so it is neither required nor nullable - the empty set is what "no files" looks like. Remove \`${fieldValue.required ? "required" : "nullable"}\` from it, and use \`min: 1\` if at least one file is mandatory.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const max = fieldValue.max ?? CONTENT_FILE_COLLECTION_DEFAULT_MAX;
+  if (
+    !Number.isInteger(max) ||
+    max < 1 ||
+    max > CONTENT_FILE_COLLECTION_ABSOLUTE_MAX
+  ) {
+    throw new ContentEngineError(
+      `File field "${name}" has max ${max}; it must be a whole number between 1 and ${CONTENT_FILE_COLLECTION_ABSOLUTE_MAX}. Every entry is a stored object the record pins against deletion, and the whole list is read and rewritten as one - model a content type for a media library.`,
+      { contentTypeId: id },
+    );
+  }
+
+  const min = fieldValue.min;
+  if (min !== undefined && (!Number.isInteger(min) || min < 1 || min > max)) {
+    throw new ContentEngineError(
+      `File field "${name}" has min ${min}, which must be a whole number between 1 and its max of ${max}. \`min: 0\` is what leaving it out already means.`,
+      { contentTypeId: id },
+    );
+  }
+};
+
+/**
+ * A to-one **file** field may not carry `min`, `max` or `ordered`.
+ *
+ * All three describe a list, and one file is not one. Refused rather than
+ * ignored: a `field.file({ max: 5 })` that silently stored one file is a
+ * gallery the author thinks they declared.
+ */
+const assertSingleFile = (
+  id: string,
+  name: string,
+  fieldValue: ContentFileField,
+): void => {
+  const listArg =
+    fieldValue.min !== undefined
+      ? "min"
+      : fieldValue.max !== undefined
+        ? "max"
+        : fieldValue.ordered
+          ? "ordered"
+          : null;
+  if (listArg === null) return;
+
+  throw new ContentEngineError(
+    `File field "${name}" has \`${listArg}\` but is not \`multiple: true\`. One file has no count and no order. Add \`multiple: true\`, or drop \`${listArg}\`.`,
+    { contentTypeId: id },
+  );
+};
+
+/**
  * A to-one reference may not carry `ordered`, which would mean nothing.
  *
  * Applied to `user` as well as `relation`: `field.user({ ordered: true })`
@@ -353,6 +430,13 @@ export const resolveContentAdvanced = ({
   for (const [name, fieldValue] of Object.entries(fields)) {
     if (fieldValue.kind === "relation" || fieldValue.kind === "user") {
       assertReference(id, name, fieldValue);
+    }
+    if (fieldValue.kind === "file") {
+      if (fieldValue.multiple) {
+        assertFileCollection(id, name, fieldValue);
+      } else {
+        assertSingleFile(id, name, fieldValue);
+      }
     }
     if (fieldValue.kind === "group") assertGroup(id, name, fieldValue);
     if (fieldValue.kind === "repeatable")
@@ -526,6 +610,19 @@ export const contentRepeatableMin = (
 
 export const contentRelationCollectionMax = (): number =>
   CONTENT_RELATION_COLLECTION_MAX;
+
+/** The resolved ceiling on a file collection's entry count. */
+export const contentFileCollectionMax = (
+  fieldValue: ContentFieldDescriptor,
+): number =>
+  fieldValue.kind === "file"
+    ? (fieldValue.max ?? CONTENT_FILE_COLLECTION_DEFAULT_MAX)
+    : CONTENT_FILE_COLLECTION_DEFAULT_MAX;
+
+/** The resolved floor on a file collection's entry count. */
+export const contentFileCollectionMin = (
+  fieldValue: ContentFieldDescriptor,
+): number => (fieldValue.kind === "file" ? (fieldValue.min ?? 0) : 0);
 
 /** Looks a generated junction up by its field name. */
 export const findContentJunction = (
