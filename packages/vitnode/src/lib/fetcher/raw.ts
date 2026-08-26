@@ -24,6 +24,15 @@ export interface RawApiFetchArgs {
      */
     next?: { revalidate?: false | number; tags?: string[] };
   };
+  /**
+   * Origin to build the URL against, instead of `NEXT_PUBLIC_API_URL`.
+   *
+   * For a runtime that serves the API itself, the right origin is the one the
+   * request being handled arrived on: it is only knowable per request, and on a
+   * preview deployment it is a hostname nobody configured. Left unset
+   * everywhere else, so Next.js and the browser keep reading `CONFIG.api`.
+   */
+  origin?: string;
   params?: Record<string, unknown>;
   /** Route path within the module, e.g. `/` or `/{id}`. */
   path: string;
@@ -35,6 +44,7 @@ export interface RawApiFetchArgs {
 
 export const buildApiUrl = ({
   module,
+  origin,
   params,
   path,
   pluginId,
@@ -44,6 +54,7 @@ export const buildApiUrl = ({
 }: Pick<
   RawApiFetchArgs,
   | "module"
+  | "origin"
   | "params"
   | "path"
   | "pluginId"
@@ -65,7 +76,7 @@ export const buildApiUrl = ({
 
   const url = new URL(
     `/api/${pluginId}${prefixPath}/${module}${formattedPath === "/" ? "" : formattedPath}`,
-    CONFIG.api.origin,
+    origin ?? CONFIG.api.origin,
   );
 
   if (query) {

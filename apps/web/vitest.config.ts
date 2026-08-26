@@ -10,6 +10,11 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    server: {
+      deps: {
+        inline: [/@tanstack\/react-start/, /@tanstack\/start-server-core/],
+      },
+    },
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
@@ -20,6 +25,22 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      'tanstack-start-manifest:v': resolve(
+        import.meta.dirname,
+        './src/tests/start-runtime/manifest.ts',
+      ),
+      '#tanstack-router-entry': resolve(
+        import.meta.dirname,
+        './src/tests/start-runtime/router-entry.ts',
+      ),
+      '#tanstack-start-entry': resolve(
+        import.meta.dirname,
+        './src/tests/start-runtime/start-entry.ts',
+      ),
+      '#tanstack-start-plugin-adapters': resolve(
+        import.meta.dirname,
+        './src/tests/start-runtime/plugin-adapters.ts',
+      ),
       '#': resolve(import.meta.dirname, './src'),
       '@': resolve(import.meta.dirname, './src'),
     },

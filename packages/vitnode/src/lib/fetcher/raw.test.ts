@@ -90,6 +90,20 @@ describe("buildApiUrl", () => {
     ).toBe("https://api.example.com");
   });
 
+  it("builds against the origin the caller passes instead of the env one", () => {
+    // What a runtime that serves the API itself needs: the origin is the one
+    // the request being handled arrived on, which is a per-request value and on
+    // a preview deployment a hostname nobody configured.
+    expect(
+      buildApiUrl({
+        module: "middleware",
+        origin: "https://web-git-branch.vercel.app",
+        path: "/",
+        pluginId: PLUGIN_ID,
+      }).toString(),
+    ).toBe(`https://web-git-branch.vercel.app/api/${PLUGIN_ID}/middleware`);
+  });
+
   it("adds the pagination defaults only when asked", () => {
     const url = buildApiUrl({
       module: "users",
@@ -124,6 +138,24 @@ describe("rawApiFetch against the mounted API", () => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
+  });
+
+  it("calls the origin passed on the call rather than the configured one", async () => {
+    // `rawApiFetch` forwards the override to the URL builder, so a caller that
+    // knows its origin per request never has to reach for `fetch` directly.
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "http://localhost:3000");
+
+    await rawApiFetch({
+      method: "get",
+      module: "middleware",
+      origin: "http://localhost:3001",
+      path: "/",
+      pluginId: PLUGIN_ID,
+    });
+
+    expect(new URL(api.seen.at(0)?.url ?? "").origin).toBe(
+      "http://localhost:3001",
+    );
   });
 
   it("reaches the route the URL builder addressed", async () => {

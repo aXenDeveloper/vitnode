@@ -2,33 +2,63 @@ import '@tanstack/react-start/server-only'
 import {
   getRequestHeaders,
   getRequestIP,
+  getRequestUrl,
   setCookie,
 } from '@tanstack/react-start/server'
+import { CONFIG } from '@vitnode/core/lib/config'
 import { coreFetcher } from '@vitnode/core/lib/fetcher/core'
 import { buildForwardedHeaders } from '@vitnode/core/lib/fetcher/request-context'
 import { parseSetCookies } from '@vitnode/core/lib/fetcher/set-cookie'
 import { config } from 'dotenv'
 
 /**
- * `@vitnode/core`'s fetcher builds absolute URLs from
- * `process.env.NEXT_PUBLIC_API_URL`, read lazily on every call, so that value
- * has to be in `process.env` before the first request - not before the first
- * import.
+ * `.env` into `process.env`, for anything that still reads it: the browser
+ * bundle's inlined `NEXT_PUBLIC_*` values, the database and Redis URLs the
+ * mounted API needs, and `resolveApiOrigin`'s fallback below.
  *
- * Vite's config loads `.env` into `process.env` for `vite dev` and `vite build`.
- * This covers `node .output/server/index.mjs`, where Vite is not involved, the
- * same way `apps/api` does it. dotenv does not overwrite what is already set, so
- * a platform that injects real environment variables still wins.
+ * Vite's config already does this for `vite dev` and `vite build`. This covers
+ * `node .output/server/index.mjs`, where Vite is not involved, the same way
+ * `apps/api` does it. dotenv does not overwrite what is already set, so a
+ * platform that injects real environment variables still wins.
  */
 config({ quiet: true })
 
+/**
+ * The origin to call `/api/*` on.
+ *
+ * This app *serves* the API, so the answer is not configuration - it is
+ * whichever origin the request being rendered arrived on. Taking it from the
+ * request is what makes a preview deployment work: its hostname is generated
+ * per branch, so no `NEXT_PUBLIC_API_URL` could name it, and the old default of
+ * `http://localhost:3000` names a completely different app in development (this
+ * one is on 3001) or nothing at all in production.
+ *
+ * `getRequestUrl()` reads the `Host` header the request arrived with and honours
+ * `x-forwarded-proto`, so a TLS-terminating proxy in front of a plain-HTTP
+ * server still yields an `https:` origin. `x-forwarded-host` is deliberately
+ * *not* honoured: it is a header a visitor can set, and these calls carry that
+ * visitor's cookies, so trusting it would let a request point this server's
+ * API calls at a host of the caller's choosing.
+ *
+ * Outside a request - boot, a script, a cron job - there is nothing to read and
+ * `getRequestUrl()` throws, so `NEXT_PUBLIC_API_URL` remains the fallback.
+ */
+export const resolveApiOrigin = (): string => {
+  try {
+    return getRequestUrl().origin
+  } catch {
+    return CONFIG.api.origin
+  }
+}
+
 if (!process.env.NEXT_PUBLIC_API_URL && process.env.NODE_ENV === 'production') {
-  // The fallback is `http://localhost:3000`, which in production is either
-  // nothing at all or - worse - this very server, so the failure reads as a
-  // hanging page rather than a missing variable.
+  // Server-side calls no longer need it, but the browser bundle still does:
+  // `vitnode-env.ts` inlines this value, and with nothing to inline a
+  // client-side call falls back to `http://localhost:3000` - somebody else's
+  // machine, from the visitor's browser.
   // eslint-disable-next-line no-console
   console.warn(
-    '\x1b[34m[VitNode]\x1b[0m \x1b[33mNEXT_PUBLIC_API_URL is not set; API calls will fall back to http://localhost:3000\x1b[0m',
+    '\x1b[34m[VitNode]\x1b[0m \x1b[33mNEXT_PUBLIC_API_URL is not set; client-side API calls will fall back to http://localhost:3000\x1b[0m',
   )
 }
 
@@ -90,6 +120,9 @@ export const fetcherServer: typeof coreFetcher = async (
       ...getForwardedApiHeaders(),
       ...options.additionalHeaders,
     },
+    // Same-origin by construction, and ahead of `NEXT_PUBLIC_API_URL` - which
+    // an explicit `origin` on the call can still override.
+    origin: options.origin ?? resolveApiOrigin(),
   })
 
 /**

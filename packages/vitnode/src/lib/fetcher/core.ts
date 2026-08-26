@@ -46,6 +46,12 @@ interface CoreFetcherOptions<
   method: Method;
   module: ModuleName;
   options?: Omit<RequestInit, "body" | "headers">;
+  /**
+   * Origin to call, instead of the `NEXT_PUBLIC_API_URL` one. Set by a runtime
+   * that serves the API itself and knows the origin only per request; see
+   * `RawApiFetchArgs["origin"]`.
+   */
+  origin?: string;
   path: SelectedPath;
   prefixPath?: string;
   withPagination?: boolean;
@@ -76,6 +82,7 @@ export async function coreFetcher<
     withPagination = false,
     prefixPath = "",
     formData,
+    origin,
   }: CoreFetcherOptions<M, Routes, Modules, ModuleName, SelectedPath, Method>,
 ): Promise<
   InferResponseType<M, Routes, Modules, ModuleName, SelectedPath, Method>
@@ -87,6 +94,7 @@ export async function coreFetcher<
     method,
     module,
     options,
+    origin,
     params:
       args && "params" in args
         ? (args.params as Record<string, unknown>)

@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
-import { getRequestHeader, getRequestUrl } from '@tanstack/react-start/server'
+import { getRequestHeader } from '@tanstack/react-start/server'
+
+import { resolveApiOrigin } from '#/server/fetcher.server'
 
 interface ApiProbe {
   body: string
@@ -30,9 +32,9 @@ const PROBES = [
 
 const probeApi = createServerFn().handler(async (): Promise<ApiProbe[]> => {
   // Same-origin by construction: the API is mounted in this app, so the origin
-  // of the request being rendered is the origin to call. No `NEXT_PUBLIC_API_URL`
-  // and no second server involved.
-  const { origin } = getRequestUrl()
+  // of the request being rendered is the origin to call. The same resolver the
+  // fetcher uses, so this page cannot pass while real calls go elsewhere.
+  const origin = resolveApiOrigin()
   const cookie = getRequestHeader('cookie')
   const userAgent = getRequestHeader('user-agent')
 
