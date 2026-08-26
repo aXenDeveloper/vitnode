@@ -3,8 +3,6 @@
  * Supports standard cron format: minute hour day month weekday
  * Also supports extended format with seconds (6 fields): second minute hour day month weekday
  *
- * @param schedule - The cron schedule string to validate
- * @returns true if the schedule is valid, false otherwise
  *
  * @example
  * ```typescript

@@ -18,7 +18,6 @@ import {
   sep,
 } from "node:path";
 
-// Regex patterns for import statements
 const relativeImportRegex =
   /import\s+(?:(?:{[^}]*})|(?:[^{}\s,]*))?\s*(?:,\s*(?:{[^}]*}))?\s*from\s+['"]([./]+[^'"]*)['"]/g;
 const atImportRegex =
@@ -69,7 +68,6 @@ export const buildInitialRouteMap = (
   return map;
 };
 
-// Function to transform file content by updating import statements
 export const transformFileImports = (
   content: string,
   pluginName: string,
@@ -78,13 +76,9 @@ export const transformFileImports = (
   let transformedContent = content.replace(
     relativeImportRegex,
     (match, importPath: string) => {
-      // Only transform relative imports (starting with ./ or ../)
       if (importPath.startsWith(".")) {
-        // Remove any file extensions from the import path
         const cleanPath = importPath.replace(jsExtensionRegex, "");
-        // Extract the path after removing leading '../' sequences
         const normalizedPath = cleanPath.replace(/^(?:\.\.\/)+/, "");
-        // Return the package import format
 
         return match.replace(importPath, `${pluginName}/${normalizedPath}`);
       }
@@ -97,11 +91,9 @@ export const transformFileImports = (
   transformedContent = transformedContent.replace(
     atImportRegex,
     (match, importPath: string) => {
-      // Remove '@/' prefix and any file extensions
       const cleanPath = importPath
         .replace(/^@\//, "")
         .replace(jsExtensionRegex, "");
-      // Return the package import format
 
       return match.replace(importPath, `${pluginName}/${cleanPath}`);
     },
@@ -111,11 +103,9 @@ export const transformFileImports = (
   transformedContent = transformedContent.replace(
     dynamicAtImportRegex,
     (match, importPath: string) => {
-      // Remove '@/' prefix and any file extensions
       const cleanPath = importPath
         .replace(/^@\//, "")
         .replace(jsExtensionRegex, "");
-      // Return the package import format
 
       return match.replace(importPath, `${pluginName}/${cleanPath}`);
     },
@@ -174,13 +164,11 @@ export function findPackagePath(
 }
 
 export function findLocaleRoot(repoRoot: string): string {
-  // Check for standalone structure (src/app/[locale])
   const standalonePath = join(repoRoot, "src", "app", "[locale]");
   if (existsSync(standalonePath)) {
     return standalonePath;
   }
 
-  // Function to recursively search for [locale] directories
   const findLocaleDirectories = (searchDir: string): string[] => {
     const localeDirectories: string[] = [];
     if (!existsSync(searchDir)) return localeDirectories;
@@ -197,9 +185,7 @@ export function findLocaleRoot(repoRoot: string): string {
 
           const fullPath = join(currentDir, entry.name);
 
-          // Check if this is a [locale] directory with app structure
           if (entry.name === "[locale]") {
-            // Verify it's inside an app directory structure
             const parentPath = dirname(fullPath);
             if (parentPath.endsWith(join("src", "app"))) {
               localeDirectories.push(fullPath);
@@ -207,7 +193,6 @@ export function findLocaleRoot(repoRoot: string): string {
             }
           }
 
-          // Continue searching in subdirectories
           visit(fullPath, depth + 1);
         }
       } catch (_error) {
@@ -220,11 +205,9 @@ export function findLocaleRoot(repoRoot: string): string {
     return localeDirectories;
   };
 
-  // Search for any directory structure containing src/app/[locale]
   const localeDirectories = findLocaleDirectories(repoRoot);
 
   if (localeDirectories.length > 0) {
-    // Return the first found locale directory
     return localeDirectories[0];
   }
 
@@ -297,7 +280,7 @@ export const copyFile = (
         );
       }
 
-      return; // 🔥 skip the copy
+      return;
     }
   }
 
@@ -307,23 +290,17 @@ export const copyFile = (
       mkdirSync(destDir, { recursive: true });
     }
 
-    // Check if file should have imports processed (like .js, .jsx, .ts, .tsx files)
     const ext = extname(srcPath);
     if (pluginName && [".js", ".jsx", ".ts", ".tsx"].includes(ext)) {
-      // Read file content
       const content = readFileSync(srcPath, "utf-8");
-      // Transform imports
       const transformedContent = transformFileImports(content, pluginName);
-      // Write transformed content
       writeFileSync(destPath, transformedContent);
     } else {
-      // Copy file directly without transforming
       copyFileSync(srcPath, destPath);
     }
 
     if (verbose) {
       // Show even shorter, project-rooted paths for clarity
-      // Remove everything before '/src/app' in the source path if present
       const srcAppIdx = srcPath.indexOf(join("src", "app"));
       let shortSrc: string;
       if (srcAppIdx !== -1) {

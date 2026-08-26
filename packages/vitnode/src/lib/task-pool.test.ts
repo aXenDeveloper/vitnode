@@ -2,15 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { createTaskPool } from "./task-pool";
 
-/**
- * The ceiling, and the two ways a pool with one can go wrong: starting too many,
- * and - much worse - stopping.
- *
- * Nothing here waits on a clock. Every task is a promise the test settles by
- * hand, which is what makes "three were running and the fourth was not" a fact
- * rather than a race with a timer.
- */
-
 /** Lets every promise chain that is already settled run to the end. */
 const flush = async () => {
   await new Promise<void>(resolve => {
@@ -63,6 +54,14 @@ const tasks = () => {
   };
 };
 
+/**
+ * The ceiling, and the two ways a pool with one can go wrong: starting too many,
+ * and - much worse - stopping.
+ *
+ * Nothing here waits on a clock. Every task is a promise the test settles by
+ * hand, which is what makes "three were running and the fourth was not" a fact
+ * rather than a race with a timer.
+ */
 describe("createTaskPool", () => {
   it("starts no more than the limit", async () => {
     const pool = createTaskPool(2);

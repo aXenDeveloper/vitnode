@@ -27,7 +27,6 @@ export class SessionModel {
     const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const bytes = new Uint8Array(hashBuffer);
 
-    // Optimize: Use direct iteration instead of Array.from + map
     let result = "";
     for (const byte of bytes) {
       result += byte.toString(16).padStart(2, "0");
@@ -41,7 +40,6 @@ export class SessionModel {
     const randomBytes = new Uint8Array(64);
     crypto.getRandomValues(randomBytes);
 
-    // Optimize: Use direct iteration instead of Array.from + map
     let token = "";
     for (const byte of randomBytes) {
       token += byte.toString(16).padStart(2, "0");

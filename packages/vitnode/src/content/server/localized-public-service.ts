@@ -319,15 +319,6 @@ export const createContentLocalizedPublicService = <
     );
 
   /**
-   * One localized column, read off whichever translation this row resolved to.
-   *
-   * The `CASE` is gated on the *join* having matched rather than on the column
-   * being null, which is what stops a nullable localized field being taken from
-   * one language while its neighbours come from another. Either the requested
-   * translation matched and every localized value comes from it, or none did and
-   * every value comes from the fallback.
-   */
-  /**
    * A canonical path, resolved to the column on the **aliased** translation.
    *
    * The two aliases are fresh Drizzle tables, so they carry the generated
@@ -339,6 +330,15 @@ export const createContentLocalizedPublicService = <
   const translationColumnName = (name: string): string =>
     localizedColumnByPath.get(name) ?? name;
 
+  /**
+   * One localized column, read off whichever translation this row resolved to.
+   *
+   * The `CASE` is gated on the *join* having matched rather than on the column
+   * being null, which is what stops a nullable localized field being taken from
+   * one language while its neighbours come from another. Either the requested
+   * translation matched and every localized value comes from it, or none did and
+   * every value comes from the fallback.
+   */
   const localizedValue = (
     name: string,
     withFallback: boolean,

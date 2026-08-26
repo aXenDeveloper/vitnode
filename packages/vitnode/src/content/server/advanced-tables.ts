@@ -1,3 +1,13 @@
+/**
+ * Generates the relational storage Stage 6 needs.
+ *
+ * Two shapes, both ordinary Drizzle tables so `drizzle-kit` discovers them the
+ * same way it discovers every other one - by runtime identity, when it globs the
+ * plugin's built `dist/src/database/*.js`. There is no JSONB column, no
+ * comma-separated identifier list and no property/value table anywhere in here:
+ * a to-many relation is a junction table with two foreign keys, and a repeatable
+ * is a child table with real columns, real constraints and real indexes.
+ */
 import type {
   AnyPgColumnBuilder,
   PgColumn,
@@ -36,17 +46,6 @@ import {
   contentStorageColumns,
 } from "../paths";
 import { buildContentColumn } from "./column-builders";
-
-/**
- * Generates the relational storage Stage 6 needs.
- *
- * Two shapes, both ordinary Drizzle tables so `drizzle-kit` discovers them the
- * same way it discovers every other one - by runtime identity, when it globs the
- * plugin's built `dist/src/database/*.js`. There is no JSONB column, no
- * comma-separated identifier list and no property/value table anywhere in here:
- * a to-many relation is a junction table with two foreign keys, and a repeatable
- * is a child table with real columns, real constraints and real indexes.
- */
 
 /**
  * The junction table for one to-many relation field.

@@ -102,7 +102,7 @@ const assertIndexable = (
       throw new ContentEngineError(
         path
           ? `indexes names "${name}", a leaf of the localized group "${owner}". Its column is on the translation table, where the unique scope is per language - see \`localization.translationIndexes\`.`
-          : `indexes names the localized field "${owner}", which is not a column on the base table. Localized values get their own AdminCP surface in Stage 5B.`,
+          : `indexes names the localized field "${owner}", which is not a column on the base table. Localized values are edited through the field's own language switcher.`,
         { contentTypeId: id },
       );
     }

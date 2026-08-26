@@ -12,14 +12,13 @@ export function getDefaults<T extends z.ZodType>(
 
   const defaultValues: Record<string, unknown> = {};
 
-  // Iterate over each property in the schema
   for (const key in jsonSchema.properties) {
     const prop = jsonSchema.properties[key] as z.core.JSONSchema.JSONSchema;
 
     // Case 1: The property has a 'default' key.
     if (prop.default !== undefined) {
       defaultValues[key] = prop.default;
-      continue; // Move to the next property
+      continue;
     }
 
     // Case 2: The property is a nested object. Recurse into it.
@@ -98,7 +97,7 @@ export function getZodInputParams(
 
     // 3. Handle complex patterns from `allOf` (used for password)
     if (prop.allOf) {
-      fieldParams.patterns = prop.allOf.map(p => p.pattern).filter(Boolean); // Filter out any undefined patterns
+      fieldParams.patterns = prop.allOf.map(p => p.pattern).filter(Boolean);
     }
 
     if (prop.description) {

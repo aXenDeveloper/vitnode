@@ -51,11 +51,11 @@ export interface ContentLocalizedService<TDefinition> {
   /**
    * Creates a base row and its default-locale translation, atomically.
    *
-   * Either both exist or neither does. That is the invariant every later stage
-   * leans on: a record always resolves in at least one language, so a locale tab
-   * strip always has something to show, a public read always has something to
-   * fall back to, and there is no such thing as an "empty" record whose title
-   * exists in no language at all.
+   * Either both exist or neither does. That is the invariant everything above
+   * leans on: a record always resolves in at least one language, so the AdminCP
+   * always has something to show, a public read always has something to fall
+   * back to, and there is no such thing as an "empty" record whose title exists
+   * in no language at all.
    */
   create: (
     input: ContentLocalizedCreateInput<TDefinition>,

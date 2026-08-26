@@ -16,7 +16,7 @@
  * types a term.
  *
  * One tag rather than one per locale: the feed is rebuilt wholesale by
- * `rebuildSearchIndex`, which re-indexes every language at once, so a per-locale
+ * `rebuildSearchIndexTask`, which re-indexes every language at once, so a per-locale
  * tag would buy nothing and only add strings to expire. Term searches are not
  * cached at all and so are not tagged - see `views/search/fetch-feed.ts`.
  */

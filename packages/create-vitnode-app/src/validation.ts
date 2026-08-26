@@ -8,7 +8,6 @@ import { isWriteable } from "./helpers/is-writeable.js";
 import { validateNpmName } from "./helpers/validate-pkg.js";
 
 export const validationProject = async (projectPath: string) => {
-  // Verify the project path is provided
   if (!projectPath) {
     console.log(
       "\nPlease specify the project directory:\n" +
@@ -20,7 +19,6 @@ export const validationProject = async (projectPath: string) => {
     process.exit(1);
   }
 
-  // Verify the project name is valid
   const resolvedProjectPath = resolve(projectPath);
   const projectName = basename(resolvedProjectPath);
   const validation = validateNpmName({ name: projectName });
@@ -37,7 +35,6 @@ export const validationProject = async (projectPath: string) => {
     process.exit(1);
   }
 
-  // Verify the project dir is empty or doesn't exist
   const root = resolve(resolvedProjectPath);
   const appName = basename(root);
   const folderExists = existsSync(root);
@@ -46,7 +43,6 @@ export const validationProject = async (projectPath: string) => {
     process.exit(1);
   }
 
-  // Verify the project dir is writeable
   if (!(await isWriteable(dirname(root)))) {
     console.error(
       "The application path is not writable, please check folder permissions and try again.",

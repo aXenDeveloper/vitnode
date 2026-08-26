@@ -228,19 +228,6 @@ const assertLocalizedFields = (
 };
 
 /**
- * There is no capability boundary left.
- *
- * Stage 5A landed the infrastructure, Stage 5B the editorial layer, Stage 5C the
- * public read and Stage 5D per-locale search. `localization` now combines with
- * `publication`, `editorial`, `publicApi` and `search`, and every one of them
- * reads the language it was asked for rather than pretending there is only one.
- *
- * The function is gone rather than left as an empty stub: a boundary that refuses
- * nothing is a comment, and a comment is where the next one would be added
- * silently.
- */
-
-/**
  * Checks and fills in `localization`.
  *
  * Runs after every other resolver, because the Stage 5A boundaries are stated in

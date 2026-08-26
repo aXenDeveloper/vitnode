@@ -47,7 +47,6 @@ export const createPluginVitNode = async ({
     process.exit(1);
   }
 
-  // Create the folder for the plugin
   await mkdir(pluginPath, { recursive: true });
   if (!isFolderEmpty(pluginPath, pluginName)) {
     process.exit(1);
@@ -56,7 +55,6 @@ export const createPluginVitNode = async ({
   spinner.text = "Preparing the plugin structure...";
   await cp(templatePath, pluginPath, { recursive: true });
 
-  // Rename template npmignore to .npmignore in the generated plugin
   const npmIgnoreTemplatePath = join(pluginPath, "npmignore.template");
   const dotNpmIgnorePath = join(pluginPath, ".npmignore");
   if (existsSync(npmIgnoreTemplatePath)) {

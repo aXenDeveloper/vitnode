@@ -120,11 +120,6 @@ interface Harness {
 }
 
 /**
- * Mounts the generated routes with the service and permission check stubbed,
- * so each test drives the real Hono pipeline (validation, status codes, error
- * mapping) without a database.
- */
-/**
  * The two typed collection maps every service carries, empty.
  *
  * None of these fixtures declares an advanced field, and the generated routes
@@ -133,6 +128,11 @@ interface Harness {
  */
 const noCollections = { relations: {}, repeatable: {} };
 
+/**
+ * Mounts the generated routes with the service and permission check stubbed,
+ * so each test drives the real Hono pipeline (validation, status codes, error
+ * mapping) without a database.
+ */
 const harness = ({ allow = true }: { allow?: boolean } = {}): Harness => {
   const emitted: Harness["emitted"] = [];
   const service = {

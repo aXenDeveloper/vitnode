@@ -14,18 +14,15 @@ export const findConfigFile = (
   filename: string,
   maxDepth = 4,
 ): null | string => {
-  // Search recursively in project
   const searchRecursively = (dir: string, depth: number): null | string => {
     if (depth > maxDepth) return null;
 
     try {
-      // Check if config exists in src folder of current directory
       const configPath = join(dir, "src", filename);
       if (existsSync(configPath)) {
         return configPath;
       }
 
-      // Search in subdirectories
       const items = readdirSync(dir);
       for (const item of items) {
         // Skip node_modules, hidden directories, and build output folders
@@ -101,7 +98,6 @@ export async function getConfig<T extends "api.config" | "config" = "config">({
     const configVarName =
       type === "config" ? "vitNodeConfig" : "vitNodeApiConfig";
 
-    // Use jiti to load TypeScript files
     const jiti = createJiti(import.meta.url, {
       interopDefault: true,
     });

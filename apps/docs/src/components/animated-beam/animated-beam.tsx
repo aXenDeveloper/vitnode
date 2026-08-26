@@ -11,7 +11,7 @@ export const AnimatedBeam = ({
   fromRef,
   toRef,
   curvature = 0,
-  reverse = false, // Include the reverse prop
+  reverse = false,
   // eslint-disable-next-line react-hooks/purity, @eslint-react/purity
   duration = Math.random() * 3 + 4,
   delay = 0,
@@ -26,7 +26,7 @@ export const AnimatedBeam = ({
   endYOffset = 0,
 }: {
   className?: string;
-  containerRef: RefObject<HTMLElement | null>; // Container ref
+  containerRef: RefObject<HTMLElement | null>;
   curvature?: number;
   delay?: number;
   duration?: number;
@@ -90,7 +90,6 @@ export const AnimatedBeam = ({
     };
 
     const resizeObserver = new ResizeObserver(entries => {
-      // For all entries, recalculate the path
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for (const _entry of entries) {
         updatePath();

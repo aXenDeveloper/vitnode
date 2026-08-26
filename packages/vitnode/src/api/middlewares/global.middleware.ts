@@ -344,7 +344,6 @@ export const globalMiddleware = ({
   return async (c: Context, next: Next) => {
     let ipAddress: string | undefined;
 
-    // Optimize: Try both header methods in a single loop
     for (const key of ipHeaderKeys) {
       ipAddress = c.req.header(key);
       if (ipAddress) break;

@@ -42,7 +42,6 @@ export async function cleanupOutdatedCronJobs(
 ) {
   if (cronFromDb.length === 0) return;
 
-  // Optimize: Use Set for O(1) lookup instead of Array.includes O(n)
   const currentCronIdentifiers = new Set(
     currentCronJobs.map(job => `${job.pluginId}:${job.module}:${job.name}`),
   );
@@ -73,7 +72,6 @@ export function processCronJobs(
     job: CronJobConfig;
   }[] = [];
 
-  // Optimize: Create a Map for O(1) lookup instead of O(n) find operations
   const cronFromDbMap = new Map(
     cronFromDb.map(dbJob => [
       `${dbJob.pluginId}:${dbJob.module}:${dbJob.name}`,

@@ -1381,7 +1381,7 @@ export type ContentSearchDescriptionField<
  * Widest of the three, and the only one that reaches into a **repeatable**:
  * `faq.question` is many values rather than one, which rules it out as a
  * heading but makes it exactly the kind of prose a body should carry. The
- * values are concatenated in position order - see `contentSearchText`.
+ * values are concatenated in position order - see `contentSearchDocument`.
  */
 export type ContentSearchTextField<
   TFields,
@@ -1970,10 +1970,9 @@ export type ContentTranslationRow<TDefinition> = Prettify<
 /**
  * One translation without its values.
  *
- * What the list route returns, and deliberately so: a locale tab strip needs to
- * know which languages exist, how stale each one is and whether each is
- * published - not to drag every article body in every language across the wire
- * to find out.
+ * What the list route returns, and deliberately so: the AdminCP needs to know
+ * which languages exist, how stale each one is and whether each is published -
+ * not to drag every article body in every language across the wire to find out.
  */
 export type ContentTranslationMeta<TDefinition = AnyContentTypeDefinition> =
   Prettify<
@@ -2302,11 +2301,6 @@ export type PublicFilterableContentFieldName<TDefinition> = AnyFieldNamesOfKind<
 >;
 
 /**
- * Equality filters accepted by `service.findMany`, one key per filterable
- * field - plus `status` once publication is enabled, which is a generated
- * column rather than a declared field.
- */
-/**
  * The one filter a to-many relation accepts: "this record is related to *that*
  * row".
  *
@@ -2321,6 +2315,11 @@ export interface ContentRelationFilter {
   contains: number;
 }
 
+/**
+ * Equality filters accepted by `service.findMany`, one key per filterable
+ * field - plus `status` once publication is enabled, which is a generated
+ * column rather than a declared field.
+ */
 export type ContentFilterInput<TDefinition> = Partial<
   Record<ContentRelationCollectionName<TDefinition>, ContentRelationFilter> &
     (TDefinition extends { publication: { enabled: true } }

@@ -108,13 +108,6 @@ const identifier = (c: Context): number => {
 };
 
 /**
- * The five CRUD routes plus the picker-options route for one content type.
- *
- * Every route carries an explicit `adminStaffPermission`, and every path sits
- * under `/admin/` so the global admin session middleware runs - both are
- * required for `assertStaffPermission` to have an admin to check.
- */
-/**
  * The collections a search document is made of, or nothing.
  *
  * Read after the write has returned, and only when the search configuration
@@ -133,6 +126,13 @@ const advancedForSearch = async (
     : undefined;
 };
 
+/**
+ * The five CRUD routes plus the picker-options route for one content type.
+ *
+ * Every route carries an explicit `adminStaffPermission`, and every path sits
+ * under `/admin/` so the global admin session middleware runs - both are
+ * required for `assertStaffPermission` to have an admin to check.
+ */
 export const buildContentRoutes = <
   TDefinition extends AnyContentTypeDefinition,
   P extends string,

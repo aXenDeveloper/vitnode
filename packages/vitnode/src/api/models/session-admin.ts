@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import { and, eq, gt, or } from "drizzle-orm"; // Removed 'or' as it's safer not to use it here
+import { and, eq, gt, or } from "drizzle-orm";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 
@@ -28,7 +28,6 @@ export class SessionAdminModel {
     const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const bytes = new Uint8Array(hashBuffer);
 
-    // Optimize: Use direct iteration instead of Array.from + map
     let result = "";
     for (const byte of bytes) {
       result += byte.toString(16).padStart(2, "0");
@@ -65,7 +64,6 @@ export class SessionAdminModel {
     const randomBytes = new Uint8Array(64);
     crypto.getRandomValues(randomBytes);
 
-    // Optimize: Use direct iteration instead of Array.from + map
     let token = "";
     for (const byte of randomBytes) {
       token += byte.toString(16).padStart(2, "0");

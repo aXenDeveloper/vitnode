@@ -41,7 +41,7 @@ const assertNotLocalized = (
   const localized = names.find(name => localizedFields[name] !== undefined);
   if (localized !== undefined) {
     throw new ContentEngineError(
-      `${label} names the localized field "${localized}", which is not a column on the base table. Localized values get their own AdminCP surface in Stage 5B.`,
+      `${label} names the localized field "${localized}", which is not a column on the base table. Localized values are edited through the field's own language switcher.`,
       { contentTypeId: id },
     );
   }

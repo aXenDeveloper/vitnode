@@ -75,7 +75,6 @@ export const runCronRoute = buildRoute({
       }
 
       if (jobsToExecute.length > 0) {
-        // Optimize: Create a Map for O(1) lookup instead of O(n) find operations
         const cronFromDbMap = new Map(
           cronFromDb.map(dbJob => [
             `${dbJob.pluginId}:${dbJob.module}:${dbJob.name}`,

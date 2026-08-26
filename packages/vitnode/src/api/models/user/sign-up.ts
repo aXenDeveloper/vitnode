@@ -123,7 +123,6 @@ export const signUp = async (
       emailVerified,
       ipAddress: c.get("ipAddress"),
       // TODO: Handle language
-      // language: await this.getLanguage(req),
     })
     .returning();
 
