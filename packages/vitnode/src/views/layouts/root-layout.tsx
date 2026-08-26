@@ -4,6 +4,7 @@ import type React from "react";
 import type { VitNodeConfig } from "@/vitnode.config";
 
 import { I18nProvider } from "@/components/i18n-provider";
+import { titleTemplate } from "@/lib/metadata";
 import { VitNodeWebSocketProvider } from "@/ws/provider";
 
 import { RootProvider } from "./provider";
@@ -16,12 +17,12 @@ export interface RootLayoutProps {
 }
 
 export const generateMetadataRootLayout = ({
-  metadata: { title, shortTitle },
+  metadata,
 }: VitNodeConfig): Metadata => {
   return {
     title: {
-      default: title,
-      template: `%s - ${shortTitle ?? title}`,
+      default: metadata.title,
+      template: titleTemplate(metadata),
     },
   };
 };

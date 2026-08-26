@@ -1,91 +1,68 @@
 "use client";
 
 import { ProgressProvider } from "@bprogress/next/app";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
-import type { LocaleConfig } from "@/lib/i18n/types";
-import type { VitNodeConfig } from "@/vitnode.config";
+import type { ProgressBarConfig } from "@/components/progress-bar";
+import type { Toaster } from "@/components/ui/sonner";
 
-import { CONFIG } from "@/lib/config";
+import { NextThemeScript } from "@/components/theme-script-next";
+import { createVitNodeQueryClient } from "@/lib/query-client";
 
-import { LanguagesProvider } from "../../components/languages-provider";
-import { ThemeProvider } from "../../components/theme-provider";
-import { Toaster } from "../../components/ui/sonner";
-import { TooltipProvider } from "../../components/ui/tooltip";
-import { RateLimitListener } from "./rate-limit-listener";
+import type { VitNodeProvidersConfig } from "./providers";
+
+import { VitNodeProviders } from "./providers";
 
 /**
- * The slice of the config this provider needs. Deliberately not the whole
- * `VitNodeConfig`: `plugins` and `i18n.messages` hold functions, which React
- * cannot serialise across the server/client boundary.
+ * The provider config of a Next.js app: the shared one plus the progress bar,
+ * which is driven by Next's router and so belongs to this half.
  */
-export interface RootProviderConfig extends Pick<
-  VitNodeConfig,
-  "debug" | "progressBar" | "theme"
-> {
-  locales: LocaleConfig[];
+export interface RootProviderConfig extends VitNodeProvidersConfig {
+  progressBar?: ProgressBarConfig;
 }
 
+/**
+ * The Next.js half of VitNode's provider tree.
+ *
+ * Three things only: the QueryClient (Next has no router to own one, so the
+ * outermost client component does), the theme's no-flash script - inserted
+ * through `useServerInsertedHTML`, which is Next's mechanism and nobody else's -
+ * and `@bprogress/next`, which hooks Next's own navigation events.
+ *
+ * Everything else moved to {@link VitNodeProviders}, which the TanStack Start
+ * app mounts too. Nothing is rendered twice: the QueryClient lives here, so
+ * `apps/web` must not create another one - its router does that instead.
+ */
 export const RootProvider = ({
   children,
   toaster,
-  config: { debug, theme, progressBar, locales },
+  config: { progressBar, ...providers },
 }: {
   children: React.ReactNode;
   config: RootProviderConfig;
   toaster?: React.ComponentProps<typeof Toaster>;
 }) => {
-  React.useEffect(() => {
-    // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
-    if (!(debug && CONFIG.node_development)) return;
-
-    void import("react-scan").then(({ scan }) => scan({ enabled: true }));
-  }, [debug]);
-
-  const [queryClient] = React.useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            refetchOnWindowFocus: false,
-            refetchOnMount: false,
-          },
-        },
-      }),
-  );
+  const [queryClient] = React.useState(createVitNodeQueryClient);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider
-        attribute="class"
-        disableTransitionOnChange
-        enableSystem
-        {...theme}
+      <NextThemeScript {...providers.theme} />
+
+      <ProgressProvider
+        {...progressBar}
+        color={progressBar?.color ?? "var(--primary)"}
+        height={progressBar?.height ?? "4px"}
+        options={{
+          showSpinner: false,
+          ...progressBar?.options,
+        }}
+        shallowRouting={progressBar?.shallowRouting ?? true}
       >
-        <Toaster
-          closeButton
-          position={toaster?.position ?? "top-center"}
-          {...toaster}
-        />
-        <RateLimitListener />
-        <ProgressProvider
-          {...progressBar}
-          color={progressBar?.color ?? "var(--primary)"}
-          height={progressBar?.height ?? "4px"}
-          options={{
-            showSpinner: false,
-            ...progressBar?.options,
-          }}
-          shallowRouting={progressBar?.shallowRouting ?? true}
-        >
-          <TooltipProvider>
-            <LanguagesProvider languages={locales}>
-              {children}
-            </LanguagesProvider>
-          </TooltipProvider>
-        </ProgressProvider>
-      </ThemeProvider>
+        <VitNodeProviders config={providers} toaster={toaster}>
+          {children}
+        </VitNodeProviders>
+      </ProgressProvider>
     </QueryClientProvider>
   );
 };

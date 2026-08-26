@@ -35,10 +35,18 @@ const filesUnder = (directory: string): string[] => {
   return entries
 }
 
+/**
+ * Every specifier a file imports.
+ *
+ * Written to tolerate compiled output as well as source: a package's `dist` is
+ * minified onto one line, so `from"./x.js"` carries no whitespace and its
+ * statements are separated by `;` rather than by newlines. The `[^\w$.]` guard
+ * before `from` keeps a property access such as `Object.from` out.
+ */
 const importsFrom = (path: string): string[] =>
   [
     ...readFileSync(path, 'utf8').matchAll(
-      /from\s+["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']|(?:^|\n)\s*import\s+["']([^"']+)["']/g,
+      /(?:^|[^\w$.])from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']|(?:^|[\n;}])\s*import\s*["']([^"']+)["']/g,
     ),
   ]
     .map((match) => match[1] ?? match[2] ?? match[3])
@@ -196,5 +204,148 @@ describe('the TanStack Start application stays Next-free', () => {
     ) as { dependencies?: Record<string, string> }
 
     expect(manifest.dependencies?.next).toBeUndefined()
+  })
+})
+
+/**
+ * The graph the bundler walks, rather than the files this app happens to own.
+ *
+ * The tests above scan `apps/web/src` for a forbidden `import`, which catches a
+ * line written here. It does not catch the more likely mistake: importing
+ * something from `@vitnode/core` or a plugin whose *own* imports reach Next.js.
+ * That is not hypothetical - a plugin's frontend entry
+ * (`blogPlugin()`) registers AdminCP screens, which reach `next/dynamic` and
+ * `next-intl/navigation`, and `apps/web/src/vitnode.config.ts` exists in the
+ * shape it does because of it.
+ *
+ * So this walks the real thing, transitively: this app's source, then every
+ * package module it reaches, as the *built* files - which is what a bundler and
+ * the Nitro server actually load, and which have their type-only imports already
+ * erased.
+ */
+describe('the whole graph this app imports stays Next-free', () => {
+  const DIST_OF: Record<string, string> = {
+    '@vitnode/blog': join(repoRoot, 'plugins/blog/dist/src'),
+    '@vitnode/core': join(repoRoot, 'packages/vitnode/dist/src'),
+    '@vitnode/example': join(repoRoot, 'plugins/example/dist/src'),
+  }
+  const appSrc = join(repoRoot, 'apps/web/src')
+  const CANDIDATES = [
+    '',
+    '.ts',
+    '.tsx',
+    '.js',
+    '/index.ts',
+    '/index.tsx',
+    '/index.js',
+  ]
+
+  const resolveFile = (base: string): null | string => {
+    for (const suffix of CANDIDATES) {
+      const path = `${base}${suffix}`
+      if (existsSync(path) && statSync(path).isFile()) return path
+    }
+
+    return null
+  }
+
+  const resolveSpecifier = (
+    specifier: string,
+    importer: string,
+  ): null | string => {
+    if (specifier.startsWith('.')) {
+      return resolveFile(resolve(dirname(importer), specifier))
+    }
+
+    if (specifier.startsWith('#/')) {
+      return resolveFile(join(appSrc, specifier.slice(2)))
+    }
+
+    const pkg = Object.keys(DIST_OF).find(
+      (name) => specifier === name || specifier.startsWith(`${name}/`),
+    )
+    if (!pkg) return null
+
+    return resolveFile(join(DIST_OF[pkg], specifier.slice(pkg.length + 1)))
+  }
+
+  /** Every package specifier reachable from `entries`, with how it got there. */
+  const reachableExternals = (entries: string[]) => {
+    const visited = new Set<string>()
+    const externals = new Map<string, string[]>()
+
+    const walk = (path: string, chain: string[]) => {
+      if (visited.has(path)) return
+      visited.add(path)
+
+      for (const specifier of importsFrom(path)) {
+        const target = resolveSpecifier(specifier, path)
+
+        if (target) {
+          walk(target, [...chain, relative(repoRoot, target)])
+        } else if (!specifier.startsWith('.') && !externals.has(specifier)) {
+          externals.set(specifier, chain)
+        }
+      }
+    }
+
+    for (const entry of entries) {
+      const path = resolveFile(join(repoRoot, entry))
+      expect(path, `${entry} exists`).not.toBeNull()
+      if (path) walk(path, [entry])
+    }
+
+    return { externals, visited }
+  }
+
+  const offenders = (entries: string[], forbidden: string[]): string[] =>
+    [...reachableExternals(entries).externals]
+      .filter(([specifier]) =>
+        forbidden.some((entry) => matches(specifier, entry)),
+      )
+      .map(([specifier, chain]) => `${specifier} via ${chain.join(' -> ')}`)
+
+  /** Everything the app reaches, from every entry point it has. */
+  const ENTRIES = [
+    'apps/web/src/router.tsx',
+    'apps/web/src/routes/__root.tsx',
+    'apps/web/src/routes/index.tsx',
+    'apps/web/src/server/messages.server.ts',
+    'apps/web/src/vitnode.config.ts',
+    'apps/web/src/vitnode.shell.config.ts',
+  ]
+
+  it('needs the packages to be built to mean anything', () => {
+    // A missing `dist` makes every assertion below vacuous: nothing resolves, so
+    // nothing is walked. `turbo` builds the packages before this app's tests.
+    expect(
+      existsSync(join(DIST_OF['@vitnode/core'], 'views/layouts/providers.js')),
+      'run `turbo build:plugins` first',
+    ).toBe(true)
+  })
+
+  it('walks into the packages rather than stopping at the app', () => {
+    const { visited } = reachableExternals(ENTRIES)
+
+    expect(
+      [...visited].filter((path) => path.includes('packages/vitnode/dist'))
+        .length,
+    ).toBeGreaterThan(5)
+  })
+
+  it('finds Next.js in a plugin frontend entry, which is why one is not imported', () => {
+    // The control, and the reason `vitnode.config.ts` registers plugins by id
+    // and messages instead of calling `blogPlugin()`.
+    expect(
+      offenders(['plugins/blog/dist/src/config.js'], NEXT_ONLY),
+    ).not.toEqual([])
+  })
+
+  it('reaches no next/* and no server-only', () => {
+    expect(offenders(ENTRIES, NEXT_ONLY)).toEqual([])
+  })
+
+  it("reaches none of next-intl's Next-only entries", () => {
+    expect(offenders(ENTRIES, NEXT_INTL_RUNTIME)).toEqual([])
   })
 })

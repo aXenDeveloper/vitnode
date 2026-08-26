@@ -1,13 +1,7 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-// The provider is `server-only`, which throws on import outside a server
-// component. The rule under test is a pure function inside it, so the guard is
-// stubbed rather than the function copied out - a second copy is the one that
-// would stop matching what actually ships.
-vi.mock("server-only", () => ({}));
-
-const { pickMessages } = await import("./i18n-provider");
+import { pickMessages } from "./pick-messages";
 
 /**
  * Which namespaces reach the client bundle.

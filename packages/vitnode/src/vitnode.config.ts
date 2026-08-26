@@ -1,7 +1,5 @@
-import type { ProgressProvider } from "@bprogress/next/app";
 import type { drizzle } from "drizzle-orm/postgres-js";
 import type { IRateLimiterOptions } from "rate-limiter-flexible";
-import type React from "react";
 
 import type { CacheConfig } from "./api/lib/cache";
 import type { CronAdapter } from "./api/lib/cron";
@@ -12,6 +10,7 @@ import type { EventsApiPlugin } from "./api/models/events";
 import type { SearchProviderApiPlugin } from "./api/models/search";
 import type { SSOApiPlugin } from "./api/models/sso";
 import type { StorageApiPlugin } from "./api/models/storage";
+import type { ProgressBarConfig } from "./components/progress-bar";
 import type { ThemeProviderProps } from "./components/theme-provider";
 import type { DefaultTemplateEmailProps } from "./emails/default-template";
 import type {
@@ -19,6 +18,7 @@ import type {
   VitNodeApiI18nConfig,
   VitNodeI18nConfig,
 } from "./lib/i18n/types";
+import type { VitNodeMetadata } from "./lib/metadata";
 import type { BuildPluginReturn } from "./lib/plugin";
 
 export type { LocaleConfig };
@@ -28,9 +28,9 @@ export interface VitNodeConfig<
 > {
   debug?: boolean;
   i18n: VitNodeI18nConfig<AppLocales>;
-  metadata: VitNodeApiConfig["metadata"];
+  metadata: VitNodeMetadata;
   plugins: BuildPluginReturn[];
-  progressBar?: React.ComponentProps<typeof ProgressProvider>;
+  progressBar?: ProgressBarConfig;
   theme?: Omit<
     ThemeProviderProps,
     "attribute" | "children" | "disableTransitionOnChange" | "enableSystem"
@@ -120,10 +120,7 @@ export interface VitNodeApiConfig {
    * web and the API together, point this and `buildConfig` at the same object.
    */
   i18n?: VitNodeApiI18nConfig;
-  metadata: {
-    shortTitle?: string;
-    title: string;
-  };
+  metadata: VitNodeMetadata;
   plugins: BuildPluginApiReturn[];
   rateLimiter?: Omit<IRateLimiterOptions, "keyPrefix">;
   /**

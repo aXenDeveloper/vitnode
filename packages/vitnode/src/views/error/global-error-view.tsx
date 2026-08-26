@@ -9,6 +9,7 @@ import { useTransition } from "react";
 
 import { LogoVitNode } from "@/components/logo-vitnode";
 import { ThemeProvider } from "@/components/theme-provider";
+import { NextThemeScript } from "@/components/theme-script-next";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,10 @@ export const GlobalErrorView = ({
     <html lang="en" suppressHydrationWarning>
       <body className={className}>
         <ThemeProvider attribute="class" disableTransitionOnChange enableSystem>
+          {/* The theme, before the first paint - this page renders its own
+              document, so nothing above it inserts the script. */}
+          <NextThemeScript />
+
           <div className="bg-background flex min-h-screen flex-col items-center justify-center p-4">
             <div className="container mx-auto flex w-full max-w-md flex-col items-center justify-center gap-6 text-center">
               <Link href="/">
