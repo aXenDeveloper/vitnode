@@ -15,6 +15,11 @@ export interface ParsedSetCookie {
     domain?: string;
     expires?: Date;
     httpOnly?: boolean;
+    /**
+     * Lifetime in seconds. `0` is a value, not an absence: it is how the API
+     * deletes a cookie, so nothing downstream may treat it as falsy.
+     */
+    maxAge?: number;
     path?: string;
     sameSite?: "lax" | "none" | "strict";
     secure?: boolean;
@@ -50,6 +55,25 @@ const parseExpires = (value: unknown): Date | undefined => {
   return Number.isNaN(expires.getTime()) ? undefined : expires;
 };
 
+/**
+ * A `Max-Age` in seconds, or nothing.
+ *
+ * This is the attribute the API deletes a cookie with: Hono's `deleteCookie()`
+ * answers with `name=; Max-Age=0` and no `Expires` at all, so dropping it turns
+ * every sign-out into an empty cookie that lingers until the browser closes
+ * rather than one the browser discards.
+ *
+ * `Number()` alone is too loose - it reads `""`, `" 12 "` and `"1e3"` as
+ * numbers, and a cookie store would then serialize an attribute the API never
+ * sent. RFC 6265 spells the value as an optionally-negative digit string and
+ * says to ignore anything else, which is exactly the test below.
+ */
+const parseMaxAge = (value: unknown): number | undefined => {
+  if (typeof value !== "string" || !/^-?\d+$/.test(value)) return undefined;
+
+  return Number(value);
+};
+
 const asString = (value: unknown): string | undefined =>
   typeof value === "string" ? value : undefined;
 
@@ -81,6 +105,9 @@ export const parseSetCookies = (
           domain: asString(cookie.Domain),
           expires: parseExpires(cookie.Expires),
           httpOnly: asFlag(cookie.HttpOnly),
+          // Both are forwarded when the API sends both; browsers already give
+          // `Max-Age` precedence, so narrowing it here would only lose fidelity.
+          maxAge: parseMaxAge(cookie["Max-Age"]),
           path: asString(cookie.Path),
           sameSite: parseSameSite(cookie.SameSite),
           secure: asFlag(cookie.Secure),

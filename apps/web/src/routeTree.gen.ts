@@ -10,23 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiCheckRouteImport } from './routes/api-check'
-import { Route as SessionCheckRouteImport } from './routes/session-check'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiCheckRoute = ApiCheckRouteImport.update({
-  id: '/api-check',
-  path: '/api-check',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SessionCheckRoute = SessionCheckRouteImport.update({
-  id: '/session-check',
-  path: '/session-check',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSplatRoute = ApiSplatRouteImport.update({
@@ -37,35 +25,27 @@ const ApiSplatRoute = ApiSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/api-check': typeof ApiCheckRoute
-  '/session-check': typeof SessionCheckRoute
   '/api/$': typeof ApiSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/api-check': typeof ApiCheckRoute
-  '/session-check': typeof SessionCheckRoute
   '/api/$': typeof ApiSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/api-check': typeof ApiCheckRoute
-  '/session-check': typeof SessionCheckRoute
   '/api/$': typeof ApiSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api-check' | '/session-check' | '/api/$'
+  fullPaths: '/' | '/api/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api-check' | '/session-check' | '/api/$'
-  id: '__root__' | '/' | '/api-check' | '/session-check' | '/api/$'
+  to: '/' | '/api/$'
+  id: '__root__' | '/' | '/api/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ApiCheckRoute: typeof ApiCheckRoute
-  SessionCheckRoute: typeof SessionCheckRoute
   ApiSplatRoute: typeof ApiSplatRoute
 }
 
@@ -76,20 +56,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api-check': {
-      id: '/api-check'
-      path: '/api-check'
-      fullPath: '/api-check'
-      preLoaderRoute: typeof ApiCheckRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/session-check': {
-      id: '/session-check'
-      path: '/session-check'
-      fullPath: '/session-check'
-      preLoaderRoute: typeof SessionCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/$': {
@@ -104,8 +70,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ApiCheckRoute: ApiCheckRoute,
-  SessionCheckRoute: SessionCheckRoute,
   ApiSplatRoute: ApiSplatRoute,
 }
 export const routeTree = rootRouteImport

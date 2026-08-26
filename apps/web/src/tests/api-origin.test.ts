@@ -1,4 +1,5 @@
 import { requestHandler } from '@tanstack/react-start/server'
+import { buildApiUrl } from '@vitnode/core/lib/fetcher/raw'
 import { Hono } from 'hono'
 import { readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
@@ -121,7 +122,7 @@ describe('resolveApiOrigin', () => {
     // Not the configured value: the API is served by this process, so the
     // origin that reached it is the origin to call back on.
     await expect(
-      withRequest('http://localhost:3001/session-check', {}, resolveApiOrigin),
+      withRequest('http://localhost:3001/', {}, resolveApiOrigin),
     ).resolves.toBe('http://localhost:3001')
   })
 
@@ -206,7 +207,7 @@ describe('SSR calls through fetcherServer', () => {
     )
 
   it('calls the origin the page was requested on', async () => {
-    await withRequest('https://web.test/session-check', {}, callSession)
+    await withRequest('https://web.test/', {}, callSession)
 
     expect(recorded.at(0)).toStrictEqual({
       origin: 'https://web.test',
@@ -219,7 +220,7 @@ describe('SSR calls through fetcherServer', () => {
     // is `apps/docs`. The call has to stay on 3001, where the mounted API is.
     vi.stubEnv('NEXT_PUBLIC_API_URL', 'http://localhost:3000')
 
-    await withRequest('http://localhost:3001/session-check', {}, callSession)
+    await withRequest('http://localhost:3001/', {}, callSession)
 
     expect(recorded.at(0)?.origin).toBe('http://localhost:3001')
   })
@@ -228,7 +229,7 @@ describe('SSR calls through fetcherServer', () => {
     // The escape hatch a genuinely separate API server needs. Nothing in this
     // app passes it; the option exists so the request-derived default is a
     // default rather than a hard-coding.
-    await withRequest('https://web.test/session-check', {}, async () =>
+    await withRequest('https://web.test/', {}, async () =>
       (
         fetcherServer as unknown as (
           moduleReturn: { pluginId: string },
@@ -251,5 +252,55 @@ describe('SSR calls through fetcherServer', () => {
     )
 
     expect(recorded.at(0)?.origin).toBe('https://api.example.com')
+  })
+})
+
+describe('browser-side calls', () => {
+  /** A client-side call, with the page served from `origin`. */
+  const fromPageAt = (origin: string): string => {
+    vi.stubGlobal('location', { origin })
+
+    return buildApiUrl({
+      module: 'users',
+      path: '/session',
+      pluginId: PLUGIN_ID,
+    }).toString()
+  }
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+  })
+
+  it('stays on the origin the page was served from', () => {
+    // The API is mounted in this app, so `https://example.com` serves
+    // `https://example.com/api/*` and the browser already knows where to call.
+    // Nothing has to name the origin for a client-side call to reach it.
+    vi.stubEnv('NEXT_PUBLIC_API_URL', undefined)
+
+    expect(fromPageAt('https://example.com')).toBe(
+      `https://example.com${API_BASE}/users/session`,
+    )
+  })
+
+  it('does not send the visitor to their own machine on a preview deployment', () => {
+    // The regression this closes: with `NEXT_PUBLIC_API_URL` unset the default
+    // was `http://localhost:3000`, so every client-side call from a visitor's
+    // browser went to that visitor's own machine.
+    vi.stubEnv('NEXT_PUBLIC_API_URL', undefined)
+
+    expect(fromPageAt('https://web-git-feat-tanstack-abc123.vercel.app')).toBe(
+      `https://web-git-feat-tanstack-abc123.vercel.app${API_BASE}/users/session`,
+    )
+  })
+
+  it('still lets a configured API origin win', () => {
+    // A genuinely separate API server: same-origin is the default, not a
+    // hard-coding.
+    vi.stubEnv('NEXT_PUBLIC_API_URL', 'https://api.example.com')
+
+    expect(fromPageAt('https://example.com')).toBe(
+      `https://api.example.com${API_BASE}/users/session`,
+    )
   })
 })

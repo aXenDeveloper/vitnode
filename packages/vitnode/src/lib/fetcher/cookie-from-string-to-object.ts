@@ -6,6 +6,7 @@ export const cookieFromStringToObject = (
   Domain: string;
   Expires: string;
   HttpOnly: boolean;
+  "Max-Age": string;
   Path: string;
   SameSite: "lax" | "none" | "strict" | boolean | undefined;
   Secure: boolean;

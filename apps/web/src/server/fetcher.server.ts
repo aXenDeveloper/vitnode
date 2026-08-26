@@ -42,6 +42,11 @@ config({ quiet: true })
  *
  * Outside a request - boot, a script, a cron job - there is nothing to read and
  * `getRequestUrl()` throws, so `NEXT_PUBLIC_API_URL` remains the fallback.
+ *
+ * The browser reaches the same conclusion on its own: with nothing configured,
+ * `CONFIG.api` reads the origin the document was served from, so a client-side
+ * call stays on this app too. `NEXT_PUBLIC_API_URL` is therefore optional here
+ * rather than load-bearing - set it only to point at a separate API server.
  */
 export const resolveApiOrigin = (): string => {
   try {
@@ -49,17 +54,6 @@ export const resolveApiOrigin = (): string => {
   } catch {
     return CONFIG.api.origin
   }
-}
-
-if (!process.env.NEXT_PUBLIC_API_URL && process.env.NODE_ENV === 'production') {
-  // Server-side calls no longer need it, but the browser bundle still does:
-  // `vitnode-env.ts` inlines this value, and with nothing to inline a
-  // client-side call falls back to `http://localhost:3000` - somebody else's
-  // machine, from the visitor's browser.
-  // eslint-disable-next-line no-console
-  console.warn(
-    '\x1b[34m[VitNode]\x1b[0m \x1b[33mNEXT_PUBLIC_API_URL is not set; client-side API calls will fall back to http://localhost:3000\x1b[0m',
-  )
 }
 
 /**

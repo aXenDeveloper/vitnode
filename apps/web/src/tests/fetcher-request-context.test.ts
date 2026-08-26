@@ -1,5 +1,6 @@
 import { requestHandler } from '@tanstack/react-start/server'
 import { Hono } from 'hono'
+import { deleteCookie } from 'hono/cookie'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import {
@@ -59,6 +60,23 @@ const createApi = (recorded: Recorded[]) => {
     c.json({ message: 'slow down' }, 429),
   )
 
+  plugin.get('/users/sign-out', (c) => {
+    // `hono/cookie`'s own helper rather than a hand-written header: the whole
+    // question is what the real API sends, and it sends `name=; Max-Age=0` with
+    // no `Expires` to fall back on.
+    deleteCookie(c, 'vitnode_auth', { path: '/' })
+
+    return c.json({ ok: true })
+  })
+
+  plugin.get('/users/remember-device', (c) => {
+    c.header('set-cookie', 'vitnode_device=device; Path=/; Max-Age=31536000', {
+      append: true,
+    })
+
+    return c.json({ ok: true })
+  })
+
   const app = new Hono().basePath('/api')
   app.route(`/${PLUGIN_ID}`, plugin)
 
@@ -80,7 +98,7 @@ const withRequest = async <T>(
     result = await handler()
 
     return new Response(null, { status: 204 })
-  })(new Request(`${WEB_ORIGIN}/session-check`, init), {})
+  })(new Request(`${WEB_ORIGIN}/`, init), {})
 
   return { result, setCookie: response.headers.getSetCookie() }
 }
@@ -242,6 +260,9 @@ describe('SSR request context reaches the API', () => {
   })
 
   describe('saveApiCookies', () => {
+    const call = async (path: string) =>
+      await callFetcher(usersModule, { method: 'get', module: 'users', path })
+
     it('puts every cookie the API minted on this response', async () => {
       const { setCookie } = await withRequest({}, async () => {
         const response = await callFetcher(usersModule, {
@@ -260,6 +281,29 @@ describe('SSR request context reaches the API', () => {
         'vitnode_auth=token; Path=/; HttpOnly',
         'vitnode_device=device; Path=/; HttpOnly',
       ])
+    })
+
+    it('carries a lifetime through instead of downgrading it to a session', async () => {
+      const { setCookie } = await withRequest({}, async () => {
+        saveApiCookies(await call('/remember-device'))
+      })
+
+      // Dropped, the device cookie lasts until the browser closes - and a new
+      // device row is written on the visitor's next visit.
+      expect(setCookie).toEqual([
+        'vitnode_device=device; Max-Age=31536000; Path=/',
+      ])
+    })
+
+    it('forwards a sign-out as a deletion rather than an empty cookie', async () => {
+      const { setCookie } = await withRequest({}, async () => {
+        saveApiCookies(await call('/sign-out'))
+      })
+
+      // `Max-Age=0` is the entire instruction here. Without it the browser is
+      // told to hold an empty `vitnode_auth` for the rest of the session, so the
+      // cookie the visitor just signed out of survives the sign-out.
+      expect(setCookie).toEqual(['vitnode_auth=; Max-Age=0; Path=/'])
     })
 
     it('writes nothing for a response that set no cookies', async () => {
