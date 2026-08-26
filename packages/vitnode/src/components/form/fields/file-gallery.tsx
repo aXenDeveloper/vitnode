@@ -36,7 +36,6 @@ import { FileCard, FileCardSkeleton } from "./file-shared";
 /** One row of the gallery: a file the form holds, or an upload still running. */
 export type FileGalleryRow =
   | {
-      /** The descriptor, or `null` when only the identifier is known. */
       file: AutoFormFileValue | null;
       id: number;
       kind: "file";
@@ -44,18 +43,9 @@ export type FileGalleryRow =
   | { kind: "pending"; name: string; order: number; size: number };
 
 export interface FileGalleryProps {
-  /** False when the field's `min` would be broken by taking one away. */
   canRemove: boolean;
   onRemove: (id: number) => void;
-  /** The whole new identifier list, in the order it was dropped in. */
   onReorder: (ids: number[]) => void;
-  /**
-   * Whether the order is the author's to choose.
-   *
-   * Straight off `field.file({ ordered })`. A field that stores its entries by
-   * ascending `core_files.id` must not offer a handle that appears to do
-   * something and is then normalised away by the save.
-   */
   ordered: boolean;
   rows: FileGalleryRow[];
 }
@@ -85,9 +75,6 @@ const RemoveAction = ({
   return (
     <AttachmentAction
       aria-label={t("remove_named", { name })}
-      // A field with `min: 2` cannot be taken to one by clicking: the save would
-      // be refused, and refusing the click says so before the bandwidth and the
-      // version are spent.
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -124,17 +111,6 @@ export const fileGalleryDrop = (
   return next.some((id, at) => id !== ids[at]) ? next : null;
 };
 
-/**
- * One stored file, draggable by its handle.
- *
- * The handle is a real `<button>` and the **only** drag target, which is the
- * whole reason it exists: dnd-kit's listeners on the card would swallow the
- * click that removes it, and a card that is one big grab target has no keyboard
- * affordance and no name to announce. The handle carries dnd-kit's own
- * `attributes` - `aria-roledescription`, the instructions it is described by,
- * and the keyboard entry point - so space picks the row up and the arrow keys
- * move it.
- */
 const SortableFileRow = ({
   file,
   id,
@@ -187,23 +163,6 @@ const SortableFileRow = ({
   );
 };
 
-/**
- * The files a collection holds, with the ones still uploading in their places.
- *
- * Two things it is careful about, because both are ways a list can lie:
- *
- * - **A placeholder is never a file.** An upload in flight has no
- *   `core_files.id` to sort by and nothing to save, so it is rendered where it
- *   will land and left out of the sortable set entirely. Dragging one would be
- *   dragging something that does not exist yet.
- * - **The order it shows is the order that will be saved.** A drop rewrites
- *   `field.value` immediately and nothing else - there is no local arrangement
- *   kept beside the form for a reset to disagree with.
- *
- * The handles appear only once there are two files, because reordering one file
- * is not a thing anybody can do, and a control that does nothing is worse than
- * no control.
- */
 export const FileGallery = ({
   canRemove,
   onRemove,
@@ -214,10 +173,7 @@ export const FileGallery = ({
   const t = useTranslations("core.global.file");
   const rowName = useRowName();
   const sensors = useSensors(
-    // A short threshold, so a handle that is pressed rather than dragged still
-    // behaves like a button.
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    // Hold-to-drag on touch, so the page still scrolls normally.
     useSensor(TouchSensor, {
       activationConstraint: { delay: 200, tolerance: 8 },
     }),
@@ -234,15 +190,12 @@ export const FileGallery = ({
 
     return row ? rowName(row) : t("stored");
   };
-  /** Who moved, and to which of how many places - the three every line needs. */
   const spoken = (activeId: number, overId: number) => ({
     name: nameOf(activeId),
     position: ids.indexOf(overId) + 1,
     total: ids.length,
   });
 
-  // dnd-kit's own announcements are in English and say "sortable item". These
-  // name the file and the place it landed, in the reader's own language.
   const announcements: Announcements = {
     onDragCancel: ({ active }) =>
       t("reorder_cancelled", spoken(Number(active.id), Number(active.id))),
@@ -265,16 +218,9 @@ export const FileGallery = ({
 
         if (row.kind === "pending") {
           return (
-            // Keyed by its queue slot, which is monotonic and never reused - an
-            // index would hand the next file this card the moment this one
-            // settles, and its skeleton would flash where the thumbnail is.
             <li key={`pending-${row.order}`}>
               <FileCardSkeleton
-                leading={
-                  // The width a handle would take, so the thumbnails stay in a
-                  // column while a card in the middle of the list is uploading.
-                  isSortable ? <span className="size-7" /> : undefined
-                }
+                leading={isSortable ? <span className="size-7" /> : undefined}
                 name={row.name}
                 size={row.size}
               />
@@ -297,11 +243,6 @@ export const FileGallery = ({
 
         return (
           <li key={row.id}>
-            {/*
-              An entry with no descriptor still gets a card: "there is a file
-              here and I cannot describe it" must not look like the gallery
-              being one shorter than it is.
-            */}
             <FileCard file={row.file ?? { id: row.id, name, size: 0, url: "" }}>
               <RemoveAction
                 disabled={!canRemove}

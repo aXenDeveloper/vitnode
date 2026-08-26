@@ -7,12 +7,6 @@ import React from "react";
 
 import { useVitNodeWebSocketContext } from "@/ws/provider";
 
-/**
- * Reconnects the shared WebSocket whenever the signed-in user changes, so the
- * long-lived connection re-authenticates from the current session cookie -
- * e.g. it drops to "guest" right after sign-out (and picks up the user again
- * after sign-in). Renders nothing.
- */
 export const WebSocketAuthSync = ({ userId }: { userId: null | number }) => {
   const { reconnect } = useVitNodeWebSocketContext();
   const previousUserIdRef = React.useRef(userId);

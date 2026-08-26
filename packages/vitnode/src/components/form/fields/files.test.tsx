@@ -160,7 +160,6 @@ const field = (
     get peak() {
       return peak;
     },
-    /** Chooses files, exactly as the hidden `<input type="file">` reports them. */
     pick: async (...names: string[]) => {
       const input =
         document.querySelector<HTMLInputElement>('input[type="file"]');
@@ -177,13 +176,11 @@ const field = (
         fireEvent.change(input);
       });
     },
-    /** Refuses one upload, the way the API refuses a format. */
     reject: async (name: string, message: string) => {
       await settled(() => {
         settle.get(name)?.reject(new Error(message));
       });
     },
-    /** Finishes one upload with the identifier the API would have stored. */
     resolve: async (name: string, id: number) => {
       await settled(() => {
         settle.get(name)?.resolve(id);

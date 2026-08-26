@@ -39,52 +39,17 @@ import { ScheduleContentPanel } from "./schedule-action";
 /** The row actions that live behind the ⋯ button. */
 type PanelId = "delete" | "delivery" | "history" | "preview" | "schedule";
 
-/**
- * How many actions a row shows as buttons before they collapse into the menu.
- *
- * Three, because that is where the two costs cross over. Below it a menu is a
- * click that buys nothing - a ⋯ hiding a single "Delete" is strictly worse than
- * the delete button itself, since it costs an extra click *and* hides what the
- * row can do. Above it a strip of icons stops being readable and becomes a
- * puzzle, which is what the menu was introduced to fix.
- *
- * Counted **after** permissions, so what a role sees is what decides: an editor
- * who may only delete gets one button, and an administrator on the same row gets
- * the menu.
- */
 const INLINE_ACTION_LIMIT = 3;
 
 /** One entry in the menu, in the order the list declares it. */
 interface RowAction {
-  /** Whether the content type has this action *and* the role may use it. */
   available: boolean;
-  /**
-   * Delete, and nothing else so far: listed under a rule and in the destructive
-   * colour, because the one action here that cannot be undone should not look
-   * like the four above it.
-   */
   destructive?: boolean;
   icon: React.ReactNode;
   id: PanelId;
   label: string;
 }
 
-/**
- * Everything a row can do that is not Publish or Edit.
- *
- * Two shapes, chosen by how many actions the role in front of the table actually
- * has - see {@link INLINE_ACTION_LIMIT}. A few are buttons in the row, reachable
- * in one click and visible without one. Many collapse into a ⋯ menu that lists
- * them by name, because publish and edit are what people click all day and a
- * strip of six icons beside them is a row nobody can read.
- *
- * Delete comes last either way, under a rule in the menu and in the destructive
- * colour as a button, because it is the one action here that cannot be undone.
- *
- * Each panel is a dialog, and one is mounted at a time: a table of 25 rows costs
- * 25 buttons rather than 150 dialogs, and every panel body is behind a
- * `dynamic()` so opening one is what fetches it.
- */
 export const ContentRowActionsMenu = ({
   contentTypeId,
   currentVersion,
@@ -102,50 +67,27 @@ export const ContentRowActionsMenu = ({
   version,
 }: {
   contentTypeId: string;
-  /** The version the row is showing, which history opens at. */
   currentVersion: number;
-  /** `delivery.enabled` - offers the URL panel. */
   delivery: boolean;
-  /** `editorial.enabled` - offers the revision history. */
   editorial: boolean;
   id: number;
-  /** The language the list is being read in, for the URL panel. */
   locale?: string;
   permissionModule: string;
   pluginId: string;
-  /** `editorial.preview.enabled` - offers the signed preview link. */
   preview: boolean;
-  /** `editorial.scheduling.enabled` - offers the schedule panel. */
   scheduling: boolean;
   singular: string;
   spec: ContentFormSpec;
   title: string;
-  /**
-   * The version delete has to match, taken from the row in front of the person -
-   * `undefined` for a content type without `editorial`, whose delete route has no
-   * precondition.
-   */
   version?: number;
 }) => {
   const t = useTranslations("core.content");
   const triggerRef = React.useRef<HTMLButtonElement>(null);
-  /**
-   * Which panel is mounted, and whether it is open.
-   *
-   * Closing keeps it mounted rather than dropping it, so the dialog can animate
-   * out - unmounting a Base UI dialog mid-transition is what leaves a backdrop
-   * behind over a table nobody can click any more. The dialog unmounts its own
-   * body once the animation ends, so the next opening still starts from scratch.
-   */
   const [panel, setPanel] = React.useState<null | {
     id: PanelId;
     open: boolean;
   }>(null);
 
-  // The gates for the whole menu, read once per row instead of once per action:
-  // reading a record covers looking at its URLs and what changed, while booking
-  // a publication is publishing - just later - and deleting is its own
-  // permission entirely.
   const canView = useAdminStaffPermission({
     module: permissionModule,
     permission: CONTENT_PERMISSIONS.view,
@@ -162,11 +104,6 @@ export const ContentRowActionsMenu = ({
     plugin: pluginId,
   });
 
-  // Bare verbs, not the panel headings. A menu is a list of things to do, read
-  // top to bottom against its icons - "Schedule", "History", "Delete" - and
-  // repeating "this Article" on every line pushes the only word that differs to
-  // the far right of six near-identical rows. The panel that opens still says
-  // which record it is about, in its own title, where there is one of them.
   const actions: RowAction[] = [
     {
       available: preview && canView,
@@ -202,8 +139,6 @@ export const ContentRowActionsMenu = ({
   ];
   const items = actions.filter(action => action.available);
 
-  // A role allowed none of these gets no button at all - an empty menu is worse
-  // than a missing one.
   if (items.length === 0) return null;
 
   const panelProps = {
@@ -215,13 +150,6 @@ export const ContentRowActionsMenu = ({
     },
   };
 
-  /**
-   * Opens a panel, and records the control that opened it.
-   *
-   * Written on the click rather than bound to one element, because there is no
-   * single trigger any more: a closing dialog returns focus to the button that
-   * opened it, which is the ⋯ in one shape and one of several icons in the other.
-   */
   const openPanel = (id: PanelId) => (event: React.MouseEvent<HTMLElement>) => {
     triggerRef.current = event.currentTarget as HTMLButtonElement;
     setPanel({ id, open: true });
@@ -270,8 +198,6 @@ export const ContentRowActionsMenu = ({
           <DropdownMenuContent align="end" className="w-64">
             {items.map((item, index) => (
               <React.Fragment key={item.id}>
-                {/* Nothing to separate when delete is the only thing a role may
-                    do. */}
                 {item.destructive === true && index > 0 ? (
                   <DropdownMenuSeparator />
                 ) : null}

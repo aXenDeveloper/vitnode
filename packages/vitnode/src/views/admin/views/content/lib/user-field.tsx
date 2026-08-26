@@ -25,20 +25,6 @@ const asReference = (value: unknown): null | ReferenceValue => {
     : null;
 };
 
-/**
- * The `user` field, as the AdminCP form renders it.
- *
- * An **adapter**, and deliberately a thin one. `AutoFormUser` speaks user ids,
- * because that is the sane thing for a form value to be; a Content Engine
- * reference field holds `{ label, value }`, because that is what lets a saved
- * record show a name without a second round trip. Rather than change one to suit
- * the other - which would mean touching the schema, the payload conversion and
- * every content type in the wild - the two meet here.
- *
- * The options this field has seen are remembered so that picking somebody can
- * rebuild the pair: the picker reports an id and nothing else, and the label has
- * to come from the search that offered them.
- */
 export const ContentUserField = ({
   loadOptions,
   spec,
@@ -50,20 +36,15 @@ export const ContentUserField = ({
   const t = useTranslations("core.content.form");
   const { field } = props;
   const seenRef = React.useRef<Record<number, UserOption>>({});
-  /** The author, once looked up - the record arrives with a name and no face. */
   const [resolved, setResolved] = React.useState<null | UserOption>(null);
 
   const current = asReference(field.value);
   const parsedId = current === null ? Number.NaN : Number(current.value);
-  // `NaN` for a reference whose identifier is not a number - a hand-edited form
-  // value, or a target keyed by something else. Treated as "nothing chosen"
-  // rather than rendered, because `NaN` in a trigger helps nobody.
   const currentId = Number.isInteger(parsedId) ? parsedId : null;
   const currentLabel = current?.label ?? "";
 
   const toUser = React.useCallback(
     (option: ContentOption): UserOption => ({
-      // The picker route sends these two only for a `user` field.
       avatarColor: option.avatarColor ?? "",
       id: Number(option.value),
       name: option.label,
@@ -72,23 +53,7 @@ export const ContentUserField = ({
     [],
   );
 
-  /**
-   * Fetches the face behind the name the record arrived with.
-   *
-   * A record carries its author's *label* and nothing else - that is what the
-   * detail route resolves - so on an edit form the field would otherwise sit on
-   * a placeholder until somebody opened the picker for no reason. One lookup,
-   * searched by the label the row already has and matched by **id**, which is
-   * why a near-miss on the name cannot put the wrong person's avatar here.
-   *
-   * Skipped entirely when there is no author, and re-run only when the id
-   * actually changes - picking somebody from the list resolves them by itself,
-   * because the option that was clicked carried a colour with it.
-   */
   React.useEffect(() => {
-    // No reset when the author is cleared: `resolved` is only ever read when its
-    // id still matches, so stale state cannot surface - and clearing it here
-    // would be a `setState` in an effect for no visible gain.
     if (currentId === null || seenRef.current[currentId]) return;
 
     let active = true;
@@ -152,9 +117,6 @@ export const ContentUserField = ({
         currentId === null
           ? null
           : // The looked-up person once there is one, and the bare name until
-            // then - so the field reads correctly on the very first paint and
-            // grows a face a moment later rather than flashing empty. Matched on
-            // id, so a resolved author never labels the one chosen after them.
             resolved?.id === currentId
             ? resolved
             : { id: currentId, name: currentLabel }

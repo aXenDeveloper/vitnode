@@ -9,11 +9,6 @@ import {
   type RateLimitEventDetail,
 } from "@/lib/fetcher/rate-limit";
 
-/**
- * Listens for rate-limit events dispatched by the client fetcher and informs
- * the user with a toast. A stable toast id collapses bursts of 429s (e.g. many
- * parallel requests) into a single message. Renders nothing.
- */
 export const RateLimitListener = () => {
   const t = useTranslations("core.global.errors");
 

@@ -14,16 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { contentRevisionDiff } from "@/content/revisions";
 import { cn } from "@/lib/utils";
 
-/** How many lines of a `textarea` diff are shown before it collapses. */
 const TEXTAREA_PREVIEW_LINES = 8;
 
-/**
- * Kinds short enough to read as a token rather than as prose.
- *
- * The distinction is visual only: an id or a date is a value you compare at a
- * glance, and a box around it makes the pair either side of the arrow easy to
- * tell apart. A paragraph in a box is just a paragraph in a box.
- */
 const TOKEN_KINDS = new Set([
   "boolean",
   "dateTime",
@@ -58,13 +50,6 @@ const Empty = ({ label }: { label: string }) => (
   </span>
 );
 
-/**
- * One value, rendered the way its field kind reads best.
- *
- * Raw JSON is deliberately not the default anywhere: an editor comparing two
- * versions of an article is looking for a sentence that changed, and
- * `{"title":"..."}` makes them find it themselves.
- */
 const Value = ({
   emptyLabel,
   kind,
@@ -74,19 +59,12 @@ const Value = ({
 }: {
   emptyLabel: string;
   kind: string;
-  /** Resolved display names for relation and user identifiers. */
   labels: Record<string, string>;
   options?: Record<string, string>;
   value: ContentSnapshotValue | undefined;
 }) => {
-  // Narrowed once, so the scalar branches below can use `String(...)` without
-  // every one of them having to prove the value is not an object.
   if (isBlank(value)) return <Empty label={emptyLabel} />;
 
-  // The three Stage 6 shapes reach here as objects and arrays rather than
-  // scalars, and `String(...)` on any of them is `[object Object]`. Each gets a
-  // summary a person can read: a group as its leaves, a to-many relation as its
-  // targets, a repeatable as how many entries it holds.
   if (Array.isArray(value)) {
     if (typeof value[0] === "number") {
       return (
@@ -133,9 +111,6 @@ const Value = ({
     case "number":
       return <span className="tabular-nums">{String(value)}</span>;
 
-    // A snapshot stores the foreign key, never a label - the label belongs to
-    // another content type and may not even be public. It is resolved for
-    // display only, and falls back to the identifier.
     case "relation":
     case "user":
       return <span>{labels[String(value)] ?? `#${String(value)}`}</span>;
@@ -161,7 +136,6 @@ const Value = ({
   }
 };
 
-/** One side of a change: struck through on the left, plain on the right. */
 const Side = ({
   before = false,
   kind,
@@ -174,16 +148,12 @@ const Side = ({
   options?: Record<string, string>;
   value: ContentSnapshotValue | undefined;
 }) => {
-  // Nothing is left bare on purpose: a box drawn around an absence reads as a
-  // value that failed to render.
   if (isBlank(props.value)) return <Empty label={props.emptyLabel} />;
 
   return (
     <span
       className={cn(
         "min-w-0 wrap-break-word",
-        // The enum branch brings its own badge, and a box around a badge is two
-        // boxes.
         TOKEN_KINDS.has(kind) &&
           "bg-background rounded-md border px-1.5 py-0.5",
         before && "text-muted-foreground line-through",
@@ -194,13 +164,6 @@ const Side = ({
   );
 };
 
-/**
- * Field-level differences between two snapshots.
- *
- * Walks the content type's *current* fields, so a field dropped since the
- * snapshot was taken is absent rather than shown as "changed to nothing" -
- * which matches what a restore would actually do with it.
- */
 export const RevisionDiff = ({
   after,
   before,
@@ -220,8 +183,6 @@ export const RevisionDiff = ({
           field.name,
           {
             ...field,
-            // The form spec carries picker options as a list; the renderer wants
-            // a lookup from the stored value to its label.
             options: Object.fromEntries(
               (field.options ?? []).map(option => [option.value, option.label]),
             ),

@@ -14,7 +14,6 @@ export const SendNotificationAction = ({
   defaultTitle,
   defaultUserId,
 }: {
-  /** What the admin set behind the gear - empty until they set something. */
   defaultTitle: string;
   defaultUserId: number;
 }) => {

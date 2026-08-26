@@ -8,17 +8,6 @@ import { UserFormat } from "@/components/user-format";
 import { Link } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
-/**
- * Who made the change, and a way to go and ask them.
- *
- * The link needs both halves: the id says there was an account, and the name
- * says it still exists - a revision whose author has since been deleted keeps
- * its `actorUserId` and joins to nothing, and a link to a user page that no
- * longer resolves is worse than plain text.
- *
- * Shared by both histories, because a name that is clickable in one of them and
- * plain in the other reads as a bug.
- */
 export const RevisionActor = ({
   className,
   revision,

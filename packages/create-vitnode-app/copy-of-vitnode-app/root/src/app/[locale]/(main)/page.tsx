@@ -7,7 +7,6 @@ import { ArrowRight, Book, Terminal } from "lucide-react";
 export default function Page() {
   return (
     <main className="container mx-auto flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-16 px-4 py-16">
-      {/* Hero Section */}
       <div className="flex max-w-3xl flex-col items-center space-y-8 text-center">
         <LogoVitNode className="w-44" />
 
@@ -20,7 +19,6 @@ export default function Page() {
           </p>
         </div>
 
-        {/* Primary Actions */}
         <div className="flex flex-wrap items-center justify-center gap-4">
           <Link
             className={cn(
@@ -79,7 +77,6 @@ export default function Page() {
         </div>
       </div>
 
-      {/* Features Grid */}
       <div className="grid w-full max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <div className="bg-card rounded-lg border p-6">
           <h3 className="mb-2 font-semibold">Plugin System</h3>

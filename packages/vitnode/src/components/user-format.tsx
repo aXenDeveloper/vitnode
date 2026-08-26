@@ -8,9 +8,6 @@ export const UserFormat = ({
   ...props
 }: React.ComponentProps<"span"> & {
   format?: boolean;
-  // Only what is rendered. Asking for an id, a handle and a role id it never
-  // reads would make a caller that has a name and a colour - a revision's
-  // author, a log line - invent three values to satisfy the type.
   user: {
     name: string;
     role: {

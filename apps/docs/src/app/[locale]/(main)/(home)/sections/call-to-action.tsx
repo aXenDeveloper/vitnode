@@ -1,7 +1,4 @@
 import { Card } from "@vitnode/core/components/ui/card";
-// import { cn } from "@vitnode/core/lib/utils";
-
-// import { CodeBlock } from "../../../../../components/fumadocs/code-block";
 
 export const CallToActionSection = () => {
   return (
@@ -13,18 +10,6 @@ export const CallToActionSection = () => {
         <p className="text-muted-foreground leading-relaxed text-balance md:text-lg">
           Everything you need for modern web apps, zero config.
         </p>
-
-        <div className="flex w-full max-w-xl justify-center">
-          {/* <CodeBlock
-            code="npx create-vitnode-app@canary"
-            lang="bash"
-            wrapper={{
-              className: cn(
-                "bg-background m-0 w-full sm:w-[calc(100%_-_10rem)]",
-              ),
-            }}
-          /> */}
-        </div>
       </Card>
     </section>
   );

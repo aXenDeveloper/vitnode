@@ -42,8 +42,6 @@ export const ItemNavAdmin = ({
   const isMobile = useIsMobile();
   const pathname = usePathname();
 
-  // True when the pathname is the href itself or lives under it as a path
-  // segment (e.g. an edit/create sub-page), matching whole segments only.
   const isPathnameUnderHref = (candidate: string) => {
     const normalizedPathname = normalizeUrl(pathname);
     const normalizedHref = normalizeUrl(candidate);
@@ -54,11 +52,8 @@ export const ItemNavAdmin = ({
     );
   };
 
-  // Check if current path matches href (with normalization)
   const isActive = normalizeUrl(pathname) === normalizeUrl(href);
 
-  // Only the most specific (longest) matching child is active, so nested
-  // siblings like `/users` and `/users/roles` don't both highlight.
   const activeChildHref = items.reduce<null | string>((best, item) => {
     if (!isPathnameUnderHref(item.href)) return best;
     if (best === null) return item.href;
@@ -68,12 +63,8 @@ export const ItemNavAdmin = ({
       : best;
   }, null);
 
-  // Check if any child item is active
   const hasActiveChild = activeChildHref !== null;
 
-  // Open collapsible by default if has active child, and keep it open when
-  // navigating into one of its children. Controlled to avoid Base UI warning
-  // about changing the default open state of an uncontrolled Collapsible.
   const [open, setOpen] = useState(hasActiveChild);
 
   useEffect(() => {

@@ -37,9 +37,6 @@ export const NotesContent = ({
         widgetId,
       });
 
-      // Say so rather than letting the indicator go quietly blank - a note that
-      // looks saved and is not is worse than no note at all. The next keystroke
-      // retries, since the effect runs again on every change.
       if (res?.error) {
         setStatus("error");
 

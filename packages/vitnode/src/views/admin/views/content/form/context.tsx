@@ -13,57 +13,21 @@ export interface ContentFormHeaderValue {
 }
 
 export interface ContentFormContextValue {
-  /** Every field of the form, in declaration order. */
   fieldNames: string[];
-  /** Every field, already rendered and keyed by name. */
   fields: Record<string, React.ReactNode>;
-  /**
-   * The page heading and its back link, for `ContentFormHeader` to render.
-   *
-   * `undefined` in a dialog. A page-mode layout is expected to place the header
-   * itself, exactly as it places every field - which is what lets it put the
-   * submit buttons beside the back link rather than in a sidebar.
-   */
   header?: ContentFormHeaderValue;
-  /**
-   * Which of them hold one value per language.
-   *
-   * Informational, for a layout that wants to group or annotate them. A layout
-   * does **not** need it to place a field: a localized input renders its own
-   * language switcher, so `<ContentFormField name="title" />` works wherever it
-   * is put, whichever table the value ends up on.
-   */
   localizedFieldNames: string[];
-  /** Records that a layout rendered the header, so a page never loses its heading silently. */
   markHeaderRendered?: () => void;
-  /** Records what a layout actually placed, so nothing goes missing silently. */
   markRendered?: (name: string) => void;
   mode: "create" | "edit";
-  /**
-   * Where the record sits in the lifecycle.
-   *
-   * `status` and `publishedAt` are values, not fields: they are absent from the
-   * form schema, and the only thing that moves them is the publish action -
-   * the one the list's row button runs. `transition` is that same action from
-   * inside the form, so the edit page can offer "Publish" / "Convert to draft"
-   * beside "Save changes", and the create form can publish right after the
-   * create. Both are shown only when `canPublish` allows it.
-   */
   publication: {
-    /** Whether the current admin holds `can_publish` for this content type. */
     canPublish: boolean;
     enabled: boolean;
     publishedAt?: unknown;
     status?: unknown;
-    /**
-     * Publishes or unpublishes the record being edited. Resolves `true` when
-     * the record moved. `undefined` while creating - there is nothing to move.
-     */
     transition?: (action: "publish" | "unpublish") => Promise<boolean>;
   };
-  /** The content type's singular label, for confirmations and toasts. */
   singular: string;
-  /** The record's resolved title while editing, for confirmations and toasts. */
   title?: string;
 }
 
@@ -109,18 +73,6 @@ export const ContentFormProvider = ({
   children: React.ReactNode;
   value: Omit<ContentFormContextValue, "markHeaderRendered" | "markRendered">;
 }) => {
-  /**
-   * Every field a layout has placed, cumulative for the life of the form.
-   *
-   * Never emptied, and that is the point: the question this answers is "did the
-   * layout ever ask for this field", not "did it ask on this particular render".
-   * Clearing it per render is what the first version did, and it could not be
-   * made to work either way round - during render it is a write React forbids,
-   * and in the effect it depends on there being exactly one effect run per
-   * render. There is not: Strict Mode, which every Next dev server enables, runs
-   * them twice on mount, so the second pass always found an empty set and
-   * reported every field on the screen as missing.
-   */
   const renderedRef = React.useRef<Set<string>>(new Set());
   const headerRenderedRef = React.useRef(false);
 
@@ -134,14 +86,6 @@ export const ContentFormProvider = ({
 
   const { fieldNames, header } = value;
 
-  /**
-   * A layout that forgets a field silently drops it from the payload, which is
-   * the one failure mode this API has that the generated form does not. Saying
-   * so in development costs nothing and turns a data-loss bug into a console
-   * line naming the field.
-   *
-   * Runs after the children, which is what makes the set complete.
-   */
   React.useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
 

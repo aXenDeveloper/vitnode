@@ -71,16 +71,13 @@ export const WidgetPanel = ({
   isOpen,
   widgets,
 }: {
-  /** Ends edit mode - pinned to the foot of the panel, always in reach. */
   actions?: React.ReactNode;
-  /** Driven by the board's edit mode - the panel only exists while editing. */
   isOpen: boolean;
   widgets: DashboardWidgetOption[];
 }) => {
   const t = useTranslations("admin.dashboard.widgets");
   const [query, setQuery] = React.useState("");
 
-  // Closing the panel puts the search back to where an admin left off: nowhere.
   const [wasOpen, setWasOpen] = React.useState(isOpen);
   if (wasOpen !== isOpen) {
     setWasOpen(isOpen);
@@ -93,25 +90,17 @@ export const WidgetPanel = ({
     <div
       aria-hidden={!isOpen}
       className={cn(
-        // Small screens: stacks under the board while editing. A pinned rail
-        // would swallow most of a phone's width.
         "mt-4 flex w-full",
         !isOpen && "hidden",
-        // From `md` up: a rail pinned to the right edge, below the AdminCP
-        // header (`h-16` in admin-layout), sliding in from off-canvas. Not a
-        // Sheet - a backdrop would block dropping onto the board.
         "md:fixed md:inset-e-0 md:top-16 md:bottom-0 md:z-10 md:mt-0 md:flex md:w-(--dashboard-panel-width) md:transition-transform md:duration-200 md:ease-linear",
         !isOpen && "md:translate-x-full md:rtl:-translate-x-full",
       )}
       inert={!isOpen}
     >
-      {/* `collapsible="none"` keeps it out of the AdminCP sidebar's open state -
-          this panel opens and closes with the board's edit mode instead. */}
       <Sidebar
         className="bg-sidebar h-auto w-full rounded-xl border md:h-full md:rounded-none md:border-0 md:border-s"
         collapsible="none"
       >
-        {/* `px-3` to line the search box up with the cards below it. */}
         <SidebarHeader className="border-sidebar-border gap-2 border-b px-3 py-3">
           <h2 className="font-medium">{t("panel.title")}</h2>
           <p className="text-muted-foreground text-xs text-pretty">
@@ -156,8 +145,6 @@ export const WidgetPanel = ({
               </EmptyHeader>
             </Empty>
           ) : (
-            // One stack of button-like cards per category, rather than the
-            // AdminCP sidebar's flat menu - these are things to drag, not links.
             groups.map(group => (
               <section className="px-3 pb-3 first:pt-3" key={group.id}>
                 <h3 className="text-muted-foreground px-1 pb-2 text-xs font-medium tracking-wide uppercase">

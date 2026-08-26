@@ -32,14 +32,6 @@ export function DocsModeScript(): null {
   return null;
 }
 
-/**
- * Keeps the docs section class on `<html>` in sync with the route.
- *
- * First paint is handled by `DocsModeScript` above, which derives the same
- * class from `location.pathname` before anything renders. This takes over from
- * there, so client navigations between sections repaint correctly.
- * Renders nothing.
- */
 export function DocsModeSync(): null {
   const { slug } = useParams();
   const mode = Array.isArray(slug) && slug.length > 0 ? slug[0] : undefined;

@@ -15,7 +15,6 @@ import { contentErrorKey } from "../lib/mutation-feedback";
 import { ContentPanel } from "./content-panel";
 import { createContentPreviewAction } from "./mutation-api.server";
 
-/** How long the "copied" tick stays before the icon flips back. */
 const COPIED_FEEDBACK_MS = 2000;
 
 const CopyButton = ({ label, url }: { label: string; url: string }) => {
@@ -54,13 +53,6 @@ const CopyButton = ({ label, url }: { label: string; url: string }) => {
   );
 };
 
-/**
- * The link itself, minted on mount.
- *
- * A body rather than state on the panel, because the dialog unmounts this when it
- * closes: one opening is one token, and a link left over from the last time the
- * panel was open may already have expired.
- */
 const PreviewLink = ({
   contentTypeId,
   id,
@@ -74,8 +66,6 @@ const PreviewLink = ({
   const [preview, setPreview] = React.useState<ContentPreviewLink | null>(null);
 
   React.useEffect(() => {
-    // A link that arrives after the dialog was closed again is thrown away rather
-    // than written into a component nobody is looking at.
     let current = true;
 
     void createContentPreviewAction(contentTypeId, id).then(result => {
@@ -87,8 +77,6 @@ const PreviewLink = ({
         return;
       }
 
-      // 503 is the one failure with a fix the person reading it can apply, so it
-      // says what to do rather than "something went wrong".
       if (result.status === 503) {
         toast.error(tErrors("title"), { description: t("unavailable") });
 
@@ -108,8 +96,6 @@ const PreviewLink = ({
     };
   }, [contentTypeId, id, t, tContentErrors, tErrors]);
 
-  // A failure leaves this line in place and puts the reason in a toast: there is
-  // nothing to show, and an empty panel says less than "creating a link".
   if (!preview) {
     return <p className="text-muted-foreground text-sm">{t("loading")}</p>;
   }
@@ -146,10 +132,6 @@ const PreviewLink = ({
         />
       </div>
 
-      {/* `0` means the record predates its content type opting into editorial, so
-          there is no snapshot to freeze and the link reads the live row. Worth
-          saying out loud - "preview" otherwise promises something this one link
-          cannot deliver. */}
       {preview.revisionId === 0 ? (
         <p className="text-muted-foreground text-xs leading-relaxed">
           {t("live")}
@@ -163,17 +145,6 @@ const PreviewLink = ({
   );
 };
 
-/**
- * The preview row action.
- *
- * Listed only for a content type with `editorial.preview`, and absent rather than
- * disabled for anything else - a greyed-out entry invites someone to work out how
- * to enable it, and this one cannot be enabled from the UI.
- *
- * The token is minted **when the panel opens**, never earlier. A table of 25 rows
- * must not be 25 live bearer credentials for unpublished records sitting in a
- * browser, and most of them would never be used.
- */
 export const PreviewContentPanel = ({
   contentTypeId,
   id,
@@ -192,8 +163,6 @@ export const PreviewContentPanel = ({
       title={t("title")}
       {...panel}
     >
-      {/* Mounted by the dialog, and only while it is open - which is what makes
-          "one opening, one token" true. */}
       <PreviewLink contentTypeId={contentTypeId} id={id} />
     </ContentPanel>
   );

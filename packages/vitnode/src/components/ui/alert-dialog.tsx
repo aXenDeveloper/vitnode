@@ -29,9 +29,6 @@ function AlertDialog({
   const [open, setOpen] = React.useState(false);
   const isOpen = openProp ?? open;
 
-  // Opens/closes the dialog, from a Base UI interaction or from a
-  // `useAlertDialog()` caller - the confirm footer closes itself that way, and a
-  // dialog whose `open` comes from a prop would otherwise ignore it.
   const changeOpen = React.useCallback(
     (newOpen: boolean) => {
       onOpenChange?.(newOpen);

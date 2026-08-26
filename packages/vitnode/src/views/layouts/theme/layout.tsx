@@ -8,12 +8,6 @@ import { HeaderLayout } from "./header/header";
 import { NotificationListener } from "./notification-listener";
 import { WebSocketAuthSync } from "./web-socket-auth-sync";
 
-/**
- * Reads the session purely to tell {@link WebSocketAuthSync} who is signed in.
- * Split out of the layout so the session read sits under its own `<Suspense>`:
- * awaiting it in the layout body pulled every themed route into request time,
- * and nothing above this point needs the user.
- */
 const WebSocketAuthSyncSession = async () => {
   const session = await getSessionApi();
 
@@ -33,7 +27,6 @@ export const ThemeLayout = ({
   return (
     <>
       <NotificationListener />
-      {/* Renders nothing, so an empty fallback costs no layout shift. */}
       <Suspense>
         <WebSocketAuthSyncSession />
       </Suspense>

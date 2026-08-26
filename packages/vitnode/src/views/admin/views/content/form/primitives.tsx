@@ -92,15 +92,12 @@ const ContentFormPublicationToggle = () => {
         ),
       })}
       onSubmit={async ({ onClose }) => {
-        // Left open on failure, so the reason is still on screen next to the
-        // thing that failed - the same behaviour as the row action.
         if (await transition(action)) onClose();
       }}
       submitVariant={published ? "destructive" : "default"}
       textSubmit={tContent(`${action}.confirm`)}
       title={tContent(`${action}.title`, { name: singular })}
     >
-      {/* Explicitly not a submit: it sits inside the record's own form. */}
       <Button type="button" variant="outline">
         <Icon />
         {tContent(published ? "edit.unpublish" : "edit.publish")}
@@ -137,12 +134,6 @@ export const ContentFormRemainingFields = ({
   );
 };
 
-/**
- * The read-only publication line, for a layout that wants it in its sidebar.
- *
- * Renders nothing for a content type without `publication`, and nothing while
- * creating - there is no lifecycle to report before the record exists.
- */
 export const ContentFormStatus = () => {
   const { mode, publication } = useContentForm();
 
@@ -156,12 +147,6 @@ export const ContentFormStatus = () => {
   );
 };
 
-/**
- * The submit row - see `ContentFormSubmit` for which buttons it holds.
- *
- * Goes wherever the layout wants it: in a sidebar card, or inside
- * `ContentFormHeader` beside the back link.
- */
 export const ContentFormActions = ({
   cancelHref,
   children,
@@ -169,12 +154,7 @@ export const ContentFormActions = ({
   submitLabel,
   ...props
 }: React.ComponentProps<"div"> & {
-  /** Renders a Cancel link back to the list. */
   cancelHref?: string;
-  /**
-   * Replaces the single submit button's label. Ignored while creating a record
-   * with a lifecycle, where the row is "Save as draft" and "Publish".
-   */
   submitLabel?: React.ReactNode;
 }) => {
   const t = useTranslations("core.global");
@@ -199,13 +179,6 @@ export const ContentFormActions = ({
   );
 };
 
-/**
- * The two-column editor shell: a wide main column and a sidebar.
- *
- * Single column below `lg`, which is the only responsive decision worth making
- * here - a metadata sidebar next to a 40-character-wide editor is worse than no
- * sidebar at all.
- */
 export const ContentFormLayoutGrid = ({
   children,
   className,
@@ -232,11 +205,6 @@ export const ContentFormMain = ({
   </div>
 );
 
-/**
- * The metadata column. Sticky on large screens so the actions stay reachable
- * while a long body scrolls, and static below that, where sticky would eat the
- * viewport.
- */
 export const ContentFormSidebar = ({
   children,
   className,
@@ -250,7 +218,6 @@ export const ContentFormSidebar = ({
   </div>
 );
 
-/** A titled card. Renders no heading element when it has no title. */
 export const ContentFormSection = ({
   children,
   className,

@@ -14,14 +14,6 @@ import type { SearchSyncError } from "./sync-errors";
 
 import { parseSearchSyncError } from "./sync-errors";
 
-/**
- * The last few times a content mutation succeeded but its search document did
- * not follow.
- *
- * Content Engine synchronization is best effort by design: a temporary search
- * engine outage must not turn a committed write into a failed one. This panel is
- * how that tradeoff stays visible, and a rebuild is how it gets repaired.
- */
 export const SyncErrorsCard = async ({
   errors,
   labels,

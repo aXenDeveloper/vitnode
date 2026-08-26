@@ -47,7 +47,6 @@ export const AnimatedBeam = ({
   const [pathD, setPathD] = useState("");
   const [svgDimensions, setSvgDimensions] = useState({ width: 0, height: 0 });
 
-  // Calculate the gradient coordinates based on the reverse prop
   const gradientCoordinates = reverse
     ? {
         x1: ["90%", "-10%"],
@@ -90,7 +89,6 @@ export const AnimatedBeam = ({
       }
     };
 
-    // Initialize ResizeObserver
     const resizeObserver = new ResizeObserver(entries => {
       // For all entries, recalculate the path
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -99,16 +97,12 @@ export const AnimatedBeam = ({
       }
     });
 
-    // Observe the container element
     if (containerRef.current) {
       resizeObserver.observe(containerRef.current);
     }
 
-    // Call the updatePath initially to set the initial path
-
     updatePath();
 
-    // Clean up the observer on component unmount
     return () => {
       resizeObserver.disconnect();
     };

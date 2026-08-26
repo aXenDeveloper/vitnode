@@ -15,18 +15,6 @@ export interface ContentGroupFieldProps extends ItemAutoFormComponentProps {
   spec: ContentFormFieldSpec;
 }
 
-/**
- * A structured group, rendered as a labelled section of ordinary inputs.
- *
- * A `fieldset` with a `legend`, not a `div` with a heading: a screen reader
- * announces the group name with every leaf inside it, which is the difference
- * between "Title" appearing twice on a form and "SEO / Title" and "Article /
- * Title" being told apart.
- *
- * The value it controls is the nested object the API takes - `{ title,
- * description }` - so nothing has to be flattened on submit and nothing has to
- * be re-nested on load.
- */
 export const ContentGroupField = ({
   field,
   loadOptions,
@@ -65,9 +53,6 @@ export const ContentGroupField = ({
             aria-label={t("group.enabled")}
             checked={!isNull}
             onCheckedChange={checked => {
-              // `null` is the whole group's absence, and it is a different
-              // state from every leaf happening to be empty - which is exactly
-              // why a nullable group requires nullable leaves.
               field.onChange(
                 checked
                   ? Object.fromEntries(leaves.map(leaf => [leaf.name, null]))

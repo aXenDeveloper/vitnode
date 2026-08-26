@@ -22,21 +22,9 @@ import { loadWidgetSettingsAction } from "../widgets/load-widget-settings.server
 import { saveWidgetSettingsMutation } from "../widgets/save-widget-settings.server";
 
 interface WidgetSettingsDialogContextProps {
-  /** Dismisses the dialog without writing anything. */
   close: () => void;
-  /** A save is in flight - disable the form's controls. */
   isPending: boolean;
-  /**
-   * Merges these keys into this copy's settings and closes the dialog. Keys you
-   * leave out are kept as they were. Once the write lands, the card behind the
-   * dialog is re-rendered on its own - the rest of the board is left alone, so
-   * an arrangement in progress survives.
-   *
-   * Resolves once the write is done, so `AutoForm` can hold its submit button
-   * in the loading state for as long as it takes.
-   */
   save: (settings: Record<string, unknown>) => Promise<void>;
-  /** The copy being configured, e.g. `@vitnode/core:notes#2`. */
   widgetId: string;
 }
 
@@ -58,23 +46,16 @@ export const useWidgetSettingsDialog = () => {
   return context;
 };
 
-/** Unwraps the form the server sent back, so the dialog can suspend on it. */
 const WidgetSettingsForm = ({
   form,
 }: {
   form: Promise<React.ReactNode>;
 }): React.ReactNode => React.use(form);
 
-/**
- * The gear on a card, and the dialog behind it. Rendered alongside the sizing
- * and removal buttons for widgets that registered a `settingsComponent` - so
- * only while the board is being edited.
- */
 export const WidgetSettingsDialog = ({
   onSaved,
   widget,
 }: {
-  /** Asks the board to render this card again, against what was just stored. */
   onSaved: () => void;
   widget: DashboardWidgetView;
 }) => {

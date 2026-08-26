@@ -17,14 +17,6 @@ const RevisionHistory = dynamic(async () =>
   })),
 );
 
-/**
- * The revision-history row action, opened from the row's overflow menu.
- *
- * Listed for `can_view`, not `can_restore`: reading what changed is part of
- * seeing the record at all, and a role that can look but not roll back is a
- * reasonable one. The restore button inside checks `can_restore` itself, and the
- * menu that lists this one holds the `can_view` gate.
- */
 export const HistoryContentPanel = ({
   contentTypeId,
   currentVersion,

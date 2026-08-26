@@ -49,19 +49,6 @@ export async function I18nProvider<
 }: {
   children: React.ReactNode;
   namespaces: NestedKey | NestedKey[];
-  /**
-   * Namespaces only known at runtime - a plugin id, above all.
-   *
-   * Separate from `namespaces`, which is a checked union of every namespace the
-   * message files declare, because a plugin's id cannot be in that union: it is
-   * whichever plugin the request resolved to. Keeping the two apart is what lets
-   * every core call site stay type-checked while the one place that genuinely
-   * cannot be says so out loud.
-   *
-   * A name that resolves to nothing is skipped rather than throwing -
-   * `pickMessages` simply finds no such key - so an id with no messages costs
-   * nothing.
-   */
   runtimeNamespaces?: readonly string[];
 }) {
   const locale = await getLocale();

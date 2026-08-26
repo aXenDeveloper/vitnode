@@ -9,26 +9,16 @@ const colorSchemes = ["light", "dark"];
 type Attribute = "class" | `data-${string}`;
 
 export interface ThemeProviderProps {
-  /** HTML attribute(s) used to apply the theme. @defaultValue `"class"` */
   attribute?: Attribute | Attribute[];
   children?: React.ReactNode;
-  /** Default theme name. @defaultValue `enableSystem ? "system" : "light"` */
   defaultTheme?: string;
-  /** Disable CSS transitions while the theme is switching. */
   disableTransitionOnChange?: boolean;
-  /** Whether to set the `color-scheme` style on the document. */
   enableColorScheme?: boolean;
-  /** Whether to switch between dark/light based on system preference. */
   enableSystem?: boolean;
-  /** Forced theme name - disables switching. */
   forcedTheme?: string;
-  /** Nonce passed to the injected no-flash script (CSP). */
   nonce?: string;
-  /** Key used to persist the theme in `localStorage`. @defaultValue `"theme"` */
   storageKey?: string;
-  /** List of available theme names. */
   themes?: string[];
-  /** Map of theme name -> applied attribute value. */
   value?: Record<string, string>;
 }
 
@@ -233,12 +223,10 @@ export const ThemeProvider = ({
     [storageKey],
   );
 
-  // Apply the theme to the DOM whenever the resolved value changes.
   React.useEffect(() => {
     applyTheme(forcedTheme ?? theme);
   }, [applyTheme, forcedTheme, theme, systemTheme]);
 
-  // Sync across tabs.
   React.useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key !== storageKey) return;

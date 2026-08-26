@@ -14,28 +14,9 @@ import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 
 export interface ContentRowData extends Record<string, unknown> {
-  /**
-   * The resolved descriptor of each file field, keyed by field name.
-   *
-   * Carried beside the row by the generated list response, which is why a file
-   * cell can show a thumbnail and a name rather than the `core_files.id` the
-   * column actually holds. Absent for a content type with no file fields.
-   *
-   * A `multiple: true` field's entry is a list - and never reaches a cell: a
-   * gallery is not one column, so `admin.list.columns` refuses it and the list
-   * response loads no junction table. The union is here because one `files` bag
-   * carries every file field of the row, whatever its arity.
-   */
   files?: Record<string, ContentFileFieldValue>;
   id: number;
   labels: ContentLabels;
-  /**
-   * The record's translation in the reader's own language, when it has one.
-   *
-   * The list resolves exactly one - the language the person is already using
-   * VitNode in - so a localized cell is an ordinary cell with one lookup in
-   * front of it, and there is nothing above the table to choose.
-   */
   translation?: null | { values?: Record<string, unknown> };
 }
 
@@ -69,12 +50,6 @@ const asText = (value: unknown): string => {
   return "";
 };
 
-/**
- * Renders one list cell for a field kind.
- *
- * Deliberately plain: a plugin that wants more supplies `columns.<name>.cell`
- * in `buildPlugin`, and that override is used instead of this.
- */
 export const ContentCell = ({
   emptyLabel,
   missingLabel,
@@ -83,24 +58,15 @@ export const ContentCell = ({
   statusLabels,
 }: {
   emptyLabel: string;
-  /** Shown for a localized cell of a record with no translation here. */
   missingLabel?: string;
   row: ContentRowData;
   spec: ContentColumnSpec;
-  /** Translated `draft`/`published`, for the generated publication column. */
   statusLabels: { draft: string; published: string };
 }) => {
   const value = contentCellValue(row, spec);
 
-  // Before the generic emptiness check: what the column holds is an identifier,
-  // and a raw `42` in a list is worse than useless - it is the one thing an
-  // editor cannot recognise. An image gets its own thumbnail; everything else
-  // gets an icon and its file name.
   if (spec.kind === "file") {
     const entry = row.files?.[spec.name];
-    // A list means a gallery, which `resolveAdmin` refuses as a column - so this
-    // is unreachable rather than merely unusual, and falling through to "empty"
-    // is the right answer if it ever is not.
     const file = entry === undefined || Array.isArray(entry) ? null : entry;
     if (!file) return <Empty label={emptyLabel} />;
 
@@ -113,8 +79,6 @@ export const ContentCell = ({
           className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md"
         >
           {image ? (
-            // Decorative: the file name is right beside it as real text, so an
-            // alt would repeat it to a screen reader for no gain.
             <img
               alt=""
               className="size-full object-cover"
@@ -141,8 +105,6 @@ export const ContentCell = ({
   }
 
   if (value === null || value === undefined || value === "") {
-    // "Nobody has written this in your language yet" and "this field is empty"
-    // are different facts, and only the first is worth acting on.
     const missing =
       spec.localized === true && missingLabel !== undefined && !row.translation;
 

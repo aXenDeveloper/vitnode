@@ -23,7 +23,6 @@ export const SearchAdmin = ({ items }: { items: AdminSearchNavItem[] }) => {
   const tCore = useTranslations("core.global");
 
   const [open, setOpen] = React.useState(false);
-  /** Keeps the dialog chunk mounted after the first open so it is not re-requested. */
   const [isMounted, setIsMounted] = React.useState(false);
   const [isApple, setIsApple] = React.useState<boolean | undefined>(undefined);
 
@@ -52,7 +51,6 @@ export const SearchAdmin = ({ items }: { items: AdminSearchNavItem[] }) => {
     setOpen(true);
   };
 
-  /** Warms the dialog chunk on hover/focus so opening it does not wait on the network. */
   const handlePrefetch = () => {
     void importSearchAdminDialog();
   };

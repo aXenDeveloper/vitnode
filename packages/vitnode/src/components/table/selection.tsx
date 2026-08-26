@@ -13,13 +13,10 @@ import { TableRow } from "../ui/table";
 import { TooltipWithContent } from "../ui/tooltip";
 
 export interface SelectionDataTable {
-  /** Every row on the page is ticked - what the header checkbox shows. */
   allSelected: boolean;
   clear: () => void;
   isSelected: (id: number) => boolean;
-  /** The ticked ids, in the order they were ticked. */
   selected: number[];
-  /** Some but not all of them: the header checkbox's indeterminate state. */
   someSelected: boolean;
   toggle: (id: number) => void;
   toggleAll: (next: boolean) => void;
@@ -53,12 +50,6 @@ export const useDataTableSelection = (): SelectionDataTable => {
   return value;
 };
 
-/**
- * Holds which rows are ticked, for one page of one table.
- *
- * `rowIds` is the page as the server just rendered it, and the selection is
- * pruned to it on every change.
- */
 export function SelectionProviderDataTable({
   children,
   rowIds,
@@ -72,10 +63,6 @@ export function SelectionProviderDataTable({
 
   if (pageKey !== prevPageKey) {
     setPrevPageKey(pageKey);
-    // Pruned, not cleared. Paging or searching replaces the ids outright, so
-    // the selection empties on its own - but a bulk action that only partly
-    // went through leaves exactly the rows it could not do still on screen and
-    // still ticked, which is the answer the person needs.
     setSelected(current => {
       const next = current.filter(id => rowIds.includes(id));
 
@@ -109,7 +96,6 @@ export function SelectionProviderDataTable({
   );
 }
 
-/** The header checkbox: ticks or unticks the whole page. */
 export function SelectAllDataTable() {
   const t = useTranslations("core.global.data_table");
   const { allSelected, someSelected, toggleAll } = useDataTableSelection();
@@ -124,7 +110,6 @@ export function SelectAllDataTable() {
   );
 }
 
-/** One row's checkbox. */
 export function SelectRowDataTable({ id }: { id: number }) {
   const t = useTranslations("core.global.data_table");
   const { isSelected, toggle } = useDataTableSelection();
@@ -138,7 +123,6 @@ export function SelectRowDataTable({ id }: { id: number }) {
   );
 }
 
-/** A `TableRow` that shades itself while its row is ticked. */
 export function RowSelectableDataTable({
   children,
   id,
@@ -155,14 +139,6 @@ export function RowSelectableDataTable({
   );
 }
 
-/**
- * The bar that floats at the bottom of the viewport while rows are ticked.
- *
- * Rendered into `body` rather than in place: `position: fixed` is measured
- * against the nearest ancestor with a transform or a filter, and a table can
- * easily sit inside one (the AdminCP shell animates its sidebar), which would
- * pin the bar to the middle of the page instead of the screen.
- */
 export function BulkActionsDataTable({
   actions,
 }: {
@@ -186,8 +162,6 @@ export function BulkActionsDataTable({
       {selected.length > 0 && (
         <motion.div
           animate={{ opacity: 1, y: 0 }}
-          // Below the `z-50` overlays, so a confirmation opened from the bar
-          // covers it rather than fighting it.
           className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
           exit={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}
           initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 16 }}

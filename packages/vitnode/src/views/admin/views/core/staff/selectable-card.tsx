@@ -13,11 +13,6 @@ interface SelectableCardProps {
   title: React.ReactNode;
 }
 
-/**
- * A large, tappable choice card with a radio-style indicator in the corner.
- * Shared by the access-level switch (edit) and the assignee switch (create) so
- * both flows speak the same visual language.
- */
 export const SelectableCard = ({
   selected,
   onSelect,

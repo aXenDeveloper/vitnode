@@ -30,8 +30,6 @@ const listHref = (type: PermissionStaffType) =>
 
 interface PermissionItem {
   checked: boolean;
-  // Keys of the permissions this one depends on. The row stays locked until
-  // every dependency is enabled (e.g. `can_create` depends on `can_view`).
   dependsOn: string[];
   key: string;
   label: string;
@@ -260,8 +258,6 @@ export const EditStaffPermissionsForm = ({
     [plugins],
   );
 
-  // Resolve every permission key to its label so dependency hints ("Requires
-  // …") can name the gates they wait on.
   const labelByKey = React.useMemo(() => {
     const map = new Map<string, string>();
     for (const item of allItems) map.set(item.key, item.label);
@@ -269,8 +265,6 @@ export const EditStaffPermissionsForm = ({
     return map;
   }, [allItems]);
 
-  // Reverse index: permission key -> keys of the permissions that depend on it,
-  // so turning a gate off can cascade to everything it unlocks.
   const dependentsByKey = React.useMemo(() => {
     const map = new Map<string, string[]>();
     for (const item of allItems) {
@@ -306,8 +300,6 @@ export const EditStaffPermissionsForm = ({
         return next;
       }
 
-      // Removing a permission also removes anything that (transitively) depends
-      // on it, so a hidden switch can never stay granted behind the scenes.
       const stack = [key];
       while (stack.length > 0) {
         const current = stack.pop();

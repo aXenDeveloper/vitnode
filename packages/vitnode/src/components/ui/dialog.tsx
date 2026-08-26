@@ -50,7 +50,6 @@ function Dialog({
 
   const isOpen = openProp ?? open;
 
-  // Opens/closes the dialog programmatically, bypassing the unsaved-changes guard.
   const changeOpen = React.useCallback(
     (newOpen: boolean) => {
       onOpenChange?.(newOpen);
@@ -59,14 +58,11 @@ function Dialog({
     [onOpenChange],
   );
 
-  // Wired to Base UI. Blocks dismissals while there are unsaved changes (asking
-  // the user to confirm first) and ignores presses that land on a toast.
   const handleOpenChange = (
     newOpen: boolean,
     eventDetails: DialogPrimitive.Root.ChangeEventDetails,
   ) => {
     if (!newOpen) {
-      // Prevent closing the dialog if there are unsaved changes.
       if (isDirty) {
         eventDetails.cancel();
         setOpenAlertDialogBeforeClose(true);
@@ -74,7 +70,6 @@ function Dialog({
         return;
       }
 
-      // Prevent dismissing the dialog when clicking on a toast.
       if (eventDetails.reason === "outside-press") {
         const target = eventDetails.event.target as Element | null;
         if (target?.closest("[data-sonner-toaster]")) {

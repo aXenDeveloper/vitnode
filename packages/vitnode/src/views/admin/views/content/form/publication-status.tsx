@@ -6,14 +6,6 @@ import { useTranslations } from "next-intl";
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 
-/**
- * A read-only line saying where the record is in the lifecycle.
- *
- * Read-only on purpose, and the rule is the same in a dialog and on a page:
- * `status` and `publishedAt` are not in the form schema, and the one thing that
- * moves them is the publish action on the list. Two competing mutation paths in
- * one form is how a form ends up fighting its own optimistic state.
- */
 export const ContentFormPublication = ({
   publishedAt,
   status,

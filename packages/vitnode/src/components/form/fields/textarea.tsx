@@ -18,13 +18,6 @@ type AutoFormTextareaProps = ItemAutoFormComponentProps &
     multiLang?: boolean;
   };
 
-/**
- * The same textarea, holding one value per language.
- *
- * The switcher sits beside the label rather than inside the box, which is where
- * `AutoFormEditor` puts it too: a textarea is resizable and multi-line, so an
- * inline addon would end up floating in the middle of the control.
- */
 const MultiLangTextarea = ({
   label,
   labelRight,

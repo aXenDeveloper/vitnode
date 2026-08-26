@@ -20,25 +20,11 @@ import { Loader } from "@/components/ui/loader";
  * when to open.
  */
 export interface ContentPanelProps {
-  /**
-   * Where focus lands when the panel closes.
-   *
-   * The menu item it was opened from no longer exists by then, so without this a
-   * keyboard user is dropped at the top of the document instead of back on the
-   * button they opened - the menu trigger of the row they were working in.
-   */
   finalFocus?: React.RefObject<HTMLElement | null>;
   onOpenChange: (open: boolean) => void;
   open: boolean;
 }
 
-/**
- * The dialog every overflow row action opens.
- *
- * Header, description and lazy-loading fallback in one place, because the five
- * panels differ only in their body - and a per-panel copy of this is how one of
- * them ends up with a different close button or no loader at all.
- */
 export const ContentPanel = ({
   children,
   className,
@@ -49,10 +35,6 @@ export const ContentPanel = ({
   title,
 }: ContentPanelProps & {
   children: React.ReactNode;
-  /**
-   * Widths only, in practice: a panel whose body is a table of before-and-after
-   * values needs more room than one asking a yes-or-no question.
-   */
   className?: string;
   description: React.ReactNode;
   title: React.ReactNode;
@@ -64,8 +46,6 @@ export const ContentPanel = ({
         <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
 
-      {/* Every body here is behind a `dynamic()`, so the fallback belongs to the
-          shell rather than being repeated in each of them. */}
       <React.Suspense fallback={<Loader />}>{children}</React.Suspense>
     </DialogContent>
   </Dialog>

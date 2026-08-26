@@ -16,16 +16,6 @@ import {
   DropdownMenuTrigger,
 } from "../../ui/dropdown-menu";
 
-/**
- * The switchable locales. Split out because it is the only part that reads
- * `usePathname()` - switching locale means re-navigating to the current path.
- *
- * This component sits in the header of every themed route, so reading the
- * pathname in the switcher body kept the whole header out of the static shell on
- * any route with dynamic params. Keeping the read down here leaves the trigger
- * button prerendered and suspends only the menu items, which are behind a closed
- * dropdown anyway.
- */
 const LanguageSwitcherItems = ({
   locales,
   startTransition,
@@ -75,8 +65,6 @@ export const LanguageSwitcher = ({ locales }: { locales: LocaleConfig[] }) => {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent>
-        {/* The fallback holds the menu's final size, so opening it mid-stream
-            doesn't resize the popup under the pointer. */}
         <React.Suspense
           fallback={locales.map(locale => (
             <DropdownMenuItem disabled key={locale.code}>

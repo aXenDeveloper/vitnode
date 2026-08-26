@@ -27,23 +27,6 @@ export interface AsyncPickerOption {
   id: number;
 }
 
-/**
- * A search-as-you-type picker over a server-side list.
- *
- * The shape every "choose a user", "choose a role" control in the AdminCP had
- * grown its own copy of. Extracted so the ones that matter - the debounce, the
- * spinner that only shows while there is nothing to show, and re-running the
- * empty search each time it opens so the list is never yesterday's - are
- * decided once.
- *
- * **Not** built on `Combobox`: an option here is a row with an avatar or a
- * colour swatch in it, and the combobox's async mode renders `{ label, value }`
- * strings. Rendering is the caller's job through `renderOption`.
- *
- * Deliberately uncontrolled about *selection*: it reports what was picked and
- * nothing else, so the same component serves a single-value field and a
- * multi-value one without knowing which it is in.
- */
 export function AsyncPicker<TOption extends AsyncPickerOption>({
   className,
   disabled,
@@ -58,14 +41,12 @@ export function AsyncPicker<TOption extends AsyncPickerOption>({
 }: {
   className?: string;
   disabled?: boolean;
-  /** Shown when a search comes back with nothing. Defaults to the core string. */
   emptyLabel?: string;
   invalid?: boolean;
   onSelect: (option: TOption) => void;
   renderOption: (option: TOption) => React.ReactNode;
   search: (value: string) => Promise<TOption[]>;
   searchPlaceholder?: string;
-  /** Ticked in the list, so picking again to remove reads as a toggle. */
   selectedIds?: number[];
   trigger: React.ReactNode;
 }) {
@@ -99,9 +80,6 @@ export function AsyncPicker<TOption extends AsyncPickerOption>({
     <Popover
       onOpenChange={next => {
         setOpen(next);
-        // Cleared and re-run on every open rather than cached: the list is a
-        // live view of who exists, and a stale one offers somebody who was
-        // deleted since.
         if (next) {
           setOptions([]);
           void runSearch("");

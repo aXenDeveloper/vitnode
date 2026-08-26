@@ -18,14 +18,6 @@ export interface ContentRepeatableFieldProps extends ItemAutoFormComponentProps 
 
 /** One row as the editor holds it: the API's shape plus a key for React. */
 interface EditorRow {
-  /**
-   * A key that is stable for the row's whole life in the editor.
-   *
-   * Separate from `id`, and deliberately: `id` belongs to the database and a
-   * row that has not been saved yet does not have one. Keying React off `id`
-   * would give every unsaved row the key `undefined`, and React would reuse one
-   * input's DOM state for another row's value.
-   */
   key: string;
   values: Record<string, unknown>;
 }
@@ -41,17 +33,6 @@ const toRows = (value: unknown): EditorRow[] =>
       }))
     : [];
 
-/**
- * A repeatable field's editor: add, edit, remove, move up, move down.
- *
- * Reorder is buttons, not drag-and-drop. Drag-and-drop may be added on top, but
- * it can never be the only way: a keyboard user and a screen-reader user both
- * need a control they can reach and a label that says what it does, and "drag
- * the third item above the second" is neither.
- *
- * The whole list is one form value, so saving five rows is one request with one
- * `expectedVersion` - not five mutations racing each other's version.
- */
 export const ContentRepeatableField = ({
   field,
   loadOptions,
@@ -64,7 +45,6 @@ export const ContentRepeatableField = ({
   const max = spec.maxItems ?? Number.MAX_SAFE_INTEGER;
   const legendId = `content-repeatable-${spec.name}`;
 
-  // Monotonic, so a row added and removed and added again never reuses a key.
   const nextKeyRef = React.useRef(0);
 
   const commit = (next: EditorRow[]) => {
@@ -182,8 +162,6 @@ export const ContentRepeatableField = ({
         disabled={rows.length >= max}
         onClick={() => {
           nextKeyRef.current += 1;
-          // No `id`: that is the whole write protocol. A row without one is
-          // created; a row with one is updated in place and keeps it.
           commit([...rows, { key: `new-${nextKeyRef.current}`, values: {} }]);
         }}
         size="sm"

@@ -65,14 +65,6 @@ export interface ItemAutoFormComponentProps {
   itemParams?: InputParams;
   label?: React.ReactNode;
   labelRight?: React.ReactNode;
-  /**
-   * Whether this field holds one value per language.
-   *
-   * Set by whoever builds the field list - the Content Engine reads it off
-   * `localized: true` - so a custom component can pass it straight through to
-   * `AutoFormInput`, `AutoFormTextarea` or `AutoFormEditor` and get the language
-   * switcher without knowing why the field has one.
-   */
   multiLang?: boolean;
   otherProps: {
     ["aria-invalid"]?: boolean;
@@ -102,21 +94,12 @@ function AutoFormField({
     // eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
     if (!invalid || shouldReduceMotion || !scope.current) return;
 
-    // Restart the shake on every error, mirroring the macOS shake.
     animate(scope.current, SHAKE_KEYFRAMES, SHAKE_TRANSITION);
   }, [invalid, submitCount, shouldReduceMotion, animate, scope]);
 
   return <Field data-invalid={invalid} ref={scope} {...props} />;
 }
 
-/**
- * The submit button of the surrounding `AutoForm`, for a `layout` that has to
- * place it itself.
- *
- * Reads the form through context rather than taking props, so it stays in step
- * with validity and submission exactly like the built-in one - and so a layout
- * cannot wire up a button that submits a different form.
- */
 export const AutoFormSubmitButton = ({
   children,
   className,
@@ -125,14 +108,6 @@ export const AutoFormSubmitButton = ({
 }: {
   children?: React.ReactNode;
   className?: string;
-  /**
-   * Which of several submit buttons this one is.
-   *
-   * Handed to `onSubmit` as `options.intent` when this button is the one that
-   * submitted the form - so a layout can offer "Save as draft" and "Publish" on
-   * one form without a second `<form>`, a hidden field or a ref that goes stale
-   * when Enter submits through the default button instead.
-   */
   intent?: string;
   variant?: React.ComponentProps<typeof Button>["variant"];
 }) => {
@@ -183,7 +158,6 @@ export type AutoFormOnSubmit<
   form: UseFormReturn<z.input<T>, TContext, z.output<T>>,
   options: {
     captchaToken: string;
-    /** The `intent` of the `AutoFormSubmitButton` that was pressed, if any. */
     intent?: string;
   },
 ) => Promise<void> | void;
@@ -206,18 +180,6 @@ export function AutoForm<
   captcha?: z.infer<typeof routeMiddlewareSchema>["captcha"];
   fields: ItemAutoFormProps<T>[];
   formSchema: T;
-  /**
-   * Places the fields yourself instead of stacking them in declaration order.
-   *
-   * Called with every field already rendered and keyed by its `id`, so a layout
-   * puts an element where it wants it and each one stays wired into this form's
-   * validation, dirty state and error display. One `<form>`, one schema, one
-   * submit - a layout cannot accidentally create a second of any of them.
-   *
-   * The automatic submit button is **not** rendered in this mode: a layout that
-   * decides where the fields go has to decide where the button goes too.
-   * Mutually exclusive with `tabs`.
-   */
   layout?: (renderedFields: Record<string, React.ReactNode>) => React.ReactNode;
   mode?: Mode;
   onSubmit?: AutoFormOnSubmit<T, TContext>;

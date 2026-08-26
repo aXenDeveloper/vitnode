@@ -12,38 +12,11 @@ import { AutoFormLabel } from "../common/label";
 
 type AutoFormNullableNumberProps = ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Input>, "value"> & {
-    // Optional connector text between the unit and the checkbox, e.g. "or".
     orLabel?: React.ReactNode;
-    // Label for the checkbox. Checking it sets the value to `null` and disables
-    // the input (e.g. "Unlimited", "Never", "No limit").
     toggleLabel: React.ReactNode;
-    // Optional unit shown right after the input, e.g. "kB", "minutes", "%".
     unitLabel?: React.ReactNode;
   };
 
-/**
- * A numeric field paired with a checkbox that toggles the value to `null`.
- *
- * The form value is `number | null`:
- * - a `number` - the value typed in the input, or
- * - `null` - when the checkbox is checked (the input is disabled).
- *
- * Use it wherever a number can also mean "no value": an unlimited storage cap,
- * a session that never expires, an uncapped rate limit, and so on. Back it with
- * a `z.number().nullable()` schema (keep it optional/defaulted when the field
- * can be hidden). Extra props (`min`, `max`, `step`, `placeholder`, …) are
- * forwarded to the underlying input, and validation constraints come from the
- * Zod schema.
- *
- * @example
- * ```tsx
- * const formSchema = z.object({
- *   maxMembers: z.number().int().min(1).nullable().default(null),
- * });
- *
- * <AutoFormNullableNumber {...props} label="Maximum members" toggleLabel="Unlimited" />
- * ```
- */
 export const AutoFormNullableNumber = ({
   label,
   labelRight,
@@ -66,7 +39,6 @@ export const AutoFormNullableNumber = ({
   const [text, setText] = React.useState(
     typeof field.value === "number" ? String(field.value) : "",
   );
-  // Remember the last numeric value so unchecking the toggle restores it.
   const lastNumericRef = React.useRef(
     typeof field.value === "number" ? field.value : 0,
   );

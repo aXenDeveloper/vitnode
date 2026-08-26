@@ -43,7 +43,6 @@ export const CreateEditRoleAdmin = ({ data }: { data?: RoleData }) => {
       .max(50)
       .default(data?.color ?? ""),
     allowUploadFiles: z.boolean().default(data?.allowUploadFiles ?? false),
-    // `null` means unlimited. Values are stored in kB.
     totalMaxStorage: z
       .number()
       .int()

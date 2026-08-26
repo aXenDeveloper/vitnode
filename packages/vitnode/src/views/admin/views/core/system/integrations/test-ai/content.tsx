@@ -34,7 +34,6 @@ export const ContentTestAI = ({ models }: { models: TestAIModel[] }) => {
   const [error, setError] = React.useState<null | string>(null);
   const abortRef = React.useRef<AbortController | null>(null);
 
-  // Abort any in-flight stream when the dialog (and this component) unmounts.
   React.useEffect(() => () => abortRef.current?.abort(), []);
 
   const reset = () => {
@@ -77,8 +76,6 @@ export const ContentTestAI = ({ models }: { models: TestAIModel[] }) => {
         return;
       }
 
-      // The endpoint streams NDJSON: `{"t":"…"}` text deltas and `{"e":"…"}`
-      // when generation fails mid-stream (so the real provider error surfaces).
       const reader = (res.body as ReadableStream<Uint8Array>).getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -126,8 +123,6 @@ export const ContentTestAI = ({ models }: { models: TestAIModel[] }) => {
 
       setStatus("done");
     } catch (err) {
-      // Cancelling aborts the request, which lands here - return to the form
-      // instead of surfacing it as an error.
       if (controller.signal.aborted) {
         reset();
 

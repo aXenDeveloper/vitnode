@@ -26,13 +26,6 @@ import {
 import { RevisionActor } from "./revision-actor";
 import { RevisionDiff } from "./revision-diff";
 
-/**
- * The colour each operation carries.
- *
- * One map rather than two, so the dot on the rail can never disagree with the
- * badge beside it - the dot is the thing that makes a long history scannable,
- * and it is only worth anything if its colour means the same as the word.
- */
 const OPERATION_TONES: Record<
   ContentRevisionOperation,
   { badge: string; dot: string }
@@ -55,8 +48,6 @@ const OPERATION_TONES: Record<
       "border-violet-500/40 bg-violet-500/10 text-violet-700 dark:text-violet-400",
     dot: "bg-violet-500",
   },
-  // The one state that is an absence: taken back down, and deliberately the only
-  // entry with no colour of its own.
   unpublish: {
     badge: "bg-muted text-muted-foreground",
     dot: "bg-muted-foreground/40",
@@ -68,7 +59,6 @@ const OPERATION_TONES: Record<
   },
 };
 
-/** `create` reads better as "Created" than as a raw operation name. */
 const OperationBadge = ({
   operation,
 }: {
@@ -83,12 +73,6 @@ const OperationBadge = ({
   );
 };
 
-/**
- * One entry on the timeline: metadata always, the snapshot only once opened.
- *
- * Loading every snapshot up front would mean shipping every historical version
- * of a long article to the browser to render a list of dates.
- */
 export const RevisionRow = ({
   canRestore,
   contentTypeId,
@@ -123,31 +107,15 @@ export const RevisionRow = ({
   const [previous, setPrevious] = React.useState<ContentRevisionDetail | null>(
     null,
   );
-  // Whether a fetch has come back at all, which is the only way to tell "still
-  // loading" from "loaded, and there was nothing there". Derived rather than a
-  // `loading` flag so nothing sets state synchronously inside the effect.
   const [settled, setSettled] = React.useState(false);
   const [open, setOpen] = React.useState(false);
 
-  // A publish or an unpublish moves no field, and the server says so rather than
-  // leaving it to be discovered: there is nothing behind the toggle, so the row
-  // states the fact instead of offering an empty panel to open.
   const hasChanges = revision.changedFields.length > 0;
 
-  // Fetches whichever snapshots are missing, and only those.
-  //
-  // An effect rather than a click handler because the pair this row needs can
-  // change while it is open: the last row of a page has nothing below it, so
-  // its diff opens with no "before" - and **Load older versions** then puts one
-  // there. Loading on click alone would leave that row comparing against
-  // nothing until it was closed and reopened.
   React.useEffect(() => {
     if (!open) return;
 
     const needsDetail = detail === null;
-    // Not "is it null" but "is it the right one": the boundary row's previous
-    // arrives one page late, and re-fetching a snapshot already on screen is
-    // wasted work.
     const needsPrevious = previousId !== null && previous?.id !== previousId;
     if (!needsDetail && !needsPrevious) return;
 
@@ -163,8 +131,6 @@ export const RevisionRow = ({
     ]).then(([current, earlier]) => {
       if (!active) return;
 
-      // Both in one batch, so the diff never renders for a frame with its
-      // "before" still missing and every field looking newly added.
       if (current) setDetail(current.revision ?? null);
       if (earlier) setPrevious(earlier.revision ?? null);
       setSettled(true);
@@ -177,8 +143,6 @@ export const RevisionRow = ({
 
   return (
     <li className="group/revision flex gap-3">
-      {/* The rail. The line stretches to the bottom of the entry, so it meets
-          the next dot instead of stopping under the text. */}
       <div
         aria-hidden
         className="flex flex-col items-center gap-1.5 self-stretch"
@@ -194,8 +158,6 @@ export const RevisionRow = ({
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-2 pb-5 group-last/revision:pb-0">
-        {/* `min-h-8` keeps every entry on the same rhythm whether or not it has
-            buttons, which is also what the dot above aligns to. */}
         <div className="flex min-h-8 flex-wrap items-center gap-x-2 gap-y-1">
           <span className="text-sm font-medium tabular-nums">
             v{revision.version}
@@ -214,10 +176,6 @@ export const RevisionRow = ({
           <div className="ms-auto flex items-center gap-1.5">
             {hasChanges ? (
               <Button
-                // No `aria-controls`: the panel it names does not exist while
-                // the row is collapsed, and a dangling reference is worse than
-                // none. `aria-expanded` on a button whose disclosure follows it
-                // is the whole contract.
                 aria-expanded={open}
                 onClick={() => {
                   setOpen(!open);
@@ -260,8 +218,6 @@ export const RevisionRow = ({
                         : tErrors("internal_server_error"),
                     });
 
-                    // Left open, so the reason stays next to the thing that
-                    // failed - the same behaviour as delete and publish.
                     return;
                   }
 
@@ -271,8 +227,6 @@ export const RevisionRow = ({
                     }),
                   });
                   onClose();
-                  // The new version travels back so the next restore in this
-                  // still-open dialog posts the right precondition.
                   onRestored(mutation.version);
                 }}
                 textSubmit={t("restore.confirm")}
@@ -302,9 +256,6 @@ export const RevisionRow = ({
               })}
             </p>
 
-            {/* Keyed on the snapshot rather than on a loading flag, so a later
-                fetch of the missing "before" refines the diff in place instead
-                of replacing it with a spinner somebody has to wait out again. */}
             {detail ? (
               <RevisionDiff
                 after={detail.snapshot}

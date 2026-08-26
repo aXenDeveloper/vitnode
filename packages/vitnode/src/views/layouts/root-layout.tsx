@@ -10,12 +10,6 @@ import { RootProvider } from "./provider";
 
 export interface RootLayoutProps {
   children: React.ReactNode;
-  /**
-   * Still handed over by Next, and still spread through by app layouts, but no
-   * longer read here: the locale now comes from `next/root-params` via the
-   * next-intl request config. Optional so a layout that has stopped destructuring
-   * it type-checks.
-   */
   params?: Promise<{
     locale: string;
   }>;
@@ -41,8 +35,6 @@ export const RootLayout = ({
   return (
     <I18nProvider namespaces={[]}>
       <RootProvider
-        // Hand over only the serialisable slice - the rest of the config
-        // (plugins, message loaders) stays on the server.
         config={{
           debug: config.debug,
           locales: config.i18n.locales,

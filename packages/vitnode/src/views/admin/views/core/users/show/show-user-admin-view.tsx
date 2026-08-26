@@ -37,9 +37,6 @@ export const ShowUserAdminView = async ({ id }: { id: string }) => {
 
   const user = await res.json();
 
-  // Editing any user needs `can_edit`; editing an administrator additionally
-  // needs the elevated `can_edit_admin` permission. The backend enforces the
-  // same rule - this only hides the edit controls.
   const session = await getSessionAdminApi();
   const canEdit =
     !!session &&
@@ -61,7 +58,6 @@ export const ShowUserAdminView = async ({ id }: { id: string }) => {
       overview={
         <div className="flex w-full flex-col gap-4">
           <Card className="w-full overflow-hidden pt-0">
-            {/* Cover placeholder */}
             <div className="from-primary/30 to-primary/5 relative h-44 w-full bg-linear-to-br">
               <span className="sr-only">{t("coverPlaceholder")}</span>
               {canEdit && (
@@ -72,7 +68,6 @@ export const ShowUserAdminView = async ({ id }: { id: string }) => {
             </div>
 
             <CardContent className="flex flex-col">
-              {/* Avatar */}
               <div className="-mt-16 mb-4 flex justify-center">
                 <div className="relative">
                   <Avatar
@@ -88,7 +83,6 @@ export const ShowUserAdminView = async ({ id }: { id: string }) => {
                 </div>
               </div>
 
-              {/* Username */}
               <EditUserField
                 as="h2"
                 canEdit={canEdit}
@@ -109,7 +103,6 @@ export const ShowUserAdminView = async ({ id }: { id: string }) => {
                 )}
               </div>
 
-              {/* Email */}
               <div className="mt-3">
                 <EditUserField
                   canEdit={canEdit}
@@ -126,7 +119,6 @@ export const ShowUserAdminView = async ({ id }: { id: string }) => {
                 {t("joined")} <DateFormat date={user.createdAt} />
               </p>
 
-              {/* Actions */}
               <div className="mt-6">
                 <Button
                   className="w-full"
