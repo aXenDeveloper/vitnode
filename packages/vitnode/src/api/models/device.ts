@@ -1,11 +1,11 @@
 import type { Context } from "hono";
 
 import { eq } from "drizzle-orm";
-import { getCookie, setCookie } from "hono/cookie";
+import { getCookie } from "hono/cookie";
 import { randomBytes } from "node:crypto";
 
+import { setAuthCookie } from "@/api/lib/auth-cookie";
 import { core_sessions_known_devices } from "@/database/sessions";
-import { CONFIG } from "@/lib/config";
 
 export class DeviceModel {
   constructor(c: Context) {
@@ -36,15 +36,11 @@ export class DeviceModel {
   }
 
   private setCookieDevice(publicDeviceId: string) {
-    setCookie(
+    setAuthCookie(
       this.c,
       this.c.get("core").authorization.deviceCookieName,
       publicDeviceId,
       {
-        httpOnly: true,
-        secure: this.c.get("core").authorization.cookieSecure,
-        path: "/",
-        domain: CONFIG.web.hostname,
         expires: new Date(
           Date.now() + this.c.get("core").authorization.deviceCookieExpires,
         ),

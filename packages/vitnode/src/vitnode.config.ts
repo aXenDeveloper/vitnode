@@ -52,6 +52,25 @@ export interface VitNodeApiConfig {
   authorization?: {
     adminCookieExpires?: number;
     adminCookieName?: string;
+    /**
+     * `Domain` to stamp on the session, admin, device and SSO cookies.
+     *
+     * Leave it unset - the default - and no `Domain` is sent at all, making the
+     * cookies *host-only*: valid on exactly the host that issued them. That is
+     * what a normal VitNode install wants, because the web app serves `/api/*`
+     * on its own origin, and it is the only setting that survives a hostname
+     * nobody configured, such as a per-branch preview deployment.
+     *
+     * Set it only to share one session across subdomains - `".example.com"` for
+     * `app.example.com` and `admin.example.com`. A value the response's own host
+     * does not fall under is rejected by the browser, so an install that gets
+     * this wrong cannot sign anybody in.
+     *
+     * Deliberately not derived from `NEXT_PUBLIC_WEB_URL`: that names where the
+     * front end lives, which is not the same question, and guessing it is how a
+     * preview deployment ends up sending `Domain=localhost`.
+     */
+    cookieDomain?: string;
     cookieExpires?: number;
     cookieName?: string;
     cookieSecure?: boolean;

@@ -73,5 +73,48 @@ import { TypeTable } from 'fumadocs-ui/components/type-table';
       type: 'boolean',
       default: 'true',
     },
+    cookieDomain: {
+      description:
+        'The Domain to stamp on the auth cookies. Leave it unset unless you share one session across subdomains - see below.',
+      type: 'string',
+      default: 'undefined (host-only)',
+    },
   }}
 />
+
+### Sharing a session across subdomains
+
+By default VitNode sends no `Domain` attribute at all, which makes every auth
+cookie **host-only**: valid on exactly the host that issued it, and nowhere
+else. That is what you want almost always, because the web app serves `/api/*`
+on its own origin - there is no second host to share with.
+
+It is also the only setting that survives a hostname nobody configured. A
+preview deployment gets a fresh URL per branch, and a cookie stamped with a
+`Domain` the response did not come from is thrown away by the browser - so
+nobody can sign in, and nothing says why.
+
+If you genuinely run VitNode across several subdomains - say `app.example.com`
+and `admin.example.com` - opt in explicitly:
+
+```ts title="src/vitnode.api.config.ts"
+VitNodeAPI({
+  app,
+  plugins: [],
+  authorization: {
+    // [!code ++]
+    cookieDomain: '.example.com',
+  },
+});
+```
+
+<Callout type="warn" title="Pick a domain your app actually serves from">
+  The value has to be one the responding host falls under. `.example.com` works
+  for `app.example.com`; `example.com` does not work for `example.org`, and
+  nothing works for a preview URL on a hosting provider's domain. Get it wrong
+  and every browser silently drops the cookie.
+</Callout>
+
+Changing this later logs everyone out: the browser treats a host-only cookie and
+a `Domain` cookie of the same name as two different cookies, so the old one is
+no longer the one VitNode reads or removes.
