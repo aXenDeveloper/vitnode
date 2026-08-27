@@ -1,6 +1,6 @@
-import type { searchModule } from "@/api/modules/search/search.module";
-
 import { infiniteQueryOptions } from "@tanstack/react-query";
+
+import type { searchModule } from "@/api/modules/search/search.module";
 
 import { CONFIG_PLUGIN } from "@/config";
 import { clientModule, fetcherClient } from "@/lib/fetcher-client";
@@ -189,15 +189,17 @@ export type SearchFeedPageFetcher = (
  * VitNode client call uses - same-origin, cookies attached by the browser
  * itself, and a 429 routed to the global rate-limit notice.
  */
-export const fetchSearchFeedPageInBrowser: SearchFeedPageFetcher = async (
-  args,
-) => {
-  const response = await fetcherClient(searchModuleRef, searchFeedRequest(args));
+export const fetchSearchFeedPageInBrowser: SearchFeedPageFetcher =
+  async args => {
+    const response = await fetcherClient(
+      searchModuleRef,
+      searchFeedRequest(args),
+    );
 
-  assertSearchFeedResponse(response, args);
+    assertSearchFeedResponse(response, args);
 
-  return await response.json();
-};
+    return await response.json();
+  };
 
 /**
  * The feed, as the one query definition every caller shares.

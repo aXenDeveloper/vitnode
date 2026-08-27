@@ -18,7 +18,14 @@ import { loadEnv } from 'vite'
  * consequence of what somebody happened to call a variable. Add a key to publish
  * one more.
  */
-const CLIENT_ENV_KEYS = ['NEXT_PUBLIC_API_URL', 'NEXT_PUBLIC_WEB_URL'] as const
+const CLIENT_ENV_KEYS = [
+  'NEXT_PUBLIC_API_URL',
+  // Temporary, for the length of the migration: the origin serving the routes
+  // this app does not own yet. `components/migration-link.tsx` reads it in the
+  // browser, so it has to be inlined like the others. See `src/lib/legacy-app.ts`.
+  'NEXT_PUBLIC_LEGACY_WEB_URL',
+  'NEXT_PUBLIC_WEB_URL',
+] as const
 
 /**
  * Environment handling for a TanStack Start app that serves a VitNode API.

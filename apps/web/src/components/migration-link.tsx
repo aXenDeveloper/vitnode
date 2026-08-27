@@ -2,8 +2,9 @@ import type { AnyRouter } from '@tanstack/react-router'
 
 import { Link, useRouter } from '@tanstack/react-router'
 
-import { localizeHref, useLocale } from '#/lib/i18n/client'
+import { useLocale } from '#/lib/i18n/client'
 import { localeRouting } from '#/lib/i18n/shared'
+import { buildLegacyHref, legacyWebOrigin } from '#/lib/legacy-app'
 
 /**
  * Linking to a VitNode page while half of VitNode still runs on Next.js.
@@ -77,14 +78,17 @@ export const isTanStackOwnedPath = (
 /**
  * A link to anywhere in VitNode, migrated or not.
  *
- * The locale is applied exactly once on each branch and never by hand:
+ * The two branches differ in origin as well as in mechanism, which is the whole
+ * point: a relative `/blog/post-1` from this app resolves against *this* app,
+ * so it turned a client-side not-found into a full-document not-found rather
+ * than reaching the application that owns the route.
  *
- * - **Owned.** `<Link to>` takes the *internal* path and the router's
- *   `rewrite.output` writes the prefix, so `/discover` renders as `/pl/discover`
- *   while reading Polish. Adding one here would double it.
- * - **Not owned.** The router never sees the URL, so the rewrite never runs on
- *   it - `localizeHref` applies the same Stage 3 rule instead. It is idempotent,
- *   so an already-prefixed href stays single-prefixed.
+ * - **Owned.** `<Link to>` takes the *internal* path and stays relative. The
+ *   router's `rewrite.output` writes the locale prefix, so `/discover` renders
+ *   as `/pl/discover` while reading Polish. Neither an origin nor a prefix is
+ *   added here; either would be a duplicate.
+ * - **Not owned.** The router never sees the URL, so `buildLegacyHref` localizes
+ *   it with the same Stage 3 rule and points it at the legacy origin.
  *
  * Search parameters and hashes survive both branches untouched.
  */
@@ -109,7 +113,10 @@ export const MigrationLink = ({
   }
 
   return (
-    <a className={className} href={localizeHref(href, locale)}>
+    <a
+      className={className}
+      href={buildLegacyHref({ href, legacyOrigin: legacyWebOrigin(), locale })}
+    >
       {children}
     </a>
   )

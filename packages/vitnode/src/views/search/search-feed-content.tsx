@@ -89,8 +89,16 @@ const SAFE_EXTERNAL_SCHEMES: ReadonlySet<string> = new Set([
   "tel:",
 ]);
 
-/** Leading whitespace and control characters hide a scheme: `\tjava\nscript:`. */
-const STRIPPED = /[\u0000-\u0020]/g;
+/**
+ * Control characters and spaces removed, because they hide a scheme:
+ * `java\nscript:` and `\u0000javascript:` are both followed by a browser.
+ *
+ * Written as a code-point filter rather than a regular expression: a character
+ * class containing a literal NUL is what `no-control-regex` exists to catch,
+ * and the intent - "drop anything at or below a space" - reads better this way.
+ */
+const withoutControlCharacters = (value: string): string =>
+  [...value].filter(char => (char.codePointAt(0) ?? 0) > 0x20).join("");
 
 export type SearchFeedHrefKind = "external" | "internal" | "unsafe";
 
@@ -108,7 +116,7 @@ export type SearchFeedHrefKind = "external" | "internal" | "unsafe";
  * rather than through rendered markup.
  */
 export const classifySearchFeedHref = (href: string): SearchFeedHrefKind => {
-  const cleaned = href.replace(STRIPPED, "");
+  const cleaned = withoutControlCharacters(href);
 
   // Protocol-relative. Checked before the scheme test, which would not match it.
   if (cleaned.startsWith("//")) return "external";

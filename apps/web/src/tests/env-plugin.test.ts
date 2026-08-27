@@ -86,6 +86,9 @@ describe('vitNodeEnv', () => {
   it('inlines the API and web URLs into the client bundle', async () => {
     expect(clientDefine(await runConfig(root))).toStrictEqual({
       'process.env.NEXT_PUBLIC_API_URL': '"https://api.example.test"',
+      // Temporary migration infrastructure, unset in this fixture. See
+      // `src/lib/legacy-app.ts`; it goes away with the last legacy route.
+      'process.env.NEXT_PUBLIC_LEGACY_WEB_URL': 'undefined',
       'process.env.NEXT_PUBLIC_WEB_URL': '"https://web.example.test"',
     })
   })
@@ -120,6 +123,7 @@ describe('vitNodeEnv', () => {
     // instead of falling through to the default the core config has for it.
     expect(clientDefine(await runConfig(root))).toStrictEqual({
       'process.env.NEXT_PUBLIC_API_URL': 'undefined',
+      'process.env.NEXT_PUBLIC_LEGACY_WEB_URL': 'undefined',
       'process.env.NEXT_PUBLIC_WEB_URL': 'undefined',
     })
   })
