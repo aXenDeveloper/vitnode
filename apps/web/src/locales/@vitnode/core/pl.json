@@ -6,6 +6,17 @@
       "language_switcher": "Zmień język",
       "save": "Zapisz",
       "theme_switcher": "Zmień motyw"
+    },
+    "search": {
+      "discoverTitle": "Odkrywaj",
+      "discoverDesc": "Zobacz najnowszą aktywność w społeczności.",
+      "empty": "Nic tu jeszcze nie ma.",
+      "loadMore": "Wczytaj więcej",
+      "loading": "Wczytywanie…",
+      "types": {
+        "blog_post": "Wpis",
+        "unknown": "Treść"
+      }
     }
   }
 }

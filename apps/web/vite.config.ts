@@ -9,6 +9,19 @@ import { vitNodeEnv } from './vitnode-env'
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
+  /**
+   * A second dev server has to fail rather than quietly move.
+   *
+   * `tanstackStart()` runs the route generator and *writes*
+   * `src/routeTree.gen.ts`. Two servers means two generators owning one file: if
+   * their route lists ever differ - which is precisely what happens when one was
+   * started before a route file existed - they overwrite each other forever, and
+   * every write is a full page reload. Without `strictPort` the second `pnpm dev`
+   * says "Port 3001 is in use, trying another one" and succeeds, so the fight
+   * starts silently and looks like an inexplicable refresh loop on the first
+   * server.
+   */
+  server: { strictPort: true },
   ssr: {
     /**
      * The VitNode API packages mounted at `/api/*`, kept out of the SSR pass.

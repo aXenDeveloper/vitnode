@@ -1,0 +1,218 @@
+// @vitest-environment node
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const srcRoot = resolve(here, "../..");
+
+const SHARED_ENTRY = join(here, "search-feed-content.tsx");
+const NEXT_WRAPPER = join(here, "search-feed.tsx");
+
+/**
+ * The other half of what a migrated feed page renders.
+ *
+ * Scanned here rather than in a file of its own because it is the same boundary
+ * for the same reason: `/discover` is a heading and a feed, and either one
+ * reaching `next-intl/navigation` makes the whole page Next-only. This one did,
+ * until the back link became a prop.
+ */
+const HEADER_CONTENT = join(here, "../../components/ui/header-content.tsx");
+
+/**
+ * The specifier a `from "..."` resolves to, or `null` when it leaves the
+ * package.
+ *
+ * Only `@/` and relative paths are followed. Anything else is a bare package
+ * name, which is exactly what the assertions below are looking at.
+ */
+const resolveSpecifier = (specifier: string, from: string): null | string => {
+  let base: string;
+
+  if (specifier.startsWith("@/")) base = join(srcRoot, specifier.slice(2));
+  else if (specifier.startsWith(".")) base = resolve(dirname(from), specifier);
+  else return null;
+
+  for (const suffix of [".ts", ".tsx", "/index.ts", "/index.tsx"]) {
+    const candidate = base + suffix;
+    if (existsSync(candidate) && statSync(candidate).isFile()) return candidate;
+  }
+
+  return existsSync(base) && statSync(base).isFile() ? base : null;
+};
+
+/**
+ * Every specifier a file imports **at runtime**.
+ *
+ * `import type` statements are stripped first: the feed imports the search
+ * module's *type* to keep `fetcherClient` typed, and that module is a Hono
+ * server module. It is erased at compile time and never reaches a bundle, so
+ * counting it would make this suite fail on something that cannot break.
+ */
+const runtimeImports = (path: string): string[] => {
+  const source = readFileSync(path, "utf8").replace(
+    /(^|[\n;])\s*import\s+type\s[\s\S]*?from\s*["'][^"']+["']/g,
+    "$1",
+  );
+
+  return [
+    ...source.matchAll(
+      /(?:^|[^\w$.])from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']|(?:^|[\n;}])\s*import\s*["']([^"']+)["']/g,
+    ),
+  ]
+    .map(match => match[1] ?? match[2] ?? match[3])
+    .filter((specifier): specifier is string => Boolean(specifier));
+};
+
+/** Every external specifier reachable from an entry, with the chain that got there. */
+const externalGraph = (entry: string): Map<string, string[]> => {
+  const found = new Map<string, string[]>();
+  const parents = new Map<string, string>();
+  const seen = new Set<string>();
+
+  const chain = (file: string): string => {
+    const parts: string[] = [];
+    for (let at: string | undefined = file; at; at = parents.get(at)) {
+      parts.unshift(relative(srcRoot, at));
+    }
+
+    return parts.join(" -> ");
+  };
+
+  const walk = (file: string) => {
+    if (seen.has(file)) return;
+    seen.add(file);
+
+    for (const specifier of runtimeImports(file)) {
+      const target = resolveSpecifier(specifier, file);
+
+      if (target) {
+        if (!parents.has(target)) parents.set(target, file);
+        walk(target);
+        continue;
+      }
+
+      found.set(specifier, [...(found.get(specifier) ?? []), chain(file)]);
+    }
+  };
+
+  walk(entry);
+
+  return found;
+};
+
+const matches = (specifier: string, forbidden: string): boolean =>
+  specifier === forbidden || specifier.startsWith(`${forbidden}/`);
+
+const offenders = (entry: string, forbidden: string[]): string[] =>
+  [...externalGraph(entry)]
+    .filter(([specifier]) => forbidden.some(one => matches(specifier, one)))
+    .flatMap(([specifier, chains]) => chains.map(at => `${specifier} in ${at}`))
+    .sort();
+
+/** Anything that only resolves inside a Next.js app. */
+const NEXT_ONLY = ["next", "server-only"];
+
+/**
+ * `next-intl`'s Next-only halves.
+ *
+ * The root entry is deliberately absent, for the same reason `apps/web`'s
+ * `isolation.test.ts` leaves it out: it re-exports `use-intl`, which is
+ * framework-free, and `apps/web` already renders core components that import it.
+ * These four are the ones that reach for Next's request scope, its middleware or
+ * its build plugin - and `lib/navigation` is built on two of them.
+ */
+const NEXT_INTL_RUNTIME = [
+  "next-intl/middleware",
+  "next-intl/navigation",
+  "next-intl/plugin",
+  "next-intl/server",
+];
+
+describe("the import scan finds what it is looking for", () => {
+  // Every assertion below is a "found nothing" one, which a scanner that
+  // silently matches nothing also satisfies. The Next wrapper is the control:
+  // it provably imports the things the shared feed must not.
+  it("finds the Next-only imports in the Next wrapper", () => {
+    expect(offenders(NEXT_WRAPPER, NEXT_INTL_RUNTIME)).not.toEqual([]);
+  });
+
+  it("walks past the entry file into its dependencies", () => {
+    // `lib/navigation` is two hops from the wrapper, not one.
+    expect(offenders(NEXT_WRAPPER, ["next-intl/navigation"]).join()).toContain(
+      "lib/navigation",
+    );
+  });
+});
+
+describe("the shared search feed is framework-neutral", () => {
+  it("reaches nothing from next/* or server-only", () => {
+    expect(offenders(SHARED_ENTRY, NEXT_ONLY)).toEqual([]);
+  });
+
+  it("reaches none of next-intl's Next-only entrypoints", () => {
+    expect(offenders(SHARED_ENTRY, NEXT_INTL_RUNTIME)).toEqual([]);
+  });
+
+  it("never reaches the locale-aware navigation module", () => {
+    const reached = [...externalGraph(SHARED_ENTRY).keys()];
+
+    expect(reached.some(one => one.includes("navigation"))).toBe(false);
+  });
+
+  it("takes its translations from use-intl, not from next-intl", () => {
+    const imports = runtimeImports(SHARED_ENTRY);
+
+    expect(imports).toContain("use-intl");
+    expect(imports).not.toContain("next-intl");
+  });
+
+  it("takes the locale as a prop rather than from a framework hook", () => {
+    // Comments stripped first - the file explains at length *why* it no longer
+    // calls `useLocale()`, and prose is not a call site.
+    const code = readFileSync(SHARED_ENTRY, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+
+    expect(code).not.toContain("useLocale");
+    expect(code).toContain("locale: string;");
+  });
+});
+
+describe("the shared header is framework-neutral", () => {
+  it("reaches nothing from next/* or server-only", () => {
+    expect(offenders(HEADER_CONTENT, NEXT_ONLY)).toEqual([]);
+  });
+
+  it("reaches none of next-intl's Next-only entrypoints", () => {
+    expect(offenders(HEADER_CONTENT, NEXT_INTL_RUNTIME)).toEqual([]);
+  });
+
+  it("never reaches the locale-aware navigation module", () => {
+    // It used to import it directly, for one back button on one admin screen.
+    const reached = [...externalGraph(HEADER_CONTENT).keys()];
+
+    expect(reached.some(one => one.includes("navigation"))).toBe(false);
+  });
+
+  it("takes the back link as a prop instead of importing one", () => {
+    const code = readFileSync(HEADER_CONTENT, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/\/\/.*$/gm, "");
+
+    expect(code).toContain("BackLink");
+    expect(code).not.toContain("@/lib/navigation");
+  });
+});
+
+describe("the Next wrapper keeps the Next-only pieces", () => {
+  it("is the only one of the two that knows about next-intl navigation", () => {
+    expect(offenders(NEXT_WRAPPER, ["next-intl/navigation"])).not.toEqual([]);
+    expect(offenders(SHARED_ENTRY, ["next-intl/navigation"])).toEqual([]);
+  });
+
+  it("resolves the locale itself", () => {
+    expect(readFileSync(NEXT_WRAPPER, "utf8")).toContain("useLocale()");
+  });
+});

@@ -30,6 +30,7 @@ export const ContentFormHeader = ({
   return (
     <HeaderContent
       back={header.back}
+      BackLink={Link}
       className={className}
       desc={header.desc}
       h1={header.title}

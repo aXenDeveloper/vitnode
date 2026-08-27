@@ -1,3 +1,5 @@
+import type { QueryClient } from '@tanstack/react-query'
+
 import { queryOptions } from '@tanstack/react-query'
 import { createServerFn } from '@tanstack/react-start'
 
@@ -9,6 +11,19 @@ import { localeRouting } from './shared'
 
 /** The strings every page needs, whatever else it renders. */
 export const GLOBAL_NAMESPACE = 'core.global'
+
+/** Everything a message entry's key starts with, before the language. */
+const INTL_QUERY_SCOPE = ['vitnode', 'intl'] as const
+
+/**
+ * One language's slice of the message cache.
+ *
+ * Its own function because two things need it: the key each entry is stored
+ * under, and the prefix `loadedIntlNamespaces` searches by. Spelling the prefix
+ * out twice would let a search silently stop matching the keys it is looking
+ * for.
+ */
+const intlQueryPrefix = (locale: Locale) => [...INTL_QUERY_SCOPE, locale]
 
 /**
  * Namespaces in a form two callers cannot spell differently.
@@ -172,7 +187,38 @@ export const intlQueryOptions = ({
   return queryOptions({
     queryFn: async () =>
       await getIntlMessages({ data: { locale, namespaces: normalized } }),
-    queryKey: ['vitnode', 'intl', locale, ...normalized] as const,
+    queryKey: [...intlQueryPrefix(locale), ...normalized] as const,
     staleTime: Infinity,
   })
+}
+
+/**
+ * Every namespace set a client currently holds messages for, in one language.
+ *
+ * Read off the cache rather than declared anywhere, and that is the point: the
+ * root asks for `core.global`, a route asks for whatever it renders, and by the
+ * time somebody switches language the cache is the only place that knows which
+ * sets are on screen. A language switch has to warm *those* - warming only the
+ * global set leaves the route's provider suspending on a key nobody fetched,
+ * which blanks the page for a round trip.
+ *
+ * Falls back to the global set, so a switch made before anything has loaded
+ * still warms the one set every page needs.
+ */
+export const loadedIntlNamespaces = (
+  queryClient: QueryClient,
+  locale: Locale,
+): string[][] => {
+  const prefix = intlQueryPrefix(locale)
+  const sets = queryClient
+    .getQueryCache()
+    .findAll({ queryKey: prefix })
+    .map(({ queryKey }) =>
+      queryKey
+        .slice(prefix.length)
+        .filter((part): part is string => typeof part === 'string'),
+    )
+    .filter((namespaces) => namespaces.length > 0)
+
+  return sets.length > 0 ? sets : [[GLOBAL_NAMESPACE]]
 }

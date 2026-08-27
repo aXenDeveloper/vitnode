@@ -1,5 +1,6 @@
 import '@tanstack/react-start/server-only'
 import type { MessagesSource } from '@vitnode/core/lib/i18n/types'
+import type { AbstractIntlMessages } from 'use-intl'
 
 import { CONFIG_PLUGIN as CORE } from '@vitnode/core/config'
 import { loadMessages } from '@vitnode/core/lib/i18n/load-messages'
@@ -35,7 +36,18 @@ const sources: MessagesSource[] = [
 
 export interface IntlMessages {
   locale: string
-  messages: object
+  /**
+   * The picked message tree, as `use-intl`'s own shape rather than a bare
+   * `object`.
+   *
+   * It matters at both ends. `createTranslator` constrains its messages to an
+   * indexable type, so an `object` there collapses every key it could translate
+   * to `never` - which is how a route resolves its own metadata strings. And a
+   * server function's return type has to prove itself serializable, which
+   * `Record<string, unknown>` cannot: `unknown` might be a function. A tree of
+   * strings can.
+   */
+  messages: AbstractIntlMessages
 }
 
 /**
@@ -72,5 +84,11 @@ export const loadIntlMessages = async ({
 
   const merged = await loadMessages({ defaultLocale, locale, sources })
 
-  return { locale, messages: pickMessages(merged, namespaces) }
+  // `pickMessages` walks an unknown tree and cannot know what it found; what it
+  // returns is a message tree by construction, every leaf a string from a JSON
+  // file. Asserted here, once, rather than by every caller.
+  return {
+    locale,
+    messages: pickMessages(merged, namespaces) as AbstractIntlMessages,
+  }
 }

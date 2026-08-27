@@ -11,7 +11,7 @@ import {
 
 import type { Locale } from './shared'
 
-import { intlQueryOptions } from './query'
+import { intlQueryOptions, loadedIntlNamespaces } from './query'
 import { localeRouting } from './shared'
 
 /**
@@ -143,7 +143,15 @@ export const useLocale = (): Locale =>
 /**
  * Puts a language's messages in the cache before anything renders in it.
  *
- * Failure is deliberately not fatal: the switch still happens, and the
+ * Every set the page is currently showing, not just the global one. The root
+ * provides `core.global`; a route provides whatever it renders on top of that
+ * (`RouteMessages`), and both read through `useSuspenseQuery`. Warming only the
+ * first would leave the second suspending on a key nobody had fetched - which,
+ * because the suspend is caused by a store update, cannot be deferred: the page
+ * blanks for a round trip. `loadedIntlNamespaces` answers "which sets" by
+ * reading the cache, so this stays right as more routes declare their own.
+ *
+ * Failure is deliberately not fatal: the switch still happens, and each
  * provider's own query retries it. A language that cannot be fetched should
  * degrade to a moment of loading, not to a switcher that appears to do nothing.
  */
@@ -151,12 +159,21 @@ const warmMessages = async (router: AnyRouter, locale: Locale) => {
   const { queryClient } = router.options.context as {
     queryClient?: QueryClient
   }
+  if (!queryClient) return
 
-  try {
-    await queryClient?.ensureQueryData(intlQueryOptions({ locale }))
-  } catch {
-    /* empty */
-  }
+  const current = resolveLocale(publicPathnameOf(router.latestLocation))
+
+  await Promise.all(
+    loadedIntlNamespaces(queryClient, current).map(async (namespaces) => {
+      try {
+        await queryClient.ensureQueryData(
+          intlQueryOptions({ locale, namespaces }),
+        )
+      } catch {
+        /* empty */
+      }
+    }),
+  )
 }
 
 /**

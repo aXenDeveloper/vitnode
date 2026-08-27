@@ -67,7 +67,14 @@ const offendersIn = (files: string[], forbidden: string[]): string[] =>
 /** Anything that only exists inside a TanStack Start app. */
 const TANSTACK_ONLY = ['@tanstack/react-start', '@tanstack/react-router']
 
-/** Anything that only exists inside a Next.js app. */
+/**
+ * Anything that only exists inside a Next.js app.
+ *
+ * `next` covers every subpath by the prefix rule in `matches` - `next/cache`,
+ * `next/server`, `next/headers`, `next/dynamic`, `next/image`. They are not
+ * listed one by one on purpose: a list of subpaths is a list somebody has to
+ * remember to extend, and the package itself is the boundary.
+ */
 const NEXT_ONLY = ['next', 'server-only']
 
 /**
@@ -343,12 +350,17 @@ describe('the whole graph this app imports stays Next-free', () => {
   /** Everything the app reaches, from every entry point it has. */
   const ENTRIES = [
     'apps/web/src/components/language-switcher.tsx',
+    'apps/web/src/components/route-messages.tsx',
     'apps/web/src/lib/i18n/client.ts',
     'apps/web/src/lib/i18n/query.ts',
     'apps/web/src/lib/i18n/shared.ts',
+    'apps/web/src/lib/search/discover-feed.ts',
+    'apps/web/src/lib/search/discover-request.ts',
     'apps/web/src/router.tsx',
     'apps/web/src/routes/__root.tsx',
+    'apps/web/src/routes/discover.tsx',
     'apps/web/src/routes/index.tsx',
+    'apps/web/src/server/discover-feed.server.ts',
     'apps/web/src/server/locale.server.ts',
     'apps/web/src/server/messages.server.ts',
     'apps/web/src/start.ts',
@@ -388,6 +400,71 @@ describe('the whole graph this app imports stays Next-free', () => {
 
   it("reaches none of next-intl's Next-only entries", () => {
     expect(offenders(ENTRIES, NEXT_INTL_RUNTIME)).toEqual([])
+  })
+
+  /**
+   * `/discover`, on its own.
+   *
+   * The first VitNode route to render outside Next.js, and the one whose graph
+   * is worth stating separately from the app's: it is the route that renders
+   * *shared* components, so it is the one that would find out - at runtime, in
+   * production - that a piece of the design system still reaches for Next's
+   * router or its request scope. It already did once: `HeaderContent` imported
+   * `@/lib/navigation`, which is `next-intl/navigation` and `next-intl/server`,
+   * and the back link it needed them for is now a prop.
+   *
+   * Every forbidden entry is asserted one at a time rather than as a set, so a
+   * failure names the specifier rather than "something in this list".
+   */
+  describe('the /discover runtime graph reaches no Next.js', () => {
+    const DISCOVER = ['apps/web/src/routes/discover.tsx']
+
+    it('walks into the shared components the route renders', () => {
+      // Without this the assertions below would pass on a graph that stopped at
+      // the route file - which is exactly the graph that cannot break.
+      const reached = [...reachableExternals(DISCOVER).visited]
+
+      expect(reached.some((path) => path.includes('search-feed-content'))).toBe(
+        true,
+      )
+      expect(reached.some((path) => path.includes('header-content'))).toBe(true)
+    })
+
+    it.each([
+      'next',
+      'next/cache',
+      'next/server',
+      'next-intl/navigation',
+      'next-intl/server',
+      'server-only',
+    ])('never reaches %s', (forbidden) => {
+      expect(offenders(DISCOVER, [forbidden])).toEqual([])
+    })
+
+    it('takes its translations from use-intl', () => {
+      const reached = [...reachableExternals(DISCOVER).externals.keys()]
+
+      expect(reached).toContain('use-intl')
+    })
+
+    it("only ever reaches next-intl's framework-free root entry", () => {
+      // The root entry is `use-intl` re-exported and resolves fine outside
+      // Next.js - `Button`'s client half still imports it for the loading
+      // label, and that is allowed by the same rule the app-wide scan uses.
+      // What must never appear is a subpath: those reach Next's request scope,
+      // its middleware or its build plugin, and none of them resolves here.
+      const reached = [...reachableExternals(DISCOVER).externals.keys()]
+
+      expect(reached.filter((one) => one.startsWith('next-intl/'))).toEqual([])
+    })
+
+    it('never reaches a locale-aware navigation module', () => {
+      // The one that made `HeaderContent` Next-only. `Link` now arrives as a
+      // prop, from whichever router the app happens to have.
+      const reached = [...reachableExternals(DISCOVER).externals.keys()]
+
+      expect(reached.filter((one) => one.includes('navigation'))).toEqual([])
+    })
   })
 })
 

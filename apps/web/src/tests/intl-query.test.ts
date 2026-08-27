@@ -3,7 +3,11 @@ import { describe, expect, it } from 'vitest'
 
 import type { Locale } from '#/lib/i18n/shared'
 
-import { GLOBAL_NAMESPACE, intlQueryOptions } from '#/lib/i18n/query'
+import {
+  GLOBAL_NAMESPACE,
+  intlQueryOptions,
+  loadedIntlNamespaces,
+} from '#/lib/i18n/query'
 import { loadIntlMessages } from '#/server/messages.server'
 
 /**
@@ -109,5 +113,70 @@ describe('two languages live in one QueryClient at once', () => {
     expect(
       queryClient.getQueryData(intlQueryOptions({ locale: 'pl' }).queryKey),
     ).toBeUndefined()
+  })
+})
+
+/**
+ * Which namespace sets a page is showing, answered by the cache.
+ *
+ * The root asks for `core.global`; a route asks for whatever it renders on top
+ * (`RouteMessages`). Nothing declares the union anywhere, so a language switch -
+ * which has to warm every set *before* the URL moves, or the second provider
+ * suspends and the page blanks - reads it back off the entries that exist.
+ */
+describe('the sets a client is holding', () => {
+  const clientHolding = (
+    entries: { locale: Locale; namespaces?: readonly string[] }[],
+  ) => {
+    const queryClient = new QueryClient()
+
+    for (const entry of entries) {
+      queryClient.setQueryData(intlQueryOptions(entry).queryKey, {
+        locale: entry.locale,
+        messages: {},
+      })
+    }
+
+    return queryClient
+  }
+
+  it('finds every set one language holds', () => {
+    const queryClient = clientHolding([
+      { locale: 'en' },
+      { locale: 'en', namespaces: [GLOBAL_NAMESPACE, 'core.search'] },
+    ])
+
+    expect(loadedIntlNamespaces(queryClient, 'en')).toEqual([
+      [GLOBAL_NAMESPACE],
+      [GLOBAL_NAMESPACE, 'core.search'],
+    ])
+  })
+
+  it('ignores the other languages’ entries', () => {
+    const queryClient = clientHolding([
+      { locale: 'en', namespaces: [GLOBAL_NAMESPACE, 'core.search'] },
+      { locale: 'pl' },
+    ])
+
+    expect(loadedIntlNamespaces(queryClient, 'pl')).toEqual([
+      [GLOBAL_NAMESPACE],
+    ])
+  })
+
+  it('ignores everything that is not a message entry', () => {
+    const queryClient = clientHolding([{ locale: 'en' }])
+    queryClient.setQueryData(['search', { sort: 'newest' }, 'en'], {})
+
+    expect(loadedIntlNamespaces(queryClient, 'en')).toEqual([
+      [GLOBAL_NAMESPACE],
+    ])
+  })
+
+  it('falls back to the global set on an empty cache', () => {
+    // A switch made before anything has loaded still has to warm the one set
+    // every page needs.
+    expect(loadedIntlNamespaces(new QueryClient(), 'en')).toEqual([
+      [GLOBAL_NAMESPACE],
+    ])
   })
 })
