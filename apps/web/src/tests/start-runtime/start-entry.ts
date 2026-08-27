@@ -1,8 +1,10 @@
 /**
  * `#tanstack-start-entry` for the test run.
  *
- * The app has no `src/start.ts`, so it has no start instance either and Start
- * falls back to its own default request middleware. Mirroring that here keeps
- * the middleware chain the tests run identical to production's.
+ * The app's real `src/start.ts`, so the middleware chain the tests run is the
+ * one production runs: the CSRF guard on server functions, then locale routing.
+ * The Start Vite plugin generates this module in a real build; here it is
+ * aliased in `vitest.config.ts` so `createStartHandler` can be driven without
+ * the plugin.
  */
-export const startInstance = undefined
+export { startInstance } from '#/start'

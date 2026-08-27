@@ -73,8 +73,8 @@ describe('per-route titles follow the config short title', () => {
   it('renders "<page> - <shortTitle>"', () => {
     const { metadata } = vitNodeShellConfig
 
-    expect(formatPageTitle(metadata, 'Stage 2')).toBe(
-      `Stage 2 - ${metadata.shortTitle ?? metadata.title}`,
+    expect(formatPageTitle(metadata, 'Stage 3')).toBe(
+      `Stage 3 - ${metadata.shortTitle ?? metadata.title}`,
     )
     expect(titleTemplate(metadata)).toBe(
       `%s - ${metadata.shortTitle ?? metadata.title}`,
@@ -85,7 +85,7 @@ describe('per-route titles follow the config short title', () => {
     const { meta } = await headTags(IndexRoute)
 
     expect(meta.map((tag) => tag.title)).toContain(
-      formatPageTitle(vitNodeShellConfig.metadata, 'Stage 2'),
+      formatPageTitle(vitNodeShellConfig.metadata, 'Stage 3'),
     )
   })
 })
@@ -145,34 +145,5 @@ describe('the full config', () => {
         `${plugin.pluginId} ships messages`,
       ).not.toEqual([])
     }
-  })
-})
-
-/**
- * The shell's translations, loaded the way the server loads them.
- *
- * This is the assertion that catches the failure mode of loading messages at
- * all: every loader is a dynamic import of a file inside another package's build
- * output, and when one cannot be resolved the tree comes back empty and every
- * string on the page silently renders as its own key.
- */
-describe('shell translations', () => {
-  it('loads core.global for the default locale', async () => {
-    const { loadShellIntl } = await import('#/server/messages.server')
-
-    const { locale, messages } = await loadShellIntl()
-
-    expect(locale).toBe(vitNodeShellConfig.i18n.defaultLocale)
-    expect(messages).toHaveProperty('core.global.close')
-  })
-
-  it('ships only core.global to the browser', async () => {
-    const { loadShellIntl } = await import('#/server/messages.server')
-
-    const { messages } = await loadShellIntl()
-    const core = (messages as { core: Record<string, unknown> }).core
-
-    expect(Object.keys(messages)).toEqual(['core'])
-    expect(Object.keys(core)).toEqual(['global'])
   })
 })

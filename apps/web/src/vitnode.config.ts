@@ -3,7 +3,8 @@ import { buildPlugin } from '@vitnode/core/lib/plugin'
 import { buildConfig } from '@vitnode/core/vitnode.config'
 import { CONFIG_PLUGIN as EXAMPLE } from '@vitnode/example/const'
 
-import { packageMessages } from './locales'
+import { appMessages } from './locales/app'
+import { packageMessages } from './locales/packages'
 import { vitNodeShellConfig } from './vitnode.shell.config'
 
 /**
@@ -32,6 +33,12 @@ import { vitNodeShellConfig } from './vitnode.shell.config'
  */
 export const vitNodeConfig = buildConfig({
   ...vitNodeShellConfig,
+  /**
+   * The shell's locale declaration, plus the message loaders that must not be in
+   * it: `src/i18n.ts` is spread into the browser-facing shell config, and these
+   * are functions.
+   */
+  i18n: { ...vitNodeShellConfig.i18n, messages: appMessages },
   plugins: [
     buildPlugin({
       messages: packageMessages[BLOG.pluginId],

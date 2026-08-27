@@ -1,0 +1,11 @@
+{
+  "core": {
+    "global": {
+      "cancel": "Anuluj",
+      "close": "Zamknij",
+      "language_switcher": "Zmień język",
+      "save": "Zapisz",
+      "theme_switcher": "Zmień motyw"
+    }
+  }
+}

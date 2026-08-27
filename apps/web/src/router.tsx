@@ -1,7 +1,10 @@
+import type { AnyRouter } from '@tanstack/react-router'
+
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { createVitNodeQueryClient } from '@vitnode/core/lib/query-client'
 
+import { createLocaleRewrite } from './lib/i18n/client'
 import { routeTree } from './routeTree.gen'
 
 /**
@@ -28,17 +31,31 @@ import { routeTree } from './routeTree.gen'
  *
  * `defaultPreloadStaleTime: 0` leaves caching to Query rather than having the
  * router keep a second copy of the same data with its own expiry.
+ *
+ * `rewrite` is what makes one route tree serve two public URL shapes: `/pl/...`
+ * arrives, `/...` is matched, and every link the router builds gets the prefix
+ * back. No route file mentions a locale, so nothing here has to be duplicated
+ * per language - see `lib/i18n/client.ts`.
  */
 export function getRouter() {
   const queryClient = createVitNodeQueryClient()
+
+  // The rewrite reads the locale off the router's own current location, and the
+  // router needs the rewrite to parse that location - so it is handed a getter
+  // rather than the router itself. `output` only ever runs once a link is built,
+  // which is long after the assignment below.
+  const holder: { current?: AnyRouter } = {}
 
   const router = createTanStackRouter({
     context: { queryClient },
     defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,
+    rewrite: createLocaleRewrite(() => holder.current),
     routeTree,
     scrollRestoration: true,
   })
+
+  holder.current = router
 
   setupRouterSsrQueryIntegration({ queryClient, router })
 

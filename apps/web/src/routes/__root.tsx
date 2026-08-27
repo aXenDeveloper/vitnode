@@ -13,9 +13,11 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { ThemeScript } from '@vitnode/core/components/theme-script'
 import { VitNodeProviders } from '@vitnode/core/views/layouts/providers'
 import { VitNodeWebSocketProvider } from '@vitnode/core/ws/provider'
-import { IntlProvider } from 'next-intl'
+import { IntlProvider as NextIntlProvider } from 'next-intl'
+import { IntlProvider } from 'use-intl'
 
-import { shellIntlQueryOptions } from '#/lib/i18n'
+import { publicPathnameOf, resolveLocale, useLocale } from '#/lib/i18n/client'
+import { intlQueryOptions } from '#/lib/i18n/query'
 import { vitNodeShellConfig } from '#/vitnode.shell.config'
 
 import appCss from '../styles.css?url'
@@ -23,14 +25,29 @@ import appCss from '../styles.css?url'
 const { debug, i18n, metadata, theme } = vitNodeShellConfig
 
 /**
- * What every route in this app can count on having: the QueryClient the router
- * owns. A loader reads it as `context.queryClient`.
+ * What the router itself provides, before any route has run.
+ *
+ * Just the QueryClient. `beforeLoad` below adds `locale` on top, so what a
+ * loader actually receives is `{ queryClient, locale }` - the language included,
+ * because a loader that fetches anything user-facing needs to know which one it
+ * is fetching.
  */
 export interface RootRouterContext {
   queryClient: QueryClient
 }
 
 export const Route = createRootRouteWithContext<RootRouterContext>()({
+  /**
+   * The request's language, resolved once and handed to every loader below.
+   *
+   * The same function the rewrite and the components use, so there is one answer
+   * per request rather than one per consumer. Note that a language switch does
+   * not change the *internal* URL - only the public one - so the switcher
+   * invalidates the router to bring this back in step.
+   */
+  beforeLoad: ({ location }) => ({
+    locale: resolveLocale(publicPathnameOf(location)),
+  }),
   component: RootComponent,
   head: () => ({
     links: [{ href: appCss, rel: 'stylesheet' }],
@@ -44,14 +61,16 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
     ],
   }),
   /**
-   * Warm the shell's translations before anything renders.
+   * Warm this language's shell strings before anything renders.
    *
-   * The one line that proves the Stage 2 pipeline: the loader reaches the
-   * QueryClient through the router context, and the component below reads the
-   * result out of the cache rather than fetching it again.
+   * `context.locale` rather than a default: `/pl` has to arrive with Polish
+   * already in the cache, or the first paint is English and the page flips after
+   * hydration.
    */
   loader: async ({ context }) => {
-    await context.queryClient.ensureQueryData(shellIntlQueryOptions())
+    await context.queryClient.ensureQueryData(
+      intlQueryOptions({ locale: context.locale }),
+    )
   },
   shellComponent: RootDocument,
 })
@@ -60,30 +79,62 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
  * The VitNode provider tree.
  *
  * Every provider here is shared with the Next.js app - `VitNodeProviders` is the
- * same module `apps/docs` mounts - except the intl provider, which is this
- * app's stand-in until Stage 3 brings the real locale runtime. `IntlProvider` is
- * `use-intl`'s own provider, re-exported by `next-intl`; nothing in that entry
- * imports `next/*`. The locale it is handed is the app's default one today, and
- * the request's in Stage 3 - by then this reads it off the route rather than off
- * the config.
+ * same module `apps/docs` mounts - except the intl provider, which is where the
+ * two frameworks meet their own halves of `use-intl`. This app resolves the
+ * locale from the URL and hands it straight to `use-intl`; Next.js gets it from
+ * its request scope through `next-intl`. Same library, same messages.
+ *
+ * ## Why the provider is mounted twice
+ *
+ * `IntlProvider` is one component - `next-intl` re-exports `use-intl`'s, and
+ * `NextIntlClientProvider` is that same component with a `locale` guard in front
+ * of it. What differs is the *module record* it was loaded from. This app's
+ * source goes through Vite's SSR module runner; `@vitnode/core` is external
+ * (`vite.config.ts`) and so is loaded by Node, and the `use-intl` it reaches
+ * through `next-intl` is a second instance with its own React context. Proven by
+ * identity, in a dev render:
+ *
+ *     IntlProvider (use-intl) === IntlProvider (use-intl/react)  -> true
+ *     IntlProvider (use-intl) === IntlProvider (next-intl)       -> false
+ *
+ * So core's 151 shared components - every `useTranslations` in the design
+ * system - look for a context this app would otherwise never have provided, and
+ * the first of them to render throws. A production build happens to bundle both
+ * into one chunk and collapse the two into one, which is exactly what made this
+ * a `vite dev`-only 500 that the built server never showed.
+ *
+ * Both records therefore get the same locale and the same messages. The cost is
+ * one extra context; the alternative is the app's own code importing from
+ * `next-intl`, which is the dependency this stage is meant to be shedding.
+ *
+ * **Stage 4 deletes the inner one**, once `@vitnode/core` imports `use-intl`
+ * directly and there is only one record left to provide.
+ * `src/tests/intl-provider.test.ts` fails if it is removed early.
+ *
+ * Because the locale comes from router state, changing language re-renders this:
+ * new locale, new query key, new messages, no page reload.
  *
  * The QueryClient is deliberately absent: the router owns it and the SSR
  * integration mounts its provider above this tree.
  */
 function RootComponent() {
-  const { data: intl } = useSuspenseQuery(shellIntlQueryOptions())
+  const locale = useLocale()
+  const { data: intl } = useSuspenseQuery(intlQueryOptions({ locale }))
+  const intlProps = {
+    locale,
+    messages: intl.messages,
+    timeZone: i18n.timeZone,
+  }
 
   return (
-    <IntlProvider
-      locale={intl.locale}
-      messages={intl.messages}
-      timeZone={i18n.timeZone}
-    >
-      <VitNodeProviders config={{ debug, locales: i18n.locales, theme }}>
-        <VitNodeWebSocketProvider>
-          <Outlet />
-        </VitNodeWebSocketProvider>
-      </VitNodeProviders>
+    <IntlProvider {...intlProps}>
+      <NextIntlProvider {...intlProps}>
+        <VitNodeProviders config={{ debug, locales: i18n.locales, theme }}>
+          <VitNodeWebSocketProvider>
+            <Outlet />
+          </VitNodeWebSocketProvider>
+        </VitNodeProviders>
+      </NextIntlProvider>
     </IntlProvider>
   )
 }
@@ -91,10 +142,10 @@ function RootComponent() {
 /**
  * The document itself.
  *
- * `lang` comes from the app's configured default locale, not from the request:
- * resolving a visitor's locale is Stage 3's job, and this is the smallest thing
- * that is correct for a single-language install and honest about it for any
- * other. When Stage 3 lands, this reads the matched route's locale instead.
+ * `lang` is the language this request actually resolved to - `en` for `/`, `pl`
+ * for `/pl`, and on a route outside the localized URL space (`/admin`) whatever
+ * the visitor's cookie says. It comes from the same router state the provider
+ * reads, so the two cannot disagree and hydration has nothing to complain about.
  *
  * `ThemeScript` has to be in the head, and it has to be inline: it applies the
  * stored theme to `<html>` before the browser paints, so the first frame is the
@@ -103,8 +154,10 @@ function RootComponent() {
  * differ from what the server rendered.
  */
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const locale = useLocale()
+
   return (
-    <html lang={i18n.defaultLocale} suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <HeadContent />
         <ThemeScript {...theme} />

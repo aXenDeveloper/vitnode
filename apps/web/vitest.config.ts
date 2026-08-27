@@ -1,11 +1,23 @@
+import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import { resolve } from 'node:path'
 import { defineConfig } from 'vitest/config'
 
-// Deliberately free of the app's Vite plugins (`tanstackStart`, `nitro`,
-// `viteReact`): these are server-side integration tests over plain
-// `Request`/`Response`, and loading the Start plugin here would pull the whole
-// router build pipeline into the test run for no assertion it makes.
+/**
+ * `tanstackStart()` and nothing else.
+ *
+ * The Start plugin is what compiles `createServerFn` and `createIsomorphicFn`:
+ * un-compiled, a server function called from a loader resolves to `undefined`
+ * and an isomorphic function silently keeps its server branch. Both are load
+ * bearing here - the SSR tests render the real app, whose root loader fetches
+ * its messages through a server function - so the tests run through the same
+ * transform the build does.
+ *
+ * `nitro` and `viteReact` stay out: these are server-side tests over plain
+ * `Request`/`Response` and a `renderToString`, and neither plugin has anything
+ * to contribute to that.
+ */
 export default defineConfig({
+  plugins: [tanstackStart()],
   test: {
     globals: true,
     environment: 'node',

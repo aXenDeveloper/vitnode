@@ -33,6 +33,23 @@ const appMessagesToSources = (
 };
 
 /**
+ * An app's own overrides, as sources, for an app that assembles the rest of the
+ * list itself.
+ *
+ * `buildMessagesSources` below is the normal way in, and it calls this. It is
+ * exported for the one case that cannot use it: a bundled runtime, where each
+ * package's locale barrel has to be replaced by loaders the bundler can follow
+ * (see `apps/web/src/locales/packages.ts`). Splitting overrides per plugin
+ * namespace is fiddly enough that copying it there would be a second
+ * implementation to keep in step.
+ */
+export const buildAppMessagesSources = (
+  appMessages: AppMessagesMap | undefined,
+  scope: string,
+): MessagesSource[] =>
+  appMessagesToSources(appMessages).map(source => ({ ...source, scope }));
+
+/**
  * The ordered list of everything that contributes translations: core first,
  * then each installed plugin, then whatever the app overrides. Later sources
  * win, so an app can reword a core string without forking it.

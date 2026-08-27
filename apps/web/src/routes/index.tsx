@@ -1,34 +1,35 @@
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
-import { useLanguages } from '@vitnode/core/components/languages-provider'
+import { createFileRoute, Link, useRouterState } from '@tanstack/react-router'
 import { ThemeSwitcher } from '@vitnode/core/components/switchers/themes/theme-switcher'
 import { Button } from '@vitnode/core/components/ui/button'
 import { TooltipWithContent } from '@vitnode/core/components/ui/tooltip'
 import { formatPageTitle } from '@vitnode/core/lib/metadata'
-import { useTranslations } from 'next-intl'
 import { toast } from 'sonner'
+import { useTranslations } from 'use-intl'
 
-import { shellIntlQueryOptions } from '#/lib/i18n'
+import { LanguageSwitcher } from '#/components/language-switcher'
+import { publicPathnameOf, useLocale } from '#/lib/i18n/client'
+import { intlQueryOptions } from '#/lib/i18n/query'
 import { vitNodeShellConfig } from '#/vitnode.shell.config'
 
 /**
- * Stage 2's verification page, and nothing more.
+ * The Stage 3 verification page, and nothing more.
  *
  * No VitNode feature route is migrated yet - `/discover`, search, auth and the
- * AdminCP all still live in the Next.js app. What this renders is the shell
- * itself: if the switcher flips the palette without a flash on reload, the toast
- * arrives styled, the tooltip opens, the language list is the configured one and
- * the query below is already resolved on the first paint, then config, metadata,
- * providers, theme, QueryClient and hydration are all wired up.
+ * AdminCP all still live in the Next.js app. What this renders is the shell and
+ * the locale runtime under it: the same page at `/` and at `/pl`, one route
+ * file, the language taken from the URL, `<html lang>` following it, the two
+ * languages' messages sitting side by side in one cache, and a switcher that
+ * moves between them without a reload.
  *
- * It is a scaffold. Stage 3 replaces it with the real homepage.
+ * It is a scaffold. Stage 4 replaces it with the real homepage.
  */
 export const Route = createFileRoute('/')({
   component: Home,
   // Per-route metadata, through the same title rule Next.js applies through
-  // `title.template`: "Stage 2 - VitNode".
+  // `title.template`: "Stage 3 - VitNode".
   head: () => ({
-    meta: [{ title: formatPageTitle(vitNodeShellConfig.metadata, 'Stage 2') }],
+    meta: [{ title: formatPageTitle(vitNodeShellConfig.metadata, 'Stage 3') }],
   }),
 })
 
@@ -49,16 +50,22 @@ const Row = ({
 )
 
 function Home() {
-  const languages = useLanguages()
+  const locale = useLocale()
   const t = useTranslations('core.global')
 
   /**
-   * The root route's loader already put this in the cache, and the SSR
-   * integration carried it into the page - so `isFetching` is false on the very
-   * first render, on the server and after hydration. A second QueryClient
-   * anywhere in the tree would show up right here as a refetch.
+   * Both halves of the rewrite, side by side: what the route tree matched, and
+   * what the address bar shows. `/pl` and `/` are the same `location.pathname`.
    */
-  const { data: intl, isFetching } = useQuery(shellIntlQueryOptions())
+  const location = useRouterState({ select: (state) => state.location })
+
+  /**
+   * The root route's loader already put this in the cache for this locale, and
+   * the SSR integration carried it into the page - so `isFetching` is false on
+   * the very first render, on the server and after hydration. A second
+   * QueryClient anywhere in the tree would show up right here as a refetch.
+   */
+  const { isFetching } = useQuery(intlQueryOptions({ locale }))
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 p-6">
@@ -68,12 +75,52 @@ function Home() {
         </h1>
 
         <p className="text-muted-foreground leading-relaxed text-pretty">
-          The VitNode application shell, rendering outside Next.js. Stage 2 is
-          infrastructure only - no feature route has moved yet.
+          The VitNode application shell, rendering outside Next.js. Stage 3 is
+          the locale runtime - no feature route has moved yet.
         </p>
       </header>
 
       <section className="bg-card text-card-foreground flex flex-col gap-4 rounded-lg border p-6">
+        <Row label="Language - switches without reloading the document">
+          <LanguageSwitcher />
+        </Row>
+
+        <Row label="Locale - resolved from the public URL">
+          <span className="text-sm" data-testid="locale">
+            {locale}
+          </span>
+        </Row>
+
+        <Row label="URL - what the router matched, and what the browser shows">
+          <span className="text-sm">
+            {location.pathname} &rarr; {location.publicHref}
+          </span>
+        </Row>
+
+        <Row label={`Messages - core.global.close in "${locale}"`}>
+          <span className="text-sm" data-testid="close">
+            {t('close')}
+          </span>
+        </Row>
+
+        <Row label="Fallback - core.global.loading, untranslated in Polish">
+          <span className="text-sm" data-testid="loading">
+            {t('loading')}
+          </span>
+        </Row>
+
+        <Row label="QueryClient - warmed by the root route's loader">
+          <span className="text-sm">
+            {isFetching ? 'fetching' : 'served from the cache'}
+          </span>
+        </Row>
+
+        <Row label="Links - one route, prefixed by the current locale">
+          <Link className="text-sm underline" to="/">
+            {publicPathnameOf(location)}
+          </Link>
+        </Row>
+
         <Row label="Theme - provider, no-flash script and switcher">
           <ThemeSwitcher />
         </Row>
@@ -95,22 +142,6 @@ function Home() {
           <TooltipWithContent text="TooltipProvider is mounted.">
             <Button variant="outline">Hover me</Button>
           </TooltipWithContent>
-        </Row>
-
-        <Row label="Languages - from this app's i18n config">
-          <span className="text-sm">
-            {languages.map((language) => language.name).join(', ')}
-          </span>
-        </Row>
-
-        <Row label={`Messages - core.global.close in "${intl?.locale ?? '?'}"`}>
-          <span className="text-sm">{t('close')}</span>
-        </Row>
-
-        <Row label="QueryClient - warmed by the root route's loader">
-          <span className="text-sm">
-            {isFetching ? 'fetching' : 'served from the cache'}
-          </span>
         </Row>
       </section>
     </main>

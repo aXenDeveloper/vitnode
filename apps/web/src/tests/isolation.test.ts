@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
@@ -84,6 +84,9 @@ const NEXT_INTL_RUNTIME = [
   'next-intl/plugin',
   'next-intl/server',
 ]
+
+/** Anything that only exists in a browser. */
+const DOM_ONLY_GLOBALS = ['document', 'localStorage', 'navigator', 'window']
 
 describe('the repository root is where these tests think it is', () => {
   it('resolves to the workspace root', () => {
@@ -198,6 +201,38 @@ describe('the TanStack Start application stays Next-free', () => {
     expect(offendersIn(webFiles(), NEXT_INTL_RUNTIME)).toEqual([])
   })
 
+  it('reaches for use-intl directly everywhere but the provider bridge', () => {
+    // `next-intl` stays a dependency because `@vitnode/core`'s shared components
+    // import its root entry, which is `use-intl` re-exported - and under
+    // `vite dev` that is a second module record, so the root has to mount its
+    // provider as well as `use-intl`'s (see `intl-provider.test.ts`). That one
+    // file is the whole of the exception: no other module here may reach for
+    // next-intl, and none may reach for anything but its root entry.
+    // Runtime files only: `intl-provider.test.ts` asserts *about* that import,
+    // so it necessarily contains the specifier the scanner is looking for.
+    const runtime = webFiles().filter(
+      (path) => !path.includes(`${sep}tests${sep}`),
+    )
+
+    expect(offendersIn(runtime, ['next-intl'])).toEqual([
+      'apps/web/src/routes/__root.tsx',
+    ])
+  })
+
+  it('depends on use-intl at the same version next-intl resolves', () => {
+    // Two copies of `use-intl` means two React contexts: the provider this app
+    // mounts and the `useTranslations` inside a core component would each see
+    // their own, and every shared string would throw `MISSING_MESSAGE`.
+    const manifest = JSON.parse(
+      readFileSync(join(repoRoot, 'apps/web/package.json'), 'utf8'),
+    ) as { dependencies?: Record<string, string> }
+
+    expect(manifest.dependencies?.['use-intl']).toBeDefined()
+    expect(manifest.dependencies?.['use-intl']).toBe(
+      manifest.dependencies?.['next-intl'],
+    )
+  })
+
   it('does not depend on next', () => {
     const manifest = JSON.parse(
       readFileSync(join(repoRoot, 'apps/web/package.json'), 'utf8'),
@@ -307,10 +342,16 @@ describe('the whole graph this app imports stays Next-free', () => {
 
   /** Everything the app reaches, from every entry point it has. */
   const ENTRIES = [
+    'apps/web/src/components/language-switcher.tsx',
+    'apps/web/src/lib/i18n/client.ts',
+    'apps/web/src/lib/i18n/query.ts',
+    'apps/web/src/lib/i18n/shared.ts',
     'apps/web/src/router.tsx',
     'apps/web/src/routes/__root.tsx',
     'apps/web/src/routes/index.tsx',
+    'apps/web/src/server/locale.server.ts',
     'apps/web/src/server/messages.server.ts',
+    'apps/web/src/start.ts',
     'apps/web/src/vitnode.config.ts',
     'apps/web/src/vitnode.shell.config.ts',
   ]
@@ -347,5 +388,74 @@ describe('the whole graph this app imports stays Next-free', () => {
 
   it("reaches none of next-intl's Next-only entries", () => {
     expect(offenders(ENTRIES, NEXT_INTL_RUNTIME)).toEqual([])
+  })
+})
+
+/**
+ * The shared / client / server split inside the locale layer.
+ *
+ * The rules that decide which language a URL is in have to be usable from four
+ * places that cannot import each other's runtimes - the server middleware, the
+ * router rewrite, the browser, and a plain test. That only holds while the
+ * shared half stays framework-free, and "framework-free" is not something a
+ * reviewer can be relied on to notice slipping.
+ */
+describe('the locale layer keeps its halves apart', () => {
+  const appSrc = join(repoRoot, 'apps/web/src')
+  const read = (file: string) => readFileSync(join(appSrc, file), 'utf8')
+
+  it('has the three modules it claims to', () => {
+    for (const file of [
+      'lib/i18n/shared.ts',
+      'lib/i18n/client.ts',
+      'server/locale.server.ts',
+    ]) {
+      expect(existsSync(join(appSrc, file)), file).toBe(true)
+    }
+  })
+
+  it('keeps the shared half free of every framework', () => {
+    const shared = [join(appSrc, 'lib/i18n/shared.ts')]
+
+    expect(offendersIn(shared, TANSTACK_ONLY)).toEqual([])
+    expect(offendersIn(shared, NEXT_ONLY)).toEqual([])
+    expect(offendersIn(shared, ['next-intl', 'use-intl'])).toEqual([])
+  })
+
+  it('keeps the shared half free of the DOM and of request handling', () => {
+    // Comments stripped: this file is largely prose about `Request`s and
+    // cookies, and the point is that none of it is code.
+    const code = read('lib/i18n/shared.ts')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '')
+
+    for (const global of DOM_ONLY_GLOBALS) {
+      expect(code, `shared/${global}`).not.toContain(global)
+    }
+    expect(code).not.toContain('Request')
+    expect(code).not.toContain('cookie')
+  })
+
+  it('keeps request and cookie handling on the server side', () => {
+    // `locale.server.ts` is the only module that takes a `Request`, and the
+    // `server-only` import at the top of it is what turns "somebody imported
+    // this from a component" into a build error.
+    expect(read('server/locale.server.ts')).toContain(
+      "import '@tanstack/react-start/server-only'",
+    )
+    expect(read('lib/i18n/client.ts')).not.toContain('handleLocaleRequest')
+  })
+
+  it('leaves the locale rules in core, not copied into the app', () => {
+    // The single place `/en` becomes `/`, in one direction or the other.
+    const copies = filesUnder(appSrc).filter(
+      (path) =>
+        !path.includes('/tests/') &&
+        /\$\{locale\}\/|'\/' \+ locale|`\/\$\{/.test(
+          readFileSync(path, 'utf8'),
+        ),
+    )
+
+    expect(copies.map((path) => relative(repoRoot, path))).toEqual([])
   })
 })

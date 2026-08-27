@@ -343,6 +343,9 @@ importers:
       tailwindcss:
         specifier: ^4.1.18
         version: 4.3.3
+      use-intl:
+        specifier: ^4.13.7
+        version: 4.13.7(react@19.2.8)
       zod:
         specifier: ^4.4.3
         version: 4.4.3

@@ -107,7 +107,13 @@ describe('the Query SSR integration is installed', () => {
  * Nothing in the app may hold either.
  */
 describe('nothing but the router creates a query client', () => {
-  const appFiles = ['routes/__root.tsx', 'routes/index.tsx', 'lib/i18n.ts']
+  const appFiles = [
+    'routes/__root.tsx',
+    'routes/index.tsx',
+    'lib/i18n/client.ts',
+    'lib/i18n/query.ts',
+    'lib/i18n/shared.ts',
+  ]
 
   it.each(appFiles)('%s mounts no QueryClientProvider', (file) => {
     const source = readFileSync(join(appSrc, file), 'utf8')

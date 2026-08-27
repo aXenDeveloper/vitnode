@@ -13,7 +13,7 @@ import type { VitNodeI18nConfig } from '@vitnode/core/lib/i18n/types'
  * reword something without forking the package that owns it.
  */
 export const i18n = {
-  defaultLocale: 'en',
+  defaultLocale: 'en' as const,
   /**
    * Explicit, because the app renders on a server: without one, `use-intl`
    * formats dates in whatever zone the server happens to run in and warns that
@@ -21,13 +21,18 @@ export const i18n = {
    * per-visitor zone would come from.
    */
   timeZone: 'UTC',
+  /**
+   * `as const` on each code, and nothing else: it keeps `"en" | "pl"` out of
+   * the widening `satisfies` would otherwise do, which is what makes `Locale`
+   * in `lib/i18n/shared.ts` a real union rather than an alias for `string`.
+   */
   locales: [
     {
-      code: 'en',
+      code: 'en' as const,
       name: 'English',
     },
     {
-      code: 'pl',
+      code: 'pl' as const,
       name: 'Polski',
     },
   ],
