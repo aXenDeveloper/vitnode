@@ -23,8 +23,12 @@ vi.mock("@/lib/fetcher-client", () => ({
   fetcherClient: (...args: unknown[]) => fetcherClient(...args),
 }));
 
-const { searchFeedQueryKey, SearchFeedContent } =
-  await import("./search-feed-content");
+const { classifySearchFeedHref, SearchFeedContent } = await import(
+  "./search-feed-content"
+);
+const { searchFeedQueryKey, searchFeedQueryOptions } = await import(
+  "./search-feed-query"
+);
 
 const messages = {
   core: {
@@ -134,10 +138,8 @@ const renderFeed = ({
         timeZone="UTC"
       >
         <SearchFeedContent
-          initialData={initialData}
           LinkComponent={TestLink}
-          locale={locale}
-          params={params}
+          queryOptions={searchFeedQueryOptions({ initialData, locale, params })}
           variant={variant}
         />
       </IntlProvider>
@@ -189,6 +191,7 @@ describe("translations", () => {
 describe("the locale is explicit", () => {
   it("sends the locale it was given as the query's language", async () => {
     fetcherClient.mockResolvedValue({
+      ok: true,
       json: async () => Promise.resolve(page([item()])),
     });
 
@@ -200,6 +203,7 @@ describe("the locale is explicit", () => {
 
   it("refetches under a different locale rather than reusing the cache", async () => {
     fetcherClient.mockResolvedValue({
+      ok: true,
       json: async () => Promise.resolve(page([item()])),
     });
 
@@ -215,8 +219,10 @@ describe("the locale is explicit", () => {
         <IntlProvider locale="pl" messages={plMessages} timeZone="UTC">
           <SearchFeedContent
             LinkComponent={TestLink}
-            locale="pl"
-            params={{ sort: "newest" }}
+            queryOptions={searchFeedQueryOptions({
+              locale: "pl",
+              params: { sort: "newest" },
+            })}
           />
         </IntlProvider>
       </QueryClientProvider>,
@@ -356,6 +362,7 @@ describe("loading more", () => {
 
   it("fetches the next page from the cursor and appends it", async () => {
     fetcherClient.mockResolvedValue({
+      ok: true,
       json: async () =>
         Promise.resolve(
           page([item({ id: 2, itemId: 2, title: "Second post" })]),
@@ -415,7 +422,7 @@ describe("the loading state", () => {
       container.querySelectorAll('[data-slot="skeleton"]').length,
     ).toBeGreaterThan(0);
 
-    resolvePage({ json: async () => Promise.resolve(page([item()])) });
+    resolvePage({ ok: true, json: async () => Promise.resolve(page([item()])) });
     expect(await screen.findByText("First post")).toBeDefined();
   });
 });
@@ -451,5 +458,82 @@ describe("the exported query key", () => {
       key("en", { sort: "oldest" }),
     );
     expect(key("en", { sort: "newest" })).toBe(key("en", { sort: "newest" }));
+  });
+});
+
+/**
+ * What a search result is allowed to link to.
+ *
+ * A document's `url` is written by whichever plugin indexed it, so it is data
+ * arriving from a database rather than a literal in this repository. The rule
+ * this replaced treated *any* scheme as "external, render it in an `<a href>`",
+ * which passed `javascript:` and `data:` through untouched.
+ */
+describe("the URL scheme allowlist", () => {
+  const ALLOWED = [
+    "http://example.com/post",
+    "https://example.com/post",
+    "mailto:test@example.com",
+    "tel:+123456789",
+    "//cdn.example.com/x",
+  ];
+
+  const REFUSED = [
+    "javascript:alert(1)",
+    "JavaScript:alert(1)",
+    "data:text/html,<script>alert(1)</script>",
+    "vbscript:msgbox(1)",
+    "custom-unknown-scheme:whatever",
+    // Control characters split the scheme; browsers strip them and follow it.
+    "java\nscript:alert(1)",
+    "\u0000javascript:alert(1)",
+  ];
+
+  it.each(ALLOWED)("classifies %s as external", url => {
+    expect(classifySearchFeedHref(url)).toBe("external");
+  });
+
+  it.each(REFUSED)("classifies %s as unsafe", url => {
+    expect(classifySearchFeedHref(url)).toBe("unsafe");
+  });
+
+  it.each(["/blog/post-1", "/blog/post-1?tab=comments#top", "relative/path"])(
+    "classifies %s as internal",
+    url => {
+      expect(classifySearchFeedHref(url)).toBe("internal");
+    },
+  );
+
+  it.each(ALLOWED)("renders %s as a plain anchor", url => {
+    renderFeed({ initialData: page([item({ url })]), variant: "list" });
+
+    const link = screen.getByText("First post").closest("a");
+
+    expect(link?.getAttribute("href")).toBe(url);
+    // Never through the router: no framework `Link` would accept it anyway.
+    expect(routedHrefs).toEqual([]);
+  });
+
+  it.each(REFUSED)("renders %s with no href at all", url => {
+    renderFeed({ initialData: page([item({ url })]), variant: "list" });
+
+    // The result still appears - it is a real document - but there is nothing
+    // to click, and nothing was handed to the router either.
+    expect(screen.getByText("First post")).toBeDefined();
+    expect(screen.getByText("First post").closest("a")).toBeNull();
+    expect(routedHrefs).toEqual([]);
+  });
+
+  it("refuses an unsafe href in the timeline variant too", () => {
+    // The timeline wraps the whole card in the link rather than the title, so
+    // it is a second call site with its own chance to get this wrong.
+    const { container } = renderFeed({
+      initialData: page([item({ url: "javascript:alert(1)" })]),
+      variant: "timeline",
+    });
+
+    expect(screen.getByText("First post")).toBeDefined();
+    expect(container.querySelector("a")).toBeNull();
+    expect(routedHrefs).toEqual([]);
   });
 });

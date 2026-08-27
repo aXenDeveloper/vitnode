@@ -96,6 +96,29 @@ export const publicPathnameOf = ({
 }): string => new URL(publicHref, RELATIVE_BASE).pathname
 
 /**
+ * An internal href, written in the public shape for one language.
+ *
+ *     /blog/post-30  + pl -> /pl/blog/post-30
+ *     /blog/post-30  + en -> /blog/post-30
+ *     /admin/users   + pl -> /admin/users     (an ignored path takes no prefix)
+ *
+ * For links the router will never build. Anything it *does* build gets its
+ * prefix from `rewrite.output` instead, and applying both would produce
+ * `/pl/pl/...` - so this is only for the migration boundary in
+ * `components/migration-link.tsx`, where the destination belongs to the Next.js
+ * app and the router is deliberately not involved.
+ *
+ * `localizePathname` is the same Stage 3 rule the rewrite uses and is
+ * idempotent, so an href that already carries a prefix keeps exactly one. The
+ * query string and hash are preserved.
+ */
+export const localizeHref = (href: string, locale: Locale): string => {
+  const url = localeRouting.localizeUrl(new URL(href, RELATIVE_BASE), locale)
+
+  return `${url.pathname}${url.search}${url.hash}`
+}
+
+/**
  * The router's half of locale routing: one route tree, two public URL shapes.
  *
  *     browser  /pl/discover  --input-->  /discover      route tree

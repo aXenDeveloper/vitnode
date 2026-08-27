@@ -1,16 +1,16 @@
 import type { SearchFeedLinkProps } from '@vitnode/core/views/search/search-feed-content'
 
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { HeaderContent } from '@vitnode/core/components/ui/header-content'
 import { formatPageTitle } from '@vitnode/core/lib/metadata'
 import { SearchFeedContent } from '@vitnode/core/views/search/search-feed-content'
 import { createTranslator } from 'use-intl'
 
+import { MigrationLink } from '#/components/migration-link'
 import { RouteMessages } from '#/components/route-messages'
 import { useLocale } from '#/lib/i18n/client'
 import { intlQueryOptions } from '#/lib/i18n/query'
 import { discoverFeedQueryOptions } from '#/lib/search/discover-feed'
-import { DISCOVER_FEED_PARAMS } from '#/lib/search/discover-request'
 import { vitNodeShellConfig } from '#/vitnode.shell.config'
 
 /**
@@ -39,26 +39,29 @@ import { vitNodeShellConfig } from '#/vitnode.shell.config'
 const DISCOVER_NAMESPACES = ['core.global', 'core.search'] as const
 
 /**
- * The feed's link, the TanStack way.
+ * The feed's link.
  *
- * `to` rather than `href` is the whole adapter: the router owns the locale
- * prefix, so handing it the internal path is what makes `/blog/hello` render as
- * `/pl/blog/hello` while reading `/pl/discover` - and as `/blog/hello` on the
- * unprefixed URL. Writing the prefix here would double it.
+ * `MigrationLink` rather than the router's `Link` directly, because a search
+ * result points wherever the indexed content lives and most of VitNode has not
+ * moved yet. It asks the route tree whether this app can render the
+ * destination: `/discover` is a client-side navigation, `/blog/post-30` is a
+ * document load into the Next.js app that still serves it. Either way the
+ * locale prefix is applied exactly once - by the router's rewrite on one branch
+ * and by `localizeHref` on the other.
  *
  * Declared at module scope rather than inline, so it is the same component type
  * on every render and React reconciles the feed rather than remounting every
- * result. External URLs never reach this: `SearchFeedContent` renders those as a
- * bare `<a>` itself.
+ * result. External and unsafe URLs never reach this: `SearchFeedContent`
+ * classifies those and renders them itself.
  */
 const DiscoverFeedLink = ({
   children,
   className,
   href,
 }: SearchFeedLinkProps) => (
-  <Link className={className} to={href}>
+  <MigrationLink className={className} href={href}>
     {children}
-  </Link>
+  </MigrationLink>
 )
 
 export const Route = createFileRoute('/discover')({
@@ -157,15 +160,15 @@ function DiscoverRoute() {
         <HeaderContent desc={description} h1={title} />
 
         {/*
-          No `initialData`, and no Suspense boundary either - both would be
-          admissions that the data is not here yet. The loader has already put
-          this exact query in the cache, so the very first render walks its pages
-          and `fetchNextPage` continues from its cursor.
+          The same options object the loader ensured, so this is a cache read
+          rather than a fetch: no `initialData` and no Suspense boundary, both of
+          which would be admissions that the data is not here yet. `fetchNextPage`
+          then continues from the loader's cursor through the loader's own
+          request and status checking.
         */}
         <SearchFeedContent
           LinkComponent={DiscoverFeedLink}
-          locale={locale}
-          params={DISCOVER_FEED_PARAMS}
+          queryOptions={discoverFeedQueryOptions({ locale })}
           variant="timeline"
         />
       </main>

@@ -157,6 +157,7 @@ describe("the Next wrapper", () => {
 
   it("passes the locale next-intl resolved into the search query", async () => {
     fetcherClient.mockResolvedValue({
+      ok: true,
       json: async () => Promise.resolve(page([hit])),
     });
 

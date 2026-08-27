@@ -1,49 +1,34 @@
-import type { SearchFeedPage } from '@vitnode/core/views/search/types'
+import type {
+  SearchFeedPageArgs,
+  SearchFeedPageFetcher,
+} from '@vitnode/core/views/search/search-feed-query'
 
-import { infiniteQueryOptions } from '@tanstack/react-query'
 import { createIsomorphicFn } from '@tanstack/react-start'
-import { fetcherClient } from '@vitnode/core/lib/fetcher-client'
-import { searchFeedQueryKey } from '@vitnode/core/views/search/search-feed-content'
+import {
+  fetchSearchFeedPageInBrowser,
+  searchFeedQueryKey,
+  searchFeedQueryOptions,
+} from '@vitnode/core/views/search/search-feed-query'
 
 import type { Locale } from '#/lib/i18n/shared'
-import type {
-  DiscoverFeedCursor,
-  DiscoverFeedPageArgs,
-} from '#/lib/search/discover-request'
 
-import {
-  assertDiscoverFeedResponse,
-  DISCOVER_FEED_PARAMS,
-  discoverFeedRequest,
-  searchModuleRef,
-} from '#/lib/search/discover-request'
+import { DISCOVER_FEED_PARAMS } from '#/lib/search/discover-request'
 import { fetchDiscoverFeedPageOnServer } from '#/server/discover-feed.server'
 
 /**
- * One page of the Discover feed, fetched from the browser.
+ * The Discover feed, as this app's one query definition.
  *
- * `fetcherClient` is the browser's half of the same fetcher: it builds the same
- * `/api/@vitnode/core/search` URL - same-origin, because `CONFIG.api` falls back
- * to the origin the document was served from - lets the browser attach the
- * visitor's cookies itself, and routes a 429 to the rate-limit notice every
- * other VitNode client call gets.
+ * Everything about *what* a feed page is - the request, the page size, the
+ * cursor rule, what counts as a failure - comes from
+ * `@vitnode/core/views/search/search-feed-query`, which is also what the mounted
+ * `SearchFeedContent` runs. This module supplies only the two things core cannot
+ * know: which parameters Discover browses with, and how to reach the API from a
+ * server that is rendering a request.
  */
-export const fetchDiscoverFeedPageInBrowser = async (
-  args: DiscoverFeedPageArgs,
-): Promise<SearchFeedPage> => {
-  const response = await fetcherClient(
-    searchModuleRef,
-    discoverFeedRequest(args),
-  )
-
-  assertDiscoverFeedResponse(response, args)
-
-  return await response.json()
-}
 
 /**
- * The transport boundary, and the reason the same query definition works in a
- * loader and in a component.
+ * The transport boundary, and the reason one query definition works in a loader
+ * and in a component.
  *
  * Both branches call the Hono API directly - the server one from inside the
  * request being rendered, the browser one over the network to the same origin.
@@ -55,100 +40,54 @@ export const fetchDiscoverFeedPageInBrowser = async (
  * `createIsomorphicFn` is what makes that safe rather than merely tidy. The
  * Start compiler keeps only the branch belonging to the bundle it is building
  * and drops the other's import with it, so `discover-feed.server.ts` - and the
- * `server-only` marker at the top of it - never reaches the browser. Un-compiled
- * (tests, plain Node) the stub falls back to the server branch, which is the
- * right default off a browser.
+ * `server-only` marker at the top of it - never reaches the browser. The client
+ * branch is core's own browser fetcher, so a hydrated page and a Next.js page
+ * fetch through exactly the same code.
+ *
+ * Un-compiled (tests, plain Node) the stub falls back to the server branch,
+ * which is the right default off a browser.
  */
-const fetchDiscoverFeedPage = createIsomorphicFn()
+const fetchDiscoverFeedPage: SearchFeedPageFetcher = createIsomorphicFn()
   .server(fetchDiscoverFeedPageOnServer)
-  .client(fetchDiscoverFeedPageInBrowser)
-
-/**
- * The first page carries no cursor. Named rather than inlined, because it is
- * also the value a test has to hand `getNextPageParam` to stand in for "this is
- * page one".
- */
-export const DISCOVER_FEED_FIRST_PAGE: DiscoverFeedCursor = null
+  .client(fetchSearchFeedPageInBrowser)
 
 /**
  * The cache entry one language's feed lives in.
  *
- * The locale is *in the key*, and that is the whole contract: `/discover` and
+ * Core's key, not one of this app's devising. `SearchFeedContent` runs the
+ * mounted `useInfiniteQuery` and stores its pages here; a key invented locally
+ * would be a *second* entry holding the same feed, so the loader would fill one,
+ * the component would miss the other, and every visit would render a skeleton
+ * and fetch page one again from the browser.
+ *
+ * The locale is in it, which is the whole contract: `/discover` and
  * `/pl/discover` are two feeds over two sets of documents, so they get two
- * entries. A key without it serves whichever language happened to be fetched
- * first, and a language switch - which changes the key rather than the value
- * under it - would show the previous one.
- *
- * ## Why it delegates rather than naming its own key
- *
- * `SearchFeedContent` runs its own `useInfiniteQuery`, and `searchFeedQueryKey`
- * is the entry it reads and writes - core exports it precisely so a prefetching
- * framework can warm it. A key of this app's own devising would be a *second*
- * entry holding the same feed: the loader would fill one, the component would
- * miss the other, and every visit would render a skeleton and fetch page one
- * again from the browser. Two keys for one feed is not a cosmetic duplication;
- * it is the SSR guarantee silently gone.
- *
- * So the key comes from core and the *transport* comes from here. That split is
- * exactly what core documents: the params-and-locale key is shared, the
- * `queryFn` is not, because a loader on the server cannot reach the API the way
- * the browser does.
- *
- * `DISCOVER_FEED_PARAMS` is a single module-level object for the same reason -
- * see the note on it.
+ * entries. A language switch changes the key rather than the value under it.
  */
 export const discoverFeedQueryKey = (locale: Locale) =>
   searchFeedQueryKey({ locale, params: DISCOVER_FEED_PARAMS })
 
 /**
- * Where the next page starts, or nothing when this was the last one.
- *
- * Two conditions rather than one. `hasNextPage` is the API's answer and is
- * authoritative, but the newest-first walk cursors by row id, so an `endCursor`
- * of `null` means there is no row to continue from - asking anyway would replay
- * page one forever. Returning `undefined` is what tells Query the feed has
- * ended, which is what turns the "load more" button off.
- */
-export const nextDiscoverFeedCursor = (
-  page: SearchFeedPage,
-): DiscoverFeedCursor | undefined => {
-  const { endCursor, hasNextPage } = page.pageInfo
-
-  if (!hasNextPage || endCursor === null) return undefined
-
-  return String(endCursor)
-}
-
-/**
  * The Discover feed, as the one query definition every caller shares.
  *
- * A route loader warms it before the component renders:
+ *     loader:     context.queryClient.ensureInfiniteQueryData(options)
+ *     component:  <SearchFeedContent queryOptions={options} />
+ *     load more:  fetchNextPage()   // the same queryFn, cursor rule and checks
  *
- *     loader: ({ context }) =>
- *       context.queryClient.ensureInfiniteQueryData(
- *         discoverFeedQueryOptions({ locale: context.locale }),
- *       )
+ * No `initialData`. The loader has already put page one in the entry this key
+ * names and the SSR pass dehydrates it, so passing it again would be a second
+ * copy of the same bytes that can disagree with the first.
  *
- * and the component reads the very same options back:
- *
- *     useSuspenseInfiniteQuery(discoverFeedQueryOptions({ locale }))
- *
- * Same key, same page function, same pagination - so the loader's page is the
- * page the component renders, `fetchNextPage` continues from it, and no route
- * has to implement paging a second time.
- *
- * No `staleTime`. The Next.js version cached this feed with `"use cache"` and
- * `cacheLife("minutes")`; none of that is ported, deliberately. Freshness here
- * is whatever the API's own caching gives, plus VitNode's client defaults
- * (`refetchOnMount` and `refetchOnWindowFocus` both off), so a hydrated feed is
- * not refetched behind the reader. Deciding a cache lifetime belongs to the
- * caching stage, with the API and Redis in the same view.
+ * No `staleTime` either. Freshness is whatever the API's own caching gives, plus
+ * VitNode's client defaults (`refetchOnMount` and `refetchOnWindowFocus` both
+ * off), so a hydrated feed is not refetched behind the reader. Deciding a cache
+ * lifetime belongs to the caching stage, with the API and Redis in the same view.
  */
 export const discoverFeedQueryOptions = ({ locale }: { locale: Locale }) =>
-  infiniteQueryOptions({
-    getNextPageParam: nextDiscoverFeedCursor,
-    initialPageParam: DISCOVER_FEED_FIRST_PAGE,
-    queryFn: async ({ pageParam }) =>
-      await fetchDiscoverFeedPage({ cursor: pageParam, locale }),
-    queryKey: discoverFeedQueryKey(locale),
+  searchFeedQueryOptions({
+    fetchPage: fetchDiscoverFeedPage,
+    locale,
+    params: DISCOVER_FEED_PARAMS,
   })
+
+export type { SearchFeedPageArgs }

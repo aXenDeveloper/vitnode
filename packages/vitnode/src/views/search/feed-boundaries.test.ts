@@ -168,15 +168,19 @@ describe("the shared search feed is framework-neutral", () => {
     expect(imports).not.toContain("next-intl");
   });
 
-  it("takes the locale as a prop rather than from a framework hook", () => {
+  it("takes its query as a prop rather than building one", () => {
     // Comments stripped first - the file explains at length *why* it no longer
-    // calls `useLocale()`, and prose is not a call site.
+    // resolves a locale or builds a request, and prose is not a call site.
     const code = readFileSync(SHARED_ENTRY, "utf8")
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/\/\/.*$/gm, "");
 
     expect(code).not.toContain("useLocale");
-    expect(code).toContain("locale: string;");
+    expect(code).toContain("queryOptions: SearchFeedQueryOptions;");
+    // One `useInfiniteQuery`, and it is handed its definition. A second
+    // implementation here is the bug this boundary exists to prevent.
+    expect(code.match(/useInfiniteQuery\(/g)).toHaveLength(1);
+    expect(code).toContain("useInfiniteQuery(queryOptions)");
   });
 });
 

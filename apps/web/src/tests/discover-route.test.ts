@@ -4,6 +4,7 @@ import type { SearchFeedPage } from '@vitnode/core/views/search/types'
 import { QueryClient } from '@tanstack/react-query'
 import { createMemoryHistory } from '@tanstack/react-router'
 import { requestHandler } from '@tanstack/react-start/server'
+import { searchFeedRequest } from '@vitnode/core/views/search/search-feed-query'
 import { Hono } from 'hono'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
@@ -13,7 +14,7 @@ import {
   discoverFeedQueryKey,
   discoverFeedQueryOptions,
 } from '#/lib/search/discover-feed'
-import { discoverFeedRequest } from '#/lib/search/discover-request'
+import { DISCOVER_FEED_PARAMS } from '#/lib/search/discover-request'
 import { getRouter } from '#/router'
 
 import { PLUGIN_ID } from './api-bridge-contract'
@@ -439,9 +440,10 @@ describe('the feed can be continued from where SSR left off', () => {
   })
 
   it('builds the second request from that cursor', () => {
-    const { args } = discoverFeedRequest({
+    const { args } = searchFeedRequest({
       cursor: String(FIRST_PAGE_END_CURSOR),
       locale: 'en',
+      params: DISCOVER_FEED_PARAMS,
     })
 
     expect(args.query.cursor).toBe(String(FIRST_PAGE_END_CURSOR))

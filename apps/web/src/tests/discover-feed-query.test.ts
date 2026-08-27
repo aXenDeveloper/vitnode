@@ -2,23 +2,48 @@ import type { SearchFeedPage } from '@vitnode/core/views/search/types'
 
 import { hashKey, QueryClient } from '@tanstack/react-query'
 import { requestHandler } from '@tanstack/react-start/server'
-import { searchFeedQueryKey } from '@vitnode/core/views/search/search-feed-content'
+import {
+  fetchSearchFeedPageInBrowser,
+  nextSearchFeedCursor,
+  SEARCH_FEED_FIRST_PAGE,
+  SEARCH_FEED_PAGE_SIZE,
+  searchFeedQueryKey,
+  searchFeedRequest,
+} from '@vitnode/core/views/search/search-feed-query'
 import { Hono } from 'hono'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import {
-  DISCOVER_FEED_FIRST_PAGE,
   discoverFeedQueryKey,
   discoverFeedQueryOptions,
-  fetchDiscoverFeedPageInBrowser,
-  nextDiscoverFeedCursor,
 } from '#/lib/search/discover-feed'
-import {
-  DISCOVER_FEED_PAGE_SIZE,
-  DISCOVER_FEED_PARAMS,
-  discoverFeedRequest,
-} from '#/lib/search/discover-request'
+import { DISCOVER_FEED_PARAMS } from '#/lib/search/discover-request'
 import { fetchDiscoverFeedPageOnServer } from '#/server/discover-feed.server'
+
+/** Every Discover page request, as core builds it. */
+const discoverFeedRequest = ({
+  cursor,
+  locale,
+}: {
+  cursor: null | string
+  locale: string
+}) => searchFeedRequest({ cursor, locale, params: DISCOVER_FEED_PARAMS })
+
+const DISCOVER_FEED_FIRST_PAGE = SEARCH_FEED_FIRST_PAGE
+const DISCOVER_FEED_PAGE_SIZE = SEARCH_FEED_PAGE_SIZE
+const nextDiscoverFeedCursor = nextSearchFeedCursor
+const fetchDiscoverFeedPageInBrowser = ({
+  cursor,
+  locale,
+}: {
+  cursor: null | string
+  locale: string
+}) =>
+  fetchSearchFeedPageInBrowser({
+    cursor,
+    locale,
+    params: DISCOVER_FEED_PARAMS,
+  })
 
 import { PLUGIN_ID } from './api-bridge-contract'
 
@@ -308,7 +333,11 @@ describe('the feed over the API', () => {
   describe('SSR goes through the server fetcher', () => {
     it('sends the browse query', async () => {
       await withRequest({}, async () =>
-        fetchDiscoverFeedPageOnServer({ cursor: null, locale: 'pl' }),
+        fetchDiscoverFeedPageOnServer({
+          cursor: null,
+          locale: 'pl',
+          params: DISCOVER_FEED_PARAMS,
+        }),
       )
 
       expect(recorded.at(0)?.path).toBe(FEED_PATH)
@@ -329,7 +358,11 @@ describe('the feed over the API', () => {
           },
         },
         async () =>
-          fetchDiscoverFeedPageOnServer({ cursor: null, locale: 'en' }),
+          fetchDiscoverFeedPageOnServer({
+            cursor: null,
+            locale: 'en',
+            params: DISCOVER_FEED_PARAMS,
+          }),
       )
 
       // Which is what makes this the *server* fetcher: without these, every SSR
@@ -343,7 +376,11 @@ describe('the feed over the API', () => {
 
     it('returns the page the API answered', async () => {
       const page = await withRequest({}, async () =>
-        fetchDiscoverFeedPageOnServer({ cursor: null, locale: 'en' }),
+        fetchDiscoverFeedPageOnServer({
+          cursor: null,
+          locale: 'en',
+          params: DISCOVER_FEED_PARAMS,
+        }),
       )
 
       expect(page.edges).toHaveLength(20)
@@ -355,7 +392,11 @@ describe('the feed over the API', () => {
       mountApi({ ids: [] })
 
       const page = await withRequest({}, async () =>
-        fetchDiscoverFeedPageOnServer({ cursor: null, locale: 'en' }),
+        fetchDiscoverFeedPageOnServer({
+          cursor: null,
+          locale: 'en',
+          params: DISCOVER_FEED_PARAMS,
+        }),
       )
 
       expect(page.edges).toEqual([])
@@ -370,7 +411,11 @@ describe('the feed over the API', () => {
       // empty and nothing anywhere says the request failed.
       await expect(
         withRequest({}, async () =>
-          fetchDiscoverFeedPageOnServer({ cursor: 'nope', locale: 'en' }),
+          fetchDiscoverFeedPageOnServer({
+            cursor: 'nope',
+            locale: 'en',
+            params: DISCOVER_FEED_PARAMS,
+          }),
         ),
       ).rejects.toThrow('400')
     })

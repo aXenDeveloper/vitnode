@@ -4,35 +4,33 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import type { searchModule } from "@/api/modules/search/search.module";
-
 import { Avatar } from "@/components/avatar";
 import { DateFormat } from "@/components/date-format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import { CONFIG_PLUGIN } from "@/config";
-import { clientModule, fetcherClient } from "@/lib/fetcher-client";
 import { cn } from "@/lib/utils";
 
-import type { SearchFeedPage, SearchResultItem } from "./types";
+import type { SearchFeedQueryOptions } from "./search-feed-query";
+import type { SearchResultItem } from "./types";
 
 import { getSearchTypeRenderer } from "./registry";
 
-const searchRef = clientModule<typeof searchModule>(CONFIG_PLUGIN.pluginId);
 const SNIPPET_LENGTH = 240;
 
 export type SearchFeedVariant = "list" | "timeline";
 
-export interface SearchFeedParams {
-  authorId?: string;
-  from?: string;
-  search?: string;
-  sort?: "newest" | "oldest" | "relevance";
-  to?: string;
-  types?: string;
-}
+/**
+ * Re-exported so `search-feed.tsx` and `search-controls.tsx` keep importing
+ * their parameter type from where they always have. The definition now lives
+ * with the query it parameterises.
+ */
+export type {
+  SearchFeedParams,
+  SearchFeedQueryOptions,
+} from "./search-feed-query";
+export { searchFeedQueryKey } from "./search-feed-query";
 
 /**
  * Everything the feed ever asks a link to be.
@@ -71,32 +69,88 @@ const getSnippet = (content: string): string =>
     : content;
 
 /**
- * Anything a router cannot own: `https:`, `mailto:`, `tel:`, `//host/path`.
+ * The schemes a search result is allowed to link to.
  *
- * Checked here rather than in each wrapper because it is a property of the
- * indexed data, not of the framework - a plugin is free to index an off-site
- * URL, and neither `next-intl`'s `Link` nor TanStack's would accept one. Both
- * frameworks therefore only ever see an internal path, and an external hit
- * renders the same bare `<a>` it renders today.
+ * An allowlist rather than a denylist, and that direction is the whole point. A
+ * search document's `url` is written by whichever plugin indexed it, so this is
+ * data, not code - and the previous rule ("anything with a scheme is external,
+ * render it in an `<a href>`") happily passed `javascript:` and
+ * `data:text/html,...` straight through. React 19 blocks `javascript:` at
+ * render, but that is React's backstop, not this component's policy, and it
+ * covers neither `data:` nor whatever the next scheme turns out to be.
+ *
+ * `mailto:` and `tel:` are here because a plugin indexing a contact record has
+ * a real reason to emit them. Anything outside this set is refused.
  */
-const isExternalHref = (href: string): boolean =>
-  href.startsWith("//") || /^[a-z][a-z\d+\-.]*:/i.test(href);
+const SAFE_EXTERNAL_SCHEMES: ReadonlySet<string> = new Set([
+  "http:",
+  "https:",
+  "mailto:",
+  "tel:",
+]);
 
+/** Leading whitespace and control characters hide a scheme: `\tjava\nscript:`. */
+const STRIPPED = /[\u0000-\u0020]/g;
+
+export type SearchFeedHrefKind = "external" | "internal" | "unsafe";
+
+/**
+ * What kind of destination an indexed `url` is.
+ *
+ * - `internal` - a path this app routes. The framework's `LinkComponent` gets it.
+ * - `external` - an allowlisted scheme, or a protocol-relative `//host/path`
+ *   (kept because it is existing behaviour). A bare `<a>` gets it; no router
+ *   would accept it anyway.
+ * - `unsafe` - everything else. Nothing gets it: {@link ResultLink} renders the
+ *   title as text. A result that cannot be linked to safely is still a result.
+ *
+ * Exported for the tests, which is the only way to state the policy directly
+ * rather than through rendered markup.
+ */
+export const classifySearchFeedHref = (href: string): SearchFeedHrefKind => {
+  const cleaned = href.replace(STRIPPED, "");
+
+  // Protocol-relative. Checked before the scheme test, which would not match it.
+  if (cleaned.startsWith("//")) return "external";
+  // A path, absolute or relative - no scheme to vet.
+  if (!/^[a-z][a-z\d+\-.]*:/i.test(cleaned)) return "internal";
+
+  const scheme = cleaned.slice(0, cleaned.indexOf(":") + 1).toLowerCase();
+
+  return SAFE_EXTERNAL_SCHEMES.has(scheme) ? "external" : "unsafe";
+};
+
+/**
+ * A result's destination, rendered by whatever is allowed to render it.
+ *
+ * An `unsafe` href falls back to the children with no anchor at all, so a
+ * hostile document degrades to plain text instead of to a link nobody should
+ * click - and, just as importantly, is never handed to a router either.
+ */
 const ResultLink = ({
   LinkComponent,
   children,
   className,
   href,
-}: SearchFeedLinkProps & { LinkComponent: SearchFeedLinkComponent }) =>
-  isExternalHref(href) ? (
-    <a className={className} href={href}>
-      {children}
-    </a>
-  ) : (
+}: SearchFeedLinkProps & { LinkComponent: SearchFeedLinkComponent }) => {
+  const kind = classifySearchFeedHref(href);
+
+  if (kind === "unsafe") return <span className={className}>{children}</span>;
+
+  if (kind === "external") {
+    return (
+      <a className={className} href={href}>
+        {children}
+      </a>
+    );
+  }
+
+  return (
     <LinkComponent className={className} href={href}>
       {children}
     </LinkComponent>
   );
+};
 
 const ItemTitle = ({
   LinkComponent,
@@ -233,56 +287,22 @@ const SearchResultCard = ({
 };
 
 /**
- * The cache entry one feed reads and writes.
- *
- * Exported because the component is not always the first to ask for this data.
- * A framework that prefetches - a TanStack Start route loader, say - has to warm
- * *this* key or the feed will mount, miss, and fetch page one a second time. The
- * transport is deliberately not exported with it: the browser reaches the API
- * directly through `fetcherClient`, and a loader running on the server cannot,
- * so each side brings its own `queryFn` to the same key.
- *
- * `params` before `locale` is the order it has always been in; changing it would
- * silently orphan every entry a running client already holds.
- */
-export const searchFeedQueryKey = ({
-  locale,
-  params,
-}: {
-  locale: string;
-  params: SearchFeedParams;
-}) => ["search", params, locale] as const;
-
-const buildQuery = (
-  params: SearchFeedParams,
-  cursor: string,
-): Record<string, string> => {
-  const query: Record<string, string> = { first: "20" };
-  if (params.search) query.search = params.search;
-  if (params.types) query.types = params.types;
-  if (params.authorId) query.authorId = params.authorId;
-  if (params.sort) query.sort = params.sort;
-  if (params.from) query.from = params.from;
-  if (params.to) query.to = params.to;
-  if (cursor) query.cursor = cursor;
-
-  return query;
-};
-
-/**
  * The search feed, with nothing framework-shaped left in it.
  *
  * This is the whole of the rendering and paging behaviour - infinite scroll, the
  * load-more fallback, both variants, the empty and loading states - and it runs
- * unchanged under Next.js and under TanStack Start. Two things were pulled out
- * to make that true, and they are the only two that ever needed to be:
+ * unchanged under Next.js and under TanStack Start. Exactly two things are
+ * pulled out, and they are the only two that ever needed to be:
  *
- * - **`locale`** is a prop. It used to come from `next-intl`'s `useLocale()`,
- *   which reads Next's request scope; TanStack Start resolves the same answer
- *   from the router. Passing it in also makes the query key honest: the locale
- *   is part of what was fetched, so the component that fetches should be told
- *   it rather than reaching for ambient state that a test cannot set.
- * - **`LinkComponent`** is a prop. See {@link SearchFeedLinkComponent}.
+ * - **`queryOptions`**, built by `searchFeedQueryOptions`. There is one
+ *   `useInfiniteQuery` in this file and it is handed its definition, so the page
+ *   a route loader prefetched and the page `fetchNextPage()` asks for come from
+ *   the same request, the same cursor rule and the same status checking. This
+ *   component used to build its own, which agreed with a loader on the cache key
+ *   and on nothing else - a 400 on page two was parsed as a page and the feed
+ *   quietly emptied itself. The locale and the search parameters left with it,
+ *   because both are things the *query* needs rather than the markup.
+ * - **`LinkComponent`**. See {@link SearchFeedLinkComponent}.
  *
  * Translations come from `use-intl` directly - the framework-free half of
  * `next-intl`, and the same instance `NextIntlClientProvider` provides into, so
@@ -290,40 +310,18 @@ const buildQuery = (
  */
 export const SearchFeedContent = ({
   LinkComponent,
-  initialData,
-  locale,
-  params,
+  queryOptions,
   variant = "list",
 }: {
-  initialData?: SearchFeedPage;
   LinkComponent: SearchFeedLinkComponent;
-  locale: string;
-  params: SearchFeedParams;
+  queryOptions: SearchFeedQueryOptions;
   variant?: SearchFeedVariant;
 }) => {
   const t = useTranslations("core.search");
   const sentinelRef = React.useRef<HTMLDivElement>(null);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery({
-      queryKey: searchFeedQueryKey({ locale, params }),
-      initialPageParam: "",
-      queryFn: async ({ pageParam }) => {
-        const res = await fetcherClient(searchRef, {
-          module: "search",
-          path: "/",
-          method: "get",
-          args: { query: { ...buildQuery(params, pageParam), lang: locale } },
-        });
-
-        return await res.json();
-      },
-      getNextPageParam: last =>
-        last.pageInfo.hasNextPage ? String(last.pageInfo.endCursor) : undefined,
-      initialData: initialData
-        ? { pages: [initialData], pageParams: [""] }
-        : undefined,
-    });
+    useInfiniteQuery(queryOptions);
 
   React.useEffect(() => {
     const el = sentinelRef.current;
