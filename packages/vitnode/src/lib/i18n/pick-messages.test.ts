@@ -1,7 +1,7 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { pickMessages } from "./pick-messages";
+import { isUnsafeMessagePath, pickMessages } from "./pick-messages";
 
 /**
  * Which namespaces reach the client bundle.
@@ -76,5 +76,102 @@ describe("pickMessages", () => {
     ).toStrictEqual({
       core: { content: messages.core.content, global: messages.core.global },
     });
+  });
+});
+
+/**
+ * `pickMessages` is reached from a public server function, so it is treated as
+ * a boundary in its own right rather than trusting whatever validated the input
+ * upstream. Every assertion here is about a path that should never arrive - and
+ * about what happens when one does anyway.
+ */
+describe("prototype safety", () => {
+  const tree = {
+    core: { global: { close: "Close" } },
+  };
+
+  afterEach(() => {
+    // Anything leaked by a previous case would make the next one pass for the
+    // wrong reason.
+    delete (Object.prototype as Record<string, unknown>).polluted;
+  });
+
+  it("does not pollute Object.prototype through __proto__", () => {
+    const source = JSON.parse('{"__proto__": {"polluted": "yes"}}') as object;
+
+    const result = pickMessages(source, ["__proto__"]);
+
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+    expect(result).toEqual({});
+  });
+
+  it("does not pollute through a nested __proto__ path", () => {
+    const source = JSON.parse('{"__proto__": {"polluted": "yes"}}') as object;
+
+    pickMessages(source, ["__proto__.polluted"]);
+
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+
+  it("does not pollute through constructor.prototype", () => {
+    const result = pickMessages(tree, ["constructor.prototype.polluted"]);
+
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    expect(result).toEqual({});
+  });
+
+  it("refuses an unsafe segment anywhere in the path", () => {
+    expect(pickMessages(tree, ["core.__proto__"])).toEqual({});
+    expect(pickMessages(tree, ["core.constructor.global"])).toEqual({});
+    expect(pickMessages(tree, ["core.global.prototype"])).toEqual({});
+  });
+
+  it("never reads a key off the prototype chain", () => {
+    // `toString` and `hasOwnProperty` exist on every object, but not as *own*
+    // properties of the message tree - so neither is a message. A path that
+    // gets partway before missing still creates the branch it walked through,
+    // which is long-standing behaviour and copies no value.
+    expect(pickMessages(tree, ["toString"])).toEqual({});
+    expect(pickMessages(tree, ["core.hasOwnProperty"])).toEqual({ core: {} });
+    expect(
+      Object.hasOwn(
+        pickMessages(tree, ["core.hasOwnProperty"]).core as object,
+        "hasOwnProperty",
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps the result an ordinary object, which React must be able to serialize", () => {
+    // `Object.create(null)` would be marginally safer here and would break
+    // `apps/docs`: React's Flight serializer rejects anything whose prototype
+    // is not `Object.prototype`.
+    const result = pickMessages(tree, ["core.global"]);
+
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+    expect(Object.getPrototypeOf(result.core)).toBe(Object.prototype);
+  });
+});
+
+describe("isUnsafeMessagePath", () => {
+  it.each(["__proto__", "constructor", "prototype"])(
+    "flags %s as a segment",
+    segment => {
+      expect(isUnsafeMessagePath(segment)).toBe(true);
+      expect(isUnsafeMessagePath(`core.${segment}`)).toBe(true);
+      expect(isUnsafeMessagePath(`${segment}.core`)).toBe(true);
+    },
+  );
+
+  it.each(["core.global", "core.search", "@vitnode/blog.someNamespace"])(
+    "leaves the real namespace %s alone",
+    path => {
+      expect(isUnsafeMessagePath(path)).toBe(false);
+    },
+  );
+
+  it("does not flag a segment that merely contains an unsafe word", () => {
+    expect(isUnsafeMessagePath("core.constructors")).toBe(false);
+    expect(isUnsafeMessagePath("core.prototypeName")).toBe(false);
   });
 });

@@ -2,6 +2,7 @@ import { LOCALE_COOKIE_NAME } from '@vitnode/core/lib/i18n/locale-cookie'
 import { describe, expect, it } from 'vitest'
 
 import { i18n } from '#/i18n'
+import { resolveLocale as runtimeResolveLocale } from '#/lib/i18n/client'
 import { isLocale, localeRouting } from '#/lib/i18n/shared'
 import { handleLocaleRequest } from '#/server/locale.server'
 
@@ -57,6 +58,57 @@ describe('canonical redirects', () => {
       expect(handleLocaleRequest(request(path)).redirect).toBeUndefined()
     },
   )
+
+  it('carries an explicit locale onto the redirect it issues', () => {
+    // The redirect is the end of this request. A cookie decided "after" it is
+    // attached to a response nobody reads: the browser follows `/admin`, finds
+    // no stored preference and renders in the default language - silently
+    // losing the language the visitor just asked for by URL.
+    const { redirect } = handleLocaleRequest(request('/pl/admin'))
+
+    expect(redirect?.status).toBe(308)
+    expect(redirect?.headers.get('location')).toBe('/admin')
+    expect(redirect?.headers.getSetCookie().at(0)).toContain(
+      `${LOCALE_COOKIE_NAME}=pl`,
+    )
+  })
+
+  it('keeps the search string on a redirect that also sets the cookie', () => {
+    const { redirect } = handleLocaleRequest(request('/pl/admin/users?q=x'))
+
+    expect(redirect?.headers.get('location')).toBe('/admin/users?q=x')
+    expect(redirect?.headers.getSetCookie().at(0)).toContain(
+      `${LOCALE_COOKIE_NAME}=pl`,
+    )
+  })
+
+  it('sets no redundant cookie when the choice is already stored', () => {
+    const { redirect } = handleLocaleRequest(
+      request('/pl/admin', { cookie: `${LOCALE_COOKIE_NAME}=pl` }),
+    )
+
+    expect(redirect?.status).toBe(308)
+    expect(redirect?.headers.getSetCookie()).toEqual([])
+  })
+
+  it('never gives the API a web locale preference', () => {
+    // `/pl/api/foo` is a URL to correct, not a language to remember. The Hono
+    // application negotiates per request and is outside this model entirely.
+    const { redirect } = handleLocaleRequest(request('/pl/api/foo'))
+
+    expect(redirect?.status).toBe(308)
+    expect(redirect?.headers.get('location')).toBe('/api/foo')
+    expect(redirect?.headers.getSetCookie()).toEqual([])
+  })
+
+  it('records nothing for the default locale spelled out longhand', () => {
+    // `/en/admin` is not a choice - `en` is what an unprefixed URL already
+    // means, so there is nothing to remember.
+    const { redirect } = handleLocaleRequest(request('/en/admin'))
+
+    expect(redirect?.headers.get('location')).toBe('/admin')
+    expect(redirect?.headers.getSetCookie()).toEqual([])
+  })
 
   it('never redirects the API, whatever it is asked for', () => {
     // Stage 1 mounted the whole Hono application at `/api/*`. A locale layer
@@ -139,8 +191,42 @@ describe('where the language of a request comes from', () => {
     expect(resolveLocale('/admin/users', { cookieLocale: 'pl' })).toBe('pl')
   })
 
-  it('falls back to Accept-Language and then the default there', () => {
-    expect(resolveLocale('/admin', { acceptLanguage: 'pl;q=0.9' })).toBe('pl')
+  it('falls back to the default when nothing is stored', () => {
     expect(resolveLocale('/admin')).toBe('en')
+  })
+
+  it('can negotiate Accept-Language, which this runtime deliberately does not', () => {
+    // The shared helper supports it because another runtime may want it. The
+    // TanStack runtime does not wire it up - see the block at the end of this
+    // file, and the note in `lib/i18n/client.ts`.
+    expect(resolveLocale('/admin', { acceptLanguage: 'pl;q=0.9' })).toBe('pl')
+  })
+})
+
+/**
+ * What the running app resolves, as opposed to what the shared helper can.
+ *
+ * The two differ on purpose. `localeRouting.resolveLocale` accepts an
+ * `Accept-Language` header and will negotiate against it; the TanStack runtime
+ * hands it only the cookie. Wiring the header up would have the server render
+ * `pl` for a visitor whose browser asks for Polish while the client - which
+ * cannot see request headers - hydrates the same page as `en`: a flash of the
+ * wrong language and a React hydration mismatch.
+ *
+ * Stage 3's contract for a route with no locale in its URL is therefore exactly
+ * cookie, then default. First-visit negotiation needs its own hydration-safe
+ * design and is not something to leave half-built.
+ */
+describe('the runtime resolver reads the cookie and nothing else', () => {
+  it('falls back to the default with no request scope to read', () => {
+    // No request means no cookie, which is what the default locale is for.
+    expect(runtimeResolveLocale('/admin')).toBe('en')
+    expect(runtimeResolveLocale('/admin/users')).toBe('en')
+  })
+
+  it("still takes a public route's locale from its URL", () => {
+    expect(runtimeResolveLocale('/')).toBe('en')
+    expect(runtimeResolveLocale('/pl')).toBe('pl')
+    expect(runtimeResolveLocale('/pl/discover')).toBe('pl')
   })
 })

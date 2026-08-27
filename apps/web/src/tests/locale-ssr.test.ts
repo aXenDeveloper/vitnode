@@ -120,6 +120,16 @@ describe('SSR canonicalises the default locale away', () => {
 
     expect(status).toBe(308)
     expect(headers.get('location')).toBe('/admin/users')
+    // Carried on the redirect itself - see `server/locale.server.ts`.
+    expect(headers.getSetCookie().at(0)).toContain(`${LOCALE_COOKIE_NAME}=pl`)
+  })
+
+  it('gives the API no locale cookie when it strips one', async () => {
+    const { headers, status } = await renderPage(at('/pl/api/foo'))
+
+    expect(status).toBe(308)
+    expect(headers.get('location')).toBe('/api/foo')
+    expect(headers.getSetCookie()).toEqual([])
   })
 
   it('404s an unknown first segment instead of guessing a locale', async () => {
@@ -129,6 +139,61 @@ describe('SSR canonicalises the default locale away', () => {
     // there is nothing to accidentally render `/xx` as a valid page.
     expect(status).toBe(404)
     expect(testId(html, 'locale')).toBeUndefined()
+  })
+})
+
+/**
+ * A route with no locale in its URL, over a real request.
+ *
+ * `/admin` has not been migrated yet, so these render the 404 shell - which is
+ * exactly what makes them useful: `<html lang>` is decided by the root document
+ * either way, so the locale contract for an ignored path is observable long
+ * before the AdminCP arrives.
+ */
+describe('SSR resolves an ignored route from the cookie, and nothing else', () => {
+  it('renders it in the stored language', async () => {
+    const { html } = await renderPage(at('/admin'), {
+      headers: { cookie: `${LOCALE_COOKIE_NAME}=pl` },
+    })
+
+    expect(langOf(html)).toBe('pl')
+  })
+
+  it('falls back to the default with no cookie', async () => {
+    const { html } = await renderPage(at('/admin'))
+
+    expect(langOf(html)).toBe('en')
+  })
+
+  it('ignores Accept-Language, so the client can agree with it', async () => {
+    // The shared helper can negotiate; this runtime deliberately does not wire
+    // it up. The browser cannot read request headers, so a server that answered
+    // `pl` here would hydrate to `en` - a flash of the wrong language and a
+    // React hydration mismatch on every first visit.
+    const { html } = await renderPage(at('/admin'), {
+      headers: { 'accept-language': 'pl-PL,pl;q=0.9,en;q=0.8' },
+    })
+
+    expect(langOf(html)).toBe('en')
+  })
+
+  it('is the language a localized URL just asked for, once redirected', async () => {
+    // The two halves of the fix, in sequence: the redirect hands back the
+    // cookie, and the followed URL renders in that language.
+    const redirected = await renderPage(at('/pl/admin'))
+    const cookie = redirected.headers
+      .getSetCookie()
+      .find((value) => value.startsWith(LOCALE_COOKIE_NAME))
+
+    expect(redirected.status).toBe(308)
+    expect(redirected.headers.get('location')).toBe('/admin')
+    expect(cookie).toBeDefined()
+
+    const followed = await renderPage(at('/admin'), {
+      headers: { cookie: cookie?.split(';')[0] ?? '' },
+    })
+
+    expect(langOf(followed.html)).toBe('pl')
   })
 })
 

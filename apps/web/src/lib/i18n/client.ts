@@ -60,6 +60,15 @@ const readCookieLocale = createIsomorphicFn()
  * the prefix away. Handing it the internal path would resolve every request to
  * the default locale.
  *
+ * The cookie is the only source handed to the shared helper, and that is the
+ * whole contract for a route with no locale in its URL: **cookie, then the
+ * default.** The helper can also negotiate an `Accept-Language` header and
+ * deliberately is not asked to - the browser cannot read request headers, so a
+ * server that answered `pl` from one would hydrate to `en` on the client: a
+ * flash of the wrong language and a React hydration mismatch on every first
+ * visit. First-visit negotiation is a product decision that needs its own
+ * hydration-safe design, not a source quietly added here.
+ *
  * The cast is safe by construction: the answer is either a code this app was
  * configured with or the default, never anything from the URL.
  */

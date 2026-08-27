@@ -79,7 +79,15 @@ export interface LocaleRouting {
    * already canonical.
    */
   redirectPathnameFor: (pathname: string) => string | undefined;
-  /** The single authoritative answer to "which language is this request in?". */
+  /**
+   * The single authoritative answer to "which language is this request in?".
+   *
+   * A runtime supplies whichever sources it can honour. The TanStack Start app
+   * passes only `cookieLocale` on purpose - see `apps/web/src/lib/i18n/client.ts`
+   * - because an `Accept-Language` answer the browser cannot reproduce is a
+   * hydration mismatch waiting to happen. Both sources are kept here for a
+   * runtime that has somewhere hydration-safe to put the negotiated result.
+   */
   resolveLocale: (pathname: string, sources?: LocaleSources) => string;
   /** `true` for `/api`, `/api/x`, `/admin`, `/admin/x`; `false` for `/discover`. */
   shouldIgnoreLocalePath: (pathname: string) => boolean;
