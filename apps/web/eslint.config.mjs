@@ -18,6 +18,8 @@ export default [
       ".tanstack/**",
       "dist/**",
       "src/routeTree.gen.ts",
+      "src/plugin-routes.gen.ts",
+      "src/plugin-route-manifest.gen.ts",
       "prettier.config.js",
     ],
   },

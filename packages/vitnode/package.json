@@ -105,10 +105,20 @@
       "types": "./dist/src/views/admin/views/content/form/index.d.ts",
       "default": "./dist/src/views/admin/views/content/form/index.js"
     },
+    "./routing": {
+      "import": "./dist/src/routing/index.js",
+      "types": "./dist/src/routing/index.d.ts",
+      "default": "./dist/src/routing/index.js"
+    },
     "./api/config": {
       "import": "./dist/src/api/config.js",
       "types": "./dist/src/api/config.d.ts",
       "default": "./dist/src/api/config.js"
+    },
+    "./framework/plugin-routes": {
+      "import": "./dist/src/framework/plugin-routes/index.js",
+      "types": "./dist/src/framework/plugin-routes/index.d.ts",
+      "default": "./dist/src/framework/plugin-routes/index.js"
     },
     "./*": {
       "import": "./dist/src/*.js",

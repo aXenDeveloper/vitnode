@@ -1,0 +1,213 @@
+---
+title: Route Manifest
+description: Declare a plugin's public pages as data, so any VitNode app can serve them - not just Next.js ones.
+---
+
+Plugins have always shipped pages as Next.js route files, and VitNode copies them
+into every app that installs the plugin. That works beautifully - right up until
+the app isn't Next.js.
+
+The **route manifest** is the other way to say the same thing: a plugin declares
+*what* pages it has and *where* they live, as plain data. The application decides
+how to serve them.
+
+<Callout type="warn">
+  This is new in Stage 5 and is a **parallel** path. Your `src/routes/main`
+  folder still works exactly as it did - nothing has been removed, and you don't
+  have to migrate anything today.
+</Callout>
+
+## Declaring a route
+
+Create `src/routes/manifest.ts` in your plugin and export a `routes` array:
+
+```ts title="plugins/blog/src/routes/manifest.ts"
+import type { PluginRouteDefinition } from "@vitnode/core/routing";
+
+export const routes: PluginRouteDefinition[] = [
+  {
+    entry: "routes/post-page", // [!code highlight]
+    id: "post",
+    path: "/blog/:slug", // [!code highlight]
+  },
+];
+```
+
+Four fields, and only one of them is optional:
+
+| Field   | What it is                                                                                          |
+| ------- | --------------------------------------------------------------------------------------------------- |
+| `id`    | Stable name for the page, unique inside your plugin. Name it after the page, not the URL.             |
+| `path`  | The public URL, in VitNode's canonical spelling (see below).                                          |
+| `entry` | Package export subpath of the module that renders it - `"routes/post-page"`, no file extension.       |
+| `area`  | Optional. `"main"` (the default) is the only area for now; the AdminCP keeps its own routing.         |
+
+Then hand the same array to `buildPlugin`, so an app that registers your plugin
+the usual way declares the same routes:
+
+```tsx title="plugins/blog/src/config.tsx"
+import { buildPlugin } from "@vitnode/core/lib/plugin";
+
+import { routes } from "./routes/manifest"; // [!code highlight]
+
+export const blogPlugin = () =>
+  buildPlugin({
+    pluginId: "@vitnode/blog",
+    routes, // [!code highlight]
+  });
+```
+
+One list, read by both paths - so the two can never disagree.
+
+## Writing paths
+
+VitNode has its own spelling, and it is neither framework's:
+
+| Shape           | VitNode                    | Next.js                  | TanStack Router         |
+| --------------- | -------------------------- | ------------------------ | ----------------------- |
+| Static          | `/blog`                    | `/blog`                  | `/blog`                 |
+| Dynamic segment | `/blog/:slug`              | `/blog/[slug]`           | `/blog/$slug`           |
+| Nested          | `/blog/:slug/comments`     | `/blog/[slug]/comments`  | `/blog/$slug/comments`  |
+
+Write the VitNode one. If you paste `[slug]` or `$slug` in by muscle memory, the
+error tells you so by name and hands you the right spelling - it doesn't just say
+"invalid path".
+
+Catch-all (`/blog/*`), optional (`/blog/:slug?`) and repeating (`/blog/:slug+`)
+segments are **not** supported yet. They're rejected on purpose rather than
+half-guessed at.
+
+## Building the manifest
+
+An application turns every plugin's declarations into one ordered list:
+
+```ts
+import { buildPluginRouteManifest } from "@vitnode/core/routing";
+
+const manifest = buildPluginRouteManifest(vitNodeConfig.plugins);
+```
+
+Each entry comes back validated, normalised and already parsed:
+
+```ts
+{
+  area: "main",
+  entry: "routes/post-page",
+  id: "@vitnode/blog:post",
+  path: "/blog/:slug",
+  pluginId: "@vitnode/blog",
+  routeId: "post",
+  segments: [
+    { kind: "static", value: "blog" },
+    { kind: "param", name: "slug" },
+  ],
+}
+```
+
+The order is decided by the paths, never by the order plugins were registered: a
+static segment comes before a parameter at the same depth, so `/blog/new` always
+wins over `/blog/:slug` no matter who loaded first.
+
+Need a framework-shaped path? The conversions are pure functions over
+`segments`, so there's no second parser to disagree with the first:
+
+```ts
+import { toNextRoutePath, toTanStackRoutePath } from "@vitnode/core/routing";
+
+toNextRoutePath(route.segments); // "/blog/[slug]"
+toTanStackRoutePath(route.segments); // "/blog/$slug"
+```
+
+## When two plugins want the same URL
+
+They can't have it, and VitNode won't pick for you:
+
+```txt
+Plugin route path collision on "/hello" (main): @vitnode/example already owns
+"/hello" as "@vitnode/example:hello", and @vitnode/blog declares "/hello" as
+"@vitnode/blog:greeting". Two plugins cannot serve the same path - rename one
+of them.
+```
+
+`/blog/:slug` and `/blog/:postId` collide too - different spelling, same URLs.
+Duplicate ids, malformed paths and entries an app could never import all fail the
+same way: loudly, at build time, naming the plugin.
+
+## How an app serves them
+
+The manifest says *what* exists. Serving it is the application's job, and the
+TanStack Start app in `apps/web` is the first one to do it. Two files are
+generated for it at build time, and neither of them is a page:
+
+```txt
+src/plugin-route-manifest.gen.ts   what routes exist, as the manifest above
+src/plugin-routes.gen.ts           how each route's module is imported
+```
+
+Both come from the plugins listed in `src/vitnode.config.ts` and the
+`routes/manifest.ts` each of them ships. A plugin that is installed but not
+configured contributes nothing - no directory is ever scanned.
+
+**Your page is not copied anywhere.** It stays in your plugin, compiled in your
+own `dist`, and the app holds one generated line per route:
+
+```ts title="src/plugin-routes.gen.ts"
+export const pluginRouteModules = {
+  "@vitnode/blog:post": () => import("@vitnode/blog/routes/post-page"),
+};
+```
+
+That line is a literal `import()`, which is the whole reason it is generated
+rather than assembled at runtime: the bundler can follow it, so your page gets
+its own chunk and stays out of the app's initial download until somebody visits
+it. Nothing in the browser ever asks which plugins are installed.
+
+The app then joins the two by route id and registers each one on its **existing**
+route tree - the same tree its own pages are in. There is no second router and no
+separate route tree for plugins.
+
+### What you get for free
+
+Everything the app's own pages get, because your page is in the same route tree:
+
+- **Locale prefixes.** One route, every language. `/blog/hello` and
+  `/pl/blog/hello` are the same route, and your manifest never mentions a
+  language - the app strips the prefix before matching and writes it back into
+  every link it builds.
+- **Client-side navigation.** During the Next.js -> TanStack migration, links ask
+  the route tree whether the app can render a destination. Register a route and
+  the answer changes to yes. There is no list of migrated routes to update.
+- **Lazy loading**, per the chunk above.
+
+### Writing the page
+
+A route module exports a component as its default export, and that is the entire
+contract:
+
+```tsx title="plugins/blog/src/routes/post-page.tsx"
+const PostPage = () => <main>Hello from the blog plugin</main>;
+
+export default PostPage;
+```
+
+<Callout type="info">
+  Keep these modules framework-neutral. Your plugin can be installed into a
+  Next.js app *and* a TanStack Start app at the same time, so anything from
+  `next/*`, `next-intl` or a router pins the page to one of them. Plain JSX and
+  shared VitNode components are pinned to neither.
+</Callout>
+
+## Learn More
+
+<Cards>
+  <Card
+    title="Layouts and Pages"
+    description="The Next.js route files plugins ship today"
+    href="/docs/dev/plugins/layouts-and-pages"
+  />
+  <Card
+    title="Create a Plugin"
+    description="Start here if you haven't built one yet"
+    href="/docs/dev/plugins/create"
+  />
+</Cards>

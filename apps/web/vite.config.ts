@@ -6,6 +6,7 @@ import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
 
 import { vitNodeEnv } from './vitnode-env'
+import { vitNodePluginRoutes } from './vitnode-plugin-routes'
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
@@ -39,6 +40,7 @@ const config = defineConfig({
   },
   plugins: [
     vitNodeEnv(),
+    vitNodePluginRoutes(),
     devtools(),
     nitro({ rollupConfig: { external: [/^@sentry\//] } }),
     tailwindcss(),

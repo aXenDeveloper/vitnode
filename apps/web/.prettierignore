@@ -1,0 +1,6 @@
+# Generated, and rewritten on every build. Formatting them is churn at best:
+# whatever Prettier changes is gone the next time the generator runs, and a
+# reflow would make the output depend on how long a plugin's name happens to be.
+src/routeTree.gen.ts
+src/plugin-routes.gen.ts
+src/plugin-route-manifest.gen.ts

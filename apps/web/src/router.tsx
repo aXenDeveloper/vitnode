@@ -5,7 +5,27 @@ import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query
 import { createVitNodeQueryClient } from '@vitnode/core/lib/query-client'
 
 import { createLocaleRewrite } from './lib/i18n/client'
-import { routeTree } from './routeTree.gen'
+import { pluginRouteSpecs, withPluginRoutes } from './lib/plugin-routes'
+import { pluginRouteManifest } from './plugin-route-manifest.gen'
+import { pluginRouteModules } from './plugin-routes.gen'
+import { routeTree as fileRouteTree } from './routeTree.gen'
+
+/**
+ * One route tree: this app's route files, plus the pages its plugins declare.
+ *
+ * At module scope rather than inside `getRouter`, because `getRouter` runs once
+ * per server request and mounting the plugin routes mutates the route tree - the
+ * generated tree is a module singleton. `withPluginRoutes` is idempotent anyway;
+ * doing it once is simply where it belongs.
+ *
+ * The plugin half comes from two generated files and is joined by route id. No
+ * plugin page is copied into `src/routes`, no route path is written by hand, and
+ * nothing here knows which plugins are installed - see `lib/plugin-routes.ts`.
+ */
+const routeTree = withPluginRoutes(
+  fileRouteTree,
+  pluginRouteSpecs(pluginRouteManifest, pluginRouteModules),
+)
 
 /**
  * The app's router, and the QueryClient it owns.

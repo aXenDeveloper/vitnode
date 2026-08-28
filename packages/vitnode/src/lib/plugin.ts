@@ -5,6 +5,7 @@ import type {
   ContentSelect,
   ContentSystemField,
 } from "../content/types";
+import type { PluginRouteDefinition } from "../routing/types";
 import type { ItemNavAdmin } from "../views/admin/layouts/sidebar/nav/item";
 import type { LocaleMessagesMap } from "./i18n/types";
 
@@ -182,6 +183,19 @@ export interface BuildPluginReturn<P extends string = string> {
   contentTypes?: ContentTypeFrontendRegistration[];
   messages?: LocaleMessagesMap;
   pluginId: P;
+  /**
+   * Public pages this plugin contributes, declared rather than shipped as a
+   * framework's route files.
+   *
+   * Additive and optional: a plugin with a `src/routes/` tree keeps working
+   * exactly as it did, because that tree is still copied into every Next.js app
+   * by `scripts/prepare-plugins-files.ts`. This is the parallel path - the one an
+   * application that is not Next.js can read - and `buildPluginRouteManifest`
+   * turns every plugin's list into the application's route manifest.
+   *
+   * Nothing in this package renders them yet. See `src/routing/`.
+   */
+  routes?: PluginRouteDefinition[];
 }
 
 export function buildPlugin<P extends string>(

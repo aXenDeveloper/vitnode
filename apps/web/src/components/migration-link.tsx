@@ -9,8 +9,9 @@ import { buildLegacyHref, legacyWebOrigin } from '#/lib/legacy-app'
 /**
  * Linking to a VitNode page while half of VitNode still runs on Next.js.
  *
- * This app owns three routes today - `/`, `/discover` and the `/api/*` mount -
- * and search results point at all of the ones it does not: `/blog/post-30`,
+ * This app owns four routes today - `/`, `/discover`, the `/api/*` mount and the
+ * `@vitnode/example` plugin's `/example` - and search results point at all of the
+ * ones it does not: `/blog/post-30`,
  * `/files/...`, `/admin/...`, whatever a plugin indexed. Handing every
  * internal-looking path to `<Link>` routes those into *this* router, which has
  * nothing to match them with, so a perfectly good blog post becomes a TanStack
@@ -24,8 +25,10 @@ import { buildLegacyHref, legacyWebOrigin } from '#/lib/legacy-app'
  *
  * This is deliberately not a cross-framework navigation system, and there is no
  * hand-maintained table of migrated routes - the route tree *is* the table. When
- * `/blog` is migrated it appears in the generated tree, `isTanStackOwnedPath`
- * starts answering `true` for it, and nothing here changes.
+ * `/blog` is migrated it appears in the route tree, `isTanStackOwnedPath` starts
+ * answering `true` for it, and nothing here changes. Stage 5 is the proof: a
+ * plugin declared `/example`, `lib/plugin-routes.ts` mounted it on the same tree,
+ * and this file was not touched.
  */
 
 /**
@@ -55,7 +58,8 @@ const isApiRouteId = (routeId: string): boolean =>
  * An unmatched path resolves to the root route alone, so "something below the
  * root matched" is the test. That also means a root-level catch-all route would
  * make every path look owned; there is none today, and
- * `migration-link.test.tsx` fails loudly if one appears.
+ * `src/tests/plugin-routes.test.ts` fails loudly if one appears - it asserts that
+ * `/blog/post-30` is still somebody else's.
  */
 export const isTanStackOwnedPath = (
   router: AnyRouter,
