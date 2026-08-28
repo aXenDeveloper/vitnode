@@ -14,6 +14,24 @@ import {
   type SourceConfig,
 } from "./shared/file-utils.js";
 
+/**
+ * Whether an app is a Next.js App Router app - the only kind that wants route
+ * files copied into `src/app/`.
+ *
+ * `vitnode.config.ts` is no longer enough on its own: a TanStack Start app has
+ * one too (`apps/web`), and copying Next.js pages into it fills `src/app/` with
+ * `next/*` imports that nothing renders - a confusing directory at best, and a
+ * failing Next-free boundary test at worst. That app mounts a plugin's pages
+ * through its own route tree (`vitnode-plugin-routes.ts`) and needs nothing from
+ * here.
+ *
+ * A Next config is the marker, because it is the one file only Next.js reads.
+ */
+const isNextApp = (appPath: string): boolean =>
+  ["next.config.js", "next.config.mjs", "next.config.ts"].some(name =>
+    existsSync(join(appPath, name)),
+  );
+
 export const preparePluginsFiles = async (flag?: string) => {
   // Detect which config file to load based on flag or auto-detection
   const cwd = process.cwd();
@@ -95,7 +113,7 @@ export const preparePluginsFiles = async (flag?: string) => {
         );
 
         if (hasApiConfig && !hasWebConfig) return "api";
-        if (hasWebConfig) return "web";
+        if (hasWebConfig && isNextApp(appPath)) return "web";
 
         return null;
       };

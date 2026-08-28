@@ -1,11 +1,17 @@
-import { getTranslations } from "next-intl/server";
-
 import { I18nProvider } from "@/components/i18n-provider";
-import { ErrorView } from "@/views/error/error-view";
+import { getMiddlewareApi } from "@/lib/api/get-middleware-api";
 
-import { getMiddlewareApi } from "../../../../lib/api/get-middleware-api";
+import { normalizeSSOProviders } from "../providers";
 import { ClientCallbackSSO } from "./client/client";
 
+/**
+ * The OAuth callback page for Next.js.
+ *
+ * A Server Component for one reason - reading which adapters this deployment
+ * registered, so the screens can name the provider rather than echo the id in
+ * the URL. Everything after that is the shared callback, mounted under the
+ * request-scoped message provider.
+ */
 export const CallbackSSOView = async ({
   providerId,
   searchParams: { code, error, state },
@@ -13,27 +19,17 @@ export const CallbackSSOView = async ({
   providerId: string;
   searchParams: Record<string, string>;
 }) => {
-  const [t, { sso }] = await Promise.all([
-    getTranslations("core.auth.sso"),
-    getMiddlewareApi(),
-  ]);
-
-  if (error === "access_denied") {
-    return <ErrorView code={403} customDescription={t("access_denied")} />;
-  }
+  const { sso } = await getMiddlewareApi();
 
   return (
     <I18nProvider namespaces={["core.auth.sso"]}>
-      {error === "access_denied" ? (
-        <ErrorView code={403} customDescription={t("access_denied")} />
-      ) : (
-        <ClientCallbackSSO
-          code={code}
-          providerId={providerId}
-          sso={sso}
-          state={state}
-        />
-      )}
+      <ClientCallbackSSO
+        code={code}
+        oauthError={error}
+        oauthState={state}
+        providerId={providerId}
+        providers={normalizeSSOProviders(sso)}
+      />
     </I18nProvider>
   );
 };

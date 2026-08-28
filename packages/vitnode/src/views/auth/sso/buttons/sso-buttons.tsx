@@ -1,48 +1,20 @@
-import { getTranslations } from "next-intl/server";
-
-import { Skeleton } from "@/components/ui/skeleton";
 import { getMiddlewareApi } from "@/lib/api/get-middleware-api";
 
-import { ButtonSSOButtons } from "./client";
+import { normalizeSSOProviders } from "../providers";
+import { SSOButtonsClient } from "./client";
 
-export const SSOButtonsSkeleton = () => {
-  return (
-    <div className="flex gap-4">
-      <Skeleton className="mt-6 h-8 w-full" />
-      <Skeleton className="mt-6 h-8 w-full" />
-    </div>
-  );
-};
+export { SSOButtonsSkeleton } from "./sso-buttons-content";
 
+/**
+ * The provider row for Next.js: read the deployment configuration, render the
+ * shared row.
+ *
+ * A Server Component only because of the read - `getMiddlewareApi` waits for a
+ * real request, which is why both auth pages put this inside a `<Suspense>`.
+ * The row itself renders nothing when no adapter is registered.
+ */
 export const SSOButtons = async () => {
-  const [t, { sso }] = await Promise.all([
-    getTranslations("core.auth.sso"),
-    getMiddlewareApi(),
-  ]);
+  const { sso } = await getMiddlewareApi();
 
-  if (!sso.length) {
-    return null;
-  }
-
-  return (
-    <>
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
-        </div>
-
-        <div className="relative flex justify-center text-xs">
-          <span className="bg-card text-muted-foreground px-4">{t("or")}</span>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-center gap-4">
-        {sso.map(provider => (
-          <ButtonSSOButtons key={provider.id} providerId={provider.id}>
-            {provider.name}
-          </ButtonSSOButtons>
-        ))}
-      </div>
-    </>
-  );
+  return <SSOButtonsClient providers={normalizeSSOProviders(sso)} />;
 };

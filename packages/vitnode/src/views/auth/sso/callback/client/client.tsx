@@ -1,83 +1,56 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { useTranslations } from "next-intl";
+import { useRouter } from "@/lib/navigation";
+import { ErrorViewActions } from "@/views/error/error-view";
 
-import { Loader } from "@/components/ui/loader";
-import { Link, useRouter } from "@/lib/navigation";
-import { ErrorView } from "@/views/error/error-view";
+import type { SSOProvider } from "../../providers";
 
-import type { getMiddlewareApi } from "../../../../../lib/api/get-middleware-api";
-
-import { Button } from "../../../../../components/ui/button";
+import { NextAuthLink } from "../../../next-link";
+import { SSOCallbackContent } from "../sso-callback-content";
+import { useSSOCallback } from "../use-sso-callback";
 import { mutationApi } from "./mutation-api.server";
 
+/**
+ * {@link SSOCallbackContent}, wired to Next.js.
+ *
+ * The exchange and the four screens it can end on are shared; the three things
+ * that are not live here. The server action that trades the authorization code
+ * for a session and revalidates the layout it is rendered into, the router that
+ * takes the visitor to the front page once it worked, and the two navigation
+ * buttons the generic error screens end with.
+ */
 export const ClientCallbackSSO = ({
-  providerId,
   code,
-  state,
-  sso,
+  oauthError,
+  oauthState,
+  providerId,
+  providers,
 }: {
   code: string;
+  oauthError?: string;
+  oauthState: string;
   providerId: string;
-  sso: Awaited<ReturnType<typeof getMiddlewareApi>>["sso"];
-  state: string;
+  providers: readonly SSOProvider[];
 }) => {
-  const t = useTranslations("core.auth.sso");
   const { replace } = useRouter();
-  const { isError, error } = useQuery({
-    queryKey: ["core.auth.sso.callback.sign-up", providerId, code],
-    queryFn: async () => {
-      const mutation = await mutationApi({ providerId, code, state });
-      if (mutation?.error) {
-        throw new Error(mutation.error);
-      }
+  const state = useSSOCallback({
+    code,
+    oauthError,
+    onCallback: async () =>
+      await mutationApi({ code, providerId, state: oauthState }),
+    onSignedIn: () => {
       replace("/");
-
-      return "";
     },
-    retry: false,
+    providerId,
   });
-  const provider = sso.find(p => p.id === providerId);
-
-  if (error?.message === "Email already exists") {
-    return (
-      <ErrorView
-        code={409}
-        customActions={
-          <Button
-            nativeButton={false}
-            render={<Link href="/login" />}
-            size="lg"
-          >
-            {t("email_exists.sign_in")}
-          </Button>
-        }
-        customDescription={t.rich("email_exists.desc", {
-          provider: () => (
-            <span className="font-semibold">
-              {provider?.name ?? providerId}
-            </span>
-          ),
-        })}
-        customTitle={t.rich("email_exists.title", {
-          provider: () => (
-            <span className="font-semibold">
-              {provider?.name ?? providerId}
-            </span>
-          ),
-        })}
-      />
-    );
-  }
-
-  if (isError) {
-    return <ErrorView code={500} />;
-  }
 
   return (
-    <div className="container mx-auto flex items-center justify-center p-4">
-      <Loader />
-    </div>
+    <SSOCallbackContent
+      errorActions={<ErrorViewActions />}
+      LinkComponent={NextAuthLink}
+      providerId={providerId}
+      providers={providers}
+      state={state}
+    />
   );
 };

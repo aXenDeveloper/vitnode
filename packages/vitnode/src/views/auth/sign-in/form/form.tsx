@@ -1,79 +1,35 @@
 "use client";
 
-import { AlertCircle } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
-import { useTranslations } from "next-intl";
+import { NextAuthLink } from "../../next-link";
+import { mutationApi } from "./mutation-api.server";
+import { SignInFormContent } from "./sign-in-form-content";
 
-import { AutoForm } from "@/components/form/auto-form";
-import { AutoFormInput } from "@/components/form/fields/input";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { SHAKE_KEYFRAMES, SHAKE_TRANSITION } from "@/lib/motion";
-import { Link } from "@/lib/navigation";
-
-import { useFormSignIn } from "./use-form";
-
+/**
+ * {@link SignInFormContent}, wired to Next.js.
+ *
+ * The props are unchanged, so the AdminCP sign-in screen sees exactly the
+ * component it always did. This supplies the two things the shared form cannot
+ * resolve for itself:
+ *
+ * - **The mutation.** A server action that signs in, revalidates the layout the
+ *   session is rendered into and redirects - all three of which are Next.js
+ *   APIs, and all three of which stay on this side of the boundary. `isAdmin`
+ *   travels with it because the mutation is the only thing that ever cared:
+ *   it decides which layout to revalidate and where to land.
+ * - **A `Link`** that knows how to write a locale prefix into an internal href.
+ *   `/login/reset-password` is not migrated in this stage and is not touched
+ *   here.
+ */
 export const FormSignIn = ({
   isAdmin,
   isEmail,
 }: {
   isAdmin?: boolean;
   isEmail: boolean;
-}) => {
-  const t = useTranslations("core.auth.sign_in");
-  const shouldReduceMotion = useReducedMotion();
-  const { onSubmit, error, formSchema } = useFormSignIn({ isAdmin });
-
-  return (
-    <div className="space-y-4">
-      {error && (
-        <motion.div
-          animate={shouldReduceMotion ? undefined : SHAKE_KEYFRAMES}
-          transition={SHAKE_TRANSITION}
-        >
-          <Alert variant="destructive">
-            <AlertCircle className="size-4" />
-            <AlertTitle>{t(`errors.${error}.title`)}</AlertTitle>
-            <AlertDescription>{t(`errors.${error}.desc`)}</AlertDescription>
-          </Alert>
-        </motion.div>
-      )}
-
-      <AutoForm
-        fields={[
-          {
-            id: "email",
-            component: props => (
-              <AutoFormInput label={t("email.label")} {...props} />
-            ),
-          },
-          {
-            id: "password",
-            component: props => (
-              <AutoFormInput
-                label={t("password.label")}
-                labelRight={
-                  isEmail ? (
-                    <Link
-                      className="text-primary hover:underline"
-                      href="/login/reset-password"
-                    >
-                      {t("password.reset")}
-                    </Link>
-                  ) : undefined
-                }
-                type="password"
-                {...props}
-              />
-            ),
-          },
-        ]}
-        formSchema={formSchema}
-        onSubmit={onSubmit}
-        submitButtonProps={{
-          className: "w-full",
-          children: t("submit"),
-        }}
-      />
-    </div>
-  );
-};
+}) => (
+  <SignInFormContent
+    LinkComponent={NextAuthLink}
+    onSignIn={async values => await mutationApi({ ...values, isAdmin })}
+    showResetPassword={isEmail}
+  />
+);

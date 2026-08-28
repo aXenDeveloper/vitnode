@@ -375,8 +375,72 @@ describe("the app's real route tree", () => {
     ['/discover', true],
     ['/blog/post-30', false],
     ['/api/core/members', false],
+    // Stage 6. `/login` is migrated; the two auth routes nested *under* it are
+    // not, and owning the parent must not make them look owned - see below.
+    ['/login', true],
+    ['/pl/login', true],
+    ['/login/sso/google', true],
+    ['/login/reset-password', false],
+    ['/register', false],
+    // Behind `_authenticated`, which is pathless: the guard adds no segment, so
+    // the page is owned at its own path and the boundary is invisible here.
+    ['/account', true],
   ])('answers %s as owned: %s', (href, owned) => {
     expect(isTanStackOwnedPath(getRouter(), href)).toBe(owned)
+  })
+
+  /**
+   * Owning `/login` must not quietly annex the legacy routes beneath it.
+   *
+   * If the SSO callback were a *child* of `/login`, that route would match
+   * `/login/reset-password` as a prefix too, and `MigrationLink` would hand a
+   * page the Next.js app still serves to this router as a client-side
+   * navigation - a working password reset turning into a TanStack not-found.
+   * The callback is therefore a non-nested sibling
+   * (`routes/login_.sso.$providerId.tsx`), which is what these two assertions
+   * pin: two exact leaves, no shared parent.
+   */
+  it('keeps /login an exact match, so the legacy routes under it stay legacy', () => {
+    const router = getRouter()
+    const deepest = (pathname: string) =>
+      router.matchRoutes(pathname, undefined).at(-1) as {
+        pathname: string
+        routeId: string
+      }
+
+    // `/login` resolves to itself, having consumed the whole path.
+    expect(deepest('/login')).toMatchObject({
+      pathname: '/login',
+      routeId: '/login',
+    })
+
+    // `/login/reset-password` resolves to `/login` as well - `matchRoutes`
+    // answers with the deepest *ancestor* it can match and leaves the rest
+    // unconsumed. Which is exactly why `isTanStackOwnedPath` compares the
+    // matched pathname to the requested one instead of counting matches: the
+    // route id alone says "owned" here, and it is not.
+    expect(deepest('/login/reset-password')).toMatchObject({
+      pathname: '/login',
+      routeId: '/login',
+    })
+    expect(isTanStackOwnedPath(router, '/login/reset-password')).toBe(false)
+  })
+
+  /**
+   * The SSO callback must not sit behind the guest-only guard.
+   *
+   * By the time a provider redirects back, the API has minted its `--state-sso`
+   * cookie and the visitor may already have been signed in by another tab. Under
+   * `/login`'s guard, a signed-in visitor arriving with a valid `code` would be
+   * redirected away before the exchange ran, abandoning a half-finished OAuth
+   * round trip. Asserted as route *structure*, which is what decides it.
+   */
+  it('does not put the SSO callback under the login route', () => {
+    expect(
+      getRouter()
+        .matchRoutes('/login/sso/google', undefined)
+        .map((match) => match.routeId),
+    ).not.toContain('/login')
   })
 
   /**

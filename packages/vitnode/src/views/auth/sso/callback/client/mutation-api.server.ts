@@ -5,6 +5,10 @@ import { revalidatePath } from "next/cache";
 import { usersModule } from "@/api/modules/users/users.module";
 import { fetcher } from "@/lib/fetcher";
 
+import type { SSOCallbackResult } from "../sso-callback-result";
+
+import { ssoCallbackResultFromStatus } from "../sso-callback-result";
+
 export const mutationApi = async ({
   code,
   providerId,
@@ -13,7 +17,7 @@ export const mutationApi = async ({
   code: string;
   providerId: string;
   state: string;
-}) => {
+}): Promise<SSOCallbackResult> => {
   const res = await fetcher(usersModule, {
     path: "/{providerId}/callback",
     method: "get",
@@ -30,13 +34,11 @@ export const mutationApi = async ({
     },
   });
 
-  if (res.status === 409) {
-    return { error: "Email already exists" };
+  const result = ssoCallbackResultFromStatus(res.status);
+
+  if (!result?.failure) {
+    revalidatePath("/[locale]/(main)", "layout");
   }
 
-  if (res.status !== 200) {
-    return { error: "Something went wrong" };
-  }
-
-  revalidatePath("/[locale]/(main)", "layout");
+  return result;
 };

@@ -1,36 +1,23 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { toast } from "sonner";
-
-import { Button } from "@/components/ui/button";
+import type { SSOProvider } from "../providers";
 
 import { mutationApi } from "./mutation-api.server";
+import { SSOButtonsContent } from "./sso-buttons-content";
 
-export const ButtonSSOButtons = ({
-  children,
-  providerId,
+/**
+ * {@link SSOButtonsContent}, wired to Next.js.
+ *
+ * One prop wide, and that prop is the whole of the boundary: a server action
+ * that asks the API for the provider's authorization URL and redirects to it.
+ * Redirecting *is* the success path, so it never returns - a message coming
+ * back means the flow could not be started, and the shared row raises the
+ * internal-error toast.
+ */
+export const SSOButtonsClient = ({
+  providers,
 }: {
-  children: React.ReactNode;
-  providerId: string;
-}) => {
-  const tErrors = useTranslations("core.global.errors");
-
-  return (
-    <Button
-      className="bg-card w-[calc(50%-0.5rem)]"
-      onClick={async () => {
-        const mutation = await mutationApi(providerId);
-
-        if (mutation?.message) {
-          toast.error(tErrors("title"), {
-            description: tErrors("internal_server_error"),
-          });
-        }
-      }}
-      variant="outline"
-    >
-      {children}
-    </Button>
-  );
-};
+  providers: readonly SSOProvider[];
+}) => (
+  <SSOButtonsContent onSelectProvider={mutationApi} providers={providers} />
+);

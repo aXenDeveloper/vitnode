@@ -350,7 +350,21 @@ describe('the whole graph this app imports stays Next-free', () => {
   /** Everything the app reaches, from every entry point it has. */
   const ENTRIES = [
     'apps/web/src/components/language-switcher.tsx',
+    'apps/web/src/components/migration-link.tsx',
     'apps/web/src/components/route-messages.tsx',
+    // Stage 6. The auth surface reaches deepest into `@vitnode/core` of
+    // anything this app renders - the shared login card pulls in `AutoForm`,
+    // and with it the whole form and design-system stack. That graph was
+    // Next-only until `hooks/use-captcha.ts` stopped importing
+    // `@/lib/navigation`, so it is exactly the graph worth walking here.
+    'apps/web/src/lib/auth/actions.ts',
+    'apps/web/src/lib/auth/redirects.ts',
+    'apps/web/src/lib/auth/screens.ts',
+    'apps/web/src/lib/middleware-config.ts',
+    'apps/web/src/routes/_authenticated.tsx',
+    'apps/web/src/routes/_authenticated/account.tsx',
+    'apps/web/src/routes/login.tsx',
+    'apps/web/src/routes/login_.sso.$providerId.tsx',
     'apps/web/src/lib/i18n/client.ts',
     'apps/web/src/lib/i18n/query.ts',
     'apps/web/src/lib/i18n/shared.ts',
