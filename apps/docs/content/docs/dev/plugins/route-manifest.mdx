@@ -77,6 +77,27 @@ Catch-all (`/blog/*`), optional (`/blog/:slug?`) and repeating (`/blog/:slug+`)
 segments are **not** supported yet. They're rejected on purpose rather than
 half-guessed at.
 
+### Static segments are lowercase
+
+`/blog/post` is valid; `/Blog/Post` is not. Routers match URLs
+case-insensitively, so `/Blog` and `/blog` are one page to a browser but two
+different strings to VitNode's collision check - and a collision it can't see is
+the one thing this whole layer exists to prevent.
+
+VitNode rejects the uppercase spelling instead of quietly lowercasing it, because
+your public URL silently changing is worse than a build error that tells you what
+to write:
+
+```txt
+Plugin route "post" from @vitnode/blog has an invalid path: "/Blog/post" is not a
+valid path: "Blog" has uppercase letters - VitNode route paths are lowercase,
+because a router matches them case-insensitively and "/Blog" and "/blog" would be
+one URL. Write "blog" instead.
+```
+
+Parameter names are variable names, not URL text, so `:postId` stays exactly as
+camelCase as you like.
+
 ## Building the manifest
 
 An application turns every plugin's declarations into one ordered list:
@@ -132,6 +153,12 @@ of them.
 `/blog/:slug` and `/blog/:postId` collide too - different spelling, same URLs.
 Duplicate ids, malformed paths and entries an app could never import all fail the
 same way: loudly, at build time, naming the plugin.
+
+The same rule applies against the **application's own** pages. If the app serves
+`/users/$id` from its own route files and your plugin declares `/users/:userId`,
+that's one URL claimed twice and it fails - the parameter names differ, the URLs
+don't. `/users/new` beside `/users/:id` is fine, because a router can tell a
+static segment from a dynamic one.
 
 ## How an app serves them
 

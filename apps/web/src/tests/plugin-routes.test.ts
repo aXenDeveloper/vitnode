@@ -1,3 +1,4 @@
+import type { AnyRoute } from '@tanstack/react-router'
 import type { PluginRouteModuleRegistry } from '@vitnode/core/framework/plugin-routes'
 import type { PluginRoute } from '@vitnode/core/routing'
 
@@ -179,6 +180,166 @@ describe('withPluginRoutes', () => {
         ),
       ),
     ).toThrow(/discover/)
+  })
+})
+
+/**
+ * Plugin-vs-application collisions, compared by the URLs a route matches rather
+ * than by the text of its path.
+ *
+ * The two sides are written in different syntaxes and name their parameters
+ * independently, so `/users/$id` and `/users/:userId` are the same route spelled
+ * two ways - and a string comparison sees two different strings.
+ */
+describe('plugin ↔ application collisions', () => {
+  const treeWith = (...paths: string[]) => {
+    const root = createRootRoute()
+
+    return root.addChildren(
+      paths.map((path) => createRoute({ getParentRoute: () => root, path })),
+    )
+  }
+
+  const mount = (
+    tree: AnyRoute,
+    path: string,
+    segments: PluginRoute['segments'],
+  ) =>
+    withPluginRoutes(
+      tree,
+      pluginRouteSpecs([route({ path, segments })], registryOf('plugin:page')),
+    )
+
+  const param = (name: string) => ({ kind: 'param' as const, name })
+  const staticSegment = (value: string) => ({ kind: 'static' as const, value })
+
+  it.each([
+    ['/users/$id', '/users/:userId', [staticSegment('users'), param('userId')]],
+    [
+      '/blog/$slug/comments',
+      '/blog/:postId/comments',
+      [staticSegment('blog'), param('postId'), staticSegment('comments')],
+    ],
+    ['/discover', '/discover', [staticSegment('discover')]],
+  ] as const)(
+    'refuses app %s against plugin %s',
+    (appPath, pluginPath, segments) => {
+      expect(() => mount(treeWith(appPath), pluginPath, [...segments])).toThrow(
+        /conflicts with application route/,
+      )
+    },
+  )
+
+  it.each([
+    ['/users/new', '/users/:id', [staticSegment('users'), param('id')]],
+    [
+      '/users/$id',
+      '/users/new',
+      [staticSegment('users'), staticSegment('new')],
+    ],
+    ['/discover', '/example', [staticSegment('example')]],
+  ] as const)(
+    'allows app %s beside plugin %s',
+    (appPath, pluginPath, segments) => {
+      expect(() =>
+        mount(treeWith(appPath), pluginPath, [...segments]),
+      ).not.toThrow()
+    },
+  )
+
+  it('names the plugin route, its canonical path and the app route it hit', () => {
+    let message = ''
+
+    try {
+      mount(treeWith('/users/$id'), '/users/:userId', [
+        staticSegment('users'),
+        param('userId'),
+      ])
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error)
+    }
+
+    expect(message).toContain('plugin:page')
+    expect(message).toContain('/users/:userId')
+    expect(message).toContain('/users/$id')
+  })
+})
+
+/**
+ * What the application is understood to already claim.
+ *
+ * A TanStack route can be a page *and* a layout at once, so "has children" does
+ * not mean "claims no URL" - and a pathless route claims nothing by definition.
+ */
+describe('fileRoutePaths', () => {
+  it('includes a route that has both a path and children', () => {
+    const root = createRootRoute()
+    const blog = createRoute({ getParentRoute: () => root, path: '/blog' })
+
+    blog.addChildren([
+      createRoute({ getParentRoute: () => blog, path: '/' }),
+      createRoute({ getParentRoute: () => blog, path: '/$slug' }),
+    ])
+
+    expect(fileRoutePaths(root.addChildren([blog]))).toEqual([
+      '/blog',
+      '/blog/',
+      '/blog/$slug',
+    ])
+  })
+
+  it('does not let a pathless layout claim a URL', () => {
+    const root = createRootRoute()
+    const layout = createRoute({ getParentRoute: () => root, id: '_shell' })
+
+    layout.addChildren([
+      createRoute({ getParentRoute: () => layout, path: '/settings' }),
+    ])
+
+    expect(fileRoutePaths(root.addChildren([layout]))).toEqual(['/settings'])
+  })
+
+  it('excludes the plugin container and everything under it', () => {
+    const tree = withPluginRoutes(
+      (() => {
+        const root = createRootRoute()
+
+        return root.addChildren([
+          createRoute({ getParentRoute: () => root, path: '/discover' }),
+        ])
+      })(),
+      pluginRouteSpecs([route()], registryOf('plugin:page')),
+    )
+
+    expect(fileRoutePaths(tree)).toEqual(['/discover'])
+  })
+
+  /**
+   * The regression the leaf-only walk allowed: a parent route that is also a
+   * page could be claimed by a plugin.
+   */
+  it('protects a parent route that is also a page', () => {
+    const root = createRootRoute()
+    const blog = createRoute({ getParentRoute: () => root, path: '/blog' })
+
+    blog.addChildren([
+      createRoute({ getParentRoute: () => blog, path: '/$slug' }),
+    ])
+
+    expect(() =>
+      withPluginRoutes(
+        root.addChildren([blog]),
+        pluginRouteSpecs(
+          [
+            route({
+              path: '/blog',
+              segments: [{ kind: 'static', value: 'blog' }],
+            }),
+          ],
+          registryOf('plugin:page'),
+        ),
+      ),
+    ).toThrow(/conflicts with application route/)
   })
 })
 

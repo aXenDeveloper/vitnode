@@ -10,7 +10,11 @@ import {
   joinPaths,
   lazyRouteComponent,
 } from '@tanstack/react-router'
-import { toTanStackRoutePath } from '@vitnode/core/routing'
+import {
+  routeMatchKey,
+  routeMatchKeyFromTanStackPath,
+  toTanStackRoutePath,
+} from '@vitnode/core/routing'
 
 /**
  * Plugin pages, in this app's route tree.
@@ -149,8 +153,14 @@ export const pluginRouteSpecs = (
  *
  * Walked rather than read off the route tree's types, because a route's
  * `fullPath` is only computed once the router initialises it and this runs
- * before that. Leaf paths only: a route with children is a layout, and a layout
- * does not answer a URL by itself.
+ * before that.
+ *
+ * **Every route that declares a path claims one**, children or not. A TanStack
+ * route can be a page *and* a layout - `discover.tsx` with a `discover/` folder
+ * beside it renders at `/discover` and wraps everything under it - so treating a
+ * route with children as "just a layout" would quietly hand `/discover` to a
+ * plugin. A pathless route claims nothing, which is what pathless means: it
+ * contributes no segment and answers no URL, only its children do.
  *
  * The plugin subtree is skipped, so this stays the app's own answer no matter how
  * many times the composition has run.
@@ -161,15 +171,14 @@ export const fileRoutePaths = (routeTree: AnyRoute): string[] => {
 
     if (id === PLUGIN_ROUTES_ROUTE_ID) return []
 
-    const here =
-      typeof path === 'string' && path.length > 0
-        ? joinPaths([prefix, path])
-        : prefix
+    const declaresPath = typeof path === 'string' && path.length > 0
+    const here = declaresPath ? joinPaths([prefix, path]) : prefix
     const children: AnyRoute[] = route.children ?? []
 
-    return children.length === 0
-      ? [here]
-      : children.flatMap((child) => walk(child, here))
+    return [
+      ...(declaresPath ? [here] : []),
+      ...children.flatMap((child) => walk(child, here)),
+    ]
   }
 
   return (routeTree.children ?? []).flatMap((child: AnyRoute) =>
@@ -178,26 +187,54 @@ export const fileRoutePaths = (routeTree: AnyRoute): string[] => {
 }
 
 /**
- * Refuses a plugin route that would shadow one of this app's own pages.
+ * Refuses a plugin route that would answer a URL this app already answers.
  *
- * `buildPluginRouteManifest` already rejects two *plugins* claiming one URL, and
- * cannot see this case: it never knows what application it is being built for. A
- * plugin declaring `/discover` would otherwise leave two routes matching one
- * pathname and the router picking whichever sorts first, which is the "last route
- * wins" outcome the manifest layer exists to make impossible.
+ * `buildPluginRouteManifest` already rejects two *plugins* claiming one URL and
+ * cannot see this case: it never knows which application it is being built for.
+ * Without this the app would hold two routes matching one pathname and let the
+ * router's own ranking pick, which is the "last route wins" outcome the manifest
+ * layer exists to make impossible.
+ *
+ * Compared by **match key, not by text**, and that is the whole substance of this
+ * function. `/users/$id` and `/users/:userId` are the same URL space spelled two
+ * ways in two syntaxes, and a string comparison sees two different strings:
+ *
+ *     app     /users/$id      -> /users/:   ┐ collide
+ *     plugin  /users/:userId  -> /users/:   ┘
+ *
+ *     app     /users/new      -> /users/new ┐ do not collide - a router tells
+ *     plugin  /users/:id      -> /users/:   ┘ static from dynamic
+ *
+ * Both sides go through the routing package's one key space: the plugin through
+ * `routeMatchKey` over its parsed segments, the app through
+ * `routeMatchKeyFromTanStackPath` over the string its router holds. Same rule as
+ * plugin-vs-plugin, because it is the same function.
+ *
+ * The first application path to claim a key is the one named in the error - the
+ * app's route files cannot collide with each other, so which one it is only
+ * affects the message.
  */
 const assertNoAppCollision = (
   specs: PluginRouteSpec[],
   appPaths: string[],
 ): void => {
-  const claimed = new Set(appPaths)
-  const collision = specs.find((spec) => claimed.has(spec.path))
+  const claimed = new Map<string, string>()
 
-  if (!collision) return
+  for (const appPath of appPaths) {
+    const key = routeMatchKeyFromTanStackPath(appPath)
 
-  throw new Error(
-    `[VitNode plugin routes] Plugin route "${collision.route.id}" claims "${collision.route.path}", which this app already serves from its own route files. Two routes cannot answer one URL - rename the plugin's route.`,
-  )
+    if (!claimed.has(key)) claimed.set(key, appPath)
+  }
+
+  for (const spec of specs) {
+    const conflict = claimed.get(routeMatchKey(spec.route.segments))
+
+    if (conflict === undefined) continue
+
+    throw new Error(
+      `[VitNode plugin routes] Plugin route "${spec.route.id}" claims "${spec.route.path}", which conflicts with application route "${conflict}". Both match the same URLs, and this app will not let a router's ordering decide which one answers - rename the plugin's route.`,
+    )
+  }
 }
 
 /**

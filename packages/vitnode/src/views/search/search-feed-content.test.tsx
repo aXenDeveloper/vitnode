@@ -23,12 +23,10 @@ vi.mock("@/lib/fetcher-client", () => ({
   fetcherClient: (...args: unknown[]) => fetcherClient(...args),
 }));
 
-const { classifySearchFeedHref, SearchFeedContent } = await import(
-  "./search-feed-content"
-);
-const { searchFeedQueryKey, searchFeedQueryOptions } = await import(
-  "./search-feed-query"
-);
+const { classifySearchFeedHref, SearchFeedContent } =
+  await import("./search-feed-content");
+const { searchFeedQueryKey, searchFeedQueryOptions } =
+  await import("./search-feed-query");
 
 const messages = {
   core: {
@@ -408,6 +406,7 @@ describe("the loading state", () => {
   it("renders skeletons until the first page arrives", async () => {
     let resolvePage: (value: {
       json: () => Promise<SearchFeedPage>;
+      ok: boolean;
     }) => void = () => undefined;
 
     fetcherClient.mockReturnValue(
@@ -422,7 +421,10 @@ describe("the loading state", () => {
       container.querySelectorAll('[data-slot="skeleton"]').length,
     ).toBeGreaterThan(0);
 
-    resolvePage({ ok: true, json: async () => Promise.resolve(page([item()])) });
+    resolvePage({
+      ok: true,
+      json: async () => Promise.resolve(page([item()])),
+    });
     expect(await screen.findByText("First post")).toBeDefined();
   });
 });

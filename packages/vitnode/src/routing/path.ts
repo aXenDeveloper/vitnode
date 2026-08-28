@@ -1,13 +1,19 @@
 import type { PluginRouteSegment } from "./types";
 
 /**
- * A static segment: a literal piece of URL.
+ * A static segment: a literal piece of URL, and lowercase.
  *
  * Percent-encoding, spaces and uppercase are all left out. A plugin author who
- * needs one of those in a public URL has a naming problem, not a routing
+ * needs one of the first two in a public URL has a naming problem, not a routing
  * problem, and a route table full of `%20` is nobody's idea of a good time.
+ *
+ * Uppercase is excluded for a sharper reason: the routers that consume this
+ * manifest match paths **case-insensitively**, so `/Example` and `/example`
+ * answer the same URL. Accepting both would mean two manifest paths that
+ * `routeMatchKey` calls different and a browser calls identical - a collision the
+ * validation could not see. One canonical spelling removes the question.
  */
-const STATIC_SEGMENT = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
+const STATIC_SEGMENT = /^[a-z0-9][a-z0-9._-]*$/;
 
 /** A parameter name, i.e. a JavaScript-ish identifier - it becomes one. */
 const PARAM_NAME = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
@@ -76,9 +82,18 @@ const parseSegment = (
     };
   }
 
+  // Named before the general rule, and never lowercased silently: a plugin's
+  // public URL changing behind its author's back is worse than a build error
+  // that says exactly what to write.
+  if (/[A-Z]/.test(raw)) {
+    return {
+      reason: `"${raw}" has uppercase letters - VitNode route paths are lowercase, because a router matches them case-insensitively and "/${raw}" and "/${raw.toLowerCase()}" would be one URL. Write "${raw.toLowerCase()}" instead`,
+    };
+  }
+
   if (!STATIC_SEGMENT.test(raw)) {
     return {
-      reason: `"${raw}" is not a valid path segment - use letters, digits, "-", "_" and "."`,
+      reason: `"${raw}" is not a valid path segment - use lowercase letters, digits, "-", "_" and "."`,
     };
   }
 
@@ -201,5 +216,64 @@ export const routeMatchKey = (segments: PluginRouteSegment[]): string => {
 
   return `/${segments
     .map(segment => (segment.kind === "param" ? ":" : segment.value))
+    .join("/")}`;
+};
+
+/**
+ * A splat, in a {@link routeMatchKeyFromTanStackPath} key.
+ *
+ * Deliberately not `:`. A splat swallows every remaining segment and a parameter
+ * swallows exactly one, so `/api/$` and `/api/:id` do *not* match the same URLs -
+ * `/api/a/b` reaches only the first. Giving them one key would break the single
+ * promise this whole key space makes: equal keys mean equal sets of URLs. No
+ * canonical VitNode path can produce this marker, because `parseRoutePath`
+ * rejects catch-alls outright, so a plugin route can never collide with an
+ * application's splat by key.
+ */
+const MATCH_KEY_SPLAT = "**";
+
+/**
+ * {@link routeMatchKey}, for a path already written in TanStack Router syntax.
+ *
+ * The second entrance to one key space, and the reason plugin-vs-plugin and
+ * plugin-vs-application collisions are the same question asked twice rather than
+ * two rules that agree until somebody edits one. A plugin route arrives as parsed
+ * segments and goes through `routeMatchKey`; an application's own route arrives
+ * as the string its router already holds - `/users/$id` - and comes through here.
+ * Both land on `/users/:`, so they compare.
+ *
+ *     /users/$id      -> /users/:
+ *     /users/$userId  -> /users/:      (a parameter's name is not part of a URL)
+ *     /users/new      -> /users/new    (a router tells static from dynamic)
+ *     /blog/$slug/x   -> /blog/:/x
+ *     /discover/      -> /discover     (an index route under a layout)
+ *     /api/$          -> /api/**       (see MATCH_KEY_SPLAT)
+ *
+ * Framework-neutral despite the name: `$id` is treated as *input syntax*, the
+ * same way `toTanStackRoutePath` treats it as output syntax. Nothing here imports
+ * a router, and nothing here may - see `boundaries.test.ts`.
+ */
+export const routeMatchKeyFromTanStackPath = (path: string): string => {
+  // A route may declare `/`, and a layout's index child joins to `/blog/` -
+  // which is the same URL as `/blog`. One trailing slash is formatting.
+  const trimmed =
+    path.length > 1 && path.endsWith("/") ? path.slice(0, -1) : path;
+
+  if (trimmed === "" || trimmed === "/") return "/";
+
+  return `/${trimmed
+    .replace(/^\//, "")
+    .split("/")
+    .filter(segment => segment.length > 0)
+    .map(segment => {
+      if (segment === "$") return MATCH_KEY_SPLAT;
+      if (segment.startsWith("$")) return ":";
+
+      // Lowercased because a router matches case-insensitively, so an
+      // application route at `/Users` and a plugin route at `/users` are one
+      // URL. Plugin paths are already lowercase by construction - `parseRoutePath`
+      // refuses anything else - and an app's own route files are not.
+      return segment.toLowerCase();
+    })
     .join("/")}`;
 };

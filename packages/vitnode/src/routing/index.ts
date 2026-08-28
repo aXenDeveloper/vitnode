@@ -26,6 +26,7 @@ export {
   formatRoutePath,
   parseRoutePath,
   routeMatchKey,
+  routeMatchKeyFromTanStackPath,
   toNextRoutePath,
   toTanStackRoutePath,
 } from "./path";

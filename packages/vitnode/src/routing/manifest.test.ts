@@ -305,6 +305,24 @@ describe("malformed declarations", () => {
     }
   });
 
+  /**
+   * A path a router would match case-insensitively but this layer would compare
+   * as two different strings. Rejected here rather than lowercased, and the
+   * failure names the plugin - see `path.test.ts` for the rule itself.
+   */
+  it("rejects an uppercase path, naming the plugin", () => {
+    const error = thrownBy(() =>
+      build({
+        pluginId: "@vitnode/example",
+        routes: [{ entry: "routes/x", id: "x", path: "/Example" }],
+      }),
+    );
+
+    expect(error.code).toBe("invalid-path");
+    expect(error.pluginId).toBe("@vitnode/example");
+    expect(error.message).toContain('Write "example"');
+  });
+
   it("rejects an entry an application could never import", () => {
     for (const entry of [
       undefined,

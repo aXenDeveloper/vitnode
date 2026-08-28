@@ -5,6 +5,7 @@ import {
   formatRoutePath,
   parseRoutePath,
   routeMatchKey,
+  routeMatchKeyFromTanStackPath,
   toNextRoutePath,
   toTanStackRoutePath,
 } from "./path";
@@ -116,6 +117,48 @@ describe("paths a plugin may not declare", () => {
 });
 
 /**
+ * One canonical spelling, because a router only has one.
+ *
+ * The routers that consume this manifest match paths case-insensitively, so
+ * `/Example` and `/example` are one URL to a browser and two strings to
+ * `routeMatchKey` - a collision the validation could not see. Rejected rather
+ * than lowercased: a plugin's public URL must not change behind its author's
+ * back, and a build error is how they find out.
+ */
+describe("static segments are lowercase", () => {
+  it("accepts a lowercase path", () => {
+    expect(parse("/example").path).toBe("/example");
+    expect(parse("/blog/post").path).toBe("/blog/post");
+    expect(parse("/example/:slug").path).toBe("/example/:slug");
+  });
+
+  it("rejects an uppercase segment, and says what to write instead", () => {
+    expect(reason("/Example")).toContain("uppercase letters");
+    expect(reason("/Example")).toContain('Write "example"');
+    expect(reason("/BLOG/post")).toContain('Write "blog"');
+    expect(reason("/blog/My-Post")).toContain('Write "my-post"');
+  });
+
+  /**
+   * A parameter's name never reaches a URL - it is a variable name - so the
+   * identifier rules it already had are the right ones.
+   */
+  it("still allows camelCase parameter names", () => {
+    expect(parse("/blog/:postId").segments).toEqual([
+      { kind: "static", value: "blog" },
+      { kind: "param", name: "postId" },
+    ]);
+  });
+
+  it("keeps naming the framework syntaxes ahead of the case rule", () => {
+    // `[Slug]` and `$Slug` are uppercase *and* the wrong syntax. The syntax is
+    // the useful thing to say.
+    expect(reason("/example/[Slug]")).toContain("Next.js filesystem syntax");
+    expect(reason("/example/$Slug")).toContain("TanStack Router syntax");
+  });
+});
+
+/**
  * The two syntaxes this representation exists to be independent of.
  *
  * A plugin author coming from either framework writes the one they know, so the
@@ -210,6 +253,80 @@ describe("the URLs a path matches", () => {
   it("keeps depth distinct", () => {
     expect(routeMatchKey(parse("/example/:a/:b").segments)).not.toBe(
       routeMatchKey(parse("/example/:a").segments),
+    );
+  });
+});
+
+/**
+ * The same key space, entered from a path an application's router already holds.
+ *
+ * This is what lets plugin-vs-application collisions be the same question as
+ * plugin-vs-plugin instead of a second rule that agrees until somebody edits one.
+ * `$id` is read as input syntax; nothing here imports a router.
+ */
+describe("the URLs a TanStack path matches", () => {
+  const key = routeMatchKeyFromTanStackPath;
+
+  it("agrees with the canonical key for the same route", () => {
+    expect(key("/example/hello")).toBe(
+      routeMatchKey(parse("/example/hello").segments),
+    );
+    expect(key("/blog/$slug")).toBe(
+      routeMatchKey(parse("/blog/:slug").segments),
+    );
+    expect(key("/")).toBe(routeMatchKey(parse("/").segments));
+  });
+
+  /**
+   * The case the old exact-string comparison missed: two syntaxes, two parameter
+   * names, one URL space.
+   */
+  it("does not depend on what a parameter is called", () => {
+    expect(key("/users/$id")).toBe(key("/users/$userId"));
+    expect(key("/users/$id")).toBe(
+      routeMatchKey(parse("/users/:userId").segments),
+    );
+    expect(key("/blog/$slug/comments")).toBe(
+      routeMatchKey(parse("/blog/:postId/comments").segments),
+    );
+  });
+
+  it("keeps a static segment distinct from a parameter", () => {
+    expect(key("/users/new")).not.toBe(key("/users/$id"));
+    expect(key("/users/new")).not.toBe(
+      routeMatchKey(parse("/users/:id").segments),
+    );
+  });
+
+  /**
+   * An index route under a layout joins to `/blog/`, which is the same URL as
+   * `/blog` - so a plugin claiming `/blog` has to collide with it.
+   */
+  it("treats one trailing slash as formatting", () => {
+    expect(key("/discover/")).toBe(key("/discover"));
+    expect(key("/discover/")).toBe(routeMatchKey(parse("/discover").segments));
+    expect(key("/")).toBe("/");
+  });
+
+  /**
+   * A splat swallows every remaining segment and a parameter swallows one, so
+   * they are not the same URL space and must not share a key. No canonical
+   * VitNode path can produce this marker - catch-alls are rejected - so a plugin
+   * route can never collide with an application splat by key.
+   */
+  it("keeps a splat distinct from a parameter", () => {
+    expect(key("/api/$")).toBe("/api/**");
+    expect(key("/api/$")).not.toBe(key("/api/$id"));
+    expect(key("/api/$")).not.toBe(routeMatchKey(parse("/api/:id").segments));
+  });
+
+  /**
+   * An application's own route files are not held to the plugin lowercase rule,
+   * and a router would match `/Users` and `/users` as one URL either way.
+   */
+  it("compares an application path case-insensitively", () => {
+    expect(key("/Users/$id")).toBe(
+      routeMatchKey(parse("/users/:userId").segments),
     );
   });
 });
